@@ -1,11 +1,11 @@
 # M0/M1 backlog
 
-**Planning state:** M0 foundation and M0-01 are accepted. M0-02 is unblocked for planning but remains proposed and cannot enter development until its migration/RLS brief is approved. Every later ticket remains blocked until its dependencies and linked approval gate are satisfied.
+**Planning state:** M0 foundation and M0-01 are accepted. M0-02 now has a draft implementation brief and ADR but cannot enter development until both are approved. Every later ticket remains blocked until its dependencies and linked approval gate are satisfied.
 
 | Priority | Ticket | Status | Depends on | Scope | Approval gate |
 |---|---|---|---|---|---|
 | P0 | [M0-01 Repository/tooling baseline](M0-01-REPOSITORY-TOOLING-BASELINE.md) | accepted | ADR-001 | Next.js setup, strict TypeScript, lint, format, unit-test and production-build commands | Accepted by product owner on 22 July 2026 |
-| P0 | M0-02 Data/authorization foundation | proposed | M0-01 accepted | Current Supabase project/config review; profile and invite migrations; explicit RLS and Data API access; server repository boundary; cross-user isolation tests | Approve a migration/RLS brief before any shared database change |
+| P0 | [M0-02 Data/authorization foundation](M0-02-DATA-AUTHORIZATION-FOUNDATION.md) | draft | M0-01 accepted | Local Supabase baseline; profile and invite migrations; explicit privileges/RLS; server repository boundary; cross-user isolation tests | Approve the brief and [ADR-002](../decisions/ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md) before local implementation; separately approve an exact remote target before any remote change |
 | P0 | [M0-03 Invite-only sign-in and isolated empty profile](../product/F-001-INVITE-ONLY-SIGN-IN.md) | draft | M0-02 accepted | Magic-link request, server-enforced invite gate, session handling, sign-out, and an empty protected route | Approve feature brief F-001 |
 | P0 | M0-04 Privacy, consent, and deletion-operation design | proposed | M0-02 accepted | User-facing notice; versioned AI-data consent and withdrawal records; deletion-request workflow; data inventory; privacy-policy outline; backup/security-log retention decisions | Approve consent wording, processors/data flow, and retention choices |
 | P0 | M0-05 Privacy-safe instrumentation and AI request controls | proposed | M0-02 and M0-04 accepted | Privacy-safe product-event contract; server-side AI rate-limit boundary; AI provider/model/prompt/validation/cost telemetry contract; no production AI provider call | Approve analytics data fields, retention, rate-limit defaults, and cost boundary |
