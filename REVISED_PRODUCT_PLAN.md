@@ -1,4 +1,4 @@
-# Fittip: Revised Product and Technical Plan
+# FitTip: Revised Product and Technical Plan
 
 **Revision source:** product-owner answers, 13 July 2026  
 **Audience:** the lead Codex agent, builders, reviewers, and the product owner  
@@ -6,7 +6,7 @@
 
 ## 1. The product in one paragraph
 
-Fittip is a mobile-first personal training-planning web app for a sporty person who regularly pursues several different challenges: for example, improve flexibility, prepare for a football season, run a marathon, or get stronger. It acts in the tone of a serious coach. It learns the user's goals, priorities, schedule, equipment, preferences, past training, feedback, and longer-term patterns. It then creates a detailed seven-day plan, lets the user log what actually happened, conducts a short coaching conversation when needed, and proposes a revised plan after the user explicitly asks it to replan.
+FitTip is a mobile-first personal training-planning web app for a sporty person who regularly pursues several different challenges: for example, improve flexibility, prepare for a football season, run a marathon, or get stronger. It acts in the tone of a serious coach. It learns the user's goals, priorities, schedule, equipment, preferences, past training, feedback, and longer-term patterns. It then creates a detailed seven-day plan, lets the user log what actually happened, conducts a short coaching conversation when needed, and proposes a revised plan after the user explicitly asks it to replan.
 
 The first release is a personal hosted tool, not a public multi-user product. It must nevertheless preserve history and use a clean user/ownership boundary so it can grow later.
 
@@ -18,7 +18,7 @@ The user always knows what training is most useful *now*, even when goals compet
 
 ### Differentiator
 
-Fittip is not a fixed workout logger or generic chatbot. Its value is the combination of:
+FitTip is not a fixed workout logger or generic chatbot. Its value is the combination of:
 
 1. A durable, reviewable memory of the user and their constraints.
 2. Multiple active goals with explicit priority and limited attention.
@@ -56,7 +56,7 @@ These are the product-safe interpretations of broad requirements. Keep them in t
 
 ### 4.1 “Every kind of sport should be possible”
 
-Fittip must be **sport-agnostic**, not falsely claim instant expert-level programming for every sport. The v1 data model, plan UI, logs, and AI context must work for any named sport or activity. Examples: running, football preparation, strength work, mobility, hiking, swimming, martial arts drills.
+FitTip must be **sport-agnostic**, not falsely claim instant expert-level programming for every sport. The v1 data model, plan UI, logs, and AI context must work for any named sport or activity. Examples: running, football preparation, strength work, mobility, hiking, swimming, martial arts drills.
 
 However, each sport needs different measurements and safety knowledge. Therefore:
 
@@ -583,7 +583,7 @@ It is done only when:
 
 ### 15.1 Collaborative development and decision protocol
 
-Fittip is developed through short, reviewable vertical slices. The product owner approves product behavior before it is built and accepts the resulting behavior before the next dependent slice starts. This plan remains the source of truth for product direction. Feature briefs, ADRs, tickets, and validation records make individual decisions traceable without silently changing this plan.
+FitTip is developed through short, reviewable vertical slices. The product owner approves product behavior before it is built and accepts the resulting behavior before the next dependent slice starts. This plan remains the source of truth for product direction. Feature briefs, ADRs, tickets, and validation records make individual decisions traceable without silently changing this plan.
 
 The builder may choose a reversible implementation detail that has no user-visible, privacy, cost, data-model, or future-architecture consequence. All other meaningful decisions are explicitly surfaced with a recommendation and alternatives. The builder must never silently expand product scope.
 
@@ -621,7 +621,7 @@ Before application-feature implementation, complete and approve: the M0 architec
 ## 16. First prompt for the lead Codex agent
 
 ```text
-You are the technical lead for Fittip. Read REVISED_PRODUCT_PLAN.md completely.
+You are the technical lead for FitTip. Read REVISED_PRODUCT_PLAN.md completely.
 
 The repository is new. Do not attempt to build the whole application.
 

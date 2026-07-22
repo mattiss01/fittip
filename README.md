@@ -1,6 +1,6 @@
-# Fittip
+# FitTip
 
-This repository contains the mobile-first web foundation for Fittip. M0-01 provides only the application and quality-tooling baseline; product features and external-service configuration are intentionally absent.
+This repository contains the mobile-first web foundation for FitTip. M0-01 provides only the application and quality-tooling baseline; product features and external-service configuration are intentionally absent.
 
 ## Prerequisites
 

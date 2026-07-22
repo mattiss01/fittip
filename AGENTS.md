@@ -1,4 +1,4 @@
-# Fittip working agreement
+# FitTip working agreement
 
 ## Product invariants
 

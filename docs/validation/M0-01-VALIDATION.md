@@ -11,7 +11,10 @@
 - Local route: [http://localhost:3000/](http://localhost:3000/)
 - Mobile evidence: [390px screenshot](M0-01-390px.png)
 - Viewport verified: `390x844`
-- Browser result: meaningful Fittip foundation content rendered, no framework error overlay, and no page errors.
+- Product name verified: document title and page heading are exactly `FitTip`.
+- Browser result: meaningful FitTip foundation content rendered, no framework error overlay, and no page errors.
+
+The product owner confirmed the exact human-facing capitalization `FitTip` on 22 July 2026 before M0-01 acceptance. The app, tests, governance documents, and mobile evidence were updated and revalidated; lowercase technical identifiers remain unchanged.
 
 ## Selected versions
 

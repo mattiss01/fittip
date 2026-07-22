@@ -30,7 +30,7 @@ Approve the recommended M0 foundation as one coherent, reversible starting point
 
 1. An administrator adds a tester email to the invite allowlist.
 2. The invited person requests a magic-link email and can sign in only if invited.
-3. The authenticated user sees an empty Fittip account/profile, never another user's information.
+3. The authenticated user sees an empty FitTip account/profile, never another user's information.
 4. A non-invited email cannot create an account or reach authenticated data.
 5. The user can read the privacy/AI-data notice. M0 sends no data to an AI provider.
 

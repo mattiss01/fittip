@@ -6,7 +6,7 @@
 
 ## User problem and outcome
 
-An invited tester needs to access their own Fittip account securely from a mobile browser. No person may access another tester's records, and a non-invited person must not create an account.
+An invited tester needs to access their own FitTip account securely from a mobile browser. No person may access another tester's records, and a non-invited person must not create an account.
 
 ## Proposed user flow
 
@@ -36,7 +36,7 @@ An invited tester needs to access their own Fittip account securely from a mobil
 3. Two test users cannot read or modify each other's profile data through UI or direct requests.
 4. Protected routes redirect an unauthenticated visitor to sign-in.
 5. Sign-out ends browser access to protected routes.
-6. The empty authenticated screen clearly identifies Fittip and contains no unapproved training features.
+6. The empty authenticated screen clearly identifies FitTip and contains no unapproved training features.
 7. Automated tests cover invite gating and authorization; a mobile end-to-end happy path is documented.
 
 ## Validation plan

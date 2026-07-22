@@ -37,7 +37,7 @@ Any departure from these defaults must be documented in the ticket handoff. A ch
 
 1. Scaffold a Next.js App Router application at the repository root without overwriting the existing governance and product documents.
 2. Enable strict TypeScript and the `@/*` import alias.
-3. Add a minimal neutral root page identifying the application as Fittip and containing no training, authentication, onboarding, or AI behavior.
+3. Add a minimal neutral root page identifying the application as FitTip and containing no training, authentication, onboarding, or AI behavior.
 4. Configure Tailwind CSS, ESLint, and Prettier.
 5. Configure Vitest with a browser-like test environment and React Testing Library.
 6. Provide package scripts for:
@@ -68,7 +68,7 @@ Any departure from these defaults must be documented in the ticket handoff. A ch
 
 1. A clean checkout can install dependencies from the committed lockfile using the documented command.
 2. The project uses the Next.js App Router under `src/app` and TypeScript strict mode is enabled.
-3. The root route renders a neutral Fittip foundation page and does not imply that an account, plan, or training feature exists.
+3. The root route renders a neutral FitTip foundation page and does not imply that an account, plan, or training feature exists.
 4. The documented local development command starts the application successfully.
 5. `npm run lint` exits successfully.
 6. `npm run typecheck` exits successfully.

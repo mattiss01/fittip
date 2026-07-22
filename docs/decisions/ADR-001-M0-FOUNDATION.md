@@ -6,7 +6,7 @@
 
 ## Context
 
-Fittip needs private-beta access from multiple devices while preserving user isolation and keeping a future native client possible. M0 must establish a production-shaped foundation without implementing training features or committing to an AI provider.
+FitTip needs private-beta access from multiple devices while preserving user isolation and keeping a future native client possible. M0 must establish a production-shaped foundation without implementing training features or committing to an AI provider.
 
 ## Decision
 

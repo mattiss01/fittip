@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Fittip",
-  description: "Fittip application foundation",
+  title: "FitTip",
+  description: "FitTip application foundation",
 };
 
 export default function RootLayout({
