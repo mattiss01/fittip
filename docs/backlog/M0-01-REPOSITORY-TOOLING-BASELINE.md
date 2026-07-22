@@ -1,7 +1,8 @@
 # M0-01: Repository and tooling baseline
 
-**Status:** testable — product-owner acceptance required  
+**Status:** accepted  
 **Approved by:** product owner, 22 July 2026 — “I approve M0-01 as written.”  
+**Accepted by:** product owner, 22 July 2026 — “I accept M0-01.”  
 **Milestone:** M0  
 **Priority:** P0  
 **Type:** foundation; no user-visible product feature  
@@ -109,6 +110,6 @@ Before requesting acceptance, report:
 - Confirmation that no environment secrets or feature behavior were added.
 - The exact request: accept M0-01 or return focused corrections.
 
-## Decision requested
+## Decision record
 
-Confirm this ticket as the complete scope for M0-01. Confirmation moves it from `draft` to `approved`; only then may repository scaffolding begin.
+The product owner approved the scope, reviewed the testable implementation and validation evidence, and accepted M0-01 on 22 July 2026. Follow-up changes require a new ticket or an explicitly approved correction.

@@ -1,10 +1,10 @@
 # M0/M1 backlog
 
-**Planning state:** M0 foundation and M0-01 are approved. M0-01 is testable and awaiting product-owner acceptance. Every other ticket remains blocked until its dependencies and linked approval gate are satisfied.
+**Planning state:** M0 foundation and M0-01 are accepted. M0-02 is unblocked for planning but remains proposed and cannot enter development until its migration/RLS brief is approved. Every later ticket remains blocked until its dependencies and linked approval gate are satisfied.
 
 | Priority | Ticket | Status | Depends on | Scope | Approval gate |
 |---|---|---|---|---|---|
-| P0 | [M0-01 Repository/tooling baseline](M0-01-REPOSITORY-TOOLING-BASELINE.md) | testable | ADR-001 | Next.js setup, strict TypeScript, lint, format, unit-test and production-build commands | Product-owner acceptance required after approved independent review |
+| P0 | [M0-01 Repository/tooling baseline](M0-01-REPOSITORY-TOOLING-BASELINE.md) | accepted | ADR-001 | Next.js setup, strict TypeScript, lint, format, unit-test and production-build commands | Accepted by product owner on 22 July 2026 |
 | P0 | M0-02 Data/authorization foundation | proposed | M0-01 accepted | Current Supabase project/config review; profile and invite migrations; explicit RLS and Data API access; server repository boundary; cross-user isolation tests | Approve a migration/RLS brief before any shared database change |
 | P0 | [M0-03 Invite-only sign-in and isolated empty profile](../product/F-001-INVITE-ONLY-SIGN-IN.md) | draft | M0-02 accepted | Magic-link request, server-enforced invite gate, session handling, sign-out, and an empty protected route | Approve feature brief F-001 |
 | P0 | M0-04 Privacy, consent, and deletion-operation design | proposed | M0-02 accepted | User-facing notice; versioned AI-data consent and withdrawal records; deletion-request workflow; data inventory; privacy-policy outline; backup/security-log retention decisions | Approve consent wording, processors/data flow, and retention choices |

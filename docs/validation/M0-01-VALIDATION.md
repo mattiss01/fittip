@@ -2,9 +2,9 @@
 
 **Ticket:** [M0-01 Repository and tooling baseline](../backlog/M0-01-REPOSITORY-TOOLING-BASELINE.md)  
 **Validation date:** 22 July 2026  
-**Lifecycle state:** testable; independent review approved  
+**Lifecycle state:** accepted  
 **Independent review:** approved, 22 July 2026  
-**Product-owner decision pending:** accept M0-01 or return focused corrections
+**Accepted by:** product owner, 22 July 2026 — “I accept M0-01.”
 
 ## Demo
 
@@ -97,6 +97,6 @@ npm 11.16.0 also blocks unreviewed dependency install scripts by default. The cl
 - No database, consent, authorization, deployment, or product behavior was introduced.
 - Dependency versions and the audit disposition must be rechecked before M0-06 deployment because security advisories and patches change over time.
 
-## Decision requested
+## Decision record
 
-After independent review, accept M0-01 or return focused corrections against its acceptance criteria.
+The product owner accepted M0-01 on 22 July 2026 after reviewing the implementation outcome and validation evidence.
