@@ -1,6 +1,6 @@
 # M0-01: Repository and tooling baseline
 
-**Status:** approved  
+**Status:** testable — product-owner acceptance required  
 **Approved by:** product owner, 22 July 2026 — “I approve M0-01 as written.”  
 **Milestone:** M0  
 **Priority:** P0  
