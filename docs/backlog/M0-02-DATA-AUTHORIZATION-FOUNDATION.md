@@ -1,6 +1,6 @@
 # M0-02: Data and authorization foundation
 
-**Status:** in development — local implementation started 23 July 2026
+**Status:** testable — builder implementation and independent review passed 23 July 2026
 
 **Approved by:** product owner, 23 July 2026
 
@@ -14,7 +14,7 @@
 
 **Blocks:** [M0-03 / F-001](../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md), M0-04, M0-05
 
-**Owner:** M0-02 builder assigned automatically after approval; one independent reviewer follows the builder handoff
+**Owner:** Lead agent awaiting product-owner acceptance after builder and independent-review handoffs
 
 ## Outcome
 
@@ -318,5 +318,7 @@ Before product-owner acceptance, create `docs/validation/M0-02-VALIDATION.md` wi
 ## Approval record
 
 The product owner approved this revised brief together with ADR-002 on 23 July 2026. The lead agent immediately assigned the M0-02 builder and moved the ticket to **in development** under the automatic-dispatch rule.
+
+The builder completed the local implementation, an independent reviewer returned one focused publishable-key correction, and the builder corrected it. Independent re-review passed at commit `77a965b`, so the lead agent moved M0-02 to **testable** pending product-owner acceptance.
 
 Remote project creation, Auth configuration, SMTP/CAPTCHA integration, and migration remain separate decisions.

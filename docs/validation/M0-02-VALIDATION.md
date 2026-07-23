@@ -1,6 +1,6 @@
 # M0-02 validation: local data and authorization foundation
 
-**Status:** builder handoff complete — independent review required
+**Status:** testable — independent review passed; product-owner acceptance required
 
 **Date:** 23 July 2026
 
@@ -205,9 +205,27 @@ coverage.
 
 ## Independent review
 
-Pending. The reviewer must independently rerun the authorization tests, inspect
-the actual grants/policies and server boundary, verify no remote change or
-secret exposure, and return approval or focused M0-02 corrections.
+The independent reviewer inspected the full implementation and reran the
+highest-value database and application gates. The first review returned one
+high-severity finding: the public environment validator rejected modern
+`sb_secret_` keys but could accept a legacy JWT-form `service_role` key.
+
+The builder corrected the boundary in commit `77a965b` by requiring the modern
+`sb_publishable_` format and adding non-echo regression tests for both modern
+secret and legacy service-role key shapes.
+
+Independent re-review returned **PASS — no findings** and confirmed:
+
+- clean local reset, migration list, database lint, and database advisors pass;
+- all 51 pgTAP schema, privilege, RLS, and two-user isolation checks pass;
+- generated database types match the clean local schema after line-ending
+  normalization;
+- formatting, ESLint, strict TypeScript, all 21 Vitest tests, and the production
+  build pass;
+- only the five expected correction files changed after the initial review;
+- no database policy, remote linkage, remote mutation, or M0-03 behavior was
+  added by the correction; and
+- the worktree was clean at exact commit `77a965b`.
 
 ## Decision requested after independent review
 
