@@ -1,6 +1,6 @@
 # M0-02 validation: local data and authorization foundation
 
-**Status:** testable — focused M0-02-C1 correction pending independent review and product-owner acceptance
+**Status:** testable — focused M0-02-C1 correction passed independent review; product-owner acceptance required
 
 **Date:** 23 July 2026
 
@@ -62,6 +62,29 @@ The runtime source/migration scan found no username reference and no
 service-role, secret-key, remote-link, remote-push, view, trigger, function, or
 `SECURITY DEFINER` addition. No local Supabase project reference exists.
 
+## Independent correction review
+
+Independent review at exact commit `6de981d` returned **PASS — no findings**.
+The reviewer confirmed:
+
+- a clean local reset, database lint, and security/performance advisors pass;
+- all 41 pgTAP assertions pass;
+- the catalog contains only `user_id` and `created_at`, the primary key and
+  Auth foreign key, the primary-key index, and the two approved owner policies;
+- only authenticated owner `SELECT` and `INSERT` privileges exist;
+- generated types match the clean local schema after normalized comparison;
+- formatting, ESLint, typecheck, all 13 Vitest tests, and the production build
+  pass;
+- F-001 remains draft with an eight-character password minimum and no profile
+  input; and
+- no project reference, remote mutation, or M0-03 implementation exists.
+
+The builder ran the complete application gates with pinned Node 24.18.0. The
+reviewer independently repeated formatting with Node 24.18.0 and the remaining
+application gates with the available host Node 22.14 after its pinned-node
+wrapper stalled; this was classified as an environment limitation, not a code
+finding.
+
 ## Known limitations
 
 - There is no registration, callback, confirmation, recovery, sign-in,
@@ -76,6 +99,6 @@ service-role, secret-key, remote-link, remote-push, view, trigger, function, or
 ## Acceptance boundary
 
 The original M0-02 implementation was product-owner accepted on 23 July 2026.
-M0-02-C1 is a separate approved correction and is not accepted by this record.
-It requires independent review and product-owner acceptance before M0-03 can
-be approved for implementation.
+M0-02-C1 is a separate approved correction. Accept M0-02-C1 as the reviewed
+username-removal correction, or return focused corrections. Acceptance does
+not approve M0-03 or authorize a remote Supabase change.

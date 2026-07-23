@@ -1,6 +1,6 @@
 # M0-02-C1: Remove username from the local profile foundation
 
-**Status:** in development
+**Status:** testable — builder and independent review passed 23 July 2026
 
 **Approved by:** product owner, 23 July 2026
 
@@ -14,7 +14,7 @@
 
 **Blocks:** M0-03 / F-001
 
-**Owner:** `gpt-5.6-terra` builder assigned automatically after approval; independent reviewer follows the builder handoff
+**Owner:** Lead agent awaiting product-owner acceptance after `gpt-5.6-terra` builder and independent-review handoffs
 
 ## Outcome
 
@@ -95,3 +95,7 @@ The builder must provide:
 - confirmation that F-001 remains draft.
 
 The lead agent then assigns an independent reviewer. Product-owner acceptance is requested only after focused corrections and re-review pass.
+
+## Review record
+
+The builder completed the correction at commit `6de981d`. Independent review returned **PASS — no findings** after inspecting the exact diff and independently verifying the corrected schema, privileges, RLS, owner/anonymous/cross-user behavior, generated types, application tests, and production build. M0-02-C1 is **testable** pending product-owner acceptance.
