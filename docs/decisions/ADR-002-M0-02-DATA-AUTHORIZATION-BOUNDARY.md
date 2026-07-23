@@ -1,6 +1,8 @@
 # ADR-002: M0-02 data and authorization boundary
 
-**Status:** draft — product-owner approval required
+**Status:** accepted
+
+**Approval:** Product owner approved M0-02 and this required ADR on 23 July 2026
 
 **Date:** 23 July 2026
 
@@ -90,6 +92,6 @@ Before remote application, local schema and code can be reversed with an ordinar
 
 Changing providers remains possible because the schema is ordinary PostgreSQL and the application depends on repository interfaces. Changing profile creation or exposure requires a new or superseding ADR plus authorization regression tests.
 
-## Approval requested
+## Approval record
 
-Approve this revised ADR with the M0-02 brief. Approval authorizes only the local data/authorization implementation; it does not create, link, or modify a remote Supabase project or enable public registration.
+The product owner approved this revised ADR with the M0-02 brief on 23 July 2026. Approval authorizes only the local data/authorization implementation; it does not create, link, or modify a remote Supabase project or enable public registration.

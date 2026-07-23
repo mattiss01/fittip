@@ -1,6 +1,8 @@
 # M0-02: Data and authorization foundation
 
-**Status:** draft — product-owner approval required before implementation
+**Status:** approved — local implementation may begin
+
+**Approved by:** product owner, 23 July 2026
 
 **Milestone:** M0
 
@@ -313,8 +315,8 @@ Before product-owner acceptance, create `docs/validation/M0-02-VALIDATION.md` wi
 - [Securing the Data API](https://supabase.com/docs/guides/api/securing-your-api)
 - [Local database testing](https://supabase.com/docs/guides/local-development/testing/overview)
 
-## Decision requested
+## Approval record
 
-Approve this revised brief together with ADR-002 to move M0-02 from **draft** to **approved** and authorize local implementation only.
+The product owner approved this revised brief together with ADR-002 on 23 July 2026. M0-02 may enter **in development** when a builder starts the local-only implementation.
 
 Remote project creation, Auth configuration, SMTP/CAPTCHA integration, and migration remain separate decisions.
