@@ -1,6 +1,6 @@
 # M0-02: Data and authorization foundation
 
-**Status:** approved — local implementation may begin
+**Status:** in development — local implementation started 23 July 2026
 
 **Approved by:** product owner, 23 July 2026
 
@@ -10,11 +10,11 @@
 
 **Depends on:** [M0-01 accepted](M0-01-REPOSITORY-TOOLING-BASELINE.md), [ADR-001](../decisions/ADR-001-M0-FOUNDATION.md), [ADR-003](../decisions/ADR-003-PUBLIC-EMAIL-PASSWORD-AUTH.md)
 
-**Architecture decision:** [ADR-002 draft](../decisions/ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md)
+**Architecture decision:** [ADR-002 accepted](../decisions/ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md)
 
 **Blocks:** [M0-03 / F-001](../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md), M0-04, M0-05
 
-**Owner:** one builder after approval; one independent reviewer before acceptance
+**Owner:** M0-02 builder assigned automatically after approval; one independent reviewer follows the builder handoff
 
 ## Outcome
 
@@ -317,6 +317,6 @@ Before product-owner acceptance, create `docs/validation/M0-02-VALIDATION.md` wi
 
 ## Approval record
 
-The product owner approved this revised brief together with ADR-002 on 23 July 2026. M0-02 may enter **in development** when a builder starts the local-only implementation.
+The product owner approved this revised brief together with ADR-002 on 23 July 2026. The lead agent immediately assigned the M0-02 builder and moved the ticket to **in development** under the automatic-dispatch rule.
 
 Remote project creation, Auth configuration, SMTP/CAPTCHA integration, and migration remain separate decisions.
