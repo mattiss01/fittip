@@ -1,11 +1,19 @@
 # FitTip
 
-This repository contains the mobile-first web foundation for FitTip. M0-01 provides only the application and quality-tooling baseline; product features and external-service configuration are intentionally absent.
+This repository contains the mobile-first web and local data foundation for
+FitTip. M0-02 adds a local-only Supabase profile boundary; public registration
+and all other user-visible account behavior remain unimplemented.
 
 ## Prerequisites
 
 - Node.js 24.18.0 LTS (see `.nvmrc`)
 - npm 11.16.0 (bundled with the selected Node.js release)
+- Docker Desktop or another Docker-compatible runtime with at least 7 GB of
+  memory available to the local Supabase stack
+
+The M0-02 implementation was verified with Docker 28.1.1, Supabase CLI 2.109.1,
+`@supabase/supabase-js` 2.110.8, and `@supabase/ssr` 0.12.3. All versions are
+exact-pinned in `package.json` and `package-lock.json`.
 
 ## Install
 
@@ -25,6 +33,87 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). The only route in this baseline is `/`.
 
+## Local Supabase
+
+The checked-in `supabase/config.toml` is a local development configuration. It
+is not linked to a hosted project and must not be exposed to external traffic.
+
+Start the Docker-compatible runtime first, then run:
+
+```powershell
+npx supabase start
+npx supabase db reset --local
+npx supabase db lint --local --level warning --fail-on warning
+npx supabase db advisors --local --type all --level warn --fail-on warn
+npx supabase test db --local supabase/tests/database
+```
+
+The first start downloads the local Supabase images and can take several
+minutes. Later starts are faster. Stop the stack when it is no longer needed:
+
+```powershell
+npx supabase stop
+```
+
+The local Auth server requires email confirmation. Development email is
+captured rather than sent; Mailpit is available at
+[http://127.0.0.1:54324](http://127.0.0.1:54324). M0-03 will implement the
+approved account and confirmation flows. M0-02 does not add registration,
+callbacks, session middleware, or protected routes.
+
+### Environment variables
+
+Copy `.env.example` to an uncommitted `.env.local`. Use the local project URL
+and publishable key reported by `npx supabase status`:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+```
+
+Both values are public project coordinates. The publishable key remains
+low-privilege because database access is limited by explicit grants and RLS.
+Never place a secret key, service-role key, database password, or connection
+string in a `NEXT_PUBLIC_` variable. The application has no secret/service
+Supabase client.
+
+### Schema and access model
+
+M0-02 creates only `public.profiles`:
+
+| Role            |       SELECT |       INSERT | UPDATE | DELETE |
+| --------------- | -----------: | -----------: | -----: | -----: |
+| `anon`          |           No |           No |     No |     No |
+| `authenticated` | Own row only | Own row only |     No |     No |
+
+The user-scoped server repository verifies Auth claims, derives `user_id`
+itself, repeats the ownership filter on reads, and remains subject to RLS.
+Email and all credentials stay in Supabase Auth.
+
+### Migrations and generated types
+
+Create every new migration through the exact-pinned CLI:
+
+```powershell
+npx supabase migration new descriptive_name
+```
+
+Use forward-only corrections after a migration reaches an approved remote
+environment. Do not edit applied history. Verify all committed migrations from
+zero with `npx supabase db reset --local`.
+
+Regenerate the committed public-schema types after a clean reset:
+
+```powershell
+npx supabase gen types --local --lang typescript --schema public |
+  Set-Content -Encoding utf8 src/lib/supabase/database.types.ts
+npm run format
+```
+
+No remote project is approved for this ticket. Do not run `supabase link`,
+`db push`, or any hosted migration/configuration command until the product
+owner names and approves the exact FitTip target environment.
+
 ## Quality commands
 
 ```powershell
@@ -41,4 +130,5 @@ npm run build
 - `test:run` runs the deterministic test suite once.
 - `format` rewrites supported application and repository-tooling files with Prettier.
 
-Supabase setup, authentication, environment configuration, continuous integration, and Vercel linkage belong to later approved tickets.
+Continuous integration, Vercel linkage, hosted Supabase configuration, and
+user-visible authentication belong to later approved tickets.

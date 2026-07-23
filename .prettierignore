@@ -2,6 +2,8 @@
 coverage/
 node_modules/
 package-lock.json
+supabase/.branches/
+supabase/.temp/
 AGENTS.md
 REVISED_PRODUCT_PLAN.md
 docs/
