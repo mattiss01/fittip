@@ -121,4 +121,4 @@ Public account creation is intentionally allowed, but the deployed Auth endpoint
 
 ## Decision requested
 
-Approve this public account flow, username rules, password minimum, email-confirmation requirement, recovery flow, and hosted abuse/email-delivery gate. Approval moves F-001 to **approved**; implementation still waits until M0-02 is accepted.
+Approve this public account flow, username rules, password minimum, email-confirmation requirement, recovery flow, and hosted abuse/email-delivery gate. Because M0-02 is accepted, approval moves F-001 to **in development** and triggers automatic builder assignment and implementation.
