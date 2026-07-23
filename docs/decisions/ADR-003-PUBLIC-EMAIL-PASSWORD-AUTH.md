@@ -8,6 +8,8 @@
 
 **Supersedes:** The invite-only and magic-link authentication clauses of [ADR-001](ADR-001-M0-FOUNDATION.md)
 
+**Partially superseded by:** [ADR-004](ADR-004-USERNAME-FREE-ACCOUNT-PROFILE.md) removes the username requirement while preserving public email/password accounts
+
 ## Context
 
 ADR-001 originally chose invite-only email magic links for a small private beta. The product owner has decided that FitTip should use the intended long-term account model from the beginning: a person can create their own account without an administrator first adding them to an allowlist.
