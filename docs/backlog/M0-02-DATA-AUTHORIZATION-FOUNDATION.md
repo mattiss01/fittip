@@ -1,6 +1,6 @@
 # M0-02: Data and authorization foundation
 
-**Status:** testable — builder implementation and independent review passed 23 July 2026
+**Status:** accepted — product owner accepted the reviewed implementation 23 July 2026
 
 **Approved by:** product owner, 23 July 2026
 
@@ -14,7 +14,7 @@
 
 **Blocks:** [M0-03 / F-001](../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md), M0-04, M0-05
 
-**Owner:** Lead agent awaiting product-owner acceptance after builder and independent-review handoffs
+**Owner:** Completed
 
 ## Outcome
 
@@ -320,5 +320,7 @@ Before product-owner acceptance, create `docs/validation/M0-02-VALIDATION.md` wi
 The product owner approved this revised brief together with ADR-002 on 23 July 2026. The lead agent immediately assigned the M0-02 builder and moved the ticket to **in development** under the automatic-dispatch rule.
 
 The builder completed the local implementation, an independent reviewer returned one focused publishable-key correction, and the builder corrected it. Independent re-review passed at commit `77a965b`, so the lead agent moved M0-02 to **testable** pending product-owner acceptance.
+
+The product owner accepted the reviewed M0-02 development on 23 July 2026. M0-02 is now **accepted**. This acceptance covers the local data/authorization foundation only and does not authorize a remote Supabase project, hosted Auth configuration, or M0-03 implementation.
 
 Remote project creation, Auth configuration, SMTP/CAPTCHA integration, and migration remain separate decisions.

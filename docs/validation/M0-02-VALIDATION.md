@@ -1,6 +1,6 @@
 # M0-02 validation: local data and authorization foundation
 
-**Status:** testable — independent review passed; product-owner acceptance required
+**Status:** accepted — product owner accepted the reviewed implementation 23 July 2026
 
 **Date:** 23 July 2026
 
@@ -227,8 +227,8 @@ Independent re-review returned **PASS — no findings** and confirmed:
   added by the correction; and
 - the worktree was clean at exact commit `77a965b`.
 
-## Decision requested after independent review
+## Product-owner acceptance
 
-Accept M0-02 as FitTip's **local data and authorization foundation**, or return
-focused corrections. Acceptance does not authorize a remote Supabase project,
-hosted Auth configuration, or M0-03 implementation.
+The product owner accepted M0-02 as FitTip's **local data and authorization
+foundation** on 23 July 2026. This acceptance does not authorize a remote
+Supabase project, hosted Auth configuration, or M0-03 implementation.
