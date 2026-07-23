@@ -559,6 +559,8 @@ It is done only when:
 - Create an ADR for decisions that affect future architecture.
 - Do not authorize broad refactors while implementing a feature.
 - Check every handoff against task acceptance criteria.
+- Treat product-owner approval of a dependency-ready ticket as authorization to dispatch it immediately: record `in development`, assign one builder, and start without requesting a second confirmation.
+- Automatically assign an independent reviewer after the builder handoff; involve the product owner again only for a material decision, a genuine blocker, or final acceptance.
 
 ### Builder agent
 
@@ -613,6 +615,8 @@ Feature lifecycle:
 3. **In development:** Implement the approved scope and raise material discoveries immediately.
 4. **Testable:** Provide a mobile demo path, automated-test results, changed-data notes, and known limitations in a validation record.
 5. **Accepted:** The product owner confirms visible behavior and agreed criteria; follow-up changes become new tickets.
+
+Approval is the automatic dispatch trigger. When a ticket's dependencies are satisfied, the lead agent moves it directly from **approved** to **in development**, assigns one builder, and begins delivery. After the builder handoff, the lead agent assigns an independent reviewer without waiting for another product-owner instruction. The product owner is not responsible for operationally starting approved work.
 
 Review a feature brief before each independently valuable slice. Demonstrate every user-visible flow at a 390px mobile viewport before requesting acceptance. Review database migrations, authorization, consent, AI data flow, and new external services before they reach a shared or production environment. At handoff, provide changed files, commands/tests run, results, known limitations, and the exact acceptance decision requested. No feature is complete merely because code exists or a happy path works.
 

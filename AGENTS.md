@@ -16,6 +16,8 @@
 - Do not implement a user-visible feature without an approved feature brief.
 - Product, safety/privacy/cost, and architectural decisions require product-owner approval. Record architecture decisions as ADRs.
 - Work on one approved ticket only. Do not broaden scope during implementation.
+- When the product owner approves a dependency-ready ticket, the lead agent immediately marks it `in development`, assigns one builder, and starts work without waiting for another product-owner prompt.
+- After the builder handoff, the lead agent immediately assigns an independent reviewer. Return to the product owner only for a material decision, a genuine blocker, or final acceptance.
 - Before requesting acceptance, provide the mobile demo path, changed files, tests run, results, known limitations, and the precise decision requested.
 - Use the lifecycle in Product Plan section 15.1: draft, approved, in development, testable, accepted.
 
