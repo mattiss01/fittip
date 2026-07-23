@@ -6,6 +6,8 @@
 
 **Approved by:** product owner, 22 July 2026; authentication amended by product owner, 23 July 2026
 
+**Partially superseded by:** [ADR-004](ADR-004-USERNAME-FREE-ACCOUNT-PROFILE.md). The username-specific historical approval below is superseded; current account profiles are username-free.
+
 ## Approved decision
 
 Approve the recommended M0 foundation as one coherent, reversible starting point, or select an alternative for any individual decision below.
@@ -17,7 +19,7 @@ Approve the recommended M0 foundation as one coherent, reversible starting point
 | Web application | Next.js App Router + strict TypeScript | Supports the mobile web UI and server-side domain/API boundary in one deployable application. |
 | Hosting | Vercel, with preview deployments for review and separate development/production environments | Matches the selected web stack and makes each approved slice reviewable before production. |
 | Database and auth | Supabase PostgreSQL + Supabase Auth | Keeps persistent identity, PostgreSQL, and ownership enforcement together while retaining an ordinary PostgreSQL data model. |
-| Account registration | Public email-and-password registration, verified email, and username-backed profile | Matches the intended self-service account model while retaining reliable recovery and permanent ownership. |
+| Account registration | Public email-and-password registration, verified email, and a username-free profile | Matches the intended self-service account model while retaining reliable recovery and permanent ownership. |
 | Authorization | `user_id` on every owned record; database Row Level Security plus server-side ownership checks | Provides defense in depth and prevents one beta user from accessing another's data. |
 | Database access | Server-only repository layer using a Supabase server client; browser client limited to authenticated UI/session needs | Keeps business rules, service credentials, and AI calls off the client. |
 | AI boundary | Provider-neutral `CoachAI` interface; initial provider chosen in a later M2 decision | M0 should not commit cost or behavior to an AI vendor before plan generation exists. |
@@ -28,7 +30,7 @@ Approve the recommended M0 foundation as one coherent, reversible starting point
 
 ## User-visible M0 behavior
 
-1. A person creates an account with a username, email address, and password.
+1. A person creates an account with an email address and password.
 2. The person confirms control of the email address before entering protected FitTip routes.
 3. The verified user can sign in with email and password, reset a forgotten password, and sign out.
 4. The authenticated user sees their own minimal FitTip profile, never another user's information.

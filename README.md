@@ -1,7 +1,8 @@
 # FitTip
 
 This repository contains the mobile-first web and local data foundation for
-FitTip. M0-02 adds a local-only Supabase profile boundary; public registration
+FitTip. M0-02-C1 corrects the local-only Supabase profile boundary to be
+username-free; public registration
 and all other user-visible account behavior remain unimplemented.
 
 ## Prerequisites

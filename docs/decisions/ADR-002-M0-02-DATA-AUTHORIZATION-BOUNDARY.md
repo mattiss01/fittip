@@ -10,6 +10,8 @@
 
 **Builds on:** [ADR-001](ADR-001-M0-FOUNDATION.md) and [ADR-003](ADR-003-PUBLIC-EMAIL-PASSWORD-AUTH.md)
 
+**Partially superseded by:** [ADR-004](ADR-004-USERNAME-FREE-ACCOUNT-PROFILE.md). The historical username-specific profile decisions below were corrected locally by M0-02-C1; the current profile has only `user_id` and `created_at`.
+
 ## Context
 
 ADR-001 selects Supabase PostgreSQL/Auth, server repositories, `user_id` ownership, and RLS. ADR-003 replaces invite-only magic links with public email/password registration, verified email, and a username-backed profile. M0-02 must now establish the exact first migration and server data boundary without implementing registration UI or hosted Auth configuration.

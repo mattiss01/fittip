@@ -1,18 +1,11 @@
 create table public.profiles (
   user_id uuid not null,
-  username text not null,
   created_at timestamptz not null default now(),
   constraint profiles_pkey primary key (user_id),
   constraint profiles_user_id_fkey
     foreign key (user_id)
     references auth.users (id)
-    on delete cascade,
-  constraint profiles_username_format_check
-    check (
-      username = lower(username)
-      and username ~ '^[a-z][a-z0-9_]{2,29}$'
-    ),
-  constraint profiles_username_key unique (username)
+    on delete cascade
 );
 
 alter table public.profiles enable row level security;

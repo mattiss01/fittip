@@ -46,7 +46,7 @@ FitTip is not a fixed workout logger or generic chatbot. Its value is the combin
 | Memory | Core feature: stored user facts, preferences, constraints, and observed patterns influence future plans. |
 | Language | English only initially. |
 | Devices | Mobile browser first; desktop must remain functional. |
-| Accounts | Public self-service email/password accounts, verified email, username-backed profiles, and per-user data isolation from the first beta build. |
+| Accounts | Public self-service email/password accounts, verified email, username-free profiles, and per-user data isolation from the first beta build. |
 | Business direction | Validate a real business hypothesis through founder-led early beta, then broader public beta and app-store distribution. |
 | Future | User-controlled sharing, shared workouts/plans/groups; no coach-role implementation now. |
 
@@ -75,7 +75,7 @@ This is still not permission for the AI to invent unsafe or unusable prescriptio
 
 A hosted app accessible from multiple devices needs persistent identity and per-user data isolation. A single shared password or seeded owner profile is suitable only for a private personal experiment; it would require a disruptive rewrite before inviting real testers or selling the app.
 
-**Revised MVP decision:** implement public self-service email/password registration, verified email, an authenticated `user_id` on every owned record, and strict per-user authorization/row-level security from the first beta build. Username is profile data; email remains the login identity. Social discovery and payments remain out of scope.
+**Revised MVP decision:** implement public self-service email/password registration, verified email, an authenticated `user_id` on every owned record, and strict per-user authorization/row-level security from the first beta build. Email remains the login identity; no display name or public handle is collected. Social discovery and payments remain out of scope.
 
 The MVP is therefore a **commercially aware early beta**: a small, usable product with public self-service accounts and production-shaped data, privacy, and AI-cost foundations—but without the feature breadth of a finished consumer company.
 
@@ -124,7 +124,7 @@ The first product questions are: do users return weekly, do they log enough cont
 
 | Build in early beta | Design for now, implement later |
 |---|---|
-| Public email/password accounts, verified email, username profiles, and per-user authorization | Referrals, growth loops, social login, passkeys |
+| Public email/password accounts, verified email, minimal profiles, and per-user authorization | Referrals, growth loops, social login, passkeys |
 | Privacy/consent records and deletion-capable data model | Polished self-service export/deletion UX |
 | Secure server-side AI, request limits, cost/usage telemetry | Subscription checkout and entitlement management |
 | Mobile-first responsive web experience | Native iOS/Android client, push notifications, offline mode, watch integrations |
@@ -467,7 +467,7 @@ No React component contains plan-versioning, memory, safety, or AI business rule
 ### M0: Foundation, early beta, and commercial-ready core
 
 - Initialize the repository, strict TypeScript, lint/format, test runner, and CI checks.
-- Implement public email/password registration with verified email, username profile completion, password recovery, and per-user authorization/row-level security.
+- Implement public email/password registration with verified email, minimal profile creation, password recovery, and per-user authorization/row-level security.
 - Set up database migrations, environment documentation, secure deployment, and separate development/production environments.
 - Create a data inventory, an AI-data consent record, a deletion-capable backend design, and a privacy-policy outline.
 - Add server-side AI request limits and privacy-conscious event instrumentation (without raw notes).
@@ -620,7 +620,7 @@ Approval is the automatic dispatch trigger. When a ticket's dependencies are sat
 
 Review a feature brief before each independently valuable slice. Demonstrate every user-visible flow at a 390px mobile viewport before requesting acceptance. Review database migrations, authorization, consent, AI data flow, and new external services before they reach a shared or production environment. At handoff, provide changed files, commands/tests run, results, known limitations, and the exact acceptance decision requested. No feature is complete merely because code exists or a happy path works.
 
-Before application-feature implementation, complete and approve: the M0 architecture decision brief; an M0/M1 backlog of independently testable tickets; `AGENTS.md` containing the invariants and this protocol; and the first feature brief for public email/password registration and an isolated username-backed profile.
+Before application-feature implementation, complete and approve: the M0 architecture decision brief; an M0/M1 backlog of independently testable tickets; `AGENTS.md` containing the invariants and this protocol; and the first feature brief for public email/password registration and an isolated username-free profile.
 
 ## 16. First prompt for the lead Codex agent
 

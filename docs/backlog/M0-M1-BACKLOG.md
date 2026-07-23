@@ -5,7 +5,7 @@
 | Priority | Ticket | Status | Depends on | Scope | Approval gate |
 |---|---|---|---|---|---|
 | P0 | [M0-01 Repository/tooling baseline](M0-01-REPOSITORY-TOOLING-BASELINE.md) | accepted | ADR-001 | Next.js setup, strict TypeScript, lint, format, unit-test and production-build commands | Accepted by product owner on 22 July 2026 |
-| P0 | [M0-02 Data/authorization foundation](M0-02-DATA-AUTHORIZATION-FOUNDATION.md) | accepted | M0-01 accepted and ADR-003 | Local Supabase baseline; username-backed profile migration; explicit privileges/RLS; server repository boundary; cross-user isolation tests | Builder and independent re-review passed; reviewed implementation accepted by product owner on 23 July 2026; exact remote target remains separately gated |
+| P0 | [M0-02 Data/authorization foundation](M0-02-DATA-AUTHORIZATION-FOUNDATION.md) | accepted (corrected locally by M0-02-C1) | M0-01 accepted and ADR-003 | Local Supabase baseline; minimal username-free profile migration; explicit privileges/RLS; server repository boundary; cross-user isolation tests | Original reviewed implementation was accepted on 23 July 2026; M0-02-C1 corrects the never-remotely-applied baseline; exact remote target remains separately gated |
 | P0 | [M0-02-C1 Remove username](M0-02-C1-REMOVE-USERNAME.md) | in development | M0-02 accepted and ADR-004 | Correct the local-only profile schema, repository, tests, generated types, and governing docs while preserving RLS and ownership | Product owner approved removal on 23 July 2026; assigned automatically to a `gpt-5.6-terra` builder; remote changes remain prohibited |
 | P0 | [M0-03 Public account registration and authentication](../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md) | draft | M0-02-C1 accepted | Public email/password signup, email confirmation, profile creation, sign-in/reset/sign-out, sessions, and protected route | Approve the username-free revised feature brief F-001 after M0-02-C1 is accepted |
 | P0 | M0-04 Privacy, consent, and deletion-operation design | proposed | M0-02 accepted | User-facing notice; versioned AI-data consent and withdrawal records; deletion-request workflow; data inventory; privacy-policy outline; backup/security-log retention decisions | Approve consent wording, processors/data flow, and retention choices |
@@ -21,7 +21,7 @@ M0-05 is now the explicit owner of the request-control, AI telemetry-contract, a
 
 Consent tables have intentionally moved out of M0-02 and into M0-04 so their schema cannot precede approval of the consent, withdrawal, processor, and retention decisions. M0-02 may establish generic ownership conventions but must not guess those privacy semantics.
 
-ADR-003 supersedes the earlier invite-only magic-link decision. M0-02 no longer contains an invite table or secret invite repository; M0-03 now owns public email/password registration, verified email, username profile completion, recovery, and session behavior.
+ADR-003 supersedes the earlier invite-only magic-link decision. ADR-004 supersedes its username-specific clauses. M0-02 contains no invite table or secret invite repository; M0-03 (still draft) will own public email/password registration, verified email, username-free profile creation, recovery, and session behavior.
 
 ## Ticket rule
 

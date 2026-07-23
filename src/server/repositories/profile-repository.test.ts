@@ -3,36 +3,17 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { Database } from "@/lib/supabase/database.types";
 import {
-  InvalidUsernameError,
-  normalizeUsername,
   ProfileAuthenticationError,
   ProfilePersistenceError,
   ProfileRepository,
-  UsernameUnavailableError,
-  validateUsername,
 } from "@/server/repositories/profile-repository";
 
 const USER_ID = "00000000-0000-4000-8000-000000000001";
-
-describe("username boundary", () => {
-  it("normalizes whitespace and case", () => {
-    expect(normalizeUsername("  Fit_User7 ")).toBe("fit_user7");
-    expect(validateUsername("  Fit_User7 ")).toBe("fit_user7");
-  });
-
-  it.each(["ab", "1runner", "runner-name", "runner!", "a".repeat(31)])(
-    "rejects invalid username %s",
-    (username) => {
-      expect(() => validateUsername(username)).toThrow(InvalidUsernameError);
-    },
-  );
-});
 
 describe("ProfileRepository", () => {
   it("derives identity and applies an explicit owner filter on reads", async () => {
     const query = createReadQuery({
       user_id: USER_ID,
-      username: "runner_one",
       created_at: "2026-07-23T08:00:00.000Z",
       ignored: "not exposed",
     });
@@ -41,47 +22,28 @@ describe("ProfileRepository", () => {
 
     await expect(repository.getCurrentProfile()).resolves.toEqual({
       userId: USER_ID,
-      username: "runner_one",
       createdAt: "2026-07-23T08:00:00.000Z",
     });
 
     expect(client.auth.getClaims).toHaveBeenCalledOnce();
-    expect(query.select).toHaveBeenCalledWith("user_id, username, created_at");
+    expect(query.select).toHaveBeenCalledWith("user_id, created_at");
     expect(query.eq).toHaveBeenCalledWith("user_id", USER_ID);
   });
 
   it("creates only for the verified current identity", async () => {
     const query = createInsertQuery({
       user_id: USER_ID,
-      username: "runner_two",
       created_at: "2026-07-23T08:00:00.000Z",
     });
     const client = createClient(query.table);
     const repository = new ProfileRepository(client);
 
-    await expect(
-      repository.createCurrentProfile("  Runner_Two "),
-    ).resolves.toEqual({
+    await expect(repository.createCurrentProfile()).resolves.toEqual({
       userId: USER_ID,
-      username: "runner_two",
       createdAt: "2026-07-23T08:00:00.000Z",
     });
 
-    expect(query.insert).toHaveBeenCalledWith({
-      user_id: USER_ID,
-      username: "runner_two",
-    });
-  });
-
-  it("rejects invalid input before making a table query", async () => {
-    const table = vi.fn();
-    const client = createClient(table);
-    const repository = new ProfileRepository(client);
-
-    await expect(repository.createCurrentProfile("bad-name")).rejects.toThrow(
-      InvalidUsernameError,
-    );
-    expect(table).not.toHaveBeenCalled();
+    expect(query.insert).toHaveBeenCalledWith({ user_id: USER_ID });
   });
 
   it("requires verified claims and does not expose provider errors", async () => {
@@ -103,16 +65,6 @@ describe("ProfileRepository", () => {
       expect(String(error)).not.toContain(rawProviderMessage);
     }
     expect(table).not.toHaveBeenCalled();
-  });
-
-  it("maps uniqueness failures to a safe domain error", async () => {
-    const query = createInsertQuery(null, { code: "23505" });
-    const client = createClient(query.table);
-    const repository = new ProfileRepository(client);
-
-    await expect(
-      repository.createCurrentProfile("runner_three"),
-    ).rejects.toThrow(UsernameUnavailableError);
   });
 
   it("maps unknown database failures without exposing details", async () => {

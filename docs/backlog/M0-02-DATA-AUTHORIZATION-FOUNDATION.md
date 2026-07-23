@@ -16,6 +16,8 @@
 
 **Owner:** Completed
 
+> Historical implementation record. M0-02-C1, approved after this acceptance, amends the never-remotely-applied local baseline to a username-free profile. The current schema contains only `user_id` and `created_at`; the original username-specific requirements and evidence below remain as the accepted implementation record they corrected.
+
 ## Outcome
 
 Establish a production-shaped but locally testable Supabase data boundary for FitTip's public email/password account flow. The result gives M0-03 a safe owner-scoped profile table, explicit database privileges, Row Level Security (RLS), a server-only repository boundary, and repeatable cross-user isolation tests.

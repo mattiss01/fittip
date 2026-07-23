@@ -13,17 +13,14 @@ export type Database = {
         Row: {
           created_at: string;
           user_id: string;
-          username: string;
         };
         Insert: {
           created_at?: string;
           user_id: string;
-          username: string;
         };
         Update: {
           created_at?: string;
           user_id?: string;
-          username?: string;
         };
         Relationships: [];
       };

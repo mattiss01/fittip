@@ -8,12 +8,10 @@ import {
   type ServerUserClient,
 } from "@/lib/supabase/server-user-client";
 
-const USERNAME_PATTERN = /^[a-z][a-z0-9_]{2,29}$/;
-const PROFILE_COLUMNS = "user_id, username, created_at" as const;
+const PROFILE_COLUMNS = "user_id, created_at" as const;
 
 export type Profile = {
   userId: string;
-  username: string;
   createdAt: string;
 };
 
@@ -24,41 +22,11 @@ export class ProfileAuthenticationError extends Error {
   }
 }
 
-export class InvalidUsernameError extends Error {
-  constructor() {
-    super(
-      "Username must contain 3-30 lowercase letters, numbers, or underscores and begin with a letter.",
-    );
-    this.name = "InvalidUsernameError";
-  }
-}
-
-export class UsernameUnavailableError extends Error {
-  constructor() {
-    super("That username is unavailable.");
-    this.name = "UsernameUnavailableError";
-  }
-}
-
 export class ProfilePersistenceError extends Error {
   constructor() {
     super("The profile operation could not be completed.");
     this.name = "ProfilePersistenceError";
   }
-}
-
-export function normalizeUsername(username: string): string {
-  return username.trim().toLowerCase();
-}
-
-export function validateUsername(username: string): string {
-  const normalized = normalizeUsername(username);
-
-  if (!USERNAME_PATTERN.test(normalized)) {
-    throw new InvalidUsernameError();
-  }
-
-  return normalized;
 }
 
 export class ProfileRepository {
@@ -81,15 +49,11 @@ export class ProfileRepository {
     return data ? toProfile(data) : null;
   }
 
-  async createCurrentProfile(username: string): Promise<Profile> {
+  async createCurrentProfile(): Promise<Profile> {
     const userId = await this.getVerifiedUserId();
-    const normalizedUsername = validateUsername(username);
     const { data, error } = await this.client
       .from("profiles")
-      .insert({
-        user_id: userId,
-        username: normalizedUsername,
-      })
+      .insert({ user_id: userId })
       .select(PROFILE_COLUMNS)
       .single();
 
@@ -121,19 +85,11 @@ function toProfile(
 ): Profile {
   return {
     userId: row.user_id,
-    username: row.username,
     createdAt: row.created_at,
   };
 }
 
 function mapPersistenceError(code: string | undefined): Error {
-  if (code === "23505") {
-    return new UsernameUnavailableError();
-  }
-
-  if (code === "23514") {
-    return new InvalidUsernameError();
-  }
-
+  void code;
   return new ProfilePersistenceError();
 }
