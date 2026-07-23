@@ -59,7 +59,7 @@ A person needs to create and recover their own permanent FitTip account without 
 
 ### Proposed password rules
 
-- Minimum 12 characters.
+- Minimum 8 characters.
 - Password and confirmation must match.
 - Allow paste and password-manager/autofill use.
 - Never log, return, persist in application state longer than necessary, or include in analytics.
@@ -116,7 +116,7 @@ Public account creation is intentionally allowed, but the deployed Auth endpoint
 ## Open decisions with recommendation
 
 1. **Username rules:** approve the 3–30 character lowercase recommendation above.
-2. **Password minimum:** approve 12 characters without an arbitrary symbol requirement.
+2. **Password minimum:** product owner selected 8 characters without an arbitrary symbol requirement.
 3. **Bot protection timing:** recommended—keep M0-03 local/testable, then require the M0-06 hosted-environment gate before exposing registration externally.
 
 ## Decision requested
