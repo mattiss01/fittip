@@ -4,7 +4,7 @@
 **Scope:** foundation only; no training-planning features  
 **Decision required before:** repository initialization and hosted deployment
 
-**Approved by:** product owner, 22 July 2026
+**Approved by:** product owner, 22 July 2026; authentication amended by product owner, 23 July 2026
 
 ## Approved decision
 
@@ -17,7 +17,7 @@ Approve the recommended M0 foundation as one coherent, reversible starting point
 | Web application | Next.js App Router + strict TypeScript | Supports the mobile web UI and server-side domain/API boundary in one deployable application. |
 | Hosting | Vercel, with preview deployments for review and separate development/production environments | Matches the selected web stack and makes each approved slice reviewable before production. |
 | Database and auth | Supabase PostgreSQL + Supabase Auth | Keeps persistent identity, PostgreSQL, and ownership enforcement together while retaining an ordinary PostgreSQL data model. |
-| Invite-only sign-in | Email magic link plus server-side invite allowlist | Low-friction across devices; no password handling; public registration stays disabled. |
+| Account registration | Public email-and-password registration, verified email, and username-backed profile | Matches the intended self-service account model while retaining reliable recovery and permanent ownership. |
 | Authorization | `user_id` on every owned record; database Row Level Security plus server-side ownership checks | Provides defense in depth and prevents one beta user from accessing another's data. |
 | Database access | Server-only repository layer using a Supabase server client; browser client limited to authenticated UI/session needs | Keeps business rules, service credentials, and AI calls off the client. |
 | AI boundary | Provider-neutral `CoachAI` interface; initial provider chosen in a later M2 decision | M0 should not commit cost or behavior to an AI vendor before plan generation exists. |
@@ -28,15 +28,15 @@ Approve the recommended M0 foundation as one coherent, reversible starting point
 
 ## User-visible M0 behavior
 
-1. An administrator adds a tester email to the invite allowlist.
-2. The invited person requests a magic-link email and can sign in only if invited.
-3. The authenticated user sees an empty FitTip account/profile, never another user's information.
-4. A non-invited email cannot create an account or reach authenticated data.
+1. A person creates an account with a username, email address, and password.
+2. The person confirms control of the email address before entering protected FitTip routes.
+3. The verified user can sign in with email and password, reset a forgotten password, and sign out.
+4. The authenticated user sees their own minimal FitTip profile, never another user's information.
 5. The user can read the privacy/AI-data notice. M0 sends no data to an AI provider.
 
 ## Explicit non-goals
 
-- No public sign-up, password login, social login, payment, profile onboarding, or coach conversation.
+- No social login, passkeys, payment, detailed profile onboarding, or coach conversation.
 - No production AI provider call or storage of training/health data.
 - No complete self-service account-deletion interface.
 - No native mobile application.
@@ -45,8 +45,9 @@ Approve the recommended M0 foundation as one coherent, reversible starting point
 
 ### Authentication
 
-- **Email/password:** familiar, but adds password reset, credential handling, and beta friction.
-- **Passkeys:** attractive long term, but add recovery/device complexity before they add product value.
+- **Invite-only magic links:** initially approved, then superseded by the product owner's public-account decision on 23 July 2026.
+- **Public magic links:** lower password friction, but do not match the requested email-and-password experience.
+- **Passkeys:** attractive later, but add recovery/device compatibility decisions before they add product value.
 - **Single shared password:** rejected; it prevents real identity and secure ownership isolation.
 
 ### Backend/database
@@ -64,18 +65,19 @@ Approve the recommended M0 foundation as one coherent, reversible starting point
 - Service-role credentials never enter browser code. Any use is limited to narrowly scoped server/admin operations.
 - No authorization decision relies on user-editable profile metadata.
 - Local dates are stored with the owner's timezone; events use UTC timestamps.
-- The invite allowlist, consent records, deletion requests, and authorization failures are auditable without raw sensitive notes in product analytics.
-- Magic-link delivery requires a configured email sender before external beta invitations. Development can use Supabase's supported development flow.
+- Account, consent, deletion-request, and authorization events are auditable without raw sensitive notes in product analytics.
+- Email confirmation and password reset require a configured sender before external registration. Development can use Supabase's supported local email-capture flow.
+- Public registration requires reviewed Auth rate limits and a bot-protection decision before broad promotion.
 
 ## Reversal and migration approach
 
-The domain layer depends on repository interfaces rather than UI components. Supabase remains standard PostgreSQL, so data can move to another PostgreSQL provider. Authentication identities are referenced through a local user/profile relation rather than scattered provider-specific fields. Moving away from magic links requires a new authentication decision and migration/testing plan, but does not alter ownership records.
+The domain layer depends on repository interfaces rather than UI components. Supabase remains standard PostgreSQL, so data can move to another PostgreSQL provider. Authentication identities are referenced through a local user/profile relation rather than scattered provider-specific fields. Adding another sign-in method requires a new authentication decision and testing plan but does not alter ownership records.
 
 ## Approval checklist
 
 - [x] Approve Next.js + Vercel.
 - [x] Approve Supabase PostgreSQL + Auth.
-- [x] Approve invite-only email magic links.
+- [x] Approve public email-and-password registration with verified email (supersedes invite-only magic links on 23 July 2026).
 - [x] Approve RLS plus server-side ownership checks.
 - [x] Approve the consent/deletion direction.
 - [x] Approve deferring the AI provider to M2.
@@ -83,4 +85,4 @@ The domain layer depends on repository interfaces rather than UI components. Sup
 
 ## Once approved
 
-Create the M0 ADR, `AGENTS.md`, repository tooling, environment documentation, and the first feature brief/ticket for invite-only sign-in and isolated empty profiles. No other application feature begins without its own approved brief.
+Create the M0 ADRs, `AGENTS.md`, repository tooling, environment documentation, and the first feature brief/ticket for public email/password accounts and isolated profiles. No other application feature begins without its own approved brief.

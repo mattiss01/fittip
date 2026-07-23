@@ -32,7 +32,7 @@ FitTip is not a fixed workout logger or generic chatbot. Its value is the combin
 |---|---|
 | First user | The product owner: sporty, exploratory, pursuing changing challenges across sports. |
 | Tone | Serious coach: precise, direct, encouraging without hype or vague motivational language. |
-| Initial audience | Founder-led private beta: the product owner first, then 5–15 invited testers using mobile browsers. |
+| Initial audience | Founder-led early beta: the product owner first, then a small number of self-registering testers using mobile browsers. |
 | Training scope | Goal- and sport-agnostic from the data model and user experience. Do not position strength as the primary experience. |
 | Goals | Multiple concurrent goals; at most 3 core goals, plus lower-attention supporting goals. Priorities are editable. |
 | Plan horizon | Detailed plan: next 7 days. Longer horizon: high-level roadmap for following weeks/months. |
@@ -46,8 +46,8 @@ FitTip is not a fixed workout logger or generic chatbot. Its value is the combin
 | Memory | Core feature: stored user facts, preferences, constraints, and observed patterns influence future plans. |
 | Language | English only initially. |
 | Devices | Mobile browser first; desktop must remain functional. |
-| Accounts | Real authenticated user accounts and per-user data isolation from the first private-beta build; no public self-serve registration yet. |
-| Business direction | Validate a real business hypothesis after private beta, then public beta and app-store distribution. |
+| Accounts | Public self-service email/password accounts, verified email, username-backed profiles, and per-user data isolation from the first beta build. |
+| Business direction | Validate a real business hypothesis through founder-led early beta, then broader public beta and app-store distribution. |
 | Future | User-controlled sharing, shared workouts/plans/groups; no coach-role implementation now. |
 
 ## 4. Critical requirement clarifications
@@ -71,13 +71,13 @@ Do not ship a global curated catalog in v1. Instead, the AI may create activitie
 
 This is still not permission for the AI to invent unsafe or unusable prescriptions. Generated activities must be structured, validated, editable, and reusable. If the user says “I do not know this exercise” the coaching chat should explain it, offer alternatives, or replace it.
 
-### 4.3 “Private beta first, then an App Store and Google Play business”
+### 4.3 “Founder-led beta first, then an App Store and Google Play business”
 
 A hosted app accessible from multiple devices needs persistent identity and per-user data isolation. A single shared password or seeded owner profile is suitable only for a private personal experiment; it would require a disruptive rewrite before inviting real testers or selling the app.
 
-**Revised MVP decision:** implement real authentication, an authenticated `user_id` on every owned record, and strict per-user authorization/row-level security from the first private-beta build. Keep sign-up invite-only or founder-administered; public registration, social discovery, and payments remain out of scope.
+**Revised MVP decision:** implement public self-service email/password registration, verified email, an authenticated `user_id` on every owned record, and strict per-user authorization/row-level security from the first beta build. Username is profile data; email remains the login identity. Social discovery and payments remain out of scope.
 
-The MVP is therefore a **commercially aware private beta**: a small, usable product with production-shaped data, privacy, and AI-cost foundations—but without the feature breadth of a finished consumer company.
+The MVP is therefore a **commercially aware early beta**: a small, usable product with public self-service accounts and production-shaped data, privacy, and AI-cost foundations—but without the feature breadth of a finished consumer company.
 
 ### 4.4 Health and pain reports
 
@@ -87,7 +87,7 @@ If the user reports pain, illness, severe fatigue, or injury, the plan must beco
 
 ### 5.1 Product strategy
 
-Build the smallest **real** product, not a throwaway personal demo and not the complete eventual company. The product owner uses it first to expose workflow problems; external private-beta users then validate whether the outcome is useful beyond the founder's preferences.
+Build the smallest **real** product, not a throwaway personal demo and not the complete eventual company. The product owner uses it first to expose workflow problems; a small number of self-registering early-beta users then validate whether the outcome is useful beyond the founder's preferences.
 
 The eventual market message cannot be “an app for every sport and every person.” The product architecture stays sport-agnostic, but the business must eventually choose a narrow initial customer and promise. A working hypothesis is:
 
@@ -100,11 +100,11 @@ This is a hypothesis, not permanent positioning. Test it with real behavior befo
 | Stage | Audience | Objective | Evidence to collect | Exit decision |
 |---|---|---|---|---|
 | Founder use | Product owner, 2–4 weeks of real training | Prove the daily workflow is personally useful | Plans created, sessions logged, replans requested/accepted, friction notes | Keep/change the core loop |
-| Private beta | 5–15 invited people with varied goals/sports | Find repeated value outside founder context | Onboarding completion, weekly active use, logging/replan frequency, qualitative interviews | Choose initial customer wedge and fix retention blockers |
+| Early beta | A small number of self-registering people with varied goals/sports | Find repeated value outside founder context | Onboarding completion, weekly active use, logging/replan frequency, qualitative interviews | Choose initial customer wedge and fix retention blockers |
 | Public beta | Limited self-serve audience | Validate onboarding, reliability, privacy, and willingness to return | Activation, week-2/week-4 retention, support load, AI cost/user | Decide whether to invest in native launch and monetization |
 | Store launch | Public iOS/Android users | Validate a scalable business | Conversion, retention, paid conversion, churn, support and safety metrics | Iterate pricing, positioning, and acquisition |
 
-### 5.3 Metrics to instrument from the private beta
+### 5.3 Metrics to instrument from the early beta
 
 Use privacy-conscious, event-based product analytics. Do not send raw sensitive notes to analytics services.
 
@@ -122,9 +122,9 @@ The first product questions are: do users return weekly, do they log enough cont
 
 ### 5.4 Build now versus defer
 
-| Build in private beta | Design for now, implement later |
+| Build in early beta | Design for now, implement later |
 |---|---|
-| Authenticated accounts, invite gate, and per-user authorization | Public sign-up, referrals, growth loops |
+| Public email/password accounts, verified email, username profiles, and per-user authorization | Referrals, growth loops, social login, passkeys |
 | Privacy/consent records and deletion-capable data model | Polished self-service export/deletion UX |
 | Secure server-side AI, request limits, cost/usage telemetry | Subscription checkout and entitlement management |
 | Mobile-first responsive web experience | Native iOS/Android client, push notifications, offline mode, watch integrations |
@@ -464,16 +464,16 @@ No React component contains plan-versioning, memory, safety, or AI business rule
 
 ## 13. MVP milestone sequence
 
-### M0: Foundation, private beta, and commercial-ready core
+### M0: Foundation, early beta, and commercial-ready core
 
 - Initialize the repository, strict TypeScript, lint/format, test runner, and CI checks.
-- Choose/document an invite-only authentication approach and enforce per-user authorization/row-level security.
+- Implement public email/password registration with verified email, username profile completion, password recovery, and per-user authorization/row-level security.
 - Set up database migrations, environment documentation, secure deployment, and separate development/production environments.
 - Create a data inventory, an AI-data consent record, a deletion-capable backend design, and a privacy-policy outline.
 - Add server-side AI request limits and privacy-conscious event instrumentation (without raw notes).
 - Add `AGENTS.md`, ADR directory, and this plan to the repository.
 
-**Exit:** invited users can access only their own data in a private deployment; consent and AI usage are recorded; typecheck, lint, tests, and build run locally/CI.
+**Exit:** registered and email-verified users can access only their own data; confirmation/recovery email and registration-abuse controls are approved for the hosted environment; consent and AI usage are recorded; typecheck, lint, tests, and build run locally/CI.
 
 ### M1: Goals, possibilities, and editable memory
 
@@ -520,11 +520,11 @@ No React component contains plan-versioning, memory, safety, or AI business rule
 
 **Exit:** memory clearly improves future plans without becoming opaque or uncontrollable.
 
-### Later (explicitly out of private beta)
+### Later (explicitly out of early beta)
 
 - Notifications/calendar integration
 - Wearables/data imports
-- Public registration, referrals, and growth loops
+- Referrals, growth loops, social login, and passkeys
 - User-controlled sharing, groups, shared plans/workouts
 - Coach-client roles
 - Subscription billing and entitlement management
@@ -538,7 +538,7 @@ The first end-to-end slice should be: **an owner creates up to three prioritized
 
 It is done only when:
 
-1. It works at a 390px-wide mobile viewport, with one authenticated invited test user unable to access another user's data.
+1. It works at a 390px-wide mobile viewport, with one registered and verified user unable to access another user's data.
 2. The user can create core and supporting goals; attempting a fourth core goal produces a clear validation message.
 3. The plan is dated, contains generic activities appropriate to the selected data, and shows goal allocation.
 4. The user can lock one upcoming session/activity.
@@ -616,7 +616,7 @@ Feature lifecycle:
 
 Review a feature brief before each independently valuable slice. Demonstrate every user-visible flow at a 390px mobile viewport before requesting acceptance. Review database migrations, authorization, consent, AI data flow, and new external services before they reach a shared or production environment. At handoff, provide changed files, commands/tests run, results, known limitations, and the exact acceptance decision requested. No feature is complete merely because code exists or a happy path works.
 
-Before application-feature implementation, complete and approve: the M0 architecture decision brief; an M0/M1 backlog of independently testable tickets; `AGENTS.md` containing the invariants and this protocol; and the first feature brief for invite-only sign-in and an empty, isolated user profile.
+Before application-feature implementation, complete and approve: the M0 architecture decision brief; an M0/M1 backlog of independently testable tickets; `AGENTS.md` containing the invariants and this protocol; and the first feature brief for public email/password registration and an isolated username-backed profile.
 
 ## 16. First prompt for the lead Codex agent
 
@@ -627,7 +627,7 @@ The repository is new. Do not attempt to build the whole application.
 
 First, inspect the repository and produce a concise implementation plan for M0 and M1 only. Create:
 1. AGENTS.md with the product invariants and collaboration rules from the plan.
-2. An ADR proposing the exact stack, invite-only authentication approach for private cross-device use, database access pattern, consent/deletion design, and test commands.
+2. An ADR proposing the exact stack, public email/password authentication approach for cross-device use, database access pattern, consent/deletion design, and test commands.
 3. A prioritized set of small tickets for M0 and M1. Every ticket must state scope, non-goals, acceptance criteria, and test plan.
 
 Make reversible defaults where the plan does not prescribe a detail. Flag only decisions that cannot be safely inferred.
@@ -640,7 +640,7 @@ Do not implement application features until this planning output is reviewed. Pr
 These do not block foundation work, but should be decided before generating real plans:
 
 1. Default measurement units: metric, imperial, or selected during intake.
-2. Which invite-only authentication method is acceptable for your private beta (for example email magic link, passkey, or email/password).
+2. Which registration-abuse protection and transactional email provider are acceptable before public hosted registration is enabled.
 3. Whether chat can create a plan automatically after the user confirms facts, or always requires a visible “Generate plan” action. Recommendation: visible action.
 4. The maximum daily time/session duration and maximum weekly days that the planner may propose by default.
 5. The exact pain/illness threshold at which the app pauses planning and directs the user to professional help.
@@ -648,4 +648,4 @@ These do not block foundation work, but should be decided before generating real
 
 ## 18. Explicit non-requirements for now
 
-Do not delay the core loop for public registration, reminders, billing, social sharing, groups, coaching roles, wearable integrations, native-app packaging, or a polished exercise-media library. Do not defer authenticated user isolation, consent, privacy-ready data handling, or AI-cost observability. Build the trustworthy personal coach loop first: goals and memory → proposal → actual log → interactive replan → versioned history.
+Do not delay the core loop for referrals, reminders, billing, social sharing, groups, coaching roles, wearable integrations, native-app packaging, social login/passkeys, or a polished exercise-media library. Do not defer public account recovery, authenticated user isolation, consent, privacy-ready data handling, or AI-cost observability. Build the trustworthy personal coach loop first: goals and memory → proposal → actual log → interactive replan → versioned history.
