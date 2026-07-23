@@ -71,11 +71,13 @@ NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 ```
 
-Both values are public project coordinates. The publishable key remains
-low-privilege because database access is limited by explicit grants and RLS.
-Never place a secret key, service-role key, database password, or connection
-string in a `NEXT_PUBLIC_` variable. The application has no secret/service
-Supabase client.
+Both values are public project coordinates. The key must use the modern
+`sb_publishable_...` format; the environment validator rejects modern secret
+keys and all legacy JWT-form keys rather than trying to distinguish a legacy
+`anon` key from a legacy `service_role` key. The exact-pinned local CLI reports
+a compatible modern publishable key. Never place a secret key, service-role
+key, database password, or connection string in a `NEXT_PUBLIC_` variable. The
+application has no secret/service Supabase client.
 
 ### Schema and access model
 

@@ -39,23 +39,31 @@ describe("readSupabasePublicEnvironment", () => {
     );
   });
 
-  it("rejects a secret key without echoing it", () => {
-    const secret = "sb_secret_do-not-log-this";
-
+  it.each([
+    ["a modern secret key", "sb_secret_do-not-log-this"],
+    [
+      "a legacy service-role JWT",
+      [
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+        "eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UifQ",
+        "fake-signature-not-a-real-key",
+      ].join("."),
+    ],
+  ])("rejects %s without echoing it", (_description, unsafeKey) => {
     expect(() =>
       readSupabasePublicEnvironment({
         NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
-        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: secret,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: unsafeKey,
       }),
     ).toThrow("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
 
     try {
       readSupabasePublicEnvironment({
         NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
-        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: secret,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: unsafeKey,
       });
     } catch (error) {
-      expect(String(error)).not.toContain(secret);
+      expect(String(error)).not.toContain(unsafeKey);
     }
   });
 });

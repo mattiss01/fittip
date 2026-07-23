@@ -136,6 +136,7 @@ The 51-test pgTAP suite proves:
 | `npx supabase test db --local supabase/tests/database/m0_02_authorization.test.sql` | PASS — 1 file, 51 tests |
 | `npx supabase migration list --local` | PASS — migration `20260723084625` applied locally |
 | `npx supabase gen types --local --lang typescript --schema public` | PASS — committed types generated from local schema |
+| Masked `npx supabase status --output json` format check | PASS — local key exists, matches `sb_publishable_...`, and no key material was printed |
 
 ### Application
 
@@ -146,7 +147,7 @@ All application gates used the verified Node.js 24.18.0 runtime.
 | Prettier check | PASS — all matched files |
 | ESLint | PASS — no findings |
 | `tsc --noEmit` | PASS |
-| Vitest | PASS — 5 files, 20 tests |
+| Vitest | PASS — 5 files, 21 tests |
 | Next.js production build | PASS — static `/` and `/_not-found` |
 
 The combined `npx`/npm wrapper was abnormally slow in this Windows/OneDrive
@@ -177,7 +178,9 @@ coverage.
 
 - `.env.example` contains only a local URL and a non-functional publishable-key
   placeholder.
-- The environment validator rejects `sb_secret_` values without echoing them.
+- The environment validator accepts only the modern `sb_publishable_...`
+  format. It rejects both `sb_secret_` values and legacy JWT-form keys without
+  echoing either value, closing the legacy `service_role` bypass path.
 - `server-only` marks the SSR client and repository; the architecture test
   rejects client-component repository imports.
 - The codebase contains no service-role/secret client, password field, token
