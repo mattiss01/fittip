@@ -6,41 +6,43 @@
 
 **Priority:** P0
 
-**Depends on:** [M0-01 accepted](M0-01-REPOSITORY-TOOLING-BASELINE.md), [ADR-001](../decisions/ADR-001-M0-FOUNDATION.md)
+**Depends on:** [M0-01 accepted](M0-01-REPOSITORY-TOOLING-BASELINE.md), [ADR-001](../decisions/ADR-001-M0-FOUNDATION.md), [ADR-003](../decisions/ADR-003-PUBLIC-EMAIL-PASSWORD-AUTH.md)
 
 **Architecture decision:** [ADR-002 draft](../decisions/ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md)
 
-**Blocks:** [M0-03 / F-001](../product/F-001-INVITE-ONLY-SIGN-IN.md), M0-04, M0-05
+**Blocks:** [M0-03 / F-001](../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md), M0-04, M0-05
 
 **Owner:** one builder after approval; one independent reviewer before acceptance
 
 ## Outcome
 
-Establish a production-shaped but locally testable Supabase data boundary for FitTip. The result gives the next ticket a safe place to implement invite-only sign-in: a minimal profile relation, a non-client-readable invite allowlist, explicit database privileges, Row Level Security (RLS), server-only repositories, and repeatable cross-user isolation tests.
+Establish a production-shaped but locally testable Supabase data boundary for FitTip's public email/password account flow. The result gives M0-03 a safe owner-scoped profile table, explicit database privileges, Row Level Security (RLS), a server-only repository boundary, and repeatable cross-user isolation tests.
 
-This ticket creates no user-visible sign-in flow and sends no email. It proves the data and authorization foundation before authentication UI is added.
+This ticket creates no registration or sign-in screen and changes no hosted Auth settings. It proves the data and authorization foundation before public account behavior is implemented.
 
 ## Approval and environment gates
 
 Approval of this brief and ADR-002 authorizes implementation against the local Supabase development stack only.
 
-It does **not** authorize any of the following:
+It does **not** authorize:
 
 - creating a paid or billable Supabase project;
 - linking the repository to a remote Supabase project;
 - applying a migration to an existing shared or production database;
-- changing authentication, email, redirect, API, or Data API settings in a remote project;
+- enabling public registration or changing Auth/email/redirect/Data API settings in a remote project;
+- configuring an external SMTP or CAPTCHA provider;
 - copying existing data into FitTip.
 
-Before any remote change, the product owner must identify the exact target environment and approve it in writing. The recommended target is a dedicated FitTip development project, separate from any unrelated application or production data.
+Before any remote change, the product owner must identify the exact target environment and approve it in writing. The recommended target remains a dedicated FitTip development project.
 
-## Current-state review — 22 July 2026
+## Current-state review — 23 July 2026
 
 ### Repository
 
-- M0-01 is accepted and the repository has Next.js, strict TypeScript, lint, format, Vitest, and production-build commands.
+- M0-01 is accepted and provides Next.js, strict TypeScript, lint, format, Vitest, and production-build commands.
 - The repository contains no `supabase/` directory, migrations, database types, Supabase dependencies, or committed environment template.
 - No application feature currently reads or writes persistent data.
+- ADR-003 has replaced the previous invite-only direction with public email/password registration and verified email.
 
 ### Connected Supabase account
 
@@ -50,126 +52,103 @@ A read-only review found one active Supabase project in the connected account. I
 - it has no migrations reported through the project migration history;
 - its Security Advisor reports several permissive policies that allow unrestricted anonymous writes, plus a public storage-listing warning.
 
-M0-02 must not alter, clean up, import from, or otherwise reuse that project without a separate product-owner decision. Those existing warnings are outside this ticket and belong to the other application using that project.
+M0-02 must not alter, clean up, import from, or reuse that project without a separate product-owner decision. Those tables and warnings belong to the other application using that project.
 
-### Current platform changes relevant to this ticket
+### Current platform behavior relevant to this ticket
 
-- New Supabase projects now default toward explicit Data API grants instead of automatically exposing new tables. M0-02 therefore records grants in the same migration as RLS policies and does not rely on project defaults.
-- New hosted projects use publishable and secret API keys. FitTip will use a publishable key for user-scoped access and a server-only secret key only for the narrow invite/provisioning boundary. Legacy `anon` and `service_role` key names are not the design default.
-- Authentication alone is not authorization. Both object privileges and row policies are required and are tested independently.
+- New Supabase projects require deliberate Data API privileges. M0-02 records grants in the same migration as RLS and does not rely on project defaults.
+- FitTip uses a publishable key for user-scoped access. M0-02 requires no application secret key because invite administration has been removed.
+- Supabase Auth owns email identities, password hashes, confirmation/reset tokens, and sessions. The FitTip profile table does not duplicate them.
+- Authentication alone is not authorization. Object privileges, RLS, and server repository filters are tested independently.
 
 ## Approved foundation decisions this ticket applies
 
-M0-02 does not reopen the accepted choices in ADR-001:
+M0-02 applies rather than reopens these accepted choices:
 
 - Supabase PostgreSQL and Supabase Auth;
+- public email/password registration with email confirmation;
+- email as login identity and username as profile data;
 - `user_id` on every user-owned record;
 - RLS plus independent server-side ownership scoping;
 - database access behind server repositories;
-- no service or secret credential in browser code;
-- no authorization based on user-editable metadata.
+- no service/secret credential in browser code;
+- no authorization based on username, email, or user-editable metadata.
 
-The product owner still needs to approve the exact M0-02 choices in ADR-002: the initial tables, privileges, repository split, local-first environment boundary, and delayed profile provisioning.
+The product owner still needs to approve the exact profile schema, privileges, repository boundary, and local-first environment approach in this brief and ADR-002.
 
 ## Scope
 
 ### 1. Local Supabase baseline
 
 - Add the Supabase CLI as an exact-pinned development dependency using its supported local-development workflow.
-- Initialize versioned local Supabase configuration under `supabase/`.
+- Initialize versioned local configuration under `supabase/`.
 - Document Docker/local prerequisites and the commands to start, stop, reset, lint, test, and generate TypeScript types.
+- Configure local Auth behavior needed for later password/confirmation testing, without changing a remote project.
 - Add an environment example containing names and safe descriptions only—never real values.
 - Verify a clean database reset applies every committed migration from zero.
 
-The builder must review the current official Supabase changelog, CLI help, RLS guidance, server-side Auth guidance, and Data API security guidance again immediately before implementation. If current behavior conflicts with this brief, stop and return the conflict to the lead agent rather than improvising.
+The builder must review the current official Supabase changelog, CLI help, password-auth, SSR Auth, RLS, Data API, and database-testing guidance immediately before implementation. If current behavior conflicts with the approved brief, stop and return the conflict to the lead agent.
 
-### 2. Minimal schema
+### 2. Minimal profile schema
 
-Create one forward migration through `supabase migration new`; do not hand-invent an applied migration timestamp and do not edit a migration after it has reached an approved remote environment.
+Create one forward migration through `supabase migration new`. Do not invent an applied migration timestamp and do not edit a migration after it reaches an approved remote environment.
 
 #### `public.profiles`
 
-Purpose: a minimal one-to-one local relation for an authenticated FitTip identity.
+Purpose: the minimal user-owned FitTip profile completed after email confirmation.
 
 | Column | Type | Rules |
 |---|---|---|
 | `user_id` | `uuid` | Primary key; not null; references `auth.users(id)`; delete cascades with the Auth identity |
+| `username` | `text` | Not null; unique; normalized lowercase; 3–30 characters; begins with a letter; remaining characters are lowercase letters, numbers, or underscore |
 | `created_at` | `timestamptz` | Not null; defaults to `now()` |
 
 Rules:
 
 - `user_id` is both identity reference and ownership key; no second profile id is created.
-- The table contains no display name, health data, training data, onboarding answers, role, plan, consent, or preference fields.
-- No automatic `auth.users` trigger creates profiles in this ticket. M0-03 owns the exact sequence “invite verified → Auth identity accepted → profile provisioned.” This prevents a generic Auth signup from silently becoming a FitTip account.
-- Future profile fields require their own approved ticket and migration.
-
-#### `public.invites`
-
-Purpose: server-managed allowlist data needed by M0-03 before an account exists.
-
-| Column | Type | Rules |
-|---|---|---|
-| `id` | `uuid` | Primary key; defaults to `gen_random_uuid()` |
-| `email_normalized` | `text` | Not null; unique; must equal `lower(btrim(email_normalized))` |
-| `status` | `text` | Not null; only `active` or `revoked`; defaults to `active` |
-| `admin_note` | `text` | Optional; never returned to a browser or product analytics |
-| `created_at` | `timestamptz` | Not null; defaults to `now()` |
-| `updated_at` | `timestamptz` | Not null; defaults to `now()`; changed explicitly by the server/admin operation |
-| `revoked_at` | `timestamptz` | Null while active; required when revoked |
-
-Rules:
-
-- A check constraint keeps `status` and `revoked_at` consistent.
-- Email syntax validation and the final normalization routine belong to M0-03; this table only enforces the approved lower-case/trimmed storage form.
-- An invite is a system-owned pre-account access-control record, not user-owned data, so it cannot carry a meaningful `user_id` before the account exists. This is the narrow documented exception to the owned-record rule.
-- Hard delete is not part of the application privilege set. Revocation is an update so the access decision remains explainable.
-- No consent, deletion request, analytics, AI request, training, memory, goal, activity, or audit-event table is created in M0-02.
+- Email is not copied into this table. The verified email remains in Supabase Auth.
+- Passwords, password hashes, confirmation tokens, reset tokens, and sessions never enter this table.
+- Username is profile data, not an Auth or authorization claim.
+- Database constraints independently enforce the approved username form; client/server validation alone is insufficient.
+- No automatic `auth.users` trigger creates a profile. M0-03 creates the profile after verified sign-in and revalidates any candidate username from untrusted Auth metadata.
+- An unconfirmed or abandoned Auth identity may temporarily have no profile and receives no protected FitTip data.
+- No invite table or allowlist data is created.
+- No consent, deletion request, analytics, AI request, training, memory, goal, activity, or audit-event table is created.
 
 ### 3. Explicit privileges and RLS
 
-The migration must revoke broad/default access for these two objects before granting the minimum required privileges. It must not depend on the remote project's default-grant toggle.
-
-#### `profiles`
+The migration must revoke broad/default access on `public.profiles` before granting the minimum required privileges.
 
 - Enable RLS.
 - `anon`: no table privileges and no policy.
-- `authenticated`: `SELECT` only.
-- `service_role`/secret server role: `SELECT` and `INSERT` only, reserved for the later invite-verified provisioning path.
-- Owner-select policy: `TO authenticated`, with an explicit non-null authenticated user check and `(select auth.uid()) = user_id`.
-- No authenticated `INSERT`, `UPDATE`, or `DELETE` policy in this ticket.
+- `authenticated`: `SELECT` and `INSERT`; no `UPDATE` or `DELETE`.
+- Owner-select policy: `TO authenticated`, explicit non-null authenticated user check, and `(select auth.uid()) = user_id`.
+- Owner-insert policy: `TO authenticated` with `WITH CHECK ((select auth.uid()) = user_id)`.
+- No policy makes usernames or profiles public.
+- No application grant is required for a secret/service role in this ticket.
 
-The authenticated profile repository must also filter by the verified current user id. RLS is the database backstop, not a replacement for server-side scoping.
-
-#### `invites`
-
-- Enable RLS even though ordinary clients receive no privileges.
-- `anon`: no table privileges and no policy.
-- `authenticated`: no table privileges and no policy.
-- `service_role`/secret server role: `SELECT`, `INSERT`, and `UPDATE`; no `DELETE`.
-- No client-readable RLS policy.
-
-The table may be addressed only by a narrowly scoped server-only invite repository using a secret key. A publishable-key request must receive no rows and must not be able to infer invite membership.
+The profile repository must also filter by the verified current user id. RLS is the database backstop, not a substitute for server-side scoping.
 
 #### General database requirements
 
-- Use lowercase `snake_case` identifiers, named constraints, `timestamptz`, and explicit `NOT NULL` constraints.
-- Index every foreign key or RLS filter column unless its primary/unique index already provides the required index. `profiles.user_id` needs no duplicate index because it is the primary key.
-- Do not create a view, RPC, `SECURITY DEFINER` function, custom Postgres role, or exposed custom schema in this ticket.
-- Do not use `auth.jwt()->'user_metadata'` or any other user-editable metadata for authorization.
-- Do not grant `ALL` to `anon`, `authenticated`, or the secret server role.
+- Use lowercase `snake_case`, named constraints, `timestamptz`, and explicit `NOT NULL`.
+- Do not add a duplicate `user_id` index because the primary key already supplies it.
+- The unique username constraint/index must operate on the same normalized value enforced by the check constraint.
+- Do not create a view, RPC, trigger, `SECURITY DEFINER` function, custom Postgres role, or exposed custom schema.
+- Do not use `auth.jwt()->'user_metadata'`, email, or username for authorization.
+- Do not grant `ALL` to any application role.
 
 ### 4. Server-only database boundary
 
 Add a small, typed boundary with no UI consumer yet:
 
-- a user-scoped server Supabase client that uses the publishable key plus the request's authenticated session and never trusts a caller-supplied user id;
-- a narrowly scoped secret server client that is importable only from server code;
-- a profile repository that resolves the verified current identity and queries with an explicit `user_id` filter;
-- an invite repository that can answer whether one normalized email has an active invite without listing or returning the full allowlist;
+- a user-scoped server Supabase client using the publishable key and request session;
+- a profile repository that resolves the verified current identity and never trusts a caller-supplied ownership id;
+- repository operations to get the current profile and create it for the current user;
 - generated database types from the committed local schema;
-- environment validation that fails clearly when a required server variable is absent.
+- environment validation that fails clearly when a required value is absent.
 
-Suggested paths (the builder may make a reversible naming adjustment):
+Suggested paths:
 
 ```text
 supabase/
@@ -180,60 +159,62 @@ src/lib/supabase/
   database.types.ts
   env.ts
   server-user-client.ts
-  server-secret-client.ts
 src/server/repositories/
   profile-repository.ts
-  invite-repository.ts
 ```
 
 Required boundary rules:
 
-- Files that can create a secret client must use a server-only guard.
-- Secret variables must not use the `NEXT_PUBLIC_` prefix.
+- Server code obtains identity through verified Auth claims/session handling, not form fields.
 - Browser components must not import a database repository.
-- Repository results expose only the fields required by the calling service.
-- Logs and thrown errors must not contain API keys, Auth tokens, full invite lists, or raw database connection strings.
-- M0-02 must not add an endpoint, Server Action, page, form, middleware rule, magic-link request, profile-creation flow, or administrator UI.
+- Profile creation sets `user_id` from the verified identity and does not accept caller-supplied ownership.
+- Candidate usernames are normalized and validated again at the server/database boundary.
+- Repository results expose only approved profile fields.
+- Logs and errors must not contain passwords, API keys, Auth tokens, raw connection strings, or raw provider responses.
+- M0-02 must not add a page, endpoint, Server Action, middleware rule, signup call, confirmation callback, password reset, or protected-route UI.
 
 ### 5. Documentation
 
-Update the repository documentation with:
+Update repository documentation with:
 
 - exact local setup and verification commands;
-- environment-variable names and which are safe for a browser;
+- environment-variable names and browser/server visibility;
 - migration creation and forward-only correction rules;
-- how to generate database types after a migration;
-- how to run the RLS tests;
-- a warning that linking/applying to a remote project requires the explicit gate above;
-- a record of the exact package and CLI versions selected by the builder.
+- database-type generation;
+- direct RLS-test instructions;
+- local Auth/email-capture notes needed by M0-03;
+- the remote-project approval warning;
+- exact package and CLI versions selected by the builder.
 
 ## Non-goals
 
-- No sign-in page, magic link, callback, session middleware, sign-out, or protected route; those belong to M0-03.
-- No creation of a remote Supabase project and no migration of the currently connected project.
-- No public registration and no administrator UI.
-- No automatic profile trigger or unapproved account-provisioning behavior.
-- No consent or withdrawal schema; that belongs to M0-04.
+- No create-account, email-confirmation, sign-in, password-reset, sign-out, callback, session middleware, or protected route; those belong to M0-03.
+- No invite allowlist, invite repository, secret client, invitation email, or administrator UI.
+- No remote Supabase project creation or migration.
+- No external SMTP or CAPTCHA integration.
+- No public exposure of profiles or usernames.
+- No consent/withdrawal schema; that belongs to M0-04.
 - No deletion request, retention, analytics, AI telemetry, rate limiting, or AI provider call.
 - No goal, memory, plan, activity, log, conversation, proposal, or training data.
 - No Vercel environment setup, CI, preview deployment, or hosted smoke test; those belong to M0-06 unless separately approved.
-- No cleanup or security repair for unrelated data found in the existing Supabase project.
+- No cleanup or repair of the unrelated connected Supabase project.
 
 ## Acceptance criteria
 
-1. A new contributor can follow the documented local prerequisites and start the local Supabase stack.
+1. A new contributor can start the local Supabase stack from the documented prerequisites.
 2. `supabase db reset` succeeds from a clean state using only committed configuration and migrations.
-3. The resulting schema contains exactly the approved M0-02 FitTip tables/columns/constraints and no speculative product tables.
-4. RLS is enabled on both tables, and grants match the matrix in this brief rather than relying on project defaults.
-5. As user A, the profile repository can read user A's profile and never returns user B's profile.
-6. User A cannot insert, update, delete, or reassign a profile through the authenticated role; user B cannot read or modify user A's profile.
-7. An anonymous request cannot read either table.
-8. An ordinary authenticated request cannot read, list, insert, update, or delete invites.
-9. The server-only invite repository returns only active/not-active for one normalized email and does not expose the allowlist or admin note.
-10. No secret key or secret-client module is reachable from a browser bundle, committed file, test snapshot, or log.
-11. Generated TypeScript database types match the clean-reset schema and are committed.
-12. Database tests, repository tests, M0-01 quality gates, and the production build all pass.
-13. No remote Supabase project or setting changed while satisfying this ticket unless a separate written approval identifies the exact target.
+3. The schema contains exactly the approved M0-02 profile table/constraints and no invite or speculative product table.
+4. RLS is enabled and grants match this brief rather than project defaults.
+5. User A can insert and read profile A through the authenticated role.
+6. User A cannot insert a profile for user B, update any profile, read profile B, or delete profiles.
+7. User B cannot read or modify profile A.
+8. An anonymous request cannot read or insert profiles.
+9. Invalid and duplicate normalized usernames are rejected by database constraints.
+10. The repository derives `user_id` from verified identity and applies an explicit ownership filter.
+11. No secret key, password, token, or sensitive Auth value appears in browser code, committed files, snapshots, or logs.
+12. Generated TypeScript database types match the clean-reset schema and are committed.
+13. Database tests, repository tests, M0-01 quality gates, and production build pass.
+14. No remote Supabase project or setting changed unless a separate approval identifies the exact target.
 
 ## Required tests
 
@@ -241,29 +222,29 @@ Update the repository documentation with:
 
 Use transaction-scoped fixtures with at least two Auth users and assert:
 
-- required tables, columns, types, constraints, keys, and RLS flags exist;
+- required table, columns, types, constraints, foreign key, primary key, unique index, and RLS flag exist;
 - anonymous access is denied;
-- authenticated user A sees only profile A;
-- authenticated user B sees only profile B;
-- cross-user profile reads return no row;
-- authenticated profile insert, update, ownership reassignment, and delete do not succeed;
-- authenticated access to every invite operation is denied;
-- malformed invite status or inconsistent `revoked_at` is rejected;
-- duplicate normalized invite email is rejected.
+- authenticated user A can insert/read only profile A;
+- user A cannot insert for B;
+- user A cannot read profile B;
+- authenticated update and delete are denied;
+- username normalization, length, first-character, and character-set constraints reject invalid data;
+- duplicate username is rejected.
 
 Do not count a UI or repository test as a substitute for direct RLS testing.
 
 ### TypeScript/Vitest
 
-- Environment validation accepts safe test values and reports missing variables without echoing secrets.
-- The profile repository derives the current user identity from the authenticated server context and includes an explicit ownership filter.
-- The invite repository normalizes its input once, selects only the active-match result, and does not return invite rows.
-- Client-reachable modules cannot import the secret client; add an enforceable lint/import rule or a focused architecture test if the existing toolchain can do so without a broad refactor.
-- Error mapping does not leak raw Supabase errors or secret values.
+- Environment validation accepts safe test values and reports missing variables without echoing sensitive values.
+- The repository derives current identity from the authenticated server context.
+- Profile creation ignores or rejects caller-supplied ownership.
+- Username input is normalized and validated before the database call.
+- Expected uniqueness/constraint errors map to safe domain errors.
+- Client-reachable modules cannot import the server repository.
 
 ### Commands expected at handoff
 
-The builder must verify the exact commands against the installed CLI's `--help`. The anticipated sequence is:
+The builder must verify exact commands against the installed CLI's `--help`. The anticipated sequence is:
 
 ```powershell
 npm.cmd ci
@@ -279,22 +260,22 @@ npm.cmd run test:run
 npm.cmd run build
 ```
 
-If Docker or a supported local prerequisite is unavailable, the builder stops and reports that concrete blocker. The builder must not substitute an unapproved shared database.
+If Docker or another supported local prerequisite is unavailable, stop and report the blocker. Do not substitute an unapproved shared database.
 
 ## Implementation sequence
 
-1. Re-read AGENTS.md, this brief, ADR-001, ADR-002, F-001, and the current official Supabase guidance.
-2. Confirm the worktree is clean enough to isolate this ticket and record current package versions.
-3. Inspect CLI/package choices and exact-pin the smallest required dependency set.
-4. Initialize the local Supabase structure and document prerequisites.
-5. Create the migration through the supported CLI workflow.
-6. Add direct schema, privilege, and RLS tests before repository integration.
-7. Generate and commit TypeScript database types from a clean reset.
-8. Add the server-only clients and the two narrow repositories.
-9. Add focused repository/environment/import-boundary tests.
-10. Run the full validation sequence from a clean database.
-11. Ask an independent reviewer to check the diff against every acceptance criterion, emphasizing cross-user isolation and secret exposure.
-12. Correct only M0-02 findings, then prepare the validation record and acceptance request.
+1. Re-read AGENTS.md, this brief, ADR-001, ADR-002, ADR-003, F-001, and current official Supabase guidance.
+2. Confirm the worktree and dependency baseline.
+3. Verify CLI/package choices and exact-pin the smallest required dependency set.
+4. Initialize local Supabase and document prerequisites.
+5. Create the profile migration through the supported CLI workflow.
+6. Add direct schema, privilege, constraint, and RLS tests.
+7. Generate and commit database types from a clean reset.
+8. Add the user-scoped server client and profile repository.
+9. Add repository/environment/import-boundary tests.
+10. Run the complete validation sequence from a clean database.
+11. Ask an independent reviewer to check every acceptance criterion, emphasizing cross-user isolation and sensitive-data exposure.
+12. Correct only M0-02 findings, then prepare the validation record.
 
 ## Builder handoff requirements
 
@@ -302,36 +283,38 @@ Before requesting review, provide:
 
 - changed files and one-sentence purpose for each group;
 - selected dependency and CLI versions;
-- exact commands run and their results;
-- database reset, lint, and pgTAP output summary;
-- the privilege/policy matrix actually created;
-- evidence for anonymous and cross-user denial cases;
+- exact commands and results;
+- database reset, lint, and pgTAP summary;
+- the actual privilege/policy matrix;
+- evidence for anonymous and cross-user denial;
+- evidence that username constraints exist at the database boundary;
 - evidence that no remote project changed;
-- evidence that the secret client cannot enter browser code;
-- known limitations and any deviation from this brief;
-- a statement that M0-03 remains unimplemented.
+- evidence that no secret/password/Auth token entered client or logs;
+- known limitations and deviations;
+- confirmation that M0-03 remains unimplemented.
 
-Before requesting product-owner acceptance, create `docs/validation/M0-02-VALIDATION.md` containing the builder evidence and independent review result. The precise decision requested must be: **accept M0-02 as the local data/authorization foundation, or return focused corrections**.
+Before product-owner acceptance, create `docs/validation/M0-02-VALIDATION.md` with builder evidence and independent review. The precise decision requested is: **accept M0-02 as the local data/authorization foundation, or return focused corrections**.
 
 ## Risks and reversal
 
-- A privilege or RLS error can expose another user's data. Direct negative tests and independent review are mandatory.
-- A secret key in client code bypasses the intended boundary. Server-only guards, environment naming, and bundle/import verification are mandatory.
+- A privilege/RLS error can expose another user's data. Direct negative tests and independent review are mandatory.
+- Public signup can leave an unconfirmed Auth identity without a profile. M0-03 must treat this as an expected incomplete state.
+- Username collision/validation errors must not create cross-user access or partial profile rows.
 - Reusing the connected unrelated project could mix products and inherit unsafe policies. The remote environment gate prevents this.
-- An incorrect migration is corrected with a new forward migration after remote use; it is never silently rewritten.
-- Before any approved remote use, reversal is local and recoverable with a clean database reset and ordinary Git revert.
+- An incorrect migration is corrected with a new forward migration after remote use; applied history is never silently rewritten.
+- Before approved remote use, reversal is local through Git revert and database reset.
 
-## Official references checked for this draft
+## Official references checked for this revision
 
+- [Supabase password-based Auth](https://supabase.com/docs/guides/auth/passwords)
+- [Supabase password security](https://supabase.com/docs/guides/auth/password-security)
+- [Supabase CAPTCHA protection](https://supabase.com/docs/guides/auth/auth-captcha)
 - [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
 - [Securing the Data API](https://supabase.com/docs/guides/api/securing-your-api)
-- [Local database testing overview](https://supabase.com/docs/guides/local-development/testing/overview)
-- [CLI testing and linting](https://supabase.com/docs/guides/local-development/cli/testing-and-linting)
-- [2026 explicit Data API grant change](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically)
-- [Supabase publishable and secret API keys](https://supabase.com/changelog/29260-upcoming-changes-to-supabase-api-keys)
+- [Local database testing](https://supabase.com/docs/guides/local-development/testing/overview)
 
 ## Decision requested
 
-Approve this brief together with ADR-002 to move M0-02 from **draft** to **approved** and authorize local implementation only.
+Approve this revised brief together with ADR-002 to move M0-02 from **draft** to **approved** and authorize local implementation only.
 
-Remote project creation, linking, and migration remain separate decisions. The recommendation is to create or designate a dedicated FitTip development project when the local implementation is ready for hosted validation.
+Remote project creation, Auth configuration, SMTP/CAPTCHA integration, and migration remain separate decisions.

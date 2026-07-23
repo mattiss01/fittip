@@ -58,7 +58,7 @@ Any departure from these defaults must be documented in the ticket handoff. A ch
 ## Non-goals
 
 - Supabase packages, project configuration, migrations, tables, policies, or credentials.
-- Authentication, invite gating, protected routes, profiles, or session handling.
+- Authentication, public registration, protected routes, profiles, or session handling.
 - Consent, deletion, analytics, AI rate limiting, AI providers, or AI telemetry.
 - CI workflows, Vercel project linkage, preview deployments, or production environments.
 - Product navigation, onboarding, training screens, reusable UI components, or a branded design system.
