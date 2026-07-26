@@ -5,8 +5,13 @@ import {
   mergeAuthResponseHeaders,
   privateRedirect,
 } from "@/lib/supabase/server-user-client";
+import { readRuntimePolicy } from "@/lib/auth/runtime-policy";
 
 export async function POST(request: Request) {
+  if (readRuntimePolicy().mode === "founder-staging") {
+    return privateRedirect(new URL("/?error=credentials", request.url));
+  }
+
   const formData = await request.formData();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");

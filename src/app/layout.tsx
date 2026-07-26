@@ -5,6 +5,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "FitTip",
   description: "FitTip application foundation",
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+  },
 };
 
 export default function RootLayout({

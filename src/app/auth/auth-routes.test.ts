@@ -5,6 +5,7 @@ const { client, createServerUserClientMock, ensureCurrentProfileMock } =
     const client = {
       auth: {
         exchangeCodeForSession: vi.fn(),
+        getClaims: vi.fn(),
         signInWithPassword: vi.fn(),
         signUp: vi.fn(),
         signOut: vi.fn(),
@@ -72,10 +73,16 @@ describe("production authentication route handlers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.auth.exchangeCodeForSession.mockResolvedValue({ error: null });
+    client.auth.getClaims.mockResolvedValue({
+      data: { claims: { sub: "00000000-0000-4000-8000-000000000001" } },
+      error: null,
+    });
     client.auth.signInWithPassword.mockResolvedValue({ error: null });
     client.auth.signUp.mockResolvedValue({ error: null });
     client.auth.signOut.mockResolvedValue({ error: null });
     ensureCurrentProfileMock.mockResolvedValue(undefined);
+    delete process.env.FITTIP_RUNTIME_MODE;
+    delete process.env.FITTIP_OWNER_USER_ID;
   });
 
   it("returns a generic private 303 when the callback code is missing", async () => {
@@ -210,5 +217,59 @@ describe("production authentication route handlers", () => {
     );
     expectPrivate303(response, "/");
     expect(client.auth.signOut).toHaveBeenCalledOnce();
+  });
+
+  it("closes hosted signup before constructing an Auth client", async () => {
+    process.env.FITTIP_RUNTIME_MODE = "founder-staging";
+    process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
+
+    const response = await signup(
+      post("/auth/signup", {
+        email: "new@example.com",
+        password: "password",
+        confirmation: "password",
+      }),
+    );
+
+    expectPrivate303(response, "/", false);
+    expect(createServerUserClientMock).not.toHaveBeenCalled();
+    expect(client.auth.signUp).not.toHaveBeenCalled();
+  });
+
+  it("signs out a non-owner after hosted sign-in before profile creation", async () => {
+    process.env.FITTIP_RUNTIME_MODE = "founder-staging";
+    process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
+    client.auth.getClaims.mockResolvedValue({
+      data: { claims: { sub: "00000000-0000-4000-8000-000000000002" } },
+      error: null,
+    });
+
+    const response = await signin(
+      post("/auth/signin", {
+        email: "member@example.com",
+        password: "password",
+      }),
+    );
+
+    expectPrivate303(response, "/");
+    expect(client.auth.signOut).toHaveBeenCalledOnce();
+    expect(ensureCurrentProfileMock).not.toHaveBeenCalled();
+  });
+
+  it("signs out a non-owner after hosted callback before profile creation", async () => {
+    process.env.FITTIP_RUNTIME_MODE = "founder-staging";
+    process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
+    client.auth.getClaims.mockResolvedValue({
+      data: { claims: { sub: "00000000-0000-4000-8000-000000000002" } },
+      error: null,
+    });
+
+    const response = await callback(
+      new Request(`${origin}/auth/callback?code=valid-code`),
+    );
+
+    expectPrivate303(response, "/");
+    expect(client.auth.signOut).toHaveBeenCalledOnce();
+    expect(ensureCurrentProfileMock).not.toHaveBeenCalled();
   });
 });

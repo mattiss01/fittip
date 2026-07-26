@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { createServerClientMock, getClaimsMock } = vi.hoisted(() => ({
-  createServerClientMock: vi.fn(),
-  getClaimsMock: vi.fn(),
-}));
+const { createServerClientMock, getClaimsMock, signOutMock } = vi.hoisted(
+  () => ({
+    createServerClientMock: vi.fn(),
+    getClaimsMock: vi.fn(),
+    signOutMock: vi.fn(),
+  }),
+);
 
 vi.mock("@supabase/ssr", () => ({
   createServerClient: createServerClientMock,
@@ -29,8 +32,10 @@ describe("production auth proxy", () => {
     vi.clearAllMocks();
     process.env.NEXT_PUBLIC_SUPABASE_URL = "http://127.0.0.1:54321";
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_test";
+    delete process.env.FITTIP_RUNTIME_MODE;
+    delete process.env.FITTIP_OWNER_USER_ID;
     createServerClientMock.mockReturnValue({
-      auth: { getClaims: getClaimsMock },
+      auth: { getClaims: getClaimsMock, signOut: signOutMock },
     });
     getClaimsMock.mockResolvedValue({
       data: { claims: { sub: "user-1" } },
@@ -55,7 +60,7 @@ describe("production auth proxy", () => {
         [{ name: "sb-refresh", value: "fresh", options: { httpOnly: true } }],
         { "X-Auth-Refresh": "present", "Cache-Control": "unsafe" },
       );
-      return { auth: { getClaims: getClaimsMock } };
+      return { auth: { getClaims: getClaimsMock, signOut: signOutMock } };
     });
     const response = await proxy(request());
     expect(response.status).toBe(200);
@@ -70,13 +75,56 @@ describe("production auth proxy", () => {
     getClaimsMock.mockResolvedValue({ data: { claims: {} }, error: null });
     createServerClientMock.mockImplementation((_url, _key, options) => {
       options.cookies.setAll([{ name: "sb-refresh", value: "fresh" }]);
-      return { auth: { getClaims: getClaimsMock } };
+      return { auth: { getClaims: getClaimsMock, signOut: signOutMock } };
     });
     const response = await proxy(request());
     expect(response.status).toBe(303);
     expect(response.headers.getSetCookie()).toEqual([
       "sb-refresh=fresh; Path=/",
     ]);
+    expectPrivateHeaders(response);
+  });
+
+  it("denies and signs out a non-owner founder-staging session", async () => {
+    process.env.FITTIP_RUNTIME_MODE = "founder-staging";
+    process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
+    getClaimsMock.mockResolvedValue({
+      data: { claims: { sub: "00000000-0000-4000-8000-000000000002" } },
+      error: null,
+    });
+
+    const response = await proxy(request());
+
+    expect(response.status).toBe(303);
+    expect(signOutMock).toHaveBeenCalledOnce();
+    expectPrivateHeaders(response);
+  });
+
+  it("allows the configured founder-staging owner", async () => {
+    const ownerId = "00000000-0000-4000-8000-000000000001";
+    process.env.FITTIP_RUNTIME_MODE = "founder-staging";
+    process.env.FITTIP_OWNER_USER_ID = ownerId;
+    getClaimsMock.mockResolvedValue({
+      data: { claims: { sub: ownerId } },
+      error: null,
+    });
+
+    const response = await proxy(request());
+
+    expect(response.status).toBe(200);
+    expect(signOutMock).not.toHaveBeenCalled();
+    expectPrivateHeaders(response);
+  });
+
+  it("redirects founder staging signup before constructing a Supabase client", async () => {
+    process.env.FITTIP_RUNTIME_MODE = "founder-staging";
+    process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
+
+    const response = await proxy(request("/signup"));
+
+    expect(response.status).toBe(303);
+    expect(new URL(response.headers.get("location") ?? "").pathname).toBe("/");
+    expect(createServerClientMock).not.toHaveBeenCalled();
     expectPrivateHeaders(response);
   });
 });

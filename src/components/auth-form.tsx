@@ -4,9 +4,11 @@ type Mode = "sign-in" | "sign-up";
 
 export function AuthForm({
   initialMode = "sign-in",
+  allowSignUp = true,
   searchParams,
 }: {
   initialMode?: Mode;
+  allowSignUp?: boolean;
   searchParams?: { checkEmail?: boolean; error?: string };
 }) {
   const mode = initialMode;
@@ -75,11 +77,13 @@ export function AuthForm({
         <button type="submit">{isSignUp ? "Create account" : "Sign in"}</button>
       </form>
 
-      <Link className="text-button" href={isSignUp ? "/" : "/signup"}>
-        {isSignUp
-          ? "Already have an account? Sign in"
-          : "New here? Create an account"}
-      </Link>
+      {allowSignUp ? (
+        <Link className="text-button" href={isSignUp ? "/" : "/signup"}>
+          {isSignUp
+            ? "Already have an account? Sign in"
+            : "New here? Create an account"}
+        </Link>
+      ) : null}
     </section>
   );
 }

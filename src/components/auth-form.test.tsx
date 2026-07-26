@@ -17,4 +17,12 @@ describe("AuthForm", () => {
       "at least 8 characters",
     );
   });
+
+  it("omits the signup path when hosted staging closes registration", () => {
+    render(<AuthForm allowSignUp={false} />);
+
+    expect(
+      screen.queryByRole("link", { name: "New here? Create an account" }),
+    ).not.toBeInTheDocument();
+  });
 });

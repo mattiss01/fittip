@@ -3,6 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 import type { Database } from "@/lib/supabase/database.types";
+import {
+  isAllowedVerifiedUser,
+  readRuntimePolicy,
+} from "@/lib/auth/runtime-policy";
 import { readSupabasePublicEnvironment } from "@/lib/supabase/env";
 import {
   applyPrivateSessionHeaders,
@@ -10,6 +14,15 @@ import {
 } from "@/lib/supabase/server-user-client";
 
 export async function proxy(request: NextRequest) {
+  const policy = readRuntimePolicy();
+  const pathname = request.nextUrl.pathname;
+
+  if (pathname === "/signup" && policy.mode === "founder-staging") {
+    return applyPrivateSessionHeaders(
+      NextResponse.redirect(new URL("/", request.url), 303),
+    );
+  }
+
   let response = NextResponse.next({ request });
   const environment = readSupabasePublicEnvironment();
   const client = createServerClient<Database>(
@@ -38,9 +51,10 @@ export async function proxy(request: NextRequest) {
 
   const { data, error } = await client.auth.getClaims();
   if (
-    request.nextUrl.pathname.startsWith("/home") &&
-    (error || !data?.claims.sub)
+    pathname.startsWith("/home") &&
+    (error || !isAllowedVerifiedUser(policy, data?.claims.sub))
   ) {
+    await client.auth.signOut();
     const redirect = NextResponse.redirect(new URL("/", request.url), 303);
     return mergeAuthResponseHeaders(redirect, response);
   }
@@ -49,5 +63,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/home/:path*"],
+  matcher: ["/home/:path*", "/signup"],
 };

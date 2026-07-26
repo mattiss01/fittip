@@ -80,6 +80,19 @@ a compatible modern publishable key. Never place a secret key, service-role
 key, database password, or connection string in a `NEXT_PUBLIC_` variable. The
 application has no secret/service Supabase client.
 
+Founder-hosted staging additionally uses two server-only variables. Leave both
+unset locally; hosted staging requires the exact mode and the owner's
+administratively created canonical UUID. These values are not public project
+coordinates and must never use the `NEXT_PUBLIC_` prefix:
+
+```text
+FITTIP_RUNTIME_MODE=founder-staging
+FITTIP_OWNER_USER_ID=replace-with-owner-user-id
+```
+
+This is a disposable, owner-only staging exception. It has no public
+registration, friend/external-user, commercial, or production authorization.
+
 ### Schema and access model
 
 M0-02 creates only `public.profiles`:

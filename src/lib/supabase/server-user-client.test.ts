@@ -122,5 +122,8 @@ describe("privateRedirect", () => {
     );
     expect(response.headers.get("Expires")).toBe("0");
     expect(response.headers.get("Pragma")).toBe("no-cache");
+    expect(response.headers.get("X-Robots-Tag")).toBe(
+      "noindex, nofollow, noarchive",
+    );
   });
 });

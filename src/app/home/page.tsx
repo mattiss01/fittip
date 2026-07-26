@@ -1,14 +1,19 @@
 import { redirect } from "next/navigation";
 
 import { SignOutButton } from "@/components/sign-out-button";
+import {
+  isAllowedVerifiedUser,
+  readRuntimePolicy,
+} from "@/lib/auth/runtime-policy";
 import { createServerUserClient } from "@/lib/supabase/server-user-client";
 import { ProfileRepository } from "@/server/repositories/profile-repository";
 
 export default async function ProtectedHome() {
+  const policy = readRuntimePolicy();
   const client = await createServerUserClient();
   const { data, error } = await client.auth.getClaims();
 
-  if (error || !data?.claims.sub) {
+  if (!isAllowedVerifiedUser(policy, error ? undefined : data?.claims.sub)) {
     redirect("/");
   }
 
