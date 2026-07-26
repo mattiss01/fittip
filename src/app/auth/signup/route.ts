@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import {
   createServerUserClient,
+  mergeAuthResponseHeaders,
   privateRedirect,
 } from "@/lib/supabase/server-user-client";
 
@@ -25,14 +26,13 @@ export async function POST(request: Request) {
     },
   });
 
-  const response = privateRedirect(
-    new URL(
-      error ? "/signup?error=signup" : "/signup?check-email=1",
-      request.url,
+  return mergeAuthResponseHeaders(
+    privateRedirect(
+      new URL(
+        error ? "/signup?error=signup" : "/signup?check-email=1",
+        request.url,
+      ),
     ),
+    pending,
   );
-  pending.headers.forEach((value, name) =>
-    response.headers.append(name, value),
-  );
-  return response;
 }

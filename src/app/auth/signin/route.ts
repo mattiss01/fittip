@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import {
   createServerUserClient,
+  mergeAuthResponseHeaders,
   privateRedirect,
 } from "@/lib/supabase/server-user-client";
 import { ProfileRepository } from "@/server/repositories/profile-repository";
@@ -20,21 +21,17 @@ export async function POST(request: Request) {
       await new ProfileRepository(client).ensureCurrentProfile();
     } catch {
       await client.auth.signOut();
-      const response = privateRedirect(
-        new URL("/?error=credentials", request.url),
+      return mergeAuthResponseHeaders(
+        privateRedirect(new URL("/?error=credentials", request.url)),
+        pending,
       );
-      pending.headers.forEach((value, name) =>
-        response.headers.append(name, value),
-      );
-      return response;
     }
   }
 
-  const response = privateRedirect(
-    new URL(error ? "/?error=credentials" : "/home", request.url),
+  return mergeAuthResponseHeaders(
+    privateRedirect(
+      new URL(error ? "/?error=credentials" : "/home", request.url),
+    ),
+    pending,
   );
-  pending.headers.forEach((value, name) =>
-    response.headers.append(name, value),
-  );
-  return response;
 }

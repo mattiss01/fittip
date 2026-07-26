@@ -68,18 +68,48 @@ describe("createServerUserClient", () => {
       },
     ]);
 
-    options.cookies.setAll([
-      {
-        name: "sb-local-auth-token",
-        value: "refreshed",
-        options: { httpOnly: true },
-      },
-    ]);
+    options.cookies.setAll(
+      [
+        {
+          name: "sb-local-auth-token",
+          value: "refreshed",
+          options: { httpOnly: true },
+        },
+      ],
+      { "X-Auth-Refresh": "present", "Cache-Control": "unsafe" },
+    );
     expect(cookieStore.set).toHaveBeenCalledWith(
       "sb-local-auth-token",
       "refreshed",
       { httpOnly: true },
     );
+  });
+
+  it("writes supplied SSR headers with set semantics while retaining response cookies", async () => {
+    const pending = new (await import("next/server")).NextResponse();
+    await createServerUserClient(pending);
+    const options = createServerClientMock.mock.calls[0]?.[2];
+
+    options.cookies.setAll(
+      [{ name: "sb-refresh", value: "fresh", options: { httpOnly: true } }],
+      {
+        "X-Auth-Refresh": "present",
+        "Cache-Control":
+          "private, no-cache, no-store, must-revalidate, max-age=0",
+        Expires: "0",
+        Pragma: "no-cache",
+      },
+    );
+
+    expect(pending.headers.getSetCookie()).toEqual([
+      "sb-refresh=fresh; Path=/; HttpOnly",
+    ]);
+    expect(pending.headers.get("X-Auth-Refresh")).toBe("present");
+    expect(pending.headers.get("Cache-Control")).toBe(
+      "private, no-cache, no-store, must-revalidate, max-age=0",
+    );
+    expect(pending.headers.get("Expires")).toBe("0");
+    expect(pending.headers.get("Pragma")).toBe("no-cache");
   });
 });
 

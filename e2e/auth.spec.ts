@@ -35,7 +35,11 @@ test.describe("public account authentication", () => {
     await expect(page.getByRole("status")).toContainText("Check your email");
 
     const confirmationUrl = await pollForConfirmationUrl(request, email);
+    const callbackResponse = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === "/auth/callback",
+    );
     await page.goto(confirmationUrl);
+    await expectPrivateSessionHeaders(await callbackResponse);
     await expect(page).toHaveURL(/\/home$/);
     await expect(
       page.getByRole("heading", { name: "You’re in." }),
@@ -50,6 +54,26 @@ test.describe("public account authentication", () => {
     await expect(page).toHaveURL(/\/home$/);
   });
 });
+
+async function expectPrivateSessionHeaders(
+  response: import("@playwright/test").Response,
+) {
+  const headers = await response.headersArray();
+  expect(
+    headers.filter(({ name }) => name.toLowerCase() === "cache-control"),
+  ).toEqual([
+    {
+      name: "cache-control",
+      value: "private, no-cache, no-store, must-revalidate, max-age=0",
+    },
+  ]);
+  expect(
+    headers.filter(({ name }) => name.toLowerCase() === "expires"),
+  ).toEqual([{ name: "expires", value: "0" }]);
+  expect(headers.filter(({ name }) => name.toLowerCase() === "pragma")).toEqual(
+    [{ name: "pragma", value: "no-cache" }],
+  );
+}
 
 async function pollForConfirmationUrl(
   request: Parameters<typeof test>[0] extends never

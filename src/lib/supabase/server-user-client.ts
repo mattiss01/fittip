@@ -42,6 +42,12 @@ export async function createServerUserClient(response?: NextResponse) {
 
 export function privateRedirect(url: URL): NextResponse {
   const response = NextResponse.redirect(url, 303);
+  return applyPrivateSessionHeaders(response);
+}
+
+export function applyPrivateSessionHeaders<T extends NextResponse>(
+  response: T,
+): T {
   response.headers.set(
     "Cache-Control",
     "private, no-cache, no-store, must-revalidate, max-age=0",
@@ -58,11 +64,17 @@ export function mergeAuthResponseHeaders(
   for (const cookie of accumulator.headers.getSetCookie()) {
     response.headers.append("Set-Cookie", cookie);
   }
-  for (const name of ["Cache-Control", "Expires", "Pragma"]) {
-    const value = accumulator.headers.get(name);
-    if (value) response.headers.set(name, value);
+
+  for (const [name, value] of accumulator.headers.entries()) {
+    if (
+      name.toLowerCase() !== "set-cookie" &&
+      !["cache-control", "expires", "pragma"].includes(name.toLowerCase())
+    ) {
+      response.headers.set(name, value);
+    }
   }
-  return response;
+
+  return applyPrivateSessionHeaders(response);
 }
 
 export type ServerUserClient = Awaited<

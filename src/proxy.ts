@@ -4,6 +4,10 @@ import { createServerClient } from "@supabase/ssr";
 
 import type { Database } from "@/lib/supabase/database.types";
 import { readSupabasePublicEnvironment } from "@/lib/supabase/env";
+import {
+  applyPrivateSessionHeaders,
+  mergeAuthResponseHeaders,
+} from "@/lib/supabase/server-user-client";
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -38,15 +42,10 @@ export async function proxy(request: NextRequest) {
     (error || !data?.claims.sub)
   ) {
     const redirect = NextResponse.redirect(new URL("/", request.url), 303);
-    response.headers.forEach((value, name) =>
-      redirect.headers.append(name, value),
-    );
-    redirect.headers.set("Cache-Control", "private, no-store");
-    return redirect;
+    return mergeAuthResponseHeaders(redirect, response);
   }
 
-  response.headers.set("Cache-Control", "private, no-store");
-  return response;
+  return applyPrivateSessionHeaders(response);
 }
 
 export const config = {
