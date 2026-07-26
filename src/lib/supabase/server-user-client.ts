@@ -42,9 +42,22 @@ export async function createServerUserClient(response?: NextResponse) {
 
 export function privateRedirect(url: URL): NextResponse {
   const response = NextResponse.redirect(url, 303);
-  response.headers.set("Cache-Control", "private, no-store");
+  response.headers.set(
+    "Cache-Control",
+    "private, no-cache, no-store, must-revalidate, max-age=0",
+  );
   response.headers.set("Pragma", "no-cache");
   response.headers.set("Expires", "0");
+  return response;
+}
+
+export function mergeAuthResponseHeaders(
+  response: NextResponse,
+  accumulator: NextResponse,
+): NextResponse {
+  for (const cookie of accumulator.headers.getSetCookie()) {
+    response.headers.append("Set-Cookie", cookie);
+  }
   return response;
 }
 

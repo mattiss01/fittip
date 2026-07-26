@@ -26,7 +26,10 @@ vi.mock("next/headers", () => ({
   cookies: cookiesMock,
 }));
 
-import { createServerUserClient } from "@/lib/supabase/server-user-client";
+import {
+  createServerUserClient,
+  privateRedirect,
+} from "@/lib/supabase/server-user-client";
 
 describe("createServerUserClient", () => {
   beforeEach(() => {
@@ -77,5 +80,17 @@ describe("createServerUserClient", () => {
       "refreshed",
       { httpOnly: true },
     );
+  });
+});
+
+describe("privateRedirect", () => {
+  it("uses a post-safe redirect and exact private cache controls", () => {
+    const response = privateRedirect(new URL("http://localhost:3000/home"));
+    expect(response.status).toBe(303);
+    expect(response.headers.get("Cache-Control")).toBe(
+      "private, no-cache, no-store, must-revalidate, max-age=0",
+    );
+    expect(response.headers.get("Expires")).toBe("0");
+    expect(response.headers.get("Pragma")).toBe("no-cache");
   });
 });
