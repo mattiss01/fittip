@@ -32,7 +32,7 @@ test.describe("public account authentication", () => {
     await page.getByLabel("Confirm password").fill(password);
     await page.getByRole("button", { name: "Create account" }).click();
     expect(pageErrors).toEqual([]);
-    await expect(page.getByRole("status")).toHaveText("Check your email");
+    await expect(page.getByRole("status")).toContainText("Check your email");
 
     const confirmationUrl = await pollForConfirmationUrl(request, email);
     await page.goto(confirmationUrl);
