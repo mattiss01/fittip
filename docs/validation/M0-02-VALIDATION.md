@@ -1,6 +1,6 @@
 # M0-02 validation: local data and authorization foundation
 
-**Status:** testable — focused M0-02-C1 correction passed independent review; product-owner acceptance required
+**Status:** accepted — product owner accepted the reviewed M0-02-C1 correction 26 July 2026
 
 **Date:** 23 July 2026
 
@@ -99,6 +99,6 @@ finding.
 ## Acceptance boundary
 
 The original M0-02 implementation was product-owner accepted on 23 July 2026.
-M0-02-C1 is a separate approved correction. Accept M0-02-C1 as the reviewed
-username-removal correction, or return focused corrections. Acceptance does
-not approve M0-03 or authorize a remote Supabase change.
+The product owner accepted M0-02-C1 as the reviewed username-removal correction
+on 26 July 2026. This acceptance does not approve M0-03 or authorize a remote
+Supabase change.

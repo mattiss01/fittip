@@ -1,6 +1,6 @@
 # M0-02-C1: Remove username from the local profile foundation
 
-**Status:** testable — builder and independent review passed 23 July 2026
+**Status:** accepted — product owner accepted the reviewed correction 26 July 2026
 
 **Approved by:** product owner, 23 July 2026
 
@@ -14,7 +14,7 @@
 
 **Blocks:** M0-03 / F-001
 
-**Owner:** Lead agent awaiting product-owner acceptance after `gpt-5.6-terra` builder and independent-review handoffs
+**Owner:** Completed
 
 ## Outcome
 
@@ -99,3 +99,5 @@ The lead agent then assigns an independent reviewer. Product-owner acceptance is
 ## Review record
 
 The builder completed the correction at commit `6de981d`. Independent review returned **PASS — no findings** after inspecting the exact diff and independently verifying the corrected schema, privileges, RLS, owner/anonymous/cross-user behavior, generated types, application tests, and production build. M0-02-C1 is **testable** pending product-owner acceptance.
+
+The product owner accepted the reviewed M0-02-C1 correction on 26 July 2026. The username-free local profile foundation is now **accepted**. This does not approve M0-03 or authorize a remote Supabase change.
