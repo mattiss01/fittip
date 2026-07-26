@@ -8,7 +8,9 @@
 
 **Supersedes:** The invite-only and magic-link authentication clauses of [ADR-001](ADR-001-M0-FOUNDATION.md)
 
-**Partially superseded by:** [ADR-004](ADR-004-USERNAME-FREE-ACCOUNT-PROFILE.md) removes the username requirement while preserving public email/password accounts. The historical username-specific clauses below are superseded; M0-03 remains draft.
+**Partially superseded by:** [ADR-004](ADR-004-USERNAME-FREE-ACCOUNT-PROFILE.md) removes the username requirement while preserving public email/password accounts. The historical username-specific clauses below are superseded.
+
+**Recovery staging superseded by:** [ADR-005](ADR-005-STAGED-MVP-AUTHENTICATION.md) moves forgotten-password and password-reset behavior out of the first authentication ticket
 
 ## Context
 

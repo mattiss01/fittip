@@ -467,7 +467,7 @@ No React component contains plan-versioning, memory, safety, or AI business rule
 ### M0: Foundation, early beta, and commercial-ready core
 
 - Initialize the repository, strict TypeScript, lint/format, test runner, and CI checks.
-- Implement public email/password registration with verified email, minimal profile creation, password recovery, and per-user authorization/row-level security.
+- Implement basic public email/password registration with verified email, minimal profile creation, and per-user authorization/row-level security. Add account recovery as a separate ticket before external MVP use.
 - Set up database migrations, environment documentation, secure deployment, and separate development/production environments.
 - Create a data inventory, an AI-data consent record, a deletion-capable backend design, and a privacy-policy outline.
 - Add server-side AI request limits and privacy-conscious event instrumentation (without raw notes).
@@ -652,4 +652,4 @@ These do not block foundation work, but should be decided before generating real
 
 ## 18. Explicit non-requirements for now
 
-Do not delay the core loop for referrals, reminders, billing, social sharing, groups, coaching roles, wearable integrations, native-app packaging, social login/passkeys, or a polished exercise-media library. Do not defer public account recovery, authenticated user isolation, consent, privacy-ready data handling, or AI-cost observability. Build the trustworthy personal coach loop first: goals and memory → proposal → actual log → interactive replan → versioned history.
+Do not delay the core loop for referrals, reminders, billing, social sharing, groups, coaching roles, wearable integrations, native-app packaging, social login/passkeys, or a polished exercise-media library. Stage public account recovery after the basic local authentication slice but complete it before external MVP use. Do not defer authenticated user isolation, consent, privacy-ready data handling, or AI-cost observability. Build the trustworthy personal coach loop first: goals and memory → proposal → actual log → interactive replan → versioned history.
