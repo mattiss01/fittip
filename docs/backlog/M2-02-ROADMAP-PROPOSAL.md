@@ -9,7 +9,8 @@
 **Depends on:** [M2-01 accepted](M2-01-LOCAL-AI-ADAPTER-CONTROLS.md) and the
 accepted M1 goal, memory, intake, and validation foundations
 
-**Architecture boundary:** [ADR-006 accepted](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md)
+**Architecture boundary:** ADR-006 and ADR-007 accepted; M0-06A accepted before
+founder-hosted use
 
 **Blocks:** [M2-03](M2-03-SEVEN-DAY-PLAN-PROPOSAL.md),
 [M2-04](M2-04-PLAN-EDIT-LOCK-ACCEPTANCE.md), and
@@ -30,8 +31,9 @@ session prescription or an accepted seven-day plan.
 
 Only the product owner's own data or synthetic data may be used locally.
 M2-01's explicit enablement, owner allowlist, budget, schema, telemetry, and
-fail-closed controls apply. Friends, hosted deployment, external use, external
-analytics, and remote resources remain prohibited until the M0 gates pass.
+fail-closed controls apply. Friends, public registration, commercial use,
+production, external analytics, and new remote resources remain prohibited
+until the M0 gates pass.
 
 ## Scope
 
@@ -57,8 +59,8 @@ analytics, and remote resources remain prohibited until the M0 gates pass.
   an accepted version in place.
 - No unbounded chat history, global sport/exercise library, sport-specific
   capability pack, or medical advice.
-- No provider/model/key/spend decision, external analytics, remote migration,
-  hosted deployment, friend data, or external user.
+- No provider/model/key/spend decision, external analytics, new remote
+  resource, friend data, public registration, commercial use, or production.
 
 ## Data and versioning rules
 
@@ -147,7 +149,7 @@ decisions.
 9. Invalid/unsafe output and provider/control failure create no active roadmap
    and expose no raw content/error.
 10. No detailed seven-day plan, activity catalog, logging, replan, external
-    user, hosted behavior, analytics sink, secret, or unapproved spend is
+    user, non-M0-06A hosted behavior, analytics sink, secret, or unapproved spend is
     added.
 
 ## Test plan
@@ -182,8 +184,8 @@ Provide the exact branch/commit, changed files, schema and RLS matrix, source
 selection and output schema versions, fixture/live validation results,
 idempotency/transaction evidence, `390x844` demo path, leakage scan, full
 commands/results, limitations, and confirmation that no weekly-plan,
-direct-write, friend, hosted, analytics, or unapproved provider/spend behavior
-was added.
+direct-write, friend, non-M0-06A-hosted, analytics, or unapproved
+provider/spend behavior was added.
 
 ## Open decisions
 
@@ -201,6 +203,6 @@ was added.
 
 The product owner must approve this brief and all roadmap data, horizon, UX,
 safety, retention, and transaction decisions. M2-01 must be accepted with its
-provider/model/budget decision. Approval remains owner/synthetic local-only and
-does not authorize M2-03, friends, hosted deployment, external use, or an
-analytics sink.
+provider/model/budget decision. Approval remains owner/synthetic local or
+M0-06A founder-hosted only and does not authorize M2-03, friends, public
+registration, commercial use, production, or an analytics sink.

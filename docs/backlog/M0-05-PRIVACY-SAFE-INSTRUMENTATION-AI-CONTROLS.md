@@ -13,9 +13,9 @@
 **Current dependency state:** M0-02 and M0-02-C1 are accepted. M0-04 remains
 proposed, so this ticket is not dependency-ready.
 
-**Blocks:** M0-06, any friend/hosted/external AI request, and any external
-product-event sink. Owner/synthetic local AI is separately gated by ADR-006
-and M2-01.
+**Blocks:** M0-06, any friend/public/commercial AI request, and any external
+product-event sink. Owner/synthetic local or M0-06A founder-hosted AI is
+separately gated by ADR-006, ADR-007, and M2-01.
 
 ## Outcome
 
@@ -30,10 +30,10 @@ features one reviewed boundary instead of allowing each feature to invent its
 own analytics fields, consent check, rate limit, budget rule, or AI audit
 format.
 
-This ticket remains the pre-friends/hosted production-shaped control gate.
-[ADR-006](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md) and M2-01 may establish a
-smaller owner/synthetic local boundary first; that local slice does not accept,
-implement, or replace M0-05.
+This ticket remains the pre-friends/public/commercial production-shaped
+control gate. ADR-006, ADR-007, M0-06A, and M2-01 may establish a smaller
+owner/synthetic local or founder-hosted boundary first; that slice does not
+accept, implement, or replace M0-05.
 
 ## Dependency and authorization boundary
 
@@ -43,7 +43,7 @@ configuration, or an external data transfer.
 
 M0-05 can implement pure contracts and local/test adapters after the M0-04
 design is accepted. This dependency applies to M0-05 itself, not to the
-separately approved ADR-006/M2-01 local-owner slice. A real effective-consent
+separately approved ADR-006/ADR-007/M0-06A/M2-01 founder slice. A real effective-consent
 lookup, persistent event or AI
 audit store, deletion worker, analytics sink, or production AI path also needs
 the later privacy implementation brief identified by M0-04. That implementation

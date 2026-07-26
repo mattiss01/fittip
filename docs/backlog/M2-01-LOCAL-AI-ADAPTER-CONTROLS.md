@@ -11,7 +11,9 @@
 [M1-03 accepted](M1-03-INTAKE-FACT-REVIEW.md), and
 [M1-05 accepted](M1-05-M1-VALIDATION-SLICE.md)
 
-**Architecture boundary:** [ADR-006 accepted](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md)
+**Architecture boundary:** [ADR-006 accepted](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md),
+[ADR-007 accepted](../decisions/ADR-007-FOUNDER-HOSTED-STAGING.md), and
+[M0-06A accepted](M0-06A-FOUNDER-HOSTED-STAGING.md) before hosted use
 
 **Additional dependency before implementation:** explicit product-owner
 approval of the exact provider, model, account/key use, prompt/data-use and
@@ -25,8 +27,8 @@ spend
 ## Outcome
 
 Create a provider-neutral, server-only AI boundary with deterministic fixtures
-and one separately approved real-provider adapter for owner/synthetic local MVP
-validation. Every request must prove owner authorization, explicit local
+and one separately approved real-provider adapter for owner/synthetic local or
+founder-hosted MVP validation. Every request must prove owner authorization, explicit
 enablement, allowlisted context, available budget, and idempotency before the
 adapter runs. Every response is size-bounded, schema-validated, and returned
 only as a proposal.
@@ -36,14 +38,15 @@ retention/data-use term, external resource, call, or spend.
 
 ## Local-owner and pre-friends boundary
 
-- Local development only; no hosted deployment or externally reachable tunnel.
+- Local development or the accepted M0-06A founder-staging environment only.
 - Provider-bound data may be the product owner's own data or synthetic data.
 - Friend and other external-user data are denied even if the caller is
   authenticated.
 - Tests use fixtures/mocks by default. Live tests are explicit opt-in and
   skipped safely when the approved enablement/configuration is absent.
 - M0-03B, M0-04 and its later implementation, M0-05, and M0-06 remain mandatory
-  before friend data or hosted/external use. M2-01 does not replace them.
+  before friend data, public registration, commercial use, or production.
+  M2-01 does not replace them.
 
 ## Scope
 
@@ -68,8 +71,9 @@ retention/data-use term, external resource, call, or spend.
 ## Non-goals
 
 - No provider/model/key/account selection in this document.
-- No credential creation, setup instructions, committed value, remote secret
-  store, hosted environment, or deployment.
+- No credential creation, setup instructions, committed value, new remote
+  resource, environment, or deployment; M0-06A's existing Vercel secret store
+  is the only permitted hosted key location after separate approval.
 - No direct AI database access or writes, proposal acceptance, roadmap/plan UI,
   chat, streaming, replan, logging, or memory inference.
 - No external analytics/monitoring sink, persistent product analytics, or
@@ -144,8 +148,10 @@ requires:
 - immediate fail-closed behavior at or near hard limits, while non-AI features
   remain available.
 
-In-memory limits are acceptable only for the one-process local MVP and tests.
-No shared/hosted durability is implied.
+In-memory limits are acceptable only for local deterministic tests. A
+founder-hosted implementation must use an approved shared fail-closed
+rate/budget/idempotency state that survives Vercel instance changes; the exact
+schema/service and cost require the M2-01 approval decision.
 
 ## Idempotency and safe errors
 
@@ -199,8 +205,9 @@ saved. Non-AI account and M1 functions remain usable when AI fails closed.
 3. A real call is impossible unless every local flag, owner, operation,
    provider/model, key-presence, rate, concurrency, budget, and schema gate
    passes.
-4. Anonymous, non-owner, friend, cross-user, hosted/preview/production, and
-   malformed-context attempts stop before adapter invocation.
+4. Anonymous, non-owner, friend, cross-user, non-M0-06A hosted,
+   preview/production, and malformed-context attempts stop before adapter
+   invocation.
 5. Context contains only operation-approved owner records and respects active,
    status, expiry, size, and reference limits.
 6. Concurrent/replayed requests cannot duplicate a provider attempt or charge.
@@ -214,8 +221,9 @@ saved. Non-AI account and M1 functions remain usable when AI fails closed.
     synthetic data and remains within the approved cap.
 11. Existing authentication, RLS, M1, formatting, lint, typecheck, unit,
     browser, and build tests pass.
-12. No provider/account/key/spend, remote resource, hosted use, friend data, or
-    external sink exists unless separately and explicitly approved.
+12. No provider/account/key/spend, new remote resource, friend data, public
+    registration, commercial use, production, or external sink exists unless
+    separately and explicitly approved.
 
 ## Test plan
 
@@ -246,8 +254,9 @@ out of this ticket.
 Report the exact branch/commit, changed files, separately approved decision
 values (never secret values), interface/schema versions, gate matrix, fixture
 and opt-in live results, provider-attempt/token/cost evidence, leakage scan,
-full commands/results, known limitations, and confirmation of no hosted,
-external, friend-data, analytics-sink, or direct-write behavior.
+full commands/results, known limitations, and confirmation of no
+non-M0-06A-hosted, external, friend-data, analytics-sink, or direct-write
+behavior.
 
 ## Open decisions
 
@@ -269,5 +278,6 @@ external, friend-data, analytics-sink, or direct-write behavior.
 
 The product owner must approve this brief and every open provider, model,
 quality, data-use, retention, key-use, rate, token, cost, and spend decision.
-Approval is local-owner/synthetic only and does not authorize friends, external
-users, hosted deployment, analytics, remote resources, or any other M2 ticket.
+Approval is owner/synthetic local or M0-06A founder-hosted only and does not
+authorize friends, external users, public registration, commercial use,
+production, analytics, new remote resources, or any other M2 ticket.

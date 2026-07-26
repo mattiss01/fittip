@@ -9,7 +9,8 @@
 **Depends on:** [M2-02 accepted](M2-02-ROADMAP-PROPOSAL.md) and
 [M2-03 accepted](M2-03-SEVEN-DAY-PLAN-PROPOSAL.md)
 
-**Architecture boundary:** [ADR-006 accepted](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md)
+**Architecture boundary:** ADR-006 and ADR-007 accepted; M0-06A accepted before
+founder-hosted use
 
 **Blocks:** [M2-05](M2-05-M2-VALIDATION-SLICE.md)
 
@@ -28,7 +29,7 @@ accepted history.
 
 All data remains product-owner or synthetic local data. This ticket makes no
 provider call beyond accepted M2-02/M2-03 generation, adds no remote resource,
-and does not authorize friends, hosted/external use, or analytics. The full M0
+and does not authorize friends, non-M0-06A-hosted/external use, or analytics. The full M0
 privacy/recovery/instrumentation/deployment gates remain mandatory before those
 uses.
 
@@ -61,7 +62,7 @@ uses.
   against future replans; those belong to later milestones.
 - No mutation of completed history, past sessions, or a prior accepted version.
 - No global activity/exercise catalog, public sharing, coach role, sport pack,
-  analytics sink, hosted deployment, external user, or new provider call.
+  analytics sink, new hosted resource, external user, or new provider call.
 
 ## Record and versioning rules
 
@@ -193,7 +194,7 @@ confirmation require approval.
     intake, completed history, or another accepted version.
 11. Mobile, accessibility, migration, RLS, transaction, quality, and build
     gates pass.
-12. No logging/replan/friend/hosted/external/analytics behavior, secret, remote
+12. No logging/replan/friend/non-M0-06A-hosted/external/analytics behavior, secret, remote
     resource, or unapproved spend is added.
 
 ## Test plan
@@ -230,7 +231,7 @@ Provide exact branch/commit, changed files, approved edit/lock/activity/version
 contracts, migration and privilege/RLS matrix, transaction rollback/
 idempotency/concurrency evidence, immutable snapshot proof, `390x844` demo,
 leakage scan, exact commands/results, limitations, and confirmation that no
-logging, completed-history, replan, friend, hosted, analytics, or new-provider
+logging, completed-history, replan, friend, non-M0-06A-hosted, analytics, or new-provider
 behavior was added.
 
 ## Open decisions
@@ -252,5 +253,6 @@ behavior was added.
 
 The product owner must approve the edit, lock, diff, activity, version,
 transaction, UX, and retention decisions. M2-02 and M2-03 must be accepted.
-Approval is owner/synthetic local-only and does not authorize logging, replan,
-friends, hosted deployment, external use, analytics, or M2-05.
+Approval is owner/synthetic local or M0-06A founder-hosted only and does not
+authorize logging, replan, friends, public registration, commercial use,
+production, analytics, or M2-05.

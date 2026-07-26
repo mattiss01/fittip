@@ -8,8 +8,11 @@
 
 **Depends on:** [M0-03 / F-001 accepted](../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md); [M0-02-C1 accepted](M0-02-C1-REMOVE-USERNAME.md); [ADR-002](../decisions/ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md); [ADR-004](../decisions/ADR-004-USERNAME-FREE-ACCOUNT-PROFILE.md)
 
-**Local staging boundary:** [ADR-006](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md);
-product-owner or synthetic data only, no hosted/external use
+**Hosted test dependency:** [M0-06A accepted](M0-06A-FOUNDER-HOSTED-STAGING.md)
+
+**Founder staging boundary:** [ADR-006](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md)
+and [ADR-007](../decisions/ADR-007-FOUNDER-HOSTED-STAGING.md);
+product-owner or synthetic data only, local or founder-hosted
 
 **Blocks:** [M1-03 Intake fact review](M1-03-INTAKE-FACT-REVIEW.md) and [M1-05 M1 validation slice](M1-05-M1-VALIDATION-SLICE.md)
 
@@ -422,8 +425,7 @@ slice, or return focused corrections**.
 
 The product owner must approve the memory types, statuses, provenance,
 version/history, expiry, delete, sensitive-data, mobile UX/copy, and any
-consequential database architecture before implementation. Approval is
-local-only and dispatches the ticket only when its recorded local dependencies
-are accepted. M0-06 remains a pre-hosted/pre-friends gate, not a local
-implementation dependency. Until then,
-M1-02 remains **proposed**.
+consequential database architecture before implementation. Approval dispatches
+the ticket only when its recorded dependencies are accepted. M0-06A permits
+only owner/synthetic founder staging; M0-06 remains a
+pre-friends/public/commercial gate. Until then, M1-02 remains **proposed**.

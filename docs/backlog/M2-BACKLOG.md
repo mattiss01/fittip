@@ -1,19 +1,21 @@
 # M2 backlog
 
-**Planning state:** ADR-006 accepts only the local-owner AI staging principle.
-All five M2 tickets remain proposed and require their own product-owner
-approval. No provider, model, account, key, prompt, data-use/retention term,
-price, spend, remote resource, hosted deployment, friend data, external user,
-or analytics sink is approved.
+**Planning state:** ADR-006 accepts the local-owner AI staging principle and
+ADR-007 accepts the separate founder-hosted topology. All five M2 tickets
+remain proposed and require their own product-owner approval. No provider,
+model, account, key, prompt, data-use/retention term, price, spend, friend data,
+external user, public registration, commercial use, or analytics sink is
+approved.
 
-**Local boundary:** product-owner data or synthetic data only; server-side,
-explicitly enabled, deny-by-default, budget-capped AI. M0-03B, M0-04 and its
-later implementation, M0-05, and M0-06 remain mandatory before friends,
-hosted deployment, or external use.
+**Founder boundary:** product-owner data or synthetic data only; local or
+accepted M0-06A founder staging; server-side, explicitly enabled,
+deny-by-default, budget-capped AI. M0-03B, M0-04 and its later implementation,
+M0-05, and M0-06 remain mandatory before friends, public registration,
+commercial use, or production.
 
 | Priority | Ticket | Status | Depends on | Scope | Approval gate |
 |---|---|---|---|---|---|
-| P1 | [M2-01 Local AI adapter and controls](M2-01-LOCAL-AI-ADAPTER-CONTROLS.md) | proposed | M1-01, M1-02, M1-03, and M1-05 accepted; ADR-006; explicit provider/model/key-use/data-use/retention/quality/rate/token/budget/spend approval | Provider-neutral server interface, fixtures/mocks, one separately approved real adapter, owner allowlist/enable flag, allowlisted context, schema validation, rate/concurrency/budget/idempotency, content-free telemetry, opt-in live tests | Approve every provider/model/data-use/retention/key-use/quality/cost value and exact hard limits; local owner/synthetic only |
+| P1 | [M2-01 Local AI adapter and controls](M2-01-LOCAL-AI-ADAPTER-CONTROLS.md) | proposed | M1-01, M1-02, M1-03, and M1-05 accepted; M0-06A accepted for hosted use; ADR-006 and ADR-007; explicit provider/model/key-use/data-use/retention/quality/rate/token/budget/spend approval | Provider-neutral server interface, fixtures/mocks, one separately approved real adapter, owner allowlist/enable flag, allowlisted context, schema validation, rate/concurrency/budget/idempotency, content-free telemetry, opt-in live tests | Approve every provider/model/data-use/retention/key-use/quality/cost value and exact hard limits; owner/synthetic local or founder-hosted only |
 | P1 | [M2-02 Roadmap proposal](M2-02-ROADMAP-PROPOSAL.md) | proposed | M2-01 accepted and accepted M1 foundations | Owner-scoped structured high-level roadmap proposal with phases, milestones, uncertainty, review points, source versions, edit/reject/accept boundary; no detailed plan | Approve horizon, schema, uncertainty/review UX, safety, versioning, retention, and transaction choices |
 | P1 | [M2-03 Seven-day plan proposal](M2-03-SEVEN-DAY-PLAN-PROPOSAL.md) | proposed | M2-01 and M2-02 accepted | Exactly seven owner-local dates, structured sport-agnostic sessions and personal activity candidates, goal allocation, constraints, alternatives, reasoning, conservative safety; no acceptance | Approve date/unit/session/activity/time/intensity/allocation/safety/UX limits |
 | P1 | [M2-04 Plan edit, lock, and acceptance](M2-04-PLAN-EDIT-LOCK-ACCEPTANCE.md) | proposed | M2-02 and M2-03 accepted | Structured edits, session/activity locks, side-by-side review, personal activity definitions, transactional immutable roadmap/week acceptance; no logging or replan | Approve editable fields, lock inheritance, diff/copy, activity reuse/snapshot, version/current-pointer, transaction, and retention decisions |
@@ -36,11 +38,11 @@ roadmap source. M2-04 depends on both proposal slices because it accepts the
 reviewed roadmap/week pair and creates their immutable versions. M2-05 starts
 only after every owning slice is accepted.
 
-## Pre-friends/hosted gate
+## Pre-friends/public gate
 
-A local M2 acceptance proves only the product-owner/synthetic MVP path. Before
-any friend's real data, external user, hosted deployment, external
-registration, or external analytics:
+A local or founder-hosted M2 acceptance proves only the
+product-owner/synthetic MVP path. Before any friend's real data, external user,
+public registration, commercial use, production claim, or external analytics:
 
 1. M0-03B account recovery must be accepted.
 2. M0-04 privacy design and its required implementation slices must be
@@ -48,18 +50,19 @@ registration, or external analytics:
    inventory/retention, deletion, and applicable access/export behavior.
 3. M0-05 production-shaped instrumentation and AI request controls must be
    accepted with any required persistent dependencies.
-4. M0-06 hosted quality/deployment, environment, email, abuse, backup,
+4. M0-06 full quality/deployment, environment, email, abuse, backup,
    monitoring, cost, and validation gates must be accepted.
 5. Exact provider terms, region, retention/deletion, subprocessors, data use,
    quality, and cost must be revalidated for the external scope.
 
-No relationship, informal permission, preview URL, or small tester count
-bypasses this gate.
+No relationship, informal permission, public founder-staging URL, or small
+tester count bypasses this gate.
 
 ## Ticket rule
 
 Each M2 ticket is independently approved, implemented, reviewed, and accepted.
-Approval of ADR-006 or an earlier M2 ticket does not approve a later one.
+Approval of ADR-006, ADR-007, M0-06A, or an earlier M2 ticket does not approve a
+later one.
 Provider output is always a proposal; only the approved M2-04 transaction can
 create an accepted plan. M2 does not implement completions, logging,
 plan-versus-actual history, or replanning.

@@ -13,7 +13,8 @@
 traceable to a reviewed high-level direction. M2-01 and M2-02 may not be
 bypassed by generating a standalone week.
 
-**Architecture boundary:** [ADR-006 accepted](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md)
+**Architecture boundary:** ADR-006 and ADR-007 accepted; M0-06A accepted before
+founder-hosted use
 
 **Blocks:** [M2-04](M2-04-PLAN-EDIT-LOCK-ACCEPTANCE.md) and
 [M2-05](M2-05-M2-VALIDATION-SLICE.md)
@@ -29,9 +30,10 @@ in M2-04.
 
 ## Local-owner and pre-friends boundary
 
-Provider calls are local and limited to the product owner's data or synthetic
-data through M2-01. Friend data, hosted/external use, remote resources, and
-external analytics remain prohibited. The full recovery/privacy/
+Provider calls are local or M0-06A founder-hosted and limited to the product
+owner's data or synthetic data through M2-01. Friend data, public registration,
+commercial/production use, new remote resources, and external analytics remain
+prohibited. The full recovery/privacy/
 instrumentation/deployment gates remain mandatory before those uses.
 
 ## Scope
@@ -60,8 +62,8 @@ instrumentation/deployment gates remain mandatory before those uses.
   chat, progress metric, or pattern inference.
 - No global exercise/activity catalog, strength-first schema, hidden sport
   template, diagnosis, treatment, rehabilitation, or safety guarantee.
-- No provider/model/key/spend decision, remote migration, hosted deployment,
-  friend/external data, or analytics sink.
+- No provider/model/key/spend decision, new remote resource, friend/external
+  data, public registration, commercial use, production, or analytics sink.
 
 ## Exact seven-day contract
 
@@ -175,7 +177,7 @@ require approval.
    budget usage.
 9. The 390px proposal flow has honest loading/error/reject/continue states and
    never implies acceptance.
-10. No accepted plan, lock, completion, replan, friend/hosted behavior,
+10. No accepted plan, lock, completion, replan, friend/non-M0-06A-hosted behavior,
     external sink, secret, or unapproved spend is added.
 
 ## Test plan
@@ -211,7 +213,7 @@ Provide exact branch/commit, changed files, final schemas and limits, RLS/
 privilege matrix, seven-day/DST evidence, constraint/safety/idempotency tests,
 fixture/live token-cost evidence, `390x844` demo, leakage scan, full commands/
 results, limitations, and confirmation that no acceptance/logging/replan/
-friend/hosted/external behavior was added.
+friend/non-M0-06A-hosted/external behavior was added.
 
 ## Open decisions
 
@@ -230,5 +232,6 @@ friend/hosted/external behavior was added.
 
 The product owner must approve all plan, unit, constraint, allocation, safety,
 UX, and retention decisions. M2-01 and M2-02 must be accepted. Approval is
-owner/synthetic local-only and does not authorize M2-04, friend data, hosted
-deployment, external use, analytics, or additional spend.
+owner/synthetic local or M0-06A founder-hosted only and does not authorize
+M2-04, friend data, public registration, commercial use, production,
+analytics, or additional spend.

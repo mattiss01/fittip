@@ -8,8 +8,11 @@
 
 **Depends on:** [M0-03 / F-001 accepted](../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md)
 
-**Local staging boundary:** [ADR-006](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md);
-product-owner or synthetic data only, no hosted/external use
+**Hosted test dependency:** [M0-06A accepted](M0-06A-FOUNDER-HOSTED-STAGING.md)
+
+**Founder staging boundary:** [ADR-006](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md)
+and [ADR-007](../decisions/ADR-007-FOUNDER-HOSTED-STAGING.md);
+product-owner or synthetic data only, local or founder-hosted
 
 **Integration dependency:** M1-01, M1-02, and M1-03 must be accepted before
 their routes or calls to action appear as available behavior
@@ -417,7 +420,7 @@ slice, or return focused corrections**.
 The product owner must approve the visible tabs, labels/order/icons, routes and
 default, bottom-navigation treatment, empty/blocked/loading/error/offline copy,
 safe-return behavior, You composition, and responsive/accessibility choices
-before implementation. Approval is local-only and dispatches the ticket only
-after its recorded local dependencies are accepted. M0-06 remains a
-pre-hosted/pre-friends gate, not a local implementation dependency. Until then,
-M1-04 remains **proposed**.
+before implementation. Approval dispatches the ticket only after its recorded
+dependencies are accepted. M0-06A permits only owner/synthetic founder staging;
+M0-06 remains a pre-friends/public/commercial gate. Until then, M1-04 remains
+**proposed**.

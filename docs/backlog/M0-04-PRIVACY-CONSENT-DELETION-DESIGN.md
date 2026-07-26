@@ -28,9 +28,10 @@ migrations, pages, legal text, processor accounts, provider configuration, or
 deletion jobs. Any schema or user-visible implementation requires a later
 dependency-ready brief and separate product-owner approval.
 
-[ADR-006](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md) permits a narrower
-owner/synthetic-data local exception. That exception neither satisfies nor
-changes this ticket's required pre-friends/hosted privacy work.
+[ADR-006](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md) permits a narrower local
+exception, and [ADR-007](../decisions/ADR-007-FOUNDER-HOSTED-STAGING.md)
+permits the disposable owner-only hosted topology. Neither exception satisfies
+or changes this ticket's required pre-friends/public/commercial privacy work.
 
 ## Product design versus legal advice
 
@@ -238,7 +239,7 @@ User browser
   -> FitTip web/server host (provider and region TBD)
     -> Supabase Auth/Postgres/Storage (project and region TBD)
     -> LLM provider only after effective AI consent (provider/model/region TBD)
-    -> transactional email provider (TBD before hosted use)
+    -> transactional email provider (TBD before public/external use)
     -> privacy-safe analytics/monitoring only if separately approved (TBD)
 ```
 

@@ -10,8 +10,11 @@
 
 **Depends on:** [M1-01 accepted](M1-01-GOAL-MODEL-VALIDATION.md), [M1-02 accepted](M1-02-MEMORY-MODEL-MANAGEMENT.md), [M1-03 accepted](M1-03-INTAKE-FACT-REVIEW.md), and [M1-04 accepted](M1-04-MOBILE-NAVIGATION-EMPTY-STATES.md)
 
-**Local staging boundary:** [ADR-006](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md);
-product-owner or synthetic data only, no hosted/external use
+**Hosted test dependency:** [M0-06A accepted](M0-06A-FOUNDER-HOSTED-STAGING.md)
+
+**Founder staging boundary:** [ADR-006](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md)
+and [ADR-007](../decisions/ADR-007-FOUNDER-HOSTED-STAGING.md);
+product-owner or synthetic data only, local or founder-hosted
 
 **Blocks:** M1 milestone acceptance and any M2 implementation
 

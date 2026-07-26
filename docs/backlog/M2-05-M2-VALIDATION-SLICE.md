@@ -13,10 +13,11 @@
 [M2-03 accepted](M2-03-SEVEN-DAY-PLAN-PROPOSAL.md), and
 [M2-04 accepted](M2-04-PLAN-EDIT-LOCK-ACCEPTANCE.md)
 
-**Architecture boundary:** [ADR-006 accepted](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md)
+**Architecture boundary:** ADR-006 and ADR-007 accepted; M0-06A accepted before
+founder-hosted validation
 
-**Blocks:** M2 local milestone acceptance; does not authorize M3, friends,
-hosted deployment, or external use
+**Blocks:** M2 founder milestone acceptance; does not authorize M3, friends,
+public registration, commercial use, production, or external use
 
 ## Outcome
 
@@ -35,11 +36,12 @@ M2 or M1/M0 ticket.
 - Validation uses synthetic fixtures by default.
 - Any live-provider evidence is explicit opt-in, limited to one approved owner
   or synthetic input, and stays inside the approved request/token/cost cap.
-- Friend/external data, hosted deployment, external analytics/monitoring,
-  remote resource changes, and unapproved spend are prohibited.
+- Friend/external data, non-M0-06A hosted deployment, external
+  analytics/monitoring, remote resource changes, and unapproved spend are
+  prohibited.
 - M0-03B, M0-04 and its later implementation, M0-05, and M0-06 remain
-  unresolved pre-friends/hosted gates unless separately accepted. A M2 PASS is
-  not external-use readiness.
+  unresolved pre-friends/public/commercial gates unless separately accepted. A
+  M2 PASS is not external-use readiness.
 
 ## Readiness criteria
 
@@ -82,7 +84,8 @@ If readiness fails, stop and route the missing item to its owner.
 - No correction while testing, provider/model change, higher budget, retry,
   new prompt, second adapter, or new external resource.
 - No logging/completion, plan-versus-actual history, replan, coaching chat,
-  pattern detection, progress, analytics, hosted deployment, or external user.
+  pattern detection, progress, analytics, new hosted resource, or external
+  user.
 - No claim of legal/privacy compliance or external readiness.
 
 ## Validation matrix
@@ -198,7 +201,7 @@ reports, and browser storage for:
 10. The accepted `390x844` flow and manual/automated accessibility checks pass
     or findings are routed before acceptance.
 11. Secret/content/external-request inspection finds no leak, friend data,
-    hosted use, analytics sink, or unapproved resource/spend.
+    non-M0-06A hosted use, analytics sink, or unapproved resource/spend.
 12. The diff contains validation artifacts only; no product behavior or test
     expectation is changed.
 
@@ -213,7 +216,7 @@ Create `docs/validation/M2-05-VALIDATION.md` only during approved validation.
 Record exact source commits, tool versions, commands/results, schema/RLS
 matrix, fixture/live call count and cap evidence, test matrix, screenshots with
 synthetic content, accessibility results, leakage scan, limitations,
-pre-friends/hosted blockers, and independent verdict.
+  pre-friends/public/commercial blockers, and independent verdict.
 
 ## Finding ownership
 
@@ -235,7 +238,7 @@ files, readiness result, commands/results, schema/RLS matrix, fixture/live call
 count and token/cost-cap evidence, schema/safety failure evidence,
 authorization/versioning/locks/transaction results, `390x844` evidence,
 accessibility and leakage findings, known limitations, explicit
-`local owner/synthetic only — friends and hosted/external use blocked`
+`owner/synthetic local or founder-hosted only — friends and public/external use blocked`
 statement, and one verdict: **PASS** or **BLOCKED with routed findings**.
 
 ## Open validation decisions
@@ -253,5 +256,6 @@ statement, and one verdict: **PASS** or **BLOCKED with routed findings**.
 
 M2-05 may be approved only after M2-01 through M2-04 are accepted and an
 independent validator is named. Approval authorizes validation/evidence only.
-It does not authorize fixes, M3, new calls, higher spend, friends, hosted
-deployment, external use, analytics, or privacy implementation.
+It does not authorize fixes, M3, new calls, higher spend, friends, new hosted
+resources, public registration, commercial use, production, analytics, or
+privacy implementation.

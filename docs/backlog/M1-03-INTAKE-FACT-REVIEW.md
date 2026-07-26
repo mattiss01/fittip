@@ -8,8 +8,11 @@
 
 **Depends on:** [M1-01 accepted](M1-01-GOAL-MODEL-VALIDATION.md) and [M1-02 accepted](M1-02-MEMORY-MODEL-MANAGEMENT.md)
 
-**Local staging boundary:** [ADR-006](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md);
-product-owner or synthetic data only, no hosted/external use
+**Hosted test dependency:** [M0-06A accepted](M0-06A-FOUNDER-HOSTED-STAGING.md)
+
+**Founder staging boundary:** [ADR-006](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md)
+and [ADR-007](../decisions/ADR-007-FOUNDER-HOSTED-STAGING.md);
+product-owner or synthetic data only, local or founder-hosted
 
 **Blocks:** [M1-05 M1 validation slice](M1-05-M1-VALIDATION-SLICE.md)
 
@@ -31,9 +34,9 @@ This proposal may be implemented locally only after M1-01 and M1-02 are
 accepted. It does not authorize remote persistence, production AI, external
 registration, analytics, or a privacy/legal conclusion.
 
-M0-06 is not a local implementation dependency. It remains mandatory, together
-with the privacy and recovery gates below, before friends, hosted deployment,
-or external use.
+M0-06A is required before a hosted testable release. M0-06 remains mandatory,
+together with the privacy and recovery gates below, before friends, public
+registration, commercial use, or production.
 
 Before any external user submits intake, all of the following must be
 separately approved, implemented, validated, and accepted:
