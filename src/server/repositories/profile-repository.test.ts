@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Database } from "@/lib/supabase/database.types";
 import {
@@ -11,6 +11,13 @@ import {
 const USER_ID = "00000000-0000-4000-8000-000000000001";
 
 describe("ProfileRepository", () => {
+  afterEach(() => {
+    delete process.env.FITTIP_RUNTIME_MODE;
+    delete process.env.FITTIP_OWNER_USER_ID;
+    delete process.env.VERCEL;
+    delete process.env.VERCEL_ENV;
+  });
+
   it("derives identity and applies an explicit owner filter on reads", async () => {
     const query = createReadQuery({
       user_id: USER_ID,
@@ -110,6 +117,44 @@ describe("ProfileRepository", () => {
     const repository = new ProfileRepository(createClient(table));
     await repository.ensureCurrentProfile();
     expect(insert).toHaveBeenCalledWith({ user_id: USER_ID });
+  });
+
+  it("rejects a founder-staging non-owner before reading profile data", async () => {
+    process.env.FITTIP_RUNTIME_MODE = "founder-staging";
+    process.env.FITTIP_OWNER_USER_ID = USER_ID;
+    const table = vi.fn();
+    const repository = new ProfileRepository(
+      createClient(table, {
+        data: {
+          claims: { sub: "00000000-0000-4000-8000-000000000002" },
+        },
+        error: null,
+      }),
+    );
+
+    await expect(repository.getCurrentProfile()).rejects.toThrow(
+      ProfileAuthenticationError,
+    );
+    expect(table).not.toHaveBeenCalled();
+  });
+
+  it("rejects a founder-staging non-owner before creating profile data", async () => {
+    process.env.FITTIP_RUNTIME_MODE = "founder-staging";
+    process.env.FITTIP_OWNER_USER_ID = USER_ID;
+    const table = vi.fn();
+    const repository = new ProfileRepository(
+      createClient(table, {
+        data: {
+          claims: { sub: "00000000-0000-4000-8000-000000000002" },
+        },
+        error: null,
+      }),
+    );
+
+    await expect(repository.createCurrentProfile()).rejects.toThrow(
+      ProfileAuthenticationError,
+    );
+    expect(table).not.toHaveBeenCalled();
   });
 });
 

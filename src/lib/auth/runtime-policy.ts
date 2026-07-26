@@ -22,7 +22,7 @@ export function readRuntimePolicy(
 ): RuntimePolicy {
   const mode = environment[MODE_VARIABLE];
 
-  if (mode === undefined || mode === "") {
+  if ((mode === undefined || mode === "") && !isVercelRuntime(environment)) {
     return { mode: "local", ownerUserId: null };
   }
 
@@ -36,6 +36,12 @@ export function readRuntimePolicy(
   }
 
   return { mode: FOUNDER_STAGING_MODE, ownerUserId };
+}
+
+function isVercelRuntime(
+  environment: Record<string, string | undefined>,
+): boolean {
+  return environment.VERCEL === "1" || Boolean(environment.VERCEL_ENV);
 }
 
 export function isAllowedVerifiedUser(

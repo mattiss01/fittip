@@ -3,11 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 import type { Database } from "@/lib/supabase/database.types";
-import {
-  isAllowedVerifiedUser,
-  readRuntimePolicy,
-} from "@/lib/auth/runtime-policy";
-import { readSupabasePublicEnvironment } from "@/lib/supabase/env";
+import { readRuntimePolicy } from "@/lib/auth/runtime-policy";
+import { requireAllowedVerifiedUser } from "@/lib/auth/verified-user";
+import { readServerSupabaseEnvironment } from "@/lib/supabase/server-environment";
 import {
   applyPrivateSessionHeaders,
   mergeAuthResponseHeaders,
@@ -24,7 +22,7 @@ export async function proxy(request: NextRequest) {
   }
 
   let response = NextResponse.next({ request });
-  const environment = readSupabasePublicEnvironment();
+  const environment = readServerSupabaseEnvironment();
   const client = createServerClient<Database>(
     environment.url,
     environment.publishableKey,
@@ -49,14 +47,14 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  const { data, error } = await client.auth.getClaims();
-  if (
-    pathname.startsWith("/home") &&
-    (error || !isAllowedVerifiedUser(policy, data?.claims.sub))
-  ) {
-    await client.auth.signOut();
-    const redirect = NextResponse.redirect(new URL("/", request.url), 303);
-    return mergeAuthResponseHeaders(redirect, response);
+  if (pathname.startsWith("/home")) {
+    try {
+      await requireAllowedVerifiedUser(client, policy);
+    } catch {
+      await client.auth.signOut();
+      const redirect = NextResponse.redirect(new URL("/", request.url), 303);
+      return mergeAuthResponseHeaders(redirect, response);
+    }
   }
 
   return applyPrivateSessionHeaders(response);

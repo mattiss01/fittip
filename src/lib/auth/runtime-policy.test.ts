@@ -43,6 +43,28 @@ describe("readRuntimePolicy", () => {
       );
     },
   );
+
+  it.each([
+    { environment: { VERCEL: "1" }, scope: "production Vercel runtime" },
+    { environment: { VERCEL_ENV: "preview" }, scope: "preview Vercel runtime" },
+    {
+      environment: { VERCEL_ENV: "development" },
+      scope: "other Vercel runtime",
+    },
+  ])("never defaults to local in $scope", ({ environment }) => {
+    expect(() => readRuntimePolicy(environment)).toThrow(
+      new RuntimePolicyError("FITTIP_RUNTIME_MODE"),
+    );
+  });
+
+  it("requires a canonical owner UUID in every Vercel environment", () => {
+    expect(() =>
+      readRuntimePolicy({
+        VERCEL_ENV: "preview",
+        FITTIP_RUNTIME_MODE: "founder-staging",
+      }),
+    ).toThrow(new RuntimePolicyError("FITTIP_OWNER_USER_ID"));
+  });
 });
 
 describe("isAllowedVerifiedUser", () => {

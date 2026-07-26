@@ -1,23 +1,29 @@
 import { redirect } from "next/navigation";
 
 import { SignOutButton } from "@/components/sign-out-button";
-import {
-  isAllowedVerifiedUser,
-  readRuntimePolicy,
-} from "@/lib/auth/runtime-policy";
 import { createServerUserClient } from "@/lib/supabase/server-user-client";
-import { ProfileRepository } from "@/server/repositories/profile-repository";
+import {
+  ProfileAuthenticationError,
+  ProfileRepository,
+} from "@/server/repositories/profile-repository";
 
 export default async function ProtectedHome() {
-  const policy = readRuntimePolicy();
   const client = await createServerUserClient();
-  const { data, error } = await client.auth.getClaims();
 
-  if (!isAllowedVerifiedUser(policy, error ? undefined : data?.claims.sub)) {
+  let profile;
+  try {
+    profile = await new ProfileRepository(client).getCurrentProfile();
+  } catch (error) {
+    if (
+      error instanceof ProfileAuthenticationError &&
+      error.accessError?.policy.mode === "founder-staging" &&
+      error.accessError.reason === "not-owner"
+    ) {
+      redirect("/auth/denied");
+    }
     redirect("/");
   }
 
-  const profile = await new ProfileRepository(client).getCurrentProfile();
   if (!profile) {
     redirect("/");
   }

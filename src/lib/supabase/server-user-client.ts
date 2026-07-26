@@ -5,11 +5,11 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import type { Database } from "@/lib/supabase/database.types";
-import { readSupabasePublicEnvironment } from "@/lib/supabase/env";
+import { readServerSupabaseEnvironment } from "@/lib/supabase/server-environment";
 
 export async function createServerUserClient(response?: NextResponse) {
   const cookieStore = await cookies();
-  const environment = readSupabasePublicEnvironment();
+  const environment = readServerSupabaseEnvironment();
 
   return createServerClient<Database>(
     environment.url,

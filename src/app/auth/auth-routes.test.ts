@@ -35,6 +35,7 @@ vi.mock("@/server/repositories/profile-repository", () => ({
 }));
 
 import { GET as callback } from "@/app/auth/callback/route";
+import { GET as denied } from "@/app/auth/denied/route";
 import { POST as signin } from "@/app/auth/signin/route";
 import { POST as signout } from "@/app/auth/signout/route";
 import { POST as signup } from "@/app/auth/signup/route";
@@ -217,6 +218,35 @@ describe("production authentication route handlers", () => {
     );
     expectPrivate303(response, "/");
     expect(client.auth.signOut).toHaveBeenCalledOnce();
+  });
+
+  it("clears a denied founder session without relying on an optional Referer header", async () => {
+    process.env.FITTIP_RUNTIME_MODE = "founder-staging";
+    process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
+    const response = await denied(new Request(`${origin}/auth/denied`));
+
+    expectPrivate303(response, "/");
+    expect(client.auth.signOut).toHaveBeenCalledOnce();
+  });
+
+  it("returns only the generic private denial for cross-origin navigation", async () => {
+    process.env.FITTIP_RUNTIME_MODE = "founder-staging";
+    process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
+    const response = await denied(
+      new Request(`${origin}/auth/denied`, {
+        headers: { referer: "https://untrusted.example/home" },
+      }),
+    );
+
+    expectPrivate303(response, "/");
+    expect(client.auth.signOut).toHaveBeenCalledOnce();
+  });
+
+  it("does not create a session client for the founder-only denial route locally", async () => {
+    const response = await denied(new Request(`${origin}/auth/denied`));
+
+    expectPrivate303(response, "/", false);
+    expect(createServerUserClientMock).not.toHaveBeenCalled();
   });
 
   it("closes hosted signup before constructing an Auth client", async () => {

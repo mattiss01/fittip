@@ -86,6 +86,7 @@ describe("production auth proxy", () => {
   });
 
   it("denies and signs out a non-owner founder-staging session", async () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://project.supabase.co";
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
     process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
     getClaimsMock.mockResolvedValue({
@@ -102,6 +103,7 @@ describe("production auth proxy", () => {
 
   it("allows the configured founder-staging owner", async () => {
     const ownerId = "00000000-0000-4000-8000-000000000001";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://project.supabase.co";
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
     process.env.FITTIP_OWNER_USER_ID = ownerId;
     getClaimsMock.mockResolvedValue({

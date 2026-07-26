@@ -1,8 +1,10 @@
 # FitTip
 
-This repository contains the mobile-first web and local data foundation for
-FitTip. M0-03 implements local-only public email/password registration,
-Mailpit confirmation, protected sessions, and minimal username-free profiles.
+This repository contains the mobile-first web and data foundation for FitTip.
+M0-03 implements local public email/password registration, Mailpit
+confirmation, protected sessions, and minimal username-free profiles. M0-06A
+adds the approved owner-only founder-hosted staging policy; it is not a
+production or external-user release.
 
 ## Prerequisites
 
@@ -92,6 +94,20 @@ FITTIP_OWNER_USER_ID=replace-with-owner-user-id
 
 This is a disposable, owner-only staging exception. It has no public
 registration, friend/external-user, commercial, or production authorization.
+Every Vercel environment, including production and preview, is founder
+restricted: its server runtime must set the exact `founder-staging` mode and a
+canonical owner UUID. Vercel never defaults to local mode. Founder staging also
+requires an HTTPS Supabase URL; local development alone may use the HTTP local
+Supabase URL.
+
+The protected-page fallback uses a narrow internal session-denial route to
+reliably clear a founder-staging non-owner session even after a direct
+address-bar `/home` request, where a redirect may not preserve a `Referer`.
+That makes it a logout-only GET endpoint: cross-origin navigation can at most
+clear the current browser session and receives a generic private redirect. The
+tradeoff is accepted only for disposable founder staging; the route performs
+no data mutation and is not a substitute for CSRF controls required before
+external use.
 
 ### Schema and access model
 
@@ -126,9 +142,11 @@ npx supabase gen types --local --lang typescript --schema public |
 npm run format
 ```
 
-No remote project is approved for this ticket. Do not run `supabase link`,
-`db push`, or any hosted migration/configuration command until the product
-owner names and approves the exact FitTip target environment.
+ADR-007 approves one separate disposable founder-hosted staging project only.
+Do not run `supabase link`, `db push`, or any hosted migration/configuration
+command until the product owner proceeds with its separately gated resource
+creation and names the exact FitTip target environment. Never link or mutate
+the unrelated existing Supabase project.
 
 ## Quality commands
 

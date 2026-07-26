@@ -4,6 +4,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/lib/supabase/database.types";
 import {
+  requireAllowedVerifiedUser,
+  VerifiedUserAccessError,
+} from "@/lib/auth/verified-user";
+import {
   createServerUserClient,
   type ServerUserClient,
 } from "@/lib/supabase/server-user-client";
@@ -16,7 +20,7 @@ export type Profile = {
 };
 
 export class ProfileAuthenticationError extends Error {
-  constructor() {
+  constructor(readonly accessError?: VerifiedUserAccessError) {
     super("An authenticated FitTip user is required.");
     this.name = "ProfileAuthenticationError";
   }
@@ -70,14 +74,14 @@ export class ProfileRepository {
   }
 
   private async getVerifiedUserId(): Promise<string> {
-    const { data, error } = await this.client.auth.getClaims();
-    const userId = data?.claims.sub;
-
-    if (error || typeof userId !== "string" || userId.length === 0) {
+    try {
+      return await requireAllowedVerifiedUser(this.client);
+    } catch (error) {
+      if (error instanceof VerifiedUserAccessError) {
+        throw new ProfileAuthenticationError(error);
+      }
       throw new ProfileAuthenticationError();
     }
-
-    return userId;
   }
 }
 
