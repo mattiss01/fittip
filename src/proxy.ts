@@ -14,13 +14,18 @@ export async function proxy(request: NextRequest) {
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet) => {
+        setAll: (cookiesToSet, headers) => {
           for (const { name, value } of cookiesToSet) {
             request.cookies.set(name, value);
           }
           response = NextResponse.next({ request });
           for (const { name, value, options } of cookiesToSet) {
             response.cookies.set(name, value, options);
+          }
+          if (headers) {
+            for (const [name, value] of Object.entries(headers)) {
+              response.headers.append(name, value);
+            }
           }
         },
       },
@@ -32,9 +37,15 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/home") &&
     (error || !data?.claims.sub)
   ) {
-    return NextResponse.redirect(new URL("/", request.url));
+    const redirect = NextResponse.redirect(new URL("/", request.url), 303);
+    response.headers.forEach((value, name) =>
+      redirect.headers.append(name, value),
+    );
+    redirect.headers.set("Cache-Control", "private, no-store");
+    return redirect;
   }
 
+  response.headers.set("Cache-Control", "private, no-store");
   return response;
 }
 

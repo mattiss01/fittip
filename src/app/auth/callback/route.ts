@@ -24,9 +24,7 @@ export async function GET(request: Request) {
 
   try {
     const profiles = new ProfileRepository(client);
-    if (!(await profiles.getCurrentProfile())) {
-      await profiles.createCurrentProfile();
-    }
+    await profiles.ensureCurrentProfile();
   } catch {
     return NextResponse.redirect(
       new URL("/?auth=confirmation-failed", requestUrl),

@@ -15,7 +15,7 @@ test.describe("public account authentication", () => {
     const pageErrors: Error[] = [];
     page.on("pageerror", (error) => pageErrors.push(error));
     const email = `fittip-e2e-${Date.now()}@example.test`;
-    const password = "local-e2e-password";
+    const password = `Local-${crypto.randomUUID()}-9`;
 
     await page.goto("/");
     await expect(
@@ -62,12 +62,20 @@ async function pollForConfirmationUrl(
       "http://127.0.0.1:54324/api/v1/messages",
     );
     const body = (await response.json()) as {
-      messages?: Array<{ To?: Array<{ Address?: string }>; HTML?: string }>;
+      messages?: Array<{ ID?: string; To?: Array<{ Address?: string }> }>;
     };
     const message = body.messages?.find((candidate) =>
       candidate.To?.some((recipient) => recipient.Address === email),
     );
-    const url = message?.HTML?.match(
+    if (!message?.ID) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      continue;
+    }
+    const detail = await request.get(
+      `http://127.0.0.1:54324/api/v1/message/${message.ID}`,
+    );
+    const html = ((await detail.json()) as { HTML?: string }).HTML;
+    const url = html?.match(
       /https?:\/\/[^"'\s<]+\/auth\/callback[^"'\s<]*/,
     )?.[0];
     if (url) return url.replace(/&amp;/g, "&");

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { createServerUserClient } from "@/lib/supabase/server-user-client";
+import {
+  createServerUserClient,
+  privateRedirect,
+} from "@/lib/supabase/server-user-client";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -9,24 +12,27 @@ export async function POST(request: Request) {
   const confirmation = String(formData.get("confirmation") ?? "");
 
   if (password.length < 8 || password !== confirmation) {
-    return NextResponse.redirect(
-      new URL("/signup?error=validation", request.url),
-    );
+    return privateRedirect(new URL("/signup?error=validation", request.url));
   }
 
-  const client = await createServerUserClient();
+  const pending = new NextResponse();
+  const client = await createServerUserClient(pending);
   const { error } = await client.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: new URL("/auth/callback", request.url).toString(),
+      emailRedirectTo: "http://localhost:3000/auth/callback",
     },
   });
 
-  return NextResponse.redirect(
+  const response = privateRedirect(
     new URL(
       error ? "/signup?error=signup" : "/signup?check-email=1",
       request.url,
     ),
   );
+  pending.headers.forEach((value, name) =>
+    response.headers.append(name, value),
+  );
+  return response;
 }

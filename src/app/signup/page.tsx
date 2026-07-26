@@ -3,7 +3,7 @@ import { AuthForm } from "@/components/auth-form";
 export default async function SignUpPage({
   searchParams,
 }: {
-  searchParams: Promise<{ checkEmail?: string; error?: string }>;
+  searchParams: Promise<{ "check-email"?: string; error?: string }>;
 }) {
   const params = await searchParams;
   return (
@@ -11,7 +11,7 @@ export default async function SignUpPage({
       <AuthForm
         initialMode="sign-up"
         searchParams={{
-          checkEmail: params.checkEmail === "1",
+          checkEmail: params["check-email"] === "1",
           error: params.error,
         }}
       />

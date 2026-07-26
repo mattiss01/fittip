@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
 
-import { createServerUserClient } from "@/lib/supabase/server-user-client";
+import {
+  createServerUserClient,
+  privateRedirect,
+} from "@/lib/supabase/server-user-client";
 
-export async function POST(request: Request) {
-  const client = await createServerUserClient();
+export async function POST() {
+  const pending = new NextResponse();
+  const client = await createServerUserClient(pending);
   await client.auth.signOut();
-  return NextResponse.redirect(new URL("/", request.url));
+  const response = privateRedirect(new URL("http://localhost:3000/"));
+  pending.headers.forEach((value, name) =>
+    response.headers.append(name, value),
+  );
+  return response;
 }

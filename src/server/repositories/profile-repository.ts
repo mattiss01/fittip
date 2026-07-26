@@ -64,6 +64,11 @@ export class ProfileRepository {
     return toProfile(data);
   }
 
+  async ensureCurrentProfile(): Promise<Profile> {
+    const existing = await this.getCurrentProfile();
+    return existing ?? this.createCurrentProfile();
+  }
+
   private async getVerifiedUserId(): Promise<string> {
     const { data, error } = await this.client.auth.getClaims();
     const userId = data?.claims.sub;
