@@ -27,7 +27,7 @@ export async function createServerUserClient(response?: NextResponse) {
             }
             if (headers) {
               for (const [name, value] of Object.entries(headers)) {
-                response?.headers.append(name, value);
+                response?.headers.set(name, value);
               }
             }
           } catch {
@@ -57,6 +57,10 @@ export function mergeAuthResponseHeaders(
 ): NextResponse {
   for (const cookie of accumulator.headers.getSetCookie()) {
     response.headers.append("Set-Cookie", cookie);
+  }
+  for (const name of ["Cache-Control", "Expires", "Pragma"]) {
+    const value = accumulator.headers.get(name);
+    if (value) response.headers.set(name, value);
   }
   return response;
 }

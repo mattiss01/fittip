@@ -138,4 +138,4 @@ npm run test:e2e
   above. It reads the confirmation link only from local Mailpit.
 
 Continuous integration, Vercel linkage, hosted Supabase configuration, and
-user-visible authentication belong to later approved tickets.
+hosted authentication/deployment validation belong to later approved tickets.

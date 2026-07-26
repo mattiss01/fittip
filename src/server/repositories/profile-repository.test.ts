@@ -79,6 +79,42 @@ describe("ProfileRepository", () => {
       ProfilePersistenceError,
     );
   });
+
+  it("returns an existing profile when ensuring current profile", async () => {
+    const query = createReadQuery({
+      user_id: USER_ID,
+      created_at: "2026-07-23T08:00:00.000Z",
+    });
+    const repository = new ProfileRepository(createClient(query.table));
+    await expect(repository.ensureCurrentProfile()).resolves.toEqual({
+      userId: USER_ID,
+      createdAt: "2026-07-23T08:00:00.000Z",
+    });
+  });
+
+  it("creates a profile when an authenticated user has no profile", async () => {
+    const single = vi
+      .fn()
+      .mockResolvedValue({
+        data: { user_id: USER_ID, created_at: "2026-07-23T08:00:00.000Z" },
+        error: null,
+      });
+    const insert = vi
+      .fn()
+      .mockReturnValue({ select: vi.fn().mockReturnValue({ single }) });
+    const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+    const table = vi
+      .fn()
+      .mockReturnValue({
+        select: vi
+          .fn()
+          .mockReturnValue({ eq: vi.fn().mockReturnValue({ maybeSingle }) }),
+        insert,
+      });
+    const repository = new ProfileRepository(createClient(table));
+    await repository.ensureCurrentProfile();
+    expect(insert).toHaveBeenCalledWith({ user_id: USER_ID });
+  });
 });
 
 function createClient(

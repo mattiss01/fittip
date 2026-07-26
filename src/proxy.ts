@@ -24,7 +24,7 @@ export async function proxy(request: NextRequest) {
           }
           if (headers) {
             for (const [name, value] of Object.entries(headers)) {
-              response.headers.append(name, value);
+              response.headers.set(name, value);
             }
           }
         },
