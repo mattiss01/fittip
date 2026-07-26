@@ -1,6 +1,6 @@
 # F-001: Basic public account registration and authentication
 
-**Status:** testable — approved by product owner 26 July 2026; implementation and independent review passed
+**Status:** accepted — product owner accepted the reviewed implementation 26 July 2026
 
 **Ticket:** M0-03
 
@@ -104,4 +104,4 @@ Public account creation is intentionally allowed, but the deployed Auth endpoint
 
 ## Approval record
 
-The product owner approved this reduced username-free MVP authentication scope on 26 July 2026. The implementation and corrective review passed on 26 July 2026, so M0-03 is **testable** pending product-owner acceptance. See the [M0-03 validation record](../validation/M0-03-VALIDATION.md). Approval remains local-only and does not authorize a hosted Supabase project, custom SMTP, external registration, account recovery, or M0-06 behavior.
+The product owner approved this reduced username-free MVP authentication scope on 26 July 2026. The implementation and corrective independent review passed, and the product owner accepted M0-03 on 26 July 2026. See the [M0-03 validation record](../validation/M0-03-VALIDATION.md). Acceptance remains local-only and does not authorize a hosted Supabase project, custom SMTP, external registration, account recovery, or M0-06 behavior.

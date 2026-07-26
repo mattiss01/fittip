@@ -1,8 +1,10 @@
 # M0-03 validation: basic public account authentication
 
-**Status:** testable — pending product-owner acceptance
+**Status:** accepted
 
 **Date:** 26 July 2026
+
+**Accepted by:** product owner, 26 July 2026 — “I accept M0-03.”
 
 **Ticket:** [F-001 / M0-03](../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md)
 
@@ -139,8 +141,9 @@ Final independent review returned **PASS** at
 - M0-03B account recovery and M0-06 hosted email/bot-protection decisions remain
   required before external MVP registration.
 
-## Decision requested
+## Decision record
 
-Accept M0-03 as the reviewed local basic-authentication foundation. Acceptance
-does not approve account recovery, hosted authentication settings, production
-email delivery, external registration, or later product features.
+The product owner accepted M0-03 on 26 July 2026 as the reviewed local
+basic-authentication foundation. Acceptance does not approve account recovery,
+hosted authentication settings, production email delivery, external
+registration, or later product features.
