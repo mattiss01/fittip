@@ -6,7 +6,10 @@
 
 **Priority:** P1
 
-**Depends on:** M0-06 accepted; [M0-03 / F-001 accepted](../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md); [M0-02-C1 accepted](M0-02-C1-REMOVE-USERNAME.md); [ADR-002](../decisions/ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md); [ADR-004](../decisions/ADR-004-USERNAME-FREE-ACCOUNT-PROFILE.md)
+**Depends on:** [M0-03 / F-001 accepted](../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md); [M0-02-C1 accepted](M0-02-C1-REMOVE-USERNAME.md); [ADR-002](../decisions/ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md); [ADR-004](../decisions/ADR-004-USERNAME-FREE-ACCOUNT-PROFILE.md)
+
+**Local staging boundary:** [ADR-006](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md);
+product-owner or synthetic data only, no hosted/external use
 
 **Blocks:** [M1-03 Intake fact review](M1-03-INTAKE-FACT-REVIEW.md) and [M1-05 M1 validation slice](M1-05-M1-VALIDATION-SLICE.md)
 
@@ -23,8 +26,8 @@ AI provider, or treat raw chat history as memory.
 
 ## Approval, environment, and external-use boundary
 
-This proposal may be implemented locally only after M0-06 is accepted and the
-decisions below are approved. It does not authorize a remote migration,
+This proposal may be implemented locally after its accepted dependencies are
+satisfied and the decisions below are approved. It does not authorize a remote migration,
 external collection, analytics, AI transfer, or a health-data processing
 claim.
 
@@ -420,5 +423,7 @@ slice, or return focused corrections**.
 The product owner must approve the memory types, statuses, provenance,
 version/history, expiry, delete, sensitive-data, mobile UX/copy, and any
 consequential database architecture before implementation. Approval is
-local-only and dispatches the ticket only when M0-06 is accepted. Until then,
+local-only and dispatches the ticket only when its recorded local dependencies
+are accepted. M0-06 remains a pre-hosted/pre-friends gate, not a local
+implementation dependency. Until then,
 M1-02 remains **proposed**.

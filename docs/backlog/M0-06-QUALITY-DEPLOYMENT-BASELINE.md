@@ -14,7 +14,9 @@
 **Current dependency state:** Only M0-03 is accepted. M0-03B, M0-04, and M0-05
 remain proposed.
 
-**Blocks:** external registration, external MVP use, and M1 implementation
+**Blocks:** external registration, friend/external MVP use, and hosted
+deployment. It does not block approved owner/synthetic local M1 or M2 work
+under ADR-006.
 
 ## Outcome
 
@@ -34,6 +36,11 @@ ADR-001 accepts Next.js/Vercel and Supabase as the architecture direction. That
 does not identify an account, team, organization, project reference, region,
 plan, integration, domain, or billing owner. Those exact remote choices remain
 inside this ticket's approval gate.
+
+[ADR-006](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md) permits independently
+approved local M1/M2 development with only the product owner or synthetic data.
+That local path does not satisfy any M0-06 criterion and may not create a
+hosted deployment, external user, analytics sink, or remote resource.
 
 ## Dependency and external-registration gate
 

@@ -6,7 +6,10 @@
 
 **Priority:** P1
 
-**Depends on:** M0-06 accepted; [M0-03 / F-001 accepted](../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md)
+**Depends on:** [M0-03 / F-001 accepted](../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md)
+
+**Local staging boundary:** [ADR-006](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md);
+product-owner or synthetic data only, no hosted/external use
 
 **Integration dependency:** M1-01, M1-02, and M1-03 must be accepted before
 their routes or calls to action appear as available behavior
@@ -30,8 +33,8 @@ action in this brief is a proposal until the product owner approves it.
 
 ## Approval, environment, and external-use boundary
 
-Approval would authorize this local authenticated shell only after M0-06 is
-accepted. It does not authorize a deployment, remote environment, tracking,
+Approval would authorize this local authenticated shell after its accepted
+dependencies are satisfied. It does not authorize a deployment, remote environment, tracking,
 AI, training data, or any unaccepted M1 route.
 
 Before external use, all of the following must be separately approved,
@@ -415,4 +418,6 @@ The product owner must approve the visible tabs, labels/order/icons, routes and
 default, bottom-navigation treatment, empty/blocked/loading/error/offline copy,
 safe-return behavior, You composition, and responsive/accessibility choices
 before implementation. Approval is local-only and dispatches the ticket only
-after M0-06 is accepted. Until then, M1-04 remains **proposed**.
+after its recorded local dependencies are accepted. M0-06 remains a
+pre-hosted/pre-friends gate, not a local implementation dependency. Until then,
+M1-04 remains **proposed**.

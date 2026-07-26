@@ -47,6 +47,7 @@ FitTip is not a fixed workout logger or generic chatbot. Its value is the combin
 | Language | English only initially. |
 | Devices | Mobile browser first; desktop must remain functional. |
 | Accounts | Public self-service email/password accounts, verified email, username-free profiles, and per-user data isolation from the first beta build. |
+| Local AI staging | Real server-side AI calls may be tested locally with only the product owner's own data or synthetic data under ADR-006; friends, external users, hosted use, and analytics sinks remain blocked until the privacy/deployment gates pass. |
 | Business direction | Validate a real business hypothesis through founder-led early beta, then broader public beta and app-store distribution. |
 | Future | User-controlled sharing, shared workouts/plans/groups; no coach-role implementation now. |
 
@@ -78,6 +79,14 @@ A hosted app accessible from multiple devices needs persistent identity and per-
 **Revised MVP decision:** implement public self-service email/password registration, verified email, an authenticated `user_id` on every owned record, and strict per-user authorization/row-level security from the first beta build. Email remains the login identity; no display name or public handle is collected. Social discovery and payments remain out of scope.
 
 The MVP is therefore a **commercially aware early beta**: a small, usable product with public self-service accounts and production-shaped data, privacy, and AI-cost foundations—but without the feature breadth of a finished consumer company.
+
+**Local-owner staging decision:** M1 and M2 may be built and validated in local
+development before the full privacy and hosted-environment program is complete.
+Under [ADR-006](docs/decisions/ADR-006-LOCAL-OWNER-AI-MVP.md), real AI calls
+are allowed only for the product owner's own data or synthetic data, through a
+server-only, explicitly enabled, deny-by-default, budget-capped boundary. This
+exception does not permit friend data, external users, hosted deployment, an
+analytics sink, or unapproved provider/model/key/spend decisions.
 
 ### 4.4 Health and pain reports
 
@@ -136,7 +145,7 @@ The first product questions are: do users return weekly, do they log enough cont
 These are architecture requirements from the first beta, even though app-store submission is later:
 
 1. Every user-owned record has a user id and authorization is enforced server-side.
-2. The app records explicit consent before sending training notes, chat content, or health-adjacent context to an LLM provider; users can withdraw consent.
+2. Before any friend's data, external user's data, or hosted use, the app records explicit consent before sending training notes, chat content, or health-adjacent context to an LLM provider; users can withdraw consent. Owner-only local development may instead use the narrower ADR-006 staging boundary until that implementation exists.
 3. The data model and backend service support full account/data deletion, including a defined approach for backups and retained security logs.
 4. Maintain a data inventory: data collected, purpose, processors/subprocessors, retention period, and deletion behavior.
 5. Do not make medical claims. Safety messages and conservative planning behavior are testable product requirements.
@@ -464,6 +473,20 @@ No React component contains plan-versioning, memory, safety, or AI business rule
 
 ## 13. MVP milestone sequence
 
+### Local-owner development path
+
+Milestone numbering describes product capability, not a requirement to finish
+every hosted/external-use gate before local feature work. After the accepted
+M0-03 authentication and ownership foundation, an independently approved M1 or
+M2 ticket may run locally with only the product owner or synthetic fixtures.
+Any real provider call additionally requires ADR-006, an approved adapter
+ticket, an explicit provider/model/budget decision, and fail-closed local
+controls.
+
+M0-03B, M0-04 and its later privacy implementation, M0-05, and M0-06 remain
+mandatory pre-friends/pre-hosted gates. Local validation never satisfies or
+removes those gates.
+
 ### M0: Foundation, early beta, and commercial-ready core
 
 - Initialize the repository, strict TypeScript, lint/format, test runner, and CI checks.
@@ -548,7 +571,11 @@ It is done only when:
 8. Accepting the replan creates a new plan version; the previous plan remains viewable.
 9. All AI plan payloads are schema-validated and rejected safely on failure.
 10. The core flow has automated unit tests and a Playwright happy-path test.
-11. The flow records AI-data consent and emits only privacy-safe product events.
+11. The flow either records AI-data consent and emits only privacy-safe product
+    events, or—only for owner/synthetic local validation—proves the narrower
+    ADR-006 allowlist, no-external-sink, content-free telemetry, and fail-closed
+    boundary. The full consent/event requirements remain mandatory before
+    friends, hosted deployment, or external use.
 
 ## 15. Agent operating protocol
 
@@ -652,4 +679,4 @@ These do not block foundation work, but should be decided before generating real
 
 ## 18. Explicit non-requirements for now
 
-Do not delay the core loop for referrals, reminders, billing, social sharing, groups, coaching roles, wearable integrations, native-app packaging, social login/passkeys, or a polished exercise-media library. Stage public account recovery after the basic local authentication slice but complete it before external MVP use. Do not defer authenticated user isolation, consent, privacy-ready data handling, or AI-cost observability. Build the trustworthy personal coach loop first: goals and memory → proposal → actual log → interactive replan → versioned history.
+Do not delay the core loop for referrals, reminders, billing, social sharing, groups, coaching roles, wearable integrations, native-app packaging, social login/passkeys, or a polished exercise-media library. Stage public account recovery after the basic local authentication slice but complete it before external MVP use. Never remove authenticated user isolation, consent, privacy-ready data handling, or AI-cost observability from the product plan: ADR-006 permits only a temporary owner/synthetic local boundary, and the full controls remain mandatory before friends or hosted/external use. Build the trustworthy personal coach loop first: goals and memory → proposal → actual log → interactive replan → versioned history.

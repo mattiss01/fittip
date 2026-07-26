@@ -8,12 +8,16 @@
 
 **Depends on:** [M0-02 accepted](M0-02-DATA-AUTHORIZATION-FOUNDATION.md) and [M0-02-C1 accepted](M0-02-C1-REMOVE-USERNAME.md)
 
-**Blocks:** M0-05, any real AI-data transfer, and external MVP use
+**Blocks:** the pre-friends/hosted privacy implementation, M0-05's
+production-shaped boundary, any friend/external AI-data transfer, and external
+MVP use. ADR-006 separately permits owner/synthetic local AI under its narrower
+controls.
 
 ## Outcome
 
 Produce an approved, implementable privacy design before FitTip creates
-consent/deletion schema or sends user content to an AI provider. The design
+consent/deletion schema or sends friend/external user content to an AI provider
+or operates a hosted MVP. The design
 must define the user notice, separate AI-data consent and withdrawal records,
 deletion request/operation lifecycle, data inventory, processor/data-flow map,
 retention categories, backup/security-log handling, access/export boundary,
@@ -23,6 +27,10 @@ This ticket creates reviewed design artifacts only. It does not create tables,
 migrations, pages, legal text, processor accounts, provider configuration, or
 deletion jobs. Any schema or user-visible implementation requires a later
 dependency-ready brief and separate product-owner approval.
+
+[ADR-006](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md) permits a narrower
+owner/synthetic-data local exception. That exception neither satisfies nor
+changes this ticket's required pre-friends/hosted privacy work.
 
 ## Product design versus legal advice
 
