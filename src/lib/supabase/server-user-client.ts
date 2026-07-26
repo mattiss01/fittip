@@ -43,6 +43,8 @@ export async function createServerUserClient(response?: NextResponse) {
 export function privateRedirect(url: URL): NextResponse {
   const response = NextResponse.redirect(url, 303);
   response.headers.set("Cache-Control", "private, no-store");
+  response.headers.set("Pragma", "no-cache");
+  response.headers.set("Expires", "0");
   return response;
 }
 

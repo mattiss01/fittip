@@ -1,9 +1,8 @@
 # FitTip
 
 This repository contains the mobile-first web and local data foundation for
-FitTip. M0-02-C1 corrects the local-only Supabase profile boundary to be
-username-free; public registration
-and all other user-visible account behavior remain unimplemented.
+FitTip. M0-03 implements local-only public email/password registration,
+Mailpit confirmation, protected sessions, and minimal username-free profiles.
 
 ## Prerequisites
 
@@ -61,9 +60,7 @@ npx supabase stop
 
 The local Auth server requires email confirmation. Development email is
 captured rather than sent; Mailpit is available at
-[http://127.0.0.1:54324](http://127.0.0.1:54324). M0-03 will implement the
-approved account and confirmation flows. M0-02 does not add registration,
-callbacks, session middleware, or protected routes.
+[http://127.0.0.1:54324](http://127.0.0.1:54324).
 
 ### Environment variables
 

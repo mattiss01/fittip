@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     email,
     password,
     options: {
-      emailRedirectTo: "http://localhost:3000/auth/callback",
+      emailRedirectTo: new URL("/auth/callback", request.url).toString(),
     },
   });
 
