@@ -101,11 +101,11 @@ Public account creation is intentionally allowed, but the deployed Auth endpoint
 - Playwright at 390px: create account → confirm through local email capture → protected screen → sign out → sign in.
 - Security inspection: browser bundle, logs, environment variables, and snapshots contain no secret key, password, or token.
 
-## Open decisions with recommendation
+## Decision summary
 
 1. **Password minimum:** product owner selected 8 characters without an arbitrary symbol requirement.
 2. **Bot protection timing:** recommended—keep M0-03 local/testable, then require the M0-06 hosted-environment gate before exposing registration externally.
 
 ## Decision requested
 
-Approve this username-free public account flow, password minimum, email-confirmation requirement, recovery flow, and hosted abuse/email-delivery gate. After M0-02-C1 is accepted, approval moves F-001 to **in development** and triggers automatic builder assignment and implementation.
+Approve this username-free public account flow, password minimum, email-confirmation requirement, recovery flow, and hosted abuse/email-delivery gate. Because M0-02-C1 is accepted, approval moves F-001 to **in development** and triggers automatic builder assignment and implementation.
