@@ -1,0 +1,77 @@
+import { expect, test } from "@playwright/test";
+
+const localEnvironmentReady = Boolean(
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+);
+
+test.describe("public account authentication", () => {
+  test.skip(!localEnvironmentReady, "requires the local Supabase environment");
+
+  test("creates an account, confirms it through Mailpit, signs out, and signs in", async ({
+    page,
+    request,
+  }) => {
+    const pageErrors: Error[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+    const email = `fittip-e2e-${Date.now()}@example.test`;
+    const password = "local-e2e-password";
+
+    await page.goto("/");
+    await expect(
+      page.getByRole("heading", { name: "Welcome back." }),
+    ).toBeVisible();
+    await page
+      .getByRole("link", { name: "New here? Create an account" })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Start with your next move." }),
+    ).toBeVisible();
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByLabel("Confirm password").fill(password);
+    await page.getByRole("button", { name: "Create account" }).click();
+    expect(pageErrors).toEqual([]);
+    await expect(page.getByRole("status")).toHaveText("Check your email");
+
+    const confirmationUrl = await pollForConfirmationUrl(request, email);
+    await page.goto(confirmationUrl);
+    await expect(page).toHaveURL(/\/home$/);
+    await expect(
+      page.getByRole("heading", { name: "You’re in." }),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await expect(page).toHaveURL(/\/$/);
+
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page).toHaveURL(/\/home$/);
+  });
+});
+
+async function pollForConfirmationUrl(
+  request: Parameters<typeof test>[0] extends never
+    ? never
+    : import("@playwright/test").APIRequestContext,
+  email: string,
+): Promise<string> {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const response = await request.get(
+      "http://127.0.0.1:54324/api/v1/messages",
+    );
+    const body = (await response.json()) as {
+      messages?: Array<{ To?: Array<{ Address?: string }>; HTML?: string }>;
+    };
+    const message = body.messages?.find((candidate) =>
+      candidate.To?.some((recipient) => recipient.Address === email),
+    );
+    const url = message?.HTML?.match(
+      /https?:\/\/[^"'\s<]+\/auth\/callback[^"'\s<]*/,
+    )?.[0];
+    if (url) return url.replace(/&amp;/g, "&");
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error("No local confirmation email arrived in Mailpit.");
+}

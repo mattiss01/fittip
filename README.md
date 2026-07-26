@@ -32,7 +32,10 @@ On Windows systems where PowerShell blocks `npm.ps1`, use `npm.cmd` in place of 
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The only route in this baseline is `/`.
+Open [http://localhost:3000](http://localhost:3000). The local M0-03 flow is
+available from `/`: create an email/password account, open its captured
+confirmation message in Mailpit, then continue to the protected `/home` route.
+Password recovery and hosted-email behavior are deliberately not implemented.
 
 ## Local Supabase
 
@@ -127,11 +130,15 @@ npm run test:run
 npm run format
 npm run format:check
 npm run build
+npm run test:e2e
 ```
 
 - `test` starts Vitest in watch mode.
 - `test:run` runs the deterministic test suite once.
 - `format` rewrites supported application and repository-tooling files with Prettier.
+- `test:e2e` runs the 390px browser flow. Start the local Supabase stack and
+  `npm run dev` first, and set the two public local Supabase variables shown
+  above. It reads the confirmation link only from local Mailpit.
 
 Continuous integration, Vercel linkage, hosted Supabase configuration, and
 user-visible authentication belong to later approved tickets.
