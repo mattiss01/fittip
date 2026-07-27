@@ -82,7 +82,7 @@ remains functional.
 | Hosted records | count-only database query | PASS - one confirmed non-anonymous owner and one matching profile; zero anonymous users |
 | Supabase performance advisors | hosted project advisor | PASS - no findings |
 | Supabase security advisors | hosted project advisor | PASS WITH KNOWN WARNING - leaked-password protection disabled |
-| Vercel build | deployment build-error query | PASS - build completed; no build errors |
+| Vercel build | deployment build-error query | PASS WITH KNOWN WARNING - build completed; Vercel's Node `24.15.0` is below the repository's accepted `>=24.18.0 <25` range |
 | Vercel runtime | 24-hour production error query | PASS - no runtime errors |
 | Mobile browser | hosted page at `390x844` | PASS - no horizontal overflow, console errors, or page errors |
 | Anonymous root | `GET /` | PASS - sign-in-only page, `200` |
@@ -175,6 +175,10 @@ test report, browser recording, screenshot, or agent message.
   decision if pausing disrupts testing.
 - Leaked-password protection is currently disabled. Public registration is
   closed, and enabling paid or broader protection requires a separate decision.
+- Vercel currently supplies Node `24.15.0` for its `24.x` project setting,
+  while FitTip's accepted engine range starts at `24.18.0`. The production
+  build passes, but Vercel emits `EBADENGINE`; the approved repository engine
+  range was not weakened as part of this hosting ticket.
 - There is no account recovery, password-change UI, custom SMTP, CAPTCHA,
   custom domain, external monitoring, analytics, or AI provider in this ticket.
 - Vercel Hobby and Supabase free tiers are accepted only for this personal,
