@@ -1,6 +1,6 @@
 # M0-06A: Founder-hosted staging
 
-**Status:** in development
+**Status:** testable
 
 **Milestone:** M0
 
@@ -12,6 +12,8 @@
 
 **Approval:** The product owner approved the complete founder-hosted FitTip MVP
 plan and requested implementation on 26 July 2026
+
+**Validation:** [M0-06A validation](../validation/M0-06A-VALIDATION.md)
 
 **Blocks:** hosted M1 testable releases
 
