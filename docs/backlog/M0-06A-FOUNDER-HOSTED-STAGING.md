@@ -1,6 +1,6 @@
 # M0-06A: Founder-hosted staging
 
-**Status:** testable
+**Status:** accepted
 
 **Milestone:** M0
 
@@ -14,6 +14,8 @@
 plan and requested implementation on 26 July 2026
 
 **Validation:** [M0-06A validation](../validation/M0-06A-VALIDATION.md)
+
+**Acceptance:** The product owner accepted M0-06A on 27 July 2026
 
 **Blocks:** hosted M1 testable releases
 

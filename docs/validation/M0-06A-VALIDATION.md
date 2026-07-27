@@ -1,10 +1,10 @@
 # M0-06A validation: founder-hosted staging
 
-**Status:** testable
+**Status:** accepted
 
 **Date:** 27 July 2026
 
-**Awaiting:** product-owner acceptance
+**Accepted by:** product owner, 27 July 2026 - "i accept"
 
 **Ticket:** [M0-06A](../backlog/M0-06A-FOUNDER-HOSTED-STAGING.md)
 
@@ -195,10 +195,10 @@ service-role key, database password, management token, or owner UUID is
 committed or exposed in the deployed client bundles. Only the public Supabase
 project reference and generated Vercel URL are recorded here.
 
-## Decision requested
+## Decision record
 
-Accept M0-06A as the testable founder-hosted staging baseline, or return focused
-corrections. Acceptance authorizes separately approved M1 tickets to be
-deployed here one at a time with only product-owner or synthetic data. It does
-not authorize friends, public registration, production, commercial use,
-external analytics, an AI provider/model/key, or spend.
+The product owner accepted M0-06A on 27 July 2026 as the founder-hosted staging
+baseline. Separately approved M1 tickets may be deployed here one at a time
+with only product-owner or synthetic data. This acceptance does not authorize
+friends, public registration, production, commercial use, external analytics,
+an AI provider/model/key, or spend.
