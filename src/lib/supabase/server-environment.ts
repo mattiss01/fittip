@@ -15,7 +15,7 @@ export function readServerSupabaseEnvironment(
 
   if (
     policy.mode === "founder-staging" &&
-    !isHostedSupabaseUrl(new URL(publicEnvironment.url))
+    !isFounderStagingSupabaseOrigin(publicEnvironment.url)
   ) {
     throw new SupabaseEnvironmentError("NEXT_PUBLIC_SUPABASE_URL");
   }
@@ -23,9 +23,9 @@ export function readServerSupabaseEnvironment(
   return publicEnvironment;
 }
 
-function isHostedSupabaseUrl(url: URL): boolean {
-  return (
-    url.protocol === "https:" &&
-    !["localhost", "127.0.0.1", "::1"].includes(url.hostname)
-  );
+const FOUNDER_STAGING_SUPABASE_ORIGIN =
+  /^https:\/\/[a-z]{20}\.supabase\.co\/?$/;
+
+function isFounderStagingSupabaseOrigin(value: string): boolean {
+  return FOUNDER_STAGING_SUPABASE_ORIGIN.test(value);
 }

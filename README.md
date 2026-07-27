@@ -106,8 +106,8 @@ address-bar `/home` request, where a redirect may not preserve a `Referer`.
 That makes it a logout-only GET endpoint: cross-origin navigation can at most
 clear the current browser session and receives a generic private redirect. The
 tradeoff is accepted only for disposable founder staging; the route performs
-no data mutation and is not a substitute for CSRF controls required before
-external use.
+a bounded auth-session mutation and is not a substitute for CSRF controls
+required before external use.
 
 ### Schema and access model
 
@@ -168,5 +168,6 @@ npm run test:e2e
   `npm run dev` first, and set the two public local Supabase variables shown
   above. It reads the confirmation link only from local Mailpit.
 
-Continuous integration, Vercel linkage, hosted Supabase configuration, and
-hosted authentication/deployment validation belong to later approved tickets.
+M0-06A owns the approved founder-hosted Supabase/Vercel configuration and
+hosted authentication/deployment validation. Continuous integration and every
+external-use, commercial, or production capability remain later gated work.

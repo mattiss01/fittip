@@ -84,6 +84,8 @@ describe("production authentication route handlers", () => {
     ensureCurrentProfileMock.mockResolvedValue(undefined);
     delete process.env.FITTIP_RUNTIME_MODE;
     delete process.env.FITTIP_OWNER_USER_ID;
+    delete process.env.VERCEL;
+    delete process.env.VERCEL_ENV;
   });
 
   it("returns a generic private 303 when the callback code is missing", async () => {
@@ -220,26 +222,39 @@ describe("production authentication route handlers", () => {
     expect(client.auth.signOut).toHaveBeenCalledOnce();
   });
 
-  it("clears a denied founder session without relying on an optional Referer header", async () => {
+  it("does not sign out the configured founder when denial fallback is revisited", async () => {
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
     process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
     const response = await denied(new Request(`${origin}/auth/denied`));
 
     expectPrivate303(response, "/");
-    expect(client.auth.signOut).toHaveBeenCalledOnce();
+    expect(client.auth.signOut).not.toHaveBeenCalled();
   });
 
-  it("returns only the generic private denial for cross-origin navigation", async () => {
+  it("does not sign out an anonymous founder-staging request", async () => {
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
     process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
-    const response = await denied(
-      new Request(`${origin}/auth/denied`, {
-        headers: { referer: "https://untrusted.example/home" },
-      }),
-    );
+    client.auth.getClaims.mockResolvedValue({
+      data: { claims: {} },
+      error: null,
+    });
+    const response = await denied(new Request(`${origin}/auth/denied`));
 
     expectPrivate303(response, "/");
-    expect(client.auth.signOut).toHaveBeenCalledOnce();
+    expect(client.auth.signOut).not.toHaveBeenCalled();
+  });
+
+  it("clears only a verified founder-staging non-owner session locally", async () => {
+    process.env.FITTIP_RUNTIME_MODE = "founder-staging";
+    process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
+    client.auth.getClaims.mockResolvedValue({
+      data: { claims: { sub: "00000000-0000-4000-8000-000000000002" } },
+      error: null,
+    });
+    const response = await denied(new Request(`${origin}/auth/denied`));
+
+    expectPrivate303(response, "/");
+    expect(client.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
   });
 
   it("does not create a session client for the founder-only denial route locally", async () => {

@@ -17,11 +17,22 @@ describe("readServerSupabaseEnvironment", () => {
   });
 
   it.each([
-    "http://127.0.0.1:54321",
-    "http://localhost:54321",
-    "https://localhost:54321",
-    "https://127.0.0.1:54321",
-  ])("rejects founder staging non-HTTPS URL %s", (url) => {
+    "http://abcdefghijklmnopqrst.supabase.co",
+    "https://localhost",
+    "https://localhost.",
+    "https://127.0.0.1",
+    "https://127.0.0.2",
+    "https://[::1]",
+    "https://[::ffff:127.0.0.1]",
+    "https://user:password@abcdefghijklmnopqrst.supabase.co",
+    "https://abcdefghijklmnopqrst.supabase.co:443",
+    "https://abcdefghijklmnopqrst.supabase.co/auth/v1",
+    "https://abcdefghijklmnopqrst.supabase.co?x=1",
+    "https://abcdefghijklmnopqrst.supabase.co#fragment",
+    "https://abcdefghijklmnopqrst.evil.example",
+    "https://abcdefghijklmnopqrstu.supabase.co",
+    "https://ABCdefghijklmnopqrst.supabase.co",
+  ])("rejects invalid founder staging Supabase URL %s", (url) => {
     expect(() =>
       readServerSupabaseEnvironment({
         FITTIP_RUNTIME_MODE: "founder-staging",
@@ -32,15 +43,18 @@ describe("readServerSupabaseEnvironment", () => {
     ).toThrow(new SupabaseEnvironmentError("NEXT_PUBLIC_SUPABASE_URL"));
   });
 
-  it("accepts an HTTPS founder-staging Supabase URL", () => {
+  it.each([
+    "https://abcdefghijklmnopqrst.supabase.co",
+    "https://abcdefghijklmnopqrst.supabase.co/",
+  ])("accepts exact founder-staging Supabase API origin %s", (url) => {
     expect(
       readServerSupabaseEnvironment({
         VERCEL_ENV: "production",
         FITTIP_RUNTIME_MODE: "founder-staging",
         FITTIP_OWNER_USER_ID: OWNER_ID,
-        NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co",
+        NEXT_PUBLIC_SUPABASE_URL: url,
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
       }),
-    ).toMatchObject({ url: "https://project.supabase.co" });
+    ).toMatchObject({ url });
   });
 });
