@@ -14,6 +14,7 @@ import {
   TrainingRecordPersistenceError,
 } from "@/server/repositories/training-record-repository";
 import { TrainingRecordValidationError } from "@/server/training/training-records";
+import { PastPlanContentMutationError } from "@/server/training/past-plan-protection";
 
 export async function savePlanAction(
   plan: unknown,
@@ -30,6 +31,13 @@ export async function savePlanAction(
       acceptedAt: version.acceptedAt,
     };
   } catch (error) {
+    if (error instanceof PastPlanContentMutationError) {
+      return {
+        status: "validation-error",
+        message:
+          "Past accepted sessions are read-only. Reload the current plan before saving.",
+      };
+    }
     if (error instanceof TrainingRecordValidationError) {
       return {
         status: "validation-error",

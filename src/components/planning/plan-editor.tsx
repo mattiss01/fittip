@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
   useTransition,
@@ -27,6 +28,8 @@ import type {
 import { createClientId } from "@/features/planning/planning-utils";
 
 const DAY_COUNT_KEY = "fittip.plan.day-count.v1";
+const UNSAVED_PLAN_MESSAGE =
+  "Leave this plan? Your unsaved changes will be lost.";
 
 export function PlanEditor({
   initialState,
@@ -65,6 +68,8 @@ export function PlanEditor({
     initialState.personalActivities,
   );
   const [editing, setEditing] = useState<PlanSessionDraft | null>(null);
+  const editorOpenerRef = useRef<HTMLElement | null>(null);
+  const wasEditingRef = useRef(false);
   const isOnline = useSyncExternalStore(
     subscribeToOnlineStatus,
     readOnlineStatus,
@@ -78,10 +83,25 @@ export function PlanEditor({
   const dirty =
     draftState !== null &&
     (baseline === null || stablePlan(draftState) !== baseline);
+  const dirtyRef = useRef(dirty);
   const dates = useMemo(
     () => createDateRange(draft.startDate, draft.dayCount),
     [draft.dayCount, draft.startDate],
   );
+
+  useEffect(() => {
+    dirtyRef.current = dirty;
+  }, [dirty]);
+
+  useEffect(() => {
+    if (editing) {
+      wasEditingRef.current = true;
+      return;
+    }
+    if (!wasEditingRef.current) return;
+    wasEditingRef.current = false;
+    editorOpenerRef.current?.focus();
+  }, [editing]);
 
   useEffect(() => {
     const warnBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -91,6 +111,36 @@ export function PlanEditor({
     window.addEventListener("beforeunload", warnBeforeUnload);
     return () => window.removeEventListener("beforeunload", warnBeforeUnload);
   }, [dirty]);
+
+  useEffect(() => {
+    const token = `fittip-plan-${crypto.randomUUID()}`;
+    const priorState =
+      typeof window.history.state === "object" && window.history.state !== null
+        ? window.history.state
+        : {};
+    const baseState = { ...priorState, __fittipPlanBase: token };
+    const guardState = { ...baseState, __fittipPlanGuard: token };
+    window.history.replaceState(baseState, "", window.location.href);
+    window.history.pushState(guardState, "", window.location.href);
+    let active = true;
+
+    const handlePopState = () => {
+      if (!active) return;
+      if (dirtyRef.current && !window.confirm(UNSAVED_PLAN_MESSAGE)) {
+        window.history.pushState(guardState, "", window.location.href);
+        return;
+      }
+      active = false;
+      window.removeEventListener("popstate", handlePopState);
+      window.history.back();
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      active = false;
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
 
   function changeRange(nextStartDate: string, nextDayCount: number) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(nextStartDate)) {
@@ -141,8 +191,21 @@ export function PlanEditor({
           : [...current.sessions, session],
       };
     });
-    setEditing(null);
+    closeSessionEditor();
     setResult(null);
+  }
+
+  function openSessionEditor(session: PlanSessionDraft, opener?: HTMLElement) {
+    editorOpenerRef.current =
+      opener ??
+      (document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null);
+    setEditing(session);
+  }
+
+  function closeSessionEditor() {
+    setEditing(null);
   }
 
   function removeSession(clientId: string) {
@@ -161,12 +224,15 @@ export function PlanEditor({
     setResult(null);
   }
 
-  function duplicateSession(session: PlanSessionDraft) {
-    setEditing({
-      ...structuredClone(session),
-      clientId: createClientId("session"),
-      title: `${session.title} copy`,
-    });
+  function duplicateSession(session: PlanSessionDraft, opener: HTMLElement) {
+    openSessionEditor(
+      {
+        ...structuredClone(session),
+        clientId: createClientId("session"),
+        title: `${session.title} copy`,
+      },
+      opener,
+    );
   }
 
   function moveSession(clientId: string, localDate: string) {
@@ -262,314 +328,340 @@ export function PlanEditor({
 
   return (
     <main className="plan-shell">
-      <header className="plan-header">
-        <div>
-          <Link
-            className="back-link"
-            href="/home"
-            onClick={(event) => {
-              if (
-                dirty &&
-                !window.confirm(
-                  "Leave this plan? Your unsaved changes will be lost.",
-                )
-              ) {
-                event.preventDefault();
-              }
-            }}
-          >
-            ← Home
-          </Link>
-          <p className="eyebrow">FitTip / training ledger</p>
-          <h1>Plan what’s next.</h1>
-          <p className="plan-intro">
-            Choose the horizon. Build the sessions. Nothing becomes accepted
-            until you save.
-          </p>
-        </div>
-        <div className="version-stamp" aria-label="Current plan version">
-          <span>Accepted</span>
-          <strong>{versionNumber ? `v${versionNumber}` : "No version"}</strong>
-        </div>
-      </header>
-
-      <section className="horizon-panel" aria-labelledby="horizon-title">
-        <div className="section-heading">
+      <div
+        aria-hidden={editing ? true : undefined}
+        className="plan-background"
+        inert={editing ? true : undefined}
+      >
+        <header className="plan-header">
           <div>
-            <p className="step-mark">01 / HORIZON</p>
-            <h2 id="horizon-title">How far ahead?</h2>
-          </div>
-          <p>Maximum 7 days</p>
-        </div>
-        <fieldset className="day-count-fieldset">
-          <legend className="sr-only">Number of days to plan</legend>
-          {[1, 2, 3, 4, 5, 6, 7].map((count) => (
-            <button
-              aria-pressed={draft.dayCount === count}
-              className="day-count-button"
-              key={count}
-              onClick={() => changeRange(draft.startDate, count)}
-              type="button"
+            <Link
+              className="back-link"
+              href="/home"
+              onClick={(event) => {
+                if (dirty && !window.confirm(UNSAVED_PLAN_MESSAGE)) {
+                  event.preventDefault();
+                }
+              }}
             >
-              {count}
-            </button>
-          ))}
-        </fieldset>
-        <label className="date-field">
-          Start date
-          <input
-            min={localToday()}
-            onChange={(event) =>
-              changeRange(event.currentTarget.value, draft.dayCount)
-            }
-            type="date"
-            value={draft.startDate}
-          />
-        </label>
-        <p className="range-summary">
-          {formatShortDate(dates[0])} → {formatShortDate(dates.at(-1) ?? "")}
-          <span>{draft.timezoneName}</span>
-        </p>
-      </section>
-
-      {!isOnline ? (
-        <p className="offline-banner" role="status">
-          Offline — keep editing if you like; saving waits for your connection.
-        </p>
-      ) : null}
-
-      <section className="plan-days" aria-labelledby="days-title">
-        <div className="section-heading">
-          <div>
-            <p className="step-mark">02 / SESSIONS</p>
-            <h2 id="days-title">The next {draft.dayCount}</h2>
+              ← Home
+            </Link>
+            <p className="eyebrow">FitTip / training ledger</p>
+            <h1>Plan what’s next.</h1>
+            <p className="plan-intro">
+              Choose the horizon. Build the sessions. Nothing becomes accepted
+              until you save.
+            </p>
           </div>
-          <p>
-            {sessionCount} session{sessionCount === 1 ? "" : "s"}
+          <div className="version-stamp" aria-label="Current plan version">
+            <span>Accepted</span>
+            <strong>
+              {versionNumber ? `v${versionNumber}` : "No version"}
+            </strong>
+          </div>
+        </header>
+
+        <section className="horizon-panel" aria-labelledby="horizon-title">
+          <div className="section-heading">
+            <div>
+              <p className="step-mark">01 / HORIZON</p>
+              <h2 id="horizon-title">How far ahead?</h2>
+            </div>
+            <p>Maximum 7 days</p>
+          </div>
+          <fieldset className="day-count-fieldset">
+            <legend className="sr-only">Number of days to plan</legend>
+            {[1, 2, 3, 4, 5, 6, 7].map((count) => (
+              <button
+                aria-pressed={draft.dayCount === count}
+                className="day-count-button"
+                key={count}
+                onClick={() => changeRange(draft.startDate, count)}
+                type="button"
+              >
+                {count}
+              </button>
+            ))}
+          </fieldset>
+          <label className="date-field">
+            Start date
+            <input
+              min={localToday()}
+              onChange={(event) =>
+                changeRange(event.currentTarget.value, draft.dayCount)
+              }
+              type="date"
+              value={draft.startDate}
+            />
+          </label>
+          <p className="range-summary">
+            {formatShortDate(dates[0])} → {formatShortDate(dates.at(-1) ?? "")}
+            <span>{draft.timezoneName}</span>
           </p>
-        </div>
+        </section>
 
-        {dates.map((date, dateIndex) => {
-          const sessions = draft.sessions.filter(
-            ({ localDate }) => localDate === date,
-          );
-          const isPast = date < browserToday;
-          return (
-            <article className="plan-day" key={date}>
-              <header className="plan-day-header">
-                <div className="date-index">
-                  {String(dateIndex + 1).padStart(2, "0")}
-                </div>
-                <div>
-                  <p>{formatWeekday(date)}</p>
-                  <h3>{formatLongDate(date)}</h3>
-                </div>
-                <button
-                  className="add-session-button"
-                  disabled={isPast}
-                  onClick={() => setEditing(createEmptySession(date))}
-                  type="button"
-                >
-                  {isPast ? "Past" : "+ Add"}
-                </button>
-              </header>
+        {!isOnline ? (
+          <p className="offline-banner" role="status">
+            Offline — keep editing if you like; saving waits for your
+            connection.
+          </p>
+        ) : null}
 
-              {sessions.length === 0 ? (
-                <div className="empty-day">
-                  <span aria-hidden="true">—</span>
-                  <p>No training planned</p>
-                </div>
-              ) : (
-                <ol className="session-list">
-                  {sessions.map((session, sessionIndex) => (
-                    <li className="session-card" key={session.clientId}>
-                      <div className="session-main">
-                        <p className="session-meta">
-                          {session.sport}
-                          {session.expectedDurationMinutes
-                            ? ` · ${session.expectedDurationMinutes} min`
-                            : ""}
-                        </p>
-                        <h4>{session.title}</h4>
-                        <p>
-                          {session.intent ||
-                            (session.activities.length
-                              ? `${session.activities.length} planned ${session.activities.length === 1 ? "activity" : "activities"}`
-                              : "Session details only")}
-                        </p>
-                        {session.isLocked ? (
-                          <span className="lock-badge">Locked for replans</span>
-                        ) : null}
-                      </div>
-                      {isPast ? (
-                        <p className="past-session-note">
-                          Past plan · read-only
-                        </p>
-                      ) : (
-                        <div
-                          className="session-actions"
-                          aria-label={`Actions for ${session.title}`}
-                        >
-                          <button
-                            aria-label={`Move ${session.title} up`}
-                            disabled={sessionIndex === 0}
-                            onClick={() =>
-                              moveSessionOrder(session.clientId, -1)
-                            }
-                            type="button"
-                          >
-                            ↑
-                          </button>
-                          <button
-                            aria-label={`Move ${session.title} down`}
-                            disabled={sessionIndex === sessions.length - 1}
-                            onClick={() =>
-                              moveSessionOrder(session.clientId, 1)
-                            }
-                            type="button"
-                          >
-                            ↓
-                          </button>
-                          <button
-                            onClick={() => setEditing(structuredClone(session))}
-                            type="button"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => duplicateSession(session)}
-                            type="button"
-                          >
-                            Copy
-                          </button>
-                          <button
-                            onClick={() => toggleSessionLock(session.clientId)}
-                            type="button"
-                          >
-                            {session.isLocked ? "Unlock" : "Lock"}
-                          </button>
-                          <label>
-                            <span className="sr-only">
-                              Move {session.title} to another date
+        <section className="plan-days" aria-labelledby="days-title">
+          <div className="section-heading">
+            <div>
+              <p className="step-mark">02 / SESSIONS</p>
+              <h2 id="days-title">The next {draft.dayCount}</h2>
+            </div>
+            <p>
+              {sessionCount} session{sessionCount === 1 ? "" : "s"}
+            </p>
+          </div>
+
+          {dates.map((date, dateIndex) => {
+            const sessions = draft.sessions.filter(
+              ({ localDate }) => localDate === date,
+            );
+            const isPast = date < browserToday;
+            return (
+              <article className="plan-day" key={date}>
+                <header className="plan-day-header">
+                  <div className="date-index">
+                    {String(dateIndex + 1).padStart(2, "0")}
+                  </div>
+                  <div>
+                    <p>{formatWeekday(date)}</p>
+                    <h3>{formatLongDate(date)}</h3>
+                  </div>
+                  <button
+                    className="add-session-button"
+                    disabled={isPast}
+                    onClick={(event) =>
+                      openSessionEditor(
+                        createEmptySession(date),
+                        event.currentTarget,
+                      )
+                    }
+                    type="button"
+                  >
+                    {isPast ? "Past" : "+ Add"}
+                  </button>
+                </header>
+
+                {sessions.length === 0 ? (
+                  <div className="empty-day">
+                    <span aria-hidden="true">—</span>
+                    <p>No training planned</p>
+                  </div>
+                ) : (
+                  <ol className="session-list">
+                    {sessions.map((session, sessionIndex) => (
+                      <li className="session-card" key={session.clientId}>
+                        <div className="session-main">
+                          <p className="session-meta">
+                            {session.sport}
+                            {session.expectedDurationMinutes
+                              ? ` · ${session.expectedDurationMinutes} min`
+                              : ""}
+                          </p>
+                          <h4>{session.title}</h4>
+                          <p>
+                            {session.intent ||
+                              (session.activities.length
+                                ? `${session.activities.length} planned ${session.activities.length === 1 ? "activity" : "activities"}`
+                                : "Session details only")}
+                          </p>
+                          {session.isLocked ? (
+                            <span className="lock-badge">
+                              Locked for replans
                             </span>
-                            <select
-                              aria-label={`Move ${session.title} to date`}
-                              onChange={(event) =>
-                                moveSession(
-                                  session.clientId,
-                                  event.currentTarget.value,
+                          ) : null}
+                        </div>
+                        {isPast ? (
+                          <p className="past-session-note">
+                            Past plan · read-only
+                          </p>
+                        ) : (
+                          <div
+                            className="session-actions"
+                            aria-label={`Actions for ${session.title}`}
+                          >
+                            <button
+                              aria-label={`Move ${session.title} up`}
+                              disabled={sessionIndex === 0}
+                              onClick={() =>
+                                moveSessionOrder(session.clientId, -1)
+                              }
+                              type="button"
+                            >
+                              ↑
+                            </button>
+                            <button
+                              aria-label={`Move ${session.title} down`}
+                              disabled={sessionIndex === sessions.length - 1}
+                              onClick={() =>
+                                moveSessionOrder(session.clientId, 1)
+                              }
+                              type="button"
+                            >
+                              ↓
+                            </button>
+                            <button
+                              onClick={(event) =>
+                                openSessionEditor(
+                                  structuredClone(session),
+                                  event.currentTarget,
                                 )
                               }
-                              value={session.localDate}
+                              type="button"
                             >
-                              {dates
-                                .filter(
-                                  (candidate) => candidate >= browserToday,
-                                )
-                                .map((candidate) => (
-                                  <option key={candidate} value={candidate}>
-                                    {formatShortDate(candidate)}
-                                  </option>
-                                ))}
-                            </select>
-                          </label>
-                          <button
-                            className="danger-text"
-                            onClick={() => removeSession(session.clientId)}
-                            type="button"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </article>
-          );
-        })}
-      </section>
-
-      <ActivityLibrary
-        activities={personalActivities}
-        onArchive={async (id) => {
-          const archiveResult = await archivePersonalActivityAction(id);
-          if (archiveResult.status === "archived") {
-            setPersonalActivities((current) =>
-              current.filter((activity) => activity.id !== id),
+                              Edit
+                            </button>
+                            <button
+                              onClick={(event) =>
+                                duplicateSession(session, event.currentTarget)
+                              }
+                              type="button"
+                            >
+                              Copy
+                            </button>
+                            <button
+                              onClick={() =>
+                                toggleSessionLock(session.clientId)
+                              }
+                              type="button"
+                            >
+                              {session.isLocked ? "Unlock" : "Lock"}
+                            </button>
+                            <label>
+                              <span className="sr-only">
+                                Move {session.title} to another date
+                              </span>
+                              <select
+                                aria-label={`Move ${session.title} to date`}
+                                onChange={(event) =>
+                                  moveSession(
+                                    session.clientId,
+                                    event.currentTarget.value,
+                                  )
+                                }
+                                value={session.localDate}
+                              >
+                                {dates
+                                  .filter(
+                                    (candidate) => candidate >= browserToday,
+                                  )
+                                  .map((candidate) => (
+                                    <option key={candidate} value={candidate}>
+                                      {formatShortDate(candidate)}
+                                    </option>
+                                  ))}
+                              </select>
+                            </label>
+                            <button
+                              className="danger-text"
+                              onClick={() => removeSession(session.clientId)}
+                              type="button"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </article>
             );
-          }
-          return archiveResult;
-        }}
-        onCreate={async (input) => {
-          const activityResult = await createPersonalActivityAction(input);
-          if (activityResult.status === "saved") {
-            setPersonalActivities((current) => [
-              ...current,
-              activityResult.activity,
-            ]);
-          }
-          return activityResult;
-        }}
-        onUpdate={async (id, input) => {
-          const activityResult = await updatePersonalActivityAction(id, input);
-          if (activityResult.status === "saved") {
-            setPersonalActivities((current) =>
-              current.map((activity) =>
-                activity.id === id ? activityResult.activity : activity,
-              ),
+          })}
+        </section>
+
+        <ActivityLibrary
+          activities={personalActivities}
+          onArchive={async (id) => {
+            const archiveResult = await archivePersonalActivityAction(id);
+            if (archiveResult.status === "archived") {
+              setPersonalActivities((current) =>
+                current.filter((activity) => activity.id !== id),
+              );
+            }
+            return archiveResult;
+          }}
+          onCreate={async (input) => {
+            const activityResult = await createPersonalActivityAction(input);
+            if (activityResult.status === "saved") {
+              setPersonalActivities((current) => [
+                ...current,
+                activityResult.activity,
+              ]);
+            }
+            return activityResult;
+          }}
+          onUpdate={async (id, input) => {
+            const activityResult = await updatePersonalActivityAction(
+              id,
+              input,
             );
-          }
-          return activityResult;
-        }}
-      />
+            if (activityResult.status === "saved") {
+              setPersonalActivities((current) =>
+                current.map((activity) =>
+                  activity.id === id ? activityResult.activity : activity,
+                ),
+              );
+            }
+            return activityResult;
+          }}
+        />
 
-      <section className="save-dock" aria-label="Plan save summary">
-        <div>
-          <p>{dirty ? "Draft changes" : "Up to date"}</p>
-          <strong>
-            {sessionCount} sessions · {activityCount} activities ·{" "}
-            {draft.dayCount} days
-          </strong>
-        </div>
-        <button
-          disabled={!dirty || isSaving || !isOnline}
-          onClick={handleSave}
-          type="button"
-        >
-          {isSaving ? "Saving…" : "Save plan"}
-        </button>
-      </section>
+        <section className="save-dock" aria-label="Plan save summary">
+          <div>
+            <p>{dirty ? "Draft changes" : "Up to date"}</p>
+            <strong>
+              {sessionCount} sessions · {activityCount} activities ·{" "}
+              {draft.dayCount} days
+            </strong>
+          </div>
+          <button
+            disabled={!dirty || isSaving || !isOnline}
+            onClick={handleSave}
+            type="button"
+          >
+            {isSaving ? "Saving…" : "Save plan"}
+          </button>
+        </section>
 
-      {result ? (
-        <div
-          className={`save-message ${result.status}`}
-          role={result.status === "saved" ? "status" : "alert"}
-        >
-          {result.status === "saved" ? (
-            <p>
-              Plan version {result.versionNumber} accepted. Earlier versions are
-              unchanged.
-            </p>
-          ) : (
-            <>
-              <p>{result.message}</p>
-              {result.status === "conflict" ? (
-                <button onClick={() => window.location.reload()} type="button">
-                  Reload current plan
-                </button>
-              ) : null}
-            </>
-          )}
-        </div>
-      ) : null}
+        {result ? (
+          <div
+            className={`save-message ${result.status}`}
+            role={result.status === "saved" ? "status" : "alert"}
+          >
+            {result.status === "saved" ? (
+              <p>
+                Plan version {result.versionNumber} accepted. Earlier versions
+                are unchanged.
+              </p>
+            ) : (
+              <>
+                <p>{result.message}</p>
+                {result.status === "conflict" ? (
+                  <button
+                    onClick={() => window.location.reload()}
+                    type="button"
+                  >
+                    Reload current plan
+                  </button>
+                ) : null}
+              </>
+            )}
+          </div>
+        ) : null}
+      </div>
 
       {editing ? (
         <SessionComposer
           dates={dates}
           initialSession={editing}
-          onCancel={() => setEditing(null)}
+          onCancel={closeSessionEditor}
           onSave={saveSession}
           personalActivities={personalActivities}
         />

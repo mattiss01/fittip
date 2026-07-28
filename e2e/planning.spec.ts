@@ -36,8 +36,27 @@ test.describe("manual selectable-horizon planning", () => {
         ),
       ).toBe(true);
 
-      await page.getByRole("button", { name: "+ Add" }).first().click();
+      const firstAddButton = page
+        .getByRole("button", { name: "+ Add" })
+        .first();
+      await firstAddButton.click();
       const composer = page.getByRole("dialog", { name: "Add session" });
+      await expect(composer.getByLabel("Session title")).toBeFocused();
+      const keepDraftButton = composer.getByRole("button", {
+        name: "Keep in draft",
+      });
+      await keepDraftButton.focus();
+      await page.keyboard.press("Tab");
+      await expect(
+        composer.getByRole("button", { name: "Close session editor" }),
+      ).toBeFocused();
+      await page.keyboard.press("Shift+Tab");
+      await expect(keepDraftButton).toBeFocused();
+      await page.keyboard.press("Escape");
+      await expect(composer).toBeHidden();
+      await expect(firstAddButton).toBeFocused();
+      await firstAddButton.click();
+      await expect(composer.getByLabel("Session title")).toBeFocused();
       await composer.getByLabel("Session title").fill("Easy trail run");
       await composer
         .getByLabel("Sport or domain", { exact: true })
@@ -176,6 +195,25 @@ test.describe("manual selectable-horizon planning", () => {
         fullPage: true,
         path: testInfo.outputPath("m1-02-390x844.png"),
       });
+
+      await page.getByRole("button", { name: "3" }).click();
+      await expect(page.getByText("Draft changes")).toBeVisible();
+      page.once("dialog", async (dialog) => {
+        expect(dialog.type()).toBe("confirm");
+        expect(dialog.message()).toBe(
+          "Leave this plan? Your unsaved changes will be lost.",
+        );
+        await dialog.dismiss();
+      });
+      await page.goBack();
+      await expect(page).toHaveURL(/\/home\/plan$/);
+      await expect(page.getByText("Draft changes")).toBeVisible();
+
+      page.once("dialog", async (dialog) => {
+        await dialog.accept();
+      });
+      await page.goBack();
+      await expect(page).toHaveURL(/\/home$/);
     } finally {
       await deleteLocalUser(request, userId);
     }

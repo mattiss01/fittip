@@ -7,6 +7,7 @@ import {
   TrainingRecordAuthenticationError,
   TrainingRecordRepository,
 } from "@/server/repositories/training-record-repository";
+import { PastPlanContentMutationError } from "@/server/training/past-plan-protection";
 import { TrainingRecordValidationError } from "@/server/training/training-records";
 
 const USER_ID = "10000000-0000-4000-8000-000000000001";
@@ -34,7 +35,10 @@ describe("TrainingRecordRepository", () => {
     };
     const retry = vi.fn().mockResolvedValue({ data: planRow, error: null });
     const rpc = vi.fn().mockReturnValue({ retry });
-    const repository = new TrainingRecordRepository(createClient({ rpc }));
+    const repository = new TrainingRecordRepository(
+      createClient({ rpc }),
+      fixedNow,
+    );
 
     await expect(
       repository.saveManualPlan(
@@ -93,7 +97,10 @@ describe("TrainingRecordRepository", () => {
 
   it("rejects an invalid horizon before making a database call", async () => {
     const rpc = vi.fn();
-    const repository = new TrainingRecordRepository(createClient({ rpc }));
+    const repository = new TrainingRecordRepository(
+      createClient({ rpc }),
+      fixedNow,
+    );
 
     await expect(
       repository.saveManualPlan(
@@ -115,7 +122,10 @@ describe("TrainingRecordRepository", () => {
       error: { code: "PT409", message: "provider details" },
     });
     const rpc = vi.fn().mockReturnValue({ retry });
-    const repository = new TrainingRecordRepository(createClient({ rpc }));
+    const repository = new TrainingRecordRepository(
+      createClient({ rpc }),
+      fixedNow,
+    );
 
     await expect(
       repository.saveManualPlan(
@@ -130,6 +140,35 @@ describe("TrainingRecordRepository", () => {
     ).rejects.toThrow(TrainingPlanConflictError);
     expect(retry).toHaveBeenCalledOnce();
     expect(retry).toHaveBeenCalledWith(false);
+  });
+
+  it("rejects forged changes to an accepted past session before the save RPC", async () => {
+    const rpc = vi.fn();
+    const repository = new TrainingRecordRepository(
+      createClient({ rpc }),
+      fixedNow,
+    );
+    vi.spyOn(repository, "getCurrentManualPlan").mockResolvedValue({
+      plan: {
+        dayCount: 2,
+        startDate: "2026-07-27",
+        timezoneName: "Europe/Berlin",
+        sessions: [manualSession("2026-07-27", "Accepted run")],
+      },
+    } as never);
+
+    await expect(
+      repository.saveManualPlan(
+        {
+          dayCount: 2,
+          startDate: "2026-07-27",
+          timezoneName: "Europe/Berlin",
+          sessions: [manualSession("2026-07-27", "Forged title")],
+        },
+        2,
+      ),
+    ).rejects.toThrow(PastPlanContentMutationError);
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("derives ownership when creating a personal activity", async () => {
@@ -327,7 +366,7 @@ describe("TrainingRecordRepository", () => {
 
 function createClient({
   rpc = vi.fn(),
-  from = vi.fn(),
+  from = createNoPlanFrom(),
   claims = {
     data: {
       claims: { sub: USER_ID },
@@ -348,6 +387,39 @@ function createClient({
     rpc,
     from,
   } as unknown as SupabaseClient<Database>;
+}
+
+function createNoPlanFrom() {
+  return vi.fn((table: string) => {
+    if (table !== "detailed_plan_heads") {
+      throw new Error(`Unexpected table: ${table}`);
+    }
+    return {
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: null,
+            error: null,
+          }),
+        })),
+      })),
+    };
+  });
+}
+
+function fixedNow() {
+  return new Date("2026-07-28T12:00:00.000Z");
+}
+
+function manualSession(localDate: string, title: string) {
+  return {
+    localDate,
+    position: 0,
+    title,
+    sport: "Running",
+    isLocked: false,
+    activities: [],
+  };
 }
 
 function personalActivityRow() {

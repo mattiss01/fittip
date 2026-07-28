@@ -40,6 +40,7 @@ import { PlanEditor, toPersistencePlan } from "./plan-editor";
 describe("PlanEditor", () => {
   beforeEach(() => {
     localStorage.clear();
+    window.history.replaceState(null, "", "/home/plan");
     vi.clearAllMocks();
     vi.spyOn(window, "confirm").mockReturnValue(true);
     savePlanActionMock.mockResolvedValue({
@@ -230,6 +231,62 @@ describe("PlanEditor", () => {
     expect(
       screen.queryByLabelText("Actions for Past run"),
     ).not.toBeInTheDocument();
+  });
+
+  it("contains keyboard focus in the session dialog and restores its opener", async () => {
+    const { container } = render(
+      <PlanEditor initialState={existingPlanState()} />,
+    );
+    const opener = screen.getAllByRole("button", { name: "+ Add" })[0];
+
+    fireEvent.click(opener);
+    const dialog = screen.getByRole("dialog", { name: "Add session" });
+    const background = container.querySelector(".plan-background");
+    const title = within(dialog).getByLabelText("Session title");
+    const close = within(dialog).getByRole("button", {
+      name: "Close session editor",
+    });
+    const keep = within(dialog).getByRole("button", {
+      name: "Keep in draft",
+    });
+
+    expect(background).toHaveAttribute("inert");
+    expect(background).toHaveAttribute("aria-hidden", "true");
+    await waitFor(() => expect(title).toHaveFocus());
+
+    keep.focus();
+    fireEvent.keyDown(dialog, { key: "Tab" });
+    expect(close).toHaveFocus();
+
+    close.focus();
+    fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true });
+    expect(keep).toHaveFocus();
+
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(background).not.toHaveAttribute("inert");
+    expect(background).not.toHaveAttribute("aria-hidden");
+    await waitFor(() => expect(opener).toHaveFocus());
+  });
+
+  it("protects a dirty draft from browser Back until leaving is confirmed", () => {
+    const back = vi
+      .spyOn(window.history, "back")
+      .mockImplementation(() => undefined);
+    render(<PlanEditor initialState={existingPlanState()} />);
+    fireEvent.click(screen.getByRole("button", { name: "3" }));
+
+    vi.mocked(window.confirm).mockReturnValue(false);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    expect(window.confirm).toHaveBeenCalledWith(
+      "Leave this plan? Your unsaved changes will be lost.",
+    );
+    expect(back).not.toHaveBeenCalled();
+    expect(screen.getByText("Draft changes")).toBeVisible();
+
+    vi.mocked(window.confirm).mockReturnValue(true);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    expect(back).toHaveBeenCalledOnce();
   });
 });
 

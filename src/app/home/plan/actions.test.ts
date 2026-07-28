@@ -32,6 +32,7 @@ import {
   TrainingRecordAuthenticationError,
   TrainingRecordPersistenceError,
 } from "@/server/repositories/training-record-repository";
+import { PastPlanContentMutationError } from "@/server/training/past-plan-protection";
 import { TrainingRecordValidationError } from "@/server/training/training-records";
 
 describe("M1-02 planning server actions", () => {
@@ -93,6 +94,27 @@ describe("M1-02 planning server actions", () => {
       expect(revalidatePathMock).not.toHaveBeenCalled();
     },
   );
+
+  it("keeps a forged past-session save out of the accepted plan", async () => {
+    const saveManualPlan = vi
+      .fn()
+      .mockRejectedValue(new PastPlanContentMutationError());
+    createRepositoryMock.mockResolvedValue({ saveManualPlan });
+    const forgedPlan = {
+      dayCount: 2,
+      startDate: "2026-07-27",
+      timezoneName: "Europe/Berlin",
+      sessions: [{ localDate: "2026-07-27", title: "Forged title" }],
+    };
+
+    await expect(savePlanAction(forgedPlan, 2)).resolves.toEqual({
+      status: "validation-error",
+      message:
+        "Past accepted sessions are read-only. Reload the current plan before saving.",
+    });
+    expect(saveManualPlan).toHaveBeenCalledWith(forgedPlan, 2);
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
 
   it("creates, updates, and archives only through verified repositories", async () => {
     const activity = {

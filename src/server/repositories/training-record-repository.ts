@@ -18,6 +18,7 @@ import {
   type ManualPlanInput,
   type PersonalActivityInput,
 } from "@/server/training/training-records";
+import { assertPastPlanContentIsImmutable } from "@/server/training/past-plan-protection";
 
 const PERSONAL_ACTIVITY_COLUMNS =
   "id, user_id, name, sport, description, measurement_mode, default_measurement, archived_at, created_at, updated_at" as const;
@@ -112,7 +113,10 @@ export class ReferencedPersonalActivityError extends Error {
 }
 
 export class TrainingRecordRepository {
-  constructor(private readonly client: TrainingRecordClient) {}
+  constructor(
+    private readonly client: TrainingRecordClient,
+    private readonly now: () => Date = () => new Date(),
+  ) {}
 
   async getCurrentPlanHead(): Promise<DetailedPlanHead | null> {
     const userId = await this.getVerifiedUserId();
@@ -201,7 +205,8 @@ export class TrainingRecordRepository {
       throw new TrainingRecordValidationError();
     }
 
-    await this.getVerifiedUserId();
+    const current = await this.getCurrentManualPlan();
+    assertPastPlanContentIsImmutable(current?.plan ?? null, plan, this.now());
     const { data, error } = await this.client
       .rpc("save_manual_plan_version", {
         p_expected_revision: expectedRevision,

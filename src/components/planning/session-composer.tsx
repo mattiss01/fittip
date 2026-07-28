@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import type {
   MeasurementMode,
@@ -25,8 +25,57 @@ export function SessionComposer({
   onSave: (session: PlanSessionDraft) => void;
 }) {
   const titleId = useId();
+  const dialogRef = useRef<HTMLElement>(null);
   const [session, setSession] = useState(() => structuredClone(initialSession));
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      dialogRef.current
+        ?.querySelector<HTMLElement>("[data-dialog-initial-focus]")
+        ?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  function handleDialogKeyDown(event: React.KeyboardEvent<HTMLElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      onCancel();
+      return;
+    }
+    if (event.key !== "Tab") return;
+
+    const focusable = Array.from(
+      dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+      ) ?? [],
+    ).filter(
+      (element) =>
+        !element.hasAttribute("hidden") &&
+        element.getAttribute("aria-hidden") !== "true",
+    );
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (!first || !last) return;
+
+    if (
+      event.shiftKey &&
+      (document.activeElement === first ||
+        !dialogRef.current?.contains(document.activeElement))
+    ) {
+      event.preventDefault();
+      last.focus();
+    } else if (
+      !event.shiftKey &&
+      (document.activeElement === last ||
+        !dialogRef.current?.contains(document.activeElement))
+    ) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
 
   function updateActivity(
     clientId: string,
@@ -130,6 +179,8 @@ export function SessionComposer({
         aria-labelledby={titleId}
         aria-modal="true"
         className="session-composer"
+        onKeyDown={handleDialogKeyDown}
+        ref={dialogRef}
         role="dialog"
       >
         <header className="composer-header">
@@ -192,7 +243,7 @@ export function SessionComposer({
         <label>
           Session title
           <input
-            autoFocus
+            data-dialog-initial-focus
             maxLength={120}
             onChange={(event) => {
               const title = event.currentTarget.value;
