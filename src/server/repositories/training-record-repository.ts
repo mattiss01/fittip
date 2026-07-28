@@ -1,0 +1,354 @@
+import "server-only";
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import {
+  requireAllowedVerifiedUser,
+  VerifiedUserAccessError,
+} from "@/lib/auth/verified-user";
+import type { Database, Json } from "@/lib/supabase/database.types";
+import {
+  createServerUserClient,
+  type ServerUserClient,
+} from "@/lib/supabase/server-user-client";
+import {
+  parseManualPlanInput,
+  parsePersonalActivityInput,
+  TrainingRecordValidationError,
+  type ManualPlanInput,
+  type PersonalActivityInput,
+} from "@/server/training/training-records";
+
+const PERSONAL_ACTIVITY_COLUMNS =
+  "id, user_id, name, sport, description, measurement_mode, default_measurement, archived_at, created_at, updated_at" as const;
+const PLAN_HEAD_COLUMNS =
+  "user_id, current_version_id, revision, updated_at" as const;
+
+type TrainingRecordClient = SupabaseClient<Database> | ServerUserClient;
+type PlanVersionRow =
+  Database["public"]["Tables"]["detailed_plan_versions"]["Row"];
+type PlanHeadRow = Database["public"]["Tables"]["detailed_plan_heads"]["Row"];
+type PersonalActivityRow =
+  Database["public"]["Tables"]["personal_activities"]["Row"];
+
+export type DetailedPlanVersion = {
+  id: string;
+  userId: string;
+  versionNumber: number;
+  parentVersionId: string | null;
+  dayCount: number;
+  startDate: string;
+  endDate: string;
+  timezoneName: string;
+  sourceKind: "manual";
+  acceptedAt: string;
+  createdAt: string;
+};
+
+export type DetailedPlanHead = {
+  userId: string;
+  currentVersionId: string;
+  revision: number;
+  updatedAt: string;
+};
+
+export type PersonalActivity = {
+  id: string;
+  userId: string;
+  name: string;
+  sport: string;
+  description: string | null;
+  measurementMode: string;
+  defaultMeasurement: Json | null;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export class TrainingRecordAuthenticationError extends Error {
+  constructor(readonly accessError?: VerifiedUserAccessError) {
+    super("An authenticated FitTip user is required.");
+    this.name = "TrainingRecordAuthenticationError";
+  }
+}
+
+export class TrainingRecordPersistenceError extends Error {
+  constructor() {
+    super("The training record operation could not be completed.");
+    this.name = "TrainingRecordPersistenceError";
+  }
+}
+
+export class TrainingPlanConflictError extends Error {
+  constructor() {
+    super("The training plan changed before this save.");
+    this.name = "TrainingPlanConflictError";
+  }
+}
+
+export class ReferencedPersonalActivityError extends Error {
+  constructor() {
+    super(
+      "A referenced personal activity must be archived instead of deleted.",
+    );
+    this.name = "ReferencedPersonalActivityError";
+  }
+}
+
+export class TrainingRecordRepository {
+  constructor(private readonly client: TrainingRecordClient) {}
+
+  async getCurrentPlanHead(): Promise<DetailedPlanHead | null> {
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("detailed_plan_heads")
+      .select(PLAN_HEAD_COLUMNS)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) {
+      throw new TrainingRecordPersistenceError();
+    }
+
+    return data ? toPlanHead(data) : null;
+  }
+
+  async saveManualPlan(
+    input: unknown,
+    expectedRevision: number,
+  ): Promise<DetailedPlanVersion> {
+    const plan = parseManualPlanInput(input);
+    if (!Number.isInteger(expectedRevision) || expectedRevision < 0) {
+      throw new TrainingRecordValidationError();
+    }
+
+    await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .rpc("save_manual_plan_version", {
+        p_expected_revision: expectedRevision,
+        p_day_count: plan.dayCount,
+        p_start_date: plan.startDate,
+        p_timezone_name: plan.timezoneName,
+        p_sessions: toPlanJson(plan),
+      })
+      .retry(false);
+
+    if (error) {
+      if (error.code === "PT409") {
+        throw new TrainingPlanConflictError();
+      }
+      throw new TrainingRecordPersistenceError();
+    }
+
+    if (!data) {
+      throw new TrainingRecordPersistenceError();
+    }
+
+    return toPlanVersion(data);
+  }
+
+  async listActivePersonalActivities(): Promise<PersonalActivity[]> {
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("personal_activities")
+      .select(PERSONAL_ACTIVITY_COLUMNS)
+      .eq("user_id", userId)
+      .is("archived_at", null)
+      .order("name");
+
+    if (error) {
+      throw new TrainingRecordPersistenceError();
+    }
+
+    return data.map(toPersonalActivity);
+  }
+
+  async createPersonalActivity(input: unknown): Promise<PersonalActivity> {
+    const activity = parsePersonalActivityInput(input);
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("personal_activities")
+      .insert(toPersonalActivityInsert(userId, activity))
+      .select(PERSONAL_ACTIVITY_COLUMNS)
+      .single();
+
+    if (error || !data) {
+      throw new TrainingRecordPersistenceError();
+    }
+
+    return toPersonalActivity(data);
+  }
+
+  async updatePersonalActivity(
+    id: string,
+    input: unknown,
+  ): Promise<PersonalActivity> {
+    assertUuid(id);
+    const activity = parsePersonalActivityInput(input);
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("personal_activities")
+      .update({
+        name: activity.name,
+        sport: activity.sport,
+        description: activity.description ?? null,
+        measurement_mode: activity.measurementMode,
+        default_measurement: activity.defaultMeasurement ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("user_id", userId)
+      .select(PERSONAL_ACTIVITY_COLUMNS)
+      .single();
+
+    if (error || !data) {
+      throw new TrainingRecordPersistenceError();
+    }
+
+    return toPersonalActivity(data);
+  }
+
+  async archivePersonalActivity(id: string): Promise<PersonalActivity> {
+    assertUuid(id);
+    const userId = await this.getVerifiedUserId();
+    const now = new Date().toISOString();
+    const { data, error } = await this.client
+      .from("personal_activities")
+      .update({ archived_at: now, updated_at: now })
+      .eq("id", id)
+      .eq("user_id", userId)
+      .select(PERSONAL_ACTIVITY_COLUMNS)
+      .single();
+
+    if (error || !data) {
+      throw new TrainingRecordPersistenceError();
+    }
+
+    return toPersonalActivity(data);
+  }
+
+  async deleteUnreferencedPersonalActivity(id: string): Promise<void> {
+    assertUuid(id);
+    const userId = await this.getVerifiedUserId();
+    const { error } = await this.client
+      .from("personal_activities")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId);
+
+    if (error?.code === "23503") {
+      throw new ReferencedPersonalActivityError();
+    }
+    if (error) {
+      throw new TrainingRecordPersistenceError();
+    }
+  }
+
+  private async getVerifiedUserId(): Promise<string> {
+    try {
+      return await requireAllowedVerifiedUser(this.client);
+    } catch (error) {
+      if (error instanceof VerifiedUserAccessError) {
+        throw new TrainingRecordAuthenticationError(error);
+      }
+      throw new TrainingRecordAuthenticationError();
+    }
+  }
+}
+
+export async function createTrainingRecordRepository(): Promise<TrainingRecordRepository> {
+  return new TrainingRecordRepository(await createServerUserClient());
+}
+
+function toPlanJson(plan: ManualPlanInput): Json {
+  return plan.sessions.map((session) => ({
+    local_date: session.localDate,
+    position: session.position,
+    title: session.title,
+    sport: session.sport,
+    ...(session.intent === undefined ? {} : { intent: session.intent }),
+    ...(session.expectedDurationMinutes === undefined
+      ? {}
+      : { expected_duration_minutes: session.expectedDurationMinutes }),
+    ...(session.note === undefined ? {} : { note: session.note }),
+    is_locked: session.isLocked,
+    activities: session.activities.map((activity) => ({
+      ...(activity.personalActivityId === undefined
+        ? {}
+        : { personal_activity_id: activity.personalActivityId }),
+      position: activity.position,
+      name: activity.name,
+      sport: activity.sport,
+      ...(activity.instructions === undefined
+        ? {}
+        : { instructions: activity.instructions }),
+      measurement_mode: activity.measurementMode,
+      ...(activity.target === undefined ? {} : { target: activity.target }),
+      is_locked: activity.isLocked,
+    })),
+  }));
+}
+
+function toPersonalActivityInsert(
+  userId: string,
+  activity: PersonalActivityInput,
+): Database["public"]["Tables"]["personal_activities"]["Insert"] {
+  return {
+    user_id: userId,
+    name: activity.name,
+    sport: activity.sport,
+    description: activity.description ?? null,
+    measurement_mode: activity.measurementMode,
+    default_measurement: activity.defaultMeasurement ?? null,
+  };
+}
+
+function toPlanVersion(row: PlanVersionRow): DetailedPlanVersion {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    versionNumber: row.version_number,
+    parentVersionId: row.parent_version_id,
+    dayCount: row.day_count,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    timezoneName: row.timezone_name,
+    sourceKind: "manual",
+    acceptedAt: row.accepted_at,
+    createdAt: row.created_at,
+  };
+}
+
+function toPlanHead(row: PlanHeadRow): DetailedPlanHead {
+  return {
+    userId: row.user_id,
+    currentVersionId: row.current_version_id,
+    revision: row.revision,
+    updatedAt: row.updated_at,
+  };
+}
+
+function toPersonalActivity(row: PersonalActivityRow): PersonalActivity {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    sport: row.sport,
+    description: row.description,
+    measurementMode: row.measurement_mode,
+    defaultMeasurement: row.default_measurement,
+    archivedAt: row.archived_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function assertUuid(value: string): void {
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    )
+  ) {
+    throw new TrainingRecordValidationError();
+  }
+}

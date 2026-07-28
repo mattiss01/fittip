@@ -17,6 +17,29 @@ describe("server repository import boundary", () => {
       expect(readFileSync(component, "utf8")).not.toMatch(SERVER_IMPORT);
     }
   });
+
+  it("disables retries only for the atomic manual-plan RPC", () => {
+    const sources = sourceFiles(join(process.cwd(), "src")).filter(
+      (path) => !path.endsWith(".test.ts") && !path.endsWith(".test.tsx"),
+    );
+    const retryFiles = sources.filter((path) =>
+      readFileSync(path, "utf8").includes(".retry(false)"),
+    );
+    const repositoryPath = join(
+      process.cwd(),
+      "src",
+      "server",
+      "repositories",
+      "training-record-repository.ts",
+    );
+    const repository = readFileSync(repositoryPath, "utf8");
+
+    expect(retryFiles).toEqual([repositoryPath]);
+    expect(repository.match(/\.retry\(false\)/g)).toHaveLength(1);
+    expect(repository).toMatch(
+      /\.rpc\(\s*"save_manual_plan_version",[\s\S]*?\)\s*\.retry\(false\)/,
+    );
+  });
 });
 
 function sourceFiles(directory: string): string[] {
