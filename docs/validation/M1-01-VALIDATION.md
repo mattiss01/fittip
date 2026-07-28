@@ -16,6 +16,8 @@
 
 **Governing documentation commit:** `6d3cc71`
 
+**Master integration commit:** `b495829` (fast-forwarded 28 July 2026)
+
 ## Builder outcome
 
 M1-01 establishes the local database, domain-validation, and server-repository
@@ -377,6 +379,10 @@ exact commit `96c185a` and confirmed that it contains the previously approved
 M1-01 implementation unchanged and no M1-02 UI/read-model work. Focused
 validation passed again with 29 tests, and the reviewer reran TypeScript
 checking under exact Node `24.18.0`.
+
+After fast-forwarding the reviewed ticket branch to `master` at `b495829`, the
+lead reran the complete Vitest suite under Node `24.18.0` (17 files, 113
+tests), TypeScript checking, and ESLint. All passed.
 
 One independent build rerun encountered an ignored `.next` OneDrive file lock
 after the builder's corrected production build and the reviewer's earlier
