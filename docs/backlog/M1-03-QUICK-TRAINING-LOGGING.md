@@ -1,6 +1,6 @@
 # M1-03: Quick training logging
 
-**Status:** approved — queued until M1-01 is accepted; product-owner approval recorded 28 July 2026
+**Status:** in development — dependency satisfied and builder dispatched 28 July 2026
 
 **Milestone:** M1 — manual training planning and tracking
 
@@ -133,5 +133,6 @@ training session. Saving an actual record never edits the source plan.
 
 The product owner approved this ticket and its listed outcome, required-field,
 effort/feeling, correction, note/privacy, pain/illness, measurement-depth, and
-mobile-copy recommendations in chat on 28 July 2026. The ticket remains queued
-and must not enter development until M1-01 is accepted.
+mobile-copy recommendations in chat on 28 July 2026. M1-01 was accepted and
+committed to `master` on 28 July 2026. The parallel file/data ownership and
+merge plan is recorded in [M1-BACKLOG](M1-BACKLOG.md).
