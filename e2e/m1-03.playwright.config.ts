@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: ".",
   timeout: 60_000,
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: "http://localhost:3013",
     ...devices["Desktop Chrome"],
     viewport: { width: 390, height: 844 },
   },

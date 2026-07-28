@@ -68,7 +68,11 @@ async function createAndConfirmAccount(
   await page.getByRole("button", { name: "Create account" }).click();
 
   const confirmationUrl = await pollForConfirmationUrl(request, email);
-  await page.goto(confirmationUrl);
+  await request.get(confirmationUrl);
+  await page.goto("/");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/home$/);
 }
 
@@ -95,8 +99,8 @@ async function pollForConfirmationUrl(
     );
     const html = ((await detail.json()) as { HTML?: string }).HTML;
     const url = html?.match(
-      /https?:\/\/[^"'\s<]+\/auth\/callback[^"'\s<]*/,
-    )?.[0];
+      /href="(https?:\/\/[^"]+\/auth\/v1\/verify\?[^"]+)"/,
+    )?.[1];
     if (url) return url.replace(/&amp;/g, "&");
   }
   throw new Error("No local confirmation email arrived in Mailpit.");
