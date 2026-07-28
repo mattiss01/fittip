@@ -1,12 +1,12 @@
-# M1-03: Structured intake and fact review
+# M2-03: Structured intake and fact review
 
 **Status:** proposed — not approved for implementation
 
-**Milestone:** M1
+**Milestone:** M2 — goals, possibilities, and editable memory
 
 **Priority:** P1
 
-**Depends on:** [M1-01 accepted](M1-01-GOAL-MODEL-VALIDATION.md) and [M1-02 accepted](M1-02-MEMORY-MODEL-MANAGEMENT.md)
+**Depends on:** [M2-01 accepted](M2-01-GOAL-MODEL-VALIDATION.md) and [M2-02 accepted](M2-02-MEMORY-MODEL-MANAGEMENT.md)
 
 **Hosted test dependency:** [M0-06A accepted](M0-06A-FOUNDER-HOSTED-STAGING.md)
 
@@ -14,7 +14,7 @@
 and [ADR-007](../decisions/ADR-007-FOUNDER-HOSTED-STAGING.md);
 product-owner or synthetic data only, local or founder-hosted
 
-**Blocks:** [M1-05 M1 validation slice](M1-05-M1-VALIDATION-SLICE.md)
+**Blocks:** [M2-04 M2 validation slice](M2-04-M2-VALIDATION-SLICE.md)
 
 ## Outcome
 
@@ -30,7 +30,7 @@ inferences, generate a plan, provide coaching, or give diagnostic advice.
 
 ## Approval, environment, and external-use boundary
 
-This proposal may be implemented locally only after M1-01 and M1-02 are
+This proposal may be implemented locally only after M2-01 and M2-02 are
 accepted. It does not authorize remote persistence, production AI, external
 registration, analytics, or a privacy/legal conclusion.
 
@@ -52,14 +52,14 @@ separately approved, implemented, validated, and accepted:
   authorization gates.
 
 M0-04 design acceptance does not authorize intake draft/candidate schema,
-collection UI, consent UI, deletion operations, or external use. M1-03 adds no
+collection UI, consent UI, deletion operations, or external use. M2-03 adds no
 AI transfer even if an AI-consent design later exists.
 
 ## Scope
 
 1. Add the approved structured intake steps and review screen.
 2. Deterministically map submitted fields to candidate goal and memory
-   contracts already accepted in M1-01/M1-02.
+   contracts already accepted in M2-01/M2-02.
 3. Keep candidate/draft state separate from active goal and memory records.
 4. Require an explicit decision for every candidate before publication.
 5. Support partial selection with atomic publication of the selected accepted
@@ -82,7 +82,7 @@ AI transfer even if an AI-consent design later exists.
   write that bypasses the accepted goal/memory services.
 - No analytics, remote migration, deployment, external service, consent
   implementation, or deletion operation.
-- No new goal or memory behavior beyond the accepted M1-01/M1-02 contracts.
+- No new goal or memory behavior beyond the accepted M2-01/M2-02 contracts.
 
 ## Structured intake boundary
 
@@ -118,7 +118,7 @@ Each draft/candidate needs enough state to represent:
 - accepted intake-schema version;
 - current step and completion state;
 - candidate kind (`goal` or `memory`) and deterministic source field;
-- candidate payload validated against the accepted M1-01 or M1-02 input schema;
+- candidate payload validated against the accepted M2-01 or M2-02 input schema;
 - decision `pending`, `accept`, `edit_and_accept`, or `reject`;
 - user edits and current revision/concurrency token;
 - duplicate/conflict references without copying unrelated record content;
@@ -268,7 +268,7 @@ signal are open safety/product decisions.
 
 1. **Welcome/purpose:** Explain what will be collected, that nothing becomes
    active until review, and where the privacy notice is available.
-2. **Goals:** Add and order goal cards using the accepted M1-01 fields.
+2. **Goals:** Add and order goal cards using the accepted M2-01 fields.
 3. **Possibilities:** Enter availability, time, equipment, and locations.
 4. **Preferences and constraints:** Enter the approved structured fields and
    see conservative safety copy when applicable.
@@ -298,7 +298,7 @@ required fields remain unapproved proposals.
    navigation, timeout, or retry silently accepts it.
 5. A mixed accepted/rejected selection is supported, while publication of all
    selected accepted items is atomic under the approved design.
-6. Destination records use the accepted M1-01/M1-02 contracts, provenance,
+6. Destination records use the accepted M2-01/M2-02 contracts, provenance,
    lifecycle, version, ownership, and history operations rather than bypassing
    them.
 7. Duplicate, contradiction, fourth-core, rank, and stale-write states are
@@ -375,7 +375,7 @@ git diff --check
 ## Implementation sequence and file guidance
 
 1. Re-read [AGENTS.md](../../AGENTS.md), the
-   [Product Plan](../../REVISED_PRODUCT_PLAN.md), accepted M1-01/M1-02 briefs
+   [Product Plan](../../REVISED_PRODUCT_PLAN.md), accepted M2-01/M2-02 briefs
    and validation, accepted privacy implementation artifacts, and current
    Supabase guidance.
 2. Resolve required fields, draft retention, publication atomicity, safety, and
@@ -388,7 +388,7 @@ git diff --check
 7. Add unit, integration, privacy/security, accessibility, and 390px tests.
 8. Regenerate types from a clean reset and run all gates.
 9. Hand off to independent review. Missing goal/memory behavior returns to its
-   owning ticket; missing intake behavior remains M1-03.
+   owning ticket; missing intake behavior remains M2-03.
 
 Likely areas are `supabase/migrations/`, `supabase/tests/database/`,
 `src/server/`, authenticated `src/app/` routes, focused components, shared
@@ -440,7 +440,7 @@ Before testable status, provide:
   was added.
 
 The lead agent assigns an independent reviewer. The precise product-owner
-decision after review is: **accept M1-03 as the structured intake/fact-review
+decision after review is: **accept M2-03 as the structured intake/fact-review
 slice, or return focused corrections**.
 
 ## Approval gate
@@ -449,5 +449,5 @@ The product owner must approve required fields, draft persistence/retention,
 partial-selection and atomic-publication behavior, duplicate/conflict rules,
 safety copy/thresholds, privacy handling, and mobile flow/copy. Any
 consequential transaction or persistence mechanism requires an ADR. Approval
-dispatches only after M1-01 and M1-02 are accepted. Until then, M1-03 remains
+dispatches only after M2-01 and M2-02 are accepted. Until then, M2-03 remains
 **proposed**.

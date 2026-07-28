@@ -79,7 +79,7 @@ data. Relationship or informal consent does not widen it.
 
 ## Consequences
 
-- Local M1 and M2 work no longer depends on completing M0-03B through M0-06,
+- Local M1 through M3 work no longer depends on completing M0-03B through M0-06,
   provided each ticket is independently approved and preserves this boundary.
 - A separately approved M2 adapter ticket may prove one real provider locally
   after its provider/model/budget/data-use/retention decisions are resolved.

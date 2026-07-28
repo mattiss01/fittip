@@ -1,20 +1,21 @@
-# M2-02: High-level roadmap proposal
+# M3-02: High-level roadmap proposal
 
 **Status:** proposed — not approved for implementation
 
-**Milestone:** M2
+**Milestone:** M3
 
 **Priority:** P1
 
-**Depends on:** [M2-01 accepted](M2-01-LOCAL-AI-ADAPTER-CONTROLS.md) and the
-accepted M1 goal, memory, intake, and validation foundations
+**Depends on:** [M3-01 accepted](M3-01-LOCAL-AI-ADAPTER-CONTROLS.md), the
+accepted M1 training foundation, and the accepted M2 goal, memory, intake, and
+validation foundations
 
 **Architecture boundary:** ADR-006 and ADR-007 accepted; M0-06A accepted before
 founder-hosted use
 
-**Blocks:** [M2-03](M2-03-SEVEN-DAY-PLAN-PROPOSAL.md),
-[M2-04](M2-04-PLAN-EDIT-LOCK-ACCEPTANCE.md), and
-[M2-05](M2-05-M2-VALIDATION-SLICE.md)
+**Blocks:** [M3-03](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md),
+[M3-04](M3-04-PLAN-EDIT-LOCK-ACCEPTANCE.md), and
+[M3-05](M3-05-M3-VALIDATION-SLICE.md)
 
 ## Outcome
 
@@ -25,12 +26,12 @@ review points, uncertainty, and goal tradeoffs. It remains a versioned proposal
 until the owner explicitly accepts, rejects, or edits it.
 
 The roadmap is strategic direction for following weeks/months, not a detailed
-session prescription or an accepted seven-day plan.
+session prescription or an accepted selected-horizon detailed plan.
 
 ## Local-owner and pre-friends boundary
 
 Only the product owner's own data or synthetic data may be used locally.
-M2-01's explicit enablement, owner allowlist, budget, schema, telemetry, and
+M3-01's explicit enablement, owner allowlist, budget, schema, telemetry, and
 fail-closed controls apply. Friends, public registration, commercial use,
 production, external analytics, and new remote resources remain prohibited
 until the M0 gates pass.
@@ -41,7 +42,7 @@ until the M0 gates pass.
    uncertainty, and review-point schemas.
 2. Construct owner-scoped context from accepted active goals, eligible active
    memory, and accepted intake facts.
-3. Request one roadmap candidate through M2-01.
+3. Request one roadmap candidate through M3-01.
 4. Apply deterministic server validation for owner, source versions, time
    bounds, goal allocation, safety, and schema.
 5. Persist an owner-owned, immutable proposal plus minimized source references
@@ -53,7 +54,7 @@ until the M0 gates pass.
 
 ## Non-goals
 
-- No dated seven-day sessions, planned activities, exact volume/intensity,
+- No dated selected-horizon sessions, planned activities, exact volume/intensity,
   daily schedule, logging, replan, completed history, or progress metrics.
 - No direct model write, silent acceptance, automatic replacement, or editing
   an accepted version in place.
@@ -116,7 +117,7 @@ decisions.
 
 ## AI and safety rules
 
-- M2-01 gates every call and returns only validated structured candidates.
+- M3-01 gates every call and returns only validated structured candidates.
 - The roadmap context contains no rejected/archived/expired memory or
   inactive goals.
 - The server independently verifies referenced goals and all numeric/time
@@ -124,7 +125,7 @@ decisions.
 - Pain, illness, injury, and severe-fatigue context yields conservative,
   non-diagnostic direction and approved stop/professional-help copy where
   required.
-- The AI cannot persist a proposal, accept it, create a weekly plan, or mutate
+- The AI cannot persist a proposal, accept it, create a detailed plan, or mutate
   goals/memory.
 - Malformed, extra-field, unsupported, unsafe, or business-invalid output is
   rejected in full.
@@ -148,7 +149,7 @@ decisions.
    sources, or accepted roadmap.
 9. Invalid/unsafe output and provider/control failure create no active roadmap
    and expose no raw content/error.
-10. No detailed seven-day plan, activity catalog, logging, replan, external
+10. No detailed selected-horizon plan, activity catalog, logging, replan, external
     user, non-M0-06A hosted behavior, analytics sink, secret, or unapproved spend is
     added.
 
@@ -160,7 +161,7 @@ decisions.
   accepted-version records.
 - Generation/accept/reject/edit idempotency, stale source, concurrent
   acceptance, and simulated transaction failure.
-- AI fixture plus opt-in live owner/synthetic path through M2-01; verify zero
+- AI fixture plus opt-in live owner/synthetic path through M3-01; verify zero
   direct writes and safe failure.
 - Safety fixtures for ordinary limitation, severe/acute/worsening signal, and
   prohibited diagnosis/treatment claims.
@@ -172,8 +173,9 @@ decisions.
 ## Implementation guidance
 
 Create one focused owner-scoped proposal/version model through a supported
-forward migration after approval. Reuse accepted M1 repositories and M2-01
-contracts; do not duplicate their validation. Keep generation, proposal
+forward migration after approval. Reuse accepted M1 training repositories,
+accepted M2 context repositories, and M3-01 contracts; do not duplicate their
+validation. Keep generation, proposal
 persistence, and acceptance as separate domain operations. Any privileged
 database function, trigger, elevated connection, or new transaction boundary
 requires an ADR and product-owner approval.
@@ -183,7 +185,7 @@ requires an ADR and product-owner approval.
 Provide the exact branch/commit, changed files, schema and RLS matrix, source
 selection and output schema versions, fixture/live validation results,
 idempotency/transaction evidence, `390x844` demo path, leakage scan, full
-commands/results, limitations, and confirmation that no weekly-plan,
+commands/results, limitations, and confirmation that no detailed-plan,
 direct-write, friend, non-M0-06A-hosted, analytics, or unapproved
 provider/spend behavior was added.
 
@@ -202,7 +204,7 @@ provider/spend behavior was added.
 ## Approval gate
 
 The product owner must approve this brief and all roadmap data, horizon, UX,
-safety, retention, and transaction decisions. M2-01 must be accepted with its
+safety, retention, and transaction decisions. M3-01 must be accepted with its
 provider/model/budget decision. Approval remains owner/synthetic local or
-M0-06A founder-hosted only and does not authorize M2-03, friends, public
+M0-06A founder-hosted only and does not authorize M3-03, friends, public
 registration, commercial use, production, or an analytics sink.

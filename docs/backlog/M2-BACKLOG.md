@@ -1,68 +1,41 @@
 # M2 backlog
 
-**Planning state:** ADR-006 accepts the local-owner AI staging principle and
-ADR-007 accepts the separate founder-hosted topology. All five M2 tickets
-remain proposed and require their own product-owner approval. No provider,
-model, account, key, prompt, data-use/retention term, price, spend, friend data,
-external user, public registration, commercial use, or analytics sink is
-approved.
+**Planning state:** The former proposed M1 goals, memory, and intake work moved
+to M2 on 28 July 2026 after the product owner chose manual training planning
+and tracking as the first product milestone. No moved ticket was approved or
+implemented by the renumbering.
 
-**Founder boundary:** product-owner data or synthetic data only; local or
-accepted M0-06A founder staging; server-side, explicitly enabled,
-deny-by-default, budget-capped AI. M0-03B, M0-04 and its later implementation,
-M0-05, and M0-06 remain mandatory before friends, public registration,
-commercial use, or production.
+**Founder boundary:** owner or synthetic data only, locally or in accepted
+M0-06A founder staging. M0-03B, M0-04 and its later implementation, M0-05, and
+M0-06 remain mandatory before friends, public registration, commercial use, or
+production.
 
 | Priority | Ticket | Status | Depends on | Scope | Approval gate |
 |---|---|---|---|---|---|
-| P1 | [M2-01 Local AI adapter and controls](M2-01-LOCAL-AI-ADAPTER-CONTROLS.md) | proposed | M1-01, M1-02, M1-03, and M1-05 accepted; M0-06A accepted for hosted use; ADR-006 and ADR-007; explicit provider/model/key-use/data-use/retention/quality/rate/token/budget/spend approval | Provider-neutral server interface, fixtures/mocks, one separately approved real adapter, owner allowlist/enable flag, allowlisted context, schema validation, rate/concurrency/budget/idempotency, content-free telemetry, opt-in live tests | Approve every provider/model/data-use/retention/key-use/quality/cost value and exact hard limits; owner/synthetic local or founder-hosted only |
-| P1 | [M2-02 Roadmap proposal](M2-02-ROADMAP-PROPOSAL.md) | proposed | M2-01 accepted and accepted M1 foundations | Owner-scoped structured high-level roadmap proposal with phases, milestones, uncertainty, review points, source versions, edit/reject/accept boundary; no detailed plan | Approve horizon, schema, uncertainty/review UX, safety, versioning, retention, and transaction choices |
-| P1 | [M2-03 Seven-day plan proposal](M2-03-SEVEN-DAY-PLAN-PROPOSAL.md) | proposed | M2-01 and M2-02 accepted | Exactly seven owner-local dates, structured sport-agnostic sessions and personal activity candidates, goal allocation, constraints, alternatives, reasoning, conservative safety; no acceptance | Approve date/unit/session/activity/time/intensity/allocation/safety/UX limits |
-| P1 | [M2-04 Plan edit, lock, and acceptance](M2-04-PLAN-EDIT-LOCK-ACCEPTANCE.md) | proposed | M2-02 and M2-03 accepted | Structured edits, session/activity locks, side-by-side review, personal activity definitions, transactional immutable roadmap/week acceptance; no logging or replan | Approve editable fields, lock inheritance, diff/copy, activity reuse/snapshot, version/current-pointer, transaction, and retention decisions |
-| P1 | [M2-05 Consolidated M2 validation](M2-05-M2-VALIDATION-SLICE.md) | proposed | M2-01 through M2-04 accepted | Independent clean local validation, mock and opt-in live evidence, cost/token cap, schema failures, authorization, proposals/versioning/locks/acceptance, 390px accessibility, secret/content-log scan; no new behavior | Approve validator, exact commits, fixtures/live cap, evidence retention, accessibility checklist, and blocker statement |
+| P1 | [M2-01 Goal model and validation](M2-01-GOAL-MODEL-VALIDATION.md) | proposed | M1-05 accepted; M0-03 and M0-02-C1 accepted | Sport-agnostic goal CRUD; lifecycle; core/supporting ranks; maximum three active core goals; ownership/RLS; concurrency; archive/delete; 390px management | Approve goal fields, lifecycle/rank, archive/delete, concurrency architecture, mobile UX/copy, and privacy classification |
+| P1 | [M2-02 Memory model and management](M2-02-MEMORY-MODEL-MANAGEMENT.md) | proposed | M1-05 accepted; M0-03 and M0-02-C1 accepted | Explicit facts, constraints, preferences, and proposed patterns; provenance/status/history; inspect/edit/disable/delete; ownership/RLS; sensitive-data handling; 390px management; no AI extraction | Approve statuses, provenance, history/expiry/delete, sensitive-data handling, mobile UX/copy, and consequential architecture |
+| P1 | [M2-03 Structured intake and fact review](M2-03-INTAKE-FACT-REVIEW.md) | proposed | M2-01 and M2-02 accepted | Structured intake; separate candidates; explicit accept/edit/reject; partial selection and atomic publication; duplicate/conflict; resume/retry; conservative safety copy; no production AI | Approve required fields, draft retention, atomicity, conflicts, safety, mobile UX/copy, privacy, and any transaction ADR |
+| P1 | [M2-04 Consolidated M2 validation](M2-04-M2-VALIDATION-SLICE.md) | proposed | M2-01 through M2-03 accepted | Independent clean-migration, RLS, invariant, 390px, accessibility, privacy/security, quality, and regression validation; no product changes | Dispatch only after the three feature slices are accepted and approve the exact validator/evidence matrix |
 
 ## Dependency chain
 
 ```text
-Accepted M1 goal + memory + intake + validation foundations
-  -> M2-01 local AI adapter and controls
-    -> M2-02 high-level roadmap proposal
-      -> M2-03 exact seven-day plan proposal
-        -> M2-04 edit, locks, and transactional acceptance
-          -> M2-05 independent validation
+Accepted M1 manual plan-and-track foundation
+  -> M2-01 goals
+  -> M2-02 memory
+  -> M2-03 structured intake and explicit fact review
+  -> M2-04 independent validation
+  -> M3 AI adapter and proposal work
 ```
 
-M2-03 depends on M2-02 because the first detailed week must be traceable to a
-reviewed high-level direction, rather than inventing a standalone plan with no
-roadmap source. M2-04 depends on both proposal slices because it accepts the
-reviewed roadmap/week pair and creates their immutable versions. M2-05 starts
-only after every owning slice is accepted.
-
-## Pre-friends/public gate
-
-A local or founder-hosted M2 acceptance proves only the
-product-owner/synthetic MVP path. Before any friend's real data, external user,
-public registration, commercial use, production claim, or external analytics:
-
-1. M0-03B account recovery must be accepted.
-2. M0-04 privacy design and its required implementation slices must be
-   accepted, including notice, consent/withdrawal before AI transfer,
-   inventory/retention, deletion, and applicable access/export behavior.
-3. M0-05 production-shaped instrumentation and AI request controls must be
-   accepted with any required persistent dependencies.
-4. M0-06 full quality/deployment, environment, email, abuse, backup,
-   monitoring, cost, and validation gates must be accepted.
-5. Exact provider terms, region, retention/deletion, subprocessors, data use,
-   quality, and cost must be revalidated for the external scope.
-
-No relationship, informal permission, public founder-staging URL, or small
-tester count bypasses this gate.
+M2-01 and M2-02 may be approved and delivered separately after M1 acceptance.
+M2-03 requires both destination models. M2-04 starts only after all three
+feature slices are accepted.
 
 ## Ticket rule
 
-Each M2 ticket is independently approved, implemented, reviewed, and accepted.
-Approval of ADR-006, ADR-007, M0-06A, or an earlier M2 ticket does not approve a
-later one.
-Provider output is always a proposal; only the approved M2-04 transaction can
-create an accepted plan. M2 does not implement completions, logging,
-plan-versus-actual history, or replanning.
+Each ticket remains independently proposed, approved, implemented, reviewed,
+and accepted. Moving a proposed ticket from M1 to M2 does not approve it.
+Goals and memory become context for later AI only after explicit user review;
+M2 introduces no provider call, generated plan, silent inference, or direct AI
+write.

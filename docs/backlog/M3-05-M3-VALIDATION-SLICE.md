@@ -1,35 +1,35 @@
-# M2-05: Consolidated local M2 validation slice
+# M3-05: Consolidated local M3 validation slice
 
 **Status:** proposed — not approved to start
 
-**Milestone:** M2
+**Milestone:** M3
 
 **Priority:** P1
 
 **Type:** independent validation and evidence only; no new product behavior
 
-**Depends on:** [M2-01 accepted](M2-01-LOCAL-AI-ADAPTER-CONTROLS.md),
-[M2-02 accepted](M2-02-ROADMAP-PROPOSAL.md),
-[M2-03 accepted](M2-03-SEVEN-DAY-PLAN-PROPOSAL.md), and
-[M2-04 accepted](M2-04-PLAN-EDIT-LOCK-ACCEPTANCE.md)
+**Depends on:** [M3-01 accepted](M3-01-LOCAL-AI-ADAPTER-CONTROLS.md),
+[M3-02 accepted](M3-02-ROADMAP-PROPOSAL.md),
+[M3-03 accepted](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md), and
+[M3-04 accepted](M3-04-PLAN-EDIT-LOCK-ACCEPTANCE.md)
 
 **Architecture boundary:** ADR-006 and ADR-007 accepted; M0-06A accepted before
 founder-hosted validation
 
-**Blocks:** M2 founder milestone acceptance; does not authorize M3, friends,
+**Blocks:** M3 founder milestone acceptance; does not authorize M4, friends,
 public registration, commercial use, production, or external use
 
 ## Outcome
 
-Independently validate the complete local owner/synthetic M2 path: controlled
-AI adapter, roadmap proposal, exact seven-day proposal, editing, locks,
+Independently validate the complete local owner/synthetic M3 path: controlled
+AI adapter, roadmap proposal, exact user-selected 1–7-day proposal, editing, locks,
 personal activities, and transactional acceptance. Produce evidence for mock
 and opt-in live-provider behavior, token/cost caps, schema failure,
 authorization, proposal/versioning invariants, 390px UX, accessibility, and
 absence of secrets/content logs.
 
-M2-05 adds no behavior and fixes no finding. Failures return to their owning
-M2 or M1/M0 ticket.
+M3-05 adds no behavior and fixes no finding. Failures return to their owning
+M3, M2, M1, or M0 ticket.
 
 ## Local-owner and pre-friends boundary
 
@@ -41,13 +41,13 @@ M2 or M1/M0 ticket.
   prohibited.
 - M0-03B, M0-04 and its later implementation, M0-05, and M0-06 remain
   unresolved pre-friends/public/commercial gates unless separately accepted. A
-  M2 PASS is not external-use readiness.
+  M3 PASS is not external-use readiness.
 
 ## Readiness criteria
 
 The independent validator starts only when:
 
-1. M2-01 through M2-04 and their material decisions are accepted;
+1. M3-01 through M3-04 and their material decisions are accepted;
 2. exact reviewed commits are integrated with no unreviewed behavior;
 3. provider/model/account/key-use, data-use/retention, price/rate card, quality
    threshold, and hard budget values have a traceable product-owner approval;
@@ -55,19 +55,19 @@ The independent validator starts only when:
    network access;
 5. local Auth/Supabase fixtures are synthetic and resettable;
 6. no friend/external data exists in the test environment; and
-7. the validator did not build M2-01 through M2-04.
+7. the validator did not build M3-01 through M3-04.
 
 If readiness fails, stop and route the missing item to its owner.
 
 ## Scope
 
 1. Reproduce clean migrations, generated types, grants, policies, constraints,
-   and accepted M2 records.
+   and accepted M3 records.
 2. Validate server-only adapter boundaries and the complete local
    flag/owner/operation/config/rate/concurrency/budget/idempotency gate.
 3. Validate every schema and deterministic business/safety constraint.
 4. Run mock/fixture flows and one approved opt-in live-provider contract test.
-5. Verify roadmap and seven-day proposal source/version/uncertainty/allocation
+5. Verify roadmap and selected-horizon proposal source/version/uncertainty/allocation
    semantics.
 6. Verify proposal editing, locks, personal activities, transactional
    acceptance, immutable versions, stale state, and retries.
@@ -75,7 +75,7 @@ If readiness fails, stop and route the missing item to its owner.
 8. Walk the accepted `390x844` story and perform accessibility review.
 9. Inspect logs, telemetry, errors, screenshots, snapshots, URLs, client
    bundles, and Git for secrets or raw content.
-10. Create one consolidated M2 validation record with PASS or routed findings.
+10. Create one consolidated M3 validation record with PASS or routed findings.
 
 ## Non-goals
 
@@ -110,7 +110,7 @@ If readiness fails, stop and route the missing item to its owner.
   treatment/safety claims.
 - Every invalid candidate is rejected in full and writes no proposal or
   accepted record.
-- Exactly seven owner-local dates survive timezone and DST cases.
+- Exactly the requested 1–7 owner-local dates survive timezone and DST cases.
 - Roadmap uncertainty/review points and plan goal allocation/tradeoffs are
   present and validated.
 
@@ -118,10 +118,11 @@ If readiness fails, stop and route the missing item to its owner.
 
 - Direct grants/RLS/repository tests cover owner access, anonymous denial,
   user A versus user B, owner reassignment, and cross-owner references for
-  proposals, sources, roadmap versions, weekly versions, sessions, activities,
+  proposals, sources, roadmap versions, detailed-plan versions, sessions, activities,
   personal activities, and current pointers.
 - Authentication alone never counts as ownership.
-- Accepted M1 owner/active/status/expiry selection is preserved.
+- Accepted M2 owner/active/status/expiry selection is preserved, and accepted
+  M1 plan/completion history remains unchanged.
 - Proposal generation cannot write accepted data; acceptance makes no provider
   call.
 
@@ -136,7 +137,7 @@ If readiness fails, stop and route the missing item to its owner.
 - Session/activity locks persist exactly as reviewed.
 - Personal activity reuse is owner-scoped and near duplicates never silently
   merge.
-- No completed-history/log/replan record or behavior exists.
+- No completed-history/log behavior is changed and no replan behavior exists.
 
 ### Mock and opt-in live evidence
 
@@ -155,8 +156,9 @@ If readiness fails, stop and route the missing item to its owner.
 
 At `390x844`, independently run:
 
-1. accepted M1 context → generate/review/accept roadmap;
-2. generate exact seven-day proposal;
+1. accepted M1 training history plus accepted M2 context →
+   generate/review/accept roadmap;
+2. select 1–7 days and generate the exact requested-horizon proposal;
 3. inspect allocation, uncertainty, alternatives, and safety state;
 4. edit session/activity, add/remove/reorder within limits, and set locks;
 5. review side-by-side changes and accept;
@@ -182,7 +184,7 @@ reports, and browser storage for:
 
 ## Acceptance criteria
 
-1. Readiness proves accepted M2-01 through M2-04 commits and approved
+1. Readiness proves accepted M3-01 through M3-04 commits and approved
    provider/model/data-use/retention/quality/budget decisions.
 2. Clean migrations, generated types, database lint/advisors, direct RLS tests,
    formatting, lint, typecheck, unit/integration, browser tests, and build pass.
@@ -193,8 +195,8 @@ reports, and browser storage for:
    yields only schema-validated proposal output.
 6. Malformed/unsafe/provider-failed output writes no proposal/accepted data and
    exposes no raw error/content.
-7. Owner/anonymous/cross-user/cross-owner tests pass for every M2 record.
-8. Roadmap and exact seven-day proposals preserve sources, uncertainty,
+7. Owner/anonymous/cross-user/cross-owner tests pass for every M3 record.
+8. Roadmap and exact requested 1–7-day proposals preserve sources, uncertainty,
    priorities, constraints, sport-agnostic activities, and conservative safety.
 9. Editing/locks/activities/acceptance are transactional, idempotent, and
    versioned; prior accepted/source history remains immutable.
@@ -212,7 +214,7 @@ families are clean install, local database start/reset/lint/advisors/tests,
 generated types, format, lint, typecheck, unit/integration, Playwright at 390px,
 production build, dependency/secret scans, and `git diff --check`.
 
-Create `docs/validation/M2-05-VALIDATION.md` only during approved validation.
+Create `docs/validation/M3-05-VALIDATION.md` only during approved validation.
 Record exact source commits, tool versions, commands/results, schema/RLS
 matrix, fixture/live call count and cap evidence, test matrix, screenshots with
 synthetic content, accessibility results, leakage scan, limitations,
@@ -222,11 +224,11 @@ synthetic content, accessibility results, leakage scan, limitations,
 
 | Finding | Return to |
 |---|---|
-| Adapter, owner gate, secrets, rate/concurrency/budget, telemetry, provider errors | M2-01 |
-| Roadmap schema/source/version/uncertainty/review UX | M2-02 |
-| Seven-day dates/constraints/activities/allocation/safety/reasoning UX | M2-03 |
-| Edit/diff/lock/activity/transaction/version/acceptance UX | M2-04 |
-| Goal/memory/intake provenance or ownership regression | Owning M1 ticket |
+| Adapter, owner gate, secrets, rate/concurrency/budget, telemetry, provider errors | M3-01 |
+| Roadmap schema/source/version/uncertainty/review UX | M3-02 |
+| Selected-horizon dates/day-count/constraints/activities/allocation/safety/reasoning UX | M3-03 |
+| Edit/diff/lock/activity/transaction/version/acceptance UX | M3-04 |
+| Goal/memory/intake provenance or ownership regression | Owning M2 ticket |
 | Auth/profile/RLS foundation regression | Owning M0 ticket |
 | Privacy/recovery/hosted/external readiness gap | M0-03B, M0-04 implementation, M0-05, or M0-06 |
 | New behavior or material decision | New proposed brief/ADR |
@@ -246,7 +248,7 @@ statement, and one verdict: **PASS** or **BLOCKED with routed findings**.
 1. Exact integrated commit set and independent validator.
 2. Synthetic fixture set and whether any minimized owner input is permitted in
    the single live test.
-3. Maximum live-validation request/token/cost allowance, within M2-01's
+3. Maximum live-validation request/token/cost allowance, within M3-01's
    approved hard limits.
 4. Evidence/screenshot retention and redaction.
 5. Automated accessibility tool plus manual checklist.
@@ -254,7 +256,7 @@ statement, and one verdict: **PASS** or **BLOCKED with routed findings**.
 
 ## Approval gate
 
-M2-05 may be approved only after M2-01 through M2-04 are accepted and an
+M3-05 may be approved only after M3-01 through M3-04 are accepted and an
 independent validator is named. Approval authorizes validation/evidence only.
 It does not authorize fixes, M3, new calls, higher spend, friends, new hosted
 resources, public registration, commercial use, production, analytics, or

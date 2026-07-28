@@ -1,12 +1,12 @@
-# M1-01: Goal model and validation
+# M2-01: Goal model and validation
 
 **Status:** proposed — not approved for implementation
 
-**Milestone:** M1
+**Milestone:** M2 — goals, possibilities, and editable memory
 
 **Priority:** P1
 
-**Depends on:** [M0-03 / F-001 accepted](../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md); [M0-02-C1 accepted](M0-02-C1-REMOVE-USERNAME.md); [ADR-002](../decisions/ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md); [ADR-004](../decisions/ADR-004-USERNAME-FREE-ACCOUNT-PROFILE.md)
+**Depends on:** [M1-05 accepted](M1-05-M1-VALIDATION-SLICE.md); [M0-03 / F-001 accepted](../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md); [M0-02-C1 accepted](M0-02-C1-REMOVE-USERNAME.md); [ADR-002](../decisions/ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md); [ADR-004](../decisions/ADR-004-USERNAME-FREE-ACCOUNT-PROFILE.md)
 
 **Hosted test dependency:** [M0-06A accepted](M0-06A-FOUNDER-HOSTED-STAGING.md)
 
@@ -14,7 +14,7 @@
 and [ADR-007](../decisions/ADR-007-FOUNDER-HOSTED-STAGING.md);
 product-owner or synthetic data only, local or founder-hosted
 
-**Blocks:** [M1-03 Intake fact review](M1-03-INTAKE-FACT-REVIEW.md) and [M1-05 M1 validation slice](M1-05-M1-VALIDATION-SLICE.md)
+**Blocks:** [M2-03 Intake fact review](M2-03-INTAKE-FACT-REVIEW.md) and [M2-04 M2 validation slice](M2-04-M2-VALIDATION-SLICE.md)
 
 ## Outcome
 
@@ -64,8 +64,8 @@ collection.
 
 ## Non-goals
 
-- No roadmap, weekly plan, planned/completed session, replan, proposal, lock,
-  activity catalog, logging, or progress behavior.
+- No roadmap, change to the accepted M1 detailed-plan/completion model, replan,
+  proposal, lock behavior, activity catalog, logging, or progress behavior.
 - No sport-specific goal table, measurement pack, exercise library, or
   strength-first default.
 - No AI extraction, coaching, generation, provider call, prompt, or model.
@@ -124,7 +124,7 @@ unvalidated escape hatch for sport-specific behavior.
 - Editing a goal does not create or alter a plan, proposal, completion, memory,
   activity, or historical training record.
 - Goal constraints/rationale remain part of the goal. Copying them into memory
-  requires the explicit review behavior owned by M1-03.
+  requires the explicit review behavior owned by M2-03.
 
 ## Maximum-three and concurrency requirements
 
@@ -195,10 +195,10 @@ Recommendation:
   activities, or memory. Those record types remain separate and permanent
   according to their own approved lifecycle.
 
-Because M1 precedes plan implementation, the builder must not add speculative
-plan tables or fake references. The migration should remain compatible with a
-later restrictive/reference-preserving relationship. Exact hard-delete versus
-archive behavior is an open product/privacy decision.
+Because the accepted M1 plan/completion model already preserves history, the
+builder must integrate goal references without rewriting historical training
+records. Exact hard-delete versus archive behavior remains an open
+product/privacy decision.
 
 ## Proposed 390px user flows
 
@@ -330,7 +330,7 @@ git diff --check
 7. Add unit, integration, and 390px end-to-end coverage.
 8. Regenerate types from a clean reset and run all quality/security gates.
 9. Hand off to an independent reviewer; any missing product behavior returns
-   to this ticket rather than being added during M1-05.
+   to this ticket rather than being added during M2-04.
 
 Likely change areas are `supabase/migrations/`,
 `supabase/tests/database/`, `src/server/`, authenticated `src/app/` routes,
@@ -383,7 +383,7 @@ Before moving the ticket to testable, provide:
   behavior was added.
 
 The lead agent then assigns an independent reviewer. The precise product-owner
-decision after review is: **accept M1-01 as the goal-model slice, or return
+decision after review is: **accept M2-01 as the goal-model slice, or return
 focused corrections**.
 
 ## Current primary guidance
@@ -401,4 +401,4 @@ archive/delete semantics, concurrency architecture, mobile flow/copy, and
 privacy classification before implementation. Approval dispatches the ticket
 only when its recorded dependencies are accepted. M0-06A permits only
 owner/synthetic founder staging; M0-06 remains a pre-friends/public/commercial
-gate. Until then, M1-01 remains **proposed**.
+gate. Until then, M2-01 remains **proposed**.

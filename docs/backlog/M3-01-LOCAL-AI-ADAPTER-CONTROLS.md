@@ -1,15 +1,15 @@
-# M2-01: Local AI adapter and controls
+# M3-01: Local AI adapter and controls
 
 **Status:** proposed — not approved for implementation
 
-**Milestone:** M2
+**Milestone:** M3
 
 **Priority:** P1
 
-**Depends on:** [M1-01 accepted](M1-01-GOAL-MODEL-VALIDATION.md),
-[M1-02 accepted](M1-02-MEMORY-MODEL-MANAGEMENT.md),
-[M1-03 accepted](M1-03-INTAKE-FACT-REVIEW.md), and
-[M1-05 accepted](M1-05-M1-VALIDATION-SLICE.md)
+**Depends on:** [M2-01 accepted](M2-01-GOAL-MODEL-VALIDATION.md),
+[M2-02 accepted](M2-02-MEMORY-MODEL-MANAGEMENT.md),
+[M2-03 accepted](M2-03-INTAKE-FACT-REVIEW.md), and
+[M2-04 accepted](M2-04-M2-VALIDATION-SLICE.md)
 
 **Architecture boundary:** [ADR-006 accepted](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md),
 [ADR-007 accepted](../decisions/ADR-007-FOUNDER-HOSTED-STAGING.md), and
@@ -20,9 +20,9 @@ approval of the exact provider, model, account/key use, prompt/data-use and
 retention terms, price/rate card, hard request/token/cost limits, and maximum
 spend
 
-**Blocks:** [M2-02](M2-02-ROADMAP-PROPOSAL.md),
-[M2-03](M2-03-SEVEN-DAY-PLAN-PROPOSAL.md), and
-[M2-05](M2-05-M2-VALIDATION-SLICE.md)
+**Blocks:** [M3-02](M3-02-ROADMAP-PROPOSAL.md),
+[M3-03](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md), and
+[M3-05](M3-05-M3-VALIDATION-SLICE.md)
 
 ## Outcome
 
@@ -46,7 +46,7 @@ retention/data-use term, external resource, call, or spend.
   skipped safely when the approved enablement/configuration is absent.
 - M0-03B, M0-04 and its later implementation, M0-05, and M0-06 remain mandatory
   before friend data, public registration, commercial use, or production.
-  M2-01 does not replace them.
+  M3-01 does not replace them.
 
 ## Scope
 
@@ -151,7 +151,7 @@ requires:
 In-memory limits are acceptable only for local deterministic tests. A
 founder-hosted implementation must use an approved shared fail-closed
 rate/budget/idempotency state that survives Vercel instance changes; the exact
-schema/service and cost require the M2-01 approval decision.
+schema/service and cost require the M3-01 approval decision.
 
 ## Idempotency and safe errors
 
@@ -190,12 +190,13 @@ and database rows. No external sink is added.
 
 ## UX and user-visible error rules
 
-M2-01 adds no standalone product screen. A consuming proposal flow may show
+M3-01 adds no standalone product screen. A consuming proposal flow may show
 only stable states such as disabled, generating, limit reached, budget
 unavailable, validation failed, and temporarily unavailable. Copy must not
 expose provider identity unless separately approved, raw errors, secret/config
 state, another user, detailed budget/account data, or imply that a proposal was
-saved. Non-AI account and M1 functions remain usable when AI fails closed.
+saved. Non-AI account, M1 training, and M2 goal/memory functions remain usable
+when AI fails closed.
 
 ## Acceptance criteria
 
@@ -245,9 +246,9 @@ saved. Non-AI account and M1 functions remain usable when AI fails closed.
 
 Keep contracts under a provider-neutral AI module and real adapters in a
 server-only subtree. Inject clocks, ids, rate/budget policies, and adapters so
-tests are deterministic. Reuse accepted M1 repositories for owner-scoped
-context; do not let the adapter query the database. Keep proposal persistence
-out of this ticket.
+tests are deterministic. Reuse accepted M1 training and M2 goal/memory
+repositories for owner-scoped context; do not let the adapter query the
+database. Keep proposal persistence out of this ticket.
 
 ## Required handoff
 
@@ -280,4 +281,4 @@ The product owner must approve this brief and every open provider, model,
 quality, data-use, retention, key-use, rate, token, cost, and spend decision.
 Approval is owner/synthetic local or M0-06A founder-hosted only and does not
 authorize friends, external users, public registration, commercial use,
-production, analytics, new remote resources, or any other M2 ticket.
+production, analytics, new remote resources, or any other M3 ticket.

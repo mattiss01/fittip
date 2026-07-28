@@ -1,12 +1,14 @@
 # FitTip: Revised Product and Technical Plan
 
-**Revision source:** product-owner answers, 13 July 2026  
+**Revision source:** product-owner answers, 13 July 2026; milestone-order revision approved 28 July 2026
 **Audience:** the lead Codex agent, builders, reviewers, and the product owner  
-**Current stage:** planning only — no application code has been built
+**Current stage:** M0 authentication, ownership, and founder staging are
+accepted; the first training capability is proposed in the revised M1 and has
+not been implemented
 
 ## 1. The product in one paragraph
 
-FitTip is a mobile-first personal training-planning web app for a sporty person who regularly pursues several different challenges: for example, improve flexibility, prepare for a football season, run a marathon, or get stronger. It acts in the tone of a serious coach. It learns the user's goals, priorities, schedule, equipment, preferences, past training, feedback, and longer-term patterns. It then creates a detailed seven-day plan, lets the user log what actually happened, conducts a short coaching conversation when needed, and proposes a revised plan after the user explicitly asks it to replan.
+FitTip is a mobile-first personal training-planning web app for a sporty person who regularly pursues several different challenges: for example, improve flexibility, prepare for a football season, run a marathon, or get stronger. It acts in the tone of a serious coach. It learns the user's goals, priorities, schedule, equipment, preferences, past training, feedback, and longer-term patterns. It then creates a detailed plan for a user-selected horizon of the next 1–7 days, lets the user log what actually happened, conducts a short coaching conversation when needed, and proposes a revised plan after the user explicitly asks it to replan.
 
 The first release is a personal hosted tool, not a public multi-user product. It must nevertheless preserve history and use a clean user/ownership boundary so it can grow later.
 
@@ -35,7 +37,7 @@ FitTip is not a fixed workout logger or generic chatbot. Its value is the combin
 | Initial audience | Founder-led early beta: the product owner first, then a small number of self-registering testers using mobile browsers. |
 | Training scope | Goal- and sport-agnostic from the data model and user experience. Do not position strength as the primary experience. |
 | Goals | Multiple concurrent goals; at most 3 core goals, plus lower-attention supporting goals. Priorities are editable. |
-| Plan horizon | Detailed plan: next 7 days. Longer horizon: high-level roadmap for following weeks/months. |
+| Plan horizon | Detailed plan: a user-selected next 1–7 days, never more than 7. Longer horizon: high-level roadmap for following weeks/months. |
 | Initial-plan source | AI-generated, with user edits and conversational feedback. |
 | Replanning | Explicit user action; may change any *future, unlocked* aspect of the plan. |
 | Locks | User can lock a session and/or activity so replanning cannot change it. |
@@ -47,7 +49,7 @@ FitTip is not a fixed workout logger or generic chatbot. Its value is the combin
 | Language | English only initially. |
 | Devices | Mobile browser first; desktop must remain functional. |
 | Accounts | Public self-service email/password accounts, verified email, username-free profiles, and per-user data isolation from the first beta build. |
-| Founder staging | M1 and later approved server-side AI calls may be tested locally or in the disposable founder-hosted environment with only the product owner's own data or synthetic data under ADR-006 and ADR-007; friends, external users, public registration, commercial use, and analytics sinks remain blocked until the full gates pass. |
+| Founder staging | Approved M1/M2 product work and later approved M3 server-side AI calls may be tested locally or in the disposable founder-hosted environment with only the product owner's own data or synthetic data under ADR-006 and ADR-007; friends, external users, public registration, commercial use, and analytics sinks remain blocked until the full gates pass. |
 | Business direction | Validate a real business hypothesis through founder-led early beta, then broader public beta and app-store distribution. |
 | Future | User-controlled sharing, shared workouts/plans/groups; no coach-role implementation now. |
 
@@ -80,7 +82,7 @@ A hosted app accessible from multiple devices needs persistent identity and per-
 
 The MVP is therefore a **commercially aware early beta**: a small, usable product with public self-service accounts and production-shaped data, privacy, and AI-cost foundations—but without the feature breadth of a finished consumer company.
 
-**Founder staging decision:** M1 and M2 may be built and validated locally or
+**Founder staging decision:** M1 through M3 may be built and validated locally or
 in the disposable founder-hosted environment before the full privacy and
 external-use program is complete. ADR-006 preserves the local AI decision;
 [ADR-007](docs/decisions/ADR-007-FOUNDER-HOSTED-STAGING.md) extends the narrow
@@ -204,7 +206,8 @@ Rules:
 2. The coach asks a compact, adaptive intake: current goals, priorities, target dates, current fitness/activity, available days/time, equipment/locations, preferences, limitations, and relevant upcoming commitments.
 3. The user can write naturally; the AI extracts structured facts and asks follow-up questions only for material gaps or ambiguities.
 4. The user reviews extracted goals, constraints, and preferences before they become active memory.
-5. The system creates a high-level roadmap and a detailed 7-day proposal.
+5. The system creates a high-level roadmap and a detailed proposal for the
+   user-selected next 1–7 days.
 6. The plan screen shows goals addressed, sessions, activity details, expected duration, and concise rationale.
 7. The user can chat, edit, choose between alternatives, lock items, or accept the plan.
 
@@ -222,7 +225,8 @@ Rules:
 1. User taps **Replan** or asks the coach to adapt the plan.
 2. The coach receives the active goals, active memory, upcoming unlocked sessions, completed session summaries, current roadmap, and new input.
 3. If uncertainty materially affects the plan, it asks a focused question and may offer alternatives. Example: “Do you want to preserve Saturday football, reduce the run volume, or move the long run?”
-4. It produces a proposal for the requested scope, normally the remaining week and/or next detailed 7-day period.
+4. It produces a proposal for the requested scope, normally the remaining
+   selected horizon and/or a newly selected next 1–7-day period.
 5. The user sees a side-by-side comparison: current versus proposed, each changed/removed/added item, concise reasons, and options where available.
 6. The user accepts, edits, partially chooses options, or discards the proposal.
 7. Acceptance creates a new plan version. Historical plans and completions stay unchanged.
@@ -240,7 +244,7 @@ Rules:
 Primary tabs:
 
 1. **Today** — next session, status, quick log/start action, urgent coach message if a clarification blocks planning.
-2. **Plan** — current 7-day detailed plan, locks, roadmap entry point, replan action.
+2. **Plan** — current selected 1–7-day detailed plan, locks, roadmap entry point, replan action.
 3. **Coach** — persistent conversation, suggestions, questions, and requested explanations.
 4. **Progress** — history, plan-versus-actual, basic trends, observed patterns.
 5. **You** — active goals, priorities, memory, availability, equipment/possibilities, and preferences.
@@ -249,7 +253,7 @@ Primary tabs:
 
 - Empty / onboarding
 - Coaching intake and fact-review step
-- Plan proposal and accepted weekly plan
+- Plan proposal and accepted detailed plan
 - Session detail
 - Quick summary log
 - Detailed activity log
@@ -274,7 +278,11 @@ Primary tabs:
 
 **Roadmap (weeks/months):** a flexible high-level view with phases, major milestones, intended focus, and review points. It is a strategy, not a dated immutable prescription.
 
-**Detailed plan (7 days):** dated sessions with the activities to perform, their targets, duration, intent, and optional alternatives. Only this detailed plan is the operational source for Today and logging.
+**Detailed plan (selected 1–7 days):** dated sessions with the activities to
+perform, their targets, duration, intent, and optional alternatives. The user
+chooses the requested day count, and the detailed plan contains exactly that
+many consecutive owner-local dates. Only this detailed plan is the operational
+source for Today and logging.
 
 ### 9.2 Generic activity schema
 
@@ -338,7 +346,7 @@ Every completed session contains:
 2. Structured extraction of goals, constraints, preferences, and signals from user text.
 3. Follow-up questions when a material decision is ambiguous.
 4. High-level roadmap generation.
-5. Detailed 7-day plan proposal generation.
+5. Detailed selected-horizon plan proposal generation for 1–7 days.
 6. Plan adaptation from plan-versus-actual history, current memory, and new input.
 7. Concise explanation on proposal; deeper reasoning only when asked.
 8. Pattern detection that creates *proposed* memories with evidence.
@@ -372,7 +380,8 @@ Minimum output types:
 - `ExtractedFacts`: candidate goals, constraints, preferences, and cited source text.
 - `CoachQuestion`: one or more targeted questions plus alternatives when suitable.
 - `RoadmapProposal`: phases/milestones/review points, with uncertainty notes.
-- `DetailedPlanProposal`: exactly one 7-day date range, sessions, generic activities, and goal allocation.
+- `DetailedPlanProposal`: one explicit 1–7-day date range, requested day
+  count, sessions, generic activities, and goal allocation.
 - `ReplanProposal`: source plan id, scope, changes, alternatives, concise reasons, and proposed detailed plan.
 - `MemoryProposal`: observed pattern/fact, confidence, evidence ids, expiry suggestion.
 - `SafetySignal`: severity, safe response category, and whether planning should pause.
@@ -408,6 +417,9 @@ Prompts, output schemas, provider code, retry policy, and test fixtures belong u
 
 ## 11. Data model and history rules
 
+The current implemented and proposed relationships are summarized in the
+[visual data-model overview](docs/product/DATA-MODEL-OVERVIEW.md).
+
 ### Core entities
 
 ```text
@@ -416,7 +428,7 @@ Owner/User
   ├─ Goal (many; max 3 active core)
   ├─ MemoryItem (many)
   ├─ RoadmapVersion (many)
-  ├─ WeeklyPlanVersion (many)
+  ├─ DetailedPlanVersion (many; each covers selected 1–7 days)
   │    └─ PlannedSession → PlannedActivity
   ├─ CompletedSession → CompletedActivity → ActualMetric/Set
   ├─ Conversation → Message
@@ -438,7 +450,7 @@ Owner/User
 
 - `profiles`, `goals`, `memory_items`
 - `roadmap_versions`, `roadmap_phases`
-- `weekly_plan_versions`, `planned_sessions`, `planned_activities`
+- `detailed_plan_versions`, `planned_sessions`, `planned_activities`
 - `personal_activities` (AI-created/user-edited activity definitions)
 - `completed_sessions`, `completed_activities`, `actual_metrics`
 - `conversations`, `messages`, `conversation_summaries`
@@ -479,7 +491,7 @@ No React component contains plan-versioning, memory, safety, or AI business rule
 Milestone numbering describes product capability, not a requirement to finish
 every production/external-use gate before founder feature work. After the
 accepted M0-03 authentication and ownership foundation, an independently
-approved M1 or M2 ticket may run locally or in the accepted M0-06A disposable
+approved M1, M2, or M3 ticket may run locally or in the accepted M0-06A disposable
 founder-staging environment with only the product owner or synthetic fixtures.
 Any real provider call additionally requires ADR-006, ADR-007 for hosted use,
 an approved adapter ticket, an explicit provider/model/budget decision, and
@@ -491,6 +503,9 @@ validation never satisfies or removes those gates.
 
 ### M0: Foundation, early beta, and commercial-ready core
 
+Accepted and proposed foundation/external-use gates are maintained in the
+separate [M0 backlog](docs/backlog/M0-BACKLOG.md).
+
 - Initialize the repository, strict TypeScript, lint/format, test runner, and CI checks.
 - Implement basic public email/password registration with verified email, minimal profile creation, and per-user authorization/row-level security. Add account recovery as a separate ticket before external MVP use.
 - Set up database migrations, environment documentation, secure deployment, and separate development/production environments.
@@ -500,32 +515,59 @@ validation never satisfies or removes those gates.
 
 **Exit:** registered and email-verified users can access only their own data; confirmation/recovery email and registration-abuse controls are approved for the hosted environment; consent and AI usage are recorded; typecheck, lint, tests, and build run locally/CI.
 
-### M1: Goals, possibilities, and editable memory
+### M1: Manual training planning and factual tracking
 
-- Mobile onboarding/coaching intake.
+The proposed visible behavior is specified in
+[F-002](docs/product/F-002-MANUAL-TRAINING-PLANNING-TRACKING.md) and dispatched
+only through the separate [M1 backlog](docs/backlog/M1-BACKLOG.md).
+
+- Establish owner-scoped personal activities, immutable 1–7-day plan
+  versions, planned sessions/activities, separate completions, and generic
+  sport-agnostic measurements.
+- Let the owner select how many next days to plan, from 1 through 7, then
+  manually create, edit, move, remove, order, and lock future sessions and
+  activities within that horizon.
+- Add quick actual logging for completed, partial, skipped, replaced, rest, and
+  unplanned training; detailed/per-set capture remains secondary.
+- Add Today, plan-versus-actual history, plan versions, correction history, and
+  the smallest honest mobile navigation required for the flow.
+
+**Exit:** the owner can create a real plan for the selected next 1–7 days, see today's training, log
+what actually happened without changing the plan, and inspect preserved
+planned-versus-actual history at 390px.
+
+### M2: Goals, possibilities, and editable memory
+
+The proposed slices are maintained in the separate
+[M2 backlog](docs/backlog/M2-BACKLOG.md).
+
 - Goal CRUD with priority/order validation: max 3 active core goals.
-- Store availability, time limits, equipment/locations, preferences, and limitations as memory items.
-- Fact-review UI so extracted information is confirmed before it becomes active.
+- Store availability, time limits, equipment/locations, preferences, and
+  limitations as explicit memory items.
+- Add structured intake and fact review so candidates are explicitly accepted,
+  edited, or rejected before becoming active.
+- Integrate goals and memory into the accepted M1 **You** surface without
+  changing plan/completion history.
 
-**Exit:** the user can accurately express changing goals and constraints, and inspect/edit the stored memory.
+**Exit:** the user can accurately express changing goals and constraints,
+inspect/edit stored memory, and explicitly control which intake facts become
+active.
 
-### M2: AI-generated roadmap and 7-day plan proposal
+### M3: AI-generated roadmap and selected-horizon plan proposal
 
-- Implement structured AI adapter with fixtures and mocked provider tests.
-- Generate a roadmap and a detailed next-seven-day proposal.
-- Allow plan/session/activity edits and locks before/after acceptance.
-- Store accepted version and personal AI-generated activity definitions.
+The proposed AI slices are maintained in the separate
+[M3 backlog](docs/backlog/M3-BACKLOG.md).
 
-**Exit:** user can discuss goals, accept a real 7-day plan, and see a rough longer-term direction.
+- Implement a structured AI adapter with fixtures and mocked provider tests.
+- Generate a roadmap and a detailed proposal for the user-selected next 1–7
+  days from accepted goals, memory, and the existing M1 training model.
+- Allow proposal/session/activity edits and locks before acceptance.
+- Accept into a new immutable plan version while preserving manual and
+  historical records.
 
-### M3: Mobile logging and plan-versus-actual history
-
-- Quick summary logging flow first.
-- Detailed optional activity/metric logging flow.
-- Support planned, partial, skipped, replaced, unplanned, and rest outcomes.
-- Build session and plan version history.
-
-**Exit:** facts of completed training are captured independently of what was planned.
+**Exit:** the user can discuss goals, review and accept a real AI-generated
+1–7-day proposal, and see a rough longer-term direction without the model
+directly writing accepted data.
 
 ### M4: Interactive replan and alternatives
 
@@ -534,7 +576,8 @@ validation never satisfies or removes those gates.
 - Ask focused questions on material ambiguity; show options when there are reasonable tradeoffs.
 - Enforce locks and completed-history invariants.
 
-**Exit:** user can report a missed, easy, hard, sick, or time-constrained session and accept an explainable new 7-day plan.
+**Exit:** user can report a missed, easy, hard, sick, or time-constrained
+session and accept an explainable new plan for a selected horizon of 1–7 days.
 
 ### M5: Memory and coach quality
 
@@ -557,28 +600,41 @@ validation never satisfies or removes those gates.
 - Native iOS/Android client, push notifications, offline mode, and watch integrations
 - Specialized sport capability packs and analytics
 
-## 14. Acceptance criteria for the first complete vertical slice
+## 14. Acceptance criteria for the first usable vertical slice
 
-The first end-to-end slice should be: **an owner creates up to three prioritized goals and constraints, receives a 7-day AI plan proposal, accepts it, logs a session, then requests and accepts a replan.**
+The first end-to-end slice is:
+
+> **The owner selects how many of the next 1–7 days to plan, creates that training plan, sees today's
+> training, records what actually happened, and reviews planned versus actual
+> history.**
 
 It is done only when:
 
-1. It works at a 390px-wide mobile viewport, with one registered and verified user unable to access another user's data.
-2. The user can create core and supporting goals; attempting a fourth core goal produces a clear validation message.
-3. The plan is dated, contains generic activities appropriate to the selected data, and shows goal allocation.
-4. The user can lock one upcoming session/activity.
-5. The user can log a session as partially completed with an effort score and free-text note.
-6. Replan cannot change the completion record or locked content.
-7. Replan presents a side-by-side diff and at least one alternative when a meaningful tradeoff exists.
-8. Accepting the replan creates a new plan version; the previous plan remains viewable.
-9. All AI plan payloads are schema-validated and rejected safely on failure.
-10. The core flow has automated unit tests and a Playwright happy-path test.
-11. The flow either records AI-data consent and emits only privacy-safe product
-    events, or—only for owner/synthetic local or founder-hosted validation—
-    proves the narrower ADR-006/ADR-007 allowlist, no-external-sink,
-    content-free telemetry, and fail-closed boundary. The full consent/event
-    requirements remain mandatory before friends, public registration,
-    commercial use, or production.
+1. It works at a 390px-wide mobile viewport and one authenticated user cannot
+   access another user's records.
+2. The owner can plan sessions for arbitrary sports without a global exercise
+   library or strength-only data assumptions.
+3. The selected horizon contains exactly the requested 1–7 consecutive
+   owner-local dates and explicit units/timezone.
+4. Editing an accepted plan creates a new immutable version; the previous
+   version remains viewable.
+5. The owner can log completed, partial, skipped, replaced, rest, and unplanned
+   outcomes.
+6. The factual completion and any later correction remain separate from the
+   source plan.
+7. Today never infers completion from a scheduled session.
+8. Personal-activity edits do not mutate historical plan or completion
+   snapshots.
+9. Empty, loading, error, conflict, offline, and session-expiry states are
+   honest and accessible.
+10. The core flow has database/RLS, domain, component, and Playwright tests.
+11. Founder validation uses only product-owner or synthetic data and sends no
+    content to AI or analytics services.
+
+The later complete coached slice extends this foundation with accepted goals
+and memory, a schema-validated AI roadmap/selected 1–7-day proposal, explicit
+acceptance, logging, and an explainable replan. Those later capabilities never
+weaken the M1 plan-versus-actual history.
 
 ## 15. Agent operating protocol
 
@@ -589,29 +645,44 @@ It is done only when:
 - Create an ADR for decisions that affect future architecture.
 - Do not authorize broad refactors while implementing a feature.
 - Check every handoff against task acceptance criteria.
-- Treat product-owner approval of a dependency-ready ticket as authorization to dispatch it immediately: record `in development`, assign one builder, and start without requesting a second confirmation.
-- Automatically assign an independent reviewer after the builder handoff; involve the product owner again only for a material decision, a genuine blocker, or final acceptance.
+- Treat product-owner approval of a dependency-ready ticket as authorization to dispatch it immediately: record `in development` and spawn a distinct builder subagent before any implementation edit, without requesting a second confirmation. The lead must not act as the builder.
+- Automatically spawn a different independent reviewer subagent after the builder handoff. If distinct delegation is unavailable, stop implementation and report the blocker rather than falling back to single-agent delivery.
+- Involve the product owner again only for a material decision, a genuine blocker, or final acceptance.
 
 ### Builder agent
 
 - Implement only one approved ticket.
 - Inspect `AGENTS.md` and relevant existing code before edits.
 - Add/update tests for changed domain behavior.
+- Work on a ticket-specific branch and isolated worktree whenever another
+  ticket is active.
+- Commit only the ticket-scoped changes before handoff and record the exact
+  commit SHA in the validation record.
 - Report changed files, commands run, results, and known limitations.
 
 ### Reviewer/QA agent
 
-- Verify tests and actual diff against acceptance criteria.
+- Verify the exact recorded ticket commit, its tests, and its actual diff
+  against acceptance criteria.
 - Prioritize history/versioning, mobile usability, authorization, malformed AI output, locks, and plan-versus-actual behavior.
-- Return either approval or focused correction tasks; do not start unrelated work.
+- Return either approval of that exact SHA or focused correction tasks; any
+  correction commit requires re-review.
+- Do not start unrelated work.
 
 ### Collaboration rules
 
 1. One agent owns a feature area at a time.
-2. Use isolated Git worktrees for genuinely independent parallel tasks.
-3. Do not place AI calls directly in UI components.
-4. Do not add a global exercise library merely for convenience; use the personal AI-generated activity model.
-5. Do not call a feature done without running the stated checks.
+2. Multiple dependency-ready tickets may run in parallel only when the lead
+   records non-overlapping file/data ownership, separate builders, isolated Git
+   worktrees, merge order, and the owner of shared integration work.
+3. Never run parallel builders in one worktree. Serialize materially
+   overlapping files, migrations, data contracts, or acceptance behavior, or
+   split them into an explicitly owned integration ticket.
+4. After merging parallel tickets, run the combined regression and integration
+   checks before either downstream ticket depends on the result.
+5. Do not place AI calls directly in UI components.
+6. Do not add a global exercise library merely for convenience; use the personal AI-generated activity model.
+7. Do not call a feature done without running the stated checks.
 
 ### 15.1 Collaborative development and decision protocol
 
@@ -646,13 +717,25 @@ Feature lifecycle:
 4. **Testable:** Provide a mobile demo path, automated-test results, changed-data notes, and known limitations in a validation record.
 5. **Accepted:** The product owner confirms visible behavior and agreed criteria; follow-up changes become new tickets.
 
-Approval is the automatic dispatch trigger. When a ticket's dependencies are satisfied, the lead agent moves it directly from **approved** to **in development**, assigns one builder, and begins delivery. After the builder handoff, the lead agent assigns an independent reviewer without waiting for another product-owner instruction. The product owner is not responsible for operationally starting approved work.
+Approval is the automatic dispatch trigger. When a ticket's dependencies are satisfied, the lead agent moves it directly from **approved** to **in development** and spawns a distinct builder subagent before any implementation edit. The lead never doubles as that builder. After the builder handoff, the lead spawns a different independent reviewer without waiting for another product-owner instruction. If either distinct delegation step is unavailable, implementation stops as blocked rather than silently becoming single-agent delivery. The product owner is not responsible for operationally starting approved work.
+
+Each implementation ticket is committed on a ticket-specific branch before
+review. The validation record names the reviewed commit SHA, and product-owner
+acceptance applies to that exact commit. After acceptance, the lead merges it
+to `master`, runs post-merge checks, records the resulting `master` SHA, and
+only then dispatches dependent work. Accepted implementation must never exist
+only as uncommitted changes on `master`, and unrelated dirty-worktree changes
+must never be swept into a ticket commit.
 
 Review a feature brief before each independently valuable slice. Demonstrate every user-visible flow at a 390px mobile viewport before requesting acceptance. Review database migrations, authorization, consent, AI data flow, and new external services before they reach a shared or production environment. At handoff, provide changed files, commands/tests run, results, known limitations, and the exact acceptance decision requested. No feature is complete merely because code exists or a happy path works.
 
 Before application-feature implementation, complete and approve: the M0 architecture decision brief; an M0/M1 backlog of independently testable tickets; `AGENTS.md` containing the invariants and this protocol; and the first feature brief for public email/password registration and an isolated username-free profile.
 
-## 16. First prompt for the lead Codex agent
+## 16. Historical first prompt for the lead Codex agent
+
+The prompt below initialized the repository. It is retained as historical
+context and is no longer the current execution instruction; use the accepted
+backlogs and ticket lifecycle instead.
 
 ```text
 You are the technical lead for FitTip. Read REVISED_PRODUCT_PLAN.md completely.
@@ -669,7 +752,7 @@ Make reversible defaults where the plan does not prescribe a detail. Flag only d
 Do not implement application features until this planning output is reviewed. Preserve the required product properties: sport-agnostic plans, up to three core prioritized goals, editable inspectable memory, AI-created personal activities rather than a global exercise catalog, explicit proposal acceptance, locks, and immutable planned-versus-actual history.
 ```
 
-## 17. Remaining decisions worth making before M2
+## 17. Remaining decisions worth making before M3
 
 These do not block foundation work, but should be decided before generating real plans:
 
@@ -682,4 +765,4 @@ These do not block foundation work, but should be decided before generating real
 
 ## 18. Explicit non-requirements for now
 
-Do not delay the core loop for referrals, reminders, billing, social sharing, groups, coaching roles, wearable integrations, native-app packaging, social login/passkeys, or a polished exercise-media library. Stage public account recovery after the basic local authentication slice but complete it before external MVP use. Never remove authenticated user isolation, consent, privacy-ready data handling, or AI-cost observability from the product plan: ADR-006 and ADR-007 permit only temporary owner/synthetic local and disposable founder-hosted boundaries, and the full controls remain mandatory before friends, public registration, commercial use, or production. Build the trustworthy personal coach loop first: goals and memory → proposal → actual log → interactive replan → versioned history.
+Do not delay the core loop for referrals, reminders, billing, social sharing, groups, coaching roles, wearable integrations, native-app packaging, social login/passkeys, or a polished exercise-media library. Stage public account recovery after the basic local authentication slice but complete it before external MVP use. Never remove authenticated user isolation, consent, privacy-ready data handling, or AI-cost observability from the product plan: ADR-006 and ADR-007 permit only temporary owner/synthetic local and disposable founder-hosted boundaries, and the full controls remain mandatory before friends, public registration, commercial use, or production. Build the trustworthy product in layers: manual plan → factual actual log → versioned history; then goals and memory → AI proposal → explicit acceptance → interactive replan.

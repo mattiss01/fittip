@@ -1,12 +1,12 @@
-# M1-02: Memory model and management
+# M2-02: Memory model and management
 
 **Status:** proposed — not approved for implementation
 
-**Milestone:** M1
+**Milestone:** M2 — goals, possibilities, and editable memory
 
 **Priority:** P1
 
-**Depends on:** [M0-03 / F-001 accepted](../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md); [M0-02-C1 accepted](M0-02-C1-REMOVE-USERNAME.md); [ADR-002](../decisions/ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md); [ADR-004](../decisions/ADR-004-USERNAME-FREE-ACCOUNT-PROFILE.md)
+**Depends on:** [M1-05 accepted](M1-05-M1-VALIDATION-SLICE.md); [M0-03 / F-001 accepted](../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md); [M0-02-C1 accepted](M0-02-C1-REMOVE-USERNAME.md); [ADR-002](../decisions/ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md); [ADR-004](../decisions/ADR-004-USERNAME-FREE-ACCOUNT-PROFILE.md)
 
 **Hosted test dependency:** [M0-06A accepted](M0-06A-FOUNDER-HOSTED-STAGING.md)
 
@@ -14,7 +14,7 @@
 and [ADR-007](../decisions/ADR-007-FOUNDER-HOSTED-STAGING.md);
 product-owner or synthetic data only, local or founder-hosted
 
-**Blocks:** [M1-03 Intake fact review](M1-03-INTAKE-FACT-REVIEW.md) and [M1-05 M1 validation slice](M1-05-M1-VALIDATION-SLICE.md)
+**Blocks:** [M2-03 Intake fact review](M2-03-INTAKE-FACT-REVIEW.md) and [M2-04 M2 validation slice](M2-04-M2-VALIDATION-SLICE.md)
 
 ## Outcome
 
@@ -48,7 +48,7 @@ approved, implemented, validated, and accepted:
   authorization validation gates.
 
 M0-04 design acceptance does not authorize a `memory_items` migration, privacy
-UI, consent UI, deletion worker, processor transfer, or external use. M1-02's
+UI, consent UI, deletion worker, processor transfer, or external use. M2-02's
 schema/UI approval is a separate gate, and production AI calls remain
 prohibited.
 
@@ -121,10 +121,10 @@ structured subtype fields must have an approved need and schema.
 ## Provenance and activation rules
 
 - A user-created item may become active only through the user's explicit save.
-- A structured intake candidate becomes active only after the M1-03 review
+- A structured intake candidate becomes active only after the M2-03 review
   action commits it.
 - Any system/AI-derived or observed content must begin `proposed`, even when
-  confidence is high. M1-02 provides the state contract but creates no
+  confidence is high. M2-02 provides the state contract but creates no
   inference engine.
 - Accepting a proposal is an explicit authenticated action. Editing before
   acceptance creates user-confirmed content while retaining the proposal's
@@ -204,7 +204,7 @@ treat them conservatively:
   instantly erase unexpired approved backups.
 
 The exact signal fields, copy, and whether a dedicated health-adjacent label is
-shown are open safety/privacy decisions. M1-02 must not add diagnostic
+shown are open safety/privacy decisions. M2-02 must not add diagnostic
 classification or automated coaching behavior.
 
 ## Ownership, repository, migration, and RLS rules
@@ -361,8 +361,8 @@ git diff --check
 5. Add only the approved authenticated memory-management screens.
 6. Add focused unit, integration, privacy/security, and 390px end-to-end tests.
 7. Regenerate types from a clean reset and run all gates.
-8. Hand off to an independent reviewer; missing behavior stays with M1-02 and
-   is not silently added by M1-05.
+8. Hand off to an independent reviewer; missing behavior stays with M2-02 and
+   is not silently added by M2-04.
 
 Likely areas are `supabase/migrations/`, `supabase/tests/database/`,
 `src/server/`, authenticated `src/app/` routes, focused `src/components/`,
@@ -411,7 +411,7 @@ Before testable status, provide:
   plan behavior was added.
 
 The lead agent assigns an independent reviewer. The precise product-owner
-decision after review is: **accept M1-02 as the memory-model and management
+decision after review is: **accept M2-02 as the memory-model and management
 slice, or return focused corrections**.
 
 ## Current primary guidance
@@ -428,4 +428,4 @@ version/history, expiry, delete, sensitive-data, mobile UX/copy, and any
 consequential database architecture before implementation. Approval dispatches
 the ticket only when its recorded dependencies are accepted. M0-06A permits
 only owner/synthetic founder staging; M0-06 remains a
-pre-friends/public/commercial gate. Until then, M1-02 remains **proposed**.
+pre-friends/public/commercial gate. Until then, M2-02 remains **proposed**.

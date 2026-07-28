@@ -38,7 +38,7 @@ plan, integration, domain, or billing owner. Those exact remote choices remain
 inside this ticket's approval gate.
 
 [ADR-006](../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md) permits independently
-approved local M1/M2 development. ADR-007 and M0-06A separately permit one
+approved local M1/M2/M3 development. ADR-007 and M0-06A separately permit one
 disposable founder-hosted environment with only the product owner or synthetic
 data. That narrow environment satisfies no M0-06 criterion and may not add an
 external user, public registration, commercial use, production claim,
@@ -111,7 +111,8 @@ No preview URL, unadvertised URL, or "small beta" label bypasses this gate.
 
 ## Non-goals
 
-- No M1 goal, memory, intake, navigation, or other product feature.
+- No M1 training, M2 goal/memory/intake, M3 AI, navigation, or other product
+  feature.
 - No production AI provider call, model, prompt, analytics SDK, external
   product-event sink, or user-content telemetry.
 - No selection or creation of an email, CAPTCHA, monitoring, analytics, or AI

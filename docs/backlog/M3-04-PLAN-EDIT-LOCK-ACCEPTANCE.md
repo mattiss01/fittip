@@ -1,34 +1,35 @@
-# M2-04: Plan editing, locks, and acceptance
+# M3-04: Plan editing, locks, and acceptance
 
 **Status:** proposed — not approved for implementation
 
-**Milestone:** M2
+**Milestone:** M3
 
 **Priority:** P1
 
-**Depends on:** [M2-02 accepted](M2-02-ROADMAP-PROPOSAL.md) and
-[M2-03 accepted](M2-03-SEVEN-DAY-PLAN-PROPOSAL.md)
+**Depends on:** [M3-02 accepted](M3-02-ROADMAP-PROPOSAL.md) and
+[M3-03 accepted](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md)
 
 **Architecture boundary:** ADR-006 and ADR-007 accepted; M0-06A accepted before
 founder-hosted use
 
-**Blocks:** [M2-05](M2-05-M2-VALIDATION-SLICE.md)
+**Blocks:** [M3-05](M3-05-M3-VALIDATION-SLICE.md)
 
 ## Outcome
 
-Let the owner edit a roadmap/seven-day proposal, lock proposed sessions or
+Let the owner edit a roadmap/selected 1–7-day proposal, lock proposed sessions or
 activities, review changes side by side, and explicitly accept one
-transactional immutable version. Acceptance stores personal AI-created or
-user-created activity definitions without introducing a global library.
+transactional immutable version. Acceptance reuses the accepted M1
+personal-activity model for AI-created or user-confirmed definitions without
+introducing a global library.
 
-This slice establishes proposal editing and initial acceptance only. It does
-not implement completed training, logging, replan behavior, or changes to
-accepted history.
+This slice establishes proposal editing and AI-proposal acceptance only. It
+does not change accepted M1 completion/logging behavior, implement replan
+behavior, or alter accepted history.
 
 ## Local-owner and pre-friends boundary
 
 All data remains product-owner or synthetic local data. This ticket makes no
-provider call beyond accepted M2-02/M2-03 generation, adds no remote resource,
+provider call beyond accepted M3-02/M3-03 generation, adds no remote resource,
 and does not authorize friends, non-M0-06A-hosted/external use, or analytics. The full M0
 privacy/recovery/instrumentation/deployment gates remain mandatory before those
 uses.
@@ -44,9 +45,10 @@ uses.
 4. Show side-by-side or equivalent explicit change review from generated source
    to edited candidate.
 5. Validate the complete candidate through the same server constraints as
-   M2-03.
-6. Create/reuse owner-owned personal activity definitions for accepted
-   AI-created or user-created activities.
+   M3-03.
+6. Create/reuse owner-owned definitions through the accepted M1
+   personal-activity contract for accepted AI-created or user-confirmed
+   activities.
 7. Accept roadmap and detailed plan transactionally into immutable versioned
    records with source/parent references.
 8. Make the accepted detailed version the current operational plan without
@@ -56,8 +58,9 @@ uses.
 
 ## Non-goals
 
-- No session completion, factual log, actual metric, skipped/partial/replaced
-  outcome, plan-versus-actual comparison, or Progress behavior.
+- No change to session completion, factual log, actual metric,
+  skipped/partial/replaced outcome, plan-versus-actual comparison, or History
+  behavior already accepted in M1.
 - No replan request, AI replan, accepted-plan diff, or enforcement of locks
   against future replans; those belong to later milestones.
 - No mutation of completed history, past sessions, or a prior accepted version.
@@ -67,17 +70,17 @@ uses.
 ## Record and versioning rules
 
 - Generated proposal, user-edited proposal revision, accepted roadmap version,
-  accepted weekly-plan version, planned session, planned activity, and personal
+  accepted detailed-plan version, planned session, planned activity, and personal
   activity definition are distinct records.
 - Every owned record has immutable `user_id`; references must remain within one
   owner.
 - Editing appends a proposal revision or creates a derived proposal. The
   original generated candidate remains inspectable.
-- Acceptance creates new immutable accepted roadmap/weekly versions linked to
+- Acceptance creates new immutable accepted roadmap/detailed-plan versions linked to
   their source proposal and prior accepted version where applicable.
 - Prior accepted versions are never overwritten or deleted by a later
   acceptance.
-- Only one current accepted roadmap and one current accepted weekly version may
+- Only one current accepted roadmap and one current accepted detailed-plan version may
   be selected for an owner at a time; switching the current pointer is part of
   the same transaction.
 - A retry of the same acceptance returns the same accepted identifiers.
@@ -88,7 +91,8 @@ uses.
 
 - Editable fields are an exact allowlist from the accepted roadmap/plan
   contracts.
-- Dates remain within the exact seven-day range; server time/session/activity,
+- Dates remain within the exact requested 1–7-day range; server
+  time/session/activity,
   allocation, target, unit, and safety constraints still apply.
 - The owner can add/remove/reorder sessions and activities only within approved
   limits.
@@ -107,7 +111,7 @@ uses.
   session under the approved rule.
 - Locks are stored in the accepted version and copied from the reviewed
   proposal candidate during acceptance.
-- M2-04 proves lock persistence and edit protection inside the current
+- M3-04 proves lock persistence and edit protection inside the current
   proposal/accepted version. Replan enforcement remains out of scope.
 
 ## Personal activity rules
@@ -134,7 +138,7 @@ uses.
 - No model may decide locks, accept a proposal, choose current pointers, merge
   personal activities, or write version records.
 - Returning to AI for a materially new proposal is an explicit later
-  generation action under M2-01/M2-03, not a hidden effect of editing.
+  generation action under M3-01/M3-03, not a hidden effect of editing.
 
 ## Transactional acceptance
 
@@ -146,7 +150,7 @@ One server/domain transaction must:
 4. validate every roadmap, date, session, activity, lock, allocation, and
    target rule;
 5. create/reuse approved personal activity definitions;
-6. create immutable roadmap/weekly-plan/session/activity records;
+6. create immutable roadmap/detailed-plan/session/activity records;
 7. switch the owner's current accepted pointers;
 8. mark the proposal accepted with its destination ids; and
 9. commit once or roll back everything.
@@ -156,13 +160,13 @@ connection needed for this transaction requires a separate ADR and approval.
 
 ## Proposed 390px flow
 
-1. The owner opens the M2-03 proposal and chooses **Edit and review**.
-2. The owner edits structured roadmap/week/session/activity fields and
+1. The owner opens the M3-03 proposal and chooses **Edit and review**.
+2. The owner edits structured roadmap/plan/session/activity fields and
    locks/unlocks sessions or activities.
 3. The review screen shows generated versus edited values and all locks.
 4. The owner chooses **Accept plan** only after seeing that the action creates
    an immutable current version.
-5. Acceptance returns the accepted seven-day plan and roadmap version with
+5. Acceptance returns the accepted selected-horizon plan and roadmap version with
    visible lock labels.
 6. Reject/back leaves accepted state unchanged; stale state preserves edits for
    comparison without committing them.
@@ -176,7 +180,7 @@ confirmation require approval.
 1. At `390x844`, the owner can edit, lock/unlock, compare, reject, and accept
    the approved proposal fields.
 2. Generated and edited proposal evidence remains separate and inspectable.
-3. Acceptance creates immutable owner-scoped roadmap and weekly-plan versions,
+3. Acceptance creates immutable owner-scoped roadmap and detailed-plan versions,
    sessions, activities, source links, and current pointers atomically.
 4. Failed/stale/concurrent acceptance writes none of the transaction and
    preserves the prior accepted current version.
@@ -219,7 +223,7 @@ confirmation require approval.
 
 ## Implementation guidance
 
-Reuse the accepted M2-02/M2-03 schemas and constraints rather than copying
+Reuse the accepted M3-02/M3-03 schemas and constraints rather than copying
 them. Keep proposal editing and transactional acceptance in server/domain
 services; UI submits no owner id and contains no versioning/lock business
 rules. Use forward migrations, explicit least-privilege grants, RLS ownership,
@@ -252,7 +256,7 @@ behavior was added.
 ## Approval gate
 
 The product owner must approve the edit, lock, diff, activity, version,
-transaction, UX, and retention decisions. M2-02 and M2-03 must be accepted.
+transaction, UX, and retention decisions. M3-02 and M3-03 must be accepted.
 Approval is owner/synthetic local or M0-06A founder-hosted only and does not
 authorize logging, replan, friends, public registration, commercial use,
-production, analytics, or M2-05.
+production, analytics, or M3-05.

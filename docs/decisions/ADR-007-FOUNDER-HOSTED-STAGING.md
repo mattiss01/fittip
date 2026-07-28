@@ -54,8 +54,8 @@ MVP.
   enter the client bundle, repository, logs, screenshots, or test artifacts.
 - The exact hosted Site URL and callback path are allowlisted. The public site
   is marked `noindex`, and authenticated responses remain private/no-store.
-- M1 may be implemented and made testable in founder staging after M0-06A is
-  accepted. M2 may later make server-side AI calls there only through its own
+- M1 and M2 may be implemented and made testable in founder staging after
+  M0-06A is accepted. M3 may later make server-side AI calls there only through its own
   approved provider/model/key/data-use/budget gates.
 - M0-03B, M0-04 and its required implementation, M0-05, and M0-06 remain
   mandatory before any friend, external registration, commercial/public use,

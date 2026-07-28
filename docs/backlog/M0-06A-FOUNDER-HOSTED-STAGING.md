@@ -55,8 +55,8 @@ not be linked, queried, migrated, configured, renamed, paused, or deleted.
 
 ### Planning and configuration
 
-1. Record ADR-007 and reconcile the Product Plan, M0/M1 backlog, M1 staging
-   boundaries, M2 backlog, and M0-06 boundary.
+1. Record ADR-007 and reconcile the Product Plan, separate M0 and M1 backlogs,
+   downstream M2/M3 backlogs, founder-staging boundaries, and M0-06 boundary.
 2. Add documented server-only founder-staging configuration with strict
    validation and safe local defaults.
 3. Document only variable names and classifications. Never record values,
@@ -126,7 +126,7 @@ not be linked, queried, migrated, configured, renamed, paused, or deleted.
   external monitoring, analytics, log drain, or alerting service.
 - No AI adapter, provider account, model, prompt, key, content transfer, or
   budget.
-- No M1/M2 product behavior, schema, navigation, goal, memory, intake, plan, or
+- No M1/M2/M3 product behavior, schema, navigation, goal, memory, intake, plan, or
   coaching feature.
 - No mutation of the unrelated existing Supabase project.
 - No claim of legal compliance or readiness for friends, commercial use, or

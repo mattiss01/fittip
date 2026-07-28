@@ -6,6 +6,16 @@ confirmation, protected sessions, and minimal username-free profiles. M0-06A
 adds the approved owner-only founder-hosted staging policy; it is not a
 production or external-user release.
 
+Current planning is separated by milestone:
+
+- [M0 foundation and external-use gates](docs/backlog/M0-BACKLOG.md)
+- [M1 manual training planning and tracking](docs/backlog/M1-BACKLOG.md)
+- [M2 goals, memory, and structured intake](docs/backlog/M2-BACKLOG.md)
+- [M3 AI roadmap and selected 1–7-day proposal](docs/backlog/M3-BACKLOG.md)
+
+See the [visual data-model overview](docs/product/DATA-MODEL-OVERVIEW.md) for
+the ownership, plan-versus-actual, goals/memory, and AI-proposal relationships.
+
 ## Prerequisites
 
 - Node.js 24.18.0 LTS (see `.nvmrc`)
