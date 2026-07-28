@@ -142,7 +142,7 @@ attribute the following files to this builder slice.
 - `docs/backlog/M0-BACKLOG.md`
 - `docs/backlog/M1-02-SELECTABLE-HORIZON-PLANNING.md`
 - `docs/backlog/M1-03-QUICK-TRAINING-LOGGING.md`
-- `docs/backlog/M1-04-TODAY-HISTORY-NAVIGATION.md`
+- `docs/backlog/M1-04-TODAY-PROGRESS-NAVIGATION.md`
 - `docs/backlog/M1-BACKLOG.md`
 - `docs/backlog/M2-01-GOAL-MODEL-VALIDATION.md`
 - `docs/backlog/M2-02-MEMORY-MODEL-MANAGEMENT.md`
@@ -165,7 +165,7 @@ plus untracked destinations, not as staged renames:
   `M2-02-MEMORY-MODEL-MANAGEMENT.md`
 - `M1-03-INTAKE-FACT-REVIEW.md` → `M2-03-INTAKE-FACT-REVIEW.md`
 - `M1-04-MOBILE-NAVIGATION-EMPTY-STATES.md` →
-  `M1-04-TODAY-HISTORY-NAVIGATION.md` as a rewritten M1 navigation ticket
+  `M1-04-TODAY-PROGRESS-NAVIGATION.md` as a rewritten M1 navigation ticket
 - `M2-01-LOCAL-AI-ADAPTER-CONTROLS.md` →
   `M3-01-LOCAL-AI-ADAPTER-CONTROLS.md`
 - `M2-02-ROADMAP-PROPOSAL.md` → `M3-02-ROADMAP-PROPOSAL.md`

@@ -8,7 +8,7 @@
 
 **Feature brief:** [F-002 proposed](../product/F-002-MANUAL-TRAINING-PLANNING-TRACKING.md)
 
-**Depends on:** [M1-01 accepted](M1-01-TRAINING-RECORDS-FOUNDATION.md), [M1-02 accepted](M1-02-SELECTABLE-HORIZON-PLANNING.md), [M1-03 accepted](M1-03-QUICK-TRAINING-LOGGING.md), and [M1-04 accepted](M1-04-TODAY-HISTORY-NAVIGATION.md)
+**Depends on:** [M1-01 accepted](M1-01-TRAINING-RECORDS-FOUNDATION.md), [M1-02 accepted](M1-02-SELECTABLE-HORIZON-PLANNING.md), [M1-03 accepted](M1-03-QUICK-TRAINING-LOGGING.md), and [M1-04 approved](M1-04-TODAY-PROGRESS-NAVIGATION.md)
 
 ## Outcome
 
@@ -77,7 +77,7 @@ owning M1 ticket as focused corrections.
 
 1. Every dispatch prerequisite is evidenced.
 2. All owner/cross-user/RLS checks pass.
-3. The full plan → Today → log → history flow passes at `390x844`.
+3. The full plan → Today → log → Progress flow passes at `390x844`.
 4. At least five different sport/measurement examples remain representable.
 5. Historical plans and actuals remain separate after edits, logging, and
    corrections.

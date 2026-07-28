@@ -7,7 +7,7 @@
 **Tickets:** [M1-01](../backlog/M1-01-TRAINING-RECORDS-FOUNDATION.md),
 [M1-02](../backlog/M1-02-SELECTABLE-HORIZON-PLANNING.md),
 [M1-03](../backlog/M1-03-QUICK-TRAINING-LOGGING.md),
-[M1-04](../backlog/M1-04-TODAY-HISTORY-NAVIGATION.md), and
+[M1-04](../backlog/M1-04-TODAY-PROGRESS-NAVIGATION.md), and
 [M1-05](../backlog/M1-05-M1-VALIDATION-SLICE.md)
 
 ## User problem
@@ -71,9 +71,9 @@ generation, or replanning are added.
 6. A correction creates a visible revision; it does not silently overwrite the
    original.
 
-### Review history
+### Review progress
 
-1. Open **History**.
+1. Open **Progress**.
 2. Browse accepted plan versions and factual completions.
 3. Open a detail showing planned and actual side by side.
 4. Inspect the current correction and prior factual revisions.
@@ -113,7 +113,7 @@ generation, or replanning are added.
 8. Include optional pain/illness/injury/severe-fatigue flags only with static,
    conservative, non-diagnostic copy; never modify the plan automatically in
    M1.
-9. Show Today, Plan, History, and You in M1; keep Coach absent until it has real
+9. Show Today, Plan, Progress, and You in M1; keep Coach absent until it has real
    behavior.
 10. Keep detailed/per-set logging secondary; M1's primary flow is a quick
     factual summary.
@@ -128,7 +128,7 @@ generation, or replanning are added.
 - Completion correction and deletion/retention behavior.
 - Outcome requirements, effort/feeling scales, note limits, and sensitive
   flags.
-- Navigation destinations/order/icons, Today card density, History labels, and
+- Navigation destinations/order/icons, Today card density, Progress labels, and
   You composition.
 - Touch targets, focus, contrast, motion, safe areas, desktop adaptation, and
   all visible empty/loading/error/offline/session-expiry states.
@@ -145,7 +145,7 @@ generation, or replanning are added.
 
 ## Acceptance criteria
 
-1. The complete select 1–7 days → plan → Today → actual → history flow works
+1. The complete select 1–7 days → plan → Today → actual → Progress flow works
    at `390x844`.
 2. Another authenticated user cannot access the owner's records.
 3. At least five sport/measurement examples fit without strength-first

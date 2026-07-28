@@ -59,7 +59,7 @@ uses.
 ## Non-goals
 
 - No change to session completion, factual log, actual metric,
-  skipped/partial/replaced outcome, plan-versus-actual comparison, or History
+  skipped/partial/replaced outcome, plan-versus-actual comparison, or Progress
   behavior already accepted in M1.
 - No replan request, AI replan, accepted-plan diff, or enforcement of locks
   against future replans; those belong to later milestones.

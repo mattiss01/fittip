@@ -1,12 +1,13 @@
-# M1-04: Today, plan-versus-actual history, and mobile navigation
+# M1-04: Today, factual progress, and mobile navigation
 
-**Status:** proposed — visible UX/IA; not approved for implementation
+**Status:** approved — dependency-queued until M1-02 and M1-03 are accepted;
+product-owner approval recorded 28 July 2026
 
 **Milestone:** M1 — manual training planning and tracking
 
 **Priority:** P1
 
-**Feature brief:** [F-002 proposed](../product/F-002-MANUAL-TRAINING-PLANNING-TRACKING.md)
+**Feature brief:** [F-002 approved](../product/F-002-MANUAL-TRAINING-PLANNING-TRACKING.md)
 
 **Depends on:** [M1-02 accepted](M1-02-SELECTABLE-HORIZON-PLANNING.md) and [M1-03 accepted](M1-03-QUICK-TRAINING-LOGGING.md)
 
@@ -18,8 +19,9 @@ The owner has a coherent mobile application rather than isolated forms:
 
 - **Today** answers what is planned now and offers the next factual action;
 - **Plan** provides the accepted manual plan for the selected next 1–7 days;
-- **History** shows planned versus actual without confusing the two;
-- future Coach, Progress, Goals, and Memory destinations remain honest and do
+- **Progress** shows factual plan and completion history without confusing
+  planned and actual records or inventing trends;
+- future Coach, Goals, and Memory destinations remain honest and do
   not display invented data or dead functionality.
 
 ## Proposed route boundary
@@ -28,8 +30,8 @@ The owner has a coherent mobile application rather than isolated forms:
 /home                 -> redirect to /home/today
 /home/today           -> current local date, planned session, actual status/action
 /home/plan            -> M1-02 selectable 1–7-day planning
-/home/history         -> plan-version and completion history
-/home/history/<id>    -> planned-versus-actual detail
+/home/progress        -> plan-version and completion history
+/home/progress/<id>   -> planned-versus-actual detail
 ```
 
 Only allowlisted same-origin paths may be restored after sign-in. Session
@@ -47,12 +49,13 @@ expiry returns to generic sign-in without leaking the requested private path.
 - Offer **Plan training** when no current plan/session exists.
 - Never infer completion from time passing or from a planned record.
 
-### History
+### Progress
 
 - Chronological list of accepted plan versions and factual completions.
 - Detail view shows **Planned** and **Actual** as separate sections.
 - Show completion revisions/corrections without erasing the original.
-- Provide no performance judgment, trend claim, streak, or AI interpretation.
+- The **Progress** label does not authorize a performance judgment, trend
+  claim, score, streak, or AI interpretation in M1.
 
 ### Navigation and page states
 
@@ -66,7 +69,7 @@ expiry returns to generic sign-in without leaking the requested private path.
 
 - Authenticated shell, route ownership, bottom navigation, and safe return.
 - Today aggregation over accepted M1 repositories/services.
-- History list/detail and plan-version navigation.
+- Progress list/detail and plan-version navigation.
 - Honest empty/loading/error/offline/session states.
 - Touch size, focus, contrast, safe-area, reduced-motion, and screen-reader
   behavior.
@@ -90,7 +93,7 @@ expiry returns to generic sign-in without leaking the requested private path.
 3. A no-plan owner gets one honest action into manual planning.
 4. A planned session opens the quick-log flow; a logged session opens factual
    actual detail.
-5. History preserves and distinguishes plan versions, source sessions,
+5. Progress preserves and distinguishes plan versions, source sessions,
    completions, and corrections.
 6. Browser back/forward, refresh, deep link, sign-in return, expiry, and
    sign-out behave safely.
@@ -106,37 +109,39 @@ expiry returns to generic sign-in without leaking the requested private path.
 - Route, redirect, safe-return, session-expiry, sign-out, and cache tests.
 - Today aggregation tests for no plan, multiple sessions, every actual status,
   replacement, unplanned training, and timezone boundary.
-- History/version/correction ordering and record-separation tests.
+- Progress/version/correction ordering and record-separation tests.
 - Component tests for labels, actions, loading/error/empty states, keyboard,
   focus, reduced motion, and accessible names.
-- Playwright at `390x844` for plan → Today → log → history and all recovery
+- Playwright at `390x844` for plan → Today → log → Progress and all recovery
   states.
 - No-fake-data, external-request, analytics, AI, secret, and private-cache
   scans.
 - Existing quality and regression commands.
 
-## Open visual, IA, copy, and architecture decisions
+## Approved visual, IA, copy, and architecture decisions
 
-1. **Navigation.** Recommendation: show Today, Plan, History, and You in M1;
-   keep Coach absent until it has real behavior. Alternative: show the eventual
-   five tabs with explicit unavailable states.
-2. **Default.** Recommendation: `/home/today`.
-3. **History label.** Recommendation: **History** in M1; later Progress may
-   contain history plus accepted trends.
-4. **You destination.** Recommendation: retain the existing profile/sign-out
-   surface and add goal/memory entries only after their tickets are accepted.
-5. **Today density.** Recommendation: concise session cards with one primary
-   action and expandable activity detail.
-6. **Same-day multiple sessions.** Approve ordering and primary-action
-   behavior.
-7. **State copy.** Approve no-plan, no-session, completed, error, offline,
-   expired-session, and conflict wording.
-8. **Design system.** Approve visible tokens, icons/text treatment, safe areas,
-   touch targets, focus, contrast, and desktop adaptation.
+1. **Navigation.** Show Today, Plan, Progress, and You in that order. Keep Coach
+   absent until it has real behavior.
+2. **Default.** Use `/home/today`.
+3. **Progress label.** Use **Progress** for factual plan-version, completion,
+   and correction history. Do not show trends or performance claims in M1.
+4. **You destination.** Retain the existing profile/sign-out surface and add
+   goal/memory entries only after their tickets are accepted.
+5. **Today density.** Use concise session cards with one primary action and
+   expandable activity detail.
+6. **Same-day multiple sessions.** Preserve plan order. Each session keeps its
+   own factual log/view action; FitTip does not silently choose one session as
+   completed or more important.
+7. **State copy.** No-plan, no-session, completed, error, offline,
+   expired-session, and conflict states remain concise, non-judgmental, and
+   explicit about the available recovery action.
+8. **Design system.** Reuse the established FitTip visual tokens. Navigation
+   uses visible text labels with accessible names, safe-area padding,
+   touch-sized targets, visible focus, sufficient contrast, reduced-motion
+   support, and a functional desktop adaptation.
 
-## Approval gate
+## Approval
 
-The product owner must approve navigation destinations/order/labels, default
-route, Today hierarchy/actions, history presentation, You composition, state
-copy, safe-return behavior, and responsive/accessibility design. Approval
-dispatches only after M1-02 and M1-03 are accepted.
+The product owner approved M1-04 in chat on 28 July 2026 with one revision:
+the factual-history navigation tab is named **Progress**, not **History**.
+Implementation remains queued until M1-02 and M1-03 are both accepted.

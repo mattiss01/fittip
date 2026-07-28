@@ -261,7 +261,7 @@ Primary tabs:
 - Plan diff / alternatives / acceptance
 - Goal management and priority ordering
 - Memory management
-- History and a plan-version detail
+- Progress and a plan-version detail
 
 ### UI rules
 
@@ -517,7 +517,7 @@ separate [M0 backlog](docs/backlog/M0-BACKLOG.md).
 
 ### M1: Manual training planning and factual tracking
 
-The proposed visible behavior is specified in
+The approved visible behavior is specified in
 [F-002](docs/product/F-002-MANUAL-TRAINING-PLANNING-TRACKING.md) and dispatched
 only through the separate [M1 backlog](docs/backlog/M1-BACKLOG.md).
 
@@ -529,8 +529,9 @@ only through the separate [M1 backlog](docs/backlog/M1-BACKLOG.md).
   activities within that horizon.
 - Add quick actual logging for completed, partial, skipped, replaced, rest, and
   unplanned training; detailed/per-set capture remains secondary.
-- Add Today, plan-versus-actual history, plan versions, correction history, and
-  the smallest honest mobile navigation required for the flow.
+- Add Today and Progress, where Progress contains factual plan-versus-actual
+  history, plan versions, and correction history, plus the smallest honest
+  mobile navigation required for the flow.
 
 **Exit:** the owner can create a real plan for the selected next 1–7 days, see today's training, log
 what actually happened without changing the plan, and inspect preserved
