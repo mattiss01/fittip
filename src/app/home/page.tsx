@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { SignOutButton } from "@/components/sign-out-button";
@@ -33,10 +34,10 @@ export default async function ProtectedHome() {
       <section className="home-card" aria-labelledby="home-title">
         <p className="eyebrow">FitTip / private space</p>
         <h1 id="home-title">You’re in.</h1>
-        <p>
-          Your verified account is ready. The first coaching tools will appear
-          here when their approved slices are complete.
-        </p>
+        <p>Your verified account is ready. Start with the training ahead.</p>
+        <Link className="primary-link" href="/home/plan">
+          Open training plan
+        </Link>
         <SignOutButton />
       </section>
     </main>

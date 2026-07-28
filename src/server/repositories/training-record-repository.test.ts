@@ -178,6 +178,130 @@ describe("TrainingRecordRepository", () => {
     expect(is).toHaveBeenCalledWith("archived_at", null);
   });
 
+  it("loads the current accepted plan through owner-filtered immutable records", async () => {
+    const planVersionId = "50000000-0000-4000-8000-000000000001";
+    const sessionId = "60000000-0000-4000-8000-000000000001";
+    const headEq = vi.fn().mockReturnValue({
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          user_id: USER_ID,
+          current_version_id: planVersionId,
+          revision: 2,
+          updated_at: "2026-07-28T12:00:00.000Z",
+        },
+        error: null,
+      }),
+    });
+    const versionOwnerEq = vi.fn().mockReturnValue({
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: planVersionId,
+          user_id: USER_ID,
+          version_number: 2,
+          parent_version_id: null,
+          parent_version_number: null,
+          day_count: 2,
+          start_date: "2026-07-28",
+          end_date: "2026-07-29",
+          timezone_name: "Europe/Berlin",
+          source_kind: "manual",
+          accepted_at: "2026-07-28T12:00:00.000Z",
+          created_at: "2026-07-28T12:00:00.000Z",
+        },
+        error: null,
+      }),
+    });
+    const versionIdEq = vi.fn().mockReturnValue({ eq: versionOwnerEq });
+    const sessionSecondOrder = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: sessionId,
+          user_id: USER_ID,
+          plan_version_id: planVersionId,
+          local_date: "2026-07-29",
+          position: 0,
+          title: "Ball control",
+          sport: "Football",
+          intent: "Clean first touch",
+          expected_duration_minutes: 35,
+          note: null,
+          is_locked: true,
+          created_at: "2026-07-28T12:00:00.000Z",
+        },
+      ],
+      error: null,
+    });
+    const sessionFirstOrder = vi.fn().mockReturnValue({
+      order: sessionSecondOrder,
+    });
+    const sessionOwnerEq = vi
+      .fn()
+      .mockReturnValue({ order: sessionFirstOrder });
+    const sessionVersionEq = vi.fn().mockReturnValue({ eq: sessionOwnerEq });
+    const activityOrder = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: "70000000-0000-4000-8000-000000000001",
+          user_id: USER_ID,
+          planned_session_id: sessionId,
+          personal_activity_id: ACTIVITY_ID,
+          position: 0,
+          name: "Wall passes",
+          sport: "Football",
+          instructions: "Both feet",
+          measurement_mode: "skill_repetitions",
+          target: { repetitions: 40, unit: "passes" },
+          is_locked: false,
+          created_at: "2026-07-28T12:00:00.000Z",
+        },
+      ],
+      error: null,
+    });
+    const activityIn = vi.fn().mockReturnValue({ order: activityOrder });
+    const activityOwnerEq = vi.fn().mockReturnValue({ in: activityIn });
+    const from = vi.fn((table: string) => {
+      const builders = {
+        detailed_plan_heads: { select: vi.fn(() => ({ eq: headEq })) },
+        detailed_plan_versions: {
+          select: vi.fn(() => ({ eq: versionIdEq })),
+        },
+        planned_sessions: {
+          select: vi.fn(() => ({ eq: sessionVersionEq })),
+        },
+        planned_activities: {
+          select: vi.fn(() => ({ eq: activityOwnerEq })),
+        },
+      };
+      return builders[table as keyof typeof builders];
+    });
+    const repository = new TrainingRecordRepository(createClient({ from }));
+
+    await expect(repository.getCurrentManualPlan()).resolves.toMatchObject({
+      head: { revision: 2, currentVersionId: planVersionId },
+      version: { versionNumber: 2, dayCount: 2 },
+      plan: {
+        dayCount: 2,
+        sessions: [
+          {
+            title: "Ball control",
+            isLocked: true,
+            activities: [
+              {
+                name: "Wall passes",
+                measurementMode: "skill_repetitions",
+                target: { repetitions: 40, unit: "passes" },
+              },
+            ],
+          },
+        ],
+      },
+    });
+    expect(headEq).toHaveBeenCalledWith("user_id", USER_ID);
+    expect(versionOwnerEq).toHaveBeenCalledWith("user_id", USER_ID);
+    expect(sessionOwnerEq).toHaveBeenCalledWith("user_id", USER_ID);
+    expect(activityOwnerEq).toHaveBeenCalledWith("user_id", USER_ID);
+  });
+
   it("enforces founder-staging owner access before any record operation", async () => {
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
     process.env.FITTIP_OWNER_USER_ID = USER_ID;
