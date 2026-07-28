@@ -93,6 +93,8 @@ export type Database = {
           duration_minutes: number | null;
           feeling: string | null;
           id: string;
+          idempotency_fingerprint: string;
+          idempotency_key: string;
           illness_reported: boolean;
           injury_reported: boolean;
           note: string | null;
@@ -117,6 +119,8 @@ export type Database = {
           duration_minutes?: number | null;
           feeling?: string | null;
           id?: string;
+          idempotency_fingerprint?: string;
+          idempotency_key?: string;
           illness_reported?: boolean;
           injury_reported?: boolean;
           note?: string | null;
@@ -141,6 +145,8 @@ export type Database = {
           duration_minutes?: number | null;
           feeling?: string | null;
           id?: string;
+          idempotency_fingerprint?: string;
+          idempotency_key?: string;
           illness_reported?: boolean;
           injury_reported?: boolean;
           note?: string | null;
@@ -558,6 +564,61 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "detailed_plan_versions";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      save_training_completion: {
+        Args: {
+          p_activities: Json;
+          p_actual_local_date: string;
+          p_actual_started_at: string | null;
+          p_completion_group_id: string | null;
+          p_correction_reason: string | null;
+          p_duration_minutes: number | null;
+          p_expected_revision: number;
+          p_feeling: string | null;
+          p_idempotency_key: string;
+          p_illness_reported: boolean;
+          p_injury_reported: boolean;
+          p_note: string | null;
+          p_pain_reported: boolean;
+          p_perceived_effort: number | null;
+          p_planned_session_id: string | null;
+          p_replacement_description: string | null;
+          p_severe_fatigue_reported: boolean;
+          p_status: string;
+          p_timezone_name: string;
+        };
+        Returns: {
+          actual_local_date: string;
+          actual_started_at: string | null;
+          completion_group_id: string;
+          correction_reason: string | null;
+          created_at: string;
+          duration_minutes: number | null;
+          feeling: string | null;
+          id: string;
+          idempotency_fingerprint: string;
+          idempotency_key: string;
+          illness_reported: boolean;
+          injury_reported: boolean;
+          note: string | null;
+          pain_reported: boolean;
+          perceived_effort: number | null;
+          planned_session_id: string | null;
+          previous_completion_id: string | null;
+          previous_revision_number: number | null;
+          replacement_description: string | null;
+          revision_number: number;
+          severe_fatigue_reported: boolean;
+          status: string;
+          timezone_name: string;
+          user_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "completed_sessions";
           isOneToOne: true;
           isSetofReturn: false;
         };
