@@ -1,15 +1,18 @@
 # M1-03 quick training logging validation
 
-**Builder status:** complete — ready for independent review
+**Builder status:** review corrections complete - ready for independent re-review
 
-**Implementation head:** `2caf38597e902698952ee909c7c0c57bf0f768bc`
+**Implementation head:** `94bc613ee307cc8d89088fbaa01291806fd6ee23`
 
 **Implementation commits:**
 
-- `d9e2e57004a741b5bb22d779b1296c24d2645045` — completion transaction,
+- `d9e2e57004a741b5bb22d779b1296c24d2645045` - completion transaction,
   domain/repository, direct logging route, UI, and automated tests.
-- `2caf38597e902698952ee909c7c0c57bf0f768bc` — isolated and hardened the
+- `2caf38597e902698952ee909c7c0c57bf0f768bc` - isolated and hardened the
   ticket-owned `390x844` browser test.
+- `94bc613ee307cc8d89088fbaa01291806fd6ee23` - resolves independent-review
+  findings for inactive outcomes, truthful receipts, revision visibility,
+  browser-local dates, and full mobile-path coverage.
 
 **Branch:** `ticket/m1-03-quick-logging`
 
@@ -23,12 +26,15 @@
 - `/home/log?plannedSession=<owner-planned-session-uuid>` shows the immutable
   planned snapshot beside one focused actual form.
 - `/home/log?completion=<owner-completion-group-uuid>` shows the current fact,
-  preserves prior revisions, and requires a reason before appending a
+  preserves every prior revision, and requires a reason before appending a
   correction.
 - Planned outcomes are `completed`, `partially_completed`, `skipped`,
   `replaced`, and `rest`; no-plan logging is explicitly `unplanned`.
-- Replacement requires a description. Duration is `0–10080`, effort is
-  optional `1–10`, and feeling is optional
+- Skipped and rest facts cannot contain activity results. The UI clears and
+  hides those fields, the server domain rejects them, and the database trigger
+  protects writes through the RPC.
+- Replacement requires a description. Duration is `0-10080`, effort is
+  optional `1-10`, and feeling is optional
   `much_easier/easier/as_expected/harder/much_harder`.
 - Optional activity results use the existing five sport-agnostic measurement
   schemas. Invalid JSON, malformed measurements, and ambiguous units fail
@@ -36,9 +42,15 @@
 - Optional pain, illness, injury, and severe-fatigue signals remain factual.
   The UI gives static conservative copy and neither interprets them nor changes
   the plan.
-- Save is idempotent. A reused key with changed content and a stale correction
-  both return an explicit conflict.
-- Session, conflict, validation, loading, unavailable, and persistence states
+- A successful RPC receipt is returned directly. Save is idempotent; an
+  ambiguous connection failure tells the user the save is unconfirmed and that
+  retrying with the same key is safe. A reused key with changed content and a
+  stale correction both return an explicit conflict.
+- Every history revision exposes its outcome, date/time, duration, effort,
+  feeling, replacement, signals, note, activity modes, and measurements.
+- The initial unplanned date is derived from the browser timezone, including
+  correct previous/next-day behavior around UTC midnight.
+- Session, conflict, validation, loading, unavailable, and unconfirmed states
   use content-safe copy that does not echo free text or identifiers.
 
 The frontend-design skill led to a factual training-ledger direction: planned
@@ -50,43 +62,45 @@ it does not collide with M1-02.
 ## Mobile demo path
 
 1. Start local Supabase and the app with the local URL and publishable key.
-2. Sign in with an allowed verified account.
-3. Open `/home/log` at `390x844`.
-4. Keep **Unplanned**, optionally enter duration, effort, feeling, note, and
-   signals, then choose **Save actual**.
-5. Choose **View or correct this actual**, change a fact, enter a correction
-   reason, and choose **Save correction**.
-6. For a planned example, open
-   `/home/log?plannedSession=<owner-planned-session-uuid>` and verify the
-   **Planned** section remains distinct from **Actual**.
+2. Sign up or sign in with an allowed verified account.
+3. Open `/home/log` at `390x844` and verify the unplanned date matches the
+   browser-local date.
+4. Save an unplanned actual and open its correction path.
+5. Open `/home/log?plannedSession=<owner-planned-session-uuid>` and save each
+   planned outcome: completed, partially completed, skipped, rest, and
+   replacement.
+6. Correct the completed fact and verify both duration and activity
+   measurements from the prior and current revisions remain visible.
 
 M1-04 owns the final Today/Plan entry points, bottom navigation, history
 destination, and post-save return to Today.
 
 ## Data, migration, and API effects
 
-- Forward migration
-  `20260728143000_m1_03_completion_writes.sql`:
+- Forward migration `20260728143000_m1_03_completion_writes.sql`:
   - replaces the M1-01 feeling constraint with the approved
     expectation-relative values;
   - adds owner-scoped `idempotency_key` and an internal request fingerprint to
-    immutable completed sessions, with defaults that preserve earlier
-    migration fixtures;
+    immutable completed sessions;
   - adds one `SECURITY DEFINER`, empty-search-path
     `save_training_completion` transaction;
   - grants function execution only to `authenticated`;
   - derives ownership only from `auth.uid()`;
   - validates planned/personal references, status rules, activity snapshots,
     measurements, safety flags, corrections, and idempotency before inserting;
-  - appends the completion/session activities and advances the current head in
-    one transaction without modifying planned records.
+  - appends completion/session activities and advances the current head in one
+    transaction without modifying planned records.
+- Forward migration `20260728170000_m1_03_review_corrections.sql` adds a
+  least-privilege trigger that rejects activity rows for skipped and rest
+  completions. RPC regression tests prove the whole attempted fact rolls back.
 - Authenticated clients retain read-only table privileges for immutable
   completion records. Anonymous, cross-user, and direct authenticated writes
   remain denied by grants plus RLS.
-- `src/lib/supabase/database.types.ts` records the two columns and RPC
+- `src/lib/supabase/database.types.ts` records the completion columns and RPC
   signature/return shape.
-- `saveQuickLog` sends no caller-controlled `user_id`, maps safe error states,
-  and returns only the completion group and revision required for the receipt.
+- `saveQuickLog` sends no caller-controlled `user_id`. The repository returns
+  the successful RPC receipt without a second read, and safe action messages
+  distinguish confirmed conflicts from ambiguous persistence.
 - No remote migration, deployment, analytics, external service, service-role
   credential, or spend was introduced.
 
@@ -96,39 +110,46 @@ Commands ran from `.worktrees/m1-03`.
 
 | Check | Result |
 |---|---|
-| `npx.cmd --yes --package node@24.18.0 -- npm.cmd run test:run` | Pass — 21 files, 134 tests |
+| `npx.cmd --yes --package node@24.18.0 -- npm.cmd run test:run` | Pass - 23 files, 145 tests |
 | `npx.cmd --yes --package node@24.18.0 -- npm.cmd run typecheck` | Pass |
 | `npx.cmd --yes --package node@24.18.0 -- npm.cmd run lint` | Pass |
-| `npx.cmd --yes --package node@24.18.0 -- npm.cmd run build` | Pass — `/home/log` emitted as a dynamic route |
-| `npx.cmd supabase db reset` | Pass — clean forward migration application |
-| `npx.cmd supabase test db` | Pass — 3 files, 174 pgTAP tests, including all M0-02 and M1-01 regressions plus 30 M1-03 tests |
-| `npx.cmd supabase db lint --level warning` | Pass — no schema errors |
-| `npx.cmd playwright test m1-03-quick-log.spec.ts --config=e2e/m1-03.playwright.config.ts` | Pass — signup/confirmation/sign-in, unplanned save, and append-only correction at exactly `390x844` |
+| `npx.cmd --yes --package node@24.18.0 -- npm.cmd run build` | Pass - `/home/log` emitted as a dynamic route |
+| `npx.cmd supabase db reset` | Pass - clean forward migration application |
+| `npx.cmd supabase test db` | Pass - 3 files, 177 pgTAP tests, including all M0-02 and M1-01 regressions plus 33 M1-03 tests |
+| `npx.cmd supabase db lint --level warning` | Pass - no schema errors |
+| `npx.cmd playwright test m1-03-quick-log.spec.ts --config=e2e/m1-03.playwright.config.ts` | Pass - signup, confirmation redirect, sign-in, browser-local date, every planned outcome, unplanned save, and full correction history at exactly `390x844` on isolated port `3013` |
 | Ticket-file `prettier --check` | Pass |
 | `git diff --check` | Pass |
 
 The repository-wide `npm.cmd run format:check` still reports the existing
-52-file formatting baseline. Every M1-03 TypeScript, TSX, CSS, generated-type,
-and architecture-test file passes the ticket-scoped Prettier check. This ticket
-does not broaden into unrelated baseline formatting.
+51-file formatting baseline. Every M1-03 TypeScript, TSX, and CSS file passes
+the ticket-scoped Prettier check. This ticket does not broaden into unrelated
+baseline formatting.
 
 ## Security and invariant evidence
 
-- The 30-test M1-03 pgTAP suite covers function grants, empty search path,
+- The 33-test M1-03 pgTAP suite covers function grants, empty search path,
   immutable table access, owner writes, anonymous denial, cross-user planned
   references, RLS visibility, plan immutability, all-or-nothing activity
-  snapshots, idempotent retry, changed-key conflict, append-only correction,
-  stale correction, malformed measurements, out-of-range effort, replacement
-  requirements, and truthful unplanned logging.
-- Existing M1-01 pgTAP tests continue to pass after the forward migration.
-- Domain tests cover every outcome plus correction coordinates, dates,
-  timezones, text limits, effort/duration, feeling values, and all measurement
-  shapes.
-- Repository tests prove Auth verification precedes writes, only `PT409` maps
-  to a conflict, and client retry is disabled for the completion transaction.
-- Server-action tests verify no caller identity enters the payload and private
-  notes never enter returned errors.
-- The architecture regression now permits `.retry(false)` only for the two
+  snapshots, skipped/rest activity rejection and rollback, idempotent retry,
+  changed-key conflict, append-only correction, stale correction, malformed
+  measurements, out-of-range effort, replacement requirements, and truthful
+  unplanned logging.
+- Existing M1-01 pgTAP tests continue to pass after both forward migrations.
+- Domain tests cover every outcome, skipped/rest activity rejection, correction
+  coordinates, dates, timezones, text limits, effort/duration, feeling values,
+  and all measurement shapes.
+- Repository tests prove Auth verification precedes writes, a successful RPC
+  receipt requires no follow-up read, only `PT409` maps to a conflict,
+  ambiguous failures remain unconfirmed, and client retry is disabled for the
+  completion transaction.
+- Server-action tests prove skipped/rest payloads clear stale activities, no
+  caller identity enters the payload, retry copy preserves idempotency
+  semantics, and private notes never enter returned errors.
+- Component and history tests prove inactive-outcome clearing, browser-local
+  date derivation, and visibility of changed duration and measurements in
+  every revision.
+- The architecture regression permits `.retry(false)` only for the two
   approved atomic RPCs: manual plan save and completion save.
 - A content/external-request scan found only local Mailpit URLs in the E2E
   harness and the UI promise that private notes are not sent externally.
@@ -137,47 +158,62 @@ does not broaden into unrelated baseline formatting.
 
 ### Created
 
-- `e2e/m1-03-quick-log.spec.ts` — exercises the direct unplanned save and
-  append-only correction journey at `390x844`.
-- `e2e/m1-03.playwright.config.ts` — isolates the ticket browser run on a
-  non-conflicting local port while enforcing the required mobile viewport.
-- `src/app/home/log/actions.test.ts` — verifies safe server-action payloads and
-  conflict, session-expiry, and persistence messages.
-- `src/app/home/log/actions.ts` — converts form data into a validated
-  completion command and exposes content-safe action state.
-- `src/app/home/log/error.tsx` — gives an honest no-change route error state.
-- `src/app/home/log/loading.tsx` — gives an explicit private-record loading
+- `docs/validation/M1-03-VALIDATION.md` - persists exact commit, evidence,
+  limitations, and the complete change manifest for reviewer reconciliation.
+- `e2e/m1-03-quick-log.spec.ts` - exercises signup/confirmation, all planned
+  outcomes, unplanned logging, and detailed append-only correction history.
+- `e2e/m1-03.playwright.config.ts` - isolates the ticket browser run on port
+  `3013`, fixes the browser timezone, and enforces `390x844`.
+- `src/app/home/log/actions.test.ts` - verifies safe action payloads,
+  skipped/rest clearing, and conflict, session, validation, and unconfirmed
+  messages.
+- `src/app/home/log/actions.ts` - converts form data into a validated completion
+  command, clears inactive activities, and exposes content-safe action state.
+- `src/app/home/log/error.tsx` - gives an honest unconfirmed route error state.
+- `src/app/home/log/loading.tsx` - gives an explicit private-record loading
   state.
-- `src/app/home/log/log.module.css` — supplies route-local, accessible,
-  responsive training-ledger styling without editing shared M1-02 CSS.
-- `src/app/home/log/page.tsx` — authenticates the owner, reads optional planned
-  and completion history snapshots, and renders planned versus actual
-  separately.
-- `src/components/completions/quick-log-form.test.tsx` — covers planned versus
-  unplanned choices, replacement fields, correction reason, and mobile-form
-  semantics.
-- `src/components/completions/quick-log-form.tsx` — implements the reusable
-  status-driven factual logging and correction form.
-- `src/features/completions/completion-types.ts` — defines shared completion,
-  activity, history, status, feeling, and planned-snapshot types.
-- `src/server/completions/completion-records.test.ts` — covers the complete
-  status and invalid-field domain matrix.
-- `src/server/completions/completion-records.ts` — validates and normalizes
+- `src/app/home/log/log.module.css` - supplies route-local, accessible,
+  responsive training-ledger and detailed-history styling.
+- `src/app/home/log/page.tsx` - authenticates the owner, reads optional planned
+  and completion snapshots, derives new unplanned dates in the browser, and
+  renders complete revision history.
+- `src/components/completions/quick-log-form.test.tsx` - covers status-driven
+  fields, inactive-result clearing, correction reason, and browser-local date.
+- `src/components/completions/quick-log-form.tsx` - implements the reusable
+  status-driven factual logging/correction form and clears skipped/rest
+  activity results.
+- `src/components/completions/revision-history.test.tsx` - proves changed
+  duration and measurements remain visible in current and prior revisions.
+- `src/components/completions/revision-history.tsx` - renders all relevant
+  factual fields for every immutable revision.
+- `src/features/completions/completion-types.ts` - defines shared completion,
+  activity, receipt, history, status, feeling, and planned-snapshot types.
+- `src/features/completions/local-date.test.ts` - covers previous/next-day
+  browser-timezone results around UTC midnight.
+- `src/features/completions/local-date.ts` - derives an ISO calendar date in a
+  named browser timezone without UTC truncation.
+- `src/server/completions/completion-records.test.ts` - covers the complete
+  status matrix, including skipped/rest activity rejection.
+- `src/server/completions/completion-records.ts` - validates and normalizes
   completion commands before persistence.
-- `src/server/repositories/completion-repository.test.ts` — checks Auth-first
-  persistence, conflict mapping, retry scope, and safe failures.
-- `src/server/repositories/completion-repository.ts` — provides the separate
-  owner-scoped completion write/history/planned-snapshot repository.
-- `supabase/migrations/20260728143000_m1_03_completion_writes.sql` — adds the
+- `src/server/repositories/completion-repository.test.ts` - checks Auth-first
+  persistence, direct successful receipts, conflict mapping, retry scope, and
+  ambiguous failures.
+- `src/server/repositories/completion-repository.ts` - provides separate
+  owner-scoped completion writes/reads, direct RPC receipts, and explicit
+  unconfirmed-error semantics.
+- `supabase/migrations/20260728143000_m1_03_completion_writes.sql` - adds the
   approved atomic completion and correction transaction.
-- `supabase/tests/database/m1_03_completion_writes.test.sql` — adds 30 database,
+- `supabase/migrations/20260728170000_m1_03_review_corrections.sql` - prevents
+  activity rows on skipped/rest completions at the database boundary.
+- `supabase/tests/database/m1_03_completion_writes.test.sql` - adds 33 database,
   authorization, immutability, validation, correction, and idempotency tests.
 
 ### Modified
 
-- `src/architecture/server-boundary.test.ts` — extends the exact no-retry
+- `src/architecture/server-boundary.test.ts` - extends the exact no-retry
   allowlist to the separately approved atomic completion RPC.
-- `src/lib/supabase/database.types.ts` — adds completion idempotency columns
+- `src/lib/supabase/database.types.ts` - adds completion idempotency columns
   and the generated completion RPC contract.
 
 ### Deleted
@@ -196,17 +232,15 @@ does not broaden into unrelated baseline formatting.
   M1-04 wires the visible entry point.
 - Activity summaries accept schema-validated JSON; detailed per-set capture is
   explicitly outside this ticket.
-- No offline write queue exists. A failed connection reports that nothing
-  changed and permits retry with the same idempotency key.
-- The browser test covers the full unplanned and correction journey. Planned
-  status variants are additionally covered by component, domain, repository,
-  and database matrices; M1-04/M1-05 own the consolidated Plan-to-Today
-  browser journey.
+- No offline write queue exists. An interrupted request can leave save status
+  unconfirmed; retrying reuses the idempotency key and cannot create a
+  duplicate fact.
 - No remote Supabase project or founder staging environment was changed.
 
 ## Independent review target
 
 Review exact implementation head
-`2caf38597e902698952ee909c7c0c57bf0f768bc`, reconcile this manifest against
-the Git diff from the M1-03 branch base, rerun the security/data/mobile checks,
-and report any omitted or unexpected file before recommending `testable`.
+`94bc613ee307cc8d89088fbaa01291806fd6ee23`, reconcile this manifest against
+the actual Git diff from base `ddc15909481efb5c4b61cd9b133c6c6151c5e1cf`,
+rerun the security/data/mobile checks, and report any omitted, unexpected, or
+inaccurately described file before recommending `testable`.
