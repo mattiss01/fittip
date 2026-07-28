@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/app/home/log/actions", () => ({
@@ -6,6 +12,7 @@ vi.mock("@/app/home/log/actions", () => ({
 }));
 
 import { QuickLogForm } from "@/components/completions/quick-log-form";
+import { isoDateInTimezone } from "@/features/completions/local-date";
 
 afterEach(cleanup);
 
@@ -64,6 +71,36 @@ describe("QuickLogForm", () => {
     expect(screen.getByLabelText("What replaced it? *")).toBeRequired();
   });
 
+  it.each(["Skipped", "Rest"])(
+    "clears and hides activity results for %s",
+    (outcome) => {
+      render(
+        <QuickLogForm
+          current={null}
+          defaultDate="2026-07-28"
+          plannedSession={PLANNED}
+        />,
+      );
+      const measurement = screen.getByLabelText("Actual measurement JSON");
+      fireEvent.change(measurement, {
+        target: { value: '{"distance":5,"distance_unit":"km"}' },
+      });
+
+      fireEvent.click(screen.getByRole("radio", { name: outcome }));
+      expect(
+        screen.queryByText("Activity results (optional)"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Skipped and rest facts do not contain activity results.",
+        ),
+      ).toBeVisible();
+
+      fireEvent.click(screen.getByRole("radio", { name: "Completed" }));
+      expect(screen.getByLabelText("Actual measurement JSON")).toHaveValue("");
+    },
+  );
+
   it("restricts a no-plan flow to the truthful unplanned outcome", () => {
     render(
       <QuickLogForm
@@ -74,6 +111,23 @@ describe("QuickLogForm", () => {
     );
     expect(screen.getByRole("radio", { name: "Unplanned" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "Completed" })).toBeDisabled();
+  });
+
+  it("replaces the UTC fallback with the browser-local initial date", async () => {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const expected = isoDateInTimezone(new Date(), timezone);
+    render(
+      <QuickLogForm
+        current={null}
+        defaultDate="1999-01-01"
+        deriveBrowserDate
+        plannedSession={null}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Local date *")).toHaveValue(expected),
+    );
   });
 
   it("shows correction reason and immutable-history copy on a correction", () => {

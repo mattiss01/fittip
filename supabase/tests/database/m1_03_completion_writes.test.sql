@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(30);
+select plan(33);
 
 select has_function(
   'public',
@@ -304,6 +304,38 @@ select throws_ok(
   '22023',
   'Invalid completion',
   'replacement requires an actual description'
+);
+select throws_ok(
+  $$select pg_temp.save_completion(
+    '34000000-0000-4000-8000-00000000000a',
+    null, 0, '32000000-0000-4000-8000-000000000001',
+    'skipped', null, null
+  )$$,
+  '23514',
+  'Skipped or rest completions cannot contain activity results',
+  'skipped completion rejects activity results atomically'
+);
+select throws_ok(
+  $$select pg_temp.save_completion(
+    '34000000-0000-4000-8000-00000000000b',
+    null, 0, '32000000-0000-4000-8000-000000000001',
+    'rest', null, null
+  )$$,
+  '23514',
+  'Skipped or rest completions cannot contain activity results',
+  'rest completion rejects activity results atomically'
+);
+select is(
+  (
+    select count(*)::bigint
+    from public.completed_sessions
+    where idempotency_key in (
+      '34000000-0000-4000-8000-00000000000a',
+      '34000000-0000-4000-8000-00000000000b'
+    )
+  ),
+  0::bigint,
+  'rejected inactive-result writes leave no factual session'
 );
 select throws_ok(
   $$select pg_temp.save_completion(

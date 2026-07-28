@@ -248,6 +248,15 @@
   padding: 1rem 0;
 }
 
+.noActivityResult {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border-left: 4px solid var(--rule);
+  background: var(--field);
+  color: #4d625d;
+  line-height: 1.45;
+}
+
 .activityDetails summary {
   min-height: 2.75rem;
   cursor: pointer;
@@ -337,23 +346,91 @@
   border: 1px solid var(--ink);
 }
 
-.history ol {
+.history > ol {
   margin: 1.5rem 0 0;
   padding: 0;
   list-style: none;
 }
 
-.history li {
-  display: grid;
-  grid-template-columns: 9rem 1fr;
-  gap: 0.4rem 1rem;
-  padding: 1rem 0;
+.history > ol > li {
+  padding: 1.25rem 0;
   border-top: 1px solid var(--rule);
 }
 
-.history small {
-  grid-column: 2;
+.revisionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.revisionHeader > span {
+  color: var(--signal-dark);
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.revisionFacts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.revisionFacts > div,
+.revisionText,
+.correctionReason {
+  padding: 0.75rem;
+  background: var(--field);
+}
+
+.revisionFacts dt,
+.revisionText > strong,
+.correctionReason > strong {
   color: #5a6b66;
+  font:
+    700 0.66rem "Courier New",
+    monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.revisionFacts dd,
+.revisionText p,
+.correctionReason p {
+  margin: 0.3rem 0 0;
+  line-height: 1.45;
+}
+
+.revisionText {
+  margin-top: 0.75rem;
+}
+
+.revisionText ul {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.revisionText li {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.revisionText code {
+  overflow-wrap: anywhere;
+  color: var(--signal-dark);
+  font-size: 0.76rem;
+}
+
+.correctionReason {
+  margin-top: 0.75rem;
+  border-left: 3px solid var(--signal);
 }
 
 .saved {
@@ -414,12 +491,8 @@
     grid-template-columns: 1fr;
   }
 
-  .history li {
-    grid-template-columns: 1fr;
-  }
-
-  .history small {
-    grid-column: 1;
+  .revisionFacts {
+    grid-template-columns: 1fr 1fr;
   }
 }
 

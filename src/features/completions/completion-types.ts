@@ -81,6 +81,13 @@ export type CompletionHistory = {
   revisions: CompletionRevision[];
 };
 
+export type CompletionWriteReceipt = {
+  id: string;
+  completionGroupId: string;
+  revisionNumber: number;
+  status: CompletionStatus;
+};
+
 export type PlannedSessionSnapshot = {
   id: string;
   localDate: string;

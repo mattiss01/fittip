@@ -85,6 +85,9 @@ export function parseCompletionInput(value: unknown): CompletionInput {
       positions.add(activity.position);
       return activity;
     });
+    if ((status === "skipped" || status === "rest") && activities.length > 0) {
+      throw new CompletionValidationError();
+    }
 
     return {
       idempotencyKey: readUuid(record.idempotencyKey),

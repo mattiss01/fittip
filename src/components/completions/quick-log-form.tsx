@@ -9,6 +9,7 @@ import {
   type CompletionStatus,
   type PlannedSessionSnapshot,
 } from "@/features/completions/completion-types";
+import { isoDateInTimezone } from "@/features/completions/local-date";
 import { saveQuickLog, type QuickLogActionState } from "@/app/home/log/actions";
 import styles from "@/app/home/log/log.module.css";
 
@@ -25,16 +26,19 @@ export function QuickLogForm({
   plannedSession,
   current,
   defaultDate,
+  deriveBrowserDate = false,
 }: {
   plannedSession: PlannedSessionSnapshot | null;
   current: CompletionRevision | null;
   defaultDate: string;
+  deriveBrowserDate?: boolean;
 }) {
   const initialStatus =
     current?.status ?? (plannedSession ? "completed" : "unplanned");
   const [outcome, setOutcome] = useState<CompletionStatus>(initialStatus);
   const [startedAtLocal, setStartedAtLocal] = useState<string | null>(null);
   const timezoneRef = useRef<HTMLInputElement>(null);
+  const dateRef = useRef<HTMLInputElement>(null);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [state, action, pending] = useActionState<
     QuickLogActionState,
@@ -43,10 +47,14 @@ export function QuickLogForm({
 
   useEffect(() => {
     if (timezoneRef.current && !current?.timezoneName) {
-      timezoneRef.current.value =
+      const browserTimezone =
         Intl.DateTimeFormat().resolvedOptions().timeZone ?? "UTC";
+      timezoneRef.current.value = browserTimezone;
+      if (deriveBrowserDate && dateRef.current) {
+        dateRef.current.value = isoDateInTimezone(new Date(), browserTimezone);
+      }
     }
-  }, [current?.timezoneName]);
+  }, [current?.timezoneName, deriveBrowserDate]);
 
   if (state.status === "saved") {
     return (
@@ -92,6 +100,7 @@ export function QuickLogForm({
             measurementMode: "custom" as const,
           },
         ];
+  const acceptsActivityResults = outcome !== "skipped" && outcome !== "rest";
 
   return (
     <form action={action} className={styles.form}>
@@ -173,6 +182,7 @@ export function QuickLogForm({
           <input
             defaultValue={current?.actualLocalDate ?? defaultDate}
             name="actualLocalDate"
+            ref={dateRef}
             required
             type="date"
           />
@@ -224,92 +234,100 @@ export function QuickLogForm({
         </label>
       </section>
 
-      <details className={styles.activityDetails}>
-        <summary>Activity results (optional)</summary>
-        <p>
-          Add JSON using the activity’s measurement mode, for example{" "}
-          <code>{`{"distance":5,"distance_unit":"km"}`}</code>.
-        </p>
-        <input
-          name="activityCount"
-          type="hidden"
-          value={activityInputs.length}
-        />
-        {activityInputs.map((activity, index) => (
-          <div className={styles.activity} key={activity.id}>
-            <input
-              name={`activity-${index}-planned-id`}
-              type="hidden"
-              value={
-                activity.id === "unplanned"
-                  ? ""
-                  : "completedSessionId" in activity
-                    ? (activity.plannedActivityId ?? "")
-                    : activity.id
-              }
-            />
-            <input
-              name={`activity-${index}-personal-id`}
-              type="hidden"
-              value={
-                "personalActivityId" in activity
-                  ? (activity.personalActivityId ?? "")
-                  : ""
-              }
-            />
-            <label className={styles.field}>
-              <span>Activity</span>
+      {acceptsActivityResults ? (
+        <details className={styles.activityDetails}>
+          <summary>Activity results (optional)</summary>
+          <p>
+            Add JSON using the activity’s measurement mode, for example{" "}
+            <code>{`{"distance":5,"distance_unit":"km"}`}</code>.
+          </p>
+          <input
+            name="activityCount"
+            type="hidden"
+            value={activityInputs.length}
+          />
+          {activityInputs.map((activity, index) => (
+            <div className={styles.activity} key={activity.id}>
               <input
-                defaultValue={activity.name}
-                name={`activity-${index}-name`}
-                placeholder="e.g. Easy run"
+                name={`activity-${index}-planned-id`}
+                type="hidden"
+                value={
+                  activity.id === "unplanned"
+                    ? ""
+                    : "completedSessionId" in activity
+                      ? (activity.plannedActivityId ?? "")
+                      : activity.id
+                }
               />
-            </label>
-            <label className={styles.field}>
-              <span>Sport / domain</span>
               <input
-                defaultValue={activity.sport}
-                name={`activity-${index}-sport`}
-                placeholder="e.g. Running"
-              />
-            </label>
-            <input
-              name={`activity-${index}-instructions`}
-              type="hidden"
-              value={activity.instructions ?? ""}
-            />
-            <label className={styles.field}>
-              <span>Measurement mode</span>
-              <select
-                defaultValue={activity.measurementMode}
-                name={`activity-${index}-mode`}
-              >
-                <option value="sets_reps_load">Sets / reps / load</option>
-                <option value="time_distance_pace">
-                  Time / distance / pace
-                </option>
-                <option value="duration_intensity">Duration / intensity</option>
-                <option value="skill_repetitions">Skill repetitions</option>
-                <option value="custom">Custom</option>
-              </select>
-            </label>
-            <label className={styles.field}>
-              <span>Actual measurement JSON</span>
-              <textarea
-                defaultValue={
-                  "actualMeasurement" in activity &&
-                  activity.actualMeasurement !== undefined
-                    ? JSON.stringify(activity.actualMeasurement)
+                name={`activity-${index}-personal-id`}
+                type="hidden"
+                value={
+                  "personalActivityId" in activity
+                    ? (activity.personalActivityId ?? "")
                     : ""
                 }
-                name={`activity-${index}-measurement`}
-                placeholder='{"duration_minutes":45,"intensity":"easy"}'
-                rows={3}
               />
-            </label>
-          </div>
-        ))}
-      </details>
+              <label className={styles.field}>
+                <span>Activity</span>
+                <input
+                  defaultValue={activity.name}
+                  name={`activity-${index}-name`}
+                  placeholder="e.g. Easy run"
+                />
+              </label>
+              <label className={styles.field}>
+                <span>Sport / domain</span>
+                <input
+                  defaultValue={activity.sport}
+                  name={`activity-${index}-sport`}
+                  placeholder="e.g. Running"
+                />
+              </label>
+              <input
+                name={`activity-${index}-instructions`}
+                type="hidden"
+                value={activity.instructions ?? ""}
+              />
+              <label className={styles.field}>
+                <span>Measurement mode</span>
+                <select
+                  defaultValue={activity.measurementMode}
+                  name={`activity-${index}-mode`}
+                >
+                  <option value="sets_reps_load">Sets / reps / load</option>
+                  <option value="time_distance_pace">
+                    Time / distance / pace
+                  </option>
+                  <option value="duration_intensity">
+                    Duration / intensity
+                  </option>
+                  <option value="skill_repetitions">Skill repetitions</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </label>
+              <label className={styles.field}>
+                <span>Actual measurement JSON</span>
+                <textarea
+                  defaultValue={
+                    "actualMeasurement" in activity &&
+                    activity.actualMeasurement !== undefined
+                      ? JSON.stringify(activity.actualMeasurement)
+                      : ""
+                  }
+                  name={`activity-${index}-measurement`}
+                  placeholder='{"duration_minutes":45,"intensity":"easy"}'
+                  rows={3}
+                />
+              </label>
+            </div>
+          ))}
+        </details>
+      ) : (
+        <p className={styles.noActivityResult} role="note">
+          Skipped and rest facts do not contain activity results.
+        </p>
+      )}
 
       <label className={styles.field}>
         <span>Private note</span>

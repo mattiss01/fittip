@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   CompletionAuthenticationError,
   CompletionConflictError,
-  CompletionPersistenceError,
   CompletionRepository,
+  CompletionWriteUnconfirmedError,
 } from "@/server/repositories/completion-repository";
 
 const USER_ID = "00000000-0000-4000-8000-000000000001";
@@ -25,7 +25,7 @@ describe("CompletionRepository", () => {
     );
 
     await expect(repository.save(completion())).rejects.toThrow(
-      CompletionPersistenceError,
+      CompletionWriteUnconfirmedError,
     );
     expect(rpc).toHaveBeenCalledWith(
       "save_training_completion",
@@ -35,6 +35,34 @@ describe("CompletionRepository", () => {
       }),
     );
     expect(retry).toHaveBeenCalledWith(false);
+  });
+
+  it("returns the successful RPC receipt without a follow-up read", async () => {
+    const from = vi.fn();
+    const repository = new CompletionRepository(
+      client({
+        from,
+        rpc: vi.fn().mockReturnValue({
+          retry: vi.fn().mockResolvedValue({
+            data: {
+              id: "00000000-0000-4000-8000-000000000040",
+              completion_group_id: "00000000-0000-4000-8000-000000000050",
+              revision_number: 1,
+              status: "completed",
+            },
+            error: null,
+          }),
+        }),
+      }),
+    );
+
+    await expect(repository.save(completion())).resolves.toEqual({
+      id: "00000000-0000-4000-8000-000000000040",
+      completionGroupId: "00000000-0000-4000-8000-000000000050",
+      revisionNumber: 1,
+      status: "completed",
+    });
+    expect(from).not.toHaveBeenCalled();
   });
 
   it("maps only PT409 to a correction/idempotency conflict", async () => {

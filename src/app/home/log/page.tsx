@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { QuickLogForm } from "@/components/completions/quick-log-form";
+import { RevisionHistory } from "@/components/completions/revision-history";
 import { createServerUserClient } from "@/lib/supabase/server-user-client";
 import {
   CompletionAuthenticationError,
@@ -106,30 +107,14 @@ export default async function QuickLogPage({
               plannedSession?.localDate ??
               new Date().toISOString().slice(0, 10)
             }
+            deriveBrowserDate={!current && !plannedSession}
             plannedSession={plannedSession}
           />
         </section>
       </div>
 
       {history && history.revisions.length > 0 ? (
-        <section className={styles.history} aria-labelledby="history-heading">
-          <p className={styles.sectionNumber}>03 / Revision history</p>
-          <h2 id="history-heading">Nothing erased.</h2>
-          <ol>
-            {history.revisions.map((revision) => (
-              <li key={revision.id}>
-                <strong>Revision {revision.revisionNumber}</strong>
-                <span>
-                  {revision.status.replaceAll("_", " ")} ·{" "}
-                  {revision.actualLocalDate}
-                </span>
-                {revision.correctionReason ? (
-                  <small>{revision.correctionReason}</small>
-                ) : null}
-              </li>
-            ))}
-          </ol>
-        </section>
+        <RevisionHistory history={history} />
       ) : null}
     </main>
   );

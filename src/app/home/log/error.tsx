@@ -11,9 +11,12 @@ export default function QuickLogError({
   return (
     <main className={styles.shell}>
       <section className={styles.saved} role="alert">
-        <p className={styles.kicker}>Actual not changed</p>
+        <p className={styles.kicker}>Actual unavailable</p>
         <h1>The log could not load.</h1>
-        <p>Try again. Your accepted plan and prior actuals remain unchanged.</p>
+        <p>
+          Try again. FitTip cannot confirm any save outcome from this loading
+          error alone.
+        </p>
         <button onClick={reset} type="button">
           Try again
         </button>

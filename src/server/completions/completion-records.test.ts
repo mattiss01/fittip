@@ -56,6 +56,30 @@ describe("completion domain validation", () => {
     ).toThrow(CompletionValidationError);
   });
 
+  it.each(["skipped", "rest"] as const)(
+    "rejects activity results for a %s outcome",
+    (status) => {
+      expect(() =>
+        parseCompletionInput(
+          completion({
+            status,
+            activities: [
+              {
+                position: 0,
+                name: "Should not be factual",
+                sport: "Running",
+                measurementMode: "time_distance_pace",
+                actualMeasurement: {
+                  duration_seconds: 1200,
+                },
+              },
+            ],
+          }),
+        ),
+      ).toThrow(CompletionValidationError);
+    },
+  );
+
   it("enforces effort, duration, feeling, notes and measurements", () => {
     expect(() =>
       parseCompletionInput(completion({ perceivedEffort: 11 })),

@@ -23,7 +23,7 @@ import { saveQuickLog } from "@/app/home/log/actions";
 import {
   CompletionAuthenticationError,
   CompletionConflictError,
-  CompletionPersistenceError,
+  CompletionWriteUnconfirmedError,
 } from "@/server/repositories/completion-repository";
 
 describe("saveQuickLog", () => {
@@ -69,16 +69,40 @@ describe("saveQuickLog", () => {
     expect(JSON.stringify(result)).not.toContain("do-not-echo");
   });
 
-  it("returns an honest no-change message for persistence failures", async () => {
-    saveMock.mockRejectedValue(new CompletionPersistenceError());
+  it("returns an honest ambiguous-save message for response failures", async () => {
+    saveMock.mockRejectedValue(new CompletionWriteUnconfirmedError());
     await expect(
       saveQuickLog({ status: "idle" }, validForm()),
     ).resolves.toEqual({
       status: "error",
       message:
-        "We could not save this actual. Nothing was changed. Check your connection and try again.",
+        "The save could not be confirmed. Retry safely: FitTip will reuse this save key and will not create a duplicate fact.",
     });
   });
+
+  it.each(["skipped", "rest"])(
+    "clears submitted activity results for %s before domain persistence",
+    async (outcome) => {
+      saveMock.mockResolvedValue({
+        completionGroupId: "00000000-0000-4000-8000-000000000060",
+        revisionNumber: 1,
+      });
+      const form = validForm();
+      form.set("outcome", outcome);
+      form.set("plannedSessionId", "00000000-0000-4000-8000-000000000010");
+      form.set("activityCount", "1");
+      form.set("activity-0-name", "Stale result");
+      form.set("activity-0-sport", "Running");
+      form.set("activity-0-mode", "time_distance_pace");
+      form.set("activity-0-measurement", '{"duration_seconds":1200}');
+
+      await saveQuickLog({ status: "idle" }, form);
+
+      expect(saveMock).toHaveBeenCalledWith(
+        expect.objectContaining({ status: outcome, activities: [] }),
+      );
+    },
+  );
 
   it("names session expiry without exposing submitted content", async () => {
     saveMock.mockRejectedValue(new CompletionAuthenticationError());

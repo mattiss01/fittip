@@ -7,6 +7,7 @@ import {
   type CompletionHistory,
   type CompletionInput,
   type CompletionRevision,
+  type CompletionWriteReceipt,
   type PlannedSessionSnapshot,
 } from "@/features/completions/completion-types";
 import {
@@ -92,6 +93,13 @@ export class CompletionConflictError extends Error {
   }
 }
 
+export class CompletionWriteUnconfirmedError extends Error {
+  constructor() {
+    super("The completion write could not be confirmed.");
+    this.name = "CompletionWriteUnconfirmedError";
+  }
+}
+
 export class CompletionRepository {
   constructor(private readonly client: CompletionClient) {}
 
@@ -99,7 +107,7 @@ export class CompletionRepository {
     await this.getVerifiedUserId();
   }
 
-  async save(input: unknown): Promise<CompletionRevision> {
+  async save(input: unknown): Promise<CompletionWriteReceipt> {
     const completion = parseCompletionInput(input);
     await this.getVerifiedUserId();
     const { data, error } = await this.client
@@ -107,13 +115,14 @@ export class CompletionRepository {
       .retry(false);
 
     if (error?.code === "PT409") throw new CompletionConflictError();
-    if (error || !data) throw new CompletionPersistenceError();
+    if (error || !data) throw new CompletionWriteUnconfirmedError();
 
-    const history = await this.getCompletionHistory(data.completion_group_id);
-    if (!history || history.current.id !== data.id) {
-      throw new CompletionPersistenceError();
-    }
-    return history.current;
+    return {
+      id: data.id,
+      completionGroupId: data.completion_group_id,
+      revisionNumber: data.revision_number,
+      status: data.status as CompletionWriteReceipt["status"],
+    };
   }
 
   async getCompletionHistory(

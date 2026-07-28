@@ -4,9 +4,10 @@ import type { CompletionActivityInput } from "@/features/completions/completion-
 import {
   CompletionAuthenticationError,
   CompletionConflictError,
-  CompletionPersistenceError,
+  CompletionWriteUnconfirmedError,
   createCompletionRepository,
 } from "@/server/repositories/completion-repository";
+import { CompletionValidationError } from "@/server/completions/completion-records";
 
 export type QuickLogActionState =
   | { status: "idle" }
@@ -64,21 +65,30 @@ export async function saveQuickLog(
           "This record changed before your save. Reload it before correcting again.",
       };
     }
-    if (error instanceof CompletionPersistenceError) {
+    if (error instanceof CompletionWriteUnconfirmedError) {
       return {
         status: "error",
         message:
-          "We could not save this actual. Nothing was changed. Check your connection and try again.",
+          "The save could not be confirmed. Retry safely: FitTip will reuse this save key and will not create a duplicate fact.",
+      };
+    }
+    if (error instanceof CompletionValidationError) {
+      return {
+        status: "error",
+        message: "Review the highlighted details and try again.",
       };
     }
     return {
       status: "error",
-      message: "Review the highlighted details and try again.",
+      message:
+        "FitTip could not start or confirm this save. Retry safely with the same form.",
     };
   }
 }
 
 function readActivities(formData: FormData): CompletionActivityInput[] {
+  const outcome = required(formData, "outcome");
+  if (outcome === "skipped" || outcome === "rest") return [];
   const count = integer(formData, "activityCount", 0);
   if (count < 0 || count > 50) throw new Error("Invalid activity count");
   const activities: CompletionActivityInput[] = [];
