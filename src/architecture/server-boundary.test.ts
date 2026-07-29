@@ -18,26 +18,40 @@ describe("server repository import boundary", () => {
     }
   });
 
-  it("disables retries only for the atomic manual-plan RPC", () => {
+  it("disables retries only for the atomic plan and completion RPCs", () => {
     const sources = sourceFiles(join(process.cwd(), "src")).filter(
       (path) => !path.endsWith(".test.ts") && !path.endsWith(".test.tsx"),
     );
     const retryFiles = sources.filter((path) =>
       readFileSync(path, "utf8").includes(".retry(false)"),
     );
-    const repositoryPath = join(
+    const trainingRepositoryPath = join(
       process.cwd(),
       "src",
       "server",
       "repositories",
       "training-record-repository.ts",
     );
-    const repository = readFileSync(repositoryPath, "utf8");
+    const completionRepositoryPath = join(
+      process.cwd(),
+      "src",
+      "server",
+      "repositories",
+      "completion-repository.ts",
+    );
+    const trainingRepository = readFileSync(trainingRepositoryPath, "utf8");
+    const completionRepository = readFileSync(completionRepositoryPath, "utf8");
 
-    expect(retryFiles).toEqual([repositoryPath]);
-    expect(repository.match(/\.retry\(false\)/g)).toHaveLength(1);
-    expect(repository).toMatch(
+    expect(retryFiles.sort()).toEqual(
+      [trainingRepositoryPath, completionRepositoryPath].sort(),
+    );
+    expect(trainingRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
+    expect(trainingRepository).toMatch(
       /\.rpc\(\s*"save_manual_plan_version",[\s\S]*?\)\s*\.retry\(false\)/,
+    );
+    expect(completionRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
+    expect(completionRepository).toMatch(
+      /\.rpc\(\s*"save_training_completion",[\s\S]*?\)\s*\.retry\(false\)/,
     );
   });
 });
