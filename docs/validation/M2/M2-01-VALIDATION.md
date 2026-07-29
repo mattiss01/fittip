@@ -10,6 +10,17 @@ exact-commit review
 **Exact implementation commit:**
 `d40df06a23519fd937ac2b38028d80410926a544`
 
+**Initial validation-record commit:**
+`68ddd8722791f2247c957ac7893459b74431a7f0`
+
+The implementation commit contains all runtime, migration, test, generated
+type, developer-documentation, and screenshot changes. The initial
+validation-record commit adds this handoff document. A later
+documentation-only branch-head correction adds the validation record to its
+own 29-file branch-diff manifest; its exact SHA is reported in the builder
+handoff because a commit cannot contain its own final SHA. No implementation
+behavior changed after `d40df06a23519fd937ac2b38028d80410926a544`.
+
 **Architecture:** [ADR-009](../../decisions/ADR-009-M2-GOAL-MUTATION-TRANSACTION.md)
 
 ## Delivered behavior
@@ -53,12 +64,12 @@ fitness, or other.
 
 ## Privilege and policy matrix
 
-| Surface | Anonymous | Authenticated owner | Other authenticated owner | Normal write path |
-|---|---|---|---|---|
-| `goal_collections` | no table privileges | owner-only `SELECT` through RLS | denied by RLS | none directly |
-| `goals` | no table privileges | owner-only `SELECT` through RLS | denied by RLS | none directly |
-| `goal_lifecycle_events` | no table privileges | owner-only `SELECT` through RLS | denied by RLS | none directly |
-| `apply_goal_change` | no execute | execute with Auth-derived owner | cannot name or access another owner | sole approved transaction |
+| Surface                 | Anonymous           | Authenticated owner             | Other authenticated owner           | Normal write path         |
+| ----------------------- | ------------------- | ------------------------------- | ----------------------------------- | ------------------------- |
+| `goal_collections`      | no table privileges | owner-only `SELECT` through RLS | denied by RLS                       | none directly             |
+| `goals`                 | no table privileges | owner-only `SELECT` through RLS | denied by RLS                       | none directly             |
+| `goal_lifecycle_events` | no table privileges | owner-only `SELECT` through RLS | denied by RLS                       | none directly             |
+| `apply_goal_change`     | no execute          | execute with Auth-derived owner | cannot name or access another owner | sole approved transaction |
 
 Direct authenticated insert, update, and delete grants are revoked. `PUBLIC`,
 anonymous, and `service_role` execution of the goal mutation are revoked. The
@@ -70,15 +81,15 @@ or browser output.
 
 ### Database and concurrency
 
-| Check | Result |
-|---|---|
-| `npx.cmd supabase db reset --local` | PASS — all six migrations applied cleanly, including `20260729161854_m2_01_goal_model.sql` |
-| focused `supabase test db --local supabase/tests/database/m2_01_goals.test.sql` | PASS — 55 assertions |
-| complete `supabase test db --local supabase/tests/database` | PASS — 4 files, 232 assertions |
-| `supabase db lint --local --level warning --fail-on warning` | PASS — no schema errors |
-| `supabase db advisors --local --type all --level warn --fail-on warn` | PASS — no security or performance findings |
-| `supabase gen types typescript --local` | PASS — committed types regenerated; existing nullable M1 RPC compatibility retained and the PowerShell BOM removed |
-| `test:m2-01-concurrency` under Node 24.18 | PASS — simultaneous third-core creates returned exactly one `200` and one `409`; revision 3; core ranks 1–3 |
+| Check                                                                           | Result                                                                                                             |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `npx.cmd supabase db reset --local`                                             | PASS — all six migrations applied cleanly, including `20260729161854_m2_01_goal_model.sql`                         |
+| focused `supabase test db --local supabase/tests/database/m2_01_goals.test.sql` | PASS — 55 assertions                                                                                               |
+| complete `supabase test db --local supabase/tests/database`                     | PASS — 4 files, 232 assertions                                                                                     |
+| `supabase db lint --local --level warning --fail-on warning`                    | PASS — no schema errors                                                                                            |
+| `supabase db advisors --local --type all --level warn --fail-on warn`           | PASS — no security or performance findings                                                                         |
+| `supabase gen types typescript --local`                                         | PASS — committed types regenerated; existing nullable M1 RPC compatibility retained and the PowerShell BOM removed |
+| `test:m2-01-concurrency` under Node 24.18                                       | PASS — simultaneous third-core creates returned exactly one `200` and one `409`; revision 3; core ranks 1–3        |
 
 The 55 focused assertions cover exact objects, function ownership/search path,
 RLS, privileges, anonymous denial, direct-write denial, cross-owner
@@ -87,18 +98,18 @@ rollback, fourth-core rejection, archive/delete behavior, and date validation.
 
 ### Application and production browser
 
-| Check | Result |
-|---|---|
-| full `npm.cmd run lint` under Node 24.18 | PASS |
-| final scoped ESLint after the draft-preservation correction | PASS |
-| full `npm.cmd run typecheck` under Node 24.18 | PASS |
-| full `npm.cmd run test:run` under Node 24.18 | PASS — 39 files, 226 tests |
-| final focused action/component rerun | PASS — 2 files, 9 tests |
-| `npm.cmd run build` under Node 24.18 | PASS — `/home/you/goals` is a dynamic route |
-| bounded production Playwright flow | PASS — 1 test at exactly `390x844`, 5.9 seconds |
-| scoped Prettier check/write | PASS — no scoped formatting changes after final correction |
-| repository-wide `format:check` | known baseline — 108 older files remain outside this ticket |
-| `git diff --check` | PASS |
+| Check                                                       | Result                                                      |
+| ----------------------------------------------------------- | ----------------------------------------------------------- |
+| full `npm.cmd run lint` under Node 24.18                    | PASS                                                        |
+| final scoped ESLint after the draft-preservation correction | PASS                                                        |
+| full `npm.cmd run typecheck` under Node 24.18               | PASS                                                        |
+| full `npm.cmd run test:run` under Node 24.18                | PASS — 39 files, 226 tests                                  |
+| final focused action/component rerun                        | PASS — 2 files, 9 tests                                     |
+| `npm.cmd run build` under Node 24.18                        | PASS — `/home/you/goals` is a dynamic route                 |
+| bounded production Playwright flow                          | PASS — 1 test at exactly `390x844`, 5.9 seconds             |
+| scoped Prettier check/write                                 | PASS — no scoped formatting changes after final correction  |
+| repository-wide `format:check`                              | known baseline — 108 older files remain outside this ticket |
+| `git diff --check`                                          | PASS                                                        |
 
 The production Playwright flow provisions and removes only a disposable
 confirmed `example.test` account. It proves empty-state navigation, three core
@@ -164,6 +175,9 @@ credential, real training data, or external target is visible.
 
 ### Created
 
+- `docs/validation/M2/M2-01-VALIDATION.md` — persists the builder handoff,
+  29-file branch-diff manifest, privilege matrix, validation evidence,
+  screenshots, corrections, limitations, and exact implementation boundary.
 - `docs/validation/M2/evidence/M2-01-core-supporting-390x844.png` — synthetic
   mobile evidence of independent core and supporting ranks.
 - `docs/validation/M2/evidence/M2-01-destructive-action-390x844.png` —
