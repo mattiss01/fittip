@@ -341,6 +341,39 @@ describe("TrainingRecordRepository", () => {
     expect(activityOwnerEq).toHaveBeenCalledWith("user_id", USER_ID);
   });
 
+  it("lists every immutable plan version newest first with an owner predicate", async () => {
+    const order = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: "50000000-0000-4000-8000-000000000002",
+          user_id: USER_ID,
+          version_number: 2,
+          parent_version_id: "50000000-0000-4000-8000-000000000001",
+          parent_version_number: 1,
+          day_count: 3,
+          start_date: "2026-07-29",
+          end_date: "2026-07-31",
+          timezone_name: "Europe/Berlin",
+          source_kind: "manual",
+          accepted_at: "2026-07-29T12:00:00.000Z",
+          created_at: "2026-07-29T12:00:00.000Z",
+        },
+      ],
+      error: null,
+    });
+    const eq = vi.fn().mockReturnValue({ order });
+    const from = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({ eq }),
+    });
+    const repository = new TrainingRecordRepository(createClient({ from }));
+
+    await expect(repository.listPlanVersions()).resolves.toEqual([
+      expect.objectContaining({ versionNumber: 2, dayCount: 3 }),
+    ]);
+    expect(eq).toHaveBeenCalledWith("user_id", USER_ID);
+    expect(order).toHaveBeenCalledWith("version_number", { ascending: false });
+  });
+
   it("enforces founder-staging owner access before any record operation", async () => {
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
     process.env.FITTIP_OWNER_USER_ID = USER_ID;

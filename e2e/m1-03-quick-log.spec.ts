@@ -68,9 +68,7 @@ test.describe("M1-03 quick factual logging", () => {
       .fill("Corrected from watch.");
     await page.getByRole("button", { name: "Save correction" }).click();
     await expect(page.getByText("Revision 2 is preserved.")).toBeVisible();
-    await page
-      .getByRole("link", { name: "View or correct this actual" })
-      .click();
+    await page.getByRole("link", { name: "Correct this actual" }).click();
     const history = page.getByRole("region", { name: "Nothing erased." });
     await expect(history.getByText("42 min")).toBeVisible();
     await expect(
@@ -135,7 +133,7 @@ async function logPlannedOutcome(
     page.getByRole("heading", { name: "Fact recorded." }),
   ).toBeVisible();
   const href = await page
-    .getByRole("link", { name: "View or correct this actual" })
+    .getByRole("link", { name: "Correct this actual" })
     .getAttribute("href");
   expect(href).toMatch(/^\/home\/log\?completion=/);
   return href!;
@@ -161,7 +159,7 @@ async function createAndConfirmAccount(
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/home$/);
+  await expect(page).toHaveURL(/\/home\/today$/);
   return { email, password };
 }
 

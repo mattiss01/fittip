@@ -39,7 +39,7 @@ export async function GET(request: Request) {
   }
 
   return mergeAuthResponseHeaders(
-    privateRedirect(new URL("/home", requestUrl)),
+    privateRedirect(new URL("/home/today", requestUrl)),
     pending,
   );
 }

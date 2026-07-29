@@ -7,9 +7,11 @@ import {
 } from "@/lib/supabase/server-user-client";
 import { requireAllowedVerifiedUser } from "@/lib/auth/verified-user";
 import { ProfileRepository } from "@/server/repositories/profile-repository";
+import { safeAuthReturn } from "@/lib/auth/safe-return";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
+  const returnTo = safeAuthReturn(formData.get("next"));
   const pending = new NextResponse();
   const client = await createServerUserClient(pending);
   const { error } = await client.auth.signInWithPassword({
@@ -32,7 +34,7 @@ export async function POST(request: Request) {
 
   return mergeAuthResponseHeaders(
     privateRedirect(
-      new URL(error ? "/?error=credentials" : "/home", request.url),
+      new URL(error ? "/?error=credentials" : returnTo, request.url),
     ),
     pending,
   );
