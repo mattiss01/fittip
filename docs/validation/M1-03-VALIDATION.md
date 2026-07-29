@@ -1,6 +1,13 @@
 # M1-03 quick training logging validation
 
-**Builder status:** review corrections complete - ready for independent re-review
+**Lifecycle status:** accepted
+
+**Independent review:** approved exact implementation
+`94bc613ee307cc8d89088fbaa01291806fd6ee23` on 29 July 2026
+
+**Product-owner acceptance:** recorded 29 July 2026
+
+**Accepted master merge:** `1521d2674c54de2dec54c7de24e15fcf373a4b7f`
 
 **Implementation head:** `94bc613ee307cc8d89088fbaa01291806fd6ee23`
 
@@ -226,7 +233,7 @@ baseline formatting.
 
 ## Known limitations and handoff
 
-- Final Today/Plan links, Today return behavior, consolidated History, and
+- Final Today/Plan links, Today return behavior, consolidated Progress, and
   mobile navigation remain intentionally owned by M1-04.
 - The direct planned demo requires an owner-scoped planned-session UUID until
   M1-04 wires the visible entry point.
@@ -239,8 +246,12 @@ baseline formatting.
 
 ## Independent review target
 
-Review exact implementation head
-`94bc613ee307cc8d89088fbaa01291806fd6ee23`, reconcile this manifest against
-the actual Git diff from base `ddc15909481efb5c4b61cd9b133c6c6151c5e1cf`,
-rerun the security/data/mobile checks, and report any omitted, unexpected, or
-inaccurately described file before recommending `testable`.
+The independent reviewer reconciled this manifest against the exact Git diff
+and approved implementation head
+`94bc613ee307cc8d89088fbaa01291806fd6ee23`. The product owner accepted that
+reviewed implementation on 29 July 2026. It was merged to `master` as
+`1521d2674c54de2dec54c7de24e15fcf373a4b7f`.
+
+The merged M1-02 and M1-03 application passed the combined Node, Supabase,
+concurrency, advisor, and `390x844` browser validation recorded in
+[M1-02/M1-03 integration validation](M1-02-M1-03-INTEGRATION-VALIDATION.md).

@@ -2,7 +2,14 @@
 
 **Ticket:** [M1-02](../backlog/M1-02-SELECTABLE-HORIZON-PLANNING.md)
 
-**Builder state:** complete and awaiting independent review
+**Lifecycle state:** accepted
+
+**Independent review:** approved exact implementation
+`92f878d34000726bdde0f9ad878198a6dd7879fa` on 29 July 2026
+
+**Product-owner acceptance:** recorded 29 July 2026
+
+**Accepted master merge:** `cf3253e35d09b527cb281ec9ac15fcf4f88f81ad`
 
 **Initial implementation commit:** `ccffa4db6ac0fa37bd9c57ef10d575b61ccb7af2`
 
@@ -295,8 +302,11 @@ the confirmation decision.
    confirmation, conflict state, and past read-only state.
 ## Handoff boundary
 
-The builder requests independent re-review of exact implementation head
-`92f878d34000726bdde0f9ad878198a6dd7879fa` and this separate
-validation/evidence commit. M1-02 should become `testable` only after that
-reviewer reconciles the manifest, reruns the scoped checks, and reports no
-unresolved findings.
+The independent reviewer reconciled the manifest and approved exact
+implementation head `92f878d34000726bdde0f9ad878198a6dd7879fa`. The product
+owner accepted that reviewed implementation on 29 July 2026. It was merged to
+`master` as `cf3253e35d09b527cb281ec9ac15fcf4f88f81ad`.
+
+The merged M1-02 and M1-03 application passed the combined Node, Supabase,
+concurrency, advisor, and `390x844` browser validation recorded in
+[M1-02/M1-03 integration validation](M1-02-M1-03-INTEGRATION-VALIDATION.md).

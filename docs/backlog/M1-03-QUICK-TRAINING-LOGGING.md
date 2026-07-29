@@ -1,10 +1,12 @@
 # M1-03: Quick training logging
 
-**Status:** testable — independent review approved 29 July 2026
+**Status:** accepted — product-owner acceptance recorded 29 July 2026
 
 **Reviewed implementation:** `94bc613ee307cc8d89088fbaa01291806fd6ee23`
 
 **Reviewed validation/evidence:** `ea4511a3a073d185f0afff8020c359267f23189e`
+
+**Accepted master merge:** `1521d2674c54de2dec54c7de24e15fcf373a4b7f`
 
 **Milestone:** M1 — manual training planning and tracking
 
@@ -140,3 +142,10 @@ effort/feeling, correction, note/privacy, pain/illness, measurement-depth, and
 mobile-copy recommendations in chat on 28 July 2026. M1-01 was accepted and
 committed to `master` on 28 July 2026. The parallel file/data ownership and
 merge plan is recorded in [M1-BACKLOG](M1-BACKLOG.md).
+
+The independent reviewer approved exact implementation
+`94bc613ee307cc8d89088fbaa01291806fd6ee23`. The product owner accepted that
+reviewed implementation in chat on 29 July 2026. It was merged to `master` as
+`1521d2674c54de2dec54c7de24e15fcf373a4b7f` and passed the combined post-merge
+validation recorded in
+[M1-02/M1-03 integration validation](../validation/M1-02-M1-03-INTEGRATION-VALIDATION.md).

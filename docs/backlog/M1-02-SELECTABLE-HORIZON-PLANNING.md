@@ -1,10 +1,12 @@
 # M1-02: Manual selectable-horizon training planning
 
-**Status:** testable — independent review approved 29 July 2026
+**Status:** accepted — product-owner acceptance recorded 29 July 2026
 
 **Reviewed implementation:** `92f878d34000726bdde0f9ad878198a6dd7879fa`
 
 **Reviewed validation/evidence:** `5dbd4bbbe0a0705b730d6b6de56c8cb89ff53843`
+
+**Accepted master merge:** `cf3253e35d09b527cb281ec9ac15fcf4f88f81ad`
 
 **Milestone:** M1 — manual training planning and tracking
 
@@ -159,3 +161,10 @@ selector/default/remembering, start-date, field/label, save/version, rest,
 activity reuse, move, lock, limit, error/conflict, and responsive-behavior
 recommendations in chat on 28 July 2026. M1-01 was accepted on 28 July 2026, so
 this ticket entered development with a distinct builder.
+
+The independent reviewer approved exact implementation
+`92f878d34000726bdde0f9ad878198a6dd7879fa`. The product owner accepted that
+reviewed implementation in chat on 29 July 2026. It was merged to `master` as
+`cf3253e35d09b527cb281ec9ac15fcf4f88f81ad` and passed the combined post-merge
+validation recorded in
+[M1-02/M1-03 integration validation](../validation/M1-02-M1-03-INTEGRATION-VALIDATION.md).

@@ -1,7 +1,7 @@
 # M1-04: Today, factual progress, and mobile navigation
 
-**Status:** approved — dependency-queued until M1-02 and M1-03 are accepted;
-product-owner approval recorded 28 July 2026
+**Status:** in development — dependencies accepted and dispatch recorded
+29 July 2026; product-owner approval recorded 28 July 2026
 
 **Milestone:** M1 — manual training planning and tracking
 
@@ -144,4 +144,6 @@ expiry returns to generic sign-in without leaking the requested private path.
 
 The product owner approved M1-04 in chat on 28 July 2026 with one revision:
 the factual-history navigation tab is named **Progress**, not **History**.
-Implementation remains queued until M1-02 and M1-03 are both accepted.
+M1-02 and M1-03 were accepted and passed combined post-merge validation on
+29 July 2026, so this ticket entered development with a distinct builder in an
+isolated ticket worktree.
