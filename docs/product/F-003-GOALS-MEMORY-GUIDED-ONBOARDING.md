@@ -156,9 +156,9 @@ The product owner approved these directions in chat on 29 July 2026:
 
 ## Approval boundary
 
-This brief records the approved M2 onboarding direction only. It does not
-approve M2-01, M2-02, or M2-03 for implementation. Each ticket remains
-proposed until its open product, privacy, safety, UX, and architecture
-decisions are approved. Public or external-user onboarding additionally
-remains blocked by the M0 recovery, privacy implementation, instrumentation,
-and hosted-quality gates.
+This brief records the approved M2 onboarding direction. M2-01 was separately
+approved for implementation on 29 July 2026 and is in development. M2-02 and
+M2-03 remain proposed until their open product, privacy, safety, UX, and
+architecture decisions are approved. Public or external-user onboarding
+additionally remains blocked by the M0 recovery, privacy implementation,
+instrumentation, and hosted-quality gates.

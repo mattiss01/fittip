@@ -1,12 +1,18 @@
 # M2-01: Goal model and validation
 
-**Status:** proposed — not approved for implementation
+**Status:** in development — product-owner approval recorded 29 July 2026
 
 **Milestone:** M2 — goals, editable coaching context, and guided onboarding
 
 **Priority:** P1
 
 **Feature brief:** [F-003 draft; direction approved](../../product/F-003-GOALS-MEMORY-GUIDED-ONBOARDING.md)
+
+**Implementation approval:** On 29 July 2026 the product owner approved M2-01
+for implementation. The approval accepts the ticket's recommended product
+direction for independent contiguous ranks, active-by-default creation,
+explicit terminal-state reopening, archive-first deletion, and the proposed
+390px flow within the existing owner-or-synthetic founder boundary.
 
 **Depends on:** [M1 milestone closeout accepted](../../validation/M1/M1-MILESTONE-CLOSEOUT.md); [M0-03 / F-001 accepted](../../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md); [M0-02-C1 accepted](../M0/M0-02-C1-REMOVE-USERNAME.md); [ADR-002](../../decisions/ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md); [ADR-004](../../decisions/ADR-004-USERNAME-FREE-ACCOUNT-PROFILE.md)
 
@@ -398,9 +404,11 @@ focused corrections**.
 
 ## Approval gate
 
-The product owner must approve the goal fields, lifecycle, rank behavior,
-archive/delete semantics, concurrency architecture, mobile flow/copy, and
-privacy classification before implementation. Approval dispatches the ticket
-only when its recorded dependencies are accepted. M0-06A permits only
-owner/synthetic founder staging; M0-06 remains a pre-friends/public/commercial
-gate. Until then, M2-01 remains **proposed**.
+Product-owner implementation approval is recorded and the dependencies are
+accepted, so M2-01 is **in development**. Reversible field names, bounded text
+limits, and the minimum sport-agnostic target representation may be finalized
+and evidenced within this ticket. A private function/RPC, trigger, elevated
+credential or connection, or another new privileged transaction boundary
+still requires a proposed ADR and explicit product-owner approval before it is
+introduced. M0-06A permits only owner/synthetic founder staging; M0-06 remains
+a pre-friends/public/commercial gate.
