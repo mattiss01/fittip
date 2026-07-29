@@ -1,6 +1,10 @@
 # M1-02: Manual selectable-horizon training planning
 
-**Status:** in development — dependency satisfied and builder dispatched 28 July 2026
+**Status:** testable — independent review approved 29 July 2026
+
+**Reviewed implementation:** `92f878d34000726bdde0f9ad878198a6dd7879fa`
+
+**Reviewed validation/evidence:** `5dbd4bbbe0a0705b730d6b6de56c8cb89ff53843`
 
 **Milestone:** M1 — manual training planning and tracking
 

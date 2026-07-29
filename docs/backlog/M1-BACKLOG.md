@@ -2,9 +2,9 @@
 
 **Planning state:** On 28 July 2026 the product owner revised the first product
 milestone and approved F-002 plus M1-01 through M1-03. M1-01 is accepted.
-M1-02 and M1-03 are in development in separate ticket branches and isolated
-worktrees under the ownership plan below. M1-04 is approved and
-dependency-queued. M1-05 remains proposed.
+M1-02 and M1-03 are testable after independent exact-commit review. M1-04 is
+approved and dependency-queued until both are accepted. M1-05 remains
+proposed.
 
 The governing visible-behavior brief is
 [F-002 Manual training planning and factual tracking](../product/F-002-MANUAL-TRAINING-PLANNING-TRACKING.md),
@@ -24,8 +24,8 @@ continues to govern every pre-friends/public/commercial requirement.
 | Priority | Ticket | Status | Depends on | Scope | Approval gate |
 |---|---|---|---|---|---|
 | P1 | [M1-01 Training records and ownership foundation](M1-01-TRAINING-RECORDS-FOUNDATION.md) | accepted | M0-03 and M0-02-C1 accepted; M0-06A for hosted testing | Owner-scoped personal activities, immutable selected 1–7-day plan versions, planned sessions/activities, separate completions, generic measurements, RLS, concurrency | Product-owner acceptance recorded 28 July 2026 |
-| P1 | [M1-02 Manual selectable-horizon training planning](M1-02-SELECTABLE-HORIZON-PLANNING.md) | in development | M1-01 accepted | Mobile 1–7-day selector and plan; create/edit/move/remove future sessions; personal activities; locks; explicit version save | Builder dispatched 28 July 2026; implement and independently review |
-| P1 | [M1-03 Quick training logging](M1-03-QUICK-TRAINING-LOGGING.md) | in development | M1-01 accepted | Planned/unplanned quick actual; completion statuses; duration/effort/feeling/notes; replacements; correction history | Builder dispatched 28 July 2026 in an isolated worktree; implement and independently review |
+| P1 | [M1-02 Manual selectable-horizon training planning](M1-02-SELECTABLE-HORIZON-PLANNING.md) | testable | M1-01 accepted | Mobile 1–7-day selector and plan; create/edit/move/remove future sessions; personal activities; locks; explicit version save | Independent review approved exact implementation `92f878d` and evidence `5dbd4bb`; request product-owner acceptance |
+| P1 | [M1-03 Quick training logging](M1-03-QUICK-TRAINING-LOGGING.md) | testable | M1-01 accepted | Planned/unplanned quick actual; completion statuses; duration/effort/feeling/notes; replacements; correction history | Independent review approved exact implementation `94bc613` and evidence `ea4511a`; request product-owner acceptance |
 | P1 | [M1-04 Today, Progress, and mobile navigation](M1-04-TODAY-PROGRESS-NAVIGATION.md) | approved — dependency-queued | M1-02 and M1-03 accepted | Today action surface, factual plan-versus-actual Progress, versions/corrections, authenticated navigation and honest states | Product-owner approval recorded 28 July 2026; dispatch automatically when both dependencies are accepted |
 | P1 | [M1-05 Consolidated M1 validation](M1-05-M1-VALIDATION-SLICE.md) | proposed | M1-01 through M1-04 accepted | Independent clean-migration, RLS, invariant, 390px end-to-end, accessibility, privacy/security, and regression validation | Dispatch only after all four slices are accepted and approve validator/evidence matrix |
 

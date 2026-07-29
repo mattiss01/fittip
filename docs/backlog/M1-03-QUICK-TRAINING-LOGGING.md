@@ -1,6 +1,10 @@
 # M1-03: Quick training logging
 
-**Status:** in development — dependency satisfied and builder dispatched 28 July 2026
+**Status:** testable — independent review approved 29 July 2026
+
+**Reviewed implementation:** `94bc613ee307cc8d89088fbaa01291806fd6ee23`
+
+**Reviewed validation/evidence:** `ea4511a3a073d185f0afff8020c359267f23189e`
 
 **Milestone:** M1 — manual training planning and tracking
 
