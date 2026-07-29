@@ -38,6 +38,17 @@
 - Before requesting acceptance, provide the Vercel Preview URL, mobile demo path, changed files, tests run, hosted and local results, known limitations, and the precise decision requested.
 - Use the lifecycle in Product Plan section 15.1: draft, approved, in development, testable, accepted.
 
+## Project skill workflow
+
+- Project-scoped skills under `.agents/skills` are the FitTip source of truth when the same skill name also exists globally. The lead names every applicable project skill explicitly in the builder or reviewer handoff so skill selection is deterministic.
+- A selected skill supplements this agreement, approved feature briefs, ADRs, tickets, and validation requirements. It never overrides them or expands approved scope.
+- A builder and an independent reviewer may use the same skill for different purposes, but each must apply it independently. Skill guidance never replaces exact-commit review, automated tests, RLS/ownership checks, hosted evidence, or product-owner acceptance.
+- Use `vercel-react-best-practices` whenever an implementation or review materially changes React components, Next.js pages, Server Actions, data fetching, server/client boundaries, or bundle behavior. Prioritize authentication, request isolation, serialization, waterfalls, and bundle rules; apply lower-impact micro-optimizations only when evidence justifies them. Record the relevant rules checked in the ticket validation record.
+- Use `frontend-design` whenever an approved ticket creates or materially reshapes user-visible UI. The skill may propose tokens, typography, layout, interaction, copy, and one FitTip-specific visual signature, but any new visible direction or behavior still requires product-owner approval before implementation. Preserve the serious-coach tone, 390px mobile path, keyboard focus, reduced motion, and honest empty/error states.
+- `sleek-design-mobile-apps` is an optional external design service, not a default implementation tool. Do not authenticate, create a project, send content, incur cost, or store Sleek output without explicit product-owner approval of the provider, purpose, data sent, credential scopes, and spend. Start with synthetic content only, never send real user or sensitive training data, and treat generated screenshots/HTML as reviewable design proposals rather than application source of truth.
+- `find-skills` is lead-agent research only. It may identify and assess candidate skills, but no agent may install, update, remove, or execute a newly discovered skill without product-owner approval. Report the source, reputation, license, permissions/external access, expected value, and overlap with existing project skills first.
+- Adding, updating, or removing project skill files or `skills-lock.json` is a separately committed governance and supply-chain change. Preserve the lockfile hashes and do not silently replace a project skill with a global copy.
+
 ## Engineering rules
 
 - Keep AI calls and business rules server-side, behind domain-service interfaces.
