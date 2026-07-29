@@ -14,7 +14,7 @@ direction for independent contiguous ranks, active-by-default creation,
 explicit terminal-state reopening, archive-first deletion, and the proposed
 390px flow within the existing owner-or-synthetic founder boundary.
 
-**Depends on:** [M1 milestone closeout accepted](../../validation/M1/M1-MILESTONE-CLOSEOUT.md); [M0-03 / F-001 accepted](../../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md); [M0-02-C1 accepted](../M0/M0-02-C1-REMOVE-USERNAME.md); [ADR-002](../../decisions/ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md); [ADR-004](../../decisions/ADR-004-USERNAME-FREE-ACCOUNT-PROFILE.md)
+**Depends on:** [M1 milestone closeout accepted](../../validation/M1/M1-MILESTONE-CLOSEOUT.md); [M0-03 / F-001 accepted](../../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md); [M0-02-C1 accepted](../M0/M0-02-C1-REMOVE-USERNAME.md); [ADR-002](../../decisions/ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md); [ADR-004](../../decisions/ADR-004-USERNAME-FREE-ACCOUNT-PROFILE.md); [ADR-009](../../decisions/ADR-009-M2-GOAL-MUTATION-TRANSACTION.md)
 
 **Hosted test dependency:** [M0-06A accepted](../M0/M0-06A-FOUNDER-HOSTED-STAGING.md)
 
@@ -151,14 +151,12 @@ The implementation must:
 5. let the UI refresh current state without silently overwriting the other
    change.
 
-Recommendation: serialize goal-priority mutations per owner using a stable
-owner record or another database-enforced transaction boundary, then validate
-and write the complete ordering in one transaction. Alternatives include a
-serializable transaction with bounded retries or a narrowly scoped private
-database operation. Any new RPC, function, privileged connection, trigger, or
-`SECURITY DEFINER` use is a consequential architecture decision and requires
-an ADR plus product-owner approval. A public definer function is not an
-acceptable shortcut.
+[ADR-009](../../decisions/ADR-009-M2-GOAL-MUTATION-TRANSACTION.md) approves one
+narrowly scoped authenticated `SECURITY DEFINER` goal-mutation function. It
+uses an Auth-derived owner, empty search path, fully qualified objects,
+revoked direct table writes, a per-owner transaction advisory lock, complete
+ordering validation, and an expected collection revision. No other privileged
+function, connection, credential, or write path is approved.
 
 ## Ownership, repository, and RLS rules
 
@@ -347,30 +345,25 @@ documentation. The builder may choose reversible names and decomposition after
 approval; a new privileged database/API boundary is not reversible and needs
 an ADR.
 
-## Open product, architecture, and privacy decisions
+## Approved implementation decisions
 
-1. **Rank semantics.** Recommendation: contiguous independent ordering for
-   active core and active supporting goals. Alternative: rank only core goals
-   and sort supporting goals by creation time.
-2. **Create default.** Recommendation: new goals start active, with core slot
-   availability visible before save. Alternative: start paused for a
-   review-first flow.
-3. **Terminal-state reopening.** Recommendation: allow explicit reopen with
-   fresh validation and an audit entry. Alternative: duplicate as a new goal
-   while preserving the old terminal record.
-4. **Archive versus delete.** Recommendation: archive referenced goals and
-   hard-delete only never-referenced goals; finalize content-history and
-   deletion evidence against the accepted M0-04 implementation.
-5. **Target metric.** Approve the minimum sport-agnostic shape and field limits;
+1. **Rank semantics:** contiguous independent ordering for active core and
+   active supporting goals.
+2. **Create default:** new goals start active, with core slot availability
+   visible before save.
+3. **Terminal-state reopening:** explicit reopen with fresh validation and a
+   minimal audit entry.
+4. **Archive versus delete:** archive referenced goals and hard-delete only
+   never-referenced eligible goals.
+5. **Target metric:** use the minimum bounded sport-agnostic representation;
    do not default to strength measurements.
-6. **Concurrency architecture.** Approve the per-owner transaction mechanism.
-   Any private function/RPC, trigger, elevated credential, or new database
-   connection requires an ADR and focused security review.
-7. **Visible flow and copy.** Approve routes, labels, rank interaction,
-   conflict copy, and destructive confirmations at 390px.
-8. **Goal text privacy.** Confirm inventory classification, retention,
-   deletion/export behavior, and prohibited logging/analytics fields before
-   external collection.
+6. **Concurrency architecture:** use only the authenticated goal-mutation
+   transaction approved in ADR-009.
+7. **Visible flow and copy:** use the proposed **You → Goals** routes, explicit
+   ranks, conflict state, and destructive confirmations at 390px.
+8. **Goal text privacy:** treat content as private owner training data, exclude
+   it from logs/analytics/external requests, and keep external collection
+   blocked pending the M0 privacy implementation.
 
 ## Handoff
 
@@ -404,11 +397,10 @@ focused corrections**.
 
 ## Approval gate
 
-Product-owner implementation approval is recorded and the dependencies are
-accepted, so M2-01 is **in development**. Reversible field names, bounded text
-limits, and the minimum sport-agnostic target representation may be finalized
-and evidenced within this ticket. A private function/RPC, trigger, elevated
-credential or connection, or another new privileged transaction boundary
-still requires a proposed ADR and explicit product-owner approval before it is
-introduced. M0-06A permits only owner/synthetic founder staging; M0-06 remains
-a pre-friends/public/commercial gate.
+Product-owner implementation approval and the ADR-009 transaction approval are
+recorded, so M2-01 remains **in development**. Reversible field names, bounded
+text limits, and the minimum sport-agnostic target representation may be
+finalized and evidenced within this ticket. No additional privileged function,
+trigger, credential, connection, or write boundary is approved. M0-06A permits
+only owner/synthetic founder staging; M0-06 remains a
+pre-friends/public/commercial gate.
