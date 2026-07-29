@@ -21,7 +21,8 @@ founder-hosted use
 
 Let the authenticated product owner request and review a structured,
 sport-agnostic high-level roadmap derived from accepted goals, active memory,
-and accepted intake facts. The roadmap expresses phases, milestones, focus,
+and active coaching context explicitly accepted by the user. The roadmap
+expresses phases, milestones, focus,
 review points, uncertainty, and goal tradeoffs. It remains a versioned proposal
 until the owner explicitly accepts, rejects, or edits it.
 
@@ -41,7 +42,7 @@ until the M0 gates pass.
 1. Define strict roadmap input, proposal, phase, milestone, allocation,
    uncertainty, and review-point schemas.
 2. Construct owner-scoped context from accepted active goals, eligible active
-   memory, and accepted intake facts.
+   memory records explicitly accepted by the user.
 3. Request one roadmap candidate through M3-01.
 4. Apply deterministic server validation for owner, source versions, time
    bounds, goal allocation, safety, and schema.
@@ -134,8 +135,8 @@ decisions.
 
 1. An owner can request, inspect, edit, reject, and accept a roadmap proposal at
    `390x844`.
-2. Context uses only accepted active goals, eligible active memory, and
-   accepted intake owned by the current user.
+2. Context uses only eligible active goals and memory records that are
+   user-created or explicitly accepted by the current user.
 3. Output is structured, sport-agnostic, bounded, versioned, and includes
    uncertainty and explicit review points.
 4. Proposal, rejection, and accepted roadmap are distinguishable records;

@@ -1,6 +1,6 @@
 # FitTip data-model overview
 
-**Status:** living planning view — M0 is implemented; M1 through M3 are
+**Status:** living planning view — M0 and M1 are accepted; M2 and M3 are
 proposed and require ticket-level approval
 
 This diagram shows the intended ownership and history boundaries. It is a
@@ -15,7 +15,7 @@ flowchart TB
     PROFILE["Profile<br/>user_id, created_at"]
   end
 
-  subgraph M1["M1 — proposed manual planning and tracking"]
+  subgraph M1["M1 — accepted manual planning and tracking"]
     ACTIVITY["Personal activity<br/>owner-created definition"]
     PLAN["Detailed plan version<br/>day_count: 1–7<br/>start/end date, timezone<br/>parent/source version"]
     SESSION["Planned session<br/>date, order, intent, duration, lock"]
@@ -25,10 +25,10 @@ flowchart TB
     CORRECTION["Completion correction history<br/>append-only revisions/current pointer"]
   end
 
-  subgraph M2["M2 — proposed goals, memory, and intake"]
+  subgraph M2["M2 — proposed goals, memory, and guided onboarding"]
     GOAL["Goal<br/>core/supporting, rank, lifecycle"]
     MEMORY["Memory item<br/>type, provenance, status, confidence, expiry"]
-    INTAKE["Intake draft"]
+    INTAKE["Onboarding draft"]
     CANDIDATE["Reviewed candidate<br/>accept / edit / reject"]
   end
 
@@ -77,7 +77,7 @@ flowchart TB
 
 - **M0 is actual:** today the implemented public data model contains only the
   owner profile backed by Supabase Auth.
-- **M1 is the next proposed model:** a detailed plan version contains exactly
+- **M1 is accepted:** a detailed plan version contains exactly
   the user-requested 1–7 consecutive owner-local dates.
 - Planned sessions/activities and completed sessions/activities are separate.
   The dotted source link never converts or rewrites a plan into an actual.
@@ -94,18 +94,18 @@ flowchart TB
 | Model area | Owning ticket | Current status |
 |---|---|---|
 | Profile and ownership baseline | M0-02 / M0-02-C1 | accepted |
-| Detailed plans, planned/actual separation, personal activities | [M1-01](../backlog/M1/M1-01-TRAINING-RECORDS-FOUNDATION.md) | proposed |
-| Manual selected-horizon plan behavior | [M1-02](../backlog/M1/M1-02-SELECTABLE-HORIZON-PLANNING.md) | proposed |
-| Factual logging and correction history | [M1-03](../backlog/M1/M1-03-QUICK-TRAINING-LOGGING.md) | proposed |
+| Detailed plans, planned/actual separation, personal activities | [M1-01](../backlog/M1/M1-01-TRAINING-RECORDS-FOUNDATION.md) | accepted |
+| Manual selected-horizon plan behavior | [M1-02](../backlog/M1/M1-02-SELECTABLE-HORIZON-PLANNING.md) | accepted |
+| Factual logging and correction history | [M1-03](../backlog/M1/M1-03-QUICK-TRAINING-LOGGING.md) | accepted |
 | Goals | [M2-01](../backlog/M2/M2-01-GOAL-MODEL-VALIDATION.md) | proposed |
 | Memory | [M2-02](../backlog/M2/M2-02-MEMORY-MODEL-MANAGEMENT.md) | proposed |
-| Intake candidates and explicit publication | [M2-03](../backlog/M2/M2-03-INTAKE-FACT-REVIEW.md) | proposed |
+| Guided-onboarding candidates and explicit publication | [M2-03](../backlog/M2/M2-03-INTAKE-FACT-REVIEW.md) | proposed |
 | AI proposal/source records | [M3-01](../backlog/M3/M3-01-LOCAL-AI-ADAPTER-CONTROLS.md), [M3-02](../backlog/M3/M3-02-ROADMAP-PROPOSAL.md), [M3-03](../backlog/M3/M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md) | proposed |
 | Proposal edit and explicit acceptance | [M3-04](../backlog/M3/M3-04-PLAN-EDIT-LOCK-ACCEPTANCE.md) | proposed |
 
 ## Approval boundary
 
-The visual records the current intended shape only. M1-01 must still approve
-the exact tables, foreign keys, revision/current-pointer strategy, ownership
-columns, RLS policies, delete/archive behavior, and transaction mechanism
-before a migration is implemented.
+The visual records the current intended shape only. M2-01 through M2-03 must
+still approve their exact tables, fields, ownership/RLS policies, history,
+delete/expiry behavior, and publication transaction before migrations are
+implemented.

@@ -60,7 +60,7 @@ retention/data-use term, external resource, call, or spend.
 5. Resolve all context references under verified `user_id`; accept no
    caller-supplied ownership.
 6. Build a minimal operation-specific context from accepted goals, active
-   memory, and accepted intake records.
+   memory records explicitly accepted by the user.
 7. Enforce schema, size, rate, concurrency, deadline, retry, idempotency, token,
    cost, and environment limits.
 8. Validate structured output and map failures to safe domain errors.
@@ -102,8 +102,8 @@ payload and return an untrusted candidate.
 
 - Server derives request id, owner id, operation, timestamps, schema versions,
   prompt version, environment, and context references.
-- Context uses only the accepted active goals, active/non-expired memory, and
-  accepted intake facts required by the operation.
+- Context uses only operation-required active goals and active/non-expired
+  memory records that are user-created or explicitly accepted by the user.
 - Proposed, rejected, archived, expired, cross-user, raw unbounded history, and
   unrelated records are excluded.
 - Raw Auth tokens, email, password data, internal secrets, arbitrary database

@@ -1,10 +1,17 @@
-# M2-03: Structured intake and fact review
+# M2-03: Guided onboarding and context review
 
-**Status:** proposed — not approved for implementation
+**Status:** proposed — product direction approved; detailed implementation
+decisions remain open
 
-**Milestone:** M2 — goals, possibilities, and editable memory
+**Milestone:** M2 — goals, editable coaching context, and guided onboarding
 
 **Priority:** P1
+
+**Feature brief:** [F-003 draft; direction approved](../../product/F-003-GOALS-MEMORY-GUIDED-ONBOARDING.md)
+
+**Direction approval:** On 29 July 2026 the product owner approved guided
+onboarding inside M2, with goals as a central step, accepted data editable in
+**You**, and future AI limited to active explicitly accepted records.
 
 **Depends on:** [M2-01 accepted](M2-01-GOAL-MODEL-VALIDATION.md) and [M2-02 accepted](M2-02-MEMORY-MODEL-MANAGEMENT.md)
 
@@ -14,15 +21,22 @@
 and [ADR-007](../../decisions/ADR-007-FOUNDER-HOSTED-STAGING.md);
 product-owner or synthetic data only, local or founder-hosted
 
-**Blocks:** [M2-04 M2 validation slice](M2-04-M2-VALIDATION-SLICE.md)
+**Blocks:** [M2-04 targeted M2 milestone closeout](M2-04-M2-VALIDATION-SLICE.md)
 
 ## Outcome
 
-Let an authenticated user complete a compact, sport-agnostic structured intake,
-review deterministic candidate goals and memory items, and explicitly accept,
-edit-and-accept, or reject every candidate before any item becomes active.
-Interrupted intake can resume safely, validation conflicts remain reviewable,
-and retries do not duplicate accepted records.
+After verified account creation and first sign-in, offer an authenticated user
+a detailed but progressive, sport-agnostic guided onboarding. The flow covers
+goals, current training background, possibilities, preferences, and optional
+constraints. The user reviews deterministic candidate goals and memory items
+and explicitly accepts, edits-and-accepts, or rejects every candidate before
+anything becomes active.
+
+Onboarding is separate from the authentication/profile-creation transaction,
+can be skipped without blocking manual M1 features, can resume safely, and is
+also reachable later from **You**. Completion links to the accepted goals and
+coaching context in **You**. Validation conflicts remain reviewable and retries
+do not duplicate accepted records.
 
 This ticket uses structured form input and deterministic mapping only. It does
 not use production AI extraction, accept unreviewed natural-language
@@ -30,15 +44,16 @@ inferences, generate a plan, provide coaching, or give diagnostic advice.
 
 ## Approval, environment, and external-use boundary
 
-This proposal may be implemented locally only after M2-01 and M2-02 are
-accepted. It does not authorize remote persistence, production AI, external
-registration, analytics, or a privacy/legal conclusion.
+This proposal may be implemented only after M2-01 and M2-02 are accepted,
+using the approved local/founder-hosted owner-or-synthetic boundary. It does
+not authorize production AI, external registration, analytics, or a
+privacy/legal conclusion.
 
 M0-06A is required before a hosted testable release. M0-06 remains mandatory,
 together with the privacy and recovery gates below, before friends, public
 registration, commercial use, or production.
 
-Before any external user submits intake, all of the following must be
+Before any external user submits onboarding data, all of the following must be
 separately approved, implemented, validated, and accepted:
 
 - M0-03B account recovery;
@@ -57,7 +72,8 @@ AI transfer even if an AI-consent design later exists.
 
 ## Scope
 
-1. Add the approved structured intake steps and review screen.
+1. Add the approved first-run, resumable guided-onboarding steps and review
+   screen, with a later entry point from **You**.
 2. Deterministically map submitted fields to candidate goal and memory
    contracts already accepted in M2-01/M2-02.
 3. Keep candidate/draft state separate from active goal and memory records.
@@ -76,7 +92,7 @@ AI transfer even if an AI-consent design later exists.
 
 - No production AI extraction, chat, prompt, model, provider call, generated
   plan, roadmap, activity, coaching response, or diagnostic advice.
-- No general narrative intake unless a later brief separately approves its
+- No general narrative onboarding unless a later brief separately approves its
   purpose, privacy handling, and mapping.
 - No silent persistence, preselected acceptance, automatic merge, or direct
   write that bypasses the accepted goal/memory services.
@@ -84,16 +100,19 @@ AI transfer even if an AI-consent design later exists.
   implementation, or deletion operation.
 - No new goal or memory behavior beyond the accepted M2-01/M2-02 contracts.
 
-## Structured intake boundary
+## Structured onboarding boundary
 
-The default proposed intake asks only for structured fields needed by the
+The default proposed onboarding asks only for structured fields needed by the
 accepted goal and memory contracts:
 
 - goals, desired outcomes, category, sports/activity areas, dates, target
   detail/metric, core/supporting tier, and rank;
+- current training background and a sport-relevant recent baseline without a
+  universal gym-first experience scale;
 - weekly availability and time limits;
 - equipment and locations/possibilities;
-- preferences and explicit dislikes;
+- training preferences, explicit dislikes, and coaching-style preferences;
+- timezone, units, and approved planning defaults;
 - current constraints and optional expiry/review date; and
 - optional limitation flags needed to show approved non-diagnostic safety copy.
 
@@ -198,8 +217,9 @@ review and again at publication.
 - Contradiction: show current and candidate content side by side with source,
   status, and expiry; require the user to choose which item to activate,
   disable, update, or reject.
-- Inferred/system-looking content: deterministic structured intake records
-  `intake_confirmed`, not `inferred`. A user cannot forge system provenance.
+- Inferred/system-looking content: deterministic structured onboarding records
+  use `intake_confirmed`, not `inferred`. A user cannot forge system
+  provenance.
 - Health-adjacent conflict: preserve neutral wording and do not choose which
   statement is medically correct.
 
@@ -266,20 +286,26 @@ signal are open safety/product decisions.
 
 ## Proposed 390px user flow
 
-1. **Welcome/purpose:** Explain what will be collected, that nothing becomes
-   active until review, and where the privacy notice is available.
+1. **Welcome/purpose:** After first verified sign-in, explain what will be
+   collected, that onboarding is resumable/skippable, that nothing becomes
+   active until review, and where the privacy notice is available. Existing
+   users can enter from **You**.
 2. **Goals:** Add and order goal cards using the accepted M2-01 fields.
-3. **Possibilities:** Enter availability, time, equipment, and locations.
-4. **Preferences and constraints:** Enter the approved structured fields and
-   see conservative safety copy when applicable.
-5. **Review:** Candidate goals and memory are grouped by destination. Each card
+3. **Current training:** Enter the approved sport-relevant background and
+   recent-baseline fields.
+4. **Possibilities:** Enter availability, time, equipment, and locations.
+5. **Preferences and constraints:** Enter the approved training/coaching
+   preferences and optional limitations; see conservative safety copy when
+   applicable.
+6. **Review:** Candidate goals and memory are grouped by destination. Each card
    requires accept, edit-and-accept, or reject.
-6. **Resolve:** Duplicates, contradictions, fourth-core, rank, and stale-state
+7. **Resolve:** Duplicates, contradictions, fourth-core, rank, and stale-state
    conflicts are handled explicitly.
-7. **Save:** A summary names the counts to be published. One final action
+8. **Save:** A summary names the counts to be published. One final action
    atomically creates/updates selected accepted records.
-8. **Complete:** Show only actual persisted goals/memory with links to inspect
-   them. Do not generate or imply a plan.
+9. **Complete:** Show only actual persisted records with links to
+   **You -> Goals** and **You -> Coach context**. Do not generate or imply a
+   plan.
 
 Each step uses a visible title/progress indicator, associated labels, inline
 and summary errors, thumb-reachable actions, safe back navigation, and
@@ -288,8 +314,9 @@ required fields remain unapproved proposals.
 
 ## Acceptance criteria
 
-1. At `390x844`, an authenticated user can start, save, resume, review, publish,
-   cancel, and safely retry the approved structured intake.
+1. At `390x844`, an authenticated user can start after verified sign-in, skip,
+   save, resume, review, publish, cancel, revisit from **You**, and safely retry
+   the approved structured onboarding.
 2. Intake is sport-agnostic and contains no production AI extraction, coaching
    chat, plan generation, global activity library, or diagnostic advice.
 3. Candidate goals/memory remain separate from active records until explicit
@@ -384,7 +411,7 @@ git diff --check
    goal/memory contracts, not copying divergent rules.
 4. Create the forward migration and direct draft/candidate authorization tests.
 5. Add the intake domain/repository boundary and atomic publication service.
-6. Add only the approved structured intake and review routes/components.
+6. Add only the approved guided-onboarding and review routes/components.
 7. Add unit, integration, privacy/security, accessibility, and 390px tests.
 8. Regenerate types from a clean reset and run all gates.
 9. Hand off to independent review. Missing goal/memory behavior returns to its
@@ -399,8 +426,10 @@ design requires explicit architecture/privacy approval.
 
 ## Open product, architecture, safety, and privacy decisions
 
-1. **Required intake fields.** Approve which goal, availability, equipment,
-   preference, and limitation fields are required versus skippable.
+1. **Required onboarding fields and AI readiness.** Approve which goal,
+   background/baseline, availability, equipment, preference, unit/timezone,
+   and limitation fields are required versus skippable, plus the minimum
+   accepted context required before future AI generation.
 2. **Free text.** Recommendation: no general narrative box; approve any short
    text fields, limits, and purpose separately.
 3. **Draft persistence.** Recommendation: owner-scoped resumable server draft;
@@ -415,8 +444,9 @@ design requires explicit architecture/privacy approval.
 6. **Safety.** Approve limitation fields, static non-diagnostic copy, trigger
    thresholds, and whether severe/acute/worsening signals block publication or
    only the affected constraint.
-7. **Mobile IA/copy.** Approve route, step count/order, progress pattern,
-   button labels, completion copy, and whether a user may skip intake.
+7. **Mobile IA/copy.** Approve first-run and **You** entry routes, step
+   count/order, progress pattern, button labels, completion copy, deferral/
+   reminder behavior, and restart behavior.
 8. **Privacy.** Approve collection notice placement, content classification,
    source retention, access/export, deletion, backups, and prohibited logging
    before external use.
@@ -440,14 +470,15 @@ Before testable status, provide:
   was added.
 
 The lead agent assigns an independent reviewer. The precise product-owner
-decision after review is: **accept M2-03 as the structured intake/fact-review
-slice, or return focused corrections**.
+decision after review is: **accept M2-03 as the guided-onboarding and context
+review slice, or return focused corrections**.
 
 ## Approval gate
 
-The product owner must approve required fields, draft persistence/retention,
-partial-selection and atomic-publication behavior, duplicate/conflict rules,
-safety copy/thresholds, privacy handling, and mobile flow/copy. Any
-consequential transaction or persistence mechanism requires an ADR. Approval
-dispatches only after M2-01 and M2-02 are accepted. Until then, M2-03 remains
+The product owner must approve required fields and AI-readiness minimum, draft
+persistence/retention, partial-selection and atomic-publication behavior,
+duplicate/conflict rules, safety copy/thresholds, privacy handling, and mobile
+flow/copy. Any consequential transaction or persistence mechanism requires an
+ADR. Direction approval does not dispatch implementation. Ticket approval can
+dispatch only after M2-01 and M2-02 are accepted. Until then, M2-03 remains
 **proposed**.

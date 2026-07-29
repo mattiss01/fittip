@@ -24,7 +24,7 @@ commercial use, or production.
 ## Dependency chain
 
 ```text
-Accepted M2 goal + memory + intake + validation foundations
+Accepted M2 goals + coaching context + guided onboarding + targeted closeout
   -> M3-01 local AI adapter and controls
     -> M3-02 high-level roadmap proposal
       -> M3-03 exact selected 1–7-day plan proposal

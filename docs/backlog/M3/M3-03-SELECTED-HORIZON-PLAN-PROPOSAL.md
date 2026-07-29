@@ -22,12 +22,12 @@ founder-hosted use
 ## Outcome
 
 Generate and display one sport-agnostic plan proposal for the user-selected
-next 1–7 days, based on the accepted roadmap, active goals, active memory, and
-accepted intake facts. The proposal contains exactly the requested number of
-consecutive owner-local dates, dated sessions and personal activity candidates,
-goal allocation, duration/intensity targets, alternatives, concise reasoning,
-and conservative safety behavior. It changes no plan until explicit acceptance
-in M3-04.
+next 1–7 days, based on the accepted roadmap, active goals, and active,
+explicitly accepted coaching context. The proposal contains exactly the
+requested number of consecutive owner-local dates, dated sessions and personal
+activity candidates, goal allocation, duration/intensity targets, alternatives,
+concise reasoning, and conservative safety behavior. It changes no plan until
+explicit acceptance in M3-04.
 
 ## Local-owner and pre-friends boundary
 
@@ -42,8 +42,8 @@ instrumentation/deployment gates remain mandatory before those uses.
 1. Define strict `DetailedPlanProposal`, session, activity, target,
    alternative, allocation, rationale, and safety schemas.
 2. Build an owner-scoped context from the current accepted roadmap, active
-   goals, eligible memory, accepted intake, timezone, and approved generation
-   date.
+   goals, eligible explicitly accepted memory, timezone, and approved
+   generation date.
 3. Accept an explicit user-selected `dayCount` from 1 through 7 and generate
    exactly that many consecutive owner-local calendar dates.
 4. Enforce server-owned limits for sessions, daily/horizon time, activities,
@@ -136,8 +136,8 @@ approval before implementation.
 
 ## Proposal and authorization rules
 
-- Proposal, accepted roadmap, goals, memory, and intake remain separate
-  records.
+- Proposal, accepted roadmap, goals, memory, and onboarding drafts/candidates
+  remain separate records.
 - A proposal stores owner, schema/prompt versions, generation status,
   idempotency reference, source ids/versions, validation state, and the
   structured proposed horizon.

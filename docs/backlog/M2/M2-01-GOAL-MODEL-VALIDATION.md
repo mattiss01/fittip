@@ -2,9 +2,11 @@
 
 **Status:** proposed — not approved for implementation
 
-**Milestone:** M2 — goals, possibilities, and editable memory
+**Milestone:** M2 — goals, editable coaching context, and guided onboarding
 
 **Priority:** P1
+
+**Feature brief:** [F-003 draft; direction approved](../../product/F-003-GOALS-MEMORY-GUIDED-ONBOARDING.md)
 
 **Depends on:** [M1 milestone closeout accepted](../../validation/M1/M1-MILESTONE-CLOSEOUT.md); [M0-03 / F-001 accepted](../../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md); [M0-02-C1 accepted](../M0/M0-02-C1-REMOVE-USERNAME.md); [ADR-002](../../decisions/ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md); [ADR-004](../../decisions/ADR-004-USERNAME-FREE-ACCOUNT-PROFILE.md)
 
@@ -14,7 +16,7 @@
 and [ADR-007](../../decisions/ADR-007-FOUNDER-HOSTED-STAGING.md);
 product-owner or synthetic data only, local or founder-hosted
 
-**Blocks:** [M2-03 Intake fact review](M2-03-INTAKE-FACT-REVIEW.md) and [M2-04 M2 validation slice](M2-04-M2-VALIDATION-SLICE.md)
+**Blocks:** [M2-03 Guided onboarding](M2-03-INTAKE-FACT-REVIEW.md) and [M2-04 targeted M2 closeout](M2-04-M2-VALIDATION-SLICE.md)
 
 ## Outcome
 

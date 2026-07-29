@@ -252,7 +252,7 @@ Primary tabs:
 ### Essential screens and states
 
 - Empty / onboarding
-- Coaching intake and fact-review step
+- Guided onboarding and context-review step
 - Plan proposal and accepted detailed plan
 - Session detail
 - Quick summary log
@@ -545,14 +545,17 @@ The proposed slices are maintained in the separate
 - Goal CRUD with priority/order validation: max 3 active core goals.
 - Store availability, time limits, equipment/locations, preferences, and
   limitations as explicit memory items.
-- Add structured intake and fact review so candidates are explicitly accepted,
-  edited, or rejected before becoming active.
+- Add first-run, resumable guided onboarding for goals, current training
+  background, possibilities, preferences, and optional constraints. Require
+  explicit candidate review before anything becomes active.
 - Integrate goals and memory into the accepted M1 **You** surface without
   changing plan/completion history.
 
 **Exit:** the user can accurately express changing goals and constraints,
-inspect/edit stored memory, and explicitly control which intake facts become
-active.
+complete or revisit guided onboarding, inspect/edit accepted goals and
+coaching context under **You**, and explicitly control which onboarding facts
+become active. M2 makes no AI provider call; later AI may use only active,
+explicitly accepted records.
 
 ### M3: AI-generated roadmap and selected-horizon plan proposal
 

@@ -10,7 +10,7 @@ Current planning is separated by milestone:
 
 - [M0 foundation and external-use gates](docs/backlog/M0/M0-BACKLOG.md)
 - [M1 manual training planning and tracking](docs/backlog/M1/M1-BACKLOG.md)
-- [M2 goals, memory, and structured intake](docs/backlog/M2/M2-BACKLOG.md)
+- [M2 goals, editable coaching context, and guided onboarding](docs/backlog/M2/M2-BACKLOG.md)
 - [M3 AI roadmap and selected 1–7-day proposal](docs/backlog/M3/M3-BACKLOG.md)
 
 Start with the [documentation overview](docs/README.md) to navigate product
