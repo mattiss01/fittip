@@ -18,11 +18,18 @@ import {
   type ManualPlanInput,
   type PersonalActivityInput,
 } from "@/server/training/training-records";
+import { assertPastPlanContentIsImmutable } from "@/server/training/past-plan-protection";
 
 const PERSONAL_ACTIVITY_COLUMNS =
   "id, user_id, name, sport, description, measurement_mode, default_measurement, archived_at, created_at, updated_at" as const;
 const PLAN_HEAD_COLUMNS =
   "user_id, current_version_id, revision, updated_at" as const;
+const PLAN_VERSION_COLUMNS =
+  "id, user_id, version_number, parent_version_id, parent_version_number, day_count, start_date, end_date, timezone_name, source_kind, accepted_at, created_at" as const;
+const PLANNED_SESSION_COLUMNS =
+  "id, user_id, plan_version_id, local_date, position, title, sport, intent, expected_duration_minutes, note, is_locked, created_at" as const;
+const PLANNED_ACTIVITY_COLUMNS =
+  "id, user_id, planned_session_id, personal_activity_id, position, name, sport, instructions, measurement_mode, target, is_locked, created_at" as const;
 
 type TrainingRecordClient = SupabaseClient<Database> | ServerUserClient;
 type PlanVersionRow =
@@ -30,6 +37,10 @@ type PlanVersionRow =
 type PlanHeadRow = Database["public"]["Tables"]["detailed_plan_heads"]["Row"];
 type PersonalActivityRow =
   Database["public"]["Tables"]["personal_activities"]["Row"];
+type PlannedSessionRow =
+  Database["public"]["Tables"]["planned_sessions"]["Row"];
+type PlannedActivityRow =
+  Database["public"]["Tables"]["planned_activities"]["Row"];
 
 export type DetailedPlanVersion = {
   id: string;
@@ -65,6 +76,12 @@ export type PersonalActivity = {
   updatedAt: string;
 };
 
+export type CurrentManualPlan = {
+  head: DetailedPlanHead;
+  version: DetailedPlanVersion;
+  plan: ManualPlanInput;
+};
+
 export class TrainingRecordAuthenticationError extends Error {
   constructor(readonly accessError?: VerifiedUserAccessError) {
     super("An authenticated FitTip user is required.");
@@ -96,7 +113,10 @@ export class ReferencedPersonalActivityError extends Error {
 }
 
 export class TrainingRecordRepository {
-  constructor(private readonly client: TrainingRecordClient) {}
+  constructor(
+    private readonly client: TrainingRecordClient,
+    private readonly now: () => Date = () => new Date(),
+  ) {}
 
   async getCurrentPlanHead(): Promise<DetailedPlanHead | null> {
     const userId = await this.getVerifiedUserId();
@@ -113,6 +133,69 @@ export class TrainingRecordRepository {
     return data ? toPlanHead(data) : null;
   }
 
+  async getCurrentManualPlan(): Promise<CurrentManualPlan | null> {
+    const userId = await this.getVerifiedUserId();
+    const { data: headRow, error: headError } = await this.client
+      .from("detailed_plan_heads")
+      .select(PLAN_HEAD_COLUMNS)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (headError) {
+      throw new TrainingRecordPersistenceError();
+    }
+    if (!headRow) {
+      return null;
+    }
+
+    const { data: versionRow, error: versionError } = await this.client
+      .from("detailed_plan_versions")
+      .select(PLAN_VERSION_COLUMNS)
+      .eq("id", headRow.current_version_id)
+      .eq("user_id", userId)
+      .single();
+
+    if (versionError || !versionRow) {
+      throw new TrainingRecordPersistenceError();
+    }
+
+    const { data: sessionRows, error: sessionsError } = await this.client
+      .from("planned_sessions")
+      .select(PLANNED_SESSION_COLUMNS)
+      .eq("plan_version_id", versionRow.id)
+      .eq("user_id", userId)
+      .order("local_date")
+      .order("position");
+
+    if (sessionsError) {
+      throw new TrainingRecordPersistenceError();
+    }
+
+    const sessionIds = sessionRows.map(({ id }) => id);
+    let activityRows: PlannedActivityRow[] = [];
+    if (sessionIds.length > 0) {
+      const { data, error } = await this.client
+        .from("planned_activities")
+        .select(PLANNED_ACTIVITY_COLUMNS)
+        .eq("user_id", userId)
+        .in("planned_session_id", sessionIds)
+        .order("position");
+
+      if (error) {
+        throw new TrainingRecordPersistenceError();
+      }
+      activityRows = data;
+    }
+
+    return {
+      head: toPlanHead(headRow),
+      version: toPlanVersion(versionRow),
+      plan: parseManualPlanInput(
+        toManualPlanInput(versionRow, sessionRows, activityRows),
+      ),
+    };
+  }
+
   async saveManualPlan(
     input: unknown,
     expectedRevision: number,
@@ -122,7 +205,8 @@ export class TrainingRecordRepository {
       throw new TrainingRecordValidationError();
     }
 
-    await this.getVerifiedUserId();
+    const current = await this.getCurrentManualPlan();
+    assertPastPlanContentIsImmutable(current?.plan ?? null, plan, this.now());
     const { data, error } = await this.client
       .rpc("save_manual_plan_version", {
         p_expected_revision: expectedRevision,
@@ -340,6 +424,54 @@ function toPersonalActivity(row: PersonalActivityRow): PersonalActivity {
     archivedAt: row.archived_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+function toManualPlanInput(
+  version: PlanVersionRow,
+  sessions: PlannedSessionRow[],
+  activities: PlannedActivityRow[],
+): unknown {
+  const activitiesBySession = new Map<string, PlannedActivityRow[]>();
+  for (const activity of activities) {
+    const sessionActivities =
+      activitiesBySession.get(activity.planned_session_id) ?? [];
+    sessionActivities.push(activity);
+    activitiesBySession.set(activity.planned_session_id, sessionActivities);
+  }
+
+  return {
+    dayCount: version.day_count,
+    startDate: version.start_date,
+    timezoneName: version.timezone_name,
+    sessions: sessions.map((session) => ({
+      localDate: session.local_date,
+      position: session.position,
+      title: session.title,
+      sport: session.sport,
+      ...(session.intent === null ? {} : { intent: session.intent }),
+      ...(session.expected_duration_minutes === null
+        ? {}
+        : { expectedDurationMinutes: session.expected_duration_minutes }),
+      ...(session.note === null ? {} : { note: session.note }),
+      isLocked: session.is_locked,
+      activities: (activitiesBySession.get(session.id) ?? []).map(
+        (activity) => ({
+          ...(activity.personal_activity_id === null
+            ? {}
+            : { personalActivityId: activity.personal_activity_id }),
+          position: activity.position,
+          name: activity.name,
+          sport: activity.sport,
+          ...(activity.instructions === null
+            ? {}
+            : { instructions: activity.instructions }),
+          measurementMode: activity.measurement_mode,
+          ...(activity.target === null ? {} : { target: activity.target }),
+          isLocked: activity.is_locked,
+        }),
+      ),
+    })),
   };
 }
 

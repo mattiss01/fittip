@@ -145,3 +145,892 @@ button:disabled {
   width: 100%;
   margin-top: 1.75rem;
 }
+
+.primary-link {
+  display: grid;
+  min-height: 3.2rem;
+  place-items: center;
+  margin-top: 1.75rem;
+  border-radius: 0.35rem;
+  background: var(--foreground);
+  color: var(--surface);
+  font:
+    700 0.85rem "Courier New",
+    monospace;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+}
+
+.primary-link:hover {
+  background: var(--accent-dark);
+}
+
+.plan-shell {
+  display: block;
+  width: min(100%, 58rem);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: max(1.25rem, env(safe-area-inset-top)) 1rem
+    calc(8.5rem + env(safe-area-inset-bottom));
+}
+
+.plan-shell button,
+.plan-shell input,
+.plan-shell select,
+.plan-shell textarea {
+  font: inherit;
+}
+
+.plan-shell button {
+  min-height: 2.75rem;
+  margin-top: 0;
+}
+
+.plan-shell input,
+.plan-shell select,
+.plan-shell textarea {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid #aebbb0;
+  border-radius: 0.4rem;
+  background: #fffef9;
+  color: var(--foreground);
+}
+
+.plan-shell textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+.plan-shell input:focus,
+.plan-shell select:focus,
+.plan-shell textarea:focus,
+.plan-shell button:focus-visible,
+.plan-shell a:focus-visible,
+.activity-library summary:focus-visible {
+  outline: 3px solid #f4cba0;
+  outline-offset: 2px;
+}
+
+.plan-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0 1.8rem;
+  border-bottom: 3px solid var(--foreground);
+}
+
+.plan-header h1 {
+  max-width: 8ch;
+  font-size: clamp(3rem, 14vw, 6.5rem);
+}
+
+.plan-header .eyebrow {
+  margin-top: 1.8rem;
+}
+
+.back-link {
+  color: var(--foreground);
+  font:
+    700 0.75rem "Courier New",
+    monospace;
+  text-underline-offset: 0.25rem;
+}
+
+.plan-intro {
+  max-width: 34rem;
+  margin: 1rem 0 0;
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1.45;
+}
+
+.version-stamp {
+  flex: 0 0 auto;
+  padding: 0.7rem;
+  border: 1px solid var(--foreground);
+  background: #dbe4d5;
+  text-align: right;
+  transform: rotate(1deg);
+}
+
+.version-stamp span,
+.version-stamp strong {
+  display: block;
+  font-family: "Courier New", monospace;
+}
+
+.version-stamp span {
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.version-stamp strong {
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+}
+
+.horizon-panel {
+  padding: 1.5rem 0;
+  border-bottom: 1px solid #9bab9e;
+}
+
+.section-heading,
+.activity-builder-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.section-heading h2,
+.activity-builder-heading h3 {
+  margin: 0.15rem 0 0;
+  font-size: clamp(1.8rem, 7vw, 2.7rem);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.section-heading > p {
+  margin: 0;
+  color: var(--muted);
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.step-mark {
+  margin: 0;
+  color: var(--accent-dark);
+  font:
+    700 0.65rem "Courier New",
+    monospace;
+  letter-spacing: 0.09em;
+}
+
+.day-count-fieldset {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.35rem;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.day-count-button {
+  min-width: 0;
+  padding: 0;
+  border: 1px solid #9bab9e;
+  background: transparent;
+  color: var(--foreground);
+  font:
+    700 0.9rem "Courier New",
+    monospace !important;
+}
+
+.day-count-button:hover,
+.day-count-button[aria-pressed="true"] {
+  border-color: var(--foreground);
+  background: var(--foreground);
+  color: var(--surface);
+}
+
+.date-field {
+  display: block;
+  margin-top: 1.1rem;
+}
+
+.date-field input {
+  margin-top: 0.35rem;
+}
+
+.range-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.8rem 0 0;
+  color: var(--foreground);
+  font:
+    700 0.78rem "Courier New",
+    monospace;
+}
+
+.range-summary span {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.offline-banner {
+  margin: 1rem 0 0;
+  padding: 0.8rem;
+  border: 1px solid #9b2b1b;
+  background: #fff2ec;
+  color: #7e2418;
+  font-size: 0.9rem;
+}
+
+.plan-days {
+  padding-top: 1.8rem;
+}
+
+.plan-day {
+  margin-top: 1.2rem;
+  border: 1px solid #9bab9e;
+  background: rgba(255, 254, 249, 0.64);
+}
+
+.plan-day-header {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 5.2rem;
+  padding: 0.7rem;
+  border-bottom: 1px solid #bdc8be;
+}
+
+.date-index {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #dbe4d5;
+  font:
+    700 0.75rem "Courier New",
+    monospace;
+}
+
+.plan-day-header p,
+.plan-day-header h3 {
+  margin: 0;
+}
+
+.plan-day-header p {
+  color: var(--accent-dark);
+  font:
+    700 0.65rem "Courier New",
+    monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.plan-day-header h3 {
+  margin-top: 0.15rem;
+  font-size: 1.35rem;
+}
+
+.add-session-button {
+  padding: 0 0.8rem;
+  background: var(--foreground);
+  font-size: 0.75rem !important;
+}
+
+.empty-day {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 4.4rem;
+  padding: 0.9rem;
+  color: var(--muted);
+}
+
+.empty-day span {
+  font-size: 1.7rem;
+}
+
+.empty-day p {
+  margin: 0;
+  font-style: italic;
+}
+
+.session-list,
+.activity-edit-list,
+.library-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session-card {
+  padding: 1rem;
+  border-top: 1px dashed #bdc8be;
+}
+
+.session-card:first-child {
+  border-top: 0;
+}
+
+.session-main h4,
+.session-main p {
+  margin: 0;
+}
+
+.session-main h4 {
+  margin-top: 0.2rem;
+  font-size: 1.4rem;
+}
+
+.session-main > p:last-of-type {
+  margin-top: 0.35rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.session-meta {
+  color: var(--accent-dark);
+  font:
+    700 0.65rem "Courier New",
+    monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.lock-badge {
+  display: inline-block;
+  margin-top: 0.6rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid #8d9e90;
+  font:
+    700 0.58rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.past-session-note {
+  margin: 0.8rem 0 0;
+  color: var(--muted);
+  font:
+    700 0.65rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.session-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.9rem;
+}
+
+.session-actions button,
+.session-actions select,
+.activity-editor header button,
+.library-list button {
+  width: auto;
+  min-height: 2.55rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #9bab9e;
+  background: transparent;
+  color: var(--foreground);
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+}
+
+.session-actions label {
+  flex: 1 1 8.5rem;
+}
+
+.session-actions select {
+  width: 100%;
+}
+
+.session-actions button:hover,
+.activity-editor header button:hover,
+.library-list button:hover {
+  background: #dbe4d5;
+}
+
+.session-actions button:disabled,
+.activity-editor header button:disabled {
+  opacity: 0.35;
+}
+
+.danger-text {
+  color: #8d2f20 !important;
+}
+
+.activity-library {
+  margin-top: 1.5rem;
+  border: 1px solid #9bab9e;
+  background: #fffef9;
+}
+
+.activity-library summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 4.8rem;
+  padding: 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.activity-library summary::-webkit-details-marker {
+  display: none;
+}
+
+.activity-library summary > span:first-child {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.activity-library summary strong {
+  font-size: 1.45rem;
+}
+
+.activity-library summary > span:last-child {
+  color: var(--muted);
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  text-transform: uppercase;
+}
+
+.library-content {
+  padding: 0 1rem 1rem;
+  border-top: 1px solid #bdc8be;
+}
+
+.library-content > p {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.secondary-button {
+  border: 1px solid var(--foreground) !important;
+  background: transparent !important;
+  color: var(--foreground) !important;
+}
+
+.library-list {
+  margin-top: 1rem;
+}
+
+.library-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.8rem 0;
+  border-top: 1px dashed #bdc8be;
+}
+
+.library-list li > div:first-child {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.library-list li span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.library-list li > div:last-child {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.library-empty,
+.library-message {
+  padding: 0.8rem;
+  background: #edf0e8;
+}
+
+.activity-definition-form {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid #bdc8be;
+  background: #edf0e8;
+}
+
+.activity-definition-form label,
+.session-composer > label,
+.composer-grid label,
+.activity-editor label,
+.reuse-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.activity-definition-form footer,
+.composer-footer {
+  display: flex;
+  justify-content: end;
+  gap: 0.5rem;
+}
+
+.text-action {
+  background: transparent !important;
+  color: var(--foreground) !important;
+  text-decoration: underline;
+}
+
+.save-dock {
+  position: fixed;
+  z-index: 20;
+  right: 0.75rem;
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  left: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  width: min(calc(100% - 1.5rem), 56rem);
+  min-height: 5.2rem;
+  margin: 0 auto;
+  padding: 0.8rem;
+  border: 1px solid var(--foreground);
+  border-radius: 0.8rem 0.8rem 0.2rem 0.8rem;
+  background: var(--foreground);
+  color: var(--surface);
+  box-shadow: 0 8px 30px rgba(23, 51, 46, 0.28);
+}
+
+.save-dock p,
+.save-dock strong {
+  margin: 0;
+}
+
+.save-dock p {
+  color: #bbcabd;
+  font:
+    700 0.62rem "Courier New",
+    monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.save-dock strong {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.save-dock button {
+  flex: 0 0 auto;
+  min-width: 7.4rem;
+}
+
+.save-dock button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.save-message {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid #9bab9e;
+  background: #fffef9;
+}
+
+.save-message p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.save-message.saved {
+  border-color: #346447;
+}
+
+.save-message.conflict,
+.save-message.save-error,
+.save-message.validation-error,
+.save-message.session-expired {
+  border-color: #9b2b1b;
+}
+
+.save-message button {
+  margin-top: 0.75rem;
+}
+
+.composer-backdrop {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  align-items: end;
+  background: rgba(16, 35, 31, 0.64);
+}
+
+.session-composer {
+  width: min(100%, 44rem);
+  max-height: calc(100dvh - env(safe-area-inset-top));
+  margin: 0 auto;
+  padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  border-radius: 1.2rem 1.2rem 0 0;
+  background: #fffef9;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.18);
+}
+
+.composer-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--foreground);
+}
+
+.composer-header h2 {
+  margin: 0.2rem 0 0;
+  font-size: 2.4rem;
+  letter-spacing: -0.04em;
+}
+
+.close-button {
+  width: 2.75rem;
+  padding: 0;
+  border: 1px solid #9bab9e;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 1.5rem !important;
+}
+
+.session-composer > label,
+.composer-grid,
+.lock-control {
+  margin-top: 0.9rem;
+}
+
+.composer-grid,
+.measurement-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.measurement-grid {
+  margin-top: 0.7rem;
+}
+
+.measurement-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.lock-control {
+  display: flex !important;
+  align-items: start;
+  gap: 0.65rem !important;
+  padding: 0.8rem;
+  border: 1px solid #bdc8be;
+  background: #edf0e8;
+}
+
+.lock-control input {
+  width: 1.2rem;
+  min-height: 1.2rem;
+  margin: 0.15rem 0 0;
+}
+
+.lock-control span {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.9rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.lock-control small {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--muted);
+}
+
+.lock-control.compact {
+  margin-top: 0.7rem;
+}
+
+.activity-builder {
+  margin-top: 1.2rem;
+  padding-top: 1.2rem;
+  border-top: 2px solid var(--foreground);
+}
+
+.activity-builder-heading button {
+  padding: 0 0.7rem;
+  background: var(--foreground);
+  font-size: 0.7rem !important;
+}
+
+.reuse-field {
+  margin-top: 1rem;
+}
+
+.activity-library-hint,
+.composer-empty {
+  margin: 1rem 0 0;
+  padding: 0.8rem;
+  background: #edf0e8;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.activity-edit-list {
+  margin-top: 1rem;
+}
+
+.activity-editor {
+  margin-top: 0.8rem;
+  padding: 0.9rem;
+  border: 1px solid #9bab9e;
+  background: #f7f6ef;
+}
+
+.activity-editor header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+
+.activity-editor header > div {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.compound-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4rem;
+}
+
+.compound-input input {
+  border-radius: 0.4rem 0 0 0.4rem;
+}
+
+.compound-input select {
+  border-left: 0;
+  border-radius: 0 0.4rem 0.4rem 0;
+}
+
+.composer-error {
+  margin: 1rem 0 0;
+  padding: 0.8rem;
+  border: 1px solid #9b2b1b;
+  background: #fff2ec;
+  color: #7e2418;
+}
+
+.composer-footer {
+  position: sticky;
+  bottom: -1rem;
+  margin: 1rem -1rem -1rem;
+  padding: 0.8rem 1rem calc(0.8rem + env(safe-area-inset-bottom));
+  border-top: 1px solid #9bab9e;
+  background: #fffef9;
+}
+
+.composer-footer button {
+  flex: 1;
+}
+
+.plan-loading,
+.plan-error-card {
+  width: min(100%, 34rem);
+  margin: 15vh auto 0;
+  padding: 1.5rem;
+  border: 1px solid #9bab9e;
+  background: #fffef9;
+}
+
+.plan-loading h1,
+.plan-error-card h1 {
+  font-size: clamp(2.4rem, 12vw, 4rem);
+}
+
+.plan-error-card > p:not(.eyebrow) {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.loading-rule {
+  width: 100%;
+  height: 1rem;
+  margin-top: 1.5rem;
+  background: #dbe4d5;
+  animation: ledger-pulse 1.2s ease-in-out infinite alternate;
+}
+
+.loading-rule.short {
+  width: 68%;
+  margin-top: 0.7rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes ledger-pulse {
+  to {
+    opacity: 0.35;
+  }
+}
+
+@media (max-width: 480px) {
+  .plan-header {
+    align-items: start;
+  }
+
+  .version-stamp {
+    margin-top: 2.2rem;
+  }
+
+  .plan-intro {
+    font-size: 0.96rem;
+  }
+
+  .section-heading h2 {
+    font-size: 2rem;
+  }
+
+  .measurement-grid.three {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .measurement-grid.three > label:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .save-dock strong {
+    font-size: 0.76rem;
+  }
+}
+
+@media (max-width: 350px) {
+  .version-stamp {
+    display: none;
+  }
+
+  .composer-grid,
+  .measurement-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-rule {
+    animation: none;
+  }
+}
