@@ -6,7 +6,7 @@
 review
 
 **Exact implementation review target:**
-`e860fabe8622961f841786d8c00d40c37b2100dd`
+`aead708f520c061b851974c29c20291e8de2eb4a`
 
 **Initial implementation commit:**
 `3ea1f3b456a45b3490d290213a4e6db5ba102915`
@@ -19,6 +19,9 @@ review
 - `e860fabe8622961f841786d8c00d40c37b2100dd` — removes a timer from that
   local-date subscription so the complete parallel component suite remains
   isolated and deterministic.
+- `aead708f520c061b851974c29c20291e8de2eb4a` — normalizes received HTTP
+  response header names before comparison while preserving exact private-cache
+  values and the complete production You, sign-out, and sign-in flow.
 
 **Branch:** `ticket/m1-04-today-progress-navigation`
 
@@ -26,7 +29,8 @@ review
 
 **Mobile evidence:** [390x844 factual detail screenshot](evidence/M1-04-390x844.png)
 
-**Independent review:** pending
+**Independent review:** requested header-name normalization; correction
+implemented and re-review pending
 
 ## Delivered behavior
 
@@ -149,7 +153,8 @@ review
 ### Modified
 
 - `e2e/auth.spec.ts` — follows the new Today default and reaches sign-out
-  through You.
+  through You; compares received HTTP header names case-insensitively while
+  retaining exact cache-control, expires, and pragma value assertions.
 - `e2e/m1-03-quick-log.spec.ts` — follows the renamed explicit correction link
   and new Today sign-in default.
 - `e2e/planning.spec.ts` — enters Plan through the approved navigation and
@@ -223,9 +228,11 @@ review
 | `npm.cmd run lint` | PASS |
 | `npm.cmd run typecheck` | PASS |
 | `npm.cmd run test:run` | PASS — 34 files, 199 tests |
+| focused auth/security Node suites | PASS — 3 files, 29 tests |
 | focused Today, Progress detail, navigation, safe-return, auth-route, and repository suites | PASS — route/data/security assertions |
 | `npm.cmd run build` | PASS — all authenticated routes compiled dynamic |
 | production `playwright test e2e/m1-04-today-progress.spec.ts --config=e2e/m1-04.playwright.config.ts` | PASS — 1 full mobile flow at exactly `390x844` |
+| production `playwright test e2e/auth.spec.ts` | PASS — full signup, confirmation, Today, You, sign-out, and sign-in flow |
 | production private response header assertion | PASS — `private` and `no-store` |
 | mobile horizontal-overflow assertion | PASS |
 | browser console/page errors | PASS — none |
@@ -240,6 +247,11 @@ dialog above the save dock, the save dock above navigation, and navigation
 above ordinary content. The passing run proves both actions at `390x844`.
 Two disposable accounts left by those timed-out attempts were explicitly
 removed; the passing run removed its own account.
+
+After the independent reviewer requested case-insensitive response-header name
+comparison, the corrected production auth flow passed in 7.7 seconds and the
+M1-04 mobile production flow passed again in 6.9 seconds. Exact header values
+remain asserted. The disposable auth account was explicitly removed.
 
 ## Known limitations
 
@@ -267,9 +279,9 @@ removed; the passing run removed its own account.
 ## Independent reviewer checklist
 
 - Review exact implementation commit
-  `e860fabe8622961f841786d8c00d40c37b2100dd`, not an uncommitted tree.
+  `aead708f520c061b851974c29c20291e8de2eb4a`, not an uncommitted tree.
 - Reconcile this manifest against `git diff
-  c99eb8a3d845dffb8e0518c0c6a23111a2fb985a..e860fabe8622961f841786d8c00d40c37b2100dd`
+  c99eb8a3d845dffb8e0518c0c6a23111a2fb985a..aead708f520c061b851974c29c20291e8de2eb4a`
   and report omitted, unexpected, or inaccurate files.
 - Confirm `/home`, Today, Plan, Progress, detail, You, quick-log, callback,
   sign-in, expiry, and sign-out routing.
