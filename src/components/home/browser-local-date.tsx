@@ -16,11 +16,9 @@ export function BrowserLocalDate() {
 function subscribe(callback: () => void) {
   window.addEventListener("focus", callback);
   document.addEventListener("visibilitychange", callback);
-  const interval = window.setInterval(callback, 60_000);
   return () => {
     window.removeEventListener("focus", callback);
     document.removeEventListener("visibilitychange", callback);
-    window.clearInterval(interval);
   };
 }
 
