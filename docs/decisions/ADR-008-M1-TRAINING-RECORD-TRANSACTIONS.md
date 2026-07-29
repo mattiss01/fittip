@@ -9,7 +9,7 @@ version/current-pointer and stale-write architecture, in chat on 28 July 2026.
 The product owner separately approved the reviewed `PT409` conflict transport
 and no-retry correction on 28 July 2026.
 
-**Ticket:** [M1-01](../backlog/M1-01-TRAINING-RECORDS-FOUNDATION.md)
+**Ticket:** [M1-01](../backlog/M1/M1-01-TRAINING-RECORDS-FOUNDATION.md)
 
 **Builds on:** [ADR-001](ADR-001-M0-FOUNDATION.md),
 [ADR-002](ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md), and

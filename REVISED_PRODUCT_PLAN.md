@@ -504,7 +504,7 @@ validation never satisfies or removes those gates.
 ### M0: Foundation, early beta, and commercial-ready core
 
 Accepted and proposed foundation/external-use gates are maintained in the
-separate [M0 backlog](docs/backlog/M0-BACKLOG.md).
+separate [M0 backlog](docs/backlog/M0/M0-BACKLOG.md).
 
 - Initialize the repository, strict TypeScript, lint/format, test runner, and CI checks.
 - Implement basic public email/password registration with verified email, minimal profile creation, and per-user authorization/row-level security. Add account recovery as a separate ticket before external MVP use.
@@ -519,7 +519,7 @@ separate [M0 backlog](docs/backlog/M0-BACKLOG.md).
 
 The approved visible behavior is specified in
 [F-002](docs/product/F-002-MANUAL-TRAINING-PLANNING-TRACKING.md) and dispatched
-only through the separate [M1 backlog](docs/backlog/M1-BACKLOG.md).
+only through the separate [M1 backlog](docs/backlog/M1/M1-BACKLOG.md).
 
 - Establish owner-scoped personal activities, immutable 1–7-day plan
   versions, planned sessions/activities, separate completions, and generic
@@ -540,7 +540,7 @@ planned-versus-actual history at 390px.
 ### M2: Goals, possibilities, and editable memory
 
 The proposed slices are maintained in the separate
-[M2 backlog](docs/backlog/M2-BACKLOG.md).
+[M2 backlog](docs/backlog/M2/M2-BACKLOG.md).
 
 - Goal CRUD with priority/order validation: max 3 active core goals.
 - Store availability, time limits, equipment/locations, preferences, and
@@ -557,7 +557,7 @@ active.
 ### M3: AI-generated roadmap and selected-horizon plan proposal
 
 The proposed AI slices are maintained in the separate
-[M3 backlog](docs/backlog/M3-BACKLOG.md).
+[M3 backlog](docs/backlog/M3/M3-BACKLOG.md).
 
 - Implement a structured AI adapter with fixtures and mocked provider tests.
 - Generate a roadmap and a detailed proposal for the user-selected next 1–7
@@ -695,10 +695,15 @@ Keep the following repository structure:
 
 ```text
 docs/
+  README.md      # documentation entry point
   product/       # approved feature briefs and user journeys
   decisions/     # ADRs for consequential technical/product decisions
-  backlog/       # prioritised, small implementation tickets
-  validation/    # test scenarios, demo evidence, known limitations
+  backlog/
+    README.md    # milestone backlog index
+    M0/ ... M3/ # milestone indexes and small implementation tickets
+  validation/
+    README.md    # milestone validation index
+    M0/ ... M3/ # test scenarios, demo evidence, known limitations
 ```
 
 Every feature brief states: user problem, intended outcome, user flow, affected data and rules, open decisions with a recommendation, non-goals, acceptance criteria, and validation plan. Every ADR states: status, context, decision, alternatives, consequences, reversal approach where relevant, and product-owner approval reference. Every ticket links to its approved feature brief and ADRs.

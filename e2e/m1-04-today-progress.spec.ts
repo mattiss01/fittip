@@ -100,7 +100,7 @@ test.describe("M1-04 Today, Progress, and navigation", () => {
 
       await page.screenshot({
         fullPage: true,
-        path: "docs/validation/evidence/M1-04-390x844.png",
+        path: "docs/validation/M1/evidence/M1-04-390x844.png",
       });
 
       await context.clearCookies();

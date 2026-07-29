@@ -94,14 +94,14 @@ flowchart TB
 | Model area | Owning ticket | Current status |
 |---|---|---|
 | Profile and ownership baseline | M0-02 / M0-02-C1 | accepted |
-| Detailed plans, planned/actual separation, personal activities | [M1-01](../backlog/M1-01-TRAINING-RECORDS-FOUNDATION.md) | proposed |
-| Manual selected-horizon plan behavior | [M1-02](../backlog/M1-02-SELECTABLE-HORIZON-PLANNING.md) | proposed |
-| Factual logging and correction history | [M1-03](../backlog/M1-03-QUICK-TRAINING-LOGGING.md) | proposed |
-| Goals | [M2-01](../backlog/M2-01-GOAL-MODEL-VALIDATION.md) | proposed |
-| Memory | [M2-02](../backlog/M2-02-MEMORY-MODEL-MANAGEMENT.md) | proposed |
-| Intake candidates and explicit publication | [M2-03](../backlog/M2-03-INTAKE-FACT-REVIEW.md) | proposed |
-| AI proposal/source records | [M3-01](../backlog/M3-01-LOCAL-AI-ADAPTER-CONTROLS.md), [M3-02](../backlog/M3-02-ROADMAP-PROPOSAL.md), [M3-03](../backlog/M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md) | proposed |
-| Proposal edit and explicit acceptance | [M3-04](../backlog/M3-04-PLAN-EDIT-LOCK-ACCEPTANCE.md) | proposed |
+| Detailed plans, planned/actual separation, personal activities | [M1-01](../backlog/M1/M1-01-TRAINING-RECORDS-FOUNDATION.md) | proposed |
+| Manual selected-horizon plan behavior | [M1-02](../backlog/M1/M1-02-SELECTABLE-HORIZON-PLANNING.md) | proposed |
+| Factual logging and correction history | [M1-03](../backlog/M1/M1-03-QUICK-TRAINING-LOGGING.md) | proposed |
+| Goals | [M2-01](../backlog/M2/M2-01-GOAL-MODEL-VALIDATION.md) | proposed |
+| Memory | [M2-02](../backlog/M2/M2-02-MEMORY-MODEL-MANAGEMENT.md) | proposed |
+| Intake candidates and explicit publication | [M2-03](../backlog/M2/M2-03-INTAKE-FACT-REVIEW.md) | proposed |
+| AI proposal/source records | [M3-01](../backlog/M3/M3-01-LOCAL-AI-ADAPTER-CONTROLS.md), [M3-02](../backlog/M3/M3-02-ROADMAP-PROPOSAL.md), [M3-03](../backlog/M3/M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md) | proposed |
+| Proposal edit and explicit acceptance | [M3-04](../backlog/M3/M3-04-PLAN-EDIT-LOCK-ACCEPTANCE.md) | proposed |
 
 ## Approval boundary
 

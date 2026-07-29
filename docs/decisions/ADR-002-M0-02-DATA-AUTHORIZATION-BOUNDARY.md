@@ -6,7 +6,7 @@
 
 **Date:** 23 July 2026
 
-**Ticket:** [M0-02](../backlog/M0-02-DATA-AUTHORIZATION-FOUNDATION.md)
+**Ticket:** [M0-02](../backlog/M0/M0-02-DATA-AUTHORIZATION-FOUNDATION.md)
 
 **Builds on:** [ADR-001](ADR-001-M0-FOUNDATION.md) and [ADR-003](ADR-003-PUBLIC-EMAIL-PASSWORD-AUTH.md)
 

@@ -4,11 +4,11 @@
 
 **Milestone:** M1
 
-**Tickets:** [M1-01](../backlog/M1-01-TRAINING-RECORDS-FOUNDATION.md),
-[M1-02](../backlog/M1-02-SELECTABLE-HORIZON-PLANNING.md),
-[M1-03](../backlog/M1-03-QUICK-TRAINING-LOGGING.md),
-[M1-04](../backlog/M1-04-TODAY-PROGRESS-NAVIGATION.md), and
-[M1-05](../backlog/M1-05-M1-VALIDATION-SLICE.md)
+**Tickets:** [M1-01](../backlog/M1/M1-01-TRAINING-RECORDS-FOUNDATION.md),
+[M1-02](../backlog/M1/M1-02-SELECTABLE-HORIZON-PLANNING.md),
+[M1-03](../backlog/M1/M1-03-QUICK-TRAINING-LOGGING.md),
+[M1-04](../backlog/M1/M1-04-TODAY-PROGRESS-NAVIGATION.md), and
+[M1-05](../backlog/M1/M1-05-M1-VALIDATION-SLICE.md)
 
 ## User problem
 
