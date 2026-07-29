@@ -17,6 +17,7 @@ Validation records and their visual evidence are grouped by milestone.
 - [M1-03 quick training logging](M1/M1-03-VALIDATION.md)
 - [M1-02/M1-03 integration](M1/M1-02-M1-03-INTEGRATION-VALIDATION.md)
 - [M1-04 Today and Progress](M1/M1-04-VALIDATION.md)
+- [M1 milestone closeout](M1/M1-MILESTONE-CLOSEOUT.md)
 - [M1 visual evidence](M1/evidence/)
 
 M2 and M3 do not have validation records yet. Their future evidence belongs in

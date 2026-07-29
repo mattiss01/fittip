@@ -7,8 +7,9 @@
 **Tickets:** [M1-01](../backlog/M1/M1-01-TRAINING-RECORDS-FOUNDATION.md),
 [M1-02](../backlog/M1/M1-02-SELECTABLE-HORIZON-PLANNING.md),
 [M1-03](../backlog/M1/M1-03-QUICK-TRAINING-LOGGING.md),
-[M1-04](../backlog/M1/M1-04-TODAY-PROGRESS-NAVIGATION.md), and
-[M1-05](../backlog/M1/M1-05-M1-VALIDATION-SLICE.md)
+[M1-04](../backlog/M1/M1-04-TODAY-PROGRESS-NAVIGATION.md), plus the retired
+[M1-05 proposal](../backlog/M1/M1-05-M1-VALIDATION-SLICE.md) and its targeted
+[M1 milestone closeout](../validation/M1/M1-MILESTONE-CLOSEOUT.md)
 
 ## User problem
 
@@ -163,14 +164,15 @@ generation, or replanning are added.
 ## Validation plan
 
 - Implement and independently accept M1-01 through M1-04 one at a time.
-- Run the consolidated M1-05 clean-migration, RLS, invariant, mobile,
-  accessibility, privacy/security, and regression matrix.
-- Provide exact commits, changed files/data, policy matrix, commands/results,
-  known limitations, and `390x844` demo evidence.
+- Reuse their recorded clean-migration, RLS, invariant, mobile, accessibility,
+  privacy/security, and regression evidence rather than repeat it in M1-05.
+- Run the approved targeted hosted M1 closeout: current deployment and
+  migration/RLS/advisor state plus one `390x844` Plan to Today to actual to
+  Progress smoke.
 
 ## Approval boundary
 
 The product owner approved this feature brief in chat on 28 July 2026. That
 approval establishes the governing behavior for M1 but does not dispatch every
-M1 ticket. M1-01 was approved separately and moved into development; M1-02
-through M1-05 remain proposed until separately approved.
+M1 ticket. M1-01 through M1-04 were separately accepted. On 29 July 2026 the
+product owner retired M1-05 and approved the targeted M1 milestone closeout.

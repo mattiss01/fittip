@@ -6,7 +6,7 @@
 
 **Priority:** P1
 
-**Depends on:** [M1-05 accepted](../M1/M1-05-M1-VALIDATION-SLICE.md); [M0-03 / F-001 accepted](../../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md); [M0-02-C1 accepted](../M0/M0-02-C1-REMOVE-USERNAME.md); [ADR-002](../../decisions/ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md); [ADR-004](../../decisions/ADR-004-USERNAME-FREE-ACCOUNT-PROFILE.md)
+**Depends on:** [M1 milestone closeout accepted](../../validation/M1/M1-MILESTONE-CLOSEOUT.md); [M0-03 / F-001 accepted](../../product/F-001-PUBLIC-ACCOUNT-AUTHENTICATION.md); [M0-02-C1 accepted](../M0/M0-02-C1-REMOVE-USERNAME.md); [ADR-002](../../decisions/ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md); [ADR-004](../../decisions/ADR-004-USERNAME-FREE-ACCOUNT-PROFILE.md)
 
 **Hosted test dependency:** [M0-06A accepted](../M0/M0-06A-FOUNDER-HOSTED-STAGING.md)
 

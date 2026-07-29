@@ -1,16 +1,29 @@
 # M1-05: Consolidated M1 manual plan-and-track validation
 
-**Status:** proposed — not approved to start
+**Status:** retired — replaced by targeted M1 milestone closeout on 29 July 2026
 
 **Milestone:** M1 — manual training planning and tracking
 
 **Priority:** P1
 
-**Feature brief:** [F-002 proposed](../../product/F-002-MANUAL-TRAINING-PLANNING-TRACKING.md)
+**Feature brief:** [F-002 approved](../../product/F-002-MANUAL-TRAINING-PLANNING-TRACKING.md)
 
-**Depends on:** [M1-01 accepted](M1-01-TRAINING-RECORDS-FOUNDATION.md), [M1-02 accepted](M1-02-SELECTABLE-HORIZON-PLANNING.md), [M1-03 accepted](M1-03-QUICK-TRAINING-LOGGING.md), and [M1-04 approved](M1-04-TODAY-PROGRESS-NAVIGATION.md)
+**Depends on:** [M1-01 accepted](M1-01-TRAINING-RECORDS-FOUNDATION.md), [M1-02 accepted](M1-02-SELECTABLE-HORIZON-PLANNING.md), [M1-03 accepted](M1-03-QUICK-TRAINING-LOGGING.md), and [M1-04 accepted](M1-04-TODAY-PROGRESS-NAVIGATION.md)
 
-## Outcome
+## Retirement decision
+
+On 29 July 2026 the product owner decided that a second exhaustive,
+standalone validation cycle would duplicate the independently reviewed and
+post-merge evidence already recorded for M1-01 through M1-04. This ticket will
+not be dispatched.
+
+It is replaced by the narrower
+[M1 milestone closeout](../../validation/M1/M1-MILESTONE-CLOSEOUT.md): one
+hosted `390x844` Plan to Today to actual to Progress smoke plus current
+deployment, migration, RLS, advisor, runtime-error, and founder-boundary
+evidence. The historical proposal below is retained for traceability only.
+
+## Historical proposed outcome
 
 An independent reviewer proves the complete founder flow:
 
@@ -103,7 +116,6 @@ The validation record must state:
 
 ## Approval gate
 
-The product owner approves the validator, exact integrated commits, scenario
-matrix, evidence retention, and accessibility checklist. Dispatch starts only
-after M1-01 through M1-04 are individually accepted. Until then M1-05 remains
-**proposed**.
+This gate was superseded by the product owner's 29 July 2026 retirement
+decision. M1-05 remains **retired** and must not be dispatched. M2 remains
+blocked until the replacement targeted closeout is accepted.
