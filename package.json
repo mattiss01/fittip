@@ -15,6 +15,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:m1-01-concurrency": "node supabase/tests/integration/m1_01_concurrent_data_api.mjs",
+    "test:m2-01-concurrency": "node supabase/tests/integration/m2_01_concurrent_goal_mutations.mjs",
     "test:e2e": "playwright test",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

@@ -7,6 +7,31 @@ export type Json =
   | Json[];
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never;
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json;
+          operationName?: string;
+          query?: string;
+          variables?: Json;
+        };
+        Returns: Json;
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
+  };
   public: {
     Tables: {
       completed_activities: {
@@ -341,6 +366,157 @@ export type Database = {
           },
         ];
       };
+      goal_collections: {
+        Row: {
+          revision: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          revision?: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          revision?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "goal_collections_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      goal_lifecycle_events: {
+        Row: {
+          collection_revision: number;
+          created_at: string;
+          from_status: string;
+          goal_id: string;
+          id: string;
+          to_status: string;
+          user_id: string;
+        };
+        Insert: {
+          collection_revision: number;
+          created_at?: string;
+          from_status: string;
+          goal_id: string;
+          id?: string;
+          to_status: string;
+          user_id: string;
+        };
+        Update: {
+          collection_revision?: number;
+          created_at?: string;
+          from_status?: string;
+          goal_id?: string;
+          id?: string;
+          to_status?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "goal_lifecycle_events_goal_fkey";
+            columns: ["goal_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "goals";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "goal_lifecycle_events_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      goals: {
+        Row: {
+          active_rank: number | null;
+          activity_areas: string[];
+          archived_at: string | null;
+          category: string;
+          constraints_text: string | null;
+          created_at: string;
+          desired_outcome: string;
+          id: string;
+          last_active_rank: number | null;
+          priority_tier: string;
+          rationale: string | null;
+          start_date: string;
+          status: string;
+          target_date: string | null;
+          target_detail: string | null;
+          target_metric_label: string | null;
+          target_metric_unit: string | null;
+          target_metric_value: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          active_rank?: number | null;
+          activity_areas?: string[];
+          archived_at?: string | null;
+          category: string;
+          constraints_text?: string | null;
+          created_at?: string;
+          desired_outcome: string;
+          id?: string;
+          last_active_rank?: number | null;
+          priority_tier: string;
+          rationale?: string | null;
+          start_date: string;
+          status?: string;
+          target_date?: string | null;
+          target_detail?: string | null;
+          target_metric_label?: string | null;
+          target_metric_unit?: string | null;
+          target_metric_value?: string | null;
+          title: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          active_rank?: number | null;
+          activity_areas?: string[];
+          archived_at?: string | null;
+          category?: string;
+          constraints_text?: string | null;
+          created_at?: string;
+          desired_outcome?: string;
+          id?: string;
+          last_active_rank?: number | null;
+          priority_tier?: string;
+          rationale?: string | null;
+          start_date?: string;
+          status?: string;
+          target_date?: string | null;
+          target_detail?: string | null;
+          target_metric_label?: string | null;
+          target_metric_unit?: string | null;
+          target_metric_value?: string | null;
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "goals_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       personal_activities: {
         Row: {
           archived_at: string | null;
@@ -535,6 +711,35 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      apply_goal_change: {
+        Args: {
+          p_activity_areas?: string[];
+          p_category?: string;
+          p_constraints_text?: string;
+          p_desired_outcome?: string;
+          p_expected_collection_revision: number;
+          p_goal_id?: string;
+          p_operation: string;
+          p_ordered_goal_ids?: string[];
+          p_priority_tier?: string;
+          p_rationale?: string;
+          p_start_date?: string;
+          p_target_date?: string;
+          p_target_detail?: string;
+          p_target_metric_label?: string;
+          p_target_metric_unit?: string;
+          p_target_metric_value?: string;
+          p_target_rank?: number;
+          p_title?: string;
+        };
+        Returns: Database["public"]["CompositeTypes"]["goal_change_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "goal_change_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       is_valid_training_measurement: {
         Args: { p_mode: string; p_value: Json };
         Returns: boolean;
@@ -628,7 +833,11 @@ export type Database = {
       [_ in never]: never;
     };
     CompositeTypes: {
-      [_ in never]: never;
+      goal_change_receipt: {
+        goal_id: string | null;
+        collection_revision: number | null;
+        result: string | null;
+      };
     };
   };
 };
@@ -754,6 +963,9 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

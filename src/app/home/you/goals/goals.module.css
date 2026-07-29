@@ -1,0 +1,370 @@
+.page {
+  --goal-core: #d95835;
+  --goal-support: #557667;
+}
+
+.manager {
+  display: grid;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.attention,
+.supporting,
+.addPanel,
+.history {
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  box-shadow: 7px 7px 0 #a7b7a5;
+}
+
+.attention {
+  border-top: 7px solid var(--goal-core);
+}
+
+.supporting {
+  border-top: 7px solid var(--goal-support);
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--ledger-rule);
+}
+
+.sectionHeading h2 {
+  margin: 0;
+  font-size: clamp(1.8rem, 8vw, 3rem);
+  letter-spacing: -0.045em;
+}
+
+.eyebrow,
+.category,
+.tier,
+.areas,
+.rank {
+  font-family: "Courier New", monospace;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--ledger-muted);
+  font-size: 0.65rem;
+}
+
+.slotSignal {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.slotSignal i {
+  width: 1rem;
+  height: 2.2rem;
+  display: block;
+  border: 1px solid var(--ledger-ink);
+  background: transparent;
+}
+
+.slotSignal i[data-filled="true"] {
+  background: var(--goal-core);
+}
+
+.goalList {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.goalCard {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr;
+  border-bottom: 1px solid var(--ledger-rule);
+}
+
+.goalCard:last-child {
+  border-bottom: 0;
+}
+
+.rank {
+  display: grid;
+  place-items: start center;
+  padding-top: 1.2rem;
+  border-right: 1px solid var(--ledger-rule);
+  color: #9b3b24;
+  font-size: 1rem;
+}
+
+.goalBody {
+  min-width: 0;
+  padding: 1.1rem;
+}
+
+.goalHeader {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.goalHeader h3 {
+  margin: 0;
+  font-size: clamp(1.45rem, 7vw, 2.2rem);
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.category {
+  margin: 0 0 0.4rem;
+  color: var(--ledger-muted);
+  font-size: 0.58rem;
+}
+
+.tier {
+  padding: 0.3rem 0.4rem;
+  border: 1px solid currentColor;
+  color: #8b341f;
+  font-size: 0.58rem;
+}
+
+.outcome {
+  margin: 0.8rem 0 0;
+  line-height: 1.5;
+}
+
+.areas {
+  margin: 0.65rem 0 0;
+  color: var(--ledger-muted);
+  font-size: 0.62rem;
+}
+
+.controls,
+.lifecycle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.9rem;
+}
+
+.controls button,
+.lifecycle button,
+.history button {
+  min-height: 2.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--ledger-ink);
+  background: transparent;
+  color: var(--ledger-ink);
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+}
+
+.controls button:disabled,
+.lifecycle button:disabled,
+.history button:disabled,
+.primary:disabled {
+  opacity: 0.45;
+}
+
+.detail {
+  margin-top: 1rem;
+  border-top: 1px solid var(--ledger-rule);
+}
+
+.detail > summary,
+.addPanel > summary,
+.history > summary {
+  min-height: 3.25rem;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font:
+    700 0.72rem "Courier New",
+    monospace;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.addPanel > summary,
+.history > summary {
+  padding: 0 1rem;
+}
+
+.form {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem 0 0;
+}
+
+.addPanel .form {
+  padding: 0 1rem 1rem;
+}
+
+.form label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--ledger-muted);
+  font:
+    700 0.66rem "Courier New",
+    monospace;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.form input,
+.form textarea,
+.form select {
+  width: 100%;
+  min-height: 2.9rem;
+  padding: 0.65rem;
+  border: 1px solid var(--ledger-ink);
+  border-radius: 0;
+  background: white;
+  color: var(--ledger-ink);
+  font:
+    400 1rem/1.35 Arial,
+    sans-serif;
+  text-transform: none;
+}
+
+.form textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+.fieldPair,
+.metric {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+}
+
+.metric {
+  grid-template-columns: 1fr 1fr 0.7fr;
+}
+
+.primary {
+  min-height: 3rem;
+  border: 1px solid var(--ledger-ink);
+  background: var(--goal-core);
+  color: white;
+  font:
+    700 0.75rem "Courier New",
+    monospace;
+}
+
+.consequence,
+.empty {
+  margin: 0;
+  padding: 1rem;
+  color: var(--ledger-muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.consequence {
+  padding: 0.8rem 0 0;
+}
+
+.history ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history li {
+  min-height: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--ledger-rule);
+}
+
+.history li div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.history li span {
+  color: var(--ledger-muted);
+  font:
+    700 0.62rem "Courier New",
+    monospace;
+  text-transform: uppercase;
+}
+
+.notice {
+  position: sticky;
+  z-index: 20;
+  top: 0.75rem;
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--ledger-ink);
+  background: #e7f0dc;
+  box-shadow: 5px 5px 0 #a7b7a5;
+  line-height: 1.4;
+}
+
+.notice[data-state="conflict"],
+.notice[data-state="validation"],
+.notice[data-state="error"] {
+  background: #fff0e1;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.manager button:focus-visible,
+.manager input:focus-visible,
+.manager textarea:focus-visible,
+.manager select:focus-visible,
+.manager summary:focus-visible {
+  outline: 3px solid #efaa84;
+  outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+  .fieldPair,
+  .metric {
+    grid-template-columns: 1fr;
+  }
+
+  .goalCard {
+    grid-template-columns: 2.5rem 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .attention,
+  .supporting,
+  .addPanel,
+  .history {
+    animation: goal-enter 260ms ease-out both;
+  }
+}
+
+@keyframes goal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

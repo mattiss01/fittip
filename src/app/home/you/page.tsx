@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 import { SignOutButton } from "@/components/sign-out-button";
 import { createServerUserClient } from "@/lib/supabase/server-user-client";
@@ -34,12 +35,23 @@ export default async function YouPage() {
           <p className={styles.kicker}>FitTip / you</p>
           <h1>Your private space.</h1>
           <p className={styles.intro}>
-            Account access and sign-out only. Goals and coaching memory will
-            appear here only after their own tickets are accepted.
+            Set the outcomes that should direct future coaching. Coaching
+            context will appear here only after its own ticket is accepted.
           </p>
         </div>
         <p className={styles.stamp}>Verified account</p>
       </header>
+      <section className={`${styles.section} ${styles.card}`}>
+        <p className={styles.kicker}>Training direction</p>
+        <h2>Goals</h2>
+        <p className={styles.bodyCopy}>
+          Create and rank up to three core goals, keep supporting goals
+          distinct, and preserve paused or finished outcomes.
+        </p>
+        <Link className={styles.primaryAction} href="/home/you/goals">
+          Manage goals
+        </Link>
+      </section>
       <section className={`${styles.section} ${styles.card}`}>
         <p className={styles.kicker}>Account controls</p>
         <h2>End this session</h2>

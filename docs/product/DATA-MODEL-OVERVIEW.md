@@ -1,7 +1,7 @@
 # FitTip data-model overview
 
-**Status:** living planning view — M0 and M1 are accepted; M2 and M3 are
-proposed and require ticket-level approval
+**Status:** living planning view — M0 and M1 are accepted; M2-01 is in
+development; later M2 and M3 records remain proposed
 
 This diagram shows the intended ownership and history boundaries. It is a
 conceptual overview, not approval of exact table names, columns, migrations, or
@@ -25,8 +25,10 @@ flowchart TB
     CORRECTION["Completion correction history<br/>append-only revisions/current pointer"]
   end
 
-  subgraph M2["M2 — proposed goals, memory, and guided onboarding"]
-    GOAL["Goal<br/>core/supporting, rank, lifecycle"]
+  subgraph M2["M2 — goals in development; memory and onboarding proposed"]
+    GOAL_COLLECTION["Goal collection<br/>owner revision / compare-and-swap"]
+    GOAL["Goal<br/>core/supporting, independent rank, lifecycle"]
+    GOAL_EVENT["Goal lifecycle event<br/>explicit terminal-state reopening"]
     MEMORY["Memory item<br/>type, provenance, status, confidence, expiry"]
     INTAKE["Onboarding draft"]
     CANDIDATE["Reviewed candidate<br/>accept / edit / reject"]
@@ -54,6 +56,10 @@ flowchart TB
   COMPLETION -->|"corrected through"| CORRECTION
 
   PROFILE -->|"owns"| GOAL
+  PROFILE -->|"owns"| GOAL_COLLECTION
+  PROFILE -->|"owns"| GOAL_EVENT
+  GOAL_COLLECTION -->|"versions atomic changes to"| GOAL
+  GOAL -->|"reopening records"| GOAL_EVENT
   PROFILE -->|"owns"| MEMORY
   PROFILE -->|"owns"| INTAKE
   INTAKE -->|"produces"| CANDIDATE
@@ -75,10 +81,13 @@ flowchart TB
 
 ## How to read it
 
-- **M0 is actual:** today the implemented public data model contains only the
-  owner profile backed by Supabase Auth.
+- **M0 is actual:** the public data model starts with an owner profile backed
+  by Supabase Auth.
 - **M1 is accepted:** a detailed plan version contains exactly
   the user-requested 1–7 consecutive owner-local dates.
+- **M2-01 is in development:** the ticket branch adds owner-scoped goal,
+  collection-revision, and minimal lifecycle-event records. One authenticated
+  transaction owns all changes; active core and supporting ranks are separate.
 - Planned sessions/activities and completed sessions/activities are separate.
   The dotted source link never converts or rewrites a plan into an actual.
 - Personal activity definitions are reusable, but every historical plan and
@@ -105,7 +114,9 @@ flowchart TB
 
 ## Approval boundary
 
-The visual records the current intended shape only. M2-01 through M2-03 must
-still approve their exact tables, fields, ownership/RLS policies, history,
-delete/expiry behavior, and publication transaction before migrations are
-implemented.
+The visual records the current intended shape. M2-01's exact in-development
+contract is governed by its approved ticket, ADR-009, migration, and validation
+record; it is not accepted until exact-commit review and product-owner
+acceptance. M2-02 and M2-03 must still approve their exact tables, fields,
+ownership/RLS policies, history, expiry, and publication transactions before
+migrations are implemented.

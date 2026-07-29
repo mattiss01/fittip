@@ -18,7 +18,7 @@ describe("server repository import boundary", () => {
     }
   });
 
-  it("disables retries only for the atomic plan and completion RPCs", () => {
+  it("disables retries only for the three approved atomic RPCs", () => {
     const sources = sourceFiles(join(process.cwd(), "src")).filter(
       (path) => !path.endsWith(".test.ts") && !path.endsWith(".test.tsx"),
     );
@@ -39,11 +39,23 @@ describe("server repository import boundary", () => {
       "repositories",
       "completion-repository.ts",
     );
+    const goalRepositoryPath = join(
+      process.cwd(),
+      "src",
+      "server",
+      "repositories",
+      "goal-repository.ts",
+    );
     const trainingRepository = readFileSync(trainingRepositoryPath, "utf8");
     const completionRepository = readFileSync(completionRepositoryPath, "utf8");
+    const goalRepository = readFileSync(goalRepositoryPath, "utf8");
 
     expect(retryFiles.sort()).toEqual(
-      [trainingRepositoryPath, completionRepositoryPath].sort(),
+      [
+        trainingRepositoryPath,
+        completionRepositoryPath,
+        goalRepositoryPath,
+      ].sort(),
     );
     expect(trainingRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
     expect(trainingRepository).toMatch(
@@ -52,6 +64,10 @@ describe("server repository import boundary", () => {
     expect(completionRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
     expect(completionRepository).toMatch(
       /\.rpc\(\s*"save_training_completion",[\s\S]*?\)\s*\.retry\(false\)/,
+    );
+    expect(goalRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
+    expect(goalRepository).toMatch(
+      /\.rpc\(\s*"apply_goal_change",[\s\S]*?\)\s*\.retry\(false\)/,
     );
   });
 });
