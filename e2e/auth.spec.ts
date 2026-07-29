@@ -59,21 +59,22 @@ test.describe("public account authentication", () => {
 async function expectPrivateSessionHeaders(
   response: import("@playwright/test").Response,
 ) {
-  const headers = await response.headersArray();
-  expect(
-    headers.filter(({ name }) => name.toLowerCase() === "cache-control"),
-  ).toEqual([
+  const headers = (await response.headersArray()).map(({ name, value }) => ({
+    name: name.toLowerCase(),
+    value,
+  }));
+  expect(headers.filter(({ name }) => name === "cache-control")).toEqual([
     {
       name: "cache-control",
       value: "private, no-cache, no-store, must-revalidate, max-age=0",
     },
   ]);
-  expect(
-    headers.filter(({ name }) => name.toLowerCase() === "expires"),
-  ).toEqual([{ name: "expires", value: "0" }]);
-  expect(headers.filter(({ name }) => name.toLowerCase() === "pragma")).toEqual(
-    [{ name: "pragma", value: "no-cache" }],
-  );
+  expect(headers.filter(({ name }) => name === "expires")).toEqual([
+    { name: "expires", value: "0" },
+  ]);
+  expect(headers.filter(({ name }) => name === "pragma")).toEqual([
+    { name: "pragma", value: "no-cache" },
+  ]);
 }
 
 async function pollForConfirmationUrl(
