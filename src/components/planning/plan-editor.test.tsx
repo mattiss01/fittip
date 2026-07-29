@@ -39,6 +39,8 @@ import { PlanEditor, toPersistencePlan } from "./plan-editor";
 
 describe("PlanEditor", () => {
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-07-28T12:00:00.000Z"));
     localStorage.clear();
     window.history.replaceState(null, "", "/home/plan");
     vi.clearAllMocks();
@@ -53,6 +55,7 @@ describe("PlanEditor", () => {
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
