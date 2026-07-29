@@ -7,7 +7,7 @@ application, database, security-advisor, concurrency, authentication, and
 `390x844` full-story checks. On 29 July 2026 the product owner retired M1-05
 as a duplicative standalone validation cycle and approved the narrower
 [M1 milestone closeout](../../validation/M1/M1-MILESTONE-CLOSEOUT.md), which
-is in progress.
+is accepted.
 
 The governing visible-behavior brief is
 [F-002 Manual training planning and factual tracking](../../product/F-002-MANUAL-TRAINING-PLANNING-TRACKING.md),
@@ -99,8 +99,9 @@ sport-agnostic plan, see today's training, record actual training without
 changing the plan, and inspect preserved plan-versus-actual history at
 `390x844`.
 
-The milestone closes only when the targeted hosted
-[M1 closeout](../../validation/M1/M1-MILESTONE-CLOSEOUT.md) is accepted.
+The targeted hosted
+[M1 closeout](../../validation/M1/M1-MILESTONE-CLOSEOUT.md) was accepted on
+29 July 2026. M1 is closed.
 
 ## Ticket rule
 

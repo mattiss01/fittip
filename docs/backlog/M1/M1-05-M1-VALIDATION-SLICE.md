@@ -117,5 +117,6 @@ The validation record must state:
 ## Approval gate
 
 This gate was superseded by the product owner's 29 July 2026 retirement
-decision. M1-05 remains **retired** and must not be dispatched. M2 remains
-blocked until the replacement targeted closeout is accepted.
+decision. M1-05 remains **retired** and must not be dispatched. The replacement
+targeted closeout is accepted; M2-01 and M2-02 are dependency-ready but remain
+separately proposed.

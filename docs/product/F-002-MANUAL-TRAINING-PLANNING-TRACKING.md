@@ -1,6 +1,6 @@
 # F-002: Manual training planning and factual tracking
 
-**Status:** approved — product-owner approval recorded 28 July 2026
+**Status:** accepted — M1 milestone closeout recorded 29 July 2026
 
 **Milestone:** M1
 
@@ -176,3 +176,5 @@ The product owner approved this feature brief in chat on 28 July 2026. That
 approval establishes the governing behavior for M1 but does not dispatch every
 M1 ticket. M1-01 through M1-04 were separately accepted. On 29 July 2026 the
 product owner retired M1-05 and approved the targeted M1 milestone closeout.
+The product owner completed the private hosted walkthrough and the milestone
+closeout was accepted on 29 July 2026.

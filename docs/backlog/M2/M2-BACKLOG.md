@@ -5,9 +5,10 @@ to M2 on 28 July 2026 after the product owner chose manual training planning
 and tracking as the first product milestone. No moved ticket was approved or
 implemented by the renumbering.
 
-M2-01 and M2-02 remain blocked until the targeted
-[M1 milestone closeout](../../validation/M1/M1-MILESTONE-CLOSEOUT.md) is
-accepted.
+The targeted
+[M1 milestone closeout](../../validation/M1/M1-MILESTONE-CLOSEOUT.md) was
+accepted on 29 July 2026. M2-01 and M2-02 are dependency-ready but remain
+separately proposed and subject to their approval gates.
 
 **Founder boundary:** owner or synthetic data only, locally or in accepted
 M0-06A founder staging. M0-03B, M0-04 and its later implementation, M0-05, and
