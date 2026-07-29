@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { BrowserLocalDate } from "@/components/home/browser-local-date";
 import { isoDateInTimezone } from "@/features/completions/local-date";
 import { completionStatusLabel } from "@/features/completions/status-label";
 import { createServerUserClient } from "@/lib/supabase/server-user-client";
@@ -46,8 +47,8 @@ export default async function TodayPage() {
   }
 
   const timezoneName =
-    currentPlan?.version.timezoneName ?? completions[0]?.timezoneName ?? "UTC";
-  const localDate = isoDateInTimezone(new Date(), timezoneName);
+    currentPlan?.version.timezoneName ?? completions[0]?.timezoneName ?? null;
+  const localDate = isoDateInTimezone(new Date(), timezoneName ?? "UTC");
   const sessions =
     currentPlan?.sessions.filter(
       (session) => session.localDate === localDate,
@@ -64,8 +65,14 @@ export default async function TodayPage() {
           <p className={styles.kicker}>FitTip / today</p>
           <h1>Training, as it stands.</h1>
           <p className={styles.intro}>
-            {formatLocalDate(localDate)} · {timezoneName}. Planned and actual
-            records remain separate.
+            {timezoneName ? (
+              <>
+                {formatLocalDate(localDate)} · {timezoneName}
+              </>
+            ) : (
+              <BrowserLocalDate />
+            )}
+            . Planned and actual records remain separate.
           </p>
         </div>
         <p className={styles.stamp}>
