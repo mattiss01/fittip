@@ -2,8 +2,7 @@
 
 **Ticket:** [M1-04](../backlog/M1-04-TODAY-PROGRESS-NAVIGATION.md)
 
-**Lifecycle state:** in development — builder handoff ready for independent
-review
+**Lifecycle state:** accepted
 
 **Exact implementation review target:**
 `aead708f520c061b851974c29c20291e8de2eb4a`
@@ -29,8 +28,13 @@ review
 
 **Mobile evidence:** [390x844 factual detail screenshot](evidence/M1-04-390x844.png)
 
-**Independent review:** requested header-name normalization; correction
-implemented and re-review pending
+**Independent review:** approved exact implementation
+`aead708f520c061b851974c29c20291e8de2eb4a` and evidence
+`964da4e084507dee41d4e00411eb0080c24c50ca` with no unresolved findings
+
+**Product-owner acceptance:** recorded 29 July 2026
+
+**Accepted master merge:** `e07c031568ee9cfcbad67b3d8ef2780a2fb9b9d5`
 
 ## Delivered behavior
 
@@ -252,6 +256,41 @@ After the independent reviewer requested case-insensitive response-header name
 comparison, the corrected production auth flow passed in 7.7 seconds and the
 M1-04 mobile production flow passed again in 6.9 seconds. Exact header values
 remain asserted. The disposable auth account was explicitly removed.
+
+## Independent review and post-merge acceptance
+
+The independent reviewer reconciled the complete manifest against the exact
+Git diff. The initial review requested one correction: HTTP response header
+names in the production authentication test must be normalized
+case-insensitively without weakening the exact private-cache value checks. The
+builder committed that correction as
+`aead708f520c061b851974c29c20291e8de2eb4a`. Independent re-review then
+approved that exact implementation and evidence
+`964da4e084507dee41d4e00411eb0080c24c50ca` with no unresolved findings.
+
+The product owner accepted the exact reviewed implementation in chat on
+29 July 2026. It was merged to `master` as
+`e07c031568ee9cfcbad67b3d8ef2780a2fb9b9d5`.
+
+Post-merge validation on that master merge passed:
+
+- Node 24.18.0: 34 Vitest files and 199 tests;
+- TypeScript, ESLint, and the Next.js production build with all authenticated
+  routes emitted dynamically;
+- clean local application of all five migrations;
+- 3 pgTAP files and 177 database/RLS tests;
+- database lint plus security and performance advisors with no findings;
+- the simultaneous plan-save regression with one success, one `PT409`, and
+  one version/head;
+- the production Plan to Today to actual to Progress flow at exactly
+  `390x844`, with private/no-store and no-overflow assertions; and
+- the production signup, confirmation, Today, You, sign-out, and sign-in flow
+  at `390x844`, including exact private-cache header values.
+
+The disposable local database was reset after browser validation so the
+synthetic authentication account was not retained. No remote project,
+deployment, analytics service, AI provider, credential, or paid resource was
+changed.
 
 ## Known limitations
 

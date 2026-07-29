@@ -1,7 +1,12 @@
 # M1-04: Today, factual progress, and mobile navigation
 
-**Status:** in development — dependencies accepted and dispatch recorded
-29 July 2026; product-owner approval recorded 28 July 2026
+**Status:** accepted — product-owner acceptance recorded 29 July 2026
+
+**Reviewed implementation:** `aead708f520c061b851974c29c20291e8de2eb4a`
+
+**Reviewed validation/evidence:** `964da4e084507dee41d4e00411eb0080c24c50ca`
+
+**Accepted master merge:** `e07c031568ee9cfcbad67b3d8ef2780a2fb9b9d5`
 
 **Milestone:** M1 — manual training planning and tracking
 
@@ -147,3 +152,11 @@ the factual-history navigation tab is named **Progress**, not **History**.
 M1-02 and M1-03 were accepted and passed combined post-merge validation on
 29 July 2026, so this ticket entered development with a distinct builder in an
 isolated ticket worktree.
+
+The independent reviewer approved exact implementation
+`aead708f520c061b851974c29c20291e8de2eb4a` and evidence
+`964da4e084507dee41d4e00411eb0080c24c50ca` with no unresolved findings. The
+product owner accepted that exact reviewed implementation in chat on 29 July
+2026. It was merged to `master` as
+`e07c031568ee9cfcbad67b3d8ef2780a2fb9b9d5` and passed the recorded post-merge
+application, database, security, authentication, and mobile checks.

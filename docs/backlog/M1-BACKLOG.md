@@ -1,9 +1,10 @@
 # M1 backlog
 
-**Planning state:** On 29 July 2026 M1-01, M1-02, and M1-03 are accepted.
-M1-02 and M1-03 were independently reviewed at exact commits, merged to
-`master`, and passed the combined post-merge application, database, and mobile
-regression. M1-04 is approved and in development. M1-05 remains proposed.
+**Planning state:** On 29 July 2026 M1-01 through M1-04 are accepted. Each
+implementation was independently reviewed at an exact commit before
+product-owner acceptance and merge to `master`. M1-04 passed the post-merge
+application, database, security-advisor, concurrency, authentication, and
+`390x844` full-story checks. M1-05 is dependency-ready but remains proposed.
 
 The governing visible-behavior brief is
 [F-002 Manual training planning and factual tracking](../product/F-002-MANUAL-TRAINING-PLANNING-TRACKING.md),
@@ -25,7 +26,7 @@ continues to govern every pre-friends/public/commercial requirement.
 | P1 | [M1-01 Training records and ownership foundation](M1-01-TRAINING-RECORDS-FOUNDATION.md) | accepted | M0-03 and M0-02-C1 accepted; M0-06A for hosted testing | Owner-scoped personal activities, immutable selected 1–7-day plan versions, planned sessions/activities, separate completions, generic measurements, RLS, concurrency | Product-owner acceptance recorded 28 July 2026 |
 | P1 | [M1-02 Manual selectable-horizon training planning](M1-02-SELECTABLE-HORIZON-PLANNING.md) | accepted | M1-01 accepted | Mobile 1–7-day selector and plan; create/edit/move/remove future sessions; personal activities; locks; explicit version save | Exact implementation `92f878d` independently approved; product-owner acceptance recorded 29 July 2026; merged as `cf3253e` |
 | P1 | [M1-03 Quick training logging](M1-03-QUICK-TRAINING-LOGGING.md) | accepted | M1-01 accepted | Planned/unplanned quick actual; completion statuses; duration/effort/feeling/notes; replacements; correction history | Exact implementation `94bc613` independently approved; product-owner acceptance recorded 29 July 2026; merged as `1521d26` |
-| P1 | [M1-04 Today, Progress, and mobile navigation](M1-04-TODAY-PROGRESS-NAVIGATION.md) | in development | M1-02 and M1-03 accepted | Today action surface, factual plan-versus-actual Progress, versions/corrections, authenticated navigation and honest states | Product-owner approval recorded 28 July 2026; dependencies accepted and dispatch recorded 29 July 2026 |
+| P1 | [M1-04 Today, Progress, and mobile navigation](M1-04-TODAY-PROGRESS-NAVIGATION.md) | accepted | M1-02 and M1-03 accepted | Today action surface, factual plan-versus-actual Progress, versions/corrections, authenticated navigation and honest states | Exact implementation `aead708` independently approved; product-owner acceptance recorded 29 July 2026; merged as `e07c031` |
 | P1 | [M1-05 Consolidated M1 validation](M1-05-M1-VALIDATION-SLICE.md) | proposed | M1-01 through M1-04 accepted | Independent clean-migration, RLS, invariant, 390px end-to-end, accessibility, privacy/security, and regression validation | Dispatch only after all four slices are accepted and approve validator/evidence matrix |
 
 ## Dependency chain
@@ -39,8 +40,9 @@ M1-01 training record foundation
 ```
 
 M1-02 and M1-03 are accepted after isolated parallel delivery, exact-commit
-review, merge, and combined integration validation. M1-04 now integrates their
-accepted behavior. M1-05 validates but adds no product behavior.
+review, merge, and combined integration validation. M1-04 integrates their
+accepted behavior and is also accepted after exact-commit review and
+post-merge validation. M1-05 validates but adds no product behavior.
 
 ## M1-02 / M1-03 parallel ownership plan
 
