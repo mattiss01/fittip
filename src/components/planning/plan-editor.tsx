@@ -113,15 +113,28 @@ export function PlanEditor({
   }, [dirty]);
 
   useEffect(() => {
-    const token = `fittip-plan-${crypto.randomUUID()}`;
     const priorState =
       typeof window.history.state === "object" && window.history.state !== null
         ? window.history.state
         : {};
-    const baseState = { ...priorState, __fittipPlanBase: token };
-    const guardState = { ...baseState, __fittipPlanGuard: token };
-    window.history.replaceState(baseState, "", window.location.href);
-    window.history.pushState(guardState, "", window.location.href);
+    const existingGuard =
+      typeof priorState.__fittipPlanGuard === "string"
+        ? priorState.__fittipPlanGuard
+        : null;
+    const token = existingGuard ?? `fittip-plan-${crypto.randomUUID()}`;
+    const guardState = existingGuard
+      ? priorState
+      : {
+          ...priorState,
+          __fittipPlanBase: token,
+          __fittipPlanGuard: token,
+        };
+
+    if (!existingGuard) {
+      const baseState = { ...priorState, __fittipPlanBase: token };
+      window.history.replaceState(baseState, "", window.location.href);
+      window.history.pushState(guardState, "", window.location.href);
+    }
     let active = true;
 
     const handlePopState = () => {

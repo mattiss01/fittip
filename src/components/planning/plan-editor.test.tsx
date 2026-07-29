@@ -288,6 +288,22 @@ describe("PlanEditor", () => {
     window.dispatchEvent(new PopStateEvent("popstate"));
     expect(back).toHaveBeenCalledOnce();
   });
+
+  it("reuses an existing history guard after returning to Plan", () => {
+    window.history.replaceState(
+      {
+        __fittipPlanBase: "existing-plan-guard",
+        __fittipPlanGuard: "existing-plan-guard",
+      },
+      "",
+      "/home/plan",
+    );
+    const pushState = vi.spyOn(window.history, "pushState");
+
+    render(<PlanEditor initialState={existingPlanState()} />);
+
+    expect(pushState).not.toHaveBeenCalled();
+  });
 });
 
 describe("toPersistencePlan", () => {
