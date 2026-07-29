@@ -177,6 +177,38 @@
   border-top: 1px solid var(--ledger-rule);
 }
 
+.confirmation {
+  flex: 1 1 9rem;
+  border: 1px solid var(--ledger-rule);
+}
+
+.confirmation > summary {
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  padding: 0.55rem 0.7rem;
+  cursor: pointer;
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+}
+
+.confirmation > p {
+  margin: 0;
+  padding: 0.75rem;
+  border-top: 1px solid var(--ledger-rule);
+  color: var(--ledger-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.confirmation > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0 0.75rem 0.75rem;
+}
+
 .detail > summary,
 .addPanel > summary,
 .history > summary {
@@ -320,6 +352,20 @@
   background: #fff0e1;
 }
 
+.reload {
+  width: fit-content;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--ledger-ink);
+  color: var(--ledger-ink);
+  font:
+    700 0.7rem "Courier New",
+    monospace;
+  text-decoration: none;
+}
+
 .srOnly {
   position: absolute;
   width: 1px;
@@ -333,7 +379,8 @@
 .manager input:focus-visible,
 .manager textarea:focus-visible,
 .manager select:focus-visible,
-.manager summary:focus-visible {
+.manager summary:focus-visible,
+.manager a:focus-visible {
   outline: 3px solid #efaa84;
   outline-offset: 2px;
 }

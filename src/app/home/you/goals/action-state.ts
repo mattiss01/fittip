@@ -21,6 +21,7 @@ export type GoalActionState = {
   operation?: string;
   goalId?: string;
   draft?: GoalActionDraft;
+  conflict?: "stale" | "core-limit" | "archive-required";
 };
 
 export const INITIAL_GOAL_ACTION_STATE: GoalActionState = {

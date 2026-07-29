@@ -30,6 +30,7 @@ export async function changeGoalAction(
     status: GoalActionState["status"],
     message: string,
     preserveDraft: boolean,
+    conflict?: GoalActionState["conflict"],
   ): GoalActionState => ({
     status,
     message,
@@ -37,6 +38,7 @@ export async function changeGoalAction(
     operation: submittedOperation,
     goalId: submittedGoalId,
     draft: preserveDraft ? submittedDraft : undefined,
+    conflict,
   });
 
   try {
@@ -47,6 +49,11 @@ export async function changeGoalAction(
     );
 
     if (operation === "create" || operation === "edit") {
+      const priorityTier = text(formData, "priorityTier");
+      const originalPriorityTier =
+        operation === "edit"
+          ? optionalText(formData, "originalPriorityTier")
+          : undefined;
       const input = {
         title: text(formData, "title"),
         desiredOutcome: text(formData, "desiredOutcome"),
@@ -61,8 +68,13 @@ export async function changeGoalAction(
         targetMetricLabel: optionalText(formData, "targetMetricLabel"),
         targetMetricValue: optionalText(formData, "targetMetricValue"),
         targetMetricUnit: optionalText(formData, "targetMetricUnit"),
-        priorityTier: text(formData, "priorityTier"),
-        targetRank: optionalNumber(formData, "targetRank"),
+        priorityTier,
+        targetRank:
+          operation === "edit" &&
+          originalPriorityTier !== undefined &&
+          originalPriorityTier !== priorityTier
+            ? undefined
+            : optionalNumber(formData, "targetRank"),
         rationale: optionalText(formData, "rationale"),
         constraints: optionalText(formData, "constraints"),
       };
@@ -131,6 +143,7 @@ export async function changeGoalAction(
           "conflict",
           "Three core goals are already active. Make this supporting or pause another core goal.",
           true,
+          "core-limit",
         );
       }
       if (error.reason === "archive-required") {
@@ -138,12 +151,14 @@ export async function changeGoalAction(
           "conflict",
           "This goal has retained history. Archive it instead of deleting it.",
           true,
+          "archive-required",
         );
       }
       return resultState(
         "conflict",
         "Goals changed in another tab. Reload before trying this change again.",
         true,
+        "stale",
       );
     }
     if (error instanceof GoalAuthenticationError) {

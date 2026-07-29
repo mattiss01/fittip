@@ -58,13 +58,18 @@ describe("goal actions", () => {
   });
 
   it.each([
-    [new GoalConflictError("core-limit"), "conflict", /three core goals/i],
-    [new GoalConflictError("stale"), "conflict", /another tab/i],
-    [new GoalAuthenticationError(), "session", /session ended/i],
-    [new GoalPersistenceError(), "error", /could not be confirmed/i],
+    [
+      new GoalConflictError("core-limit"),
+      "conflict",
+      /three core goals/i,
+      "core-limit",
+    ],
+    [new GoalConflictError("stale"), "conflict", /another tab/i, "stale"],
+    [new GoalAuthenticationError(), "session", /session ended/i, undefined],
+    [new GoalPersistenceError(), "error", /could not be confirmed/i, undefined],
   ])(
     "maps failures to honest content-safe states",
-    async (error, status, copy) => {
+    async (error, status, copy, conflict) => {
       createRepositoryMock.mockResolvedValue({
         create: vi.fn().mockRejectedValue(error),
       });
@@ -76,6 +81,7 @@ describe("goal actions", () => {
 
       expect(result.status).toBe(status);
       expect(result.message).toMatch(copy);
+      expect(result.conflict).toBe(conflict);
       expect(result.draft).toMatchObject({
         title: "Run a trail event",
         priorityTier: "core",
@@ -83,6 +89,32 @@ describe("goal actions", () => {
       expect(revalidatePathMock).not.toHaveBeenCalled();
     },
   );
+
+  it("omits the source-tier rank when an edit changes attention tier", async () => {
+    const edit = vi.fn().mockResolvedValue({
+      goal_id: "52000000-0000-4000-8000-000000000001",
+      collection_revision: 5,
+      result: "edited",
+    });
+    createRepositoryMock.mockResolvedValue({ edit });
+    const form = createForm();
+    form.set("operation", "edit");
+    form.set("goalId", "52000000-0000-4000-8000-000000000001");
+    form.set("originalPriorityTier", "core");
+    form.set("priorityTier", "supporting");
+    form.set("targetRank", "2");
+
+    await changeGoalAction(INITIAL_GOAL_ACTION_STATE, form);
+
+    expect(edit).toHaveBeenCalledWith(
+      "52000000-0000-4000-8000-000000000001",
+      expect.objectContaining({
+        priorityTier: "supporting",
+        targetRank: undefined,
+      }),
+      0,
+    );
+  });
 
   it("returns a validation state for malformed form content", async () => {
     const create = vi.fn().mockRejectedValue(new GoalValidationError());

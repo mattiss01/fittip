@@ -80,6 +80,11 @@ export function GoalManager({ initialGoals, expectedRevision }: Props) {
       >
         {pending ? "Saving goal change…" : state.message}
       </p>
+      {state.conflict === "stale" ? (
+        <a className={styles.reload} href="/home/you/goals">
+          Reload current goals
+        </a>
+      ) : null}
 
       <section className={styles.attention} aria-labelledby="core-heading">
         <div className={styles.sectionHeading}>
@@ -236,7 +241,7 @@ function GoalCard({
             disabled={pending || index === order.length - 1}
           />
         </div>
-        <details className={styles.detail}>
+        <details className={styles.detail} data-goal-editor>
           <summary>Review and edit</summary>
           <GoalForm
             key={`edit-${goal.id}-${
@@ -263,7 +268,7 @@ function GoalCard({
               action={action}
               pending={pending}
             />
-            <SimpleAction
+            <ConfirmedAction
               operation="achieve"
               label="Mark achieved"
               goal={goal}
@@ -271,7 +276,7 @@ function GoalCard({
               action={action}
               pending={pending}
             />
-            <SimpleAction
+            <ConfirmedAction
               operation="abandon"
               label="Mark abandoned"
               goal={goal}
@@ -279,7 +284,7 @@ function GoalCard({
               action={action}
               pending={pending}
             />
-            <SimpleAction
+            <ConfirmedAction
               operation="archive"
               label="Archive"
               goal={goal}
@@ -287,7 +292,7 @@ function GoalCard({
               action={action}
               pending={pending}
             />
-            <SimpleAction
+            <ConfirmedAction
               operation="delete"
               label="Delete if unused"
               goal={goal}
@@ -327,6 +332,13 @@ function GoalForm({
       <input type="hidden" name="operation" value={goal ? "edit" : "create"} />
       <input type="hidden" name="expectedRevision" value={expectedRevision} />
       {goal ? <input type="hidden" name="goalId" value={goal.id} /> : null}
+      {goal ? (
+        <input
+          type="hidden"
+          name="originalPriorityTier"
+          value={goal.priorityTier}
+        />
+      ) : null}
       <label>
         Goal title
         <input
@@ -533,6 +545,73 @@ function SimpleAction({
       <input type="hidden" name="targetRank" value={goal.activeRank ?? ""} />
       <button disabled={pending}>{label}</button>
     </form>
+  );
+}
+
+const CONFIRMATION_COPY = {
+  achieve: {
+    confirm: "Confirm achieved",
+    consequence:
+      "This ends active attention and records the goal as achieved. Reopening it later requires a separate action.",
+  },
+  abandon: {
+    confirm: "Confirm abandoned",
+    consequence:
+      "This ends active attention and records the goal as abandoned. Reopening it later requires a separate action.",
+  },
+  archive: {
+    confirm: "Confirm archive",
+    consequence:
+      "This keeps the goal as history and removes it from active use. It will remain in your archive.",
+  },
+  delete: {
+    confirm: "Confirm permanent delete",
+    consequence:
+      "This permanently deletes an unused goal and cannot be undone. Goals with retained history must be archived instead.",
+  },
+} as const;
+
+function ConfirmedAction({
+  operation,
+  label,
+  goal,
+  expectedRevision,
+  action,
+  pending,
+}: {
+  operation: keyof typeof CONFIRMATION_COPY;
+  label: string;
+  goal: GoalView;
+  expectedRevision: number;
+  action: (payload: FormData) => void;
+  pending: boolean;
+}) {
+  const copy = CONFIRMATION_COPY[operation];
+  return (
+    <details className={styles.confirmation} data-confirmation={operation}>
+      <summary>{label}</summary>
+      <p>{copy.consequence}</p>
+      <div>
+        <SimpleAction
+          operation={operation}
+          label={copy.confirm}
+          goal={goal}
+          expectedRevision={expectedRevision}
+          action={action}
+          pending={pending}
+        />
+        <button
+          type="button"
+          onClick={(event) => {
+            const details = event.currentTarget.closest("details");
+            details?.removeAttribute("open");
+            details?.querySelector("summary")?.focus();
+          }}
+        >
+          Cancel
+        </button>
+      </div>
+    </details>
   );
 }
 

@@ -1,14 +1,31 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const { useActionStateMock } = vi.hoisted(() => ({
+  useActionStateMock: vi.fn(),
+}));
+
+vi.mock("react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react")>();
+  return { ...actual, useActionState: useActionStateMock };
+});
 
 vi.mock("@/app/home/you/goals/actions", () => ({
   changeGoalAction: vi.fn(),
   INITIAL_GOAL_ACTION_STATE: { status: "idle", message: "" },
 }));
 
+import { INITIAL_GOAL_ACTION_STATE } from "@/app/home/you/goals/action-state";
 import { GoalManager, type GoalView } from "./goal-manager";
 
 afterEach(cleanup);
+beforeEach(() => {
+  useActionStateMock.mockReturnValue([
+    INITIAL_GOAL_ACTION_STATE,
+    vi.fn(),
+    false,
+  ]);
+});
 
 describe("GoalManager", () => {
   it("separates ranked core and supporting attention", () => {
@@ -66,6 +83,60 @@ describe("GoalManager", () => {
     expect(screen.getByText(/no core goal yet/i)).toBeVisible();
     expect(screen.getByText(/supporting goals stay visible/i)).toBeVisible();
     expect(screen.getByText("Add goal")).toBeVisible();
+  });
+
+  it("requires explicit confirmations with consequences and restores focus on cancel", () => {
+    render(
+      <GoalManager
+        expectedRevision={1}
+        initialGoals={[goal({ title: "Trail event" })]}
+      />,
+    );
+    const editor = screen
+      .getByText("Review and edit", { selector: "summary" })
+      .closest("details");
+    expect(editor).not.toBeNull();
+    editor!.open = true;
+
+    for (const [action, consequence, confirmation] of [
+      ["Mark achieved", /records the goal as achieved/i, "Confirm achieved"],
+      ["Mark abandoned", /records the goal as abandoned/i, "Confirm abandoned"],
+      ["Archive", /remain in your archive/i, "Confirm archive"],
+      [
+        "Delete if unused",
+        /permanently deletes an unused goal/i,
+        "Confirm permanent delete",
+      ],
+    ] as const) {
+      const summary = screen.getByText(action, { selector: "summary" });
+      const details = summary.closest("details");
+      expect(details).not.toBeNull();
+      details!.open = true;
+      expect(screen.getByText(consequence)).toBeVisible();
+      expect(screen.getByRole("button", { name: confirmation })).toBeEnabled();
+      fireEvent.click(details!.querySelector('button[type="button"]')!);
+      expect(summary).toHaveFocus();
+    }
+  });
+
+  it("offers a usable reload action only for stale conflicts", () => {
+    useActionStateMock.mockReturnValue([
+      {
+        ...INITIAL_GOAL_ACTION_STATE,
+        status: "conflict",
+        conflict: "stale",
+        message:
+          "Goals changed in another tab. Reload before trying this change again.",
+      },
+      vi.fn(),
+      false,
+    ]);
+
+    render(<GoalManager expectedRevision={2} initialGoals={[]} />);
+
+    expect(
+      screen.getByRole("link", { name: "Reload current goals" }),
+    ).toHaveAttribute("href", "/home/you/goals");
   });
 });
 
