@@ -1,45 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { SignOutButton } from "@/components/sign-out-button";
-import { createServerUserClient } from "@/lib/supabase/server-user-client";
-import {
-  ProfileAuthenticationError,
-  ProfileRepository,
-} from "@/server/repositories/profile-repository";
-
-export default async function ProtectedHome() {
-  const client = await createServerUserClient();
-
-  let profile;
-  try {
-    profile = await new ProfileRepository(client).getCurrentProfile();
-  } catch (error) {
-    if (
-      error instanceof ProfileAuthenticationError &&
-      error.accessError?.policy.mode === "founder-staging" &&
-      error.accessError.reason === "not-owner"
-    ) {
-      redirect("/auth/denied");
-    }
-    redirect("/");
-  }
-
-  if (!profile) {
-    redirect("/");
-  }
-
-  return (
-    <main>
-      <section className="home-card" aria-labelledby="home-title">
-        <p className="eyebrow">FitTip / private space</p>
-        <h1 id="home-title">You’re in.</h1>
-        <p>Your verified account is ready. Start with the training ahead.</p>
-        <Link className="primary-link" href="/home/plan">
-          Open training plan
-        </Link>
-        <SignOutButton />
-      </section>
-    </main>
-  );
+export default function ProtectedHome() {
+  redirect("/home/today");
 }

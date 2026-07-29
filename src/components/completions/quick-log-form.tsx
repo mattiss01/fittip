@@ -66,11 +66,18 @@ export function QuickLogForm({
           changed.
         </p>
         <a
+          href={`/home/progress/completion-${encodeURIComponent(
+            state.completionGroupId,
+          )}`}
+        >
+          View in Progress
+        </a>
+        <a
           href={`/home/log?completion=${encodeURIComponent(
             state.completionGroupId,
           )}`}
         >
-          View or correct this actual
+          Correct this actual
         </a>
       </section>
     );

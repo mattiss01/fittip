@@ -32,6 +32,8 @@ const PLANNED_SESSION_COLUMNS =
   "id, local_date, title, sport, intent, expected_duration_minutes" as const;
 const PLANNED_ACTIVITY_COLUMNS =
   "id, planned_session_id, position, name, sport, instructions, measurement_mode" as const;
+const COMPLETION_HEAD_COLUMNS =
+  "completion_group_id, current_completion_id, revision, updated_at" as const;
 
 type CompletionClient = SupabaseClient<Database> | ServerUserClient;
 type CompletionRow = Pick<
@@ -158,6 +160,35 @@ export class CompletionRepository {
       ),
     );
     return { current: revisions[0], revisions };
+  }
+
+  async listCurrentCompletions(): Promise<CompletionRevision[]> {
+    const userId = await this.getVerifiedUserId();
+    const { data: heads, error: headError } = await this.client
+      .from("completion_heads")
+      .select(COMPLETION_HEAD_COLUMNS)
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false });
+    if (headError) throw new CompletionPersistenceError();
+    if (heads.length === 0) return [];
+
+    const currentIds = heads.map(
+      ({ current_completion_id }) => current_completion_id,
+    );
+    const { data: sessions, error: sessionError } = await this.client
+      .from("completed_sessions")
+      .select(COMPLETION_COLUMNS)
+      .eq("user_id", userId)
+      .in("id", currentIds);
+    if (sessionError) throw new CompletionPersistenceError();
+
+    const sessionsById = new Map(
+      sessions.map((session) => [session.id, session]),
+    );
+    return heads.flatMap((head) => {
+      const session = sessionsById.get(head.current_completion_id);
+      return session ? [toCompletionRevision(session, [])] : [];
+    });
   }
 
   async getPlannedSessionSnapshot(

@@ -48,7 +48,7 @@ export default async function QuickLogPage({
 
   const current = history?.current ?? null;
   return (
-    <main className={styles.shell}>
+    <main className={styles.shell} id="main-content">
       <header className={styles.header}>
         <p className={styles.kicker}>FitTip / factual training log</p>
         <h1>{current ? "Correct the record." : "Log what happened."}</h1>
@@ -122,7 +122,7 @@ export default async function QuickLogPage({
 
 function NotFoundState({ message }: { message: string }) {
   return (
-    <main className={styles.shell}>
+    <main className={styles.shell} id="main-content">
       <section className={styles.saved} role="alert">
         <p className={styles.kicker}>Unavailable</p>
         <h1>Record not found.</h1>

@@ -110,7 +110,7 @@ describe("production authentication route handlers", () => {
     const response = await callback(
       new Request(`${origin}/auth/callback?code=valid-code`),
     );
-    expectPrivate303(response, "/home");
+    expectPrivate303(response, "/home/today");
     expect(ensureCurrentProfileMock).toHaveBeenCalledOnce();
   });
 
@@ -145,8 +145,28 @@ describe("production authentication route handlers", () => {
         password: "password",
       }),
     );
-    expectPrivate303(response, "/home");
+    expectPrivate303(response, "/home/today");
     expect(ensureCurrentProfileMock).toHaveBeenCalledOnce();
+  });
+
+  it("restores only an allowlisted same-origin private destination", async () => {
+    const allowed = await signin(
+      post("/auth/signin", {
+        email: "member@example.com",
+        password: "password",
+        next: "/home/progress",
+      }),
+    );
+    expectPrivate303(allowed, "/home/progress");
+
+    const rejected = await signin(
+      post("/auth/signin", {
+        email: "member@example.com",
+        password: "password",
+        next: "https://attacker.example/home/progress",
+      }),
+    );
+    expectPrivate303(rejected, "/home/today");
   });
 
   it("signs out again and returns a generic response when sign-in provisioning fails", async () => {

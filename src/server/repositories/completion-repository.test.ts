@@ -110,6 +110,75 @@ describe("CompletionRepository", () => {
     expect(auth.getClaims).not.toHaveBeenCalled();
     expect(rpc).not.toHaveBeenCalled();
   });
+
+  it("lists only current owner-scoped completion heads in factual order", async () => {
+    const currentId = "00000000-0000-4000-8000-000000000040";
+    const groupId = "00000000-0000-4000-8000-000000000050";
+    const headOrder = vi.fn().mockResolvedValue({
+      data: [
+        {
+          completion_group_id: groupId,
+          current_completion_id: currentId,
+          revision: 2,
+          updated_at: "2026-07-29T12:00:00.000Z",
+        },
+      ],
+      error: null,
+    });
+    const headEq = vi.fn().mockReturnValue({ order: headOrder });
+    const sessionIn = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: currentId,
+          user_id: USER_ID,
+          completion_group_id: groupId,
+          revision_number: 2,
+          previous_completion_id: "00000000-0000-4000-8000-000000000039",
+          planned_session_id: PLANNED_ID,
+          actual_local_date: "2026-07-29",
+          actual_started_at: null,
+          timezone_name: "Europe/Berlin",
+          duration_minutes: 35,
+          status: "partially_completed",
+          perceived_effort: 5,
+          feeling: "as_expected",
+          note: null,
+          replacement_description: null,
+          pain_reported: false,
+          illness_reported: false,
+          injury_reported: false,
+          severe_fatigue_reported: false,
+          correction_reason: "Adjusted duration",
+          created_at: "2026-07-29T12:00:00.000Z",
+        },
+      ],
+      error: null,
+    });
+    const sessionEq = vi.fn().mockReturnValue({ in: sessionIn });
+    const from = vi.fn((table: string) => {
+      if (table === "completion_heads") {
+        return { select: vi.fn(() => ({ eq: headEq })) };
+      }
+      if (table === "completed_sessions") {
+        return { select: vi.fn(() => ({ eq: sessionEq })) };
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    });
+    const repository = new CompletionRepository(client({ from }));
+
+    await expect(repository.listCurrentCompletions()).resolves.toEqual([
+      expect.objectContaining({
+        id: currentId,
+        completionGroupId: groupId,
+        revisionNumber: 2,
+        status: "partially_completed",
+        activities: [],
+      }),
+    ]);
+    expect(headEq).toHaveBeenCalledWith("user_id", USER_ID);
+    expect(sessionEq).toHaveBeenCalledWith("user_id", USER_ID);
+    expect(sessionIn).toHaveBeenCalledWith("id", [currentId]);
+  });
 });
 
 function client(overrides: Record<string, unknown>) {

@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { safeAuthReturn } from "@/lib/auth/safe-return";
+
 type Mode = "sign-in" | "sign-up";
 
 export function AuthForm({
@@ -9,7 +11,7 @@ export function AuthForm({
 }: {
   initialMode?: Mode;
   allowSignUp?: boolean;
-  searchParams?: { checkEmail?: boolean; error?: string };
+  searchParams?: { checkEmail?: boolean; error?: string; next?: string };
 }) {
   const mode = initialMode;
   const isSignUp = mode === "sign-up";
@@ -32,6 +34,13 @@ export function AuthForm({
         className="auth-form"
         method="post"
       >
+        {searchParams?.next ? (
+          <input
+            name="next"
+            type="hidden"
+            value={safeAuthReturn(searchParams.next)}
+          />
+        ) : null}
         <label htmlFor="email">Email</label>
         <input
           autoComplete="email"

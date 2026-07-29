@@ -22,7 +22,7 @@ test.describe("manual selectable-horizon planning", () => {
 
     try {
       await signIn(page, email, password);
-      await page.getByRole("link", { name: "Open training plan" }).click();
+      await page.getByRole("link", { name: "Plan", exact: true }).click();
       await expect(page).toHaveURL(/\/home\/plan$/);
       await expect(
         page.getByRole("heading", { name: /Plan what/ }),
@@ -213,7 +213,7 @@ test.describe("manual selectable-horizon planning", () => {
         await dialog.accept();
       });
       await page.goBack();
-      await expect(page).toHaveURL(/\/home$/);
+      await expect(page).toHaveURL(/\/home\/today$/);
     } finally {
       await deleteLocalUser(request, userId);
     }
@@ -229,7 +229,7 @@ async function signIn(
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/home$/);
+  await expect(page).toHaveURL(/\/home\/today$/);
 }
 
 async function createConfirmedLocalUser(

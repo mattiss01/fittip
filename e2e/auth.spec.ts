@@ -40,39 +40,41 @@ test.describe("public account authentication", () => {
     );
     await page.goto(confirmationUrl);
     await expectPrivateSessionHeaders(await callbackResponse);
-    await expect(page).toHaveURL(/\/home$/);
+    await expect(page).toHaveURL(/\/home\/today$/);
     await expect(
-      page.getByRole("heading", { name: "You’re in." }),
+      page.getByRole("heading", { name: "Training, as it stands." }),
     ).toBeVisible();
 
+    await page.getByRole("link", { name: "You", exact: true }).click();
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/$/);
 
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page).toHaveURL(/\/home$/);
+    await expect(page).toHaveURL(/\/home\/today$/);
   });
 });
 
 async function expectPrivateSessionHeaders(
   response: import("@playwright/test").Response,
 ) {
-  const headers = await response.headersArray();
-  expect(
-    headers.filter(({ name }) => name.toLowerCase() === "cache-control"),
-  ).toEqual([
+  const headers = (await response.headersArray()).map(({ name, value }) => ({
+    name: name.toLowerCase(),
+    value,
+  }));
+  expect(headers.filter(({ name }) => name === "cache-control")).toEqual([
     {
       name: "cache-control",
       value: "private, no-cache, no-store, must-revalidate, max-age=0",
     },
   ]);
-  expect(
-    headers.filter(({ name }) => name.toLowerCase() === "expires"),
-  ).toEqual([{ name: "expires", value: "0" }]);
-  expect(headers.filter(({ name }) => name.toLowerCase() === "pragma")).toEqual(
-    [{ name: "pragma", value: "no-cache" }],
-  );
+  expect(headers.filter(({ name }) => name === "expires")).toEqual([
+    { name: "expires", value: "0" },
+  ]);
+  expect(headers.filter(({ name }) => name === "pragma")).toEqual([
+    { name: "pragma", value: "no-cache" },
+  ]);
 }
 
 async function pollForConfirmationUrl(

@@ -340,7 +340,7 @@ export function PlanEditor({
   );
 
   return (
-    <main className="plan-shell">
+    <main className="plan-shell" id="main-content">
       <div
         aria-hidden={editing ? true : undefined}
         className="plan-background"
@@ -350,14 +350,14 @@ export function PlanEditor({
           <div>
             <Link
               className="back-link"
-              href="/home"
+              href="/home/today"
               onClick={(event) => {
                 if (dirty && !window.confirm(UNSAVED_PLAN_MESSAGE)) {
                   event.preventDefault();
                 }
               }}
             >
-              ← Home
+              ← Today
             </Link>
             <p className="eyebrow">FitTip / training ledger</p>
             <h1>Plan what’s next.</h1>

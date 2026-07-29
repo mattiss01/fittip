@@ -82,6 +82,36 @@ export type CurrentManualPlan = {
   plan: ManualPlanInput;
 };
 
+export type PlannedActivitySnapshot = {
+  id: string;
+  name: string;
+  sport: string;
+  instructions: string | null;
+  measurementMode: string;
+  target: Json | null;
+};
+
+export type PlannedSessionRecord = {
+  id: string;
+  localDate: string;
+  position: number;
+  title: string;
+  sport: string;
+  intent: string | null;
+  expectedDurationMinutes: number | null;
+  note: string | null;
+  activities: PlannedActivitySnapshot[];
+};
+
+export type PlanVersionSnapshot = {
+  version: DetailedPlanVersion;
+  sessions: PlannedSessionRecord[];
+};
+
+export type CurrentPlanSnapshot = PlanVersionSnapshot & {
+  head: DetailedPlanHead;
+};
+
 export class TrainingRecordAuthenticationError extends Error {
   constructor(readonly accessError?: VerifiedUserAccessError) {
     super("An authenticated FitTip user is required.");
@@ -194,6 +224,46 @@ export class TrainingRecordRepository {
         toManualPlanInput(versionRow, sessionRows, activityRows),
       ),
     };
+  }
+
+  async getCurrentPlanSnapshot(): Promise<CurrentPlanSnapshot | null> {
+    const userId = await this.getVerifiedUserId();
+    const { data: headRow, error: headError } = await this.client
+      .from("detailed_plan_heads")
+      .select(PLAN_HEAD_COLUMNS)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (headError) throw new TrainingRecordPersistenceError();
+    if (!headRow) return null;
+
+    const snapshot = await this.getPlanVersionSnapshotForUser(
+      userId,
+      headRow.current_version_id,
+    );
+    if (!snapshot) throw new TrainingRecordPersistenceError();
+
+    return { head: toPlanHead(headRow), ...snapshot };
+  }
+
+  async listPlanVersions(): Promise<DetailedPlanVersion[]> {
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("detailed_plan_versions")
+      .select(PLAN_VERSION_COLUMNS)
+      .eq("user_id", userId)
+      .order("version_number", { ascending: false });
+
+    if (error) throw new TrainingRecordPersistenceError();
+    return data.map(toPlanVersion);
+  }
+
+  async getPlanVersionSnapshot(
+    planVersionId: string,
+  ): Promise<PlanVersionSnapshot | null> {
+    assertUuid(planVersionId);
+    const userId = await this.getVerifiedUserId();
+    return this.getPlanVersionSnapshotForUser(userId, planVersionId);
   }
 
   async saveManualPlan(
@@ -338,6 +408,47 @@ export class TrainingRecordRepository {
       throw new TrainingRecordAuthenticationError();
     }
   }
+
+  private async getPlanVersionSnapshotForUser(
+    userId: string,
+    planVersionId: string,
+  ): Promise<PlanVersionSnapshot | null> {
+    const { data: versionRow, error: versionError } = await this.client
+      .from("detailed_plan_versions")
+      .select(PLAN_VERSION_COLUMNS)
+      .eq("id", planVersionId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (versionError) throw new TrainingRecordPersistenceError();
+    if (!versionRow) return null;
+
+    const { data: sessionRows, error: sessionsError } = await this.client
+      .from("planned_sessions")
+      .select(PLANNED_SESSION_COLUMNS)
+      .eq("plan_version_id", planVersionId)
+      .eq("user_id", userId)
+      .order("local_date")
+      .order("position");
+    if (sessionsError) throw new TrainingRecordPersistenceError();
+
+    const sessionIds = sessionRows.map(({ id }) => id);
+    let activityRows: PlannedActivityRow[] = [];
+    if (sessionIds.length > 0) {
+      const { data, error } = await this.client
+        .from("planned_activities")
+        .select(PLANNED_ACTIVITY_COLUMNS)
+        .eq("user_id", userId)
+        .in("planned_session_id", sessionIds)
+        .order("position");
+      if (error) throw new TrainingRecordPersistenceError();
+      activityRows = data;
+    }
+
+    return {
+      version: toPlanVersion(versionRow),
+      sessions: toPlannedSessionRecords(sessionRows, activityRows),
+    };
+  }
 }
 
 export async function createTrainingRecordRepository(): Promise<TrainingRecordRepository> {
@@ -473,6 +584,38 @@ function toManualPlanInput(
       ),
     })),
   };
+}
+
+function toPlannedSessionRecords(
+  sessions: PlannedSessionRow[],
+  activities: PlannedActivityRow[],
+): PlannedSessionRecord[] {
+  const activitiesBySession = new Map<string, PlannedActivityRow[]>();
+  for (const activity of activities) {
+    const sessionActivities =
+      activitiesBySession.get(activity.planned_session_id) ?? [];
+    sessionActivities.push(activity);
+    activitiesBySession.set(activity.planned_session_id, sessionActivities);
+  }
+
+  return sessions.map((session) => ({
+    id: session.id,
+    localDate: session.local_date,
+    position: session.position,
+    title: session.title,
+    sport: session.sport,
+    intent: session.intent,
+    expectedDurationMinutes: session.expected_duration_minutes,
+    note: session.note,
+    activities: (activitiesBySession.get(session.id) ?? []).map((activity) => ({
+      id: activity.id,
+      name: activity.name,
+      sport: activity.sport,
+      instructions: activity.instructions,
+      measurementMode: activity.measurement_mode,
+      target: activity.target,
+    })),
+  }));
 }
 
 function assertUuid(value: string): void {
