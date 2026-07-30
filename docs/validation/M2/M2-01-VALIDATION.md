@@ -2,10 +2,16 @@
 
 **Ticket:** [M2-01](../../backlog/M2/M2-01-GOAL-MODEL-VALIDATION.md)
 
-**Lifecycle state:** builder implementation complete; awaiting independent
-exact-commit review
+**Lifecycle state:** testable on 30 July 2026 — this record supplies the mobile
+demo path, automated-test results, changed-data notes, and known limitations
+required by Product Plan section 15.1. Independent exact-commit re-review,
+Preview verification, and product-owner acceptance remain open.
 
-**Branch:** `ticket/m2-01-goal-model`
+**Branch:** `ticket/m2-01-goal-model`, pushed to
+`origin/ticket/m2-01-goal-model`
+
+**Exact implementation review target:**
+`ae7d3104899fb93499fde5273cb7e372d2b2457e`
 
 **Initial implementation commit:**
 `d40df06a23519fd937ac2b38028d80410926a544`
@@ -16,13 +22,19 @@ exact-commit review
 **Initial validation-record commit:**
 `68ddd8722791f2247c957ac7893459b74431a7f0`
 
+**Corrected-evidence documentation commit:**
+`9a998b86e82dfe485309b18337ffb0d6d606d051`
+
 The initial implementation commit introduced M2-01. The correction
 implementation commit addresses every finding from the first independent
-review without rewriting the already-applied migration. The initial
-validation-record commit adds this handoff document. A final
-documentation-only commit records the corrected evidence and complete 32-file
-branch-diff manifest; its exact SHA is reported in the builder handoff because
-a commit cannot contain its own final SHA.
+review without rewriting the already-applied migration, and is the last commit
+containing runtime, migration, or test behavior. The initial validation-record
+commit adds this handoff document; the corrected-evidence documentation commit
+records the post-correction evidence and complete 32-file branch-diff
+manifest. The documentation-only commit that moves this ticket to testable
+carries no runtime change, and its exact SHA is reported in the builder
+handoff because a commit cannot contain its own final SHA. The reviewer's
+target is the implementation commit above within the complete branch range.
 
 **Architecture:** [ADR-009](../../decisions/ADR-009-M2-GOAL-MUTATION-TRANSACTION.md)
 
@@ -313,11 +325,19 @@ credential, real training data, or external target is visible.
 
 ## Known limitations and next gate
 
-- The corrected implementation commit has not been pushed, preview-deployed,
-  or independently re-reviewed by this builder. Those are lead/reviewer
-  workflow gates.
+- The ticket branch is pushed to `origin/ticket/m2-01-goal-model`. A matching
+  Vercel Preview deployment has not been confirmed for the branch head, and
+  the corrected implementation has not been independently re-reviewed. Those
+  remain lead/reviewer workflow gates.
 - Hosted migration, RLS, security, and mobile verification remain required on
-  the ticket preview before product-owner acceptance.
+  the ticket preview before product-owner acceptance. All evidence in this
+  record is from the local stack.
+- This record does not yet list the `vercel-react-best-practices` rules checked
+  or the `frontend-design` treatment applied, `supabase gen types typescript`
+  was not repeated after the correction migration, and repository-wide
+  `format:check` and root-config `npm run test:e2e` were not run as part of the
+  final evidence. Those are open reviewer items rather than known product
+  limitations.
 - The normal delete action is intentionally narrow: retained lifecycle history
   requires archive. Future plan/proposal/completion references must preserve
   that same archive-first rule when separately approved.

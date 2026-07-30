@@ -20,5 +20,11 @@ Validation records and their visual evidence are grouped by milestone.
 - [M1 milestone closeout](M1/M1-MILESTONE-CLOSEOUT.md)
 - [M1 visual evidence](M1/evidence/)
 
-M2 and M3 do not have validation records yet. Their future evidence belongs in
-matching `M2/` and `M3/` folders when those milestones enter development.
+## M2
+
+- [M2-01 goal model and management](M2/M2-01-VALIDATION.md) — testable, not yet
+  accepted
+- [M2 visual evidence](M2/evidence/)
+
+M3 does not have validation records yet. Its future evidence belongs in a
+matching `M3/` folder when that milestone enters development.

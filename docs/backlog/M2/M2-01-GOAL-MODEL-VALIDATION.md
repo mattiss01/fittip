@@ -1,6 +1,8 @@
 # M2-01: Goal model and validation
 
-**Status:** in development — product-owner approval recorded 29 July 2026
+**Status:** testable — product-owner approval recorded 29 July 2026; builder
+implementation and [validation record](../../validation/M2/M2-01-VALIDATION.md)
+recorded 30 July 2026
 
 **Milestone:** M2 — goals, editable coaching context, and guided onboarding
 
@@ -398,7 +400,9 @@ focused corrections**.
 ## Approval gate
 
 Product-owner implementation approval and the ADR-009 transaction approval are
-recorded, so M2-01 remains **in development**. Reversible field names, bounded
+recorded. The builder handoff is complete, so M2-01 is **testable**; the
+remaining gates are independent exact-commit re-review, Vercel Preview
+verification, and product-owner acceptance. Reversible field names, bounded
 text limits, and the minimum sport-agnostic target representation may be
 finalized and evidenced within this ticket. No additional privileged function,
 trigger, credential, connection, or write boundary is approved. M0-06A permits
