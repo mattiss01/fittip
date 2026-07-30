@@ -383,7 +383,34 @@ dependent M2 work is dispatched.
 
 ## Post-merge record
 
-The accepted branch was merged to `master` by fast-forward, preserving the
-existing linear history. The resulting `master` SHA and founder deployment
-evidence are appended in a follow-up commit on `master`, because a commit
-cannot contain its own SHA.
+The accepted branch was merged to `master` by fast-forward on 30 July 2026,
+preserving the existing linear history. No merge commit was created.
+
+- Resulting `master` SHA: `f380776fe0b97a7b5b3376e66dc02e6adf543bfe`, pushed to
+  `origin/master` as `67427db..f380776`.
+- Founder Vercel deployment for that SHA completed successfully:
+  `https://vercel.com/mattis-3657s-projects/fittip/GwmdteSAn8i24z9xuQSoUaMMNtBB`.
+- Founder alias: `https://fittip-gilt.vercel.app/`.
+
+### Hosted checks performed
+
+An anonymous boundary check ran against the founder alias on 30 July 2026:
+
+| Request                       | Result                                                        |
+| ----------------------------- | ------------------------------------------------------------- |
+| `GET /`                       | `200` with `private, no-cache, no-store, max-age=0, must-revalidate` |
+| `GET /home/you/goals`         | `303` to `/` with `private, no-cache, no-store, must-revalidate, max-age=0` |
+
+The new authenticated goal route is therefore unreachable anonymously on the
+founder deployment and is not cached by the edge.
+
+### Hosted checks still outstanding
+
+These were not performed and remain open before dependent M2 work is
+dispatched:
+
+- the authenticated founder `390x844` goal walkthrough on the deployment;
+- verification that the hosted migration list contains both M2-01 migrations;
+  and
+- `supabase db lint`/`advisors` and the RLS, grant, and privilege matrix
+  against the hosted founder project rather than the local stack.
