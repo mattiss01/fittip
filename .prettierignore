@@ -7,5 +7,6 @@ package-lock.json
 supabase/.branches/
 supabase/.temp/
 AGENTS.md
+CLAUDE.md
 REVISED_PRODUCT_PLAN.md
 docs/

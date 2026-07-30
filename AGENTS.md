@@ -30,7 +30,7 @@
 - Product-owner acceptance is requested against the exact independently reviewed commit and its Vercel Preview URL. The product owner's manual acceptance surface is Vercel, not localhost.
 - Product-owner acceptance applies to the exact independently reviewed commit. After acceptance, the lead immediately merges that commit into `master`, pushes `master` to GitHub, waits for the founder Vercel deployment to reach `READY`, performs the required hosted smoke/security checks, and records the resulting `master` commit SHA and deployment URL before dispatching dependent work.
 - The Vercel `production` target is currently the owner-only founder-testing environment, not a public or commercial launch. Ticket Preview URLs are temporary review artifacts; no separate persistent staging environment is required yet.
-- Do not automatically repeat the complete local suite after a clean merge of the exact reviewed commit. Re-run the full or combined suite when the merge changes the reviewed result, resolves conflicts, integrates separately developed behavior, or otherwise creates material regression risk. Always verify the resulting Vercel deployment and its required hosted flows.
+- Do not automatically repeat the complete local suite after a clean merge of the exact reviewed commit. The `master` continuous-integration run covers the post-merge suite; a red or absent run for the merge commit is a delivery blocker. Re-run the full or combined suite locally only when the merge changes the reviewed result, resolves conflicts, integrates separately developed behavior, or otherwise creates material regression risk. Always verify the resulting Vercel deployment and its required hosted flows.
 - An accepted ticket must never remain solely as uncommitted changes on `master`. Do not begin dependent implementation from an uncommitted or unmerged ticket.
 - An accepted or testable ticket must never remain only in the local repository. Local `master` must not remain ahead of `origin/master` after accepted work; if push or deployment fails, stop and report the blocker.
 - The product owner grants standing authorization to push every intentional FitTip commit and ticket branch to the public `origin` repository at `https://github.com/mattiss01/fittip.git`. Do not request push approval again while `origin` matches that exact URL; push promptly after each commit at the point required by this workflow.
@@ -40,6 +40,18 @@
 - Return to the product owner only for a material decision, a genuine blocker, or final acceptance.
 - Before requesting acceptance, provide the Vercel Preview URL, mobile demo path, changed files, tests run, hosted and local results, known limitations, and the precise decision requested.
 - Use the lifecycle in Product Plan section 15.1: draft, approved, in development, testable, accepted.
+
+## Continuous integration
+
+- `.github/workflows/ci.yml` runs on `master`, on `ticket/**` and `chore/**` branches, and on pull requests into `master`. It covers Prettier, ESLint, TypeScript, the Vitest suite, the production build, every migration applied from zero, database lint, the security and performance advisors, the pgTAP suite, the concurrency harnesses, and the 390px production browser flows.
+- The green CI run for the exact reviewed commit is the automated-test evidence for that ticket. Record its run URL in the validation record instead of pasting suite output. A red or absent run for that SHA is a delivery blocker.
+- The builder runs the narrow tests it needs while implementing, and does not execute the complete suite by hand to produce evidence. Push the ticket branch and let CI establish the result.
+- The independent reviewer reads the exact diff, reconciles it against the manifest, and confirms the CI run is green for that SHA. It does not re-execute the suites CI already ran. Reviewing still requires judgment CI cannot supply: authorization, ownership predicates, product invariants, history and versioning behavior, and honest empty, error, and offline states.
+- Do not write "re-run lint, typecheck, tests, build, and the browser flow" into a reviewer checklist. Name the CI run instead, plus whatever genuinely needs a human or a hosted environment.
+- CI does not replace exact-commit independent review, Vercel Preview verification, hosted smoke and security checks, or product-owner acceptance.
+- CI proves that an assertion holds. It cannot judge whether a mobile surface looks or feels correct. Visual layout, spacing, focus and touch affordances, copy tone, and the 390px acceptance pass remain the product owner's manual check on the Vercel Preview.
+- The pipeline requires no repository secret. Each Docker job starts its own disposable local Supabase stack and derives that container's ephemeral coordinates. Do not add a repository secret, hosted project, deployment step, or paid resource to CI without separate product-owner approval.
+- Changing `.github/**` is a tooling and supply-chain change. Commit it separately from product changes, and never weaken a check merely to make a branch green.
 
 ## Project skill workflow
 
