@@ -116,7 +116,8 @@ flowchart TB
 
 The visual records the current intended shape. M2-01's exact accepted contract
 is governed by its approved ticket, ADR-009, migration, and validation record,
-which also documents that acceptance waived the independent exact-commit
-re-review. M2-02 and M2-03 must still approve their exact tables, fields,
+which also documents that acceptance initially waived the independent
+exact-commit re-review and that the product owner withdrew that waiver on
+30 July 2026, so the review is required before M2-01 is accepted again. M2-02 and M2-03 must still approve their exact tables, fields,
 ownership/RLS policies, history, expiry, and publication transactions before
 migrations are implemented.

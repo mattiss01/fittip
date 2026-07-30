@@ -2,10 +2,13 @@
 
 **Ticket:** [M2-01](../../backlog/M2/M2-01-GOAL-MODEL-VALIDATION.md)
 
-**Lifecycle state:** accepted by the product owner on 30 July 2026 against the
-ticket's Vercel Preview, with the required independent exact-commit re-review
-explicitly waived. See
-[Independent review and product-owner acceptance](#independent-review-and-product-owner-acceptance).
+**Lifecycle state:** testable. Acceptance was granted on 30 July 2026 against
+the ticket's Vercel Preview with the required independent exact-commit
+re-review explicitly waived, and the product owner withdrew that waiver later
+the same day. The independent review is required before acceptance is granted
+again. See
+[Independent review and product-owner acceptance](#independent-review-and-product-owner-acceptance)
+and [Acceptance withdrawn](#acceptance-withdrawn-30-july-2026).
 
 **Branch:** `ticket/m2-01-goal-model`, pushed to
 `origin/ticket/m2-01-goal-model`
@@ -355,12 +358,43 @@ the accepted implementation.
 The open reviewer items listed under known limitations were not closed before
 acceptance. They remain the honest state of this record.
 
+## Acceptance withdrawn (30 July 2026)
+
+Later on 30 July 2026 the product owner withdrew the waiver recorded above,
+stating that M2-01 should receive the full independent exact-commit review. The
+acceptance rested on that waiver, so it is withdrawn with it and M2-01 returns
+to **testable**.
+
+Nothing above this section is rewritten. The waiver happened, and this record
+continues to say so; this section records only what changed afterwards.
+
+Required before acceptance is requested again:
+
+- An independent exact-commit review of
+  `ae7d3104899fb93499fde5273cb7e372d2b2457e`, reconciling the complete manifest
+  against the real diff.
+- Closure, or explicit re-acceptance, of the open reviewer items still listed
+  below under known limitations.
+- A conclusion on
+  [M2-05](../../backlog/M2/M2-05-INTERMITTENT-GOAL-MUTATIONS.md), which records
+  goal creates, reorders, and deletes intermittently failing to apply with no
+  error shown, at a measured one-in-two rate in continuous integration. That
+  behavior is inside this ticket's accepted contract and is exactly what an
+  independent review of the corrected diff might have caught.
+- A green continuous-integration run for the reviewed commit.
+
+The implementation remains merged on `master` and deployed. Withdrawing
+acceptance does not revert code; it reopens the gate that governs dependent
+work, so M2-02 must not start until M2-01 is accepted again.
+
 ## Known limitations and next gate
 
 - The corrected implementation was never independently re-reviewed. Acceptance
   waived that gate; no second agent reconciled the corrected diff, so this
-  record's automated evidence and the product owner's Preview verification are
-  the complete basis for acceptance.
+  record's automated evidence and the product owner's Preview verification were
+  the complete basis for that acceptance. The waiver was withdrawn on 30 July
+  2026 and the review is now required; see
+  [Acceptance withdrawn](#acceptance-withdrawn-30-july-2026).
 - Every automated result in this record is from the local stack. Hosted
   migration, RLS, advisor, and security verification against the founder
   environment were not performed by this builder and remain required after the

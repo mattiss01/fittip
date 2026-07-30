@@ -1,9 +1,11 @@
 # M2-01: Goal model and validation
 
-**Status:** accepted 30 July 2026 — product-owner approval recorded 29 July
-2026; accepted against the ticket Vercel Preview with the independent
-exact-commit re-review explicitly waived. See the
-[validation record](../../validation/M2/M2-01-VALIDATION.md).
+**Status:** testable — acceptance withdrawn 30 July 2026. The product owner
+withdrew the earlier waiver of the independent exact-commit re-review, so that
+review is required before M2-01 is accepted again. Implementation approval was
+recorded 29 July 2026, and the implementation remains merged and deployed. See
+the [validation record](../../validation/M2/M2-01-VALIDATION.md) and
+[M2-05](M2-05-INTERMITTENT-GOAL-MUTATIONS.md).
 
 **Milestone:** M2 — goals, editable coaching context, and guided onboarding
 
@@ -402,9 +404,12 @@ focused corrections**.
 
 Product-owner implementation approval and the ADR-009 transaction approval are
 recorded, and the product owner accepted the slice on 30 July 2026 against the
-ticket Preview, waiving the independent exact-commit re-review. M2-01 is
-**accepted**; the remaining step is post-merge founder deployment and hosted
-verification. Reversible field names, bounded
+ticket Preview, waiving the independent exact-commit re-review, then withdrew
+that waiver later the same day. M2-01 is therefore **testable**, not accepted.
+An independent exact-commit review of
+`ae7d3104899fb93499fde5273cb7e372d2b2457e` is required, after which acceptance
+must be requested again. Post-merge founder deployment and hosted verification
+also remain required. Reversible field names, bounded
 text limits, and the minimum sport-agnostic target representation may be
 finalized and evidenced within this ticket. No additional privileged function,
 trigger, credential, connection, or write boundary is approved. M0-06A permits
