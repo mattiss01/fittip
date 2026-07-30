@@ -1,0 +1,169 @@
+name: CI
+
+# Mirrors the quality, database, and browser commands documented in README.md
+# so a ticket branch proves itself before independent review, instead of every
+# agent re-running the same suites in its own session.
+
+on:
+  push:
+    branches: [master, "ticket/**", "chore/**"]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: Lint, types, unit tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Shape-valid placeholders only. No Supabase project exists behind these;
+      # they exist so the environment validator and `next build` can run without
+      # the Docker stack. Jobs that need real coordinates derive them below.
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Prettier
+        run: npm run format:check
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: Vitest
+        run: npm run test:run
+
+      - name: Next production build
+        run: npm run build
+
+  database:
+    name: Migrations, RLS, advisors, concurrency
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Start local Supabase stack
+        run: npx supabase start
+
+      - name: Derive local Supabase coordinates
+        run: node .github/scripts/supabase-env.mjs
+
+      - name: Apply every migration from zero
+        run: npx supabase db reset --local
+
+      - name: Database lint
+        run: npx supabase db lint --local --level warning --fail-on warning
+
+      - name: Security and performance advisors
+        run: npx supabase db advisors --local --type all --level warn --fail-on warn
+
+      - name: pgTAP authorization and constraint tests
+        run: npx supabase test db --local supabase/tests/database
+
+      - name: M1-01 concurrent plan writes
+        run: npm run test:m1-01-concurrency
+
+      - name: M2-01 concurrent goal mutations
+        run: npm run test:m2-01-concurrency
+
+      - name: M2-01 concurrent reorder and lifecycle
+        run: npm run test:m2-01-concurrency-lifecycle
+
+      - name: Stop local Supabase stack
+        if: always()
+        run: npx supabase stop --no-backup
+
+  browser:
+    name: 390px production browser flows
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start local Supabase stack
+        run: npx supabase start
+
+      - name: Derive local Supabase coordinates
+        run: node .github/scripts/supabase-env.mjs
+
+      - name: Apply every migration from zero
+        run: npx supabase db reset --local
+
+      # NEXT_PUBLIC_* values are inlined into the client bundle at build time,
+      # so the build must happen after the real coordinates are derived.
+      - name: Next production build
+        run: npm run build
+
+      - name: Authentication and planning flows
+        run: |
+          .github/scripts/with-server.sh 3000 \
+            npx playwright test e2e/auth.spec.ts e2e/planning.spec.ts
+
+      # m1-03.playwright.config.ts has no testMatch, so the spec is named
+      # explicitly to stop it collecting every other ticket's spec.
+      - name: M1-03 quick logging
+        run: |
+          .github/scripts/with-server.sh 3013 \
+            npx playwright test e2e/m1-03-quick-log.spec.ts \
+              --config=e2e/m1-03.playwright.config.ts
+
+      - name: M1-04 Today and Progress
+        run: |
+          .github/scripts/with-server.sh 3014 \
+            npx playwright test --config=e2e/m1-04.playwright.config.ts
+
+      - name: M2-01 goal management
+        run: |
+          .github/scripts/with-server.sh 3015 \
+            npx playwright test --config=e2e/m2-01.playwright.config.ts
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Stop local Supabase stack
+        if: always()
+        run: npx supabase stop --no-backup

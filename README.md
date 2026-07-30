@@ -182,5 +182,33 @@ npm run test:e2e
   above. It reads the confirmation link only from local Mailpit.
 
 M0-06A owns the approved founder-hosted Supabase/Vercel configuration and
-hosted authentication/deployment validation. Continuous integration and every
-external-use, commercial, or production capability remain later gated work.
+hosted authentication/deployment validation. Every external-use, commercial, or
+production capability remains later gated work.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs the commands above on `master`, on `ticket/**`
+and `chore/**` branches, and on pull requests into `master`. It exists so a
+branch proves itself once, instead of the builder, the reviewer, and the
+post-merge check each re-running the same suites by hand.
+
+| Job | Covers |
+| --- | --- |
+| `static` | Prettier, ESLint, TypeScript, Vitest, and the production build |
+| `database` | `db reset` from zero, database lint, security/performance advisors, pgTAP, and the concurrency harnesses |
+| `browser` | The 390px production Playwright flows for authentication, planning, M1-03, M1-04, and M2-01 |
+
+The pipeline requires **no repository secrets**. Every job starts its own
+disposable local Supabase stack and derives that container's ephemeral
+coordinates with `.github/scripts/supabase-env.mjs`. No hosted project,
+founder-staging environment, deployment, or paid resource is contacted; the
+workflow has read-only repository permissions.
+
+The `static` job runs without Docker and uses shape-valid placeholder Supabase
+coordinates so the environment validator and `next build` can run. The
+`database` and `browser` jobs derive real local coordinates before building,
+because `NEXT_PUBLIC_*` values are inlined into the client bundle at build time.
+
+A green run is evidence for a ticket's validation record. It does not replace
+exact-commit independent review, Vercel Preview verification, or product-owner
+acceptance.
