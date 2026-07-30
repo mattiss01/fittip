@@ -55,6 +55,11 @@ if (!environmentFile) {
   process.exit(1);
 }
 
+// Throwaway container keys are still key-shaped strings, and this repository is
+// public. Mask them so later steps do not print them into the run log.
+console.log(`::add-mask::${publishableKey}`);
+console.log(`::add-mask::${serviceRoleKey}`);
+
 appendFileSync(
   environmentFile,
   [
@@ -66,4 +71,6 @@ appendFileSync(
 );
 
 console.log(`Local Supabase URL: ${url}`);
-console.log(`Publishable key prefix: ${publishableKey.slice(0, 18)}...`);
+console.log(
+  "Derived and masked the local stack's publishable and secret keys.",
+);

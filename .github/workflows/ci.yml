@@ -30,9 +30,9 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -59,9 +59,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -104,9 +104,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -130,10 +130,18 @@ jobs:
       - name: Next production build
         run: npm run build
 
+      # Every browser step runs one worker at a time. A shared runner also hosts
+      # the Supabase stack and the application server, so parallel workers make
+      # these flows slower and less deterministic than the documented local run.
+      #
+      # The root config's 60s test timeout is raised here for the same reason.
+      # The per-ticket configs already set their own longer timeouts and are
+      # deliberately left alone.
       - name: Authentication and planning flows
         run: |
           .github/scripts/with-server.sh 3000 \
-            npx playwright test e2e/auth.spec.ts e2e/planning.spec.ts
+            npx playwright test e2e/auth.spec.ts e2e/planning.spec.ts \
+              --workers=1 --timeout=180000
 
       # m1-03.playwright.config.ts has no testMatch, so the spec is named
       # explicitly to stop it collecting every other ticket's spec.
@@ -141,21 +149,23 @@ jobs:
         run: |
           .github/scripts/with-server.sh 3013 \
             npx playwright test e2e/m1-03-quick-log.spec.ts \
-              --config=e2e/m1-03.playwright.config.ts
+              --config=e2e/m1-03.playwright.config.ts --workers=1
 
       - name: M1-04 Today and Progress
         run: |
           .github/scripts/with-server.sh 3014 \
-            npx playwright test --config=e2e/m1-04.playwright.config.ts
+            npx playwright test --config=e2e/m1-04.playwright.config.ts \
+              --workers=1
 
       - name: M2-01 goal management
         run: |
           .github/scripts/with-server.sh 3015 \
-            npx playwright test --config=e2e/m2-01.playwright.config.ts
+            npx playwright test --config=e2e/m2-01.playwright.config.ts \
+              --workers=1
 
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: |
