@@ -404,13 +404,21 @@ An anonymous boundary check ran against the founder alias on 30 July 2026:
 The new authenticated goal route is therefore unreachable anonymously on the
 founder deployment and is not cached by the edge.
 
+On 30 July 2026 the product owner reported that `/home/you/goals` loads on the
+founder deployment and that the `390x844` goal walkthrough recorded above
+passes there. Because the goal routes cannot function without the goal tables
+and `apply_goal_change`, that result establishes that both M2-01 migrations are
+applied to the founder Supabase project. This is the product owner's own manual
+verification, not a builder-run or automated hosted test.
+
 ### Hosted checks still outstanding
 
-These were not performed and remain open before dependent M2 work is
-dispatched:
+These remain open before dependent M2 work is dispatched:
 
-- the authenticated founder `390x844` goal walkthrough on the deployment;
-- verification that the hosted migration list contains both M2-01 migrations;
-  and
-- `supabase db lint`/`advisors` and the RLS, grant, and privilege matrix
-  against the hosted founder project rather than the local stack.
+- the exact hosted `supabase migration list` output confirming both M2-01
+  migration entries and no unexpected or out-of-band schema change; and
+- hosted `supabase db lint` and `db advisors` results, with the
+  `apply_goal_change` SECURITY DEFINER finding classified against
+  [ADR-009](../../decisions/ADR-009-M2-GOAL-MUTATION-TRANSACTION.md) exactly as
+  the M1 closeout classified its two equivalents, plus confirmation that the
+  three new tables report RLS enabled on the hosted project.
