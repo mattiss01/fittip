@@ -1,7 +1,7 @@
 # FitTip data-model overview
 
-**Status:** living planning view — M0 and M1 are accepted; M2-01 is testable
-and not yet accepted; later M2 and M3 records remain proposed
+**Status:** living planning view — M0, M1, and M2-01 are accepted; later M2 and
+M3 records remain proposed
 
 This diagram shows the intended ownership and history boundaries. It is a
 conceptual overview, not approval of exact table names, columns, migrations, or
@@ -85,7 +85,7 @@ flowchart TB
   by Supabase Auth.
 - **M1 is accepted:** a detailed plan version contains exactly
   the user-requested 1–7 consecutive owner-local dates.
-- **M2-01 is testable, not accepted:** the ticket branch adds owner-scoped goal,
+- **M2-01 is accepted:** it adds owner-scoped goal,
   collection-revision, and minimal lifecycle-event records. One authenticated
   transaction owns all changes; active core and supporting ranks are separate.
 - Planned sessions/activities and completed sessions/activities are separate.
@@ -106,7 +106,7 @@ flowchart TB
 | Detailed plans, planned/actual separation, personal activities | [M1-01](../backlog/M1/M1-01-TRAINING-RECORDS-FOUNDATION.md) | accepted |
 | Manual selected-horizon plan behavior | [M1-02](../backlog/M1/M1-02-SELECTABLE-HORIZON-PLANNING.md) | accepted |
 | Factual logging and correction history | [M1-03](../backlog/M1/M1-03-QUICK-TRAINING-LOGGING.md) | accepted |
-| Goals | [M2-01](../backlog/M2/M2-01-GOAL-MODEL-VALIDATION.md) | testable |
+| Goals | [M2-01](../backlog/M2/M2-01-GOAL-MODEL-VALIDATION.md) | accepted |
 | Memory | [M2-02](../backlog/M2/M2-02-MEMORY-MODEL-MANAGEMENT.md) | proposed |
 | Guided-onboarding candidates and explicit publication | [M2-03](../backlog/M2/M2-03-INTAKE-FACT-REVIEW.md) | proposed |
 | AI proposal/source records | [M3-01](../backlog/M3/M3-01-LOCAL-AI-ADAPTER-CONTROLS.md), [M3-02](../backlog/M3/M3-02-ROADMAP-PROPOSAL.md), [M3-03](../backlog/M3/M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md) | proposed |
@@ -114,9 +114,9 @@ flowchart TB
 
 ## Approval boundary
 
-The visual records the current intended shape. M2-01's exact testable
-contract is governed by its approved ticket, ADR-009, migration, and validation
-record; it is not accepted until exact-commit review and product-owner
-acceptance. M2-02 and M2-03 must still approve their exact tables, fields,
+The visual records the current intended shape. M2-01's exact accepted contract
+is governed by its approved ticket, ADR-009, migration, and validation record,
+which also documents that acceptance waived the independent exact-commit
+re-review. M2-02 and M2-03 must still approve their exact tables, fields,
 ownership/RLS policies, history, expiry, and publication transactions before
 migrations are implemented.

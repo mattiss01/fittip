@@ -1,8 +1,9 @@
 # M2-01: Goal model and validation
 
-**Status:** testable — product-owner approval recorded 29 July 2026; builder
-implementation and [validation record](../../validation/M2/M2-01-VALIDATION.md)
-recorded 30 July 2026
+**Status:** accepted 30 July 2026 — product-owner approval recorded 29 July
+2026; accepted against the ticket Vercel Preview with the independent
+exact-commit re-review explicitly waived. See the
+[validation record](../../validation/M2/M2-01-VALIDATION.md).
 
 **Milestone:** M2 — goals, editable coaching context, and guided onboarding
 
@@ -400,9 +401,10 @@ focused corrections**.
 ## Approval gate
 
 Product-owner implementation approval and the ADR-009 transaction approval are
-recorded. The builder handoff is complete, so M2-01 is **testable**; the
-remaining gates are independent exact-commit re-review, Vercel Preview
-verification, and product-owner acceptance. Reversible field names, bounded
+recorded, and the product owner accepted the slice on 30 July 2026 against the
+ticket Preview, waiving the independent exact-commit re-review. M2-01 is
+**accepted**; the remaining step is post-merge founder deployment and hosted
+verification. Reversible field names, bounded
 text limits, and the minimum sport-agnostic target representation may be
 finalized and evidenced within this ticket. No additional privileged function,
 trigger, credential, connection, or write boundary is approved. M0-06A permits

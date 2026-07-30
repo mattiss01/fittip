@@ -2,10 +2,10 @@
 
 **Ticket:** [M2-01](../../backlog/M2/M2-01-GOAL-MODEL-VALIDATION.md)
 
-**Lifecycle state:** testable on 30 July 2026 — this record supplies the mobile
-demo path, automated-test results, changed-data notes, and known limitations
-required by Product Plan section 15.1. Independent exact-commit re-review,
-Preview verification, and product-owner acceptance remain open.
+**Lifecycle state:** accepted by the product owner on 30 July 2026 against the
+ticket's Vercel Preview, with the required independent exact-commit re-review
+explicitly waived. See
+[Independent review and product-owner acceptance](#independent-review-and-product-owner-acceptance).
 
 **Branch:** `ticket/m2-01-goal-model`, pushed to
 `origin/ticket/m2-01-goal-model`
@@ -323,15 +323,48 @@ credential, real training data, or external target is visible.
   tests, focused domain/repository/action/UI/architecture coverage within the
   229-test application suite, and one complete production browser flow.
 
+## Independent review and product-owner acceptance
+
+The first independent review of the initial implementation produced findings.
+The builder committed the corrections as
+`ae7d3104899fb93499fde5273cb7e372d2b2457e`. Under the delivery protocol that
+correction invalidated the earlier approval until an independent re-review of
+the exact corrected commit.
+
+That re-review did not happen. On 30 July 2026 the product owner stated they
+had personally tested M2-01 on the ticket's Vercel Preview and accepted the
+slice, explicitly waiving the required independent exact-commit re-review. This
+is a recorded conscious deviation from the AGENTS.md delivery protocol, not an
+omitted step. The accepted behavior therefore rests on the builder's automated
+evidence in this record plus the product owner's own Preview verification; no
+second agent reconciled the corrected diff.
+
+Preview evidence for the accepted runtime:
+
+| Commit    | Contents                        | Vercel Preview                                                                   |
+| --------- | ------------------------------- | -------------------------------------------------------------------------------- |
+| `ae7d310` | last runtime/migration/test commit | build status remained `pending` and was superseded by the following commits     |
+| `9a998b8` | documentation only              | `success` — `https://vercel.com/mattis-3657s-projects/fittip/6NRcBJdH9NfVSMXKKua17zyrYmZJ` |
+| `5f97562` | documentation only              | `success` — `https://vercel.com/mattis-3657s-projects/fittip/jTuVd8tk9LXvQtUAEeAa4SkXfauU` |
+
+`git diff ae7d310..5f97562` touches only the five documentation files listed in
+this record, so every succeeded Preview deploys exactly the runtime, migration,
+and test behavior of `ae7d3104899fb93499fde5273cb7e372d2b2457e`. That commit is
+the accepted implementation.
+
+The open reviewer items listed under known limitations were not closed before
+acceptance. They remain the honest state of this record.
+
 ## Known limitations and next gate
 
-- The ticket branch is pushed to `origin/ticket/m2-01-goal-model`. A matching
-  Vercel Preview deployment has not been confirmed for the branch head, and
-  the corrected implementation has not been independently re-reviewed. Those
-  remain lead/reviewer workflow gates.
-- Hosted migration, RLS, security, and mobile verification remain required on
-  the ticket preview before product-owner acceptance. All evidence in this
-  record is from the local stack.
+- The corrected implementation was never independently re-reviewed. Acceptance
+  waived that gate; no second agent reconciled the corrected diff, so this
+  record's automated evidence and the product owner's Preview verification are
+  the complete basis for acceptance.
+- Every automated result in this record is from the local stack. Hosted
+  migration, RLS, advisor, and security verification against the founder
+  environment were not performed by this builder and remain required after the
+  merge.
 - This record does not yet list the `vercel-react-best-practices` rules checked
   or the `frontend-design` treatment applied, `supabase gen types typescript`
   was not repeated after the correction migration, and repository-wide
@@ -343,7 +376,14 @@ credential, real training data, or external target is visible.
   that same archive-first rule when separately approved.
 - M2-02 memory and M2-03 onboarding/publication behavior remain absent.
 
-The independent reviewer must reconcile this manifest against the exact diff,
-review correction commit `ae7d3104899fb93499fde5273cb7e372d2b2457e`
-within the complete branch range, and verify the matching Vercel Preview before
-the lead requests product-owner acceptance.
+The next gate is the post-merge founder deployment: `master` must reach a
+`READY` Vercel deployment and pass the hosted smoke and security checks, whose
+resulting `master` SHA and deployment URL are recorded below before any
+dependent M2 work is dispatched.
+
+## Post-merge record
+
+The accepted branch was merged to `master` by fast-forward, preserving the
+existing linear history. The resulting `master` SHA and founder deployment
+evidence are appended in a follow-up commit on `master`, because a commit
+cannot contain its own SHA.
