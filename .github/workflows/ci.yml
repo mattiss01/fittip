@@ -141,7 +141,7 @@ jobs:
         run: |
           .github/scripts/with-server.sh 3000 \
             npx playwright test e2e/auth.spec.ts e2e/planning.spec.ts \
-              --workers=1 --timeout=180000
+              --workers=1 --timeout=180000 --trace=retain-on-failure
 
       # m1-03.playwright.config.ts has no testMatch, so the spec is named
       # explicitly to stop it collecting every other ticket's spec.
@@ -149,19 +149,19 @@ jobs:
         run: |
           .github/scripts/with-server.sh 3013 \
             npx playwright test e2e/m1-03-quick-log.spec.ts \
-              --config=e2e/m1-03.playwright.config.ts --workers=1
+              --config=e2e/m1-03.playwright.config.ts --workers=1 --trace=retain-on-failure
 
       - name: M1-04 Today and Progress
         run: |
           .github/scripts/with-server.sh 3014 \
             npx playwright test --config=e2e/m1-04.playwright.config.ts \
-              --workers=1
+              --workers=1 --trace=retain-on-failure
 
       - name: M2-01 goal management
         run: |
           .github/scripts/with-server.sh 3015 \
             npx playwright test --config=e2e/m2-01.playwright.config.ts \
-              --workers=1
+              --workers=1 --trace=retain-on-failure
 
       - name: Upload Playwright report
         if: failure()
