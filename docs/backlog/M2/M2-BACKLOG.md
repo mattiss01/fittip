@@ -30,6 +30,7 @@ production.
 | P1 | [M2-02 Memory model and management](M2-02-MEMORY-MODEL-MANAGEMENT.md) | proposed | M1 milestone closeout accepted; M0-03 and M0-02-C1 accepted | Explicit facts, constraints, preferences, and proposed patterns; provenance/status/history; inspect/edit/disable/delete; ownership/RLS; sensitive-data handling; 390px management; no AI extraction | Approve statuses, provenance, history/expiry/delete, sensitive-data handling, mobile UX/copy, and consequential architecture |
 | P1 | [M2-03 Guided onboarding and context review](M2-03-INTAKE-FACT-REVIEW.md) | proposed | M2-01 and M2-02 accepted | First-run/resumable onboarding for goals, baseline, possibilities, preferences, and optional constraints; separate candidates; explicit review; atomic publication into You; no production AI | Approve required fields, AI-readiness minimum, draft retention, atomicity, conflicts, safety, mobile UX/copy, privacy, and any transaction ADR |
 | P1 | [M2-04 Targeted M2 milestone closeout](M2-04-M2-VALIDATION-SLICE.md) | proposed | M2-01 through M2-03 accepted | Reuse accepted ticket evidence; one hosted onboarding-to-You walkthrough plus current deployment, migration/RLS/advisor, active-context, and no-AI boundary checks | Approve the exact targeted closeout after all three feature slices are accepted |
+| P1 | [M2-05 Intermittent goal-creation failure](M2-05-GOAL-CREATION-INTERMITTENT-FAILURE.md) | proposed | M2-01 accepted | Investigate a supporting-goal create that intermittently produces no goal and no error after a lifecycle mutation; correct the cause; make failed mutations visible; add regression coverage | Approve the investigation, then normal implementation, review, Preview, and acceptance for any correction |
 
 ## Dependency chain
 
@@ -45,6 +46,12 @@ Accepted M1 manual plan-and-track foundation
 M2-01 and M2-02 may be approved and delivered separately after M1 acceptance.
 M2-03 requires both destination models. M2-04 reuses their accepted evidence
 and starts only after all three feature slices are accepted.
+
+M2-05 sits outside this chain. It corrects accepted M2-01 behavior rather than
+adding a slice, so it does not block M2-02 or M2-03. It does block relying on a
+green continuous-integration run as a delivery gate, because an intermittent
+browser failure on unchanged code teaches every reader to re-run instead of
+read.
 
 ## Ticket rule
 
