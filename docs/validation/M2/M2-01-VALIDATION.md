@@ -376,10 +376,8 @@ acceptance. They remain the honest state of this record.
   that same archive-first rule when separately approved.
 - M2-02 memory and M2-03 onboarding/publication behavior remain absent.
 
-The next gate is the post-merge founder deployment: `master` must reach a
-`READY` Vercel deployment and pass the hosted smoke and security checks, whose
-resulting `master` SHA and deployment URL are recorded below before any
-dependent M2 work is dispatched.
+The post-merge founder deployment and hosted verification are complete and
+recorded below. M2-01 no longer blocks dependent M2 work.
 
 ## Post-merge record
 
@@ -406,19 +404,58 @@ founder deployment and is not cached by the edge.
 
 On 30 July 2026 the product owner reported that `/home/you/goals` loads on the
 founder deployment and that the `390x844` goal walkthrough recorded above
-passes there. Because the goal routes cannot function without the goal tables
-and `apply_goal_change`, that result establishes that both M2-01 migrations are
-applied to the founder Supabase project. This is the product owner's own manual
-verification, not a builder-run or automated hosted test.
+passes there. This is the product owner's own manual verification, not a
+builder-run or automated hosted test.
 
-### Hosted checks still outstanding
+### Hosted database
 
-These remain open before dependent M2 work is dispatched:
+Read-only checks ran on 30 July 2026 against linked project
+`FitTip Founder Staging`, `ACTIVE_HEALTHY` on PostgreSQL 17.6.1.147. No
+migration was pushed and no hosted schema, data, or setting was changed.
 
-- the exact hosted `supabase migration list` output confirming both M2-01
-  migration entries and no unexpected or out-of-band schema change; and
-- hosted `supabase db lint` and `db advisors` results, with the
-  `apply_goal_change` SECURITY DEFINER finding classified against
-  [ADR-009](../../decisions/ADR-009-M2-GOAL-MUTATION-TRANSACTION.md) exactly as
-  the M1 closeout classified its two equivalents, plus confirmation that the
-  three new tables report RLS enabled on the hosted project.
+`supabase migration list --linked` reported seven migrations with every local
+timestamp matching its remote entry and no drift in either direction:
+
+1. `20260723084625`
+2. `20260727082635`
+3. `20260728105226`
+4. `20260728143000`
+5. `20260728170000`
+6. `20260729161854` — M2-01 goal model
+7. `20260729174620` — M2-01 review corrections
+
+Both M2-01 migrations were therefore already applied to the founder project
+before this check, through the normal migration history rather than an
+out-of-band schema change.
+
+`supabase db lint --linked --level warning` reported no schema errors in the
+`public` or `extensions` schemas.
+
+### Advisor disposition
+
+`supabase db advisors --linked --type performance --level warn` reported no
+issues.
+
+`supabase db advisors --linked --type security --level warn` reported exactly
+four warnings, all previously classified or expected:
+
+- `apply_goal_change` is executable by `authenticated` as a `SECURITY DEFINER`
+  function. This is the intended and only approved goal write boundary under
+  [ADR-009](../../decisions/ADR-009-M2-GOAL-MUTATION-TRANSACTION.md). It is the
+  single new finding introduced by M2-01.
+- `save_manual_plan_version` and `save_training_completion` carry the same
+  warning as the accepted M1 transaction boundaries under
+  [ADR-008](../../decisions/ADR-008-M1-TRAINING-RECORD-TRANSACTIONS.md),
+  unchanged from the M1 closeout.
+- Leaked-password protection remains disabled, as already accepted for the
+  owner-only founder environment in M0-06A. It must be resolved through the
+  separate external-use gates before friends, public registration, or
+  commercial use.
+
+No advisor reported a disabled-RLS, exposed-table, or anonymous-access finding
+for `goals`, `goal_collections`, or `goal_lifecycle_events`. Those checks are
+`ERROR` level and were within the requested threshold, so their absence is
+positive evidence that RLS remained enabled on all three new tables after the
+hosted migration.
+
+No unexpected hosted finding was produced, so no M2-01 correction is required.
