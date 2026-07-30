@@ -77,14 +77,32 @@ documentation. This is the run that left `master` red.
   page** on `/home/you/goals` (`stalePage`) to exercise stale-client conflict
   behavior. Two clients are therefore live against the same owner's goals.
 
+### Failure C - a delete does not remove the goal
+
+Failed on the master commit carrying the continuous-integration concurrency fix,
+which changed only the workflow file.
+
+- The spec failed at `e2e/m2-01-goals.spec.ts:237`, asserting
+  `toBeHidden()` on the heading `Temporary idea` after the permanent-delete
+  confirmation. The heading was still present, so the delete did not apply.
+- This is the same goal the create in failure A could not produce, reached from
+  the opposite direction: in A it never appeared, in C it never went away.
+
 ### Common shape
 
-Both failures are an accepted mutation - one create, one reorder - that does
-not apply, renders no error, and leaves the surface looking as though nothing
-was requested. Both sit in the transactional rank and lifecycle path. Failure A
-follows a lifecycle mutation; failure B runs with a second concurrent client
-open. That two unrelated assertions fail this way makes a test-only timing
-artifact substantially less likely than a real defect.
+All three failures are an accepted mutation - a create, a reorder, and a delete
+- that does not apply, renders no error, and leaves the surface looking as
+though nothing was requested. All three sit in the transactional rank and
+lifecycle path. Three different assertions failing this way, while the same
+run's other flows pass, makes a test-only timing artifact substantially less
+likely than a real defect.
+
+**Not part of this ticket.** One run also failed `e2e/planning.spec.ts:29`,
+waiting for the Plan page heading after navigation. That is a page render, not
+a mutation, and it has happened once in six runs against M2-01's three in six.
+Record it if it recurs, but do not fold it into this diagnosis; the shapes are
+different and conflating them would send the investigation in the wrong
+direction.
 
 ## Open questions
 
@@ -135,12 +153,15 @@ artifact substantially less likely than a real defect.
 
 ## Observed rate
 
-Four completed runs of this spec so far: two passed, two failed, with two
-different symptoms. That sample is still small, but a roughly even failure rate
-on unchanged code is not a marginal flake, and it currently leaves `master`
-red. A gate that fails this often trains every reader to re-run it reflexively,
-which is worse than having no gate. Record the real rate observed during the
-investigation.
+Six completed attempts of this flow so far: three passed, three failed, with
+three different symptoms. In the same runs the M1-03 and M1-04 flows passed six
+times out of six, so the instability is specific to goal management rather than
+to the runner.
+
+A one-in-two failure rate on unchanged code is not a marginal flake, and it
+currently leaves `master` red. A gate that fails this often trains every reader
+to re-run it reflexively, which is worse than having no gate. Record the real
+rate observed during the investigation.
 
 ## Validation
 
