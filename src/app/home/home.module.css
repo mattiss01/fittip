@@ -12,6 +12,15 @@
   padding-bottom: calc(7rem + env(safe-area-inset-bottom));
 }
 
+/* The plan editor adds a second fixed layer above the fixed navigation. Its top
+   edge sits 10.6rem above the viewport bottom (5.4rem offset plus its 5.2rem
+   min-height), which is more than the navigation-only reserve above. Without
+   this, the last of the page content can never be scrolled clear of the dock
+   and stays untappable. */
+.appShell > main:has(:global(.save-dock)) {
+  padding-bottom: calc(11.5rem + env(safe-area-inset-bottom));
+}
+
 .appShell :global(.save-dock) {
   z-index: 40;
   bottom: calc(5.4rem + env(safe-area-inset-bottom));
