@@ -14,9 +14,12 @@ on:
 permissions:
   contents: read
 
+# Superseding an in-flight branch run saves minutes and costs nothing. Doing the
+# same on `master` would leave a merge commit with no completed run, which the
+# working agreement treats as a delivery blocker, so never cancel there.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
   static:
