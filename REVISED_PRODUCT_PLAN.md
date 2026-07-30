@@ -662,13 +662,19 @@ weaken the M1 plan-versus-actual history.
   ticket is active.
 - Commit only the ticket-scoped changes before handoff and record the exact
   commit SHA in the validation record.
-- Report changed files, commands run, results, and known limitations.
+- Run the narrow tests needed while implementing. Do not execute the complete
+  suite by hand to produce evidence; push the ticket branch and let continuous
+  integration establish the automated result for that commit.
+- Report changed files, the continuous-integration run for the committed SHA,
+  results, and known limitations.
 
 ### Reviewer/QA agent
 
 - Verify the exact recorded ticket commit, its tests, and its actual diff
   against acceptance criteria.
-- Prioritize history/versioning, mobile usability, authorization, malformed AI output, locks, and plan-versus-actual behavior.
+- Confirm the continuous-integration run for that exact commit is green instead
+  of re-executing the suites it already ran. A red or absent run is a blocker.
+- Prioritize history/versioning, mobile usability, authorization, malformed AI output, locks, and plan-versus-actual behavior. These require judgment that continuous integration cannot supply.
 - Return either approval of that exact SHA or focused correction tasks; any
   correction commit requires re-review.
 - Do not start unrelated work.
@@ -686,7 +692,9 @@ weaken the M1 plan-versus-actual history.
    checks before either downstream ticket depends on the result.
 5. Do not place AI calls directly in UI components.
 6. Do not add a global exercise library merely for convenience; use the personal AI-generated activity model.
-7. Do not call a feature done without running the stated checks.
+7. Do not call a feature done without the stated checks passing. Automated
+   suites are established by the continuous-integration run for the reviewed
+   commit; never weaken a check to make a branch green.
 
 ### 15.1 Collaborative development and decision protocol
 
@@ -729,8 +737,11 @@ Feature lifecycle:
 Approval is the automatic dispatch trigger. When a ticket's dependencies are satisfied, the lead agent moves it directly from **approved** to **in development** and spawns a distinct builder subagent before any implementation edit. The lead never doubles as that builder. After the builder handoff, the lead spawns a different independent reviewer without waiting for another product-owner instruction. If either distinct delegation step is unavailable, implementation stops as blocked rather than silently becoming single-agent delivery. The product owner is not responsible for operationally starting approved work.
 
 Each implementation ticket is committed on a ticket-specific branch before
-review. The validation record names the reviewed commit SHA, and product-owner
-acceptance applies to that exact commit. After acceptance, the lead merges it
+review. Pushing that branch runs continuous integration, whose green run for
+the reviewed SHA is the automated-test evidence in the validation record; it
+does not replace independent review, Vercel Preview verification, or the
+product owner's manual 390px acceptance. The validation record names the
+reviewed commit SHA, and product-owner acceptance applies to that exact commit. After acceptance, the lead merges it
 to `master`, runs post-merge checks, records the resulting `master` SHA, and
 only then dispatches dependent work. Accepted implementation must never exist
 only as uncommitted changes on `master`, and unrelated dirty-worktree changes

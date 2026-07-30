@@ -8,6 +8,7 @@
 # Test output
 /coverage/
 /test-results/
+/playwright-report/
 
 # Isolated local ticket worktrees
 /.worktrees/
@@ -15,6 +16,10 @@
 # Local environment values
 .env*
 !.env.example
+
+# Local agent overrides (shared agent config is committed)
+CLAUDE.local.md
+/.claude/settings.local.json
 
 # Logs
 npm-debug.log*

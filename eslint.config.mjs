@@ -8,8 +8,10 @@ export default defineConfig([
   globalIgnores([
     ".next/**",
     ".worktrees/**",
+    ".github/scripts/**",
     "out/**",
     "coverage/**",
+    "playwright-report/**",
     "next-env.d.ts",
   ]),
 ]);
