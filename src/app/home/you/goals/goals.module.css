@@ -348,7 +348,10 @@
 
 .notice[data-state="conflict"],
 .notice[data-state="validation"],
-.notice[data-state="error"] {
+.notice[data-state="error"],
+.notice[data-state="lost-render"],
+.notice[data-state="recovered"],
+.notice[data-state="unconfirmed"] {
   background: #fff0e1;
 }
 

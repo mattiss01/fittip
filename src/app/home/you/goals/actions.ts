@@ -126,7 +126,12 @@ export async function changeGoalAction(
       throw new GoalValidationError();
     }
 
-    revalidatePath("/home/you");
+    // Only this route renders goal data, so revalidating `/home/you` as well
+    // bought nothing. It did invalidate the client router cache a second time
+    // on every mutation and re-prefetch all four navigation routes, which the
+    // M2-05 traces show racing the transition that carries the result. That
+    // this specific call widened the race is reasoning from those traces, not
+    // an isolated measurement; removing it is justified on its own.
     revalidatePath("/home/you/goals");
     return resultState("saved", resultCopy(operation), false);
   } catch (error) {
