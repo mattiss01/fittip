@@ -45,7 +45,11 @@ Run from the repository root. PowerShell on this machine blocks `npm.ps1`, so al
 
 - The green run for the exact reviewed commit **is** the automated-test evidence. Cite its run
   URL in the validation record instead of pasting suite output. A red or absent run for that SHA
-  is a delivery blocker.
+  is a delivery blocker, subject only to the two exceptions in `AGENTS.md`: a red run whose every
+  failure belongs to a named, already-ticketed defect that fails identically on unchanged
+  `master`, and a commit that changes only the validation record. Both demand a written,
+  checkable justification. A failure anywhere the ticket changed behavior is a regression and
+  blocks regardless.
 - Inspect a run with `gh run list --branch <branch>`, `gh run view <id>`, and
   `gh run view <id> --log-failed`. For a browser failure,
   `gh run download <id> -n playwright-report` yields the trace and page snapshot. The trace

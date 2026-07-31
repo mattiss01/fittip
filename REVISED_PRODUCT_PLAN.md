@@ -673,7 +673,8 @@ weaken the M1 plan-versus-actual history.
 - Verify the exact recorded ticket commit, its tests, and its actual diff
   against acceptance criteria.
 - Confirm the continuous-integration run for that exact commit is green instead
-  of re-executing the suites it already ran. A red or absent run is a blocker.
+  of re-executing the suites it already ran. A red or absent run is a blocker, subject to the
+  two narrow exceptions recorded in `AGENTS.md`.
 - Prioritize history/versioning, mobile usability, authorization, malformed AI output, locks, and plan-versus-actual behavior. These require judgment that continuous integration cannot supply.
 - Return either approval of that exact SHA or focused correction tasks; any
   correction commit requires re-review.
