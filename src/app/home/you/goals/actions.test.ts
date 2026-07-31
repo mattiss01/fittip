@@ -54,7 +54,11 @@ describe("goal actions", () => {
       }),
       0,
     );
-    expect(revalidatePathMock).toHaveBeenCalledWith("/home/you/goals");
+    // Only the goals route renders goal data, and every extra revalidation
+    // re-prefetches the whole navigation, which widened the M2-05 window.
+    expect(revalidatePathMock).toHaveBeenCalledExactlyOnceWith(
+      "/home/you/goals",
+    );
   });
 
   it.each([
@@ -114,6 +118,32 @@ describe("goal actions", () => {
       }),
       0,
     );
+  });
+
+  // The browser flow asserts the committed record rather than this transient
+  // copy, because the surface may reload itself to recover a lost render.
+  it.each([
+    ["pause", "Goal paused."],
+    ["resume", "Goal resumed."],
+    ["achieve", "Goal marked achieved."],
+    ["abandon", "Goal marked abandoned."],
+    ["reopen", "Goal reopened."],
+    ["archive", "Goal archived."],
+    ["delete", "Goal permanently deleted."],
+  ])("reports %s as %s", async (operation, message) => {
+    const transition = vi.fn().mockResolvedValue({
+      goal_id: "52000000-0000-4000-8000-000000000001",
+      collection_revision: 2,
+      result: operation,
+    });
+    createRepositoryMock.mockResolvedValue({ transition });
+    const form = createForm();
+    form.set("operation", operation);
+    form.set("goalId", "52000000-0000-4000-8000-000000000001");
+
+    await expect(
+      changeGoalAction(INITIAL_GOAL_ACTION_STATE, form),
+    ).resolves.toMatchObject({ status: "saved", message });
   });
 
   it("returns a validation state for malformed form content", async () => {

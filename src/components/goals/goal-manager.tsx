@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import {
   INITIAL_GOAL_ACTION_STATE,
@@ -9,6 +15,13 @@ import {
 } from "@/app/home/you/goals/action-state";
 import { changeGoalAction } from "@/app/home/you/goals/actions";
 import styles from "@/app/home/you/goals/goals.module.css";
+import {
+  latestActionResponseAt,
+  RECOVERY_NOTICE_MS,
+  watchGoalMutation,
+  WATCH_INTERVAL_MS,
+  type GoalMutationWatch,
+} from "@/features/goals/mutation-watchdog";
 
 export type GoalView = {
   id: string;
@@ -46,11 +59,28 @@ const CATEGORIES = [
   ["other", "Other"],
 ] as const;
 
+/**
+ * Session-scoped, non-personal, versioned marker that survives the recovery
+ * reload. It carries no goal content, only the fact that the reload was
+ * self-triggered.
+ */
+const RECOVERY_FLAG = "fittip.goals.recovered:v1";
+
+const RECOVERED_NOTICE =
+  "Your last goal change did not appear, so these goals were reloaded. The list below is what is saved.";
+
 export function GoalManager({ initialGoals, expectedRevision }: Props) {
   const [state, action, pending] = useActionState(
     changeGoalAction,
     INITIAL_GOAL_ACTION_STATE,
   );
+  const stall = useMutationStall(pending, state.submission);
+  const recovered = useRecoveredReload(state.submission);
+  const notice =
+    stallNotice(stall) ??
+    (pending ? "Saving goal change…" : null) ??
+    (recovered ? RECOVERED_NOTICE : null);
+  const noticeState = stall ?? (recovered ? "recovered" : state.status);
   const active = initialGoals.filter(
     (goal) => goal.status === "active" && goal.archivedAt === null,
   );
@@ -73,14 +103,14 @@ export function GoalManager({ initialGoals, expectedRevision }: Props) {
   return (
     <div className={styles.manager}>
       <p
-        className={state.status === "idle" ? styles.srOnly : styles.notice}
-        data-state={state.status}
+        className={noticeState === "idle" ? styles.srOnly : styles.notice}
+        data-state={noticeState}
         role="status"
         aria-live="polite"
       >
-        {pending ? "Saving goal change…" : state.message}
+        {notice ?? state.message}
       </p>
-      {state.conflict === "stale" ? (
+      {state.conflict === "stale" || stall === "unconfirmed" ? (
         <a className={styles.reload} href="/home/you/goals">
           Reload current goals
         </a>
@@ -659,6 +689,124 @@ function HistorySection({
       </ul>
     </details>
   );
+}
+
+/**
+ * M2-05: a goal mutation can commit on the server while the App Router
+ * transition carrying its result never renders, leaving this surface frozen on
+ * "Saving goal change…" with stale content and no message. Watching the
+ * mutation from outside React tells the two cases apart: a response that
+ * arrived but did not reach the screen is recovered by reloading the committed
+ * collection, and a mutation with no response at all is reported as
+ * unconfirmed rather than assumed either way.
+ */
+type MutationStall = Exclude<GoalMutationWatch, "waiting">;
+
+function useMutationStall(
+  pending: boolean,
+  submission: number,
+): MutationStall | null {
+  // Keyed by the submission it describes, so a later mutation never inherits
+  // an earlier one's verdict and no effect has to reset state.
+  const [stall, setStall] = useState<{
+    key: string;
+    verdict: MutationStall;
+  } | null>(null);
+  const respondedAt = useRef<number | null>(null);
+  const key = `${submission}:${pending}`;
+
+  useEffect(() => {
+    if (typeof PerformanceObserver === "undefined") return;
+    const actionUrl = `${window.location.origin}${window.location.pathname}`;
+    const observer = new PerformanceObserver((list) => {
+      const seen = latestActionResponseAt(
+        list.getEntries() as PerformanceResourceTiming[],
+        actionUrl,
+      );
+      if (seen === null) return;
+      if (respondedAt.current === null || seen > respondedAt.current) {
+        respondedAt.current = seen;
+      }
+    });
+    observer.observe({ type: "resource", buffered: true });
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!pending) return;
+    const submittedAt = performance.now();
+    const interval = window.setInterval(() => {
+      const verdict = watchGoalMutation({
+        submittedAt,
+        respondedAt: respondedAt.current,
+        now: performance.now(),
+      });
+      if (verdict === "waiting") return;
+      window.clearInterval(interval);
+      setStall({ key, verdict });
+      if (verdict === "lost-render") {
+        // The change is already committed; the surface simply never rendered
+        // it. Reloading shows the true collection instead of a frozen page.
+        markRecovered(true);
+        window.setTimeout(() => window.location.reload(), RECOVERY_NOTICE_MS);
+      }
+    }, WATCH_INTERVAL_MS);
+    return () => window.clearInterval(interval);
+  }, [key, pending]);
+
+  return stall?.key === key ? stall.verdict : null;
+}
+
+/**
+ * The recovery reload replaces the whole surface, so the result message the
+ * mutation produced is gone. Saying nothing would leave the reload looking
+ * like an unexplained flash, so the reason is carried across it and reported
+ * until the next mutation.
+ */
+function useRecoveredReload(submission: number): boolean {
+  // The server has no session storage, so it reports "not recovered" and the
+  // client agrees on the first render; hydration cannot mismatch.
+  const recovered = useSyncExternalStore(
+    subscribeNothing,
+    readRecovered,
+    () => false,
+  );
+  useEffect(() => {
+    if (recovered) markRecovered(false);
+  }, [recovered]);
+  return recovered && submission === 0;
+}
+
+function subscribeNothing() {
+  return () => {};
+}
+
+function readRecovered(): boolean {
+  try {
+    return window.sessionStorage.getItem(RECOVERY_FLAG) !== null;
+  } catch {
+    // Session storage throws in private browsing and when it is disabled.
+    return false;
+  }
+}
+
+function markRecovered(recovered: boolean) {
+  try {
+    if (recovered) window.sessionStorage.setItem(RECOVERY_FLAG, "1");
+    else window.sessionStorage.removeItem(RECOVERY_FLAG);
+  } catch {
+    // Losing the marker only costs the explanation, never the recovery.
+  }
+}
+
+function stallNotice(stall: GoalMutationWatch | null) {
+  if (stall === "lost-render") {
+    return "This goal change was saved but did not appear. Reloading your goals.";
+  }
+  if (stall === "unconfirmed") {
+    return "This goal change has not been confirmed. Reload to see whether it was saved.";
+  }
+  return null;
 }
 
 function byRank(a: GoalView, b: GoalView) {

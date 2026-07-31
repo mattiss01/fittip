@@ -111,12 +111,21 @@ test.describe("M2-01 goal management", () => {
         stalePage.getByText("Primary attention / 3 of 3"),
       ).toBeVisible();
 
+      // Trail event holds rank 3 and Climbing skill rank 2 before this move.
+      // Asserting Swim endurance still holds rank 1 proves nothing, because
+      // that was already true; both moved ranks are asserted instead.
+      await expect(
+        goalCard(page, "Climbing skill").getByLabel("Rank 2"),
+      ).toBeVisible();
       await trailCard.getByRole("button", { name: "Move up" }).click();
       await expect(
-        goalCard(page, "Swim endurance").getByLabel("Rank 1"),
+        goalCard(page, "Trail event").getByLabel("Rank 2"),
       ).toBeVisible();
       await expect(
-        goalCard(page, "Trail event").getByLabel("Rank 2"),
+        goalCard(page, "Climbing skill").getByLabel("Rank 3"),
+      ).toBeVisible();
+      await expect(
+        goalCard(page, "Swim endurance").getByLabel("Rank 1"),
       ).toBeVisible();
       await goalCard(stalePage, "Trail event")
         .getByRole("button", { name: "Move up" })
@@ -178,7 +187,15 @@ test.describe("M2-01 goal management", () => {
       await page.keyboard.press("Tab");
       await expect(archiveConfirmation.confirm).toBeFocused();
       await archiveConfirmation.confirm.click();
-      await expect(page.getByRole("status")).toHaveText("Goal archived.");
+      // The status message is transient and is lost if the surface has to
+      // reload itself, so every lifecycle step asserts the committed record
+      // instead. The message copy is covered by the action unit tests.
+      await expect(
+        page.getByRole("heading", { name: "Mobility habit" }),
+      ).toBeHidden();
+      await expect(historyEntry(page, "Mobility habit")).toContainText(
+        "archived",
+      );
 
       await createGoal(page, "Achievement candidate", "supporting", "Cycling");
       const achievementCard = goalCard(page, "Achievement candidate");
@@ -193,8 +210,11 @@ test.describe("M2-01 goal management", () => {
         achievementCard.getByText(/records the goal as achieved/i),
       ).toBeVisible();
       await achieveConfirmation.confirm.click();
-      await expect(page.getByRole("status")).toHaveText(
-        "Goal marked achieved.",
+      await expect(
+        page.getByRole("heading", { name: "Achievement candidate" }),
+      ).toBeHidden();
+      await expect(historyEntry(page, "Achievement candidate")).toContainText(
+        "achieved",
       );
 
       await createGoal(page, "Abandon candidate", "supporting", "Rowing");
@@ -210,8 +230,11 @@ test.describe("M2-01 goal management", () => {
         abandonCard.getByText(/records the goal as abandoned/i),
       ).toBeVisible();
       await abandonConfirmation.confirm.click();
-      await expect(page.getByRole("status")).toHaveText(
-        "Goal marked abandoned.",
+      await expect(
+        page.getByRole("heading", { name: "Abandon candidate" }),
+      ).toBeHidden();
+      await expect(historyEntry(page, "Abandon candidate")).toContainText(
+        "abandoned",
       );
 
       await createGoal(page, "Temporary idea", "supporting", "Walking");
@@ -252,6 +275,75 @@ test.describe("M2-01 goal management", () => {
   });
 });
 
+// M2-05. A goal mutation whose result never reaches the surface used to leave
+// the page on "Saving goal change…" for ever, with no error and stale content.
+// Holding the response open reproduces that shape deterministically, so the
+// honest message and its recovery action are covered rather than left to the
+// intermittent race that produced the original reports.
+test.describe("M2-05 unconfirmed goal mutation", () => {
+  test.skip(!localEnvironmentReady, "requires the local Supabase environment");
+
+  test("reports a goal mutation it cannot confirm at 390x844", async ({
+    page,
+    request,
+  }) => {
+    const account = await createConfirmedLocalUser(request);
+
+    try {
+      await signIn(page, account.email, account.password);
+      await page.goto("/home/you/goals");
+      await expect(
+        page.getByRole("heading", { name: "Direct your attention." }),
+      ).toBeVisible();
+
+      await page.route(
+        (url) => url.pathname === "/home/you/goals",
+        async (route) => {
+          if (route.request().method() !== "POST") {
+            await route.continue();
+            return;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 45_000));
+          await route.abort();
+        },
+      );
+
+      await openAddPanel(page);
+      const form = addGoalForm(page);
+      await form.getByLabel("Goal title").fill("Unconfirmed goal");
+      await form.getByLabel("Desired outcome").fill("This is never confirmed.");
+      await form.getByLabel("Attention").selectOption("supporting");
+      await form.getByLabel("Start date").fill("2026-07-29");
+      await form.getByRole("button", { name: "Create active goal" }).click();
+
+      const notice = page.getByRole("status");
+      await expect(notice).toHaveText("Saving goal change…");
+      // The surface must stop claiming to be saving and say what it knows.
+      // The wait exceeds the confirmation budget on purpose; the shared expect
+      // budget stays as it is so a genuine regression still fails fast.
+      await expect(notice).toHaveText(
+        "This goal change has not been confirmed. Reload to see whether it was saved.",
+        { timeout: 20_000 },
+      );
+      await expect(notice).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: "Reload current goals" }),
+      ).toBeVisible();
+      await page.screenshot({
+        fullPage: true,
+        path: path.join(evidenceDirectory, "M2-05-unconfirmed-390x844.png"),
+      });
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true);
+    } finally {
+      await deleteLocalUser(request, account.userId);
+    }
+  });
+});
+
 async function createGoal(
   page: import("@playwright/test").Page,
   title: string,
@@ -283,6 +375,16 @@ function addGoalForm(page: import("@playwright/test").Page) {
     .locator("details")
     .filter({ hasText: "Add goal" })
     .locator("form");
+}
+
+function historyEntry(page: import("@playwright/test").Page, title: string) {
+  return page
+    .locator("details")
+    .filter({
+      has: page.locator("summary").filter({ hasText: /^History and archive/ }),
+    })
+    .locator("li")
+    .filter({ hasText: title });
 }
 
 function goalCard(page: import("@playwright/test").Page, title: string) {

@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { useActionStateMock } = vi.hoisted(() => ({
@@ -16,6 +22,10 @@ vi.mock("@/app/home/you/goals/actions", () => ({
 }));
 
 import { INITIAL_GOAL_ACTION_STATE } from "@/app/home/you/goals/action-state";
+import {
+  CONFIRMATION_BUDGET_MS,
+  WATCH_INTERVAL_MS,
+} from "@/features/goals/mutation-watchdog";
 import { GoalManager, type GoalView } from "./goal-manager";
 
 afterEach(cleanup);
@@ -137,6 +147,50 @@ describe("GoalManager", () => {
     expect(
       screen.getByRole("link", { name: "Reload current goals" }),
     ).toHaveAttribute("href", "/home/you/goals");
+  });
+
+  it("keeps a submitted mutation silent while it is still in flight", () => {
+    vi.useFakeTimers();
+    useActionStateMock.mockReturnValue([
+      INITIAL_GOAL_ACTION_STATE,
+      vi.fn(),
+      true,
+    ]);
+
+    render(<GoalManager expectedRevision={2} initialGoals={[]} />);
+    act(() => {
+      vi.advanceTimersByTime(CONFIRMATION_BUDGET_MS - WATCH_INTERVAL_MS);
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent("Saving goal change…");
+    expect(
+      screen.queryByRole("link", { name: "Reload current goals" }),
+    ).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it("reports an unconfirmed mutation instead of staying on Saving", () => {
+    vi.useFakeTimers();
+    useActionStateMock.mockReturnValue([
+      INITIAL_GOAL_ACTION_STATE,
+      vi.fn(),
+      true,
+    ]);
+
+    render(<GoalManager expectedRevision={2} initialGoals={[]} />);
+    act(() => {
+      vi.advanceTimersByTime(CONFIRMATION_BUDGET_MS + WATCH_INTERVAL_MS);
+    });
+
+    const notice = screen.getByRole("status");
+    expect(notice).toHaveTextContent(
+      "This goal change has not been confirmed. Reload to see whether it was saved.",
+    );
+    expect(notice).toHaveAttribute("data-state", "unconfirmed");
+    expect(
+      screen.getByRole("link", { name: "Reload current goals" }),
+    ).toHaveAttribute("href", "/home/you/goals");
+    vi.useRealTimers();
   });
 });
 

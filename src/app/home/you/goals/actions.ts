@@ -126,7 +126,10 @@ export async function changeGoalAction(
       throw new GoalValidationError();
     }
 
-    revalidatePath("/home/you");
+    // Only this route renders goal data. Revalidating `/home/you` as well
+    // invalidated the whole client router cache a second time on every
+    // mutation, which re-prefetched all four navigation routes and widened the
+    // M2-05 window in which the result never reached the screen.
     revalidatePath("/home/you/goals");
     return resultState("saved", resultCopy(operation), false);
   } catch (error) {
