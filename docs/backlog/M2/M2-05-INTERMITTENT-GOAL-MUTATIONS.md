@@ -97,12 +97,13 @@ lifecycle path. Three different assertions failing this way, while the same
 run's other flows pass, makes a test-only timing artifact substantially less
 likely than a real defect.
 
-**Not part of this ticket.** One run also failed `e2e/planning.spec.ts:29`,
-waiting for the Plan page heading after navigation. That is a page render, not
-a mutation, and it has happened once in six runs against M2-01's three in six.
-Record it if it recurs, but do not fold it into this diagnosis; the shapes are
-different and conflating them would send the investigation in the wrong
-direction.
+**A second, separate defect - not this ticket.** `e2e/planning.spec.ts:29` has
+now failed three times in eight runs, every time on the same assertion: the
+`Plan what's next.` heading does not appear within 5 s after the Plan
+navigation link is clicked. That is a page render, not a mutation, so it is not
+this ticket's shape and must not be folded into this diagnosis. It needs its
+own ticket. It is noted here only because both were observed in the same runs
+and a reader comparing them will otherwise conflate the two.
 
 ## Open questions
 
@@ -153,10 +154,11 @@ direction.
 
 ## Observed rate
 
-Six completed attempts of this flow so far: three passed, three failed, with
-three different symptoms. In the same runs the M1-03 and M1-04 flows passed six
-times out of six, so the instability is specific to goal management rather than
-to the runner.
+Nine completed attempts of this flow so far: five passed, four failed, with
+three different symptoms. In the same runs the M1-03 and M1-04 flows passed
+every time, eight out of eight, so the instability is not the runner. It is
+confined to the two longest flows - this one and planning - and only this one
+fails on mutation outcomes.
 
 A one-in-two failure rate on unchanged code is not a marginal flake, and it
 currently leaves `master` red. A gate that fails this often trains every reader
