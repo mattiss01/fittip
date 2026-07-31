@@ -416,7 +416,7 @@ Judgement this record asks for:
 | Commit | Contents | CI run | Conclusion |
 | ------ | -------- | ------ | ---------- |
 | `1be0525bfc4e937eca7c506d12830f2e8b1d012c` | The correction, its tests, and this record | [30632462684](https://github.com/mattiss01/fittip/actions/runs/30632462684) | **success** — all three jobs |
-| head of the branch | This section only: the SHA and run URL above | recorded by the lead when it completes | — |
+| `6c34f1c5ec88879033b480b4d7ccc55c84834fec` | This section only: the SHA and run URL above | [30632818567](https://github.com/mattiss01/fittip/actions/runs/30632818567) | **failure** — see below |
 
 Run `30632462684` is green on `Lint, types, unit tests, build`,
 `Migrations, RLS, advisors, concurrency`, and `390px production browser flows`,
@@ -424,5 +424,22 @@ which includes both tests in `e2e/m2-01-goals.spec.ts`.
 
 The evidence commit that follows changes only this file, because a record
 cannot contain its own commit hash. Review the branch head; its diff against
-`1be0525` is this section alone, and its own continuous-integration run must
-also be green before acceptance.
+`1be0525` is this section alone.
+
+Recorded by the lead on 31 July 2026: run `30632818567` on `6c34f1c` failed,
+and **not on this ticket's behavior**. `Lint, types, unit tests, build`,
+`Migrations, RLS, advisors, concurrency`, `M1-03`, `M1-04`, and
+`M2-01 goal management` all passed. The single failure was
+`Authentication and planning flows`, which is
+[M2-06](../../backlog/M2/M2-06-PLAN-PAGE-RENDER-TIMEOUT.md) — a separate
+approved defect that predates this branch, fails on unchanged `master`, and
+that this ticket was explicitly forbidden to touch.
+
+That leaves an unresolved governance question rather than a technical one. The
+working agreement says a red run for the reviewed commit is a delivery blocker,
+and it does not yet distinguish a regression from a known defect tracked under
+its own ticket. The product owner decides whether to accept against `1be0525`
+with this exception recorded, or to require M2-06 to be corrected first.
+
+This final commit records the result above; its own run is verified by the lead
+rather than recorded here, to avoid an endless chain of evidence commits.
