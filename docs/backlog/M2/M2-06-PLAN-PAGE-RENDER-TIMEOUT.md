@@ -1,6 +1,6 @@
 # M2-06: Plan page intermittently does not finish rendering
 
-**Status:** approved 31 July 2026 - investigation authorized by the product owner; not yet dispatched
+**Status:** in development - approved 31 July 2026, dispatched to a builder the same day on branch `ticket/m2-06-plan-render`. Tier 2.
 
 **Milestone:** M2 - goals, editable coaching context, and guided onboarding
 
