@@ -47,6 +47,17 @@
 - Before requesting acceptance, provide the Vercel Preview URL, mobile demo path, changed files, tests run, hosted and local results, known limitations, and the precise decision requested.
 - Use the lifecycle in Product Plan section 15.1: draft, approved, in development, testable, accepted.
 
+## Ticket agent brief
+
+- Every implementation ticket opens with an `## Agent brief` section placed immediately after the status header block and before any other section. It is the contract a builder or reviewer needs in order to work, and it is deliberately short: aim for 40 lines and treat 60 as a limit.
+- The brief contains only what changes behavior: the outcome in one or two sentences, the tier, the hard constraints, the explicit non-goals, the acceptance criteria, and the exact files or modules expected to change when that is known.
+- The brief ends with the line **"Read only this section unless you hit an ambiguity it does not resolve."** That instruction is the point of the section. Everything below it — approval history, rationale, alternatives considered, dependency links, external-use boundaries — exists for the product owner and for audit, and a builder should not load it to make a scoped change.
+- Do not restate the brief further down the ticket. If a constraint matters enough to repeat, it belongs in the brief and nowhere else.
+- Link sparingly from the brief. A ticket header that links seven documents costs every agent that reads it, because agents follow links. Name a document in the brief only when the work cannot be done correctly without it, and say what the agent needs from it.
+- The lead names the applicable project skills in the brief rather than leaving skill selection to the builder.
+- Tickets already `accepted` are permanent history and are not retrofitted. A `proposed` ticket gains its brief when it is approved for implementation, so the brief is written against the scope actually being dispatched rather than against a draft.
+- A ticket that cannot be summarized in a 40-line brief is usually too large to be one ticket. Treat that as a signal to split it, not as a reason to write a longer brief.
+
 ## Continuous integration
 
 - `.github/workflows/ci.yml` runs on `master`, on `ticket/**` and `chore/**` branches, and on pull requests into `master`. It covers Prettier, ESLint, TypeScript, the Vitest suite, the production build, every migration applied from zero, database lint, the security and performance advisors, the pgTAP suite, the concurrency harnesses, and the 390px production browser flows.

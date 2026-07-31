@@ -18,16 +18,55 @@ investigations; see "Relationship to M2-05" below.
 **Blocks:** treating a green continuous-integration run as a dependable
 delivery gate, together with M2-05
 
-## Outcome
+## Agent brief
 
-Establish why `/home/plan` intermittently fails to replace its loading state
-with the planning surface within five seconds, then correct the cause.
+**Outcome.** `/home/plan` intermittently never replaces its loading state with
+the planning surface. Establish why, then correct it. Investigation first: the
+cause is not known.
 
-This ticket is an investigation first. It authorizes no change to the accepted
-planning model, plan versioning, horizon rules, or activity behavior. If it
-finds a defect, the correction returns to the owning accepted ticket and
-follows the normal implementation, review, Preview, deployment, and acceptance
-workflow.
+**Tier 2.** User-visible behavior on an accepted schema. Escalate to Tier 1 and
+stop if the cause turns out to sit in a migration, authorization, or RLS.
+
+**Hard constraints.**
+
+- Do not raise the Playwright expectation budget to make the flow pass. It may
+  be revisited once the cause is known, as a recorded decision.
+- Never weaken or delete a check to make continuous integration green.
+- A truthful "not reproduced", with what was tried and ruled out, is a valid
+  outcome and is worth more than a speculative fix.
+- Goal mutations that never apply are a different defect, M2-05. Do not fix it
+  here.
+
+**Non-goals.** No change to the accepted planning model, horizon selection,
+plan versioning, session composition, or activity behavior beyond what the
+identified defect requires. No goals, memory, onboarding, or AI behavior. No
+new external service or hosted resource.
+
+**Acceptance criteria.**
+
+1. The cause is identified, or explicitly recorded as unidentified with what
+   was ruled out.
+2. A server render that fails shows an honest error instead of an indefinite
+   loading state.
+3. `e2e/planning.spec.ts` no longer passes on a committed URL alone; it asserts
+   the loading state was replaced.
+4. Repeated runs after the correction, with the consecutive pass count
+   recorded.
+5. A green continuous-integration run for the reviewed commit.
+
+**Expected files.** `e2e/planning.spec.ts`, and whichever of
+`src/app/home/plan/page.tsx`, `src/app/home/plan/loading.tsx`,
+`src/app/home/plan/error.tsx`, or the planning repository the cause turns out
+to implicate.
+
+**Project skills.** `mobile-e2e` for the browser flow, `validation-record` for
+the handoff. Read `.agents/skills/vercel-react-best-practices/AGENTS.md`
+explicitly if server/client boundaries or data fetching change.
+
+**Start here.** The observed behavior below is measured, not inferred; read it
+before forming a theory.
+
+Read only this section unless you hit an ambiguity it does not resolve.
 
 ## Observed behavior
 
@@ -86,16 +125,6 @@ been corrected, so the next occurrence will retain a trace and a page snapshot.
 4. Ensure a server render that fails surfaces an honest error rather than an
    indefinite loading state.
 5. Strengthen the navigation assertion so a committed URL alone cannot pass.
-
-## Non-goals
-
-- No change to the accepted planning model, horizon selection, plan versioning,
-  session composition, or activity behavior beyond what the defect requires.
-- No goal, memory, onboarding, or AI behavior. Goal mutations are M2-05.
-- **Do not raise the expectation budget to make the flow pass.** The budget may
-  be revisited once the cause is known, and only as a deliberate decision with
-  its reason recorded.
-- No new external service, provider call, or hosted resource.
 
 ## Relationship to M2-05
 
