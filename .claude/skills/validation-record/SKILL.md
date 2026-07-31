@@ -1,17 +1,20 @@
 ---
 name: validation-record
-description: Write a FitTip ticket validation record — the persisted builder handoff with the complete change manifest, evidence, command results, limitations, and reviewer checklist. Use when finishing an implementation ticket, before requesting independent review or product-owner acceptance.
+description: Write a FitTip ticket validation record — the persisted builder handoff with the changed files, evidence, results, limitations, and reviewer checklist. Use when finishing a Tier 1 or Tier 2 implementation ticket, before requesting independent review or product-owner acceptance.
 ---
 
 # Validation record
 
-AGENTS.md requires the change manifest to be **persisted**, not chat-only. It lives at
+AGENTS.md requires the builder handoff to be **persisted**, not chat-only. It lives at
 `docs/validation/<MILESTONE>/<TICKET>-VALIDATION.md`, with images under
 `docs/validation/<MILESTONE>/evidence/`. Read a recent accepted record first —
 `docs/validation/M1/M1-04-VALIDATION.md` is the reference shape — and add the new file to
 `docs/validation/README.md`.
 
 Prettier ignores `docs/`, so hand-wrap at ~80 columns to match the neighbours.
+
+A Tier 3 change does not get its own record. Add one entry to the milestone's record instead;
+see the tier definitions in `AGENTS.md`.
 
 ## Required sections
 
@@ -20,9 +23,11 @@ Prettier ignores `docs/`, so hand-wrap at ~80 columns to match the neighbours.
 2. **Delivered behavior** — what a user can now do, in factual terms.
 3. **Mobile demo path** — numbered steps the product owner can follow at `390x844`, naming the
    exact commands and port used.
-4. **Complete change manifest** — four subsections, `### Created`, `### Modified`,
-   `### Deleted`, `### Renamed`. Every file listed with one brief explanation of what changed
-   and why. Write `- None.` for an empty group; never omit the heading.
+4. **Changed files** — the `git diff --stat` output for the ticket's commit range, then one
+   line for each file whose purpose is not evident from its path and diff, and an explicit note
+   of anything deleted or renamed. Do not restate the diff in prose: the diff is the record, and
+   duplicating it costs you to write and the reviewer to read. The reviewer treats the diff as
+   the source of truth and this section as navigation.
 5. **Data, migration, API, privacy, and security effects** — schema/policy/RPC/type/package
    changes, ownership and RLS handling, what the browser stores, any credential used only at
    test runtime.
@@ -36,7 +41,7 @@ Prettier ignores `docs/`, so hand-wrap at ~80 columns to match the neighbours.
 7. **Known limitations** — honest scope boundaries, warnings you accepted, and what remains
    gated.
 8. **Independent reviewer checklist** — the exact commit to review, the exact
-   `git diff <base>..<head>` range for manifest reconciliation, and the specific behaviors,
+   `git diff <base>..<head>` range to review, and the specific behaviors,
    authorization paths, and states to confirm. Point the reviewer at the CI run for that SHA;
    never ask it to re-run lint, typecheck, tests, build, or the browser flow. Reserve the
    checklist for judgment CI cannot supply.
@@ -45,8 +50,8 @@ Prettier ignores `docs/`, so hand-wrap at ~80 columns to match the neighbours.
 
 - Report what actually happened. A skipped step is written as skipped; a failure is written with
   its output. Never claim a command result you did not observe.
-- The manifest must match the real Git diff — the reviewer reconciles them and reports any
-  omitted, unexpected, or inaccurately described file.
+- The changed-files section must match the real Git diff. The reviewer compares them and
+  reports any omitted or unexpected file, or one whose stated purpose is wrong.
 - Every SHA is the full hash of a real commit on the ticket branch. Correction commits invalidate
   earlier approvals; add them, do not overwrite.
 - Records of accepted tickets are permanent. Append acceptance and merge details; never rewrite
