@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: ".",
+  testMatch: "m1-03-quick-log.spec.ts",
   timeout: 120_000,
   use: {
     baseURL: "http://localhost:3013",

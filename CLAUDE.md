@@ -72,9 +72,8 @@ Run from the repository root. PowerShell on this machine blocks `npm.ps1`, so al
   `e2e/planning.spec.ts`, `e2e/m1-04-today-progress.spec.ts`, and `e2e/m2-01-goals.spec.ts` also
   need `SUPABASE_SERVICE_ROLE_KEY` and **skip themselves silently without it** — read the
   skipped count before reporting a pass.
-- `e2e/m1-03.playwright.config.ts` sets no `testMatch`, unlike the m1-04 and m2-01 configs, so
-  running it bare collects every spec on port 3013 under `Pacific/Kiritimati`. Name the spec
-  explicitly, as CI does.
+- Every per-ticket config pins its own `testMatch`. A new one must do the same, or running it
+  bare collects every other ticket's spec on that config's port and timezone.
 - Per-ticket flows have their own config and port, e.g.
   `npx.cmd playwright test e2e/m1-04-today-progress.spec.ts --config=e2e/m1-04.playwright.config.ts`
   (port 3014). Acceptance evidence is captured against `build` + `start`, not `dev`.

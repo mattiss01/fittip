@@ -154,8 +154,6 @@ jobs:
               --workers=1 --timeout=180000 --trace=retain-on-failure \
               --output=test-results/auth-planning
 
-      # m1-03.playwright.config.ts has no testMatch, so the spec is named
-      # explicitly to stop it collecting every other ticket's spec.
       - name: M1-03 quick logging
         # Report every broken flow in one run, not just the first.
         if: ${{ !cancelled() }}
@@ -163,9 +161,8 @@ jobs:
           PLAYWRIGHT_HTML_REPORT: playwright-report/m1-03
         run: |
           .github/scripts/with-server.sh 3013 \
-            npx playwright test e2e/m1-03-quick-log.spec.ts \
-              --config=e2e/m1-03.playwright.config.ts --workers=1 \
-              --trace=retain-on-failure --output=test-results/m1-03
+            npx playwright test --config=e2e/m1-03.playwright.config.ts \
+              --workers=1 --trace=retain-on-failure --output=test-results/m1-03
 
       - name: M1-04 Today and Progress
         # Report every broken flow in one run, not just the first.
