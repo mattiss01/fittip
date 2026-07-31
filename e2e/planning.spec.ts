@@ -6,6 +6,19 @@ const localEnvironmentReady = Boolean(
     process.env.SUPABASE_SERVICE_ROLE_KEY,
 );
 
+// M2-06. Opening the plan is a client-side App Router transition, and
+// src/app/home/plan/loading.tsx lets the router commit the URL before the
+// segment renders. Playwright's default 5 s expectation budget could not say
+// whether the three continuous-integration failures were a slow render or a
+// lost one, so this budget is deliberately far larger than any measurement.
+// Measured on a local production build the transition lands in 11-478 ms
+// normally, occasionally at about 4 s, and otherwise never: two separate
+// occurrences held the shell empty for the full 30 s, and one for the full
+// 60 s, with no request outstanding and no change to the document in between.
+// A failure at this budget therefore means the render did not arrive, not that
+// the runner was busy. Raising it further would buy nothing.
+const PLAN_RENDER_BUDGET_MS = 60_000;
+
 test.describe("manual selectable-horizon planning", () => {
   test.skip(!localEnvironmentReady, "requires the local Supabase environment");
   test.use({ viewport: { width: 390, height: 844 } });
@@ -24,9 +37,7 @@ test.describe("manual selectable-horizon planning", () => {
       await signIn(page, email, password);
       await page.getByRole("link", { name: "Plan", exact: true }).click();
       await expect(page).toHaveURL(/\/home\/plan$/);
-      await expect(
-        page.getByRole("heading", { name: /Plan what/ }),
-      ).toBeVisible();
+      await expectPlanSurfaceReplacedLoading(page);
 
       await page.getByRole("button", { name: "3" }).click();
       await expect(page.locator(".plan-day")).toHaveCount(3);
@@ -219,6 +230,25 @@ test.describe("manual selectable-horizon planning", () => {
     }
   });
 });
+
+// The URL assertion above proves only that the router committed the address.
+// It passed in every observed M2-06 failure while the segment held no plan
+// surface at all, so it cannot detect this class on its own. Prove instead
+// that the loading boundary was replaced by the planning surface, and record
+// how long that took so the budget above stays answerable to measurement
+// rather than to habit.
+async function expectPlanSurfaceReplacedLoading(
+  page: import("@playwright/test").Page,
+) {
+  const startedAt = Date.now();
+  await expect(page.getByRole("heading", { name: /Plan what/ })).toBeVisible({
+    timeout: PLAN_RENDER_BUDGET_MS,
+  });
+  await expect(
+    page.getByRole("heading", { name: /Opening your training ledger/ }),
+  ).toBeHidden();
+  console.log(`[M2-06] plan surface rendered in ${Date.now() - startedAt} ms`);
+}
 
 async function signIn(
   page: import("@playwright/test").Page,
