@@ -525,3 +525,56 @@ gap the reviewer identified: the path had been observed, not tested.
 
 No migration, no ADR-009 change, no change to authorization or to the action's
 signature. The planning flow and M2-06 were not touched.
+
+## Independent review and product-owner acceptance (31 July 2026)
+
+The independent reviewer withheld approval of `1be0525` and returned three
+must-fix corrections and four optional ones: a lost-render notice that claimed
+a change was saved on the strength of a response merely having arrived, an
+uncancelled reload timer, and no automated coverage of the lost-render or
+recovered paths.
+
+Writing the missing coverage exposed a further defect that was not on the
+reviewer's list. The `sessionStorage` marker was cleared by an effect in the
+same document that set it, so the recovered explanation could never have
+survived the reload. This record had claimed a behavior that did not work. It
+does now, and the earlier claim is retracted in the corrections section above
+rather than edited away.
+
+All seven items were applied in `97679ee08219138b3d931f9afeb0f18f2cdef1cd`. The
+reviewer then approved that exact commit, confirming that the false-success
+inference is gone from the copy, the comments, and this record rather than
+reworded; that the `consumedAt` rewrite is correct and cannot misattribute one
+mutation's response to another; and that the record was appended to rather than
+rewritten, at 82 insertions and 0 deletions.
+
+Evidence for the accepted commit:
+
+| Gate | Result |
+| --- | --- |
+| CI run [30653424875](https://github.com/mattiss01/fittip/actions/runs/30653424875) on `97679ee` | **success** — three jobs, all four browser flows |
+| Vercel Preview | **success** — `https://vercel.com/mattis-3657s-projects/fittip/4ndXNvpkYXovoJTnVTCW1Xph2JoK` |
+| Independent exact-commit review | approved with no unresolved findings |
+
+Because the planning flow passed on that run, the known-defect exception for
+M2-06 was not needed for this acceptance.
+
+The product owner accepted `97679ee` on 31 July 2026 and it was merged to
+`master` as `e438a7e`.
+
+## Deferred, not fixed
+
+- **The framework defect remains.** This ticket detects and recovers from it on
+  the goals surface only.
+- **The unbounded `pg_advisory_xact_lock`** at
+  `supabase/migrations/20260729161854_m2_01_goal_model.sql:266` still has no
+  `lock_timeout` or `statement_timeout`. It is not the cause of M2-05 and was
+  deliberately not corrected on sight. It needs its own Tier 1 ticket.
+- **A cancelled reload leaves the recovery marker set.** If a slow transition
+  lands inside the 500 ms notice window, a later remount with no intervening
+  mutation can show the recovery explanation when no reload occurred. It makes
+  no claim about saved data and self-clears at the next mutation. The reviewer
+  raised it as non-blocking and recommended folding it into the hosted-latency
+  follow-up; one line in the cleanup would remove it.
+- **Hosted Preview behavior of the 750 ms and 10 s budgets** has not been
+  measured against founder staging.

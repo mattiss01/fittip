@@ -23,7 +23,7 @@ Validation records and their visual evidence are grouped by milestone.
 ## M2
 
 - [M2-01 goal model and management](M2/M2-01-VALIDATION.md) — testable; acceptance withdrawn 30 July 2026 pending independent exact-commit review
-- [M2-05 intermittent goal mutations](M2/M2-05-VALIDATION.md) — testable; awaiting independent exact-commit review
+- [M2-05 intermittent goal mutations](M2/M2-05-VALIDATION.md) — accepted
 - [M2 visual evidence](M2/evidence/)
 
 M3 does not have validation records yet. Its future evidence belongs in a

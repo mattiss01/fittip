@@ -1,6 +1,6 @@
 # M2-05: Intermittent goal mutations that do not apply
 
-**Status:** in development - approved 31 July 2026, dispatched to a builder the same day on branch `ticket/m2-05-goal-mutation-lock`. Tier 1: it touches a migration and the ADR-009 transaction boundary.
+**Status:** accepted 31 July 2026 against reviewed commit `97679ee` and its Vercel Preview, and merged to `master`. Dispatched as Tier 1 because a correction was expected to touch a migration; in the event it did not, and no migration or ADR-009 change was made. See the [validation record](../../validation/M2/M2-05-VALIDATION.md).
 
 **Milestone:** M2 - goals, editable coaching context, and guided onboarding
 
