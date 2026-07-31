@@ -8,7 +8,11 @@
 
 **Base:** `c33fbc66faa15133dfa0b79aa097f693429dba7d` — `origin/master` at dispatch
 
-**Implementation review target:** _see "Commit and continuous integration"_
+**Implementation commit:** `1be0525bfc4e937eca7c506d12830f2e8b1d012c`
+
+**Review target:** the head of `ticket/m2-05-goal-mutation-lock` — the evidence
+commit recorded under "Commit and continuous integration", which adds nothing
+but this file's run URLs
 
 **Related decision:** [ADR-009](../../decisions/ADR-009-M2-GOAL-MUTATION-TRANSACTION.md)
 — unchanged by this ticket.
@@ -39,10 +43,11 @@ on a local production build (port 3015, local Supabase stack):
 | `--repeat-each=8`        | 2 failed, 6 passed              |
 | **Measured rate**        | **6 failures in 22 runs (27%)** |
 
-Six local failures across five distinct assertions — the tier-change edit
-(line 84), the reorder (line 120), the resume (line 164) and the abandon status
-message (line 213) — matching the four different symptoms continuous
-integration had recorded. This is one defect with many faces, not four defects.
+The six local failures landed on four different assertions: the tier-change
+edit (spec line 84, twice), the tier change back to core (line 94), the resume
+(line 164) and the abandon status message (line 213). Continuous integration
+had separately recorded the reorder (line 120), the delete (line 237) and the
+create (line 271). Seven distinct assertions, one defect — not seven.
 
 ### The advisory-lock hypothesis is refuted
 
@@ -199,22 +204,26 @@ The unconfirmed state at `390x844` is captured in
 
 ## Changed files
 
+`git diff --stat c33fbc66faa15133dfa0b79aa097f693429dba7d..1be0525bfc4e937eca7c506d12830f2e8b1d012c`:
+
 ```
- e2e/m2-01-goals.spec.ts                     | 116 +++++++++++++++++---
- src/app/home/you/goals/actions.test.ts      |  32 +++++-
- src/app/home/you/goals/actions.ts           |   5 +-
- src/app/home/you/goals/goals.module.css     |   5 +-
- src/components/goals/goal-manager.test.tsx  |  56 +++++++++-
- src/components/goals/goal-manager.tsx       | 134 +++++++++++++++++++++++-
- src/features/goals/mutation-watchdog.ts     |  70 ++++++++++++ (new)
- src/features/goals/mutation-watchdog.test.ts|  98 ++++++++++++++++ (new)
- docs/validation/M2/M2-05-VALIDATION.md      | (new)
- docs/validation/M2/evidence/M2-05-unconfirmed-390x844.png | (new)
- docs/validation/README.md                   |   1 +
+ docs/validation/M2/M2-05-VALIDATION.md             | 407 +++++++++++++++++++++
+ .../M2/evidence/M2-05-unconfirmed-390x844.png      | Bin 0 -> 85995 bytes
+ docs/validation/README.md                          |   1 +
+ e2e/m2-01-goals.spec.ts                            | 116 +++++-
+ src/app/home/you/goals/actions.test.ts             |  32 +-
+ src/app/home/you/goals/actions.ts                  |   5 +-
+ src/app/home/you/goals/goals.module.css            |   5 +-
+ src/components/goals/goal-manager.test.tsx         |  56 ++-
+ src/components/goals/goal-manager.tsx              | 158 +++++++-
+ src/features/goals/mutation-watchdog.test.ts       | 101 +++++
+ src/features/goals/mutation-watchdog.ts            |  74 ++++
+ 11 files changed, 939 insertions(+), 16 deletions(-)
 ```
 
-Regenerate with `git diff --stat c33fbc66..<review target>`. Nothing was
-deleted or renamed, and the ticket's own lifecycle line was left to the lead.
+The follow-up commit that records the run URLs below touches only this file.
+Nothing was deleted or renamed, and the ticket's own lifecycle line was left
+to the lead.
 
 Files whose purpose is not evident from the path and diff:
 
@@ -404,4 +413,16 @@ Judgement this record asks for:
 
 ## Commit and continuous integration
 
-_Filled in below once the branch was pushed._
+| Commit | Contents | CI run | Conclusion |
+| ------ | -------- | ------ | ---------- |
+| `1be0525bfc4e937eca7c506d12830f2e8b1d012c` | The correction, its tests, and this record | [30632462684](https://github.com/mattiss01/fittip/actions/runs/30632462684) | **success** — all three jobs |
+| head of the branch | This section only: the SHA and run URL above | recorded by the lead when it completes | — |
+
+Run `30632462684` is green on `Lint, types, unit tests, build`,
+`Migrations, RLS, advisors, concurrency`, and `390px production browser flows`,
+which includes both tests in `e2e/m2-01-goals.spec.ts`.
+
+The evidence commit that follows changes only this file, because a record
+cannot contain its own commit hash. Review the branch head; its diff against
+`1be0525` is this section alone, and its own continuous-integration run must
+also be green before acceptance.
