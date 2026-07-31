@@ -133,6 +133,11 @@ jobs:
       - name: Next production build
         run: npm run build
 
+      # Each step writes to its own artifact directories. Playwright clears its
+      # output directory when it starts, so a shared one would let a later step
+      # destroy the trace of an earlier failure - which is what happened once
+      # the later steps were allowed to run after a failure.
+      #
       # Every browser step runs one worker at a time. A shared runner also hosts
       # the Supabase stack and the application server, so parallel workers make
       # these flows slower and less deterministic than the documented local run.
@@ -141,36 +146,46 @@ jobs:
       # The per-ticket configs already set their own longer timeouts and are
       # deliberately left alone.
       - name: Authentication and planning flows
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report/auth-planning
         run: |
           .github/scripts/with-server.sh 3000 \
             npx playwright test e2e/auth.spec.ts e2e/planning.spec.ts \
-              --workers=1 --timeout=180000 --trace=retain-on-failure
+              --workers=1 --timeout=180000 --trace=retain-on-failure \
+              --output=test-results/auth-planning
 
       # m1-03.playwright.config.ts has no testMatch, so the spec is named
       # explicitly to stop it collecting every other ticket's spec.
       - name: M1-03 quick logging
         # Report every broken flow in one run, not just the first.
         if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report/m1-03
         run: |
           .github/scripts/with-server.sh 3013 \
             npx playwright test e2e/m1-03-quick-log.spec.ts \
-              --config=e2e/m1-03.playwright.config.ts --workers=1 --trace=retain-on-failure
+              --config=e2e/m1-03.playwright.config.ts --workers=1 \
+              --trace=retain-on-failure --output=test-results/m1-03
 
       - name: M1-04 Today and Progress
         # Report every broken flow in one run, not just the first.
         if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report/m1-04
         run: |
           .github/scripts/with-server.sh 3014 \
             npx playwright test --config=e2e/m1-04.playwright.config.ts \
-              --workers=1 --trace=retain-on-failure
+              --workers=1 --trace=retain-on-failure --output=test-results/m1-04
 
       - name: M2-01 goal management
         # Report every broken flow in one run, not just the first.
         if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report/m2-01
         run: |
           .github/scripts/with-server.sh 3015 \
             npx playwright test --config=e2e/m2-01.playwright.config.ts \
-              --workers=1 --trace=retain-on-failure
+              --workers=1 --trace=retain-on-failure --output=test-results/m2-01
 
       - name: Upload Playwright report
         if: failure()
