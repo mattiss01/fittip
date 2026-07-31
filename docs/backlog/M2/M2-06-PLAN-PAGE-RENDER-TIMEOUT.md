@@ -29,8 +29,14 @@ stop if the cause turns out to sit in a migration, authorization, or RLS.
 
 **Hard constraints.**
 
-- Do not raise the Playwright expectation budget to make the flow pass. It may
-  be revisited once the cause is known, as a recorded decision.
+- Establish whether this affects users at all before changing application code.
+  The product owner checked the plan page on the Vercel production deployment
+  on 31 July 2026 and it loaded normally. Nobody has observed this outside
+  continuous integration.
+- Raising the expectation budget is a legitimate outcome here **if** the
+  evidence shows slowness rather than a hang, but only with the measurement
+  recorded. It is not a legitimate way to silence a failure you have not
+  explained.
 - Never weaken or delete a check to make continuous integration green.
 - A truthful "not reproduced", with what was tried and ruled out, is a valid
   outcome and is worth more than a speculative fix.
@@ -66,6 +72,11 @@ explicitly if server/client boundaries or data fetching change.
 **Start here.** The observed behavior below is measured, not inferred. Read it,
 and read the lead from M2-05 immediately after it, before forming a theory.
 
+**Do not assume M2-05's cause.** The lead below is a hypothesis carried over
+from a different surface. The product owner has since verified the plan page
+loads normally on Vercel production, which is evidence against a user-facing
+hang. Measure first.
+
 **Leading lead from M2-05.** M2-05 proved that the App Router transition in
 `next@16.2.11` / `react@19.2.7` intermittently never commits after a Server
 Action: the write lands, the server returns 200 in tens of milliseconds, and
@@ -84,6 +95,12 @@ Read only this section unless you hit an ambiguity it does not resolve.
 Between 30 and 31 July 2026 the `Authentication and planning flows` step failed
 three times in eight continuous-integration runs, every time on the same
 assertion, on commits that changed no application code.
+
+**It has never been observed outside continuous integration.** On 31 July 2026
+the product owner loaded the plan page on the Vercel production deployment and
+it rendered normally after a brief loading state. Treat the scope of this
+defect as unestablished: what is measured is that one assertion, with a five
+second budget, failed three times in eight runs on a shared runner.
 
 - The spec fails at `e2e/planning.spec.ts:29`:
   `expect(page.getByRole("heading", { name: /Plan what/ })).toBeVisible()`,
@@ -109,7 +126,19 @@ been corrected, so the next occurrence will retain a trace and a page snapshot.
 
 ## Open questions
 
-1. What is the server render actually waiting on? `/home/plan` is a dynamic
+1. **Is this a product defect at all, or an artifact of the test environment?**
+   Answer this first; everything else depends on it. The failing assertion gets
+   Playwright's default 5 s, not the 180 s test budget, and the run is a
+   brand-new account's first authenticated render with Supabase, the
+   application server, and the browser sharing one small runner. Measure how
+   long the render actually takes when it is slow. If it completes at six or
+   ten seconds, this is latency under contention and the correction belongs in
+   the test, not the application.
+2. If it never completes, how does that differ from M2-05? There the builder
+   proved the update never arrives by leaving a 60 s budget and still failing.
+   **That experiment has not been run here.** Run it before assuming the same
+   cause.
+3. What is the server render waiting on? `/home/plan` is a dynamic
    authenticated route that reads the current plan head and versions. Identify
    whether a specific query, the Supabase connection, or the initial session
    verification is the slow step.
