@@ -1,6 +1,6 @@
 # M2-05: Intermittent goal mutations that do not apply
 
-**Status:** approved 31 July 2026 - investigation authorized by the product owner; not yet dispatched
+**Status:** in development - approved 31 July 2026, dispatched to a builder the same day on branch `ticket/m2-05-goal-mutation-lock`. Tier 1: it touches a migration and the ADR-009 transaction boundary.
 
 **Milestone:** M2 - goals, editable coaching context, and guided onboarding
 
