@@ -1,6 +1,6 @@
 # M2-06: Plan page intermittently does not finish rendering
 
-**Status:** proposed - investigation not yet approved
+**Status:** approved 31 July 2026 - investigation authorized by the product owner; not yet dispatched
 
 **Milestone:** M2 - goals, editable coaching context, and guided onboarding
 

@@ -387,6 +387,97 @@ The implementation remains merged on `master` and deployed. Withdrawing
 acceptance does not revert code; it reopens the gate that governs dependent
 work, so M2-02 must not start until M2-01 is accepted again.
 
+## Independent exact-commit review (31 July 2026)
+
+Reviewer: a Claude Code session acting as the independent reviewer. It did not
+write this implementation, which an earlier session delivered. It has since
+changed continuous integration, the plan save-dock spacing, and delivery
+documentation; none of those touch the goal model reviewed here.
+
+Target `ae7d3104899fb93499fde5273cb7e372d2b2457e`, reviewed against
+`git diff 67427dbbb4cc04308985741c2433256030024bef..ae7d3104899fb93499fde5273cb7e372d2b2457e`
+- 32 files, 5,916 insertions.
+
+### Verdict
+
+**Correction required. Not approved for re-acceptance.** One defect was found
+that plausibly explains the M2-05 failures and is user-visible in its own
+right. The authorization and ownership surface, which was the priority of this
+review, is sound.
+
+### Finding 1 - a contended goal mutation waits without bound
+
+`supabase/migrations/20260729161854_m2_01_goal_model.sql:266` takes
+`pg_advisory_xact_lock(62001, hashtext(user))`, the **blocking** variant. No
+`lock_timeout` or `statement_timeout` is set in the function, the migration,
+`supabase/config.toml`, or the application. A second mutation for the same
+owner therefore waits indefinitely for the first transaction to commit.
+
+The resulting user experience is silent. The server action never returns, so
+`useActionState` keeps `status: "idle"`;
+`src/components/goals/goal-manager.tsx:76` renders the notice screen-reader-only
+while idle, so no message appears; and the create form keeps its values because
+its `key={`create-${state.submission}`}` only changes once a result arrives. The
+user sees a form that did nothing, with no error and no explanation.
+
+That is precisely the M2-05 evidence: add panel still open and correctly
+filled, alert region empty, and the assertion exhausting its budget while every
+other action in the run finished in 0.5 s or less.
+
+This is a hypothesis for M2-05's cause, not proof. It must be confirmed by
+reproduction before a correction is designed.
+
+Recommended correction, owned by
+[M2-05](../../backlog/M2/M2-05-INTERMITTENT-GOAL-MUTATIONS.md):
+
+- Bound the wait, either with a `lock_timeout` inside the function or by using
+  `pg_try_advisory_xact_lock` with an explicit conflict result.
+- Map exhaustion to the existing conflict path so contention surfaces as
+  `PT409` and the accepted "Goals changed. Reload and try again." copy, rather
+  than as a hang.
+- Preserve the serialization ADR-009 requires. The finding is about unbounded
+  waiting, not about locking.
+
+### What passed
+
+Authorization and ownership:
+
+- Every write goes through `public.apply_goal_change`. The three tables revoke
+  all privileges and grant only `select`.
+- RLS owner policies use `(select auth.uid()) = user_id`.
+- The function is `security definer` with `set search_path = ''`, and correctly
+  schema-qualifies `auth.uid()` and `pg_catalog.*` as that setting requires.
+- **The owner is derived inside the function** (`v_user_id := auth.uid()`) and
+  is never accepted from the caller. This is the single most important property
+  in the ticket and it holds.
+- Execute is revoked from `public, anon, authenticated, service_role`, then
+  granted only to `authenticated`.
+- A null user raises `42501`; a missing profile raises `23503`.
+- The repository derives the verified user and repeats `.eq("user_id", userId)`
+  on every read.
+- Optimistic concurrency by collection revision raises `PT409` on a stale
+  expectation.
+
+Server actions map every failure mode to a typed state with distinct copy for
+validation, stale conflict, core limit, archive-required, expired session, and
+persistence failure. Caller-supplied ownership appears nowhere.
+
+### Scope of this review
+
+Reviewed closely: the migration's authorization surface, the RPC's guards and
+revision handling, the repository, the server actions, and the action state.
+
+Read but not line by line: the 670-line goal manager component, its 417-line
+stylesheet, 1,281 lines of pgTAP, and the 370-line browser spec. A defect
+confined to those files could have been missed.
+
+Not re-run: the automated suites. Continuous integration covers them, and its
+`database` job - migrations from zero, lint, advisors, pgTAP, and both
+concurrency harnesses - has passed on every run.
+
+The record's stated 32-file branch diff matches `git diff --stat`. Individual
+file descriptions were spot-checked rather than each verified.
+
 ## Known limitations and next gate
 
 - The corrected implementation was never independently re-reviewed. Acceptance

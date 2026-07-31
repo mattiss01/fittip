@@ -1,6 +1,6 @@
 # M2-05: Intermittent goal mutations that do not apply
 
-**Status:** proposed - investigation not yet approved
+**Status:** approved 31 July 2026 - investigation authorized by the product owner; not yet dispatched
 
 **Milestone:** M2 - goals, editable coaching context, and guided onboarding
 
@@ -104,6 +104,39 @@ navigation link is clicked. That is a page render, not a mutation, so it is not
 this ticket's shape and must not be folded into this diagnosis. It needs its
 own ticket. It is noted here only because both were observed in the same runs
 and a reader comparing them will otherwise conflate the two.
+
+## Leading hypothesis from the M2-01 independent review
+
+The 31 July 2026 independent review of
+`ae7d3104899fb93499fde5273cb7e372d2b2457e` found an unbounded wait that would
+produce exactly this symptom. Treat it as the first thing to test, not as a
+settled cause.
+
+`supabase/migrations/20260729161854_m2_01_goal_model.sql:266` takes
+`pg_advisory_xact_lock(62001, hashtext(user))`, the blocking variant, and no
+`lock_timeout` or `statement_timeout` is set in the function, the migration,
+`supabase/config.toml`, or the application. A second mutation for the same owner
+waits indefinitely for the first to commit.
+
+The silence follows from the client: while the action has not returned,
+`useActionState` holds `status: "idle"`, and
+`src/components/goals/goal-manager.tsx:76` renders the notice screen-reader-only
+in that state, so no message is shown. The create form keeps its values because
+its key only changes once a result arrives.
+
+That accounts for every part of failure A - panel still filled, alert empty,
+budget exhausted while other actions took 0.5 s - and for failures B and C,
+which both follow other mutations in the same flow. Failure B additionally runs
+with a second live client, which is the obvious way to contend for the lock.
+
+If confirmed, the correction is to bound the wait and map exhaustion onto the
+existing `PT409` conflict path, so contention surfaces as the accepted
+"Goals changed. Reload and try again." copy instead of a hang, while preserving
+the serialization ADR-009 requires.
+
+Confirm before correcting. A bounded wait that merely converts a hang into a
+conflict message would be wrong if the real cause is that the first transaction
+never commits.
 
 ## Open questions
 
