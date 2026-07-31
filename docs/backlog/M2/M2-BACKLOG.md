@@ -34,6 +34,7 @@ production.
 | P1 | [M2-03 Guided onboarding and context review](M2-03-INTAKE-FACT-REVIEW.md) | proposed | M2-01 and M2-02 accepted | First-run/resumable onboarding for goals, baseline, possibilities, preferences, and optional constraints; separate candidates; explicit review; atomic publication into You; no production AI | Approve required fields, AI-readiness minimum, draft retention, atomicity, conflicts, safety, mobile UX/copy, privacy, and any transaction ADR |
 | P1 | [M2-04 Targeted M2 milestone closeout](M2-04-M2-VALIDATION-SLICE.md) | proposed | M2-01 through M2-03 accepted | Reuse accepted ticket evidence; one hosted onboarding-to-You walkthrough plus current deployment, migration/RLS/advisor, active-context, and no-AI boundary checks | Approve the exact targeted closeout after all three feature slices are accepted |
 | P1 | [M2-05 Intermittent goal mutations that do not apply](M2-05-INTERMITTENT-GOAL-MUTATIONS.md) | proposed | M2-01 implementation merged | Investigate two observed symptoms - a create that never appears and a reorder that never takes effect, both silent; identify lost write versus lost render; correct the cause; make failed mutations visible; add regression coverage | Approve the investigation, then normal implementation, review, Preview, and acceptance for any correction |
+| P1 | [M2-06 Plan page intermittently does not finish rendering](M2-06-PLAN-PAGE-RENDER-TIMEOUT.md) | proposed | M1 milestone closeout accepted | Investigate a plan route that intermittently never replaces its loading state; identify what the render waits on; make a failed render show an honest error; stop a committed URL alone from passing the navigation assertion | Approve the investigation, then normal implementation, review, Preview, and acceptance for any correction |
 
 ## Dependency chain
 
@@ -50,11 +51,12 @@ M2-01 and M2-02 may be approved and delivered separately after M1 acceptance.
 M2-03 requires both destination models. M2-04 reuses their accepted evidence
 and starts only after all three feature slices are accepted.
 
-M2-05 sits outside this chain. It corrects accepted M2-01 behavior rather than
-adding a slice, so it does not block M2-02 or M2-03. It does block relying on a
-green continuous-integration run as a delivery gate, because an intermittent
-browser failure on unchanged code teaches every reader to re-run instead of
-read.
+M2-05 and M2-06 sit outside this chain. They correct already accepted behavior
+rather than adding a slice, so neither blocks M2-02 or M2-03. Together they do
+block relying on a green continuous-integration run as a delivery gate, because
+intermittent browser failures on unchanged code teach every reader to re-run
+instead of read. M2-05 covers goal mutations that never apply; M2-06 covers a
+plan render that never completes. They are deliberately separate.
 
 ## Ticket rule
 
