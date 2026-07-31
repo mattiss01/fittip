@@ -8,7 +8,10 @@
 
 **Base:** `6b8f9e6e90ae47e0aab659048e868c28b60675f9` — `origin/master` at dispatch
 
-**Implementation commit:** recorded under "Commit and continuous integration"
+**Implementation commit:** `55e1a129cd592511497de5eab132b4c9648e632c`
+
+**Review target:** `9bdabe9bb1c0a2191867fdbe9ebef19414a151a4` — the branch
+head, a one-line correction to a comment in `e2e/planning.spec.ts`
 
 **Mobile evidence:**
 [failed plan server render at 390x844](evidence/M2-06-plan-error-390x844.png)
@@ -268,15 +271,20 @@ By hand at `390x844`:
 
 ## Changed files
 
-`git diff --stat 6b8f9e6e90ae47e0aab659048e868c28b60675f9..<implementation commit>`:
+`git diff --stat 6b8f9e6e90ae47e0aab659048e868c28b60675f9..9bdabe9bb1c0a2191867fdbe9ebef19414a151a4`:
 
 ```
- docs/validation/M2/M2-06-VALIDATION.md            | (this file)
- docs/validation/M2/evidence/M2-06-plan-error-390x844.png | Bin
- docs/validation/README.md                         |   1 +
- e2e/planning.spec.ts                              |  36 ++++++++++---
- src/app/home/plan/page.test.tsx                   |  14 ++++++
+ docs/validation/M2/M2-06-VALIDATION.md             | 396 +++++++++++++++++++++
+ .../M2/evidence/M2-06-plan-error-390x844.png       | Bin 0 -> 22067 bytes
+ docs/validation/README.md                          |   1 +
+ e2e/planning.spec.ts                               |  36 +-
+ src/app/home/plan/page.test.tsx                    |  14 +
+ 5 files changed, 444 insertions(+), 3 deletions(-)
 ```
+
+The line counts above are for the two-commit range. `9bdabe9` is a one-line
+correction to a comment in `e2e/planning.spec.ts`; `55e1a12` is everything
+else.
 
 Nothing was deleted or renamed. No file outside this list changed; in
 particular `src/app/home/layout.tsx` is untouched, and the watchdog described
@@ -393,4 +401,25 @@ Judgement this record asks for:
 
 | Commit | Contents | CI run | Conclusion |
 | ------ | -------- | ------ | ---------- |
-| (recorded on push) | The test correction, the regression test and this record | (recorded on push) | (recorded on push) |
+| `55e1a129cd592511497de5eab132b4c9648e632c` | The test correction, the regression test and this record | [30670298686](https://github.com/mattiss01/fittip/actions/runs/30670298686) | **cancelled** — superseded by the commit below before it finished |
+| `9bdabe9bb1c0a2191867fdbe9ebef19414a151a4` | One-line comment correction | [30670345598](https://github.com/mattiss01/fittip/actions/runs/30670345598) | **success** — all three jobs |
+
+Run `30670345598` is green on `Lint, types, unit tests, build`,
+`Migrations, RLS, advisors, concurrency` and
+`390px production browser flows`, which includes the strengthened planning
+step. That run's log carries the new measurement:
+
+```
+[M2-06] plan surface rendered in 21 ms
+```
+
+The defect did not occur on this run. At the measured 25–33% continuous
+integration rate that is the expected majority outcome and is **not** evidence
+that the defect is fixed — nothing in this commit changes the application. A
+later red run on `Authentication and planning flows` means the transition was
+lost again, which is exactly what the strengthened assertion now reports
+honestly.
+
+The follow-up commit that fills in the run URLs above touches only this file.
+Review the branch head; its diff against `9bdabe9` is this section, the commit
+range in "Changed files" and the header SHAs alone.
