@@ -63,8 +63,19 @@ to implicate.
 the handoff. Read `.agents/skills/vercel-react-best-practices/AGENTS.md`
 explicitly if server/client boundaries or data fetching change.
 
-**Start here.** The observed behavior below is measured, not inferred; read it
-before forming a theory.
+**Start here.** The observed behavior below is measured, not inferred. Read it,
+and read the lead from M2-05 immediately after it, before forming a theory.
+
+**Leading lead from M2-05.** M2-05 proved that the App Router transition in
+`next@16.2.11` / `react@19.2.7` intermittently never commits after a Server
+Action: the write lands, the server returns 200 in tens of milliseconds, and
+React then never renders again. `/home/plan` uses the same mechanism. Test
+whether this defect is the same one before assuming it is a plan-specific
+latency problem. Note the differences honestly: M2-05 was a Server Action
+result, this is a navigation render, and a 60 s budget was already shown not to
+help M2-05. If it is the same defect, the recovery approach in
+`src/features/goals/mutation-watchdog.ts` on `ticket/m2-05-goal-mutation-lock`
+is the precedent to follow rather than reinvent.
 
 Read only this section unless you hit an ambiguity it does not resolve.
 
