@@ -692,13 +692,14 @@ function HistorySection({
 }
 
 /**
- * M2-05: a goal mutation can commit on the server while the App Router
- * transition carrying its result never renders, leaving this surface frozen on
- * "Saving goal change…" with stale content and no message. Watching the
- * mutation from outside React tells the two cases apart: a response that
- * arrived but did not reach the screen is recovered by reloading the committed
- * collection, and a mutation with no response at all is reported as
- * unconfirmed rather than assumed either way.
+ * M2-05: the App Router transition carrying a goal mutation's result
+ * intermittently never renders, leaving this surface frozen on "Saving goal
+ * change…" with stale content and no message. Watching the mutation from
+ * outside React tells two cases apart: a reply that arrived but never reached
+ * the screen, which a reload settles by showing what is actually saved, and a
+ * mutation with no reply at all, which is reported as unconfirmed rather than
+ * assumed either way. Neither case can tell whether the change succeeded — the
+ * action answers 200 for every outcome — so neither claims it did.
  */
 type MutationStall = Exclude<GoalMutationWatch, "waiting">;
 
@@ -713,11 +714,16 @@ function useMutationStall(
     verdict: MutationStall;
   } | null>(null);
   const respondedAt = useRef<number | null>(null);
+  // The newest response the previous mutation had already accounted for. See
+  // `watchGoalMutation`: this is what makes a reply that beats the pending
+  // render detectable.
+  const consumedAt = useRef<number | null>(null);
   const key = `${submission}:${pending}`;
 
   useEffect(() => {
     if (typeof PerformanceObserver === "undefined") return;
-    const actionUrl = `${window.location.origin}${window.location.pathname}`;
+    const { origin, pathname, search } = window.location;
+    const actionUrl = `${origin}${pathname}${search}`;
     const observer = new PerformanceObserver((list) => {
       const seen = latestActionResponseAt(
         list.getEntries() as PerformanceResourceTiming[],
@@ -734,24 +740,43 @@ function useMutationStall(
 
   useEffect(() => {
     if (!pending) return;
+    // A new mutation supersedes any earlier recovery, so the explanation is
+    // consumed here. Clearing it from the render path instead would consume
+    // the marker in the same document that set it, and the reloaded page
+    // would have nothing left to explain itself with.
+    markRecovered(false);
     const submittedAt = performance.now();
+    let reload = 0;
     const interval = window.setInterval(() => {
       const verdict = watchGoalMutation({
         submittedAt,
         respondedAt: respondedAt.current,
+        consumedAt: consumedAt.current,
         now: performance.now(),
       });
       if (verdict === "waiting") return;
       window.clearInterval(interval);
       setStall({ key, verdict });
       if (verdict === "lost-render") {
-        // The change is already committed; the surface simply never rendered
-        // it. Reloading shows the true collection instead of a frozen page.
+        // A reply came back and never reached the screen. What it said is
+        // unknown — every outcome, including a rejection, answers 200 — so
+        // reloading is how the surface shows what is actually saved.
         markRecovered(true);
-        window.setTimeout(() => window.location.reload(), RECOVERY_NOTICE_MS);
+        reload = window.setTimeout(
+          () => window.location.reload(),
+          RECOVERY_NOTICE_MS,
+        );
       }
     }, WATCH_INTERVAL_MS);
-    return () => window.clearInterval(interval);
+    return () => {
+      window.clearInterval(interval);
+      // Cleanup runs on unmount or when this mutation settles, so a queued
+      // reload is always stale by then: the user has navigated away, or the
+      // lost transition landed inside the notice window and the result is
+      // already on screen.
+      window.clearTimeout(reload);
+      consumedAt.current = respondedAt.current;
+    };
   }, [key, pending]);
 
   return stall?.key === key ? stall.verdict : null;
@@ -765,15 +790,13 @@ function useMutationStall(
  */
 function useRecoveredReload(submission: number): boolean {
   // The server has no session storage, so it reports "not recovered" and the
-  // client agrees on the first render; hydration cannot mismatch.
+  // client agrees on the first render; hydration cannot mismatch. The marker
+  // is consumed by the next mutation, not here.
   const recovered = useSyncExternalStore(
     subscribeNothing,
     readRecovered,
     () => false,
   );
-  useEffect(() => {
-    if (recovered) markRecovered(false);
-  }, [recovered]);
   return recovered && submission === 0;
 }
 
@@ -801,7 +824,10 @@ function markRecovered(recovered: boolean) {
 
 function stallNotice(stall: GoalMutationWatch | null) {
   if (stall === "lost-render") {
-    return "This goal change was saved but did not appear. Reloading your goals.";
+    // Says only what is known. A reply arrived and never rendered; whether it
+    // saved, was rejected as stale, or failed validation is not observable
+    // here, so the reload is what settles it.
+    return "This goal change did not appear. Reloading your goals to show what is saved.";
   }
   if (stall === "unconfirmed") {
     return "This goal change has not been confirmed. Reload to see whether it was saved.";

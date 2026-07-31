@@ -443,3 +443,85 @@ with this exception recorded, or to require M2-06 to be corrected first.
 
 This final commit records the result above; its own run is verified by the lead
 rather than recorded here, to avoid an endless chain of evidence commits.
+
+## Review corrections (31 July 2026)
+
+The independent review of `1be0525` did not approve. It confirmed the
+investigation, the diagnosis, the advisory-lock refutation, the changed-files
+manifest, and that no instrumentation residue survived in `package-lock.json`
+or `node_modules/next`. It raised three must-fix corrections and four optional
+ones. The narrative above is left as it was written; this section records what
+changed and why.
+
+### 1. The lost-render notice claimed a change was saved — corrected
+
+The reviewer was right, and this was the most serious finding. The watchdog's
+only evidence is a resource-timing entry: it proves a reply arrived, not what
+the reply said. `changeGoalAction` answers 200 for validation failure, stale
+conflict, core-limit conflict, archive-required conflict, expired session, and
+persistence error alike. On the exact race this ticket documents, the surface
+could therefore have told a user their change was saved when it had been
+rejected, and then reloaded away the conflict guidance that would have
+explained it.
+
+The notice now reads "This goal change did not appear. Reloading your goals to
+show what is saved." — it asserts only that nothing rendered, and leaves the
+reload to settle what is true. The same inference was corrected in the module
+header of `src/features/goals/mutation-watchdog.ts`, in the hook comment above
+`useMutationStall`, and at the reload site. `RECOVERED_NOTICE` was already
+accurate and is unchanged.
+
+The claim "the change is committed and only the render was lost" in the
+correction narrative above is wrong in the same way. The accurate statement is
+that a reply arrived and never rendered.
+
+### 2. The recovery reload timer is now cancelled
+
+`window.setTimeout(...)` for the reload was never cleared. Its id is now kept
+and cleared in the effect cleanup beside the interval. Cleanup runs only on
+unmount or when the mutation settles, so cancelling there is always correct:
+either the user navigated away during the 500 ms notice, or the lost
+transition landed inside that window and the result is already on screen.
+`goal-manager.test.tsx` covers the second case explicitly.
+
+### 3. Automated coverage of the lost-render and recovered paths — added
+
+Four jsdom tests now cover what was previously only observed:
+
+- a reply that arrived and never rendered produces the corrected copy,
+  `data-state="lost-render"`, the `sessionStorage` marker, and a reload that
+  fires only after the notice window;
+- a router prefetch of the same route is not mistaken for that reply;
+- a mutation that settles inside the notice window cancels the reload and
+  shows its own result;
+- a document that starts with the marker present explains itself, and a later
+  mutation replaces that explanation with its own outcome.
+
+**Writing these found a real defect that the reviewer's item 3 predicted.**
+The marker was cleared by an effect in `useRecoveredReload`, which runs in the
+*same* document that set it — so the explanation would never have survived the
+reload, and the recovery would have looked like an unexplained flash. Consuming
+the marker moved to the start of the next mutation instead. The record above
+claims this notice worked; it did not, and it does now. This is exactly the
+gap the reviewer identified: the path had been observed, not tested.
+
+### Optional items
+
+| # | Disposition |
+| - | ----------- |
+| 4 | Applied. The comment in `actions.ts` now states that the widening is reasoning from the traces rather than an isolated A/B, and that removing a revalidation of a route with no goal data is justified on its own. |
+| 5 | Applied. The action URL now includes `search`, so a future query on the route neither misses the response nor matches the `_rsc` prefetches. Documented in `latestActionResponseAt`. |
+| 6 | Applied, and more thoroughly than suggested. Rather than moving the timestamp, `watchGoalMutation` now compares the observed response against `consumedAt` — the newest response the *previous* mutation accounted for — instead of against `submittedAt`. A reply that beats the pending render is therefore still claimed, because it is newer than anything the last mutation saw. `submittedAt` still bounds only the ten-second unconfirmed path, where being conservative is correct. Covered by a test named for that case. |
+| 7 | Applied. The browser test asserts `data-state="unconfirmed"` and the absence of the `srOnly` class instead of `toBeVisible`, which a 1×1 clipped element would satisfy. |
+
+### Verification of the corrections
+
+| Check | Result |
+| ----- | ------ |
+| `npm.cmd run lint`, `npm.cmd run typecheck` | Clean |
+| `npm.cmd run test:run` (whole suite) | 40 files, 254 tests passed |
+| `git diff --check` | Clean |
+| Both tests in `e2e/m2-01-goals.spec.ts` ×10, local production build | 20 passed (4.1 min) |
+
+No migration, no ADR-009 change, no change to authorization or to the action's
+signature. The planning flow and M2-06 were not touched.

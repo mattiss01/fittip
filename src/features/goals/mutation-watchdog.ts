@@ -1,16 +1,23 @@
 /**
- * M2-05: a confirmed goal mutation that never reaches the surface.
+ * M2-05: a goal mutation whose result never reaches the surface.
  *
  * The goal surface submits through `useActionState`, so both the typed result
  * and the revalidated server tree arrive inside one App Router transition.
- * That transition intermittently never commits: the mutation is applied and
- * the server responds, but React renders nothing further, so the page stays on
- * "Saving goal change…" for ever with stale content and no error. A user sees
- * a surface that silently did nothing.
+ * That transition intermittently never commits: the server answers, but React
+ * renders nothing further, so the page stays on "Saving goal change…" for ever
+ * with stale content and no message. A user sees a surface that silently did
+ * nothing.
  *
- * These rules turn that frozen state into an honest outcome. They are kept
- * free of React so the timing decisions can be tested directly rather than
- * inferred from a component.
+ * What these rules can observe is narrow, and the copy they drive must not
+ * exceed it. A resource timing entry proves that a **response arrived**. It
+ * does not prove what the response said: `changeGoalAction` answers 200 for a
+ * validation failure, a stale conflict, a core-limit conflict, an
+ * archive-required conflict, an expired session, and a persistence error just
+ * as it does for a success. So the outcome here is only ever "a reply came
+ * back and never rendered" or "nothing came back at all" — never "it saved".
+ *
+ * They are kept free of React so the timing decisions can be tested directly
+ * rather than inferred from a component.
  */
 
 export type GoalMutationWatch = "waiting" | "lost-render" | "unconfirmed";
@@ -35,29 +42,45 @@ export const WATCH_INTERVAL_MS = 250;
 /** How long the recovery notice stays readable before the reload. */
 export const RECOVERY_NOTICE_MS = 500;
 
+/**
+ * `consumedAt` is the newest response the *previous* mutation had already seen
+ * when it settled. Comparing against it, rather than against `submittedAt`,
+ * is what makes a fast response safe: `submittedAt` can only be read once the
+ * pending render commits, so a reply that beat that commit would look older
+ * than its own submission and be missed. A response newer than everything the
+ * last mutation accounted for belongs to this one, whenever it arrived.
+ */
 export function watchGoalMutation({
   submittedAt,
   respondedAt,
+  consumedAt,
   now,
 }: {
   submittedAt: number;
   respondedAt: number | null;
+  consumedAt: number | null;
   now: number;
 }): GoalMutationWatch {
-  const responded =
-    respondedAt !== null &&
-    respondedAt >= submittedAt &&
-    now - respondedAt >= RENDER_GRACE_MS;
-  if (responded) return "lost-render";
+  const unaccountedFor =
+    respondedAt !== null && (consumedAt === null || respondedAt > consumedAt);
+  if (unaccountedFor && now - respondedAt >= RENDER_GRACE_MS) {
+    return "lost-render";
+  }
   if (now - submittedAt >= CONFIRMATION_BUDGET_MS) return "unconfirmed";
   return "waiting";
 }
 
 /**
- * The App Router posts a Server Action to the current URL with no query, so a
- * resource entry with exactly that name is this page's mutation response.
- * Router prefetches of the same route carry an `_rsc` query and therefore a
- * different entry name.
+ * The App Router posts a Server Action to the current URL, so a resource entry
+ * with exactly that name is this page's mutation response. Router prefetches
+ * of the same route append an `_rsc` query and therefore have a different
+ * entry name.
+ *
+ * `actionUrl` must carry the page's own query string as well as its path. The
+ * goals route has none today, but a future one would post to
+ * `/home/you/goals?x=1`; matching on the path alone would then also match the
+ * prefetches, and matching on a query-less URL would match nothing at all and
+ * silently degrade every mutation to the ten-second path.
  */
 export function latestActionResponseAt(
   entries: readonly { name: string; responseEnd: number }[],

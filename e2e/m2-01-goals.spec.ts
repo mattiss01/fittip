@@ -325,7 +325,10 @@ test.describe("M2-05 unconfirmed goal mutation", () => {
         "This goal change has not been confirmed. Reload to see whether it was saved.",
         { timeout: 20_000 },
       );
-      await expect(notice).toBeVisible();
+      // `.srOnly` is a 1x1 clipped element that Playwright still reports as
+      // visible, so the rendered state is asserted instead of `toBeVisible`.
+      await expect(notice).toHaveAttribute("data-state", "unconfirmed");
+      await expect(notice).not.toHaveClass(/srOnly/);
       await expect(
         page.getByRole("link", { name: "Reload current goals" }),
       ).toBeVisible();

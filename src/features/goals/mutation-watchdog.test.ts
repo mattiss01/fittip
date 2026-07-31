@@ -10,7 +10,12 @@ import {
 describe("watchGoalMutation", () => {
   it("waits while a mutation is still in flight", () => {
     expect(
-      watchGoalMutation({ submittedAt: 1_000, respondedAt: null, now: 1_400 }),
+      watchGoalMutation({
+        submittedAt: 1_000,
+        respondedAt: null,
+        consumedAt: null,
+        now: 1_400,
+      }),
     ).toBe("waiting");
   });
 
@@ -19,6 +24,7 @@ describe("watchGoalMutation", () => {
       watchGoalMutation({
         submittedAt: 1_000,
         respondedAt: 1_100,
+        consumedAt: null,
         now: 1_100 + RENDER_GRACE_MS - 1,
       }),
     ).toBe("waiting");
@@ -29,19 +35,34 @@ describe("watchGoalMutation", () => {
       watchGoalMutation({
         submittedAt: 1_000,
         respondedAt: 1_100,
+        consumedAt: null,
         now: 1_100 + RENDER_GRACE_MS,
       }),
     ).toBe("lost-render");
   });
 
-  it("ignores a response that belongs to an earlier mutation", () => {
+  it("ignores a response the previous mutation already accounted for", () => {
     expect(
       watchGoalMutation({
         submittedAt: 5_000,
         respondedAt: 1_100,
+        consumedAt: 1_100,
         now: 5_000 + RENDER_GRACE_MS,
       }),
     ).toBe("waiting");
+  });
+
+  it("claims a response that arrived before the pending render committed", () => {
+    // The reply beat the render, so it looks older than `submittedAt`. It is
+    // still newer than anything the previous mutation saw, so it counts.
+    expect(
+      watchGoalMutation({
+        submittedAt: 1_050,
+        respondedAt: 1_020,
+        consumedAt: 900,
+        now: 1_020 + RENDER_GRACE_MS,
+      }),
+    ).toBe("lost-render");
   });
 
   it("reports an unconfirmed mutation rather than assuming it applied", () => {
@@ -49,6 +70,18 @@ describe("watchGoalMutation", () => {
       watchGoalMutation({
         submittedAt: 1_000,
         respondedAt: null,
+        consumedAt: null,
+        now: 1_000 + CONFIRMATION_BUDGET_MS,
+      }),
+    ).toBe("unconfirmed");
+  });
+
+  it("reports unconfirmed when the only response is an accounted-for one", () => {
+    expect(
+      watchGoalMutation({
+        submittedAt: 1_000,
+        respondedAt: 900,
+        consumedAt: 900,
         now: 1_000 + CONFIRMATION_BUDGET_MS,
       }),
     ).toBe("unconfirmed");
@@ -59,6 +92,7 @@ describe("watchGoalMutation", () => {
       watchGoalMutation({
         submittedAt: 1_000,
         respondedAt: 1_200,
+        consumedAt: null,
         now: 1_000 + CONFIRMATION_BUDGET_MS,
       }),
     ).toBe("lost-render");
