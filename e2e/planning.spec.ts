@@ -9,8 +9,8 @@ const localEnvironmentReady = Boolean(
 // M2-06. Opening the plan is a client-side App Router transition, and
 // src/app/home/plan/loading.tsx lets the router commit the URL before the
 // segment renders. Playwright's default 5 s expectation budget could not say
-// whether the three continuous-integration failures were a slow render or a
-// lost one, so this budget is deliberately far larger than any measurement.
+// whether the continuous-integration failures were a slow render or a lost
+// one, so this budget is deliberately far larger than any measurement.
 // Measured on a local production build the transition lands in 11-478 ms
 // normally, occasionally at about 4 s, and otherwise never: two separate
 // occurrences held the shell empty for the full 30 s, and one for the full
