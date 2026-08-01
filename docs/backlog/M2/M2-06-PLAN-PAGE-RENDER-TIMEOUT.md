@@ -1,6 +1,6 @@
 # M2-06: Plan page intermittently does not finish rendering
 
-**Status:** in development - approved 31 July 2026, dispatched to a builder the same day on branch `ticket/m2-06-plan-render`. Tier 2.
+**Status:** accepted 1 August 2026 against reviewed commit `3a731fe` and its Vercel Preview, and merged to `master`. The defect is characterized, not fixed; recovery is deferred to a follow-up ticket. See the [validation record](../../validation/M2/M2-06-VALIDATION.md).
 
 **Milestone:** M2 - goals, editable coaching context, and guided onboarding
 

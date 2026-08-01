@@ -468,3 +468,63 @@ honestly.
 The follow-up commit that fills in the run URLs above touches only this file.
 Review the branch head; its diff against `9bdabe9` is this section, the commit
 range in "Changed files" and the header SHAs alone.
+
+## Independent review and product-owner acceptance (1 August 2026)
+
+The independent reviewer approved the diff, the diagnosis, the scope and the
+engineering judgement at `9bdabe9`, and withheld approval only on three
+statements in this record: that the browser flow could "now detect" a defect it
+had already been detecting, a missing acceptance-criteria disposition, and a
+reproduction command that omitted `--timeout=180000` and so could not produce
+the failure it described. The lead applied those corrections, plus two optional
+items, in `3a731fe`; the reviewer then approved that commit with no corrections
+remaining.
+
+On the central question it was asked — whether changing no application code was
+the right outcome or under-delivery dressed as restraint — the reviewer
+concluded restraint, on four grounds: FitTip's code is not implicated, the only
+available recovery must live in the shared `/home` layout and therefore leaves
+this ticket's scope, a self-reloading page is a product-owner decision, and the
+severity is genuinely lower than M2-05 because the navigation bar survives and
+nothing false is claimed.
+
+It verified independently, against retained continuous-integration artifacts:
+the five failures attributed to `e2e/planning.spec.ts:29` and that the other six
+reds in the window were M2-05; the page snapshot showing the shell with neither
+main content nor a loading boundary; and the three `/home/plan` responses at
+`200` in 17.8, 19.0 and 33.5 ms.
+
+Evidence for the accepted commit:
+
+| Gate | Result |
+| --- | --- |
+| CI run [30691401103](https://github.com/mattiss01/fittip/actions/runs/30691401103) on `3a731fe` | **success** — three jobs, all four browser flows |
+| Vercel Preview | **success** — `https://vercel.com/mattis-3657s-projects/fittip/Hxt1Jzh5yt9vsdRigAPNm2HQQ9pj` |
+| Independent exact-commit review | approved with no unresolved findings |
+
+The product owner accepted `3a731fe` on 1 August 2026 and it was merged to
+`master` as `60c5e4d`.
+
+## Carried into the follow-up ticket
+
+The reviewer asked that the follow-up not be scoped as "retune the watchdog to
+20 s", which is the weakest of this ticket's findings presented as its
+conclusion. The load-bearing constraints are:
+
+- Any recovery must live in the shared `/home` layout, because nothing on the
+  destination route mounts. It therefore changes Today, Progress and You, and is
+  a product-owner decision in the same way M2-05's self-triggered reload was.
+- The 20 s budget is a starting point derived from four local failures and two
+  legitimate slow transitions. It is not settled.
+- Check first whether M2-05's discriminator applies: that watchdog acted on
+  *a response was observed and still nothing rendered*, not on a bare timer. A
+  signal beats a timer where one exists. Whether the legitimate ~4 s transitions
+  also have their payload back early is unmeasured.
+- A hosted repeat probe against a Preview would convert "hosted rate
+  unmeasured" into a number, and is the one cheap measurement that tells the
+  product owner whether the follow-up is urgent.
+
+Separately, the defect spans three surfaces and has now been characterized twice
+without being fixed. Reporting it upstream against `next@16.2.11` /
+`react@19.2.7`, or testing a version bump, is likely worth more than a third
+local workaround.
