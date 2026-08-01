@@ -80,7 +80,7 @@ and
 | Window | Rate |
 | --- | --- |
 | 30–31 July, up to the M2-05 merge | **5 of 15 completed runs (33%)** |
-| Including the five runs since | **5 of 20 completed runs (25%)** |
+| Including the runs since | **5 of 22 completed runs (23%)** |
 
 The other red runs in that window were M2-05, not this defect; each was
 checked and attributed by its failing spec line rather than assumed.
@@ -241,9 +241,18 @@ set from the measurements above.
 No user-visible behavior changed. The plan page renders, fails and recovers
 exactly as it did before this commit, including the honest error above.
 
-What changed is that the browser flow can now detect the defect instead of
-passing through it: `toHaveURL(/\/home\/plan$/)` passed in **every** observed
-occurrence while the page was blank, so the step gave false assurance.
+The browser flow already detected this defect — the five continuous-integration
+failures at `e2e/planning.spec.ts:29` are this ticket's evidence base, and each
+one was a detection. What changed is how a failure reads.
+
+`toHaveURL(/\/home\/plan$/)` passed in **every** observed occurrence while the
+page was blank, so that step gave false assurance and the failure surfaced one
+assertion later, inside a five second budget that a busy runner could plausibly
+explain. Now the step asserts the surface is visible **and** the loading
+boundary replaced, holds a 60 s budget justified by the measurements above, and
+logs the elapsed time on every run. A future failure therefore means the
+transition was lost, not that the runner was slow, and a passing run records how
+long the render actually took.
 
 ## Mobile demo path
 
@@ -253,8 +262,16 @@ Local production build with the local Supabase stack:
 npx.cmd supabase start
 npm.cmd run build
 npm.cmd run start -- -p 3000
-npx.cmd playwright test e2e/planning.spec.ts --workers=1
+npx.cmd playwright test e2e/planning.spec.ts --workers=1 --timeout=180000
 ```
+
+`--timeout=180000` is required, and continuous integration passes it for the
+same reason (`.github/workflows/ci.yml`). The root `playwright.config.ts` sets a
+60 s budget for the whole test, so without the override a lost transition ends
+the test on the test budget before the 60 s assertion budget can report. The
+result is the ambiguous "Test timeout of 60000ms exceeded" that this change
+exists to eliminate, and the elapsed-time line never prints. Every 60 s
+measurement recorded above used the same override.
 
 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and
 `SUPABASE_SERVICE_ROLE_KEY` must be exported from `npx.cmd supabase status`
@@ -263,7 +280,7 @@ first; the spec skips silently without the service-role key.
 By hand at `390x844`:
 
 1. Sign in and tap **Plan**. The planning surface opens. Repeat sign-in and
-   the tap several times; roughly one navigation in twenty leaves a blank page
+   the tap several times; roughly one navigation in thirty leaves a blank page
    under the navigation bar, which is the defect.
 2. To see the honest error state, stop the local PostgREST container
    (`docker stop supabase_rest_fittip`), open `/home/plan`, and confirm the
@@ -333,7 +350,35 @@ Two throwaway Playwright probes and a temporary 4 s delay in
 `src/app/home/today/page.tsx` were used during the investigation. All were
 removed; `git status` is clean apart from the files listed above.
 
+## Acceptance criteria
+
+The ticket's brief set five criteria. This ticket changed no application code,
+so each disposition is stated explicitly rather than left to be inferred from a
+small diff.
+
+| # | Criterion | Disposition |
+| --- | --- | --- |
+| 1 | The cause is identified, or explicitly recorded as unidentified with what was ruled out | **Met, as the second branch.** The mechanism inside `next@16.2.11` / `react@19.2.7` is unidentified. Where it is not is established by measurement: the server, the data, authorization, the loading boundary, contention alone, and navigating away mid-render. |
+| 2 | A server render that fails shows an honest error instead of an indefinite loading state | **Already satisfied before this ticket.** Verified by stopping PostgREST: `error.tsx` renders at 390x844 on both a document load and a client navigation. No change was needed and none was made. The evidence screenshot is committed. |
+| 3 | `e2e/planning.spec.ts` no longer passes on a committed URL alone | **Met.** The step now asserts the plan surface is visible and the loading boundary replaced, on a 60 s budget, logging elapsed time. |
+| 4 | Repeated runs after the correction, with the consecutive pass count recorded | **Not applicable as written, and stated rather than quietly dropped.** The criterion assumes a correction whose effect could be re-measured. No application behavior changed, so a post-correction pass count would measure the defect's natural rate, not a fix. The equivalent evidence is the before-rate above and the green run below. |
+| 5 | A green continuous-integration run for the reviewed commit | **Met.** Recorded below. |
+
+One measurement detail the reviewer asked to see stated rather than inferred:
+the 60-run batch was executed with the assertion budget raised to 60 s, which is
+the budget the committed helper now pins. Whether that batch ran the committed
+helper or an equivalent ad-hoc override at the time is not recorded, and is not
+reconstructable from an artifact. It does not affect the measured durations,
+which came from the same elapsed-time instrumentation that ships in the commit.
+
 ## Known limitations
+
+- **A merely slow plan render no longer fails anything.** The 60 s assertion
+  budget buys an unambiguous signal for a lost transition at the cost of
+  coverage: a latency regression anywhere below 60 s now passes green. The
+  elapsed time is logged on every run but never asserted, so such a regression
+  would be visible in the log and invisible to the gate. Raised by the
+  independent reviewer.
 
 - **The defect is not fixed.** This commit makes the browser flow detect it
   honestly; it does not stop it happening. The continuous-integration run for
