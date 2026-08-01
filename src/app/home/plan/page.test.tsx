@@ -83,6 +83,20 @@ describe("PlanPage", () => {
     await expect(PlanPage()).rejects.toThrow("redirect:/");
   });
 
+  // M2-06. src/app/home/plan/error.tsx only runs if the failure escapes the
+  // page. Swallowing one here would leave the route on its loading boundary
+  // with nothing to recover from, which is the state the ticket forbids.
+  it("lets a persistence failure reach the route error boundary", async () => {
+    getCurrentManualPlanMock.mockRejectedValue(
+      new Error("The training record operation could not be completed."),
+    );
+
+    await expect(PlanPage()).rejects.toThrow(
+      "The training record operation could not be completed.",
+    );
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
   it("redirects a denied founder-staging user to the narrow denial route", async () => {
     getCurrentManualPlanMock.mockRejectedValue(
       new TrainingRecordAuthenticationErrorMock({ reason: "not-owner" }),
