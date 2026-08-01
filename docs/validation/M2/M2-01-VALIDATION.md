@@ -2,13 +2,18 @@
 
 **Ticket:** [M2-01](../../backlog/M2/M2-01-GOAL-MODEL-VALIDATION.md)
 
-**Lifecycle state:** testable. Acceptance was granted on 30 July 2026 against
-the ticket's Vercel Preview with the required independent exact-commit
-re-review explicitly waived, and the product owner withdrew that waiver later
-the same day. The independent review is required before acceptance is granted
-again. See
-[Independent review and product-owner acceptance](#independent-review-and-product-owner-acceptance)
-and [Acceptance withdrawn](#acceptance-withdrawn-30-july-2026).
+**Lifecycle state:** accepted 1 August 2026, after the independent
+exact-commit review the withdrawn waiver required was completed twice: once on
+31 July 2026, which returned "correction required", and once on 1 August 2026
+against merged `master`, which returned "approved for re-acceptance". The
+second review closed the four areas the first had declared out of scope. Its
+eight findings contain no authorization or correctness defect and were routed
+to [M2-07](../../backlog/M2/M2-07-GOAL-REVIEW-FOLLOWUPS.md) rather than held
+against this ticket. See
+[Independent review and product-owner acceptance](#independent-review-and-product-owner-acceptance),
+[Acceptance withdrawn](#acceptance-withdrawn-30-july-2026),
+[Second independent exact-commit review](#second-independent-exact-commit-review-1-august-2026),
+and [Re-acceptance](#re-acceptance-1-august-2026).
 
 **Branch:** `ticket/m2-01-goal-model`, pushed to
 `origin/ticket/m2-01-goal-model`
@@ -584,3 +589,165 @@ positive evidence that RLS remained enabled on all three new tables after the
 hosted migration.
 
 No unexpected hosted finding was produced, so no M2-01 correction is required.
+
+## Second independent exact-commit review (1 August 2026)
+
+Reviewer: a Claude Code subagent dispatched by the lead agent. It built no part
+of M2-01, M2-05, or M2-06, and it edited no file, ran no suite, started no
+Supabase stack, and issued no remote command.
+
+Target: `master` at `6542693`, whose last runtime-bearing commit is `60c5e4d`.
+Reviewing merged `master` rather than the original branch head
+`ae7d3104899fb93499fde5273cb7e372d2b2457e` is deliberate. The first review's
+single finding was routed to M2-05, which has since been implemented,
+independently reviewed, accepted, and merged, so the branch head no longer
+describes the behavior a user meets.
+
+### Scope
+
+This review was commissioned to close a specific gap. The 31 July review
+recorded four areas as "read but not line by line" and wrote that "a defect
+confined to those files could have been missed":
+
+- `src/components/goals/goal-manager.tsx` — all 845 lines read
+- `src/app/home/you/goals/goals.module.css` — all 421 lines read
+- `supabase/tests/database/m2_01_goals.test.sql` (701 lines) and
+  `m2_01_review_corrections.test.sql` (580 lines) — every assertion read, and
+  the user-A/user-B interleaving traced to determine which assertions are
+  load-bearing
+- `e2e/m2-01-goals.spec.ts` (475 lines) and its config
+
+The reviewer also read the goal server actions, action state, page, repository,
+records module, and the M2-05 watchdog in full, and confirmed continuous
+integration run `30691605310` is green on all three jobs for `60c5e4d`.
+
+It did not re-audit the migration's authorization surface the 31 July review
+already cleared, though it independently verified the properties its own
+findings depend on. It read the Vitest test titles but not their bodies, and
+reports the Vitest suites as **not** independently verified by this review.
+
+### Verdict
+
+**Approved for re-acceptance.** No defect was found in the authorization
+surface, ownership derivation, the maximum of three active core goals,
+contiguous ranking, stale-conflict handling, or the client/server boundary.
+
+### Finding 1 disposition — closed by measurement, not by the recommended change
+
+`supabase/migrations/20260729161854_m2_01_goal_model.sql:266` still calls the
+blocking `pg_advisory_xact_lock`. M2-05 wrote no migration. The finding is
+nonetheless closed, because M2-05 refuted its hypothesis by measurement: every
+`apply_goal_change` call returned in under 120 ms locally and in 18–35 ms in
+the retained CI trace, including the calls whose result never appeared. The
+cause was a lost App Router render transition, not lock contention.
+
+The user-visible silence the first review objected to is now bounded.
+`src/features/goals/mutation-watchdog.ts:37` sets a 10-second confirmation
+budget, and `src/components/goals/goal-manager.tsx:832` then states that the
+change has not been confirmed and offers a reload.
+
+On contention specifically: the lock is per-owner and the transaction performs
+no external I/O, so a second same-owner mutation acquires the lock as soon as
+the first commits, reads the incremented revision, and raises `PT409` — the
+accepted conflict path with the accepted copy. ADR-009's serialization
+requirement is preserved.
+
+One residual, recorded as a hypothesis rather than a finding: if a same-owner
+transaction ever blocked past the role-level `statement_timeout` Supabase sets
+on `authenticated`, the caller would receive `57014`, which
+`goal-repository.ts:204` maps to honest copy. The reviewer did not verify that
+role setting, and `supabase/config.toml` sets no timeout.
+
+### Findings routed to M2-07
+
+All eight findings are recorded in
+[M2-07](../../backlog/M2/M2-07-GOAL-REVIEW-FOLLOWUPS.md). None is an
+authorization or correctness defect, and the product owner accepted M2-01 with
+them open as a separate, explicit decision. The two that matter most are gaps
+in the guard rather than in the behavior:
+
+- **A pgTAP assertion that can never fail.** `m2_01_goals.test.sql:185-195`
+  searches `pg_get_functiondef` for `EXECUTE IMMEDIATE`, which is Oracle
+  syntax with no PL/pgSQL equivalent — PL/pgSQL dynamic SQL is `EXECUTE
+  <string>`. The substring cannot occur, so the only assertion guarding
+  ADR-009's no-dynamic-SQL hardening passes unconditionally. The reviewer read
+  all 711 lines of the function and confirms it contains no dynamic SQL today.
+- **RLS policy predicates are never asserted.** Neither M2-01 pgTAP file
+  contains a `pg_policies` inspection, `has_column`, `col_type_is`,
+  `has_index`, `has_pk`, or `has_fk`. The tables are covered only by
+  `relrowsecurity` being true plus table-privilege checks, and cross-user read
+  denial is unproven for `goal_collections` and `goal_lifecycle_events`
+  because every query against them carries an explicit own-owner `where`
+  clause. A later migration adding `using (true)` alongside the owner policy
+  would leave all 95 assertions green. `m0_02_authorization.test.sql:32-66` is
+  the stronger in-repo precedent, asserting each policy's name, command, target
+  roles, and exact count.
+
+The remaining six are a create-form draft wiped by an unrelated mutation, an
+expired-session message rendered on the success background, reorder buttons
+without a per-goal accessible name, a recovery explanation that can reappear
+after navigation, a permanent-delete assertion satisfiable by an archive, and a
+repo-wide focus-outline contrast of 1.92:1 that predates M2-01.
+
+### `vercel-react-best-practices` rules checked
+
+This closes the open reviewer item that the record did not list these. Applied
+from the project copy at `.agents/skills/vercel-react-best-practices/SKILL.md`
+(index read; individual `rules/*.md` files not opened).
+
+| Rule | Result |
+| --- | --- |
+| `server-auth-actions` | Pass. `requireAllowedVerifiedUser` runs before every read and every RPC, and `apply_goal_change` independently derives the owner from `auth.uid()`. |
+| `server-no-shared-module-state` | Pass. No module-level mutable state; a fresh cookie-scoped client per request. |
+| `server-serialization` | Pass, and load-bearing for privacy. `toGoal` drops `user_id`, `last_active_rank`, `created_at`, and `updated_at`; no owner id crosses to the client. |
+| `server-dedup-props` | Pass. `initialGoals` and `expectedRevision` passed once. |
+| `async-parallel` | Pass. Collection head and goals queries share one `Promise.all`; the preceding `getVerifiedUserId()` is a genuine data dependency. |
+| `async-cheap-condition-before-await` | Pass. Malformed goal content is rejected before authentication. |
+| Server/client boundary | Pass. `goal-manager.tsx` imports no `@/server/**` or repository. Enforced by `src/architecture/server-boundary.test.ts`, which also pins `.retry(false)` to three RPC call sites. |
+| `bundle-barrel-imports`, `bundle-analyzable-paths` | Pass. All imports are direct, statically analysable paths. |
+| `rerender-no-inline-components` | Pass. Every subcomponent is module-level. |
+| `rerender-dependencies` | Pass. Primitive-keyed effect deps; observer effect cleans up. |
+| `rerender-derived-state-no-effect` | Pass. Notices and goal partitions derive during render. |
+| `rendering-conditional-render` | Pass. Explicit `: null` ternaries; no `&&` short-circuits. |
+| `rendering-hydration-no-flicker` | Pass. `useSyncExternalStore` with a `() => false` server snapshot. |
+| `rendering-usetransition-loading` | Pass. Pending state comes from `useActionState`. |
+| `client-event-listeners` | Pass. Observer, interval, and queued timeout all cleared on unmount. |
+| `client-localstorage-schema` | Pass. Namespaced and versioned key storing no goal content, read and write both guarded. |
+| `js-tosorted-immutable` | Pass. `.toSorted(byRank)` does not mutate props. |
+| `js-combine-iterations` | Not actioned. `initialGoals` is walked six times over a bounded collection; skipped per the skill's own priority guidance. |
+| `server-cache-react`, `bundle-dynamic-imports` | Not applicable. |
+| `async-suspense-boundaries` | Satisfied by convention: `force-dynamic` with a route-level `loading.tsx`, correct for a private uncacheable record. |
+
+### Open reviewer items from the first review
+
+- **`vercel-react-best-practices` rules unlisted** — closed by the table above.
+  The `frontend-design` treatment remains unrecorded; it is carried into M2-07.
+- **`supabase gen types typescript` not repeated after the correction
+  migration** — closed by inspection rather than by a run.
+  `20260729174620_m2_01_review_corrections.sql` drops and re-adds a `CHECK`
+  constraint and creates an index. Supabase's generated types reflect tables,
+  columns, enums, functions, and foreign-key relationships; they carry neither
+  check constraints nor non-unique indexes, so `database.types.ts` cannot have
+  drifted from that migration.
+- **Repository-wide `format:check` not run** — closed by continuous
+  integration, which was added after this record was written and runs Prettier
+  repository-wide on a Linux checkout in the `static` job.
+- **Root-config `npm run test:e2e` not run** — closed by continuous
+  integration, whose `browser` job runs `e2e/auth.spec.ts` and
+  `e2e/planning.spec.ts` on port 3000 alongside the per-ticket configs.
+
+## Re-acceptance (1 August 2026)
+
+The product owner accepted M2-01 on 1 August 2026 against merged `master`
+`6542693` and the founder deployment at `https://fittip-gilt.vercel.app/`,
+with the eight second-review findings explicitly left open and routed to
+M2-07 as a separate decision.
+
+Acceptance rests on the product owner's own `390x844` verification of the goal
+walkthrough on the founder deployment recorded above, the first independent
+review's authorization verdict, this second independent review closing the four
+areas that verdict excluded, the separately accepted M2-05 and M2-06
+corrections, and green continuous integration on `master` for `60c5e4d`.
+
+M2-01 is accepted, merged, deployed, and hosted-verified, so it no longer
+blocks M2-02.

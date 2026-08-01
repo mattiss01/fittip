@@ -1,11 +1,15 @@
 # M2-01: Goal model and validation
 
-**Status:** testable — acceptance withdrawn 30 July 2026. The product owner
-withdrew the earlier waiver of the independent exact-commit re-review, so that
-review is required before M2-01 is accepted again. Implementation approval was
-recorded 29 July 2026, and the implementation remains merged and deployed. See
-the [validation record](../../validation/M2/M2-01-VALIDATION.md) and
-[M2-05](M2-05-INTERMITTENT-GOAL-MUTATIONS.md).
+**Status:** accepted 1 August 2026 against merged `master` `6542693` and the
+founder deployment, after the independent exact-commit review the withdrawn
+waiver required was completed. The first review (31 July 2026) returned
+"correction required" and its finding was corrected under
+[M2-05](M2-05-INTERMITTENT-GOAL-MUTATIONS.md); the second (1 August 2026)
+returned "approved for re-acceptance" and closed the four areas the first left
+out of scope. Its eight findings are open and routed to
+[M2-07](M2-07-GOAL-REVIEW-FOLLOWUPS.md), which the product owner accepted as a
+separate explicit decision. See the
+[validation record](../../validation/M2/M2-01-VALIDATION.md).
 
 **Milestone:** M2 — goals, editable coaching context, and guided onboarding
 

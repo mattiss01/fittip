@@ -1,6 +1,10 @@
 # M2-02: Memory model and management
 
-**Status:** proposed — not approved for implementation
+**Status:** in development — approved for implementation 1 August 2026. The
+product owner approved the ticket's recommended direction for statuses,
+history, expiry, and deletion; the memory write boundary as a new ADR-010; and
+the sensitive-content treatment recorded in the brief below. The approval
+resolves the eight open decisions listed at the end of this ticket.
 
 **Milestone:** M2 — goals, editable coaching context, and guided onboarding
 
@@ -17,6 +21,74 @@ and [ADR-007](../../decisions/ADR-007-FOUNDER-HOSTED-STAGING.md);
 product-owner or synthetic data only, local or founder-hosted
 
 **Blocks:** [M2-03 Guided onboarding](M2-03-INTAKE-FACT-REVIEW.md) and [M2-04 targeted M2 closeout](M2-04-M2-VALIDATION-SLICE.md)
+
+## Agent brief
+
+**Outcome.** Give an authenticated user an explicit, inspectable, editable,
+statused store of coaching facts, constraints, preferences, and proposed
+observed patterns at `/home/you/memory`, so nothing FitTip believes about them
+is hidden or silently inferred.
+
+**Tier 1.** New table, migration, RLS, health-adjacent content, deletion.
+
+**Approved decisions — build these, do not re-litigate them.**
+
+- **Disable** moves `active` to `archived`, reversible by **Enable**. `rejected`
+  is only a declined proposal. `proposed` is never active context.
+- Editing appends a content revision and moves a current pointer; it never
+  overwrites prior text, and a partial revision is never visible.
+- Expiry excludes an item from active context and marks it review-due. It never
+  silently deletes, archives, or converts content.
+- **Delete permanently** purges the current content and every content-bearing
+  revision in one transaction, leaving only evidence carrying no content.
+- Content is one generic validated text value. No structured subtype fields, no
+  global activity, equipment, or facility catalog.
+- No health-adjacent field and no classifier; nothing infers severity from CRUD.
+  One static, non-diagnostic notice on create and edit tells the user to stop
+  and consult a qualified professional for severe or worsening symptoms.
+
+**Hard constraints.**
+
+- Write **ADR-010**, following ADR-008 and ADR-009: tables grant only `select`;
+  one `security definer` function with `set search_path = ''` is the sole write
+  path, deriving the owner from `auth.uid()` internally and never from the
+  caller; execute granted only to `authenticated`.
+- **Bound every lock wait.** ADR-009's unbounded `pg_advisory_xact_lock` was the
+  defect M2-01's review caught. Use `lock_timeout` or
+  `pg_try_advisory_xact_lock`, map exhaustion to the conflict path, and never
+  let a contended save hang silently.
+- Memory content must never reach logs, analytics, error messages, snapshots,
+  or fixtures. Add a test that fails if it does.
+- A third RPC call site changes the `.retry(false)` invariant in
+  `src/architecture/server-boundary.test.ts`. Update it deliberately.
+- Do not copy M2-01's broken pgTAP patterns
+  ([M2-07](M2-07-GOAL-REVIEW-FOLLOWUPS.md) findings 1 and 2). Per
+  `supabase/tests/database/m0_02_authorization.test.sql`: assert policy names,
+  commands, roles, predicates, **exact count** per table; prove cross-user
+  denial behaviorally with no own-owner `where` masking RLS; write no assertion
+  that passes when the property is absent.
+- No `supabase link`, `db push`, or remote command. No secret, service client,
+  trigger, view, or elevated worker beyond the approved function.
+
+**Non-goals.** No AI extraction, pattern detection, coaching, plan generation,
+or provider call. No raw-chat store. No onboarding flow — that is M2-03. No
+training, completion, replan, diagnosis, treatment, analytics, or external
+service.
+
+**Acceptance criteria.** The twelve criteria below are the contract; the
+approved decisions settle how 1 through 7 and 10 are met.
+
+**Expected files.** Migration and pgTAP under `supabase/`; domain and
+repository under `src/server/`; route `src/app/home/you/memory/`; components
+`src/components/memory/`; regenerated `database.types.ts`;
+`e2e/m2-02-memory.spec.ts` with its own config and port; `ADR-010`; validation
+record. Decomposition is yours.
+
+**Project skills.** `schema-change`, `vercel-react-best-practices`,
+`frontend-design`, `mobile-e2e`, `validation-record` — read each from
+`.agents/skills/<name>/`; Claude Code does not auto-discover them.
+
+Read only this section unless you hit an ambiguity it does not resolve.
 
 ## Outcome
 
@@ -373,6 +445,11 @@ reversible builder decisions after approval. A privileged operation, new
 database connection, function/RPC, trigger, or hidden audit store is not.
 
 ## Open product, architecture, safety, and privacy decisions
+
+**Resolved 1 August 2026.** All eight were settled at approval; the outcomes
+are in the Agent brief. This section is retained as the record of what was
+asked. Decision 2 became ADR-010, and decision 6 was answered with no
+health-adjacent field and a static non-diagnostic notice.
 
 1. **Visible statuses.** Recommendation: use Product Plan statuses and map
    **Disable** to reversible `archived`; approve the exact label and restore
