@@ -2,10 +2,14 @@
 
 **Ticket:** [M2-02](../../backlog/M2/M2-02-MEMORY-MODEL-MANAGEMENT.md)
 
-**Lifecycle state:** testable — awaiting independent exact-commit review
+**Lifecycle state:** accepted 2 August 2026 by the product owner, against the
+independently reviewed commit and its Vercel Preview, after three independent
+review rounds and hosted database verification. See
+[Independent review outcome](#independent-review-outcome) and
+[Product-owner acceptance](#product-owner-acceptance-2-august-2026).
 
 **Exact implementation review target:**
-`e5dab52`
+`e5dab525c140fa290a61545cc59706ca0bb69758`
 
 **Initial implementation commit:**
 `460ee184cb60c28d41f64481515c0bb8f459249a`
@@ -934,3 +938,92 @@ Confirm the judgment CI cannot supply:
     regenerate.
 15. **Hosted verification** against the Vercel Preview for this exact commit,
     at `390x844`.
+
+## Independent review outcome
+
+Three review rounds against this branch, all by the same independent reviewer,
+which built no part of this implementation.
+
+| Round | Target | Verdict |
+| --- | --- | --- |
+| 1 | `6178d8e` | Correction required — one blocking finding (a false privacy claim in this record), plus the lock guards, the destroyed create draft, and the ADR framing |
+| 2 | `3fc2237` | Approved — all findings resolved, one late finding (F6) recorded and routed |
+| 3 | `39315b9`, then `e5dab52` | Approved — the overturned decision verified, then the restored keyboard coverage verified |
+
+The reviewer independently re-derived the pgTAP collection-revision sequence by
+hand rather than trusting the diff, confirmed the cross-owner ownership test is
+pinned to user B's own current revision so it cannot pass on a stale-revision
+check, verified `proposed` is unreachable from the authenticated write path
+entirely after the reversal, and endorsed amending the migration in place after
+checking the premise itself.
+
+Findings routed out of this ticket rather than fixed here, all recorded on
+`master` before acceptance: F3 stale confidence after edit-and-accept →
+[M2-03](../../backlog/M2/M2-03-INTAKE-FACT-REVIEW.md) decision 9; F5 focus lost
+after every mutation and F6 the card-editor draft lost after a rejected edit →
+[M2-10](../../backlog/M2/M2-10-FOCUS-LOST-AFTER-MUTATION.md).
+
+## Product-owner acceptance (2 August 2026)
+
+Accepted against independently reviewed commit
+`e5dab525c140fa290a61545cc59706ca0bb69758`, branch head
+`9e93a5671cc3656c4709fe88234415b263ee5ee8`, and the Vercel Preview at
+`https://fittip-pqu7p0k95-mattis-3657s-projects.vercel.app`.
+
+Continuous-integration run `30759653021` is green on all three jobs for the
+branch head. The head commit changes only this record and the re-captured
+evidence, so the run covers the reviewed implementation unchanged.
+
+The product owner made two product decisions during acceptance, both recorded
+where the work is:
+
+- **ADR-010 decision 7 overturned.** A user-created `observed_pattern` is
+  `active` on save. The cost — no browser coverage of the review actions until
+  M2-03 — was stated before the decision and accepted with it.
+- **The three known limitations were accepted open**, each with a ticket:
+  M2-09 for the unexplained App Router race, M2-10 for focus and the card-editor
+  draft, and the review-action coverage gap recorded in limitation 2.
+
+### Hosted database verification
+
+The migration reached the founder-hosted project before acceptance, which is
+what made the memory surface reachable on the Preview at all. The product owner
+ran `supabase link` and `db push` personally; no agent executed a remote
+command against the project.
+
+`supabase migration list --linked` reports eight migrations with every local
+timestamp matching its remote entry and no drift in either direction. The
+eighth is `20260801085404` — this ticket's memory model.
+
+`supabase db lint --linked --level warning` reported no schema errors in
+`public` or `extensions`.
+
+`supabase db advisors --linked --type performance --level warn` reported no
+issues.
+
+`supabase db advisors --linked --type security --level warn` reported exactly
+five warnings, four of them pre-existing and previously classified:
+
+- **`apply_memory_change` is executable by `authenticated` as a
+  `SECURITY DEFINER` function.** This is the single new finding introduced by
+  M2-02, and it is the intended and only approved memory write boundary under
+  ADR-010. It is the same warning ADR-008 and ADR-009 already carry.
+- `apply_goal_change` (ADR-009), `save_manual_plan_version` and
+  `save_training_completion` (ADR-008) — unchanged from previous milestones.
+- Leaked-password protection remains disabled, as accepted in M0-06A for the
+  owner-only founder environment. It must be resolved through the external-use
+  gates before friends, public registration, or commercial use.
+
+**No advisor reported a disabled-RLS, exposed-table, or anonymous-access
+finding for `memory_items`, `memory_revisions`, `memory_collections`, or
+`memory_deletion_events`.** Those checks are `ERROR` level and were within the
+requested threshold, so their absence is positive evidence that RLS held on all
+four new tables after the hosted migration.
+
+### A note for whoever corrects this migration next
+
+`20260801085404_m2_02_memory_model.sql` was amended in place once, during the
+ADR-010 reversal, when it had never been applied to any persistent database.
+That reasoning expired the moment it was pushed to the founder project. It is
+now applied history: every future correction to it is forward-only, and nobody
+should reason by analogy from that amendment.
