@@ -15,6 +15,14 @@ acceptance remain required.
 **Architecture decision:**
 [ADR-011](../../decisions/ADR-011-M2-ONBOARDING-PUBLICATION-BOUNDARY.md)
 
+## Approved cleanup clarification — 3 August 2026
+
+The product owner approved automatic expired-draft cleanup once daily inside
+PostgreSQL. ADR-011 fixes the job at `03:17 UTC`, accepts up to 24 hours of
+deletion lag after the 30-day expiry, and permits no HTTP, Edge Function,
+network credential, external provider, or remote command. Implementation and
+disposable-database evidence are pending the focused governance commit.
+
 ## Delivered behavior
 
 - A verified owner can start, explicitly save, leave, resume, cancel, restart,

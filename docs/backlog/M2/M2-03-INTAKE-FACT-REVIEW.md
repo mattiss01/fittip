@@ -36,7 +36,7 @@ product-owner or synthetic data only, local or founder-hosted
 - Steps: Goals; Current training; Time and access; Preferences; Constraints; Review and save. Skipping never gates manual planning or logging.
 - Future-AI readiness is informational only: one active core goal, an explicit training answer, availability/capacity, access/equipment, timezone, and units; it authorizes no AI call or safety claim.
 - No general narrative box or universal experience level. Reuse accepted goal limits; allow up to 10 new labels of 60 characters, baseline detail 500, and memory text 1,000.
-- One cross-device draft saves only on named save actions, expires after 30 inactive days, and is purged on cancel, expiry, or publication; retain only a content-free receipt.
+- One cross-device draft saves only on named save actions and expires after 30 inactive days. Cancel/publication purge immediately; private in-Postgres cleanup runs daily at **03:17 UTC**, permitting at most 24 hours of expiry-deletion lag. Retain only a content-free receipt.
 - Nothing is preaccepted. Publish any valid accepted subset; finishing with none publishes nothing. Exact duplicates cannot create a second record.
 - Compare deterministically only. Show existing versus candidate for conflicts; preview full rank changes; preserve decisions on stale refresh; never merge.
 - Optional pain/injury, illness/recovery, unusual-fatigue, and other limitations infer no severity and block no publication. Copy: “FitTip cannot assess or diagnose symptoms. If symptoms are severe, sudden, or getting worse, stop the affected activity and contact a qualified health professional.”
@@ -51,6 +51,7 @@ product-owner or synthetic data only, local or founder-hosted
 - Every owned row has `user_id`; exposed tables use RLS, exact owner-select policies, explicit grants, and no direct authenticated writes. Private helpers grant no API-role execution.
 - Reuse accepted goal/memory mutation invariants; change applied behavior only by forward migration and never build weaker onboarding-only copies.
 - No intake content in logs, analytics, URLs, browser storage, email, errors, receipts, fixtures, screenshots, AI providers, or external services.
+- The expiry job is one idempotently named `pg_cron` schedule calling a private database function. It uses no HTTP, Edge Function, network credential, external provider, or API-role function grant.
 - Focus the new heading after navigation, the first actionable error after validation, and the result heading after publication; preserve reduced motion, keyboard use, touch targets, and `390x844` reflow.
 
 **Non-goals.** No production AI, extraction, chat, coaching, plan generation, activity library, diagnosis, treatment, analytics, notifications, public users, remote command, service-role client, or changes to completed/past records.
@@ -530,9 +531,11 @@ review slice, or return focused corrections**.
 
 ## Approval gate
 
-**Resolved 2 August 2026.** The product owner approved the nine-part decision
+**Resolved 2 August 2026; retention mechanism clarified 3 August 2026.** The product owner approved the nine-part decision
 set after M2-01 and M2-02 were accepted. ADR-011 records the approved
 transaction and persistence mechanism. The ticket is Tier 1 and was moved to
 **in development** for a distinct builder and independent reviewer. Approval
 remains limited to owner/synthetic local and founder-hosted use and authorizes
-no production AI, external user, analytics, provider, or spend.
+no production AI, external user, analytics, provider, or spend. The 3 August
+clarification approves automatic expiry cleanup once daily inside PostgreSQL
+only, with up to 24 hours of deletion lag after the 30-day expiry.

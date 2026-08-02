@@ -4,6 +4,8 @@
 
 **Date:** 2 August 2026
 
+**Amended:** 3 August 2026 — approved daily in-Postgres expiry cleanup
+
 **Ticket:** [M2-03 guided onboarding](../backlog/M2/M2-03-INTAKE-FACT-REVIEW.md)
 
 **Builds on:** [ADR-002](ADR-002-M0-02-DATA-AUTHORIZATION-BOUNDARY.md),
@@ -33,8 +35,11 @@ database layer, and a publication receipt that carries no intake content.
 1. Store one active onboarding draft per owner, its bounded structured answers,
    deterministic candidates, review decisions, and a monotonic draft revision
    in normalized owner-scoped tables. Every owned row carries `user_id`.
-2. A draft expires 30 days after last activity. Cancel, expiry, and successful
-   publication purge every answer and candidate containing user content.
+2. A draft expires 30 days after last activity. Cancel and successful
+   publication purge every answer and candidate containing user content
+   immediately. A private PostgreSQL cleanup function deletes expired drafts
+   and cascading content once daily at **03:17 UTC** through `pg_cron`.
+   Deletion may therefore lag the 30-day expiry by no more than 24 hours.
 3. Retain one content-free publication receipt until account deletion. It may
    contain owner, batch/idempotency id, timestamps, resulting goal and memory
    ids, and final collection revisions, but no answer or candidate text.
@@ -79,8 +84,12 @@ database layer, and a publication receipt that carries no intake content.
 14. Keep intake content out of logs, analytics, URLs, browser storage, email,
     error messages, generic audit events, receipts, snapshots, fixtures, and
     external services. Database errors become stable content-free domain errors.
-15. Add no service-role client, direct database application connection, trigger,
-    view, secret, remote command, AI provider, paid resource, or background job.
+15. Add no service-role client, direct database application connection,
+    trigger, view, secret, remote command, AI provider, paid resource, HTTP
+    cron call, Edge Function, or external background service. The sole
+    background exception is the private in-Postgres expiry cleanup in decision
+    2. Its function grants execution to no API role, its named `pg_cron` job is
+    scheduled idempotently by migration, and its SQL performs no network work.
 
 ## Required evidence
 
@@ -90,6 +99,9 @@ database layer, and a publication receipt that carries no intake content.
   cross-owner behavioral denial; direct owner writes denied.
 - One-active-draft enforcement, owner-scoped resume, 30-day expiry, cancel,
   successful-publication purge, and content-free receipt checks.
+- Private cleanup function ownership/search path/execute matrix, one active
+  named `03:17 UTC` schedule after repeat scheduling, and expired
+  health-adjacent content removed by a direct disposable-database invocation.
 - Deterministic mapping, forged provenance rejection, and active-context
   exclusion before publication.
 - Atomic mixed-decision publication with goal ordering, fourth-core, stale
@@ -137,12 +149,17 @@ retaining a second copy of sensitive intake.
 - Same-owner context mutations may briefly serialize; different owners do not.
 - Draft content has a defined short lifetime, while accepted destination
   history remains governed by M2-01 and M2-02.
+- Expired content can remain for up to 24 hours after the 30-day inactivity
+  boundary; cleanup is automatic inside PostgreSQL and needs no application,
+  credential, or network availability.
 - The owner/synthetic founder boundary remains unchanged.
 
 ## Approval boundary
 
 The product owner approved this decision with the M2-03 field, UX, safety,
-privacy, conflict, and confidence decisions on 2 August 2026. It authorizes
-local and founder-hosted owner/synthetic implementation only. It does not
-authorize production AI, analytics, friends, public registration, commercial
-use, an external provider, a remote schema command, or spend.
+privacy, conflict, and confidence decisions on 2 August 2026. On 3 August
+2026, the product owner approved the daily in-Postgres cleanup amendment,
+including the maximum 24-hour deletion lag after expiry. It authorizes local
+and founder-hosted owner/synthetic implementation only. It does not authorize
+production AI, analytics, friends, public registration, commercial use, an
+external provider, a remote schema command, network credentials, or spend.
