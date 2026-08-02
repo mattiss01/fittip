@@ -6,7 +6,8 @@
 exact-commit review, branch CI, Vercel Preview verification, and product-owner
 acceptance remain required.
 
-**Implementation commit:** `17cbea2657c4b2b0308f99d362238d19c94ef05b`
+**Implementation correction commit:**
+`2bb141f65066ff4ff4cb1b4b87485e71e3611844`
 
 **Branch:** `ticket/m2-03-guided-onboarding`
 
@@ -334,23 +335,36 @@ The correction implements and proves the following:
   overrides it. Validation copy now truthfully asks the owner to review the
   current step without claiming field highlighting.
 
-Correction manifest before its exact commit is recorded:
+Correction manifest:
+
+`git diff --stat e3db3b1..2bb141f65066ff4ff4cb1b4b87485e71e3611844`
 
 ```text
- src/app/home/you/onboarding/actions.test.ts        | action-copy regression
- src/app/home/you/onboarding/actions.ts             | honest validation copy
- src/components/onboarding/onboarding-manager.test.tsx | rank/status/focus regressions
- src/components/onboarding/onboarding-manager.tsx   | status UI, rank and focus behavior
- src/lib/onboarding/onboarding-contract.ts          | comparison status contract
- src/server/repositories/onboarding-repository.ts   | deterministic status-aware comparison
- supabase/migrations/20260802201214_m2_03_guided_onboarding.sql | transaction, cleanup and confidence corrections
- supabase/tests/database/m2_02_memory.test.sql      | approved confidence expectation
- supabase/tests/database/m2_03_onboarding.test.sql  | trust, cleanup, status and confidence evidence
+ docs/validation/M2/M2-03-VALIDATION.md             | 109 +++++-
+ src/app/home/you/onboarding/actions.test.ts        |   2 +-
+ src/app/home/you/onboarding/actions.ts             |   2 +-
+ .../onboarding/onboarding-manager.test.tsx         | 153 +++++++-
+ src/components/onboarding/onboarding-manager.tsx   | 102 ++++--
+ src/lib/onboarding/onboarding-contract.ts          |   1 +
+ src/server/repositories/onboarding-repository.ts   |  47 ++-
+ .../20260802201214_m2_03_guided_onboarding.sql     | 347 ++++++++++++++++--
+ supabase/tests/database/m2_02_memory.test.sql      |   4 +-
+ supabase/tests/database/m2_03_onboarding.test.sql  | 401 +++++++++++++++++++--
+ 10 files changed, 1048 insertions(+), 120 deletions(-)
 ```
 
 No file was deleted or renamed. The migration adds no exposed write surface,
 external service, credential, network call, `.github/**` change, or remote
 database mutation.
+
+Purpose notes for paths whose role is not self-evident:
+
+- The accepted `m2_02_memory.test.sql` expectation changes because the approved
+  forward trigger now clears confidence after `edit_and_accept`; all other
+  M2-02 lock, conflict, provenance, history, and unchanged-acceptance tests
+  remain intact.
+- `onboarding-contract.ts` carries only the serialized existing-status value
+  needed to make inactive Memory honest at the client boundary.
 
 Post-correction local results:
 
