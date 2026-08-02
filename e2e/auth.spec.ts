@@ -108,9 +108,14 @@ async function completeGuidedSetup(
   await expect
     .poll(
       async () => {
-        const alert = page.getByRole("alert");
-        if (await alert.isVisible().catch(() => false)) {
-          return `action alert: ${await alert.innerText()}`;
+        const notice = page.locator(
+          "[data-onboarding-notice][data-state='validation'], " +
+            "[data-onboarding-notice][data-state='conflict'], " +
+            "[data-onboarding-notice][data-state='session'], " +
+            "[data-onboarding-notice][data-state='error']",
+        );
+        if (await notice.isVisible().catch(() => false)) {
+          return `action notice: ${await notice.innerText()}`;
         }
         return new URL(page.url()).pathname;
       },

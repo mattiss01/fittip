@@ -65,10 +65,6 @@ export function OnboardingManager({
 
   useEffect(() => {
     if (state.submission === 0) return;
-    if (state.redirectTo) {
-      router.push(state.redirectTo);
-      return;
-    }
     router.refresh();
     if (state.status === "published") {
       resultRef.current?.focus();
@@ -80,7 +76,7 @@ export function OnboardingManager({
     ) {
       noticeRef.current?.focus();
     }
-  }, [router, state.redirectTo, state.status, state.submission]);
+  }, [router, state.status, state.submission]);
 
   useEffect(() => {
     if (snapshot.draft && state.status !== "published") {
@@ -195,6 +191,7 @@ export function OnboardingManager({
       {state.status !== "idle" ? (
         <div
           className={styles.notice}
+          data-onboarding-notice
           data-state={state.status}
           ref={noticeRef}
           role={state.status === "saved" ? "status" : "alert"}

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import type { OnboardingActionState } from "./action-state";
 
@@ -27,6 +28,15 @@ import {
 } from "@/server/repositories/onboarding-repository";
 
 export async function changeOnboardingAction(
+  previous: OnboardingActionState,
+  formData: FormData,
+): Promise<OnboardingActionState> {
+  const state = await resolveOnboardingAction(previous, formData);
+  if (state.redirectTo) redirect(state.redirectTo);
+  return state;
+}
+
+async function resolveOnboardingAction(
   previous: OnboardingActionState,
   formData: FormData,
 ): Promise<OnboardingActionState> {

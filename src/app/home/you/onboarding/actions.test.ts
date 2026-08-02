@@ -1,11 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createRepositoryMock, revalidatePathMock } = vi.hoisted(() => ({
-  createRepositoryMock: vi.fn(),
-  revalidatePathMock: vi.fn(),
-}));
+const { createRepositoryMock, redirectMock, revalidatePathMock } = vi.hoisted(
+  () => ({
+    createRepositoryMock: vi.fn(),
+    redirectMock: vi.fn(),
+    revalidatePathMock: vi.fn(),
+  }),
+);
 
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
+vi.mock("next/navigation", () => ({ redirect: redirectMock }));
 vi.mock(
   "@/server/repositories/onboarding-repository",
   async (importOriginal) => {
@@ -69,6 +73,7 @@ describe("onboarding actions", () => {
       },
     });
     expect(revalidatePathMock).toHaveBeenCalled();
+    expect(redirectMock).toHaveBeenCalledExactlyOnceWith("/home/you");
   });
 
   it("returns an actionable validation state instead of claiming a redirect", async () => {
@@ -87,7 +92,26 @@ describe("onboarding actions", () => {
         "Check the highlighted step. Nothing from this attempt was saved.",
     });
     expect(result.redirectTo).toBeUndefined();
+    expect(redirectMock).not.toHaveBeenCalled();
     expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+
+  it("lets the framework redirect escape the persistence error mapper", async () => {
+    const frameworkRedirect = new Error("NEXT_REDIRECT");
+    createRepositoryMock.mockResolvedValue({
+      apply: vi.fn().mockResolvedValue({
+        draft_id: "54000000-0000-4000-8000-000000000001",
+        draft_revision: 1,
+        result: "saved",
+      }),
+    });
+    redirectMock.mockImplementationOnce(() => {
+      throw frameworkRedirect;
+    });
+
+    await expect(
+      changeOnboardingAction(INITIAL_ONBOARDING_ACTION_STATE, goalForm()),
+    ).rejects.toBe(frameworkRedirect);
   });
 });
 
