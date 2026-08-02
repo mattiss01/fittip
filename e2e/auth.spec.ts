@@ -195,7 +195,11 @@ async function completeGuidedSetup(
   await page.getByRole("link", { name: "Goals", exact: true }).click();
   await expect(page.getByText(goalTitle)).toBeVisible();
   await page.goto("/home/you/memory");
-  await expect(page.getByText("I am not training currently.")).toBeVisible();
+  await expect(
+    page
+      .locator('[data-memory-content="true"]')
+      .filter({ hasText: /^I am not training currently\.$/ }),
+  ).toBeVisible();
 
   await page.goto("/home/you/onboarding");
   await page.getByRole("button", { name: "Run guided review again" }).click();
