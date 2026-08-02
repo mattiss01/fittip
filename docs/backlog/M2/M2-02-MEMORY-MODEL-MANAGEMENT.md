@@ -6,6 +6,30 @@ history, expiry, and deletion; the memory write boundary as a new ADR-010; and
 the sensitive-content treatment recorded in the brief below. The approval
 resolves the eight open decisions listed at the end of this ticket.
 
+**Decision, 2 August 2026 — a user-created `observed_pattern` is active on
+save.** The product owner ruled that an observed pattern the user writes
+themselves becomes `active` immediately, like a fact, constraint, or
+preference. It does not start `proposed` and needs no confirming tap. Two
+statements below are superseded by this and are retained as history rather than
+edited: the class table's "Starts proposed and needs explicit user acceptance"
+for `observed_pattern`, and "Any system/AI-derived **or observed** content must
+begin `proposed`" under the provenance rules. The `## Agent brief` never stated
+that rule, so the implementation contract is unaffected.
+
+**What did not change:** genuinely system-derived or inferred content still
+begins `proposed`, and no caller can forge `inferred_proposed` provenance or
+`author_class = 'system'`. The independent review confirmed `proposed` is now
+unreachable from the authenticated write path entirely.
+
+**The cost, recorded deliberately:** accept, edit-and-accept, and reject have
+no browser coverage and will not until M2-03 produces real proposals, because
+no user path reaches the review queue. They remain proven at the database and
+unit level against directly seeded proposals. Manufacturing an application path
+to a proposal was rejected outright — it would have let a user create content
+that reads as FitTip-inferred, which is the invariant this ticket exists to
+protect. See ADR-010 decision 7 and the M2-02 validation record, both of which
+arrive on `master` with the ticket merge.
+
 **Milestone:** M2 — goals, editable coaching context, and guided onboarding
 
 **Priority:** P1

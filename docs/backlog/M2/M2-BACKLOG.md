@@ -45,6 +45,9 @@ production.
 | P1 | [M2-05 Intermittent goal mutations that do not apply](M2-05-INTERMITTENT-GOAL-MUTATIONS.md) | accepted | M2-01 implementation merged | Investigate two observed symptoms - a create that never appears and a reorder that never takes effect, both silent; identify lost write versus lost render; correct the cause; make failed mutations visible; add regression coverage | Approve the investigation, then normal implementation, review, Preview, and acceptance for any correction |
 | P1 | [M2-06 Plan page intermittently does not finish rendering](M2-06-PLAN-PAGE-RENDER-TIMEOUT.md) | accepted | M1 milestone closeout accepted | Investigate a plan route that intermittently never replaces its loading state; identify what the render waits on; make a failed render show an honest error; stop a committed URL alone from passing the navigation assertion | Approve the investigation, then normal implementation, review, Preview, and acceptance for any correction |
 | P2 | [M2-07 Goal review follow-ups](M2-07-GOAL-REVIEW-FOLLOWUPS.md) | proposed | M2-01 accepted | Eight findings from M2-01's second independent review; two pgTAP guards that cannot fail, unasserted RLS predicates, a wiped create draft, and four smaller client and test corrections; no migration expected | Approve the scope, then normal implementation, review, Preview, and acceptance |
+| P2 | [M2-08 Regenerating database types breaks typecheck](M2-08-TYPE-GENERATION-DRIFT.md) | proposed | none | Documented type regeneration drops `\| null` from nine `save_training_completion` parameters and reddens typecheck on unchanged `master`; identify generator regression versus wrong RPC signature before proposing a fix | Approve the investigation; tier depends on the cause |
+| P1 | [M2-09 App Router transitions drop a mutation result](M2-09-APP-ROUTER-LOST-RENDER.md) | proposed | none | A server action returns 200 with a correct body and the transition never commits; measured on goals (3 in 20) and memory (1 in 6, with a 33ms trace ruling out slowness); identify the cause, measure `/home/plan` and `/home/log`, and consolidate the shared recovery if none is found | Approve the investigation; tier depends on the outcome |
+| P2 | [M2-10 Focus is lost after every mutation](M2-10-FOCUS-LOST-AFTER-MUTATION.md) | proposed | M2-02 accepted | Both management surfaces drop focus to `body` when the acting control unmounts, so a keyboard or screen-reader user restarts from the top after every change; decide where focus belongs per mutation kind and apply it to goals and memory together | Approve the focus destinations, then normal implementation, review, Preview, and acceptance |
 
 ## Dependency chain
 
@@ -74,6 +77,23 @@ of them are pgTAP guards that cannot fail, which is why the ticket exists at
 all: a suite that reports a property it does not test is worse than one that
 omits it. M2-02 should not copy those two patterns when it writes its own
 memory authorization tests.
+
+M2-08 is a tooling defect the M2-02 builder hit and reproduced on unchanged
+`master`: running the documented type-generation step reddens `typecheck`. It
+blocks nothing, but every schema ticket pays for it until it is fixed, and it
+pushes builders toward exactly the hand-edit the project rules forbid.
+
+M2-10 came out of M2-02's independent review, which checked the goals surface
+before reporting and found the identical gap there. Fixing it inside M2-02
+would have made memory diverge from an accepted surface with nothing recording
+why, and left goals broken, so it is one ticket deciding one answer for both.
+
+M2-09 is the framework race that M2-05 mitigated on goals and asked to have
+filed separately. It was not filed, and M2-02 then paid for it again — a red
+continuous-integration run, a trace investigation, and an unplanned correction.
+Two surfaces now carry their own recovery for a defect nobody has explained,
+and `/home/plan` and `/home/log` remain unmeasured. Filing it is how that stops
+being rediscovered one ticket at a time.
 
 ## Ticket rule
 
