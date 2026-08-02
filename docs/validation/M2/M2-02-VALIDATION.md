@@ -5,7 +5,7 @@
 **Lifecycle state:** testable — awaiting independent exact-commit review
 
 **Exact implementation review target:**
-`3fc223732214732067d76618a6e6bd29c47abdc9`
+`39315b9f213f929184c4dcf98bf337e15bfe5532`
 
 **Initial implementation commit:**
 `460ee184cb60c28d41f64481515c0bb8f459249a`
@@ -21,6 +21,15 @@
   action, two bounded-lock pgTAP guards that passed when the property was
   absent, and ADR-010 framing a builder decision as pre-approved. Also
   corrects this record's browser-storage claims.
+- `75520c2` — a user-created `observed_pattern` is active on save, after the
+  product owner overturned ADR-010 decision 7 on 2 August 2026. The migration
+  is amended in place; see *The overturned decision*.
+- `1796965` — the pgTAP suite proves the review queue only from directly
+  seeded system proposals, and asserts that no authenticated create produces
+  one.
+- `39315b9f213f929184c4dcf98bf337e15bfe5532` — removes the review-queue steps
+  from the 390px flow rather than faking a user path to a proposal, and drops
+  the create form's "(starts proposed)" option text.
 
 **Lead commit on this branch:** `deabe75` — `ci: run the M2-02 memory browser
 flow` (port 3016). Wiring the flow into continuous integration was a
@@ -34,11 +43,11 @@ the gap and the lead closed it.
 **Architecture decision:**
 [ADR-010](../../decisions/ADR-010-M2-MEMORY-WRITE-BOUNDARY.md) — proposed,
 recording the write boundary the product owner approved in principle at
-dispatch, for confirmation with this ticket
+dispatch, for confirmation with this ticket. Decision 7 has already been
+ruled on: the owner overturned it on 2 August 2026.
 
 **Mobile evidence:** [empty state](evidence/M2-02-empty-390x844.png),
 [filed memory](evidence/M2-02-filed-390x844.png),
-[review queue](evidence/M2-02-review-queue-390x844.png),
 [stale conflict](evidence/M2-02-stale-conflict-390x844.png),
 [permanent delete](evidence/M2-02-delete-390x844.png),
 [final state](evidence/M2-02-final-390x844.png)
@@ -64,13 +73,16 @@ below. Re-review pending.
   reachable only by an authenticated verified owner.
 - An owner can file a fact, constraint, preference, or observed pattern as one
   validated text value of 1–1000 characters, with an optional review date.
-- A `profile_fact`, `constraint`, or `preference` becomes active on save. An
-  `observed_pattern` starts **proposed** whoever creates it, and enters a
-  review queue that is excluded from active context until the owner accepts
-  it.
-- A proposal offers **Accept**, **Edit and accept**, and **Decline**. No action
-  is preselected and leaving the screen changes nothing. A declined item is
-  never switchable back on as fact; only permanent deletion acts on it.
+- All four classes become active on save, including `observed_pattern`. The
+  product owner ruled on this on 2 August 2026; see *The overturned decision*.
+- **proposed** is reserved for content FitTip derived rather than content the
+  owner wrote. No authenticated path can produce it, so in M2-02 the review
+  queue is always empty and the surface says so.
+- A proposal, once M2-03 produces one, offers **Accept**, **Edit and accept**,
+  and **Decline**. No action is preselected and leaving the screen changes
+  nothing. A declined item is never switchable back on as fact; only permanent
+  deletion acts on it. These actions exist and are proven at the database
+  level; see limitation 2.
 - **Disable** moves an active item to disabled and **Enable** restores it.
   Disabled memory stays fully inspectable and is excluded from active context.
 - Editing appends a new version and moves the current pointer. Prior text is
@@ -118,21 +130,19 @@ Run at `390x844` against a production build, not `next dev`.
 4. **Add memory** → Fact → "Trains four mornings before work." → Save memory.
 5. Add a Constraint with review date `2020-01-01`. It files under **Review
    due** and is stamped so.
-6. Add an Observed pattern. It files under **Needs your review**, stamped
-   "Proposed · needs your review".
+6. Add an Observed pattern. It files under **Observed patterns**, stamped
+   "Active", exactly like the other three classes.
 7. Open the fact's **Edit memory**, change the text, save. The card reads
    Version 2; **Version history** still shows version 1's original text.
 8. **Disable** the fact, then **Enable** it.
 9. On the constraint, open **Edit memory** and set **New review date** to a
    future date, then **Update review date**. The Review due section
    disappears.
-10. On the proposal, open **Edit and accept**, change the text, **Save and
-    accept**. It becomes active and reads "confirmed by you".
-11. Add a second observed pattern and **Decline** it. It files under
-    **Declined** with no Enable control.
-12. Open **Delete permanently** on any card, read the stated effect, then
+10. Filter to **Proposed 0**. The review queue is empty and says so; nothing
+    a user can create ever lands there.
+11. Open **Delete permanently** on any card, read the stated effect, then
     **Confirm permanent delete**. Reload; the text is gone.
-13. Use the filter buttons. Each shows its own count and explanatory line.
+12. Use the filter buttons. Each shows its own count and explanatory line.
 
 The automated form of this path is
 `npx.cmd playwright test --config=e2e/m2-02.playwright.config.ts` (port 3016,
@@ -221,6 +231,31 @@ Three product files changed there: the create-form key in
 `memory-manager.tsx`, the two lock guards in `m2_02_memory.test.sql`, and the
 tests covering the draft. The rest is documentation and re-captured
 screenshots.
+
+The overturned-decision round,
+`git diff --stat 3fc223732214732067d76618a6e6bd29c47abdc9..39315b9f213f929184c4dcf98bf337e15bfe5532`:
+
+```
+ docs/validation/M2/M2-02-VALIDATION.md             | 142 +++++++++++++-
+ .../M2/evidence/M2-02-delete-390x844.png           | Bin 148774 -> 131605 bytes
+ .../validation/M2/evidence/M2-02-empty-390x844.png | Bin 34752 -> 34794 bytes
+ .../validation/M2/evidence/M2-02-filed-390x844.png | Bin 128980 -> 122864 bytes
+ .../validation/M2/evidence/M2-02-final-390x844.png | Bin 123564 -> 101206 bytes
+ .../M2/evidence/M2-02-review-queue-390x844.png     | Bin 132170 -> 0 bytes
+ .../M2/evidence/M2-02-stale-conflict-390x844.png   | Bin 119568 -> 100262 bytes
+ e2e/m2-02-memory.spec.ts                           |  67 ++-----
+ src/components/memory/memory-manager.test.tsx      |  31 ++-
+ src/components/memory/memory-manager.tsx           |   4 +-
+ .../20260801085404_m2_02_memory_model.sql          |  15 +-
+ supabase/tests/database/m2_02_memory.test.sql      | 214 ++++++++++++++-------
+ 12 files changed, 329 insertions(+), 144 deletions(-)
+```
+
+`M2-02-review-queue-390x844.png` is **deleted**: it shows a screen no user can
+reach, and keeping it as evidence would misrepresent the product. The other
+screenshots are the same flow re-captured. The migration change is one branch
+of the create path; see *The overturned decision* for why it was amended in
+place.
 
 Files in the first correction whose purpose is not evident from the path and
 diff:
@@ -411,6 +446,42 @@ M2-03 produces confidence values) goes to M2-03; missing focus restoration
 after a mutation needs one ticket covering this surface and the identically
 shaped accepted goal surface, not a divergent fix here.
 
+## The overturned decision
+
+ADR-010 decision 7 made an `observed_pattern` start `proposed` whoever created
+it. That was the builder's own product judgement, flagged as such and put to
+the product owner for ratification. **On 2 August 2026 they overturned it**: an
+observed pattern the owner writes is their own statement like any other, so it
+becomes active on save — consistency across the four classes, and one less tap.
+They made the call knowing it costs the review-queue demonstration.
+
+**What changed.** One branch of the create path in
+`20260801085404_m2_02_memory_model.sql`, the assertions that pinned the old
+rule, the create form's option text, and the browser flow's review-queue steps.
+
+**What did not change, and was never in question.** Content FitTip derives
+still starts `proposed`. `inferred_proposed` provenance and
+`author_class = 'system'` remain unforgeable: neither is a caller input, both
+are fixed inside the function, and direct writes to `memory_items` and
+`memory_revisions` are revoked from every role the application can reach.
+pgTAP asserts all of that, and now also asserts that **no authenticated create
+produces a proposal at all** — the invariant the owner's decision has to
+preserve.
+
+**The migration was amended in place rather than corrected forward.** Directed
+by the lead, and the reasoning holds: this migration has never been applied to
+any persistent database — only local resets and CI's disposable stacks — and
+the branch is unmerged, so there is no applied history for the immutability
+rule to protect. Shipping a table that forces a rule plus a second migration
+immediately undoing it would be worse history than one correct migration. A
+full `db reset --local` confirms it applies cleanly from zero.
+
+**The cost, stated plainly.** The review queue is now unreachable from any user
+path, so its accept, edit-and-accept and reject actions have no browser
+coverage. See limitation 2. The alternative — inventing an app path that
+creates proposals so the flow stayed green — was rejected outright, because it
+would let a user manufacture content that reads as system-inferred.
+
 ## Data, migration, API, privacy, and security effects
 
 **Migration** `supabase/migrations/20260801085404_m2_02_memory_model.sql`,
@@ -542,16 +613,18 @@ locally while developing, reported as such.
 | Command or check | Result |
 | --- | --- |
 | `npx.cmd supabase db reset --local` | All 8 migrations applied from zero |
-| `npx.cmd supabase test db --local supabase/tests/database` | `All tests successful. Files=6, Tests=363` — the new `m2_02_memory.test.sql` contributes 91 assertions |
+| `npx.cmd supabase test db --local supabase/tests/database` | `All tests successful. Files=6, Tests=365` — the new `m2_02_memory.test.sql` contributes 93 assertions |
 | `npx.cmd supabase db lint --local --level warning --fail-on warning` | `No schema errors found` |
 | `npx.cmd supabase db advisors --local --type all --level warn --fail-on warn` | `No issues found` |
 | `npm.cmd run lint` | clean, 0 problems |
 | `npm.cmd run typecheck` | clean |
-| `npm.cmd run test:run` | `Test Files 45 passed (45)`, `Tests 328 passed (328)` after both corrections; 325 after the first, 321 before either |
+| `npm.cmd run test:run` | `Test Files 45 passed (45)`, `Tests 329 passed (329)` after the overturned-decision change; 328 after the review corrections, 321 at the initial commit |
 | `npm.cmd run build` | succeeded; `/home/you/memory` listed as server-rendered on demand |
 | `npx.cmd playwright test --config=e2e/m2-02.playwright.config.ts --workers=1 --repeat-each=12` against `npm.cmd run start -- -p 3016`, run twice | **24 passed, 0 failed, 0 skipped** — the service-role key was supplied, so the spec did not skip itself |
 | The same flow before the correction, `--repeat-each=6` | **1 failed, 5 passed** — the defect CI caught, reproduced locally |
 | The flow again after the review corrections, `--repeat-each=8` | **8 passed, 0 failed** |
+| The reduced flow after the overturned decision, `--repeat-each=8` | **8 passed, 0 failed** |
+| `npx.cmd supabase db reset --local` on the amended migration | all 8 migrations applied from zero |
 | New lock guards evaluated against synthetic definitions in `psql` | `'3s'` passes; `'0'`, `'30min'` and an absent setting all fail |
 | `git diff --check` | clean |
 | Two-session bounded-lock probe (below) | contender aborted after 3s with `PT409` |
@@ -586,10 +659,15 @@ exactly seven columns and no content column; that no memory table other than
 ordering indexes; RLS enabled on all four tables; the four policies by exact
 predicate and exact count; the full privilege matrix; and then, as the owner —
 create, edit appending a version with the prior text still readable, the
-current pointer moving, disable, enable, accept, edit-and-accept of a
-**directly seeded system proposal** preserving its `inferred_proposed` origin
-and confidence while recording user confirmation, reject, a declined proposal
-refusing to be enabled, a passed review date leaving status and text alone,
+current pointer moving, disable, enable, that a user-written observed pattern
+is active and confirmed like any other class, that **no authenticated create
+produces a proposal at all**, that an active item cannot be accepted again,
+and — against **directly seeded `inferred_proposed`, `author_class = 'system'`
+items**, which is the only legitimate way to reach them — accept preserving
+the provenance of the text it carries, edit-and-accept preserving the item's
+`inferred_proposed` origin and confidence while recording user confirmation,
+reject, a declined proposal refusing to be enabled, a passed review date
+leaving status and text alone,
 renew, a stale change returning `PT409` without advancing the collection,
 invalid content and an unapproved class rejected before persistence, and a
 permanent delete purging both versions of a two-version item, removing the
@@ -662,15 +740,24 @@ overflow at 390px.
    was chosen over a browser-supplied date to keep the selector deterministic
    and avoid a hydration mismatch. An owner timezone belongs to a later
    ticket.
-2. **`intake_confirmed` and `inferred_proposed` provenance, `confidence`, and
-   `source_reference` have no producer in M2-02.** The state contract is
-   enforced and tested — pgTAP seeds a system proposal directly and proves the
-   acceptance path preserves its origin — but nothing in this ticket creates
-   one, because M2-02 adds no AI and no onboarding. M2-03 is the producer.
-   Until then those columns are populated only by tests.
-3. **`memory_type` is immutable after creation.** Changing a class would move
-   an active item into `observed_pattern`, which must be proposed. The owner
-   deletes and re-files instead.
+2. **The review queue has no browser coverage, and will not until M2-03.**
+   `intake_confirmed` and `inferred_proposed` provenance, `confidence`, and
+   `source_reference` have no producer in M2-02, because it adds no AI and no
+   onboarding. After the product owner overturned decision 7, no user path
+   reaches a proposal either. So **accept, edit-and-accept and reject are
+   proven at the database level and in component tests, but not in any 390px
+   browser flow.** pgTAP seeds `inferred_proposed`, `author_class = 'system'`
+   items directly and exercises all three against them, which is legitimate
+   because it is the shape M2-03 will produce — but it is not the same as
+   driving the real surface. Manufacturing a user path to a proposal purely to
+   keep the flow green was rejected: it would let a user create content that
+   reads as system-inferred, which this ticket forbids outright. The gap
+   closes when M2-03 produces real proposals.
+3. **`memory_type` is immutable after creation.** The owner deletes and
+   re-files instead. This was originally justified by the forced-`proposed`
+   rule, which no longer exists; it stands now only because no approved
+   requirement asks for reclassification, and adding one would need its own
+   ticket.
 4. **`rejected` is terminal apart from permanent deletion.** A declined
    proposal cannot be accepted or enabled later, which is what "must not
    reappear as fact" requires; re-filing it as a new statement is the path.
@@ -712,13 +799,15 @@ overflow at 390px.
 
 ## Independent reviewer checklist
 
-Review commit `3fc223732214732067d76618a6e6bd29c47abdc9` on
+Review commit `39315b9f213f929184c4dcf98bf337e15bfe5532` on
 `ticket/m2-02-memory-model`, plus the follow-up commit adding this record. The
-first round's three findings are addressed in that commit and described under
-*The first independent review*; the re-review should confirm those and
-re-check nothing else regressed.
+first round's three findings are addressed in `3fc2237` and described under
+*The first independent review*; the product owner's reversal of ADR-010
+decision 7 is in `75520c2`, `1796965` and `39315b9` and described under *The
+overturned decision*. The re-review should confirm both and re-check nothing
+else regressed.
 
-Read `git diff 79fdefbb76005264bbea9e1acbdc37f46289b0e4..3fc223732214732067d76618a6e6bd29c47abdc9`
+Read `git diff 79fdefbb76005264bbea9e1acbdc37f46289b0e4..39315b9f213f929184c4dcf98bf337e15bfe5532`
 as the source of truth, and confirm the CI run is green for that SHA. Do not
 re-run lint, typecheck, `test:run`, `build`, the database matrix, or the
 browser flow — CI covers them, and CI now includes the 390px memory flow. Note
@@ -772,16 +861,24 @@ Confirm the judgment CI cannot supply:
     and a new import of `src/features/goals/mutation-watchdog.ts`, which is
     read but not modified. `.github/workflows/ci.yml` in the reviewed range is
     the lead's `deabe75`.
-11. **The recovery tells the truth and claims nothing.** Neither notice may
+11. **The overturned decision is fully applied and nothing leaked.** Confirm a
+    user-created `observed_pattern` is active, that no authenticated path can
+    reach `proposed`, and — the invariant the reversal must not weaken — that
+    `inferred_proposed` and `author_class = 'system'` are still impossible for
+    a caller to set. Confirm the migration amendment is confined to the create
+    branch, and satisfy yourself that amending in place rather than adding a
+    forward migration was right here (never applied to a persistent database,
+    branch unmerged).
+12. **The recovery tells the truth and claims nothing.** Neither notice may
     say the change was saved — the action answers 200 for a success, a
     conflict, a validation failure, an expired session, and a persistence
     error alike. Confirm the lost-render path reloads and the unconfirmed path
     does not, that the session marker carries no memory content, and that
     `settled()` in the spec waits for a real state rather than masking a
     failure.
-12. **Verify the generated-types disclosure yourself.** The claim that the
+13. **Verify the generated-types disclosure yourself.** The claim that the
     nine `save_training_completion` lines diverge on unchanged `master` is
     checkable: remove this ticket's migration and pgTAP file, reset, and
     regenerate.
-13. **Hosted verification** against the Vercel Preview for this exact commit,
+14. **Hosted verification** against the Vercel Preview for this exact commit,
     at `390x844`.

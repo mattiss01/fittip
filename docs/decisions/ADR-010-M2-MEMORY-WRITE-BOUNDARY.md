@@ -1,7 +1,7 @@
 # ADR-010: M2 memory write boundary
 
 **Status:** proposed — awaiting the product owner's decision with M2-02
-acceptance
+acceptance, except decision 7, which they have already ruled on
 
 **What was approved, and what was not.** Decisions 1 through 6 and 8 through
 15 record the write boundary the product owner approved in principle on
@@ -9,17 +9,23 @@ acceptance
 `SECURITY DEFINER` function, complete purge on permanent delete, and the
 bounded lock wait.
 
-**Decision 7 is the builder's own product judgement and was not authorized by
-the brief.** Making an `observed_pattern` start `proposed` whoever creates it
-is a visible behavioural choice, taken because M2-02 adds no AI and no
-onboarding, so without it nothing could produce a proposal and the approved
-accept / edit-and-accept / decline flow would have been unreachable and
-untestable. The alternative — letting a user create an item carrying
-system-inferred provenance — was rejected because it would let a user forge
-provenance, which the ticket forbids. It is presented here for the product
-owner's explicit ratification at acceptance, not as something already agreed.
+**Decision 7 was the builder's own product judgement, and the product owner
+overturned it on 2 August 2026.** The builder had made an `observed_pattern`
+start `proposed` whoever created it, on the reasoning that a reading of
+behaviour is fallible, and because M2-02 adds no AI and no onboarding, so
+without it nothing could produce a proposal and the accept / edit-and-accept
+/ decline flow would have been unreachable and untestable. The product owner
+ruled against it: an observed pattern the owner writes is their own statement
+like any other, so it becomes active on save, for consistency across the four
+classes and one less tap. They made that call knowing it costs the
+review-queue demonstration.
 
-**Date:** 1 August 2026
+The decision text below records the outcome. What did **not** change, and was
+never in question: content FitTip derives rather than content the owner wrote
+still starts `proposed`, and a caller still cannot forge `inferred_proposed`
+provenance or `author_class = 'system'`.
+
+**Date:** 1 August 2026, decision 7 amended 2 August 2026
 
 **Ticket:** [M2-02](../backlog/M2/M2-02-MEMORY-MODEL-MANAGEMENT.md)
 
@@ -82,11 +88,15 @@ looking at a form that silently did nothing.
    an optional review date. Every operation declares exactly which of those it
    accepts and rejects anything else.
 7. Derive status, provenance, author class, and revision numbering inside the
-   function. A user-created item is `user_created` and authored by `user`. An
-   `observed_pattern` starts `proposed` whoever creates it, because a reading
-   of behaviour is fallible and needs an explicit acceptance. Accepting keeps
+   function. A user-created item is `user_created`, authored by `user`, and
+   **active on save whichever of the four classes it belongs to** — including
+   `observed_pattern`. `proposed` is reserved for content FitTip derived, and
+   no authenticated path can produce it, because provenance and author class
+   are fixed inside the function and are not caller inputs. Accepting keeps
    the item's origin provenance and the accepted revision's own provenance,
    and records the confirmation separately in `user_confirmed_at`.
+   *(Amended 2 August 2026. The builder originally forced `observed_pattern`
+   to start `proposed`; see the header for both sets of reasoning.)*
 8. Return a typed receipt of item id, resulting collection revision, resulting
    revision number, and a safe result category. **The receipt carries no
    memory content.**
