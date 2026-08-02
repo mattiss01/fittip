@@ -184,6 +184,16 @@ jobs:
             npx playwright test --config=e2e/m2-01.playwright.config.ts \
               --workers=1 --trace=retain-on-failure --output=test-results/m2-01
 
+      - name: M2-02 memory management
+        # Report every broken flow in one run, not just the first.
+        if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report/m2-02
+        run: |
+          .github/scripts/with-server.sh 3016 \
+            npx playwright test --config=e2e/m2-02.playwright.config.ts \
+              --workers=1 --trace=retain-on-failure --output=test-results/m2-02
+
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v7
