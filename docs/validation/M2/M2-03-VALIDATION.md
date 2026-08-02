@@ -146,11 +146,43 @@ Project skill checks applied:
   indexes, canonical bounded locking, and transaction-level reuse of accepted
   goal and Memory invariants.
 
+## First branch CI correction
+
+Branch CI
+[run 30768073121](https://github.com/mattiss01/fittip/actions/runs/30768073121)
+against `8eeadf2ec6dfe1c0c96928bb1f99cfcb8b2f90c0` was **red** and
+invalidated that review target and its Preview. Correction commit
+`1c0f6b6292ffbb7fabdfca7b6d287f8dff6a705c` addresses every reported failure:
+
+- Client onboarding code now imports constants and serializable view types
+  from `src/lib/onboarding/onboarding-contract.ts`, not a server module.
+- The architecture contract explicitly names `apply_onboarding_change` as the
+  fifth approved atomic RPC whose client retry is disabled.
+- M2-03 no longer moves or wraps the accepted public M2-02 Memory function.
+  Its bounded lock wait, explicit PT409 lock-conflict mapping, and accepted
+  edit-and-accept provenance, confidence, and confirmation behavior remain
+  unchanged. Confidence clearing occurs inside reviewed onboarding updates,
+  and the M2-03 pgTAP case now proves that exact path.
+- The onboarding continuation explicitly sets the existing authenticated page
+  to `390x844` before asserting the viewport and beginning the flow. The CI
+  production build had passed; only the shared browser invocation's inherited
+  `1280x720` viewport caused this browser failure.
+
+Post-correction local results:
+
+- Full Vitest: **pass**, 49 files and 346 tests.
+- From-zero migration reset: **pass**.
+- Combined pgTAP: **pass**, 7 files and 438 assertions, including all unchanged
+  M2-02 tests and the corrected M2-03 suite.
+- Full ESLint and `tsc --noEmit`: **pass**.
+- Database lint and security/performance advisors: **pass**, no findings.
+- Focused Prettier check and `git diff --check`: **pass**.
+
 ## Required evidence still pending
 
-- **Branch CI:** pending push. Its exact-SHA green run is mandatory and includes
-  the production build, all migrations and pgTAP, lint/advisors, and the
-  existing 390px `e2e/auth.spec.ts` invocation.
+- **Branch CI:** corrected exact-SHA run pending push. Its green result is
+  mandatory and includes the production build, all migrations and pgTAP,
+  lint/advisors, and the existing 390px `e2e/auth.spec.ts` invocation.
 - **Local production build and browser flow:** blocked, not claimed green.
   The pinned command
   `npx.cmd --yes --package node@24.18.0 node node_modules\next\dist\bin\next build`
