@@ -1,10 +1,16 @@
 # M2-02: Memory model and management
 
-**Status:** in development — approved for implementation 1 August 2026. The
-product owner approved the ticket's recommended direction for statuses,
-history, expiry, and deletion; the memory write boundary as a new ADR-010; and
-the sensitive-content treatment recorded in the brief below. The approval
-resolves the eight open decisions listed at the end of this ticket.
+**Status:** accepted 2 August 2026 against independently reviewed commit
+`e5dab525c140fa290a61545cc59706ca0bb69758` and its Vercel Preview, after three
+independent review rounds and hosted database verification. Approved for
+implementation 1 August 2026: the product owner approved the ticket's
+recommended direction for statuses, history, expiry, and deletion; the memory
+write boundary as a new ADR-010; and the sensitive-content treatment recorded
+in the brief below, resolving the eight open decisions listed at the end of
+this ticket. Three known limitations were accepted open, each with a ticket —
+[M2-09](M2-09-APP-ROUTER-LOST-RENDER.md),
+[M2-10](M2-10-FOCUS-LOST-AFTER-MUTATION.md), and the review-action coverage gap
+in the [validation record](../../validation/M2/M2-02-VALIDATION.md).
 
 **Decision, 2 August 2026 — a user-created `observed_pattern` is active on
 save.** The product owner ruled that an observed pattern the user writes

@@ -23,7 +23,7 @@ Validation records and their visual evidence are grouped by milestone.
 ## M2
 
 - [M2-01 goal model and management](M2/M2-01-VALIDATION.md) — accepted 1 August 2026 after the required independent exact-commit review; follow-ups in M2-07
-- [M2-02 memory model and management](M2/M2-02-VALIDATION.md) — testable, awaiting independent exact-commit review
+- [M2-02 memory model and management](M2/M2-02-VALIDATION.md) — accepted 2 August 2026 after three independent review rounds; follow-ups in M2-09 and M2-10
 - [M2-05 intermittent goal mutations](M2/M2-05-VALIDATION.md) — accepted
 - [M2-06 plan page render](M2/M2-06-VALIDATION.md) — accepted
 - [M2 visual evidence](M2/evidence/)
