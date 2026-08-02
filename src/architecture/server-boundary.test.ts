@@ -18,11 +18,11 @@ describe("server repository import boundary", () => {
     }
   });
 
-  // M2-02 adds the fourth call site deliberately: `apply_memory_change` is an
-  // atomic owner-scoped mutation whose PT409 conflict must reach the caller
-  // unchanged, so an automatic retry would re-run a change the user was told
+  // M2-03 adds the fifth call site deliberately: each allowlisted RPC is an
+  // atomic owner-scoped mutation whose conflict must reach the caller
+  // unchanged, so an automatic retry could re-run a change the user was told
   // to review.
-  it("disables retries only for the four approved atomic RPCs", () => {
+  it("disables retries only for the five approved atomic RPCs", () => {
     const sources = sourceFiles(join(process.cwd(), "src")).filter(
       (path) => !path.endsWith(".test.ts") && !path.endsWith(".test.tsx"),
     );
@@ -57,10 +57,18 @@ describe("server repository import boundary", () => {
       "repositories",
       "memory-repository.ts",
     );
+    const onboardingRepositoryPath = join(
+      process.cwd(),
+      "src",
+      "server",
+      "repositories",
+      "onboarding-repository.ts",
+    );
     const trainingRepository = readFileSync(trainingRepositoryPath, "utf8");
     const completionRepository = readFileSync(completionRepositoryPath, "utf8");
     const goalRepository = readFileSync(goalRepositoryPath, "utf8");
     const memoryRepository = readFileSync(memoryRepositoryPath, "utf8");
+    const onboardingRepository = readFileSync(onboardingRepositoryPath, "utf8");
 
     expect(retryFiles.sort()).toEqual(
       [
@@ -68,6 +76,7 @@ describe("server repository import boundary", () => {
         completionRepositoryPath,
         goalRepositoryPath,
         memoryRepositoryPath,
+        onboardingRepositoryPath,
       ].sort(),
     );
     expect(trainingRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
@@ -85,6 +94,10 @@ describe("server repository import boundary", () => {
     expect(memoryRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
     expect(memoryRepository).toMatch(
       /\.rpc\(\s*"apply_memory_change",[\s\S]*?\)\s*\.retry\(false\)/,
+    );
+    expect(onboardingRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
+    expect(onboardingRepository).toMatch(
+      /\.rpc\(\s*"apply_onboarding_change",[\s\S]*?\)\s*\.retry\(false\)/,
     );
   });
 });

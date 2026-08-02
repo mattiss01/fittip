@@ -815,17 +815,52 @@ select set_config(
   true
 );
 select lives_ok(
+  $sql$ select public.apply_onboarding_change(0, 'start') $sql$,
+  'user B can start the confidence regression review'
+);
+select lives_ok(
   $sql$
-    select public.apply_memory_change(
+    select public.apply_onboarding_change(
       0,
-      'edit_and_accept',
-      '54000000-0000-4000-8000-000000000101',
-      null,
-      'Owner-edited wording.',
-      null
+      'save_preferences',
+      '{"advance":true,"preferences":["Owner-edited wording."]}'::jsonb
     )
   $sql$,
-  'an owner can edit and accept system wording through the accepted boundary'
+  'onboarding prepares owner-edited wording for explicit review'
+);
+select lives_ok(
+  $sql$
+    select public.apply_onboarding_change(
+      1,
+      'save_review',
+      jsonb_build_object(
+        'decisions',
+        jsonb_build_array(
+          jsonb_build_object(
+            'kind', 'memory',
+            'id', (select id from public.onboarding_memory_candidates),
+            'decision', 'accepted',
+            'resolution', 'update',
+            'targetId', '54000000-0000-4000-8000-000000000101'
+          )
+        )
+      )
+    )
+  $sql$,
+  'the owner explicitly chooses to update the compared Memory item'
+);
+select lives_ok(
+  $sql$
+    select public.apply_onboarding_change(
+      2,
+      'publish',
+      '{}'::jsonb,
+      0,
+      0,
+      (select idempotency_key from public.onboarding_drafts)
+    )
+  $sql$,
+  'onboarding publishes the reviewed wording through the accepted boundary'
 );
 select ok(
   (

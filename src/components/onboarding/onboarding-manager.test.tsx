@@ -2,7 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { OnboardingManager } from "./onboarding-manager";
-import type { OnboardingSnapshot } from "@/server/onboarding/onboarding-records";
+import type { OnboardingSnapshot } from "@/lib/onboarding/onboarding-contract";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({

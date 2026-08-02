@@ -7,90 +7,6 @@
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated, service_role;
 
--- Preserve the accepted public M2-02 contract while applying the approved
--- confidence rule to every later owner content edit.
-alter function public.apply_memory_change(
-  bigint,
-  text,
-  uuid,
-  text,
-  text,
-  date
-) set schema private;
-
-alter function private.apply_memory_change(
-  bigint,
-  text,
-  uuid,
-  text,
-  text,
-  date
-) rename to apply_memory_change_m2_02;
-
-revoke all privileges on function private.apply_memory_change_m2_02(
-  bigint,
-  text,
-  uuid,
-  text,
-  text,
-  date
-) from public, anon, authenticated, service_role;
-
-create function public.apply_memory_change(
-  p_expected_collection_revision bigint,
-  p_operation text,
-  p_item_id uuid default null,
-  p_memory_type text default null,
-  p_content text default null,
-  p_expires_on date default null
-)
-returns public.memory_change_receipt
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_receipt public.memory_change_receipt;
-  v_user_id uuid := auth.uid();
-begin
-  v_receipt := private.apply_memory_change_m2_02(
-    p_expected_collection_revision,
-    p_operation,
-    p_item_id,
-    p_memory_type,
-    p_content,
-    p_expires_on
-  );
-
-  if p_operation in ('edit', 'edit_and_accept') then
-    update public.memory_items
-    set confidence = null
-    where id = (v_receipt).item_id
-      and user_id = v_user_id;
-  end if;
-
-  return v_receipt;
-end;
-$$;
-
-revoke all privileges on function public.apply_memory_change(
-  bigint,
-  text,
-  uuid,
-  text,
-  text,
-  date
-) from public, anon, authenticated, service_role;
-
-grant execute on function public.apply_memory_change(
-  bigint,
-  text,
-  uuid,
-  text,
-  text,
-  date
-) to authenticated;
-
 alter table public.memory_items
 add column intake_field_key text;
 
@@ -1637,12 +1553,30 @@ begin
           intake_field_key = v_field_key
         where id = (v_memory_receipt).item_id
           and user_id = v_user_id;
-      elsif v_field_key is not null then
+        update public.memory_revisions
+        set provenance = 'intake_confirmed'
+        where id = (
+          select current_revision_id
+          from public.memory_items
+          where id = (v_memory_receipt).item_id
+            and user_id = v_user_id
+        )
+          and user_id = v_user_id;
+      elsif v_memory_candidate.resolution = 'update' then
         update public.memory_items
-        set intake_field_key = coalesce(intake_field_key, v_field_key)
+        set
+          confidence = null,
+          intake_field_key = case
+            when v_field_key is null then intake_field_key
+            else coalesce(intake_field_key, v_field_key)
+          end
         where id = (v_memory_receipt).item_id
           and user_id = v_user_id
-          and (intake_field_key is null or intake_field_key = v_field_key);
+          and (
+            v_field_key is null
+            or intake_field_key is null
+            or intake_field_key = v_field_key
+          );
         get diagnostics v_count = row_count;
         if v_count <> 1 then
           raise exception using
@@ -1650,16 +1584,6 @@ begin
             message = 'Onboarding changed. Reload and try again.';
         end if;
       end if;
-
-      update public.memory_revisions
-      set provenance = 'intake_confirmed'
-      where id = (
-        select current_revision_id
-        from public.memory_items
-        where id = (v_memory_receipt).item_id
-          and user_id = v_user_id
-      )
-        and user_id = v_user_id;
     end loop;
 
     insert into public.onboarding_publication_receipts (

@@ -1,4 +1,4 @@
-import type { OnboardingStep } from "@/server/onboarding/onboarding-records";
+import type { OnboardingStep } from "@/lib/onboarding/onboarding-contract";
 
 export type OnboardingActionState = {
   status:

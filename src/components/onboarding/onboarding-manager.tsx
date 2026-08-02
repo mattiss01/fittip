@@ -14,7 +14,7 @@ import {
   type GoalCandidateView,
   type OnboardingSnapshot,
   type OnboardingStep,
-} from "@/server/onboarding/onboarding-records";
+} from "@/lib/onboarding/onboarding-contract";
 
 const DAY_OPTIONS = [
   "Monday",

@@ -74,6 +74,7 @@ async function completeGuidedSetup(
   page: import("@playwright/test").Page,
   testInfo: import("@playwright/test").TestInfo,
 ) {
+  await page.setViewportSize({ width: 390, height: 844 });
   expect(page.viewportSize()).toEqual({ width: 390, height: 844 });
 
   // The Home invitation can be dismissed once, while You keeps the permanent
