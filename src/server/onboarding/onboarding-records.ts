@@ -30,37 +30,67 @@ export function parseOnboardingStep(value: unknown): OnboardingStep {
 export function parseGoalsPayload(
   formData: FormData,
   advance: boolean,
-): { goals: GoalInput[]; advance: boolean } {
-  const goals: GoalInput[] = [];
+): { goals: OnboardingGoalPayload[]; advance: boolean } {
+  const goals: OnboardingGoalPayload[] = [];
   for (let index = 0; index < 3; index += 1) {
-    const title = text(formData, `goalTitle:${index}`).trim();
+    const title = renderedText(formData, `goalTitle:${index}`).trim();
     if (!title) continue;
-    goals.push(
-      parseGoalInput({
-        title,
-        desiredOutcome: text(formData, `goalOutcome:${index}`),
-        category: text(formData, `goalCategory:${index}`),
-        activityAreas: commaList(
-          text(formData, `goalActivities:${index}`),
-          10,
-          60,
-        ),
-        startDate: text(formData, `goalStartDate:${index}`),
-        targetDate: optionalText(formData, `goalTargetDate:${index}`),
-        targetDetail: optionalText(formData, `goalTargetDetail:${index}`),
-        targetMetricLabel: optionalText(formData, `goalMetricLabel:${index}`),
-        targetMetricValue: optionalText(formData, `goalMetricValue:${index}`),
-        targetMetricUnit: optionalText(formData, `goalMetricUnit:${index}`),
-        priorityTier: text(formData, `goalTier:${index}`),
-        targetRank: optionalNumber(formData, `goalRank:${index}`),
-        rationale: optionalText(formData, `goalRationale:${index}`),
-        constraints: optionalText(formData, `goalConstraints:${index}`),
-      }),
-    );
+    const goal = parseGoalInput({
+      title,
+      desiredOutcome: text(formData, `goalOutcome:${index}`),
+      category: text(formData, `goalCategory:${index}`),
+      activityAreas: commaList(
+        text(formData, `goalActivities:${index}`),
+        10,
+        60,
+      ),
+      startDate: text(formData, `goalStartDate:${index}`),
+      targetDate: optionalText(formData, `goalTargetDate:${index}`),
+      targetDetail: optionalText(formData, `goalTargetDetail:${index}`),
+      targetMetricLabel: optionalText(formData, `goalMetricLabel:${index}`),
+      targetMetricValue: optionalText(formData, `goalMetricValue:${index}`),
+      targetMetricUnit: optionalText(formData, `goalMetricUnit:${index}`),
+      priorityTier: text(formData, `goalTier:${index}`),
+      targetRank: optionalNumber(formData, `goalRank:${index}`),
+      rationale: optionalText(formData, `goalRationale:${index}`),
+      constraints: optionalText(formData, `goalConstraints:${index}`),
+    });
+    goals.push({
+      ...goal,
+      targetDate: goal.targetDate ?? "",
+      targetDetail: goal.targetDetail ?? "",
+      targetMetricLabel: goal.targetMetricLabel ?? "",
+      targetMetricValue: goal.targetMetricValue ?? "",
+      targetMetricUnit: goal.targetMetricUnit ?? "",
+      targetRank: goal.targetRank ?? "",
+      rationale: goal.rationale ?? "",
+      constraints: goal.constraints ?? "",
+    });
   }
   if (goals.length < 1) throw new OnboardingValidationError();
   return { goals, advance };
 }
+
+type OnboardingGoalPayload = Omit<
+  GoalInput,
+  | "targetDate"
+  | "targetDetail"
+  | "targetMetricLabel"
+  | "targetMetricValue"
+  | "targetMetricUnit"
+  | "targetRank"
+  | "rationale"
+  | "constraints"
+> & {
+  targetDate: string;
+  targetDetail: string;
+  targetMetricLabel: string;
+  targetMetricValue: string;
+  targetMetricUnit: string;
+  targetRank: number | "";
+  rationale: string;
+  constraints: string;
+};
 
 export function parseTrainingPayload(formData: FormData, advance: boolean) {
   const trainingStatus = text(formData, "trainingStatus");
@@ -76,7 +106,7 @@ export function parseTrainingPayload(formData: FormData, advance: boolean) {
   }> = [];
   if (trainingStatus === "current") {
     for (let index = 0; index < 10; index += 1) {
-      const name = text(formData, `activityName:${index}`).trim();
+      const name = renderedText(formData, `activityName:${index}`).trim();
       if (!name) continue;
       activities.push({
         name: bounded(name, 60),
@@ -237,6 +267,13 @@ function lines(value: string, maxItems: number, maxLength: number) {
 
 function text(formData: FormData, key: string): string {
   const value = formData.get(key);
+  if (typeof value !== "string") throw new OnboardingValidationError();
+  return value;
+}
+
+function renderedText(formData: FormData, key: string): string {
+  const value = formData.get(key);
+  if (value === null) return "";
   if (typeof value !== "string") throw new OnboardingValidationError();
   return value;
 }

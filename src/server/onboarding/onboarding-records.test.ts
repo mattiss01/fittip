@@ -26,9 +26,6 @@ describe("onboarding payload parsing", () => {
     form.set("goalRank:0", "1");
     form.set("goalRationale:0", "");
     form.set("goalConstraints:0", "");
-    emptyGoal(form, 1);
-    emptyGoal(form, 2);
-
     expect(parseGoalsPayload(form, true)).toEqual({
       advance: true,
       goals: [
@@ -37,6 +34,12 @@ describe("onboarding payload parsing", () => {
           activityAreas: ["Running", "Strength"],
           priorityTier: "core",
           targetRank: 1,
+          targetDetail: "",
+          targetMetricLabel: "",
+          targetMetricValue: "",
+          targetMetricUnit: "",
+          rationale: "",
+          constraints: "",
         }),
       ],
     });
@@ -49,13 +52,6 @@ describe("onboarding payload parsing", () => {
     form.set("activitySessions:0", "3");
     form.set("activityDuration:0", "40");
     form.set("activityDetail:0", "Mostly conversational.");
-    for (let index = 1; index < 10; index += 1) {
-      form.set(`activityName:${index}`, "");
-      form.set(`activitySessions:${index}`, "1");
-      form.set(`activityDuration:${index}`, "30");
-      form.set(`activityDetail:${index}`, "");
-    }
-
     expect(parseTrainingPayload(form, false)).toEqual({
       trainingStatus: "current",
       advance: false,
@@ -163,24 +159,3 @@ describe("onboarding payload parsing", () => {
     }
   });
 });
-
-function emptyGoal(form: FormData, index: number) {
-  for (const field of [
-    "Title",
-    "Outcome",
-    "Category",
-    "Activities",
-    "StartDate",
-    "TargetDate",
-    "TargetDetail",
-    "MetricLabel",
-    "MetricValue",
-    "MetricUnit",
-    "Tier",
-    "Rank",
-    "Rationale",
-    "Constraints",
-  ]) {
-    form.set(`goal${field}:${index}`, "");
-  }
-}

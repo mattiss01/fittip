@@ -105,7 +105,21 @@ async function completeGuidedSetup(
   await page.getByLabel("Desired outcome").fill(goalOutcome);
   await page.getByLabel("Activity areas").fill("Running");
   await page.getByRole("button", { name: "Save and finish later" }).click();
-  await expect(page).toHaveURL(/\/home\/you$/);
+  await expect
+    .poll(
+      async () => {
+        const alert = page.getByRole("alert");
+        if (await alert.isVisible().catch(() => false)) {
+          return `action alert: ${await alert.innerText()}`;
+        }
+        return new URL(page.url()).pathname;
+      },
+      {
+        message:
+          "Save and finish later must redirect to You; any actionable validation state is reported",
+      },
+    )
+    .toBe("/home/you");
 
   // Resume restores the saved candidate; cancel deletes it. The permanent You
   // entry then starts a genuinely fresh draft.
