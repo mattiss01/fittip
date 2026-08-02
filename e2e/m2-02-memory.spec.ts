@@ -184,7 +184,10 @@ test.describe("M2-02 memory management", () => {
       await stalePage.close();
 
       // Permanent deletion states its effect, then removes the text and every
-      // earlier version of it.
+      // earlier version of it. Driven entirely by keyboard: this is the most
+      // destructive action on the surface, so it is the one that has to be
+      // reachable without a pointer. It exercises the same details/summary
+      // confirmation every other destructive action uses.
       await settled(page);
       const deleteTarget = card(page, "Prefers early starts.");
       const remove = confirmation(
@@ -192,7 +195,9 @@ test.describe("M2-02 memory management", () => {
         "delete",
         "Confirm permanent delete",
       );
-      await remove.summary.click();
+      await remove.summary.focus();
+      await expect(remove.summary).toBeFocused();
+      await page.keyboard.press("Enter");
       await expect(deleteTarget).toContainText(
         /erases the current text and every earlier version/,
       );
@@ -200,7 +205,9 @@ test.describe("M2-02 memory management", () => {
         fullPage: true,
         path: path.join(evidenceDirectory, "M2-02-delete-390x844.png"),
       });
-      await remove.confirm.click();
+      await page.keyboard.press("Tab");
+      await expect(remove.confirm).toBeFocused();
+      await page.keyboard.press("Enter");
       await expect(page.getByText("Prefers early starts.")).toHaveCount(0);
       await page.reload();
       await expect(page.getByText("Prefers early starts.")).toHaveCount(0);
