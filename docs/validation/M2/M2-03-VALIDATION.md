@@ -1,0 +1,167 @@
+# M2-03 builder validation: guided onboarding and context review
+
+**Ticket:** [M2-03](../../backlog/M2/M2-03-INTAKE-FACT-REVIEW.md)
+
+**Lifecycle state:** in development; builder handoff is complete, independent
+exact-commit review, branch CI, Vercel Preview verification, and product-owner
+acceptance remain required.
+
+**Implementation commit:** `17cbea2657c4b2b0308f99d362238d19c94ef05b`
+
+**Branch:** `ticket/m2-03-guided-onboarding`
+
+**Base:** `7d066fc157e7acad7a7cd97f32d3da59a4cfb99c`
+
+**Architecture decision:**
+[ADR-011](../../decisions/ADR-011-M2-ONBOARDING-PUBLICATION-BOUNDARY.md)
+
+## Delivered behavior
+
+- A verified owner can start, explicitly save, leave, resume, cancel, restart,
+  and publish a six-step setup at `/home/you/onboarding`.
+- Home offers the one-time optional invitation and **Not now** dismissal; You
+  keeps the permanent guided-setup entry.
+- Deterministic structured answers create review-only goal and Memory
+  candidates. Every candidate requires an accept or reject decision, with an
+  explicit create, keep, or update conflict resolution where applicable.
+- Publication applies the accepted subset through the accepted M2-01 and M2-02
+  mutation boundaries in one owner-scoped, revision-checked, idempotent
+  transaction. It deletes the draft and candidates and retains one
+  content-free receipt.
+- Draft rows expire after 30 inactive days and are purged on the next owner
+  touch. Cancel and successful publication purge them immediately.
+- The database exposes owner reads under RLS but no direct authenticated
+  writes. The only authenticated write entry is
+  `apply_onboarding_change(...)`; private validation helpers grant no API-role
+  execution.
+- Intake-confirmed Memory preserves accepted provenance. A later owner edit
+  clears confidence without rewriting origin or confirmation history.
+- The Constraints step repeats the approved non-diagnostic safety notice.
+  Optional health-adjacent answers infer no severity and block no publication.
+- The 390px continuation is part of the already CI-invoked
+  `e2e/auth.spec.ts`; no `.github/**` change was needed.
+
+## Migration, data, and API effects
+
+- Migration `20260802201214_m2_03_guided_onboarding.sql` creates six
+  owner-scoped onboarding tables, their constraints, indexes, RLS policies,
+  explicit privileges, private helpers, a content-free receipt type, and the
+  single public mutation function.
+- `memory_items.intake_field_key` supplies owner-scoped exact intake
+  deduplication. The accepted Memory function is moved behind a private helper
+  and its public wrapper preserves M2-02 behavior while clearing confidence on
+  owner content edits.
+- Publication takes onboarding, goal-collection, then Memory-collection locks
+  with bounded lock and statement timeouts. Any downstream failure rolls the
+  mixed goal-and-Memory publication back.
+- No completed activity, past plan, or accepted historical version is changed.
+- No production AI call, external provider, service-role application client,
+  analytics, email, browser persistence, or remote database mutation was
+  added.
+
+## Changed files
+
+`git diff --stat 7d066fc157e7acad7a7cd97f32d3da59a4cfb99c..17cbea2657c4b2b0308f99d362238d19c94ef05b`
+
+```text
+ e2e/auth.spec.ts                                   |  136 +-
+ src/app/home/home.module.css                       |   11 +
+ src/app/home/today/page.test.tsx                   |   27 +-
+ src/app/home/today/page.tsx                        |   18 +-
+ src/app/home/you/onboarding/action-state.ts        |   22 +
+ src/app/home/you/onboarding/actions.ts             |  199 +++
+ src/app/home/you/onboarding/error.tsx              |   30 +
+ src/app/home/you/onboarding/loading.tsx            |   13 +
+ src/app/home/you/onboarding/onboarding.module.css  |  650 ++++++++
+ src/app/home/you/onboarding/page.tsx               |   52 +
+ src/app/home/you/page.tsx                          |   11 +
+ .../onboarding/onboarding-home-invitation.tsx      |   52 +
+ .../onboarding/onboarding-manager.test.tsx         |  168 ++
+ src/components/onboarding/onboarding-manager.tsx   | 1004 +++++++++++
+ src/lib/supabase/database.types.ts                 |  358 ++++
+ src/server/onboarding/onboarding-privacy.test.ts   |   37 +
+ src/server/onboarding/onboarding-records.test.ts   |  186 +++
+ src/server/onboarding/onboarding-records.ts        |  375 +++++
+ .../repositories/onboarding-repository.test.ts     |  158 ++
+ src/server/repositories/onboarding-repository.ts   |  489 ++++++
+ .../20260802201214_m2_03_guided_onboarding.sql     | 1743 ++++++++++++++++++++
+ supabase/tests/database/m2_03_onboarding.test.sql  | 1015 ++++++++++++
+ 22 files changed, 6742 insertions(+), 12 deletions(-)
+```
+
+Purpose notes for paths whose role is not self-evident:
+
+- `e2e/auth.spec.ts` extends the existing confirmed-account journey with the
+  CI-invoked 390px onboarding path, so no service-role test credential is
+  introduced.
+- `src/app/home/home.module.css`, `src/app/home/today/page.tsx`, and its test
+  add and prove the optional Home invitation without changing other Today
+  behavior.
+- `src/app/home/you/page.tsx` adds the permanent guided-review entry.
+- `src/lib/supabase/database.types.ts` records the migration's generated
+  tables, composite receipt, RPC, and Memory intake key. Existing GraphQL
+  schema types and nullable completion arguments were preserved.
+- `src/server/onboarding/onboarding-privacy.test.ts` scans the runtime
+  onboarding modules for prohibited browser storage, logging, analytics,
+  external-send, and service-role sinks.
+
+No file was deleted or renamed.
+
+## Tests and builder results
+
+- `npx.cmd supabase db reset --local --no-seed` — **pass**; every migration
+  applied from zero through M2-03.
+- `npx.cmd supabase test db --local supabase/tests/database/m2_03_onboarding.test.sql`
+  — **pass**, 70 assertions. Coverage includes grants/RLS, owner/anonymous and
+  cross-owner isolation, explicit decisions, 30-day purge, cancel, provenance,
+  context exclusion, idempotent retry, fourth-core rejection, and injected
+  mixed-publication failure rollback.
+- `npx.cmd supabase db lint --local --level warning --fail-on warning` —
+  **pass**, no schema warnings.
+- `npx.cmd supabase db advisors --local --type all --level warn --fail-on warn`
+  — **pass**, no security or performance advisor findings.
+- Focused Prettier write over all changed TypeScript, TSX, and CSS — **pass**
+  with the checked-in local formatter.
+- Focused ESLint over all changed TypeScript and TSX — **pass**.
+- `tsc --noEmit` — **pass**. It passed under the pinned Node 24 runtime before
+  the final SQL-only test addition and again under the installed local runtime
+  after formatting and generated-type reconciliation.
+- Focused Vitest — **pass**, 5 files and 19 tests:
+  onboarding parsing, privacy sinks, repository behavior, manager behavior,
+  and the Today invitation.
+- `git diff --check` and staged secret-pattern scan — **pass**.
+
+Project skill checks applied:
+
+- `frontend-design`: serious-coach hierarchy, Context map destination stamp,
+  explicit storage/no-AI and safety copy, keyboard focus, touch sizing,
+  reduced motion, honest empty/error/result states, and 390px reflow.
+- `vercel-react-best-practices`: authenticated server reads, parallel
+  owner-scoped snapshot reads, server/client serialization boundary, no
+  client-side secret or data fetch, and effects limited to router/DOM
+  synchronization.
+- `supabase:supabase` and
+  `supabase:supabase-postgres-best-practices`: explicit privileges, owner RLS,
+  security-definer search path, owner-derived identity, composite foreign-key
+  indexes, canonical bounded locking, and transaction-level reuse of accepted
+  goal and Memory invariants.
+
+## Required evidence still pending
+
+- **Branch CI:** pending push. Its exact-SHA green run is mandatory and includes
+  the production build, all migrations and pgTAP, lint/advisors, and the
+  existing 390px `e2e/auth.spec.ts` invocation.
+- **Local production build and browser flow:** blocked, not claimed green.
+  The pinned command
+  `npx.cmd --yes --package node@24.18.0 node node_modules\next\dist\bin\next build`
+  first failed because sandboxed `npx` attempted registry access and returned
+  `EACCES`; the approved escalated retry returned `aborted` before any Next.js
+  output. No server reached port 3000 and no screenshot was generated.
+- **Independent review:** pending against the exact pushed evidence commit and
+  its matching Vercel Preview.
+- **Vercel Preview and hosted owner/security verification:** pending lead and
+  reviewer handoff.
+- **Product-owner visual acceptance:** pending on the reviewed Vercel Preview
+  at 390px.
+
+No local browser or hosted result is represented as evidence in this record.
