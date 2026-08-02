@@ -63,11 +63,13 @@ test.describe("M2-02 memory management", () => {
         "Often misses Thursday training.",
       );
 
-      // Every class is filed separately and each card is stamped.
+      // Every class is filed separately and each card is stamped. An observed
+      // pattern the owner wrote is active like the rest; nothing a user can
+      // create lands in the review queue.
       for (const heading of [
         "Facts",
         "Preferences",
-        "Needs your review",
+        "Observed patterns",
         "Review due",
       ]) {
         await expect(
@@ -75,8 +77,11 @@ test.describe("M2-02 memory management", () => {
         ).toBeVisible();
       }
       await expect(card(page, "Often misses Thursday training.")).toContainText(
-        "Proposed · needs your review",
+        "Active",
       );
+      await expect(
+        page.getByRole("heading", { name: "Needs your review" }),
+      ).toBeHidden();
       await expect(
         card(page, "No pool access until the local pool reopens."),
       ).toContainText("Review due");
@@ -145,52 +150,10 @@ test.describe("M2-02 memory management", () => {
         page.getByRole("heading", { name: "Review due" }),
       ).toBeHidden();
 
-      // A proposal needs an explicit acceptance, and edit-and-accept records
-      // the owner's own words.
-      await settled(page);
-      const proposalCard = card(page, "Often misses Thursday training.");
-      await page.screenshot({
-        fullPage: true,
-        path: path.join(evidenceDirectory, "M2-02-review-queue-390x844.png"),
-      });
-      await openDetails(proposalCard.locator("details[data-memory-editor]"));
-      await proposalCard
-        .getByLabel("What FitTip should remember")
-        .fill("Usually trains Wednesday instead of Thursday.");
-      await proposalCard
-        .getByRole("button", { name: "Save and accept" })
-        .click();
-      const acceptedCard = card(
-        page,
-        "Usually trains Wednesday instead of Thursday.",
-      );
-      await expect(acceptedCard).toContainText("Active");
-      await expect(acceptedCard).toContainText("confirmed by you");
-      await expect(
-        page.getByRole("heading", { name: "Needs your review" }),
-      ).toBeHidden();
-
-      // A declined proposal is never switched on as fact.
-      await addMemory(page, "observed_pattern", "Skips mobility when away.");
-      await settled(page);
-      const declineTarget = card(page, "Skips mobility when away.");
-      const decline = confirmation(declineTarget, "reject", "Confirm decline");
-      await decline.summary.focus();
-      await page.keyboard.press("Enter");
-      await expect(declineTarget).toContainText(
-        /Declining keeps this out of coaching context/,
-      );
-      await page.keyboard.press("Tab");
-      await expect(decline.confirm).toBeFocused();
-      await decline.confirm.click();
-      await expect(card(page, "Skips mobility when away.")).toContainText(
-        "Declined",
-      );
-      await expect(
-        card(page, "Skips mobility when away.").getByRole("button", {
-          name: "Enable",
-        }),
-      ).toHaveCount(0);
+      // Accept, edit-and-accept and decline are unreachable from any user
+      // path: only genuinely system-derived content is ever proposed, and
+      // nothing in M2-02 produces that. Those actions are proven at the
+      // database level in m2_02_memory.test.sql instead of being faked here.
 
       // A stale save is reported honestly and offers a real recovery.
       const stalePage = await page.context().newPage();
@@ -244,9 +207,11 @@ test.describe("M2-02 memory management", () => {
 
       // The filter narrows the view without hiding what a status means.
       await settled(page);
-      await page.getByRole("button", { name: /^Declined 1$/ }).click();
+      await page.getByRole("button", { name: /^Proposed 0$/ }).click();
+      // The review queue is empty and says so, rather than hiding what the
+      // status means.
       await expect(
-        page.getByText(/You declined these proposals/),
+        page.getByText("No memory matches this filter."),
       ).toBeVisible();
       await expect(
         page.getByText("Trains five mornings before work."),

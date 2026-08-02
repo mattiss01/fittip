@@ -185,9 +185,38 @@ describe("MemoryManager", () => {
     ).toBeInTheDocument();
   });
 
+  it("files a user-written observed pattern as active, like any other class", () => {
+    renderManager([
+      item({
+        id: "p",
+        memoryType: "observed_pattern",
+        content: "Often misses Thursday.",
+      }),
+    ]);
+
+    expect(
+      screen.getByRole("heading", { name: "Observed patterns" }),
+    ).toBeInTheDocument();
+    expect(stamps()).toEqual(["Active"]);
+    expect(
+      screen.queryByRole("heading", { name: "Needs your review" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Accept" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Disable" })).toBeEnabled();
+  });
+
+  // Only genuinely system-derived content can be proposed, so the fixture says
+  // so: a user-created proposal is not a state the write path can produce.
   it("offers accept and decline only for a proposal, and never preselects one", () => {
     renderManager([
-      item({ id: "p", status: "proposed", memoryType: "observed_pattern" }),
+      item({
+        id: "p",
+        status: "proposed",
+        provenance: "inferred_proposed",
+        memoryType: "observed_pattern",
+      }),
     ]);
 
     expect(screen.getByRole("button", { name: "Accept" })).toBeEnabled();

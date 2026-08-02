@@ -530,9 +530,7 @@ function MemoryForm({
             <option value="profile_fact">Fact</option>
             <option value="constraint">Constraint</option>
             <option value="preference">Preference</option>
-            <option value="observed_pattern">
-              Observed pattern (starts proposed)
-            </option>
+            <option value="observed_pattern">Observed pattern</option>
           </select>
         </label>
       ) : null}
