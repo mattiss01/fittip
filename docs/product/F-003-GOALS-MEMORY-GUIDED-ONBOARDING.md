@@ -1,7 +1,7 @@
 # F-003: Goals, editable coaching context, and guided onboarding
 
-**Status:** draft - product direction approved 29 July 2026; detailed
-field, privacy, safety, UX, and architecture decisions remain unapproved
+**Status:** approved — product direction approved 29 July 2026; detailed M2-03
+field, privacy, safety, UX, and architecture decisions approved 2 August 2026
 
 **Milestone:** M2
 
@@ -51,12 +51,12 @@ may use only active, explicitly accepted goal and memory records.
 7. The user accepts, edits and accepts, or rejects each candidate and resolves
    duplicates, contradictions, and goal-priority conflicts.
 8. One explicit final action publishes the selected accepted records.
-9. Completion links to **You -> Goals** and **You -> Coach context**. No plan
+9. Completion links to **You -> Goals** and **You -> Memory**. No plan
    or coaching response is generated in M2.
 
 The onboarding is resumable and may be skipped without blocking the accepted
-manual M1 features. The exact minimum context required before a future
-AI-generated plan remains an open M2/M3 product and safety decision.
+manual M1 features. M2-03 defines an informational minimum for future AI
+readiness; it is neither a safety claim nor authorization for an AI call.
 
 ## Affected data and rules
 
@@ -92,7 +92,12 @@ The product owner approved these directions in chat on 29 July 2026:
 8. M2-04 should be a minimal targeted closeout that reuses the evidence from
    M2-01 through M2-03.
 
-## Open decisions requiring product-owner approval
+## Resolved M2-03 decision record
+
+The product owner resolved these questions on 2 August 2026. The concise
+implementation contract is the M2-03 Agent brief and the transaction decision
+is ADR-011. The prompts below are retained as the audit record of the approval
+surface, not as open decisions.
 
 - Exact onboarding steps, fields, order, labels, help text, limits, and
   required-versus-optional behavior.
@@ -156,9 +161,8 @@ The product owner approved these directions in chat on 29 July 2026:
 
 ## Approval boundary
 
-This brief records the approved M2 onboarding direction. M2-01 was separately
-approved for implementation on 29 July 2026 and is in development. M2-02 and
-M2-03 remain proposed until their open product, privacy, safety, UX, and
-architecture decisions are approved. Public or external-user onboarding
-additionally remains blocked by the M0 recovery, privacy implementation,
+This brief records the approved M2 direction and the resolved M2-03 decision
+surface. M2-01 and M2-02 are accepted; M2-03 entered Tier 1 development on
+2 August 2026 under its Agent brief and ADR-011. Public or external-user
+onboarding remains blocked by the M0 recovery, privacy implementation,
 instrumentation, and hosted-quality gates.

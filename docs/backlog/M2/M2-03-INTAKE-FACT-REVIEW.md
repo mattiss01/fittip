@@ -1,13 +1,15 @@
 # M2-03: Guided onboarding and context review
 
-**Status:** proposed — product direction approved; detailed implementation
-decisions remain open
+**Status:** in development — approved and dispatched 2 August 2026 after
+M2-02 was accepted, merged, pushed, deployed to the founder environment, and
+verified. The product owner approved the nine-part field, UX, persistence,
+atomicity, conflict, safety, privacy, and confidence decision set.
 
 **Milestone:** M2 — goals, editable coaching context, and guided onboarding
 
 **Priority:** P1
 
-**Feature brief:** [F-003 draft; direction approved](../../product/F-003-GOALS-MEMORY-GUIDED-ONBOARDING.md)
+**Feature brief:** [F-003 approved](../../product/F-003-GOALS-MEMORY-GUIDED-ONBOARDING.md)
 
 **Direction approval:** On 29 July 2026 the product owner approved guided
 onboarding inside M2, with goals as a central step, accepted data editable in
@@ -22,6 +24,45 @@ and [ADR-007](../../decisions/ADR-007-FOUNDER-HOSTED-STAGING.md);
 product-owner or synthetic data only, local or founder-hosted
 
 **Blocks:** [M2-04 targeted M2 milestone closeout](M2-04-M2-VALIDATION-SLICE.md)
+
+## Agent brief
+
+**Outcome.** Give a verified owner a skippable, resumable six-step setup at `/home/you/onboarding` that deterministically prepares goal and memory candidates, requires every decision, and publishes only the accepted subset.
+
+**Tier 1.** New sensitive owner data, migration, RLS, privileged transaction, cross-model publication, expiry/deletion, and health-adjacent intake.
+
+**Approved behavior — build this, do not re-litigate it.**
+
+- Steps: Goals; Current training; Time and access; Preferences; Constraints; Review and save. Skipping never gates manual planning or logging.
+- Future-AI readiness is informational only: one active core goal, an explicit training answer, availability/capacity, access/equipment, timezone, and units; it authorizes no AI call or safety claim.
+- No general narrative box or universal experience level. Reuse accepted goal limits; allow up to 10 new labels of 60 characters, baseline detail 500, and memory text 1,000.
+- One cross-device draft saves only on named save actions, expires after 30 inactive days, and is purged on cancel, expiry, or publication; retain only a content-free receipt.
+- Nothing is preaccepted. Publish any valid accepted subset; finishing with none publishes nothing. Exact duplicates cannot create a second record.
+- Compare deterministically only. Show existing versus candidate for conflicts; preview full rank changes; preserve decisions on stale refresh; never merge.
+- Optional pain/injury, illness/recovery, unusual-fatigue, and other limitations infer no severity and block no publication. Copy: “FitTip cannot assess or diagnose symptoms. If symptoms are severe, sudden, or getting worse, stop the affected activity and contact a qualified health professional.”
+- Show the start storage/no-AI notice and repeat it before Constraints. Home uses **Set up your coaching context**, **Start setup**, and **Not now**; do not remind or notify.
+- Save controls are **Save and continue**, **Save and finish later**, and **Save accepted items**. Completion offers Goals, Memory, and **Run guided review again**.
+- Use the visible label **Memory**. The review signature is a Context map that stamps every candidate **Goals** or **Memory**.
+- Keep confidence only for unchanged system wording; an owner content edit clears it while preserving provenance and confirmation history.
+
+**Hard constraints.**
+
+- Follow [ADR-011](../../decisions/ADR-011-M2-ONBOARDING-PUBLICATION-BOUNDARY.md): one authenticated write function, Auth-derived owner, expected revisions, canonical bounded locks, and one atomic idempotent publication.
+- Every owned row has `user_id`; exposed tables use RLS, exact owner-select policies, explicit grants, and no direct authenticated writes. Private helpers grant no API-role execution.
+- Reuse accepted goal/memory mutation invariants; change applied behavior only by forward migration and never build weaker onboarding-only copies.
+- No intake content in logs, analytics, URLs, browser storage, email, errors, receipts, fixtures, screenshots, AI providers, or external services.
+- Focus the new heading after navigation, the first actionable error after validation, and the result heading after publication; preserve reduced motion, keyboard use, touch targets, and `390x844` reflow.
+
+**Non-goals.** No production AI, extraction, chat, coaching, plan generation, activity library, diagnosis, treatment, analytics, notifications, public users, remote command, service-role client, or changes to completed/past records.
+
+**Acceptance criteria.** Prove the 390px start/skip/save/resume/review/cancel/restart/publish flow; owner/anonymous/cross-user isolation; 30-day purge; mapping/provenance; mixed-decision atomicity, conflict, fourth-core, failure and retry; context exclusions; confidence clearing; honest states; prohibited sinks.
+
+**Expected modules.** Migration/pgTAP under `supabase/`; onboarding domain and repository under `src/server/`; route/actions under `src/app/home/you/onboarding/`; `src/components/onboarding/`; Home/You entries; generated types; ticket-specific 390px Playwright flow; validation record.
+
+**Skills.** Project `frontend-design` and `vercel-react-best-practices`; plugin
+`supabase:supabase` and `supabase:supabase-postgres-best-practices`.
+
+Read only this section unless you hit an ambiguity it does not resolve.
 
 ## Outcome
 
@@ -44,7 +85,7 @@ inferences, generate a plan, provide coaching, or give diagnostic advice.
 
 ## Approval, environment, and external-use boundary
 
-This proposal may be implemented only after M2-01 and M2-02 are accepted,
+This approved ticket may be implemented because M2-01 and M2-02 are accepted,
 using the approved local/founder-hosted owner-or-synthetic boundary. It does
 not authorize production AI, external registration, analytics, or a
 privacy/legal conclusion.
@@ -144,11 +185,9 @@ Each draft/candidate needs enough state to represent:
 - created, updated, last-resumed, expiry/cancel, and publication timestamps; and
 - an idempotency/publication reference to the created goal or memory.
 
-Draft and candidate schema is not approved merely by this recommendation.
-Alternatives include encrypted/session-local drafts with no cross-device
-resume or a narrower server draft. The selected design must support the
-approved resume promise, retention/deletion design, RLS, and atomic
-publication.
+The product owner approved the owner-scoped server draft, 30-day inactivity
+expiry, content purge, cross-device resume, and content-free receipt on
+2 August 2026. ADR-011 governs the persistence and publication boundary.
 
 Candidate records are proposals, not facts. Pending or rejected candidates
 never appear in active goal lists, active memory context, planning context,
@@ -309,8 +348,8 @@ signal are open safety/product decisions.
 
 Each step uses a visible title/progress indicator, associated labels, inline
 and summary errors, thumb-reachable actions, safe back navigation, and
-non-color-only status. Exact step count, route, copy, progress pattern, and
-required fields remain unapproved proposals.
+non-color-only status. The approved step count, route, copy, progress pattern,
+and required-versus-optional behavior are in the Agent brief.
 
 ## Acceptance criteria
 
@@ -405,8 +444,8 @@ git diff --check
    [Product Plan](../../../REVISED_PRODUCT_PLAN.md), accepted M2-01/M2-02 briefs
    and validation, accepted privacy implementation artifacts, and current
    Supabase guidance.
-2. Resolve required fields, draft retention, publication atomicity, safety, and
-   mobile UX decisions; record architecture decisions where required.
+2. Apply the approved field, retention, atomicity, safety, privacy, and mobile
+   UX decisions in the Agent brief and ADR-011.
 3. Define deterministic candidate schemas by importing/reusing the accepted
    goal/memory contracts, not copying divergent rules.
 4. Create the forward migration and direct draft/candidate authorization tests.
@@ -424,7 +463,11 @@ Exact reversible file names remain builder choices. A transaction function,
 RPC, trigger, elevated credential/connection, or persistent sensitive draft
 design requires explicit architecture/privacy approval.
 
-## Open product, architecture, safety, and privacy decisions
+## Pre-approval decision record
+
+The product owner resolved all nine questions below on 2 August 2026. The
+approved behavior is stated once in the Agent brief; these original prompts
+remain only as the audit record of what required a decision.
 
 1. **Required onboarding fields and AI readiness.** Approve which goal,
    background/baseline, availability, equipment, preference, unit/timezone,
@@ -487,10 +530,9 @@ review slice, or return focused corrections**.
 
 ## Approval gate
 
-The product owner must approve required fields and AI-readiness minimum, draft
-persistence/retention, partial-selection and atomic-publication behavior,
-duplicate/conflict rules, safety copy/thresholds, privacy handling, and mobile
-flow/copy. Any consequential transaction or persistence mechanism requires an
-ADR. Direction approval does not dispatch implementation. Ticket approval can
-dispatch only after M2-01 and M2-02 are accepted. Until then, M2-03 remains
-**proposed**.
+**Resolved 2 August 2026.** The product owner approved the nine-part decision
+set after M2-01 and M2-02 were accepted. ADR-011 records the approved
+transaction and persistence mechanism. The ticket is Tier 1 and was moved to
+**in development** for a distinct builder and independent reviewer. Approval
+remains limited to owner/synthetic local and founder-hosted use and authorizes
+no production AI, external user, analytics, provider, or spend.
