@@ -178,6 +178,39 @@ Post-correction local results:
 - Database lint and security/performance advisors: **pass**, no findings.
 - Focused Prettier check and `git diff --check`: **pass**.
 
+## Second branch CI correction
+
+Branch CI
+[run 30768498948](https://github.com/mattiss01/fittip/actions/runs/30768498948)
+against `4666fbdc7f762f7ff09917c54f7acfe4380d13a5` was **red only in
+the 390px authentication/onboarding flow**. The app, full database, and every
+other browser job were green. After the first Goals step selected **Save and
+finish later**, the page correctly stayed on onboarding because the action had
+returned validation instead of the approved `/home/you` redirect.
+
+Correction commit `b47c11a45ad9f8da2f9c3a97d1353aa566fc9ca0` fixes both
+causes in the form-to-RPC boundary:
+
+- Dynamic Goals and Current training parsers skip rows that were not rendered;
+  they no longer treat the absent second through maximum rows as malformed
+  submitted content.
+- Validated blank optional goal fields become explicit empty values before the
+  RPC. JSON serialization therefore preserves the exact key set required by
+  the privileged database function.
+- Action tests prove that the real one-rendered-goal payload returns the named
+  finish redirect, and that database validation instead returns the visible,
+  content-safe actionable state with no redirect.
+- The 390px flow still requires the exact `/home/you` destination. Its polling
+  diagnostic now reports any rendered action alert, rather than hiding the
+  reason behind a URL-only timeout.
+
+Post-correction local results:
+
+- Focused action/parser/manager tests: **pass**, 3 files and 12 tests.
+- Full Vitest: **pass**, 50 files and 348 tests.
+- Full ESLint and `tsc --noEmit`: **pass**.
+- Focused Prettier and diff/scope checks: **pass**.
+
 ## Required evidence still pending
 
 - **Branch CI:** corrected exact-SHA run pending push. Its green result is
