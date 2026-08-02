@@ -35,8 +35,8 @@ export default async function YouPage() {
           <p className={styles.kicker}>FitTip / you</p>
           <h1>Your private space.</h1>
           <p className={styles.intro}>
-            Set the outcomes that should direct future coaching. Coaching
-            context will appear here only after its own ticket is accepted.
+            Set the outcomes that should direct future coaching, and keep the
+            memory FitTip is allowed to use.
           </p>
         </div>
         <p className={styles.stamp}>Verified account</p>
@@ -50,6 +50,18 @@ export default async function YouPage() {
         </p>
         <Link className={styles.primaryAction} href="/home/you/goals">
           Manage goals
+        </Link>
+      </section>
+      <section className={`${styles.section} ${styles.card}`}>
+        <p className={styles.kicker}>Coaching context</p>
+        <h2>Memory</h2>
+        <p className={styles.bodyCopy}>
+          Keep the facts, constraints and preferences FitTip may use. Every
+          entry shows where it came from, and you can edit, disable or delete
+          any of them.
+        </p>
+        <Link className={styles.primaryAction} href="/home/you/memory">
+          Manage memory
         </Link>
       </section>
       <section className={`${styles.section} ${styles.card}`}>

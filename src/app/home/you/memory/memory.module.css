@@ -1,0 +1,447 @@
+/* A card index rather than a ledger: every remembered statement is filed on
+   its own card, spined and stamped with the status and origin that decide
+   whether coaching may use it. The stamp is the one loud element; everything
+   around it stays quiet. */
+.page {
+  --memory-stated: #2f5d50;
+  --memory-proposed: #8a6a1f;
+  --memory-review: #a8481f;
+  --memory-disabled: #6c7a74;
+  --memory-declined: #4c4550;
+  --memory-file: #e3ebdb;
+}
+
+.manager {
+  display: grid;
+  gap: 1.6rem;
+  margin-top: 1.75rem;
+}
+
+.notice {
+  position: sticky;
+  z-index: 20;
+  top: 0.75rem;
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--ledger-ink);
+  background: #e7f0dc;
+  box-shadow: 5px 5px 0 #a7b7a5;
+  line-height: 1.4;
+}
+
+.notice[data-state="conflict"],
+.notice[data-state="validation"],
+.notice[data-state="error"],
+.notice[data-state="session"] {
+  background: #fff0e1;
+}
+
+.reload {
+  width: fit-content;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--ledger-ink);
+  color: var(--ledger-ink);
+  font:
+    700 0.7rem "Courier New",
+    monospace;
+  text-decoration: none;
+}
+
+/* Filing tabs. Each option names the filter in full and carries its count, so
+   narrowing the view never hides what exists. */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.6rem;
+  border: 1px solid var(--ledger-ink);
+  background: var(--memory-file);
+}
+
+.filters button {
+  min-height: 2.75rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--ledger-ink);
+  background: transparent;
+  color: var(--ledger-ink);
+  font:
+    700 0.64rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.filters button[aria-pressed="true"] {
+  background: var(--ledger-ink);
+  color: var(--ledger-paper);
+}
+
+.group {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.groupHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--ledger-rule);
+}
+
+.groupHeading h2 {
+  margin: 0;
+  font-size: clamp(1.5rem, 6.5vw, 2.3rem);
+  letter-spacing: -0.04em;
+}
+
+.groupCount {
+  margin: 0;
+  color: var(--ledger-muted);
+  font:
+    700 0.62rem "Courier New",
+    monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cardList {
+  display: grid;
+  gap: 0.9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  border: 1px solid var(--ledger-ink);
+  border-left: 7px solid var(--memory-stated);
+  background: var(--ledger-paper);
+  box-shadow: 6px 6px 0 #a7b7a5;
+}
+
+.card[data-state="proposed"] {
+  border-left-color: var(--memory-proposed);
+}
+
+.card[data-state="review-due"] {
+  border-left-color: var(--memory-review);
+}
+
+.card[data-state="archived"] {
+  border-left-color: var(--memory-disabled);
+}
+
+.card[data-state="rejected"] {
+  border-left-color: var(--memory-declined);
+}
+
+.cardBody {
+  min-width: 0;
+  padding: 1rem;
+}
+
+.stampRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+/* The signature element. A filed card carries a stamp saying exactly what
+   FitTip is allowed to do with it. */
+.stamp {
+  padding: 0.35rem 0.5rem;
+  border: 2px solid currentColor;
+  color: var(--memory-stated);
+  font:
+    700 0.58rem "Courier New",
+    monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transform: rotate(-1.5deg);
+}
+
+.card[data-state="proposed"] .stamp {
+  color: var(--memory-proposed);
+}
+
+.card[data-state="review-due"] .stamp {
+  color: var(--memory-review);
+}
+
+.card[data-state="archived"] .stamp {
+  color: var(--memory-disabled);
+}
+
+.card[data-state="rejected"] .stamp {
+  color: var(--memory-declined);
+}
+
+.className,
+.origin,
+.revision {
+  font-family: "Courier New", monospace;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.className {
+  margin: 0;
+  color: var(--ledger-muted);
+  font-size: 0.6rem;
+}
+
+/* Memory has no title. The remembered sentence is the display element. */
+.content {
+  margin: 0.7rem 0 0;
+  overflow-wrap: anywhere;
+  font-size: 1.12rem;
+  line-height: 1.5;
+}
+
+.origin,
+.revision {
+  margin: 0.7rem 0 0;
+  color: var(--ledger-muted);
+  font-size: 0.6rem;
+}
+
+.reviewDate {
+  margin: 0.5rem 0 0;
+  color: var(--ledger-muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.itemActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.9rem;
+}
+
+.itemActions button,
+.confirmation button,
+.form button {
+  min-height: 2.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--ledger-ink);
+  background: transparent;
+  color: var(--ledger-ink);
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+}
+
+.itemActions button:disabled,
+.confirmation button:disabled,
+.form button:disabled {
+  opacity: 0.45;
+}
+
+.confirmation {
+  flex: 1 1 10rem;
+  border: 1px solid var(--ledger-rule);
+}
+
+.confirmation > summary {
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  padding: 0.55rem 0.7rem;
+  cursor: pointer;
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+}
+
+.confirmation > p {
+  margin: 0;
+  padding: 0.75rem;
+  border-top: 1px solid var(--ledger-rule);
+  color: var(--ledger-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.confirmation > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0 0.75rem 0.75rem;
+}
+
+.editor,
+.historyPanel,
+.addPanel {
+  margin-top: 0.9rem;
+  border-top: 1px solid var(--ledger-rule);
+}
+
+.addPanel {
+  margin-top: 0;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  box-shadow: 6px 6px 0 #a7b7a5;
+}
+
+.editor > summary,
+.historyPanel > summary,
+.addPanel > summary {
+  min-height: 3rem;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font:
+    700 0.7rem "Courier New",
+    monospace;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.addPanel > summary {
+  padding: 0 1rem;
+}
+
+.form {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem 0 0;
+}
+
+.addPanel .form {
+  padding: 0 1rem 1rem;
+}
+
+.form label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--ledger-muted);
+  font:
+    700 0.64rem "Courier New",
+    monospace;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.form input,
+.form textarea,
+.form select {
+  width: 100%;
+  min-height: 2.9rem;
+  padding: 0.65rem;
+  border: 1px solid var(--ledger-ink);
+  border-radius: 0;
+  background: white;
+  color: var(--ledger-ink);
+  font:
+    400 1rem/1.4 Georgia,
+    "Times New Roman",
+    serif;
+  text-transform: none;
+}
+
+.form textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.form > button {
+  background: var(--memory-stated);
+  border-color: var(--memory-stated);
+  color: var(--ledger-paper);
+  min-height: 3rem;
+}
+
+/* Static, non-diagnostic, and shown only where the owner writes memory. */
+.safety {
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px dashed var(--memory-review);
+  color: #6b3117;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.historyList {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0 0 0.9rem;
+  list-style: none;
+}
+
+.historyList li {
+  padding: 0.7rem;
+  border-left: 3px solid var(--ledger-rule);
+  background: #f3f1e6;
+}
+
+.historyMeta {
+  margin: 0 0 0.35rem;
+  color: var(--ledger-muted);
+  font:
+    700 0.58rem "Courier New",
+    monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.historyText {
+  margin: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+
+.empty {
+  margin: 0;
+  padding: 1.1rem;
+  border: 1px dashed var(--ledger-rule);
+  color: var(--ledger-muted);
+  line-height: 1.55;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.manager button:focus-visible,
+.manager input:focus-visible,
+.manager textarea:focus-visible,
+.manager select:focus-visible,
+.manager summary:focus-visible,
+.manager a:focus-visible {
+  outline: 3px solid #efaa84;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .card,
+  .addPanel {
+    animation: memory-file 240ms ease-out both;
+  }
+}
+
+@keyframes memory-file {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

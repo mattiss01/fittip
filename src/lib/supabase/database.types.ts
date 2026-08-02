@@ -517,6 +517,197 @@ export type Database = {
           },
         ];
       };
+      memory_collections: {
+        Row: {
+          revision: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          revision?: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          revision?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "memory_collections_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      memory_deletion_events: {
+        Row: {
+          collection_revision: number;
+          created_at: string;
+          id: string;
+          item_id: string;
+          memory_type: string;
+          purged_revision_count: number;
+          user_id: string;
+        };
+        Insert: {
+          collection_revision: number;
+          created_at?: string;
+          id?: string;
+          item_id: string;
+          memory_type: string;
+          purged_revision_count: number;
+          user_id: string;
+        };
+        Update: {
+          collection_revision?: number;
+          created_at?: string;
+          id?: string;
+          item_id?: string;
+          memory_type?: string;
+          purged_revision_count?: number;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "memory_deletion_events_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      memory_items: {
+        Row: {
+          confidence: number | null;
+          created_at: string;
+          current_revision_id: string;
+          expires_on: string | null;
+          id: string;
+          memory_type: string;
+          provenance: string;
+          source_reference: string | null;
+          status: string;
+          status_changed_at: string;
+          updated_at: string;
+          user_confirmed_at: string | null;
+          user_id: string;
+        };
+        Insert: {
+          confidence?: number | null;
+          created_at?: string;
+          current_revision_id: string;
+          expires_on?: string | null;
+          id?: string;
+          memory_type: string;
+          provenance: string;
+          source_reference?: string | null;
+          status: string;
+          status_changed_at?: string;
+          updated_at?: string;
+          user_confirmed_at?: string | null;
+          user_id: string;
+        };
+        Update: {
+          confidence?: number | null;
+          created_at?: string;
+          current_revision_id?: string;
+          expires_on?: string | null;
+          id?: string;
+          memory_type?: string;
+          provenance?: string;
+          source_reference?: string | null;
+          status?: string;
+          status_changed_at?: string;
+          updated_at?: string;
+          user_confirmed_at?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "memory_items_current_revision_fkey";
+            columns: ["current_revision_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "memory_revisions";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "memory_items_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      memory_revisions: {
+        Row: {
+          author_class: string;
+          change_kind: string;
+          content: string;
+          created_at: string;
+          id: string;
+          item_id: string;
+          previous_revision_id: string | null;
+          provenance: string;
+          revision_number: number;
+          status_after: string;
+          user_id: string;
+        };
+        Insert: {
+          author_class: string;
+          change_kind: string;
+          content: string;
+          created_at?: string;
+          id?: string;
+          item_id: string;
+          previous_revision_id?: string | null;
+          provenance: string;
+          revision_number: number;
+          status_after: string;
+          user_id: string;
+        };
+        Update: {
+          author_class?: string;
+          change_kind?: string;
+          content?: string;
+          created_at?: string;
+          id?: string;
+          item_id?: string;
+          previous_revision_id?: string | null;
+          provenance?: string;
+          revision_number?: number;
+          status_after?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "memory_revisions_item_fkey";
+            columns: ["item_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "memory_items";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "memory_revisions_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "memory_revisions_previous_fkey";
+            columns: ["previous_revision_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "memory_revisions";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
       personal_activities: {
         Row: {
           archived_at: string | null;
@@ -740,6 +931,23 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      apply_memory_change: {
+        Args: {
+          p_content?: string;
+          p_expected_collection_revision: number;
+          p_expires_on?: string;
+          p_item_id?: string;
+          p_memory_type?: string;
+          p_operation: string;
+        };
+        Returns: Database["public"]["CompositeTypes"]["memory_change_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "memory_change_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       is_valid_training_measurement: {
         Args: { p_mode: string; p_value: Json };
         Returns: boolean;
@@ -836,6 +1044,12 @@ export type Database = {
       goal_change_receipt: {
         goal_id: string | null;
         collection_revision: number | null;
+        result: string | null;
+      };
+      memory_change_receipt: {
+        item_id: string | null;
+        collection_revision: number | null;
+        revision_number: number | null;
         result: string | null;
       };
     };
