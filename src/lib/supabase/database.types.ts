@@ -588,6 +588,7 @@ export type Database = {
           current_revision_id: string;
           expires_on: string | null;
           id: string;
+          intake_field_key: string | null;
           memory_type: string;
           provenance: string;
           source_reference: string | null;
@@ -603,6 +604,7 @@ export type Database = {
           current_revision_id: string;
           expires_on?: string | null;
           id?: string;
+          intake_field_key?: string | null;
           memory_type: string;
           provenance: string;
           source_reference?: string | null;
@@ -618,6 +620,7 @@ export type Database = {
           current_revision_id?: string;
           expires_on?: string | null;
           id?: string;
+          intake_field_key?: string | null;
           memory_type?: string;
           provenance?: string;
           source_reference?: string | null;
@@ -705,6 +708,335 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "memory_revisions";
             referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      onboarding_drafts: {
+        Row: {
+          access_labels: string[];
+          available_days: string[];
+          created_at: string;
+          current_step: number;
+          expires_at: string;
+          id: string;
+          idempotency_key: string;
+          revision: number;
+          session_duration_minutes: number | null;
+          sessions_per_week: number | null;
+          timezone_name: string | null;
+          training_status: string | null;
+          units_system: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          access_labels?: string[];
+          available_days?: string[];
+          created_at?: string;
+          current_step?: number;
+          expires_at: string;
+          id?: string;
+          idempotency_key?: string;
+          revision?: number;
+          session_duration_minutes?: number | null;
+          sessions_per_week?: number | null;
+          timezone_name?: string | null;
+          training_status?: string | null;
+          units_system?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          access_labels?: string[];
+          available_days?: string[];
+          created_at?: string;
+          current_step?: number;
+          expires_at?: string;
+          id?: string;
+          idempotency_key?: string;
+          revision?: number;
+          session_duration_minutes?: number | null;
+          sessions_per_week?: number | null;
+          timezone_name?: string | null;
+          training_status?: string | null;
+          units_system?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_drafts_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      onboarding_goal_candidates: {
+        Row: {
+          activity_areas: string[];
+          category: string;
+          constraints_text: string | null;
+          decision: string;
+          desired_outcome: string;
+          draft_id: string;
+          id: string;
+          position: number;
+          priority_tier: string;
+          rationale: string | null;
+          resolution: string | null;
+          start_date: string;
+          target_date: string | null;
+          target_detail: string | null;
+          target_goal_id: string | null;
+          target_metric_label: string | null;
+          target_metric_unit: string | null;
+          target_metric_value: string | null;
+          target_rank: number | null;
+          title: string;
+          user_id: string;
+        };
+        Insert: {
+          activity_areas?: string[];
+          category: string;
+          constraints_text?: string | null;
+          decision?: string;
+          desired_outcome: string;
+          draft_id: string;
+          id?: string;
+          position: number;
+          priority_tier: string;
+          rationale?: string | null;
+          resolution?: string | null;
+          start_date: string;
+          target_date?: string | null;
+          target_detail?: string | null;
+          target_goal_id?: string | null;
+          target_metric_label?: string | null;
+          target_metric_unit?: string | null;
+          target_metric_value?: string | null;
+          target_rank?: number | null;
+          title: string;
+          user_id: string;
+        };
+        Update: {
+          activity_areas?: string[];
+          category?: string;
+          constraints_text?: string | null;
+          decision?: string;
+          desired_outcome?: string;
+          draft_id?: string;
+          id?: string;
+          position?: number;
+          priority_tier?: string;
+          rationale?: string | null;
+          resolution?: string | null;
+          start_date?: string;
+          target_date?: string | null;
+          target_detail?: string | null;
+          target_goal_id?: string | null;
+          target_metric_label?: string | null;
+          target_metric_unit?: string | null;
+          target_metric_value?: string | null;
+          target_rank?: number | null;
+          title?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_goal_candidates_draft_fkey";
+            columns: ["draft_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "onboarding_drafts";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "onboarding_goal_candidates_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "onboarding_goal_candidates_target_fkey";
+            columns: ["target_goal_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "goals";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      onboarding_memory_candidates: {
+        Row: {
+          content: string;
+          decision: string;
+          draft_id: string;
+          field_key: string;
+          id: string;
+          memory_type: string;
+          position: number;
+          resolution: string | null;
+          target_memory_id: string | null;
+          user_id: string;
+        };
+        Insert: {
+          content: string;
+          decision?: string;
+          draft_id: string;
+          field_key: string;
+          id?: string;
+          memory_type: string;
+          position: number;
+          resolution?: string | null;
+          target_memory_id?: string | null;
+          user_id: string;
+        };
+        Update: {
+          content?: string;
+          decision?: string;
+          draft_id?: string;
+          field_key?: string;
+          id?: string;
+          memory_type?: string;
+          position?: number;
+          resolution?: string | null;
+          target_memory_id?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_memory_candidates_draft_fkey";
+            columns: ["draft_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "onboarding_drafts";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "onboarding_memory_candidates_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "onboarding_memory_candidates_target_fkey";
+            columns: ["target_memory_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "memory_items";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      onboarding_prompt_states: {
+        Row: {
+          dismissed_at: string;
+          user_id: string;
+        };
+        Insert: {
+          dismissed_at?: string;
+          user_id: string;
+        };
+        Update: {
+          dismissed_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_prompt_states_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      onboarding_publication_receipts: {
+        Row: {
+          goal_collection_revision: number;
+          goal_ids: string[];
+          id: string;
+          idempotency_key: string;
+          memory_collection_revision: number;
+          memory_ids: string[];
+          published_at: string;
+          user_id: string;
+        };
+        Insert: {
+          goal_collection_revision: number;
+          goal_ids?: string[];
+          id?: string;
+          idempotency_key: string;
+          memory_collection_revision: number;
+          memory_ids?: string[];
+          published_at?: string;
+          user_id: string;
+        };
+        Update: {
+          goal_collection_revision?: number;
+          goal_ids?: string[];
+          id?: string;
+          idempotency_key?: string;
+          memory_collection_revision?: number;
+          memory_ids?: string[];
+          published_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_publication_receipts_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      onboarding_training_activities: {
+        Row: {
+          detail: string | null;
+          draft_id: string;
+          duration_minutes: number;
+          id: string;
+          name: string;
+          position: number;
+          sessions_per_week: number;
+          user_id: string;
+        };
+        Insert: {
+          detail?: string | null;
+          draft_id: string;
+          duration_minutes: number;
+          id?: string;
+          name: string;
+          position: number;
+          sessions_per_week: number;
+          user_id: string;
+        };
+        Update: {
+          detail?: string | null;
+          draft_id?: string;
+          duration_minutes?: number;
+          id?: string;
+          name?: string;
+          position?: number;
+          sessions_per_week?: number;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_training_activities_draft_fkey";
+            columns: ["draft_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "onboarding_drafts";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "onboarding_training_activities_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
           },
         ];
       };
@@ -948,6 +1280,23 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      apply_onboarding_change: {
+        Args: {
+          p_expected_draft_revision: number;
+          p_expected_goal_revision?: number;
+          p_expected_memory_revision?: number;
+          p_idempotency_key?: string;
+          p_operation: string;
+          p_payload?: Json;
+        };
+        Returns: Database["public"]["CompositeTypes"]["onboarding_change_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "onboarding_change_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       is_valid_training_measurement: {
         Args: { p_mode: string; p_value: Json };
         Returns: boolean;
@@ -1051,6 +1400,15 @@ export type Database = {
         collection_revision: number | null;
         revision_number: number | null;
         result: string | null;
+      };
+      onboarding_change_receipt: {
+        draft_id: string | null;
+        draft_revision: number | null;
+        result: string | null;
+        idempotency_key: string | null;
+        publication_id: string | null;
+        goal_collection_revision: number | null;
+        memory_collection_revision: number | null;
       };
     };
   };

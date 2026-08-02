@@ -42,6 +42,17 @@ export default async function YouPage() {
         <p className={styles.stamp}>Verified account</p>
       </header>
       <section className={`${styles.section} ${styles.card}`}>
+        <p className={styles.kicker}>Optional guided review</p>
+        <h2>Guided setup</h2>
+        <p className={styles.bodyCopy}>
+          Prepare a private, resumable set of goal and memory candidates, then
+          choose exactly what FitTip may save.
+        </p>
+        <Link className={styles.primaryAction} href="/home/you/onboarding">
+          Open guided setup
+        </Link>
+      </section>
+      <section className={`${styles.section} ${styles.card}`}>
         <p className={styles.kicker}>Training direction</p>
         <h2>Goals</h2>
         <p className={styles.bodyCopy}>

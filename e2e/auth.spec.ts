@@ -1,4 +1,13 @@
 import { expect, test } from "@playwright/test";
+import path from "node:path";
+
+const m2EvidenceDirectory = path.join(
+  process.cwd(),
+  "docs",
+  "validation",
+  "M2",
+  "evidence",
+);
 
 const localEnvironmentReady = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -11,7 +20,7 @@ test.describe("public account authentication", () => {
   test("creates an account, confirms it through Mailpit, signs out, and signs in", async ({
     page,
     request,
-  }) => {
+  }, testInfo) => {
     const pageErrors: Error[] = [];
     page.on("pageerror", (error) => pageErrors.push(error));
     const email = `fittip-e2e-${Date.now()}@example.test`;
@@ -53,8 +62,133 @@ test.describe("public account authentication", () => {
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/\/home\/today$/);
+
+    // M2-03 reuses this CI-invoked authenticated production-browser journey
+    // so its 390px flow does not require a .github workflow change or an
+    // uninvoked ticket config.
+    await completeGuidedSetup(page, testInfo);
   });
 });
+
+async function completeGuidedSetup(
+  page: import("@playwright/test").Page,
+  testInfo: import("@playwright/test").TestInfo,
+) {
+  expect(page.viewportSize()).toEqual({ width: 390, height: 844 });
+
+  // The Home invitation can be dismissed once, while You keeps the permanent
+  // entry. This screenshot precedes all intake entry and contains no answers.
+  await expect(
+    page.getByRole("heading", { name: "Set up your coaching context" }),
+  ).toBeVisible();
+  await page.screenshot({
+    fullPage: true,
+    path: path.join(m2EvidenceDirectory, "M2-03-start-390x844.png"),
+  });
+  await page.getByRole("button", { name: "Not now" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Set up your coaching context" }),
+  ).toHaveCount(0);
+  await page.getByRole("link", { name: "You", exact: true }).click();
+  await page.getByRole("link", { name: "Open guided setup" }).click();
+  await expect(page).toHaveURL(/\/home\/you\/onboarding$/);
+  await expect(page.getByText(/not sent to an AI provider/)).toBeVisible();
+  await page.getByRole("button", { name: "Start setup" }).click();
+
+  const goalTitle = "Finish a calm 10K";
+  const goalOutcome = "Run the autumn event with even pacing.";
+  await expect(
+    page.getByRole("heading", { name: "Name the outcomes." }),
+  ).toBeFocused();
+  await page.getByLabel("Goal title").fill(goalTitle);
+  await page.getByLabel("Desired outcome").fill(goalOutcome);
+  await page.getByLabel("Activity areas").fill("Running");
+  await page.getByRole("button", { name: "Save and finish later" }).click();
+  await expect(page).toHaveURL(/\/home\/you$/);
+
+  // Resume restores the saved candidate; cancel deletes it. The permanent You
+  // entry then starts a genuinely fresh draft.
+  await page.getByRole("link", { name: "Open guided setup" }).click();
+  await expect(page.getByLabel("Goal title")).toHaveValue(goalTitle);
+  await page.getByRole("button", { name: "Cancel and delete draft" }).click();
+  await expect(page).toHaveURL(/\/home\/you$/);
+  await page.getByRole("link", { name: "Open guided setup" }).click();
+  await page.getByRole("button", { name: "Start setup" }).click();
+
+  await page.getByLabel("Goal title").fill(goalTitle);
+  await page.getByLabel("Desired outcome").fill(goalOutcome);
+  await page.getByLabel("Activity areas").fill("Running");
+  await page.getByRole("button", { name: "Save and continue" }).click();
+  await expect(page.getByText("Step 2 of 6 · Current training")).toBeVisible();
+
+  await page.getByLabel("I am not training currently").check();
+  await page.getByRole("button", { name: "Save and continue" }).click();
+  await expect(page.getByText("Step 3 of 6 · Time and access")).toBeVisible();
+
+  await page.getByLabel("Monday").check();
+  await page.getByLabel("Saturday").check();
+  await page.getByLabel("Access and equipment").fill("Road, Home weights");
+  await page.getByLabel("Timezone").fill("Europe/Berlin");
+  await page.getByRole("button", { name: "Save and continue" }).click();
+  await expect(page.getByText("Step 4 of 6 · Preferences")).toBeVisible();
+
+  // Preferences and constraints are optional. The exact conservative safety
+  // copy remains visible without a severity question or acknowledgement gate.
+  await page.getByRole("button", { name: "Save and continue" }).click();
+  await expect(page.getByText("Step 5 of 6 · Constraints")).toBeVisible();
+  await expect(
+    page.getByText(/FitTip cannot assess or diagnose symptoms/),
+  ).toBeVisible();
+  await expect(page.getByLabel(/severity/i)).toHaveCount(0);
+  await page.getByRole("button", { name: "Save and continue" }).click();
+  await expect(page.getByText("Step 6 of 6 · Review and save")).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Choose where each statement lands.",
+    }),
+  ).toBeVisible();
+
+  const decisions = page.getByLabel("Decision");
+  const decisionCount = await decisions.count();
+  expect(decisionCount).toBeGreaterThan(1);
+  for (let index = 0; index < decisionCount; index += 1) {
+    await decisions.nth(index).selectOption("accepted");
+  }
+  await page.getByRole("button", { name: "Save accepted items" }).click();
+  await expect(
+    page.getByRole("heading", {
+      name: "Your accepted context is filed.",
+    }),
+  ).toBeFocused();
+
+  // Publication has deleted the draft, so this result screenshot contains no
+  // intake answers or candidate text.
+  await page.screenshot({
+    fullPage: true,
+    path: path.join(m2EvidenceDirectory, "M2-03-published-390x844.png"),
+  });
+  await page.screenshot({
+    fullPage: true,
+    path: testInfo.outputPath("m2-03-published-390x844.png"),
+  });
+
+  await page.getByRole("link", { name: "Goals", exact: true }).click();
+  await expect(page.getByText(goalTitle)).toBeVisible();
+  await page.goto("/home/you/memory");
+  await expect(page.getByText("I am not training currently.")).toBeVisible();
+
+  await page.goto("/home/you/onboarding");
+  await page.getByRole("button", { name: "Run guided review again" }).click();
+  await expect(page.getByText("Step 1 of 6 · Goals")).toBeVisible();
+  await page.getByRole("button", { name: "Cancel and delete draft" }).click();
+  await expect(page).toHaveURL(/\/home\/you$/);
+
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+}
 
 async function expectPrivateSessionHeaders(
   response: import("@playwright/test").Response,

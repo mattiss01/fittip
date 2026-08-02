@@ -1,14 +1,19 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getCurrentPlanSnapshotMock, listCurrentCompletionsMock, redirectMock } =
-  vi.hoisted(() => ({
-    getCurrentPlanSnapshotMock: vi.fn(),
-    listCurrentCompletionsMock: vi.fn(),
-    redirectMock: vi.fn((url: string) => {
-      throw new Error(`redirect:${url}`);
-    }),
-  }));
+const {
+  getCurrentPlanSnapshotMock,
+  getEntryStateMock,
+  listCurrentCompletionsMock,
+  redirectMock,
+} = vi.hoisted(() => ({
+  getCurrentPlanSnapshotMock: vi.fn(),
+  getEntryStateMock: vi.fn().mockResolvedValue({ showHomeInvitation: false }),
+  listCurrentCompletionsMock: vi.fn(),
+  redirectMock: vi.fn((url: string) => {
+    throw new Error(`redirect:${url}`);
+  }),
+}));
 
 vi.mock("next/navigation", () => ({ redirect: redirectMock }));
 vi.mock("@/lib/supabase/server-user-client", () => ({
@@ -24,6 +29,12 @@ vi.mock("@/server/repositories/completion-repository", () => ({
   CompletionAuthenticationError: class extends Error {},
   CompletionRepository: class {
     listCurrentCompletions = listCurrentCompletionsMock;
+  },
+}));
+vi.mock("@/server/repositories/onboarding-repository", () => ({
+  OnboardingAuthenticationError: class extends Error {},
+  OnboardingRepository: class {
+    getEntryState = getEntryStateMock;
   },
 }));
 

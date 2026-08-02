@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { BrowserLocalDate } from "@/components/home/browser-local-date";
+import { OnboardingHomeInvitation } from "@/components/onboarding/onboarding-home-invitation";
 import { isoDateInTimezone } from "@/features/completions/local-date";
 import { completionStatusLabel } from "@/features/completions/status-label";
 import { createServerUserClient } from "@/lib/supabase/server-user-client";
@@ -13,6 +14,10 @@ import {
   TrainingRecordAuthenticationError,
   TrainingRecordRepository,
 } from "@/server/repositories/training-record-repository";
+import {
+  OnboardingAuthenticationError,
+  OnboardingRepository,
+} from "@/server/repositories/onboarding-repository";
 import styles from "../home.module.css";
 
 export const dynamic = "force-dynamic";
@@ -21,25 +26,30 @@ export default async function TodayPage() {
   const client = await createServerUserClient();
   const plans = new TrainingRecordRepository(client);
   const actuals = new CompletionRepository(client);
+  const onboarding = new OnboardingRepository(client);
 
   let currentPlan;
   let completions;
+  let onboardingEntry;
   try {
-    [currentPlan, completions] = await Promise.all([
+    [currentPlan, completions, onboardingEntry] = await Promise.all([
       plans.getCurrentPlanSnapshot(),
       actuals.listCurrentCompletions(),
+      onboarding.getEntryState(),
     ]);
   } catch (error) {
     if (
       (error instanceof TrainingRecordAuthenticationError ||
-        error instanceof CompletionAuthenticationError) &&
+        error instanceof CompletionAuthenticationError ||
+        error instanceof OnboardingAuthenticationError) &&
       error.accessError?.reason === "not-owner"
     ) {
       redirect("/auth/denied");
     }
     if (
       error instanceof TrainingRecordAuthenticationError ||
-      error instanceof CompletionAuthenticationError
+      error instanceof CompletionAuthenticationError ||
+      error instanceof OnboardingAuthenticationError
     ) {
       redirect("/");
     }
@@ -81,6 +91,8 @@ export default async function TodayPage() {
             : "No accepted plan"}
         </p>
       </header>
+
+      {onboardingEntry.showHomeInvitation ? <OnboardingHomeInvitation /> : null}
 
       <section className={styles.section} aria-labelledby="today-training">
         <div className={styles.sectionHeader}>

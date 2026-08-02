@@ -1,0 +1,650 @@
+/* Guided setup keeps FitTip's ledger materials and spends its one visual
+   signature on the Context map: destination stamps make storage explicit. */
+.page {
+  --setup-goals: #294f73;
+  --setup-memory: #6c4a22;
+  --setup-soft-blue: #e6eef3;
+  --setup-soft-amber: #f2ead8;
+}
+
+.manager {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.progress {
+  overflow-x: auto;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+}
+
+.progress ol {
+  min-width: 42rem;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.progress li {
+  border-left: 1px solid var(--ledger-rule);
+}
+
+.progress li:first-child {
+  border-left: 0;
+}
+
+.progress button {
+  width: 100%;
+  min-height: 4.2rem;
+  display: grid;
+  place-content: center;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0.5rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ledger-muted);
+  text-align: left;
+}
+
+.progress button span,
+.progress button strong {
+  display: block;
+}
+
+.progress button span {
+  font-size: 0.6rem;
+}
+
+.progress button strong {
+  font-size: 0.67rem;
+  line-height: 1.2;
+}
+
+.progress li[data-saved="true"] button {
+  background: #edf0e7;
+  color: var(--ledger-ink);
+}
+
+.progress li[data-current="true"] button {
+  box-shadow: inset 0 4px 0 var(--ledger-signal);
+  background: var(--ledger-ink);
+  color: var(--ledger-paper);
+}
+
+.progress button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.notice {
+  position: sticky;
+  z-index: 20;
+  top: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--ledger-ink);
+  background: #e7f0dc;
+  box-shadow: 5px 5px 0 #a7b7a5;
+  line-height: 1.45;
+}
+
+.notice[data-state="validation"],
+.notice[data-state="conflict"],
+.notice[data-state="session"],
+.notice[data-state="error"] {
+  border-color: #7d2d1d;
+  background: #fff0e1;
+  color: #6c2718;
+}
+
+.stepHeader {
+  padding-bottom: 1rem;
+  border-bottom: 3px solid var(--ledger-ink);
+}
+
+.stepHeader p,
+.eyebrow,
+.loadingCard > p,
+.errorCard > p {
+  margin: 0;
+  color: #9b3b24;
+  font:
+    700 0.67rem "Courier New",
+    monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stepHeader h2 {
+  margin: 0.35rem 0;
+  font-size: clamp(2.2rem, 10vw, 4.2rem);
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+}
+
+.stepHeader span {
+  color: var(--ledger-muted);
+  font-size: 0.85rem;
+}
+
+.stepForm {
+  display: grid;
+  gap: 1rem;
+}
+
+.stepForm label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.stepForm input,
+.stepForm select,
+.stepForm textarea {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--ledger-rule);
+  border-radius: 0;
+  background: #fffef9;
+  color: var(--ledger-ink);
+  font: inherit;
+}
+
+.stepForm textarea {
+  resize: vertical;
+}
+
+.stepForm small {
+  color: var(--ledger-muted);
+  font:
+    400 0.78rem Georgia,
+    serif;
+  letter-spacing: 0;
+  line-height: 1.4;
+  text-transform: none;
+}
+
+.stepForm input:focus,
+.stepForm select:focus,
+.stepForm textarea:focus,
+.stepForm button:focus-visible,
+.progress button:focus-visible,
+.startCard a:focus-visible,
+.startCard button:focus-visible,
+.result a:focus-visible,
+.result button:focus-visible,
+.cancelForm button:focus-visible {
+  outline: 3px solid #efaa84;
+  outline-offset: 2px;
+}
+
+.explainer {
+  margin: 0;
+  color: var(--ledger-muted);
+  line-height: 1.55;
+}
+
+.entryCard,
+.choiceGroup,
+.constraintList fieldset {
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  box-shadow: 6px 6px 0 #a7b7a5;
+}
+
+.entryCard {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.entryCard legend,
+.choiceGroup legend,
+.dayGrid legend,
+.constraintList legend {
+  padding: 0 0.35rem;
+  color: #8a351f;
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fieldGrid,
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.metricGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.choiceGroup {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.choiceGroup label,
+.dayGrid label,
+.constraintChoice {
+  display: flex;
+  align-items: start;
+  gap: 0.55rem;
+  min-height: 2.75rem;
+  padding: 0.55rem;
+  border: 1px solid var(--ledger-rule);
+  background: #f4f1e6;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.92rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.4;
+  text-transform: none;
+}
+
+.choiceGroup input,
+.dayGrid input,
+.constraintChoice input {
+  width: 1.2rem;
+  min-height: 1.2rem;
+  margin: 0.1rem 0 0;
+}
+
+.dayGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.privacyNotice,
+.safetyCopy {
+  margin: 0;
+  padding: 0.9rem;
+  line-height: 1.5;
+}
+
+.privacyNotice {
+  border-left: 4px solid var(--setup-goals);
+  background: var(--setup-soft-blue);
+}
+
+.safetyCopy {
+  border: 1px solid #9b3b24;
+  background: #fff0e1;
+  color: #6c2718;
+}
+
+.constraintList {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.constraintList fieldset {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.stepActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 0.55rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--ledger-rule);
+}
+
+.stepActions button,
+.secondaryButton,
+.result button,
+.startCard button {
+  min-height: 2.9rem;
+  margin: 0;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--ledger-ink);
+  border-radius: 0;
+  background: var(--ledger-signal);
+  color: white;
+  font:
+    700 0.72rem "Courier New",
+    monospace;
+}
+
+.secondaryButton {
+  width: fit-content;
+  background: transparent !important;
+  color: var(--ledger-ink) !important;
+}
+
+.contextMap {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 3px solid var(--ledger-ink);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--setup-soft-blue) 70%, transparent) 0 50%,
+    color-mix(in srgb, var(--setup-soft-amber) 70%, transparent) 50% 100%
+  );
+}
+
+.contextMap > header,
+.mapLegend {
+  grid-column: 1 / -1;
+}
+
+.contextMap > header p {
+  margin: 0;
+  color: #8a351f;
+  font:
+    700 0.67rem "Courier New",
+    monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.contextMap > header h3,
+.rankPreview h3 {
+  margin: 0.3rem 0 0;
+  font-size: clamp(1.8rem, 7vw, 2.8rem);
+  letter-spacing: -0.04em;
+}
+
+.mapLegend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+}
+
+.mapLegend span {
+  padding: 0.55rem;
+  color: white;
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.mapLegend [data-destination="goals"] {
+  background: var(--setup-goals);
+}
+
+.mapLegend [data-destination="memory"] {
+  background: var(--setup-memory);
+}
+
+.reviewCard {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  padding: 2.7rem 0.85rem 0.85rem;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  box-shadow: 5px 5px 0 #9da99d;
+}
+
+.reviewCard:has([data-destination="goals"]) {
+  grid-column: 1;
+}
+
+.reviewCard:has([data-destination="memory"]) {
+  grid-column: 2;
+}
+
+.destinationStamp {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  padding: 0.3rem 0.45rem;
+  color: white;
+  font:
+    700 0.6rem "Courier New",
+    monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transform: rotate(1deg);
+}
+
+.destinationStamp[data-destination="goals"] {
+  background: var(--setup-goals);
+}
+
+.destinationStamp[data-destination="memory"] {
+  background: var(--setup-memory);
+}
+
+.reviewCard h4 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 1.35rem;
+}
+
+.reviewCard > p {
+  margin: 0;
+  color: var(--ledger-muted);
+  line-height: 1.45;
+}
+
+.comparison {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.7rem;
+  border-left: 4px solid var(--ledger-signal);
+  background: #f3f1e6;
+}
+
+.comparison p {
+  margin: 0;
+  color: #8a351f;
+  font:
+    700 0.63rem "Courier New",
+    monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.comparison span {
+  overflow-wrap: anywhere;
+  color: var(--ledger-muted);
+  line-height: 1.4;
+}
+
+.rankPreview {
+  padding: 1rem;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+}
+
+.rankPreview ol {
+  display: grid;
+  gap: 0.45rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rankPreview li {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  gap: 0.6rem;
+  padding: 0.65rem;
+  border-top: 1px solid var(--ledger-rule);
+}
+
+.rankPreview li span {
+  color: #8a351f;
+  font:
+    700 0.62rem "Courier New",
+    monospace;
+  text-transform: uppercase;
+}
+
+.cancelForm {
+  padding-top: 1rem;
+  border-top: 1px dashed var(--ledger-rule);
+}
+
+.cancelForm button {
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #8d2f20;
+  text-decoration: underline;
+  text-underline-offset: 0.25rem;
+}
+
+.startCard,
+.result,
+.loadingCard,
+.errorCard {
+  margin-top: 1.5rem;
+  padding: clamp(1.2rem, 5vw, 2rem);
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  box-shadow: 7px 7px 0 #a7b7a5;
+}
+
+.startCard h2,
+.result h2,
+.loadingCard h1,
+.errorCard h1 {
+  margin: 0.45rem 0 0;
+  font-size: clamp(2rem, 9vw, 3.4rem);
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.startCard > p:not(.eyebrow),
+.result > p:not(.eyebrow),
+.errorCard > span {
+  display: block;
+  max-width: 42rem;
+  margin: 1rem 0;
+  color: var(--ledger-muted);
+  line-height: 1.55;
+}
+
+.startCard form,
+.resultActions form {
+  display: inline;
+}
+
+.quietLink {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.8rem;
+  color: var(--ledger-ink);
+}
+
+.resultActions,
+.errorCard > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.resultActions a,
+.errorCard a {
+  min-height: 2.9rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--ledger-ink);
+  color: var(--ledger-ink);
+  font:
+    700 0.72rem "Courier New",
+    monospace;
+}
+
+.loadingCard,
+.errorCard {
+  margin-top: 12vh;
+}
+
+.errorCard button {
+  min-height: 2.9rem;
+  margin: 0;
+  border-radius: 0;
+}
+
+@media (max-width: 620px) {
+  .fieldGrid,
+  .metricGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .dayGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stepActions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .stepActions button {
+    width: 100%;
+  }
+
+  .contextMap {
+    grid-template-columns: 1fr;
+    background: var(--ledger-wash);
+  }
+
+  .mapLegend {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .reviewCard:has([data-destination="goals"]),
+  .reviewCard:has([data-destination="memory"]) {
+    grid-column: 1;
+  }
+
+  .quietLink {
+    margin: 0.5rem 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .reviewCard,
+  .entryCard {
+    animation: setup-file 220ms ease-out both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reviewCard,
+  .entryCard {
+    animation: none;
+  }
+}
+
+@keyframes setup-file {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
