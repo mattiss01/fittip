@@ -368,8 +368,27 @@ and records the confirmation separately in `user_confirmed_at`.
 **Privacy.** Memory content never reaches a log, analytics payload, monitoring
 call, error message, or receipt. A database error message is never forwarded;
 the repository raises its own generic failure. No memory module calls
-`console`. The browser stores nothing: no `localStorage`, no `sessionStorage`,
-no cookie beyond the existing Supabase session.
+`console`.
+
+**What the browser stores.** No `localStorage`, and no cookie beyond the
+existing Supabase session. The correction commit added exactly one
+`sessionStorage` entry, and this is the whole of it:
+
+| Key | Value | Purpose | Cleared |
+| --- | --- | --- | --- |
+| `fittip.memory.recovered:v1` | the literal string `"1"` | records that the surface reloaded *itself* to recover a mutation whose result never rendered, so the reloaded page can explain the reload instead of flashing unexplained | on the next mutation, and by the browser when the tab session ends |
+
+It holds no memory content, no item id, no user id, no timestamp, and no
+status — only the fact that a self-triggered reload happened. It is
+session-scoped, never sent to the server, and versioned in its key so a later
+shape change cannot be misread. Reads and writes are wrapped in `try`/`catch`,
+so private browsing or disabled storage costs the explanation and never the
+recovery. This mirrors `fittip.goals.recovered:v1` on the accepted goal
+surface.
+
+An earlier version of this record said the browser stored nothing. That was
+true of `460ee18` and became false at `6ac57c2`; the table above is the
+correction.
 
 **Generated types.** `src/lib/supabase/database.types.ts` was regenerated with
 `npx.cmd supabase gen types --local --lang typescript` from a clean reset,
@@ -486,8 +505,13 @@ a `where user_id = …` that would mask a broken predicate, following
 - `rendering-conditional-render` — ternaries throughout, never `&&`.
 - `js-set-map-lookups` — version history is grouped by item id with a `Map`
   rather than a repeated scan.
-- `client-localstorage-schema` — not applicable and deliberately unused: this
-  surface stores nothing in the browser.
+- `client-localstorage-schema` — applies to the one entry the surface writes,
+  `fittip.memory.recovered:v1`. Versioned in the key, minimal by design (the
+  literal `"1"`, carrying no memory content or identifier), `sessionStorage`
+  rather than `localStorage` so it dies with the tab, cleared on the next
+  mutation, and read and written inside `try`/`catch`. See *What the browser
+  stores*. (An earlier version of this record called the rule not applicable;
+  that was true only before the correction commit.)
 
 `frontend-design` — the treatment applied. Memory is filed rather than
 ledgered: each remembered statement is its own index card with a status-
@@ -617,8 +641,13 @@ Confirm the judgment CI cannot supply:
 10. **Scope.** Confirm no AI extraction, pattern detection, plan or coaching
     generation, provider call, raw-chat store, global activity catalog, remote
     mutation, trigger, view, second RPC, service client, secret, or paid
-    resource was added, and that `src/app/home/you/page.tsx` is the only
-    change outside the memory slice.
+    resource was added. Four changes sit outside the memory slice, and these
+    are all of them: `src/app/home/you/page.tsx` (the entry point and a now-
+    false intro line), `src/architecture/server-boundary.test.ts` (the fourth
+    `.retry(false)` site), `src/lib/supabase/database.types.ts` (regenerated),
+    and a new import of `src/features/goals/mutation-watchdog.ts`, which is
+    read but not modified. `.github/workflows/ci.yml` in the reviewed range is
+    the lead's `deabe75`.
 11. **The recovery tells the truth and claims nothing.** Neither notice may
     say the change was saved — the action answers 200 for a success, a
     conflict, a validation failure, an expired session, and a persistence

@@ -137,6 +137,17 @@ export function MemoryManager({ items, expectedRevision, today }: Props) {
     INITIAL_MEMORY_ACTION_STATE,
   );
   const [filter, setFilter] = useState<Filter>("all");
+  // The Add-memory form is remounted to clear it, so its key must move only
+  // when a *create* settles. Keying it on the shared submission counter would
+  // throw away an unsaved draft whenever any other card completed an action —
+  // disable, accept, delete — with no warning. Sticky rather than derived,
+  // because `state.operation` reverts to another card's operation on the next
+  // action and a plain expression would flip the key back and lose the draft
+  // just the same.
+  const [createdAt, setCreatedAt] = useState(0);
+  if (state.operation === "create" && state.submission !== createdAt) {
+    setCreatedAt(state.submission);
+  }
   const stall = useMutationStall(pending, state.submission);
   const recovered = useRecoveredReload(state.submission);
   const notice =
@@ -198,7 +209,7 @@ export function MemoryManager({ items, expectedRevision, today }: Props) {
       <details className={styles.addPanel}>
         <summary>Add memory</summary>
         <MemoryForm
-          key={`create-${state.submission}`}
+          key={`create-${createdAt}`}
           action={action}
           expectedRevision={expectedRevision}
           operation="create"

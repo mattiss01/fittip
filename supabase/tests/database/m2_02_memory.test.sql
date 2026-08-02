@@ -52,17 +52,38 @@ select is(
   0,
   'the privileged function contains no dynamic SQL'
 );
+-- Extracts the configured value rather than searching for the setting's name.
+-- A `lock_timeout` of '0' disables the timeout entirely and '30min' is no
+-- bound worth having; both contain the string, so a presence check would pass
+-- for a function that hangs. The CASE keeps a malformed or absent value a
+-- failure rather than a cast error that would abort the file.
 select ok(
-  pg_get_functiondef(
-    'public.apply_memory_change(bigint,text,uuid,text,text,date)'::regprocedure
-  ) like '%lock_timeout%',
-  'the privileged function bounds how long it waits for a lock'
+  (
+    select case
+      when v ~ '^[0-9]+(\.[0-9]+)?\s*(ms|s|min|h|milliseconds?|seconds?|minutes?|hours?)$'
+        then v::interval > interval '0'
+         and v::interval <= interval '10 seconds'
+      else false
+    end
+    from (
+      select substring(
+        pg_get_functiondef(
+          'public.apply_memory_change(bigint,text,uuid,text,text,date)'::regprocedure
+        )
+        from 'set_config\(\s*''lock_timeout''\s*,\s*''([^'']+)'''
+      ) as v
+    ) as configured
+  ),
+  'the privileged function bounds its lock wait to a non-zero interval of at most ten seconds'
 );
+-- Asserts the mapping, not the mere presence of the condition name: an
+-- unhandled `lock_not_available` would surface as a generic failure rather
+-- than the conflict the caller can act on.
 select ok(
   pg_get_functiondef(
     'public.apply_memory_change(bigint,text,uuid,text,text,date)'::regprocedure
-  ) like '%lock_not_available%',
-  'the privileged function maps lock exhaustion instead of hanging'
+  ) ~ 'when\s+lock_not_available\s+then\s+raise\s+exception\s+using\s+errcode\s*=\s*''PT409''',
+  'lock exhaustion is mapped to the explicit conflict, not left to hang'
 );
 select is(
   (

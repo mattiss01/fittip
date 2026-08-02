@@ -1,8 +1,23 @@
 # ADR-010: M2 memory write boundary
 
-**Status:** proposed — records the direction the product owner approved in
-principle on 1 August 2026 when M2-02 was dispatched; awaiting confirmation
-with M2-02 acceptance
+**Status:** proposed — awaiting the product owner's decision with M2-02
+acceptance
+
+**What was approved, and what was not.** Decisions 1 through 6 and 8 through
+15 record the write boundary the product owner approved in principle on
+1 August 2026 when M2-02 was dispatched: append-only revisions behind one
+`SECURITY DEFINER` function, complete purge on permanent delete, and the
+bounded lock wait.
+
+**Decision 7 is the builder's own product judgement and was not authorized by
+the brief.** Making an `observed_pattern` start `proposed` whoever creates it
+is a visible behavioural choice, taken because M2-02 adds no AI and no
+onboarding, so without it nothing could produce a proposal and the approved
+accept / edit-and-accept / decline flow would have been unreachable and
+untestable. The alternative — letting a user create an item carrying
+system-inferred provenance — was rejected because it would let a user forge
+provenance, which the ticket forbids. It is presented here for the product
+owner's explicit ratification at acceptance, not as something already agreed.
 
 **Date:** 1 August 2026
 

@@ -337,6 +337,109 @@ describe("MemoryManager", () => {
   });
 });
 
+/** Scopes to the Add-memory panel: a card's own editor uses the same label. */
+function addMemoryPanel() {
+  const panel = screen.getByText("Add memory").closest("details");
+  if (!panel) throw new Error("the Add memory panel is missing");
+  return within(panel as HTMLElement);
+}
+
+describe("MemoryManager add-memory draft", () => {
+  it("keeps an unsaved draft when an unrelated card completes an action", () => {
+    const { rerender } = renderManager([item({ id: "a" })]);
+    const draft = "Sharp left knee pain on stairs since 12 July.";
+    fireEvent.change(
+      addMemoryPanel().getByLabelText("What FitTip should remember"),
+      { target: { value: draft } },
+    );
+
+    // Any other card finishing an action advances the shared counter.
+    useActionStateMock.mockReturnValue([
+      {
+        ...INITIAL_MEMORY_ACTION_STATE,
+        status: "saved",
+        message: "Memory disabled.",
+        submission: 1,
+        operation: "disable",
+        itemId: "a",
+      },
+      vi.fn(),
+      false,
+    ]);
+    rerender(
+      <MemoryManager
+        items={[item({ id: "a" })]}
+        expectedRevision={4}
+        today={TODAY}
+      />,
+    );
+
+    expect(
+      addMemoryPanel().getByLabelText("What FitTip should remember"),
+    ).toHaveValue(draft);
+  });
+
+  it("clears the form once the memory it holds is created", () => {
+    const { rerender } = renderManager([]);
+    fireEvent.change(
+      addMemoryPanel().getByLabelText("What FitTip should remember"),
+      { target: { value: "Trains before work." } },
+    );
+
+    useActionStateMock.mockReturnValue([
+      {
+        ...INITIAL_MEMORY_ACTION_STATE,
+        status: "saved",
+        message: "Memory saved.",
+        submission: 1,
+        operation: "create",
+      },
+      vi.fn(),
+      false,
+    ]);
+    rerender(
+      <MemoryManager
+        items={[item({ id: "a", content: "Trains before work." })]}
+        expectedRevision={5}
+        today={TODAY}
+      />,
+    );
+
+    expect(
+      addMemoryPanel().getByLabelText("What FitTip should remember"),
+    ).toHaveValue("");
+  });
+
+  it("returns the owner's own words after a rejected create", () => {
+    const { rerender } = renderManager([]);
+
+    useActionStateMock.mockReturnValue([
+      {
+        ...INITIAL_MEMORY_ACTION_STATE,
+        status: "validation",
+        message: "Enter between 1 and 1000 characters.",
+        submission: 1,
+        operation: "create",
+        draft: {
+          memoryType: "constraint",
+          content: "No pool this month.",
+          reviewDate: "",
+        },
+      },
+      vi.fn(),
+      false,
+    ]);
+    rerender(<MemoryManager items={[]} expectedRevision={4} today={TODAY} />);
+
+    expect(
+      addMemoryPanel().getByLabelText("What FitTip should remember"),
+    ).toHaveValue("No pool this month.");
+    expect(addMemoryPanel().getByLabelText("Memory type")).toHaveValue(
+      "constraint",
+    );
+  });
+});
+
 /**
  * M2-02's own defect, not an inherited concern. Continuous-integration run
  * 30728162026 and a local six-run repeat both froze this surface on "Saving
