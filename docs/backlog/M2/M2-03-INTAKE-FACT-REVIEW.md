@@ -450,6 +450,18 @@ design requires explicit architecture/privacy approval.
 8. **Privacy.** Approve collection notice placement, content classification,
    source retention, access/export, deletion, backups, and prohibited logging
    before external use.
+9. **Confidence after edit-and-accept.** Raised by M2-02's independent review on
+   2 August 2026 and inherited here, because M2-03 is the first ticket that can
+   actually produce it. M2-02's `edit_and_accept` deliberately leaves
+   `memory_items.confidence` untouched, and its pgTAP asserts that it stays put,
+   so a proposal offered at 70% keeps that number after the user rewrites the
+   text. The card then renders the user's own sentence with a model's confidence
+   attached — an inference figure qualifying words the model never wrote, which
+   runs against "a user statement outranks an inferred proposal". Unreachable in
+   M2-02 because nothing produces confidence there. Decide before M2-03 ships
+   whether edit-and-accept clears confidence, keeps it with a visible marker that
+   it refers to the original proposal, or something else. Changing it requires a
+   forward migration and an update to the M2-02 pgTAP assertion.
 
 ## Handoff
 
