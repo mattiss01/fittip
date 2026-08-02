@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(91);
+select plan(93);
 
 -- Structure -----------------------------------------------------------------
 
@@ -458,13 +458,27 @@ select lives_ok(
   $sql$,
   'the owner can record an observed pattern'
 );
+-- Overturned by the product owner on 2 August 2026: an observed pattern the
+-- owner writes is active on save like any other class. `proposed` is reserved
+-- for content FitTip derived, which no authenticated path can create.
 select ok(
   (
-    select status = 'proposed' and user_confirmed_at is null
+    select status = 'active'
+      and provenance = 'user_created'
+      and user_confirmed_at is not null
     from public.memory_items
     where memory_type = 'observed_pattern'
   ),
-  'an observed pattern starts proposed and unconfirmed'
+  'a user-written observed pattern is active and confirmed like any other class'
+);
+select is(
+  (
+    select count(*)::bigint
+    from public.memory_items
+    where status = 'proposed'
+  ),
+  0::bigint,
+  'no authenticated create produces a proposal'
 );
 select throws_ok(
   $sql$
@@ -615,7 +629,8 @@ select is(
   'active',
   'enable restores the item to active context'
 );
-select lives_ok(
+-- There is nothing to accept: the owner's own writing is already active.
+select throws_ok(
   format(
     $sql$
       select public.apply_memory_change(
@@ -626,22 +641,15 @@ select lives_ok(
     $sql$,
     (select id from public.memory_items where memory_type = 'observed_pattern')
   ),
-  'the owner can accept a proposal'
-);
-select ok(
-  (
-    select status = 'active'
-      and user_confirmed_at is not null
-      and provenance = 'user_created'
-    from public.memory_items
-    where memory_type = 'observed_pattern'
-  ),
-  'accepting activates the proposal and records the confirmation'
+  'PT409',
+  'Memory changed. Reload and try again.',
+  'an active item cannot be accepted again'
 );
 
--- A system-proposed item cannot be produced by the authenticated write path in
--- M2-02, so one is seeded directly to prove the acceptance contract that
--- M2-03 will rely on.
+-- No authenticated path can create a proposal, so the three that the review
+-- queue acts on are seeded directly as system-derived content. This is the
+-- contract M2-03 will produce against; it is proven here at the database
+-- level because no browser flow can reach it until then.
 reset role;
 insert into public.memory_revisions (
   id,
@@ -654,17 +662,40 @@ insert into public.memory_revisions (
   change_kind,
   status_after
 )
-values (
-  '53000000-0000-4000-8000-0000000000a1',
-  '53000000-0000-4000-8000-000000000001',
-  '53000000-0000-4000-8000-0000000000b1',
-  1,
-  'Recovers slowly after two hard sessions in a row.',
-  'system',
-  'inferred_proposed',
-  'created',
-  'proposed'
-);
+values
+  (
+    '53000000-0000-4000-8000-0000000000a1',
+    '53000000-0000-4000-8000-000000000001',
+    '53000000-0000-4000-8000-0000000000b1',
+    1,
+    'Recovers slowly after two hard sessions in a row.',
+    'system',
+    'inferred_proposed',
+    'created',
+    'proposed'
+  ),
+  (
+    '53000000-0000-4000-8000-0000000000a2',
+    '53000000-0000-4000-8000-000000000001',
+    '53000000-0000-4000-8000-0000000000b2',
+    1,
+    'Trains hardest on Tuesday evenings.',
+    'system',
+    'inferred_proposed',
+    'created',
+    'proposed'
+  ),
+  (
+    '53000000-0000-4000-8000-0000000000a3',
+    '53000000-0000-4000-8000-000000000001',
+    '53000000-0000-4000-8000-0000000000b3',
+    1,
+    'Prefers to avoid hill sessions.',
+    'system',
+    'inferred_proposed',
+    'created',
+    'proposed'
+  );
 insert into public.memory_items (
   id,
   user_id,
@@ -675,16 +706,37 @@ insert into public.memory_items (
   source_reference,
   current_revision_id
 )
-values (
-  '53000000-0000-4000-8000-0000000000b1',
-  '53000000-0000-4000-8000-000000000001',
-  'observed_pattern',
-  'proposed',
-  'inferred_proposed',
-  70,
-  'seeded:m2-02-test',
-  '53000000-0000-4000-8000-0000000000a1'
-);
+values
+  (
+    '53000000-0000-4000-8000-0000000000b1',
+    '53000000-0000-4000-8000-000000000001',
+    'observed_pattern',
+    'proposed',
+    'inferred_proposed',
+    70,
+    'seeded:m2-02-test',
+    '53000000-0000-4000-8000-0000000000a1'
+  ),
+  (
+    '53000000-0000-4000-8000-0000000000b2',
+    '53000000-0000-4000-8000-000000000001',
+    'observed_pattern',
+    'proposed',
+    'inferred_proposed',
+    55,
+    'seeded:m2-02-test',
+    '53000000-0000-4000-8000-0000000000a2'
+  ),
+  (
+    '53000000-0000-4000-8000-0000000000b3',
+    '53000000-0000-4000-8000-000000000001',
+    'observed_pattern',
+    'proposed',
+    'inferred_proposed',
+    40,
+    'seeded:m2-02-test',
+    '53000000-0000-4000-8000-0000000000a3'
+  );
 
 set local role authenticated;
 select set_config(
@@ -693,6 +745,39 @@ select set_config(
   true
 );
 
+select lives_ok(
+  $sql$
+    select public.apply_memory_change(
+      p_expected_collection_revision => 5,
+      p_operation => 'accept',
+      p_item_id => '53000000-0000-4000-8000-0000000000b2'
+    )
+  $sql$,
+  'the owner can accept a system proposal unchanged'
+);
+select ok(
+  (
+    select status = 'active'
+      and provenance = 'inferred_proposed'
+      and confidence = 55
+      and user_confirmed_at is not null
+    from public.memory_items
+    where id = '53000000-0000-4000-8000-0000000000b2'
+  ),
+  'accepting activates the proposal and records who confirmed it'
+);
+select ok(
+  (
+    select r.author_class = 'user'
+      and r.provenance = 'inferred_proposed'
+      and r.change_kind = 'accepted'
+      and r.content = 'Trains hardest on Tuesday evenings.'
+    from public.memory_items i
+    join public.memory_revisions r on r.id = i.current_revision_id
+    where i.id = '53000000-0000-4000-8000-0000000000b2'
+  ),
+  'an accepted revision keeps the provenance of the text it carries'
+);
 select lives_ok(
   $sql$
     select public.apply_memory_change(
@@ -740,29 +825,11 @@ select lives_ok(
   $sql$
     select public.apply_memory_change(
       p_expected_collection_revision => 7,
-      p_operation => 'create',
-      p_memory_type => 'observed_pattern',
-      p_content => 'Skips mobility work when travelling.'
+      p_operation => 'reject',
+      p_item_id => '53000000-0000-4000-8000-0000000000b3'
     )
   $sql$,
-  'the owner can record a second observed pattern'
-);
-select lives_ok(
-  format(
-    $sql$
-      select public.apply_memory_change(
-        p_expected_collection_revision => 8,
-        p_operation => 'reject',
-        p_item_id => %L::uuid
-      )
-    $sql$,
-    (
-      select id
-      from public.memory_items
-      where status = 'proposed'
-    )
-  ),
-  'the owner can reject a proposal'
+  'the owner can reject a system proposal'
 );
 select is(
   (
@@ -777,7 +844,7 @@ select throws_ok(
   format(
     $sql$
       select public.apply_memory_change(
-        p_expected_collection_revision => 9,
+        p_expected_collection_revision => 8,
         p_operation => 'enable',
         p_item_id => %L::uuid
       )
@@ -791,7 +858,7 @@ select throws_ok(
 select lives_ok(
   $sql$
     select public.apply_memory_change(
-      p_expected_collection_revision => 9,
+      p_expected_collection_revision => 8,
       p_operation => 'create',
       p_memory_type => 'constraint',
       p_content => 'No pool access until the local pool reopens.',
@@ -812,7 +879,7 @@ select lives_ok(
   format(
     $sql$
       select public.apply_memory_change(
-        p_expected_collection_revision => 10,
+        p_expected_collection_revision => 9,
         p_operation => 'renew',
         p_item_id => %L::uuid,
         p_expires_on => '2027-01-01'
@@ -837,7 +904,7 @@ select throws_ok(
   format(
     $sql$
       select public.apply_memory_change(
-        p_expected_collection_revision => 10,
+        p_expected_collection_revision => 9,
         p_operation => 'disable',
         p_item_id => %L::uuid
       )
@@ -850,13 +917,13 @@ select throws_ok(
 );
 select is(
   (select revision from public.memory_collections),
-  11::bigint,
+  10::bigint,
   'a stale memory change does not advance the collection'
 );
 select throws_ok(
   $sql$
     select public.apply_memory_change(
-      p_expected_collection_revision => 11,
+      p_expected_collection_revision => 10,
       p_operation => 'create',
       p_memory_type => 'preference',
       p_content => '   '
@@ -869,7 +936,7 @@ select throws_ok(
 select throws_ok(
   $sql$
     select public.apply_memory_change(
-      p_expected_collection_revision => 11,
+      p_expected_collection_revision => 10,
       p_operation => 'create',
       p_memory_type => 'equipment_catalog',
       p_content => 'Anything.'
@@ -882,7 +949,7 @@ select throws_ok(
 select lives_ok(
   $sql$
     select public.apply_memory_change(
-      p_expected_collection_revision => 11,
+      p_expected_collection_revision => 10,
       p_operation => 'create',
       p_memory_type => 'preference',
       p_content => 'Purge sentinel alpha bravo.'
@@ -894,7 +961,7 @@ select lives_ok(
   format(
     $sql$
       select public.apply_memory_change(
-        p_expected_collection_revision => 12,
+        p_expected_collection_revision => 11,
         p_operation => 'edit',
         p_item_id => %L::uuid,
         p_content => 'Purge sentinel charlie delta.'
@@ -912,7 +979,7 @@ select lives_ok(
   format(
     $sql$
       select public.apply_memory_change(
-        p_expected_collection_revision => 13,
+        p_expected_collection_revision => 12,
         p_operation => 'delete',
         p_item_id => %L::uuid
       )
@@ -1000,6 +1067,9 @@ select is(
   1::bigint,
   'user B sees only their own collection revision'
 );
+-- User B's own collection is at 1, so this passes the revision check and can
+-- only fail on ownership. Passing a stale revision here would let the
+-- assertion succeed without ever testing cross-owner access.
 select throws_ok(
   $sql$
     select public.apply_memory_change(
@@ -1023,7 +1093,7 @@ select set_config(
 );
 select is(
   (select count(*)::bigint from public.memory_items),
-  5::bigint,
+  6::bigint,
   'user A still sees only their own memory items'
 );
 select is(
@@ -1037,7 +1107,7 @@ select is(
 );
 select is(
   (select revision from public.memory_collections),
-  14::bigint,
+  13::bigint,
   'user A collection revision is untouched by user B activity'
 );
 
