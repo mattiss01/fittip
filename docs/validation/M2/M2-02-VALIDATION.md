@@ -5,7 +5,7 @@
 **Lifecycle state:** testable — awaiting independent exact-commit review
 
 **Exact implementation review target:**
-`6ac57c2741f43ec32cc9b5f9a959c01a70b59df6`
+`3fc223732214732067d76618a6e6bd29c47abdc9`
 
 **Initial implementation commit:**
 `460ee184cb60c28d41f64481515c0bb8f459249a`
@@ -16,6 +16,11 @@
   result never reaches the screen, after continuous-integration run
   30728162026 proved the defect on this surface; also formats
   `e2e/m2-02-memory.spec.ts`, which failed the CI Prettier step.
+- `3fc223732214732067d76618a6e6bd29c47abdc9` — the first independent review's
+  three corrections: an unsaved Add-memory draft destroyed by any unrelated
+  action, two bounded-lock pgTAP guards that passed when the property was
+  absent, and ADR-010 framing a builder decision as pre-approved. Also
+  corrects this record's browser-storage claims.
 
 **Lead commit on this branch:** `deabe75` — `ci: run the M2-02 memory browser
 flow` (port 3016). Wiring the flow into continuous integration was a
@@ -44,7 +49,12 @@ two failures, both real and both now fixed in
 run* below. The run for the corrected SHA is not yet recorded; the lead pushes
 and records it.
 
-**Independent review:** not yet performed
+**Independent review:** first round reviewed `6178d8e` against CI run
+30748008542 (green) and returned **correction required** — three findings, no
+authorization, ownership, deletion, provenance, locking, or privacy defect in
+the code. All three are fixed in
+`3fc223732214732067d76618a6e6bd29c47abdc9`; see *The first independent review*
+below. Re-review pending.
 
 **Product-owner acceptance:** not yet requested
 
@@ -82,6 +92,9 @@ and records it.
   reference are displayed when present, never as certainty.
 - A save that races another tab reports the conflict and offers a reload
   action rather than overwriting the newer collection.
+- An unsaved **Add memory** draft survives any action taken on another card.
+  The form clears only when the memory it holds has been created, and a
+  rejected create returns the owner's own words.
 - A save whose result never reaches the screen no longer leaves the surface
   frozen. If the reply arrived and did not render, the page says so and
   reloads to show what is actually saved; if no reply arrived at all, it
@@ -188,7 +201,29 @@ builder's. The five changed screenshots are the same flow re-captured against
 the corrected build. Later versions of this record are added in a further
 commit, because a record cannot contain the SHA of the commit that adds it.
 
-Files in the correction whose purpose is not evident from the path and diff:
+The second correction,
+`git diff --stat 6ac57c2741f43ec32cc9b5f9a959c01a70b59df6..3fc223732214732067d76618a6e6bd29c47abdc9`:
+
+```
+ docs/decisions/ADR-010-M2-MEMORY-WRITE-BOUNDARY.md |  21 +-
+ docs/validation/M2/M2-02-VALIDATION.md             | 239 +++++++++++++++++----
+ .../M2/evidence/M2-02-delete-390x844.png           | Bin 161668 -> 148774 bytes
+ .../validation/M2/evidence/M2-02-empty-390x844.png | Bin 34722 -> 34752 bytes
+ .../validation/M2/evidence/M2-02-filed-390x844.png | Bin 123183 -> 128980 bytes
+ .../validation/M2/evidence/M2-02-final-390x844.png | Bin 123896 -> 123564 bytes
+ src/components/memory/memory-manager.test.tsx      | 103 +++++++++
+ src/components/memory/memory-manager.tsx           |  13 +-
+ supabase/tests/database/m2_02_memory.test.sql      |  33 ++-
+ 9 files changed, 361 insertions(+), 48 deletions(-)
+```
+
+Three product files changed there: the create-form key in
+`memory-manager.tsx`, the two lock guards in `m2_02_memory.test.sql`, and the
+tests covering the draft. The rest is documentation and re-captured
+screenshots.
+
+Files in the first correction whose purpose is not evident from the path and
+diff:
 
 - `src/components/memory/memory-manager.tsx` — adds the M2-05 recovery hooks
   (`useMutationStall`, `useRecoveredReload`) and the honest notices they
@@ -292,6 +327,68 @@ in-flight states first. **No assertion was relaxed and no timeout was raised.**
 **Measured result:** 1 failure in 6 runs before the fix; **24 consecutive
 passes** after it (two batches of `--repeat-each=12`, `--workers=1`, against
 `build` + `start` on port 3016).
+
+## The first independent review
+
+The reviewer read `6178d8e` against green CI run 30748008542, reconciled the
+manifest exactly, and found no authorization, ownership, deletion,
+provenance, locking, or privacy defect in the code. Three corrections were
+required; all are in `3fc223732214732067d76618a6e6bd29c47abdc9`.
+
+**1. This record made a privacy claim the code contradicted.** It said the
+browser stored nothing. That was true of `460ee18` and stopped being true at
+`6ac57c2`, which added the `sessionStorage` recovery marker. On a Tier 1
+health-adjacent record the privacy section has to be exactly right, so it now
+carries the full disclosure — key, value, purpose, and when it is cleared —
+under *What the browser stores*, and the
+`client-localstorage-schema` entry says the rule applies rather than that it
+does not. Reviewer checklist item 10 was also wrong: four changes sit outside
+the memory slice, not one, and it now names all four.
+
+**2. Two bounded-lock pgTAP guards passed when the property was absent.**
+They searched the function definition for the strings `lock_timeout` and
+`lock_not_available`. A function setting `lock_timeout` to `'0'` — which
+disables the timeout outright and restores exactly the unbounded wait this
+ticket existed to avoid — contains that string and passed. So did `'30min'`.
+The guard now extracts the configured value and asserts it is a non-zero
+interval of at most ten seconds, and the second asserts `lock_not_available`
+is *mapped* to `PT409` rather than merely mentioned. Verified against
+synthetic definitions before adoption:
+
+| Configured value | Old guard | New guard |
+| --- | --- | --- |
+| `'3s'` (actual) | pass | **pass** |
+| `'0'` (timeout disabled) | pass | **fail** |
+| `'30min'` | pass | **fail** |
+| setting absent entirely | fail | **fail** |
+
+The runtime behaviour was already correct — the reviewer confirmed the code
+path and the two-session `psql` probe independently. Only the guard changed.
+
+**3. An unsaved Add-memory draft was destroyed by any unrelated action.** The
+create form was keyed on the shared submission counter, which
+`changeMemoryAction` increments on every completed action from every card. Open
+**Add memory**, type four hundred characters, click **Disable** on a card
+lower down, and the form remounted empty with no warning. The per-card edit
+forms already guarded against this; the create form now does too. The key is
+sticky rather than derived, because a plain expression would flip back on the
+next unrelated action and lose the draft just the same. Three tests cover it,
+and the first fails without the fix. This is M2-07 finding 4, fixed here
+rather than added a second time to that backlog.
+
+**ADR-010 wording.** The status line framed the whole ADR as approved in
+principle, which laundered decision 7 — an `observed_pattern` always starting
+`proposed` — as pre-approved. It is the builder's own product judgement, taken
+because nothing else in M2-02 can produce a proposal. The header now separates
+what the product owner approved from what awaits explicit ratification. The
+behaviour is unchanged, and both the reviewer and the lead recommend the owner
+accept it.
+
+**Routed elsewhere by the lead, deliberately not fixed here:** stale
+`confidence` shown beside text rewritten by edit-and-accept (unreachable until
+M2-03 produces confidence values) goes to M2-03; missing focus restoration
+after a mutation needs one ticket covering this surface and the identically
+shaped accepted goal surface, not a divergent fix here.
 
 ## Data, migration, API, privacy, and security effects
 
@@ -429,10 +526,12 @@ locally while developing, reported as such.
 | `npx.cmd supabase db advisors --local --type all --level warn --fail-on warn` | `No issues found` |
 | `npm.cmd run lint` | clean, 0 problems |
 | `npm.cmd run typecheck` | clean |
-| `npm.cmd run test:run` | `Test Files 45 passed (45)`, `Tests 325 passed (325)` after the correction; 321 before it |
+| `npm.cmd run test:run` | `Test Files 45 passed (45)`, `Tests 328 passed (328)` after both corrections; 325 after the first, 321 before either |
 | `npm.cmd run build` | succeeded; `/home/you/memory` listed as server-rendered on demand |
 | `npx.cmd playwright test --config=e2e/m2-02.playwright.config.ts --workers=1 --repeat-each=12` against `npm.cmd run start -- -p 3016`, run twice | **24 passed, 0 failed, 0 skipped** — the service-role key was supplied, so the spec did not skip itself |
 | The same flow before the correction, `--repeat-each=6` | **1 failed, 5 passed** — the defect CI caught, reproduced locally |
+| The flow again after the review corrections, `--repeat-each=8` | **8 passed, 0 failed** |
+| New lock guards evaluated against synthetic definitions in `psql` | `'3s'` passes; `'0'`, `'30min'` and an absent setting all fail |
 | `git diff --check` | clean |
 | Two-session bounded-lock probe (below) | contender aborted after 3s with `PT409` |
 
@@ -457,8 +556,9 @@ changes, and CI's Prettier step on a Linux checkout is the real gate.
 
 **pgTAP coverage.** The new suite asserts, behaviourally where behaviour is
 what matters: table and function existence; `SECURITY DEFINER` with an empty
-search path and the expected owner; absence of dynamic SQL; presence of the
-`lock_timeout` and `lock_not_available` guards; a required owner column on all
+search path and the expected owner; absence of dynamic SQL; that the
+configured `lock_timeout` is a non-zero interval of at most ten seconds and
+that `lock_not_available` is mapped to `PT409`; a required owner column on all
 four tables; owner-scoped composite foreign keys; that deletion evidence has
 exactly seven columns and no content column; that no memory table other than
 `memory_revisions` carries a text content column; the seven ownership and
@@ -591,10 +691,13 @@ overflow at 390px.
 
 ## Independent reviewer checklist
 
-Review commit `6ac57c2741f43ec32cc9b5f9a959c01a70b59df6` on
-`ticket/m2-02-memory-model`, plus the follow-up commit adding this record.
+Review commit `3fc223732214732067d76618a6e6bd29c47abdc9` on
+`ticket/m2-02-memory-model`, plus the follow-up commit adding this record. The
+first round's three findings are addressed in that commit and described under
+*The first independent review*; the re-review should confirm those and
+re-check nothing else regressed.
 
-Read `git diff 79fdefbb76005264bbea9e1acbdc37f46289b0e4..6ac57c2741f43ec32cc9b5f9a959c01a70b59df6`
+Read `git diff 79fdefbb76005264bbea9e1acbdc37f46289b0e4..3fc223732214732067d76618a6e6bd29c47abdc9`
 as the source of truth, and confirm the CI run is green for that SHA. Do not
 re-run lint, typecheck, `test:run`, `build`, the database matrix, or the
 browser flow — CI covers them, and CI now includes the 390px memory flow. Note
