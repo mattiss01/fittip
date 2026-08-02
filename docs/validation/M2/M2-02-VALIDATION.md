@@ -1020,6 +1020,38 @@ finding for `memory_items`, `memory_revisions`, `memory_collections`, or
 requested threshold, so their absence is positive evidence that RLS held on all
 four new tables after the hosted migration.
 
+## Post-merge record
+
+The accepted branch was merged to `master` on 2 August 2026, bringing the four
+governance commits made on `master` during delivery into the branch first so the
+merge itself introduced no surprise.
+
+- Resulting `master` SHA: `cd00ac31dfc4b00bc0b7f9eb67270c0d85251303`, pushed to
+  `origin/master` as `34e5026..cd00ac3`.
+- `master` continuous-integration run `30763801088` is **green on all three
+  jobs** for that SHA.
+- Founder Vercel deployment for that SHA reached `READY`:
+  `https://fittip-fnfabci6i-mattis-3657s-projects.vercel.app`.
+- Founder alias: `https://fittip-gilt.vercel.app/`.
+
+### Hosted smoke and security checks
+
+Anonymous requests against the founder alias on 2 August 2026:
+
+| Request | Result |
+| --- | --- |
+| `GET /` | `200` with `private, no-cache, no-store, max-age=0, must-revalidate` |
+| `GET /home/you/memory` | `303` to `/` with `private, no-cache, no-store, must-revalidate, max-age=0` |
+| `GET /home/you/goals` | `303` to `/`, unchanged by this ticket |
+
+The new authenticated memory route is therefore unreachable anonymously on the
+founder deployment and is not cached by the edge. HSTS is present on all three.
+
+The hosted database verification recorded above ran **before** the merge,
+because the migration had to reach the founder project for the product owner to
+exercise the surface on the Preview at all. It is not repeated here; no schema
+change occurred between that check and this deployment.
+
 ### A note for whoever corrects this migration next
 
 `20260801085404_m2_02_memory_model.sql` was amended in place once, during the
