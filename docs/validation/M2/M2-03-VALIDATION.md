@@ -246,6 +246,30 @@ Post-correction local results:
 - Full ESLint and `tsc --noEmit`: **pass**.
 - Focused Prettier, secret, diff, and scope checks: **pass**.
 
+## Fourth branch CI correction
+
+Branch CI
+[run 30769658497](https://github.com/mattiss01/fittip/actions/runs/30769658497)
+against `ee60cfc2dae41fa2591a734e7477ef1b135bbb61` was **red only at
+a post-publication Playwright assertion**. App and database jobs were green,
+the full onboarding flow published successfully, and Memory contained the
+accepted `I am not training currently.` item. The locator was ambiguous because
+the same legitimate text appears in current content, the edit textarea, and
+version history.
+
+Correction commit `b09e4191e949542f84ea22835fccc9b668343313` keeps the exact
+text assertion but scopes it to `[data-memory-content="true"]`, the semantic
+marker for current Memory content. It does not use `.first()` or weaken the
+assertion. The adjacent goal-title assertion is not equivalent: the title
+renders once as the card heading, and it had already passed in this run.
+
+Post-correction local results:
+
+- Focused Prettier and ESLint: **pass**.
+- Playwright discovery: **pass**, the mobile Chromium auth flow loads as one
+  valid test.
+- `tsc --noEmit`, diff, and scope checks: **pass**.
+
 ## Required evidence still pending
 
 - **Branch CI:** corrected exact-SHA run pending push. Its green result is
