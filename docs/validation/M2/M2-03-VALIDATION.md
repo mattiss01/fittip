@@ -211,6 +211,41 @@ Post-correction local results:
 - Full ESLint and `tsc --noEmit`: **pass**.
 - Focused Prettier and diff/scope checks: **pass**.
 
+## Third branch CI correction
+
+Branch CI
+[run 30769063418](https://github.com/mattiss01/fittip/actions/runs/30769063418)
+against `ac69443e67c45201398699a9e0f5211c9426d598` was **red only in
+the 390px authentication/onboarding flow**. App and database jobs were green.
+The named save persisted successfully, but the production Server Action
+revalidation replaced the rendered tree before the client effect reliably
+observed its returned `redirectTo`; the page therefore stayed on onboarding.
+The first diagnostic also matched Next's blank route-announcer `role=alert`
+instead of the FitTip notice.
+
+Correction commit `6be2ffcd471c8b591a9309117f0e2509d95de258` makes the
+navigation boundary deterministic:
+
+- After the persistence/error-mapping resolver succeeds, the Server Action
+  calls Next's `redirect("/home/you")` outside the resolver's `try/catch`.
+  Successful finish and cancel therefore use the framework's Server Action 303
+  instead of a client effect.
+- Validation, conflict, session, and persistence failures still return their
+  content-safe actionable states and never call redirect.
+- The client redirect effect is removed. The app notice now has a dedicated
+  `data-onboarding-notice` marker, and Playwright diagnostics scope only to its
+  error states rather than any framework alert.
+- Action tests prove successful finish invokes the framework redirect,
+  validation does not redirect, and the framework redirect throw escapes the
+  persistence error mapper.
+
+Post-correction local results:
+
+- Focused action/parser/manager tests: **pass**, 3 files and 13 tests.
+- Full Vitest: **pass**, 50 files and 349 tests.
+- Full ESLint and `tsc --noEmit`: **pass**.
+- Focused Prettier, secret, diff, and scope checks: **pass**.
+
 ## Required evidence still pending
 
 - **Branch CI:** corrected exact-SHA run pending push. Its green result is
