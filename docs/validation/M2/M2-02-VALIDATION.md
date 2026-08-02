@@ -369,12 +369,33 @@ path and the two-session `psql` probe independently. Only the guard changed.
 create form was keyed on the shared submission counter, which
 `changeMemoryAction` increments on every completed action from every card. Open
 **Add memory**, type four hundred characters, click **Disable** on a card
-lower down, and the form remounted empty with no warning. The per-card edit
-forms already guarded against this; the create form now does too. The key is
-sticky rather than derived, because a plain expression would flip back on the
-next unrelated action and lose the draft just the same. Three tests cover it,
-and the first fails without the fix. This is M2-07 finding 4, fixed here
-rather than added a second time to that backlog.
+lower down, and the form remounted empty with no warning. The create form is
+now keyed stickily rather than by a derived expression, because a plain
+expression would flip back on the next unrelated action and lose the draft just
+the same. Three tests cover it, and the first fails without the fix. This is
+M2-07 finding 4, fixed here rather than added a second time to that backlog.
+
+An earlier version of this paragraph claimed the per-card edit forms "already
+guarded against this". The second independent review, on 2 August 2026, showed
+that is not true in one case, and it is corrected here rather than left
+standing. The card editor key is
+`` `${editOperation}-${item.id}-${draft ? actionState.submission : 0}` ``
+(`src/components/memory/memory-manager.tsx:427-429`), which is correct in the
+common case but flips back after a **rejected** edit on that same card: a
+conflict preserves the draft and moves the key to `edit-A-1`, the user retypes
+without submitting, an unrelated action on card B resolves card A's `draft` to
+`undefined`, the key returns to `edit-A-0`, and the retyped text is lost. That
+is the identical flip-back the sticky create key exists to prevent, surviving in
+the card editors because only the create key was made sticky.
+
+The behavior is unchanged by this correction and is present identically in
+`460ee18`, `6ac57c2`, and `3fc2237`, so it is pre-existing rather than
+introduced. It costs unsaved input only, with no data, authorization, or
+privacy consequence, and it requires a rejected edit followed by a retype
+followed by an unrelated action. The fix is the same sticky-key pattern and is
+routed to [M2-10](../../backlog/M2/M2-10-FOCUS-LOST-AFTER-MUTATION.md) alongside
+the focus-restoration work on both surfaces. The *Delivered behavior* claim
+about **Add memory** drafts is correctly scoped and remains true as written.
 
 **ADR-010 wording.** The status line framed the whole ADR as approved in
 principle, which laundered decision 7 — an `observed_pattern` always starting
