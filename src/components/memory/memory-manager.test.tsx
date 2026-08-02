@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -21,14 +22,102 @@ vi.mock("@/app/home/you/memory/actions", () => ({
 }));
 
 import { INITIAL_MEMORY_ACTION_STATE } from "@/app/home/you/memory/action-state";
+import {
+  CONFIRMATION_BUDGET_MS,
+  RECOVERY_NOTICE_MS,
+  RENDER_GRACE_MS,
+  WATCH_INTERVAL_MS,
+} from "@/features/goals/mutation-watchdog";
 import { MemoryManager, type MemoryView } from "./memory-manager";
 
 const TODAY = "2026-08-01";
+const RECOVERY_FLAG = "fittip.memory.recovered:v1";
+const PAGE_ORIGIN = "http://localhost";
+const PAGE_PATH = "/home/you/memory";
+
+let clock = 0;
+let reload: ReturnType<typeof vi.fn>;
+let realLocation: Location | null = null;
+let realPerformanceObserver: typeof globalThis.PerformanceObserver | undefined;
+let observerStubbed = false;
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.restoreAllMocks();
+  window.sessionStorage.clear();
+  if (realLocation) {
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: realLocation,
+    });
+    realLocation = null;
+  }
+  if (observerStubbed) {
+    if (realPerformanceObserver === undefined) {
+      delete (globalThis as { PerformanceObserver?: unknown })
+        .PerformanceObserver;
+    } else {
+      globalThis.PerformanceObserver = realPerformanceObserver;
+    }
+    observerStubbed = false;
+  }
 });
+
+/**
+ * The watchdog reads the monotonic clock rather than the wall clock, so the
+ * fake timers are paired with an explicit `performance.now`. Nothing in these
+ * tests depends on real elapsed time.
+ */
+function useControlledClock(startAt = 1_000) {
+  clock = startAt;
+  vi.useFakeTimers();
+  vi.spyOn(performance, "now").mockImplementation(() => clock);
+}
+
+/** Steps the monotonic clock and the fake timers together, never in one jump,
+ *  so a timer scheduled mid-way does not observe time that has not passed. */
+function advance(ms: number) {
+  const step = 50;
+  for (let elapsed = 0; elapsed < ms; elapsed += step) {
+    clock += step;
+    act(() => {
+      vi.advanceTimersByTime(step);
+    });
+  }
+}
+
+function stubLocation() {
+  realLocation = window.location;
+  reload = vi.fn();
+  Object.defineProperty(window, "location", {
+    configurable: true,
+    value: {
+      origin: PAGE_ORIGIN,
+      pathname: PAGE_PATH,
+      search: "",
+      href: `${PAGE_ORIGIN}${PAGE_PATH}`,
+      reload,
+    },
+  });
+}
+
+/** Reports the given resource entries as soon as the surface observes. */
+function stubPerformanceObserver(
+  entries: { name: string; responseEnd: number }[],
+) {
+  realPerformanceObserver = globalThis.PerformanceObserver;
+  observerStubbed = true;
+  globalThis.PerformanceObserver = class {
+    constructor(
+      private readonly report: (list: { getEntries: () => unknown[] }) => void,
+    ) {}
+    observe() {
+      this.report({ getEntries: () => entries });
+    }
+    disconnect() {}
+  } as unknown as typeof globalThis.PerformanceObserver;
+}
 
 describe("MemoryManager", () => {
   it("says nothing is stored rather than claiming the coach has learned anything", () => {
@@ -245,6 +334,102 @@ describe("MemoryManager", () => {
     );
     expect(submits).not.toHaveLength(0);
     for (const button of submits) expect(button).toBeDisabled();
+  });
+});
+
+/**
+ * M2-02's own defect, not an inherited concern. Continuous-integration run
+ * 30728162026 and a local six-run repeat both froze this surface on "Saving
+ * memory change…" with stale content, at different mutations. In the CI trace
+ * the server had answered in 33 ms with a complete `{"status":"saved"}`
+ * payload, so the transition carrying it never committed.
+ */
+describe("MemoryManager mutation recovery", () => {
+  it("reports a reply that never rendered, then reloads to show what is saved", () => {
+    useControlledClock();
+    stubLocation();
+    // The response arrives immediately; the transition never commits.
+    stubPerformanceObserver([
+      { name: `${PAGE_ORIGIN}${PAGE_PATH}`, responseEnd: 1_010 },
+    ]);
+    renderManager([item({ id: "a" })], INITIAL_MEMORY_ACTION_STATE, true);
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Saving memory change…",
+    );
+
+    // The grace period plus one watch interval, so the check that crosses it
+    // has actually run.
+    advance(RENDER_GRACE_MS + WATCH_INTERVAL_MS + 100);
+
+    const notice = screen.getByRole("status");
+    expect(notice).toHaveTextContent(
+      "This memory change did not appear. Reloading to show what is saved.",
+    );
+    expect(notice).toHaveAttribute("data-state", "lost-render");
+    // Says only what is observable. The reload is what settles the outcome, so
+    // the notice never reports this change as applied.
+    expect(notice).not.toHaveTextContent("Memory saved.");
+    expect(reload).not.toHaveBeenCalled();
+    expect(window.sessionStorage.getItem(RECOVERY_FLAG)).toBe("1");
+
+    advance(RECOVERY_NOTICE_MS + 100);
+    expect(reload).toHaveBeenCalled();
+  });
+
+  it("reports an unconfirmed change and offers a reload when no reply arrives", () => {
+    useControlledClock();
+    stubLocation();
+    stubPerformanceObserver([]);
+    renderManager([item({ id: "a" })], INITIAL_MEMORY_ACTION_STATE, true);
+
+    advance(CONFIRMATION_BUDGET_MS + 100);
+
+    const notice = screen.getByRole("status");
+    expect(notice).toHaveTextContent(
+      "This memory change has not been confirmed. Reload to see whether it was saved.",
+    );
+    expect(notice).toHaveAttribute("data-state", "unconfirmed");
+    expect(
+      screen.getByRole("link", { name: "Reload current memory" }),
+    ).toHaveAttribute("href", PAGE_PATH);
+    // Nothing is assumed either way, so the surface never reloads by itself.
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it("explains the reload it triggered, until the next change", () => {
+    window.sessionStorage.setItem(RECOVERY_FLAG, "1");
+    renderManager([item({ id: "a" })]);
+
+    const notice = screen.getByRole("status");
+    expect(notice).toHaveTextContent(
+      "Your last memory change did not appear, so this page was reloaded. What you see below is what is saved.",
+    );
+    expect(notice).toHaveAttribute("data-state", "recovered");
+
+    cleanup();
+    // A surface that has already handled a mutation is not a reloaded one.
+    renderManager([item({ id: "a" })], {
+      ...INITIAL_MEMORY_ACTION_STATE,
+      status: "saved",
+      message: "Memory saved.",
+      submission: 1,
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Memory saved.");
+  });
+
+  it("says nothing while a change is still inside its budget", () => {
+    useControlledClock();
+    stubLocation();
+    stubPerformanceObserver([]);
+    renderManager([item({ id: "a" })], INITIAL_MEMORY_ACTION_STATE, true);
+
+    advance(RENDER_GRACE_MS + 100);
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Saving memory change…",
+    );
+    expect(reload).not.toHaveBeenCalled();
   });
 });
 

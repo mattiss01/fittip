@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import {
   INITIAL_MEMORY_ACTION_STATE,
@@ -9,6 +15,18 @@ import {
 } from "@/app/home/you/memory/action-state";
 import { changeMemoryAction } from "@/app/home/you/memory/actions";
 import styles from "@/app/home/you/memory/memory.module.css";
+// M2-05 established this watchdog for the goal surface. The timing rules are
+// not goal-specific and the memory surface reproduces the same defect (see
+// `useMutationStall` below), so they are reused rather than duplicated. The
+// module name is now too narrow; renaming it touches M2-05's accepted code and
+// belongs to a separate ticket.
+import {
+  latestActionResponseAt,
+  RECOVERY_NOTICE_MS,
+  watchGoalMutation,
+  WATCH_INTERVAL_MS,
+  type GoalMutationWatch,
+} from "@/features/goals/mutation-watchdog";
 
 export type MemoryRevisionView = {
   id: string;
@@ -103,12 +121,29 @@ const SAFETY_NOTICE =
 const DELETE_CONSEQUENCE =
   "This erases the current text and every earlier version of it, and cannot be undone. A dated record that a deletion happened stays, without the text.";
 
+/**
+ * Session-scoped, non-personal, versioned marker that survives the recovery
+ * reload. It carries no memory content, only the fact that the reload was
+ * self-triggered.
+ */
+const RECOVERY_FLAG = "fittip.memory.recovered:v1";
+
+const RECOVERED_NOTICE =
+  "Your last memory change did not appear, so this page was reloaded. What you see below is what is saved.";
+
 export function MemoryManager({ items, expectedRevision, today }: Props) {
   const [state, action, pending] = useActionState(
     changeMemoryAction,
     INITIAL_MEMORY_ACTION_STATE,
   );
   const [filter, setFilter] = useState<Filter>("all");
+  const stall = useMutationStall(pending, state.submission);
+  const recovered = useRecoveredReload(state.submission);
+  const notice =
+    stallNotice(stall) ??
+    (pending ? "Saving memory change…" : null) ??
+    (recovered ? RECOVERED_NOTICE : null);
+  const noticeState = stall ?? (recovered ? "recovered" : state.status);
 
   const stated = items.map((item) => ({ item, state: cardState(item, today) }));
   const counts = countByState(stated);
@@ -125,14 +160,14 @@ export function MemoryManager({ items, expectedRevision, today }: Props) {
   return (
     <div className={styles.manager}>
       <p
-        className={state.status === "idle" ? styles.srOnly : styles.notice}
-        data-state={pending ? "saving" : state.status}
+        className={noticeState === "idle" ? styles.srOnly : styles.notice}
+        data-state={noticeState}
         role="status"
         aria-live="polite"
       >
-        {pending ? "Saving memory change…" : state.message}
+        {notice ?? state.message}
       </p>
-      {state.status === "conflict" ? (
+      {state.status === "conflict" || stall === "unconfirmed" ? (
         <a className={styles.reload} href="/home/you/memory">
           Reload current memory
         </a>
@@ -583,6 +618,160 @@ function ConfirmedAction({
       </div>
     </details>
   );
+}
+
+/**
+ * The memory surface submits through `useActionState`, so the typed result and
+ * the revalidated server tree arrive inside one App Router transition — the
+ * same shape M2-05 documented for goals, and it fails the same way here.
+ *
+ * Measured on this surface: in a six-run repeat of the 390px flow, one run
+ * froze on "Saving memory change…" with stale content and no message, and the
+ * continuous-integration run 30728162026 froze at a different mutation. In the
+ * CI trace the server answered that mutation in 33 ms with a complete, correct
+ * payload — `{"status":"saved"}` plus the new item — and the transition
+ * carrying it never committed. So this is not slowness, and waiting longer
+ * would not have helped.
+ *
+ * Watching the mutation from outside React separates two cases: a reply that
+ * arrived but never reached the screen, which a reload settles by showing what
+ * is actually saved, and a mutation with no reply at all, which is reported as
+ * unconfirmed rather than assumed either way. Neither case can tell whether
+ * the change succeeded — the action answers 200 for every outcome — so neither
+ * claims it did.
+ */
+type MutationStall = Exclude<GoalMutationWatch, "waiting">;
+
+function useMutationStall(
+  pending: boolean,
+  submission: number,
+): MutationStall | null {
+  // Keyed by the submission it describes, so a later mutation never inherits
+  // an earlier one's verdict and no effect has to reset state.
+  const [stall, setStall] = useState<{
+    key: string;
+    verdict: MutationStall;
+  } | null>(null);
+  const respondedAt = useRef<number | null>(null);
+  // The newest response the previous mutation had already accounted for. See
+  // `watchGoalMutation`: this is what makes a reply that beats the pending
+  // render detectable.
+  const consumedAt = useRef<number | null>(null);
+  const key = `${submission}:${pending}`;
+
+  useEffect(() => {
+    if (typeof PerformanceObserver === "undefined") return;
+    const { origin, pathname, search } = window.location;
+    const actionUrl = `${origin}${pathname}${search}`;
+    const observer = new PerformanceObserver((list) => {
+      const seen = latestActionResponseAt(
+        list.getEntries() as PerformanceResourceTiming[],
+        actionUrl,
+      );
+      if (seen === null) return;
+      if (respondedAt.current === null || seen > respondedAt.current) {
+        respondedAt.current = seen;
+      }
+    });
+    observer.observe({ type: "resource", buffered: true });
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!pending) return;
+    // A new mutation supersedes any earlier recovery, so the explanation is
+    // consumed here. Clearing it from the render path instead would consume
+    // the marker in the same document that set it, and the reloaded page
+    // would have nothing left to explain itself with.
+    markRecovered(false);
+    const submittedAt = performance.now();
+    let reload = 0;
+    const interval = window.setInterval(() => {
+      const verdict = watchGoalMutation({
+        submittedAt,
+        respondedAt: respondedAt.current,
+        consumedAt: consumedAt.current,
+        now: performance.now(),
+      });
+      if (verdict === "waiting") return;
+      window.clearInterval(interval);
+      setStall({ key, verdict });
+      if (verdict === "lost-render") {
+        // A reply came back and never reached the screen. What it said is
+        // unknown — every outcome, including a rejection, answers 200 — so
+        // reloading is how the surface shows what is actually saved.
+        markRecovered(true);
+        reload = window.setTimeout(
+          () => window.location.reload(),
+          RECOVERY_NOTICE_MS,
+        );
+      }
+    }, WATCH_INTERVAL_MS);
+    return () => {
+      window.clearInterval(interval);
+      // Cleanup runs on unmount or when this mutation settles, so a queued
+      // reload is always stale by then: the user has navigated away, or the
+      // lost transition landed inside the notice window and the result is
+      // already on screen.
+      window.clearTimeout(reload);
+      consumedAt.current = respondedAt.current;
+    };
+  }, [key, pending]);
+
+  return stall?.key === key ? stall.verdict : null;
+}
+
+/**
+ * The recovery reload replaces the whole surface, so the result message the
+ * mutation produced is gone. Saying nothing would leave the reload looking
+ * like an unexplained flash, so the reason is carried across it and reported
+ * until the next mutation.
+ */
+function useRecoveredReload(submission: number): boolean {
+  // The server has no session storage, so it reports "not recovered" and the
+  // client agrees on the first render; hydration cannot mismatch. The marker
+  // is consumed by the next mutation, not here.
+  const recovered = useSyncExternalStore(
+    subscribeNothing,
+    readRecovered,
+    () => false,
+  );
+  return recovered && submission === 0;
+}
+
+function subscribeNothing() {
+  return () => {};
+}
+
+function readRecovered(): boolean {
+  try {
+    return window.sessionStorage.getItem(RECOVERY_FLAG) !== null;
+  } catch {
+    // Session storage throws in private browsing and when it is disabled.
+    return false;
+  }
+}
+
+function markRecovered(recovered: boolean) {
+  try {
+    if (recovered) window.sessionStorage.setItem(RECOVERY_FLAG, "1");
+    else window.sessionStorage.removeItem(RECOVERY_FLAG);
+  } catch {
+    // Losing the marker only costs the explanation, never the recovery.
+  }
+}
+
+function stallNotice(stall: GoalMutationWatch | null) {
+  if (stall === "lost-render") {
+    // Says only what is known. A reply arrived and never rendered; whether it
+    // saved, was rejected, or failed validation is not observable here, so the
+    // reload is what settles it.
+    return "This memory change did not appear. Reloading to show what is saved.";
+  }
+  if (stall === "unconfirmed") {
+    return "This memory change has not been confirmed. Reload to see whether it was saved.";
+  }
+  return null;
 }
 
 function cardState(item: MemoryView, today: string): CardState {

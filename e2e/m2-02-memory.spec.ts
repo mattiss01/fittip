@@ -45,7 +45,11 @@ test.describe("M2-02 memory management", () => {
         path: path.join(evidenceDirectory, "M2-02-empty-390x844.png"),
       });
 
-      await addMemory(page, "profile_fact", "Trains four mornings before work.");
+      await addMemory(
+        page,
+        "profile_fact",
+        "Trains four mornings before work.",
+      );
       await addMemory(page, "preference", "Prefers Sundays completely off.");
       await addMemory(
         page,
@@ -66,7 +70,9 @@ test.describe("M2-02 memory management", () => {
         "Needs your review",
         "Review due",
       ]) {
-        await expect(page.getByRole("heading", { name: heading })).toBeVisible();
+        await expect(
+          page.getByRole("heading", { name: heading }),
+        ).toBeVisible();
       }
       await expect(card(page, "Often misses Thursday training.")).toContainText(
         "Proposed · needs your review",
@@ -83,6 +89,7 @@ test.describe("M2-02 memory management", () => {
       });
 
       // Editing appends a version; the earlier text stays inspectable.
+      await settled(page);
       const factCard = card(page, "Trains four mornings before work.");
       await openDetails(factCard.locator("details[data-memory-editor]"));
       await factCard
@@ -101,6 +108,7 @@ test.describe("M2-02 memory management", () => {
 
       // Disable removes it from context and keeps it inspectable; enable
       // restores it.
+      await settled(page);
       await editedCard.getByRole("button", { name: "Disable" }).click();
       await expect(
         card(page, "Trains five mornings before work."),
@@ -108,6 +116,7 @@ test.describe("M2-02 memory management", () => {
       await page
         .getByRole("button", { name: "Disabled 1" })
         .click({ trial: true });
+      await settled(page);
       await card(page, "Trains five mornings before work.")
         .getByRole("button", { name: "Enable" })
         .click();
@@ -117,12 +126,15 @@ test.describe("M2-02 memory management", () => {
 
       // Renewing a passed review date clears the review-due state without
       // touching the text.
+      await settled(page);
       const constraintCard = card(
         page,
         "No pool access until the local pool reopens.",
       );
       await openDetails(constraintCard.locator("details[data-memory-editor]"));
-      await constraintCard.getByLabel("New review date").fill(FUTURE_REVIEW_DATE);
+      await constraintCard
+        .getByLabel("New review date")
+        .fill(FUTURE_REVIEW_DATE);
       await constraintCard
         .getByRole("button", { name: "Update review date" })
         .click();
@@ -135,6 +147,7 @@ test.describe("M2-02 memory management", () => {
 
       // A proposal needs an explicit acceptance, and edit-and-accept records
       // the owner's own words.
+      await settled(page);
       const proposalCard = card(page, "Often misses Thursday training.");
       await page.screenshot({
         fullPage: true,
@@ -159,6 +172,7 @@ test.describe("M2-02 memory management", () => {
 
       // A declined proposal is never switched on as fact.
       await addMemory(page, "observed_pattern", "Skips mobility when away.");
+      await settled(page);
       const declineTarget = card(page, "Skips mobility when away.");
       const decline = confirmation(declineTarget, "reject", "Confirm decline");
       await decline.summary.focus();
@@ -185,6 +199,8 @@ test.describe("M2-02 memory management", () => {
         stalePage.getByRole("heading", { name: "What FitTip knows." }),
       ).toBeVisible();
       await addMemory(page, "preference", "Prefers early starts.");
+      await settled(page);
+      await settled(stalePage);
       const staleTarget = card(stalePage, "Prefers Sundays completely off.");
       await staleTarget.getByRole("button", { name: "Disable" }).click();
       await expect(stalePage.getByRole("status")).toContainText(
@@ -206,8 +222,13 @@ test.describe("M2-02 memory management", () => {
 
       // Permanent deletion states its effect, then removes the text and every
       // earlier version of it.
+      await settled(page);
       const deleteTarget = card(page, "Prefers early starts.");
-      const remove = confirmation(deleteTarget, "delete", "Confirm permanent delete");
+      const remove = confirmation(
+        deleteTarget,
+        "delete",
+        "Confirm permanent delete",
+      );
       await remove.summary.click();
       await expect(deleteTarget).toContainText(
         /erases the current text and every earlier version/,
@@ -222,8 +243,11 @@ test.describe("M2-02 memory management", () => {
       await expect(page.getByText("Prefers early starts.")).toHaveCount(0);
 
       // The filter narrows the view without hiding what a status means.
+      await settled(page);
       await page.getByRole("button", { name: /^Declined 1$/ }).click();
-      await expect(page.getByText(/You declined these proposals/)).toBeVisible();
+      await expect(
+        page.getByText(/You declined these proposals/),
+      ).toBeVisible();
       await expect(
         page.getByText("Trains five mornings before work."),
       ).toHaveCount(0);
@@ -252,12 +276,28 @@ test.describe("M2-02 memory management", () => {
   });
 });
 
+/**
+ * The surface reloads itself to recover a mutation whose result never reached
+ * the screen — see `useMutationStall` in `memory-manager.tsx`. That is correct
+ * product behaviour, but typing into a document that is about to be replaced
+ * loses the input, so every step that drives a mutation waits for the surface
+ * to leave its in-flight states first. This waits for a real state; it does
+ * not relax any assertion.
+ */
+async function settled(page: import("@playwright/test").Page) {
+  await expect(page.getByRole("status")).not.toHaveAttribute(
+    "data-state",
+    /^(saving|lost-render)$/,
+  );
+}
+
 async function addMemory(
   page: import("@playwright/test").Page,
   memoryType: string,
   content: string,
   reviewDate?: string,
 ) {
+  await settled(page);
   const panel = page.locator("details").filter({ hasText: "Add memory" });
   if ((await panel.getAttribute("open")) === null) {
     await panel.getByText("Add memory", { exact: true }).click();
@@ -276,7 +316,9 @@ async function addMemory(
 function card(page: import("@playwright/test").Page, content: string) {
   return page
     .locator("li")
-    .filter({ has: page.locator(`[data-memory-content]:text-is("${content}")`) })
+    .filter({
+      has: page.locator(`[data-memory-content]:text-is("${content}")`),
+    })
     .first();
 }
 
