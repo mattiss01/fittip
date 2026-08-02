@@ -5,12 +5,22 @@
 **Lifecycle state:** testable — awaiting independent exact-commit review
 
 **Exact implementation review target:**
-`460ee184cb60c28d41f64481515c0bb8f459249a`
+`6ac57c2741f43ec32cc9b5f9a959c01a70b59df6`
 
 **Initial implementation commit:**
 `460ee184cb60c28d41f64481515c0bb8f459249a`
 
-**Builder correction commits:** none
+**Builder correction commits:**
+
+- `6ac57c2741f43ec32cc9b5f9a959c01a70b59df6` — recovers a memory change whose
+  result never reaches the screen, after continuous-integration run
+  30728162026 proved the defect on this surface; also formats
+  `e2e/m2-02-memory.spec.ts`, which failed the CI Prettier step.
+
+**Lead commit on this branch:** `deabe75` — `ci: run the M2-02 memory browser
+flow` (port 3016). Wiring the flow into continuous integration was a
+`.github/**` tooling change outside the builder's scope; the builder reported
+the gap and the lead closed it.
 
 **Branch:** `ticket/m2-02-memory-model`
 
@@ -28,8 +38,11 @@ dispatch, for confirmation with this ticket
 [permanent delete](evidence/M2-02-delete-390x844.png),
 [final state](evidence/M2-02-final-390x844.png)
 
-**Continuous integration:** not yet recorded. The branch has not been pushed;
-the lead pushes and records the run URL and conclusion for this exact SHA.
+**Continuous integration:** run 30728162026, against `deabe75`, was **red** —
+two failures, both real and both now fixed in
+`6ac57c2741f43ec32cc9b5f9a959c01a70b59df6`. See *The red continuous-integration
+run* below. The run for the corrected SHA is not yet recorded; the lead pushes
+and records it.
 
 **Independent review:** not yet performed
 
@@ -69,6 +82,11 @@ the lead pushes and records the run URL and conclusion for this exact SHA.
   reference are displayed when present, never as certainty.
 - A save that races another tab reports the conflict and offers a reload
   action rather than overwriting the newer collection.
+- A save whose result never reaches the screen no longer leaves the surface
+  frozen. If the reply arrived and did not render, the page says so and
+  reloads to show what is actually saved; if no reply arrived at all, it
+  reports the change as unconfirmed and offers a reload. Neither claims the
+  change was applied.
 - Creating and editing memory shows one static, non-diagnostic safety notice.
   Nothing infers or grades severity, and no classifier exists.
 - The empty state says nothing is stored. It makes no claim that the coach has
@@ -144,10 +162,41 @@ the spec skips silently.**
  27 files changed, 5284 insertions(+), 3 deletions(-)
 ```
 
-This validation record and
-[ADR-010](../../decisions/ADR-010-M2-MEMORY-WRITE-BOUNDARY.md) are added in a
-separate follow-up commit, because a record cannot contain the SHA of the
-commit that adds it.
+The correction commit,
+`git diff --stat 460ee184cb60c28d41f64481515c0bb8f459249a..6ac57c2741f43ec32cc9b5f9a959c01a70b59df6`,
+also carries the docs commit and the lead's CI commit that sit between them:
+
+```
+ .github/workflows/ci.yml                           |  10 +
+ docs/decisions/ADR-010-M2-MEMORY-WRITE-BOUNDARY.md | 206 +++++++++
+ docs/validation/M2/M2-02-VALIDATION.md             | 500 +++++++++++++++++++++
+ .../M2/evidence/M2-02-delete-390x844.png           | Bin 148774 -> 161668 bytes
+ .../validation/M2/evidence/M2-02-empty-390x844.png | Bin 34752 -> 34722 bytes
+ .../validation/M2/evidence/M2-02-filed-390x844.png | Bin 129452 -> 123183 bytes
+ .../validation/M2/evidence/M2-02-final-390x844.png | Bin 123200 -> 123896 bytes
+ .../M2/evidence/M2-02-review-queue-390x844.png     | Bin 133893 -> 132170 bytes
+ docs/validation/README.md                          |   1 +
+ e2e/m2-02-memory.spec.ts                           |  54 ++-
+ src/app/home/you/memory/memory.module.css          |   5 +-
+ src/components/memory/memory-manager.test.tsx      | 185 ++++++++
+ src/components/memory/memory-manager.tsx           | 199 +++++++-
+ 13 files changed, 1148 insertions(+), 12 deletions(-)
+```
+
+`.github/workflows/ci.yml` in that range is the lead's `deabe75`, not the
+builder's. The five changed screenshots are the same flow re-captured against
+the corrected build. Later versions of this record are added in a further
+commit, because a record cannot contain the SHA of the commit that adds it.
+
+Files in the correction whose purpose is not evident from the path and diff:
+
+- `src/components/memory/memory-manager.tsx` — adds the M2-05 recovery hooks
+  (`useMutationStall`, `useRecoveredReload`) and the honest notices they
+  drive. The block comment above them records the measurement that justifies
+  them.
+- `e2e/m2-02-memory.spec.ts` — adds `settled(page)`, awaited before every
+  mutating step, because the surface can now legitimately reload itself
+  mid-flow. It waits for a real state; it relaxes nothing.
 
 Nothing was deleted or renamed.
 
@@ -180,6 +229,69 @@ Files whose purpose is not evident from the path and diff:
   ticket is accepted", which this ticket makes false.
 - `src/lib/supabase/database.types.ts` — regenerated. See the divergence noted
   under *Data, migration, API, privacy, and security effects*.
+
+## The red continuous-integration run
+
+Run **30728162026**, against the lead's `deabe75`, failed two jobs. The
+database job passed in full. Both failures were real and neither was a flake
+to be re-run away.
+
+**Prettier.** `e2e/m2-02-memory.spec.ts` was genuinely unformatted — the one
+file this ticket added that had not been through `prettier --write` before
+committing. Fixed by formatting that single file, 22 insertions and 6
+deletions. `format` was not run across the repository.
+
+**The 390px memory flow.** The step failed waiting for a card that had just
+been saved. The trace, not the plain log, settles what happened:
+
+- The server action for that mutation started at `02:09:02.182` and completed
+  in **33.485 ms** (`wait` 20.97 ms, `receive` 12.5 ms) with HTTP 200.
+- Its body is complete and correct. It contains
+  `1:{"status":"saved","message":"Memory saved.","submission":4,...}` and the
+  re-rendered page props including the new item with `"status":"proposed"` and
+  the expected content. No error, no digest.
+- The page snapshot at the moment of failure shows the surface still reading
+  "Saving memory change…", every control disabled, and `Collection 3` — the
+  state from *before* that save.
+
+So the mutation succeeded, its reply reached the browser in 33 ms, and the
+App Router transition carrying it never committed. **This is not slowness, and
+raising the timeout would not have helped** — there was nothing left to wait
+for.
+
+This is the defect M2-05 documented for the goal surface, reproduced on the
+memory surface, which had no protection against it. It is a real defect in
+this ticket's deliverable, not a test artifact.
+
+**Reproduced locally before changing anything.** Twelve mutations per run,
+six runs: **one run failed**, at a *different* mutation than CI (edit-and-
+accept rather than create), with the identical signature — frozen on "Saving
+memory change…", stale content, controls disabled. The earlier single local
+pass reported in this record was luck, not leftover state. Roughly a 1.5%
+per-mutation failure rate, which is why one flow of a dozen mutations fails
+about one run in six.
+
+**Fix.** The memory surface now uses the recovery M2-05 established and the
+product owner accepted: watch the mutation from outside React, and when a
+reply arrived that never rendered, say so and reload to show what is actually
+saved; when no reply arrived at all, report the change as unconfirmed and
+offer a reload. Neither path claims the change was applied, because the action
+answers 200 for every outcome. The timing rules in
+`src/features/goals/mutation-watchdog.ts` are not goal-specific, so they are
+imported rather than duplicated; the module name is now too narrow, and
+renaming it would touch M2-05's accepted code, so that is left to a follow-up.
+
+**The spec was also wrong.** After the fix, one run in ten still failed — but
+for a different reason, and the snapshot proves the product was correct: the
+recovery notice was displayed and the saved item was on the page. The spec was
+driving the next mutation while the surface was reloading itself, so the typed
+input was lost with the replaced document. Since that reload is real product
+behaviour, every mutating step now waits for the status region to leave its
+in-flight states first. **No assertion was relaxed and no timeout was raised.**
+
+**Measured result:** 1 failure in 6 runs before the fix; **24 consecutive
+passes** after it (two batches of `--repeat-each=12`, `--workers=1`, against
+`build` + `start` on port 3016).
 
 ## Data, migration, API, privacy, and security effects
 
@@ -298,11 +410,17 @@ locally while developing, reported as such.
 | `npx.cmd supabase db advisors --local --type all --level warn --fail-on warn` | `No issues found` |
 | `npm.cmd run lint` | clean, 0 problems |
 | `npm.cmd run typecheck` | clean |
-| `npm.cmd run test:run` | `Test Files 45 passed (45)`, `Tests 321 passed (321)` |
+| `npm.cmd run test:run` | `Test Files 45 passed (45)`, `Tests 325 passed (325)` after the correction; 321 before it |
 | `npm.cmd run build` | succeeded; `/home/you/memory` listed as server-rendered on demand |
-| `npx.cmd playwright test --config=e2e/m2-02.playwright.config.ts --workers=1 --trace=retain-on-failure` against `npm.cmd run start -- -p 3016` | `1 passed (12.0s)`, **0 skipped** — the service-role key was supplied, so the spec did not skip itself |
+| `npx.cmd playwright test --config=e2e/m2-02.playwright.config.ts --workers=1 --repeat-each=12` against `npm.cmd run start -- -p 3016`, run twice | **24 passed, 0 failed, 0 skipped** — the service-role key was supplied, so the spec did not skip itself |
+| The same flow before the correction, `--repeat-each=6` | **1 failed, 5 passed** — the defect CI caught, reproduced locally |
 | `git diff --check` | clean |
 | Two-session bounded-lock probe (below) | contender aborted after 3s with `PT409` |
+
+The single `1 passed (12.0s)` run reported here before the correction was
+honest but insufficient: one pass cannot distinguish a working surface from a
+one-in-six flake. Repeat runs are what established both the defect and the
+fix.
 
 The lock probe, run through `docker exec … psql` against the applied
 migration, one session holding and one contending:
@@ -357,8 +475,14 @@ a `where user_id = …` that would mask a broken predicate, following
 - `rerender-no-inline-components` — every subcomponent is defined at module
   scope.
 - `rerender-derived-state-no-effect` — the card state, grouping, counts, and
-  filtering are all derived during render. The component has **no**
-  `useEffect`.
+  filtering are all derived during render. The correction commit adds the two
+  effects the M2-05 recovery needs — a `PerformanceObserver` subscription and
+  the in-flight watch — and nothing else. No derived value moved into an
+  effect. (An earlier version of this record claimed the component had no
+  `useEffect`; that was true only before the correction.)
+- `rerender-dependencies` — the watch effect depends on a primitive key
+  (`` `${submission}:${pending}` ``), so a later mutation cannot inherit an
+  earlier verdict and no effect has to reset state.
 - `rendering-conditional-render` — ternaries throughout, never `&&`.
 - `js-set-map-lookups` — version history is grouped by item id with a `Map`
   rather than a repeated scan.
@@ -409,46 +533,49 @@ overflow at 390px.
    version.** That is how the current pointer stays a complete snapshot.
    Every copy is owner-scoped and purged together on permanent delete.
    ADR-010 records the alternative that was rejected.
-6. **`e2e/m2-02-memory.spec.ts` does not run in CI.** `.github/workflows/ci.yml`
-   lists each ticket's browser flow explicitly, and this builder was scoped out
-   of `.github/**`. Until a separate tooling commit adds an
-   `m2-02` browser step on port 3016, the flow is only ever run by hand. It
-   passed locally against a production build, as recorded above, but CI will
-   not catch a regression in it.
-7. **No automated concurrency harness.** M1-01 and M2-01 have
+6. **Resolved.** `e2e/m2-02-memory.spec.ts` now runs in CI, on port 3016, via
+   the lead's `deabe75`. It was the builder's report of this gap that led to
+   the run which caught the recovery defect.
+7. **The recovery is a mitigation, not a root-cause fix.** The App Router
+   transition that loses a mutation result is not understood, on this surface
+   or on goals; M2-05 reached the same conclusion. The surface now detects the
+   loss and tells the truth, and a reload settles the outcome — but a user
+   still sees a reload they did not ask for, roughly once in every sixty-odd
+   mutations at the rate measured here. The underlying race deserves its own
+   investigation.
+8. **No automated concurrency harness.** M1-01 and M2-01 have
    `supabase/tests/integration/*.mjs` harnesses wired into CI as npm scripts.
    The bounded lock wait here was proved manually with two `psql` sessions and
    asserted structurally in pgTAP; there is no automated multi-session test,
    and adding one would also need the `.github/**` step this builder could not
    write.
-8. **A pre-existing generated-types divergence is carried, not fixed.** See
+9. **A pre-existing generated-types divergence is carried, not fixed.** See
    the disclosure under *Data, migration, API, privacy, and security effects*.
    A clean regeneration on unchanged `master` breaks
    `completion-repository.ts`; nine unrelated lines were kept at their
    committed values. This needs its own ticket.
-9. **Deletion evidence is retained indefinitely.** `memory_deletion_events`
+10. **Deletion evidence is retained indefinitely.** `memory_deletion_events`
    rows carry no content, but nothing prunes them. Retention belongs to the
    M0-04 privacy implementation.
-10. **`docs/product/DATA-MODEL-OVERVIEW.md` still lists Memory as proposed.**
+11. **`docs/product/DATA-MODEL-OVERVIEW.md` still lists Memory as proposed.**
     That living planning view was left alone rather than edited outside this
     ticket's brief.
-11. **External use stays gated.** This slice authorizes local and
+12. **External use stays gated.** This slice authorizes local and
     founder-hosted owner or synthetic data only. Sending memory content to an
     AI provider remains prohibited until the separate consent and privacy
     gates recorded in the ticket are approved, implemented, and accepted.
 
 ## Independent reviewer checklist
 
-Review commit `460ee184cb60c28d41f64481515c0bb8f459249a` on
-`ticket/m2-02-memory-model`, plus the follow-up commit adding
-[ADR-010](../../decisions/ADR-010-M2-MEMORY-WRITE-BOUNDARY.md) and this
-record.
+Review commit `6ac57c2741f43ec32cc9b5f9a959c01a70b59df6` on
+`ticket/m2-02-memory-model`, plus the follow-up commit adding this record.
 
-Read `git diff 79fdefbb76005264bbea9e1acbdc37f46289b0e4..460ee184cb60c28d41f64481515c0bb8f459249a`
+Read `git diff 79fdefbb76005264bbea9e1acbdc37f46289b0e4..6ac57c2741f43ec32cc9b5f9a959c01a70b59df6`
 as the source of truth, and confirm the CI run is green for that SHA. Do not
 re-run lint, typecheck, `test:run`, `build`, the database matrix, or the
-browser flow — CI covers them. Note that CI does **not** run
-`e2e/m2-02-memory.spec.ts` (limitation 6).
+browser flow — CI covers them, and CI now includes the 390px memory flow. Note
+that `.github/workflows/ci.yml` inside that range is the lead's `deabe75`, not
+the builder's.
 
 Confirm the judgment CI cannot supply:
 
@@ -492,9 +619,16 @@ Confirm the judgment CI cannot supply:
     mutation, trigger, view, second RPC, service client, secret, or paid
     resource was added, and that `src/app/home/you/page.tsx` is the only
     change outside the memory slice.
-11. **Verify the generated-types disclosure yourself.** The claim that the
+11. **The recovery tells the truth and claims nothing.** Neither notice may
+    say the change was saved — the action answers 200 for a success, a
+    conflict, a validation failure, an expired session, and a persistence
+    error alike. Confirm the lost-render path reloads and the unconfirmed path
+    does not, that the session marker carries no memory content, and that
+    `settled()` in the spec waits for a real state rather than masking a
+    failure.
+12. **Verify the generated-types disclosure yourself.** The claim that the
     nine `save_training_completion` lines diverge on unchanged `master` is
     checkable: remove this ticket's migration and pgTAP file, reset, and
     regenerate.
-12. **Hosted verification** against the Vercel Preview for this exact commit,
+13. **Hosted verification** against the Vercel Preview for this exact commit,
     at `390x844`.
