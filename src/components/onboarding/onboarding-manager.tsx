@@ -5,7 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { changeOnboardingAction } from "@/app/home/you/onboarding/actions";
-import { INITIAL_ONBOARDING_ACTION_STATE } from "@/app/home/you/onboarding/action-state";
+import {
+  INITIAL_ONBOARDING_ACTION_STATE,
+  type OnboardingActionState,
+} from "@/app/home/you/onboarding/action-state";
 import styles from "@/app/home/you/onboarding/onboarding.module.css";
 import {
   GOAL_CATEGORIES,
@@ -34,6 +37,35 @@ const LIMITATION_LABELS = {
   other: "Other constraint",
 } as const;
 
+export function OnboardingActionNotice({
+  state,
+}: {
+  state: OnboardingActionState;
+}) {
+  const noticeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (state.submission > 0 && isActionErrorStatus(state.status)) {
+      noticeRef.current?.focus();
+    }
+  }, [state.status, state.submission]);
+
+  if (state.status === "idle" || state.status === "published") return null;
+
+  return (
+    <div
+      className={styles.notice}
+      data-onboarding-notice
+      data-state={state.status}
+      ref={noticeRef}
+      role={state.status === "saved" ? "status" : "alert"}
+      tabIndex={isActionErrorStatus(state.status) ? -1 : undefined}
+    >
+      {state.message}
+    </div>
+  );
+}
+
 export function OnboardingManager({
   snapshot,
 }: {
@@ -55,7 +87,6 @@ export function OnboardingManager({
     snapshot.draft?.trainingStatus ?? "current",
   );
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const noticeRef = useRef<HTMLDivElement>(null);
   const resultRef = useRef<HTMLHeadingElement>(null);
   const visibleStep =
     selectedStep ??
@@ -68,18 +99,15 @@ export function OnboardingManager({
     router.refresh();
     if (state.status === "published") {
       resultRef.current?.focus();
-    } else if (
-      state.status === "validation" ||
-      state.status === "conflict" ||
-      state.status === "session" ||
-      state.status === "error"
-    ) {
-      noticeRef.current?.focus();
     }
   }, [router, state.status, state.submission]);
 
   useEffect(() => {
-    if (snapshot.draft && state.status !== "published") {
+    if (
+      snapshot.draft &&
+      state.status !== "published" &&
+      !isActionErrorStatus(state.status)
+    ) {
       headingRef.current?.focus();
     }
   }, [snapshot.draft, visibleStep, state.status]);
@@ -188,25 +216,7 @@ export function OnboardingManager({
         </ol>
       </nav>
 
-      {state.status !== "idle" ? (
-        <div
-          className={styles.notice}
-          data-onboarding-notice
-          data-state={state.status}
-          ref={noticeRef}
-          role={state.status === "saved" ? "status" : "alert"}
-          tabIndex={
-            state.status === "validation" ||
-            state.status === "conflict" ||
-            state.status === "session" ||
-            state.status === "error"
-              ? -1
-              : undefined
-          }
-        >
-          {state.message}
-        </div>
-      ) : null}
+      <OnboardingActionNotice state={state} />
 
       <header className={styles.stepHeader}>
         <p>
@@ -890,6 +900,13 @@ function ReviewCard({
           </p>
           <strong>{comparison.existingLabel}</strong>
           <span>{comparison.existingDetail}</span>
+          {comparison.existingStatus &&
+          comparison.existingStatus !== "active" ? (
+            <span>
+              Saved status: {comparison.existingStatus}. Accepting updates this
+              to active Memory.
+            </span>
+          ) : null}
         </div>
       ) : null}
       <label>
@@ -914,7 +931,10 @@ function ReviewCard({
             name={`resolution:${candidate.id}`}
           >
             <option value="update">Update what’s saved</option>
-            <option value="keep">Keep what’s saved</option>
+            {comparison.existingStatus === null ||
+            comparison.existingStatus === "active" ? (
+              <option value="keep">Keep what’s saved</option>
+            ) : null}
           </select>
         </label>
       ) : (
@@ -933,7 +953,7 @@ function ReviewCard({
   );
 }
 
-function buildRankPreview(snapshot: OnboardingSnapshot) {
+export function buildRankPreview(snapshot: OnboardingSnapshot) {
   const result = snapshot.activeGoalOrder.map((goal) => ({
     key: goal.id,
     title: goal.title,
@@ -942,15 +962,16 @@ function buildRankPreview(snapshot: OnboardingSnapshot) {
   }));
   for (const candidate of snapshot.goalCandidates) {
     if (
-      candidate.comparison.targetId &&
-      candidate.comparison.kind === "conflict"
+      candidate.decision !== "accepted" ||
+      (candidate.resolution !== "create" && candidate.resolution !== "update")
     ) {
+      continue;
+    }
+    if (candidate.comparison.targetId && candidate.resolution === "update") {
       const existingIndex = result.findIndex(
         (goal) => goal.key === candidate.comparison.targetId,
       );
       if (existingIndex >= 0) result.splice(existingIndex, 1);
-    } else if (candidate.comparison.kind === "exact") {
-      continue;
     }
     result.push({
       key: candidate.id,
@@ -965,6 +986,17 @@ function buildRankPreview(snapshot: OnboardingSnapshot) {
   return result.sort(
     (left, right) =>
       left.tier.localeCompare(right.tier) || left.rank - right.rank,
+  );
+}
+
+export function isActionErrorStatus(
+  status: OnboardingActionState["status"],
+): boolean {
+  return (
+    status === "validation" ||
+    status === "conflict" ||
+    status === "session" ||
+    status === "error"
   );
 }
 

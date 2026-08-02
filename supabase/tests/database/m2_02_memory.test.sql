@@ -792,13 +792,13 @@ select lives_ok(
 select ok(
   (
     select provenance = 'inferred_proposed'
-      and confidence = 70
+      and confidence is null
       and status = 'active'
       and user_confirmed_at is not null
     from public.memory_items
     where id = '53000000-0000-4000-8000-0000000000b1'
   ),
-  'edit and accept preserves the source provenance and records confirmation'
+  'edit and accept clears obsolete confidence and records confirmation'
 );
 select ok(
   (

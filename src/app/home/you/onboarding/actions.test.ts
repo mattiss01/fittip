@@ -89,7 +89,7 @@ describe("onboarding actions", () => {
     expect(result).toMatchObject({
       status: "validation",
       message:
-        "Check the highlighted step. Nothing from this attempt was saved.",
+        "Review this step and correct the details. Nothing from this attempt was saved.",
     });
     expect(result.redirectTo).toBeUndefined();
     expect(redirectMock).not.toHaveBeenCalled();

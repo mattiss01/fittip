@@ -193,6 +193,67 @@ select ok(
   ),
   'private helpers grant no API-role access'
 );
+select ok(
+  exists (
+    select 1 from pg_extension where extname = 'pg_cron'
+  ),
+  'pg_cron is installed for durable expiry cleanup'
+);
+select has_function(
+  'private',
+  'purge_expired_onboarding_drafts',
+  array[]::text[],
+  'the private expiry cleanup function exists'
+);
+select ok(
+  not has_function_privilege(
+    'anon',
+    'private.purge_expired_onboarding_drafts()',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'authenticated',
+    'private.purge_expired_onboarding_drafts()',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'service_role',
+    'private.purge_expired_onboarding_drafts()',
+    'EXECUTE'
+  ),
+  'no API role can execute the private cleanup'
+);
+select is(
+  (
+    select count(*)::bigint
+    from cron.job
+    where jobname = 'fittip-onboarding-expiry-cleanup'
+      and schedule = '17 3 * * *'
+      and command = 'select private.purge_expired_onboarding_drafts()'
+      and active
+  ),
+  1::bigint,
+  'one active private cleanup runs daily at 03:17 UTC'
+);
+select lives_ok(
+  $sql$
+    select cron.schedule(
+      'fittip-onboarding-expiry-cleanup',
+      '17 3 * * *',
+      'select private.purge_expired_onboarding_drafts()'
+    )
+  $sql$,
+  'rescheduling the named cleanup is idempotent'
+);
+select is(
+  (
+    select count(*)::bigint
+    from cron.job
+    where jobname = 'fittip-onboarding-expiry-cleanup'
+  ),
+  1::bigint,
+  'idempotent scheduling leaves exactly one cleanup job'
+);
 select is(
   (
     select count(*)::bigint
@@ -235,12 +296,19 @@ values
     'm2-03-user-b@example.test',
     '{}',
     '{}'
+  ),
+  (
+    '54000000-0000-4000-8000-000000000003',
+    'm2-03-user-c@example.test',
+    '{}',
+    '{}'
   );
 
 insert into public.profiles (user_id)
 values
   ('54000000-0000-4000-8000-000000000001'),
-  ('54000000-0000-4000-8000-000000000002');
+  ('54000000-0000-4000-8000-000000000002'),
+  ('54000000-0000-4000-8000-000000000003');
 
 set local role authenticated;
 select set_config(
@@ -625,6 +693,37 @@ select lives_ok(
   $sql$,
   'a fourth core candidate remains reviewable'
 );
+select throws_ok(
+  $sql$
+    select public.apply_onboarding_change(
+      1,
+      'save_review',
+      jsonb_build_object(
+        'decisions',
+        (
+          select jsonb_agg(
+            jsonb_build_object(
+              'kind', 'goal',
+              'id', candidate.id,
+              'decision', 'accepted',
+              'resolution', 'keep',
+              'targetId', (
+                select id
+                from public.goals
+                order by id
+                limit 1
+              )
+            )
+          )
+          from public.onboarding_goal_candidates candidate
+        )
+      )
+    )
+  $sql$,
+  'PT409',
+  'Onboarding changed. Reload and try again.',
+  'a same-owner Goal UUID cannot be forged as the candidate target'
+);
 select lives_ok(
   $sql$
     select public.apply_onboarding_change(
@@ -712,11 +811,35 @@ select
   id,
   user_id,
   1,
-  'preference:expired',
-  'preference',
-  'synthetic-expired-marker'
+  'constraint:pain_injury',
+  'constraint',
+  'Pain-adjacent synthetic-expired-marker'
 from public.onboarding_drafts
 where user_id = '54000000-0000-4000-8000-000000000002';
+
+select is(
+  private.purge_expired_onboarding_drafts(),
+  1::bigint,
+  'the scheduled cleanup deletes one expired owner draft'
+);
+select is(
+  (
+    select count(*)::bigint
+    from public.onboarding_memory_candidates
+    where content like '%synthetic-expired-marker%'
+  ),
+  0::bigint,
+  'cleanup cascades through health-adjacent candidate content'
+);
+select is(
+  (
+    select count(*)::bigint
+    from public.onboarding_publication_receipts
+    where user_id = '54000000-0000-4000-8000-000000000002'
+  ),
+  0::bigint,
+  'cleanup creates no publication receipt'
+);
 
 set local role authenticated;
 select set_config(
@@ -726,16 +849,16 @@ select set_config(
 );
 select lives_ok(
   $sql$ select public.apply_onboarding_change(0, 'start') $sql$,
-  'starting after expiry purges the old draft and creates a fresh one'
+  'starting after scheduled cleanup creates a fresh draft'
 );
 select is(
   (
     select count(*)::bigint
     from public.onboarding_memory_candidates
-    where content = 'synthetic-expired-marker'
+    where content like '%synthetic-expired-marker%'
   ),
   0::bigint,
-  'expired candidate content is purged'
+  'expired candidate content stays purged'
 );
 select lives_ok(
   $sql$
@@ -776,17 +899,29 @@ insert into public.memory_revisions (
   change_kind,
   status_after
 )
-values (
-  '54000000-0000-4000-8000-000000000201',
-  '54000000-0000-4000-8000-000000000002',
-  '54000000-0000-4000-8000-000000000101',
-  1,
-  'System wording.',
-  'system',
-  'inferred_proposed',
-  'created',
-  'proposed'
-);
+values
+  (
+    '54000000-0000-4000-8000-000000000201',
+    '54000000-0000-4000-8000-000000000002',
+    '54000000-0000-4000-8000-000000000101',
+    1,
+    'Owner-edited wording.',
+    'system',
+    'inferred_proposed',
+    'created',
+    'proposed'
+  ),
+  (
+    '54000000-0000-4000-8000-000000000202',
+    '54000000-0000-4000-8000-000000000002',
+    '54000000-0000-4000-8000-000000000102',
+    1,
+    'Unrelated same-owner Memory.',
+    'user',
+    'user_created',
+    'created',
+    'active'
+  );
 insert into public.memory_items (
   id,
   user_id,
@@ -797,16 +932,27 @@ insert into public.memory_items (
   source_reference,
   current_revision_id
 )
-values (
-  '54000000-0000-4000-8000-000000000101',
-  '54000000-0000-4000-8000-000000000002',
-  'preference',
-  'proposed',
-  'inferred_proposed',
-  0.8,
-  'synthetic-system-proposal',
-  '54000000-0000-4000-8000-000000000201'
-);
+values
+  (
+    '54000000-0000-4000-8000-000000000101',
+    '54000000-0000-4000-8000-000000000002',
+    'preference',
+    'proposed',
+    'inferred_proposed',
+    80,
+    'synthetic-system-proposal',
+    '54000000-0000-4000-8000-000000000201'
+  ),
+  (
+    '54000000-0000-4000-8000-000000000102',
+    '54000000-0000-4000-8000-000000000002',
+    'preference',
+    'active',
+    'user_created',
+    null,
+    null,
+    '54000000-0000-4000-8000-000000000202'
+  );
 
 set local role authenticated;
 select set_config(
@@ -827,6 +973,29 @@ select lives_ok(
     )
   $sql$,
   'onboarding prepares owner-edited wording for explicit review'
+);
+select throws_ok(
+  $sql$
+    select public.apply_onboarding_change(
+      1,
+      'save_review',
+      jsonb_build_object(
+        'decisions',
+        jsonb_build_array(
+          jsonb_build_object(
+            'kind', 'memory',
+            'id', (select id from public.onboarding_memory_candidates),
+            'decision', 'accepted',
+            'resolution', 'update',
+            'targetId', '54000000-0000-4000-8000-000000000102'
+          )
+        )
+      )
+    )
+  $sql$,
+  'PT409',
+  'Onboarding changed. Reload and try again.',
+  'a same-owner Memory UUID cannot be forged as the candidate target'
 );
 select lives_ok(
   $sql$
@@ -864,13 +1033,13 @@ select lives_ok(
 );
 select ok(
   (
-    select confidence is null
+    select confidence = 80
       and provenance = 'inferred_proposed'
       and user_confirmed_at is not null
     from public.memory_items
     where id = '54000000-0000-4000-8000-000000000101'
   ),
-  'an owner content edit clears confidence while preserving origin provenance'
+  'unchanged system wording keeps confidence and preserves origin provenance'
 );
 
 -- User B: prepare a mixed goal+memory publication, inject a database failure
@@ -1006,6 +1175,178 @@ select is(
 reset role;
 drop trigger fail_m2_03_memory_insert on public.memory_items;
 drop function private.fail_m2_03_memory_insert();
+
+-- Inactive exact Memory and ordinary-edit confidence --------------------------
+
+set constraints all deferred;
+insert into public.memory_revisions (
+  id, user_id, item_id, revision_number, content, author_class,
+  provenance, change_kind, status_after
+)
+values
+  (
+    '54000000-0000-4000-8000-000000000211',
+    '54000000-0000-4000-8000-000000000003',
+    '54000000-0000-4000-8000-000000000111',
+    1, 'Proposed exact wording.', 'system', 'inferred_proposed',
+    'created', 'proposed'
+  ),
+  (
+    '54000000-0000-4000-8000-000000000212',
+    '54000000-0000-4000-8000-000000000003',
+    '54000000-0000-4000-8000-000000000112',
+    1, 'Archived exact wording.', 'user', 'user_created',
+    'created', 'archived'
+  ),
+  (
+    '54000000-0000-4000-8000-000000000213',
+    '54000000-0000-4000-8000-000000000003',
+    '54000000-0000-4000-8000-000000000113',
+    1, 'Rejected exact wording.', 'system', 'inferred_proposed',
+    'rejected', 'rejected'
+  ),
+  (
+    '54000000-0000-4000-8000-000000000214',
+    '54000000-0000-4000-8000-000000000003',
+    '54000000-0000-4000-8000-000000000114',
+    1, 'Inference before ordinary edit.', 'system', 'inferred_proposed',
+    'accepted', 'active'
+  );
+insert into public.memory_items (
+  id, user_id, memory_type, status, provenance, confidence,
+  current_revision_id, user_confirmed_at
+)
+values
+  (
+    '54000000-0000-4000-8000-000000000111',
+    '54000000-0000-4000-8000-000000000003',
+    'preference', 'proposed', 'inferred_proposed', 70,
+    '54000000-0000-4000-8000-000000000211', null
+  ),
+  (
+    '54000000-0000-4000-8000-000000000112',
+    '54000000-0000-4000-8000-000000000003',
+    'preference', 'archived', 'user_created', null,
+    '54000000-0000-4000-8000-000000000212', now()
+  ),
+  (
+    '54000000-0000-4000-8000-000000000113',
+    '54000000-0000-4000-8000-000000000003',
+    'preference', 'rejected', 'inferred_proposed', 60,
+    '54000000-0000-4000-8000-000000000213', null
+  ),
+  (
+    '54000000-0000-4000-8000-000000000114',
+    '54000000-0000-4000-8000-000000000003',
+    'observed_pattern', 'active', 'inferred_proposed', 65,
+    '54000000-0000-4000-8000-000000000214', now()
+  );
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"54000000-0000-4000-8000-000000000003","role":"authenticated"}',
+  true
+);
+select lives_ok(
+  $sql$ select public.apply_onboarding_change(0, 'start') $sql$,
+  'the status regression owner can start onboarding'
+);
+select lives_ok(
+  $sql$
+    select public.apply_onboarding_change(
+      0,
+      'save_preferences',
+      '{"advance":true,"preferences":["Proposed exact wording.","Archived exact wording.","Rejected exact wording."]}'::jsonb
+    )
+  $sql$,
+  'inactive exact content is prepared for review'
+);
+select lives_ok(
+  $sql$
+    select public.apply_onboarding_change(
+      1,
+      'save_review',
+      jsonb_build_object(
+        'decisions',
+        (
+          select jsonb_agg(
+            jsonb_build_object(
+              'kind', 'memory',
+              'id', candidate.id,
+              'decision', 'accepted',
+              'resolution', 'update',
+              'targetId', item.id
+            )
+            order by candidate.position
+          )
+          from public.onboarding_memory_candidates candidate
+          join public.memory_items item
+            on item.user_id = candidate.user_id
+           and item.status <> 'active'
+          join public.memory_revisions revision
+            on revision.id = item.current_revision_id
+           and revision.user_id = item.user_id
+           and revision.content = candidate.content
+        )
+      )
+    )
+  $sql$,
+  'inactive exact matches require an explicit activating update'
+);
+select lives_ok(
+  $sql$
+    select public.apply_onboarding_change(
+      2,
+      'publish',
+      '{}'::jsonb,
+      0,
+      0,
+      (select idempotency_key from public.onboarding_drafts)
+    )
+  $sql$,
+  'inactive exact Memory publication reconciles every accepted status'
+);
+select is(
+  (
+    select count(*)::bigint
+    from public.memory_items item
+    join public.memory_revisions revision
+      on revision.id = item.current_revision_id
+     and revision.user_id = item.user_id
+    where item.user_id = '54000000-0000-4000-8000-000000000003'
+      and item.status = 'active'
+      and revision.content in (
+        'Proposed exact wording.',
+        'Archived exact wording.',
+        'Rejected exact wording.'
+      )
+  ),
+  3::bigint,
+  'accepted proposed, archived, and rejected exact content is active'
+);
+select lives_ok(
+  $sql$
+    select public.apply_memory_change(
+      3,
+      'edit',
+      '54000000-0000-4000-8000-000000000114',
+      null,
+      'Owner wording after ordinary edit.',
+      null
+    )
+  $sql$,
+  'an ordinary later Memory edit still uses the accepted boundary'
+);
+select ok(
+  (
+    select confidence is null
+      and provenance = 'inferred_proposed'
+    from public.memory_items
+    where id = '54000000-0000-4000-8000-000000000114'
+  ),
+  'an ordinary owner edit clears confidence while preserving origin provenance'
+);
 
 -- Prohibited sinks are structural: application source and the content-free
 -- receipt schema are scanned separately in Vitest. Database errors stay fixed.

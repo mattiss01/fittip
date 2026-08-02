@@ -20,8 +20,8 @@ acceptance remain required.
 The product owner approved automatic expired-draft cleanup once daily inside
 PostgreSQL. ADR-011 fixes the job at `03:17 UTC`, accepts up to 24 hours of
 deletion lag after the 30-day expiry, and permits no HTTP, Edge Function,
-network credential, external provider, or remote command. Implementation and
-disposable-database evidence are pending the focused governance commit.
+network credential, external provider, or remote command. Governance commit
+`e3db3b1` records that approval before implementation.
 
 ## Delivered behavior
 
@@ -36,8 +36,10 @@ disposable-database evidence are pending the focused governance commit.
   mutation boundaries in one owner-scoped, revision-checked, idempotent
   transaction. It deletes the draft and candidates and retains one
   content-free receipt.
-- Draft rows expire after 30 inactive days and are purged on the next owner
-  touch. Cancel and successful publication purge them immediately.
+- Draft rows expire after 30 inactive days. One private `pg_cron` job purges
+  expired rows daily at `03:17 UTC`; the next owner touch is a second
+  deterministic purge path. Cancel and successful publication purge them
+  immediately.
 - The database exposes owner reads under RLS but no direct authenticated
   writes. The only authenticated write entry is
   `apply_onboarding_change(...)`; private validation helpers grant no API-role
@@ -56,9 +58,20 @@ disposable-database evidence are pending the focused governance commit.
   explicit privileges, private helpers, a content-free receipt type, and the
   single public mutation function.
 - `memory_items.intake_field_key` supplies owner-scoped exact intake
-  deduplication. The accepted Memory function is moved behind a private helper
-  and its public wrapper preserves M2-02 behavior while clearing confidence on
-  owner content edits.
+  deduplication. A private trigger observes revisions written by the unchanged
+  accepted Memory boundary and clears confidence only after owner-authored
+  `edit` or `edit_and_accept` content changes. Unchanged acceptance preserves
+  inference confidence and provenance.
+- Review targets and allowed resolutions are recomputed from current owned
+  Goal and Memory state inside `apply_onboarding_change`; submitted target
+  UUIDs are never trusted merely because the owner owns them.
+- Inactive exact Memory matches are surfaced as conflicts. Explicit acceptance
+  activates proposed or archived content through accepted M2-02 operations and
+  replaces rejected content with a new active item while preserving the
+  rejected item's history.
+- `pg_cron` owns exactly one named daily job. Its private cleanup function has
+  no API-role execution grant and uses no HTTP, credential, provider, or remote
+  command.
 - Publication takes onboarding, goal-collection, then Memory-collection locks
   with bounded lock and statement timeouts. Any downstream failure rolls the
   mixed goal-and-Memory publication back.
@@ -278,17 +291,87 @@ Post-correction local results:
   valid test.
 - `tsc --noEmit`, diff, and scope checks: **pass**.
 
+## Independent-review correction pass
+
+The independent review of the pushed implementation found six blocking gaps:
+
+1. `save_review` accepted any same-owner Goal or Memory UUID instead of
+   proving it was the deterministic comparison target and that the submitted
+   resolution was valid for that comparison.
+2. Expired content had only owner-touch cleanup, before the product owner
+   separately approved the single daily in-Postgres cleanup.
+3. Confidence clearing was limited to onboarding publication instead of the
+   accepted ordinary Memory edit boundary.
+4. An exact Memory match could be proposed, archived, or rejected while the UI
+   still called it already saved and publication could leave it inactive.
+5. The full-rank preview included pending, rejected, and keep-existing
+   candidates that would not change the published order.
+6. The action notice received focus and was immediately overwritten by the
+   step-heading effect; validation copy also claimed a highlighted step that
+   the UI did not render.
+
+The correction implements and proves the following:
+
+- Trusted comparison enforcement is now transaction-local, deterministic by
+  exact match then conflict target, and rejects forged same-owner targets with
+  `PT409`. New accepts only `create`, active exact accepts only `keep`, active
+  conflicts accept `keep` or `update`, and inactive Memory conflicts accept
+  only the activating `update`.
+- A single named `pg_cron` job calls only
+  `private.purge_expired_onboarding_drafts()` at `03:17 UTC`. Reapplying the
+  name leaves one job; API roles cannot execute the function; cascade deletion
+  removes health-adjacent candidate content and creates no receipt.
+- A forward trigger on the accepted M2-02 Memory write path clears obsolete
+  confidence for ordinary `edit` and `edit_and_accept` revisions while
+  preserving provenance, history, bounded locking, and conflict behavior.
+- The repository and UI distinguish inactive exact Memory from active exact
+  Memory, display the saved status, remove the inactive **Keep** option, and
+  publish accepted proposed, archived, and rejected wording to active Memory
+  deterministically.
+- Rank preview applies only accepted `create` and `update` decisions. Rejected,
+  pending, exact keep, and conflict keep decisions have no preview effect.
+- Actionable errors retain focus on the notice; the step heading no longer
+  overrides it. Validation copy now truthfully asks the owner to review the
+  current step without claiming field highlighting.
+
+Correction manifest before its exact commit is recorded:
+
+```text
+ src/app/home/you/onboarding/actions.test.ts        | action-copy regression
+ src/app/home/you/onboarding/actions.ts             | honest validation copy
+ src/components/onboarding/onboarding-manager.test.tsx | rank/status/focus regressions
+ src/components/onboarding/onboarding-manager.tsx   | status UI, rank and focus behavior
+ src/lib/onboarding/onboarding-contract.ts          | comparison status contract
+ src/server/repositories/onboarding-repository.ts   | deterministic status-aware comparison
+ supabase/migrations/20260802201214_m2_03_guided_onboarding.sql | transaction, cleanup and confidence corrections
+ supabase/tests/database/m2_02_memory.test.sql      | approved confidence expectation
+ supabase/tests/database/m2_03_onboarding.test.sql  | trust, cleanup, status and confidence evidence
+```
+
+No file was deleted or renamed. The migration adds no exposed write surface,
+external service, credential, network call, `.github/**` change, or remote
+database mutation.
+
+Post-correction local results:
+
+- From-zero migration reset: **pass**.
+- Complete pgTAP: **pass**, 7 files and 456 assertions.
+- Full Vitest: **pass**, 50 files and 352 tests.
+- Full ESLint and `tsc --noEmit`: **pass**.
+- Database lint and security/performance advisors: **pass**, no findings.
+- Pinned Node `24.18.0` production build: **pass**.
+- Focused changed-file Prettier: **pass**. Repository-wide Prettier remains the
+  unchanged CRLF/baseline failure across 143 pre-existing files; no unrelated
+  formatting was committed.
+
 ## Required evidence still pending
 
 - **Branch CI:** corrected exact-SHA run pending push. Its green result is
   mandatory and includes the production build, all migrations and pgTAP,
   lint/advisors, and the existing 390px `e2e/auth.spec.ts` invocation.
-- **Local production build and browser flow:** blocked, not claimed green.
-  The pinned command
-  `npx.cmd --yes --package node@24.18.0 node node_modules\next\dist\bin\next build`
-  first failed because sandboxed `npx` attempted registry access and returned
-  `EACCES`; the approved escalated retry returned `aborted` before any Next.js
-  output. No server reached port 3000 and no screenshot was generated.
+- **Local production build:** green under pinned Node `24.18.0`. The local
+  browser flow remains unclaimed; CI and Vercel Preview provide the required
+  browser surfaces.
 - **Independent review:** pending against the exact pushed evidence commit and
   its matching Vercel Preview.
 - **Vercel Preview and hosted owner/security verification:** pending lead and

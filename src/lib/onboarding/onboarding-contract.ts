@@ -34,6 +34,7 @@ export type CandidateComparison = {
   targetId: string | null;
   existingLabel: string | null;
   existingDetail: string | null;
+  existingStatus: "active" | "proposed" | "rejected" | "archived" | null;
 };
 
 export type OnboardingDraftView = {

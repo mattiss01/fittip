@@ -1,7 +1,12 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { OnboardingManager } from "./onboarding-manager";
+import {
+  buildRankPreview,
+  isActionErrorStatus,
+  OnboardingActionNotice,
+  OnboardingManager,
+} from "./onboarding-manager";
 import type { OnboardingSnapshot } from "@/lib/onboarding/onboarding-contract";
 
 vi.mock("next/navigation", () => ({
@@ -92,6 +97,7 @@ describe("OnboardingManager", () => {
                 targetId: null,
                 existingLabel: null,
                 existingDetail: null,
+                existingStatus: null,
               },
             },
           ],
@@ -110,6 +116,7 @@ describe("OnboardingManager", () => {
                 targetId: null,
                 existingLabel: null,
                 existingDetail: null,
+                existingStatus: null,
               },
             },
           ],
@@ -130,6 +137,121 @@ describe("OnboardingManager", () => {
     expect(
       screen.getByRole("button", { name: "Save accepted items" }),
     ).toBeVisible();
+  });
+
+  it("previews only accepted create and update decisions", () => {
+    const snapshot = emptySnapshot();
+    snapshot.activeGoalOrder = [
+      {
+        id: "54000000-0000-4000-8000-000000000201",
+        title: "Existing core",
+        priorityTier: "core",
+        activeRank: 1,
+      },
+    ];
+    snapshot.goalCandidates = [
+      goalCandidate({
+        id: "54000000-0000-4000-8000-000000000301",
+        title: "Rejected candidate",
+        decision: "rejected",
+      }),
+      goalCandidate({
+        id: "54000000-0000-4000-8000-000000000302",
+        title: "Kept exact",
+        decision: "accepted",
+        resolution: "keep",
+        targetGoalId: "54000000-0000-4000-8000-000000000201",
+        comparison: {
+          kind: "exact",
+          targetId: "54000000-0000-4000-8000-000000000201",
+          existingLabel: "Existing core",
+          existingDetail: "Existing outcome",
+          existingStatus: null,
+        },
+      }),
+      goalCandidate({
+        id: "54000000-0000-4000-8000-000000000303",
+        title: "Accepted new",
+        decision: "accepted",
+        resolution: "create",
+      }),
+      goalCandidate({
+        id: "54000000-0000-4000-8000-000000000304",
+        title: "Accepted replacement",
+        decision: "accepted",
+        resolution: "update",
+        targetGoalId: "54000000-0000-4000-8000-000000000201",
+        comparison: {
+          kind: "conflict",
+          targetId: "54000000-0000-4000-8000-000000000201",
+          existingLabel: "Existing core",
+          existingDetail: "Existing outcome",
+          existingStatus: null,
+        },
+      }),
+    ];
+
+    expect(buildRankPreview(snapshot).map((goal) => goal.title)).toEqual([
+      "Accepted new",
+      "Accepted replacement",
+    ]);
+  });
+
+  it("surfaces inactive exact Memory and does not offer keep", () => {
+    render(
+      <OnboardingManager
+        snapshot={{
+          ...emptySnapshot(),
+          draft: draft({ currentStep: 6 }),
+          memoryCandidates: [
+            {
+              id: "54000000-0000-4000-8000-000000000401",
+              position: 1,
+              fieldKey: "preference:1",
+              memoryType: "preference",
+              content: "Synthetic preference.",
+              decision: "pending",
+              resolution: null,
+              targetMemoryId: null,
+              comparison: {
+                kind: "conflict",
+                targetId: "54000000-0000-4000-8000-000000000402",
+                existingLabel: "preference",
+                existingDetail: "Synthetic preference.",
+                existingStatus: "archived",
+              },
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/Saved status: archived/)).toBeVisible();
+    expect(
+      screen.queryByRole("option", { name: /Keep what/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: /Update what/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("focuses the actionable error notice", async () => {
+    render(
+      <OnboardingActionNotice
+        state={{
+          status: "validation",
+          message: "Review this step.",
+          submission: 1,
+        }}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveFocus());
+    expect(isActionErrorStatus("validation")).toBe(true);
+    expect(isActionErrorStatus("conflict")).toBe(true);
+    expect(isActionErrorStatus("session")).toBe(true);
+    expect(isActionErrorStatus("error")).toBe(true);
+    expect(isActionErrorStatus("saved")).toBe(false);
   });
 });
 
@@ -163,6 +285,33 @@ function draft(
     units: "metric",
     idempotencyKey: "54000000-0000-4000-8000-000000000002",
     expiresAt: "2026-09-01T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function goalCandidate(
+  overrides: Partial<OnboardingSnapshot["goalCandidates"][number]>,
+): OnboardingSnapshot["goalCandidates"][number] {
+  return {
+    id: "54000000-0000-4000-8000-000000000399",
+    position: 1,
+    title: "Candidate",
+    desiredOutcome: "Candidate outcome",
+    category: "other",
+    activityAreas: [],
+    startDate: "2026-08-02",
+    priorityTier: "core",
+    targetRank: 2,
+    decision: "pending",
+    resolution: null,
+    targetGoalId: null,
+    comparison: {
+      kind: "new",
+      targetId: null,
+      existingLabel: null,
+      existingDetail: null,
+      existingStatus: null,
+    },
     ...overrides,
   };
 }

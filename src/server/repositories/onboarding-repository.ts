@@ -343,10 +343,13 @@ function toGoalCandidate(
   row: GoalCandidateRow,
   goals: GoalRow[],
 ): GoalCandidateView {
-  const exact = goals.find((goal) => goalMatches(row, goal));
+  const orderedGoals = [...goals].sort((left, right) =>
+    left.id.localeCompare(right.id),
+  );
+  const exact = orderedGoals.find((goal) => goalMatches(row, goal));
   const conflict =
     exact ??
-    goals.find(
+    orderedGoals.find(
       (goal) =>
         goal.title.trim().toLocaleLowerCase() === row.title.toLocaleLowerCase(),
     );
@@ -356,6 +359,7 @@ function toGoalCandidate(
         targetId: exact.id,
         existingLabel: exact.title,
         existingDetail: exact.desired_outcome,
+        existingStatus: null,
       }
     : conflict
       ? {
@@ -363,12 +367,14 @@ function toGoalCandidate(
           targetId: conflict.id,
           existingLabel: conflict.title,
           existingDetail: conflict.desired_outcome,
+          existingStatus: null,
         }
       : {
           kind: "new",
           targetId: null,
           existingLabel: null,
           existingDetail: null,
+          existingStatus: null,
         };
 
   return {
@@ -406,10 +412,25 @@ function toMemoryCandidate(
   items: MemoryItemRow[],
   revisions: Map<string, MemoryRevisionRow>,
 ): MemoryCandidateView {
-  const exact = items.find((item) => {
+  const orderedItems = [...items].sort(
+    (left, right) =>
+      memoryStatusOrder(left.status) - memoryStatusOrder(right.status) ||
+      left.id.localeCompare(right.id),
+  );
+  const exact = orderedItems.find((item) => {
     const revision = revisions.get(item.current_revision_id);
     return (
-      item.memory_type === row.memory_type && revision?.content === row.content
+      item.status === "active" &&
+      item.memory_type === row.memory_type &&
+      revision?.content === row.content
+    );
+  });
+  const inactiveExact = orderedItems.find((item) => {
+    const revision = revisions.get(item.current_revision_id);
+    return (
+      item.status !== "active" &&
+      item.memory_type === row.memory_type &&
+      revision?.content === row.content
     );
   });
   const durableField =
@@ -419,8 +440,9 @@ function toMemoryCandidate(
       : null;
   const conflict =
     exact ??
+    inactiveExact ??
     (durableField
-      ? items.find((item) => item.intake_field_key === durableField)
+      ? orderedItems.find((item) => item.intake_field_key === durableField)
       : undefined);
   const conflictRevision = conflict
     ? revisions.get(conflict.current_revision_id)
@@ -431,6 +453,7 @@ function toMemoryCandidate(
         targetId: exact.id,
         existingLabel: memoryTypeLabel(exact.memory_type),
         existingDetail: conflictRevision?.content ?? null,
+        existingStatus: "active",
       }
     : conflict
       ? {
@@ -438,12 +461,15 @@ function toMemoryCandidate(
           targetId: conflict.id,
           existingLabel: memoryTypeLabel(conflict.memory_type),
           existingDetail: conflictRevision?.content ?? null,
+          existingStatus:
+            conflict.status as CandidateComparison["existingStatus"],
         }
       : {
           kind: "new",
           targetId: null,
           existingLabel: null,
           existingDetail: null,
+          existingStatus: null,
         };
 
   return {
@@ -486,4 +512,15 @@ function sameArray(left: string[], right: string[]) {
 
 function memoryTypeLabel(value: string) {
   return value.replaceAll("_", " ");
+}
+
+function memoryStatusOrder(value: string) {
+  return (
+    {
+      active: 1,
+      proposed: 2,
+      archived: 3,
+      rejected: 4,
+    }[value] ?? 5
+  );
 }

@@ -23,6 +23,8 @@ create unique index memory_items_owner_intake_field_key_idx
   on public.memory_items (user_id, intake_field_key)
   where intake_field_key is not null;
 
+create extension if not exists pg_cron;
+
 create type public.onboarding_change_receipt as (
   draft_id uuid,
   draft_revision bigint,
@@ -464,6 +466,64 @@ exception
 end;
 $$;
 
+-- Any owner-authored content revision makes an inference confidence obsolete,
+-- whichever accepted write surface produced that revision.
+create function private.clear_memory_confidence_after_owner_edit()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.current_revision_id is distinct from old.current_revision_id
+    and exists (
+      select 1
+      from public.memory_revisions
+      where id = new.current_revision_id
+        and user_id = new.user_id
+        and change_kind in ('edited', 'edited_and_accepted')
+    )
+  then
+    new.confidence := null;
+  end if;
+  return new;
+end;
+$$;
+
+revoke all privileges on function
+  private.clear_memory_confidence_after_owner_edit()
+from public, anon, authenticated, service_role;
+
+create trigger memory_items_clear_confidence_after_owner_edit
+before update of current_revision_id on public.memory_items
+for each row
+execute function private.clear_memory_confidence_after_owner_edit();
+
+create function private.purge_expired_onboarding_drafts()
+returns bigint
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_count bigint;
+begin
+  delete from public.onboarding_drafts
+  where expires_at <= pg_catalog.statement_timestamp();
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+revoke all privileges on function private.purge_expired_onboarding_drafts()
+from public, anon, authenticated, service_role;
+
+select cron.schedule(
+  'fittip-onboarding-expiry-cleanup',
+  '17 3 * * *',
+  'select private.purge_expired_onboarding_drafts()'
+);
+
 revoke all privileges on function private.onboarding_exact_keys(jsonb, text[])
   from public, anon, authenticated, service_role;
 revoke all privileges on function private.onboarding_text_array(
@@ -499,6 +559,11 @@ declare
   v_seen_ids uuid[] := array[]::uuid[];
   v_id uuid;
   v_target_id uuid;
+  v_expected_target_id uuid;
+  v_target_status text;
+  v_target_field_key text;
+  v_comparison_kind text;
+  v_memory_was_created boolean;
   v_position integer;
   v_count integer;
   v_current_goal_revision bigint;
@@ -1260,13 +1325,73 @@ begin
       end if;
 
       if v_entry ->> 'kind' = 'goal' then
-        if v_target_id is not null and not exists (
-          select 1
-          from public.goals
-          where id = v_target_id
-            and user_id = v_user_id
-            and archived_at is null
-        ) then
+        select goal.id
+        into v_expected_target_id
+        from public.onboarding_goal_candidates candidate
+        join public.goals goal
+          on goal.user_id = candidate.user_id
+         and goal.archived_at is null
+         and goal.title = candidate.title
+         and goal.desired_outcome = candidate.desired_outcome
+         and goal.category = candidate.category
+         and goal.activity_areas = candidate.activity_areas
+         and goal.start_date = candidate.start_date
+         and goal.target_date is not distinct from candidate.target_date
+         and goal.target_detail is not distinct from candidate.target_detail
+         and goal.target_metric_label is not distinct from
+           candidate.target_metric_label
+         and goal.target_metric_value is not distinct from
+           candidate.target_metric_value
+         and goal.target_metric_unit is not distinct from
+           candidate.target_metric_unit
+         and goal.priority_tier = candidate.priority_tier
+         and goal.rationale is not distinct from candidate.rationale
+         and goal.constraints_text is not distinct from candidate.constraints_text
+        where candidate.id = v_id
+          and candidate.draft_id = v_draft.id
+          and candidate.user_id = v_user_id
+        order by goal.id
+        limit 1;
+        v_comparison_kind := case
+          when v_expected_target_id is not null then 'exact'
+          else 'new'
+        end;
+        if v_expected_target_id is null then
+          select goal.id
+          into v_expected_target_id
+          from public.onboarding_goal_candidates candidate
+          join public.goals goal
+            on goal.user_id = candidate.user_id
+           and goal.archived_at is null
+           and lower(trim(goal.title)) = lower(candidate.title)
+          where candidate.id = v_id
+            and candidate.draft_id = v_draft.id
+            and candidate.user_id = v_user_id
+          order by goal.id
+          limit 1;
+          if v_expected_target_id is not null then
+            v_comparison_kind := 'conflict';
+          end if;
+        end if;
+        if v_entry ->> 'decision' = 'accepted' and ((
+          v_comparison_kind = 'new'
+          and (
+            v_entry ->> 'resolution' <> 'create'
+            or v_target_id is not null
+          )
+        ) or (
+          v_comparison_kind = 'exact'
+          and (
+            v_entry ->> 'resolution' <> 'keep'
+            or v_target_id is distinct from v_expected_target_id
+          )
+        ) or (
+          v_comparison_kind = 'conflict'
+          and (
+            v_entry ->> 'resolution' not in ('keep', 'update')
+            or v_target_id is distinct from v_expected_target_id
+          )
+        )) then
           raise exception using
             errcode = 'PT409',
             message = 'Onboarding changed. Reload and try again.';
@@ -1280,11 +1405,88 @@ begin
           and draft_id = v_draft.id
           and user_id = v_user_id;
       else
-        if v_target_id is not null and not exists (
-          select 1
-          from public.memory_items
-          where id = v_target_id and user_id = v_user_id
-        ) then
+        select item.id, item.status
+        into v_expected_target_id, v_target_status
+        from public.onboarding_memory_candidates candidate
+        join public.memory_items item
+          on item.user_id = candidate.user_id
+         and item.memory_type = candidate.memory_type
+        join public.memory_revisions revision
+          on revision.id = item.current_revision_id
+         and revision.user_id = item.user_id
+         and revision.content = candidate.content
+        where candidate.id = v_id
+          and candidate.draft_id = v_draft.id
+          and candidate.user_id = v_user_id
+        order by
+          case item.status
+            when 'active' then 1
+            when 'proposed' then 2
+            when 'archived' then 3
+            else 4
+          end,
+          item.id
+        limit 1;
+        v_comparison_kind := case
+          when v_expected_target_id is not null and v_target_status = 'active'
+            then 'exact'
+          when v_expected_target_id is not null then 'conflict'
+          else 'new'
+        end;
+        if v_expected_target_id is null
+          and (
+            exists (
+              select 1
+              from public.onboarding_memory_candidates
+              where id = v_id
+                and (
+                  field_key like 'context:%'
+                  or field_key like 'constraint:%'
+                )
+            )
+          )
+        then
+          select item.id, item.status
+          into v_expected_target_id, v_target_status
+          from public.onboarding_memory_candidates candidate
+          join public.memory_items item
+            on item.user_id = candidate.user_id
+           and item.intake_field_key = candidate.field_key
+          where candidate.id = v_id
+            and candidate.draft_id = v_draft.id
+            and candidate.user_id = v_user_id
+          order by item.id
+          limit 1;
+          if v_expected_target_id is not null then
+            v_comparison_kind := 'conflict';
+          end if;
+        end if;
+        if v_entry ->> 'decision' = 'accepted' and ((
+          v_comparison_kind = 'new'
+          and (
+            v_entry ->> 'resolution' <> 'create'
+            or v_target_id is not null
+          )
+        ) or (
+          v_comparison_kind = 'exact'
+          and (
+            v_entry ->> 'resolution' <> 'keep'
+            or v_target_id is distinct from v_expected_target_id
+          )
+        ) or (
+          v_comparison_kind = 'conflict'
+          and (
+            (
+              v_target_status = 'active'
+              and v_entry ->> 'resolution' not in ('keep', 'update')
+            )
+            or (
+              v_target_status <> 'active'
+              and v_entry ->> 'resolution' <> 'update'
+            )
+            or v_target_id is distinct from v_expected_target_id
+          )
+        )) then
           raise exception using
             errcode = 'PT409',
             message = 'Onboarding changed. Reload and try again.';
@@ -1471,6 +1673,7 @@ begin
         and decision = 'accepted'
       order by position, field_key
     loop
+      v_memory_was_created := false;
       v_field_key := case
         when v_memory_candidate.field_key like 'context:%'
           or v_memory_candidate.field_key like 'constraint:%'
@@ -1514,23 +1717,105 @@ begin
       end if;
 
       if v_memory_candidate.resolution = 'update' then
-        v_memory_receipt := public.apply_memory_change(
-          v_current_memory_revision,
-          case
-            when exists (
-              select 1
-              from public.memory_items
-              where id = v_memory_candidate.target_memory_id
-                and user_id = v_user_id
-                and status = 'proposed'
-            ) then 'edit_and_accept'
-            else 'edit'
-          end,
-          v_memory_candidate.target_memory_id,
-          null,
-          v_memory_candidate.content,
-          null
-        );
+        select item.status, item.intake_field_key
+        into v_target_status, v_target_field_key
+        from public.memory_items item
+        where item.id = v_memory_candidate.target_memory_id
+          and item.user_id = v_user_id;
+
+        if v_target_status = 'proposed' and exists (
+          select 1
+          from public.memory_items item
+          join public.memory_revisions revision
+            on revision.id = item.current_revision_id
+           and revision.user_id = item.user_id
+          where item.id = v_memory_candidate.target_memory_id
+            and item.user_id = v_user_id
+            and revision.content = v_memory_candidate.content
+        ) then
+          v_memory_receipt := public.apply_memory_change(
+            v_current_memory_revision,
+            'accept',
+            v_memory_candidate.target_memory_id,
+            null,
+            null,
+            null
+          );
+        elsif v_target_status = 'proposed' then
+          v_memory_receipt := public.apply_memory_change(
+            v_current_memory_revision,
+            'edit_and_accept',
+            v_memory_candidate.target_memory_id,
+            null,
+            v_memory_candidate.content,
+            null
+          );
+        elsif v_target_status = 'archived' then
+          if not exists (
+            select 1
+            from public.memory_items item
+            join public.memory_revisions revision
+              on revision.id = item.current_revision_id
+             and revision.user_id = item.user_id
+            where item.id = v_memory_candidate.target_memory_id
+              and item.user_id = v_user_id
+              and revision.content = v_memory_candidate.content
+          ) then
+            v_memory_receipt := public.apply_memory_change(
+              v_current_memory_revision,
+              'edit',
+              v_memory_candidate.target_memory_id,
+              null,
+              v_memory_candidate.content,
+              null
+            );
+            v_current_memory_revision :=
+              (v_memory_receipt).collection_revision;
+          end if;
+          v_memory_receipt := public.apply_memory_change(
+            v_current_memory_revision,
+            'enable',
+            v_memory_candidate.target_memory_id,
+            null,
+            null,
+            null
+          );
+        elsif v_target_status = 'rejected' then
+          v_field_key := coalesce(v_field_key, v_target_field_key);
+          update public.memory_items
+          set intake_field_key = null
+          where id = v_memory_candidate.target_memory_id
+            and user_id = v_user_id
+            and (
+              v_field_key is null
+              or intake_field_key is null
+              or intake_field_key = v_field_key
+            );
+          get diagnostics v_count = row_count;
+          if v_count <> 1 then
+            raise exception using
+              errcode = 'PT409',
+              message = 'Onboarding changed. Reload and try again.';
+          end if;
+          v_memory_receipt := public.apply_memory_change(
+            v_current_memory_revision,
+            'create',
+            null,
+            v_memory_candidate.memory_type,
+            v_memory_candidate.content,
+            null
+          );
+          v_memory_was_created := true;
+        else
+          v_memory_receipt := public.apply_memory_change(
+            v_current_memory_revision,
+            'edit',
+            v_memory_candidate.target_memory_id,
+            null,
+            v_memory_candidate.content,
+            null
+          );
+        end if;
       else
         v_memory_receipt := public.apply_memory_change(
           v_current_memory_revision,
@@ -1540,11 +1825,12 @@ begin
           v_memory_candidate.content,
           null
         );
+        v_memory_was_created := true;
       end if;
       v_current_memory_revision := (v_memory_receipt).collection_revision;
       v_memory_ids := array_append(v_memory_ids, (v_memory_receipt).item_id);
 
-      if v_memory_candidate.resolution = 'create' then
+      if v_memory_was_created then
         update public.memory_items
         set
           provenance = 'intake_confirmed',
@@ -1565,7 +1851,6 @@ begin
       elsif v_memory_candidate.resolution = 'update' then
         update public.memory_items
         set
-          confidence = null,
           intake_field_key = case
             when v_field_key is null then intake_field_key
             else coalesce(intake_field_key, v_field_key)

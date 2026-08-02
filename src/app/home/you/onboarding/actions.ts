@@ -135,7 +135,7 @@ async function resolveOnboardingAction(
     ) {
       return result(
         "validation",
-        "Check the highlighted step. Nothing from this attempt was saved.",
+        "Review this step and correct the details. Nothing from this attempt was saved.",
       );
     }
     if (error instanceof OnboardingConflictError) {
