@@ -5,7 +5,7 @@
 **Lifecycle state:** testable — awaiting independent exact-commit review
 
 **Exact implementation review target:**
-`39315b9f213f929184c4dcf98bf337e15bfe5532`
+`e5dab52`
 
 **Initial implementation commit:**
 `460ee184cb60c28d41f64481515c0bb8f459249a`
@@ -30,6 +30,9 @@
 - `39315b9f213f929184c4dcf98bf337e15bfe5532` — removes the review-queue steps
   from the 390px flow rather than faking a user path to a proposal, and drops
   the create form's "(starts proposed)" option text.
+- `e5dab52` — the second independent review's one correction: restores
+  keyboard coverage, which had gone with the deleted decline block, by driving
+  permanent deletion entirely by keyboard.
 
 **Lead commit on this branch:** `deabe75` — `ci: run the M2-02 memory browser
 flow` (port 3016). Wiring the flow into continuous integration was a
@@ -63,7 +66,17 @@ and records it.
 authorization, ownership, deletion, provenance, locking, or privacy defect in
 the code. All three are fixed in
 `3fc223732214732067d76618a6e6bd29c47abdc9`; see *The first independent review*
-below. Re-review pending.
+below.
+
+Second round reviewed `d3797bd` and **approved** the reversal of ADR-010
+decision 7: correct and complete, with the forgery invariant intact and, in
+the reviewer's assessment, stronger than before — `proposed` is now
+unreachable from the authenticated write path entirely rather than for three
+classes out of four. The reviewer re-derived the pgTAP revision sequence by
+hand, confirmed the cross-owner assertion is pinned to user B's own revision,
+and independently verified the premise for amending the migration in place.
+One correction: the deleted decline block had carried the surface's only
+keyboard assertion. Fixed in `e5dab52`. Re-review of that commit pending.
 
 **Product-owner acceptance:** not yet requested
 
@@ -140,8 +153,9 @@ Run at `390x844` against a production build, not `next dev`.
    disappears.
 10. Filter to **Proposed 0**. The review queue is empty and says so; nothing
     a user can create ever lands there.
-11. Open **Delete permanently** on any card, read the stated effect, then
-    **Confirm permanent delete**. Reload; the text is gone.
+11. Delete a card **using only the keyboard**: Tab to **Delete permanently**,
+    press Enter to open it, read the stated effect, Tab to **Confirm permanent
+    delete**, press Enter. Reload; the text is gone.
 12. Use the filter buttons. Each shows its own count and explanatory line.
 
 The automated form of this path is
@@ -231,6 +245,20 @@ Three product files changed there: the create-form key in
 `memory-manager.tsx`, the two lock guards in `m2_02_memory.test.sql`, and the
 tests covering the draft. The rest is documentation and re-captured
 screenshots.
+
+The keyboard-coverage round,
+`git diff --stat 39315b9f213f929184c4dcf98bf337e15bfe5532..e5dab52`:
+
+```
+ docs/decisions/ADR-010-M2-MEMORY-WRITE-BOUNDARY.md |  38 +++--
+ docs/validation/M2/M2-02-VALIDATION.md             | 179 ++++++++++++++++-----
+ e2e/m2-02-memory.spec.ts                           |  13 +-
+ 3 files changed, 172 insertions(+), 58 deletions(-)
+```
+
+One product-facing change: the deletion step in `e2e/m2-02-memory.spec.ts` is
+now driven by keyboard. The ADR and record changes in that range are the
+overturned-decision documentation committed alongside it.
 
 The overturned-decision round,
 `git diff --stat 3fc223732214732067d76618a6e6bd29c47abdc9..39315b9f213f929184c4dcf98bf337e15bfe5532`:
@@ -482,6 +510,18 @@ coverage. See limitation 2. The alternative — inventing an app path that
 creates proposals so the flow stayed green — was rejected outright, because it
 would let a user manufacture content that reads as system-inferred.
 
+**A second cost, which the first version of this section failed to disclose.**
+The deleted decline block held the surface's **only** keyboard assertion, so
+removing it left nothing anywhere proving the memory surface is operable
+without a pointer — a ticket requirement at 390px. The builder did not notice;
+the second independent review did, by grepping the spec and the component
+tests for `keyboard`, `toBeFocused`, `toHaveFocus` and `focus()` and finding
+zero hits in both. Restored in `e5dab52` by driving **permanent deletion**
+entirely by keyboard, which is a stricter case than the one lost: the same
+`details`/`summary` confirmation, on the most destructive action on the
+surface, with focus asserted at each step. Confirmed load-bearing — replacing
+the opening Enter with ArrowDown fails the run.
+
 ## Data, migration, API, privacy, and security effects
 
 **Migration** `supabase/migrations/20260801085404_m2_02_memory_model.sql`,
@@ -624,6 +664,8 @@ locally while developing, reported as such.
 | The same flow before the correction, `--repeat-each=6` | **1 failed, 5 passed** — the defect CI caught, reproduced locally |
 | The flow again after the review corrections, `--repeat-each=8` | **8 passed, 0 failed** |
 | The reduced flow after the overturned decision, `--repeat-each=8` | **8 passed, 0 failed** |
+| The flow with the keyboard deletion path, `--repeat-each=8` | **8 passed, 0 failed** |
+| Falsifiability probe: opening Enter replaced with ArrowDown | **run fails**, so the keyboard assertions are load-bearing |
 | `npx.cmd supabase db reset --local` on the amended migration | all 8 migrations applied from zero |
 | New lock guards evaluated against synthetic definitions in `psql` | `'3s'` passes; `'0'`, `'30min'` and an absent setting all fail |
 | `git diff --check` | clean |
@@ -752,7 +794,12 @@ overflow at 390px.
    driving the real surface. Manufacturing a user path to a proposal purely to
    keep the flow green was rejected: it would let a user create content that
    reads as system-inferred, which this ticket forbids outright. The gap
-   closes when M2-03 produces real proposals.
+   closes when M2-03 produces real proposals. Note that keyboard operation is
+   **not** part of this gap: the deleted block had carried the surface's only
+   keyboard assertion, and `e5dab52` restored it on permanent deletion, which
+   uses the identical `details`/`summary` confirmation. What is missing is the
+   review actions themselves, not the interaction pattern they share with the
+   rest of the surface.
 3. **`memory_type` is immutable after creation.** The owner deletes and
    re-files instead. This was originally justified by the forced-`proposed`
    rule, which no longer exists; it stands now only because no approved
@@ -799,15 +846,15 @@ overflow at 390px.
 
 ## Independent reviewer checklist
 
-Review commit `39315b9f213f929184c4dcf98bf337e15bfe5532` on
-`ticket/m2-02-memory-model`, plus the follow-up commit adding this record. The
-first round's three findings are addressed in `3fc2237` and described under
-*The first independent review*; the product owner's reversal of ADR-010
-decision 7 is in `75520c2`, `1796965` and `39315b9` and described under *The
-overturned decision*. The re-review should confirm both and re-check nothing
-else regressed.
+Review commit `e5dab52` on `ticket/m2-02-memory-model`, plus the follow-up
+commit adding this record. The first round's three findings are addressed in
+`3fc2237`; the product owner's reversal of ADR-010 decision 7 is in `75520c2`,
+`1796965` and `39315b9`, which the second round approved. The only outstanding
+change is `e5dab52`, restoring keyboard coverage on permanent deletion, so a
+third round can reasonably scope itself to that commit and to confirming
+nothing else regressed.
 
-Read `git diff 79fdefbb76005264bbea9e1acbdc37f46289b0e4..39315b9f213f929184c4dcf98bf337e15bfe5532`
+Read `git diff 79fdefbb76005264bbea9e1acbdc37f46289b0e4..e5dab52`
 as the source of truth, and confirm the CI run is green for that SHA. Do not
 re-run lint, typecheck, `test:run`, `build`, the database matrix, or the
 browser flow — CI covers them, and CI now includes the 390px memory flow. Note
@@ -869,16 +916,21 @@ Confirm the judgment CI cannot supply:
     branch, and satisfy yourself that amending in place rather than adding a
     forward migration was right here (never applied to a persistent database,
     branch unmerged).
-12. **The recovery tells the truth and claims nothing.** Neither notice may
+12. **Keyboard operation is genuinely covered.** The surface lost its only
+    keyboard assertion once and nobody noticed until a grep found it. Confirm
+    `e2e/m2-02-memory.spec.ts` still drives permanent deletion by focus, Enter,
+    Tab, Enter with the intermediate focus asserted, and that no future edit
+    can quietly remove it again without the grep coming back empty.
+13. **The recovery tells the truth and claims nothing.** Neither notice may
     say the change was saved — the action answers 200 for a success, a
     conflict, a validation failure, an expired session, and a persistence
     error alike. Confirm the lost-render path reloads and the unconfirmed path
     does not, that the session marker carries no memory content, and that
     `settled()` in the spec waits for a real state rather than masking a
     failure.
-13. **Verify the generated-types disclosure yourself.** The claim that the
+14. **Verify the generated-types disclosure yourself.** The claim that the
     nine `save_training_completion` lines diverge on unchanged `master` is
     checkable: remove this ticket's migration and pgTAP file, reset, and
     regenerate.
-14. **Hosted verification** against the Vercel Preview for this exact commit,
+15. **Hosted verification** against the Vercel Preview for this exact commit,
     at `390x844`.
