@@ -47,6 +47,38 @@ surfaces should end up with the same answer, decided once.
 The same reasoning covers any surface added later: whatever this ticket
 concludes becomes the pattern M2-03 and its successors follow.
 
+## Also in scope: a card editor draft lost after a rejected edit
+
+Added 2 August 2026 from M2-02's second independent review. It is here rather
+than in its own ticket because it is a three-line change in the same components,
+and splitting it would mean two tickets touching the same files for the same
+reason.
+
+`src/components/memory/memory-manager.tsx:427-429` keys each card editor on
+`` `${editOperation}-${item.id}-${draft ? actionState.submission : 0}` ``. That
+is correct in the common case but flips back after a **rejected** edit on that
+same card:
+
+1. An edit of card A is rejected — a stale-revision conflict preserves the
+   draft, so the key becomes `edit-A-1` and the editor re-renders with the
+   preserved text.
+2. The user retypes without submitting.
+3. The user acts on card B. Card A's `draft` now resolves to `undefined`, its
+   key returns to `edit-A-0`, the editor remounts, and the retyped text is
+   silently lost.
+
+This is the same flip-back that M2-02's sticky create key exists to prevent; it
+survives in the card editors because only the create key was made sticky. The
+fix is the same sticky-key pattern.
+
+It is **pre-existing**, present identically across every M2-02 commit, and it
+costs unsaved input only — no data, authorization, or privacy consequence. The
+reviewer was explicit that it did not warrant blocking acceptance, and equally
+explicit that it was reported a round late rather than absent.
+
+Check whether the goals surface has the same shape before fixing, as it does for
+the focus gap.
+
 ## Investigation and design first
 
 There is a real product question here, and it should be settled before code:
@@ -90,7 +122,9 @@ to implement, and record the reasoning.
    not interrupt or duplicate them.
 5. Automated coverage that fails without the change, on both surfaces.
 6. `prefers-reduced-motion` and the existing 44px touch targets are unaffected.
-7. A green continuous-integration run for the reviewed commit.
+7. A card editor keeps retyped text when the user acts on a different card after
+   a rejected edit, covered by a test that fails without the fix.
+8. A green continuous-integration run for the reviewed commit.
 
 ## Approval gate
 
