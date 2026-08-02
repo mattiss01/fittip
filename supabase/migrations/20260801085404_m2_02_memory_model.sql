@@ -411,13 +411,11 @@ begin
     v_item_id := gen_random_uuid();
     v_revision_id := gen_random_uuid();
     v_revision_number := 1;
-    -- An observed pattern is a fallible reading of behaviour, so it is never
-    -- active on creation. It enters the review queue and needs an explicit
-    -- acceptance, exactly as an inferred proposal would.
-    v_status := case
-      when p_memory_type = 'observed_pattern' then 'proposed'
-      else 'active'
-    end;
+    -- Anything the owner states about themselves is active on save, whichever
+    -- class it belongs to. `proposed` is reserved for content FitTip derived
+    -- rather than content the owner wrote, and this path cannot produce that:
+    -- provenance and author class are fixed below and are not caller inputs.
+    v_status := 'active';
 
     insert into public.memory_revisions (
       id,
@@ -467,7 +465,8 @@ begin
       'user_created',
       p_expires_on,
       v_revision_id,
-      case when v_status = 'proposed' then null else v_now end,
+      -- The owner wrote it and saved it, so it is confirmed at creation.
+      v_now,
       v_now,
       v_now,
       v_now
