@@ -15,7 +15,8 @@ commercial use, or production.
 
 | Priority | Ticket | Status | Depends on | Scope | Approval gate |
 |---|---|---|---|---|---|
-| P1 | [M3-01 Local AI adapter and controls](M3-01-LOCAL-AI-ADAPTER-CONTROLS.md) | proposed | M2-01, M2-02, M2-03, and M2-04 accepted; M0-06A accepted for hosted use; ADR-006 and ADR-007; explicit provider/model/key-use/data-use/retention/quality/rate/token/budget/spend approval | Provider-neutral server interface, fixtures/mocks, one separately approved real adapter, owner allowlist/enable flag, allowlisted context, schema validation, rate/concurrency/budget/idempotency, content-free telemetry, opt-in live tests | Approve every provider/model/data-use/retention/key-use/quality/cost value and exact hard limits; owner/synthetic local or founder-hosted only |
+| P1 | [M3-01 Server-only AI boundary and fixture adapters](M3-01-LOCAL-AI-ADAPTER-CONTROLS.md) | proposed | M2-01 through M2-04 accepted; ADR-006, ADR-007, ADR-012 | Provider-neutral `CoachAI` contract, deterministic fixture adapters, owner allowlist/enable flag, ADR-012 goal and memory context allowlist, schema validation, in-memory rate/concurrency/budget/idempotency policy, content-free telemetry. No provider, credential, network call, or spend | Approve the dispatch; no provider decision required |
+| P1 | [M3-01B One approved real-provider adapter](M3-01B-REAL-PROVIDER-ADAPTER.md) | proposed | M3-01 accepted; M0-06A accepted for hosted use | One real adapter behind the accepted contract, server-only credential path, durable fail-closed rate/budget/idempotency state, cost reservation and reconciliation, opt-in live test | Approve every provider/model/account/data-use/retention/limit/spend value before dispatch |
 | P1 | [M3-02 Roadmap proposal](M3-02-ROADMAP-PROPOSAL.md) | proposed | M3-01 accepted and accepted M2 foundations | Owner-scoped structured high-level roadmap proposal with phases, milestones, uncertainty, review points, source versions, edit/reject/accept boundary; no detailed plan | Approve horizon, schema, uncertainty/review UX, safety, versioning, retention, and transaction choices |
 | P1 | [M3-03 Selected-horizon plan proposal](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md) | proposed | M3-01 and M3-02 accepted | User-selected 1–7 consecutive owner-local dates, structured sport-agnostic sessions and personal activity candidates, goal allocation, constraints, alternatives, reasoning, conservative safety; no acceptance | Approve day-count default/remembering, date/unit/session/activity/time/intensity/allocation/safety/UX limits |
 | P1 | [M3-04 Plan edit, lock, and acceptance](M3-04-PLAN-EDIT-LOCK-ACCEPTANCE.md) | proposed | M3-02 and M3-03 accepted | Structured edits, session/activity locks, side-by-side review, reuse of the M1 personal-activity/version model, transactional immutable roadmap/detailed-plan acceptance; no change to logging and no replan | Approve editable fields, lock inheritance, diff/copy, activity reuse/snapshot, version/current-pointer, transaction, and retention decisions |
@@ -25,12 +26,20 @@ commercial use, or production.
 
 ```text
 Accepted M2 goals + coaching context + guided onboarding + targeted closeout
-  -> M3-01 local AI adapter and controls
-    -> M3-02 high-level roadmap proposal
-      -> M3-03 exact selected 1–7-day plan proposal
-        -> M3-04 edit, locks, and transactional acceptance
-          -> M3-05 independent validation
+  -> M3-01 server-only AI boundary and fixture adapters   (no provider needed)
+    -> M3-01B one approved real-provider adapter          (provider decision)
+      -> M3-02 high-level roadmap proposal
+        -> M3-03 exact selected 1–7-day plan proposal
+          -> M3-04 edit, locks, and transactional acceptance
+            -> M3-05 independent validation
 ```
+
+M3-01 was split on 3 August 2026. The boundary — authorization, context
+allowlist, schema validation, budget accounting, fail-closed behavior — needs no
+provider, credential, network call, or spend, so it starts immediately; only the
+real adapter waits on a provider decision. The split also improves the contract,
+because fixtures written against the interface alone cannot quietly shape it
+around one provider's API.
 
 M3-03 depends on M3-02 because the first detailed horizon must be traceable to a
 reviewed high-level direction, rather than inventing a standalone plan with no

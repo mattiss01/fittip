@@ -1,6 +1,17 @@
-# M3-01: Local AI adapter and controls
+# M3-01: Server-only AI boundary and fixture adapters
 
-**Status:** proposed — not approved for implementation
+**Status:** proposed — brief written 3 August 2026; awaiting product-owner
+approval to dispatch
+
+**Scope split, 3 August 2026.** This ticket originally covered both the
+provider-neutral boundary and one real-provider adapter. The boundary needs no
+provider, no credential, no network call, and no spend, so it is dispatchable
+now; the real adapter is gated on a provider decision the product owner has not
+made. Scope item 3, the opt-in live test, and open decisions 1, 2, 3, 5, 6, 7,
+and 8 moved to
+[M3-01B](M3-01B-REAL-PROVIDER-ADAPTER.md). Everything below the Agent brief is
+the original text and still describes both halves; the brief is authoritative
+for what is being built here.
 
 **Milestone:** M3
 
@@ -24,6 +35,59 @@ spend
 **Blocks:** [M3-02](M3-02-ROADMAP-PROPOSAL.md),
 [M3-03](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md), and
 [M3-05](M3-05-M3-VALIDATION-SLICE.md)
+
+## Agent brief
+
+**Outcome.** A provider-neutral, server-only `CoachAI` boundary with
+deterministic fixture adapters. Every gate that must stand between a user and a
+provider exists, is tested, and fails closed — before any provider exists to
+call. No network call, no credential, no dependency on any AI SDK, no spend.
+
+**Tier 1.** It defines what user data may ever leave this system.
+
+**Hard constraints.**
+
+- **No AI provider dependency.** Nothing added to `package.json`. If you find
+  yourself needing one, you are building M3-01B — stop and report.
+- **No network call anywhere**, including tests. Fixtures are pure functions.
+- The adapter never queries the database. The domain service builds context
+  from the accepted M1 training and M2 goal/memory repositories and hands the
+  adapter an already-authorized payload.
+- Goal eligibility is decided by
+  [ADR-012](../../decisions/ADR-012-AI-GOAL-CONTEXT-ELIGIBILITY.md), not by you:
+  implement `selectActiveGoalContext` in `src/server/goals/` mirroring
+  `selectActiveMemoryContext`, exposing **targetable** and **historical** goals
+  as separate fields, with per-status tests. Memory uses the existing
+  `selectActiveMemoryContext`.
+- Rate, budget, concurrency, and idempotency state is **injected policy, held
+  in memory**. No migration, no new table. Durable hosted state belongs to
+  M3-01B.
+- Unknown or stale cost/token state denies the call. Never treat unknown as
+  zero.
+- Server-only modules import `server-only`. Extend
+  `src/architecture/server-boundary.test.ts` so a `"use client"` file importing
+  `@/server/ai/**` fails the build.
+
+**Non-goals.** No real provider adapter, no provider or model selection, no
+credential reading beyond a presence check, no prompt content beyond fixture
+stubs, no proposal persistence, no UI, no migration, no live test.
+
+**Acceptance criteria.** Criteria 1, 2, 3, 4, 5, 6, 7, 8, 9, and 11 from the
+list below, scoped to fixtures. Criterion 10 (live evidence) and the provider
+half of 12 belong to M3-01B. Plus: a green continuous-integration run for the
+reviewed commit.
+
+**Expected change.** A new `src/server/ai/` subtree (contracts, gates, context
+assembly, budget/idempotency policy, output validation, content-free
+telemetry, fixture adapters) with tests alongside; `selectActiveGoalContext`
+added to `src/server/goals/goal-records.ts`; one extension to
+`src/architecture/server-boundary.test.ts`.
+
+**Project skills.** Invoke `validation-record` for the handoff. No
+`.agents/skills/` skill applies — this ticket changes no React, Next.js, or
+user-visible surface.
+
+Read only this section unless you hit an ambiguity it does not resolve.
 
 ## Outcome
 
