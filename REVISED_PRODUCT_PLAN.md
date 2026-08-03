@@ -413,7 +413,9 @@ interface CoachAI {
 }
 ```
 
-Prompts, output schemas, provider code, retry policy, and test fixtures belong under a dedicated `src/lib/ai/` module. Keep secrets server-side. Store model/prompt version and validation outcome with a proposal for debugging.
+Prompts, output schemas, provider code, retry policy, and test fixtures belong under a dedicated `src/server/ai/` module. Keep secrets server-side. Store model/prompt version and validation outcome with a proposal for debugging.
+
+Corrected from `src/lib/ai/` on 3 August 2026. `src/architecture/server-boundary.test.ts` fails the build when a `"use client"` file imports from `@/server/**`, and it does not guard `@/lib/**`. Only the `src/server/` path is therefore actually enforced against client import, which is the whole point of putting provider code behind a server-only interface. The original path predates that invariant.
 
 ## 11. Data model and history rules
 

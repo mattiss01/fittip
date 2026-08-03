@@ -1,7 +1,7 @@
 # M3-01: Server-only AI boundary and fixture adapters
 
-**Status:** proposed — brief written 3 August 2026; awaiting product-owner
-approval to dispatch
+**Status:** in development — approved and dispatched by the product owner on
+3 August 2026 as **Tier 1** on branch `ticket/m3-01-ai-boundary`
 
 **Scope split, 3 August 2026.** This ticket originally covered both the
 provider-neutral boundary and one real-provider adapter. The boundary needs no
@@ -63,10 +63,8 @@ call.
   M3-01B.
 - Unknown or stale cost/token state denies the call. Never treat unknown as
   zero.
-- Code lives in `src/server/ai/`, **not** the `src/lib/ai/` that
-  `REVISED_PRODUCT_PLAN.md` §10.5 names — the invariant test guards
-  `@/server/**` only, so that is the sole path actually protected from client
-  import. Modules import `server-only`, and you extend
+- Code lives in `src/server/ai/` — the only path the invariant test actually
+  protects from client import. Modules import `server-only`, and you extend
   `src/architecture/server-boundary.test.ts` so a `"use client"` file importing
   `@/server/ai/**` fails the build.
 
