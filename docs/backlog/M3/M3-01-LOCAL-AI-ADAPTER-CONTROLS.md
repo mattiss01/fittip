@@ -41,7 +41,7 @@ spend
 **Outcome.** A provider-neutral, server-only `CoachAI` boundary with
 deterministic fixture adapters. Every gate that must stand between a user and a
 provider exists, is tested, and fails closed — before any provider exists to
-call. No network call, no credential, no dependency on any AI SDK, no spend.
+call.
 
 **Tier 1.** It defines what user data may ever leave this system.
 
@@ -55,10 +55,9 @@ call. No network call, no credential, no dependency on any AI SDK, no spend.
   adapter an already-authorized payload.
 - Goal eligibility is decided by
   [ADR-012](../../decisions/ADR-012-AI-GOAL-CONTEXT-ELIGIBILITY.md), not by you:
-  implement `selectActiveGoalContext` in `src/server/goals/` mirroring
-  `selectActiveMemoryContext`, exposing **targetable** and **historical** goals
-  as separate fields, with per-status tests. Memory uses the existing
-  `selectActiveMemoryContext`.
+  add `selectActiveGoalContext` to `src/server/goals/` mirroring
+  `selectActiveMemoryContext`, exposing **targetable** and **historical** as
+  separate fields, with per-status tests.
 - Rate, budget, concurrency, and idempotency state is **injected policy, held
   in memory**. No migration, no new table. Durable hosted state belongs to
   M3-01B.
