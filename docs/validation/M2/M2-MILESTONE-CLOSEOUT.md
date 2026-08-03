@@ -1,7 +1,6 @@
 # M2 milestone closeout
 
-**Lifecycle state:** in progress — platform evidence complete, awaiting the
-product owner's hosted walkthrough and decision
+**Lifecycle state:** accepted — 3 August 2026
 
 **Approval:** On 29 July 2026 the product owner requested the smallest useful
 M2 validation slice, following the targeted M1 closeout model. Execution was
@@ -128,7 +127,23 @@ inference, or direct AI write.
 
 ### Private owner walkthrough
 
-**Pending the product owner.** Not yet performed.
+The product owner ran the approved path at `390x844` against
+`https://fittip-gilt.vercel.app` on 3 August 2026 using the private founder
+session, and attested that it passed:
+
+**start/resume onboarding -> add and prioritize goals -> add coaching context ->
+review/edit/reject candidates -> publish selected records -> inspect and edit
+the resulting Goals and Coach context under You.**
+
+Per the M1 closeout's retention rule, no owner email, password, Auth token, user
+UUID, secret, note, or training detail is recorded here. The attestation is the
+evidence; the session contents are deliberately not.
+
+This is the first end-to-end exercise of the chain. M2-01, M2-02, and M2-03 were
+each accepted in isolation, and onboarding through to editing published records
+under **You** had never run as one continuous hosted flow. It also closes the
+coverage gap M2-02 accepted knowingly: its review actions had no browser
+coverage until M2-03 could produce real proposals.
 
 ## Findings
 
@@ -167,8 +182,49 @@ One consequence is worth stating plainly: a user who wants a paused goal
 considered must resume it, and no UI affordance explains that. ADR-012 records
 it as accepted and unaddressed.
 
+## M2 closes with four open tickets
+
+Deliberately, and none of them blocks anything. M3 depends only on M2-01 through
+M2-04. Milestone numbers here mark where work originated, not a release train —
+M2-05 and M2-06 were likewise raised and accepted mid-milestone — so these four
+keep their numbers as open defects against a closed milestone rather than being
+renumbered into M3.
+
+| Ticket | Priority | Why it stays open |
+| --- | --- | --- |
+| [M2-07](../../backlog/M2/M2-07-GOAL-REVIEW-FOLLOWUPS.md) | P2 | Eight findings from M2-01's second review. Two are pgTAP guards that cannot fail, so the suite reports RLS properties it does not test. |
+| [M2-08](../../backlog/M2/M2-08-TYPE-GENERATION-DRIFT.md) | P2 | The documented type-generation step reddens `typecheck` on unchanged `master`. M3-02 and M3-03 both add schema, so this taxes M3's real work. |
+| [M2-09](../../backlog/M2/M2-09-APP-ROUTER-LOST-RENDER.md) | P1 | The App Router race is unexplained. Two surfaces carry mitigations and continuous integration now retries the planning flow, which makes it quieter rather than fixed. |
+| [M2-10](../../backlog/M2/M2-10-FOCUS-LOST-AFTER-MUTATION.md) | P2 | Keyboard and screen-reader users restart from the top after every mutation on both management surfaces. No external user exists yet; this must precede one. |
+
+Two of these are worth naming as risks rather than filing quietly. M2-09 is now
+masked by its own stopgap, which is precisely when a P1 gets forgotten; its
+removal is written into its acceptance criteria so it cannot become permanent by
+default. M2-07's unfailable pgTAP guards buy false confidence in the
+authorization model this product rests on, which is a stronger claim than its P2
+label carries.
+
 ## Acceptance
 
-Pending. The decision requested is: **accept M2 as the goals, editable
-coaching-context, and guided-onboarding foundation, or return a focused
-correction to its owning ticket** — together with the disposition of F1.
+**M2 is accepted and closed on 3 August 2026** as the goals, editable
+coaching-context, and guided-onboarding foundation.
+
+All six acceptance criteria are met. The exact accepted commits and their
+validation records are identified; the hosted walkthrough passed at `390x844`;
+context eligibility is settled for memory by `selectActiveMemoryContext`, for
+onboarding candidates structurally, and for goals by ADR-012 with implementation
+assigned to M3-01; hosted migration, RLS, advisor, and founder-boundary checks
+carry no unresolved blocker; no AI provider, plan generation, external-user,
+analytics, or production behavior was introduced; and this record holds the
+evidence and the decision.
+
+Two limitations are accepted as recorded rather than resolved. The hosted
+database was reused from M2-03's same-day verification and not independently
+re-queried, on the basis that no migration changed in between. A paused goal
+must be resumed before a coach will consider it, and no interface affordance
+explains that.
+
+[M3-01](../../backlog/M3/M3-01-LOCAL-AI-ADAPTER-CONTROLS.md) is now
+dependency-ready. It remains separately proposed and still requires explicit
+product-owner approval of the provider, model, key use, data-use and retention
+terms, rate card, hard limits, and maximum spend before any implementation.

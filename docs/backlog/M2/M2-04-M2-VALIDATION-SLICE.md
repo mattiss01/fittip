@@ -1,7 +1,11 @@
 # M2-04: Targeted goals, coaching-context, and onboarding closeout
 
-**Status:** proposed - minimal-closeout direction approved; execution waits
-for M2-01 through M2-03 acceptance
+**Status:** accepted - executed and accepted on 3 August 2026 against `master`
+`02ce95e` and founder deployment `dpl_8vN1B9Rqqv5D8FJUkWDGUkTNdsno`. M2 is
+closed. Evidence and the decision are in
+[the M2 milestone closeout](../../validation/M2/M2-MILESTONE-CLOSEOUT.md); its
+one finding was resolved by
+[ADR-012](../../decisions/ADR-012-AI-GOAL-CONTEXT-ELIGIBILITY.md)
 
 **Milestone:** M2 - goals, editable coaching context, and guided onboarding
 
