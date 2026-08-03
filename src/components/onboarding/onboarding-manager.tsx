@@ -15,6 +15,7 @@ import {
   LIMITATION_CATEGORIES,
   ONBOARDING_STEPS,
   type GoalCandidateView,
+  type OnboardingResolution,
   type OnboardingSnapshot,
   type OnboardingStep,
 } from "@/lib/onboarding/onboarding-contract";
@@ -36,6 +37,13 @@ const LIMITATION_LABELS = {
   unusual_fatigue: "Unusual fatigue",
   other: "Other constraint",
 } as const;
+
+type ReviewSelection = {
+  decision: "" | "accepted" | "rejected";
+  resolution: OnboardingResolution;
+};
+
+type ReviewSelections = Record<string, ReviewSelection>;
 
 export function OnboardingActionNotice({
   state,
@@ -85,6 +93,13 @@ export function OnboardingManager({
   );
   const [trainingStatus, setTrainingStatus] = useState<"current" | "none">(
     snapshot.draft?.trainingStatus ?? "current",
+  );
+  const [reviewSelections, setReviewSelections] = useState<ReviewSelections>(
+    () => buildReviewSelections(snapshot),
+  );
+  const activeReviewSelections = reconcileReviewSelections(
+    snapshot,
+    reviewSelections,
   );
   const headingRef = useRef<HTMLHeadingElement>(null);
   const resultRef = useRef<HTMLHeadingElement>(null);
@@ -187,7 +202,10 @@ export function OnboardingManager({
       ];
     }),
   );
-  const rankPreview = buildRankPreview(snapshot);
+  const rankPreview = buildRankPreview(snapshot, activeReviewSelections);
+  const coreGoalCount = rankPreview.filter(
+    (goal) => goal.tier === "core",
+  ).length;
 
   return (
     <div className={styles.manager}>
@@ -534,6 +552,18 @@ export function OnboardingManager({
                 destination="Goals"
                 key={candidate.id}
                 kind="goal"
+                onSelectionChange={(selection) =>
+                  setReviewSelections((current) =>
+                    reconcileReviewSelections(snapshot, {
+                      ...current,
+                      [candidate.id]: selection,
+                    }),
+                  )
+                }
+                selection={
+                  activeReviewSelections[candidate.id] ??
+                  defaultReviewSelection(candidate)
+                }
               />
             ))}
             {snapshot.memoryCandidates.map((candidate) => (
@@ -542,13 +572,31 @@ export function OnboardingManager({
                 destination="Memory"
                 key={candidate.id}
                 kind="memory"
+                onSelectionChange={(selection) =>
+                  setReviewSelections((current) =>
+                    reconcileReviewSelections(snapshot, {
+                      ...current,
+                      [candidate.id]: selection,
+                    }),
+                  )
+                }
+                selection={
+                  activeReviewSelections[candidate.id] ??
+                  defaultReviewSelection(candidate)
+                }
               />
             ))}
           </section>
           {rankPreview.length ? (
             <section className={styles.rankPreview}>
               <p className={styles.eyebrow}>Full rank preview</p>
-              <h3>If every goal card above is accepted</h3>
+              <h3>Result from your current choices</h3>
+              {coreGoalCount > 3 ? (
+                <p role="alert">
+                  These choices would create {coreGoalCount} core goals. Reduce
+                  the result to at most three before publication.
+                </p>
+              ) : null}
               <ol>
                 {rankPreview.map((goal) => (
                   <li key={goal.key}>
@@ -855,12 +903,16 @@ function ReviewCard({
   candidate,
   destination,
   kind,
+  onSelectionChange,
+  selection,
 }: {
   candidate:
     | OnboardingSnapshot["goalCandidates"][number]
     | OnboardingSnapshot["memoryCandidates"][number];
   destination: "Goals" | "Memory";
   kind: "goal" | "memory";
+  onSelectionChange: (selection: ReviewSelection) => void;
+  selection: ReviewSelection;
 }) {
   const comparison = candidate.comparison;
   const label =
@@ -869,15 +921,6 @@ function ReviewCard({
       : (candidate as OnboardingSnapshot["memoryCandidates"][number]).content;
   const detail =
     kind === "goal" ? (candidate as GoalCandidateView).desiredOutcome : null;
-  const defaultDecision =
-    candidate.decision === "pending" ? "" : candidate.decision;
-  const defaultResolution =
-    candidate.resolution ??
-    (comparison.kind === "new"
-      ? "create"
-      : comparison.kind === "exact"
-        ? "keep"
-        : "update");
 
   return (
     <article className={styles.reviewCard}>
@@ -912,9 +955,15 @@ function ReviewCard({
       <label>
         Decision
         <select
-          defaultValue={defaultDecision}
           name={`decision:${candidate.id}`}
+          onChange={(event) =>
+            onSelectionChange({
+              ...selection,
+              decision: event.target.value as ReviewSelection["decision"],
+            })
+          }
           required
+          value={selection.decision}
         >
           <option disabled value="">
             Choose
@@ -927,8 +976,14 @@ function ReviewCard({
         <label>
           If accepted
           <select
-            defaultValue={defaultResolution}
             name={`resolution:${candidate.id}`}
+            onChange={(event) =>
+              onSelectionChange({
+                ...selection,
+                resolution: event.target.value as OnboardingResolution,
+              })
+            }
+            value={selection.resolution}
           >
             <option value="update">Update what’s saved</option>
             {comparison.existingStatus === null ||
@@ -941,7 +996,7 @@ function ReviewCard({
         <input
           name={`resolution:${candidate.id}`}
           type="hidden"
-          value={defaultResolution}
+          value={selection.resolution}
         />
       )}
       <input
@@ -953,40 +1008,133 @@ function ReviewCard({
   );
 }
 
-export function buildRankPreview(snapshot: OnboardingSnapshot) {
-  const result = snapshot.activeGoalOrder.map((goal) => ({
-    key: goal.id,
-    title: goal.title,
-    tier: goal.priorityTier,
-    rank: goal.activeRank,
-  }));
-  for (const candidate of snapshot.goalCandidates) {
+export function buildRankPreview(
+  snapshot: OnboardingSnapshot,
+  selections: ReviewSelections = buildReviewSelections(snapshot),
+) {
+  const result = {
+    core: snapshot.activeGoalOrder
+      .filter((goal) => goal.priorityTier === "core")
+      .sort((left, right) => left.activeRank - right.activeRank)
+      .map((goal) => ({ key: goal.id, title: goal.title })),
+    supporting: snapshot.activeGoalOrder
+      .filter((goal) => goal.priorityTier === "supporting")
+      .sort((left, right) => left.activeRank - right.activeRank)
+      .map((goal) => ({ key: goal.id, title: goal.title })),
+  };
+  for (const candidate of [...snapshot.goalCandidates].sort(
+    (left, right) => left.position - right.position,
+  )) {
+    const selection =
+      selections[candidate.id] ?? defaultReviewSelection(candidate);
     if (
-      candidate.decision !== "accepted" ||
-      (candidate.resolution !== "create" && candidate.resolution !== "update")
+      selection.decision !== "accepted" ||
+      (selection.resolution !== "create" && selection.resolution !== "update")
     ) {
       continue;
     }
-    if (candidate.comparison.targetId && candidate.resolution === "update") {
-      const existingIndex = result.findIndex(
-        (goal) => goal.key === candidate.comparison.targetId,
-      );
-      if (existingIndex >= 0) result.splice(existingIndex, 1);
+    if (candidate.comparison.targetId && selection.resolution === "update") {
+      for (const tier of [result.core, result.supporting]) {
+        const existingIndex = tier.findIndex(
+          (goal) => goal.key === candidate.comparison.targetId,
+        );
+        if (existingIndex >= 0) tier.splice(existingIndex, 1);
+      }
     }
-    result.push({
+    const tier = result[candidate.priorityTier];
+    const targetIndex = Math.min(
+      Math.max((candidate.targetRank ?? tier.length + 1) - 1, 0),
+      tier.length,
+    );
+    tier.splice(targetIndex, 0, {
       key: candidate.id,
       title: candidate.title,
-      tier: candidate.priorityTier,
-      rank:
-        candidate.targetRank ??
-        result.filter((goal) => goal.tier === candidate.priorityTier).length +
-          1,
     });
   }
-  return result.sort(
-    (left, right) =>
-      left.tier.localeCompare(right.tier) || left.rank - right.rank,
+  return (["core", "supporting"] as const).flatMap((tier) =>
+    result[tier].map((goal, index) => ({
+      ...goal,
+      tier,
+      rank: index + 1,
+    })),
   );
+}
+
+function buildReviewSelections(snapshot: OnboardingSnapshot): ReviewSelections {
+  return Object.fromEntries(
+    [...snapshot.goalCandidates, ...snapshot.memoryCandidates].map(
+      (candidate) => [candidate.id, defaultReviewSelection(candidate)],
+    ),
+  );
+}
+
+function reconcileReviewSelections(
+  snapshot: OnboardingSnapshot,
+  current: ReviewSelections,
+): ReviewSelections {
+  const candidates = [...snapshot.goalCandidates, ...snapshot.memoryCandidates];
+  const next = Object.fromEntries(
+    candidates.map((candidate) => {
+      const previous = current[candidate.id];
+      const fallback = defaultReviewSelection(candidate);
+      return [
+        candidate.id,
+        previous
+          ? {
+              decision: previous.decision,
+              resolution: allowedResolution(candidate, previous.resolution)
+                ? previous.resolution
+                : fallback.resolution,
+            }
+          : fallback,
+      ];
+    }),
+  );
+  if (
+    Object.keys(next).length === Object.keys(current).length &&
+    Object.entries(next).every(
+      ([id, selection]) =>
+        current[id]?.decision === selection.decision &&
+        current[id]?.resolution === selection.resolution,
+    )
+  ) {
+    return current;
+  }
+  return next;
+}
+
+function defaultReviewSelection(
+  candidate:
+    | OnboardingSnapshot["goalCandidates"][number]
+    | OnboardingSnapshot["memoryCandidates"][number],
+): ReviewSelection {
+  return {
+    decision: candidate.decision === "pending" ? "" : candidate.decision,
+    resolution:
+      candidate.resolution ??
+      (candidate.comparison.kind === "new"
+        ? "create"
+        : candidate.comparison.kind === "exact"
+          ? "keep"
+          : "update"),
+  };
+}
+
+function allowedResolution(
+  candidate:
+    | OnboardingSnapshot["goalCandidates"][number]
+    | OnboardingSnapshot["memoryCandidates"][number],
+  resolution: OnboardingResolution,
+) {
+  if (candidate.comparison.kind === "new") return resolution === "create";
+  if (candidate.comparison.kind === "exact") return resolution === "keep";
+  if (
+    candidate.comparison.existingStatus &&
+    candidate.comparison.existingStatus !== "active"
+  ) {
+    return resolution === "update";
+  }
+  return resolution === "keep" || resolution === "update";
 }
 
 export function isActionErrorStatus(

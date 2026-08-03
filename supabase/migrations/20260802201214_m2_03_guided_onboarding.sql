@@ -466,6 +466,56 @@ exception
 end;
 $$;
 
+-- M2-03 may encounter an exact item that the owner previously rejected.
+-- Extend only the accepted unchanged/edit-and-accept transitions so onboarding
+-- can preserve that item's identity and history. The guarded replacement keeps
+-- the accepted M2-02 lock, validation, receipt, grants, and function shape.
+do $m2_03_memory_forward_change$
+declare
+  v_definition text;
+  v_edit_old constant text :=
+    'elsif p_operation = ''edit_and_accept'' then'
+    || chr(10)
+    || '        if v_item.status <> ''proposed'' then';
+  v_edit_new constant text :=
+    'elsif p_operation = ''edit_and_accept'' then'
+    || chr(10)
+    || '        if v_item.status not in (''proposed'', ''rejected'') then';
+  v_accept_old constant text :=
+    'elsif p_operation = ''accept'' then'
+    || chr(10)
+    || '        if v_item.status <> ''proposed'' then';
+  v_accept_new constant text :=
+    'elsif p_operation = ''accept'' then'
+    || chr(10)
+    || '        if v_item.status not in (''proposed'', ''rejected'') then';
+begin
+  select pg_catalog.pg_get_functiondef(
+    'public.apply_memory_change(bigint,text,uuid,text,text,date)'::regprocedure
+  )
+  into v_definition;
+  v_definition := pg_catalog.replace(
+    v_definition,
+    pg_catalog.chr(13) || pg_catalog.chr(10),
+    pg_catalog.chr(10)
+  );
+
+  if pg_catalog.strpos(v_definition, v_edit_old) = 0
+    or pg_catalog.strpos(v_definition, v_accept_old) = 0
+  then
+    raise exception 'Unexpected M2-02 Memory boundary definition.';
+  end if;
+
+  v_definition := pg_catalog.replace(v_definition, v_edit_old, v_edit_new);
+  v_definition := pg_catalog.replace(
+    v_definition,
+    v_accept_old,
+    v_accept_new
+  );
+  execute v_definition;
+end;
+$m2_03_memory_forward_change$;
+
 -- Any owner-authored content revision makes an inference confidence obsolete,
 -- whichever accepted write surface produced that revision.
 create function private.clear_memory_confidence_after_owner_edit()
@@ -561,7 +611,6 @@ declare
   v_target_id uuid;
   v_expected_target_id uuid;
   v_target_status text;
-  v_target_field_key text;
   v_comparison_kind text;
   v_memory_was_created boolean;
   v_position integer;
@@ -1717,8 +1766,8 @@ begin
       end if;
 
       if v_memory_candidate.resolution = 'update' then
-        select item.status, item.intake_field_key
-        into v_target_status, v_target_field_key
+        select item.status
+        into v_target_status
         from public.memory_items item
         where item.id = v_memory_candidate.target_memory_id
           and item.user_id = v_user_id;
@@ -1781,31 +1830,38 @@ begin
             null
           );
         elsif v_target_status = 'rejected' then
-          v_field_key := coalesce(v_field_key, v_target_field_key);
-          update public.memory_items
-          set intake_field_key = null
-          where id = v_memory_candidate.target_memory_id
-            and user_id = v_user_id
-            and (
-              v_field_key is null
-              or intake_field_key is null
-              or intake_field_key = v_field_key
-            );
-          get diagnostics v_count = row_count;
-          if v_count <> 1 then
-            raise exception using
-              errcode = 'PT409',
-              message = 'Onboarding changed. Reload and try again.';
-          end if;
           v_memory_receipt := public.apply_memory_change(
             v_current_memory_revision,
-            'create',
+            case
+              when exists (
+                select 1
+                from public.memory_items item
+                join public.memory_revisions revision
+                  on revision.id = item.current_revision_id
+                 and revision.user_id = item.user_id
+                where item.id = v_memory_candidate.target_memory_id
+                  and item.user_id = v_user_id
+                  and revision.content = v_memory_candidate.content
+              ) then 'accept'
+              else 'edit_and_accept'
+            end,
+            v_memory_candidate.target_memory_id,
             null,
-            v_memory_candidate.memory_type,
-            v_memory_candidate.content,
+            case
+              when exists (
+                select 1
+                from public.memory_items item
+                join public.memory_revisions revision
+                  on revision.id = item.current_revision_id
+                 and revision.user_id = item.user_id
+                where item.id = v_memory_candidate.target_memory_id
+                  and item.user_id = v_user_id
+                  and revision.content = v_memory_candidate.content
+              ) then null
+              else v_memory_candidate.content
+            end,
             null
           );
-          v_memory_was_created := true;
         else
           v_memory_receipt := public.apply_memory_change(
             v_current_memory_revision,

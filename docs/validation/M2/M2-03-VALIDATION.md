@@ -67,9 +67,8 @@ network credential, external provider, or remote command. Governance commit
   Goal and Memory state inside `apply_onboarding_change`; submitted target
   UUIDs are never trusted merely because the owner owns them.
 - Inactive exact Memory matches are surfaced as conflicts. Explicit acceptance
-  activates proposed or archived content through accepted M2-02 operations and
-  replaces rejected content with a new active item while preserving the
-  rejected item's history.
+  activates proposed, archived, or rejected content through forward-preserved
+  M2-02 operations on the deterministic existing item ID.
 - `pg_cron` owns exactly one named daily job. Its private cleanup function has
   no API-role execution grant and uses no HTTP, credential, provider, or remote
   command.
@@ -377,6 +376,72 @@ Post-correction local results:
 - Focused changed-file Prettier: **pass**. Repository-wide Prettier remains the
   unchanged CRLF/baseline failure across 143 pre-existing files; no unrelated
   formatting was committed.
+
+## Final independent re-review correction
+
+Independent re-review rejected evidence head
+`4e2f85da75dc2c529c589bddc9f1a44f2d0892f3` for two remaining gaps:
+
+1. The persisted-decision rank helper was correct after a save, but the
+   uncontrolled Step 6 selects did not recompute the preview during the first
+   review before submission.
+2. Accepted exact rejected Memory created a second identical item instead of
+   reactivating the deterministic existing target with ID continuity.
+
+The builder correction resolves both without changing the approved cleanup,
+authorization, privacy, or external-use boundaries:
+
+- Step 6 owns one bounded selection map keyed by the current candidate IDs.
+  Decision and resolution controls use that same state for form submission and
+  preview derivation. A refreshed snapshot preserves still-valid live choices;
+  changed candidate sets are reconciled and pruned on the next interaction.
+- The preview starts from the complete active Goal order and applies accepted
+  candidates sequentially by position. `create` inserts at the proposed rank;
+  `update` removes the deterministic target then inserts the candidate; exact
+  keep, conflict keep, reject, and pending make no change.
+- The visible preview updates before submit and reports when current choices
+  would exceed the maximum three core goals.
+- A guarded forward `CREATE OR REPLACE` keeps the accepted M2-02 public
+  function, signature, owner-derived identity, bounded lock, grants, receipt,
+  and history behavior. It broadens only unchanged `accept` and
+  `edit_and_accept` from proposed to proposed-or-rejected.
+- Exact rejected onboarding publication now accepts the existing target.
+  Changed rejected conflicts edit-and-accept that target. Both preserve the
+  item ID and revision chain; unchanged wording preserves provenance and
+  confidence, while the existing owner-edit trigger clears confidence only
+  when wording changes.
+
+Pre-commit correction manifest:
+
+```text
+ src/components/onboarding/onboarding-manager.test.tsx | live pending-choice, refresh, keep/reject and core-limit regressions
+ src/components/onboarding/onboarding-manager.tsx      | controlled review state and complete sequential rank preview
+ supabase/migrations/20260802201214_m2_03_guided_onboarding.sql | rejected-target forward transition and ID-continuous publication
+ supabase/tests/database/m2_03_onboarding.test.sql     | one-item, original-ID, history, provenance, confidence and receipt assertions
+```
+
+No file is deleted or renamed. No `.github/**`, credential, external service,
+network call, remote database command, exposed write surface, or cleanup
+schedule changes.
+
+Final-correction local results:
+
+- Focused interactive manager test: **pass**, including pending first-review
+  selection changes, snapshot refresh preservation, keep/reject no-ops, update
+  replacement, sequential rank insertion, and the fourth-core warning.
+- Focused M2-02 plus M2-03 pgTAP: **pass**, 189 assertions.
+- From-zero migration reset: **pass**.
+- Complete pgTAP: **pass**, 7 files and 461 assertions.
+- Full Vitest: **pass**, 50 files and 353 tests.
+- Full ESLint and `tsc --noEmit`: **pass**.
+- Database lint and security/performance advisors: **pass**, no findings.
+- Pinned Node `24.18.0` production build: **pass** from the existing package
+  cache. The first pinned attempt timed out without a build artifact; its
+  workers exited, and the exact offline-cache retry completed successfully.
+
+**Builder re-review verdict:** both findings are corrected locally. The new
+exact pushed commit, branch CI, matching Preview, and independent re-review
+remain required before the ticket can be testable.
 
 ## Required evidence still pending
 

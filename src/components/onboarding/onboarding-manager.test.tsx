@@ -1,4 +1,11 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -197,6 +204,138 @@ describe("OnboardingManager", () => {
     ]);
   });
 
+  it("updates the complete rank preview from first-pass live choices", () => {
+    const snapshot = emptySnapshot();
+    snapshot.draft = draft({ currentStep: 6 });
+    snapshot.activeGoalOrder = [
+      {
+        id: "54000000-0000-4000-8000-000000000501",
+        title: "Existing one",
+        priorityTier: "core",
+        activeRank: 1,
+      },
+      {
+        id: "54000000-0000-4000-8000-000000000502",
+        title: "Existing two",
+        priorityTier: "core",
+        activeRank: 2,
+      },
+      {
+        id: "54000000-0000-4000-8000-000000000503",
+        title: "Existing three",
+        priorityTier: "core",
+        activeRank: 3,
+      },
+    ];
+    snapshot.goalCandidates = [
+      goalCandidate({
+        id: "54000000-0000-4000-8000-000000000511",
+        position: 1,
+        title: "New first",
+        targetRank: 1,
+      }),
+      goalCandidate({
+        id: "54000000-0000-4000-8000-000000000512",
+        position: 2,
+        title: "Replacement first",
+        targetRank: 1,
+        comparison: {
+          kind: "conflict",
+          targetId: "54000000-0000-4000-8000-000000000502",
+          existingLabel: "Existing two",
+          existingDetail: "Existing outcome",
+          existingStatus: null,
+        },
+      }),
+    ];
+
+    const { rerender } = render(<OnboardingManager snapshot={snapshot} />);
+
+    expect(rankTitles()).toEqual([
+      "Existing one",
+      "Existing two",
+      "Existing three",
+    ]);
+
+    const newCard = screen
+      .getByRole("heading", { name: "New first" })
+      .closest("article")!;
+    fireEvent.change(within(newCard).getByLabelText("Decision"), {
+      target: { value: "accepted" },
+    });
+    expect(rankTitles()).toEqual([
+      "New first",
+      "Existing one",
+      "Existing two",
+      "Existing three",
+    ]);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /would create 4 core goals/,
+    );
+
+    rerender(
+      <OnboardingManager
+        snapshot={{
+          ...snapshot,
+          draft: draft({ currentStep: 6, revision: 1 }),
+        }}
+      />,
+    );
+    expect(rankTitles()).toEqual([
+      "New first",
+      "Existing one",
+      "Existing two",
+      "Existing three",
+    ]);
+
+    fireEvent.change(within(newCard).getByLabelText("Decision"), {
+      target: { value: "rejected" },
+    });
+    expect(rankTitles()).toEqual([
+      "Existing one",
+      "Existing two",
+      "Existing three",
+    ]);
+    expect(
+      screen.queryByText(/would create 4 core goals/),
+    ).not.toBeInTheDocument();
+
+    const replacementCard = screen
+      .getByRole("heading", { name: "Replacement first" })
+      .closest("article")!;
+    fireEvent.change(within(replacementCard).getByLabelText("Decision"), {
+      target: { value: "accepted" },
+    });
+    expect(rankTitles()).toEqual([
+      "Replacement first",
+      "Existing one",
+      "Existing three",
+    ]);
+
+    fireEvent.change(within(replacementCard).getByLabelText("If accepted"), {
+      target: { value: "keep" },
+    });
+    expect(rankTitles()).toEqual([
+      "Existing one",
+      "Existing two",
+      "Existing three",
+    ]);
+    const submitted = new FormData(
+      screen
+        .getByRole("button", { name: "Save accepted items" })
+        .closest("form")!,
+    );
+    expect(submitted.get("decision:54000000-0000-4000-8000-000000000511")).toBe(
+      "rejected",
+    );
+    expect(submitted.get("decision:54000000-0000-4000-8000-000000000512")).toBe(
+      "accepted",
+    );
+    expect(
+      submitted.get("resolution:54000000-0000-4000-8000-000000000512"),
+    ).toBe("keep");
+  });
+
   it("surfaces inactive exact Memory and does not offer keep", () => {
     render(
       <OnboardingManager
@@ -314,4 +453,13 @@ function goalCandidate(
     },
     ...overrides,
   };
+}
+
+function rankTitles() {
+  const preview = screen
+    .getByRole("heading", { name: "Result from your current choices" })
+    .closest("section")!;
+  return within(preview)
+    .getAllByRole("listitem")
+    .map((item) => item.querySelector("strong")?.textContent);
 }

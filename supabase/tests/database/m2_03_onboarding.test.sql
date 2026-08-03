@@ -1325,6 +1325,62 @@ select is(
   3::bigint,
   'accepted proposed, archived, and rejected exact content is active'
 );
+select is(
+  (
+    select count(*)::bigint
+    from public.memory_items item
+    join public.memory_revisions revision
+      on revision.id = item.current_revision_id
+     and revision.user_id = item.user_id
+    where item.user_id = '54000000-0000-4000-8000-000000000003'
+      and revision.content = 'Rejected exact wording.'
+  ),
+  1::bigint,
+  'rejected exact acceptance leaves one item across every status'
+);
+select ok(
+  (
+    select status = 'active'
+      and provenance = 'inferred_proposed'
+      and confidence = 60
+    from public.memory_items
+    where id = '54000000-0000-4000-8000-000000000113'
+  ),
+  'the deterministic rejected target keeps its ID and becomes active'
+);
+select ok(
+  (
+    select revision.change_kind = 'accepted'
+      and revision.status_after = 'active'
+      and revision.previous_revision_id =
+        '54000000-0000-4000-8000-000000000213'
+      and revision.provenance = 'inferred_proposed'
+      and revision.content = 'Rejected exact wording.'
+    from public.memory_items item
+    join public.memory_revisions revision
+      on revision.id = item.current_revision_id
+     and revision.user_id = item.user_id
+    where item.id = '54000000-0000-4000-8000-000000000113'
+  ),
+  'rejected exact reactivation appends accepted history with provenance'
+);
+select is(
+  (
+    select count(*)::bigint
+    from public.memory_revisions
+    where item_id = '54000000-0000-4000-8000-000000000113'
+  ),
+  2::bigint,
+  'rejected exact reactivation preserves the prior revision'
+);
+select ok(
+  (
+    select '54000000-0000-4000-8000-000000000113'::uuid = any(memory_ids)
+    from public.onboarding_publication_receipts
+    where user_id = '54000000-0000-4000-8000-000000000003'
+  ),
+  'the publication receipt records the original rejected target ID'
+);
 select lives_ok(
   $sql$
     select public.apply_memory_change(
