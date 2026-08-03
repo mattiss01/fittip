@@ -12,7 +12,8 @@
 [M2-04 accepted](../M2/M2-04-M2-VALIDATION-SLICE.md)
 
 **Architecture boundary:** [ADR-006 accepted](../../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md),
-[ADR-007 accepted](../../decisions/ADR-007-FOUNDER-HOSTED-STAGING.md), and
+[ADR-007 accepted](../../decisions/ADR-007-FOUNDER-HOSTED-STAGING.md),
+[ADR-012 accepted](../../decisions/ADR-012-AI-GOAL-CONTEXT-ELIGIBILITY.md), and
 [M0-06A accepted](../M0/M0-06A-FOUNDER-HOSTED-STAGING.md) before hosted use
 
 **Additional dependency before implementation:** explicit product-owner
@@ -59,8 +60,12 @@ retention/data-use term, external resource, call, or spend.
    allowlist before any real call.
 5. Resolve all context references under verified `user_id`; accept no
    caller-supplied ownership.
-6. Build a minimal operation-specific context from accepted goals, active
-   memory records explicitly accepted by the user.
+6. Build a minimal operation-specific context from goals and memory the user
+   explicitly accepted. Goal eligibility is already decided by
+   [ADR-012](../../decisions/ADR-012-AI-GOAL-CONTEXT-ELIGIBILITY.md): implement
+   `selectActiveGoalContext` in `src/server/goals/` mirroring
+   `selectActiveMemoryContext`, exposing targetable and historical goals as
+   separate fields, with per-status tests. Do not redecide the policy.
 7. Enforce schema, size, rate, concurrency, deadline, retry, idempotency, token,
    cost, and environment limits.
 8. Validate structured output and map failures to safe domain errors.

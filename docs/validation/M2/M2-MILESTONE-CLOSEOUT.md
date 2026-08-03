@@ -149,13 +149,23 @@ Nothing is broken today, because nothing reads goals for AI. The cost is that
 invent that boundary itself, in the ticket that first introduces a provider —
 which is the worst place to be defining what an AI is allowed to see.
 
-Two honest dispositions, both the product owner's decision:
+**Resolved on 3 August 2026.** The product owner settled the policy rather than
+deferring it, on the grounds that the expensive part is the coaching decision
+and not the code, and that M3-01 is the worst place to be making it. Recorded as
+[ADR-012](../../decisions/ADR-012-AI-GOAL-CONTEXT-ELIGIBILITY.md): a goal is
+targetable only while `active` and unarchived; `achieved` goals are readable as
+history but never targetable; `paused` and `abandoned` are excluded entirely;
+targetable and historical are separate context fields; and the gate is
+deny-by-default so a future status is invisible until someone amends the ADR.
 
-- **Accept M2 and carry F1 into M3-01** as an explicit named precondition, so
-  the adapter ticket cannot start without defining the goal gate first.
-- **Return a focused correction to M2-01**, adding `selectActiveGoalContext`
-  with its unit tests before M2 closes. Small and self-contained; it is a pure
-  server-side selector with no schema, UI, or authorization change.
+Implementation belongs to M3-01, which now names ADR-012 in its architecture
+boundary and carries the selector in scope item 6 with an explicit instruction
+not to redecide the policy. No correction returns to M2-01, and F1 does not
+block M2 acceptance.
+
+One consequence is worth stating plainly: a user who wants a paused goal
+considered must resume it, and no UI affordance explains that. ADR-012 records
+it as accepted and unaddressed.
 
 ## Acceptance
 
