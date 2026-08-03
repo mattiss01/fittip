@@ -9,6 +9,9 @@ acceptance remain required.
 **Implementation correction commit:**
 `2bb141f65066ff4ff4cb1b4b87485e71e3611844`
 
+**Final re-review correction commit:**
+`bdada36a671e56d0e6389e57e87abcbd92c6cf9b`
+
 **Branch:** `ticket/m2-03-guided-onboarding`
 
 **Base:** `7d066fc157e7acad7a7cd97f32d3da59a4cfb99c`
@@ -411,13 +414,17 @@ authorization, privacy, or external-use boundaries:
   confidence, while the existing owner-edit trigger clears confidence only
   when wording changes.
 
-Pre-commit correction manifest:
+Final correction manifest:
+
+`git diff --stat 4e2f85da75dc2c529c589bddc9f1a44f2d0892f3..bdada36a671e56d0e6389e57e87abcbd92c6cf9b`
 
 ```text
- src/components/onboarding/onboarding-manager.test.tsx | live pending-choice, refresh, keep/reject and core-limit regressions
- src/components/onboarding/onboarding-manager.tsx      | controlled review state and complete sequential rank preview
- supabase/migrations/20260802201214_m2_03_guided_onboarding.sql | rejected-target forward transition and ID-continuous publication
- supabase/tests/database/m2_03_onboarding.test.sql     | one-item, original-ID, history, provenance, confidence and receipt assertions
+ docs/validation/M2/M2-03-VALIDATION.md             |  71 ++++++-
+ .../onboarding/onboarding-manager.test.tsx         | 150 +++++++++++++-
+ src/components/onboarding/onboarding-manager.tsx   | 224 +++++++++++++++++----
+ .../20260802201214_m2_03_guided_onboarding.sql     | 102 +++++++---
+ supabase/tests/database/m2_03_onboarding.test.sql  |  56 ++++++
+ 5 files changed, 538 insertions(+), 65 deletions(-)
 ```
 
 No file is deleted or renamed. No `.github/**`, credential, external service,
@@ -439,9 +446,10 @@ Final-correction local results:
   cache. The first pinned attempt timed out without a build artifact; its
   workers exited, and the exact offline-cache retry completed successfully.
 
-**Builder re-review verdict:** both findings are corrected locally. The new
-exact pushed commit, branch CI, matching Preview, and independent re-review
-remain required before the ticket can be testable.
+**Builder re-review verdict:** both findings are corrected at exact pushed
+commit `bdada36a671e56d0e6389e57e87abcbd92c6cf9b`. Branch CI, its matching
+Preview, and independent re-review remain required before the ticket can be
+testable.
 
 ## Required evidence still pending
 
