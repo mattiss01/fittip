@@ -510,6 +510,43 @@ testable.
   after migration. No new authorization or migration correction was made from
   those notices.
 
-The product owner's authenticated refresh of `/home/today` and
-`/home/you/onboarding`, followed by the visual/behavioral acceptance pass,
-remains required. M2-03 is not accepted and must not merge until that succeeds.
+## Product-owner acceptance and master closeout — 3 August 2026
+
+- After the hosted migration repair, the product owner stated
+  **“i accept m2-03”** against exact independently reviewed branch head
+  `2dd7824c21057cf441ba70d68a460d0ba0522a8c` and its repaired Preview.
+- Remote `master` was still at the approved ticket base
+  `7d066fc157e7acad7a7cd97f32d3da59a4cfb99c`. The accepted history was a
+  strict fast-forward with no intervening master work and was pushed directly
+  to `master` at `2dd7824c21057cf441ba70d68a460d0ba0522a8c`.
+- Exact master CI run
+  <https://github.com/mattiss01/fittip/actions/runs/30801368695> completed
+  successfully. All three jobs passed: application checks and production
+  build; migrations, RLS, advisors, pgTAP, and concurrency; and the `390px`
+  production browser flows.
+- Founder deployment `dpl_EY2PcT1H2y96CVR4TJKFUxQuaNUc` reached `READY`,
+  targets `production`, maps exactly to `2dd7824`, and owns the
+  <https://fittip-gilt.vercel.app> alias.
+- Post-merge hosted migration history ends at exact repository version
+  `20260802201214_m2_03_guided_onboarding`; the temporary connector-generated
+  version is absent.
+- Post-merge hosted database checks reconfirmed all six onboarding tables,
+  their six owner-select policies, RLS, authenticated select without direct
+  table writes, no anonymous table access, the guarded authenticated mutation,
+  no anonymous mutation access, no authenticated access to the private purge,
+  and exactly one active `03:17 UTC` cleanup job.
+- Hosted advisors still show only the intentional authenticated
+  `SECURITY DEFINER` mutation boundaries, the previously accepted
+  founder-staging leaked-password warning, pre-existing unindexed foreign keys,
+  and expected unused indexes. The onboarding advisor entry is the approved
+  public mutation boundary; there is no RLS or exposed-table finding.
+- Anonymous fetches of `/`, `/home/today`, and `/home/you/onboarding` on the
+  founder alias all returned the sign-in surface with `private, no-cache,
+  no-store`, HSTS, and `noindex, nofollow, noarchive`.
+- The exact founder deployment produced no error or fatal runtime logs during
+  the closeout window. The only grouped onboarding persistence error in the
+  preceding hour belongs to the pre-repair ticket Preview
+  `dpl_4oFWTYHFrBnuWcetDLyjZihkd8if`, not the founder deployment.
+
+M2-03 is **accepted**, merged, pushed, deployed, and hosted-verified. M2-04 is
+now dependency-ready for a separate product-owner approval and dispatch.

@@ -1,9 +1,11 @@
 # M2-03: Guided onboarding and context review
 
-**Status:** in development — approved and dispatched 2 August 2026 after
-M2-02 was accepted, merged, pushed, deployed to the founder environment, and
-verified. The product owner approved the nine-part field, UX, persistence,
-atomicity, conflict, safety, privacy, and confidence decision set.
+**Status:** accepted — accepted by the product owner on 3 August 2026 against
+exact independently reviewed commit
+`2dd7824c21057cf441ba70d68a460d0ba0522a8c` after the founder migration repair
+and authenticated Preview recheck. The commit was fast-forwarded to `master`;
+exact master CI, the founder deployment, and hosted database/security checks
+passed.
 
 **Milestone:** M2 — goals, editable coaching context, and guided onboarding
 
