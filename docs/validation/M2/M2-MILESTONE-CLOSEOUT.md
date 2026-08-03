@@ -328,6 +328,12 @@ and never reproduced locally. Most likely something in that file's import graph
 touches `window` after the jsdom environment tears down, surfaced by a timing
 change. It is not diagnosed and does not belong to M2-08.
 
+The product owner decided on 3 August 2026 to leave this as a note rather than
+open a ticket, on the evidence available: one occurrence, not reproducible, and
+no failing assertion behind it. If it recurs, this paragraph is the prior
+observation to cite — a second sighting makes it a pattern rather than a
+one-off, and worth opening then.
+
 **Known limitations.**
 
 - **The database signature still does not say what the application means.**

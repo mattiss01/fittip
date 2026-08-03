@@ -1,11 +1,10 @@
 # M2-08: Regenerating database types breaks typecheck
 
-**Status:** testable — dispatched Tier 1 on 3 August 2026, then **re-scoped to
+**Status:** accepted — dispatched Tier 1 on 3 August 2026, **re-scoped to
 Tier 3** the same day when the builder proved the prescribed migration is not
-executable. Delivered as `61379f1b544253ecef4a6660ef9605a86ca39f25` on
-`ticket/m2-08-type-generation-drift`. Evidence is in the
-[M2 milestone closeout](../../validation/M2/M2-MILESTONE-CLOSEOUT.md#m2-08--type-generation-reproduces-the-committed-file);
-awaiting product-owner acceptance
+executable, and **accepted** by the product owner against
+`61379f1b544253ecef4a6660ef9605a86ca39f25`. Evidence is in the
+[M2 milestone closeout](../../validation/M2/M2-MILESTONE-CLOSEOUT.md#m2-08--type-generation-reproduces-the-committed-file)
 
 **Superseded by delivery:** the Agent brief below prescribes a forward
 migration adding `default null` to nine parameters. That is **not executable** —
