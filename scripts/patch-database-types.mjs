@@ -83,7 +83,13 @@ export function patchDatabaseTypes(source) {
   // that into `};`. Accept both so the "run format first" check below is what
   // reports the ordering mistake, rather than this producing a cryptic
   // formatting complaint.
-  const argsEnd = source.slice(argsStart).search(/\n {8}};?\n/);
+  //
+  // `\r?` is not decoration. `core.autocrlf=true` gives this repository CRLF
+  // working files on Windows, which is where the schema workflow actually runs,
+  // while continuous integration checks out LF and would never see the
+  // difference. An LF-only pattern passes every hosted run and fails every
+  // developer.
+  const argsEnd = source.slice(argsStart).search(/\r?\n {8}};?\r?\n/);
   if (argsEnd === -1) {
     throw new TypePatchError(
       `Could not find the end of the "${TARGET_FUNCTION}" Args block. The ` +

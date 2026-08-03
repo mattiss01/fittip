@@ -68,6 +68,20 @@ describe("patchDatabaseTypes", () => {
     expect(patchDatabaseTypes(once)).toBe(once);
   });
 
+  it("handles CRLF working files", () => {
+    // `core.autocrlf=true` gives this repository CRLF working files on Windows,
+    // where the schema workflow actually runs. Continuous integration checks
+    // out LF, so it cannot catch an LF-only pattern: this assertion is the only
+    // thing standing between a developer and a script that always throws.
+    const crlf = generated().replace(/\r?\n/g, "\r\n");
+
+    const patched = patchDatabaseTypes(crlf);
+
+    expect(patched).toContain("p_note: string | null;");
+    expect(patched).not.toContain("\n\n"); // no line endings mangled
+    expect(patched.split("\r\n").length).toBe(crlf.split("\r\n").length);
+  });
+
   it("throws when the function is gone", () => {
     expect(() => patchDatabaseTypes("export type Database = {};")).toThrow(
       TypePatchError,
