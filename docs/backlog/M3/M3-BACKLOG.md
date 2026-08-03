@@ -47,6 +47,54 @@ roadmap source. M3-04 depends on both proposal slices because it accepts the
 reviewed roadmap/detailed-plan pair and creates their immutable versions. M3-05 starts
 only after every owning slice is accepted.
 
+## Delivery approach — how M3 gets built without paying for iteration
+
+Approved by the product owner on 3 August 2026. This is the canonical statement;
+tickets reference it rather than restating it.
+
+M3 is the first milestone that can spend money, and the naive path — wire a
+provider early, then iterate prompts against it — is where the spend actually
+goes. Prompt tuning is hundreds of calls; the finished product is a handful.
+So the work is ordered to keep the provider out of the loop until there is
+something worth validating.
+
+**1. Boundary and fixtures cost nothing.** M3-01 builds the whole server-side
+boundary against deterministic fixtures. No provider, no credential, no network
+call, no spend — and that is a permanent property of the ticket, not a phase.
+
+**2. Fixtures are authored, not generated.** The corpus a builder needs — valid,
+truncated, schema-violating, impossible-date, unowned-goal-reference, and
+unsafe-phrasing responses — is written deliberately as an enumerated checklist.
+Do not reach for a model to produce malformed output: random garbage gives a
+flaky test and no guarantee the case that matters is covered. Realistic *valid*
+shapes may be drafted in a chat product and saved as files.
+
+**3. Prompt iteration happens off-API.** Draft and refine prompts in a chat
+subscription against synthetic athlete profiles, reading the output and tuning
+by hand. This is where the cost would otherwise land, and it is where a chat
+product is genuinely the better tool. Manually copying output into fixtures is
+ordinary use; wiring the application to a chat product is not, and is not
+permitted.
+
+**4. The adapter is tested against a stub HTTP endpoint.** M3-01B's client,
+timeout, retry-off, and error-mapping behavior are proven against a local stub
+that returns controlled status codes, bodies, delays, and hangs. That is
+deterministic, runs in continuous integration, and tests timeout behavior
+precisely. A local model server was considered and rejected: it buys nothing the
+stub does not, and costs a heavy local dependency on hardware already running
+Docker, Supabase, and the dev server.
+
+**5. Real provider calls happen once, bounded.** A single validation pass of
+roughly 20–50 calls confirms what only the real API can: that schema enforcement
+actually holds, that the prompt behaves the same through the API as it did in the
+chat window, and what the true token counts and latency are. That is the only
+place real spend occurs across the entire milestone.
+
+The resulting spend for all of M3 is under a euro at nano-tier pricing, or a few
+euros at a mid tier — against credit the product owner already holds. Cost is
+therefore not a reason to compromise on model choice; see the verified figures in
+[M3-01B](M3-01B-REAL-PROVIDER-ADAPTER.md).
+
 ## Pre-friends/public gate
 
 A local or founder-hosted M3 acceptance proves only the

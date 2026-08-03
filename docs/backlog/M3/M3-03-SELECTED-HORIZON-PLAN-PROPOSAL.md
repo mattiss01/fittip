@@ -56,6 +56,18 @@ instrumentation/deployment gates remain mandatory before those uses.
    acceptance belong to M3-04.
 9. Add AI-output, domain, authorization, safety, mobile, and leakage tests.
 
+## Prompt work happens off-API
+
+Per [the M3 delivery approach](M3-BACKLOG.md#delivery-approach--how-m3-gets-built-without-paying-for-iteration),
+draft and iterate this operation's prompt in a chat subscription against
+synthetic athlete profiles and a synthetic accepted roadmap. Judge session
+quality, goal allocation, and above all the conservative pain, illness, injury,
+and severe-fatigue behavior by reading real output — that judgment is the point
+of this ticket and needs no API key to exercise.
+
+Save the good shapes as fixtures. The provider is reached only inside M3-01B's
+bounded validation budget, once the prompt is settled.
+
 ## Non-goals
 
 - No accepted plan version, editing, locks, personal-activity persistence, or

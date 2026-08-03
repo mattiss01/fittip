@@ -68,6 +68,19 @@ call. No network call, no credential, no dependency on any AI SDK, no spend.
   `src/architecture/server-boundary.test.ts` so a `"use client"` file importing
   `@/server/ai/**` fails the build.
 
+**Fixtures are an enumerated checklist, not sampled output.** Author each
+failure mode deliberately: truncated JSON, valid JSON violating the schema,
+schema-valid but an impossible date or duration, a goal reference the owner does
+not hold, oversized payload, extra fields, and unsafe medical phrasing. Do not
+generate malformed output from a model — random garbage produces a flaky test
+and no guarantee the case that matters is covered.
+
+**Module location.** `src/server/ai/`, not `src/lib/ai/`.
+`src/architecture/server-boundary.test.ts` guards `@/server/**` and not
+`@/lib/**`, so only the former is actually protected from client import.
+`REVISED_PRODUCT_PLAN.md` §10.5 still says `src/lib/ai/` and predates that
+invariant; this brief wins, and the plan line is flagged for correction.
+
 **Non-goals.** No real provider adapter, no provider or model selection, no
 credential reading beyond a presence check, no prompt content beyond fixture
 stubs, no proposal persistence, no UI, no migration, no live test.

@@ -53,6 +53,19 @@ until the M0 gates pass.
 8. Keep acceptance transactional and separate from proposal generation.
 9. Add authorization, versioning, AI-output, UX, safety, and idempotency tests.
 
+## Prompt work happens off-API
+
+Per [the M3 delivery approach](M3-BACKLOG.md#delivery-approach--how-m3-gets-built-without-paying-for-iteration),
+draft and iterate this operation's prompt in a chat subscription against
+synthetic athlete profiles — reading the roadmap it produces, judging phase and
+milestone quality, and tuning by hand. Save the good shapes as fixtures. Only
+once the prompt is settled does it reach the real provider, inside M3-01B's
+bounded validation budget.
+
+Prompt iteration is where this milestone's API cost would otherwise land:
+hundreds of calls to tune, a handful to ship. Do not wire a provider in order to
+explore what a good roadmap looks like.
+
 ## Non-goals
 
 - No dated selected-horizon sessions, planned activities, exact volume/intensity,

@@ -55,6 +55,28 @@ inside approved hard limits.
 6. Opt-in live contract test using only owner or synthetic data, inside the
    approved cap, skipping safely when configuration is absent.
 
+## How this is built without paying for iteration
+
+Follows the approach in [the M3 backlog](M3-BACKLOG.md#delivery-approach--how-m3-gets-built-without-paying-for-iteration).
+Two points bind this ticket specifically.
+
+**The adapter's own behavior is proven against a stub HTTP endpoint**, not
+against the provider. The stub returns controlled status codes, bodies, delays,
+and hangs, so timeout, retry-off, error mapping, and partial-response handling
+are tested deterministically and in continuous integration. A local model server
+was considered and rejected — it buys nothing the stub does not and adds a heavy
+local dependency.
+
+**Real provider calls are a single bounded validation pass**, roughly 20–50
+requests, confirming the three things only the real API can show: that
+structured-output enforcement actually holds, that the prompt behaves the same
+through the API as it did during off-API drafting, and what real token counts
+and latency are. Record those numbers — the budget accounting built in M3-01 is
+calibrated against guesses until this pass replaces them with measurements.
+
+Everything else — prompt drafting, quality and safety review, valid-shape
+fixtures — happens off-API on a chat subscription before this ticket starts.
+
 ## Non-goals
 
 - No second provider, no fallback chain, no provider-routing gateway.
