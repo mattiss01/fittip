@@ -236,9 +236,17 @@ record one entry here rather than taking their own validation document.
 
 ### M2-08 — type generation reproduces the committed file
 
-**Commit** `e945ed912b54b452917906c335dbfe98019fb576` on
+**Reviewed commit** `61379f1b544253ecef4a6660ef9605a86ca39f25` on
 `ticket/m2-08-type-generation-drift`. Lead-implemented; Tier 3 replaces the
 builder and reviewer split.
+
+- `e945ed912b54b452917906c335dbfe98019fb576` — initial implementation.
+- `61379f1b544253ecef4a6660ef9605a86ca39f25` — correction: the Args-block
+  pattern did not match CRLF working files.
+
+Continuous integration for the reviewed commit:
+[run 30815703994](https://github.com/mattiss01/fittip/actions/runs/30815703994),
+**green** — 51 test files, all three jobs.
 
 **Re-scoped mid-ticket.** Dispatched Tier 1 on the lead's diagnosis that the
 fix was a forward migration adding `default null` to nine parameters. The
@@ -294,6 +302,31 @@ landing silently.
 | --- | --- |
 | `db reset --local` + generate → format → patch, then `git diff` | clean; byte-identical to the committed file |
 | `git diff --check` | clean |
+| Full local `test:run` on Windows/CRLF | 51 files, 362 tests; found the CRLF defect below |
+
+No Vercel Preview check applies. This commit changes no `src/` file, no
+migration, and no runtime behavior — only tooling, its tests, and
+documentation.
+
+**The correction is worth reading.** The first commit's pattern matched the
+generated Args block on `\n` only. Continuous integration checks out LF and
+passed all nine tests; the working tree here is CRLF under
+`core.autocrlf=true`, and the guard test failed immediately. An LF-only
+pattern would have gone green on every hosted run while throwing for every
+developer running the schema workflow — the exact inversion of the failure this
+script exists to prevent. The fix adds `\r?` and, more importantly, a CRLF
+regression test, because continuous integration structurally cannot catch that
+class.
+
+**One unrelated observation, recorded not diagnosed.** The first CI run
+([30815101025](https://github.com/mattiss01/fittip/actions/runs/30815101025))
+reported all 51 test files passing but exited non-zero on two unhandled
+`ReferenceError: window is not defined` errors attributed to
+`src/app/home/progress/[id]/page.test.tsx` — a file this ticket does not touch,
+which contains no `window` reference. It did not recur on the reviewed commit
+and never reproduced locally. Most likely something in that file's import graph
+touches `window` after the jsdom environment tears down, surfaced by a timing
+change. It is not diagnosed and does not belong to M2-08.
 
 **Known limitations.**
 

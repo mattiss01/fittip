@@ -2,7 +2,7 @@
 
 **Status:** testable — dispatched Tier 1 on 3 August 2026, then **re-scoped to
 Tier 3** the same day when the builder proved the prescribed migration is not
-executable. Delivered as `e945ed912b54b452917906c335dbfe98019fb576` on
+executable. Delivered as `61379f1b544253ecef4a6660ef9605a86ca39f25` on
 `ticket/m2-08-type-generation-drift`. Evidence is in the
 [M2 milestone closeout](../../validation/M2/M2-MILESTONE-CLOSEOUT.md#m2-08--type-generation-reproduces-the-committed-file);
 awaiting product-owner acceptance
