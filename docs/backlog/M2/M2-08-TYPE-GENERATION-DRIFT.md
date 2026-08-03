@@ -1,7 +1,7 @@
 # M2-08: Regenerating database types breaks typecheck
 
-**Status:** proposed — brief written and cause identified 3 August 2026;
-awaiting product-owner approval to dispatch
+**Status:** in development — approved and dispatched by the product owner on
+3 August 2026 as **Tier 1** on branch `ticket/m2-08-type-generation-drift`
 
 **Milestone:** M2 — goals, editable coaching context, and guided onboarding
 
