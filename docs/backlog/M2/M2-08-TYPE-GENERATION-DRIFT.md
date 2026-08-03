@@ -1,6 +1,7 @@
 # M2-08: Regenerating database types breaks typecheck
 
-**Status:** proposed — not approved for implementation
+**Status:** proposed — brief written and cause identified 3 August 2026;
+awaiting product-owner approval to dispatch
 
 **Milestone:** M2 — goals, editable coaching context, and guided onboarding
 
@@ -16,6 +17,62 @@ unchanged `master`
 
 **Blocks:** nothing today, but it silently taxes every future schema ticket.
 
+## Agent brief
+
+**Outcome.** After `supabase db reset --local` and the documented type
+generation, the working tree is clean and `typecheck` is green — the generator
+reproduces the committed `src/lib/supabase/database.types.ts` exactly, with no
+hand-preserved lines.
+
+**Tier 1.** A forward migration to an accepted `security definer` RPC that
+carries M1-03's atomic completion write.
+
+**Cause.** Already identified — see "Lead diagnosis" below, and confirm it in
+five minutes before building. In short: the generator never emits `| null` on
+RPC arguments, so the nine `| null` annotations on `save_training_completion`
+in the committed file were hand-written and every regeneration correctly
+removes them. Nothing is wrong with the CLI.
+
+**Expected change.**
+
+- A new forward migration adding `default null` to exactly these nine
+  parameters of `public.save_training_completion`, body and grants otherwise
+  unchanged: `p_completion_group_id`, `p_planned_session_id`,
+  `p_actual_started_at`, `p_duration_minutes`, `p_perceived_effort`,
+  `p_feeling`, `p_note`, `p_replacement_description`, `p_correction_reason`.
+- `src/server/repositories/completion-repository.ts` — `toRpcInput` omits those
+  keys when the value is absent instead of passing `null`. Follow the accepted
+  precedent at `src/server/repositories/goal-repository.ts:163`
+  (`...(id ? { p_goal_id: id } : {})`). Runtime behavior is identical: an
+  omitted argument resolves to the parameter's `default null`.
+- `src/lib/supabase/database.types.ts` — regenerated, never hand-edited. The
+  nine arguments become optional (`p_note?: string`), not nullable.
+
+**Hard constraints.**
+
+- Forward-only. Do not edit `20260728143000_m1_03_completion_writes.sql`.
+- Do not change the function body, its grants, its revokes, or any RLS policy.
+- Do not touch `apply_goal_change` or `apply_memory_change`.
+- Preserve the `.retry(false)` call in `completion-repository.ts`.
+  `src/architecture/server-boundary.test.ts` asserts exactly two such calls.
+- No suppression: no `any`, no `@ts-expect-error`, no loosened `tsconfig`.
+- No Supabase CLI bump and no other dependency change.
+- Completion, planning, and training behavior must not change.
+
+**Acceptance criteria.**
+
+1. `db reset --local` then the documented generation leaves the tree clean.
+2. `typecheck` passes with no hand-preserved lines in the generated file.
+3. The completion pgTAP suite and the concurrency harness pass unchanged.
+4. A green continuous-integration run for the reviewed commit.
+
+**Project skills.** Invoke `schema-change` for the migration, reset, pgTAP, and
+regeneration sequence, and `validation-record` for the handoff. Both are
+auto-discovered under `.claude/skills/`; no `.agents/skills/` skill applies,
+because this ticket changes no React, Next.js, or user-visible surface.
+
+Read only this section unless you hit an ambiguity it does not resolve.
+
 ## Observed behavior
 
 The documented schema workflow ends by regenerating the committed types from a
@@ -28,10 +85,7 @@ npx.cmd supabase gen types typescript --local
 
 With the pinned Supabase CLI 2.109.1, that regeneration **drops `| null` from
 nine `save_training_completion` parameters** in
-`src/lib/supabase/database.types.ts`. Those parameters are genuinely nullable:
-`p_actual_started_at`, `p_completion_group_id`, `p_correction_reason`,
-`p_duration_minutes`, `p_feeling`, `p_note`, and the remaining three the
-generator narrows the same way.
+`src/lib/supabase/database.types.ts`.
 
 `src/server/repositories/completion-repository.ts` passes `null` for them, so
 the narrowed types make `npm.cmd run typecheck` fail on a tree whose only
@@ -57,46 +111,45 @@ builder who "fixed" the resulting type errors in `completion-repository.ts`
 would have removed correct `null` handling from accepted completion behavior.
 Neither is a mistake anyone should have to avoid by being careful.
 
-## Investigation first
+## Lead diagnosis — 3 August 2026
 
-The cause is not known. Do not guess at a fix.
+The ticket asked whether this was a wrong RPC signature, a CLI regression, or
+something else. It is the first, with a twist: the signature never told the
+generator anything, and the committed types have been wrong since they were
+introduced.
 
-Establish which is true before proposing anything:
+Four pieces of evidence, all static and cheap to re-check:
 
-1. The RPC's declared parameter defaults or signature no longer tell the
-   generator those arguments are optional, in which case the correction is a
-   forward migration and the generator is behaving correctly.
-2. The pinned CLI version has a regression in nullable-parameter emission, in
-   which case the correction is a version bump with its own verification, or an
-   accepted documented deviation.
-3. Something else.
+1. **`save_training_completion` declares no parameter defaults.** All nineteen
+   parameters in `20260728143000_m1_03_completion_writes.sql:32` are plain
+   required arguments, and the function is not `strict`.
+2. **`apply_goal_change` does declare them.** Its parameters are
+   `default null` (`20260729161854_m2_01_goal_model.sql:201`), and the
+   generator emits them as `p_goal_id?: string` — optional, and **not**
+   `| null`.
+3. **The generator therefore never emits `| null` on an RPC argument.** It
+   emits `name?: T` for a defaulted parameter and `name: T` otherwise.
+   PostgreSQL has no per-argument nullability to read: every argument of a
+   non-`strict` function accepts `NULL`, so no generator could single out nine
+   of nineteen.
+4. **The annotations arrived with the function.** `git log -S` puts them in
+   `d9e2e57`, the M1-03 commit that created the RPC, and the CLI has been
+   pinned at `2.109.1` since. The committed file has never been reproducible;
+   the drift is a regeneration correctly reverting a hand-edit, and it will
+   recur on every schema ticket until the signature says what the application
+   means.
 
-Option 1 and option 2 lead to completely different changes, and option 1 would
-mean the committed types are currently wrong rather than the generator.
+This is why the fix is a migration rather than the CLI bump the ticket
+allowed for, and why the tier is 1 rather than 3.
 
-## Non-goals
-
-- No change to completion, planning, or training behavior.
-- No hand-edit of `src/lib/supabase/database.types.ts` as the fix. Regenerating
-  must produce the committed file.
-- No suppression: no `any`, no `@ts-expect-error`, no loosened `tsconfig`.
-- No unrelated dependency bumps bundled with a CLI bump.
-
-## Acceptance criteria
-
-1. The cause is identified and recorded, or explicitly recorded as unidentified
-   with what was ruled out.
-2. After `db reset --local` followed by the documented type generation, the
-   working tree is clean — the generator reproduces the committed file exactly.
-3. `npm.cmd run typecheck` passes on that tree with no hand-preserved lines.
-4. If the fix is a migration, it is forward-only and no applied migration is
-   edited. If it is a CLI bump, it is committed separately as a tooling change
-   with the full database matrix re-run.
-5. A green continuous-integration run for the reviewed commit.
+The builder should still confirm point 2 by regenerating once before changing
+anything — it is the load-bearing observation, and it costs one reset.
 
 ## Approval gate
 
-The product owner approves the investigation. Tier depends on the cause: a CLI
-bump is **Tier 3** tooling the lead may implement; a migration correcting the
-RPC signature is **Tier 1** and needs a distinct builder and reviewer. Stop and
-re-dispatch if the investigation crosses that line.
+The product owner approves the dispatch. The lead diagnosis fixes the tier at
+**Tier 1**: the change is a forward migration to a `security definer` RPC
+behind accepted completion behavior, so it takes a distinct builder and a
+distinct independent reviewer. If the builder's confirmation contradicts the
+diagnosis, stop and return to the product owner rather than re-planning inside
+the ticket.
