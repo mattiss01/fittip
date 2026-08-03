@@ -451,19 +451,65 @@ commit `bdada36a671e56d0e6389e57e87abcbd92c6cf9b`. Branch CI, its matching
 Preview, and independent re-review remain required before the ticket can be
 testable.
 
-## Required evidence still pending
+## Exact-commit review and hosted migration incident — 3 August 2026
 
-- **Branch CI:** corrected exact-SHA run pending push. Its green result is
-  mandatory and includes the production build, all migrations and pgTAP,
-  lint/advisors, and the existing 390px `e2e/auth.spec.ts` invocation.
-- **Local production build:** green under pinned Node `24.18.0`. The local
-  browser flow remains unclaimed; CI and Vercel Preview provide the required
-  browser surfaces.
-- **Independent review:** pending against the exact pushed evidence commit and
-  its matching Vercel Preview.
-- **Vercel Preview and hosted owner/security verification:** pending lead and
-  reviewer handoff.
-- **Product-owner visual acceptance:** pending on the reviewed Vercel Preview
-  at 390px.
+- Exact evidence commit
+  `d56c5f2b9cff4de70d4e23383e947b1c6eb0205f` passed branch CI:
+  <https://github.com/mattiss01/fittip/actions/runs/30797771265>.
+- Vercel deployment `dpl_4oFWTYHFrBnuWcetDLyjZihkd8if` reached `READY`
+  for that exact commit at
+  <https://fittip-n3nqyma5k-mattis-3657s-projects.vercel.app>.
+- The independent reviewer approved the exact code and manifest with no
+  remaining findings. Anonymous `390x844` verification passed, including the
+  authenticated-route redirect, viewport width, absence of browser-storage
+  keys, and absence of page errors.
+- The first product-owner authenticated check exposed a delivery failure:
+  `/home/today` showed **The records could not load** and
+  `/home/you/onboarding` showed its error boundary. Hosted Supabase migration
+  history ended at `20260801085404_m2_02_memory_model`; the committed
+  `20260802201214_m2_03_guided_onboarding` migration had never been applied.
+  API evidence matched the failure: onboarding-table reads returned `404` and
+  the new `memory_items.intake_field_key` projection returned `400`.
+- Root cause: CI applied every migration only to its disposable local Supabase
+  stack. The Vercel Git deployment built application code but had no database
+  deployment step. The lead requested acceptance after checking CI, the
+  deployment SHA, and anonymous behavior without first comparing founder
+  Supabase migration history or exercising the authenticated database-backed
+  route.
 
-No local browser or hosted result is represented as evidence in this record.
+### Hosted repair evidence
+
+- The product owner explicitly authorized applying the migration and recording
+  a preventive delivery gate.
+- The reviewed migration file SHA-256 is
+  `3B5D2361F5B9D050810334D5B9A1633F37781814F388FF23503E99F961F7137B`.
+- An initial connector submission was rejected before execution because its
+  SQL transport was truncated. A post-failure check proved that migration
+  history, `onboarding_drafts`, and `memory_items.intake_field_key` remained
+  unchanged.
+- The lead reconstructed all `63,403` migration characters across eight
+  bounded chunks, verified the first, cron, and final SQL markers, and applied
+  the complete SQL successfully to **FitTip Founder Staging**.
+- The connector initially recorded generated version `20260803090555`.
+  After successful schema verification, the lead guardedly reconciled that
+  single entry to repository version `20260802201214`; hosted migration history
+  now matches the committed file name and version.
+- Hosted schema verification found all six onboarding tables,
+  `memory_items.intake_field_key`, and `pg_cron`. All six tables have RLS, the
+  six owner-select policies are present, `authenticated` has select but no
+  direct insert/update/delete, and `anon` has no table access.
+- `authenticated` alone can execute the guarded public onboarding mutation;
+  `anon` cannot. Neither `authenticated` nor `anon` can execute the private
+  purge function.
+- Exactly one active `fittip-onboarding-expiry-cleanup` job runs
+  `select private.purge_expired_onboarding_drafts()` at `17 3 * * *`.
+- Hosted advisors reported the intentional authenticated
+  `SECURITY DEFINER` mutation-boundary warnings already covered by the ticket,
+  the existing founder-staging leaked-password warning, pre-existing
+  unindexed-foreign-key notices, and expected unused-index notices immediately
+  after migration. No new authorization or migration correction was made from
+  those notices.
+
+The product owner's authenticated refresh of `/home/today` and
+`/home/you/onboarding`, followed by the visual/behavioral acceptance pass,
+remains required. M2-03 is not accepted and must not merge until that succeeds.
