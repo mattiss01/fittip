@@ -145,13 +145,32 @@ jobs:
       # The root config's 60s test timeout is raised here for the same reason.
       # The per-ticket configs already set their own longer timeouts and are
       # deliberately left alone.
+      #
+      # This step alone retries. `planning.spec.ts` opens `/home/plan` through
+      # the App Router transition that M2-09 tracks: the segment intermittently
+      # never replaces its loading boundary, which M2-06 made detectable and
+      # nobody has yet explained. Measured at roughly one run in five, it
+      # reddened seven of the last thirty-five runs on commits that touched no
+      # application code, which teaches every reader to re-run instead of read.
+      #
+      # Two retries absorb intermittency, not breakage. A plan surface that is
+      # genuinely broken fails all three attempts and still blocks the job; only
+      # a defect that passes on a re-draw is let through, and Playwright reports
+      # it as `flaky` rather than swallowing it, so M2-09 keeps accruing its
+      # rate from continuous integration instead of losing every occurrence to a
+      # red job. Remove this the moment M2-09 lands a fix - the retry count is
+      # the measurement, so a run that stops reporting flaky is the evidence.
+      #
+      # Deliberately scoped to this step. The other browser steps do not carry
+      # this defect and must keep failing on the first attempt.
       - name: Authentication and planning flows
         env:
           PLAYWRIGHT_HTML_REPORT: playwright-report/auth-planning
         run: |
           .github/scripts/with-server.sh 3000 \
             npx playwright test e2e/auth.spec.ts e2e/planning.spec.ts \
-              --workers=1 --timeout=180000 --trace=retain-on-failure \
+              --workers=1 --timeout=180000 --retries=2 \
+              --trace=retain-on-failure \
               --output=test-results/auth-planning
 
       - name: M1-03 quick logging

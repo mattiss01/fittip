@@ -96,6 +96,29 @@ Questions the evidence does not yet answer:
    production `build` + `start` path specifically?
 4. Do `/home/plan` and `/home/log` exhibit it? They have never been measured.
 
+## Continuous-integration stopgap
+
+Question 4 is no longer open on `/home/plan`. It exhibits it, and continuous
+integration has been measuring the rate without anyone reading the measurement:
+the `Authentication and planning flows` step reddened **seven of the last
+thirty-five runs**, always on
+`planning.spec.ts:244 › expectPlanSurfaceReplacedLoading`, and four of those
+seven were commits that changed only documentation. That is the assertion
+[M2-06](M2-06-PLAN-PAGE-RENDER-TIMEOUT.md) added so the class would be visible,
+working exactly as designed.
+
+On 3 August 2026 the product owner approved `--retries=2` on that one step as a
+**Tier 3** stopgap, because a gate that fires on unchanged code one run in five
+teaches every reader to re-run instead of read — the precise failure the
+milestone backlog already warned about. Retries absorb intermittency, not
+breakage: a genuinely broken plan surface fails all three attempts and still
+blocks, and Playwright reports a recovered run as `flaky`, so the occurrence
+rate keeps accruing rather than being lost to a red job.
+
+This ticket owns removing it. The stopgap is not a fix and does not reduce this
+ticket's scope; it only stops the defect from spending everyone's attention
+while it waits to be explained.
+
 ## Non-goals
 
 - No redesign of the accepted goal or memory models, schemas, or actions.
@@ -115,7 +138,10 @@ Questions the evidence does not yet answer:
    correctly named module that is not owned by any single feature, and every
    mutating surface either uses it or records why it does not.
 5. No mitigation is removed without evidence that the race is gone.
-6. A green continuous-integration run for the reviewed commit.
+6. The `--retries=2` stopgap on `Authentication and planning flows` is removed
+   if this ticket fixes the race, or is explicitly re-justified in writing if it
+   does not. It does not survive by being forgotten.
+7. A green continuous-integration run for the reviewed commit.
 
 ## Approval gate
 

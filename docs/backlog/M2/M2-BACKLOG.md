@@ -101,9 +101,15 @@ why, and left goals broken, so it is one ticket deciding one answer for both.
 M2-09 is the framework race that M2-05 mitigated on goals and asked to have
 filed separately. It was not filed, and M2-02 then paid for it again — a red
 continuous-integration run, a trace investigation, and an unplanned correction.
-Two surfaces now carry their own recovery for a defect nobody has explained,
-and `/home/plan` and `/home/log` remain unmeasured. Filing it is how that stops
-being rediscovered one ticket at a time.
+Two surfaces now carry their own recovery for a defect nobody has explained.
+
+On 3 August 2026 `/home/plan` stopped being unmeasured: the
+`Authentication and planning flows` step had reddened seven of the last
+thirty-five runs on M2-06's plan-render assertion, four of them on commits that
+changed only documentation. The product owner approved a Tier 3 `--retries=2`
+stopgap on that one step so the gate stops firing on unchanged code, and M2-09
+owns removing it. `/home/log` remains unmeasured. Filing this ticket is how
+that stops being rediscovered one ticket at a time.
 
 ## Ticket rule
 
