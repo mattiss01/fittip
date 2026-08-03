@@ -147,13 +147,34 @@ Use forward-only corrections after a migration reaches an approved remote
 environment. Do not edit applied history. Verify all committed migrations from
 zero with `npx supabase db reset --local`.
 
-Regenerate the committed public-schema types after a clean reset:
+Regenerate the committed types after a clean reset. Run all three steps, in
+this order:
 
 ```powershell
-npx supabase gen types --local --lang typescript --schema public |
+npx supabase gen types --local --lang typescript |
   Set-Content -Encoding utf8 src/lib/supabase/database.types.ts
 npm run format
+npm run types:patch
 ```
+
+`git status` must be clean afterwards. If it is not, the schema changed and the
+new output belongs in your commit.
+
+Two things about that sequence are not obvious, both from
+[M2-08](docs/backlog/M2/M2-08-TYPE-GENERATION-DRIFT.md):
+
+- **No `--schema public`.** The committed file also carries `graphql_public`,
+  and passing the flag silently drops it.
+- **`types:patch` restores argument nullability the generator cannot express.**
+  `supabase gen types` never emits `| null` on an RPC argument, because
+  PostgreSQL has no per-argument nullability to read — every argument of a
+  non-`STRICT` function accepts NULL. `save_training_completion` genuinely
+  takes NULL for nine of its nineteen, so the patched file describes the
+  database more accurately than the raw output does. The script is idempotent
+  and fails loudly if the generated shape stops matching what it expects. It
+  must run _after_ `format`, because it rewrites formatted declarations.
+
+Never hand-edit `src/lib/supabase/database.types.ts`.
 
 ADR-007 approves one separate disposable founder-hosted staging project only.
 Do not run `supabase link`, `db push`, or any hosted migration/configuration

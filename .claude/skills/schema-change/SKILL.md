@@ -49,9 +49,15 @@ let the branch's CI run stand as the recorded evidence.
 
 ## 5. Regenerate committed types
 
-After the clean reset, regenerate `src/lib/supabase/database.types.ts` with the command in
-`README.md` ("Migrations and generated types"). Never hand-edit it. Then run the application
-gate: `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd run test:run`, `npm.cmd run build`.
+After the clean reset, regenerate `src/lib/supabase/database.types.ts` with the sequence in
+`README.md` ("Migrations and generated types"). It is three ordered steps — generate, then
+`npm.cmd run format`, then `npm.cmd run types:patch` — and all three are required. Do not pass
+`--schema public`, and do not run the patch before formatting; both mistakes are recorded in
+M2-08 with what they cost. `git status` must be clean afterwards unless your migration
+genuinely changed the schema. Never hand-edit the file.
+
+Then run the application gate: `npm.cmd run lint`, `npm.cmd run typecheck`,
+`npm.cmd run test:run`, `npm.cmd run build`.
 
 ## 6. Record
 

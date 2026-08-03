@@ -12,6 +12,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "types:patch": "node scripts/patch-database-types.mjs",
     "test": "vitest",
     "test:run": "vitest run",
     "test:m1-01-concurrency": "node supabase/tests/integration/m1_01_concurrent_data_api.mjs",
