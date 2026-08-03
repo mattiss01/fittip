@@ -87,30 +87,61 @@ The product owner must approve each explicitly. None is settled.
 8. **Where durable budget state lives** — a table in the existing database or
    another approved store — and its cost.
 
-## Cost context recorded 3 August 2026
+## Cost and terms recorded 3 August 2026
 
-Gathered so the decision is made against numbers rather than impressions.
-Anthropic figures are from the `claude-api` reference cached 2026-06-24; other
-providers were not verified at the time of writing and must be before decision 1
-is taken.
+Gathered so decisions 1 and 3 are made against numbers rather than impressions.
+Anthropic figures come from the `claude-api` reference cached 2026-06-24;
+OpenAI prices were read from its published pricing page and Google's terms from
+Google's own page, both on 3 August 2026. Model lineups and prices move fast —
+re-check before dispatch rather than trusting this table.
 
-Assuming roughly 5K input and 3K output per proposal:
+Assuming roughly 5K input and 3K output per proposal, at ~9 proposals per user
+per month:
 
-| Model | Per proposal | Per user/month at ~9 proposals |
+| Model | Per proposal | Per user/month |
 | --- | --- | --- |
+| `gpt-5-nano` | ~$0.0015 | ~$0.01 |
+| `gpt-4o-mini` | ~$0.0026 | ~$0.02 |
 | Claude Haiku 4.5 | ~$0.02 | ~$0.18 |
 | Claude Sonnet 5 | ~$0.06 | ~$0.54 |
 | Claude Opus 5 | ~$0.10 | ~$0.90 |
 
-Development cost is not the constraint: M3-01 makes zero calls, and proving the
-adapter plus tuning prompts across M3-02 and M3-03 is on the order of 50–200
-calls, well under $10 in total. The product owner holds a small existing OpenAI
-credit that would cover that development entirely.
+**The spread is roughly 60× across tiers, and it dwarfs the spread across
+providers.** Per-user cost is therefore a model-tier decision, not a provider
+decision. Whether a small model's coaching judgment is good enough on
+health-adjacent content is an empirical question M3-02 and M3-03 will answer;
+the provider-neutral contract is what keeps changing the answer cheap.
 
-Two levers reduce per-user cost materially and should be considered part of the
-decision rather than a later optimization: prompt caching, since the system
-prompt and schema are stable across every request, and the fact that proposals
-are user-initiated, so cost tracks engagement rather than registration count.
+Development cost is not a constraint under any option. M3-01 makes zero calls,
+and proving the adapter plus tuning prompts across M3-02 and M3-03 is on the
+order of 50–200 calls. The product owner's existing ~5 EUR OpenAI credit covers
+roughly 3,400 proposals at `gpt-5-nano` rates — development and then some.
+
+Prompt caching matters more here than model choice at the margin: the system
+prompt and JSON schema are identical on every request, and cached input is
+around 10× cheaper on both providers. Proposals are also user-initiated, so cost
+tracks engagement rather than registration count.
+
+### Data-use terms — a disqualifier worth recording
+
+**Google's Gemini free tier is not usable with real owner data.** Google's own
+API terms state that it uses content submitted to the unpaid services "to
+provide, improve, and develop Google products and services", that "human
+reviewers may read, annotate, and process your API input and output", and
+explicitly: "Do not submit sensitive, confidential, or personal information to
+the Unpaid Services." FitTip's context can carry injury, illness, and
+severe-fatigue signals. The free tier remains usable for **synthetic data only**,
+which is enough for a contract test but not for the product owner's own data.
+Google's paid tier does not train on prompts or responses.
+
+OpenAI's API does not train on submitted data by default and retains inputs and
+outputs for up to 30 days for abuse monitoring, with zero-retention options for
+qualifying accounts. Anthropic's Claude Fable 5 tier requires 30-day retention
+and cannot run under zero data retention; the other Claude models do not carry
+that constraint.
+
+Whatever is chosen, decision 3 must record the exact terms read on the day they
+were read, not a recollection of them.
 
 ## Approval gate
 
