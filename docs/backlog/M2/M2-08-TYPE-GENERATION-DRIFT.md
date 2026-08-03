@@ -1,7 +1,18 @@
 # M2-08: Regenerating database types breaks typecheck
 
-**Status:** in development — approved and dispatched by the product owner on
-3 August 2026 as **Tier 1** on branch `ticket/m2-08-type-generation-drift`
+**Status:** testable — dispatched Tier 1 on 3 August 2026, then **re-scoped to
+Tier 3** the same day when the builder proved the prescribed migration is not
+executable. Delivered as `e945ed912b54b452917906c335dbfe98019fb576` on
+`ticket/m2-08-type-generation-drift`. Evidence is in the
+[M2 milestone closeout](../../validation/M2/M2-MILESTONE-CLOSEOUT.md#m2-08--type-generation-reproduces-the-committed-file);
+awaiting product-owner acceptance
+
+**Superseded by delivery:** the Agent brief below prescribes a forward
+migration adding `default null` to nine parameters. That is **not executable** —
+PostgreSQL requires every parameter after a defaulted one to have a default,
+and the nine are interspersed with parameters that must stay required. The
+brief is left unedited as the record of what was dispatched; the closeout entry
+records what was actually built and why. Do not implement the brief.
 
 **Milestone:** M2 — goals, editable coaching context, and guided onboarding
 

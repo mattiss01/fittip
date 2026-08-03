@@ -228,3 +228,83 @@ explains that.
 dependency-ready. It remains separately proposed and still requires explicit
 product-owner approval of the provider, model, key use, data-use and retention
 terms, rate card, hard limits, and maximum spend before any implementation.
+
+## Post-closure Tier 3 entries
+
+Appended after acceptance. Nothing above this line is rewritten. Tier 3 changes
+record one entry here rather than taking their own validation document.
+
+### M2-08 — type generation reproduces the committed file
+
+**Commit** `e945ed912b54b452917906c335dbfe98019fb576` on
+`ticket/m2-08-type-generation-drift`. Lead-implemented; Tier 3 replaces the
+builder and reviewer split.
+
+**Re-scoped mid-ticket.** Dispatched Tier 1 on the lead's diagnosis that the
+fix was a forward migration adding `default null` to nine parameters. The
+builder proved that is not executable — PostgreSQL requires every parameter
+after a defaulted one to have a default, and the nine sit at positions 2, 4, 6,
+8, 10-13 and 18 of nineteen, interspersed with parameters that must stay
+required. Correcting the signature meant dropping and recreating a
+`security definer` function guarding accepted training data, plus seven edits
+to M1-03's pgTAP file. The product owner declined that blast radius for a
+typecheck defect and chose to patch the generated types instead. The builder
+committed nothing and handed back; that was the correct call and the brief's
+stop condition working as intended.
+
+**Delivered.** `npm run types:patch` restores the nine `| null` annotations
+`supabase gen types` cannot emit. The generator never emits `| null` on an RPC
+argument because PostgreSQL has no per-argument nullability to read, so the
+patched file describes the database *more* accurately than raw generator
+output. Generate → format → patch now reproduces the committed file
+byte-identically, verified against the local stack at CLI 2.109.1 with all nine
+migrations applied from zero.
+
+**A second defect surfaced while verifying.** The documented command passed
+`--schema public`, which silently dropped the `graphql_public` schema the
+committed file carries. Fixed in the same commit.
+
+**Changed files.**
+
+```text
+ .claude/skills/schema-change/SKILL.md |  12 ++-
+ README.md                             |  25 +++++-
+ package.json                          |   1 +
+ scripts/patch-database-types.mjs      | 154 +++++++++++++++++++++++++++++++
+ scripts/patch-database-types.test.mjs | 113 ++++++++++++++++++++++
+ 5 files changed, 300 insertions(+), 5 deletions(-)
+```
+
+Nothing was deleted or renamed. No schema, migration, RPC, policy, grant,
+dependency, or application-code change; `src/lib/supabase/database.types.ts` is
+untouched by this commit. `scripts/patch-database-types.mjs` is a pure function
+plus a thin CLI, kept free of subprocess and platform branching so the logic is
+directly testable.
+
+**Tests.** Nine unit tests cover the patch, the required-argument and `Returns`
+blocks it must not touch, idempotency, and four distinct failure messages —
+unknown function, missing argument, argument-became-optional, and unformatted
+input. The last exists because running the patch before Prettier is the easy
+mistake and would otherwise surface as nine identical "argument missing"
+errors. A guard test asserts the committed types already carry the annotations,
+so regenerating without patching fails continuous integration rather than
+landing silently.
+
+| Check continuous integration does not cover | Result |
+| --- | --- |
+| `db reset --local` + generate → format → patch, then `git diff` | clean; byte-identical to the committed file |
+| `git diff --check` | clean |
+
+**Known limitations.**
+
+- **The database signature still does not say what the application means.**
+  `save_training_completion` declares nine parameters as required that the
+  application always may pass as NULL. The types now describe reality; the
+  schema does not. Correcting it remains available as the drop-and-recreate
+  described above, and nothing here forecloses it.
+- **The patch is pinned to one function.** A second RPC with genuinely nullable
+  arguments needs adding to `NULLABLE_ARGUMENTS` deliberately. That is the
+  intent — silent generalization is how this class of drift returns — but it is
+  a manual step nothing enforces.
+- **Formatting-shape coupling.** The patch navigates Prettier's output shape and
+  fails loudly if it changes. A Prettier major bump may require updating it.
