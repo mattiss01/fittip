@@ -63,11 +63,14 @@ invent one inside a Tier 1 ticket. The independent review confirmed that was the
 right call.
 
 A coach with no training history cannot ground volume or load, so this ticket
-needs it. **An ADR settling training-history eligibility, in the shape of
-[ADR-012](../../decisions/ADR-012-AI-GOAL-CONTEXT-ELIGIBILITY.md), is required
-before M3-02 is dispatched.** Adding a third context source will also mean
-revisiting `COACH_AI_CONTEXT_LIMITS` in `src/server/ai/context.ts`, which
-reserves no byte budget for it.
+needs it. **[ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md)
+is drafted and must be accepted before M3-02 is dispatched.** It carries four
+open questions for the product owner, of which the privacy line — structured
+safety flags sent, free-text notes withheld — is the consequential one.
+
+Adding a third context source will also mean revisiting
+`COACH_AI_CONTEXT_LIMITS` in `src/server/ai/context.ts`, which today splits its
+byte budget across two sources.
 
 ## Prompt work happens off-API
 
