@@ -315,13 +315,59 @@ applies — the ticket changes no React, Next.js, or user-visible surface.
    no retry, so the field exists for a future decision rather than to distinguish
    observed behavior today.
 
+The four below were added by the lead on 4 August 2026 from the independent
+review. All are documentation accuracy or forward risk; the reviewer found no
+defect requiring a source change, and none was made.
+
+9. **An adapter declares whether the live enablement gate applies to it.**
+   `coach-ai-service.ts:159` runs `requireCoachAILiveEnablement` only when
+   `adapter.kind === "provider"`, so a `"fixture"` adapter skips the runtime
+   check, the live flag, the `NEXT_PUBLIC_` scan, the owner allowlist, the
+   operation switch, and credential presence. The reasoning is sound — a fixture
+   reaches nothing, and criterion 3 governs a *real* call — but the Delivered
+   behavior section above describes the gate unconditionally, which overstates
+   it. Zero exposure today: nothing in the repository constructs
+   `CoachAIService`. The forward risk is real and belongs to M3-01B, where a
+   provider adapter copy-pasted from `FixtureCoachAI` would inherit
+   `kind: "fixture"` and call out ungated, with no invariant catching it.
+10. **`hasPublicAIVariable` does not match the names a leaked key would have.**
+    `enablement.ts:170` tests `/(^|_)AI(_|$)/`, which matches `AI_KEY` and
+    `COACH_AI_FLAG` but **not** `NEXT_PUBLIC_OPENAI_KEY`,
+    `NEXT_PUBLIC_ANTHROPIC_KEY`, or `NEXT_PUBLIC_GEMINI_KEY` — "AI" is not
+    delimited in any of them. The adjacent comment claims it catches "any
+    `NEXT_PUBLIC_*` variable naming AI", which is not true. It is defense in
+    depth rather than the primary control, so this is an overstated claim rather
+    than a hole, but it will not fire on the most likely real leak once M3-01B
+    names a provider.
+11. **Telemetry reports `environment: "local"` for any fixture run**, including
+    on the founder project, because `coach-ai-service.ts:158` initializes it and
+    only reassigns inside the provider branch. Criterion 9 asks telemetry to
+    prove the environment; today it proves it only for provider calls.
+12. **The concurrency slot is released on deadline while the call may still be
+    in flight.** `maxConcurrentRequests` counts reservations, not live calls, so
+    with a real provider a timed-out request stays open and billable while a
+    second is admitted. Spend ceilings still hold — the full reservation stays
+    charged — so this is not a budget hole, but it is a gap against "one
+    explicit maximum concurrent live request". Not exercisable with fixtures.
+
+Two smaller notes from the same review, recorded without their own entries: the
+`"rejected"` telemetry outcome is unreachable because the outer `catch`
+overwrites it with `"failed"` (no information is lost, `rejectionReason`
+survives), and the new database-seam invariant does not match
+`@supabase/supabase-js` itself, so a future file constructing its own client
+would pass.
+
 ## Independent reviewer checklist
 
-Review exact pushed commit `9c6b4a7a4faadfd8bdaf43d582ec4b1cb179f63c` on
+Review exact pushed commit `8a39aeeed42881e3e3308f01bab6ca6592183496` on
 `ticket/m3-01-ai-boundary`. The range is
-`git diff 9727f167ea31fd1a3feb528be7521e3d4e4ff260..9c6b4a7a4faadfd8bdaf43d582ec4b1cb179f63c`.
+`git diff 9727f167ea31fd1a3feb528be7521e3d4e4ff260..8a39aeeed42881e3e3308f01bab6ca6592183496`.
 Confirm the CI run for that SHA is green; do not re-run lint, typecheck, tests,
 build, or the browser flow.
+
+The "Changed files" manifest above is stated for `9727f16..9c6b4a7` and
+reconciles exactly against that range. The delta from there to the reviewed
+commit is two files under `docs/` and nothing else.
 
 Judgment this ticket needs and CI cannot supply:
 

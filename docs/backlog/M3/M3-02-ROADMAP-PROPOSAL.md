@@ -53,6 +53,22 @@ until the M0 gates pass.
 8. Keep acceptance transactional and separate from proposal generation.
 9. Add authorization, versioning, AI-output, UX, safety, and idempotency tests.
 
+## Blocked on a training-history policy
+
+M3-01 built the AI context from goals and memory only. There is no decision
+about which training history a coach may read — how far back, completions or
+plans or both, whether corrected revisions are visible, whether a deleted
+session remains history — and M3-01's builder correctly stopped rather than
+invent one inside a Tier 1 ticket. The independent review confirmed that was the
+right call.
+
+A coach with no training history cannot ground volume or load, so this ticket
+needs it. **An ADR settling training-history eligibility, in the shape of
+[ADR-012](../../decisions/ADR-012-AI-GOAL-CONTEXT-ELIGIBILITY.md), is required
+before M3-02 is dispatched.** Adding a third context source will also mean
+revisiting `COACH_AI_CONTEXT_LIMITS` in `src/server/ai/context.ts`, which
+reserves no byte budget for it.
+
 ## Prompt work happens off-API
 
 Per [the M3 delivery approach](M3-BACKLOG.md#delivery-approach--how-m3-gets-built-without-paying-for-iteration),

@@ -77,6 +77,33 @@ calibrated against guesses until this pass replaces them with measurements.
 Everything else — prompt drafting, quality and safety review, valid-shape
 fixtures — happens off-API on a chat subscription before this ticket starts.
 
+## Carried forward from M3-01's independent review
+
+Four things M3-01 left safe-but-incomplete because nothing calls the boundary
+yet. Each becomes live the moment a real adapter exists, so they are
+requirements here rather than notes.
+
+1. **The live enablement gate must not key on something the adapter asserts
+   about itself.** Today it runs only when `adapter.kind === "provider"`. A
+   provider adapter copy-pasted from `FixtureCoachAI` would inherit
+   `kind: "fixture"` and call out with no runtime check, no live flag, no owner
+   allowlist, and no credential check — and no invariant would catch it. Make
+   the gate unconditional, or key it on something structural the adapter cannot
+   declare, and add an architecture invariant that fails if a module reaching
+   the network can bypass it.
+2. **Widen `hasPublicAIVariable`.** Its `/(^|_)AI(_|$)/` pattern does not match
+   `NEXT_PUBLIC_OPENAI_KEY`, `NEXT_PUBLIC_ANTHROPIC_KEY`, or
+   `NEXT_PUBLIC_GEMINI_KEY`. Once this ticket names a provider, add that
+   provider's name to the pattern and correct the comment, which currently
+   claims more than the code does.
+3. **Release the concurrency slot on settlement, not on deadline.**
+   `maxConcurrentRequests` counts reservations rather than live calls, so a
+   timed-out request stays open and billable at the provider while a second is
+   admitted. Spend ceilings hold either way; the concurrency guarantee does not.
+4. **Fix telemetry's environment for non-provider runs** and extend the
+   database-seam invariant to match `@supabase/supabase-js` directly, so a
+   future file cannot construct its own client inside the subtree.
+
 ## Non-goals
 
 - No second provider, no fallback chain, no provider-routing gateway.
