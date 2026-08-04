@@ -85,6 +85,23 @@
 - `find-skills` is lead-agent research only. It may identify and assess candidate skills, but no agent may install, update, remove, or execute a newly discovered skill without product-owner approval. Report the source, reputation, license, permissions/external access, expected value, and overlap with existing project skills first.
 - Adding, updating, or removing project skill files or `skills-lock.json` is a separately committed governance and supply-chain change. Preserve the lockfile hashes and do not silently replace a project skill with a global copy.
 
+## Agent skills
+
+### Issue tracker
+
+Tickets are markdown files under `docs/backlog/M<n>/`; validation records under
+`docs/validation/M<n>/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical roles, unchanged, recorded as a `Triage:` line kept separate
+from the delivery `Status:` lifecycle. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: root `CONTEXT.md` plus ADRs in `docs/decisions/`.
+See `docs/agents/domain.md`.
+
 ## Engineering rules
 
 - Keep AI calls and business rules server-side, behind domain-service interfaces.
