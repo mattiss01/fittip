@@ -12,7 +12,19 @@ verification, and product-owner acceptance all remain required.
 
 **Base:** `9727f167ea31fd1a3feb528be7521e3d4e4ff260`
 
-**Implementation review target:** `9c6b4a7a4faadfd8bdaf43d582ec4b1cb179f63c`
+**Reviewed commit:** `8a39aeeed42881e3e3308f01bab6ca6592183496` — the branch
+head, which has its own green continuous-integration run
+([30891730440](https://github.com/mattiss01/fittip/actions/runs/30891730440)).
+
+Amended by the lead on 4 August 2026. The builder nominated `9c6b4a7` as the
+review target and then had to argue that a green run on a later commit stood in
+for it, because the workflow's concurrency group cancels in-progress runs on any
+non-`master` ref and the record commits cancelled `9c6b4a7`'s run. That argument
+is unnecessary: `git diff --name-only 9c6b4a7..8a39aee` returns only paths under
+`docs/`, so the two commits carry identical source, and the head already has the
+green run the working agreement asks for. Reviewing the head therefore satisfies
+"a green run for the exact reviewed commit" outright rather than through an
+exception. Review `git diff 9727f16..8a39aee`.
 
 **Commits on the branch, oldest first:**
 
