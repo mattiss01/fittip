@@ -11,8 +11,57 @@ export const GOAL_CATEGORIES = [
 
 export const GOAL_TIERS = ["core", "supporting"] as const;
 
+export const GOAL_STATUSES = [
+  "active",
+  "paused",
+  "achieved",
+  "abandoned",
+] as const;
+
 export type GoalCategory = (typeof GOAL_CATEGORIES)[number];
 export type GoalTier = (typeof GOAL_TIERS)[number];
+export type GoalStatus = (typeof GOAL_STATUSES)[number];
+
+/**
+ * The minimum a goal must expose to be judged against ADR-012. Structural on
+ * purpose: the repository's `Goal` satisfies it without this module importing
+ * the repository that already imports this module.
+ */
+export type GoalContextCandidate = {
+  status: GoalStatus;
+  archivedAt: string | null;
+};
+
+/**
+ * Targetable and historical goals stay separate fields, never one list with a
+ * flag, so losing the distinction is a type error rather than a judgement call.
+ */
+export type GoalContextSelection<Candidate extends GoalContextCandidate> = {
+  targetable: Candidate[];
+  historical: Candidate[];
+};
+
+/**
+ * The only goals a later approved coaching ticket may read, per ADR-012.
+ *
+ * `active` goals are targetable — a proposal may name one as its objective.
+ * `achieved` goals are readable as proven capability and are never targetable.
+ * `paused` and `abandoned` goals are excluded entirely. The gate enumerates the
+ * statuses it admits rather than the ones it rejects, so a status added later
+ * stays invisible to the AI until someone amends ADR-012.
+ */
+export function selectActiveGoalContext<Candidate extends GoalContextCandidate>(
+  goals: Candidate[],
+): GoalContextSelection<Candidate> {
+  // Archiving disqualifies on its own and is checked before status, so a future
+  // status value cannot make an archived goal eligible by accident.
+  const live = goals.filter((goal) => goal.archivedAt === null);
+
+  return {
+    targetable: live.filter((goal) => goal.status === "active"),
+    historical: live.filter((goal) => goal.status === "achieved"),
+  };
+}
 
 export type GoalInput = {
   title: string;

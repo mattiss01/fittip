@@ -18,6 +18,7 @@ import {
   parseGoalTier,
   parseOrderedGoalIds,
   type GoalInput,
+  type GoalStatus,
   type GoalTier,
 } from "@/server/goals/goal-records";
 
@@ -48,7 +49,7 @@ export type Goal = {
   targetMetricValue: string | null;
   targetMetricUnit: string | null;
   priorityTier: GoalTier;
-  status: "active" | "paused" | "achieved" | "abandoned";
+  status: GoalStatus;
   activeRank: number | null;
   rationale: string | null;
   constraints: string | null;
