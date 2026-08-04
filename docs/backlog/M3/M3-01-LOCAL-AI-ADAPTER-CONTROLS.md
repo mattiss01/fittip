@@ -1,7 +1,12 @@
 # M3-01: Server-only AI boundary and fixture adapters
 
-**Status:** in development — approved and dispatched by the product owner on
-3 August 2026 as **Tier 1** on branch `ticket/m3-01-ai-boundary`
+**Status:** accepted — dispatched Tier 1 on 3 August 2026, independently
+reviewed and **accepted** by the product owner on 4 August 2026 against
+`8a39aeeed42881e3e3308f01bab6ca6592183496`. Evidence in
+[M3-01-VALIDATION](../../validation/M3/M3-01-VALIDATION.md); four forward risks
+and the training-history gap are carried to
+[M3-01B](M3-01B-REAL-PROVIDER-ADAPTER.md) and
+[M3-02](M3-02-ROADMAP-PROPOSAL.md)
 
 **Scope split, 3 August 2026.** This ticket originally covered both the
 provider-neutral boundary and one real-provider adapter. The boundary needs no

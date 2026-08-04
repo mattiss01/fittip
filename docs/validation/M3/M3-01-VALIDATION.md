@@ -4,9 +4,12 @@
 
 **Tier:** 1 — it defines what user data may ever leave this system
 
-**Lifecycle state:** in development; builder handoff is complete. Independent
-exact-commit review, the branch continuous-integration run, Vercel Preview
-verification, and product-owner acceptance all remain required.
+**Lifecycle state:** accepted — 4 August 2026.
+
+Independent exact-commit review returned **approved** with no defect requiring a
+source change; its seven findings are documentation accuracy or forward risk and
+are recorded as limitations 9–12 plus two smaller notes below. No Vercel Preview
+check applies: this commit adds no route, no UI, and no user-visible behavior.
 
 **Branch:** `ticket/m3-01-ai-boundary`
 
