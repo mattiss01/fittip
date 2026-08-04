@@ -185,12 +185,32 @@ No file was deleted or renamed.
 
 ## Tests and final results
 
-The continuous-integration run for the exact reviewed SHA
-`9c6b4a7a4faadfd8bdaf43d582ec4b1cb179f63c` is the automated-test evidence and
-covers Prettier, ESLint, TypeScript, `test:run`, the production build, the full
-migration/lint/advisor/pgTAP matrix, the concurrency harnesses, and the 390px
-browser flows. **Run URL and conclusion to be recorded by the lead when it
-completes** — see Known limitations.
+Branch CI run
+[30891250944](https://github.com/mattiss01/fittip/actions/runs/30891250944)
+**succeeded**. It covers Prettier, ESLint, TypeScript, `test:run`, the
+production build, the full migration/lint/advisor/pgTAP matrix, the concurrency
+harnesses, and the 390px browser flows.
+
+That run's head SHA is `3b9c478175d3fe163e70faca07dee8d81a41a6c8`, the commit
+that adds this record, not the implementation target
+`9c6b4a7a4faadfd8bdaf43d582ec4b1cb179f63c`. The reason is mechanical and worth
+stating rather than glossing: the workflow's concurrency group is
+`ci-${{ github.ref }}` with `cancel-in-progress` on any non-`master` ref, so
+pushing the record cancelled the still-running job for the code commit.
+
+The two commits are identical outside `docs/`. A reviewer can confirm that in
+one command:
+
+```
+git diff --stat 9c6b4a7a4faadfd8bdaf43d582ec4b1cb179f63c..3b9c478175d3fe163e70faca07dee8d81a41a6c8
+```
+
+It reports only `docs/validation/M3/M3-01-VALIDATION.md` and
+`docs/validation/README.md`. `.prettierignore` excludes `docs/`, and no CI step
+reads it, so the green run exercises exactly the reviewed source. Under the
+AGENTS.md evidence-commit exception a record-only commit needs no run of its
+own; this note exists so the SHA mismatch is checkable rather than something the
+reviewer has to reconstruct.
 
 Checks CI does not cover, run locally by the builder:
 
