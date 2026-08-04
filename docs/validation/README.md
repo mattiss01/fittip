@@ -30,5 +30,6 @@ Validation records and their visual evidence are grouped by milestone.
 - [M2-06 plan page render](M2/M2-06-VALIDATION.md) — accepted
 - [M2 visual evidence](M2/evidence/)
 
-M3 does not have validation records yet. Its future evidence belongs in a
-matching `M3/` folder when that milestone enters development.
+## M3
+
+- [M3-01 server-only AI boundary and fixture adapters](M3/M3-01-VALIDATION.md) — in development; builder handoff complete, independent review, CI, Preview verification, and acceptance pending
