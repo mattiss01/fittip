@@ -102,6 +102,12 @@ from the delivery `Status:` lifecycle. See `docs/agents/triage-labels.md`.
 Single-context: root `CONTEXT.md` plus ADRs in `docs/decisions/`.
 See `docs/agents/domain.md`.
 
+### Workflow mapping
+
+Where the `mattpocock/skills` flow meets this protocol: which skill runs in
+whose context, and the three points where a skill's default conflicts with a
+delivery rule. See `docs/agents/workflow-mapping.md`.
+
 ## Engineering rules
 
 - Keep AI calls and business rules server-side, behind domain-service interfaces.
