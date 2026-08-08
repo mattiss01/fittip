@@ -1,10 +1,12 @@
 # ADR-013: What training history a coaching AI may read
 
-**Status:** proposed — draft for product-owner decision. Nothing here is
-approved. Each numbered decision is a separate call and any of them can be
-changed or rejected without disturbing the others.
+**Status:** proposed — revised 8 August 2026 after a product-owner decision
+session. The four open questions in the 4 August draft are now answered, and
+three of the four answers went against the draft's proposal. The ADR is not yet
+accepted: it needs a final read against the revised text below.
 
 **Date drafted:** 4 August 2026
+**Date revised:** 8 August 2026
 
 **Ticket:** raised by the [M3-01](../backlog/M3/M3-01-LOCAL-AI-ADAPTER-CONTROLS.md)
 builder and confirmed by its independent review; required before
@@ -31,36 +33,52 @@ session carries `pain_reported`, `illness_reported`, `injury_reported`, and
 `severe_fatigue_reported`, plus free-text `note`, `replacement_description`, and
 `correction_reason`. Goals and memory were already reviewed and accepted by the
 owner before they existed; a completion is logged in the moment, often
-unreflectively, and the owner never reviews it with a provider in mind. That
-difference is why this ADR is stricter than ADR-012 rather than a copy of it.
+unreflectively, and the owner never reviews it with a provider in mind.
 
-## Proposed decisions
+The 4 August draft made that difference the reason to be stricter than ADR-012.
+The 8 August session accepted the difference but not the conclusion: while use
+is founder-only, the only data at risk is the owner's own, and a coach that
+cannot read the sentence explaining a pain flag is conservative in ways that
+make it worse at its job. The exposure line moved; the boundedness did not.
 
-### 1. Completed sessions are visible; the window is bounded
+## Decisions
+
+### 1. Completed sessions are visible; the window is bounded by time and by count
 
 A coach reads completions from the **last 8 weeks** of the owner's local dates,
-not the whole archive.
+subject to a **maximum session count** within that window. Both limits apply;
+neither replaces the other.
 
-Eight weeks covers a full training block, so recent load, frequency, and trend
-are all groundable. Older history mostly adds tokens without changing what to
-propose next week. This is also the only decision here with a real cost
-dimension — `COACH_AI_CONTEXT_LIMITS` reserves no byte budget for history today
-and will need one.
+The time window is what makes a *gap* legible. A count-only rule cannot express
+"you have not trained in three weeks" — the last twenty sessions of someone who
+stopped in March still look dense. The count is what bounds cost, because eight
+weeks means sixteen sessions for one owner and forty-eight for another.
 
-*Alternative rejected:* everything ever logged. It grows without bound, pushes
-against the context limit as a user's history accumulates, and the marginal
-value of a session from fourteen months ago is close to zero for planning the
-next seven days.
+When the count trims the window, the coach is told **how many sessions the
+window held and how many it received**, so a trimmed context never reads as a
+complete one. A model that silently receives a subset will reason as though it
+saw everything.
+
+*Alternative rejected:* everything ever logged. It grows without bound and the
+marginal value of a session from fourteen months ago is close to zero for
+planning the next seven days.
+
+*Alternative rejected:* a session count alone. Bounded and predictable, but it
+destroys the gap signal, which is one of the specific things this ADR exists to
+give the coach.
 
 ### 2. Only the current revision of a completion is visible
 
 Corrections are append-only behind `completion_heads.current_completion_id`.
-The coach reads the current head and never the correction trail, and never
-`correction_reason`.
+The coach reads the current head and never the correction trail.
 
-The trail is an audit and history feature for the owner. A coach that can see
-"logged 45 minutes, corrected to 60" gains nothing for planning and may comment
-on the correction, which is neither useful nor welcome.
+Superseded values are ones the owner has explicitly declared wrong. Feeding a
+coach data it has been told is incorrect is worse than withholding it, and a
+session corrected five times would otherwise cost five records, so context size
+would stop being predictable from the session count in decision 1.
+
+The head's own `correction_reason` **is** sent — see decision 4. That is a
+change from the 4 August draft, which withheld it.
 
 ### 3. A deleted session is invisible, with no exception
 
@@ -72,82 +90,140 @@ treatment of an abandoned goal: the owner has said no, and nothing may resurface
 it. Any future caching or summarization of history must honor a later deletion,
 which is a real constraint on how history may be precomputed.
 
-### 4. Safety flags are sent; free-text notes are not
+### 4. Safety flags and free text are both sent, and free text is truncated
 
 **Sent:** `actual_local_date`, `status`, `duration_minutes`, `perceived_effort`,
 `feeling`, and the four boolean signals `pain_reported`, `illness_reported`,
 `injury_reported`, `severe_fatigue_reported`. Session `title` and `sport`, and
-personal activity names, are sent — a coach cannot reason about training it
-cannot name.
+personal activity names. And all three free-text fields on the current
+revision: `note`, `replacement_description`, and `correction_reason`.
 
-**Not sent:** the free-text `note` on a completion, `replacement_description`,
-and `correction_reason`.
+**Each free-text field is truncated to a fixed maximum** before it leaves the
+boundary. `note` allows 2000 characters and `replacement_description` and
+`correction_reason` 500 each; sending them at full length against a
+forty-session window would exceed the whole-context ceiling several times over.
+Most real notes are a sentence or two, so truncation rarely fires, and when it
+does the explaining sentence survives because it comes first.
 
-This is the most consequential decision in the ADR and the one most worth
-arguing with. The four booleans carry the entire safety signal the product
-invariant requires — conservative, non-diagnostic behavior around pain, illness,
-injury, and fatigue keys off them, not off prose. The free-text note carries
-unbounded personal content written without a provider in mind: symptoms, moods,
-relationships, work stress, anything at all. Sending structured signals gets the
-coaching benefit at a fraction of the exposure.
+This reverses the 4 August draft, which sent flags only. Two things changed the
+answer. First, use is founder-only, so the only data at risk today is the
+owner's own — and the pre-friends gate in the M3 backlog must revisit this
+before that stops being true. Second, the coaching cost of withholding is real:
+`pain_reported: true` without "knee twinged on the descent, fine by evening"
+produces a coach that backs off from a non-problem.
 
-*Cost accepted:* a coach will miss nuance a note contains — "knee twinged on
-the descent" becomes a bare `pain_reported: true`. The coach will be more
-conservative than a human reading the note would be. That is the right direction
-of error for a health-adjacent product, but it is a real quality cost, not a
-free win.
+`correction_reason` is included because the owner may correct a record for a
+reason that matters — but see decision 2: the reason travels, the trail does
+not.
 
 *Alternative rejected:* send notes with the owner's per-session consent. It puts
 a privacy decision in front of someone mid-workout-log, which is the worst
 moment to ask, and a consent that is always granted is not a control.
 
-### 5. Future locked plan entries are visible; unlocked ones are not
+*Explicitly deferred:* whether this line survives contact with another person's
+data. It does not automatically. See Consequences.
 
-A coach proposing the next horizon reads **user-locked** future sessions so it
-does not propose work that collides with something the owner has committed to.
-Unlocked future entries stay invisible.
+### 5. Inside the horizon the coach sees every planned entry and its lock state; beyond it, locked entries only
 
-An unlocked entry is a draft the owner may still change, and replanning must
-never appear to have been influenced by something they were still thinking
-about. A lock is an explicit statement that this is fixed.
+Within the dates being planned, the coach reads **every** planned session,
+each marked locked or unlocked. Beyond the horizon it reads **locked entries
+only**, within a bounded forward window.
 
-### 6. Past plans are not visible, so adherence is not inferred
+Showing an entry without showing whether it is locked is ambiguous: the coach
+cannot tell whether it should plan around the entry or replace it. The lock is
+already the owner's statement of exactly that, so the two travel together.
+Withholding unlocked entries entirely — the 4 August proposal — would have the
+coach propose into dates that already hold the owner's own manual work, with no
+idea it was doing so. The draft's anchoring concern applies to *replanning*, and
+M3 does not implement replanning.
 
-The coach sees what happened, not what was intended and missed.
+Beyond the horizon the logic inverts. Unlocked entries out there are speculative
+and the coach was not asked about those dates, so they are noise. Locked ones
+are not: a locked race is what a taper is built toward, and without it the
+roadmap has nothing to aim at. The forward window may differ per operation and
+should be longer for `create_roadmap` than for `create_seven_day_plan`.
 
-FitTip's product invariant keeps plans and completions as separate permanent
-records. Handing a coach both invites it to compute adherence and comment on it,
-which turns a training tool into something that keeps score. If adherence
-coaching is wanted later, it is a product decision with its own UX, not a side
-effect of what the AI happens to be able to see.
+### 6. Planned sessions that were never completed are visible
+
+Within the same window as decision 1, the coach reads planned sessions that
+produced no completion.
+
+The 4 August draft withheld past plans entirely so that adherence could not be
+inferred. That went too far in a specific way: a completion already carries its
+optional link to the planned session it came from, so the coach can already see
+what was *done*. What it could not see was what was planned and skipped — which
+means it could not distinguish an owner who trained three times because that was
+the plan from one who planned six and managed three, and would keep prescribing
+into a gap it could not see.
+
+Sending only the misses is the whole adherence signal at near-zero extra cost,
+and it preserves which sessions went missing. A skipped long run and a skipped
+mobility session are not the same information.
+
+This does not license score-keeping. The coach may use adherence to size the
+next proposal; the product invariant that plans and completions are separate
+permanent records is unchanged, and no completion is created, rewritten, or
+inferred from a plan.
 
 ### 7. History is read-only, bounded, and deny-by-default like the others
 
 The same shape as ADR-012: an explicit `selectTrainingHistoryContext` in
 `src/server/training/`, returning bounded fields; a maximum session count and
-byte budget enforced by denial rather than truncation; anything not enumerated
-above excluded, so a column added later is invisible until this ADR is amended.
+byte budget; anything not enumerated above excluded, so a column added later is
+invisible until this ADR is amended.
+
+Two departures from ADR-012's enforcement, both deliberate. Per-field
+truncation under decision 4 and per-count trimming under decision 1 are
+**bounded reductions**, not denials — with the disclosure decision 1 requires.
+The whole-context byte ceiling remains a denial.
 
 ## Consequences
 
 - M3-02 and M3-03 build on a decided policy rather than inventing one.
-- `COACH_AI_CONTEXT_LIMITS` gains a third source and needs a byte budget split
-  across goals, memory, and history. Today's limits assume two.
-- The 8-week window and the flags-not-notes split are both tunable later without
-  reopening the whole ADR, provided the amendment is recorded.
-- A coach will occasionally be more cautious than the situation warrants,
-  because it sees a pain flag without the sentence that explains it. Accepted
-  under decision 4.
+- `COACH_AI_CONTEXT_LIMITS` gains a third source and a much larger budget.
+  Today's ceiling is 10,000–12,000 bytes and assumes two sources; free text
+  across a full window needs roughly **30,000**. At the M3-01B figures that is
+  about 7.5K input tokens — still fractions of a cent per proposal, but roughly
+  50% above the 5K the cost table assumed. M3-01B's ceilings must be set against
+  this number, not the old one.
+- Prompt caching will not absorb history. A cached prefix must match exactly,
+  and history changes as sessions are logged, so the static system prompt and
+  schema must be ordered **before** volatile context for caching to work at all.
+- The exact session cap, per-field truncation length, and forward-window length
+  are tuning parameters. They may be amended without reopening this ADR,
+  provided the amendment is recorded here.
+- **Decision 4 does not survive the pre-friends gate unexamined.** It is
+  justified by founder-only use. Before any friend's data, external user, or
+  public registration, the free-text line must be revisited alongside M0-04
+  consent, and reversing it later means either a migration or grandfathering
+  already-logged notes. That cost is accepted knowingly.
+- A coach that reads notes will occasionally act on something the owner wrote
+  carelessly. The planning note (see below) is the deliberate channel; the
+  completion note is not, and now travels anyway.
 - Nothing here approves a provider, model, retention term, or spend. ADR-006 and
   M3-01B's open decisions continue to govern those.
 
-## Decisions the product owner must make
+## Related decision made in the same session
 
-1. Is **8 weeks** the right window, or should it be shorter, longer, or
-   expressed in sessions rather than time?
-2. Is **flags-not-notes** the right privacy line, or should notes be sent given
-   that founder-only use means the only data at risk today is the owner's own?
-3. Should **past plans** stay invisible, or is adherence something a coach
-   should see and discuss?
-4. Should **locked future sessions** be visible, as proposed, or should the
-   coach see no future state at all?
+The compose step for a plan proposal introduces a **planning note** — owner
+free text written for one proposal request, describing what the coach should
+account for on those dates. It is a new field crossing the boundary and is
+therefore a privacy decision of the same class as this ADR, but it is not
+training history and is not governed here. It needs its own record, and M3-03 is
+where it lands.
+
+## Decision history
+
+The 4 August draft asked the product owner four questions. All four were
+answered on 8 August 2026:
+
+1. **Window** — 8 weeks confirmed, with a session cap added. *(refined)*
+2. **Flags versus notes** — notes are sent, all three free-text fields, with
+   per-field truncation. *(reversed)*
+3. **Past plans** — missed planned sessions are sent; full past plans are not.
+   *(reversed in part)*
+4. **Locked future sessions** — every entry inside the horizon with its lock
+   state, locked entries only beyond it. *(reversed in part, and widened)*
+
+Decisions 2 (current revision only), 3 (deleted sessions invisible), and 7
+(read-only and bounded) carry over from the draft substantially unchanged.
