@@ -128,13 +128,37 @@ The product owner must approve each explicitly. None is settled.
    detail.
 4. **Hard limits**: per-request, per-window, daily, and total spend ceilings;
    maximum concurrent live requests; input and output token ceilings; request
-   deadline.
+   deadline. **Size these against the revised context, not the one M3-01
+   shipped** — see below.
 5. **Retry and idempotency behavior.** Recommendation: zero automatic retries.
    Note that provider SDKs commonly retry by default and must be configured off.
 6. **Price source and unknown-cost behavior.** Recommendation: deny.
 7. **Whether live tests may use minimized owner data or synthetic only.**
 8. **Where durable budget state lives** — a table in the existing database or
    another approved store — and its cost.
+
+## The context grew after this ticket was written
+
+Recorded 8 August 2026.
+[ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md) and
+[ADR-014](../../decisions/ADR-014-PLANNING-NOTE-BOUNDARY.md) take
+`COACH_AI_CONTEXT_LIMITS` from two sources to four — goals, memory, training
+history, and the planning note, plus an optional roadmap on the seven-day
+operation — and raise the whole-context byte ceiling from 10,000–12,000 to
+roughly **30,000**.
+
+That is about 7.5K input tokens, against the 5K the table below assumes. Per
+proposal the cost rises by roughly half; in absolute terms it stays fractions of
+a cent, so this changes the ceilings that must be approved rather than the
+provider or model choice. Do not set decision 4's token ceilings from the table
+below without adjusting for it.
+
+One ordering consequence for the adapter: a cached prefix must match exactly,
+and history and the planning note change on every request. The static system
+prompt and JSON schema must be emitted **before** volatile context or prompt
+caching will not fire at all — which matters, because cached input is around 10x
+cheaper and this ticket's own analysis calls caching more significant than model
+choice at the margin.
 
 ## Cost and terms recorded 3 August 2026
 

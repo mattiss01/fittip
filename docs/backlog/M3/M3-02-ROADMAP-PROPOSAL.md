@@ -7,8 +7,13 @@
 **Priority:** P1
 
 **Depends on:** [M3-01 accepted](M3-01-LOCAL-AI-ADAPTER-CONTROLS.md), the
-accepted M1 training foundation, and the accepted M2 goal, memory, intake, and
-validation foundations
+accepted M1 training foundation, the accepted M2 goal, memory, intake, and
+validation foundations, and
+[ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md) plus
+[ADR-014](../../decisions/ADR-014-PLANNING-NOTE-BOUNDARY.md) accepted
+
+**Revised:** 8 August 2026 — compose step and planning note added, context
+policy ADRs named, stub-schema gap recorded
 
 **Architecture boundary:** ADR-006 and ADR-007 accepted; M0-06A accepted before
 founder-hosted use
@@ -40,37 +45,62 @@ until the M0 gates pass.
 ## Scope
 
 1. Define strict roadmap input, proposal, phase, milestone, allocation,
-   uncertainty, and review-point schemas.
+   uncertainty, and review-point schemas. The current contract types are stubs;
+   see above.
 2. Construct owner-scoped context from accepted active goals, eligible active
-   memory records explicitly accepted by the user.
-3. Request one roadmap candidate through M3-01.
-4. Apply deterministic server validation for owner, source versions, time
+   memory records explicitly accepted by the user, and training history under
+   ADR-013.
+3. Add a compose step: an optional **planning note** under ADR-014, plus a
+   collapsed-by-default summary of the goals, active constraints, and recent
+   load the coach will receive.
+4. Request one roadmap candidate through M3-01. The same response carries
+   memory candidates extracted from the planning note; the two sections
+   validate independently, and an invalid memory section is discarded without
+   failing the roadmap.
+5. Apply deterministic server validation for owner, source versions, time
    bounds, goal allocation, safety, and schema.
-5. Persist an owner-owned, immutable proposal plus minimized source references
-   and validation metadata.
-6. Show a 390px review flow with concise rationale and visible uncertainty.
-7. Support explicit accept, reject, and edit-to-new-proposal actions.
-8. Keep acceptance transactional and separate from proposal generation.
-9. Add authorization, versioning, AI-output, UX, safety, and idempotency tests.
+6. Persist an owner-owned, immutable proposal plus minimized source references,
+   validation metadata, and the planning note.
+7. Show a 390px review flow with concise rationale and visible uncertainty.
+8. Support explicit accept, reject, and edit-to-new-proposal actions, and
+   review of any extracted memory candidates.
+9. Keep acceptance transactional and separate from proposal generation.
+10. Add authorization, versioning, AI-output, UX, safety, and idempotency
+    tests, including planning-note injection cases under ADR-014 decision 4.
 
-## Blocked on a training-history policy
+## Context policy: two ADRs must be accepted first
 
-M3-01 built the AI context from goals and memory only. There is no decision
-about which training history a coach may read — how far back, completions or
-plans or both, whether corrected revisions are visible, whether a deleted
-session remains history — and M3-01's builder correctly stopped rather than
-invent one inside a Tier 1 ticket. The independent review confirmed that was the
-right call.
+**[ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md)** —
+what training history a coach may read. Revised 8 August 2026; its four open
+questions are answered and it awaits a final read. It decides an 8-week window
+with a session cap, that completion free text travels truncated, that only the
+current revision is visible, that missed planned sessions are visible, and what
+future plan state is readable.
 
-A coach with no training history cannot ground volume or load, so this ticket
-needs it. **[ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md)
-is drafted and must be accepted before M3-02 is dispatched.** It carries four
-open questions for the product owner, of which the privacy line — structured
-safety flags sent, free-text notes withheld — is the consequential one.
+**[ADR-014](../../decisions/ADR-014-PLANNING-NOTE-BOUNDARY.md)** — the planning
+note. Drafted 8 August 2026 with four open questions. It decides that owner
+free text reaches the provider, that it has no authority over server
+constraints, and that memory candidates are extracted from it.
 
-Adding a third context source will also mean revisiting
-`COACH_AI_CONTEXT_LIMITS` in `src/server/ai/context.ts`, which today splits its
-byte budget across two sources.
+Neither ADR is accepted. Both block dispatch.
+
+Together they take `COACH_AI_CONTEXT_LIMITS` in `src/server/ai/context.ts` from
+two sources to four, and the whole-context byte ceiling from 10,000–12,000 to
+roughly 30,000. Sizing this ticket's limits against the old ceiling will produce
+denials in ordinary use.
+
+## The implemented roadmap schema is a stub
+
+`RoadmapProposal` in `src/server/ai/contracts.ts` is currently `schemaVersion`,
+`summary`, and `phases[]`, where a phase carries only `title`, `focus`,
+`startDate`, `endDate`, and `goalId`.
+
+Milestones, review criteria, goal allocation, uncertainty, review points,
+rationale, and the safety note — every item in "Structured roadmap rules" below
+— have no representation in the contract today. M3-01 shipped deliberate stub
+schemas and named them as such. The schema work in this ticket is therefore
+substantially larger than wiring up an existing type, and `fittip.roadmap.v1`
+will need a version bump.
 
 ## Prompt work happens off-API
 
@@ -134,16 +164,25 @@ accepted goal dates and approved maximum horizons.
 
 1. The owner opens **Plan → Roadmap** and sees current accepted state, if any.
 2. The owner chooses the approved explicit generation action.
-3. A pending state explains that nothing changes until acceptance.
-4. The proposal shows phases, milestones, goal allocation, uncertainty, review
+3. A **compose screen** opens. It offers an optional planning note and a
+   summary of what the coach already knows — active goals, active constraints,
+   recent load — collapsed behind a disclosure by default so the screen stays
+   short at 390px. The owner confirms from here; generation does not start on
+   the tap that opened the screen.
+4. A pending state explains that nothing changes until acceptance.
+5. The proposal shows phases, milestones, goal allocation, uncertainty, review
    points, and concise reasoning.
-5. The owner may **Accept**, **Edit proposal**, or **Reject**. No action is
+6. Any memory candidates extracted from the planning note are presented for the
+   owner's explicit accept, edit-and-accept, or reject, reusing the accepted
+   M2-02 review surface. They are independent of the roadmap decision: the
+   owner may reject the roadmap and keep a candidate, or the reverse.
+7. The owner may **Accept**, **Edit proposal**, or **Reject**. No action is
    preselected.
-6. Edit shows structured fields and produces a new reviewable proposal.
-7. Accept creates one immutable accepted roadmap version and returns to its
+8. Edit shows structured fields and produces a new reviewable proposal.
+9. Accept creates one immutable accepted roadmap version and returns to its
    detail.
-8. Failure shows a safe retry path; it never falls back to unstructured prose
-   or claims a roadmap was saved.
+10. Failure shows a safe retry path; it never falls back to unstructured prose
+    or claims a roadmap was saved.
 
 Exact labels, horizon defaults, edit controls, and copy remain open product
 decisions.
@@ -168,7 +207,14 @@ decisions.
 1. An owner can request, inspect, edit, reject, and accept a roadmap proposal at
    `390x844`.
 2. Context uses only eligible active goals and memory records that are
-   user-created or explicitly accepted by the current user.
+   user-created or explicitly accepted by the current user, training history
+   within ADR-013's bounds, and the owner's planning note.
+2a. A planning note cannot alter the horizon, the schema, context eligibility,
+    the safety rule, any limit, or cause a write. Proven by fixtures that
+    attempt each, not asserted.
+2b. Memory candidates from the note are created `inferred_proposed` /
+    `proposed` and never active without explicit owner review. An invalid
+    memory section is discarded and the roadmap still returns.
 3. Output is structured, sport-agnostic, bounded, versioned, and includes
    uncertainty and explicit review points.
 4. Proposal, rejection, and accepted roadmap are distinguishable records;
@@ -228,6 +274,10 @@ provider/spend behavior was added.
 2. Phase/milestone fields and goal-allocation representation.
 3. Exact uncertainty and review-point presentation.
 4. Visible generation action, edit controls, rejection behavior, and copy.
+4a. What the compose screen's context summary shows and how it is grouped, and
+    the copy for its collapsed state.
+4b. Where extracted memory candidates appear relative to the roadmap review,
+    and what happens to undecided candidates if the owner leaves the screen.
 5. Whether accepting a new roadmap supersedes the prior current version while
    retaining it as immutable history (recommendation: yes).
 6. Proposal/source retention and deletion behavior for owner-only local use and

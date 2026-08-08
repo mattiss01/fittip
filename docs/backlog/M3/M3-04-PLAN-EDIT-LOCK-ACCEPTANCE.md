@@ -9,6 +9,9 @@
 **Depends on:** [M3-02 accepted](M3-02-ROADMAP-PROPOSAL.md) and
 [M3-03 accepted](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md)
 
+**Revised:** 8 August 2026 — a detailed plan may now have no roadmap behind it;
+planning note and memory candidates carried through acceptance
+
 **Architecture boundary:** ADR-006 and ADR-007 accepted; M0-06A accepted before
 founder-hosted use
 
@@ -25,6 +28,37 @@ introducing a global library.
 This slice establishes proposal editing and AI-proposal acceptance only. It
 does not change accepted M1 completion/logging behavior, implement replan
 behavior, or alter accepted history.
+
+## A detailed plan may have no roadmap behind it
+
+M3-03 was revised on 8 August 2026 so that a weekly plan can be generated with
+no accepted roadmap in existence. Acceptance must therefore handle a
+detailed-plan proposal whose source references contain no roadmap, and that path
+is ordinary rather than exceptional.
+
+Two consequences for this ticket. The acceptance transaction must not require a
+current accepted roadmap in order to commit a detailed-plan version. And open
+decision 4 below — whether one acceptance can accept both roadmap and week —
+now has a third case it did not have when it was written: a week accepted with
+no roadmap at all, which must not be treated as a stale-source conflict.
+
+Where a roadmap **was** used and was marked stale at generation time, that fact
+is stored on the proposal. Accepting such a plan is permitted; the staleness is
+a property of the evidence, not a blocker. The transaction re-reads sources and
+rejects genuinely stale *proposal* state as it already does — those are
+different conditions and must not be conflated.
+
+## The planning note and memory candidates pass through
+
+The planning note travels with the proposal into the accepted version's
+evidence, under ADR-014. Editing a proposal never edits the note: it records
+what was asked for, and rewriting it would destroy the only record of that.
+
+Memory candidates extracted from the note are reviewed on the accepted M2-02
+surface and are **not** part of this transaction. Accepting a plan neither
+accepts nor discards a pending candidate, and accepting a candidate does not
+touch a plan. Keeping them independent is what stops a single confirmation from
+silently doing two unrelated things.
 
 ## Local-owner and pre-friends boundary
 
@@ -61,8 +95,12 @@ uses.
 - No change to session completion, factual log, actual metric,
   skipped/partial/replaced outcome, plan-versus-actual comparison, or Progress
   behavior already accepted in M1.
-- No replan request, AI replan, accepted-plan diff, or enforcement of locks
-  against future replans; those belong to later milestones.
+- No replan request, AI replan, or accepted-plan diff; those belong to
+  [M3-07](M3-07-REPLAN-ACCEPTED-HORIZON.md).
+- Lock enforcement against a replan is out of scope **here**, but it is no
+  longer a later-milestone concern: M3-07 owns it and follows immediately. If
+  M3-07 is approved, delete this line rather than leaving two documents
+  disagreeing about where the boundary sits.
 - No mutation of completed history, past sessions, or a prior accepted version.
 - No global activity/exercise catalog, public sharing, coach role, sport pack,
   analytics sink, new hosted resource, external user, or new provider call.
@@ -208,6 +246,11 @@ confirmation require approval.
 - Lock transition/inheritance, session/activity conflict, and reviewed-state
   snapshot tests.
 - Transaction fault injection after each logical step; assert complete rollback.
+- Acceptance of a detailed-plan proposal with no roadmap in its sources, and of
+  one whose roadmap was marked stale at generation; assert neither is treated
+  as a stale-source conflict and both commit.
+- Proof that editing a proposal leaves the planning note unchanged, and that
+  accepting a plan neither accepts nor discards a pending memory candidate.
 - Double-submit, concurrent accept, stale proposal/source/current pointer, and
   retry idempotency.
 - Personal activity create/reuse/near-duplicate/owner-edit/snapshot/archive-
@@ -243,9 +286,10 @@ behavior was added.
 1. Editable field allowlist and add/remove/reorder limits.
 2. Session-lock/activity-lock inheritance and unlock rules.
 3. Side-by-side diff presentation and exact acceptance copy.
-4. Whether one acceptance can accept both roadmap and week, or only a week
-   linked to an already accepted roadmap (recommendation: explicit atomic
-   acceptance of the reviewed pair when both are new).
+4. Whether one acceptance can accept both roadmap and week, only a week linked
+   to an already accepted roadmap, or a week with no roadmap at all
+   (recommendation: explicit atomic acceptance of the reviewed pair when both
+   are new; a roadmap-free week commits alone and is not a conflict).
 5. Current-pointer and supersession semantics.
 6. Personal activity matching/reuse, owner edit, archive, and immutable
    snapshot fields.

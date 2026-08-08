@@ -1,11 +1,25 @@
 # M3 backlog
 
 **Planning state:** ADR-006 accepts the local-owner AI staging principle and
-ADR-007 accepts the separate founder-hosted topology. All five M3 tickets
-remain proposed and require their own product-owner approval. No provider,
-model, account, key, prompt, data-use/retention term, price, spend, friend data,
-external user, public registration, commercial use, or analytics sink is
-approved.
+ADR-007 accepts the separate founder-hosted topology. M3-01 was accepted on
+4 August 2026. The remaining tickets stay proposed and require their own
+product-owner approval. No provider, model, account, key, prompt,
+data-use/retention term, price, spend, friend data, external user, public
+registration, commercial use, or analytics sink is approved.
+
+**Two context ADRs now gate M3-02 and M3-03.**
+[ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md) (training
+history) was revised on 8 August 2026 with its four open questions answered;
+[ADR-014](../../decisions/ADR-014-PLANNING-NOTE-BOUNDARY.md) (the planning note
+and owner free text as prompt input) was drafted the same day and carries four
+open questions. Neither is accepted. Together they take the AI context from two
+sources to four and raise the byte ceiling from ~12,000 to ~30,000, which
+M3-01B's spend and token ceilings must be sized against.
+
+**M3-03 no longer requires a roadmap at runtime.** Decided 8 August 2026: M3-02
+still ships first, but an owner must be able to generate a weekly plan from
+goals alone. Where a current roadmap covers the dates it is used automatically,
+and a stale one is used and marked stale rather than dropped or blocking.
 
 **Founder boundary:** product-owner data or synthetic data only; local or
 accepted M0-06A founder staging; server-side, explicitly enabled,
@@ -20,6 +34,8 @@ commercial use, or production.
 | P1 | [M3-02 Roadmap proposal](M3-02-ROADMAP-PROPOSAL.md) | proposed | M3-01 accepted and accepted M2 foundations | Owner-scoped structured high-level roadmap proposal with phases, milestones, uncertainty, review points, source versions, edit/reject/accept boundary; no detailed plan | Approve horizon, schema, uncertainty/review UX, safety, versioning, retention, and transaction choices |
 | P1 | [M3-03 Selected-horizon plan proposal](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md) | proposed | M3-01 and M3-02 accepted | User-selected 1–7 consecutive owner-local dates, structured sport-agnostic sessions and personal activity candidates, goal allocation, constraints, alternatives, reasoning, conservative safety; no acceptance | Approve day-count default/remembering, date/unit/session/activity/time/intensity/allocation/safety/UX limits |
 | P1 | [M3-04 Plan edit, lock, and acceptance](M3-04-PLAN-EDIT-LOCK-ACCEPTANCE.md) | proposed | M3-02 and M3-03 accepted | Structured edits, session/activity locks, side-by-side review, reuse of the M1 personal-activity/version model, transactional immutable roadmap/detailed-plan acceptance; no change to logging and no replan | Approve editable fields, lock inheritance, diff/copy, activity reuse/snapshot, version/current-pointer, transaction, and retention decisions |
+| P1 | [M3-07 Replanning an accepted horizon](M3-07-REPLAN-ACCEPTED-HORIZON.md) | proposed | M3-04 accepted | Ask the coach for a new plan over dates that already have an accepted version; new immutable version supersedes, locks survive, completed history untouched. No structured reporting UX, alternatives, or clarifying questions — those stay M4 | Approve five open decisions, then Tier 1 builder, reviewer, Preview, acceptance |
+| P2 | [M3-06 A plan never starts in the past](M3-06-PAST-DATED-PLAN-HORIZONS.md) | proposed | none | Change accepted M1 behaviour so a plan version's start date is owner-local today or later; horizon shrinks as the week passes and superseded versions retain past content | Approve the four open questions, then Tier 1 builder, reviewer, Preview, acceptance |
 | P1 | [M3-05 Consolidated M3 validation](M3-05-M3-VALIDATION-SLICE.md) | proposed | M3-01 through M3-04 accepted | Independent clean local validation, mock and opt-in live evidence, cost/token cap, schema failures, authorization, proposals/versioning/locks/acceptance, 390px accessibility, secret/content-log scan; no new behavior | Approve validator, exact commits, fixtures/live cap, evidence retention, accessibility checklist, and blocker statement |
 
 ## Dependency chain
@@ -31,7 +47,11 @@ Accepted M2 goals + coaching context + guided onboarding + targeted closeout
       -> M3-02 high-level roadmap proposal
         -> M3-03 exact selected 1–7-day plan proposal
           -> M3-04 edit, locks, and transactional acceptance
-            -> M3-05 independent validation
+            -> M3-07 replan an accepted horizon
+              -> M3-05 independent validation
+
+M3-06 (a plan never starts in the past) sits outside this chain, blocks
+nothing, and changes accepted M1 behaviour rather than adding an M3 slice.
 ```
 
 M3-01 was split on 3 August 2026. The boundary — authorization, context
@@ -41,11 +61,25 @@ real adapter waits on a provider decision. The split also improves the contract,
 because fixtures written against the interface alone cannot quietly shape it
 around one provider's API.
 
-M3-03 depends on M3-02 because the first detailed horizon must be traceable to a
-reviewed high-level direction, rather than inventing a standalone plan with no
-roadmap source. M3-04 depends on both proposal slices because it accepts the
-reviewed roadmap/detailed-plan pair and creates their immutable versions. M3-05 starts
-only after every owning slice is accepted.
+M3-03 ships after M3-02 so the roadmap surface exists and has been judged before
+detailed planning builds on it. That is a build dependency only — revised
+8 August 2026, a weekly plan generates with no roadmap in existence, and that
+path is first-class rather than a fallback. M3-04 depends on both proposal
+slices because it accepts the reviewed roadmap/detailed-plan pair and creates
+their immutable versions; it must also accept a week with no roadmap behind it
+without treating that as a stale-source conflict.
+
+M3-07 was added on 8 August 2026 after the product owner observed that the
+"re-proposing versus replanning" distinction the lead had drawn did not survive
+the same session's decisions: ADR-013 already puts completions and safety flags
+in context and ADR-014's planning note already carries "I got sick Tuesday", so
+there was one capability, not two. Regeneration and replanning are separated
+structurally instead — regeneration refines a proposal that was never accepted,
+replanning supersedes an accepted version. M3-07 takes M4's version-supersession
+groundwork, which the product plan's M4 entry asks to be built first anyway, and
+leaves M4 the structured reporting UX, alternatives, and clarifying questions.
+
+M3-05 starts only after every owning slice is accepted.
 
 ## Delivery approach — how M3 gets built without paying for iteration
 
