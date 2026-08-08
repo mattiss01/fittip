@@ -139,6 +139,14 @@ still block dispatch.
      Settled by a bake-off against the synthetic athlete, scored on schema
      conformance, safety-signal adherence, measured tokens and latency, and the
      product owner's own read of coaching quality.
+   - The harness, the synthetic corpus, and the selection rule live in
+     [`docs/decisions/support/m3-01b-bakeoff/`](../../decisions/support/m3-01b-bakeoff/README.md).
+     **The rule is the cheapest tier that clears both a mechanical gate and the
+     product owner's judgement — not the best model.** Start capable so a failure
+     is a real product finding rather than a tier artifact, walk down until a
+     gate breaks, take the tier above the break.
+   - The corpus in that directory is the one M3-02 and M3-03 reuse for prompt
+     tuning. Do not author a second one; extend that one and say why.
 2. **Account and credential**: whose account, which key, what scope, who
    rotates it.
    - **Resolved 8 August 2026.** A dedicated OpenAI project for FitTip, a

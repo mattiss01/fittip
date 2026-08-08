@@ -12,6 +12,13 @@ provider terms as read that day. Still not approved: the **model**, any prompt,
 price, spend ceiling, friend data, external user, public registration,
 commercial use, or analytics sink.
 
+**The model is chosen empirically, and the synthetic corpus is shared.** The
+bake-off harness, the authored synthetic athlete, and the selection rule are in
+[`docs/decisions/support/m3-01b-bakeoff/`](../../decisions/support/m3-01b-bakeoff/README.md).
+M3-02 and M3-03 reuse that corpus for off-API prompt tuning rather than
+authoring their own — the product owner has too little real training history for
+their own data to exercise the ADR-012/013/014 context assembly.
+
 **Two context ADRs now gate M3-02 and M3-03.**
 [ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md) (training
 history) was revised on 8 August 2026 with its four open questions answered;
