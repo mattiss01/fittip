@@ -1,7 +1,10 @@
 # M3-01B: One approved real-provider adapter
 
-**Status:** proposed — not approved for implementation; blocked on the provider
-decision below
+**Status:** proposed — not approved for implementation. The provider decision is
+settled (OpenAI, 8 August 2026), along with the account/credential posture, the
+data-use terms, and the live-test data source. Still blocked on decisions 1b, 4,
+5, 6, and 8 below, and decision 4 is itself blocked on ADR-013 and ADR-014 being
+accepted
 
 **Milestone:** M3
 
@@ -115,27 +118,90 @@ requirements here rather than notes.
 
 ## Open decisions — all required before dispatch
 
-The product owner must approve each explicitly. None is settled.
+The product owner must approve each explicitly. Decisions 1a, 2, 3, and 7 were
+settled in the 8 August 2026 session and are marked below; the rest are open and
+still block dispatch.
 
 1. **Provider and model**, chosen against structured-output reliability,
    coaching quality on health-adjacent content, latency, and price.
+   - **1a — provider. Resolved 8 August 2026: OpenAI.** Chosen for
+     grammar-enforced structured output (`strict: true` compiles the JSON schema
+     into a context-free grammar at sampling time, rather than requesting
+     compliance), automatic prompt caching that needs no `cache_control`
+     plumbing, and existing credit. The ticket's own analysis stands: cost is a
+     model-tier question, not a provider question. Reversal cost is one adapter
+     file against an unchanged contract.
+   - **1b — model. Open, and deliberately empirical.** At 50–200 development
+     calls the spend difference across the whole tier range is roughly €0.20
+     against €20, so cost carries no signal. The risk that matters is the
+     opposite one: proving the concept on a model too small to do it, and
+     recording that in M3-02 as a product finding rather than a tier artifact.
+     Settled by a bake-off against the synthetic athlete, scored on schema
+     conformance, safety-signal adherence, measured tokens and latency, and the
+     product owner's own read of coaching quality.
 2. **Account and credential**: whose account, which key, what scope, who
    rotates it.
+   - **Resolved 8 August 2026.** A dedicated OpenAI project for FitTip, a
+     project-scoped key used nowhere else, and a hard monthly spend cap set **at
+     OpenAI**. The provider-side cap is the point: every ceiling in `budget.ts`
+     is this repository's own code and fails open if that code is wrong, so the
+     only ceiling that survives a bug in the reservation path is one the
+     application cannot reach. Key in `.env.local` locally and a Vercel
+     **production-target** variable for founder staging. The product owner
+     rotates.
 3. **Data-use and retention terms**: training on inputs, human review,
    retention window, deletion, region, and subprocessors. This carries more
    weight than usual — the context can contain injury, illness, and fatigue
    signals. A provider tier requiring extended retention is a decision, not a
    detail.
+   - **Resolved 8 August 2026: OpenAI's standard API terms accepted.** No
+     training on inputs by default, ~30-day abuse-monitoring retention, US
+     processing accepted, no zero-retention arrangement sought. The product
+     owner recorded no objection to US infrastructure. Exact terms as read on
+     8 August 2026 are below.
+   - Zero data retention was investigated and **is approval-gated on all three
+     candidate providers** — OpenAI's controls are "subject to prior approval by
+     OpenAI", Anthropic's require a sales agreement per organization, Mistral's
+     require activation through support. Pursuing one would have blocked
+     M3-01B, and therefore M3-02 through M3-04, behind a sales process for a
+     founder-only milestone. Not worth it now; the pre-friends gate already
+     forces a full re-validation of provider terms before anyone else's data is
+     involved.
 4. **Hard limits**: per-request, per-window, daily, and total spend ceilings;
    maximum concurrent live requests; input and output token ceilings; request
    deadline. **Size these against the revised context, not the one M3-01
-   shipped** — see below.
+   shipped** — see below. **Open, and blocked on ADR-013 and ADR-014 being
+   accepted**: those set the context ceiling this decision is sized against, and
+   ADR-014's own decision 4 asks how much of the ~30,000 bytes the planning note
+   reserves. Setting spend ceilings against an unaccepted context budget would
+   produce numbers that have to be reopened.
 5. **Retry and idempotency behavior.** Recommendation: zero automatic retries.
    Note that provider SDKs commonly retry by default and must be configured off.
 6. **Price source and unknown-cost behavior.** Recommendation: deny.
 7. **Whether live tests may use minimized owner data or synthetic only.**
+   - **Resolved 8 August 2026: synthetic, for data-adequacy reasons rather than
+     privacy ones.** The product owner has too little training history for their
+     own data to exercise the context assembly — a thin history tests almost
+     nothing. Owner data is permitted whenever the product owner wishes, and
+     carries no restriction under decision 3; it is simply the weaker test until
+     there is more of it.
+   - **Consequence, and it is a scope line rather than a note.** The synthetic
+     corpus must be authored to be *richer than the real data*: a multi-week
+     history containing a pain report, a multi-week gap, a corrected completion,
+     a replaced session, achieved goals, memory at the length ceiling, and a
+     planning note that conflicts with a live goal. Anything less exercises
+     neither the ADR-012/013/014 assembly nor the byte ceiling. The corpus is
+     reused by M3-02 and M3-03 for prompt tuning.
 8. **Where durable budget state lives** — a table in the existing database or
    another approved store — and its cost.
+   - Open. One constraint the builder will hit and the ticket did not state:
+     this repository has no service-role Supabase client **by rule**, so all
+     writes carry the authenticated user's JWT. A spend counter the capped user
+     can write is a spend counter the capped user can reset. A Postgres option
+     therefore needs table-level writes revoked and an increment-only
+     `SECURITY DEFINER` RPC, not an ordinary owned table. A separate key-value
+     store avoids that but adds a vendor, a credential, and a subprocessor,
+     which is its own Tier 1 decision.
 
 ## The context grew after this ticket was written
 
@@ -215,6 +281,107 @@ that constraint.
 
 Whatever is chosen, decision 3 must record the exact terms read on the day they
 were read, not a recollection of them.
+
+### Terms verified 8 August 2026
+
+Read from primary sources on 8 August 2026 to settle decision 3. Two OpenAI
+pages — `openai.com/policies/api-data-usage-policies` and
+`openai.com/enterprise-privacy` — return HTTP 403 to automated fetches, so the
+OpenAI figures below come from its developer documentation, which is primary but
+is the technical statement rather than the legal one. **Read those two pages
+directly before relying on this record for anything beyond founder use.**
+
+**OpenAI** — `developers.openai.com/api/docs/guides/your-data`:
+
+- Training: "data sent to the OpenAI API is not used to train or improve OpenAI
+  models (unless you explicitly opt in to share data with us)." The retention
+  table marks "Data used for training" as "No" on every endpoint.
+- Retention: "By default, abuse monitoring logs are generated for all API
+  feature usage and retained for up to 30 days, unless longer retention is
+  required by law, or is reasonably necessary to protect our services or any
+  third party from harm."
+- Zero data retention: available on `/v1/chat/completions`, `/v1/responses`,
+  `/v1/embeddings`, `/v1/moderations` and others, but "these controls are
+  subject to prior approval by OpenAI."
+- EU residency: `eu.api.openai.com`, "Europe (EEA + Switzerland)", regional
+  storage and processing — gated on being "approved for abuse monitoring
+  controls" and executing "a Modified Retention amendment."
+- Structured outputs: `strict: true` compiles the supplied JSON Schema into a
+  context-free grammar used during sampling. The cacheable request prefix
+  includes the structured-output schema; caching activates automatically above
+  1024 tokens.
+
+**Anthropic** — `platform.claude.com/docs/en/manage-claude/api-and-data-retention`
+(recorded for the audit trail; not selected):
+
+- "Conversation content (your prompts and Claude's outputs) is not retained by
+  default; the exception is Covered Models, which require 30-day retention." A
+  stronger default than OpenAI's, with no agreement required.
+- "Retained data is never used for model training without your express
+  permission."
+- Claude Fable 5 and Claude Mythos 5 are Covered Models: they require 30-day
+  retention and cannot run under ZDR at all.
+- Against that: "if a chat or session is flagged, Anthropic may retain inputs
+  and outputs for up to 2 years", and this applies regardless of arrangement,
+  ZDR included. This is not evidence that Anthropic is worse — it is Anthropic
+  documenting a flagged-content path the others describe only open-endedly. It
+  matters here because FitTip's context is pain, injury, and illness text, which
+  has an above-baseline chance of tripping a safety classifier.
+- Structured outputs are ZDR-eligible "(qualified)": prompts and outputs are not
+  stored, but the JSON schema is cached up to 24 hours, with an explicit warning
+  not to place sensitive data in schema property names, enums, or patterns.
+  FitTip's schema is static and carries no user data, so this would not have
+  bitten.
+
+**Mistral** — `docs.mistral.ai/admin/monitor-comply/privacy-data-controls`
+(recorded; not selected):
+
+- "data sent through the API isn't used for model training", with an exception:
+  Labs models "can be used to train Mistral models" if activated, "regardless of
+  your subscription plan or opt-out settings." The free Experiment tier can
+  train on inputs unless opted out — a genuine trap for a casual signup.
+- The strongest jurisdictional answer of the three: EU-native, GDPR-subject, EU
+  storage by default, EU-drafted DPA, no cross-border transfer question.
+- Against that: structured output is documented as "more reliable and…
+  recommended whenever possible" with the caveat that "it is still advisable to
+  iterate on your prompts" — best-effort language, not a grammar guarantee.
+  Prompt caching is not documented on the pages read.
+- The 30-day API retention figure circulating for Mistral was **not** confirmed
+  from a primary source; the docs page does not state it. Anyone relying on
+  Mistral must read `legal.mistral.ai/terms/data-processing-addendum` first.
+
+**Google Gemini** remains disqualified for owner data on the terms already
+recorded above, unchanged.
+
+## Findings surfaced before dispatch, 8 August 2026
+
+Three things that will cost the builder a session each if they are discovered
+during implementation instead.
+
+1. **A live call cannot be verified on the ticket's Vercel Preview.**
+   `resolveCoachAIEnvironment` (`src/server/ai/enablement.ts:62`) resolves
+   `founder-staging` only when `VERCEL_ENV === "production"`; a Preview resolves
+   to `null` and the gate denies. That is the control working correctly, but it
+   collides with the standing rule that the product owner's acceptance surface
+   is the Preview. Decide before dispatch: either acceptance for this ticket is
+   local live plus a Preview covering the non-live paths plus hosted
+   verification on the founder production deployment after merge, or the
+   environment rule is amended. Do not leave this to the handoff.
+2. **`maxInputTokens: 8_000` is already suspect.**
+   `COACH_AI_FIXTURE_LIMITS` (`src/server/ai/budget.ts:40`) assumes the context
+   M3-01 shipped. Reservations charge the upper bound before the call, so token
+   ceilings and spend ceilings are coupled: raising the input ceiling to fit the
+   ADR-013/014 context raises every reservation and admits fewer requests under
+   the same daily cap. Decision 4 must set both together.
+3. **The static prompt prefix may be too short for prompt caching to fire.**
+   This ticket calls caching more significant than model choice at the margin,
+   and OpenAI's caching activates above 1024 tokens. A draft system prompt
+   carrying the full safety rules measured ~880 tokens. The JSON schema also
+   counts toward the cacheable prefix, so this may clear the bar in practice —
+   but it is a measurement, not an assumption, and the bake-off reads
+   `cached_tokens` to settle it. If caching does not fire, the honest answer at
+   this scale is to accept that rather than pad the prompt to suit the billing
+   system; either way it should be a recorded decision.
 
 ## Approval gate
 
