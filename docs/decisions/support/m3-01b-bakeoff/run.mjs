@@ -36,8 +36,11 @@ const value = (name, fallback) => {
 };
 
 const MODELS = value("models", "").split(",").filter(Boolean);
+const MAX_OUTPUT = Number(value("max-output", "4000"));
 const REPEATS = Number(value("repeats", "2"));
-const OPS = value("operations", "create_roadmap,create_seven_day_plan").split(",");
+const OPS = value("operations", "create_roadmap,create_seven_day_plan").split(
+  ",",
+);
 const SCENARIO_NAMES = flag("all")
   ? Object.keys(SCENARIOS)
   : value("scenarios")
@@ -62,14 +65,30 @@ function requireKey() {
 }
 
 async function callOpenAI(path, init, key) {
-  const response = await fetch(`${API}${path}`, {
-    ...init,
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${key}`,
-      ...(init?.headers ?? {}),
-    },
-  });
+  let response;
+  try {
+    response = await fetch(`${API}${path}`, {
+      ...init,
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${key}`,
+        ...(init?.headers ?? {}),
+      },
+    });
+  } catch (error) {
+    // A dropped connection is a transport failure, not a model result. Return
+    // it as one so a single ECONNRESET twenty calls in does not discard every
+    // measurement taken before it — these runs cost real money.
+    //
+    // `error.cause?.code` only. Never interpolate the error object: the request
+    // carries the key in a header and some transport errors quote the request.
+    return {
+      ok: false,
+      status: 0,
+      transport: error?.cause?.code ?? error?.code ?? "network error",
+      body: null,
+    };
+  }
   const text = await response.text();
   let body;
   try {
@@ -97,7 +116,7 @@ async function runOne(model, scenario, operation, key) {
     "/chat/completions",
     {
       method: "POST",
-      body: JSON.stringify({ ...base, max_completion_tokens: 4000 }),
+      body: JSON.stringify({ ...base, max_completion_tokens: MAX_OUTPUT }),
     },
     key,
   );
@@ -128,13 +147,21 @@ async function runOne(model, scenario, operation, key) {
       ...common,
       parsed: null,
       schemaHeld: false,
-      failures: [response.body?.error?.message ?? `HTTP ${response.status}`],
+      failures: [
+        response.transport
+          ? `transport failure (${response.transport}) — not a model result, re-run this cell`
+          : (response.body?.error?.message ?? `HTTP ${response.status}`),
+      ],
       probes: null,
     };
   }
 
-  const content = response.body?.choices?.[0]?.message?.content ?? "";
+  const choice = response.body?.choices?.[0];
+  const content = choice?.message?.content ?? "";
   const usage = response.body?.usage ?? {};
+  const finishReason = choice?.finish_reason ?? null;
+  const reasoningTokens =
+    usage.completion_tokens_details?.reasoning_tokens ?? 0;
 
   let parsed = null;
   try {
@@ -143,15 +170,26 @@ async function runOne(model, scenario, operation, key) {
     parsed = null;
   }
 
+  // "Not JSON" and "ran out of room" are different findings and must not be
+  // reported as the same one. A reasoning model spends hidden tokens against
+  // the same output budget as the answer, so a cap that is generous for a
+  // non-reasoning model can starve the actual response to nothing. Recording
+  // the model as incapable in that case would be plainly wrong.
+  const truncated = finishReason === "length";
   const failures = parsed
     ? validate(operation, parsed, scenario)
-    : ["response was not JSON"];
+    : [
+        truncated
+          ? `truncated at the output cap (${MAX_OUTPUT} tokens, ${reasoningTokens} of them reasoning) — raise --max-output before calling this a model failure`
+          : `response was not JSON (finish_reason=${finishReason ?? "unknown"})`,
+      ];
 
   return {
     ...common,
     inputTokens: usage.prompt_tokens ?? null,
     outputTokens: usage.completion_tokens ?? null,
-    reasoningTokens: usage.completion_tokens_details?.reasoning_tokens ?? null,
+    reasoningTokens,
+    finishReason,
     cachedInputTokens: usage.prompt_tokens_details?.cached_tokens ?? null,
     staticPrefixChars: staticChars,
     parsed,
@@ -174,7 +212,9 @@ async function listModels() {
     .sort();
   console.log(`${ids.length} chat-capable models visible to this key:\n`);
   for (const id of ids) console.log(`  ${id}`);
-  console.log(`\nPick three spanning the tiers:\n  node run.mjs --models <a>,<b>,<c>\n`);
+  console.log(
+    `\nPick three spanning the tiers:\n  node run.mjs --models <a>,<b>,<c>\n`,
+  );
 }
 
 function dryRun() {
@@ -187,11 +227,21 @@ function dryRun() {
 
     console.log(`\n=== ${scenario.name} ===`);
     console.log(`    ${scenario.title}\n`);
-    console.log(`  goals (targetable)      ${String(context.targetableGoals.length).padStart(5)}`);
-    console.log(`  goals (historical)      ${String(context.historicalGoals.length).padStart(5)}`);
-    console.log(`  memory items            ${String(context.memory.length).padStart(5)}`);
-    console.log(`  history entries         ${String(context.trainingHistory.length).padStart(5)}`);
-    console.log(`  planning note bytes     ${String(bytes(context.planningNote)).padStart(5)}`);
+    console.log(
+      `  goals (targetable)      ${String(context.targetableGoals.length).padStart(5)}`,
+    );
+    console.log(
+      `  goals (historical)      ${String(context.historicalGoals.length).padStart(5)}`,
+    );
+    console.log(
+      `  memory items            ${String(context.memory.length).padStart(5)}`,
+    );
+    console.log(
+      `  history entries         ${String(context.trainingHistory.length).padStart(5)}`,
+    );
+    console.log(
+      `  planning note bytes     ${String(bytes(context.planningNote)).padStart(5)}`,
+    );
     console.log(`  whole context bytes     ${String(whole).padStart(5)}`);
     console.log(
       `    vs ADR-013 ceiling 30000 -> ${Math.round((whole / 30000) * 100)}%`,
@@ -216,8 +266,12 @@ function dryRun() {
     );
 
     const w = planWindow(scenario.today);
-    console.log(`  plan window             ${w[0]} (${weekdayOf(w[0])}) .. ${w[6]} (${weekdayOf(w[6])})`);
-    console.log(`  plan probes             ${scenario.planProbes.length} (${scenario.planProbes.filter((p) => p.mustPass).length} must pass)`);
+    console.log(
+      `  plan window             ${w[0]} (${weekdayOf(w[0])}) .. ${w[6]} (${weekdayOf(w[6])})`,
+    );
+    console.log(
+      `  plan probes             ${scenario.planProbes.length} (${scenario.planProbes.filter((p) => p.mustPass).length} must pass)`,
+    );
   }
   console.log();
 }
@@ -225,7 +279,9 @@ function dryRun() {
 async function fullRun() {
   const key = requireKey();
   if (MODELS.length === 0) {
-    console.error("No models given. Run --list-models first, then --models a,b,c");
+    console.error(
+      "No models given. Run --list-models first, then --models a,b,c",
+    );
     process.exit(1);
   }
 
@@ -235,13 +291,15 @@ async function fullRun() {
       const scenario = getScenario(name);
       for (const operation of OPS) {
         for (let attempt = 1; attempt <= REPEATS; attempt += 1) {
-          process.stdout.write(`  ${model} / ${name} / ${operation} / ${attempt} ... `);
+          process.stdout.write(
+            `  ${model} / ${name} / ${operation} / ${attempt} ... `,
+          );
           const result = await runOne(model, scenario, operation, key);
           results.push(result);
           console.log(
             result.schemaHeld
-              ? `ok  ${result.latencyMs}ms  in=${result.inputTokens} out=${result.outputTokens} cached=${result.cachedInputTokens ?? 0}`
-              : `${result.failures.length} failure(s)  ${result.latencyMs}ms`,
+              ? `ok  ${result.latencyMs}ms  in=${result.inputTokens} out=${result.outputTokens} reasoning=${result.reasoningTokens ?? 0} cached=${result.cachedInputTokens ?? 0}`
+              : `${result.failures.length} failure(s)  ${result.latencyMs}ms  finish=${result.finishReason ?? "?"} out=${result.outputTokens ?? 0} reasoning=${result.reasoningTokens ?? 0}`,
           );
         }
       }
@@ -277,7 +335,11 @@ async function fullRun() {
 
   mkdirSync(join(HERE, "results"), { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  writeFileSync(join(HERE, "results", `api-${stamp}.json`), JSON.stringify(results, null, 2), "utf8");
+  writeFileSync(
+    join(HERE, "results", `api-${stamp}.json`),
+    JSON.stringify(results, null, 2),
+    "utf8",
+  );
   writeFileSync(join(HERE, "results", `api-${stamp}.md`), full, "utf8");
   console.log(`\n${full}`);
 }

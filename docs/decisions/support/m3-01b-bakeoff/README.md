@@ -120,7 +120,7 @@ end, and it is the whole reason this exercise exists.
 | `scenarios/` | Four authored synthetic athletes, each carrying its own probes. See `scenarios/index.mjs` for which two decide the model and why. |
 | `prompt.mjs` | Draft system prompt carrying the safety rules. **Not** the shipped prompt: the real ones belong to M3-02 and M3-03 and depend on ADR-013/014 landing. |
 | `evaluate.mjs` | Contract validation and safety probes, shared by every path so they cannot drift. |
-| `run.mjs` | The API path. Needs `OPENAI_API_KEY`; never prints or writes it. |
+| `run.mjs` | The API path. Needs `OPENAI_API_KEY`; never prints or writes it. **Spends real money — see below.** |
 | `emit.mjs` | Writes self-contained paste-ready prompts for the no-key paths. |
 | `report.mjs` | One report renderer for every path, so the same result cannot be reported two ways. |
 | `parse-worksheet.mjs` | Reads `WORKSHEET.md` into slots. Shared by the scorer and the reader — two parsers over one file is two ways to disagree about what was pasted. |
@@ -130,6 +130,27 @@ end, and it is the whole reason this exercise exists.
 
 Generated output (`paste/`, `results/`) is gitignored. Regenerate with
 `node emit.mjs`.
+
+## Before running the API path
+
+`run.mjs` bills the product owner's OpenAI account. State the exact call count
+and get an explicit yes before running it — a question about feasibility is not
+approval to spend.
+
+**Compute the count, do not estimate it.** It is
+`models × scenarios × operations × repeats`, and **`--repeats` defaults to 2**.
+Four models over the two required scenarios is 32 calls, not 16. That mistake
+was made on 9 August 2026 and the product owner found out afterwards.
+
+**Set `--max-output` deliberately when testing a reasoning model.** Reasoning
+tokens are billed as output and consume the same cap as the answer. The
+9 August run capped at 4,000; `gpt-5-nano` spent 3,840 of them thinking and
+emitted nothing, which looked identical to a model that cannot hold the schema.
+Sixteen calls bought no finding. `run.mjs` now reports `finish_reason` and
+reasoning tokens and labels a truncation as a truncation, but the cap is still
+yours to choose.
+
+`--list-models` and `--dry-run` cost nothing and need no approval.
 
 ## Running it
 

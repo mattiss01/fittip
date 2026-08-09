@@ -147,6 +147,17 @@ still block dispatch.
      gate breaks, take the tier above the break.
    - The corpus in that directory is the one M3-02 and M3-03 reuse for prompt
      tuning. Do not author a second one; extend that one and say why.
+   - **Still open after the 9 August API run, and deliberately so.** `gpt-5.5`
+     is proven: 8 of 8 under real `strict: true`, every must-pass probe clean.
+     `gpt-5.6-luna` held the contract 8 of 8 at **1/25th the price** but put
+     sessions outside the athlete's stated available days on one of two
+     cold-start runs — a structural probe reading `date`, so a real miss rather
+     than a text artifact. `gpt-5-mini` and `gpt-5-nano` are **unresolved**:
+     that run capped output at 4,000 tokens and their reasoning consumed it, so
+     nothing was learned about their capability. See the run record below.
+     Choosing `gpt-5.5` now is defensible and costs about a euro a month at
+     founder scale; choosing `gpt-5.6-luna` needs the intermittent miss
+     characterised first.
 2. **Account and credential**: whose account, which key, what scope, who
    rotates it.
    - **Resolved 8 August 2026.** A dedicated OpenAI project for FitTip, a
@@ -194,8 +205,30 @@ still block dispatch.
      exceeds the whole ceiling, and `assembleCoachAIContext` denies rather than
      truncating. A single total with independent item caps behind it produces an
      owner who cannot generate a proposal and an error that does not say why.
+   - **Three of the four shipped guesses now have measurements** from the
+     9 August API run, and two of them are wrong. `deadlineMs: 30_000` was
+     exceeded by `gpt-5-mini` at 54.1s and `gpt-5-nano` at 31.5s, with
+     `gpt-5.5` at 27.2s leaving almost no margin. `maxOutputTokens: 2_000` fits
+     a non-reasoning model — `gpt-5.6-luna` peaked at 1,513 and `gpt-5.5` at
+     1,640 — and cannot accommodate a reasoning one, which spent 3,840 tokens
+     thinking before writing anything. `maxInputTokens: 8_000` looks comfortable
+     against a 2,972-token peak, but that is two scenarios, not the regeneration
+     worst case this decision must actually size against.
+   - **Reasoning models make the reservation weaker, not just larger.** Reserve
+     charges the upper bound before the call, and hidden reasoning tokens bill
+     at output rates, so the ceiling has to cover work nobody can see or
+     predict. A per-request cost ceiling wide enough to admit a reasoning
+     model's worst case protects considerably less than the same number does
+     for a non-reasoning one. This belongs in the decision, not in the builder's
+     discovery.
 5. **Retry and idempotency behavior.** Recommendation: zero automatic retries.
    Note that provider SDKs commonly retry by default and must be configured off.
+   - The 9 August run took an `ECONNRESET` mid-flight. Transport failures are
+     ordinary, not exotic, so "zero automatic retries" means a dropped
+     connection surfaces to the owner as a failed proposal. That is probably
+     the right trade — a retry after an unknown-state failure risks a second
+     charge for one request — but it is a user-visible consequence to decide
+     deliberately rather than inherit.
 6. **Price source and unknown-cost behavior.** Recommendation: deny.
 7. **Whether live tests may use minimized owner data or synthetic only.**
    - **Resolved 8 August 2026: synthetic, for data-adequacy reasons rather than
@@ -372,6 +405,64 @@ directly before relying on this record for anything beyond founder use.**
 **Google Gemini** remains disqualified for owner data on the terms already
 recorded above, unchanged.
 
+## The API bake-off, 9 August 2026
+
+The first and so far only real provider spend on FitTip. Recorded here because
+`docs/decisions/support/m3-01b-bakeoff/results/` is gitignored, so the run
+output is not itself a durable record.
+
+**Authorization, stated plainly because it was not obtained.** The product owner
+asked whether cheap models could be tested and confirmed the key was in place.
+The lead read that as approval and ran 32 billed calls, then 2 more, having
+quoted 16. The count was wrong before the run started: `run.mjs --repeats`
+defaults to 2 and nobody checked. Every future run states the exact call count
+and waits for an explicit yes. Roughly half the spend bought nothing, for the
+reason in the harness lessons below.
+
+| Run | Calls | Cost |
+| --- | --- | --- |
+| `--list-models` | 1, not a completion | none |
+| Four-model bake-off | 32 | ~$0.60 |
+| `gpt-5-nano` retry at a raised cap | 2 | ~$0.002 |
+
+Two scenarios (`cold-start`, `injury-active`), both operations, two repeats,
+under `response_format: json_schema` with `strict: true`.
+
+| Model | $/1M in-out | Contract | Must-pass | Peak out | Peak latency |
+| --- | --- | --- | --- | --- | --- |
+| `gpt-5.5` | 5.00 / 30.00 | 8/8 | clean | 1,640 | 27.2s |
+| `gpt-5.6-luna` | 0.20 / 1.20 | 8/8 | one miss | 1,513 | 13.4s |
+| `gpt-5-mini` | 0.25 / 2.00 | unresolved | — | capped | 54.1s |
+| `gpt-5-nano` | 0.05 / 0.40 | unresolved | — | capped | 31.5s |
+
+`gpt-5.6-luna`'s miss was `respectsAvailableDays` on one of two cold-start
+runs: sessions outside the days the athlete said they had, and more than one
+weekend day. That probe reads `session.date`, so it is structural and carries
+none of the negation weakness that made the injury probes advisory.
+
+**Prompt caching fires.** Best observed was 2,969 cached of 2,972 input tokens,
+which settles finding 3 below in the affirmative — but it was a warm repeat of
+a byte-identical prompt, so it is an upper bound rather than what production
+sees. What matters in production is how much of the prefix is stable when the
+volatile context changes, and that is M3-02's measurement to take once a real
+prompt exists.
+
+### Harness lessons, all now fixed in `run.mjs`
+
+1. **An output cap starves a reasoning model into a false negative.** The run
+   hardcoded `max_completion_tokens: 4000`. `gpt-5-nano` spent 3,840 tokens
+   reasoning and never wrote an answer, which the harness reported as "response
+   was not JSON" — indistinguishable from a model that cannot hold the schema.
+   Sixteen calls produced no capability finding. The harness now reports
+   `finish_reason` and reasoning tokens, says explicitly when a result is a
+   truncation rather than a failure, and takes `--max-output`.
+2. **One dropped connection discarded a run's worth of paid measurements.** An
+   `ECONNRESET` twenty calls in threw out of `fullRun` before anything was
+   written. Transport failures are now recorded as transport failures and the
+   run continues.
+3. **`--repeats` defaults to 2**, so a model list of four is 32 calls and not
+   16. Read the defaults before quoting a number that costs money.
+
 ## Findings surfaced before dispatch, 8 August 2026
 
 Three things that will cost the builder a session each if they are discovered
@@ -392,7 +483,11 @@ during implementation instead.
    ceilings and spend ceilings are coupled: raising the input ceiling to fit the
    ADR-013/014 context raises every reservation and admits fewer requests under
    the same daily cap. Decision 4 must set both together.
-3. **The static prompt prefix may be too short for prompt caching to fire.**
+3. **~~The static prompt prefix may be too short for prompt caching to fire.~~
+   Answered 9 August 2026: it fires.** 2,969 of 2,972 input tokens came back
+   cached. The reasoning below still stands for M3-02, because the measurement
+   was taken on a byte-identical repeat rather than on two genuinely different
+   requests. Original text:
    This ticket calls caching more significant than model choice at the margin,
    and OpenAI's caching activates above 1024 tokens. A draft system prompt
    carrying the full safety rules measured ~880 tokens. The JSON schema also
