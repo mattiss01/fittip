@@ -19,14 +19,18 @@ M3-02 and M3-03 reuse that corpus for off-API prompt tuning rather than
 authoring their own — the product owner has too little real training history for
 their own data to exercise the ADR-012/013/014 context assembly.
 
-**Two context ADRs now gate M3-02 and M3-03.**
+**Both context ADRs are accepted as of 9 August 2026.**
 [ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md) (training
-history) was revised on 8 August 2026 with its four open questions answered;
-[ADR-014](../../decisions/ADR-014-PLANNING-NOTE-BOUNDARY.md) (the planning note
-and owner free text as prompt input) was drafted the same day and carries four
-open questions. Neither is accepted. Together they take the AI context from two
-sources to four and raise the byte ceiling from ~12,000 to ~30,000, which
-M3-01B's spend and token ceilings must be sized against.
+history) and [ADR-014](../../decisions/ADR-014-PLANNING-NOTE-BOUNDARY.md) (the
+planning note and owner free text as prompt input) together take the AI context
+from two sources to four and raise the byte ceiling from ~12,000 to ~30,000.
+M3-01B decision 4 is no longer blocked.
+
+Two ADR-014 answers land as new M3-03 scope rather than in M3-01B: a schema bump
+to `fittip.seven-day-plan.v2` adding a coach-authored description of the week,
+and a second free-text field for **mandatory** regeneration feedback. Memory
+extraction must treat the two owner-text fields differently — the planning note
+can propose durable constraints, regeneration feedback never can.
 
 **M3-03 no longer requires a roadmap at runtime.** Decided 8 August 2026: M3-02
 still ships first, but an owner must be able to generate a weekly plan from

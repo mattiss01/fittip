@@ -178,11 +178,22 @@ still block dispatch.
 4. **Hard limits**: per-request, per-window, daily, and total spend ceilings;
    maximum concurrent live requests; input and output token ceilings; request
    deadline. **Size these against the revised context, not the one M3-01
-   shipped** — see below. **Open, and blocked on ADR-013 and ADR-014 being
-   accepted**: those set the context ceiling this decision is sized against, and
-   ADR-014's own decision 4 asks how much of the ~30,000 bytes the planning note
-   reserves. Setting spend ceilings against an unaccepted context budget would
-   produce numbers that have to be reopened.
+   shipped** — see below. **Open, but no longer blocked**: ADR-013 and ADR-014
+   were both accepted on 9 August 2026, so the context ceiling this decision is
+   sized against is now settled.
+   - ADR-014 reserves **1,200 bytes** for the planning note and **600** for
+     mandatory regeneration feedback, both within the ~30,000 whole-context
+     budget rather than on top of it.
+   - **The worst case is a regeneration**, which carries goals, memory, training
+     history, an optional roadmap, the carried planning note, the new feedback,
+     and the superseded proposal. Size the token ceilings against that, not
+     against a first request.
+   - **This decision must produce an explicit per-source allocation, not just a
+     total.** ADR-014 records the reason: `maxMemoryItems: 40` at
+     `MEMORY_CONTENT_MAX_LENGTH` 1000 is 40,000 bytes of memory alone, which
+     exceeds the whole ceiling, and `assembleCoachAIContext` denies rather than
+     truncating. A single total with independent item caps behind it produces an
+     owner who cannot generate a proposal and an error that does not say why.
 5. **Retry and idempotency behavior.** Recommendation: zero automatic retries.
    Note that provider SDKs commonly retry by default and must be configured off.
 6. **Price source and unknown-cost behavior.** Recommendation: deny.

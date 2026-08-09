@@ -1,12 +1,13 @@
 # ADR-013: What training history a coaching AI may read
 
-**Status:** proposed — revised 8 August 2026 after a product-owner decision
-session. The four open questions in the 4 August draft are now answered, and
-three of the four answers went against the draft's proposal. The ADR is not yet
-accepted: it needs a final read against the revised text below.
+**Status:** **accepted** — the product owner accepted the revised text on
+9 August 2026. The four open questions in the 4 August draft were answered on
+8 August, three of them against the draft's proposal, and the revised ADR was
+read and accepted as it stands.
 
 **Date drafted:** 4 August 2026
 **Date revised:** 8 August 2026
+**Date accepted:** 9 August 2026
 
 **Ticket:** raised by the [M3-01](../backlog/M3/M3-01-LOCAL-AI-ADAPTER-CONTROLS.md)
 builder and confirmed by its independent review; required before
@@ -227,3 +228,9 @@ answered on 8 August 2026:
 
 Decisions 2 (current revision only), 3 (deleted sessions invisible), and 7
 (read-only and bounded) carry over from the draft substantially unchanged.
+
+**Accepted 9 August 2026** against the revised text, with no further changes.
+The consequence recorded above stands and is not softened by acceptance: the
+free-text decision is justified by founder-only use, it does not survive the
+pre-friends gate unexamined, and reversing it later means a migration or
+grandfathering already-logged notes. That cost is accepted knowingly.

@@ -1,10 +1,13 @@
 # ADR-014: The planning note, and owner free text as prompt input
 
-**Status:** proposed — draft for product-owner decision. The shape below was
-settled in the 8 August 2026 decision session; the four questions at the end
-were not, and each can be answered without disturbing the others.
+**Status:** **accepted** — the shape was settled in the 8 August 2026 decision
+session and the five open questions were answered on 9 August 2026. One answer
+went beyond the question asked and amends decision 2a: regeneration now requires
+mandatory feedback in a second field. Two consequences land in M3-03 rather than
+here — see "Decisions made" below.
 
 **Date drafted:** 8 August 2026
+**Date accepted:** 9 August 2026
 
 **Ticket:** required before [M3-02](../backlog/M3/M3-02-ROADMAP-PROPOSAL.md)
 and [M3-03](../backlog/M3/M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md) are
@@ -70,9 +73,33 @@ invisible to the owner who wrote it.
 
 ### 2a. Regeneration is the one exception to "never reused"
 
+*Amended 9 August 2026: regeneration requires mandatory feedback in a second
+field. The two-field shape below replaces the single prefilled note originally
+drafted here.*
+
 When the owner rejects a proposal and asks for another, the compose screen
-**does** prefill the previous planning note, and the superseded proposal travels
-with the request as context.
+carries **two** fields:
+
+- **The planning note**, prefilled from the previous round and editable. It
+  holds constraints on the horizon — "I am away Saturday" — which stay true
+  across every regeneration.
+- **Regeneration feedback**, empty on every round and **required**. It holds
+  what is wrong with the proposal just rejected — "too much volume on Tuesday".
+
+The superseded proposal travels with the request as context.
+
+Two fields rather than one because these are different kinds of statement and
+decision 5 sends both to memory extraction. "I am away Saturday" is a candidate
+constraint; "too much volume on Tuesday" is a comment on one week and must never
+become a proposed durable memory item. Merged into one box, either the
+constraint is buried in complaints or the complaint is mistaken for a standing
+rule.
+
+Making feedback mandatory is the substantive part. A regeneration with no stated
+reason is a slot-machine pull, and three blind pulls converge on nothing; three
+informed attempts are a reasonable budget. It also removes an unenforceable
+validation — "the note must differ from its prefill" is weak and gameable, while
+"this field is required and starts empty" is trivial to check.
 
 This is a new request on the same operation, not a continuation of a
 conversation — the provider retains nothing, and the context is reassembled from
@@ -182,24 +209,93 @@ what is available to other sources rather than pushing the total over.
   contains no injection attempt does not establish this.
 - Nothing here approves a provider, model, retention term, or spend.
 
-## Decisions the product owner must make
+Added 9 August 2026 with the answers above:
 
-1. **Maximum length.** Recommendation: 1000 characters, matching
-   `MEMORY_CONTENT_MAX_LENGTH`. Long enough for several constraints, short
-   enough to stay a note rather than becoming a chat.
-2. **Does the note survive a rejected proposal?** If a proposal is rejected and
-   the record is retained as evidence, the note is retained with it.
-   Recommendation: yes — a rejected proposal is already kept as generated
-   evidence, and the note is what explains what was asked for.
-3. **Is the note visible in Progress against an accepted plan version?**
-   Recommendation: yes. "Why does this week look like this" is answerable only
-   if what you asked for is still visible next to what you got.
-4. **How much of the ~30KB ceiling is reserved for it?** At 1000 characters the
-   answer is small, but it must be stated so the budget adds up across goals,
-   memory, training history, the optional roadmap, the note, and — on a
-   regeneration — the superseded proposal, which is the largest of these after
-   training history.
-5. **The regeneration cap per horizon.** Recommendation: 3. Enough to converge
-   on something workable, few enough that an unsatisfying loop stops and asks
-   the owner to edit the proposal directly instead. What the owner sees when the
-   cap is reached is a UX decision recorded in M3-03.
+- **M3-03 gains a schema version bump.** `fittip.seven-day-plan.v2` adds a
+  coach-authored description of the week, without which the "why does this plan
+  look like this" section has only the owner's own note to show. The roadmap
+  needs no bump; it already has `summary`.
+- **M3-03 gains a second free-text field** and its compose UX: mandatory
+  regeneration feedback, empty each round, 500 characters.
+- **Memory extraction must distinguish the two fields.** Decision 5 reads owner
+  text and proposes memory candidates. The planning note is a legitimate source
+  of durable constraints; regeneration feedback is a comment on one rejected
+  week and must not produce them. Extracting "too much volume on Tuesday" as a
+  proposed constraint would poison the memory model with one-off reactions, and
+  is the specific failure the two-field split exists to prevent.
+- **The bake-off corpus predates the v2 schema.** Its scenarios carry a planning
+  note and score per-session `intent`, so the model comparison stands, but the
+  schema in `docs/decisions/support/m3-01b-bakeoff/schemas.mjs` mirrors v1 and
+  will need the description field before it is reused for M3-03 prompt tuning.
+
+## Decisions made
+
+Answered by the product owner on 9 August 2026.
+
+1. **Maximum length: 1000 characters**, matching `MEMORY_CONTENT_MAX_LENGTH`, so
+   there is one constant and one mental model. Realistic notes are far shorter —
+   the two authored for the M3-01B bake-off measure 431 and 320 bytes — so this
+   is roughly two to three times real usage. The competing precedent, the 2000
+   allowed on a completion `note`, was rejected: a box that invites 2000
+   characters stops being a note and becomes a chat.
+
+2. **Retained with a rejected proposal: yes.** A rejected proposal without its
+   note is evidence nobody can interpret — you cannot tell whether the model
+   failed or the request was strange. This remains conditional on M3-02's
+   decision to retain rejected proposals at all; if they are not retained, there
+   is nothing for the note to be retained with.
+
+3. **Visible in Progress, inside a "why does this plan look like this"
+   section.** The section is collapsed by default and expands to reveal the
+   planning note together with a description written by the coach. Purely a
+   display affordance — no user-editable annotation, and therefore no question
+   about mutating an immutable plan version.
+
+   **This does not fit the accepted contract, and that is an M3-03 consequence
+   rather than an M3-01B one.** `RoadmapProposal` carries a `summary`;
+   `SevenDayPlanProposal` does not, and its only reasoning lives in each
+   session's `intent`. A coach-authored description for the week as a whole
+   needs a new field and a schema version bump to `fittip.seven-day-plan.v2`.
+   M3-01B non-goal 2 forbids touching the contract, so this lands in M3-03 and
+   nothing already decided is disturbed.
+
+4. **Reservation: 1,200 bytes for the planning note, 600 for the regeneration
+   feedback.** Not 1,000 and 500: umlauts and sharp s are two bytes each in
+   UTF-8 and JSON escaping adds more, so a note written in German would
+   otherwise be rejected at compose for a reason the owner cannot see. Reserved
+   within the whole-context budget per decision 6, never added on top.
+
+   Regeneration is therefore the worst-case context: goals, memory, training
+   history, an optional roadmap, the carried planning note, the new feedback,
+   **and** the superseded proposal.
+
+5. **Regeneration cap: 3, recorded as a product guardrail and explicitly not a
+   spend control.** At the prices settled in M3-01B the difference between three
+   regenerations and five is roughly EUR 0.0002. Calling it a cost control would
+   be false, and would invite the next person who reads the pricing to raise it
+   for the wrong reason. The real argument is that after three informed attempts
+   the prompt or the goals are the problem, not the roll, and the product should
+   push the owner toward editing the proposal directly. What the owner sees when
+   the cap is reached is a UX decision recorded in M3-03.
+
+6. **Regeneration feedback is mandatory**, in its own field, capped at 500
+   characters. This amends decision 2a — see that section for the reasoning and
+   the two-field shape.
+
+## A finding raised while sizing decision 4
+
+The per-source item caps and the whole-context byte ceiling are inconsistent
+today, and decision 4 cannot fix it alone.
+
+`COACH_AI_CONTEXT_LIMITS` allows `maxMemoryItems: 40`
+(`src/server/ai/context.ts:39`) and `MEMORY_CONTENT_MAX_LENGTH` is 1000. Forty
+memory items at full length is 40,000 bytes — more than the entire ~30,000
+ceiling this ADR sizes against, and more than three times the 12,000 the
+accepted code enforces today. `assembleCoachAIContext` **denies** rather than
+truncating, so an owner who curates a large memory simply cannot generate a
+proposal, and the error does not say which source is at fault.
+
+This is not a reason to reopen ADR-012 or ADR-013. It is a reason for the
+context budget to be an explicit per-source allocation rather than a single
+total with independent item caps behind it. That allocation belongs with M3-01B
+decision 4 and should be recorded there.
