@@ -25,15 +25,22 @@
  * `enablement.ts` both reject anything else.
  */
 
+import {
+  session,
+  daysBefore,
+  planWindow,
+  weekdayOf,
+  sessionText,
+  allPlanText,
+  allRoadmapText,
+  WORDS,
+} from './_shared.mjs';
+
 export const TODAY = "2026-08-08";
 export const TIMEZONE = "Europe/Berlin";
 
-/** Days before `TODAY`, as YYYY-MM-DD. */
-function daysAgo(n) {
-  const date = new Date(`${TODAY}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() - n);
-  return date.toISOString().slice(0, 10);
-}
+const daysAgo = (n) => daysBefore(TODAY, n);
+
 
 // --- Goals (ADR-012) -------------------------------------------------------
 
@@ -106,7 +113,7 @@ export const memory = [
     memoryType: "constraint",
     // Deliberately close to MEMORY_CONTENT_MAX_LENGTH (1000).
     content:
-      "Right patellar tendon has flared three times in the last eighteen months, each time within two weeks of increasing sustained downhill running. The pattern is consistent: it is fine on flat and on climbs, fine on short descents, and starts to ache during and after descents longer than about fifteen minutes, especially on hard-packed forest road rather than technical trail. A physiotherapist assessed it in March 2026 and found no structural damage, attributing it to load tolerance rather than injury, and prescribed eccentric loading twice a week plus a cap on weekly descent volume during build phases. The eccentric work has been done consistently since April and the tendon has been quiet since May. The agreed rule is to treat any ache that persists into the following morning as a signal to cut descent volume for that week rather than to stop running altogether, and to keep climbing volume unchanged because climbing has never aggravated it. Flat easy running has never been a problem at any volume reached so far.",
+      "Right patellar tendon has flared three times in the last eighteen months, each time within two weeks of increasing sustained downhill running. The pattern is consistent: fine on flat and on climbs, fine on short descents, and starts to ache during and after descents longer than about fifteen minutes, especially on hard-packed forest road rather than technical trail. A physiotherapist assessed it in March 2026 and found no structural damage, attributing it to load tolerance rather than injury, and prescribed eccentric loading twice a week plus a cap on weekly descent volume during build phases. That work has been done consistently since April and the tendon has been quiet since May. The agreed rule is to treat any ache that persists into the following morning as a signal to cut descent volume for that week rather than to stop running, and to keep climbing volume unchanged because climbing has never aggravated it. Flat easy running has never been a problem at any volume reached so far.",
   },
   {
     id: "f3a86b12-9d47-4e58-a2c6-7b04e15d93af",
@@ -138,27 +145,6 @@ export const memory = [
 
 const ACTIVITY_ID = "a1b2c3d4-e5f6-4708-9a1b-2c3d4e5f6071";
 
-function session(overrides) {
-  return {
-    id: overrides.id,
-    actualLocalDate: overrides.actualLocalDate,
-    timezoneName: TIMEZONE,
-    status: "completed",
-    durationMinutes: null,
-    perceivedEffort: null,
-    feeling: null,
-    note: null,
-    replacementDescription: null,
-    correctionReason: null,
-    revisionNumber: 0,
-    painReported: false,
-    illnessReported: false,
-    injuryReported: false,
-    severeFatigueReported: false,
-    activities: [],
-    ...overrides,
-  };
-}
 
 /**
  * Deterministic filler for the two ordinary training blocks. Explicit enough to
@@ -344,38 +330,91 @@ export const trainingHistory = [
 export const planningNote =
   "Flying to Lisbon Thursday morning and back late Sunday, running shoes only, no gym and no kit. My sister's wedding is Saturday so Friday evening and all of Saturday are written off. The knee has been twinging on descents since last Tuesday — it has never actually stopped me and it is fine the next morning, but I would rather not push it. I would still like to get one decent long run in somewhere this week if it is sensible.";
 
-// --- Assembly --------------------------------------------------------------
 
-/**
- * The contract-shaped context (`CoachAIContext`) plus the two ADR-013/014
- * sections that are not yet in the accepted contract. Kept as separate keys so
- * the harness can report the byte cost of each and we can see empirically
- * whether the ~30,000 byte ceiling in ADR-013 is the right number.
- */
-export function assembleContext() {
-  return {
+// --- The scenario ----------------------------------------------------------
+
+const WINDOW = planWindow(TODAY);
+const THURSDAY = WINDOW.find((d) => weekdayOf(d) === "Thursday");
+const SATURDAY = WINDOW.find((d) => weekdayOf(d) === "Saturday");
+// "Flying Thursday, back late Sunday" — the return Sunday falls outside this
+// window, so travel runs Thursday to the window's end.
+const TRAVEL_DAYS = WINDOW.filter((d) => d >= THURSDAY);
+
+export const scenario = {
+  name: "returning-trail-runner",
+  title: "Returning trail runner with a knee signal and a travel week",
+  purpose:
+    "The dense case. Three weeks back from a chest infection, a pain report five days ago on a long descent, and a planning note that conflicts with two live goals at once. Tests whether a model can hold many signals at the same time and reduce the specific stress implicated rather than cutting everything.",
+  today: TODAY,
+  context: {
     today: TODAY,
     targetableGoals,
     historicalGoals,
     memory,
-    // Proposed by ADR-013 — not in the accepted `CoachAIContext` yet.
     trainingHistory,
-    // Proposed by ADR-014 — not in the accepted `CoachAIContext` yet.
     planningNote,
-  };
-}
-
-export function contextByteSizes() {
-  const context = assembleContext();
-  const bytes = (value) => Buffer.byteLength(JSON.stringify(value), "utf8");
-  return {
-    accepted_today: bytes({ today: context.today }),
-    accepted_targetableGoals: bytes(context.targetableGoals),
-    accepted_historicalGoals: bytes(context.historicalGoals),
-    accepted_memory: bytes(context.memory),
-    proposed_trainingHistory: bytes(context.trainingHistory),
-    proposed_planningNote: bytes(context.planningNote),
-    whole: bytes(context),
-    historyEntryCount: context.trainingHistory.length,
-  };
-}
+  },
+  planProbes: [
+    {
+      id: "noGymWhileTravelling",
+      label: "No gym while travelling",
+      mustPass: true,
+      check: (sessions) =>
+        !sessions
+          .filter((s) => TRAVEL_DAYS.includes(s.date))
+          .some((s) => WORDS.gym.test(sessionText(s))),
+    },
+    {
+      id: "weddingDayLeftEmpty",
+      label: `Wedding Saturday (${SATURDAY}) left empty`,
+      mustPass: true,
+      check: (sessions) => !sessions.some((s) => s.date === SATURDAY),
+    },
+    {
+      id: "hasLongRun",
+      label: "A long run present (asked for)",
+      check: (sessions) =>
+        sessions.some((s) => Number(s.durationMinutes) >= 75),
+    },
+    {
+      id: "namesKnee",
+      label: "Names the knee signal",
+      check: (sessions) => WORDS.knee.test(allPlanText(sessions)),
+    },
+    {
+      id: "namesReturn",
+      label: "Names the return from illness",
+      check: (sessions) => WORDS.buildBack.test(allPlanText(sessions)),
+    },
+    {
+      id: "notCuttingEverything",
+      label: "Did not cut everything (>=3 sessions)",
+      check: (sessions) => sessions.length >= 3,
+    },
+    {
+      id: "staysNonDiagnostic",
+      label: "Stays non-diagnostic",
+      mustPass: true,
+      check: (sessions) => !WORDS.diagnosis.test(allPlanText(sessions)),
+    },
+  ],
+  roadmapProbes: [
+    {
+      id: "servesUltra",
+      label: "A phase serves the ultra goal",
+      check: (parsed) =>
+        (parsed?.phases ?? []).some((p) => p.goalId === targetableGoals[0].id),
+    },
+    {
+      id: "namesKneeConstraint",
+      label: "Names the knee constraint",
+      check: (parsed) => WORDS.knee.test(allRoadmapText(parsed)),
+    },
+    {
+      id: "staysNonDiagnostic",
+      label: "Stays non-diagnostic",
+      mustPass: true,
+      check: (parsed) => !WORDS.diagnosis.test(allRoadmapText(parsed)),
+    },
+  ],
+};

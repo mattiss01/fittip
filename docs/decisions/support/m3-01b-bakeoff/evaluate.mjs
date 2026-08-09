@@ -1,49 +1,35 @@
 /**
- * Contract validation and safety probes, shared by every path into the
- * bake-off: the API harness (`run.mjs`), the Codex handoff, and hand-pasted
- * ChatGPT output (`score.mjs`).
+ * Contract validation and scenario probes, shared by every path into the
+ * bake-off: the API harness, the Codex handoff, and the ChatGPT worksheet.
  *
- * It lives in its own module so the three paths cannot drift apart. A model
- * scored generously because it arrived through a different door is worse than
- * no comparison at all.
+ * It lives in its own module so the paths cannot drift apart. A model scored
+ * generously because it arrived through a different door is worse than no
+ * comparison at all.
+ *
+ * Everything here is scenario-driven. An earlier version imported one corpus's
+ * goal ids directly and hardcoded that athlete's planning-note checks, which
+ * made a second scenario impossible to add without a rewrite — and would have
+ * silently passed probes that meant nothing for the athlete being scored.
  */
 
 import { OPERATIONS } from "./schemas.mjs";
-import { TODAY, targetableGoals, historicalGoals } from "./corpus.mjs";
+import { planWindow } from "./scenarios/_shared.mjs";
 
-const WEEKDAYS = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-];
-
-export function addDays(iso, n) {
-  const date = new Date(`${iso}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + n);
-  return date.toISOString().slice(0, 10);
-}
-
-export function weekdayOf(iso) {
-  return WEEKDAYS[new Date(`${iso}T00:00:00Z`).getUTCDay()];
-}
-
-/** The seven days a plan request covers: tomorrow through tomorrow+6. */
-export const PLAN_WINDOW = Array.from({ length: 7 }, (_, i) =>
-  addDays(TODAY, i + 1),
-);
-
-const TARGETABLE_IDS = new Set(targetableGoals.map((g) => g.id));
-const HISTORICAL_IDS = new Set(historicalGoals.map((g) => g.id));
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Everything `src/server/ai/output-validation.ts` would reject, plus ownership. */
-export function validate(operation, parsed) {
+export function validate(operation, parsed, scenario) {
   const failures = [];
   const expected = OPERATIONS[operation]?.schemaVersion;
+  const today = scenario.today;
+  const window = planWindow(today);
+
+  const targetableIds = new Set(
+    scenario.context.targetableGoals.map((g) => g.id),
+  );
+  const historicalIds = new Set(
+    scenario.context.historicalGoals.map((g) => g.id),
+  );
 
   if (parsed?.schemaVersion !== expected) {
     failures.push(
@@ -60,9 +46,9 @@ export function validate(operation, parsed) {
 
   for (const [index, item] of items.entries()) {
     const at = `[${index}]`;
-    if (!TARGETABLE_IDS.has(item.goalId)) {
+    if (!targetableIds.has(item.goalId)) {
       failures.push(
-        HISTORICAL_IDS.has(item.goalId)
+        historicalIds.has(item.goalId)
           ? `${at} references an ACHIEVED goal — ${item.goalId}`
           : `${at} references an unknown goalId — ${item.goalId}`,
       );
@@ -74,12 +60,12 @@ export function validate(operation, parsed) {
     for (const date of dates) {
       if (!ISO_DATE.test(date ?? "")) {
         failures.push(`${at} malformed date ${JSON.stringify(date)}`);
-      } else if (date < TODAY) {
+      } else if (date < today) {
         failures.push(`${at} date ${date} is in the past`);
       }
     }
     if (operation === "create_seven_day_plan") {
-      if (ISO_DATE.test(item.date ?? "") && !PLAN_WINDOW.includes(item.date)) {
+      if (ISO_DATE.test(item.date ?? "") && !window.includes(item.date)) {
         failures.push(`${at} date ${item.date} is outside the seven-day window`);
       }
       if (!Number.isInteger(item.durationMinutes) || item.durationMinutes <= 0) {
@@ -104,68 +90,59 @@ export function validate(operation, parsed) {
   return failures;
 }
 
-const GYM_WORDS =
-  /\b(gym|deadlift|barbell|squat rack|bench press|weights room|leg press)\b/i;
-const PAIN_WORDS =
-  /\b(knee|patellar|tendon|descent|downhill|niggle|twinge)\b/i;
-const BUILD_BACK_WORDS =
-  /\b(gradual|build back|easing|return|after the (illness|break|gap)|conservativ)\b/i;
-
 /**
- * The planning note says: fly Thursday, back late Sunday, no gym, wedding
- * Saturday, knee twinging on descents, still wants one long run.
+ * Runs the scenario's own probes. Each returns `{ id, label, mustPass, passed }`.
  *
- * Each probe is a mechanical yes/no. A model can pass all of them and still
- * produce a bad plan — these narrow what a human has to read, they do not
- * replace reading it.
+ * A `mustPass` failure is a safety or hard-constraint finding, reported
+ * separately from a preference miss — "proposed swimming to an athlete with an
+ * active shoulder injury" and "did not include the long run they asked for" are
+ * not the same class of wrong.
  */
-export function probePlan(parsed) {
-  const sessions = Array.isArray(parsed?.sessions) ? parsed.sessions : [];
-  const text = (s) => `${s.title ?? ""} ${s.intent ?? ""}`;
-  const all = sessions.map(text).join(" ") + " ";
-
-  const thursday = PLAN_WINDOW.find((d) => weekdayOf(d) === "Thursday");
-  const saturday = PLAN_WINDOW.find((d) => weekdayOf(d) === "Saturday");
-  // "Flying Thursday, back late Sunday" — with this window the return Sunday
-  // falls outside it, so travel runs Thursday to the window's end. Do not
-  // anchor the end on the first Sunday found: that is the window's opening day.
-  const travelDays = thursday ? PLAN_WINDOW.filter((d) => d >= thursday) : [];
-  const onTravel = sessions.filter((s) => travelDays.includes(s.date));
-
-  return {
-    windowStart: PLAN_WINDOW[0],
-    windowEnd: PLAN_WINDOW[6],
-    travelDays,
-    sessionCount: sessions.length,
-    totalMinutes: sessions.reduce(
-      (sum, s) => sum + (Number(s.durationMinutes) || 0),
-      0,
-    ),
-    noGymWhileTravelling: !onTravel.some((s) => GYM_WORDS.test(text(s))),
-    weddingDayLeftEmpty: !sessions.some((s) => s.date === saturday),
-    hasLongRun: sessions.some((s) => Number(s.durationMinutes) >= 75),
-    acknowledgesKnee: PAIN_WORDS.test(all),
-    acknowledgesReturn: BUILD_BACK_WORDS.test(all),
-    restDays: 7 - new Set(sessions.map((s) => s.date)).size,
-  };
-}
-
-export function probeRoadmap(parsed) {
-  const phases = Array.isArray(parsed?.phases) ? parsed.phases : [];
-  const all =
-    `${parsed?.summary ?? ""} ` +
-    phases.map((p) => `${p.title} ${p.focus}`).join(" ");
-  return {
-    phaseCount: phases.length,
-    coversUltraGoal: phases.some((p) => p.goalId === targetableGoals[0].id),
-    mentionsKneeConstraint: PAIN_WORDS.test(all),
-    summaryChars: (parsed?.summary ?? "").length,
-  };
-}
-
-export function probe(operation, parsed) {
+export function runProbes(operation, parsed, scenario) {
   if (!parsed) return null;
-  return operation === "create_roadmap"
-    ? probeRoadmap(parsed)
-    : probePlan(parsed);
+
+  const probes =
+    operation === "create_roadmap"
+      ? (scenario.roadmapProbes ?? [])
+      : (scenario.planProbes ?? []);
+
+  const subject =
+    operation === "create_roadmap"
+      ? parsed
+      : Array.isArray(parsed.sessions)
+        ? parsed.sessions
+        : [];
+
+  return probes.map((probe) => {
+    let passed;
+    try {
+      passed = Boolean(probe.check(subject, scenario));
+    } catch {
+      // A probe that throws on malformed output is a failed probe, not a crash.
+      passed = false;
+    }
+    return {
+      id: probe.id,
+      label: probe.label,
+      mustPass: Boolean(probe.mustPass),
+      passed,
+    };
+  });
 }
+
+/** Convenience summary used by every report. */
+export function summarise(probeResults) {
+  if (!probeResults) return null;
+  const mustPass = probeResults.filter((p) => p.mustPass);
+  return {
+    total: probeResults.length,
+    passed: probeResults.filter((p) => p.passed).length,
+    mustPassTotal: mustPass.length,
+    mustPassFailed: mustPass.filter((p) => !p.passed).map((p) => p.label),
+    softFailed: probeResults
+      .filter((p) => !p.mustPass && !p.passed)
+      .map((p) => p.label),
+  };
+}
+
+export { planWindow, weekdayOf } from "./scenarios/_shared.mjs";

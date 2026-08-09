@@ -12,7 +12,7 @@ whichever model you select, and its picker offers coding-selected models rather
 than the API lineup a FitTip adapter would call. So this route can indicate
 **coaching quality and safety-signal adherence** — the half that needs your
 judgement — and it cannot settle schema conformance under `strict: true`, token
-counts, latency, or prompt caching. Those stay open for M3-01B's own live pass.
+counts, latency, or prompt caching. Those stay open for M3-01B's live pass.
 
 ---
 
@@ -22,50 +22,51 @@ not implementation**.
 
 ## Hard constraints
 
-- **Do not modify any file in the repository.** No source, no docs, no
-  migrations, no commits, no branches. There is no approved ticket for this work
-  and `AGENTS.md` does not permit implementation without one.
-- **Write exactly two files**, both under this directory:
-
-  ```
-  docs/decisions/support/m3-01b-bakeoff/paste/outputs/<label>__create_roadmap.json
-  docs/decisions/support/m3-01b-bakeoff/paste/outputs/<label>__create_seven_day_plan.json
-  ```
-
-  Replace `<label>` with the model you have selected in Codex, e.g.
-  `gpt-5__create_roadmap.json`. The label is only used to name rows in a report.
-
-- **Do not improve, shorten, restructure, or "fix" the prompt.** It is the
+- **Do not modify any file in the repository except `WORKSHEET.md`.** No source,
+  no docs, no migrations, no commits, no branches. There is no approved ticket
+  for this work and `AGENTS.md` does not permit implementation without one.
+- **Do not improve, shorten, restructure, or "fix" the prompts.** They are the
   variable under test. If two models see different prompts the comparison is
-  worthless. Read it and use it verbatim.
+  worthless. Read them and use them verbatim.
+- **Do not read any other model's answers before producing your own**, and do
+  not look at the probe implementations in `scenarios/`. Both would contaminate
+  the result.
 
 ## What to do
 
-1. Read `docs/decisions/support/m3-01b-bakeoff/paste/create_roadmap.txt`. It is self-contained:
-   system prompt, output instructions, JSON schema, and the athlete's context.
-2. Answer it **as the coaching model** — produce the JSON proposal it asks for.
-   Do not analyse the prompt, critique it, or explain what a good answer would
-   look like. Produce the answer itself.
-3. Write the raw JSON object to
-   `paste/outputs/<label>__create_roadmap.json`. No markdown fence, no prose.
-4. Repeat steps 1–3 with `paste/create_seven_day_plan.txt`, writing to
-   `paste/outputs/<label>__create_seven_day_plan.json`.
-5. Report back only: which model was selected, and whether anything in the
-   prompt was ambiguous or unanswerable. Do not self-assess the quality of your
-   output — that is scored separately and independently.
+1. List `docs/decisions/support/m3-01b-bakeoff/paste/`. Each file is named
+   `<scenario>__<operation>.txt` and is self-contained: system prompt, output
+   instructions, JSON schema, and that scenario's athlete context.
+2. For each file, answer it **as the coaching model** — produce the JSON
+   proposal it asks for. Do not analyse the prompt, critique it, or describe
+   what a good answer would look like. Produce the answer itself.
+3. Write each answer into `WORKSHEET.md`, into the slot whose marker matches
+   your model letter, the scenario, and the operation:
 
-## What is being scored, so you know what matters
+   ```
+   <!-- BEGIN slot=B scenario=cold-start op=create_seven_day_plan -->
+   { ...your JSON... }
+   <!-- END -->
+   ```
 
-A separate scorer checks, mechanically:
+   Leave the marker comments exactly as they are — only fill the body between
+   them. Raw JSON, no markdown fence, no prose.
+4. Record the model you used in the label table under "Record what you actually
+   used", against the letter whose slots you filled. Ask which letter to use if
+   it was not stated.
+5. Report back only: which model was selected, which slots you filled, and
+   whether anything in a prompt was ambiguous or unanswerable. **Do not
+   self-assess the quality of your output** — it is scored separately, and a
+   model grading its own coaching is worthless.
 
-- every `goalId` copied exactly from `targetableGoals` — no invented ids, and no
-  reference to the achieved goals in `historicalGoals`
-- dates well-formed, inside the requested window, never in the past
-- roadmap phases non-overlapping
-- whether the plan respects the planning note: no gym while travelling, the
-  wedding Saturday left empty, a long run present, the knee signal and the
-  return from illness acknowledged in the reasoning
+## What is being scored, so you understand the task
 
-Do not optimise for that list. It is published here so you understand the task,
-not so you can satisfy a checklist — a plan that games the probes and reads like
-a template is exactly the failure mode this exercise is trying to detect.
+A separate scorer checks the contract mechanically — every `goalId` copied from
+that scenario's `targetableGoals`, no achieved-goal references, dates
+well-formed and inside the requested window, roadmap phases non-overlapping —
+and then runs probes specific to each scenario's athlete.
+
+Do not optimise for that. It is described here so you understand what a good
+answer is, not so you can satisfy a checklist. A plan that games the probes and
+reads like a template is exactly the failure mode this exercise exists to
+detect.

@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 /**
- * Writes self-contained, paste-ready prompts for the no-API-key paths.
+ * Writes self-contained, paste-ready prompts — one file per scenario per
+ * operation — plus a WORKSHEET.md sized to the scenarios requested.
  *
- * A chat window has no `response_format`, so the JSON schema that the API would
- * enforce as a grammar has to be stated in the prompt as an instruction and
- * hoped for. That difference is the whole reason these paths cannot settle
- * schema conformance — they can only show whether a model complies *naturally*.
- * Say so in the report; do not let a clean-looking JSON blob be mistaken for
- * evidence that `strict: true` would hold.
+ * A chat window has no `response_format`, so the JSON schema the API would
+ * enforce as a grammar has to be stated in the prompt and hoped for. That is
+ * why these paths cannot settle schema conformance; they show only whether a
+ * model complies naturally.
  *
- *   node emit.mjs
+ *   node emit.mjs                       # the required scenarios
+ *   node emit.mjs --all                 # every scenario
+ *   node emit.mjs --scenarios a,b       # a specific set
  */
 
 import { writeFileSync, mkdirSync } from "node:fs";
@@ -17,22 +18,37 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { OPERATIONS } from "./schemas.mjs";
-import { assembleContext } from "./corpus.mjs";
 import { buildMessages } from "./prompt.mjs";
-import { PLAN_WINDOW, weekdayOf } from "./evaluate.mjs";
+import { SCENARIOS, REQUIRED, getScenario } from "./scenarios/index.mjs";
+import { planWindow, weekdayOf } from "./evaluate.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, "paste");
 
-const context = assembleContext();
+const argv = process.argv.slice(2);
+const flag = (n) => argv.includes(`--${n}`);
+const value = (n) => {
+  const i = argv.indexOf(`--${n}`);
+  return i >= 0 ? argv[i + 1] : undefined;
+};
 
-mkdirSync(join(OUT, "outputs"), { recursive: true });
+const names = flag("all")
+  ? Object.keys(SCENARIOS)
+  : value("scenarios")
+    ? value("scenarios").split(",")
+    : REQUIRED;
 
-for (const [operation, { schema }] of Object.entries(OPERATIONS)) {
-  const { messages } = buildMessages(operation, context);
-  const [system, user] = messages;
+mkdirSync(OUT, { recursive: true });
 
-  const body = `${system.content}
+const emitted = [];
+
+for (const name of names) {
+  const scenario = getScenario(name);
+  for (const [operation, { schema }] of Object.entries(OPERATIONS)) {
+    const { messages } = buildMessages(operation, scenario.context);
+    const [system, user] = messages;
+
+    const body = `${system.content}
 
 ## Output format
 
@@ -47,31 +63,28 @@ ${JSON.stringify(schema.schema, null, 2)}
 ${user.content}
 `;
 
-  const path = join(OUT, `${operation}.txt`);
-  writeFileSync(path, body, "utf8");
+    const file = `${name}__${operation}.txt`;
+    writeFileSync(join(OUT, file), body, "utf8");
+    emitted.push({ name, operation, file, chars: body.length });
+  }
+}
+
+console.log(`Wrote ${emitted.length} prompt file(s) to ${OUT}\n`);
+for (const e of emitted) {
+  console.log(`  ${e.file.padEnd(48)} ${String(e.chars).padStart(6)} chars (~${Math.round(e.chars / 4)} tokens)`);
+}
+
+console.log(`\nScenarios emitted:\n`);
+for (const name of names) {
+  const s = getScenario(name);
+  console.log(`  ${s.name}`);
+  console.log(`    ${s.title}`);
+  const window = planWindow(s.today);
   console.log(
-    `${path}\n  ${body.length} chars (~${Math.round(body.length / 4)} tokens)`,
+    `    plan window ${window[0]} (${weekdayOf(window[0])}) .. ${window[6]} (${weekdayOf(window[6])})`,
   );
 }
 
-writeFileSync(
-  join(OUT, "outputs", "README.txt"),
-  `Save each model's reply here as raw JSON, one file per model per operation:
-
-  <label>__create_roadmap.json
-  <label>__create_seven_day_plan.json
-
-<label> is whatever names the model in your picker — it is only used to label
-the report, so "gpt-5-thinking" or "codex-gpt5" is fine.
-
-Strip any markdown fence the model wrapped around the JSON; the scorer will
-tolerate one, but the file should be the object itself.
-
-Then:  node score.mjs
-`,
-  "utf8",
+console.log(
+  `\nNext: fill WORKSHEET.md, then ask Claude to run \`node worksheet.mjs\`.`,
 );
-
-console.log(`\nPlan window for reference:`);
-for (const date of PLAN_WINDOW) console.log(`  ${date}  ${weekdayOf(date)}`);
-console.log(`\nSave replies into ${join(OUT, "outputs")} then run: node score.mjs`);
