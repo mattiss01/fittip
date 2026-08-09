@@ -10,10 +10,16 @@
 accepted M1 training foundation, the accepted M2 goal, memory, intake, and
 validation foundations, and
 [ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md) plus
-[ADR-014](../../decisions/ADR-014-PLANNING-NOTE-BOUNDARY.md) accepted
+[ADR-014](../../decisions/ADR-014-PLANNING-NOTE-BOUNDARY.md) — **both accepted
+9 August 2026**
 
 **Revised:** 8 August 2026 — compose step and planning note added, context
 policy ADRs named, stub-schema gap recorded
+
+**Revised:** 9 August 2026 — both context ADRs accepted, so they no longer block
+dispatch. Planning-note length and byte reservation settled; the per-source
+context allocation is named as an M3-01B dependency; regeneration confirmed out
+of scope here
 
 **Architecture boundary:** ADR-006 and ADR-007 accepted; M0-06A accepted before
 founder-hosted use
@@ -68,26 +74,40 @@ until the M0 gates pass.
 10. Add authorization, versioning, AI-output, UX, safety, and idempotency
     tests, including planning-note injection cases under ADR-014 decision 4.
 
-## Context policy: two ADRs must be accepted first
+## Context policy: both ADRs are accepted
+
+**Both were accepted on 9 August 2026 and no longer block dispatch.**
 
 **[ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md)** —
-what training history a coach may read. Revised 8 August 2026; its four open
-questions are answered and it awaits a final read. It decides an 8-week window
-with a session cap, that completion free text travels truncated, that only the
-current revision is visible, that missed planned sessions are visible, and what
-future plan state is readable.
+what training history a coach may read. An 8-week window with a session cap,
+completion free text travelling truncated, only the current revision visible,
+missed planned sessions visible, and a defined bound on readable future plan
+state.
 
 **[ADR-014](../../decisions/ADR-014-PLANNING-NOTE-BOUNDARY.md)** — the planning
-note. Drafted 8 August 2026 with four open questions. It decides that owner
-free text reaches the provider, that it has no authority over server
-constraints, and that memory candidates are extracted from it.
-
-Neither ADR is accepted. Both block dispatch.
+note. Owner free text reaches the provider, has no authority over server
+constraints, and memory candidates are extracted from it. Settled values that
+bind this ticket: the note is **1000 characters**, enforced server-side and
+**rejected at compose rather than truncated**, and it reserves **1,200 bytes**
+of the context budget — not 1,000, because umlauts are two bytes in UTF-8 and
+JSON escaping adds more.
 
 Together they take `COACH_AI_CONTEXT_LIMITS` in `src/server/ai/context.ts` from
 two sources to four, and the whole-context byte ceiling from 10,000–12,000 to
 roughly 30,000. Sizing this ticket's limits against the old ceiling will produce
 denials in ordinary use.
+
+**The allocation must be per source, not a single total.** `maxMemoryItems: 40`
+at `MEMORY_CONTENT_MAX_LENGTH` 1000 is 40,000 bytes of memory alone, which
+exceeds the whole ceiling, and `assembleCoachAIContext` denies rather than
+truncating — so an owner who curates a large memory cannot generate at all, and
+the error does not say which source is at fault. The allocation is set with
+[M3-01B](M3-01B-REAL-PROVIDER-ADAPTER.md) decision 4; this ticket consumes it.
+
+**Regeneration is out of scope here.** ADR-014's two-field compose shape and its
+mandatory-feedback rule are recorded in
+[M3-03](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md). This ticket ships the initial
+planning note only.
 
 ## The implemented roadmap schema is a stub
 

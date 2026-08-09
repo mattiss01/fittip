@@ -9,11 +9,18 @@
 **Depends on:** [M3-01 accepted](M3-01-LOCAL-AI-ADAPTER-CONTROLS.md),
 [M3-02 accepted](M3-02-ROADMAP-PROPOSAL.md), and
 [ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md) plus
-[ADR-014](../../decisions/ADR-014-PLANNING-NOTE-BOUNDARY.md) accepted
+[ADR-014](../../decisions/ADR-014-PLANNING-NOTE-BOUNDARY.md) — **both accepted
+9 August 2026**
 
 **Revised:** 8 August 2026 — the roadmap became an optional input rather than a
 precondition; compose step, planning note, memory extraction, and regeneration
 with feedback added
+
+**Revised:** 9 August 2026 — ADR-014's answers landed here. Regeneration takes
+two owner-text fields with feedback **mandatory**; the cap is 3 and is a product
+guardrail, not a spend control; the plan schema bumps to
+`fittip.seven-day-plan.v2` for a coach-authored description of the week; and
+Progress gains a collapsible "why does this plan look like this" section
 
 **Sequencing note:** M3-02 ships first so that the roadmap surface exists and
 has been judged before detailed planning is built on it. That is a **build**
@@ -95,11 +102,15 @@ instrumentation/deployment gates remain mandatory before those uses.
 9. Persist an immutable owner-scoped proposal, the planning note, and minimized
    source references including roadmap presence and staleness.
 10. Provide reject and regenerate. Regeneration is a new call on the same
-    operation carrying the immediately previous proposal and a prefilled,
-    editable planning note, capped per horizon. Editing, locking, and
-    acceptance belong to M3-04.
+    operation carrying the immediately previous proposal, a prefilled editable
+    planning note, and a **required** feedback field, capped at 3 per horizon.
+    Editing, locking, and acceptance belong to M3-04.
 11. Add AI-output, domain, authorization, safety, mobile, and leakage tests,
-    including planning-note injection cases under ADR-014 decision 4.
+    including planning-note injection cases under ADR-014 decision 4. Cover
+    both owner-text fields: a fixture whose **regeneration feedback** attempts
+    an escalation must be rejected exactly as one in the planning note is, and
+    a fixture asserting that feedback never produces a proposed memory
+    candidate while a planning note can.
 
 ## Prompt work happens off-API
 
@@ -151,6 +162,52 @@ bounded validation budget, once the prompt is settled.
   arbitrary escape hatch.
 - Every referenced goal is active and owner-scoped. Core/supporting priorities
   and ranks remain visible in allocation.
+- **The proposal carries a coach-authored description of the week as a whole**,
+  separate from any per-session rationale. Added 9 August 2026 — see the schema
+  bump below.
+
+### The shipped plan schema needs a version bump
+
+`SevenDayPlanProposal` in `src/server/ai/contracts.ts` is currently
+`schemaVersion`, `startDate`, and `sessions[]`, where a session carries only
+`date`, `title`, `intent`, `durationMinutes`, and `goalId`. There is **no
+top-level field for the coach to explain the week**; the only reasoning lives in
+each session's `intent`.
+
+ADR-014's accepted Progress surface needs one, so this ticket bumps
+`fittip.seven-day-plan.v1` to **`fittip.seven-day-plan.v2`**. Note the asymmetry
+with M3-02: `RoadmapProposal` already has `summary` and needs no equivalent
+bump for this reason.
+
+Everything else in the contract list above is also unrepresented in the shipped
+stub — sport/domain, activities, measurement modes, allocation, alternatives,
+locks. M3-01 shipped deliberate stubs and named them as such, so the schema work
+here is substantially larger than wiring an existing type, and the version bump
+covers all of it at once.
+
+**M3-01B does not do this.** Its non-goal 2 forbids changing the accepted
+`CoachAI` contract, so a builder on that ticket who finds the schema
+insufficient must stop and report rather than widen it.
+
+### The "why does this plan look like this" section
+
+Decided 9 August 2026 under ADR-014 decision 3. Against an accepted plan
+version, Progress shows a section that is **collapsed by default and expands**
+to reveal:
+
+- the owner's planning note for that proposal, and
+- the coach's description of the week, from the v2 field above.
+
+**Display only.** The owner cannot add their own text to it — that was
+considered and deliberately not taken, because a user-editable annotation on an
+accepted plan version would either mutate an immutable record or require its own
+annotation table keyed to the version. Neither is in scope here. If it is wanted
+later it is a separate ticket, and the data model must not be designed into a
+corner that forbids it.
+
+The section is what makes "why does this week look like this" answerable at all:
+without it, an accepted plan is a list of sessions with no trace of what was
+asked for or why the coach answered that way.
 
 ## Regenerating a proposal the owner does not like
 
@@ -164,19 +221,50 @@ this refines a proposal that has never been accepted.
 
 **Same operation, not a new one.** The output schema, prompt version, limits,
 and validation are identical to a first generation. A regeneration differs in
-exactly two ways: the compose screen prefills the previous planning note (the
-one exception in ADR-014 decision 2a), and the **immediately previous proposal**
-travels as an additional context source so the coach can avoid repeating itself
-and preserve what was not criticized.
+exactly two ways: the compose screen carries two owner-text fields instead of
+one (below), and the **immediately previous proposal** travels as an additional
+context source so the coach can avoid repeating itself and preserve what was not
+criticized.
+
+**Two fields, and feedback is mandatory.** Settled 9 August 2026, amending
+ADR-014 decision 2a:
+
+- **The planning note** — prefilled from the previous round, editable, 1000
+  characters. It holds constraints on the horizon ("I am away Saturday") which
+  stay true across every regeneration.
+- **Regeneration feedback** — empty on every round, **required**, 500
+  characters. It holds what is wrong with the proposal just rejected ("too much
+  volume on Tuesday").
+
+Two fields rather than one because **memory extraction must treat them
+differently.** The planning note is a legitimate source of durable constraint
+candidates; regeneration feedback is a comment on one rejected week and must
+never produce one. Extracting "too much volume on Tuesday" as a proposed
+constraint would poison the memory model with one-off reactions. This is the
+specific failure the split exists to prevent, and a builder that merges the
+fields for UI convenience has broken it.
+
+Mandatory feedback is also what makes the cap coherent: a regeneration with no
+stated reason is a slot-machine pull, and three blind pulls converge on nothing.
+It replaces an unenforceable validation — "the note must differ from its
+prefill" is gameable by adding a space — with a trivially checkable
+required-and-empty field.
 
 **Only the immediately previous proposal travels — never the chain.** Context
 size stays flat however many rounds the owner goes. Every round is still
 persisted as immutable evidence; storage and transmission are separate.
 
-**Regeneration is capped per horizon.** It is the one control in the product
-that spends money on every press, and an owner who is not getting what they want
-will keep pressing. At the cap the owner is directed to M3-04's editing rather
-than left stuck. The exact number and that copy need approval.
+**Regeneration is capped at 3 per horizon**, decided 9 August 2026. At the cap
+the owner is directed to M3-04's editing rather than left stuck; that copy still
+needs approval.
+
+**The cap is a product guardrail, not a spend control**, and the distinction is
+load-bearing. At the prices settled in M3-01B the difference between three
+regenerations and five is roughly EUR 0.0002. The real argument is that after
+three *informed* attempts the prompt or the goals are the problem rather than
+the roll, and the product should push the owner toward editing directly. Do not
+restore the cost framing: whoever reads the pricing next would raise the cap for
+a reason that was never true.
 
 Distinguish this from editing throughout the UI. Editing (M3-04) is
 deterministic, free, and right for "move Wednesday to Thursday". Regeneration is
@@ -243,9 +331,16 @@ approval before implementation.
   proposed horizon, the planning note, and whether a roadmap was used and
   whether it was stale.
 - The planning note is never reused on a later request and is never prefilled
-  into a later compose screen (ADR-014 decision 2). Its retention against a
-  rejected proposal and its visibility in Progress are ADR-014 open decisions
-  and must be settled before dispatch.
+  into a later compose screen (ADR-014 decision 2), with regeneration as the one
+  exception. Both remaining questions were settled on 9 August 2026: the note
+  **is retained** against a rejected proposal, because a rejected proposal
+  without its note is evidence nobody can interpret; and it **is visible** in
+  Progress inside the collapsible section described above. Retention against a
+  rejected proposal is conditional on this ticket's own decision to retain
+  rejected proposals at all — if they are discarded, there is nothing for the
+  note to be retained with, and that is a question this ticket still owns.
+- Regeneration feedback is stored on the proposal it produced, under the same
+  rules, and is likewise never carried into a later request.
 - It is not the operational plan used by Today/logging until M3-04 accepts it.
 - RLS and repositories enforce immutable `user_id`, owner predicates, explicit
   grants, and anonymous/cross-user denial.
@@ -401,12 +496,27 @@ friend/non-M0-06A-hosted/external behavior was added.
     proposal screen — discarded, or retained as `proposed` for later review.
 13. Whether the day-count and start-date selectors remember the last choice
     across requests, given that the planning note deliberately does not.
-14. The regeneration cap per horizon (recommendation: 3) and the copy shown
-    when it is reached.
+14. ~~The regeneration cap per horizon~~ — **decided 9 August 2026: 3**, as a
+    product guardrail rather than a spend control. The copy shown when it is
+    reached is still open, and so is what the owner sees: at the cap they are
+    directed to M3-04's editing, and that transition has to read as a
+    suggestion rather than a punishment.
 15. Whether regeneration may change the day count or start date, or must reuse
     the original horizon (recommendation: reuse — changing the dates makes it a
     new request, not a regeneration, and the superseded proposal would then be
     about different days).
+16. Copy and layout for the two compose fields, now that regeneration carries a
+    prefilled planning note **and** a required feedback field. The owner has to
+    understand at a glance that one persists and one does not, or they will type
+    durable constraints into the feedback box where memory extraction is
+    forbidden from reading them as constraints.
+17. What the coach's description of the week should cover, and how long it may
+    be. It is the v2 field behind the Progress section, and an unbounded one
+    would grow output tokens on every request.
+18. Whether the "why does this plan look like this" section also appears against
+    a proposal the owner is still reviewing, or only after acceptance. Showing
+    it earlier helps the accept/reject judgement; showing it only after keeps
+    the review screen focused on the plan itself.
 
 ## Approval gate
 
