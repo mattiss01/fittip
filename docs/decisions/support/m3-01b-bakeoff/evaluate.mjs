@@ -66,9 +66,14 @@ export function validate(operation, parsed, scenario) {
     }
     if (operation === "create_seven_day_plan") {
       if (ISO_DATE.test(item.date ?? "") && !window.includes(item.date)) {
-        failures.push(`${at} date ${item.date} is outside the seven-day window`);
+        failures.push(
+          `${at} date ${item.date} is outside the seven-day window`,
+        );
       }
-      if (!Number.isInteger(item.durationMinutes) || item.durationMinutes <= 0) {
+      if (
+        !Number.isInteger(item.durationMinutes) ||
+        item.durationMinutes <= 0
+      ) {
         failures.push(`${at} durationMinutes is ${item.durationMinutes}`);
       }
     }
@@ -91,12 +96,19 @@ export function validate(operation, parsed, scenario) {
 }
 
 /**
- * Runs the scenario's own probes. Each returns `{ id, label, mustPass, passed }`.
+ * Runs the scenario's own probes. Each returns
+ * `{ id, label, mustPass, advisory, passed }`.
  *
  * A `mustPass` failure is a safety or hard-constraint finding, reported
  * separately from a preference miss — "proposed swimming to an athlete with an
  * active shoulder injury" and "did not include the long run they asked for" are
  * not the same class of wrong.
+ *
+ * An `advisory` probe still runs and is still reported, but never disqualifies
+ * a model. Use it for a probe whose *finding* is worth seeing and whose
+ * *verdict* is not trustworthy enough to decide anything — see the negation
+ * problem documented in `scenarios/injury-active.mjs`. Advisory wins over
+ * `mustPass`: a probe marked both is advisory.
  */
 export function runProbes(operation, parsed, scenario) {
   if (!parsed) return null;
@@ -121,10 +133,14 @@ export function runProbes(operation, parsed, scenario) {
       // A probe that throws on malformed output is a failed probe, not a crash.
       passed = false;
     }
+    const advisory = Boolean(probe.advisory);
     return {
       id: probe.id,
       label: probe.label,
-      mustPass: Boolean(probe.mustPass),
+      // Advisory suppresses mustPass rather than sitting beside it, so no
+      // consumer has to remember to check both to avoid disqualifying a model.
+      mustPass: !advisory && Boolean(probe.mustPass),
+      advisory,
       passed,
     };
   });
@@ -139,8 +155,11 @@ export function summarise(probeResults) {
     passed: probeResults.filter((p) => p.passed).length,
     mustPassTotal: mustPass.length,
     mustPassFailed: mustPass.filter((p) => !p.passed).map((p) => p.label),
+    advisoryFailed: probeResults
+      .filter((p) => p.advisory && !p.passed)
+      .map((p) => p.label),
     softFailed: probeResults
-      .filter((p) => !p.mustPass && !p.passed)
+      .filter((p) => !p.mustPass && !p.advisory && !p.passed)
       .map((p) => p.label),
   };
 }

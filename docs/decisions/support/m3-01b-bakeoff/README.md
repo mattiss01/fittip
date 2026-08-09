@@ -46,6 +46,52 @@ perfectly — well-formed JSON, valid goal ids, correct dates — still proposed
 swimming to an athlete with an active shoulder injury and named a condition.
 Contract conformance alone called it fine.
 
+### Advisory probes, and why text probes cannot be trusted alone
+
+A probe may also be marked **advisory**: it runs, it is reported, it never
+disqualifies a model. Advisory beats must-pass where both are set.
+
+Every probe in `injury-active` is advisory as of 9 August 2026. Two reasons,
+recorded in full in that file:
+
+1. All three candidate models handled an active injury sensibly, so the probes
+   could not tell them apart — no signal for the only decision this exists to
+   serve.
+2. Their verdicts were wrong more often than right. A probe is a regex over
+   free text, and free text says what it is *not* doing. "I am leaving swimming
+   out because your swim became sharp on every catch" contains the word
+   *swimming*, so `noSwimming` failed a model for correctly refusing. Five of
+   six reported hard-constraint failures that day were this artifact.
+
+**This weakness is general, not specific to that scenario.** Any probe that
+asserts a proposal does *not* contain something, by searching prose, will fire
+on a model that explains why it left the thing out — and the better the model
+explains itself, the likelier it trips. The other three scenarios' text probes
+are unchanged only because they currently return true answers. If one fails a
+model that reads correctly by eye, suspect the probe first.
+
+The durable fix is unbuilt and worth doing before M3-02 reuses this corpus:
+point *"must not contain"* probes at `title` and the structured fields and stop
+reading `intent`, because a title names what a session is and never explains
+what was ruled out. Verified against the 9 August results, title-only scoring
+returns the correct verdict on every case that all-text got wrong, and still
+catches the one model that really did put a pool session in the week. Probes
+asserting a proposal *does* say something — a professional referral, say — must
+keep reading prose, because that advice lives nowhere else.
+
+A negation-aware regex was considered and rejected. One model wrote "the
+shoulder-loading swim pattern stays out for now", where the negation follows the
+word, so looking backwards for "no" or "without" misses it.
+
+None of this relaxes a product rule. Conservative, non-diagnostic behavior on
+pain, illness, injury, and fatigue is an AGENTS.md invariant, enforced in the
+prompt and in M3-02/M3-03. Demoting a probe changes what disqualifies a
+*candidate model here*, not what the product is allowed to do.
+
+`node render.mjs` writes a readable page — every model's week aligned by date,
+coaching prose set as prose, and every watch word highlighted inline, so a red
+chip can be checked by eye in a second rather than believed.
+
 **Gate 2 — judgement, and only the product owner can decide it.** Read the
 outputs and ask:
 
@@ -77,7 +123,9 @@ end, and it is the whole reason this exercise exists.
 | `run.mjs` | The API path. Needs `OPENAI_API_KEY`; never prints or writes it. |
 | `emit.mjs` | Writes self-contained paste-ready prompts for the no-key paths. |
 | `report.mjs` | One report renderer for every path, so the same result cannot be reported two ways. |
+| `parse-worksheet.mjs` | Reads `WORKSHEET.md` into slots. Shared by the scorer and the reader — two parsers over one file is two ways to disagree about what was pasted. |
 | `WORKSHEET.md` / `worksheet.mjs` | The no-key path: fillable slots, parsed and scored. |
+| `render.mjs` | Gate 2's tool. Renders the filled worksheet as a readable page: weeks aligned by date, coaching prose set as prose, watch words highlighted so an advisory verdict can be checked rather than believed. |
 | `CODEX-HANDOFF.md` | A brief to paste into a Codex session, one run per model. |
 
 Generated output (`paste/`, `results/`) is gitignored. Regenerate with

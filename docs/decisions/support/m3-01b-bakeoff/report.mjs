@@ -12,7 +12,11 @@ const tick = (b) => (b ? "yes" : "**no**");
 
 export function renderReport({ title, source, results, notes, caveat }) {
   const answered = results.filter((r) => !r.skipped);
-  const lines = [`# ${title}`, ``, `Scored ${new Date().toISOString()} from \`${source}\`.`];
+  const lines = [
+    `# ${title}`,
+    ``,
+    `Scored ${new Date().toISOString()} from \`${source}\`.`,
+  ];
 
   lines.push(`${answered.length} of ${results.length} slots filled.`, ``);
 
@@ -53,10 +57,14 @@ export function renderReport({ title, source, results, notes, caveat }) {
 
   const withProbes = answered.filter((r) => r.probes);
   const safetyFailures = [];
+  const advisoryFailures = [];
   for (const r of withProbes) {
     const s = summarise(r.probes);
     if (s.mustPassFailed.length > 0) {
       safetyFailures.push({ ...r, failed: s.mustPassFailed });
+    }
+    if (s.advisoryFailed.length > 0) {
+      advisoryFailures.push({ ...r, failed: s.advisoryFailed });
     }
   }
 
@@ -73,7 +81,29 @@ export function renderReport({ title, source, results, notes, caveat }) {
       ``,
     );
     for (const r of safetyFailures) {
-      lines.push(`- **${r.label}** — ${r.scenario} / ${r.operation.replace("create_", "")}`);
+      lines.push(
+        `- **${r.label}** — ${r.scenario} / ${r.operation.replace("create_", "")}`,
+      );
+      for (const f of r.failed) lines.push(`  - ${f}`);
+    }
+    lines.push(``);
+  }
+
+  if (advisoryFailures.length > 0) {
+    lines.push(
+      `### Advisory — reported, not disqualifying`,
+      ``,
+      `An advisory probe is a finding to look at, not a verdict to act on. These`,
+      `read free text with regexes, and free text says what it is *not* doing, so`,
+      `a model that correctly refuses something trips the probe by explaining the`,
+      `refusal. Check the rendered plans before believing any line here —`,
+      `\`node render.mjs\`.`,
+      ``,
+    );
+    for (const r of advisoryFailures) {
+      lines.push(
+        `- **${r.label}** — ${r.scenario} / ${r.operation.replace("create_", "")}`,
+      );
       for (const f of r.failed) lines.push(`  - ${f}`);
     }
     lines.push(``);
@@ -88,7 +118,13 @@ export function renderReport({ title, source, results, notes, caveat }) {
     for (const r of rows) {
       for (const p of r.probes) {
         if (!probeIds.some((x) => x.id === p.id && x.op === r.operation)) {
-          probeIds.push({ id: p.id, label: p.label, op: r.operation, mustPass: p.mustPass });
+          probeIds.push({
+            id: p.id,
+            label: p.label,
+            op: r.operation,
+            mustPass: p.mustPass,
+            advisory: p.advisory,
+          });
         }
       }
     }
@@ -102,7 +138,7 @@ export function renderReport({ title, source, results, notes, caveat }) {
       lines.push(
         `### ${name} — ${op.replace("create_", "")}`,
         ``,
-        `| Model | ${cols.map((c) => `${c.label}${c.mustPass ? " *" : ""}`).join(" | ")} |`,
+        `| Model | ${cols.map((c) => `${c.label}${c.mustPass ? " *" : ""}${c.advisory ? " †" : ""}`).join(" | ")} |`,
         `| --- | ${cols.map(() => "---").join(" | ")} |`,
       );
       for (const r of opRows) {
@@ -112,7 +148,13 @@ export function renderReport({ title, source, results, notes, caveat }) {
         });
         lines.push(`| ${r.label} | ${cells.join(" | ")} |`);
       }
-      lines.push(``, `\\* must pass`, ``);
+      const footnotes = [
+        cols.some((c) => c.mustPass) ? `\\* must pass` : null,
+        cols.some((c) => c.advisory)
+          ? `† advisory — reported, never disqualifying`
+          : null,
+      ].filter(Boolean);
+      lines.push(``, ...footnotes, ``);
     }
   }
 
