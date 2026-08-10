@@ -26,6 +26,9 @@ of scope here
 **Revised:** 10 August 2026 — decisions 1-6 and 8 approved as drafted; decision
 7 approved with no automatic roadmap-generation blocker
 
+**Revised:** 10 August 2026 — M3-01B accepted; its limitation 17 carries here as
+a hard constraint, see "Hard constraint inherited from M3-01B" below
+
 **Architecture boundary:** ADR-006 and ADR-007 accepted; M0-06A accepted before
 founder-hosted use
 
@@ -78,6 +81,38 @@ until the M0 gates pass.
 9. Keep acceptance transactional and separate from proposal generation.
 10. Add authorization, versioning, AI-output, UX, safety, and idempotency
     tests, including planning-note injection cases under ADR-014 decision 4.
+
+## Hard constraint inherited from M3-01B: bind the model to its rate card
+
+**This is a hard constraint, not guidance.** It carries forward from
+[M3-01B](M3-01B-REAL-PROVIDER-ADAPTER.md) limitation 17, recorded in
+[its validation record](../../validation/M3/M3-01B-VALIDATION.md) and accepted
+by the product owner on 10 August 2026 on the explicit condition that this
+ticket closes it.
+
+Nothing today binds the configured model to the rate card used to price it.
+`readCode` in `src/server/ai/enablement.ts` validates the model string's
+*shape* only, and `src/server/ai/budget.ts` carries
+`OPENAI_GPT_5_6_LUNA_RATE_CARD` with luna's $0.20/$1.20 per million tokens.
+No check exists that the two describe the same model.
+
+Set `FITTIP_AI_MODEL` to `gpt-5.5` — $5.00/$30.00 per million — and every
+reservation still computes 5,200 micro-USD against a true cost near 130,000, a
+factor of 25. The 2,000,000 micro-USD daily ceiling would then admit roughly
+$50 of real spend per day while recording $2. M3-01B decision 6's "deny on an
+unknown price" does not catch it, because the price is not unknown: it is
+known and wrong.
+
+Nothing can be misconfigured today only because no production code constructs a
+`CoachAIService`. **This ticket builds the first composition root, so it is the
+first ticket that can get this wrong.**
+
+The requirement: the composition root must refuse to construct a live service
+when the configured model is not the model its rate card prices, failing closed
+in the same way a missing credential or a stale rate card does. A test must
+prove the refusal, and the model/rate-card pairing must be expressed in one
+place rather than as two constants that happen to agree. Carry this into the
+`## Agent brief` when this ticket is approved for implementation.
 
 ## Context policy: both ADRs are accepted
 

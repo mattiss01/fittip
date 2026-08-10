@@ -1,8 +1,13 @@
 # M3-01B: One approved real-provider adapter
 
-**Status:** in development — approved for dispatch by the product owner on
-10 August 2026, with every decision resolved. One sub-item is deferred with a
-recorded trigger: decision 4's per-source byte allocation.
+**Status:** accepted — accepted by the product owner on 10 August 2026 against
+the independently reviewed commit `e5adc9b` and its Vercel Preview, merged to
+`master` as `e7f931d`. Evidence in
+[M3-01B-VALIDATION](../../validation/M3/M3-01B-VALIDATION.md). Eighteen
+limitations are recorded; the product owner explicitly accepted 6, 7, 10, and
+17, and limitation 17 carries into
+[M3-02](M3-02-ROADMAP-PROPOSAL.md) as a hard constraint. One sub-item remains
+deferred with a recorded trigger: decision 4's per-source byte allocation.
 
 **Tier 1.** Schema, migration, authorization, credentials, an external service,
 and spend — decision 8 alone adds a migration with revoked privileges and a
