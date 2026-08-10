@@ -126,7 +126,15 @@ end, and it is the whole reason this exercise exists.
 | `parse-worksheet.mjs` | Reads `WORKSHEET.md` into slots. Shared by the scorer and the reader — two parsers over one file is two ways to disagree about what was pasted. |
 | `WORKSHEET.md` / `worksheet.mjs` | The no-key path: fillable slots, parsed and scored. |
 | `render.mjs` | Gate 2's tool. Renders the filled worksheet as a readable page: weeks aligned by date, coaching prose set as prose, watch words highlighted so an advisory verdict can be checked rather than believed. |
-| `CODEX-HANDOFF.md` | A brief to paste into a Codex session, one run per model. |
+| `evidence/` | The runs that cost money, kept because `results/` is gitignored and would otherwise be the only copy. Full parsed proposals, per-call latency, and token counts. |
+
+`WORKSHEET.md` ships blank. The filled 9 August comparison is in `evidence/`;
+clear the slots again rather than scoring a new run against stale pastes.
+
+**`results/` is gitignored, so a run that cost money leaves its only copy
+there.** Anything worth keeping goes to `evidence/` before that directory is
+cleaned. `run.mjs` writes a `.json` beside each report holding the full parsed
+proposals — that is the file gate 2 needs, not the report.
 
 Generated output (`paste/`, `results/`) is gitignored. Regenerate with
 `node emit.mjs`.
@@ -177,8 +185,11 @@ Cents.
 | Path | Contract conformance under `strict: true` | Coaching quality and safety | Tokens, latency, caching |
 | --- | --- | --- | --- |
 | `run.mjs` with an API key | yes | yes | yes |
-| Codex agent | no — no `response_format` | indicative; Codex adds its own scaffolding | no |
 | ChatGPT copy-paste | no — no `response_format` | yes | no |
+
+A third route existed — a brief pasted into a Codex session — and was removed on
+10 August 2026 without ever being used. It proved strictly less than the other
+two and added a scaffolding layer between the model and the schema.
 
 A chat window has no `response_format`, so the schema is an *instruction*, not a
 grammar. Clean JSON from that route means the model complied naturally. It is

@@ -440,7 +440,10 @@ recorded above, unchanged.
 
 The first and so far only real provider spend on FitTip. Recorded here because
 `docs/decisions/support/m3-01b-bakeoff/results/` is gitignored, so the run
-output is not itself a durable record.
+output is not itself a durable record. The raw records — full parsed proposals,
+per-call latency, token counts — are committed under that directory's
+`evidence/`. Read those rather than re-running: everything below is derived
+from them, and re-deriving it costs money.
 
 **Authorization, stated plainly because it was not obtained.** The product owner
 asked whether cheap models could be tested and confirmed the key was in place.
@@ -459,12 +462,25 @@ reason in the harness lessons below.
 Two scenarios (`cold-start`, `injury-active`), both operations, two repeats,
 under `response_format: json_schema` with `strict: true`.
 
-| Model | $/1M in-out | Contract | Must-pass | Peak out | Peak latency |
+| Model | $/1M in-out | Contract | Must-pass | Peak out | Latency min / median / max |
 | --- | --- | --- | --- | --- | --- |
-| `gpt-5.5` | 5.00 / 30.00 | 8/8 | clean | 1,640 | 27.2s |
-| `gpt-5.6-luna` | 0.20 / 1.20 | 8/8 | one miss | 1,513 | 13.4s |
-| `gpt-5-mini` | 0.25 / 2.00 | unresolved | — | capped | 54.1s |
-| `gpt-5-nano` | 0.05 / 0.40 | unresolved | — | capped | 31.5s |
+| `gpt-5.5` | 5.00 / 30.00 | 8/8 | clean | 1,640 | 5.2 / 18.1 / 27.2s |
+| `gpt-5.6-luna` | 0.20 / 1.20 | 8/8 | one miss | 1,513 | **4.5 / 6.8 / 13.4s** |
+| `gpt-5-mini` | 0.25 / 2.00 | see below | — | capped | 24.1 / 44.5 / 82.9s |
+| `gpt-5-nano` | 0.05 / 0.40 | unresolved | — | capped | 25.1 / 26.9 / 31.5s |
+
+**Read the median, not the peak.** `gpt-5.6-luna` answers in 6.8s typically
+against `gpt-5.5`'s 18.1s and `gpt-5-mini`'s 44.5s. That is a product
+difference, not a benchmark one — the gap between a plan that appears and a
+plan you wait for. `gpt-5-mini`'s and `gpt-5-nano`'s figures are inflated by
+warm-cache repeats being mixed with cold calls, and deflated by truncation at
+the output cap, so treat them as indicative only.
+
+**`gpt-5-mini` was resolved on 10 August 2026** by two further calls
+(~$0.019, authorized explicitly): it holds the contract on both operations of
+`injury-active` once given room, so its earlier failures were entirely the
+harness's output cap. It is uncompetitive rather than incapable — mid-price and
+by far the slowest. `gpt-5-nano` remains untested at an adequate cap.
 
 `gpt-5.6-luna`'s miss was `respectsAvailableDays` on one of two cold-start
 runs: sessions outside the days the athlete said they had, and more than one
