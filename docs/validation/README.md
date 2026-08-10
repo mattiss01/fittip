@@ -33,4 +33,4 @@ Validation records and their visual evidence are grouped by milestone.
 ## M3
 
 - [M3-01 server-only AI boundary and fixture adapters](M3/M3-01-VALIDATION.md) — in development; builder handoff complete, independent review, CI, Preview verification, and acceptance pending
-- [M3-01B one approved real-provider adapter](M3/M3-01B-VALIDATION.md) — testable; corrections to the first independent review landed, re-review of `dd980f7`, CI, Preview verification, and acceptance pending
+- [M3-01B one approved real-provider adapter](M3/M3-01B-VALIDATION.md) — testable; independently reviewed at `e5adc9b` with CI green and the founder-project migration applied and verified; Preview verification and acceptance pending

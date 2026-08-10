@@ -323,6 +323,72 @@ run. See limitation 9 for the one branch the harness does **not** reach.
   `package.json` and one additive step in the `database` CI job.
 - **B2.** This document.
 
+## Hosted verification on the founder Supabase project
+
+Performed by the product owner on 10 August 2026 against project
+`mahhfyxhgcmcbqkvudcm`, at the lead's direction and with the lead reading each
+result. The CLI commands ran in the product owner's own terminal because
+`supabase link` and `db push` are in the `deny` list in `.claude/settings.json`
+and the login flow needs a TTY; no access token or database password passed
+through the agent session.
+
+**Migration history is exact.** `supabase migration list --linked` before the
+push showed nine migrations with `local == remote` and exactly one pending,
+`20260810081331`. No earlier drift, so nothing was applied as an unreviewed
+batch. After `supabase db push` applied that one migration, the same command
+showed all ten aligned, `20260810081331` included, with no rewritten timestamp.
+
+The push emitted a `failed to cache migrations catalog` warning — the CLI's
+pg-delta helper could not read a certificate inside its own container. It runs
+after the SQL, is advisory, and did not affect what was written; the history and
+catalogue checks below are the proof of that.
+
+**Advisors** (`db advisors --linked --type all --level warn`) returned eight
+warnings. Seven are lint `0029`, signed-in users can execute a `SECURITY
+DEFINER` function; five of those pre-date this ticket
+(`apply_goal_change`, `apply_memory_change`, `apply_onboarding_change`,
+`save_manual_plan_version`, `save_training_completion`) and two are this
+ticket's (`reserve_ai_spend`, `settle_ai_spend`). The lint flags the pattern
+FitTip's entire write model is built on — definer RPCs granted to
+`authenticated`, with direct table writes revoked and ownership derived
+server-side — and cannot see that second half. The eighth,
+`auth_leaked_password_protection`, is an Auth configuration setting unrelated to
+this ticket and is not addressed here.
+
+The advisor output also confirms the hosted signatures carry no owner argument:
+`reserve_ai_spend(p_operation, p_reserved_micro_usd, p_rate_card_version,
+p_currency)` and `settle_ai_spend(p_settlement_token, p_charged_micro_usd)`.
+
+**Note for future tickets:** CI runs the advisors with `--fail-on warn` and is
+green, while the hosted database reports seven warnings. The local container's
+advisor set does not include lint `0029`. CI's advisor step is therefore weaker
+than the hosted one, which is exactly the gap this manual step covers.
+
+**The privilege boundary, verified in the hosted SQL editor.**
+
+| Check | Result |
+| --- | --- |
+| `authenticated` column privileges | `SELECT` on eleven columns; **`settlement_token` absent** |
+| `role_table_grants` | only `postgres` and `service_role`; `authenticated` and `anon` hold no table-level grant, so no `INSERT`/`UPDATE`/`DELETE` path exists |
+| `relrowsecurity` | `true` |
+| Policies | exactly one, `ai_spend_reservations_owner_select`, `{authenticated}`, `SELECT` only — no write policy exists |
+| `prosecdef` / `proconfig` | both functions `true` with `search_path=""` |
+
+The eleven readable columns are `id`, `user_id`, `operation`,
+`reserved_micro_usd`, `charged_micro_usd`, `rate_card_version`, `currency`,
+`spend_day`, `created_at`, `expires_at`, `settled_at`.
+
+**The authenticated read path, exercised under a simulated role.** With
+`set local role authenticated` and a `request.jwt.claims` subject, a plain
+`select count(*)` on `ai_spend_reservations` returned `0` with no error, and a
+`select settlement_token` failed with `42501 permission denied`. The catalogue
+says the grant is right; this says the database enforces it.
+
+`service_role` retaining all seven table privileges is visible in the
+`role_table_grants` result. That is Supabase's default for every new table and
+matches every other FitTip table; it is limitation 6, and the product owner
+accepted it against this evidence rather than against a description of it.
+
 ## Known limitations
 
 The first eight are carried forward from the original builder's handoff, which
