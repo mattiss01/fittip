@@ -1,10 +1,18 @@
 # M3-01B: One approved real-provider adapter
 
-**Status:** proposed — not approved for implementation. The provider decision is
-settled (OpenAI, 8 August 2026), along with the account/credential posture, the
-data-use terms, and the live-test data source. Still blocked on decisions 1b, 4,
-5, 6, and 8 below, and decision 4 is itself blocked on ADR-013 and ADR-014 being
-accepted
+**Status:** proposed — **every open decision is now resolved** as of 10 August
+2026: provider and model (OpenAI, `gpt-5.6-luna`), account and credential,
+data-use terms, hard limits, retry, price source, live-test data, and durable
+budget state. One sub-item is deferred with a recorded trigger: decision 4's
+per-source byte allocation. The ticket still needs the product owner's explicit
+approval to dispatch, and the brief below must be written against the scope
+actually being dispatched — per AGENTS.md a `proposed` ticket gains its
+`## Agent brief` when it is approved for implementation, and this one does not
+have it yet.
+
+**Tier 1.** Schema, migration, authorization, credentials, an external service,
+and spend — decision 8 alone adds a migration with revoked privileges and a
+`SECURITY DEFINER` function.
 
 **Milestone:** M3
 
@@ -212,9 +220,10 @@ still block dispatch.
 4. **Hard limits**: per-request, per-window, daily, and total spend ceilings;
    maximum concurrent live requests; input and output token ceilings; request
    deadline. **Size these against the revised context, not the one M3-01
-   shipped** — see below. **Open, but no longer blocked**: ADR-013 and ADR-014
-   were both accepted on 9 August 2026, so the context ceiling this decision is
-   sized against is now settled.
+   shipped** — see below. **Partly resolved 10 August 2026**: every ceiling is
+   approved, and the per-source byte allocation alone remains open, deferred
+   with a recorded trigger. ADR-013 and ADR-014 were both accepted on 9 August
+   2026, so the context ceiling this decision is sized against is settled.
    - ADR-014 reserves **1,200 bytes** for the planning note and **600** for
      mandatory regeneration feedback, both within the ~30,000 whole-context
      budget rather than on top of it.
@@ -222,8 +231,32 @@ still block dispatch.
      history, an optional roadmap, the carried planning note, the new feedback,
      and the superseded proposal. Size the token ceilings against that, not
      against a first request.
-   - **This decision must produce an explicit per-source allocation, not just a
-     total.** ADR-014 records the reason: `maxMemoryItems: 40` at
+   - **Partly resolved 10 August 2026.** Ceilings approved against
+     `gpt-5.6-luna`'s measured behaviour: `maxInputTokens` stays **8,000**,
+     `maxOutputTokens` rises to **3,000** because M3-03 adds a coach-authored
+     week description to the schema, `deadlineMs` stays **30,000** against a
+     13.4s worst case, and `perRequestCostCeilingMicroUsd` drops from
+     **250,000 to 8,000**.
+   - That last change is the substantive one. Reserve charges
+     `maxInputTokens × input rate + maxOutputTokens × output rate`, which at
+     luna's $0.20/$1.20 is **5,200 micro-USD**. A 250,000 ceiling is 48× that:
+     it would admit a request costing $0.25 when a real proposal costs $0.0024,
+     which is not a ceiling. 8,000 clears the reservation with headroom and
+     still stops a runaway.
+   - **`dailyCostCeilingMicroUsd` and `totalCostCeilingMicroUsd` stay as
+     shipped**, because the authoritative ceiling is elsewhere: the product
+     owner holds a **€5/month cap on the OpenAI project**. That cap is
+     provider-side, so it survives a bug in this repository's own accounting,
+     which is exactly why decision 2 required it. Revisit both in-app numbers
+     when there is a second user, since a provider cap cannot distinguish
+     between whose spending it is.
+   - **The per-source byte allocation is deliberately deferred**, at the product
+     owner's judgement on 10 August 2026 that it is not yet relevant. It is not
+     resolved, and the reason it can wait is that the owner currently holds few
+     memory items. **Trigger: it must be settled before any owner can reach
+     ~30 memory items, and before M3-02 is accepted.** Until then this is a
+     known limitation, recorded below rather than silently carried.
+   - **The unresolved shape, kept because it will not get simpler.** ADR-014 records the reason: `maxMemoryItems: 40` at
      `MEMORY_CONTENT_MAX_LENGTH` 1000 is 40,000 bytes of memory alone, which
      exceeds the whole ceiling, and `assembleCoachAIContext` denies rather than
      truncating. A single total with independent item caps behind it produces an
@@ -240,10 +273,15 @@ still block dispatch.
    - **Choosing `gpt-5.6-luna` on 10 August makes the shipped guesses roughly
      right, and that is a consequence of the model choice rather than a
      property of the ticket.** Against luna's measured peaks — 2,972 input,
-     1,513 output, 13.4s — `maxInputTokens: 8_000`, `maxOutputTokens: 2_000`,
-     and `deadlineMs: 30_000` all hold with margin. Every other candidate broke
-     at least one of them. Size the ceilings for the model actually chosen, and
-     if the model changes, revisit this decision rather than assuming the
+     1,513 output, 13.4s — the shipped `maxInputTokens: 8_000` and
+     `deadlineMs: 30_000` hold with margin, and `maxOutputTokens: 2_000` would
+     have held too. It is raised to 3,000 for a forward-looking reason rather
+     than a measured one: M3-03 adds a coach-authored week description to
+     `fittip.seven-day-plan.v2`, and a ceiling that fits today's schema but not
+     the next one produces a truncation that looks like a model failure. The
+     9 August run showed exactly how convincing that disguise is. Every other
+     candidate broke at least one ceiling. Size for the model actually chosen,
+     and if the model changes, revisit this decision rather than assuming the
      numbers travel.
    - **Reasoning models make the reservation weaker, not just larger.** Reserve
      charges the upper bound before the call, and hidden reasoning tokens bill
@@ -252,15 +290,30 @@ still block dispatch.
      model's worst case protects considerably less than the same number does
      for a non-reasoning one. This belongs in the decision, not in the builder's
      discovery.
-5. **Retry and idempotency behavior.** Recommendation: zero automatic retries.
-   Note that provider SDKs commonly retry by default and must be configured off.
+5. **Retry and idempotency behavior. Resolved 10 August 2026: zero automatic
+   retries.** `maxAttempts: 1`, and the provider SDK's own retry policy
+   explicitly configured off — SDKs commonly retry by default, so leaving it
+   unset is a decision made by omission.
+   - The reason is billing, not simplicity. A call that fails *after* the
+     provider generated a response has already been charged, and a retry buys a
+     second charge for one proposal. A dropped connection therefore surfaces to
+     the owner as a failed proposal they can retry by hand.
    - The 9 August run took an `ECONNRESET` mid-flight. Transport failures are
      ordinary, not exotic, so "zero automatic retries" means a dropped
      connection surfaces to the owner as a failed proposal. That is probably
      the right trade — a retry after an unknown-state failure risks a second
      charge for one request — but it is a user-visible consequence to decide
      deliberately rather than inherit.
-6. **Price source and unknown-cost behavior.** Recommendation: deny.
+6. **Price source and unknown-cost behavior. Resolved 10 August 2026: deny on
+   unknown or stale.** The rate card is a constant in this repository, versioned
+   and updated by deploy, not fetched at runtime — a price lookup that can fail
+   is one more thing between the owner and a proposal.
+   - Most of this is already built. `CoachAIRateCard` carries a `validUntil`
+     instant and `CoachAIRateCardSource` returns `null` when no price is known,
+     with `budget.ts` recording that unknown is never treated as zero. The
+     decision approves the policy, not new machinery.
+   - Past `validUntil` the price is stale, stale is unknown, and unknown denies.
+     A wrong price near a hard ceiling is worse than no proposal.
 7. **Whether live tests may use minimized owner data or synthetic only.**
    - **Resolved 8 August 2026: synthetic, for data-adequacy reasons rather than
      privacy ones.** The product owner has too little training history for their
@@ -275,16 +328,50 @@ still block dispatch.
      planning note that conflicts with a live goal. Anything less exercises
      neither the ADR-012/013/014 assembly nor the byte ceiling. The corpus is
      reused by M3-02 and M3-03 for prompt tuning.
-8. **Where durable budget state lives** — a table in the existing database or
-   another approved store — and its cost.
-   - Open. One constraint the builder will hit and the ticket did not state:
-     this repository has no service-role Supabase client **by rule**, so all
-     writes carry the authenticated user's JWT. A spend counter the capped user
-     can write is a spend counter the capped user can reset. A Postgres option
-     therefore needs table-level writes revoked and an increment-only
-     `SECURITY DEFINER` RPC, not an ordinary owned table. A separate key-value
-     store avoids that but adds a vendor, a credential, and a subprocessor,
-     which is its own Tier 1 decision.
+8. **Where durable budget state lives. Resolved 10 August 2026: a table in the
+   existing Postgres, written only through an increment-only
+   `SECURITY DEFINER` function.** No new vendor, credential, subprocessor, or
+   bill — a separate key-value store was considered and rejected on those
+   grounds, each of which would have re-opened the data-use decision settled on
+   8 August.
+   - **The constraint that shapes the whole design.** This repository has no
+     service-role Supabase client *by rule*, so every write carries the
+     authenticated user's JWT. A spend counter the capped user can write is a
+     spend counter the capped user can reset. An ordinary owned table with RLS
+     is therefore not sufficient here, and this is the one place in FitTip where
+     "the owner owns their rows" is the wrong answer.
+   - Deferring this was offered and declined. The product owner has a €5/month
+     cap on the OpenAI project, which is the only ceiling that currently holds,
+     and shipping in-memory state would have been defensible while they are the
+     sole user. Building it now means the privilege work is done once, under
+     review, rather than later under time pressure.
+
+   What the builder must get right, none of it optional:
+
+   - **Direct writes are revoked.** `REVOKE INSERT, UPDATE, DELETE` from
+     `authenticated` on the table. RLS still restricts `SELECT` to the owner's
+     own rows, so an owner can see their spend and cannot alter it.
+   - **The owner is derived, never passed.** The function reads `auth.uid()`
+     internally. A `user_id` parameter would let any caller reserve against
+     somebody else's budget or settle somebody else's reservation.
+   - **`SET search_path = ''`** on every `SECURITY DEFINER` function, with
+     fully-qualified names inside. Supabase's security advisor flags this and it
+     is a real privilege-escalation vector, not a lint preference.
+   - **The ceiling check and the write are one statement.** Checking the daily
+     total and then inserting leaves a race that admits two requests over the
+     ceiling. `maxConcurrentRequests` is 1 today; do not build on that.
+   - **Reservations expire.** Reserve charges the upper bound before the call,
+     and a call that crashes never settles. Without an expiry those reservations
+     consume the daily ceiling permanently and the owner is locked out with no
+     way to see why. Pick an expiry longer than `deadlineMs` and shorter than
+     the day, and say what it is.
+   - **Settlement is its own function.** The owner cannot `UPDATE`, so writing
+     the actual charge back over the reservation goes through a second
+     `SECURITY DEFINER` function that can only settle a reservation belonging to
+     the calling user, and only once.
+   - `GRANT EXECUTE` to `authenticated`, `REVOKE` from `public`, and pgTAP
+     coverage proving an authenticated owner cannot reset, lower, or delete
+     their own spend by any route.
 
 ## The context grew after this ticket was written
 
