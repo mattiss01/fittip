@@ -34,6 +34,59 @@ export type Database = {
   };
   public: {
     Tables: {
+      ai_spend_reservations: {
+        Row: {
+          charged_micro_usd: number | null;
+          created_at: string;
+          currency: string;
+          expires_at: string;
+          id: string;
+          operation: string;
+          rate_card_version: string;
+          reserved_micro_usd: number;
+          settled_at: string | null;
+          settlement_token: string;
+          spend_day: string;
+          user_id: string;
+        };
+        Insert: {
+          charged_micro_usd?: number | null;
+          created_at?: string;
+          currency?: string;
+          expires_at: string;
+          id?: string;
+          operation: string;
+          rate_card_version: string;
+          reserved_micro_usd: number;
+          settled_at?: string | null;
+          settlement_token?: string;
+          spend_day: string;
+          user_id: string;
+        };
+        Update: {
+          charged_micro_usd?: number | null;
+          created_at?: string;
+          currency?: string;
+          expires_at?: string;
+          id?: string;
+          operation?: string;
+          rate_card_version?: string;
+          reserved_micro_usd?: number;
+          settled_at?: string | null;
+          settlement_token?: string;
+          spend_day?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ai_spend_reservations_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       completed_activities: {
         Row: {
           actual_measurement: Json | null;
@@ -1301,6 +1354,21 @@ export type Database = {
         Args: { p_mode: string; p_value: Json };
         Returns: boolean;
       };
+      reserve_ai_spend: {
+        Args: {
+          p_currency: string;
+          p_operation: string;
+          p_rate_card_version: string;
+          p_reserved_micro_usd: number;
+        };
+        Returns: Database["public"]["CompositeTypes"]["ai_spend_reservation_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "ai_spend_reservation_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       save_manual_plan_version: {
         Args: {
           p_day_count: number;
@@ -1385,11 +1453,32 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      settle_ai_spend: {
+        Args: { p_charged_micro_usd: number; p_settlement_token: string };
+        Returns: Database["public"]["CompositeTypes"]["ai_spend_settlement_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "ai_spend_settlement_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
     };
     Enums: {
       [_ in never]: never;
     };
     CompositeTypes: {
+      ai_spend_reservation_receipt: {
+        reservation_id: string | null;
+        settlement_token: string | null;
+        spend_day: string | null;
+        reserved_micro_usd: number | null;
+        expires_at: string | null;
+      };
+      ai_spend_settlement_receipt: {
+        reservation_id: string | null;
+        charged_micro_usd: number | null;
+      };
       goal_change_receipt: {
         goal_id: string | null;
         collection_revision: number | null;
