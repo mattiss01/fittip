@@ -6,18 +6,25 @@ ADR-007 accepts the separate founder-hosted topology. M3-01 was accepted on
 product-owner approval.
 
 **The provider decision was made on 8 August 2026: OpenAI**, together with the
-account/credential posture and the data-use terms. See
+account/credential posture and the data-use terms. **The model was chosen on
+10 August 2026: `gpt-5.6-luna`**, provisionally. See
 [M3-01B](M3-01B-REAL-PROVIDER-ADAPTER.md) for the resolutions and the exact
-provider terms as read that day. Still not approved: the **model**, any prompt,
-price, spend ceiling, friend data, external user, public registration,
-commercial use, or analytics sink.
+provider terms as read that day. Still not approved: any prompt, price, spend
+ceiling, friend data, external user, public registration, commercial use, or
+analytics sink.
 
-**The model is chosen empirically, and the synthetic corpus is shared.** The
+**The model was chosen empirically, and the synthetic corpus is shared.** The
 bake-off harness, the authored synthetic athlete, and the selection rule are in
 [`docs/decisions/support/m3-01b-bakeoff/`](../../decisions/support/m3-01b-bakeoff/README.md).
 M3-02 and M3-03 reuse that corpus for off-API prompt tuning rather than
 authoring their own — the product owner has too little real training history for
 their own data to exercise the ADR-012/013/014 context assembly.
+
+**`gpt-5.6-luna` ships with a known defect that M3-02 owns.** On one of two
+cold-start runs it placed sessions outside the athlete's stated available days.
+That is a structural probe, so the finding is real. M3-02 must re-test it
+against the real prompt before the roadmap surface is accepted; `gpt-5.5` is
+the fallback at 25× the price and half the speed.
 
 **Both context ADRs are accepted as of 9 August 2026.**
 [ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md) (training

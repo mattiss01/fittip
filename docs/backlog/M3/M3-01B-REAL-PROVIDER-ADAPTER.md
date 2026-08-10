@@ -131,7 +131,30 @@ still block dispatch.
      plumbing, and existing credit. The ticket's own analysis stands: cost is a
      model-tier question, not a provider question. Reversal cost is one adapter
      file against an unchanged contract.
-   - **1b — model. Open, and deliberately empirical.** At 50–200 development
+   - **1b — model. Resolved 10 August 2026: `gpt-5.6-luna`.** Cheapest and
+     fastest of everything that held the contract — $0.20/$1.20 per million
+     against `gpt-5.5`'s $5.00/$30.00, and a 13.4s peak against 27.2s for
+     `gpt-5.5` and 82.9s for `gpt-5-mini`. It held schema, ownership, and dates
+     on 8 of 8 calls under real `strict: true`.
+   - **The decision carries one known defect, and it is not cosmetic.** On one
+     of two `cold-start` runs `gpt-5.6-luna` placed sessions outside the days
+     the athlete said they were available, and used more than one weekend day.
+     `respectsAvailableDays` reads `session.date`, so this is structural and
+     real, not a text-probe artifact. It is an intermittent failure to respect
+     an explicitly stated constraint — the same class of thing the product is
+     for. **M3-02 must re-test it against the real prompt before the roadmap
+     surface is accepted.** If prompt work does not fix it, `gpt-5.5` is the
+     fallback at 25× the price and half the speed, and that trade is the
+     product owner's to make again.
+   - Provisional by intent — "for now", in the product owner's words. Reversal
+     is a model identifier behind an unchanged contract, which is the cheapest
+     reversal in this ticket.
+   - **Unmeasured:** `gpt-5.6-luna`'s reasoning-token split. The run that
+     produced its numbers predates `run.mjs` reporting that field. Its 1,513
+     peak output suggests little or no hidden reasoning, but that is an
+     inference. Measure it on the next run rather than assuming.
+   - Superseded reasoning, kept because it explains the shape of the exercise:
+     at 50–200 development
      calls the spend difference across the whole tier range is roughly €0.20
      against €20, so cost carries no signal. The risk that matters is the
      opposite one: proving the concept on a model too small to do it, and
@@ -214,6 +237,14 @@ still block dispatch.
      thinking before writing anything. `maxInputTokens: 8_000` looks comfortable
      against a 2,972-token peak, but that is two scenarios, not the regeneration
      worst case this decision must actually size against.
+   - **Choosing `gpt-5.6-luna` on 10 August makes the shipped guesses roughly
+     right, and that is a consequence of the model choice rather than a
+     property of the ticket.** Against luna's measured peaks — 2,972 input,
+     1,513 output, 13.4s — `maxInputTokens: 8_000`, `maxOutputTokens: 2_000`,
+     and `deadlineMs: 30_000` all hold with margin. Every other candidate broke
+     at least one of them. Size the ceilings for the model actually chosen, and
+     if the model changes, revisit this decision rather than assuming the
+     numbers travel.
    - **Reasoning models make the reservation weaker, not just larger.** Reserve
      charges the upper bound before the call, and hidden reasoning tokens bill
      at output rates, so the ceiling has to cover work nobody can see or
