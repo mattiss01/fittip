@@ -5,7 +5,31 @@
 **Tier:** 1 — schema, migration, authorization, credentials, an external
 service, and spend
 
-**Lifecycle state:** testable, pending product-owner acceptance.
+**Lifecycle state:** accepted.
+
+**Accepted** by the product owner on 10 August 2026 against the independently
+reviewed commit `e5adc9b` and its Vercel Preview, and merged to `master` as
+`e7f931d` via pull request 3. The narrow re-review of `e5adc9b` returned
+**approve**, conditional on CI, which then went green on all three jobs as
+[run 31392211554](https://github.com/mattiss01/fittip/actions/runs/31392211554).
+
+The product owner explicitly accepted limitations 6, 7, 10, and 17 as a decision
+separate from accepting the work, on the condition that **limitation 17 becomes
+a hard constraint in [M3-02](../../backlog/M3/M3-02-ROADMAP-PROPOSAL.md)**. That
+constraint is recorded there under "Hard constraint inherited from M3-01B" and
+must be carried into that ticket's `## Agent brief` when it is approved for
+implementation.
+
+Two residual items were deliberately left rather than fixed, because each would
+have been a new commit invalidating an approval in order to correct wording. The
+harness comment at `m3_01b_concurrent_reservations.mjs:183` names a cause the
+preceding assertions have already excluded — a genuine lock wait past three
+seconds raises `PT409` and trips the earlier `unaffectedOne.error === null`
+assert, so the timing assert can only catch a stalled stack at the point it
+runs. And limitation 7 says correction N1 shrinks the timeout window; N1 covers
+a rejected call and does not reach the deadline path at all, where
+`durableSettlement` is unset by design. Neither changes a conclusion the product
+owner acted on. The next ticket to touch either should fix the wording.
 
 The first independent exact-commit review of `d553f6a` returned **changes
 required**: two blocking findings, one near-blocking finding, a missing
