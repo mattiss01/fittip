@@ -1,7 +1,7 @@
 # M3-02: High-level roadmap proposal
 
-**Status:** approved — feature brief and transaction ADR approved by the product
-owner on 10 August 2026; dispatch explicitly paused by the product owner
+**Status:** in development — dispatched by the product owner on 10 August 2026;
+feature brief and transaction ADR approved the same day
 
 ## Agent brief
 
@@ -29,7 +29,10 @@ RLS, privacy-sensitive AI context, privileged functions, and spend are involved.
   static non-diagnostic copy, require conservative bounded output, and reject
   diagnosis, treatment, safety claims, or escalation of affected load.
 - Set and test the per-source context allocation carried from M3-01B before this
-  ticket can be accepted. Nothing is silently truncated beyond ADR-013.
+  ticket can be accepted. Nothing is silently truncated beyond ADR-013. Derive
+  the numbers from ADR-013/ADR-014's settled reservations and the measured
+  bake-off corpus, and record the exact per-source table in the validation
+  record — the product owner approves those numbers at acceptance.
 
 **Non-goals.** No detailed sessions or selected-horizon plan, replanning,
 automatic roadmap mutation, chat, global activity library, analytics, friends,
@@ -96,6 +99,12 @@ feedback, and the same three-round guardrail planned for the detailed plan
 **Revised:** 10 August 2026 — F-004 and ADR-015 approved; ticket moved to
 `approved`. The product owner explicitly paused dispatch, so it is not `in
 development` and no implementation agents or ticket branch have been started
+
+**Revised:** 10 August 2026 — the product owner lifted the dispatch pause and
+confirmed dispatch as one ticket rather than a data/UI split. Ticket moved to
+`in development` on branch `ticket/m3-02-roadmap-proposal`. The deferred
+per-source context allocation is delegated to the builder to propose with
+evidence and to the product owner to approve at acceptance
 
 **Architecture boundary:** ADR-006 and ADR-007 accepted; M0-06A accepted before
 founder-hosted use
@@ -726,10 +735,10 @@ privileges, idempotency keys, rollback behavior, and deletion consequences.
 
 ## Approval gate
 
-**Satisfied on 10 August 2026.** The product behavior, F-004, and ADR-015 are
-approved. The ticket is ready for Tier 1 dispatch, but the product owner has
-explicitly paused dispatch. Therefore it remains `approved`, not `in
-development`, and no builder or reviewer may start yet.
+**Satisfied on 10 August 2026, and dispatched.** The product behavior, F-004,
+and ADR-015 are approved. The product owner lifted the dispatch pause on
+10 August 2026, so the ticket is `in development` under the full Tier 1
+protocol: a distinct builder, then a distinct independent reviewer.
 
 1. **Satisfied 10 August 2026:** M3-01B is accepted, merged, pushed, deployed to
    the founder environment, and its required hosted verification is recorded.
