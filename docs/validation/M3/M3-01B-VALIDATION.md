@@ -5,28 +5,41 @@
 **Tier:** 1 — schema, migration, authorization, credentials, an external
 service, and spend
 
-**Lifecycle state:** testable. The first independent exact-commit review of
-`d553f6a` returned **changes required** with two blocking findings, one
-near-blocking finding, a missing concurrency proof, and a missing validation
-record. All five are addressed in `dd980f7`, which is the new review target.
+**Lifecycle state:** testable, pending product-owner acceptance.
+
+The first independent exact-commit review of `d553f6a` returned **changes
+required**: two blocking findings, one near-blocking finding, a missing
+concurrency proof, and a missing validation record. All five are addressed in
+`dd980f7` and this record.
+
+The re-review of `6eaa0f4` returned **approve with non-blocking findings**. It
+required no code change. Four of its findings were corrections to claims this
+record and the harness made that were wrong — three honesty fixes and one
+factual slip — and they are the whole content of the documentation commit
+below. Where a finding is recorded rather than fixed, the entry says so and
+says why.
 
 **Branch:** `ticket/m3-01b-real-provider-adapter`
 
 **Base:** `4b843f8d2c34fdc837090ae418dfdd2d5a314dbc`
 
-**Reviewed commit:** `dd980f70bbcad515dae4a10699f8f58488a52a55`
+**Reviewed commit (source of record):**
+`dd980f70bbcad515dae4a10699f8f58488a52a55`
 
 **Commits on the branch, oldest first:**
 
-| SHA       | Purpose                                                   |
-| --------- | --------------------------------------------------------- |
-| `738aa94` | OpenAI adapter, prompt, live limits, rate card, spend seam |
-| `d553f6a` | migration, pgTAP, spend repository, service wiring         |
-| `dd980f7` | independent-review corrections B1, B3, N1, B4              |
+| SHA       | Purpose                                                    |
+| --------- | ---------------------------------------------------------- |
+| `738aa94` | OpenAI adapter, prompt, live limits, rate card, spend seam  |
+| `d553f6a` | migration, pgTAP, spend repository, service wiring          |
+| `dd980f7` | first-review corrections B1, B3, N1, B4                     |
+| `6eaa0f4` | this validation record — B2                                 |
+| head      | re-review corrections: documentation and comments only      |
 
-Review `git diff 4b843f8..dd980f7`. The first two commits are incremental
-commits of one scope; the third is the correction commit and is the only one
-that has been through review before.
+Review `git diff 4b843f8..dd980f7` for behavior. Nothing after `dd980f7`
+changes source: `git diff dd980f7..HEAD -- src/` is empty, and the only
+non-`docs/` file touched since is the concurrency harness, in comment text
+alone.
 
 **Architecture boundary:**
 [ADR-006](../../decisions/ADR-006-LOCAL-OWNER-AI-MVP.md),
@@ -41,9 +54,10 @@ repository constructs any of it yet. This ticket ships the boundary; M3-02
 wires it.
 
 - `OpenAICoachAI` implements the accepted `CoachAI` contract against OpenAI's
-  responses API for `gpt-5.6-luna`, using `fetch` directly rather than a
-  provider SDK, so there is no retry policy to misconfigure and no dependency
-  added. One authorized request becomes exactly one HTTP call.
+  Chat Completions API (`/v1/chat/completions`, `response_format`,
+  `max_completion_tokens`) for `gpt-5.6-luna`, using `fetch` directly rather
+  than a provider SDK, so there is no retry policy to misconfigure and no
+  dependency added. One authorized request becomes exactly one HTTP call.
 - The baseline prompt and both JSON response schemas are ported unchanged from
   the bake-off harness, with everything static emitted before anything
   volatile so the cacheable prefix stays byte-identical.
@@ -182,8 +196,14 @@ is a number the capped user chooses.
 
 ## Tests and final results
 
-**The reviewed commit `dd980f7` needs a green CI run recorded before
-acceptance.** The previous commit `d553f6a` has run
+Run [31390527346](https://github.com/mattiss01/fittip/actions/runs/31390527346)
+**succeeded** on all three jobs. ESLint, TypeScript, Vitest, and the production
+build all executed, and the new `M3-01B concurrent spend reservations` step
+appears and passes in the `database` job. Its head is the record commit
+`6eaa0f4` rather than the reviewed commit `dd980f7`, for the concurrency-group
+reason set out below; the two are identical outside `docs/`.
+
+For contrast, the commit that prompted this correction pass, `d553f6a`, has run
 [31372584775](https://github.com/mattiss01/fittip/actions/runs/31372584775),
 which **failed**: Prettier failed on
 `src/server/repositories/ai-spend-repository.test.ts`, and because Prettier is
@@ -192,15 +212,18 @@ production build all skipped. `d553f6a` therefore has no recorded result for
 any of them, which is why finding B1 was blocking rather than cosmetic. That
 formatting failure is fixed in `dd980f7`.
 
-If the branch is pushed with this record already on it, the workflow's
-`ci-${{ github.ref }}` concurrency group cancels the in-flight run for
-`dd980f7` and only the record commit's run completes — the same mechanical
-trap M3-01 hit. That is fine under the AGENTS.md evidence-commit exception,
-and it is checkable rather than assumed: `git diff --stat dd980f7..HEAD`
-reports only paths under `docs/`, `.prettierignore` excludes `docs/`, and no CI
-step reads it, so the green run exercises exactly the reviewed source. If the
-lead prefers a run attributed to `dd980f7` itself, push that commit first and
-let its run finish before pushing this one.
+The green run's head is the record commit, not `dd980f7`, because the
+workflow's `ci-${{ github.ref }}` concurrency group cancels the in-flight run
+for any earlier commit on a non-`master` ref — the same mechanical trap M3-01
+hit. That is fine under the AGENTS.md evidence-commit exception, and it is
+checkable rather than assumed: `git diff --stat dd980f7..6eaa0f4` reports only
+paths under `docs/`, `.prettierignore` excludes `docs/`, and no CI step reads
+it, so the green run exercised exactly the reviewed source.
+
+This commit adds documentation and comments only. It changes no behavior and no
+test logic, so it does not disturb that result; `git diff dd980f7..HEAD --
+src/` is empty, and the only non-`docs/` file it touches is the harness, in
+comment text alone.
 
 Checks CI does not cover, or that were run locally while correcting:
 
@@ -238,9 +261,24 @@ It proves three things:
    A separate race proves the `PT409` shape genuinely occurs: two simultaneous
    settlements of one reservation yield exactly one success and one `PT409`
    with the closed-reservation message.
-3. **The lock and the aggregate are per owner.** A saturated owner is refused
-   for one micro-USD while two other owners reserving at the same instant both
-   commit, and each of their days sums to its own reservation alone.
+3. **The ceiling aggregate is per owner** — and only the aggregate. A
+   saturated owner is refused for one micro-USD while two others reserving at
+   the same instant both commit, and each of their days sums to its own
+   reservation alone. An owner-blind `sum()` cannot pass this: by that point
+   the four boundary rounds have left 8,000,000 micro-USD on the table across
+   their owners, so a global aggregate refuses both newcomers.
+
+   **The lock's per-owner keying is proven by reading, not by test.** Replacing
+   `pg_advisory_xact_lock(62004, hashtext(v_user_id::text))` with a global
+   `pg_advisory_xact_lock(62004)` leaves the isolation block passing — measured,
+   not assumed: the whole harness still reports PASS, with
+   `isolationElapsedMs: 6` against the 3,000ms bound. The three transactions
+   serialize, but each holds the lock for single-digit milliseconds, so nothing
+   observable changes. Nothing in the harness distinguishes "no
+   contention" from "contention resolved in 2ms"; the elapsed assertion only
+   catches a lock held past `lock_timeout`. The keying is correct and visible
+   at `20260810081331_m3_01b_ai_spend_ledger.sql:208-211` — this is a limit on
+   the test, not a defect in the function.
 
 **The parameters were measured, not guessed.** A copy of `reserve_ai_spend`
 with the advisory lock removed and nothing else changed was installed in the
@@ -289,9 +327,14 @@ run. See limitation 9 for the one branch the harness does **not** reach.
 
 The first eight are carried forward from the original builder's handoff, which
 was chat-only — that omission is finding B2, and this section is written afresh
-from the diff rather than copied, so treat it as the record. Items 9 onward are
-findings the independent review surfaced and the product owner is asked to
-accept rather than block on.
+from the diff rather than copied, so treat it as the record. Items 9 through 16
+are findings the first independent review surfaced; 17 and 18 come from the
+re-review of `6eaa0f4`. The product owner is asked to accept them rather than
+block on them. Item 7 was rewritten after the re-review: it stated the wrong
+direction, and the true direction is the worse one.
+
+Read 1, 7, and 17 before the Preview. They are the three that change what the
+product owner should expect or watch for.
 
 1. **This ticket ships a boundary that nothing can reach at runtime, and the
    Preview will show no user-visible change.** `new CoachAIService(` appears
@@ -323,7 +366,9 @@ accept rather than block on.
    peaks with margin; every other candidate in the 9 August bake-off broke at
    least one. If the model changes, revisit decision 4 rather than assuming the
    numbers travel. `maxInputTokens` in particular was sized against two
-   scenarios, not against the regeneration worst case.
+   scenarios, not against the regeneration worst case. Limitation 17 is the
+   sharp edge of this one and is stated separately because it is a spend
+   control failure rather than a sizing question.
 6. **`revoke all privileges on table` names only `public`, `anon`, and
    `authenticated`, so `service_role` keeps Supabase's default `ALL` on
    `ai_spend_reservations`** and could update `charged_micro_usd` directly,
@@ -332,11 +377,29 @@ accept rather than block on.
    service-role client by rule, so it is defence in depth only. Not fixed:
    changing the convention for one table would make the other tables look
    deliberate when they are not. **(Review finding N3.)**
-7. **A reservation reserves against the request's upper bound, so a failed call
-   is charged in full.** That is intended — a call the provider generated has
-   been billed whether or not this process saw the answer — but it means a run
-   of timeouts consumes the daily ceiling at the reserved rate rather than the
-   actual one.
+7. **A timed-out call can end up recorded as zero durable spend, so the ledger
+   under-reports rather than over-reports.** The reservation charges the
+   request's upper bound before the call, which is intended: a call the
+   provider generated has been billed whether or not this process saw the
+   answer. But the reserved amount is a *hold*, not a record. The migration
+   scores an unsettled row at its reserved amount only while
+   `expires_at > v_now` (`20260810081331_m3_01b_ai_spend_ledger.sql:242-253`),
+   so once the fifteen-minute window passes an unsettled row contributes zero.
+
+   The scenario: the provider answers at 31s, the 30s deadline fires,
+   `propose` throws, the Vercel instance freezes, and the settle call never
+   leaves the process. Fifteen minutes later the hold expires and the durable
+   ledger records nothing for a call the provider billed. Correction N1 shrinks
+   the window by awaiting the settlement on the failure path, but cannot close
+   it: an instance that dies mid-await still loses the write.
+
+   Not fixed, and the expiry is not the thing to change — the brief requires
+   it, and pgTAP owner D asserts it, because a reservation that never expires
+   locks the owner out until midnight with no visible cause. The actual
+   backstop for this case is the product owner's €10/month provider-side cap,
+   which counts what OpenAI billed rather than what this repository recorded.
+   That is the ceiling to trust for real spend; the durable one bounds what
+   this system knows about.
 8. **`settle_ai_spend` accepts a charge up to 1,000,000 micro-USD regardless of
    what was reserved**, so a settlement can record more than the 8,000
    per-request ceiling. This is correct for reconciliation — the ledger must
@@ -345,13 +408,28 @@ accept rather than block on.
    per-request ceiling, and because the concurrency harness uses it to seed a
    day in four calls rather than two hundred and fifty.
 9. **The `PT409` lock-timeout branch of `reserve_ai_spend` is not exercised by
-   any test.** Reaching it needs the advisory lock held past `lock_timeout`,
-   which needs a transaction held open across requests, and PostgREST offers no
-   way to do that. The harness proves the mapping is distinguishable by
+   any test.** It is not unreachable — the builder said so and was wrong.
+   Reaching it needs the advisory lock held past `lock_timeout`, which no
+   PostgREST call can do because PostgREST gives no way to hold a transaction
+   open across requests. But the `database` CI job runs Docker, so a background
+
+   ```
+   docker exec supabase_db_<ref> psql -c \
+     "begin; select pg_advisory_xact_lock(62004, hashtext('<uuid>'));
+      select pg_sleep(4); rollback;"
+   ```
+
+   holding the lock for that owner while a `reserve_ai_spend` call is fired at
+   the same owner over PostgREST would hit `lock_not_available` deterministically.
+   That was not built here — it adds a Docker dependency to a harness that has
+   none, on a correction pass scoped to four findings — but the method is
+   recorded so the next ticket gets it cheaply.
+
+   What exists today: the harness proves the mapping is distinguishable by
    asserting the ceiling race is never `PT409`, and proves the `PT409` shape
-   occurs at all through `settle_ai_spend`'s concurrent-settlement race — but
-   the specific `lock_not_available` handler is covered by reading, not by
-   execution. **(Extends review finding B4.)**
+   occurs at all through `settle_ai_spend`'s concurrent-settlement race. The
+   specific `lock_not_available` handler is covered by reading.
+   **(Extends review finding B4.)**
 10. **The ceilings 8,000 / 2,000,000 / 20,000,000 and the operation enum are
     duplicated between the migration and `src/server/ai/budget.ts` with nothing
     cross-checking them.** They agree today. Nothing asserts they will after a
@@ -391,6 +469,35 @@ accept rather than block on.
     hold is invisible to day N+1's daily sum.** Bounded by one reservation,
     roughly 5,200 micro-USD against a 2,000,000 ceiling. **(Review finding
     N9.)**
+17. **Nothing binds `FITTIP_AI_MODEL` to the rate card, so a mismatched model
+    makes every ceiling in the system wrong by the ratio between their
+    prices.** `enablement.ts:136` validates the model string's shape and
+    nothing else, and `OPENAI_GPT_5_6_LUNA_RATE_CARD` (`budget.ts:114-120`)
+    carries luna's $0.20/$1.20 with no check that the configured model is luna.
+
+    Set `FITTIP_AI_MODEL=gpt-5.5` and every reservation still computes 5,200
+    micro-USD while the provider bills roughly twenty-five times that, so the
+    2,000,000 daily ceiling admits on the order of $50/day of real spend
+    against $2 of recorded spend. Decision 6's "unknown price denies" does not
+    catch it, because the price is not unknown — it is wrong, and a wrong price
+    near a hard ceiling is the failure decision 6 exists to prevent.
+
+    **Nothing can be misconfigured today**: there is no composition root, no
+    caller constructs the adapter, and no `FITTIP_AI_MODEL` is read in anger.
+    That is why this is a limitation rather than a defect. **M3-02 must assert
+    the pairing** — the adapter's model, the enablement gate's configured
+    model, and the rate card's model must be one value checked in one place, or
+    a mismatch must deny. Limitation 5 gestures at the sizing consequence; this
+    is the spend-control consequence and is the sharper one.
+18. **`ai-spend-repository.test.ts:116-126` does not check what its name
+    claims.** "never disables retry, so the pinned RPC set stays as it is"
+    asserts only that a mocked `rpc` returned a Promise, which is true whether
+    or not `.retry(false)` is present. The load-bearing guard is
+    `src/architecture/server-boundary.test.ts:73-81`, which pins the exact
+    five-file set that may disable retries and fails if this repository joins
+    it. Left in place and recorded rather than deleted or renamed: renaming a
+    test is a source change on a correction pass scoped to four findings, and
+    the assertion is harmless where it stands.
 
 ## What the reviewer should check that CI cannot
 
@@ -404,6 +511,9 @@ accept rather than block on.
   — the deadline path leaves `durableSettlement` unset by design, and the
   reviewer should confirm that reading rather than trust this sentence.
 - That the concurrency harness's assertions are the ones described above, and
-  that its per-owner claim is not weaker than it reads.
-- That limitations 6 and 10 are things the product owner should accept rather
-  than defects the builder declined to fix.
+  in particular that evidence item 3 now claims only the per-owner **ceiling**.
+  The first review found the harness claiming a per-owner **lock** it cannot
+  demonstrate; if any remaining sentence still reads that way, it is wrong.
+- That limitations 6, 10, and 17 are things the product owner should accept
+  rather than defects the builder declined to fix. 17 is the one with a real
+  cost attached if M3-02 forgets it.

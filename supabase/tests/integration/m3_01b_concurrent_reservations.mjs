@@ -142,11 +142,23 @@ try {
   const second = await createOwner("second");
 
   // ---------------------------------------------------------------------
-  // Race two: the lock and the ceiling are both per owner.
+  // Race two: the ceiling aggregate is per owner.
   //
-  // The saturated owner is refused while a different owner reserving at the
-  // same moment commits. A global lock or an owner-blind aggregate would show
-  // up here as a second refusal or as a wait past the lock timeout.
+  // The saturated owner is refused while two others reserving at the same
+  // moment commit. An owner-blind `sum()` fails here and cannot not fail: by
+  // this point the four boundary rounds have put 8,000,000 micro-USD on the
+  // table across their owners, so a global aggregate refuses both newcomers and
+  // `unaffectedOne` fires.
+  //
+  // **This does not prove the lock is per owner**, and the elapsed-time
+  // assertion below must not be read as proving it. Replacing the migration's
+  // `pg_advisory_xact_lock(62004, hashtext(v_user_id::text))` with a global
+  // `pg_advisory_xact_lock(62004)` leaves this block passing: the three
+  // transactions serialize, but each holds the lock for single-digit
+  // milliseconds, so nothing here can tell "no contention" from "contention
+  // resolved in 2ms". The elapsed bound only catches a lock held past
+  // `lock_timeout`. The lock's per-owner keying is read from the migration, not
+  // demonstrated here.
   // ---------------------------------------------------------------------
   const isolationStartedAt = performance.now();
   const [exhausted, unaffectedOne, unaffectedTwo] = await Promise.all([
@@ -168,9 +180,10 @@ try {
     unaffectedTwo.error === null && unaffectedTwo.data,
     `A third owner must not inherit the refusal: ${unaffectedTwo.error?.message}`,
   );
+  // Catches a lock held past its timeout, and nothing finer. See above.
   assert(
     isolationElapsedMs < LOCK_TIMEOUT_MS,
-    `Owners serialized against each other: ${Math.round(isolationElapsedMs)}ms`,
+    `A reservation waited past the lock timeout: ${Math.round(isolationElapsedMs)}ms`,
   );
   assert(
     (await dailySpend(first)) === PER_REQUEST_CEILING_MICRO_USD,
