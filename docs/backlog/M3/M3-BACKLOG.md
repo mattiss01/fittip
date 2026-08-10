@@ -9,9 +9,17 @@ product-owner approval.
 account/credential posture and the data-use terms. **The model was chosen on
 10 August 2026: `gpt-5.6-luna`**, provisionally. See
 [M3-01B](M3-01B-REAL-PROVIDER-ADAPTER.md) for the resolutions and the exact
-provider terms as read that day. Still not approved: any prompt, price, spend
-ceiling, friend data, external user, public registration, commercial use, or
-analytics sink.
+provider terms as read that day. **M3-01B's remaining decisions — hard limits,
+retry, price source, and durable budget state — were all resolved on 10 August
+2026 and the ticket is in development.** Still not approved: any prompt, friend
+data, external user, public registration, commercial use, or analytics sink.
+
+**The authoritative spend ceiling is the product owner's €10/month cap on the
+OpenAI project**, not a constant in this repository. It is provider-side, so it
+survives a bug in FitTip's own accounting — which is why decision 2 required it.
+The in-app daily and total ceilings are defence in depth and must be revisited
+when there is a second user, since a provider cap cannot tell whose spending it
+is.
 
 **The model was chosen empirically, and the synthetic corpus is shared.** The
 bake-off harness, the authored synthetic athlete, and the selection rule are in
@@ -53,7 +61,7 @@ commercial use, or production.
 | Priority | Ticket | Status | Depends on | Scope | Approval gate |
 |---|---|---|---|---|---|
 | P1 | [M3-01 Server-only AI boundary and fixture adapters](M3-01-LOCAL-AI-ADAPTER-CONTROLS.md) | accepted 4 Aug 2026 | M2-01 through M2-04 accepted; ADR-006, ADR-007, ADR-012 | Provider-neutral `CoachAI` contract, deterministic fixture adapters, owner allowlist/enable flag, ADR-012 goal and memory context allowlist, schema validation, in-memory rate/concurrency/budget/idempotency policy, content-free telemetry. No provider, credential, network call, or spend | Approve the dispatch; no provider decision required |
-| P1 | [M3-01B One approved real-provider adapter](M3-01B-REAL-PROVIDER-ADAPTER.md) | in development 10 Aug 2026 | M3-01 accepted; M0-06A accepted for hosted use | One real adapter behind the accepted contract, server-only credential path, durable fail-closed rate/budget/idempotency state via a revoked-write table and an increment-only `SECURITY DEFINER` function, cost reservation and reconciliation, opt-in live test | Values all approved. Remaining gate: approve dispatch and write the `## Agent brief` |
+| P1 | [M3-01B One approved real-provider adapter](M3-01B-REAL-PROVIDER-ADAPTER.md) | in development 10 Aug 2026 | M3-01 accepted; M0-06A accepted for hosted use | One real adapter behind the accepted contract, server-only credential path, durable fail-closed rate/budget/idempotency state via a revoked-write table and an increment-only `SECURITY DEFINER` function, cost reservation and reconciliation, opt-in live test | All values approved; dispatched 10 Aug 2026. Remaining gate: independent review, Preview, and acceptance |
 | P1 | [M3-02 Roadmap proposal](M3-02-ROADMAP-PROPOSAL.md) | proposed | M3-01 accepted and accepted M2 foundations | Owner-scoped structured high-level roadmap proposal with phases, milestones, uncertainty, review points, source versions, edit/reject/accept boundary; no detailed plan | Approve horizon, schema, uncertainty/review UX, safety, versioning, retention, and transaction choices |
 | P1 | [M3-03 Selected-horizon plan proposal](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md) | proposed | M3-01 and M3-02 accepted | User-selected 1–7 consecutive owner-local dates, structured sport-agnostic sessions and personal activity candidates, goal allocation, constraints, alternatives, reasoning, conservative safety; no acceptance | Approve day-count default/remembering, date/unit/session/activity/time/intensity/allocation/safety/UX limits |
 | P1 | [M3-04 Plan edit, lock, and acceptance](M3-04-PLAN-EDIT-LOCK-ACCEPTANCE.md) | proposed | M3-02 and M3-03 accepted | Structured edits, session/activity locks, side-by-side review, reuse of the M1 personal-activity/version model, transactional immutable roadmap/detailed-plan acceptance; no change to logging and no replan | Approve editable fields, lock inheritance, diff/copy, activity reuse/snapshot, version/current-pointer, transaction, and retention decisions |
