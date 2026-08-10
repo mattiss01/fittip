@@ -1,7 +1,62 @@
 # M3-02: High-level roadmap proposal
 
-**Status:** proposed — decision set approved 10 August 2026; not approved for
-implementation
+**Status:** approved — feature brief and transaction ADR approved by the product
+owner on 10 August 2026; dispatch explicitly paused by the product owner
+
+## Agent brief
+
+**Outcome.** Let the authenticated owner generate, regenerate, inspect, edit,
+decline, and explicitly accept a bounded `fittip.roadmap.v2` proposal while
+preserving immutable proposal and accepted-version history. **Tier 1.** Schema,
+RLS, privacy-sensitive AI context, privileged functions, and spend are involved.
+
+**Hard constraints.**
+
+- Implement [F-004](../../product/F-004-AI-ROADMAP-PROPOSALS.md) and
+  [ADR-015](../../decisions/ADR-015-M3-ROADMAP-TRANSACTIONS.md) exactly. Derive
+  every owner from `auth.uid()`; no service-role client, owner argument, direct
+  authenticated writes, or provider call inside a transaction.
+- The live composition root binds `gpt-5.6-luna` and its approved rate card as
+  one value and refuses any mismatch before a provider call.
+- Regeneration keeps the horizon, carries only the immediately previous rejected
+  proposal, prefills the planning note, requires separate 1-500-character
+  feedback, uses a fresh idempotency key/reservation/charge, and stops after
+  three rounds. Same-key uncertain retries never make another provider call.
+- Memory candidates are 0-4 exact 1-200-character planning-note excerpts,
+  persisted independently as `inferred_proposed` / `proposed`. Feedback never
+  becomes memory; no candidate becomes active without explicit owner review.
+- No safety flag automatically blocks roadmap generation. Show the approved
+  static non-diagnostic copy, require conservative bounded output, and reject
+  diagnosis, treatment, safety claims, or escalation of affected load.
+- Set and test the per-source context allocation carried from M3-01B before this
+  ticket can be accepted. Nothing is silently truncated beyond ADR-013.
+
+**Non-goals.** No detailed sessions or selected-horizon plan, replanning,
+automatic roadmap mutation, chat, global activity library, analytics, friends,
+public/commercial use, new provider/model, service-role credential, automatic
+expiry, or per-proposal deletion.
+
+**Acceptance.** Green exact-commit CI; pgTAP proves grants/RLS/owner and
+cross-owner behavior plus idempotent generation/acceptance; domain fixtures
+prove v2 bounds, source staleness, regeneration, memory separation, injection,
+and no automatic safety blocker; the `390x844` Preview proves the complete
+compose/review/regenerate/edit/decline/accept/history flow; hosted migration
+history, privileges, advisors, and authenticated owner/denied-cross-user reads
+are recorded before product-owner acceptance.
+
+**Expected to change.** One forward migration and pgTAP under `supabase/`;
+generated `src/lib/supabase/database.types.ts`; roadmap records/repository and
+tests under `src/server/`; the AI contracts, context, validation, orchestration,
+fixtures, and tests under `src/server/ai/`; `src/app/home/plan/` and a focused
+roadmap UI under `src/components/`; architecture, action, page, and mobile tests;
+`docs/validation/M3/M3-02-VALIDATION.md`.
+
+**Skills.** Builder: `schema-change`, `tdd`, `codebase-design`,
+`frontend-design`, `vercel-react-best-practices`, `mobile-e2e`, and
+`validation-record`. Reviewer: `code-review`, `schema-change`,
+`frontend-design`, `vercel-react-best-practices`, and `mobile-e2e`.
+
+Read only this section unless you hit an ambiguity it does not resolve.
 
 **Milestone:** M3
 
@@ -20,14 +75,27 @@ policy ADRs named, stub-schema gap recorded
 
 **Revised:** 9 August 2026 — both context ADRs accepted, so they no longer block
 dispatch. Planning-note length and byte reservation settled; the per-source
-context allocation is named as an M3-01B dependency; regeneration confirmed out
-of scope here
+context allocation is named as an M3-01B dependency
 
 **Revised:** 10 August 2026 — decisions 1-6 and 8 approved as drafted; decision
 7 approved with no automatic roadmap-generation blocker
 
 **Revised:** 10 August 2026 — M3-01B accepted; its limitation 17 carries here as
 a hard constraint, see "Hard constraint inherited from M3-01B" below
+
+**Revised:** 10 August 2026 — the missing
+[feature brief](../../product/F-004-AI-ROADMAP-PROPOSALS.md) and dedicated
+[transaction ADR](../../decisions/ADR-015-M3-ROADMAP-TRANSACTIONS.md) were
+drafted after the M3-01B acceptance audit; both required separate product-owner
+approval before dispatch
+
+**Revised:** 10 August 2026 — roadmap regeneration approved: same horizon,
+immediately previous proposal, prefilled planning note, mandatory separate
+feedback, and the same three-round guardrail planned for the detailed plan
+
+**Revised:** 10 August 2026 — F-004 and ADR-015 approved; ticket moved to
+`approved`. The product owner explicitly paused dispatch, so it is not `in
+development` and no implementation agents or ticket branch have been started
 
 **Architecture boundary:** ADR-006 and ADR-007 accepted; M0-06A accepted before
 founder-hosted use
@@ -67,17 +135,21 @@ until the M0 gates pass.
 3. Add a compose step: an optional **planning note** under ADR-014, plus a
    collapsed-by-default summary of the goals, active constraints, and recent
    load the coach will receive.
-4. Request one roadmap candidate through M3-01. The same response carries
-   memory candidates extracted from the planning note; the two sections
-   validate independently, and an invalid memory section is discarded without
-   failing the roadmap.
+4. Request an initial or regenerated roadmap candidate through M3-01. A
+   regeneration is a new request carrying only the immediately previous
+   proposal, the prefilled editable planning note, and mandatory separate
+   feedback. The same response carries memory candidates extracted from the
+   planning note only. Each candidate cites an exact bounded planning-note
+   excerpt, which is validated server-side and becomes the proposed memory
+   text. The two sections validate independently, and an invalid memory section
+   is discarded without failing the roadmap.
 5. Apply deterministic server validation for owner, source versions, time
    bounds, goal allocation, safety, and schema.
 6. Persist an owner-owned, immutable proposal plus minimized source references,
    validation metadata, and the planning note.
 7. Show a 390px review flow with concise rationale and visible uncertainty.
-8. Support explicit accept, reject, and edit-to-new-proposal actions, and
-   review of any extracted memory candidates.
+8. Support explicit accept, reject, regenerate, and edit-to-new-proposal
+   actions, and review of any extracted memory candidates.
 9. Keep acceptance transactional and separate from proposal generation.
 10. Add authorization, versioning, AI-output, UX, safety, and idempotency
     tests, including planning-note injection cases under ADR-014 decision 4.
@@ -144,10 +216,13 @@ truncating — so an owner who curates a large memory cannot generate at all, an
 the error does not say which source is at fault. The allocation is set with
 [M3-01B](M3-01B-REAL-PROVIDER-ADAPTER.md) decision 4; this ticket consumes it.
 
-**Regeneration is out of scope here.** ADR-014's two-field compose shape and its
-mandatory-feedback rule are recorded in
-[M3-03](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md). This ticket ships the initial
-planning note only.
+**Regeneration now applies here as well as M3-03.** It uses ADR-014's two-field
+compose shape: the planning note is prefilled and editable, while regeneration
+feedback starts empty and is mandatory. Feedback is capped at **500
+characters**, reserves **600 bytes**, and never produces a memory candidate.
+Only the immediately previous proposal travels, never the full chain. The
+regeneration ceiling is **3 per horizon**, as a product guardrail rather than a
+spend control.
 
 ## The implemented roadmap schema is a stub
 
@@ -192,6 +267,9 @@ explore what a good roadmap looks like.
 - Proposal and accepted version are separate permanent records.
 - A proposal stores operation/schema/prompt versions, model technical codes,
   validation state, idempotency reference, and source record ids/versions.
+- A regenerated proposal also stores its immediately previous proposal link and
+  the bounded feedback that requested the change. It does not duplicate the
+  older chain.
 - It does not store raw prompts or duplicate raw source content solely for
   telemetry.
 - Accepting creates an immutable accepted roadmap version referencing its
@@ -238,14 +316,22 @@ accepted goal dates and approved maximum horizons.
    owner may reject the roadmap and keep a candidate, or the reverse.
 7. The owner may **Accept**, **Edit proposal**, or **Reject**. No action is
    preselected.
-8. Edit shows structured fields and produces a new reviewable proposal.
-9. Accept creates one immutable accepted roadmap version and returns to its
-   detail.
-10. Failure shows a safe retry path; it never falls back to unstructured prose
+8. After rejection, **Regenerate proposal** reopens compose with the same dates,
+   the prior planning note prefilled and editable, and a required empty
+   feedback field. Confirmation makes a new paid request with only the
+   immediately previous proposal as additional context.
+9. Regeneration is capped at three per horizon. At the cap the interface directs
+   the owner to structured editing; changing dates starts a fresh request rather
+   than a regeneration.
+10. Edit shows structured fields and produces a new reviewable proposal.
+11. Accept creates one immutable accepted roadmap version and returns to its
+    detail.
+12. Failure shows a safe retry path; it never falls back to unstructured prose
     or claims a roadmap was saved.
 
-Exact labels, horizon defaults, edit controls, and copy remain open product
-decisions.
+The generation and regeneration labels and horizon behavior are settled above.
+Edit-control details and copy not explicitly fixed in the approved decisions
+remain open product decisions.
 
 ## AI and safety rules
 
@@ -264,24 +350,29 @@ decisions.
 
 ## Acceptance criteria
 
-1. An owner can request, inspect, edit, reject, and accept a roadmap proposal at
-   `390x844`.
+1. An owner can request, inspect, reject, regenerate, edit, and accept a roadmap
+   proposal at `390x844`.
 2. Context uses only eligible active goals and memory records that are
    user-created or explicitly accepted by the current user, training history
    within ADR-013's bounds, and the owner's planning note.
-2a. A planning note cannot alter the horizon, the schema, context eligibility,
-    the safety rule, any limit, or cause a write. Proven by fixtures that
-    attempt each, not asserted.
+2a. A planning note or regeneration feedback cannot alter the horizon, the
+    schema, context eligibility, the safety rule, any limit, or cause a write.
+    Proven by fixtures that attempt each, not asserted.
 2b. Memory candidates from the note are created `inferred_proposed` /
     `proposed` and never active without explicit owner review. An invalid
-    memory section is discarded and the roadmap still returns.
+    memory section is discarded and the roadmap still returns. Regeneration
+    feedback never produces a memory candidate: each candidate must cite an
+    exact bounded excerpt from the planning note, and that excerpt becomes the
+    proposed memory text.
 3. Output is structured, sport-agnostic, bounded, versioned, and includes
    uncertainty and explicit review points.
 4. Proposal, rejection, and accepted roadmap are distinguishable records;
    acceptance creates an immutable version.
 5. No proposal or edit becomes active without explicit acceptance.
 6. Concurrent/retried generation and acceptance are idempotent and cannot
-   duplicate provider calls or accepted versions.
+   duplicate provider calls or accepted versions. A regeneration uses a new
+   request, remains on the original horizon, carries only its immediate
+   predecessor, requires bounded feedback, and cannot exceed three rounds.
 7. Stale source records or a changed current roadmap create a conflict for
    review, not silent overwrite.
 8. User B and anonymous callers cannot read or mutate user A's proposals,
@@ -298,14 +389,19 @@ decisions.
   uncertainties, review points, unknown fields, size, and invalid dates.
 - Owner/anonymous/cross-user RLS and repository tests for proposal/source/
   accepted-version records.
-- Generation/accept/reject/edit idempotency, stale source, concurrent
-  acceptance, and simulated transaction failure.
+- Generation/regeneration/accept/reject/edit idempotency, stale source,
+  concurrent acceptance, and simulated transaction failure. Prove the
+  three-round cap, fixed horizon, immediate-predecessor-only context, planning
+  note carry-forward, mandatory feedback, and fresh idempotency/spend record.
+- Memory-candidate fixtures prove the zero-to-four bound, exact
+  planning-note-excerpt requirement, feedback exclusion, independent section
+  rejection, and idempotent persistence.
 - AI fixture plus opt-in live owner/synthetic path through M3-01; verify zero
   direct writes and safe failure.
 - Safety fixtures for ordinary limitation, severe/acute/worsening signal, and
   prohibited diagnosis/treatment claims.
-- Playwright at `390x844` for empty, generating, proposal, uncertainty, edit,
-  reject, accept, conflict, and safe error states.
+- Playwright at `390x844` for empty, generating, proposal, uncertainty, reject,
+  regeneration compose/cap, edit, accept, conflict, and safe error states.
 - Leakage scans for prompts/content/secrets in telemetry, logs, errors,
   screenshots, snapshots, URLs, and client bundles.
 
@@ -332,8 +428,11 @@ provider/spend behavior was added.
 
 **Approved by the product owner on 10 August 2026.** Decisions 1-6 and 8 were
 approved as drafted. Decision 7 was discussed separately and approved with no
-automatic roadmap-generation blocker. This resolves the decision set but does
-not approve implementation or move the ticket out of `proposed`.
+automatic roadmap-generation blocker. Later that day, the product owner amended
+decision 4 to add roadmap regeneration with the same core contract as detailed
+plan regeneration: fixed horizon, immediate predecessor only, prefilled
+planning note, mandatory separate feedback, and a three-round guardrail. These
+approvals do not approve implementation or move the ticket out of `proposed`.
 
 ### 1. Horizon
 
@@ -435,11 +534,21 @@ about what is saved.
   unchanged.** Disable duplicate submission while retaining the idempotency
   key across an uncertain retry.
 - Review actions: **Accept roadmap**, **Edit proposal**, and **Decline
-  proposal**. No action is preselected. There is no **Regenerate** action in
-  M3-02.
+  proposal**. No action is preselected.
 - **Decline proposal** opens a confirmation: **Decline this proposal? It will
   stay in your roadmap history and will not become current.** This slice stores
   the rejected status but no reason field or extra free text.
+- After decline, **Regenerate proposal** opens **Shape your roadmap** with the
+  same horizon and prefilled editable planning note. **What should the coach
+  change?** starts empty, is required, and allows at most 500 characters.
+  Supporting copy says **The previous proposal will be shared with the coach.
+  Nothing changes until you accept.** Confirmation is **Generate another
+  proposal**.
+- A regeneration is a new provider call with a new idempotency key, reservation,
+  and charge. It sends only the immediately previous proposal, never the full
+  chain. The third regeneration ends the chain and directs the owner to **Edit
+  proposal**. Changing the horizon exits regeneration and starts a fresh
+  request.
 - Editing is a structured form, not raw JSON. The owner may edit the roadmap
   title/summary; phase titles, focus, dates, order, and bounded add/remove;
   milestone text/dates; goal-attention levels/reasons; assumptions,
@@ -483,6 +592,17 @@ approved per-field truncation.
 the roadmap content, with the accepted M2-02 **Accept**, **Edit and accept**, and
 **Decline** controls. The roadmap action dock and memory controls remain
 visually and transactionally separate.
+
+- The response may contain 0-4 candidates. A candidate contains `memoryType`,
+  `sourceExcerpt`, and optional bounded `confidence`; it does not contain a
+  second model-authored version of the memory text.
+- `sourceExcerpt` is 1-200 characters and must be an exact substring of the
+  planning note after the same newline/Unicode normalization used before the
+  request. The normalized excerpt becomes the proposed memory content and is
+  not stored again on the roadmap.
+- If any candidate excerpt is absent from the planning note — including text
+  present only in regeneration feedback — the entire memory-candidate section
+  is discarded while a valid roadmap remains reviewable.
 
 - Accepting or declining the roadmap updates the roadmap state in place; it
   does not decide any memory candidate.
@@ -584,6 +704,10 @@ owner-derived database functions for proposal persistence and acceptance.
 - Valid extracted memory candidates are then created through the accepted
   M2-02 memory boundary. Their failure does not invalidate a valid roadmap, and
   the operation/request id prevents duplicate candidates on retry.
+- The durable generation claim distinguishes an uncertain same-key retry from a
+  regeneration. A regeneration has a new key, preserves the predecessor's
+  horizon, records its predecessor and feedback, and enforces the three-round
+  ceiling before any provider call.
 - A separate acceptance function atomically verifies proposal ownership and
   state, expected source revisions, and expected current-roadmap revision;
   inserts the immutable accepted version; updates the single current pointer;
@@ -602,15 +726,18 @@ privileges, idempotency keys, rollback behavior, and deletion consequences.
 
 ## Approval gate
 
-**The decision set was approved on 10 August 2026; implementation was not.** The
-ticket remains `proposed`. Before implementation approval and dispatch:
+**Satisfied on 10 August 2026.** The product behavior, F-004, and ADR-015 are
+approved. The ticket is ready for Tier 1 dispatch, but the product owner has
+explicitly paused dispatch. Therefore it remains `approved`, not `in
+development`, and no builder or reviewer may start yet.
 
-1. M3-01B must be accepted, merged, pushed, deployed to the founder environment,
-   and have its required hosted verification recorded.
-2. An approved roadmap feature brief must exist; the repository currently has
-   no M3 roadmap feature brief.
-3. Decision 8's dedicated transaction ADR must be drafted and separately
-   approved with the exact privileged boundary.
+1. **Satisfied 10 August 2026:** M3-01B is accepted, merged, pushed, deployed to
+   the founder environment, and its required hosted verification is recorded.
+2. **Satisfied 10 August 2026:**
+   [F-004](../../product/F-004-AI-ROADMAP-PROPOSALS.md) is approved.
+3. **Satisfied 10 August 2026:**
+   [ADR-015](../../decisions/ADR-015-M3-ROADMAP-TRANSACTIONS.md) is accepted with
+   its exact privileged boundary.
 
 The deferred per-source context allocation in M3-01B decision 4 must be settled
 before M3-02 can be accepted, and earlier if the owner approaches its recorded

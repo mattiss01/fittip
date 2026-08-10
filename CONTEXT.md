@@ -104,10 +104,11 @@ prompt, and context limits. The set is enumerated and closed.
 _Avoid_: task, action, call, endpoint
 
 **Regeneration**:
-Asking the coach for another proposal after rejecting one. No plan version
-exists and nothing is superseded. A new request carrying the rejected candidate
-— never a continuation of an earlier one, because no conversation is kept.
-_Avoid_: retry, refine, iterate, redo
+Asking the coach for another roadmap or detailed-plan proposal after rejecting
+one. The rejected proposal created no accepted version and regeneration itself
+supersedes nothing. It is a new request carrying the rejected candidate — never
+a continuation of an earlier one, because no conversation is kept.
+_Avoid_: retry, refine, iterate, redo, re-propose
 
 **Editing**:
 Changing a proposal's structured fields yourself, before accepting it. Purely
