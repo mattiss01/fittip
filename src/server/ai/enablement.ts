@@ -158,16 +158,25 @@ export function requireCoachAILiveEnablement(
 }
 
 /**
- * Any `NEXT_PUBLIC_*` variable naming AI. Next.js inlines those into client
- * code, so their mere existence means the boundary has already been crossed.
+ * Any `NEXT_PUBLIC_*` variable naming AI generically or naming a model
+ * provider. Next.js inlines those into client code, so their mere existence
+ * means the boundary has already been crossed.
+ *
+ * The provider names are here because the generic `AI` token does not match
+ * `NEXT_PUBLIC_OPENAI_KEY`, `NEXT_PUBLIC_ANTHROPIC_KEY`, or
+ * `NEXT_PUBLIC_GEMINI_KEY` — the three names most likely to appear on a real
+ * key — which M3-01's independent review found while the comment above claimed
+ * otherwise. A name added here must be added to the test alongside it.
  */
+const PUBLIC_AI_VARIABLE_PATTERN = /(^|_)(AI|OPENAI|ANTHROPIC|GEMINI)(_|$)/;
+
 export function hasPublicAIVariable(
   environment: Record<string, string | undefined>,
 ): boolean {
   return Object.keys(environment).some(
     (key) =>
       key.startsWith("NEXT_PUBLIC_") &&
-      /(^|_)AI(_|$)/.test(key.slice("NEXT_PUBLIC_".length)),
+      PUBLIC_AI_VARIABLE_PATTERN.test(key.slice("NEXT_PUBLIC_".length)),
   );
 }
 

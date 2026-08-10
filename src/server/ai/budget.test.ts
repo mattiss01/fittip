@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   CoachAIBudget,
   COACH_AI_FIXTURE_LIMITS,
+  COACH_AI_LIVE_LIMITS,
+  OPENAI_GPT_5_6_LUNA_RATE_CARD,
   type CoachAILimits,
   type CoachAIRateCard,
 } from "@/server/ai/budget";
@@ -251,5 +253,47 @@ describe("reconciliation", () => {
       chargedMicroUsd: UPPER_BOUND_MICRO_USD,
       reconciled: false,
     });
+  });
+});
+
+describe("the approved live caps", () => {
+  it("reserves the figure M3-01B decision 4 was approved against", () => {
+    const budget = new CoachAIBudget();
+
+    const reservation = budget.reserve({
+      ownerId: "53000000-0000-4000-8000-000000000001",
+      operation: "create_roadmap",
+      now: new Date("2026-08-10T09:00:00.000Z"),
+      limits: COACH_AI_LIVE_LIMITS,
+      rateCard: OPENAI_GPT_5_6_LUNA_RATE_CARD,
+    });
+
+    // 8,000 input at $0.20/M plus 3,000 output at $1.20/M. The per-request
+    // ceiling is 8,000, so the reservation clears it with headroom — the
+    // fixture ceiling of 250,000 would have admitted a request costing 48 times
+    // what a real proposal costs, which is not a ceiling.
+    expect(reservation.reservedMicroUsd).toBe(5_200);
+    expect(COACH_AI_LIVE_LIMITS.perRequestCostCeilingMicroUsd).toBe(8_000);
+  });
+
+  it("permits no automatic retry", () => {
+    // Decision 5. A call that fails after the provider generated a response has
+    // already been charged, so a retry buys a second charge for one proposal.
+    expect(COACH_AI_LIVE_LIMITS.maxAttempts).toBe(1);
+  });
+
+  it("treats a stale rate card as unknown, and unknown denies", () => {
+    const budget = new CoachAIBudget();
+
+    expect(() =>
+      budget.reserve({
+        ownerId: "53000000-0000-4000-8000-000000000001",
+        operation: "create_roadmap",
+        // One day after the card's validUntil.
+        now: new Date("2027-02-02T00:00:00.000Z"),
+        limits: COACH_AI_LIVE_LIMITS,
+        rateCard: OPENAI_GPT_5_6_LUNA_RATE_CARD,
+      }),
+    ).toThrow(CoachAIError);
   });
 });

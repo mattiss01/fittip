@@ -33,6 +33,19 @@ const RUNTIME_FILES = sourceFiles(AI_ROOT).filter(
   (path) => !path.endsWith(".test.ts"),
 );
 
+/**
+ * The single module M3-01B permits to open a socket.
+ *
+ * Until M3-01B there was no real provider, so "nothing under `src/server/ai`
+ * reaches the network" was both true and free. One adapter now has to, and
+ * naming it here keeps the assertion meaningful rather than deleting it: every
+ * other module in the subtree is still held to the original rule, and a second
+ * file that reaches out fails this test. What that adapter is additionally
+ * required to do — pass the live enablement gate it cannot exempt itself from —
+ * is asserted in `src/architecture/coach-ai-network-gate.test.ts`.
+ */
+const APPROVED_NETWORK_ADAPTER = join(AI_ROOT, "openai-adapter.ts");
+
 /** A distinctive health-adjacent sentence, as an owner might really write. */
 const SENSITIVE = "Sharp left knee pain on stairs since 12 July.";
 
@@ -47,6 +60,18 @@ describe("the AI boundary reaches nothing it should not", () => {
       "a Node HTTP module",
       /require\(["']https?["']\)|from\s+["']node:https?["']/,
     ],
+  ])("uses no %s outside the one approved adapter", (_case, pattern) => {
+    const others = RUNTIME_FILES.filter(
+      (path) => path !== APPROVED_NETWORK_ADAPTER,
+    );
+
+    expect(others).toHaveLength(RUNTIME_FILES.length - 1);
+    for (const path of others) {
+      expect(readFileSync(path, "utf8")).not.toMatch(pattern);
+    }
+  });
+
+  it.each([
     ["the console", /\bconsole\s*\./],
     ["browser storage", /\b(localStorage|sessionStorage|document\.cookie)\b/],
     ["a service role credential", /SERVICE_ROLE/],
