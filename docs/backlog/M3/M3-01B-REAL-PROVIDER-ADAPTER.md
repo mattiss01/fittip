@@ -1,14 +1,8 @@
 # M3-01B: One approved real-provider adapter
 
-**Status:** proposed — **every open decision is now resolved** as of 10 August
-2026: provider and model (OpenAI, `gpt-5.6-luna`), account and credential,
-data-use terms, hard limits, retry, price source, live-test data, and durable
-budget state. One sub-item is deferred with a recorded trigger: decision 4's
-per-source byte allocation. The ticket still needs the product owner's explicit
-approval to dispatch, and the brief below must be written against the scope
-actually being dispatched — per AGENTS.md a `proposed` ticket gains its
-`## Agent brief` when it is approved for implementation, and this one does not
-have it yet.
+**Status:** in development — approved for dispatch by the product owner on
+10 August 2026, with every decision resolved. One sub-item is deferred with a
+recorded trigger: decision 4's per-source byte allocation.
 
 **Tier 1.** Schema, migration, authorization, credentials, an external service,
 and spend — decision 8 alone adds a migration with revoked privileges and a
@@ -28,6 +22,65 @@ and spend — decision 8 alone adds a migration with revoked privileges and a
 **Blocks:** [M3-02](M3-02-ROADMAP-PROPOSAL.md),
 [M3-03](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md), and
 [M3-05](M3-05-M3-VALIDATION-SLICE.md)
+
+## Agent brief
+
+**Outcome.** One OpenAI adapter behind the accepted `CoachAI` contract, plus
+durable spend state that a capped owner cannot reset, so a verified owner can
+generate a schema-validated proposal from real model output inside approved
+limits. **Tier 1.**
+
+**Build the database slice first.** It blocks the adapter's reservation path and
+carries the ticket's real risk.
+
+**Hard constraints.**
+
+- **No API key exists and you must not obtain one. Make zero real provider
+  calls.** Prove the adapter against a local stub HTTP endpoint returning
+  controlled status codes, bodies, delays, and hangs. The single live pass is
+  the lead's, after review.
+- **Do not change `src/server/ai/contracts.ts`.** If the adapter cannot fit it,
+  stop and report — that is a finding about the interface, not licence to widen
+  it.
+- Model `gpt-5.6-luna`. Limits: `maxInputTokens` 8,000, `maxOutputTokens` 3,000,
+  `deadlineMs` 30,000, `maxAttempts` **1** with the SDK's own retries explicitly
+  off, `perRequestCostCeilingMicroUsd` 8,000. Unknown or stale price denies.
+- The credential is server-only: never `NEXT_PUBLIC_`, never in logs, errors,
+  telemetry, fixtures, snapshots, or a client bundle.
+- **Spend table:** `REVOKE INSERT, UPDATE, DELETE` from `authenticated`; RLS
+  allows the owner `SELECT` on their own rows only. Writes go through
+  `SECURITY DEFINER` functions that derive the owner from `auth.uid()` and never
+  take it as a parameter, carry `SET search_path = ''`, check the ceiling and
+  write in one statement, and settle once only. Reservations must expire — a
+  crashed call otherwise consumes the daily ceiling forever and locks the owner
+  out with no visible cause.
+
+**Non-goals.** No second provider, fallback chain, or routing gateway. No
+proposal persistence, roadmap or plan UI, streaming, or replan. No friend data,
+external tester, or production path. Do not resolve decision 4's per-source byte
+allocation — it is deferred deliberately.
+
+**Acceptance.**
+
+1. Green CI for the reviewed commit.
+2. pgTAP proves an authenticated owner cannot reset, lower, or delete their own
+   spend by any route, and cannot touch another owner's row.
+3. An architecture invariant fails if a module that can reach the network
+   bypasses the enablement gate. The gate must not key on `adapter.kind`, which
+   an adapter asserts about itself — see "Carried forward" item 1.
+4. Stub tests cover timeout, hang, 429, 5xx, malformed JSON, and truncation.
+5. No test makes a real provider call.
+
+**Expected to change.** A new adapter under `src/server/ai/`; `enablement.ts`
+(gate, and widen `hasPublicAIVariable` for `NEXT_PUBLIC_OPENAI_*`); `budget.ts`
+(limits, and release the concurrency slot on settlement not deadline); a new
+`supabase/migrations/*.sql`; pgTAP under `supabase/tests/`;
+`src/architecture/*.test.ts`; regenerated `src/lib/supabase/database.types.ts`.
+
+**Skills.** Read `.agents/skills/schema-change/SKILL.md` and
+`.agents/skills/tdd/SKILL.md` — Claude Code does not auto-discover these.
+
+Read only this section unless you hit an ambiguity it does not resolve.
 
 ## Why this is a separate ticket
 
@@ -245,7 +298,7 @@ still block dispatch.
      still stops a runaway.
    - **`dailyCostCeilingMicroUsd` and `totalCostCeilingMicroUsd` stay as
      shipped**, because the authoritative ceiling is elsewhere: the product
-     owner holds a **€5/month cap on the OpenAI project**. That cap is
+     owner holds a **€10/month cap on the OpenAI project**. That cap is
      provider-side, so it survives a bug in this repository's own accounting,
      which is exactly why decision 2 required it. Revisit both in-app numbers
      when there is a second user, since a provider cap cannot distinguish
@@ -340,7 +393,7 @@ still block dispatch.
      spend counter the capped user can reset. An ordinary owned table with RLS
      is therefore not sufficient here, and this is the one place in FitTip where
      "the owner owns their rows" is the wrong answer.
-   - Deferring this was offered and declined. The product owner has a €5/month
+   - Deferring this was offered and declined. The product owner has a €10/month
      cap on the OpenAI project, which is the only ceiling that currently holds,
      and shipping in-memory state would have been defensible while they are the
      sole user. Building it now means the privilege work is done once, under
