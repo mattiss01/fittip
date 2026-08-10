@@ -99,6 +99,11 @@ describe("live enablement gate", () => {
       "not_enabled",
     ],
     [
+      "a publicly exposed provider key",
+      { ...LOCAL, NEXT_PUBLIC_OPENAI_KEY: "leaked" },
+      "not_enabled",
+    ],
+    [
       "no owner allowlist",
       omit(LOCAL, "FITTIP_AI_OWNER_ALLOWLIST"),
       "owner_denied",
@@ -193,6 +198,23 @@ describe("live enablement gate", () => {
     expect(hasPublicAIVariable({ NEXT_PUBLIC_FITTIP_AI: "x" })).toBe(true);
     expect(hasPublicAIVariable({ NEXT_PUBLIC_SUPABASE_URL: "x" })).toBe(false);
     expect(hasPublicAIVariable({ FITTIP_AI_API_KEY: "x" })).toBe(false);
+  });
+
+  // Carried forward from M3-01's review: the generic `AI` token matched none of
+  // the three names a real key is most likely to carry, while the comment above
+  // the function claimed it did. M3-01B names a provider, so these now match.
+  it.each([
+    "NEXT_PUBLIC_OPENAI_KEY",
+    "NEXT_PUBLIC_ANTHROPIC_KEY",
+    "NEXT_PUBLIC_GEMINI_KEY",
+    "NEXT_PUBLIC_OPENAI",
+  ])("spots the publicly exposed provider key %s", (name) => {
+    expect(hasPublicAIVariable({ [name]: "leaked" })).toBe(true);
+  });
+
+  it("does not mistake an unrelated public variable for a provider key", () => {
+    expect(hasPublicAIVariable({ NEXT_PUBLIC_TRAINING_MODE: "x" })).toBe(false);
+    expect(hasPublicAIVariable({ NEXT_PUBLIC_DOMAIN: "x" })).toBe(false);
   });
 });
 

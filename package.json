@@ -18,6 +18,7 @@
     "test:m1-01-concurrency": "node supabase/tests/integration/m1_01_concurrent_data_api.mjs",
     "test:m2-01-concurrency": "node supabase/tests/integration/m2_01_concurrent_goal_mutations.mjs",
     "test:m2-01-concurrency-lifecycle": "node supabase/tests/integration/m2_01_concurrent_reorder_lifecycle.mjs",
+    "test:m3-01b-concurrency": "node supabase/tests/integration/m3_01b_concurrent_reservations.mjs",
     "test:e2e": "playwright test",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

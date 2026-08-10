@@ -51,6 +51,40 @@ export const COACH_AI_FIXTURE_LIMITS: CoachAILimits = {
   totalCostCeilingMicroUsd: 20_000_000,
 };
 
+/**
+ * The approved live caps (M3-01B decision 4, 10 August 2026), sized against
+ * `gpt-5.6-luna`'s measured behaviour rather than against a guess.
+ *
+ * `maxOutputTokens` is 3,000 for a forward-looking reason rather than a
+ * measured one: luna peaked at 1,513, but M3-03 adds a coach-authored week
+ * description to the plan schema, and a ceiling that fits today's schema but
+ * not the next one produces a truncation that looks exactly like a model
+ * failure. `perRequestCostCeilingMicroUsd` drops from the fixture value of
+ * 250,000 to 8,000 because a reservation costs 5,200 at luna's rates, and a
+ * ceiling 48 times the thing it bounds is not a ceiling.
+ *
+ * These numbers are the local fast path. The authoritative ceilings are the
+ * database's, in `reserve_ai_spend`, because this process cannot be trusted to
+ * bound its own spending, and above both sits the product owner's provider-side
+ * monthly cap on the OpenAI project — the only ceiling that survives a bug in
+ * this repository's own accounting.
+ */
+export const COACH_AI_LIVE_LIMITS: CoachAILimits = {
+  windowMs: 60_000,
+  maxRequestsPerOwnerWindow: 6,
+  maxRequestsPerOperationWindow: 3,
+  maxConcurrentRequests: 1,
+  maxInputTokens: 8_000,
+  maxOutputTokens: 3_000,
+  deadlineMs: 30_000,
+  // Decision 5: zero automatic retries. A call that fails after the provider
+  // generated a response has already been charged.
+  maxAttempts: 1,
+  perRequestCostCeilingMicroUsd: 8_000,
+  dailyCostCeilingMicroUsd: 2_000_000,
+  totalCostCeilingMicroUsd: 20_000_000,
+};
+
 export type CoachAIRateCard = {
   version: string;
   currency: "USD";
@@ -62,6 +96,38 @@ export type CoachAIRateCard = {
 
 /** Returns `null` when no price is known. Unknown is never treated as zero. */
 export type CoachAIRateCardSource = () => CoachAIRateCard | null;
+
+/**
+ * `gpt-5.6-luna` at $0.20 / $1.20 per million input / output tokens, read on
+ * 10 August 2026.
+ *
+ * M3-01B decision 6: the rate card is a constant in this repository, versioned
+ * and updated by deploy, never fetched at runtime — a price lookup that can
+ * fail is one more thing between the owner and a proposal. Past `validUntil`
+ * the price is stale, stale is unknown, and unknown denies, because a wrong
+ * price near a hard ceiling is worse than no proposal.
+ *
+ * Against `COACH_AI_LIVE_LIMITS` a reservation charges 8,000 x 200,000/1e6 plus
+ * 3,000 x 1,200,000/1e6 = 5,200 micro-USD, inside the 8,000 per-request
+ * ceiling with headroom.
+ */
+export const OPENAI_GPT_5_6_LUNA_RATE_CARD: CoachAIRateCard = {
+  version: "openai-gpt-5.6-luna-2026-08-10",
+  currency: "USD",
+  inputMicroUsdPerMillionTokens: 200_000,
+  outputMicroUsdPerMillionTokens: 1_200_000,
+  validUntil: "2027-02-01T00:00:00.000Z",
+};
+
+/**
+ * A rate card source over a fixed card. Injected rather than read from module
+ * state, so one request never observes another's price.
+ */
+export function staticCoachAIRateCardSource(
+  rateCard: CoachAIRateCard,
+): CoachAIRateCardSource {
+  return () => rateCard;
+}
 
 export type CoachAIReservation = {
   ownerId: string;

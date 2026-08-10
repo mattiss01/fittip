@@ -98,6 +98,9 @@ jobs:
       - name: M2-01 concurrent reorder and lifecycle
         run: npm run test:m2-01-concurrency-lifecycle
 
+      - name: M3-01B concurrent spend reservations
+        run: npm run test:m3-01b-concurrency
+
       - name: Stop local Supabase stack
         if: always()
         run: npx supabase stop --no-backup

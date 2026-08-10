@@ -23,6 +23,8 @@ import { buildCoachAIContext } from "@/server/ai/context";
 import type { CoachAIContextSource } from "@/server/ai/context-source";
 import { requireCoachAILiveEnablement } from "@/server/ai/enablement";
 import { CoachAIError } from "@/server/ai/errors";
+import { isNetworkFreeCoachAI } from "@/server/ai/network-free-adapters";
+import type { CoachAISpendHandle, CoachAISpendLedger } from "@/server/ai/spend";
 import {
   buildCoachAIIdempotencyKey,
   CoachAIIdempotencyStore,
@@ -68,6 +70,14 @@ export type CoachAIServiceDependencies = {
   limits: CoachAILimits;
   budget: CoachAIBudget;
   idempotency: CoachAIIdempotencyStore<CoachAIProposalOutcome>;
+  /**
+   * Durable, fail-closed spend state. Absent for a fixture run, which reaches
+   * nothing and spends nothing; required for any hosted one, because the
+   * in-memory budget does not survive an instance change. Optional in the type
+   * and mandatory in fact: `#run` refuses any adapter that is not on the
+   * network-free allowlist unless this is present.
+   */
+  spendLedger?: CoachAISpendLedger;
   telemetry: CoachAITelemetrySink;
   rateCard: CoachAIRateCardSource;
   clock: () => Date;
@@ -151,18 +161,32 @@ export class CoachAIService {
     draft.schemaVersion = schemaVersion;
     draft.promptVersion = promptVersion;
 
-    // The live gate applies to a real provider and only to a real provider. A
-    // fixture adapter reaches nothing and spends nothing, so requiring a
-    // credential to run one would make the gate a nuisance instead of a
-    // control — and a nuisance control is the kind people disable.
+    // Deny by default. The gate is skipped only for an adapter on the explicit
+    // network-free allowlist, which is keyed on constructor identity rather
+    // than on `kind` — `kind` is something an adapter asserts about itself, so
+    // a provider adapter copy-pasted from `FixtureCoachAI` would have inherited
+    // an exemption it does not deserve. A fixture adapter still skips the gate:
+    // it reaches nothing and spends nothing, and a control that is a nuisance
+    // is the kind people disable.
     let environment: CoachAIEnvironment = "local";
-    if (this.deps.adapter.kind === "provider") {
+    if (!isNetworkFreeCoachAI(this.deps.adapter)) {
       const enablement = requireCoachAILiveEnablement({
         operation,
         ownerId: input.owner.id,
         environment: this.deps.environment,
       });
       environment = enablement.environment;
+
+      // The gate is not complete without this. A composition root that wires a
+      // real adapter, the live flag, the allowlist and the credential but omits
+      // the ledger would pass every check above and call out with no ceiling
+      // that survives an instance change: `CoachAIBudget` is in-memory, so a
+      // Vercel cold start begins at zero spend and `dailyCostCeilingMicroUsd`
+      // never binds. Refusing here costs a misconfigured deployment its
+      // coaching feature; not refusing costs it the daily ceiling.
+      if (!this.deps.spendLedger) {
+        throw new CoachAIError("budget_unavailable");
+      }
     }
     draft.environment = environment;
 
@@ -252,6 +276,34 @@ export class CoachAIService {
     draft.rateCardVersion = reservation.rateCardVersion;
     draft.currency = reservation.currency;
 
+    // The in-memory reserve runs first because it holds the rate and
+    // concurrency limits the durable ledger does not, and refusing locally
+    // costs no round trip. The ledger's ceilings are the authoritative ones:
+    // they are enforced inside the database, where the capped owner cannot
+    // reach them.
+    const ledger = this.deps.spendLedger;
+    let durable: CoachAISpendHandle | null = null;
+    if (ledger) {
+      try {
+        durable = await ledger.reserve({
+          operation,
+          reservedMicroUsd: reservation.reservedMicroUsd,
+          rateCardVersion: reservation.rateCardVersion,
+          currency: reservation.currency,
+        });
+      } catch (error) {
+        // No provider call was made, so nothing was spent. Releasing the
+        // in-memory hold keeps a durable refusal from also consuming the local
+        // ceiling and the concurrency slot.
+        this.deps.budget.settle(
+          reservation,
+          { inputTokens: 0, outputTokens: 0 },
+          rateCard,
+        );
+        throw error;
+      }
+    }
+
     const request: CoachAIRequest = {
       requestId: input.requestId,
       ownerId: input.owner.id,
@@ -267,34 +319,98 @@ export class CoachAIService {
       context: assembled.context,
     };
 
-    let candidate: CoachAICandidate | null = null;
-    let settlement: CoachAISettlement | null = null;
-    try {
-      // Exactly one attempt. An automatic retry would need approved
-      // idempotency and billing behavior, which M3-01 does not have.
-      draft.attemptCount = 1;
-      candidate = await this.#withDeadline(
-        operation === "create_roadmap"
-          ? this.deps.adapter.createRoadmap(request)
-          : this.deps.adapter.createSevenDayPlan(request),
-        limits.deadlineMs,
-      );
-    } finally {
-      settlement = this.deps.budget.settle(
+    // Held in an object so that assigning it from the callback below does not
+    // leave the compiler narrowing it to `null` at every later use.
+    const state: {
+      settlement: CoachAISettlement | null;
+      durableSettlement: Promise<void> | null;
+    } = { settlement: null, durableSettlement: null };
+
+    const settleOnce = (result: CoachAICandidate | null): CoachAISettlement => {
+      if (state.settlement) return state.settlement;
+      const settled = this.deps.budget.settle(
         reservation,
-        candidate
+        result
           ? {
-              inputTokens: candidate.reportedInputTokens,
-              outputTokens: candidate.reportedOutputTokens,
+              inputTokens: result.reportedInputTokens,
+              outputTokens: result.reportedOutputTokens,
             }
           : null,
         rateCard,
       );
-      draft.chargedCostMicroUsd = settlement.chargedMicroUsd;
-      draft.costReconciled = settlement.reconciled;
-      draft.reportedInputTokens = candidate?.reportedInputTokens ?? null;
-      draft.reportedOutputTokens = candidate?.reportedOutputTokens ?? null;
+      state.settlement = settled;
+      if (ledger && durable) {
+        state.durableSettlement = ledger
+          .settle(durable, settled.chargedMicroUsd)
+          .catch(() => {
+            // Best effort by design. The reservation expires on its own, so a
+            // failed settlement releases the hold rather than stranding it, and
+            // it must not turn a completed proposal into a failed one.
+          });
+      }
+      return settled;
+    };
+
+    // Exactly one attempt. An automatic retry would need approved idempotency
+    // and billing behavior, and decision 5 settled that there is none: a call
+    // that fails after the provider generated a response has already been
+    // charged.
+    draft.attemptCount = 1;
+    const call =
+      operation === "create_roadmap"
+        ? this.deps.adapter.createRoadmap(request)
+        : this.deps.adapter.createSevenDayPlan(request);
+
+    // Settlement is attached to the provider call, not to the deadline race.
+    // `maxConcurrentRequests` counts reservations, so releasing the slot when
+    // the deadline fires would admit a second request while the first is still
+    // live and still billable at the provider. Spend ceilings hold either way;
+    // the concurrency guarantee does not.
+    void call.then(
+      (result) => settleOnce(result),
+      () => settleOnce(null),
+    );
+
+    let candidate: CoachAICandidate;
+    try {
+      candidate = await this.#withDeadline(call, limits.deadlineMs);
+    } catch (error) {
+      // On a deadline the call is still running, so the real charge is not yet
+      // known and the slot stays held until it ends. The reservation is what is
+      // owed meanwhile: a failed call is not a free call. If this runtime never
+      // sees the call end, the durable reservation's expiry releases it.
+      draft.chargedCostMicroUsd =
+        state.settlement?.chargedMicroUsd ?? reservation.reservedMicroUsd;
+      draft.costReconciled = state.settlement?.reconciled ?? false;
+      // Awaited on this path too. A rejected provider call is the routine one —
+      // decision 5 sets zero retries precisely because timeouts and transport
+      // failures happen — and a call that failed after the provider generated a
+      // response has still been billed. Returning without awaiting lets the
+      // instance freeze before the settle RPC leaves the process, after which
+      // the hold expires and the ledger records that spend as zero.
+      //
+      // A settlement failure must not replace the provider's error: the caller
+      // needs the real cause. `settleOnce` already swallows it, and this guard
+      // keeps that true if the promise it stores ever stops doing so.
+      if (state.durableSettlement) {
+        try {
+          await state.durableSettlement;
+        } catch {
+          // Deliberately ignored; `error` below is the cause worth reporting.
+        }
+      }
+      throw error;
     }
+
+    const settlement = settleOnce(candidate);
+    draft.chargedCostMicroUsd = settlement.chargedMicroUsd;
+    draft.costReconciled = settlement.reconciled;
+    draft.reportedInputTokens = candidate.reportedInputTokens;
+    draft.reportedOutputTokens = candidate.reportedOutputTokens;
+    // Awaited on the path that has somewhere to await it, so a serverless
+    // instance cannot be frozen between the provider response and the write
+    // that records what it cost.
+    if (state.durableSettlement) await state.durableSettlement;
 
     const validation = validateCoachAICandidate({
       operation,
