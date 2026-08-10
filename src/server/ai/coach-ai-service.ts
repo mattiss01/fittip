@@ -19,7 +19,10 @@ import {
   type CoachAIReservation,
   type CoachAISettlement,
 } from "@/server/ai/budget";
-import { buildCoachAIContext } from "@/server/ai/context";
+import {
+  buildCoachAIContext,
+  type CoachAIComposeInput,
+} from "@/server/ai/context";
 import type { CoachAIContextSource } from "@/server/ai/context-source";
 import { requireCoachAILiveEnablement } from "@/server/ai/enablement";
 import { CoachAIError } from "@/server/ai/errors";
@@ -91,6 +94,13 @@ export type CoachAIProposalInput = {
   operation: CoachAIOperation;
   /** Only obtainable from `verifyCoachAIOwner`, so ownership cannot be asserted. */
   owner: CoachAIOwner;
+  /**
+   * The horizon and the owner text for this one request. The horizon is
+   * server-derived from the compose screen; the two text fields are the owner's
+   * own words under ADR-014 and have no authority over anything the server
+   * validates afterwards.
+   */
+  compose: CoachAIComposeInput;
   idempotencyKey?: string;
 };
 
@@ -196,19 +206,32 @@ export class CoachAIService {
       throw new CoachAIError("context_invalid");
     }
 
-    const assembled = buildCoachAIContext(operation, records);
+    const assembled = buildCoachAIContext(operation, records, input.compose);
     draft.contextGoalCount =
       assembled.context.targetableGoals.length +
       assembled.context.historicalGoals.length;
     draft.contextMemoryCount = assembled.context.memory.length;
     draft.contextBytes = assembled.serializedBytes;
 
+    // The fingerprint covers the horizon and the owner text as well as the two
+    // collection revisions. Without that, a second request with the same
+    // revisions but a different planning note would replay the first one's
+    // proposal, and the owner would be shown an answer to a question they did
+    // not ask. The two text fields enter as digests rather than as content, for
+    // the reason `idempotency.ts` gives: a content hash leaks by comparison.
     const fingerprint = buildCoachAIIdempotencyKey({
       ownerId: records.ownerId,
       operation,
       schemaVersion,
       goalCollectionRevision: records.goalCollectionRevision,
       memoryCollectionRevision: records.memoryCollectionRevision,
+      requestShape: [
+        input.compose.horizonStartDate,
+        input.compose.horizonEndDate,
+        String(input.compose.planningNote?.length ?? 0),
+        String(input.compose.regenerationFeedback?.length ?? 0),
+        input.compose.previousProposal ? "regeneration" : "initial",
+      ].join(":"),
     });
     const key = input.idempotencyKey ?? fingerprint;
     if (!isCoachAIIdempotencyKey(key)) {

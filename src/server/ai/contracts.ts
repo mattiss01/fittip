@@ -22,16 +22,16 @@ export type CoachAIOperation = (typeof COACH_AI_OPERATIONS)[number];
 
 /** Bumped whenever an accepted request or response shape changes. */
 export const COACH_AI_SCHEMA_VERSIONS = {
-  create_roadmap: "fittip.roadmap.v1",
+  create_roadmap: "fittip.roadmap.v2",
   create_seven_day_plan: "fittip.seven-day-plan.v1",
 } as const satisfies Record<CoachAIOperation, string>;
 
 /**
- * Prompt identifiers only. M3-01 ships no prompt text; a provider adapter and
- * its prompts are M3-01B.
+ * Prompt identifiers. `create_roadmap` carries the real M3-02 prompt; the
+ * seven-day-plan entry is still the M3-01 stub, and M3-03 owns replacing it.
  */
 export const COACH_AI_PROMPT_VERSIONS = {
-  create_roadmap: "roadmap-stub-v1",
+  create_roadmap: "roadmap-v2-2026-08-10",
   create_seven_day_plan: "seven-day-plan-stub-v1",
 } as const satisfies Record<CoachAIOperation, string>;
 
@@ -65,19 +65,114 @@ export type CoachAIMemoryReference = {
 };
 
 /**
- * Targetable and historical goals stay separate fields all the way to the
- * adapter, so a prompt cannot quietly treat an achieved goal as an objective.
+ * One completed session, exactly as ADR-013 decision 4 enumerates it. Anything
+ * not listed here is invisible to a coach until that ADR is amended, which is
+ * why the fields are copied one at a time rather than spread from a row.
  */
-export type CoachAIContext = {
-  today: string;
-  targetableGoals: CoachAIGoalReference[];
-  historicalGoals: CoachAIGoalReference[];
-  memory: CoachAIMemoryReference[];
+export type CoachAICompletionReference = {
+  localDate: string;
+  status: string;
+  title: string | null;
+  sport: string | null;
+  durationMinutes: number | null;
+  perceivedEffort: number | null;
+  feeling: string | null;
+  painReported: boolean;
+  illnessReported: boolean;
+  injuryReported: boolean;
+  severeFatigueReported: boolean;
+  /** Truncated before it leaves the boundary. See ADR-013 decision 4. */
+  note: string | null;
+  replacementDescription: string | null;
+  correctionReason: string | null;
+  activityNames: string[];
+};
+
+/** A planned session that produced no completion (ADR-013 decision 6). */
+export type CoachAIMissedSessionReference = {
+  localDate: string;
+  title: string;
+  sport: string;
+};
+
+/** Planned future state under ADR-013 decision 5, with its lock state. */
+export type CoachAIPlanCommitmentReference = {
+  localDate: string;
+  title: string;
+  sport: string;
+  isLocked: boolean;
 };
 
 /**
- * Everything an adapter is given. Every field is server-derived: no raw Auth
- * token, email, header, caller metadata, or database row appears here.
+ * What the coach is told about the reductions ADR-013 approves. A trimmed
+ * window that reads as a complete one is the specific failure decision 1
+ * names, so the counts travel alongside the sessions.
+ */
+export type CoachAITrainingHistory = {
+  windowStartDate: string;
+  windowEndDate: string;
+  sessionsInWindow: number;
+  sessionsIncluded: number;
+  completions: CoachAICompletionReference[];
+  missedPlannedSessions: CoachAIMissedSessionReference[];
+};
+
+/**
+ * The immediately previous proposal, in reduced form, on a regeneration only.
+ * ADR-014 decision 2a: only this one travels, never the chain, so context size
+ * stays flat however many rounds the owner goes.
+ */
+export type CoachAIPreviousProposalReference = {
+  title: string;
+  summary: string;
+  phases: {
+    title: string;
+    focus: string;
+    startDate: string;
+    endDate: string;
+  }[];
+};
+
+/**
+ * Targetable and historical goals stay separate fields all the way to the
+ * adapter, so a prompt cannot quietly treat an achieved goal as an objective.
+ *
+ * `planningNote` and `regenerationFeedback` are the first owner-authored
+ * fields to cross this boundary (ADR-014). They inform what the coach
+ * proposes; they have no authority over what the server accepts, because every
+ * property they might try to change is revalidated after the response returns
+ * against values the server derived and the model never saw.
+ */
+export type CoachAIContext = {
+  today: string;
+  horizonStartDate: string;
+  horizonEndDate: string;
+  targetableGoals: CoachAIGoalReference[];
+  historicalGoals: CoachAIGoalReference[];
+  /**
+   * The ids of active goals whose target date falls outside the horizon. Ids
+   * rather than whole goals: every one of them is already in `targetableGoals`,
+   * and duplicating a dozen goal objects would spend a sixth of the context
+   * budget restating what the coach can already read.
+   */
+  goalsOutsideHorizon: string[];
+  memory: CoachAIMemoryReference[];
+  trainingHistory: CoachAITrainingHistory;
+  planCommitments: CoachAIPlanCommitmentReference[];
+  /** True when any eligible completion carries one of the four safety flags. */
+  hasSafetySignal: boolean;
+  planningNote: string | null;
+  regenerationFeedback: string | null;
+  previousProposal: CoachAIPreviousProposalReference | null;
+};
+
+/**
+ * Everything an adapter is given. Every field except the two owner-authored
+ * text fields inside `context` is server-derived: no raw Auth token, email,
+ * header, caller metadata, or database row appears here. ADR-014 corrected the
+ * older claim that *every* field was server-derived; the note and the feedback
+ * are the deliberate exceptions, and they are the reason the output validator
+ * is the control rather than a filter over the text.
  */
 export type CoachAIRequest = {
   requestId: string;
@@ -117,18 +212,103 @@ export interface CoachAI {
   createSevenDayPlan(request: CoachAIRequest): Promise<CoachAICandidate>;
 }
 
+/**
+ * `fittip.roadmap.v2`.
+ *
+ * Attention is ordinal rather than a percentage, because a model-generated
+ * "60% / 40%" looks measurable while the roadmap contains no training volume
+ * from which to calculate it. `deferred` describes this roadmap only; it never
+ * changes a goal's lifecycle or tier.
+ */
+export const ROADMAP_GOAL_ATTENTION_LEVELS = [
+  "primary",
+  "secondary",
+  "maintenance",
+  "deferred",
+] as const;
+
+export type RoadmapGoalAttentionLevel =
+  (typeof ROADMAP_GOAL_ATTENTION_LEVELS)[number];
+
+export type RoadmapGoalAttention = {
+  goalId: string;
+  level: RoadmapGoalAttentionLevel;
+  reason: string;
+};
+
+export type RoadmapMilestone = {
+  title: string;
+  /** Observable without promising an outcome. The UI says "Aim for by". */
+  observableCriterion: string;
+  targetDate: string;
+  goalIds: string[];
+};
+
 export type RoadmapPhase = {
   title: string;
   focus: string;
   startDate: string;
   endDate: string;
-  goalId: string;
+  goalAttention: RoadmapGoalAttention[];
+  milestones: RoadmapMilestone[];
+};
+
+export type RoadmapUncertainty = {
+  statement: string;
+  whyItMatters: string;
+  whatToWatch: string;
+};
+
+/**
+ * Either a date or a condition, never both. A review point states when the
+ * direction should be reconsidered; it never replans, notifies, or mutates.
+ */
+export type RoadmapReviewPoint = {
+  title: string;
+  triggerDate?: string;
+  triggerCondition?: string;
+  question: string;
 };
 
 export type RoadmapProposal = {
   schemaVersion: typeof COACH_AI_SCHEMA_VERSIONS.create_roadmap;
+  title: string;
   summary: string;
+  startDate: string;
+  endDate: string;
   phases: RoadmapPhase[];
+  assumptions?: string[];
+  uncertainties?: RoadmapUncertainty[];
+  reviewPoints: RoadmapReviewPoint[];
+  /**
+   * May explain conservative direction. It may not diagnose, prescribe
+   * treatment, or claim safety; the stop/professional-help copy is
+   * server-owned and never model-authored.
+   */
+  safetyConsiderations?: string[];
+};
+
+/**
+ * A memory candidate extracted from the planning note.
+ *
+ * It carries no model-authored text: `sourceExcerpt` must be an exact
+ * normalized substring of the planning note, and that excerpt becomes the
+ * proposed memory content. Text present only in regeneration feedback
+ * therefore cannot become memory.
+ */
+export type RoadmapMemoryCandidate = {
+  memoryType: MemoryType;
+  sourceExcerpt: string;
+  confidence?: number;
+};
+
+/**
+ * The two sections of a roadmap response. They validate independently: an
+ * invalid memory section is discarded and the roadmap still returns.
+ */
+export type RoadmapResponse = {
+  roadmap: RoadmapProposal;
+  memoryCandidates: RoadmapMemoryCandidate[];
 };
 
 export type SevenDayPlanSession = {

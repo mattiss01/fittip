@@ -98,26 +98,15 @@ export type CoachAIRateCard = {
 export type CoachAIRateCardSource = () => CoachAIRateCard | null;
 
 /**
- * `gpt-5.6-luna` at $0.20 / $1.20 per million input / output tokens, read on
- * 10 August 2026.
+ * There is no rate card in this module, deliberately.
  *
- * M3-01B decision 6: the rate card is a constant in this repository, versioned
- * and updated by deploy, never fetched at runtime — a price lookup that can
- * fail is one more thing between the owner and a proposal. Past `validUntil`
- * the price is stale, stale is unknown, and unknown denies, because a wrong
- * price near a hard ceiling is worse than no proposal.
- *
- * Against `COACH_AI_LIVE_LIMITS` a reservation charges 8,000 x 200,000/1e6 plus
- * 3,000 x 1,200,000/1e6 = 5,200 micro-USD, inside the 8,000 per-request
- * ceiling with headroom.
+ * A price that lives beside the mechanism that spends it can drift from the
+ * model it prices, which is exactly what M3-01B limitation 17 recorded: a
+ * `FITTIP_AI_MODEL` of `gpt-5.5` against luna's card would have priced every
+ * reservation 25x low. Every rate card now belongs to a provider/model binding
+ * in `src/server/ai/model-binding.ts` and cannot be obtained without naming the
+ * model it prices.
  */
-export const OPENAI_GPT_5_6_LUNA_RATE_CARD: CoachAIRateCard = {
-  version: "openai-gpt-5.6-luna-2026-08-10",
-  currency: "USD",
-  inputMicroUsdPerMillionTokens: 200_000,
-  outputMicroUsdPerMillionTokens: 1_200_000,
-  validUntil: "2027-02-01T00:00:00.000Z",
-};
 
 /**
  * A rate card source over a fixed card. Injected rather than read from module

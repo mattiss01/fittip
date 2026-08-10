@@ -4,10 +4,10 @@ import {
   CoachAIBudget,
   COACH_AI_FIXTURE_LIMITS,
   COACH_AI_LIVE_LIMITS,
-  OPENAI_GPT_5_6_LUNA_RATE_CARD,
   type CoachAILimits,
   type CoachAIRateCard,
 } from "@/server/ai/budget";
+import { requireApprovedCoachAIModel } from "@/server/ai/model-binding";
 import { CoachAIError } from "@/server/ai/errors";
 
 const OWNER = "53000000-0000-4000-8000-000000000001";
@@ -265,7 +265,7 @@ describe("the approved live caps", () => {
       operation: "create_roadmap",
       now: new Date("2026-08-10T09:00:00.000Z"),
       limits: COACH_AI_LIVE_LIMITS,
-      rateCard: OPENAI_GPT_5_6_LUNA_RATE_CARD,
+      rateCard: requireApprovedCoachAIModel("openai", "gpt-5.6-luna").rateCard,
     });
 
     // 8,000 input at $0.20/M plus 3,000 output at $1.20/M. The per-request
@@ -292,7 +292,8 @@ describe("the approved live caps", () => {
         // One day after the card's validUntil.
         now: new Date("2027-02-02T00:00:00.000Z"),
         limits: COACH_AI_LIVE_LIMITS,
-        rateCard: OPENAI_GPT_5_6_LUNA_RATE_CARD,
+        rateCard: requireApprovedCoachAIModel("openai", "gpt-5.6-luna")
+          .rateCard,
       }),
     ).toThrow(CoachAIError);
   });

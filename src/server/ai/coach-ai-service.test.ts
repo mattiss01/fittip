@@ -25,7 +25,10 @@ import { FixtureCoachAI } from "@/server/ai/fixtures/fixture-adapter";
 import {
   COACH_AI_FIXTURE_HISTORICAL_GOAL_ID,
   COACH_AI_FIXTURE_TARGETABLE_GOAL_ID,
+  COACH_AI_FIXTURE_HORIZON_END,
+  COACH_AI_FIXTURE_HORIZON_START,
   COACH_AI_FIXTURE_TODAY,
+  findCoachAIFixtureCase,
 } from "@/server/ai/fixtures/fixture-corpus";
 import { CoachAIIdempotencyStore } from "@/server/ai/idempotency";
 import type { CoachAIOwner } from "@/server/ai/owner";
@@ -54,6 +57,15 @@ const RATE_CARD: CoachAIRateCard = {
   validUntil: "2026-09-01T00:00:00.000Z",
 };
 
+/** The compose step every roadmap request now carries (ADR-014). */
+const COMPOSE = {
+  horizonStartDate: COACH_AI_FIXTURE_HORIZON_START,
+  horizonEndDate: COACH_AI_FIXTURE_HORIZON_END,
+  planningNote: null,
+  regenerationFeedback: null,
+  previousProposal: null,
+};
+
 class FakeContextSource implements CoachAIContextSource {
   goalCollectionRevision = 3;
   memoryCollectionRevision = 5;
@@ -69,6 +81,12 @@ class FakeContextSource implements CoachAIContextSource {
       memoryCollectionRevision: this.memoryCollectionRevision,
       goals: [targetableGoal(), historicalGoal()],
       memory: [memoryItem()],
+      training: {
+        today: COACH_AI_FIXTURE_TODAY,
+        horizonEndDate: COACH_AI_FIXTURE_HORIZON_END,
+        completions: [],
+        plannedSessions: [],
+      },
     };
   }
 }
@@ -213,6 +231,7 @@ describe("a successful proposal", () => {
     const outcome = await service.propose({
       operation: "create_roadmap",
       owner: OWNER,
+      compose: COMPOSE,
     });
 
     expect(outcome.status).toBe("proposal");
@@ -227,7 +246,7 @@ describe("a successful proposal", () => {
       outcome: "accepted",
       attemptCount: 1,
       adapterKind: "fixture",
-      schemaVersion: "fittip.roadmap.v1",
+      schemaVersion: "fittip.roadmap.v2",
       contextGoalCount: 2,
       contextMemoryCount: 1,
     });
@@ -240,7 +259,11 @@ describe("a successful proposal", () => {
     const spy = vi.spyOn(adapter, "createRoadmap");
     const { service } = build({ adapter });
 
-    await service.propose({ operation: "create_roadmap", owner: OWNER });
+    await service.propose({
+      operation: "create_roadmap",
+      owner: OWNER,
+      compose: COMPOSE,
+    });
 
     expect(spy).toHaveBeenCalledTimes(1);
   });
@@ -256,7 +279,11 @@ describe("a successful proposal", () => {
       }),
     });
 
-    await service.propose({ operation: "create_roadmap", owner: OWNER });
+    await service.propose({
+      operation: "create_roadmap",
+      owner: OWNER,
+      compose: COMPOSE,
+    });
 
     expect(telemetry.records.at(-1)).toMatchObject({
       estimatedCostMicroUsd: 54_000,
@@ -285,7 +312,11 @@ describe("gates before the adapter", () => {
 
     expect(
       await failureCode(() =>
-        service.propose({ operation: "create_roadmap", owner: OWNER }),
+        service.propose({
+          operation: "create_roadmap",
+          owner: OWNER,
+          compose: COMPOSE,
+        }),
       ),
     ).toBe("not_enabled");
     expect(adapter.invocations).toBe(0);
@@ -319,7 +350,11 @@ describe("gates before the adapter", () => {
 
     expect(
       await failureCode(() =>
-        service.propose({ operation: "create_roadmap", owner: OWNER }),
+        service.propose({
+          operation: "create_roadmap",
+          owner: OWNER,
+          compose: COMPOSE,
+        }),
       ),
     ).toBe("budget_unavailable");
     expect(adapter.invocations).toBe(0);
@@ -343,7 +378,11 @@ describe("gates before the adapter", () => {
 
     expect(
       await failureCode(() =>
-        service.propose({ operation: "create_roadmap", owner: OWNER }),
+        service.propose({
+          operation: "create_roadmap",
+          owner: OWNER,
+          compose: COMPOSE,
+        }),
       ),
     ).toBe("budget_unavailable");
     expect(spy).not.toHaveBeenCalled();
@@ -354,13 +393,21 @@ describe("gates before the adapter", () => {
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
       contextSource.goalCollectionRevision = attempt;
-      await service.propose({ operation: "create_roadmap", owner: OWNER });
+      await service.propose({
+        operation: "create_roadmap",
+        owner: OWNER,
+        compose: COMPOSE,
+      });
     }
 
     contextSource.goalCollectionRevision = 99;
     expect(
       await failureCode(() =>
-        service.propose({ operation: "create_roadmap", owner: OWNER }),
+        service.propose({
+          operation: "create_roadmap",
+          owner: OWNER,
+          compose: COMPOSE,
+        }),
       ),
     ).toBe("rate_limited");
   });
@@ -372,7 +419,11 @@ describe("gates before the adapter", () => {
 
     expect(
       await failureCode(() =>
-        service.propose({ operation: "create_roadmap", owner: OWNER }),
+        service.propose({
+          operation: "create_roadmap",
+          owner: OWNER,
+          compose: COMPOSE,
+        }),
       ),
     ).toBe("context_invalid");
   });
@@ -380,8 +431,16 @@ describe("gates before the adapter", () => {
   it("reads context under the owner it was given", async () => {
     const { service, contextSource } = build();
 
-    await service.propose({ operation: "create_roadmap", owner: OWNER });
-    await service.propose({ operation: "create_roadmap", owner: OTHER_OWNER });
+    await service.propose({
+      operation: "create_roadmap",
+      owner: OWNER,
+      compose: COMPOSE,
+    });
+    await service.propose({
+      operation: "create_roadmap",
+      owner: OTHER_OWNER,
+      compose: COMPOSE,
+    });
 
     expect(contextSource.calls).toEqual([OWNER.id, OTHER_OWNER.id]);
   });
@@ -398,10 +457,12 @@ describe("idempotency across requests", () => {
     const first = await service.propose({
       operation: "create_roadmap",
       owner: OWNER,
+      compose: COMPOSE,
     });
     const second = await service.propose({
       operation: "create_roadmap",
       owner: OWNER,
+      compose: COMPOSE,
     });
 
     expect(second).toBe(first);
@@ -434,26 +495,16 @@ describe("idempotency across requests", () => {
     const first = service.propose({
       operation: "create_roadmap",
       owner: OWNER,
+      compose: COMPOSE,
     });
     const second = service.propose({
       operation: "create_roadmap",
       owner: OWNER,
+      compose: COMPOSE,
     });
 
     release({
-      body: JSON.stringify({
-        schemaVersion: "fittip.roadmap.v1",
-        summary: "One phase to the race.",
-        phases: [
-          {
-            title: "Aerobic base",
-            focus: "Easy volume.",
-            startDate: "2026-08-04",
-            endDate: "2026-09-14",
-            goalId: COACH_AI_FIXTURE_TARGETABLE_GOAL_ID,
-          },
-        ],
-      }),
+      body: findCoachAIFixtureCase("valid_roadmap").body,
       reportedInputTokens: null,
       reportedOutputTokens: null,
     });
@@ -470,6 +521,7 @@ describe("idempotency across requests", () => {
     await service.propose({
       operation: "create_roadmap",
       owner: OWNER,
+      compose: COMPOSE,
       idempotencyKey: key,
     });
 
@@ -479,6 +531,7 @@ describe("idempotency across requests", () => {
         service.propose({
           operation: "create_roadmap",
           owner: OWNER,
+          compose: COMPOSE,
           idempotencyKey: key,
         }),
       ),
@@ -493,6 +546,7 @@ describe("idempotency across requests", () => {
         service.propose({
           operation: "create_roadmap",
           owner: OWNER,
+          compose: COMPOSE,
           idempotencyKey: "short",
         }),
       ),
@@ -507,12 +561,20 @@ describe("idempotency across requests", () => {
 
     expect(
       await failureCode(() =>
-        service.propose({ operation: "create_roadmap", owner: OWNER }),
+        service.propose({
+          operation: "create_roadmap",
+          owner: OWNER,
+          compose: COMPOSE,
+        }),
       ),
     ).toBe("provider_unavailable");
     expect(
       await failureCode(() =>
-        service.propose({ operation: "create_roadmap", owner: OWNER }),
+        service.propose({
+          operation: "create_roadmap",
+          owner: OWNER,
+          compose: COMPOSE,
+        }),
       ),
     ).toBe("provider_unavailable");
   });
@@ -528,7 +590,11 @@ describe("failure handling", () => {
 
     expect(
       await failureCode(() =>
-        service.propose({ operation: "create_seven_day_plan", owner: OWNER }),
+        service.propose({
+          operation: "create_seven_day_plan",
+          owner: OWNER,
+          compose: COMPOSE,
+        }),
       ),
     ).toBe("output_invalid");
 
@@ -552,7 +618,11 @@ describe("failure handling", () => {
     });
 
     await failureCode(() =>
-      service.propose({ operation: "create_roadmap", owner: OWNER }),
+      service.propose({
+        operation: "create_roadmap",
+        owner: OWNER,
+        compose: COMPOSE,
+      }),
     );
 
     expect(budget.snapshot().activeRequests).toBe(0);
@@ -583,7 +653,11 @@ describe("failure handling", () => {
 
     expect(
       await failureCode(() =>
-        service.propose({ operation: "create_roadmap", owner: OWNER }),
+        service.propose({
+          operation: "create_roadmap",
+          owner: OWNER,
+          compose: COMPOSE,
+        }),
       ),
     ).toBe("deadline_exceeded");
 
@@ -620,7 +694,11 @@ describe("the live gate keys on identity, not on self-declaration", () => {
     // with no live flag, no allowlist, and no credential check.
     expect(
       await failureCode(() =>
-        service.propose({ operation: "create_roadmap", owner: OWNER }),
+        service.propose({
+          operation: "create_roadmap",
+          owner: OWNER,
+          compose: COMPOSE,
+        }),
       ),
     ).toBe("not_enabled");
     expect(adapter.invocations).toBe(0);
@@ -634,6 +712,7 @@ describe("the live gate keys on identity, not on self-declaration", () => {
     const outcome = await service.propose({
       operation: "create_roadmap",
       owner: OWNER,
+      compose: COMPOSE,
     });
     expect(outcome.status).toBe("proposal");
   });
@@ -644,7 +723,11 @@ describe("durable spend", () => {
     const ledger = new FakeSpendLedger();
     const { service, telemetry } = build({ spendLedger: ledger });
 
-    await service.propose({ operation: "create_roadmap", owner: OWNER });
+    await service.propose({
+      operation: "create_roadmap",
+      owner: OWNER,
+      compose: COMPOSE,
+    });
 
     expect(ledger.reserved).toEqual([
       {
@@ -672,7 +755,11 @@ describe("durable spend", () => {
 
     expect(
       await failureCode(() =>
-        service.propose({ operation: "create_roadmap", owner: OWNER }),
+        service.propose({
+          operation: "create_roadmap",
+          owner: OWNER,
+          compose: COMPOSE,
+        }),
       ),
     ).toBe("budget_exhausted");
 
@@ -695,7 +782,11 @@ describe("durable spend", () => {
 
     expect(
       await failureCode(() =>
-        service.propose({ operation: "create_roadmap", owner: OWNER }),
+        service.propose({
+          operation: "create_roadmap",
+          owner: OWNER,
+          compose: COMPOSE,
+        }),
       ),
     ).toBe("provider_unavailable");
 
@@ -716,7 +807,7 @@ describe("durable spend", () => {
 
     const seen: string[] = [];
     const proposal = service
-      .propose({ operation: "create_roadmap", owner: OWNER })
+      .propose({ operation: "create_roadmap", owner: OWNER, compose: COMPOSE })
       .catch((error: unknown) => {
         seen.push(error instanceof CoachAIError ? error.code : "unexpected");
       });
@@ -746,7 +837,11 @@ describe("durable spend", () => {
     // ledger error it can do nothing about.
     expect(
       await failureCode(() =>
-        service.propose({ operation: "create_roadmap", owner: OWNER }),
+        service.propose({
+          operation: "create_roadmap",
+          owner: OWNER,
+          compose: COMPOSE,
+        }),
       ),
     ).toBe("provider_unavailable");
     expect(ledger.settleCompletions).toBe(0);
@@ -757,7 +852,11 @@ describe("telemetry", () => {
   it("records the technical outcome and none of the content", async () => {
     const { service, telemetry } = build();
 
-    await service.propose({ operation: "create_roadmap", owner: OWNER });
+    await service.propose({
+      operation: "create_roadmap",
+      owner: OWNER,
+      compose: COMPOSE,
+    });
 
     const serialized = JSON.stringify(telemetry.records);
     expect(serialized).not.toContain(MEMORY_CONTENT);
@@ -771,7 +870,11 @@ describe("telemetry", () => {
     const { service, telemetry } = build({ rateCard: null });
 
     await failureCode(() =>
-      service.propose({ operation: "create_roadmap", owner: OWNER }),
+      service.propose({
+        operation: "create_roadmap",
+        owner: OWNER,
+        compose: COMPOSE,
+      }),
     );
 
     expect(telemetry.records.at(-1)).toMatchObject({
