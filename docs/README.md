@@ -6,6 +6,7 @@ validation documentation.
 | Area | Purpose | Organization |
 |---|---|---|
 | [Product](product/) | Feature briefs, product rules, and the visual data model | Flat |
+| [Product ideas](product/ideas/) | Parked ideas: research kept so it is not repeated. Nothing here is approved | Flat |
 | [Decisions](decisions/) | Approved and proposed architecture decision records | Flat |
 | [Backlog](backlog/) | Milestone indexes and implementation tickets | Grouped by milestone |
 | [Validation](validation/) | Builder handoffs, review records, and evidence | Grouped by milestone |
