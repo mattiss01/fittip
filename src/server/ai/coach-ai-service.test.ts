@@ -122,6 +122,10 @@ class FakeSpendLedger implements CoachAISpendLedger {
   readonly reserved: CoachAISpendReservationInput[] = [];
   readonly settled: number[] = [];
   refuseWith: CoachAIError | null = null;
+  /** Held open by a test that needs to observe a settlement still in flight. */
+  settleGate: Promise<void> | null = null;
+  settleRejects = false;
+  settleCompletions = 0;
 
   async reserve(
     input: CoachAISpendReservationInput,
@@ -143,6 +147,9 @@ class FakeSpendLedger implements CoachAISpendLedger {
   ): Promise<void> {
     void handle;
     this.settled.push(chargedMicroUsd);
+    if (this.settleGate) await this.settleGate;
+    if (this.settleRejects) throw new Error("the ledger write failed");
+    this.settleCompletions += 1;
   }
 }
 
@@ -285,6 +292,48 @@ describe("gates before the adapter", () => {
     expect(budget.snapshot().spentTotalMicroUsd).toBe(0);
   });
 
+  it("denies a fully enabled adapter that has no durable spend ledger", async () => {
+    const adapter = new SpyProviderCoachAI(() =>
+      Promise.resolve({
+        body: "{}",
+        reportedInputTokens: null,
+        reportedOutputTokens: null,
+      }),
+    );
+    // Every live control satisfied except the ledger, which is the shape a
+    // composition root reaches by forgetting one dependency. Without this the
+    // only ceilings in force would be `CoachAIBudget`'s in-memory ones, which a
+    // Vercel instance change resets: every cold start would begin at zero spend
+    // and the daily ceiling would never bind.
+    const { service, budget, telemetry } = build({
+      adapter,
+      environment: {
+        FITTIP_AI_LIVE: "enabled",
+        FITTIP_AI_OWNER_ALLOWLIST: OWNER_ID,
+        FITTIP_AI_OPERATIONS: "create_roadmap",
+        FITTIP_AI_PROVIDER: "example-provider",
+        FITTIP_AI_MODEL: "example-model-1",
+        FITTIP_AI_API_KEY: "not-a-real-key-0000000000000000",
+      },
+    });
+
+    expect(
+      await failureCode(() =>
+        service.propose({ operation: "create_roadmap", owner: OWNER }),
+      ),
+    ).toBe("budget_unavailable");
+    expect(adapter.invocations).toBe(0);
+    expect(budget.snapshot()).toMatchObject({
+      spentTotalMicroUsd: 0,
+      activeRequests: 0,
+    });
+    expect(telemetry.records.at(-1)).toMatchObject({
+      outcome: "failed",
+      errorCode: "budget_unavailable",
+      attemptCount: 0,
+    });
+  });
+
   it("denies when no price is known, without invoking the adapter", async () => {
     const adapter = new FixtureCoachAI({
       create_roadmap: { caseName: "valid_roadmap" },
@@ -371,6 +420,7 @@ describe("idempotency across requests", () => {
     // behavior is proven on the path that would really call out.
     const { service, budget } = build({
       adapter,
+      spendLedger: new FakeSpendLedger(),
       environment: {
         FITTIP_AI_LIVE: "enabled",
         FITTIP_AI_OWNER_ALLOWLIST: OWNER_ID,
@@ -520,6 +570,7 @@ describe("failure handling", () => {
       adapter,
       // Deterministic: no wall-clock timer decides this test.
       deadline: () => Promise.reject(new CoachAIError("deadline_exceeded")),
+      spendLedger: new FakeSpendLedger(),
       environment: {
         FITTIP_AI_LIVE: "enabled",
         FITTIP_AI_OWNER_ALLOWLIST: OWNER_ID,
@@ -650,6 +701,55 @@ describe("durable spend", () => {
 
     // A failed call is not a free call: the reservation stands in full.
     expect(ledger.settled).toEqual([54_000]);
+  });
+
+  it("waits for the durable write before reporting a provider failure", async () => {
+    const ledger = new FakeSpendLedger();
+    let release: () => void = () => {};
+    ledger.settleGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const adapter = new FixtureCoachAI({
+      create_roadmap: { failWith: "unavailable" },
+    });
+    const { service } = build({ adapter, spendLedger: ledger });
+
+    const seen: string[] = [];
+    const proposal = service
+      .propose({ operation: "create_roadmap", owner: OWNER })
+      .catch((error: unknown) => {
+        seen.push(error instanceof CoachAIError ? error.code : "unexpected");
+      });
+
+    // The provider has already rejected and the settle call has already been
+    // made, but the write has not landed. Returning here would let a serverless
+    // instance freeze before the RPC leaves the process, after which the hold
+    // expires and the ledger records a call the provider billed as zero.
+    await vi.waitFor(() => expect(ledger.settled).toEqual([54_000]));
+    expect(seen).toEqual([]);
+
+    release();
+    await proposal;
+    expect(seen).toEqual(["provider_unavailable"]);
+    expect(ledger.settleCompletions).toBe(1);
+  });
+
+  it("reports the provider failure even when the durable write fails", async () => {
+    const ledger = new FakeSpendLedger();
+    ledger.settleRejects = true;
+    const adapter = new FixtureCoachAI({
+      create_roadmap: { failWith: "unavailable" },
+    });
+    const { service } = build({ adapter, spendLedger: ledger });
+
+    // Awaiting the settlement must not swap the cause the caller needs for a
+    // ledger error it can do nothing about.
+    expect(
+      await failureCode(() =>
+        service.propose({ operation: "create_roadmap", owner: OWNER }),
+      ),
+    ).toBe("provider_unavailable");
+    expect(ledger.settleCompletions).toBe(0);
   });
 });
 

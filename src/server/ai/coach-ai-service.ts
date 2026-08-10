@@ -73,7 +73,9 @@ export type CoachAIServiceDependencies = {
   /**
    * Durable, fail-closed spend state. Absent for a fixture run, which reaches
    * nothing and spends nothing; required for any hosted one, because the
-   * in-memory budget does not survive an instance change.
+   * in-memory budget does not survive an instance change. Optional in the type
+   * and mandatory in fact: `#run` refuses any adapter that is not on the
+   * network-free allowlist unless this is present.
    */
   spendLedger?: CoachAISpendLedger;
   telemetry: CoachAITelemetrySink;
@@ -174,6 +176,17 @@ export class CoachAIService {
         environment: this.deps.environment,
       });
       environment = enablement.environment;
+
+      // The gate is not complete without this. A composition root that wires a
+      // real adapter, the live flag, the allowlist and the credential but omits
+      // the ledger would pass every check above and call out with no ceiling
+      // that survives an instance change: `CoachAIBudget` is in-memory, so a
+      // Vercel cold start begins at zero spend and `dailyCostCeilingMicroUsd`
+      // never binds. Refusing here costs a misconfigured deployment its
+      // coaching feature; not refusing costs it the daily ceiling.
+      if (!this.deps.spendLedger) {
+        throw new CoachAIError("budget_unavailable");
+      }
     }
     draft.environment = environment;
 
@@ -369,6 +382,23 @@ export class CoachAIService {
       draft.chargedCostMicroUsd =
         state.settlement?.chargedMicroUsd ?? reservation.reservedMicroUsd;
       draft.costReconciled = state.settlement?.reconciled ?? false;
+      // Awaited on this path too. A rejected provider call is the routine one —
+      // decision 5 sets zero retries precisely because timeouts and transport
+      // failures happen — and a call that failed after the provider generated a
+      // response has still been billed. Returning without awaiting lets the
+      // instance freeze before the settle RPC leaves the process, after which
+      // the hold expires and the ledger records that spend as zero.
+      //
+      // A settlement failure must not replace the provider's error: the caller
+      // needs the real cause. `settleOnce` already swallows it, and this guard
+      // keeps that true if the promise it stores ever stops doing so.
+      if (state.durableSettlement) {
+        try {
+          await state.durableSettlement;
+        } catch {
+          // Deliberately ignored; `error` below is the cause worth reporting.
+        }
+      }
       throw error;
     }
 

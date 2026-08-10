@@ -99,12 +99,10 @@ describe("reserving durable spend", () => {
       client({
         rpc,
         auth: {
-          getClaims: vi
-            .fn()
-            .mockResolvedValue({
-              data: null,
-              error: { message: "no session" },
-            }),
+          getClaims: vi.fn().mockResolvedValue({
+            data: null,
+            error: { message: "no session" },
+          }),
         },
       }),
     );
