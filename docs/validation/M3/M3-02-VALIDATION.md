@@ -334,11 +334,26 @@ Proven by:
 
 ## Tests and final results
 
-There is no CI run URL yet: the commit was pushed at the moment this record was
-written. `.github/workflows/ci.yml` runs on `ticket/**`, so a run exists for
-`94880d6b415d0479668f4e4d121f98f1ef37a829` and **the lead must record its URL
-and conclusion here before any review.** Everything below is a local observation
-made while building, not a substitute for that run.
+**CI run:** <https://github.com/mattiss01/fittip/actions/runs/31438850506> —
+**success**, all three jobs green, for
+`dd9571157fd73f67b99ec0ae4d777a8eb3dfb61d`. That commit is the implementation
+commit `94880d6` plus this record, so the run covers the implementation
+unchanged. It includes lint, typecheck, `test:run`, the production build, every
+migration from zero, database lint, the advisors, pgTAP, the concurrency
+harnesses, and the `390x844` browser flows.
+
+The run for `94880d6` alone (`31438650270`) was **cancelled** by the push that
+added this record, which is why the green run is recorded against the later SHA.
+
+One thing worth flagging to the reviewer: the branch's base commit `851378c` —
+docs-only, containing none of this work — produced a **red** run
+(`31434464581`), an `M1-04 Today and Progress` timeout at
+`apiRequestContext.delete`. The same flow is green on the run above with this
+ticket's changes applied, so it was flaky rather than a defect, and no
+known-defect exception is claimed or needed.
+
+The table below records only what CI does not cover, plus what was observed
+locally while building.
 
 | Command or check | Result |
 | --- | --- |
