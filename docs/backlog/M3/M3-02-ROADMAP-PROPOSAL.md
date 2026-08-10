@@ -1,14 +1,16 @@
 # M3-02: High-level roadmap proposal
 
-**Status:** proposed — not approved for implementation
+**Status:** proposed — decision set approved 10 August 2026; not approved for
+implementation
 
 **Milestone:** M3
 
 **Priority:** P1
 
-**Depends on:** [M3-01 accepted](M3-01-LOCAL-AI-ADAPTER-CONTROLS.md), the
-accepted M1 training foundation, the accepted M2 goal, memory, intake, and
-validation foundations, and
+**Depends on:** [M3-01B accepted](M3-01B-REAL-PROVIDER-ADAPTER.md), which in
+turn depends on [M3-01 accepted](M3-01-LOCAL-AI-ADAPTER-CONTROLS.md); the
+accepted M1 training foundation; the accepted M2 goal, memory, intake, and
+validation foundations; and
 [ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md) plus
 [ADR-014](../../decisions/ADR-014-PLANNING-NOTE-BOUNDARY.md) — **both accepted
 9 August 2026**
@@ -20,6 +22,9 @@ policy ADRs named, stub-schema gap recorded
 dispatch. Planning-note length and byte reservation settled; the per-source
 context allocation is named as an M3-01B dependency; regeneration confirmed out
 of scope here
+
+**Revised:** 10 August 2026 — decisions 1-6 and 8 approved as drafted; decision
+7 approved with no automatic roadmap-generation blocker
 
 **Architecture boundary:** ADR-006 and ADR-007 accepted; M0-06A accepted before
 founder-hosted use
@@ -288,26 +293,292 @@ commands/results, limitations, and confirmation that no detailed-plan,
 direct-write, friend, non-M0-06A-hosted, analytics, or unapproved
 provider/spend behavior was added.
 
-## Open decisions
+## Decisions
 
-1. Default roadmap horizon and maximum horizon.
-2. Phase/milestone fields and goal-allocation representation.
-3. Exact uncertainty and review-point presentation.
-4. Visible generation action, edit controls, rejection behavior, and copy.
-4a. What the compose screen's context summary shows and how it is grouped, and
-    the copy for its collapsed state.
-4b. Where extracted memory candidates appear relative to the roadmap review,
-    and what happens to undecided candidates if the owner leaves the screen.
-5. Whether accepting a new roadmap supersedes the prior current version while
-   retaining it as immutable history (recommendation: yes).
-6. Proposal/source retention and deletion behavior for owner-only local use and
-   later privacy implementation.
-7. Exact safe-copy triggers and whether a severe signal pauses generation.
+**Approved by the product owner on 10 August 2026.** Decisions 1-6 and 8 were
+approved as drafted. Decision 7 was discussed separately and approved with no
+automatic roadmap-generation blocker. This resolves the decision set but does
+not approve implementation or move the ticket out of `proposed`.
+
+### 1. Horizon
+
+**Approved:** a roadmap starts on the owner's local today and covers at
+least 4 weeks and at most 52 weeks.
+
+- On first use, the default end is the latest target date among active core
+  goals when that date falls within the next 52 weeks. If no active core goal
+  has such a date, default to 12 weeks. A nearer target never makes the roadmap
+  shorter than 4 weeks; a later target is visibly outside this roadmap rather
+  than silently dropped.
+- The compose screen always shows and permits changing the end date before
+  generation. It never permits a start in the past or an end beyond 365 days.
+- Supporting-goal dates do not extend the default by themselves, but supporting
+  goals remain eligible for attention inside the chosen horizon.
+- Before generation, name every active goal whose target lies outside the
+  selected horizon. The proposal must not imply that the roadmap reaches it.
+
+This accommodates both a roughly 12-week return-to-running goal and a
+season-long event without making one year the default when the owner has no
+dated core goal. The rejected alternatives are a fixed 12-week horizon, which
+cannot represent the accepted long-event scenarios, and an unbounded
+goal-derived horizon, which produces oversized, falsely precise roadmaps.
+
+### 2. Roadmap shape, milestones, and goal attention
+
+**Approved:** bump the response to `fittip.roadmap.v2` and use bounded,
+ordinal attention rather than percentages.
+
+- Roadmap: `title`, `summary`, `startDate`, `endDate`, ordered `phases`,
+  `assumptions`, `uncertainties`, `reviewPoints`, and optional bounded
+  `safetyConsiderations`.
+- Phase: `title`, `focus`, `startDate`, `endDate`, `goalAttention`, and
+  `milestones`. Phases are contiguous, ordered, non-overlapping, inside the
+  roadmap horizon, and cover it without gaps.
+- Goal attention: `goalId`, one of `primary | secondary | maintenance |
+  deferred`, and a concise `reason`. `deferred` describes this roadmap phase;
+  it never changes the goal's lifecycle or tier. Every active core goal appears
+  in at least one phase, and every referenced goal is revalidated server-side.
+- Milestone: `title`, `observableCriterion`, `targetDate`, and one or more
+  `goalIds`. The UI says **Aim for by**, not **Due**, and the criterion must be
+  observable without promising an outcome.
+- Assumption: one concise statement. Uncertainty: `statement`, `whyItMatters`,
+  and `whatToWatch`. Review point: `title`, either a date or condition trigger,
+  and the question the owner should reconsider.
+- Bounds: 1-6 phases; 1-3 milestones per phase; 1-4 goal-attention entries per
+  phase; 0-4 assumptions; 0-4 uncertainties; 1-4 review points; and 0-3 safety
+  considerations. Text limits in characters: roadmap title 80 and summary 600;
+  phase title 80 and focus 300; attention reason 160; milestone title 80 and
+  criterion 200; each assumption 200; each uncertainty field 200; each review
+  point field 200; and each safety consideration 240. The complete serialized
+  proposal is capped at 16,000 UTF-8 bytes in addition to M3-01B's output-token
+  ceiling.
+- Static stop/professional-help copy is server-owned and is not model-authored
+  or editable. `safetyConsiderations` may explain conservative training
+  direction but may not diagnose, prescribe treatment, or claim safety.
+
+Percent allocations are rejected because a model-generated `60% / 40%` split
+looks measurable while the roadmap contains no training volume from which to
+calculate it. The four attention levels state the actual product meaning and
+remain sport-agnostic.
+
+### 3. Uncertainty and review-point presentation
+
+**Approved:** show uncertainty as actionable language, never a confidence
+score.
+
+- The roadmap review uses one vertical **roadmap spine** at 390px: phase bands
+  carry milestone markers, and review points interrupt the spine as explicit
+  checkpoints. This is the surface's FitTip-specific visual signature, not a
+  decorative progress meter.
+- Under the spine, show **What this assumes**, **What could change the
+  direction**, and **When to reassess**. Keep these sections expanded when they
+  contain material information; omit empty assumptions/uncertainties rather
+  than showing a misleading zero.
+- A review point says either **Review on _date_** or **Review when _condition_**,
+  followed by one focused question. It does not automatically replan, notify,
+  or mutate anything.
+- The review header says **Direction, not a promise.** Do not show percentages,
+  star ratings, model confidence, or red/amber/green certainty badges.
+- The spine is a semantic ordered list with visible keyboard focus. Any
+  transition is non-essential and removed under reduced motion.
+
+### 4. Generation, editing, rejection, and exact copy
+
+**Approved:** use one explicit compose step and keep every state honest
+about what is saved.
+
+- Empty/current-roadmap actions: **Create roadmap** when none exists and
+  **Propose a new roadmap** when one is current.
+- Compose title: **Shape your roadmap**. Planning-note label: **Anything the
+  coach should account for? (optional)**. Helper: **Add commitments or
+  constraints that your saved information does not show. Maximum 1,000
+  characters.**
+- Confirmation action: **Generate roadmap proposal**. Supporting copy:
+  **Nothing changes until you accept a proposal.** Opening compose never starts
+  generation.
+- Pending copy: **Building your roadmap proposal... Your current roadmap stays
+  unchanged.** Disable duplicate submission while retaining the idempotency
+  key across an uncertain retry.
+- Review actions: **Accept roadmap**, **Edit proposal**, and **Decline
+  proposal**. No action is preselected. There is no **Regenerate** action in
+  M3-02.
+- **Decline proposal** opens a confirmation: **Decline this proposal? It will
+  stay in your roadmap history and will not become current.** This slice stores
+  the rejected status but no reason field or extra free text.
+- Editing is a structured form, not raw JSON. The owner may edit the roadmap
+  title/summary; phase titles, focus, dates, order, and bounded add/remove;
+  milestone text/dates; goal-attention levels/reasons; assumptions,
+  uncertainties, and review points. Every edit is server-revalidated and
+  creates a new owner-edited proposal linked to its source proposal.
+- Owner id, source ids/versions, schema/prompt/model codes, validation state,
+  idempotency data, and server-owned safety copy are never editable.
+- A rejected, malformed, stale, over-limit, or provider-failed result never
+  falls back to prose and never claims that a roadmap was saved.
+
+### 4a. Compose context summary
+
+**Approved:** the collapsed disclosure says **What the coach will use**
+and summarizes the exact eligible material, for example **2 goals · 6 memory
+items · 8 weeks of training**.
+
+When expanded, group the actual provider-bound fields rather than an invented
+summary:
+
+1. **Goals** — title, core/supporting tier, and target date.
+2. **Memory** — accepted active memory items, grouped as profile facts,
+   constraints, preferences, and observed patterns.
+3. **Recent training** — the ADR-013 local-date range, current completion
+   values, completed/missed state, allowed session/activity fields, safety
+   flags, and the exact truncated free text that will travel. Superseded
+   completion revisions are not shown because ADR-013 does not send them.
+4. **Current plan commitments** — planned and locked future state eligible under
+   ADR-013.
+
+The planning note remains outside the disclosure as the only new input. Copy
+below the collapsed label says **Only active, accepted information and the
+bounded training window are included.** Empty groups say **None included**.
+When a time/count limit excludes records, show the limit and excluded count.
+When any source exceeds its approved byte allocation, generation is unavailable
+with that source named; nothing is silently truncated beyond ADR-013's already
+approved per-field truncation.
+
+### 4b. Extracted memory candidates
+
+**Approved:** show **Possible memory updates** as a separate panel after
+the roadmap content, with the accepted M2-02 **Accept**, **Edit and accept**, and
+**Decline** controls. The roadmap action dock and memory controls remain
+visually and transactionally separate.
+
+- Accepting or declining the roadmap updates the roadmap state in place; it
+  does not decide any memory candidate.
+- Leaving the screen retains undecided candidates as `inferred_proposed` /
+  `proposed`. They appear under **You -> Memory -> Needs your review** with the
+  source **Roadmap planning note** and never enter coaching context until the
+  owner accepts them.
+- The accepted-roadmap detail shows a small **Memory updates still need your
+  review** link when candidates remain undecided.
+- An invalid memory section is discarded without failing or weakening a valid
+  roadmap. No roadmap action silently discards or accepts it.
+
+### 5. Current roadmap and supersession
+
+**Approved:** yes. Accepting a proposal creates a new immutable roadmap
+version, makes it the single current roadmap, and links it to both its source
+proposal and the previously current version. The prior version remains readable
+and unchanged as superseded history.
+
+- Accepting the same proposal twice is idempotent and returns the existing
+  version.
+- If source goals/memory/training revisions or the current-roadmap head changed
+  after generation, acceptance returns a visible review conflict. It never
+  silently overwrites the new state.
+- Two different proposals cannot both win the same expected current revision.
+- `current`, `superseded`, `proposal`, and `rejected` remain distinct states;
+  supersession never changes a proposal into an accepted version or rewrites
+  the prior version.
+
+### 6. Retention and deletion boundary
+
+**Approved:** no automatic expiry and no per-proposal deletion UI in
+M3-02. For owner/synthetic founder use, retain proposals, edit lineage,
+decisions, accepted roadmap versions, planning notes, and minimized source
+references as owner-visible audit history.
+
+- Store no raw assembled prompt, provider HTTP body, duplicate source content,
+  or content-bearing telemetry. Source references are ids plus exact revisions;
+  the proposal stores only the structured content needed for review/history.
+- Rejected proposal content and its planning note remain together, as ADR-014
+  anticipated, so a later review can distinguish a poor model response from a
+  poor request.
+- Memory candidates follow the accepted M2-02 retention/deletion boundary and
+  are not embedded copies inside the roadmap record.
+- Account deletion and the future M0-04 owner-deletion/export design must be
+  able to purge content-bearing proposal chains and planning notes. Do not add
+  a hidden audit copy or tombstone in this ticket.
+- This founder-only retention decision must be revisited before any friend's
+  data; it does not approve indefinite commercial retention.
+
+Automatic deletion after 30 or 90 days is rejected for this slice because it
+would erase the provenance of a still-current or historically referenced
+roadmap. A usable content-deletion design belongs with the privacy inventory and
+reference rules rather than a timer added only to M3-02.
+
+### 7. Safety behavior — no automatic roadmap blocker
+
+**Approved 10 August 2026:** no pain, illness, injury, or severe-fatigue signal
+automatically blocks high-level roadmap generation in M3-02.
+
+- Do not add a free-text severity classifier, keyword matcher, elapsed-time
+  clearance rule, or inferred resolved state. The current model has reliable
+  structured completion flags but no reliable structured `severe`, `sudden`,
+  `worsening`, or `resolved` state for pain, illness, or injury. Seven days
+  passing would not prove recovery.
+- Any eligible `pain_reported`, `illness_reported`, `injury_reported`, or
+  `severe_fatigue_reported` completion flag makes compose and any resulting
+  review show the already approved static copy: **FitTip cannot assess or
+  diagnose symptoms. If symptoms are severe, sudden, or getting worse, stop the
+  affected activity and contact a qualified health professional.**
+- When any flag is present, the proposal must contain at least one bounded
+  `safetyConsideration` and one relevant review point. The prompt requires
+  conservative direction — pause, reduce, maintain, or defer affected work —
+  and must not escalate affected load.
+- Prohibited diagnosis, treatment, claims of safety, or instructions to ignore
+  or push through symptoms reject the entire candidate. If a structurally valid,
+  conservative candidate cannot be produced, fail closed and persist no
+  proposal.
+- `severe_fatigue_reported` remains visible and constrains the proposal; it is
+  not ignored merely because it does not block the provider call. The owner
+  still reviews and explicitly accepts or declines the proposal.
+- Do not add a waiver or acknowledgement checkbox that could imply medical
+  clearance. The explicit **Generate roadmap proposal** action and the ordinary
+  proposal acceptance boundary remain the only decisions.
+- M3-03 must decide short-horizon plan behavior separately. Approval here does
+  not decide whether a current safety signal blocks or constrains near-term
+  sessions.
+
+### 8. Transaction and privileged-write boundary
+
+**Approved:** record a dedicated ADR before dispatch and use narrow
+owner-derived database functions for proposal persistence and acceptance.
+
+- The provider call is never held open inside a database transaction.
+- After schema/business validation, one idempotent function atomically persists
+  the immutable proposal, minimized source references, edit lineage where
+  present, and its generation decision. It derives the owner from `auth.uid()`
+  and takes no owner id.
+- Valid extracted memory candidates are then created through the accepted
+  M2-02 memory boundary. Their failure does not invalidate a valid roadmap, and
+  the operation/request id prevents duplicate candidates on retry.
+- A separate acceptance function atomically verifies proposal ownership and
+  state, expected source revisions, and expected current-roadmap revision;
+  inserts the immutable accepted version; updates the single current pointer;
+  links the prior version; and records proposal acceptance.
+- Replaying acceptance for the same proposal returns the existing version.
+  Competing proposals against the same expected head produce a conflict and no
+  partial write.
+- Revoke direct authenticated writes to proposal sources, accepted versions,
+  and current heads. Functions use `SECURITY DEFINER`, `SET search_path = ''`,
+  explicit grants, and RLS/ownership tests following the accepted M2
+  transaction precedents.
+
+This boundary is Tier 1. Approval of the product behavior does not implicitly
+approve the functions; the ADR must name their exact tables, arguments,
+privileges, idempotency keys, rollback behavior, and deletion consequences.
 
 ## Approval gate
 
-The product owner must approve this brief and all roadmap data, horizon, UX,
-safety, retention, and transaction decisions. M3-01 must be accepted with its
-provider/model/budget decision. Approval remains owner/synthetic local or
-M0-06A founder-hosted only and does not authorize M3-03, friends, public
-registration, commercial use, production, or an analytics sink.
+**The decision set was approved on 10 August 2026; implementation was not.** The
+ticket remains `proposed`. Before implementation approval and dispatch:
+
+1. M3-01B must be accepted, merged, pushed, deployed to the founder environment,
+   and have its required hosted verification recorded.
+2. An approved roadmap feature brief must exist; the repository currently has
+   no M3 roadmap feature brief.
+3. Decision 8's dedicated transaction ADR must be drafted and separately
+   approved with the exact privileged boundary.
+
+The deferred per-source context allocation in M3-01B decision 4 must be settled
+before M3-02 can be accepted, and earlier if the owner approaches its recorded
+memory-item trigger. Any later implementation approval remains owner/synthetic
+local or M0-06A founder-hosted only and does not authorize M3-03, friends,
+public registration, commercial use, production, or an analytics sink.
