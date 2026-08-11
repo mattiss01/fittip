@@ -2,15 +2,20 @@
 
 **Ticket:** [M3-02](../../backlog/M3/M3-02-ROADMAP-PROPOSAL.md)
 
-**Status:** **incomplete — not ready for independent review or acceptance.**
-The data and coaching-boundary half of the ticket is delivered and green. The
-repository, domain orchestration, server actions, `390x844` interface, and
-Playwright flow are **not delivered**. See "What is not delivered" below before
-reading anything else.
+**Status:** **complete — ready for independent review.** The whole ticket is
+delivered: schema, AI boundary, repository, domain orchestration, server
+actions, the `390x844` interface, and the Playwright flow.
 
 **Branch:** `ticket/m3-02-roadmap-proposal`
 
-**Commit:** `94880d6b415d0479668f4e4d121f98f1ef37a829`
+**Commits:**
+
+- `94880d6` — schema, `fittip.roadmap.v2` contract, context allocation, model
+  binding (first builder).
+- `8226887` — repository, domain operation, server actions, interface,
+  Playwright flow, and the defect fixes below (second builder).
+- `403e025` — the workflow steps that actually run the concurrency harness and
+  the browser flow. Separately committed as a tooling change.
 
 **Base:** `851378c` (the docs-only commit that moved the ticket to
 `in development`)
@@ -19,70 +24,118 @@ reading anything else.
 
 ---
 
-## Read this first: the ticket is not finished
+## Read this first: what the second builder changed
 
-M3-02 was dispatched as one slice covering schema, AI boundary, and user
-interface. This commit delivers the first two. It delivers no user-visible
-behavior at all.
+The first builder delivered `94880d6` and left the interface half in an
+unscoped work-in-progress commit. That commit is not in the history; its
+contents were reshaped into `8226887` together with the work below.
 
-**Delivered:**
+Two defects the first builder found and reported unfixed, plus four found while
+finishing, are fixed here. Each has a test that fails without the fix.
 
-- The complete ADR-015 schema: six tables, five `SECURITY DEFINER` functions,
-  grants, RLS, and a 106-assertion pgTAP suite.
-- `fittip.roadmap.v2` as an accepted contract, with its validator, its prompt,
-  its response grammar, and an authored fixture corpus.
-- The four-source context assembly ADR-013 and ADR-014 require, with the
-  per-source byte allocation M3-01B decision 4 deferred to this ticket.
-- The live composition root, closing M3-01B limitation 17.
+1. **The screen did not advance after generating.** The owner stayed on the
+   compose form with their proposal already generated and invisible below it.
+   The screen is now derived from the last response rather than remembered
+   separately, so the review takes the compose form's place.
+2. **A regeneration lost its predecessor after a decline.** ADR-015 and
+   decision 4 require a regeneration to carry its immediately previous proposal
+   and record that link. The only proposal read was `getOpenProposal`, which by
+   construction cannot return a decided one — and declining is exactly what
+   makes a regeneration possible. The surface therefore sent no
+   `previousProposalId`, and the action refused the request as a first request
+   carrying feedback. `getReviewProposals` now returns the open proposal **and**
+   the declined predecessor from one read, and the surface offers
+   **Regenerate proposal** from that server state, so it also survives a reload
+   rather than living in one browser session.
+3. **A superseded proposal came back as open.** An edit creates a new proposal
+   without deciding its source, so once the edit was accepted the source
+   reappeared under **Direction, not a promise.** as if it were still awaiting a
+   decision. A proposal that an edit came from is now history.
+4. **A proposal's own memory candidate blocked its acceptance.** Source
+   references were recorded for every goal and memory item read, not for the
+   ones that actually travelled. Acceptance requires every recorded memory
+   source to still be `active`, so the `proposed` candidate extracted from the
+   planning note — created by the same generation — made the proposal
+   permanently unacceptable with "Your memory changed". Sources are now taken
+   from the same two eligibility selectors that decide what the coach sees.
+5. **Decision 3's "When to reassess" was missing.** Review points were marked on
+   the spine but the named section under it did not exist.
+6. **The lost-render defect reproduces on this surface.** See "The transition
+   that never commits" below.
 
-**Not delivered:**
+---
 
-- `src/server/repositories/roadmap-repository.ts` — no application code calls
-  any of the five functions. They are exercised only by pgTAP.
-- The domain operation that sequences claim → provider call → persist →
-  memory candidates.
-- `src/app/home/plan/roadmap/` — page, actions, error and loading states.
-- Every component: compose screen, roadmap spine, structured edit form, decline
-  confirmation, regeneration compose, memory-candidate panel, history.
-- `e2e/m3-02-roadmap.spec.ts` and its Playwright config.
-- The `390x844` demo path, which cannot exist without the above.
+## The transition that never commits (M2-05, on this surface)
 
-The honest reason is scope against a single builder session, not a blocker: no
-decision was missing and nothing was ambiguous. The work below is complete on
-its own terms and is a usable foundation, but the ticket's acceptance criteria
-1, 4a's compose disclosure, 4b's review panel, and the whole "User flow at
-390px" section are untouched.
+Measured here, before any fix: **three of six** local compose runs left the
+screen on "Building your roadmap proposal…" for ever. In every case the server
+had already answered `200` in about 300 ms with a complete payload — the action
+result *and* the revalidated page including the rendered spine — and a manual
+reload showed the proposal every time. No page error, no failed request.
 
-**Recommendation to the lead:** do not request independent review or
-product-owner acceptance against this commit. Either dispatch a second builder
-for the remaining half on this branch, or ask the product owner to split the
-ticket. The product owner explicitly chose "one ticket, not a data/UI split" at
-dispatch, so splitting it now is their decision to reverse, not mine.
+That is M2-05's documented defect verbatim: "the server answers, but React
+renders nothing further". The goal surface met it first and M2-02 reused its
+watchdog; this surface reuses the same module rather than inventing a third
+copy.
 
-One thing genuinely does not need to wait: the **per-source context allocation**
-below is the deferred M3-01B decision 4, and it is implemented, measured, and
-tested. It can be reviewed and approved independently of the interface.
+One deliberate difference: only the "a reply arrived and never rendered" half
+is used. `watchGoalMutation`'s ten-second confirmation budget belongs to a form
+save, and a roadmap generation is one provider call with no honest fixed
+deadline, so a silent request keeps waiting behind the pending copy instead of
+being declared unconfirmed while it is still legitimately running.
+
+After the fix, six of six diagnostic runs and four of four full flow runs
+converged without manual intervention.
+
+**New copy, not in the ticket's approved list**, mirroring the memory surface's
+wording and claiming nothing about saving:
+
+- `This roadmap step did not appear. Reloading to show what is saved.`
+- `Your last roadmap step did not appear, so this page was reloaded. What you
+  see below is what is saved.`
+
+The product owner should confirm both at acceptance.
 
 ---
 
 ## Delivered behavior
 
-No user-visible behavior. What exists is the boundary an interface would call:
-
-- An owner-derived transaction boundary that can claim one paid attempt, persist
-  a validated proposal with its minimized provenance, record inferred memory
-  candidates independently, edit or decline a proposal, and accept one as an
+- `/home/plan/roadmap`, reached from a **Roadmap →** link on the plan editor.
+  Empty state, **Create roadmap** / **Propose a new roadmap**, the
+  **Shape your roadmap** compose step with the decision 4a disclosure, the
+  proposal review on the roadmap spine, **Accept roadmap** / **Edit proposal** /
+  **Decline proposal**, the decline confirmation, the regeneration compose with
+  required feedback and its three-round ceiling, the structured editor, the
+  separate **Possible memory updates** panel, and superseded-version history.
+- An owner-derived transaction boundary that claims one paid attempt, persists a
+  validated proposal with its minimized provenance, records inferred memory
+  candidates independently, edits or declines a proposal, and accepts one as an
   immutable current roadmap version.
 - A coaching context assembled from four sources — goals, memory, ADR-013
   training history, and the owner's planning note — under an explicit per-source
   byte allocation.
 - A composition root that constructs a live coaching service only for a
   provider/model pair this repository can price, and a fixture one otherwise.
+  Without `FITTIP_AI_LIVE=enabled` every path is network-free, which is what
+  makes the flow safe to run on every push.
 
 ## Mobile demo path
 
-**None.** There is no route, no page, and no component. Nothing can be
-demonstrated at `390x844`.
+`390x844`, against `build` + `start` on port 3017:
+
+1. `/home/you/goals` — create one active core goal.
+2. `/home/plan` → **Roadmap →** → `/home/plan/roadmap`, empty state.
+3. **Create roadmap** → expand **What the coach will use** → write a planning
+   note → **Generate roadmap proposal**.
+4. Review: **Direction, not a promise.**, the spine with its phases, milestones
+   and checkpoints, **What this assumes**, **When to reassess**, and the
+   separate **Possible memory updates** panel.
+5. **Decline proposal** → confirm → **Regenerate proposal** → feedback →
+   **Generate another proposal**.
+6. **Edit proposal** → change the title → **Save as a new proposal**.
+7. **Accept roadmap** → `Version 1` and the accepted title.
+
+Screenshots for every step: `docs/validation/M3/evidence/M3-02-*-390x844.png`.
 
 ## Changed files
 
@@ -116,9 +169,77 @@ demonstrated at `390x844`.
  26 files changed, 7793 insertions(+), 657 deletions(-)
 ```
 
-Nothing was deleted or renamed.
+`git diff --stat 94880d6 8226887 403e025` — the second half, excluding this
+record and the seven screenshots:
 
-Files whose purpose is not evident from path and diff:
+```
+ .github/workflows/ci.yml                           |  13 +
+ e2e/m3-02-roadmap.spec.ts                          | 316 ++++++
+ e2e/m3-02.playwright.config.ts                     |  19 +
+ package.json                                       |   1 +
+ src/app/home/plan/roadmap/action-state.ts          |  42 ++
+ src/app/home/plan/roadmap/actions.test.ts          | 286 ++++++
+ src/app/home/plan/roadmap/actions.ts               | 373 ++++++++
+ src/app/home/plan/roadmap/error.tsx                |  21 +
+ src/app/home/plan/roadmap/loading.tsx              |  13 +
+ src/app/home/plan/roadmap/page.test.tsx            | 236 +++++
+ src/app/home/plan/roadmap/page.tsx                 | 264 +++++
+ src/app/home/plan/roadmap/roadmap.module.css       | 579 ++++++++++
+ src/components/planning/plan-editor.tsx            |   6 +
+ src/components/roadmap/roadmap-editor.tsx          | 364 +++++++
+ src/components/roadmap/roadmap-manager.test.tsx    | 466 ++++++++
+ src/components/roadmap/roadmap-manager.tsx         | 771 +++++++++++++
+ src/components/roadmap/roadmap-spine.tsx           | 171 +++
+ src/server/ai/coach-ai-service.ts                  |  75 +-
+ src/server/ai/composition.ts                       |   9 +-
+ src/server/ai/context-source.test.ts               | 222 ++++
+ src/server/ai/context-source.ts                    |  66 +-
+ src/server/ai/context.ts                           |   7 +
+ src/server/ai/contracts.ts                         |  15 +
+ src/server/ai/fixtures/fixture-adapter.ts          |  22 +
+ src/server/ai/fixtures/synthetic-roadmap.ts        | 256 +++++
+ src/server/repositories/completion-repository.test.ts |  99 ++
+ src/server/repositories/completion-repository.ts   |  67 ++
+ src/server/repositories/roadmap-repository.test.ts | 245 +++++
+ src/server/repositories/roadmap-repository.ts      | 531 +++++++++
+ src/server/roadmap/roadmap-edit.ts                 |  62 ++
+ src/server/roadmap/roadmap-records.ts              | 260 +++++
+ src/server/roadmap/roadmap-service.test.ts         | 283 ++++++
+ src/server/roadmap/roadmap-service.ts              | 236 +++++
+ supabase/tests/integration/m3_02_concurrent_acceptance.mjs | 401 ++++++
+```
+
+Nothing was deleted or renamed in either commit.
+
+Files from the second half whose purpose is not evident from path and diff:
+
+- `src/server/roadmap/roadmap-records.ts` — the domain: horizon rules, the
+  parsing of everything an owner can send, and `ROADMAP_COPY`, the one place
+  decisions 3, 4, 4a and 4b's exact strings live. It is `server-only`, so the
+  client components inline the same strings; the reviewer should compare them.
+- `src/server/roadmap/roadmap-edit.ts` — builds the validation context an owner
+  edit is re-checked against, so an edit passes through the same validator the
+  model's own output does.
+- `src/server/ai/fixtures/synthetic-roadmap.ts` — a roadmap derived from the
+  request's own context, used only when no fixture case is named. Every corpus
+  body carries fixed dates and fixed goal ids, so a real owner rejects all of
+  them; this is what makes the surface demonstrable and the flow testable
+  without a provider. It is not a model and claims nothing about coaching
+  quality.
+- `src/app/home/plan/roadmap/action-state.ts` — separate from `actions.ts`
+  because a `"use server"` module may export nothing but async functions, and
+  the client needs the initial state.
+- `src/server/repositories/completion-repository.ts` — adds
+  `listCoachingCompletions`, the only read that joins the recorded activities.
+  `listCurrentCompletions` deliberately does not: the three screens that call it
+  show no activities and would pay for a second query for nothing.
+- `supabase/tests/integration/m3_02_concurrent_acceptance.mjs` — the acceptance
+  race, which pgTAP cannot express in one session. Four rounds of six
+  contenders, plus replay and cross-owner isolation.
+- `src/components/planning/plan-editor.tsx` — a six-line **Roadmap →** link.
+  Nothing else in that file changed.
+
+Files from the first half whose purpose is not evident from path and diff:
 
 - `src/server/ai/model-binding.ts` — the model, its rate card, and its limits as
   one indivisible value. Exists solely to close M3-01B limitation 17; see below.
@@ -334,26 +455,25 @@ Proven by:
 
 ## Tests and final results
 
-**CI run:** <https://github.com/mattiss01/fittip/actions/runs/31438850506> —
-**success**, all three jobs green, for
-`dd9571157fd73f67b99ec0ae4d777a8eb3dfb61d`. That commit is the implementation
-commit `94880d6` plus this record, so the run covers the implementation
-unchanged. It includes lint, typecheck, `test:run`, the production build, every
-migration from zero, database lint, the advisors, pgTAP, the concurrency
-harnesses, and the `390x844` browser flows.
+**CI run for the reviewed commit:**
+<https://github.com/mattiss01/fittip/actions/runs/31499399415> for `403e025`.
+Its result is recorded with acceptance under the evidence-commit exception: a
+record cannot contain the run URL of the commit that adds it, and the commit
+after this one changes only this record.
 
-The run for `94880d6` alone (`31438650270`) was **cancelled** by the push that
-added this record, which is why the green run is recorded against the later SHA.
+The first half's run remains
+<https://github.com/mattiss01/fittip/actions/runs/31438850506> — **success**,
+all three jobs green, for `dd95711` (`94880d6` plus its record).
 
-One thing worth flagging to the reviewer: the branch's base commit `851378c` —
-docs-only, containing none of this work — produced a **red** run
-(`31434464581`), an `M1-04 Today and Progress` timeout at
-`apiRequestContext.delete`. The same flow is green on the run above with this
-ticket's changes applied, so it was flaky rather than a defect, and no
-known-defect exception is claimed or needed.
+Worth flagging to the reviewer: the branch's base commit `851378c` — docs-only,
+containing none of this work — produced a **red** run (`31434464581`), an
+`M1-04 Today and Progress` timeout at `apiRequestContext.delete`. The same flow
+is green on the run above with this ticket's changes applied, so it was flaky
+rather than a defect, and no known-defect exception is claimed or needed.
 
-The table below records only what CI does not cover, plus what was observed
-locally while building.
+The table below records what CI does not cover, plus what was observed locally
+while building. The database rows are from the first half and were re-checked
+only where this half touched them.
 
 | Command or check | Result |
 | --- | --- |
@@ -361,18 +481,51 @@ locally while building.
 | `npx supabase db lint --local --level warning --fail-on warning` | `No schema errors found` |
 | `npx supabase db advisors --local --type all --level warn --fail-on warn` | `No issues found` |
 | `npx supabase test db --local supabase/tests/database` | 9 files, 618 assertions, `Result: PASS` (106 new) |
+| `npm run test:m3-02-concurrency` | `4 rounds of 6 contenders, replay, and cross-owner isolation all held` |
 | `npm run lint` | clean |
 | `npm run typecheck` | clean |
-| `npm run test:run` | 64 files, 655 tests passed |
+| `npm run test:run` | 70 files, 716 tests passed |
 | `npm run build` | succeeded, with the known multiple-lockfile workspace-root warning |
-| `git diff --check` | clean |
-| Playwright `390x844` | **not run — no flow exists** |
-| Hosted migration / Preview verification | **not done — lead's step, and premature** |
-| Live provider call | **none made** |
+| `git diff --check` | clean (line-ending warnings only) |
+| Playwright `390x844`, `e2e/m3-02.playwright.config.ts`, port 3017, against `build` + `start` | **4 consecutive passes** after the fixes, ~8-11 s each; 7 screenshots captured |
+| Hosted migration / Preview verification | **not done — the lead's step** |
+| Live provider call | **none made.** `FITTIP_AI_LIVE` was never set, so every run resolved to the fixture composition. |
 
 ### Tests added or changed
 
-New: `composition.test.ts` (11), `owner-text.test.ts` (11),
+New in the second half, each covering a defect above:
+
+- `src/server/repositories/roadmap-repository.test.ts` (14) — the declined
+  predecessor survives a decline, a superseded source is not open, an accepted
+  proposal offers no predecessor, the `PT409`/`PT429` reason mapping, and that a
+  database message never reaches the caller.
+- `src/components/roadmap/roadmap-manager.test.tsx` (12) — the compose screen
+  gives way to the review, the editor still opens with that result on screen,
+  the regeneration carries `previousProposalId` with a prefilled editable note
+  and empty feedback, the three-round ceiling, the exact decline confirmation,
+  no percentage or confidence anywhere, and the lost-render reload.
+- `src/app/home/plan/roadmap/page.test.tsx` (7) — one owner-scoped read pass,
+  the predecessor handed to the surface after a decline, the remaining-round
+  arithmetic, and the three redirect/boundary paths.
+- `src/app/home/plan/roadmap/actions.test.ts` (13) — the regeneration reaches
+  the domain with its predecessor and feedback, feedback without a predecessor
+  and a predecessor without feedback are both refused before any provider call,
+  the owner's draft comes back on a rejection, and every conflict maps to an
+  honest state.
+- `src/server/roadmap/roadmap-service.test.ts` (9) — only the immediately
+  previous proposal travels and only in reduced form, a missing predecessor
+  fails before a key is consumed, the fingerprint carries lengths not content, a
+  completed claim calls no provider, and a memory-candidate conflict leaves the
+  roadmap valid.
+- `src/server/ai/context-source.test.ts` (4) — `sport` and `title` come from the
+  recorded activity (limitation 5), sources are ids and revisions only, a record
+  that never reached the coach is not recorded as a source (defect 4), and a
+  today disagreement refuses.
+- `src/server/repositories/completion-repository.test.ts` — one added case for
+  `listCoachingCompletions`, asserting the activity join, its `sport`, and the
+  owner predicate on all three reads.
+
+New in the first half: `composition.test.ts` (11), `owner-text.test.ts` (11),
 `openai-prompt.test.ts` (11), `m3_02_roadmap_proposals.test.sql` (106
 assertions).
 
@@ -446,8 +599,11 @@ explore, not to sanity-check, not once.
 
 ## Known limitations
 
-1. **The ticket is roughly half delivered.** Everything in "What is not
-   delivered" above remains. This is the limitation that matters.
+All nine were re-checked against what is true at `403e025`.
+
+1. ~~**The ticket is roughly half delivered.**~~ **Closed.** The interface,
+   actions, repository, domain operation and mobile flow are delivered, and the
+   flow passes at `390x844`.
 2. **The luna available-days defect is not re-tested.** M3-01B recorded that on
    one of two cold-start runs `gpt-5.6-luna` placed sessions outside the
    athlete's stated available days. M3-02 owns re-testing it against the real
@@ -463,14 +619,24 @@ explore, not to sanity-check, not once.
    roughly 11 sessions of the 20-session cap. The trim is disclosed and never
    denies, but the product owner may wish to raise `maxInputTokens` — a spend
    decision I did not make.
-5. **`sport` is null on every completion reference.** A completion carries no
-   sport of its own in the current model; the first activity's name stands in
-   for `title`. ADR-013 decision 4 lists session `title` and `sport` as sendable,
-   so this is a real gap against the ADR, not a design choice.
-6. **No concurrency harness.** M1-01, M2-01, and M3-01B each have one under
-   `supabase/tests/integration/`. Two genuinely simultaneous acceptances against
-   the same head are proven only by the advisory lock and the `for update`, not
-   by a test.
+5. ~~**`sport` is null on every completion reference.**~~ **Closed, verified.**
+   A completion still carries no sport column of its own — both `title` and
+   `sport` live on `completed_activities` — so the coaching path now reads them
+   through a join that `listCurrentCompletions` deliberately does not do.
+   Verified by `completion-repository.test.ts` (the join, its `sport`, and the
+   owner predicate on all three reads) and `context-source.test.ts` (the value
+   reaching `training.completions`). A session logged as several activities is
+   named by the first; the rest travel in `activityNames`.
+6. ~~**No concurrency harness.**~~ **Closed, verified — but it did not work as
+   delivered.** `m3_02_concurrent_acceptance.mjs` existed in the work-in-progress
+   commit with no npm script and no workflow step, so it had never run. Run for
+   the first time here, it failed immediately: it seeded its goal with a
+   service-role insert into `goals`, which the grants refuse — `authenticated`
+   has only `select` and the service role has no write at all. It now seeds
+   through `apply_goal_change`, exactly as the application does. It then passed
+   on every run: `4 rounds of 6 contenders, replay, and cross-owner isolation
+   all held`. `npm run test:m3-02-concurrency` and a CI step were added so it
+   keeps running.
 7. **Adherence is judged by date, not by planned-session id.** The current-plan
    read does not expose planned-session ids, so a planned date with no
    completion on it counts as a miss. Coarser than an id join; it never invents
@@ -479,17 +645,68 @@ explore, not to sanity-check, not once.
    explicitly instructs. No existing decision text changed. The reviewer and the
    product owner should confirm they accept it being recorded that way.
 9. **Nothing is deployed.** No push to the founder project, no Preview
-   verification, no hosted migration.
+   verification, no hosted migration. The lead's step, and the one that must
+   happen before acceptance: this ticket adds a migration, so the Preview does
+   not prove itself.
+
+Raised while finishing this half:
+
+10. **Completion source references are broader than what travels.** Goal and
+    memory sources are now exactly the eligible records (defect 4), but every
+    completion the owner has ever recorded is still listed, while ADR-013 sends
+    only the bounded window. The context carries no completion ids, so filtering
+    them would mean threading ids through the assembled context. The direction
+    of the error is the safe one — acceptance re-checks more than it must, never
+    fewer — but a correction to an old, unsent completion will conflict a
+    pending proposal with "Your training history changed". Worth a follow-up
+    ticket rather than a change here.
+11. **The lost-render defect is mitigated, not fixed.** The surface recovers by
+    reloading; the underlying transition failure is M2-05/M2-09's and is
+    untouched. Three of six local compose runs hit it. An owner will
+    occasionally see a brief notice and a reload where nothing should have
+    happened at all.
+12. **Two new copy strings** are not from the ticket's approved list. See "The
+    transition that never commits" above. They need the product owner's word at
+    acceptance.
+13. **The synthetic fixture roadmap is not a coach.** Everything demonstrable on
+    a Preview without `FITTIP_AI_LIVE` comes from
+    `synthesizeRoadmapBody`: structurally valid, deterministic, and deliberately
+    dull. It proves the surface and the transactions, and says nothing about
+    whether a real proposal would be any good. Limitations 2 and 3 are what
+    answer that.
 
 ## Independent reviewer checklist
 
-**Do not review this commit for acceptance.** It does not deliver the ticket.
-If the lead wants an early read on the delivered half, review
-`git diff 851378c..94880d6b415d0479668f4e4d121f98f1ef37a829` and confirm CI is
-green for `94880d6b415d0479668f4e4d121f98f1ef37a829` before anything below. Do
-not re-run lint, typecheck, tests, or build.
+Review `git diff 851378c..403e025`, and confirm the CI run above is green for
+`403e025`. Do not re-run lint, typecheck, tests, or build — CI ran them.
 
-Judgment CI cannot supply:
+Judgment CI cannot supply, on the second half:
+
+1. **The predecessor rule.** `getReviewProposals` decides both what is open and
+   what a regeneration may carry. Is "the newest proposal, if it is rejected"
+   the right definition of the immediately previous proposal, given that
+   `begin_roadmap_generation` independently requires an owned, rejected,
+   same-horizon predecessor? Can a chain longer than one round leak through it?
+2. **The superseded rule.** A proposal that an edit came from is treated as
+   history. Check the twenty-row read window: can a real history push a still-open
+   proposal past it?
+3. **Source recording.** Sources now come from `selectActiveGoalContext` and
+   `selectActiveMemoryContext` — the same selectors `buildCoachAIContext`
+   applies. Are they genuinely the same set that travels, or can the assembler
+   drop something afterwards that would then be recorded but unsent?
+4. **The exact copy.** `ROADMAP_COPY` is `server-only`, so the client components
+   inline the same strings. Compare them against decisions 3, 4, 4a and 4b
+   character by character, and judge the two new watchdog strings, which no
+   decision covers.
+5. **The watchdog.** It reloads the page on the owner's behalf. Can it fire
+   while a legitimate generation is still running? Does its notice claim
+   anything about what was saved? Is the session-storage marker free of user
+   content?
+6. **Honest states.** Empty, pending, conflict, cap-reached, expired session,
+   provider failure. Does any of them imply a roadmap was stored when it was
+   not, or invent a training fact?
+
+Judgment CI cannot supply, on the first half:
 
 1. **The model/rate-card binding.** Is there genuinely one value, or two that
    agree? Can any path obtain a rate card without naming the model it prices?
@@ -510,5 +727,4 @@ Judgment CI cannot supply:
    covers six escalations. Is any of the ADR's listed properties unproven?
 6. **The ADR-013 amendment.** Is recording the tuning parameters in the ADR the
    right call, and are 400/240/240/20/180 defensible?
-7. **Limitation 5** — `sport` always null — is a real ADR-013 gap. Confirm
-   whether it blocks.
+7. ~~**Limitation 5**~~ — closed above; confirm the fix rather than the gap.
