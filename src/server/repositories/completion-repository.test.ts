@@ -179,7 +179,106 @@ describe("CompletionRepository", () => {
     expect(sessionEq).toHaveBeenCalledWith("user_id", USER_ID);
     expect(sessionIn).toHaveBeenCalledWith("id", [currentId]);
   });
+
+  // M3-02. ADR-013 decision 4 lists the session sport among the fields a coach
+  // may read, and a completion carries none of its own: it lives on the
+  // activities. The coaching read is the only one that joins them.
+  it("reads the recorded activities and their sport for the coaching path", async () => {
+    const currentId = "00000000-0000-4000-8000-000000000041";
+    const groupId = "00000000-0000-4000-8000-000000000051";
+    const headOrder = vi.fn().mockResolvedValue({
+      data: [
+        {
+          completion_group_id: groupId,
+          current_completion_id: currentId,
+          revision: 1,
+          updated_at: "2026-07-29T12:00:00.000Z",
+        },
+      ],
+      error: null,
+    });
+    const headEq = vi.fn().mockReturnValue({ order: headOrder });
+    const sessionIn = vi.fn().mockResolvedValue({
+      data: [completionRow(currentId, groupId)],
+      error: null,
+    });
+    const sessionEq = vi.fn().mockReturnValue({ in: sessionIn });
+    const activityOrder = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: "00000000-0000-4000-8000-000000000060",
+          completed_session_id: currentId,
+          planned_activity_id: null,
+          personal_activity_id: null,
+          position: 1,
+          name: "Hill repeats",
+          sport: "Running",
+          instructions: null,
+          measurement_mode: "time_distance_pace",
+          actual_measurement: null,
+        },
+      ],
+      error: null,
+    });
+    const activityIn = vi.fn().mockReturnValue({ order: activityOrder });
+    const activityEq = vi.fn().mockReturnValue({ in: activityIn });
+    const from = vi.fn((table: string) => {
+      if (table === "completion_heads") {
+        return { select: vi.fn(() => ({ eq: headEq })) };
+      }
+      if (table === "completed_sessions") {
+        return { select: vi.fn(() => ({ eq: sessionEq })) };
+      }
+      if (table === "completed_activities") {
+        return { select: vi.fn(() => ({ eq: activityEq })) };
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    });
+    const repository = new CompletionRepository(client({ from }));
+
+    await expect(repository.listCoachingCompletions()).resolves.toEqual([
+      expect.objectContaining({
+        id: currentId,
+        activities: [
+          expect.objectContaining({ name: "Hill repeats", sport: "Running" }),
+        ],
+      }),
+    ]);
+    // The owner predicate is repeated on every read, RLS notwithstanding.
+    expect(headEq).toHaveBeenCalledWith("user_id", USER_ID);
+    expect(sessionEq).toHaveBeenCalledWith("user_id", USER_ID);
+    expect(activityEq).toHaveBeenCalledWith("user_id", USER_ID);
+    expect(activityIn).toHaveBeenCalledWith("completed_session_id", [
+      currentId,
+    ]);
+  });
 });
+
+function completionRow(id: string, groupId: string) {
+  return {
+    id,
+    user_id: USER_ID,
+    completion_group_id: groupId,
+    revision_number: 1,
+    previous_completion_id: null,
+    planned_session_id: PLANNED_ID,
+    actual_local_date: "2026-07-29",
+    actual_started_at: null,
+    timezone_name: "Europe/Berlin",
+    duration_minutes: 45,
+    status: "completed",
+    perceived_effort: 6,
+    feeling: "as_expected",
+    note: null,
+    replacement_description: null,
+    pain_reported: false,
+    illness_reported: false,
+    injury_reported: false,
+    severe_fatigue_reported: false,
+    correction_reason: null,
+    created_at: "2026-07-29T12:00:00.000Z",
+  };
+}
 
 function client(overrides: Record<string, unknown>) {
   return {

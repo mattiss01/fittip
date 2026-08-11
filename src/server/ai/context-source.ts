@@ -1,6 +1,8 @@
 import "server-only";
 
+import { selectActiveGoalContext } from "@/server/goals/goal-records";
 import {
+  selectActiveMemoryContext,
   utcIsoDate,
   type MemoryItemView,
 } from "@/server/memory/memory-records";
@@ -8,6 +10,7 @@ import type {
   CoachAIGoalRecord,
   CoachAIOwnedRecords,
 } from "@/server/ai/context";
+import type { CoachAISourceReference } from "@/server/ai/contracts";
 import { CoachAIError } from "@/server/ai/errors";
 import type { CoachAIOwner } from "@/server/ai/owner";
 import type {
@@ -43,12 +46,15 @@ type MemoryReader = {
 };
 
 /**
- * ADR-013's reads. `listCurrentCompletions` returns the current revision of
- * each completion group and nothing from the correction trail, which is
- * decision 2 enforced by the repository rather than restated here.
+ * ADR-013's reads. `listCoachingCompletions` returns the current revision of
+ * each completion group with the activities it recorded, and nothing from the
+ * correction trail — decision 2 enforced by the repository rather than restated
+ * here. The activities are why this is not `listCurrentCompletions`: a
+ * completion carries no `sport` of its own, so decision 4's session sport and
+ * activity names are only reachable through them.
  */
 type CompletionReader = {
-  listCurrentCompletions(): Promise<
+  listCoachingCompletions(): Promise<
     {
       id: string;
       completionGroupId: string;
@@ -66,7 +72,7 @@ type CompletionReader = {
       illnessReported: boolean;
       injuryReported: boolean;
       severeFatigueReported: boolean;
-      activities: { name: string }[];
+      activities: { name: string; sport: string }[];
     }[]
   >;
 };
@@ -86,20 +92,7 @@ type PlanReader = {
   } | null>;
 };
 
-/**
- * Where a proposal's provenance comes from.
- *
- * Ids and revisions only — never copied content. Acceptance rechecks every one
- * of these against its current state, so a proposal built on a goal the owner
- * has since abandoned produces a visible conflict rather than a silent
- * acceptance.
- */
-export type CoachAISourceReference = {
-  kind: "goal" | "memory" | "plan_version" | "completion";
-  recordId: string;
-  revisionId?: string;
-  revisionNumber?: number;
-};
+export type { CoachAISourceReference } from "@/server/ai/contracts";
 
 export type CoachAILoadedRecords = CoachAIOwnedRecords & {
   sources: CoachAISourceReference[];
@@ -123,7 +116,7 @@ export class RepositoryCoachAIContextSource implements CoachAIContextSource {
       await Promise.all([
         this.goals.list(),
         this.memory.list(today),
-        this.completions.listCurrentCompletions(),
+        this.completions.listCoachingCompletions(),
         this.plans.getCurrentManualPlan(),
       ]);
 
@@ -158,12 +151,27 @@ export class RepositoryCoachAIContextSource implements CoachAIContextSource {
       plannedSessions,
     };
 
+    // Only what actually travels is recorded, because acceptance rechecks every
+    // stored source against its current eligible state. A paused goal or a
+    // proposed memory candidate never reaches the coach, so recording one would
+    // make an unrelated record able to block an acceptance — and a planning
+    // note that produces a memory candidate would then conflict with the very
+    // proposal that produced it. The eligibility rules are the same two
+    // selectors `buildCoachAIContext` applies, so the two cannot drift.
+    const eligibleGoals = selectActiveGoalContext(goalCollection.goals);
+    const eligibleMemory = selectActiveMemoryContext(
+      memoryCollection.items,
+      today,
+    );
+
     const sources: CoachAISourceReference[] = [
-      ...goalCollection.goals.map((goal) => ({
-        kind: "goal" as const,
-        recordId: goal.id,
-      })),
-      ...memoryCollection.items.map((item) => ({
+      ...[...eligibleGoals.targetable, ...eligibleGoals.historical].map(
+        (goal) => ({
+          kind: "goal" as const,
+          recordId: goal.id,
+        }),
+      ),
+      ...eligibleMemory.map((item) => ({
         kind: "memory" as const,
         recordId: item.id,
         revisionNumber: item.revisionNumber,
@@ -216,13 +224,17 @@ function toHistoryCompletion(entry: {
   illnessReported: boolean;
   injuryReported: boolean;
   severeFatigueReported: boolean;
-  activities: { name: string }[];
+  activities: { name: string; sport: string }[];
 }): TrainingHistoryCompletion {
+  // A completion has no title or sport column. Decision 4 names both as
+  // sendable, and the first recorded activity is where they actually live: a
+  // session logged as one activity is that activity, and one logged as several
+  // is named by the first, with the rest travelling in `activityNames`.
   return {
     localDate: entry.actualLocalDate,
     status: entry.status,
     title: entry.activities[0]?.name ?? null,
-    sport: null,
+    sport: entry.activities[0]?.sport ?? null,
     durationMinutes: entry.durationMinutes ?? null,
     perceivedEffort: entry.perceivedEffort ?? null,
     feeling: entry.feeling ?? null,

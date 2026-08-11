@@ -365,6 +365,12 @@ export function PlanEditor({
               Choose the horizon. Build the sessions. Nothing becomes accepted
               until you save.
             </p>
+            {/* The roadmap is the months this week sits inside. It is a
+                separate record with its own acceptance, so it gets a link
+                rather than a section of this editor. */}
+            <Link className="back-link" href="/home/plan/roadmap">
+              Roadmap →
+            </Link>
           </div>
           <div className="version-stamp" aria-label="Current plan version">
             <span>Accepted</span>

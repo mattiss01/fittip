@@ -303,6 +303,21 @@ export type RoadmapMemoryCandidate = {
 };
 
 /**
+ * Where a proposal's provenance comes from.
+ *
+ * Ids and revisions only, never copied content. Acceptance rechecks every one
+ * of these against its current state, so a proposal built on a goal the owner
+ * has since abandoned produces a visible conflict rather than a silent
+ * acceptance.
+ */
+export type CoachAISourceReference = {
+  kind: "goal" | "memory" | "plan_version" | "completion";
+  recordId: string;
+  revisionId?: string;
+  revisionNumber?: number;
+};
+
+/**
  * The two sections of a roadmap response. They validate independently: an
  * invalid memory section is discarded and the roadmap still returns.
  */

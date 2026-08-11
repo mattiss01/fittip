@@ -10,6 +10,8 @@ import {
   type CoachAIOperation,
   type CoachAIProposal,
   type CoachAIRequest,
+  type CoachAISourceReference,
+  type RoadmapMemoryCandidate,
 } from "@/server/ai/contracts";
 import {
   CoachAIBudget,
@@ -36,6 +38,7 @@ import {
 import type { CoachAIOwner } from "@/server/ai/owner";
 import {
   validateCoachAICandidate,
+  validateRoadmapCandidate,
   type CoachAIRejectionReason,
 } from "@/server/ai/output-validation";
 import {
@@ -65,6 +68,25 @@ export type CoachAIProposalOutcome = {
    * caller for provenance; deliberately absent from telemetry.
    */
   references: { goalIds: string[]; memoryIds: string[] };
+  /**
+   * The same provenance as ids and revisions, in the shape the persistence
+   * function stores and the acceptance function rechecks.
+   */
+  sources: CoachAISourceReference[];
+  /**
+   * The durable reservation this call was charged against, or `null` for a
+   * fixture run that spent nothing. `finish_roadmap_generation` requires it for
+   * a live result, so a real call cannot be recorded as free.
+   */
+  spendReservationId: string | null;
+  /**
+   * Memory candidates extracted from the planning note, already validated as
+   * exact excerpts. Empty when the model returned none or when the section
+   * failed its own validation — which never invalidates the roadmap.
+   */
+  memoryCandidates: RoadmapMemoryCandidate[];
+  /** Set when a valid proposal arrived with an unusable memory section. */
+  memoryRejectionReason: CoachAIRejectionReason | null;
 };
 
 export type CoachAIServiceDependencies = {
@@ -262,6 +284,7 @@ export class CoachAIService {
         promptVersion,
         key,
         assembled,
+        sources: records.sources ?? [],
         draft,
       });
       begun.complete(outcome);
@@ -282,6 +305,7 @@ export class CoachAIService {
     promptVersion: string;
     key: string;
     assembled: ReturnType<typeof buildCoachAIContext>;
+    sources: CoachAISourceReference[];
     draft: CoachAITelemetryRecord;
   }): Promise<CoachAIProposalOutcome> {
     const { draft, assembled, operation } = input;
@@ -435,17 +459,40 @@ export class CoachAIService {
     // that records what it cost.
     if (state.durableSettlement) await state.durableSettlement;
 
-    const validation = validateCoachAICandidate({
-      operation,
-      body: candidate.body,
-      context: assembled.context,
-    });
+    // The roadmap operation returns two independently validated sections, so it
+    // goes through the validator that can report on both. An unusable memory
+    // section is discarded and the roadmap is still returned; that is the
+    // approved independent-decision boundary, not leniency.
+    let proposal: CoachAIProposal;
+    let memoryCandidates: RoadmapMemoryCandidate[] = [];
+    let memoryRejectionReason: CoachAIRejectionReason | null = null;
 
-    if (validation.outcome === "rejected") {
-      draft.outcome = "rejected";
-      draft.rejectionReason = validation.reason as CoachAIRejectionReason;
-      // A rejected candidate creates no proposal and writes no user data.
-      throw new CoachAIError("output_invalid");
+    if (operation === "create_roadmap") {
+      const validation = validateRoadmapCandidate({
+        body: candidate.body,
+        context: assembled.context,
+      });
+      if (validation.outcome === "rejected") {
+        draft.outcome = "rejected";
+        draft.rejectionReason = validation.reason;
+        throw new CoachAIError("output_invalid");
+      }
+      proposal = validation.response.roadmap;
+      memoryCandidates = validation.response.memoryCandidates;
+      memoryRejectionReason = validation.memoryRejectionReason;
+    } else {
+      const validation = validateCoachAICandidate({
+        operation,
+        body: candidate.body,
+        context: assembled.context,
+      });
+      if (validation.outcome === "rejected") {
+        draft.outcome = "rejected";
+        draft.rejectionReason = validation.reason as CoachAIRejectionReason;
+        // A rejected candidate creates no proposal and writes no user data.
+        throw new CoachAIError("output_invalid");
+      }
+      proposal = validation.proposal;
     }
 
     draft.outcome = "accepted";
@@ -454,8 +501,12 @@ export class CoachAIService {
       requestId: input.requestId,
       operation,
       idempotencyKey: input.key,
-      proposal: validation.proposal,
+      proposal,
       references: assembled.references,
+      sources: input.sources,
+      spendReservationId: durable?.reservationId ?? null,
+      memoryCandidates,
+      memoryRejectionReason,
     };
   }
 

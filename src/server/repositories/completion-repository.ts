@@ -231,6 +231,73 @@ export class CompletionRepository {
     };
   }
 
+  /**
+   * The current revision of every completion, with the activities it recorded.
+   *
+   * `listCurrentCompletions` deliberately returns no activities, because the
+   * three screens that call it show none and a second query on every page load
+   * would cost them for nothing. ADR-013 decision 4 lists session `sport` and
+   * personal activity names among the fields a coach may read, and a completion
+   * carries neither of its own — both live on `completed_activities` — so the
+   * coaching path needs the join and gets its own read rather than making the
+   * other three pay for it.
+   */
+  async listCoachingCompletions(): Promise<CompletionRevision[]> {
+    const userId = await this.getVerifiedUserId();
+    const { data: heads, error: headError } = await this.client
+      .from("completion_heads")
+      .select(COMPLETION_HEAD_COLUMNS)
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false });
+    if (headError) throw new CompletionPersistenceError();
+    if (heads.length === 0) return [];
+
+    const currentIds = heads.map(
+      ({ current_completion_id }) => current_completion_id,
+    );
+
+    // Two owner-scoped reads issued together rather than as a waterfall.
+    const [
+      { data: sessions, error: sessionError },
+      { data: activities, error: activityError },
+    ] = await Promise.all([
+      this.client
+        .from("completed_sessions")
+        .select(COMPLETION_COLUMNS)
+        .eq("user_id", userId)
+        .in("id", currentIds),
+      this.client
+        .from("completed_activities")
+        .select(COMPLETED_ACTIVITY_COLUMNS)
+        .eq("user_id", userId)
+        .in("completed_session_id", currentIds)
+        .order("position"),
+    ]);
+    if (sessionError || activityError) throw new CompletionPersistenceError();
+
+    const activitiesBySession = new Map<string, CompletedActivityRow[]>();
+    for (const activity of activities) {
+      const bucket = activitiesBySession.get(activity.completed_session_id);
+      if (bucket) bucket.push(activity);
+      else activitiesBySession.set(activity.completed_session_id, [activity]);
+    }
+
+    const sessionsById = new Map(
+      sessions.map((session) => [session.id, session]),
+    );
+    return heads.flatMap((head) => {
+      const session = sessionsById.get(head.current_completion_id);
+      return session
+        ? [
+            toCompletionRevision(
+              session,
+              activitiesBySession.get(session.id) ?? [],
+            ),
+          ]
+        : [];
+    });
+  }
+
   private async getVerifiedUserId(): Promise<string> {
     try {
       return await requireAllowedVerifiedUser(this.client);

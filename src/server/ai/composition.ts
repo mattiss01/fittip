@@ -68,7 +68,10 @@ export type CoachAICompositionInput = {
   telemetry?: CoachAITelemetrySink;
   /**
    * The fixture case to answer with. Present only in a fixture composition;
-   * naming one has no effect on a live service.
+   * naming one has no effect on a live service. Omitting it synthesizes a
+   * roadmap from the request's own context, which is what makes the surface
+   * reviewable on a Preview without a provider — a corpus literal carries fixed
+   * dates and goal ids and would be rejected against any real owner.
    */
   fixtureCaseName?: string;
   environment?: Record<string, string | undefined>;
@@ -127,7 +130,9 @@ export function createRoadmapCoachAIService(
       Object.fromEntries(
         COACH_AI_OPERATIONS.map((operation) => [
           operation,
-          { caseName: input.fixtureCaseName ?? "valid_roadmap" },
+          input.fixtureCaseName
+            ? { caseName: input.fixtureCaseName }
+            : { synthesizeFromContext: true },
         ]),
       ),
     );

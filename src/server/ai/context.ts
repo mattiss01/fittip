@@ -15,6 +15,7 @@ import type {
   CoachAIMemoryReference,
   CoachAIOperation,
   CoachAIPreviousProposalReference,
+  CoachAISourceReference,
 } from "@/server/ai/contracts";
 import { CoachAIError } from "@/server/ai/errors";
 import {
@@ -227,6 +228,12 @@ export type CoachAIOwnedRecords = {
   goals: CoachAIGoalRecord[];
   memory: MemoryItemView[];
   training: TrainingHistoryRecords;
+  /**
+   * The exact records that informed the request, as ids and revisions. Carried
+   * from the context source rather than derived here, because only the source
+   * knows which revision of each record it actually read.
+   */
+  sources?: CoachAISourceReference[];
 };
 
 export type CoachAIComposeInput = {
