@@ -4,6 +4,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -16,6 +17,12 @@ vi.mock("react", async (importOriginal) => {
   return { ...actual, useActionState: useActionStateMock };
 });
 
+const { refreshMock } = vi.hoisted(() => ({ refreshMock: vi.fn() }));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: refreshMock }),
+}));
+
 vi.mock("@/app/home/plan/roadmap/actions", () => ({
   generateRoadmapAction: vi.fn(),
   acceptRoadmapAction: vi.fn(),
@@ -23,6 +30,7 @@ vi.mock("@/app/home/plan/roadmap/actions", () => ({
   editRoadmapAction: vi.fn(),
 }));
 
+import { editRoadmapAction } from "@/app/home/plan/roadmap/actions";
 import { INITIAL_ROADMAP_ACTION_STATE } from "@/app/home/plan/roadmap/action-state";
 import type { RoadmapActionState } from "@/app/home/plan/roadmap/action-state";
 import { RoadmapManager, type RoadmapManagerState } from "./roadmap-manager";
@@ -305,6 +313,50 @@ describe("RoadmapManager", () => {
     });
     render(<RoadmapManager {...props(emptyState())} />);
     expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  // An edit creates a new proposal, so the review under the editor is stale
+  // the moment it closes. Continuous integration caught the revalidated tree
+  // not arriving with the editor's own transition.
+  it("re-reads the surface after an edit creates a new proposal", async () => {
+    vi.mocked(editRoadmapAction).mockResolvedValue({
+      status: "edited",
+      message: "",
+      submission: 2,
+      proposalId: "00000000-0000-4000-8000-000000000012",
+    });
+    render(<RoadmapManager {...props(reviewingState())} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit proposal" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Save as a new proposal" }),
+    );
+
+    await waitFor(() => expect(refreshMock).toHaveBeenCalled());
+  });
+
+  it("reloads when an edit's new proposal never reaches the surface", async () => {
+    stubLocation();
+    vi.mocked(editRoadmapAction).mockResolvedValue({
+      status: "edited",
+      message: "",
+      submission: 3,
+      proposalId: "00000000-0000-4000-8000-000000000013",
+    });
+    // The surface still shows the proposal the edit came from.
+    render(<RoadmapManager {...props(reviewingState())} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit proposal" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Save as a new proposal" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getAllByRole("status")[0]).toHaveTextContent(
+        "This roadmap step did not appear. Reloading to show what is saved.",
+      ),
+    );
+    await waitFor(() => expect(reload).toHaveBeenCalled(), { timeout: 3_000 });
   });
 
   it("shows no confidence score, percentage or certainty badge", () => {

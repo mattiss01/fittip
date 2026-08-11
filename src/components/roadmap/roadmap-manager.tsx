@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useActionState,
   useEffect,
@@ -146,6 +147,7 @@ export function RoadmapManager({
   const [note, setNote] = useState("");
   const [feedback, setFeedback] = useState("");
   const formId = useId();
+  const router = useRouter();
 
   // One key per compose screen, minted when the screen opens and stable while
   // it is open, so an uncertain retry of the same submission reuses the claim
@@ -201,6 +203,27 @@ export function RoadmapManager({
     });
   };
 
+  // An edit is the one step whose staleness is checkable rather than timed: it
+  // returns the id of the proposal it created, so a surface still showing a
+  // different one has not been re-read, whatever the transition reported.
+  // `router.refresh()` above usually settles this within a frame; when it does
+  // not, this is what stops the owner editing a proposal that no longer holds
+  // their change.
+  const editStale =
+    decisionState.status === "edited" &&
+    decisionState.proposalId !== undefined &&
+    proposal?.id !== decisionState.proposalId;
+
+  useEffect(() => {
+    if (!editStale) return;
+    markRoadmapRecovered(true);
+    const timer = window.setTimeout(
+      () => window.location.reload(),
+      RECOVERY_NOTICE_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [editStale]);
+
   const lostRender = useLostRenderRecovery(busy);
   const recovered = useRecoveredReload(
     generateState.submission === 0 && decisionState.submission === 0,
@@ -208,9 +231,9 @@ export function RoadmapManager({
 
   return (
     <div className={styles.manager}>
-      {lostRender || recovered ? (
+      {lostRender || editStale || recovered ? (
         <p className={styles.notice} data-tone="warning" role="status">
-          {lostRender
+          {lostRender || editStale
             ? "This roadmap step did not appear. Reloading to show what is saved."
             : "Your last roadmap step did not appear, so this page was reloaded. What you see below is what is saved."}
         </p>
@@ -252,6 +275,13 @@ export function RoadmapManager({
           onClose={(result) => {
             if (result) setDecisionState(result);
             setScreen("overview");
+            // An edit creates a *new* proposal, so the review below has to be
+            // re-read. The action revalidates this path, but the editor closes
+            // inside the same transition that would carry the new tree, and
+            // continuous integration caught that tree not arriving: the review
+            // reappeared showing the proposal the edit came from. Asking for it
+            // again is one request and cannot show stale content.
+            if (result?.status === "edited") router.refresh();
           }}
         />
       ) : null}
