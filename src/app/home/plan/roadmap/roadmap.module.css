@@ -565,7 +565,12 @@
   line-height: 1.5;
 }
 
-:where(.primaryAction, .secondaryAction, .quietAction, .disclosureSummary):focus-visible,
+:where(
+  .primaryAction,
+  .secondaryAction,
+  .quietAction,
+  .disclosureSummary
+):focus-visible,
 .input:focus-visible,
 .textarea:focus-visible {
   outline: 3px solid var(--accent-dark);

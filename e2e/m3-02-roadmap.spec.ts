@@ -43,7 +43,11 @@ test.describe("M3-02 roadmap proposals", () => {
       await signIn(page, account.email, account.password);
 
       // A roadmap needs at least one active goal to attend to.
-      await createCoreGoal(page, "Run a hilly half marathon", daysFromToday(120));
+      await createCoreGoal(
+        page,
+        "Run a hilly half marathon",
+        daysFromToday(120),
+      );
 
       await page.goto("/home/plan/roadmap");
       await expect(

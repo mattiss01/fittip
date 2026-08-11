@@ -125,7 +125,10 @@ function PhaseAndFollowingCheckpoints({
             ))}
           </ul>
           {phase.goalAttention.map((attention) => (
-            <p key={`${attention.goalId}-why`} className={styles.attentionReason}>
+            <p
+              key={`${attention.goalId}-why`}
+              className={styles.attentionReason}
+            >
               {attention.reason}
             </p>
           ))}

@@ -186,7 +186,10 @@ function attentionLevel(
   return phaseIndex === 0 ? "maintenance" : "deferred";
 }
 
-function attentionReason(goal: CoachAIGoalReference, phaseIndex: number): string {
+function attentionReason(
+  goal: CoachAIGoalReference,
+  phaseIndex: number,
+): string {
   const base =
     goal.priorityTier === "core"
       ? "A core objective, so it shapes this block."

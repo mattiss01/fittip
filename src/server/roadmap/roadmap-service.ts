@@ -161,9 +161,7 @@ export async function generateRoadmapProposal(
     contextSource,
     ...(deps.spendLedger ? { spendLedger: deps.spendLedger } : {}),
     ...(deps.environment ? { environment: deps.environment } : {}),
-    ...(deps.fixtureCaseName
-      ? { fixtureCaseName: deps.fixtureCaseName }
-      : {}),
+    ...(deps.fixtureCaseName ? { fixtureCaseName: deps.fixtureCaseName } : {}),
   });
 
   let outcome;
@@ -184,7 +182,8 @@ export async function generateRoadmapProposal(
     // The claim is closed with a bounded code so the owner is not left behind a
     // pending attempt they cannot clear. The code is from a fixed enum; no
     // provider text, prompt, or raw error reaches the database.
-    const code = error instanceof CoachAIError ? error.code : "provider_unavailable";
+    const code =
+      error instanceof CoachAIError ? error.code : "provider_unavailable";
     await deps.roadmaps
       .finishGenerationAsFailed(claim.completionToken, code)
       .catch(() => {
