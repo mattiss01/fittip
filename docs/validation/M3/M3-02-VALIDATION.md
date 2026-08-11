@@ -16,6 +16,9 @@ actions, the `390x844` interface, and the Playwright flow.
   Playwright flow, and the defect fixes below (second builder).
 - `403e025` — the workflow steps that actually run the concurrency harness and
   the browser flow. Separately committed as a tooling change.
+- `2a392be` — Prettier on five files the work-in-progress commit never
+  formatted.
+- `cb1f6c5` — the edit re-read fix continuous integration found (defect 6).
 
 **Base:** `851378c` (the docs-only commit that moved the ticket to
 `in development`)
@@ -30,7 +33,7 @@ The first builder delivered `94880d6` and left the interface half in an
 unscoped work-in-progress commit. That commit is not in the history; its
 contents were reshaped into `8226887` together with the work below.
 
-Two defects the first builder found and reported unfixed, plus four found while
+Two defects the first builder found and reported unfixed, plus five found while
 finishing, are fixed here. Each has a test that fails without the fix.
 
 1. **The screen did not advance after generating.** The owner stayed on the
@@ -60,7 +63,15 @@ finishing, are fixed here. Each has a test that fails without the fix.
    from the same two eligibility selectors that decide what the coach sees.
 5. **Decision 3's "When to reassess" was missing.** Review points were marked on
    the spine but the named section under it did not exist.
-6. **The lost-render defect reproduces on this surface.** See "The transition
+6. **An edit's new proposal did not reach the surface.** Found by continuous
+   integration after four local runs had passed: **Save as a new proposal**
+   closed the editor and the review reappeared showing the proposal the edit
+   came from, so the owner would have gone on reviewing content that no longer
+   held their change. Closing the editor now asks the router to re-read, and —
+   because an edit returns the id of the proposal it created — a surface still
+   showing a different one is *provably* stale rather than merely slow, says so,
+   and reloads.
+7. **The lost-render defect reproduces on this surface.** See "The transition
    that never commits" below.
 
 ---
@@ -86,6 +97,11 @@ being declared unconfirmed while it is still legitimately running.
 
 After the fix, six of six diagnostic runs and four of four full flow runs
 converged without manual intervention.
+
+The edit step needed more than a timer. It is the one step whose staleness is
+checkable: the action returns the id of the proposal it created, so a surface
+still showing a different one has not been re-read, whatever the transition
+reported. That case reloads on a fact rather than on a deadline.
 
 **New copy, not in the ticket's approved list**, mirroring the memory surface's
 wording and claiming nothing about saving:
@@ -456,10 +472,25 @@ Proven by:
 ## Tests and final results
 
 **CI run for the reviewed commit:**
-<https://github.com/mattiss01/fittip/actions/runs/31499399415> for `403e025`.
+<https://github.com/mattiss01/fittip/actions/runs/31502290454> for `cb1f6c5`.
 Its result is recorded with acceptance under the evidence-commit exception: a
 record cannot contain the run URL of the commit that adds it, and the commit
-after this one changes only this record.
+that adds this line changes only this record.
+
+Two earlier runs on this branch were red, and both were real:
+
+- `31499399415` (`403e025`) — **Prettier**. Five files inherited from the
+  reshaped work-in-progress commit had never been formatted; the local
+  `format:check` cannot distinguish that from its CRLF false positive. Fixed in
+  `2a392be`. The database and browser jobs were green, including the M3-02
+  concurrency harness and the M3-02 browser flow on their first run.
+- `31500346606` (`fd2a28e`) — the **M3-02 browser flow**, at the edit step, on
+  a run where every other flow passed. That is defect 6 above; it had passed
+  four consecutive local runs and only the slower shared runner exposed it.
+  Fixed in `cb1f6c5`.
+
+Neither is a known-defect exception and neither is claimed as one: both were
+this ticket's own failures and both are fixed.
 
 The first half's run remains
 <https://github.com/mattiss01/fittip/actions/runs/31438850506> — **success**,
@@ -487,7 +518,7 @@ only where this half touched them.
 | `npm run test:run` | 70 files, 716 tests passed |
 | `npm run build` | succeeded, with the known multiple-lockfile workspace-root warning |
 | `git diff --check` | clean (line-ending warnings only) |
-| Playwright `390x844`, `e2e/m3-02.playwright.config.ts`, port 3017, against `build` + `start` | **4 consecutive passes** after the fixes, ~8-11 s each; 7 screenshots captured |
+| Playwright `390x844`, `e2e/m3-02.playwright.config.ts`, port 3017, against `build` + `start` | **4 consecutive passes** after the final fix, ~11 s each; 7 screenshots captured |
 | Hosted migration / Preview verification | **not done — the lead's step** |
 | Live provider call | **none made.** `FITTIP_AI_LIVE` was never set, so every run resolved to the fixture composition. |
 
@@ -499,11 +530,12 @@ New in the second half, each covering a defect above:
   predecessor survives a decline, a superseded source is not open, an accepted
   proposal offers no predecessor, the `PT409`/`PT429` reason mapping, and that a
   database message never reaches the caller.
-- `src/components/roadmap/roadmap-manager.test.tsx` (12) — the compose screen
+- `src/components/roadmap/roadmap-manager.test.tsx` (14) — the compose screen
   gives way to the review, the editor still opens with that result on screen,
   the regeneration carries `previousProposalId` with a prefilled editable note
   and empty feedback, the three-round ceiling, the exact decline confirmation,
-  no percentage or confidence anywhere, and the lost-render reload.
+  no percentage or confidence anywhere, the lost-render reload, and both
+  halves of the stale-edit recovery.
 - `src/app/home/plan/roadmap/page.test.tsx` (7) — one owner-scoped read pass,
   the predecessor handed to the surface after a decline, the remaining-round
   arithmetic, and the three redirect/boundary paths.
@@ -599,7 +631,7 @@ explore, not to sanity-check, not once.
 
 ## Known limitations
 
-All nine were re-checked against what is true at `403e025`.
+All nine were re-checked against what is true at `cb1f6c5`.
 
 1. ~~**The ticket is roughly half delivered.**~~ **Closed.** The interface,
    actions, repository, domain operation and mobile flow are delivered, and the
@@ -677,8 +709,8 @@ Raised while finishing this half:
 
 ## Independent reviewer checklist
 
-Review `git diff 851378c..403e025`, and confirm the CI run above is green for
-`403e025`. Do not re-run lint, typecheck, tests, or build — CI ran them.
+Review `git diff 851378c..cb1f6c5`, and confirm the CI run above is green for
+`cb1f6c5` — it is: all three jobs passed. Do not re-run lint, typecheck, tests, or build — CI ran them.
 
 Judgment CI cannot supply, on the second half:
 
