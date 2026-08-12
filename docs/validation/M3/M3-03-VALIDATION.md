@@ -382,8 +382,8 @@ test half. The ticket remains **in development** until the lead pushes it and
 records green CI, a matching READY Preview, the founder-hosted migration and
 security checks, independent review, and product-owner acceptance.
 
-**Exact implementation review target:**
-`ac2f60339503f4ef9de84c15189962b63e4e8037`
+**Exact review target:**
+`112caa2b7c03866ecec4b3a2161de782f568af2b`
 
 **Initial implementation commit:**
 `0cf2eca190a912261730e2a41ab26b258c5a0eb8`
@@ -391,10 +391,14 @@ security checks, independent review, and product-owner acceptance.
 **Second implementation commit:**
 `ac2f60339503f4ef9de84c15189962b63e4e8037`
 
+**CI evidence-wiring correction:**
+`112caa2b7c03866ecec4b3a2161de782f568af2b` - adds the missing isolated M3-03
+390px browser step after M3-02 without changing any existing step or retry.
+
 **Branch:** `ticket/m3-03-selected-horizon-plan-proposal`
 
 **Complete ticket range:**
-`git diff bd859db..ac2f60339503f4ef9de84c15189962b63e4e8037`
+`git diff bd859db..112caa2b7c03866ecec4b3a2161de782f568af2b`
 
 ### Delivered behavior
 
@@ -462,10 +466,11 @@ npx.cmd playwright test e2e/m3-03-plan-proposal.spec.ts --config=e2e/m3-03.playw
 
 ### Changed files: complete ticket
 
-`git diff --stat bd859db..ac2f60339503f4ef9de84c15189962b63e4e8037`:
+`git diff --stat bd859db..112caa2b7c03866ecec4b3a2161de782f568af2b`:
 
 ```text
- docs/validation/M3/M3-03-VALIDATION.md             |  372 ++++++
+ .github/workflows/ci.yml                           |   10 +
+ docs/validation/M3/M3-03-VALIDATION.md             |  679 +++++++++++
  docs/validation/README.md                          |    1 +
  e2e/m3-03-plan-proposal.spec.ts                    |  215 ++++
  e2e/m3-03.playwright.config.ts                     |   16 +
@@ -508,7 +513,7 @@ npx.cmd playwright test e2e/m3-03-plan-proposal.spec.ts --config=e2e/m3-03.playw
  .../repositories/plan-proposal-repository.ts       |  263 +++++
  .../20260812131303_m3_03_plan_proposals.sql        | 1248 ++++++++++++++++++++
  .../tests/database/m3_03_plan_proposals.test.sql   | 1012 ++++++++++++++++
- 43 files changed, 7789 insertions(+), 215 deletions(-)
+ 44 files changed, 8106 insertions(+), 215 deletions(-)
 ```
 
 **Nothing was deleted or renamed.** Non-obvious purposes added by the second
@@ -572,8 +577,11 @@ Relevant `vercel-react-best-practices` checks applied:
 
 ### Tests and final local results
 
-**CI for exact implementation SHA
-`ac2f60339503f4ef9de84c15189962b63e4e8037`: pending lead push.** Do not treat
+**CI for exact review target SHA
+`112caa2b7c03866ecec4b3a2161de782f568af2b`: pending lead push.** The earlier
+CI run for `ac2f60339503f4ef9de84c15189962b63e4e8037` did not execute the M3-03
+Playwright config because the workflow omitted that step. That run is
+superseded and is not final automated evidence for this ticket. Do not treat
 the local checks below as the ticket's automated gate.
 
 | Command or check | Result |
@@ -610,7 +618,9 @@ Tests added or changed by the second builder:
 
 ### Remaining limitations and lead gates
 
-1. CI has not run for the implementation SHA because the lead owns the push.
+1. CI has not run for exact review target
+   `112caa2b7c03866ecec4b3a2161de782f568af2b` because the lead owns the push;
+   the earlier `ac2f603` run is superseded for the reason recorded above.
 2. The local Playwright flow was collected but skipped; no screenshot or manual
    390px observation is claimed. CI and the matching Preview must supply browser
    evidence.
@@ -635,10 +645,10 @@ Tests added or changed by the second builder:
 ### Independent reviewer checklist: complete ticket
 
 Review exact pushed commit
-`ac2f60339503f4ef9de84c15189962b63e4e8037` and exact range
-`git diff bd859db..ac2f60339503f4ef9de84c15189962b63e4e8037`. Reconcile the
-43-file manifest above against the diff. Use the lead-recorded CI run for this
-SHA; do not re-run CI's suites.
+`112caa2b7c03866ecec4b3a2161de782f568af2b` and exact range
+`git diff bd859db..112caa2b7c03866ecec4b3a2161de782f568af2b`. Reconcile the
+44-file manifest above against the diff. Use the lead-recorded CI run for this
+SHA; do not use the superseded `ac2f603` run or re-run CI's suites.
 
 Judge what CI cannot:
 
@@ -669,11 +679,15 @@ Judge what CI cannot:
 7. **Proposal-only semantics.** Confirm there is no accept/edit/lock/detail/
    regeneration operation, no accepted-plan write, and Continue describes the
    M3-04 boundary without implying acceptance.
-8. **390px judgment on the matching Preview.** Verify every requested date and
+8. **CI evidence wiring.** Confirm the only workflow change adds the isolated
+   M3-03 step after M3-02 on port 3018, using the ticket config, one worker,
+   retain-on-failure trace, and separate report/output paths without changing
+   any existing step or retry.
+9. **390px judgment on the matching Preview.** Verify every requested date and
    explicit rest day, one-tap session details, visible primary/unweighted
    secondary goals, serious-coach tone, focus, touch targets, no horizontal
    overflow, reduced motion, honest loading/error/offline/reject/continue
    states, day-count memory/date reset/note reset, and no roadmap requirement.
-9. **Hosted dependency.** Do not approve the Preview until the lead records the
+10. **Hosted dependency.** Do not approve the Preview until the lead records the
    product-owner-run founder migration/history, RLS/privilege/advisor, and
    authenticated owner-read evidence for the exact committed migration.
