@@ -2,12 +2,24 @@
 
 **Ticket:** [M3-02](../../backlog/M3/M3-02-ROADMAP-PROPOSAL.md)
 
-**Status:** **reviewed once; one review defect fixed and awaiting re-review.**
-The whole ticket is delivered: schema, AI boundary, repository, domain
-orchestration, server actions, the `390x844` interface, and the Playwright flow.
-Independent review of `cb1f6c5` approved everything except one defect, fixed in
-`593a6c2`. Approval of `cb1f6c5` and of its Preview is invalidated by that
-commit; the review target is now `593a6c2`.
+**Status:** **independently reviewed and approved at `593a6c2`; awaiting the
+lead's hosted verification and product-owner acceptance.** The whole ticket is
+delivered: schema, AI boundary, repository, domain orchestration, server
+actions, the `390x844` interface, and the Playwright flow.
+
+Independent review of `cb1f6c5` rejected it on one defect — a same-key uncertain
+retry made a second provider call — which is fixed in `593a6c2` (defect 8
+below). The re-review of `cb1f6c5..593a6c2` **approved** `593a6c2` on 12 August
+2026, confirming that the `claimed` discriminator closes the race, that no path
+can report `claimed` twice for one key, that no generated type changed, that no
+pgTAP assertion proves less than before, and that the in-place migration
+correction is safe because the file is unapplied anywhere persistent. The
+reviewer's round-one confirmations — authorization, ADR-015 conformance, the
+M3-01B limitation 17 binding, proposal-versus-version immutability, regeneration
+lineage, and the lost-render mitigation's inability to claim a save that did not
+happen — are untouched by that diff and still stand.
+
+Approval of `cb1f6c5` and of its Preview was invalidated by `593a6c2`.
 
 **Branch:** `ticket/m3-02-roadmap-proposal`
 
@@ -129,17 +141,30 @@ product owner sees the same copy the compose form already shows while a
 generation runs, so nothing new appears on screen; the change is that a retry
 reports the truth instead of buying a second generation.
 
-Three tests, each failing without the fix:
+Three tests. **Two fail without the fix; the third does not, and the original
+wording of this section wrongly claimed all three did.** The independent
+reviewer checked each one and corrected the claim:
 
 - `roadmap-service.test.ts` — "calls no provider for a key whose attempt is
   still in flight". The repository fixture now returns `'claimed'` for a fresh
-  claim, which is what the corrected function actually returns.
-- `actions.test.ts` — "tells the owner an attempt is still running without
-  claiming a proposal", asserting the exact copy and that no `proposalId` is
-  claimed.
+  claim, which is what the corrected function actually returns. **Genuinely
+  fails without the fix**, because the old code falls through to the provider.
 - `m3_02_roadmap_proposals.test.sql` — "a fresh claim reports claimed, the one
   state that authorizes a provider call", beside the existing assertion that a
-  replay reports the stored `pending`.
+  replay reports the stored `pending`. **Genuinely fails without the fix**,
+  because the uncorrected function reports `pending`.
+- `actions.test.ts` — "tells the owner an attempt is still running without
+  claiming a proposal", asserting the exact copy and that no `proposalId` is
+  claimed. **This one passes without the fix.** It mocks
+  `generateRoadmapProposal` to return `{ status: "pending" }` directly, and that
+  mapping branch already existed at `cb1f6c5` — it was dead, not absent. The
+  test is coverage of a newly reachable branch, not a regression guard.
+
+The strongest guard is not in that list: the shared `repository()` fixture in
+`roadmap-service.test.ts` flipping `"pending"` to `"claimed"` for fresh claims.
+Revert that one line and every other test in the file expecting a proposal
+fails, because the service now stops. That is what makes the fixture correction
+load-bearing rather than cosmetic.
 
 **The migration was corrected in place rather than patched forward.** It has
 never been applied to any persistent environment: it is not merged to `master`,
@@ -819,6 +844,21 @@ Raised while finishing this half:
     dull. It proves the surface and the transactions, and says nothing about
     whether a real proposal would be any good. Limitations 2 and 3 are what
     answer that.
+
+Raised by independent review at `593a6c2`, and carried forward by the reviewer
+as a follow-up rather than an acceptance blocker:
+
+14. **A truly simultaneous same-key submit reports a misleading message.** The
+    existing-row `SELECT` in `begin_roadmap_generation` runs before the advisory
+    lock, so two genuinely simultaneous same-key requests both find nothing and
+    both proceed. One inserts; the other blocks on the lock and then hits a
+    `23505` unique violation that nothing catches, surfacing as
+    `RoadmapPersistenceError` and the generic *"That proposal could not be
+    prepared. Nothing was saved; try again."* That is slightly untrue — an
+    attempt **is** running. This is pre-existing at `cb1f6c5` and is **not** a
+    spend defect: the loser never receives `claimed` and never calls the
+    provider. It is a copy and user-experience edge, and it wants a follow-up
+    ticket.
 
 ## Independent reviewer checklist
 
