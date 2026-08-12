@@ -1,0 +1,464 @@
+.page {
+  --plan-ink: #142f2a;
+  --plan-paper: #fffdf4;
+  --plan-rule: #9eaea3;
+  --plan-wash: #e8ede3;
+  --plan-signal: #d95835;
+  --plan-warning: #7a351d;
+}
+
+.manager {
+  margin-top: 1.6rem;
+}
+
+.compose,
+.review,
+.safetyHold {
+  padding: clamp(1.1rem, 5vw, 1.8rem);
+  border: 1px solid var(--plan-ink);
+  background: var(--plan-paper);
+  box-shadow: 8px 8px 0 #a7b7a5;
+}
+
+.compose h2,
+.review > h2,
+.safetyHold h2 {
+  margin: 0.2rem 0 0;
+  font-size: clamp(1.8rem, 8vw, 3rem);
+  letter-spacing: -0.045em;
+  line-height: 1.04;
+}
+
+.sectionLabel {
+  margin: 0;
+  color: var(--plan-signal);
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.helper,
+.weekDescription {
+  color: #53675f;
+  line-height: 1.55;
+}
+
+.dayCount {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.3rem;
+  margin: 1.35rem 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.dayCount legend {
+  grid-column: 1 / -1;
+  margin-bottom: 0.45rem;
+  font:
+    700 0.72rem "Courier New",
+    monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dayCount label {
+  min-width: 0;
+}
+
+.dayCount input {
+  position: absolute;
+  opacity: 0;
+}
+
+.dayCount span {
+  min-height: 2.8rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--plan-ink);
+  background: transparent;
+  cursor: pointer;
+  font:
+    700 0.8rem "Courier New",
+    monospace;
+}
+
+.dayCount label[data-selected="true"] span {
+  background: var(--plan-ink);
+  color: var(--plan-paper);
+  box-shadow: inset 0 -4px 0 var(--plan-signal);
+}
+
+.dayCount input:focus-visible + span,
+.input:focus-visible,
+.textarea:focus-visible,
+.primaryAction:focus-visible,
+.secondaryAction:focus-visible,
+.quietAction:focus-visible,
+.disclosure summary:focus-visible,
+.sessionDetails summary:focus-visible,
+.reviewNotes summary:focus-visible {
+  outline: 3px solid #efaa84;
+  outline-offset: 2px;
+}
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 1rem;
+  font:
+    700 0.74rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  min-height: 2.8rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--plan-ink);
+  border-radius: 0;
+  background: white;
+  color: inherit;
+  font:
+    1rem system-ui,
+    sans-serif;
+}
+
+.textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.disclosure,
+.reviewNotes {
+  margin-top: 1rem;
+  border: 1px solid var(--plan-rule);
+  background: #f4f6ed;
+}
+
+.disclosure summary,
+.reviewNotes summary,
+.sessionDetails summary {
+  min-height: 2.8rem;
+  display: flex;
+  align-items: center;
+  padding: 0.65rem 0.8rem;
+  cursor: pointer;
+  font:
+    700 0.72rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.disclosure dl,
+.sessionDetails dl {
+  margin: 0;
+  padding: 0 0.8rem 0.8rem;
+}
+
+.disclosure dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.disclosure dl > div {
+  padding: 0.55rem;
+  background: white;
+}
+
+.disclosure dt,
+.sessionDetails dt {
+  color: #5b6e66;
+  font:
+    700 0.64rem "Courier New",
+    monospace;
+  text-transform: uppercase;
+}
+
+.disclosure dd,
+.sessionDetails dd {
+  margin: 0.2rem 0 0;
+}
+
+.disclosure > p {
+  padding: 0 0.8rem 0.8rem;
+  color: #5b6e66;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.primaryAction,
+.secondaryAction,
+.quietAction {
+  min-height: 2.9rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--plan-ink);
+  border-radius: 0;
+  cursor: pointer;
+  font:
+    700 0.76rem "Courier New",
+    monospace;
+}
+
+.compose > .primaryAction {
+  width: 100%;
+  margin-top: 1.2rem;
+}
+
+.primaryAction {
+  background: var(--plan-ink);
+  color: var(--plan-paper);
+}
+
+.secondaryAction {
+  background: var(--plan-paper);
+  color: var(--plan-ink);
+}
+
+.quietAction {
+  border-color: transparent;
+  background: transparent;
+  color: #53675f;
+}
+
+.primaryAction:disabled,
+.secondaryAction:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.notice {
+  position: sticky;
+  z-index: 20;
+  top: 0.75rem;
+  margin: 0 0 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--plan-ink);
+  background: #e7f0dc;
+  box-shadow: 5px 5px 0 #a7b7a5;
+  line-height: 1.45;
+}
+
+.notice[data-tone="warning"] {
+  background: #fff0e1;
+}
+
+.weekDescription {
+  margin: 0.75rem 0 0;
+  font-size: 1.05rem;
+}
+
+/* The date rail is the page's one visual signature: a coach's seven-row
+   microcycle sheet, with each calendar day physically indexed even when it is
+   rest. It encodes the exact horizon instead of decorating it. */
+.dayStack {
+  position: relative;
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1.4rem;
+}
+
+.dayCard {
+  overflow: hidden;
+  border: 1px solid var(--plan-ink);
+  background: white;
+}
+
+.dayHeader {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr;
+  align-items: stretch;
+  border-bottom: 1px solid var(--plan-ink);
+  background: var(--plan-wash);
+}
+
+.dayIndex {
+  display: grid;
+  place-items: center;
+  margin: 0;
+  border-right: 1px solid var(--plan-ink);
+  background: var(--plan-ink);
+  color: var(--plan-paper);
+  font:
+    700 0.72rem "Courier New",
+    monospace;
+}
+
+.dayHeader > div {
+  padding: 0.65rem 0.75rem;
+}
+
+.dayHeader h2,
+.dayHeader p {
+  margin: 0;
+}
+
+.dayHeader h2 {
+  font-size: 1.2rem;
+  letter-spacing: -0.025em;
+}
+
+.dayHeader p {
+  margin-top: 0.15rem;
+  color: #53675f;
+  font:
+    700 0.65rem "Courier New",
+    monospace;
+  text-transform: uppercase;
+}
+
+.sessions {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.75rem;
+}
+
+.sessionCard {
+  padding: 0.8rem;
+  border-left: 4px solid var(--plan-signal);
+  background: #f8f6eb;
+}
+
+.sessionCard h3,
+.sessionCard p {
+  margin: 0;
+}
+
+.sessionCard h3 {
+  font-size: 1.05rem;
+}
+
+.sessionMeta,
+.primaryGoal {
+  margin-top: 0.25rem !important;
+}
+
+.sessionMeta {
+  color: #53675f;
+}
+
+.primaryGoal {
+  font:
+    700 0.7rem "Courier New",
+    monospace;
+  text-transform: uppercase;
+}
+
+.sessionDetails {
+  margin-top: 0.55rem;
+  border-top: 1px solid var(--plan-rule);
+}
+
+.sessionDetails summary {
+  padding-inline: 0;
+}
+
+.sessionDetails dl {
+  display: grid;
+  gap: 0.6rem;
+  padding-inline: 0;
+}
+
+.alternatives h4 {
+  margin: 0.7rem 0 0.3rem;
+}
+
+.alternatives ul,
+.reviewNotes ul,
+.safetyNotes ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.alternatives li,
+.reviewNotes li,
+.safetyNotes li {
+  margin-top: 0.4rem;
+  line-height: 1.45;
+}
+
+.restDay {
+  margin: 0;
+  padding: 1rem;
+  color: #53675f;
+  font-style: italic;
+}
+
+.reviewNotes > ul,
+.reviewNotes > div {
+  padding: 0 0.8rem 0.8rem;
+}
+
+.uncertainty p {
+  margin: 0.25rem 0 0;
+  line-height: 1.45;
+}
+
+.safetyNotes,
+.memoryPanel,
+.safetyHold {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-left: 4px solid var(--plan-signal);
+  background: #fff3e8;
+}
+
+.safetyNotes h3,
+.memoryPanel h3 {
+  margin: 0;
+}
+
+.memoryPanel p {
+  line-height: 1.45;
+}
+
+.actionDock {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1.4rem;
+  padding-top: 1rem;
+  border-top: 3px solid var(--plan-ink);
+}
+
+.actionDock p {
+  margin: 0 0 0.25rem;
+  color: #53675f;
+}
+
+.dialog {
+  position: fixed;
+  z-index: 70;
+  right: 1rem;
+  bottom: calc(6rem + env(safe-area-inset-bottom));
+  left: 1rem;
+  max-width: 24rem;
+  margin: auto;
+  padding: 1rem;
+  border: 1px solid var(--plan-ink);
+  background: var(--plan-paper);
+  box-shadow: 8px 8px 0 #799083;
+}
+
+.dialog h3,
+.dialog p {
+  margin-top: 0;
+}
+
+.dialog button {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compose,
+  .review,
+  .dayCard {
+    scroll-behavior: auto;
+  }
+}

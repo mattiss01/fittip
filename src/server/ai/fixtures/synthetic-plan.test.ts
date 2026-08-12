@@ -4,7 +4,6 @@ import type { CoachAIContext } from "@/server/ai/contracts";
 import {
   COACH_AI_FIXTURE_PLAN_CONTEXT,
   COACH_AI_FIXTURE_PLAN_HORIZON_START,
-  COACH_AI_FIXTURE_PLAN_SAFETY_CONTEXT,
 } from "@/server/ai/fixtures/fixture-corpus";
 import { synthesizePlanBody } from "@/server/ai/fixtures/synthetic-plan";
 import { validatePlanCandidate } from "@/server/ai/output-validation";
@@ -63,19 +62,40 @@ describe("the synthetic plan body", () => {
     expect(dated.size).toBeLessThan(7);
   });
 
-  it("acknowledges a reported signal rather than inventing one", () => {
-    const withSignal = validatePlanCandidate({
-      body: synthesizePlanBody(COACH_AI_FIXTURE_PLAN_SAFETY_CONTEXT),
-      context: COACH_AI_FIXTURE_PLAN_SAFETY_CONTEXT,
+  it("continues around an accepted ordinary limitation rather than inventing one", () => {
+    const ordinaryContext: CoachAIContext = {
+      ...COACH_AI_FIXTURE_PLAN_CONTEXT,
+      memory: [
+        {
+          id: "c3000000-0000-4000-8000-000000000001",
+          memoryType: "constraint",
+          content: "Avoid running while the knee settles.",
+        },
+      ],
+    };
+    const withLimitation = validatePlanCandidate({
+      body: synthesizePlanBody(ordinaryContext),
+      context: ordinaryContext,
     });
-    if (withSignal.outcome !== "accepted") {
+    if (withLimitation.outcome !== "accepted") {
       throw new Error("expected acceptance");
     }
-    expect(withSignal.response.plan.safetyConsiderations).toHaveLength(1);
+    expect(withLimitation.response.plan.sessions.length).toBeGreaterThan(0);
+    expect(
+      withLimitation.response.plan.sessions.every(
+        (session) => session.sport === "General recovery",
+      ),
+    ).toBe(true);
+    expect(withLimitation.response.plan.safetyConsiderations).toEqual([
+      expect.stringContaining("leaves out work that conflicts"),
+    ]);
 
     const withoutSignal = validatePlanCandidate({
-      body: synthesizePlanBody(COACH_AI_FIXTURE_PLAN_CONTEXT),
-      context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+      body: synthesizePlanBody({
+        ...COACH_AI_FIXTURE_PLAN_CONTEXT,
+        memory: [],
+      }),
+      context: { ...COACH_AI_FIXTURE_PLAN_CONTEXT, memory: [] },
     });
     if (withoutSignal.outcome !== "accepted") {
       throw new Error("expected acceptance");

@@ -31,6 +31,9 @@ export function synthesizePlanBody(context: CoachAIContext): string {
   const dates = horizonDates(context);
   const goals = context.targetableGoals;
   const primary = goals[0];
+  const hasAcceptedLimitation = context.memory.some(
+    (item) => item.memoryType === "constraint",
+  );
 
   // Every second day carries a session, so a horizon of two days or more shows
   // both a training day and an explicit rest day — which is the thing the
@@ -39,18 +42,28 @@ export function synthesizePlanBody(context: CoachAIContext): string {
 
   const sessions = sessionDates.map((date, index) => ({
     date,
-    title: index === 0 ? "Easy aerobic session" : "Steadier session",
-    sport: sportFor(primary),
+    title: hasAcceptedLimitation
+      ? index === 0
+        ? "Non-conflicting recovery session"
+        : "Gentle supporting session"
+      : index === 0
+        ? "Easy aerobic session"
+        : "Steadier session",
+    sport: hasAcceptedLimitation ? "General recovery" : sportFor(primary),
     focus: bound(
-      index === 0
-        ? "Repeatable easy work you could do again tomorrow."
-        : "A little more effort, still well short of a hard day.",
+      hasAcceptedLimitation
+        ? "Gentle work outside the accepted limitation."
+        : index === 0
+          ? "Repeatable easy work you could do again tomorrow."
+          : "A little more effort, still well short of a hard day.",
       300,
     ),
     intent: bound(
-      index === 0
-        ? "Conversational the whole way. Finish feeling you could go again."
-        : "Comfortably hard in the middle, easy either side of it.",
+      hasAcceptedLimitation
+        ? "Stop if this conflicts with the accepted limitation; otherwise keep it comfortable."
+        : index === 0
+          ? "Conversational the whole way. Finish feeling you could go again."
+          : "Comfortably hard in the middle, easy either side of it.",
       300,
     ),
     durationMinutes: index === 0 ? 45 : 50,
@@ -84,13 +97,14 @@ export function synthesizePlanBody(context: CoachAIContext): string {
       ),
     ],
     uncertainties: null,
-    // A reported signal never blocks generation and the proposal must
-    // acknowledge it. Absent a signal there is nothing to say, and inventing a
-    // safety note would be its own kind of wrong.
-    safetyConsiderations: context.hasSafetySignal
+    // An eligible reported signal is resolved by the surface before this
+    // fixture is invoked: without accepted severity its tier is uncertain and
+    // generation pauses. An accepted ordinary limitation instead leaves out
+    // conflicting work while the rest of the horizon continues.
+    safetyConsiderations: hasAcceptedLimitation
       ? [
           bound(
-            "You recorded pain, illness, injury or heavy fatigue recently, so this holds load flat on the work that involves it rather than building it.",
+            "An accepted limitation is active. This leaves out work that conflicts with it and continues only with non-conflicting sessions.",
             240,
           ),
         ]
