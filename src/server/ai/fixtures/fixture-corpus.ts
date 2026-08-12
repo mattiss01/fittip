@@ -20,6 +20,16 @@ import type { CoachAIRejectionReason } from "@/server/ai/output-validation";
 export const COACH_AI_FIXTURE_TODAY = "2026-08-04";
 export const COACH_AI_FIXTURE_HORIZON_START = "2026-08-04";
 export const COACH_AI_FIXTURE_HORIZON_END = "2026-11-15";
+
+/**
+ * The plan operation's own horizon. A roadmap spans months and a plan spans one
+ * to seven days, so the two cannot share a context: every plan case here would
+ * be rejected against the roadmap's fifteen-week range, and rejected for the
+ * right reason, which is exactly what would make the corpus useless.
+ */
+export const COACH_AI_FIXTURE_PLAN_HORIZON_START = "2026-08-04";
+export const COACH_AI_FIXTURE_PLAN_HORIZON_END = "2026-08-10";
+export const COACH_AI_FIXTURE_PLAN_DAY_COUNT = 7;
 const PHASE_ONE_END = "2026-09-14";
 const PHASE_TWO_START = "2026-09-15";
 
@@ -133,6 +143,25 @@ export const COACH_AI_FIXTURE_SAFETY_CONTEXT: CoachAIContext = {
   hasSafetySignal: true,
 };
 
+/** The same owner and the same records, over a seven-day selected horizon. */
+export const COACH_AI_FIXTURE_PLAN_CONTEXT: CoachAIContext = {
+  ...COACH_AI_FIXTURE_CONTEXT,
+  horizonStartDate: COACH_AI_FIXTURE_PLAN_HORIZON_START,
+  horizonEndDate: COACH_AI_FIXTURE_PLAN_HORIZON_END,
+};
+
+/** The shortest horizon the product allows, which is not an edge case. */
+export const COACH_AI_FIXTURE_PLAN_ONE_DAY_CONTEXT: CoachAIContext = {
+  ...COACH_AI_FIXTURE_PLAN_CONTEXT,
+  horizonEndDate: COACH_AI_FIXTURE_PLAN_HORIZON_START,
+};
+
+export const COACH_AI_FIXTURE_PLAN_SAFETY_CONTEXT: CoachAIContext = {
+  ...COACH_AI_FIXTURE_SAFETY_CONTEXT,
+  horizonStartDate: COACH_AI_FIXTURE_PLAN_HORIZON_START,
+  horizonEndDate: COACH_AI_FIXTURE_PLAN_HORIZON_END,
+};
+
 export type CoachAIFixtureExpectation =
   | {
       outcome: "accepted";
@@ -238,32 +267,86 @@ const envelope = (roadmap: unknown, memoryCandidates: unknown = null): string =>
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
+const planSession = (
+  date: string,
+  title = "Easy aerobic run",
+  overrides: Record<string, unknown> = {},
+) => ({
+  date,
+  title,
+  sport: "Running",
+  focus: "Aerobic base, kept easy enough to repeat tomorrow.",
+  intent: "Conversational effort throughout. You should finish able to talk.",
+  durationMinutes: 45,
+  primaryGoalId: GOAL,
+  secondaryGoalIds: [],
+  alternatives: null,
+  rationale: "Most of the week stays easy so the hill session lands well.",
+  ...overrides,
+});
+
 const VALID_PLAN = {
-  schemaVersion: "fittip.seven-day-plan.v1",
-  startDate: "2026-08-04",
+  schemaVersion: "fittip.seven-day-plan.v2",
+  weekDescription:
+    "A steady week aimed at the half marathon: two easy runs and one hill session, with the rest of the days deliberately free so the hills are the only hard thing in it. The 45 minute weekday limit you described is what keeps the easy runs short.",
+  startDate: COACH_AI_FIXTURE_PLAN_HORIZON_START,
+  endDate: COACH_AI_FIXTURE_PLAN_HORIZON_END,
   sessions: [
-    {
-      date: "2026-08-04",
-      title: "Easy aerobic run",
-      intent: "Time on feet at a conversational effort.",
-      durationMinutes: 45,
-      goalId: GOAL,
-    },
-    {
-      date: "2026-08-06",
-      title: "Hill repeats",
-      intent: "Six by two minutes uphill, walking recovery.",
+    planSession("2026-08-04"),
+    planSession("2026-08-06", "Hill repeats", {
+      focus: "Short, steep repeats at a controlled effort.",
+      intent: "Six by two minutes uphill, walking down between them.",
       durationMinutes: 50,
-      goalId: GOAL,
-    },
+      alternatives: [
+        {
+          title: "Steady run on the flat",
+          whenToChoose: "If the legs still feel heavy from the weekend.",
+        },
+      ],
+      rationale: "The race climbs, so one session a week should climb too.",
+    }),
   ],
+  assumptions: ["Three training days this week are available."],
+  uncertainties: null,
+  safetyConsiderations: null,
 };
+
+const planEnvelope = (
+  plan: unknown,
+  memoryCandidates: unknown = null,
+): string => JSON.stringify({ plan, memoryCandidates });
 
 function roadmapWith(mutate: (roadmap: Record<string, unknown>) => void) {
   const roadmap = clone(VALID_ROADMAP) as unknown as Record<string, unknown>;
   mutate(roadmap);
   return roadmap;
 }
+
+function planWith(mutate: (plan: Record<string, unknown>) => void) {
+  const plan = clone(VALID_PLAN) as unknown as Record<string, unknown>;
+  mutate(plan);
+  return plan;
+}
+
+/** `count` sessions spread over the horizon, at most three on any one date. */
+function planSessionsAcross(count: number) {
+  return Array.from({ length: count }, (_entry, index) =>
+    planSession(
+      COACH_AI_FIXTURE_PLAN_DATES[index % COACH_AI_FIXTURE_PLAN_DATES.length],
+      `Session ${index + 1}`,
+    ),
+  );
+}
+
+const COACH_AI_FIXTURE_PLAN_DATES = [
+  "2026-08-04",
+  "2026-08-05",
+  "2026-08-06",
+  "2026-08-07",
+  "2026-08-08",
+  "2026-08-09",
+  "2026-08-10",
+];
 
 export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
   {
@@ -589,63 +672,371 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
   {
     name: "valid_seven_day_plan",
     operation: "create_seven_day_plan",
-    body: JSON.stringify(VALID_PLAN),
+    body: planEnvelope(VALID_PLAN),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
     expected: { outcome: "accepted" },
-    note: "The M3-01 baseline, unchanged. M3-03 owns this operation.",
+    note: "The v2 baseline: session-level, one primary goal, no weights, no targets.",
   },
   {
-    name: "session_outside_plan_week",
+    name: "valid_plan_with_memory_candidates",
     operation: "create_seven_day_plan",
-    body: JSON.stringify({
-      ...VALID_PLAN,
-      sessions: [{ ...VALID_PLAN.sessions[0], date: "2026-09-04" }],
-    }),
+    body: planEnvelope(VALID_PLAN, [
+      {
+        memoryType: "constraint",
+        sourceExcerpt: "I only have 45 minutes on weekdays",
+        confidence: 70,
+      },
+      {
+        memoryType: "constraint",
+        sourceExcerpt: "I am away the first weekend of every month",
+        confidence: null,
+      },
+    ]),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "accepted", memoryCandidates: 2 },
+    note: "The plan carries the same two-section envelope the roadmap does.",
+  },
+  {
+    name: "plan_memory_candidate_paraphrased",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(VALID_PLAN, [
+      {
+        memoryType: "constraint",
+        sourceExcerpt: "Only has forty-five minutes on weekdays",
+        confidence: 90,
+      },
+    ]),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "accepted", memoryRejected: true },
+    note: "A paraphrase is not an excerpt. The plan survives; the section does not.",
+  },
+  {
+    name: "plan_one_day_horizon",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.endDate = COACH_AI_FIXTURE_PLAN_HORIZON_START;
+        plan.sessions = [planSession(COACH_AI_FIXTURE_PLAN_HORIZON_START)];
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_ONE_DAY_CONTEXT,
+    expected: { outcome: "accepted" },
+    note: "A one-day horizon is a first-class request, not a degenerate week.",
+  },
+  {
+    name: "plan_with_no_rest_day",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.sessions = COACH_AI_FIXTURE_PLAN_DATES.map((date) =>
+          planSession(date),
+        );
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "accepted" },
+    note: "Decision 4 removed the rest requirement, so a week without one must pass.",
+  },
+  {
+    name: "plan_three_sessions_on_one_date",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.sessions = [
+          planSession("2026-08-04", "Morning mobility"),
+          planSession("2026-08-04", "Easy run"),
+          planSession("2026-08-04", "Gym session"),
+        ];
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "accepted" },
+    note: "Decision 4 raised the per-day bound from two to three; three must pass.",
+  },
+  {
+    name: "plan_four_sessions_on_one_date",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.sessions = [
+          planSession("2026-08-04", "Morning mobility"),
+          planSession("2026-08-04", "Easy run"),
+          planSession("2026-08-04", "Gym session"),
+          planSession("2026-08-04", "Evening swim"),
+        ];
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "rejected", reason: "business_rule" },
+    note: "A fourth session on one date is a runaway response, not a hard day.",
+  },
+  {
+    name: "plan_at_horizon_session_ceiling",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.sessions = planSessionsAcross(21);
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "accepted" },
+    note: "Three times the day count is the ceiling, and the ceiling itself passes.",
+  },
+  {
+    name: "plan_over_horizon_session_ceiling",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.sessions = planSessionsAcross(22);
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "rejected", reason: "business_rule" },
+    note: "One session past three times the day count rejects the whole candidate.",
+  },
+  {
+    name: "session_outside_plan_horizon",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.sessions = [planSession("2026-09-04")];
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
     expected: { outcome: "rejected", reason: "impossible_date" },
-    note: "A session a month out is not part of the week that was requested.",
+    note: "A session a month out is not part of the horizon that was requested.",
+  },
+  {
+    name: "plan_horizon_widened",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.endDate = "2026-08-31";
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "rejected", reason: "impossible_date" },
+    note: "The horizon is the server's. A model that extends it produces nothing.",
   },
   {
     name: "impossible_duration",
     operation: "create_seven_day_plan",
-    body: JSON.stringify({
-      ...VALID_PLAN,
-      sessions: [{ ...VALID_PLAN.sessions[0], durationMinutes: 900 }],
-    }),
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.sessions = [
+          planSession("2026-08-04", "Long run", {
+            durationMinutes: 900,
+          }),
+        ];
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
     expected: { outcome: "rejected", reason: "invalid_duration" },
     note: "Fifteen hours is not a session.",
   },
   {
     name: "unowned_goal_reference",
     operation: "create_seven_day_plan",
-    body: JSON.stringify({
-      ...VALID_PLAN,
-      sessions: [
-        { ...VALID_PLAN.sessions[0], goalId: COACH_AI_FIXTURE_UNOWNED_GOAL_ID },
-      ],
-    }),
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.sessions = [
+          planSession("2026-08-04", "Easy aerobic run", {
+            primaryGoalId: COACH_AI_FIXTURE_UNOWNED_GOAL_ID,
+          }),
+        ];
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
     expected: { outcome: "rejected", reason: "unowned_goal_reference" },
     note: "A goal id this owner does not have must never round-trip into a proposal.",
   },
   {
+    name: "plan_secondary_goal_unowned",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.sessions = [
+          planSession("2026-08-04", "Easy aerobic run", {
+            secondaryGoalIds: [COACH_AI_FIXTURE_HISTORICAL_GOAL_ID],
+          }),
+        ];
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "rejected", reason: "unowned_goal_reference" },
+    note: "An achieved goal is background, never something a session may serve.",
+  },
+  {
+    name: "plan_repeats_its_primary_goal",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.sessions = [
+          planSession("2026-08-04", "Easy aerobic run", {
+            secondaryGoalIds: [GOAL],
+          }),
+        ];
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "rejected", reason: "business_rule" },
+    note: "One goal named twice is not two kinds of attention.",
+  },
+  {
+    name: "plan_session_carries_a_weight",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.sessions = [
+          planSession("2026-08-04", "Easy aerobic run", { goalWeight: 70 }),
+        ];
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "rejected", reason: "unknown_field" },
+    note: "Decision 6 rejected weighted allocation; no percentage may appear anywhere.",
+  },
+  {
+    name: "plan_session_carries_activities",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.sessions = [
+          planSession("2026-08-04", "Gym session", {
+            activities: [{ name: "Back squat", sets: 3 }],
+          }),
+        ];
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "rejected", reason: "unknown_field" },
+    note: "Activities and targets are M3-03D; a session that carries one is not v2.",
+  },
+  {
+    name: "plan_without_week_description",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        delete plan.weekDescription;
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "rejected", reason: "schema" },
+    note: "Decision 17 makes the description of the week required, not optional.",
+  },
+  {
+    name: "plan_week_description_at_minimum",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.weekDescription = "x";
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "accepted" },
+    note: "One character is inside the approved 1-600 bound, however terse.",
+  },
+  {
+    name: "plan_week_description_at_maximum",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.weekDescription = "x".repeat(600);
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "accepted" },
+    note: "Six hundred characters is the bound, and the bound itself passes.",
+  },
+  {
+    name: "plan_week_description_over_maximum",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.weekDescription = "x".repeat(601);
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "rejected", reason: "schema" },
+    note: "One character past the bound rejects, so 600 means 600.",
+  },
+  {
+    name: "plan_ignores_a_reported_signal",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(VALID_PLAN),
+    context: COACH_AI_FIXTURE_PLAN_SAFETY_CONTEXT,
+    expected: { outcome: "rejected", reason: "safety_requirement" },
+    note: "A reported signal never blocks generation, but the plan must acknowledge it.",
+  },
+  {
+    name: "plan_acknowledges_a_reported_signal",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.safetyConsiderations = [
+          "You reported knee pain after the descents, so this holds the hill work flat rather than building it, and keeps the rest of the week easy.",
+        ];
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_SAFETY_CONTEXT,
+    expected: { outcome: "accepted" },
+    note: "The ordinary tier: the affected work is held, the rest of the horizon still generates.",
+  },
+  {
     name: "unsafe_medical_phrasing",
     operation: "create_seven_day_plan",
-    body: JSON.stringify({
-      ...VALID_PLAN,
-      sessions: [
-        {
-          ...VALID_PLAN.sessions[0],
-          intent: "Push through the pain and take ibuprofen beforehand.",
-        },
-      ],
-    }),
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.sessions = [
+          planSession("2026-08-04", "Easy aerobic run", {
+            intent: "Push through the pain and take ibuprofen beforehand.",
+          }),
+        ];
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
     expected: { outcome: "rejected", reason: "unsafe_content" },
     note: "Two prohibited behaviours in one sentence: ignoring a signal, and medication.",
   },
   {
+    name: "plan_claims_safety",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.sessions = [
+          planSession("2026-08-04", "Easy aerobic run", {
+            rationale: "This distance is perfectly safe for your knee.",
+          }),
+        ];
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "rejected", reason: "unsafe_content" },
+    note: "A safety claim is a clinical judgement wearing training vocabulary.",
+  },
+  {
     name: "empty_plan",
     operation: "create_seven_day_plan",
-    body: JSON.stringify({ ...VALID_PLAN, sessions: [] }),
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.sessions = [];
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
     expected: { outcome: "rejected", reason: "business_rule" },
-    note: "A week with no sessions is a refusal dressed as a plan.",
+    note: "A horizon with no session at all is a refusal dressed as a plan.",
+  },
+  {
+    name: "plan_envelope_extra_field",
+    operation: "create_seven_day_plan",
+    body: JSON.stringify({
+      plan: VALID_PLAN,
+      memoryCandidates: null,
+      acceptedAt: "2026-08-04T09:00:00.000Z",
+    }),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "rejected", reason: "unknown_field" },
+    note: "Nothing in a response may claim that anything was accepted or saved.",
   },
 ];
 

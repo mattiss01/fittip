@@ -6,6 +6,7 @@ import {
   type CoachAIContext,
   type CoachAIOperation,
   type CoachAIProposal,
+  type CoachAIUncertainty,
   type RoadmapGoalAttention,
   type RoadmapGoalAttentionLevel,
   type RoadmapMemoryCandidate,
@@ -14,8 +15,9 @@ import {
   type RoadmapProposal,
   type RoadmapResponse,
   type RoadmapReviewPoint,
-  type RoadmapUncertainty,
+  type SevenDayPlanAlternative,
   type SevenDayPlanProposal,
+  type SevenDayPlanResponse,
   type SevenDayPlanSession,
 } from "@/server/ai/contracts";
 import { byteLength } from "@/server/ai/context";
@@ -23,6 +25,10 @@ import {
   MEMORY_EXCERPT_MAX_LENGTH,
   normalizeOwnerText,
 } from "@/server/ai/owner-text";
+import {
+  PLAN_MAX_DAY_COUNT,
+  PLAN_MIN_DAY_COUNT,
+} from "@/server/ai/plan-horizon";
 import { MEMORY_TYPES, type MemoryType } from "@/server/memory/memory-records";
 
 /**
@@ -79,6 +85,16 @@ export type RoadmapValidationResult =
     }
   | { outcome: "rejected"; reason: CoachAIRejectionReason };
 
+/** The plan operation's two independently validated sections. */
+export type PlanValidationResult =
+  | {
+      outcome: "accepted";
+      response: SevenDayPlanResponse;
+      /** Present when a valid plan arrived with an unusable memory section. */
+      memoryRejectionReason: CoachAIRejectionReason | null;
+    }
+  | { outcome: "rejected"; reason: CoachAIRejectionReason };
+
 export const COACH_AI_MAX_OUTPUT_BYTES = 16_000;
 
 /** Decision 2's bounds. Serialized roadmap content is capped separately. */
@@ -93,13 +109,38 @@ const MAX_REVIEW_POINTS = 4;
 const MAX_SAFETY_CONSIDERATIONS = 3;
 const MAX_MEMORY_CANDIDATES = 4;
 
-const MAX_SESSIONS = 14;
-const MAX_SESSIONS_PER_DAY = 2;
-const PLAN_DAYS = 7;
+/**
+ * M3-03 decision 4, replacing the shipped `MAX_SESSIONS_PER_DAY = 2` and
+ * `MAX_SESSIONS = 14`.
+ *
+ * Three per day, because a real day can hold a short morning mobility session,
+ * a run, and a gym session. The horizon maximum follows as `3 x dayCount`
+ * rather than a fixed number, because the horizon is no longer always a week.
+ *
+ * Both are **structural output bounds, not training rules**. They exist so a
+ * malformed or runaway response is rejected rather than parsed, and they are
+ * set where an owner would not meet them in ordinary use. There is deliberately
+ * no minutes cap and no required rest day: neither is a rule the server should
+ * own, and a horizon with neither must not be rejected for lacking one.
+ */
+const MAX_SESSIONS_PER_DAY = 3;
+
+export function maxSessionsForHorizon(dayCount: number): number {
+  return MAX_SESSIONS_PER_DAY * dayCount;
+}
+
+const MAX_SECONDARY_GOALS_PER_SESSION = 6;
+const MAX_ALTERNATIVES_PER_SESSION = 2;
+const MAX_PLAN_ASSUMPTIONS = 4;
+const MAX_PLAN_UNCERTAINTIES = 3;
+const MAX_PLAN_SAFETY_CONSIDERATIONS = 3;
 const MIN_SESSION_MINUTES = 10;
 const MAX_SESSION_MINUTES = 240;
 const DAY_MS = 86_400_000;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/** The cap on the stored plan envelope, separate from one response's body. */
+export const PLAN_CONTENT_MAX_BYTES = 16_000;
 
 /**
  * A conservative, deliberately non-exhaustive deny list. It is a backstop for
@@ -147,7 +188,26 @@ export function validateCoachAICandidate(input: {
       : result;
   }
 
+  const result = validatePlanCandidate(input);
+  return result.outcome === "accepted"
+    ? { outcome: "accepted", proposal: result.response.plan }
+    : result;
+}
+
+/**
+ * The plan entry point. Size first, then parse, then the two sections
+ * separately, then content safety last so its rejections are not masked by a
+ * structural failure that would have rejected the candidate anyway.
+ */
+export function validatePlanCandidate(input: {
+  body: string;
+  context: CoachAIContext;
+  maxBytes?: number;
+}): PlanValidationResult {
   const maxBytes = input.maxBytes ?? COACH_AI_MAX_OUTPUT_BYTES;
+
+  // Size before anything parses it. An oversized body is exactly what a parser
+  // would be asked to absorb first.
   if (byteLength(input.body) > maxBytes) return rejected("too_large");
 
   let parsed: unknown;
@@ -157,16 +217,39 @@ export function validateCoachAICandidate(input: {
     return rejected("unparsable");
   }
   if (!isRecord(parsed)) return rejected("schema");
+  if (findUnknownField(parsed, ["plan", "memoryCandidates"])) {
+    return rejected("unknown_field");
+  }
+  if (!isRecord(parsed.plan)) return rejected("schema");
 
   const targetableGoalIds = new Set(
     input.context.targetableGoals.map((goal) => goal.id),
   );
-  const result = validateSevenDayPlan(parsed, input.context, targetableGoalIds);
-  if (result.outcome === "rejected") return result;
+  const planResult = validateSevenDayPlan(
+    parsed.plan,
+    input.context,
+    targetableGoalIds,
+  );
+  if (planResult.outcome === "rejected") return planResult;
+  const plan = planResult.proposal as SevenDayPlanProposal;
 
-  return containsUnsafeContent(collectPlanStrings(result.proposal))
-    ? rejected("unsafe_content")
-    : result;
+  if (containsUnsafeContent(collectPlanStrings(plan))) {
+    return rejected("unsafe_content");
+  }
+
+  const memory = validateMemoryCandidates(
+    parsed.memoryCandidates,
+    input.context.planningNote,
+  );
+
+  return {
+    outcome: "accepted",
+    response: {
+      plan,
+      memoryCandidates: memory.outcome === "accepted" ? memory.candidates : [],
+    },
+    memoryRejectionReason: memory.outcome === "rejected" ? memory.reason : null,
+  };
 }
 
 /**
@@ -524,11 +607,14 @@ function validateStringArray(
   return [...(value as string[])];
 }
 
-function validateUncertainties(value: unknown): RoadmapUncertainty[] | null {
+function validateUncertainties(
+  value: unknown,
+  maxItems: number = MAX_UNCERTAINTIES,
+): CoachAIUncertainty[] | null {
   if (value === undefined || value === null) return [];
-  if (!Array.isArray(value) || value.length > MAX_UNCERTAINTIES) return null;
+  if (!Array.isArray(value) || value.length > maxItems) return null;
 
-  const uncertainties: RoadmapUncertainty[] = [];
+  const uncertainties: CoachAIUncertainty[] = [];
   for (const entry of value) {
     if (!isRecord(entry)) return null;
     if (findUnknownField(entry, ["statement", "whyItMatters", "whatToWatch"])) {
@@ -676,30 +762,66 @@ export function validateMemoryCandidates(
   return { outcome: "accepted", candidates };
 }
 
+/**
+ * `fittip.seven-day-plan.v2`.
+ *
+ * The horizon is the server's. `startDate` and `endDate` are compared against
+ * the values the server derived and the model never chose, which is how a
+ * model — or a planning note that persuaded one — cannot widen, shorten, or
+ * shift the requested days. Every session date is then checked against that
+ * same range, so a horizon that passed and sessions that did not cannot
+ * disagree.
+ */
 function validateSevenDayPlan(
   parsed: Record<string, unknown>,
   context: CoachAIContext,
   targetableGoalIds: Set<string>,
 ): CoachAIValidationResult {
-  if (findUnknownField(parsed, ["schemaVersion", "startDate", "sessions"])) {
+  if (
+    findUnknownField(parsed, [
+      "schemaVersion",
+      "weekDescription",
+      "startDate",
+      "endDate",
+      "sessions",
+      "assumptions",
+      "uncertainties",
+      "safetyConsiderations",
+    ])
+  ) {
     return rejected("unknown_field");
   }
 
   if (
     parsed.schemaVersion !== COACH_AI_SCHEMA_VERSIONS.create_seven_day_plan ||
+    !isBounded(parsed.weekDescription, 1, 600) ||
     !Array.isArray(parsed.sessions)
   ) {
     return rejected("schema");
   }
 
-  const startMs = parseIsoDate(parsed.startDate);
-  const todayMs = Date.parse(`${context.today}T00:00:00.000Z`);
-  if (startMs === null) return rejected("impossible_date");
-  if (startMs < todayMs || startMs > todayMs + PLAN_DAYS * DAY_MS) {
+  if (
+    parsed.startDate !== context.horizonStartDate ||
+    parsed.endDate !== context.horizonEndDate
+  ) {
     return rejected("impossible_date");
   }
 
-  if (parsed.sessions.length < 1 || parsed.sessions.length > MAX_SESSIONS) {
+  const startMs = parseIsoDate(context.horizonStartDate);
+  const endMs = parseIsoDate(context.horizonEndDate);
+  if (startMs === null || endMs === null || endMs < startMs) {
+    return rejected("impossible_date");
+  }
+
+  const dayCount = Math.round((endMs - startMs) / DAY_MS) + 1;
+  if (dayCount < PLAN_MIN_DAY_COUNT || dayCount > PLAN_MAX_DAY_COUNT) {
+    return rejected("impossible_date");
+  }
+
+  if (
+    parsed.sessions.length < 1 ||
+    parsed.sessions.length > maxSessionsForHorizon(dayCount)
+  ) {
     return rejected("business_rule");
   }
 
@@ -707,65 +829,199 @@ function validateSevenDayPlan(
   const perDay = new Map<string, number>();
 
   for (const entry of parsed.sessions) {
-    if (!isRecord(entry)) return rejected("schema");
-    if (
-      findUnknownField(entry, [
-        "date",
-        "title",
-        "intent",
-        "durationMinutes",
-        "goalId",
-      ])
-    ) {
-      return rejected("unknown_field");
-    }
-    if (
-      !isBounded(entry.title, 1, 120) ||
-      !isBounded(entry.intent, 1, 300) ||
-      typeof entry.goalId !== "string"
-    ) {
-      return rejected("schema");
-    }
+    const session = validatePlanSession(entry, { startMs, endMs });
+    if (session.outcome === "rejected") return session;
 
-    const dateMs = parseIsoDate(entry.date);
-    if (dateMs === null) return rejected("impossible_date");
-    if (dateMs < startMs || dateMs >= startMs + PLAN_DAYS * DAY_MS) {
-      return rejected("impossible_date");
-    }
-
-    if (
-      typeof entry.durationMinutes !== "number" ||
-      !Number.isSafeInteger(entry.durationMinutes) ||
-      entry.durationMinutes < MIN_SESSION_MINUTES ||
-      entry.durationMinutes > MAX_SESSION_MINUTES
-    ) {
-      return rejected("invalid_duration");
-    }
-
-    if (!targetableGoalIds.has(entry.goalId)) {
+    // Every referenced goal is one the owner may currently be coached toward.
+    // An achieved goal is readable history under ADR-012 and is never a valid
+    // objective, so `historicalGoals` is deliberately not in this set.
+    if (!targetableGoalIds.has(session.session.primaryGoalId)) {
       return rejected("unowned_goal_reference");
     }
+    const secondaries = session.session.secondaryGoalIds ?? [];
+    for (const goalId of secondaries) {
+      if (!targetableGoalIds.has(goalId)) {
+        return rejected("unowned_goal_reference");
+      }
+    }
+    // A goal named twice on one session is not two kinds of attention; it is a
+    // response that did not mean what it appears to say.
+    if (
+      new Set([session.session.primaryGoalId, ...secondaries]).size !==
+      secondaries.length + 1
+    ) {
+      return rejected("business_rule");
+    }
 
-    const date = entry.date as string;
-    const count = (perDay.get(date) ?? 0) + 1;
+    const count = (perDay.get(session.session.date) ?? 0) + 1;
     if (count > MAX_SESSIONS_PER_DAY) return rejected("business_rule");
-    perDay.set(date, count);
+    perDay.set(session.session.date, count);
 
-    sessions.push({
-      date,
-      title: entry.title,
-      intent: entry.intent,
-      durationMinutes: entry.durationMinutes,
-      goalId: entry.goalId,
-    });
+    sessions.push(session.session);
+  }
+
+  const assumptions = validateStringArray(
+    parsed.assumptions,
+    MAX_PLAN_ASSUMPTIONS,
+    200,
+  );
+  if (assumptions === null) return rejected("business_rule");
+
+  const uncertainties = validateUncertainties(
+    parsed.uncertainties,
+    MAX_PLAN_UNCERTAINTIES,
+  );
+  if (uncertainties === null) return rejected("business_rule");
+
+  const safetyConsiderations = validateStringArray(
+    parsed.safetyConsiderations,
+    MAX_PLAN_SAFETY_CONSIDERATIONS,
+    240,
+  );
+  if (safetyConsiderations === null) return rejected("business_rule");
+
+  // A present flag never blocks generation, but it does constrain the output.
+  // Without at least one bounded safety consideration the proposal has not
+  // acknowledged what the owner reported.
+  if (context.hasSafetySignal && safetyConsiderations.length === 0) {
+    return rejected("safety_requirement");
   }
 
   const proposal: SevenDayPlanProposal = {
     schemaVersion: COACH_AI_SCHEMA_VERSIONS.create_seven_day_plan,
-    startDate: parsed.startDate as string,
+    weekDescription: parsed.weekDescription,
+    startDate: context.horizonStartDate,
+    endDate: context.horizonEndDate,
     sessions,
+    ...(assumptions.length > 0 ? { assumptions } : {}),
+    ...(uncertainties.length > 0 ? { uncertainties } : {}),
+    ...(safetyConsiderations.length > 0 ? { safetyConsiderations } : {}),
   };
+
+  if (byteLength(JSON.stringify(proposal)) > PLAN_CONTENT_MAX_BYTES) {
+    return rejected("too_large");
+  }
+
   return { outcome: "accepted", proposal };
+}
+
+type PlanSessionResult =
+  | { outcome: "accepted"; session: SevenDayPlanSession }
+  | { outcome: "rejected"; reason: CoachAIRejectionReason };
+
+/**
+ * One session, session-level only.
+ *
+ * The field allowlist is the enforcement of two separate decisions at once.
+ * There is no `activities`, `measurementMode`, or `target` key, because detail
+ * is M3-03D and a session that carried one here would be a target M3-04 could
+ * not store. And there is no `weight`, `share`, or `percentage` key anywhere,
+ * because decision 6 rejected weighted allocation outright — a rejected field
+ * that the allowlist happens to exclude is a rule nobody has to remember.
+ */
+function validatePlanSession(
+  entry: unknown,
+  bounds: { startMs: number; endMs: number },
+): PlanSessionResult {
+  if (!isRecord(entry)) return rejected("schema");
+  if (
+    findUnknownField(entry, [
+      "date",
+      "title",
+      "sport",
+      "focus",
+      "intent",
+      "durationMinutes",
+      "primaryGoalId",
+      "secondaryGoalIds",
+      "alternatives",
+      "rationale",
+    ])
+  ) {
+    return rejected("unknown_field");
+  }
+
+  if (
+    !isBounded(entry.title, 1, 120) ||
+    !isBounded(entry.sport, 1, 60) ||
+    !isBounded(entry.focus, 1, 300) ||
+    !isBounded(entry.intent, 1, 300) ||
+    !isBounded(entry.rationale, 1, 300) ||
+    typeof entry.primaryGoalId !== "string" ||
+    entry.primaryGoalId.length === 0
+  ) {
+    return rejected("schema");
+  }
+
+  const dateMs = parseIsoDate(entry.date);
+  if (dateMs === null) return rejected("impossible_date");
+  if (dateMs < bounds.startMs || dateMs > bounds.endMs) {
+    return rejected("impossible_date");
+  }
+
+  if (
+    typeof entry.durationMinutes !== "number" ||
+    !Number.isSafeInteger(entry.durationMinutes) ||
+    entry.durationMinutes < MIN_SESSION_MINUTES ||
+    entry.durationMinutes > MAX_SESSION_MINUTES
+  ) {
+    return rejected("invalid_duration");
+  }
+
+  const secondaryGoalIds = validateSecondaryGoalIds(entry.secondaryGoalIds);
+  if (secondaryGoalIds === null) return rejected("schema");
+
+  const alternatives = validatePlanAlternatives(entry.alternatives);
+  if (alternatives === null) return rejected("business_rule");
+
+  return {
+    outcome: "accepted",
+    session: {
+      date: entry.date as string,
+      title: entry.title,
+      sport: entry.sport,
+      focus: entry.focus,
+      intent: entry.intent,
+      durationMinutes: entry.durationMinutes,
+      primaryGoalId: entry.primaryGoalId,
+      ...(secondaryGoalIds.length > 0 ? { secondaryGoalIds } : {}),
+      ...(alternatives.length > 0 ? { alternatives } : {}),
+      rationale: entry.rationale,
+    },
+  };
+}
+
+function validateSecondaryGoalIds(value: unknown): string[] | null {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > MAX_SECONDARY_GOALS_PER_SESSION) {
+    return null;
+  }
+  if (!value.every((id) => typeof id === "string" && id.length > 0))
+    return null;
+  return [...(value as string[])];
+}
+
+function validatePlanAlternatives(
+  value: unknown,
+): SevenDayPlanAlternative[] | null {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > MAX_ALTERNATIVES_PER_SESSION) {
+    return null;
+  }
+
+  const alternatives: SevenDayPlanAlternative[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) return null;
+    if (findUnknownField(entry, ["title", "whenToChoose"])) return null;
+    if (
+      !isBounded(entry.title, 1, 120) ||
+      !isBounded(entry.whenToChoose, 1, 200)
+    ) {
+      return null;
+    }
+    alternatives.push({ title: entry.title, whenToChoose: entry.whenToChoose });
+  }
+  return alternatives;
 }
 
 function collectRoadmapStrings(roadmap: RoadmapProposal): string[] {
@@ -797,9 +1053,28 @@ function collectRoadmapStrings(roadmap: RoadmapProposal): string[] {
 }
 
 function collectPlanStrings(proposal: CoachAIProposal): string[] {
-  return "sessions" in proposal
-    ? proposal.sessions.flatMap((session) => [session.title, session.intent])
-    : [];
+  if (!("sessions" in proposal)) return [];
+  return [
+    proposal.weekDescription,
+    ...proposal.sessions.flatMap((session) => [
+      session.title,
+      session.sport,
+      session.focus,
+      session.intent,
+      session.rationale,
+      ...(session.alternatives ?? []).flatMap((alternative) => [
+        alternative.title,
+        alternative.whenToChoose,
+      ]),
+    ]),
+    ...(proposal.assumptions ?? []),
+    ...(proposal.uncertainties ?? []).flatMap((entry) => [
+      entry.statement,
+      entry.whyItMatters,
+      entry.whatToWatch,
+    ]),
+    ...(proposal.safetyConsiderations ?? []),
+  ];
 }
 
 function containsUnsafeContent(strings: string[]): boolean {

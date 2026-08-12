@@ -23,16 +23,13 @@ export type CoachAIOperation = (typeof COACH_AI_OPERATIONS)[number];
 /** Bumped whenever an accepted request or response shape changes. */
 export const COACH_AI_SCHEMA_VERSIONS = {
   create_roadmap: "fittip.roadmap.v2",
-  create_seven_day_plan: "fittip.seven-day-plan.v1",
+  create_seven_day_plan: "fittip.seven-day-plan.v2",
 } as const satisfies Record<CoachAIOperation, string>;
 
-/**
- * Prompt identifiers. `create_roadmap` carries the real M3-02 prompt; the
- * seven-day-plan entry is still the M3-01 stub, and M3-03 owns replacing it.
- */
+/** Prompt identifiers. Both operations now carry a real, iterated prompt. */
 export const COACH_AI_PROMPT_VERSIONS = {
   create_roadmap: "roadmap-v2-2026-08-10",
-  create_seven_day_plan: "seven-day-plan-stub-v1",
+  create_seven_day_plan: "seven-day-plan-v2-2026-08-12",
 } as const satisfies Record<CoachAIOperation, string>;
 
 /** The two runtimes ADR-006 and M0-06A permit. Nothing else may ever call out. */
@@ -253,11 +250,19 @@ export type RoadmapPhase = {
   milestones: RoadmapMilestone[];
 };
 
-export type RoadmapUncertainty = {
+/**
+ * Material uncertainty, stated rather than hidden behind false precision. Both
+ * operations use the same three fields; the alias keeps `RoadmapUncertainty` as
+ * the name M3-02 accepted while the plan schema reuses the shape rather than
+ * declaring a second, identical one that could drift.
+ */
+export type CoachAIUncertainty = {
   statement: string;
   whyItMatters: string;
   whatToWatch: string;
 };
+
+export type RoadmapUncertainty = CoachAIUncertainty;
 
 /**
  * Either a date or a condition, never both. A review point states when the
@@ -296,11 +301,13 @@ export type RoadmapProposal = {
  * proposed memory content. Text present only in regeneration feedback
  * therefore cannot become memory.
  */
-export type RoadmapMemoryCandidate = {
+export type CoachAIMemoryCandidate = {
   memoryType: MemoryType;
   sourceExcerpt: string;
   confidence?: number;
 };
+
+export type RoadmapMemoryCandidate = CoachAIMemoryCandidate;
 
 /**
  * Where a proposal's provenance comes from.
@@ -323,21 +330,87 @@ export type CoachAISourceReference = {
  */
 export type RoadmapResponse = {
   roadmap: RoadmapProposal;
-  memoryCandidates: RoadmapMemoryCandidate[];
+  memoryCandidates: CoachAIMemoryCandidate[];
 };
 
+/**
+ * `fittip.seven-day-plan.v2`.
+ *
+ * v1 was the deliberate M3-01 stub: a session carried `date`, `title`,
+ * `intent`, `durationMinutes` and a single `goalId`, and the proposal had no
+ * field in which the coach could explain the week at all. M3-03 decision 17
+ * needs one, and decisions 4 and 6 change what a session is, so the whole
+ * operation moves to v2 in one bump rather than accreting fields per ticket.
+ *
+ * The plan is **session-level**. A session says what it is, what it is for, how
+ * long it takes, and which goals it serves. It carries no activities, no
+ * measurement modes, and no targets: those are M3-03D's detail operation, with
+ * its own schema, generated per session on demand.
+ */
+
+/**
+ * A focused substitute for a session, offered instead of pretending to a
+ * precision the coach does not have. It is a whole alternative session, not a
+ * variation of the activities inside one.
+ */
+export type SevenDayPlanAlternative = {
+  title: string;
+  /** The condition under which the athlete should take it instead. */
+  whenToChoose: string;
+};
+
+/**
+ * Decision 6: one primary goal, any number of unweighted secondaries.
+ *
+ * There is no weight, share, or percentage field, here or anywhere else in this
+ * contract, and that is the decision rather than an omission. A coach claiming
+ * a run is "70% endurance, 30% weight loss" has invented those numbers, the
+ * owner cannot check them, and a percentage invites being read as measurement.
+ */
 export type SevenDayPlanSession = {
   date: string;
   title: string;
+  /** The sport or movement domain, as the athlete's own vocabulary has it. */
+  sport: string;
+  focus: string;
   intent: string;
   durationMinutes: number;
-  goalId: string;
+  primaryGoalId: string;
+  secondaryGoalIds?: string[];
+  alternatives?: SevenDayPlanAlternative[];
+  rationale: string;
 };
 
 export type SevenDayPlanProposal = {
   schemaVersion: typeof COACH_AI_SCHEMA_VERSIONS.create_seven_day_plan;
+  /**
+   * Decision 17: the coach's description of the week as a whole, 1 to 600
+   * characters, separate from any per-session rationale. It covers what the
+   * week is trying to achieve, how it serves the goals, and the main tradeoff.
+   */
+  weekDescription: string;
   startDate: string;
+  endDate: string;
   sessions: SevenDayPlanSession[];
+  assumptions?: string[];
+  uncertainties?: CoachAIUncertainty[];
+  /**
+   * May explain conservative direction. It may not diagnose, prescribe
+   * treatment, or claim safety; the stop/professional-help copy is
+   * server-owned and never model-authored.
+   */
+  safetyConsiderations?: string[];
+};
+
+/**
+ * The two sections of a plan response, on the same terms as the roadmap's: an
+ * invalid memory section is discarded and the plan still returns, because the
+ * owner's decision about a durable constraint they mentioned is independent of
+ * their decision about this week's training.
+ */
+export type SevenDayPlanResponse = {
+  plan: SevenDayPlanProposal;
+  memoryCandidates: CoachAIMemoryCandidate[];
 };
 
 /**

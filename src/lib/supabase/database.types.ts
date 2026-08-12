@@ -1140,6 +1140,216 @@ export type Database = {
           },
         ];
       };
+      plan_generation_requests: {
+        Row: {
+          completion_token: string;
+          created_at: string;
+          day_count: number;
+          failure_code: string | null;
+          id: string;
+          idempotency_key: string;
+          planning_note_hash: string | null;
+          proposal_id: string | null;
+          request_fingerprint: string;
+          requested_end_date: string;
+          requested_start_date: string;
+          status: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          completion_token?: string;
+          created_at?: string;
+          day_count: number;
+          failure_code?: string | null;
+          id?: string;
+          idempotency_key: string;
+          planning_note_hash?: string | null;
+          proposal_id?: string | null;
+          request_fingerprint: string;
+          requested_end_date: string;
+          requested_start_date: string;
+          status?: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          completion_token?: string;
+          created_at?: string;
+          day_count?: number;
+          failure_code?: string | null;
+          id?: string;
+          idempotency_key?: string;
+          planning_note_hash?: string | null;
+          proposal_id?: string | null;
+          request_fingerprint?: string;
+          requested_end_date?: string;
+          requested_start_date?: string;
+          status?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "plan_generation_requests_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      plan_proposal_decisions: {
+        Row: {
+          decided_at: string;
+          decision: string;
+          proposal_id: string;
+          user_id: string;
+        };
+        Insert: {
+          decided_at?: string;
+          decision: string;
+          proposal_id: string;
+          user_id: string;
+        };
+        Update: {
+          decided_at?: string;
+          decision?: string;
+          proposal_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "plan_proposal_decisions_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "plan_proposal_decisions_proposal_fkey";
+            columns: ["proposal_id", "user_id"];
+            isOneToOne: true;
+            referencedRelation: "plan_proposals";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      plan_proposal_sources: {
+        Row: {
+          ordinal: number;
+          proposal_id: string;
+          record_id: string;
+          revision_id: string | null;
+          revision_number: number | null;
+          source_kind: string;
+          user_id: string;
+        };
+        Insert: {
+          ordinal: number;
+          proposal_id: string;
+          record_id: string;
+          revision_id?: string | null;
+          revision_number?: number | null;
+          source_kind: string;
+          user_id: string;
+        };
+        Update: {
+          ordinal?: number;
+          proposal_id?: string;
+          record_id?: string;
+          revision_id?: string | null;
+          revision_number?: number | null;
+          source_kind?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "plan_proposal_sources_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "plan_proposal_sources_proposal_fkey";
+            columns: ["proposal_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "plan_proposals";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      plan_proposals: {
+        Row: {
+          content: Json;
+          created_at: string;
+          generation_request_id: string;
+          id: string;
+          model_code: string;
+          origin: string;
+          planning_note: string | null;
+          prompt_version: string;
+          provider_code: string;
+          rate_card_version: string;
+          schema_version: string;
+          spend_reservation_id: string | null;
+          user_id: string;
+        };
+        Insert: {
+          content: Json;
+          created_at?: string;
+          generation_request_id: string;
+          id?: string;
+          model_code: string;
+          origin: string;
+          planning_note?: string | null;
+          prompt_version: string;
+          provider_code: string;
+          rate_card_version: string;
+          schema_version: string;
+          spend_reservation_id?: string | null;
+          user_id: string;
+        };
+        Update: {
+          content?: Json;
+          created_at?: string;
+          generation_request_id?: string;
+          id?: string;
+          model_code?: string;
+          origin?: string;
+          planning_note?: string | null;
+          prompt_version?: string;
+          provider_code?: string;
+          rate_card_version?: string;
+          schema_version?: string;
+          spend_reservation_id?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "plan_proposals_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "plan_proposals_request_fkey";
+            columns: ["generation_request_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "plan_generation_requests";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "plan_proposals_spend_fkey";
+            columns: ["spend_reservation_id"];
+            isOneToOne: false;
+            referencedRelation: "ai_spend_reservations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       planned_activities: {
         Row: {
           created_at: string;
@@ -1700,6 +1910,22 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      begin_plan_generation: {
+        Args: {
+          p_day_count: number;
+          p_idempotency_key: string;
+          p_planning_note?: string;
+          p_request_fingerprint: string;
+          p_start_date: string;
+        };
+        Returns: Database["public"]["CompositeTypes"]["plan_generation_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "plan_generation_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       begin_roadmap_generation: {
         Args: {
           p_end_date: string;
@@ -1715,6 +1941,29 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "roadmap_generation_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      finish_plan_generation: {
+        Args: {
+          p_completion_token: string;
+          p_content?: Json;
+          p_model_code?: string;
+          p_outcome: string;
+          p_planning_note?: string;
+          p_prompt_version?: string;
+          p_provider_code?: string;
+          p_rate_card_version?: string;
+          p_safe_failure_code?: string;
+          p_schema_version?: string;
+          p_sources?: Json;
+          p_spend_reservation_id?: string;
+        };
+        Returns: Database["public"]["CompositeTypes"]["plan_generation_result"];
+        SetofOptions: {
+          from: "*";
+          to: "plan_generation_result";
           isOneToOne: true;
           isSetofReturn: false;
         };
@@ -1747,6 +1996,24 @@ export type Database = {
         Args: { p_mode: string; p_value: Json };
         Returns: boolean;
       };
+      plan_content_is_valid: {
+        Args: { p_content: Json; p_end_date: string; p_start_date: string };
+        Returns: boolean;
+      };
+      record_plan_memory_candidates: {
+        Args: {
+          p_candidates: Json;
+          p_completion_token: string;
+          p_expected_memory_revision: number;
+        };
+        Returns: Database["public"]["CompositeTypes"]["plan_memory_candidate_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "plan_memory_candidate_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       record_roadmap_memory_candidates: {
         Args: {
           p_candidates: Json;
@@ -1757,6 +2024,16 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "roadmap_memory_candidate_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      reject_plan_proposal: {
+        Args: { p_proposal_id: string };
+        Returns: Database["public"]["CompositeTypes"]["plan_proposal_decision_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "plan_proposal_decision_receipt";
           isOneToOne: true;
           isSetofReturn: false;
         };
@@ -1923,6 +2200,24 @@ export type Database = {
         publication_id: string | null;
         goal_collection_revision: number | null;
         memory_collection_revision: number | null;
+      };
+      plan_generation_receipt: {
+        generation_id: string | null;
+        completion_token: string | null;
+        state: string | null;
+        proposal_id: string | null;
+      };
+      plan_generation_result: {
+        state: string | null;
+        proposal_id: string | null;
+      };
+      plan_memory_candidate_receipt: {
+        collection_revision: number | null;
+        item_ids: string[] | null;
+      };
+      plan_proposal_decision_receipt: {
+        proposal_id: string | null;
+        result: string | null;
       };
       roadmap_acceptance_receipt: {
         proposal_id: string | null;

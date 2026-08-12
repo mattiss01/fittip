@@ -16,7 +16,10 @@ import {
  * the product owner has too little real training history to exercise ADR-012,
  * ADR-013 and ADR-014 context assembly.
  *
- * `create_seven_day_plan` is still the M3-01B baseline; M3-03 owns replacing it.
+ * `create_seven_day_plan` carries the M3-03 prompt, drafted the same way and
+ * against the same corpus. It replaced the M3-01 stub, which asked for "the
+ * seven days beginning tomorrow" — a sentence that is simply wrong once the
+ * athlete chooses the horizon.
  *
  * Ordering is load-bearing. OpenAI's prompt caching requires a byte-identical
  * prefix, and training history changes every time a session is logged, so
@@ -89,11 +92,30 @@ Where "hasSafetySignal" is true, you must return at least one "safetyConsiderati
 
 Finally, "memoryCandidates": zero to four durable facts, constraints, preferences or observed patterns worth remembering beyond this request, each quoted as an exact substring of "planningNote". Copy the substring character for character; do not paraphrase it. Anything from "regenerationFeedback" is a comment on one rejected proposal and must never appear here. Return an empty list when the note holds nothing durable, which is the common case.`,
 
-  create_seven_day_plan: `Produce a plan for the seven days beginning tomorrow.
+  create_seven_day_plan: `Produce a training plan for exactly the dates you were given, plus any durable constraints worth remembering.
 
-Propose one entry per planned session. A rest day is the absence of a session on that date, not an entry — do not emit rest entries. A sensible week for most athletes contains rest.
+Cover "horizonStartDate" to "horizonEndDate" inclusive and nothing else. That range is one to seven consecutive days and the athlete chose it. Do not extend it, shorten it, shift it, or plan a "typical week" instead. Copy those two dates into "startDate" and "endDate" unchanged.
 
-"intent" tells the athlete what the session is for and how it should feel, in one to three sentences.`,
+Propose one entry per planned session, each dated inside the range. A rest day is the absence of a session on that date, not an entry — do not emit rest entries. At most three sessions on any one date. Rest is a normal part of a good week, but no rule requires one, and a short horizon may sensibly contain none.
+
+This is a session-level plan. Say what a session is, what it is for, and how long it takes. Do not break it into exercises, sets, reps, loads, distances, paces, or any other target: that is a separate step the athlete asks for per session, and inventing it here produces numbers nobody checked.
+
+For each session:
+- "title" names it in the athlete's own vocabulary. "sport" is the sport or movement domain.
+- "focus" is what the session is training, in a phrase or a sentence.
+- "intent" tells the athlete how it should feel and how hard to go.
+- "durationMinutes" is the whole session, warm-up and cool-down included, between 10 and 240.
+- "primaryGoalId" is the one goal the session mainly serves. "secondaryGoalIds" are other goals it also helps, in any number including none. All of them are unweighted: never express attention as a percentage, a share, or a ratio, and never name the same goal twice on one session.
+- "rationale" says why this session, on this day, for this athlete.
+- "alternatives" are up to two whole replacement sessions, each with the condition under which to take it instead. Use them where you are genuinely uncertain rather than to pad.
+
+"weekDescription" is the athlete's overview of the horizon as a whole: what it is trying to achieve, how it serves their goals, and the main tradeoff or the thing to watch. Two to five sentences, at most 600 characters. It is not a list of the sessions, which they can already see.
+
+"assumptions" are what you took as given, especially about time and availability. "uncertainties" are what could change this, each with why it matters and what to watch.
+
+Where "hasSafetySignal" is true, you must return at least one "safetyConsiderations" entry describing the conservative choice you made. Describe load, not the symptom.
+
+Finally, "memoryCandidates": zero to four durable facts, constraints, preferences or observed patterns worth remembering beyond this request, each quoted as an exact substring of "planningNote". Copy the substring character for character; do not paraphrase it. Return an empty list when the note holds nothing durable, which is the common case.`,
 };
 
 const ROADMAP_SCHEMA = {
@@ -305,6 +327,190 @@ const ROADMAP_SCHEMA = {
 };
 
 /**
+ * `fittip.seven-day-plan.v2`, as a strict grammar.
+ *
+ * There is no weight, share, percentage, activity, measurement mode, or target
+ * property anywhere in it, and `additionalProperties: false` at every level
+ * means the provider cannot add one. That is the same rule the validator
+ * enforces, stated twice on purpose: the grammar makes the common case cheap,
+ * and the validator makes it true.
+ */
+const PLAN_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["plan", "memoryCandidates"],
+  properties: {
+    plan: {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "schemaVersion",
+        "weekDescription",
+        "startDate",
+        "endDate",
+        "sessions",
+        "assumptions",
+        "uncertainties",
+        "safetyConsiderations",
+      ],
+      properties: {
+        schemaVersion: {
+          type: "string",
+          enum: [COACH_AI_SCHEMA_VERSIONS.create_seven_day_plan],
+        },
+        weekDescription: {
+          type: "string",
+          description:
+            "Two to five sentences to the athlete about the horizon as a whole. At most 600 characters.",
+        },
+        startDate: {
+          type: "string",
+          description: "Exactly horizonStartDate, YYYY-MM-DD.",
+        },
+        endDate: {
+          type: "string",
+          description: "Exactly horizonEndDate, YYYY-MM-DD.",
+        },
+        sessions: {
+          type: "array",
+          description:
+            "One entry per planned session, dated inside the horizon. At most three on any one date. A rest day is simply the absence of a session on that date.",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: [
+              "date",
+              "title",
+              "sport",
+              "focus",
+              "intent",
+              "durationMinutes",
+              "primaryGoalId",
+              "secondaryGoalIds",
+              "alternatives",
+              "rationale",
+            ],
+            properties: {
+              date: { type: "string", description: "YYYY-MM-DD." },
+              title: { type: "string", description: "At most 120 characters." },
+              sport: {
+                type: "string",
+                description:
+                  "The sport or movement domain. At most 60 characters.",
+              },
+              focus: {
+                type: "string",
+                description:
+                  "What this session trains. At most 300 characters.",
+              },
+              intent: {
+                type: "string",
+                description:
+                  "How it should feel and how hard to go. At most 300 characters.",
+              },
+              durationMinutes: {
+                type: "integer",
+                description: "The whole session, 10 to 240.",
+              },
+              primaryGoalId: {
+                type: "string",
+                description:
+                  "The one goal this session mainly serves. An id copied exactly from targetableGoals.",
+              },
+              secondaryGoalIds: {
+                type: ["array", "null"],
+                description:
+                  "Other goals it also helps, unweighted, at most six. Ids from targetableGoals, never repeating the primary.",
+                items: { type: "string" },
+              },
+              alternatives: {
+                type: ["array", "null"],
+                description: "At most two whole replacement sessions.",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["title", "whenToChoose"],
+                  properties: {
+                    title: {
+                      type: "string",
+                      description: "At most 120 characters.",
+                    },
+                    whenToChoose: {
+                      type: "string",
+                      description:
+                        "The condition under which to take it instead. At most 200 characters.",
+                    },
+                  },
+                },
+              },
+              rationale: {
+                type: "string",
+                description:
+                  "Why this session, on this day, for this athlete. At most 300 characters.",
+              },
+            },
+          },
+        },
+        assumptions: {
+          type: ["array", "null"],
+          description: "Zero to four, each at most 200 characters.",
+          items: { type: "string" },
+        },
+        uncertainties: {
+          type: ["array", "null"],
+          description: "Zero to three.",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["statement", "whyItMatters", "whatToWatch"],
+            properties: {
+              statement: { type: "string" },
+              whyItMatters: { type: "string" },
+              whatToWatch: { type: "string" },
+            },
+          },
+        },
+        safetyConsiderations: {
+          type: ["array", "null"],
+          description:
+            "Zero to three, each at most 240 characters. Describe conservative training direction. Never diagnose, prescribe, or claim safety.",
+          items: { type: "string" },
+        },
+      },
+    },
+    memoryCandidates: {
+      type: ["array", "null"],
+      description: "Zero to four exact substrings of planningNote.",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["memoryType", "sourceExcerpt", "confidence"],
+        properties: {
+          memoryType: {
+            type: "string",
+            enum: [
+              "profile_fact",
+              "constraint",
+              "preference",
+              "observed_pattern",
+            ],
+          },
+          sourceExcerpt: {
+            type: "string",
+            description:
+              "An exact substring of planningNote, at most 200 characters, copied character for character.",
+          },
+          confidence: {
+            type: ["integer", "null"],
+            description: "0 to 100, or null.",
+          },
+        },
+      },
+    },
+  },
+};
+
+/**
  * OpenAI strict-mode constraints applied throughout: every object carries
  * `additionalProperties: false`, every property appears in `required`, and no
  * `format`, `pattern`, `minLength`, or `minItems` appears, none of which strict
@@ -326,43 +532,7 @@ export const COACH_AI_RESPONSE_SCHEMAS: Record<
   create_seven_day_plan: {
     name: "fittip_seven_day_plan",
     strict: true,
-    schema: {
-      type: "object",
-      additionalProperties: false,
-      required: ["schemaVersion", "startDate", "sessions"],
-      properties: {
-        schemaVersion: {
-          type: "string",
-          enum: [COACH_AI_SCHEMA_VERSIONS.create_seven_day_plan],
-        },
-        startDate: { type: "string", description: "YYYY-MM-DD." },
-        sessions: {
-          type: "array",
-          description:
-            "One entry per planned session. A rest day is simply the absence of a session on that date.",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["date", "title", "intent", "durationMinutes", "goalId"],
-            properties: {
-              date: { type: "string", description: "YYYY-MM-DD." },
-              title: { type: "string" },
-              intent: {
-                type: "string",
-                description:
-                  "What the session is for and how it should feel. One to three sentences.",
-              },
-              durationMinutes: { type: "integer" },
-              goalId: {
-                type: "string",
-                description:
-                  "The id of the targetable goal this session primarily serves. Must be one of the supplied goal ids.",
-              },
-            },
-          },
-        },
-      },
-    },
+    schema: PLAN_SCHEMA,
   },
 };
 

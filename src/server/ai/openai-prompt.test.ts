@@ -14,6 +14,16 @@ import {
 
 const STATIC_PREFIX_BUDGET = 6_000;
 
+/**
+ * The plan prompt gets a larger allowance than the roadmap's, and that is a
+ * derivation rather than a concession. The real constraint is
+ * `prefix + wrapper + context <= 4 * maxInputTokens`, and the plan operation's
+ * context allocation is 28,500 bytes against the roadmap's 33,700 — a week of
+ * training needs no 52-week forward window. `ceil((7_000 + 64 + 28_500) / 4)`
+ * is 8,891, comfortably inside the same 10,000-token ceiling.
+ */
+const PLAN_STATIC_PREFIX_BUDGET = 7_000;
+
 describe("the roadmap prompt", () => {
   it("stays inside the prefix budget the context allocation was derived against", () => {
     // Every character here is a character the context cannot have: the adapter
@@ -145,6 +155,7 @@ describe("the roadmap response grammar", () => {
     };
 
     walk(COACH_AI_RESPONSE_SCHEMAS.create_roadmap.schema, "roadmap");
+    walk(COACH_AI_RESPONSE_SCHEMAS.create_seven_day_plan.schema, "plan");
     expect(problems).toEqual([]);
   });
 
@@ -174,5 +185,87 @@ describe("the roadmap response grammar", () => {
     expect(schema.properties.roadmap.properties.schemaVersion.enum).toEqual([
       "fittip.roadmap.v2",
     ]);
+  });
+});
+
+describe("the plan prompt", () => {
+  it("stays inside the prefix budget the context allocation was derived against", () => {
+    const prefix = coachAIStaticPrefix("create_seven_day_plan");
+
+    expect(prefix.length).toBeLessThanOrEqual(PLAN_STATIC_PREFIX_BUDGET);
+    const worstCase =
+      PLAN_STATIC_PREFIX_BUDGET +
+      64 +
+      COACH_AI_CONTEXT_LIMITS.create_seven_day_plan.bytes.total;
+    expect(Math.ceil(worstCase / 4)).toBeLessThanOrEqual(
+      COACH_AI_LIVE_LIMITS.maxInputTokens,
+    );
+  });
+
+  it("shares the cacheable system half with the roadmap", () => {
+    // Prompt caching matches a prefix byte for byte, so the operation-specific
+    // half comes last and the shared half is identical.
+    const plan = coachAIStaticPrefix("create_seven_day_plan");
+    const roadmap = coachAIStaticPrefix("create_roadmap");
+    const shared = plan.slice(0, plan.indexOf("# This request"));
+
+    expect(roadmap.startsWith(shared)).toBe(true);
+    expect(plan).toBe(coachAIStaticPrefix("create_seven_day_plan"));
+    expect(plan).not.toContain(COACH_AI_FIXTURE_PLANNING_NOTE);
+  });
+
+  it("says the horizon is the athlete's and not the model's", () => {
+    const prefix = coachAIStaticPrefix("create_seven_day_plan");
+
+    expect(prefix).toContain("the athlete chose it");
+    expect(prefix).toContain("Do not extend it, shorten it, shift it");
+    expect(prefix).toContain("At most three sessions on any one date");
+  });
+
+  it("asks for unweighted allocation and no session detail", () => {
+    const prefix = coachAIStaticPrefix("create_seven_day_plan");
+
+    // Decision 6 and the M3-03D boundary, both stated to the model as well as
+    // enforced afterwards. The enforcement is what makes them true; saying them
+    // is what stops the common case being a rejection.
+    expect(prefix).toContain("never express attention as a percentage");
+    expect(prefix).toContain(
+      "Do not break it into exercises, sets, reps, loads, distances, paces",
+    );
+  });
+});
+
+describe("the plan response grammar", () => {
+  it("admits no weight, activity, or target property anywhere", () => {
+    const serialized = JSON.stringify(
+      COACH_AI_RESPONSE_SCHEMAS.create_seven_day_plan.schema,
+    );
+
+    for (const banned of [
+      '"weight"',
+      '"percent"',
+      '"share"',
+      '"activities"',
+      '"targets"',
+      '"measurementMode"',
+    ]) {
+      expect(serialized).not.toContain(banned);
+    }
+  });
+
+  it("pins the schema version the validator accepts", () => {
+    const schema = COACH_AI_RESPONSE_SCHEMAS.create_seven_day_plan
+      .schema as Record<
+      string,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      any
+    >;
+
+    expect(schema.properties.plan.properties.schemaVersion.enum).toEqual([
+      "fittip.seven-day-plan.v2",
+    ]);
+    expect(schema.properties.plan.properties.weekDescription.type).toBe(
+      "string",
+    );
   });
 });

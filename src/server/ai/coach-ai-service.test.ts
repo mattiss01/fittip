@@ -10,9 +10,10 @@ import {
   CoachAIService,
   type CoachAIProposalOutcome,
 } from "@/server/ai/coach-ai-service";
-import type {
-  CoachAIGoalRecord,
-  CoachAIOwnedRecords,
+import {
+  CoachAIContextBelowMinimumError,
+  type CoachAIGoalRecord,
+  type CoachAIOwnedRecords,
 } from "@/server/ai/context";
 import type { CoachAIContextSource } from "@/server/ai/context-source";
 import type {
@@ -27,6 +28,8 @@ import {
   COACH_AI_FIXTURE_TARGETABLE_GOAL_ID,
   COACH_AI_FIXTURE_HORIZON_END,
   COACH_AI_FIXTURE_HORIZON_START,
+  COACH_AI_FIXTURE_PLAN_HORIZON_END,
+  COACH_AI_FIXTURE_PLAN_HORIZON_START,
   COACH_AI_FIXTURE_TODAY,
   findCoachAIFixtureCase,
 } from "@/server/ai/fixtures/fixture-corpus";
@@ -66,10 +69,20 @@ const COMPOSE = {
   previousProposal: null,
 };
 
+/** The same step for a plan, whose horizon is one to seven days (M3-03). */
+const PLAN_COMPOSE = {
+  ...COMPOSE,
+  horizonStartDate: COACH_AI_FIXTURE_PLAN_HORIZON_START,
+  horizonEndDate: COACH_AI_FIXTURE_PLAN_HORIZON_END,
+};
+
 class FakeContextSource implements CoachAIContextSource {
   goalCollectionRevision = 3;
   memoryCollectionRevision = 5;
   ownerIdOverride: string | null = null;
+  /** The plan operation's context minimum: one active goal and a resolved zone. */
+  timezoneName: string | null = "Europe/Berlin";
+  includeGoals = true;
   readonly calls: string[] = [];
 
   async load(owner: CoachAIOwner): Promise<CoachAIOwnedRecords> {
@@ -77,9 +90,10 @@ class FakeContextSource implements CoachAIContextSource {
     return {
       ownerId: this.ownerIdOverride ?? owner.id,
       today: COACH_AI_FIXTURE_TODAY,
+      timezoneName: this.timezoneName,
       goalCollectionRevision: this.goalCollectionRevision,
       memoryCollectionRevision: this.memoryCollectionRevision,
-      goals: [targetableGoal(), historicalGoal()],
+      goals: this.includeGoals ? [targetableGoal(), historicalGoal()] : [],
       memory: [memoryItem()],
       training: {
         today: COACH_AI_FIXTURE_TODAY,
@@ -593,7 +607,7 @@ describe("failure handling", () => {
         service.propose({
           operation: "create_seven_day_plan",
           owner: OWNER,
-          compose: COMPOSE,
+          compose: PLAN_COMPOSE,
         }),
       ),
     ).toBe("output_invalid");
@@ -681,6 +695,144 @@ describe("failure handling", () => {
       reportedOutputTokens: null,
     });
     await vi.waitFor(() => expect(budget.snapshot().activeRequests).toBe(0));
+  });
+});
+
+/**
+ * M3-03 decision 5. The threshold is one active goal and a resolved timezone,
+ * and below it the refusal must be the cheapest thing the system does.
+ */
+describe("the plan context minimum", () => {
+  it("generates a plan for the selected horizon at the minimum", async () => {
+    const { service, telemetry } = build({
+      adapter: new FixtureCoachAI({
+        create_seven_day_plan: { synthesizeFromContext: true },
+      }),
+    });
+
+    const outcome = await service.propose({
+      operation: "create_seven_day_plan",
+      owner: OWNER,
+      compose: PLAN_COMPOSE,
+    });
+
+    if (!("sessions" in outcome.proposal)) throw new Error("expected a plan");
+    expect(outcome.proposal.startDate).toBe(
+      COACH_AI_FIXTURE_PLAN_HORIZON_START,
+    );
+    expect(outcome.proposal.endDate).toBe(COACH_AI_FIXTURE_PLAN_HORIZON_END);
+    expect(outcome.proposal.sessions.length).toBeGreaterThan(0);
+    expect(telemetry.records.at(-1)).toMatchObject({
+      outcome: "accepted",
+      schemaVersion: "fittip.seven-day-plan.v2",
+    });
+  });
+
+  it("refuses with no active goal, before any key or reservation", async () => {
+    const contextSource = new FakeContextSource();
+    contextSource.includeGoals = false;
+    const ledger = new FakeSpendLedger();
+    const adapter = new SpyProviderCoachAI(() => {
+      throw new Error("the provider must not be reached");
+    });
+    const { service, budget, telemetry } = build({
+      adapter,
+      contextSource,
+      spendLedger: ledger,
+      environment: {
+        FITTIP_AI_LIVE: "enabled",
+        FITTIP_AI_OWNER_ALLOWLIST: OWNER_ID,
+        FITTIP_AI_OPERATIONS: "create_seven_day_plan",
+        FITTIP_AI_PROVIDER: "example-provider",
+        FITTIP_AI_MODEL: "example-model-1",
+        FITTIP_AI_API_KEY: "not-a-real-key-0000000000000000",
+      },
+    });
+
+    expect(
+      await failureCode(() =>
+        service.propose({
+          operation: "create_seven_day_plan",
+          owner: OWNER,
+          compose: PLAN_COMPOSE,
+        }),
+      ),
+    ).toBe("context_below_minimum");
+
+    expect(adapter.invocations).toBe(0);
+    expect(ledger.reserved).toEqual([]);
+    expect(budget.snapshot()).toMatchObject({
+      spentTotalMicroUsd: 0,
+      activeRequests: 0,
+    });
+    // No key was claimed either, so the refusal is repeatable rather than
+    // stored as this request's answer.
+    expect(telemetry.records.at(-1)).toMatchObject({
+      idempotencyKey: null,
+      errorCode: "context_below_minimum",
+      estimatedCostMicroUsd: null,
+    });
+  });
+
+  it("refuses with no resolved timezone, naming what is missing", async () => {
+    const contextSource = new FakeContextSource();
+    contextSource.timezoneName = null;
+    const { service } = build({ contextSource });
+
+    const error = await service
+      .propose({
+        operation: "create_seven_day_plan",
+        owner: OWNER,
+        compose: PLAN_COMPOSE,
+      })
+      .then(
+        () => null,
+        (thrown: unknown) => thrown,
+      );
+
+    expect(error).toBeInstanceOf(CoachAIContextBelowMinimumError);
+    expect((error as CoachAIContextBelowMinimumError).missing).toEqual([
+      "resolved_timezone",
+    ]);
+  });
+
+  it("names both requirements at once rather than sending the owner round twice", async () => {
+    const contextSource = new FakeContextSource();
+    contextSource.includeGoals = false;
+    contextSource.timezoneName = "Not/A_Zone";
+    const { service } = build({ contextSource });
+
+    const error = await service
+      .propose({
+        operation: "create_seven_day_plan",
+        owner: OWNER,
+        compose: PLAN_COMPOSE,
+      })
+      .then(
+        () => null,
+        (thrown: unknown) => thrown,
+      );
+
+    expect((error as CoachAIContextBelowMinimumError).missing).toEqual([
+      "active_goal",
+      "resolved_timezone",
+    ]);
+  });
+
+  it("does not apply the plan minimum to a roadmap", async () => {
+    // The roadmap's accepted context source supplies no timezone, and M3-03
+    // must not retroactively make that a refusal.
+    const contextSource = new FakeContextSource();
+    contextSource.timezoneName = null;
+    const { service } = build({ contextSource });
+
+    await expect(
+      service.propose({
+        operation: "create_roadmap",
+        owner: OWNER,
+        compose: COMPOSE,
+      }),
+    ).resolves.toMatchObject({ status: "proposal" });
   });
 });
 

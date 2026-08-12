@@ -11,7 +11,7 @@ import {
   type CoachAIProposal,
   type CoachAIRequest,
   type CoachAISourceReference,
-  type RoadmapMemoryCandidate,
+  type CoachAIMemoryCandidate,
 } from "@/server/ai/contracts";
 import {
   CoachAIBudget,
@@ -37,7 +37,7 @@ import {
 } from "@/server/ai/idempotency";
 import type { CoachAIOwner } from "@/server/ai/owner";
 import {
-  validateCoachAICandidate,
+  validatePlanCandidate,
   validateRoadmapCandidate,
   type CoachAIRejectionReason,
 } from "@/server/ai/output-validation";
@@ -84,7 +84,7 @@ export type CoachAIProposalOutcome = {
    * exact excerpts. Empty when the model returned none or when the section
    * failed its own validation — which never invalidates the roadmap.
    */
-  memoryCandidates: RoadmapMemoryCandidate[];
+  memoryCandidates: CoachAIMemoryCandidate[];
   /** Set when a valid proposal arrived with an unusable memory section. */
   memoryRejectionReason: CoachAIRejectionReason | null;
 };
@@ -459,12 +459,12 @@ export class CoachAIService {
     // that records what it cost.
     if (state.durableSettlement) await state.durableSettlement;
 
-    // The roadmap operation returns two independently validated sections, so it
-    // goes through the validator that can report on both. An unusable memory
-    // section is discarded and the roadmap is still returned; that is the
-    // approved independent-decision boundary, not leniency.
+    // Both operations return two independently validated sections. An unusable
+    // memory section is discarded and the proposal is still returned; that is
+    // the approved independent-decision boundary, not leniency. A rejected
+    // *proposal* section creates nothing and writes no user data.
     let proposal: CoachAIProposal;
-    let memoryCandidates: RoadmapMemoryCandidate[] = [];
+    let memoryCandidates: CoachAIMemoryCandidate[] = [];
     let memoryRejectionReason: CoachAIRejectionReason | null = null;
 
     if (operation === "create_roadmap") {
@@ -481,18 +481,18 @@ export class CoachAIService {
       memoryCandidates = validation.response.memoryCandidates;
       memoryRejectionReason = validation.memoryRejectionReason;
     } else {
-      const validation = validateCoachAICandidate({
-        operation,
+      const validation = validatePlanCandidate({
         body: candidate.body,
         context: assembled.context,
       });
       if (validation.outcome === "rejected") {
         draft.outcome = "rejected";
-        draft.rejectionReason = validation.reason as CoachAIRejectionReason;
-        // A rejected candidate creates no proposal and writes no user data.
+        draft.rejectionReason = validation.reason;
         throw new CoachAIError("output_invalid");
       }
-      proposal = validation.proposal;
+      proposal = validation.response.plan;
+      memoryCandidates = validation.response.memoryCandidates;
+      memoryRejectionReason = validation.memoryRejectionReason;
     }
 
     draft.outcome = "accepted";
