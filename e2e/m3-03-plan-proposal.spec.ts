@@ -41,7 +41,7 @@ test.describe("M3-03 selected-horizon plan proposal", () => {
       await expect(
         page.getByRole("heading", { name: "Make the days legible." }),
       ).toBeVisible();
-      await expect(page.getByText("No roadmap is required.")).toHaveCount(0);
+      await expect(page.getByText("No roadmap is required.")).not.toBeVisible();
 
       const disclosure = page.getByText("What the coach will use");
       await disclosure.click();
