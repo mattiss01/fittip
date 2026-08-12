@@ -1,7 +1,8 @@
 # M3-02: High-level roadmap proposal
 
-**Status:** in development — dispatched by the product owner on 10 August 2026;
-feature brief and transaction ADR approved the same day
+**Status:** accepted — accepted by the product owner on 12 August 2026 against
+`d55c343`, merged to `master` as `04cebc8`. See the
+[validation record](../../validation/M3/M3-02-VALIDATION.md)
 
 ## Agent brief
 
