@@ -88,9 +88,10 @@ commercial use, or production.
 | P1 | [M3-01 Server-only AI boundary and fixture adapters](M3-01-LOCAL-AI-ADAPTER-CONTROLS.md) | accepted 4 Aug 2026 | M2-01 through M2-04 accepted; ADR-006, ADR-007, ADR-012 | Provider-neutral `CoachAI` contract, deterministic fixture adapters, owner allowlist/enable flag, ADR-012 goal and memory context allowlist, schema validation, in-memory rate/concurrency/budget/idempotency policy, content-free telemetry. No provider, credential, network call, or spend | Approve the dispatch; no provider decision required |
 | P1 | [M3-01B One approved real-provider adapter](M3-01B-REAL-PROVIDER-ADAPTER.md) | accepted 10 Aug 2026 | M3-01 accepted; M0-06A accepted for hosted use | One real adapter behind the accepted contract, server-only credential path, durable fail-closed rate/budget/idempotency state via a revoked-write table and an increment-only `SECURITY DEFINER` function, cost reservation and reconciliation, opt-in live test | All values approved; dispatched 10 Aug 2026. Remaining gate: independent review, Preview, and acceptance |
 | P1 | [M3-02 Roadmap proposal](M3-02-ROADMAP-PROPOSAL.md) | accepted 12 Aug 2026 | M3-01B accepted and accepted M2 foundations | Owner-scoped structured high-level roadmap proposal with phases, milestones, uncertainty, review points, source versions, edit/reject/accept boundary; no detailed plan | Accepted against `d55c343`, merged as `04cebc8`. Three review passes; the per-source context allocation and the raised input ceiling are approved and recorded |
-| P1 | [M3-03 Selected-horizon plan proposal](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md) | proposed | M3-01 and M3-02 accepted | **Split 12 Aug 2026.** User-selected 1–7 consecutive owner-local dates, the `fittip.seven-day-plan.v2` bump, structured sport-agnostic sessions and personal activity candidates, goal allocation, constraints, alternatives, reasoning, conservative safety, memory extraction, reject; no roadmap input, no regeneration, no acceptance | Answer 11 open decisions, then Tier 1 builder, reviewer, hosted migration evidence, Preview, acceptance |
+| P1 | [M3-03 Selected-horizon plan proposal](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md) | proposed | M3-01 and M3-02 accepted | **Split 12 Aug 2026.** User-selected 1–7 consecutive owner-local dates, the `fittip.seven-day-plan.v2` bump, **session-level** sport-agnostic sessions with goal allocation, constraints, alternatives, reasoning, tiered safety, memory extraction, reject; no activity detail, no roadmap input, no regeneration, no acceptance | **3 open decisions left** (6, 9, 17 — all presentation), then Tier 1 builder, reviewer, hosted migration evidence, Preview, acceptance |
 | P1 | [M3-03B Plan regeneration](M3-03B-PLAN-REGENERATION.md) | proposed | M3-03 accepted | Reject and regenerate on the same operation: prefilled planning note plus a mandatory 500-character feedback field, only the immediately previous proposal travels, cap of 3 per horizon. Feedback never produces a memory candidate | Answer 3 open decisions, then Tier 1 builder, reviewer, Preview, acceptance |
 | P2 | [M3-03C Roadmap as a plan input](M3-03C-ROADMAP-AS-PLAN-INPUT.md) | proposed | M3-02 and M3-03 accepted; the Progress section also needs M3-04 | An accepted roadmap covering the requested dates is used with no extra owner action and named in the context summary; a stale one is used and marked, never dropped or blocking. Plus the collapsible "why does this plan look like this" section | Answer 4 open decisions — including whether the Progress section belongs here or in M3-04 — then Tier 2, or Tier 1 if it needs a migration |
+| P1 | [M3-03D On-demand session detail](M3-03D-ON-DEMAND-SESSION-DETAIL.md) | proposed | M3-03 accepted | Detail one session on demand into ordered activities with M1's measurement contract reused verbatim; plans stay session-level. Undetailed sessions stay valid and loggable | Answer 5 open decisions — above all what detailing does to an accepted plan version — then Tier 1 builder, reviewer, hosted migration evidence, Preview, acceptance |
 | P1 | [M3-04 Plan edit, lock, and acceptance](M3-04-PLAN-EDIT-LOCK-ACCEPTANCE.md) | proposed | M3-02 and M3-03 accepted | Structured edits, session/activity locks, side-by-side review, reuse of the M1 personal-activity/version model, transactional immutable roadmap/detailed-plan acceptance; no change to logging and no replan | Approve editable fields, lock inheritance, diff/copy, activity reuse/snapshot, version/current-pointer, transaction, and retention decisions |
 | P1 | [M3-07 Replanning an accepted horizon](M3-07-REPLAN-ACCEPTED-HORIZON.md) | proposed | M3-04 accepted | Ask the coach for a new plan over dates that already have an accepted version; new immutable version supersedes, locks survive, completed history untouched. No structured reporting UX, alternatives, or clarifying questions — those stay M4 | Approve five open decisions, then Tier 1 builder, reviewer, Preview, acceptance |
 | P2 | [M3-06 A plan never starts in the past](M3-06-PAST-DATED-PLAN-HORIZONS.md) | proposed | none | Change accepted M1 behaviour so a plan version's start date is owner-local today or later; horizon shrinks as the week passes and superseded versions retain past content | Approve the four open questions, then Tier 1 builder, reviewer, Preview, acceptance |
@@ -108,6 +109,7 @@ Accepted M2 goals + coaching context + guided onboarding + targeted closeout
         -> M3-03 exact selected 1–7-day plan proposal
           -> M3-03B regeneration with mandatory feedback
           -> M3-03C the roadmap as an optional, possibly stale input
+          -> M3-03D on-demand detail for one session
           -> M3-04 edit, locks, and transactional acceptance
             -> M3-07 replan an accepted horizon
               -> M3-05 independent validation
@@ -118,8 +120,10 @@ nothing, and changes accepted M1 behaviour rather than adding an M3 slice.
 M3-08 and M3-09 also sit outside it. Both are M3-02 follow-ups filed from that
 ticket's known limitations on 12 August 2026; neither blocks M3-03.
 
-M3-03B and M3-03C both branch from M3-03 rather than chaining after it. They are
-independent of each other and neither blocks M3-04.
+M3-03B, M3-03C, and M3-03D all branch from M3-03 rather than chaining after it.
+They are independent of each other and none blocks M3-04 — though M3-03D's first
+open decision, what detailing does to an accepted plan version, has to be
+answered in step with M3-04's immutability model.
 ```
 
 **M3-03 was split on 12 August 2026**, on the same reasoning that split M3-01.
@@ -128,12 +132,13 @@ allocation, the roadmap input with its staleness rule, regeneration with
 mandatory feedback, the Progress reasoning section, and a full 390px flow — 555
 lines and sixteen open product decisions, against an `## Agent brief` limit of
 about 40 lines. M3-03 keeps the generation slice and its number, so every
-existing link stays valid; regeneration became M3-03B and the roadmap input
-became M3-03C. The seams are real: regeneration needs a proposal to regenerate
+existing link stays valid; regeneration became M3-03B, the roadmap input
+became M3-03C, and activity detail became M3-03D once the product owner chose a
+session-level plan over a fully detailed one. The seams are real: regeneration needs a proposal to regenerate
 from, the roadmap path needs a working generation to feed, and both are additive
 to M3-03's output without changing its schema. Nothing was dropped — every open
 decision, acceptance criterion, and test-plan line moved to exactly one of the
-three, and the decided lines stayed in M3-03 as history with a pointer to their
+four, and the decided lines stayed in M3-03 as history with a pointer to their
 new owner.
 
 M3-02's remaining limitations did not all become tickets. Limitation 11, the

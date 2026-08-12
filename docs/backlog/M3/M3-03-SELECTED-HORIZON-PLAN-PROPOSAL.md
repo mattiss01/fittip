@@ -24,8 +24,8 @@ guardrail, not a spend control; the plan schema bumps to
 `fittip.seven-day-plan.v2` for a coach-authored description of the week; and
 Progress gains a collapsible "why does this plan look like this" section
 
-**Split:** 12 August 2026 — see below. Regeneration and the roadmap input left
-this ticket; the generation slice stayed.
+**Split:** 12 August 2026 — see below. Regeneration, the roadmap input, and
+activity detail all left this ticket; the session-level generation slice stayed.
 
 **Sequencing note:** M3-02 ships first so that the roadmap surface exists and
 has been judged before detailed planning is built on it. That is a **build**
@@ -39,10 +39,11 @@ founder-hosted use
 
 **Blocks:** [M3-03B](M3-03B-PLAN-REGENERATION.md),
 [M3-03C](M3-03C-ROADMAP-AS-PLAN-INPUT.md),
+[M3-03D](M3-03D-ON-DEMAND-SESSION-DETAIL.md),
 [M3-04](M3-04-PLAN-EDIT-LOCK-ACCEPTANCE.md), and
 [M3-05](M3-05-M3-VALIDATION-SLICE.md)
 
-## Split into three tickets, 12 August 2026
+## Split into four tickets, 12 August 2026
 
 This ticket carried plan generation, a schema version bump, sessions and
 activities, safety, goal allocation, the roadmap-as-optional-input path with its
@@ -52,23 +53,27 @@ decisions. AGENTS.md requires an `## Agent brief` of about 40 lines and says a
 ticket that cannot be summarized in one is usually too large to be one ticket.
 This was.
 
-The scope was divided at the two seams where the work is genuinely independent:
+The scope was divided at the seams where the work is genuinely independent:
 
-- **M3-03 (this ticket)** — generate, validate, persist, and display one plan
-  proposal for the selected dates, from goals, memory, training history, and the
-  planning note. Reject it. No roadmap, no regeneration.
+- **M3-03 (this ticket)** — generate, validate, persist, and display one
+  **session-level** plan proposal for the selected dates, from goals, memory,
+  training history, and the planning note. Reject it. No roadmap, no
+  regeneration, no activity detail.
 - **[M3-03B](M3-03B-PLAN-REGENERATION.md)** — regeneration with mandatory
   feedback and the cap of 3.
 - **[M3-03C](M3-03C-ROADMAP-AS-PLAN-INPUT.md)** — the accepted roadmap as an
   optional and possibly stale input, plus the Progress reasoning section.
+- **[M3-03D](M3-03D-ON-DEMAND-SESSION-DETAIL.md)** — the activities, measurement
+  modes, and targets for one session, generated on demand. Added 12 August 2026
+  when the product owner chose a session-level plan over a fully detailed one.
 
 The seams are real rather than administrative. Regeneration needs a proposal to
-regenerate from, and the roadmap path needs a working generation to feed. Both
-are additive to this ticket's output and neither changes its schema. That is why
-each can be approved, built, and judged on its own.
+regenerate from, the roadmap path needs a working generation to feed, and the
+detail operation needs a session to detail. All three are additive to this
+ticket's output. That is why each can be approved, built, and judged on its own.
 
 Nothing was dropped. Every open decision, acceptance criterion, and test-plan
-line moved to exactly one of the three, and the decided lines stayed here as
+line moved to exactly one of the four, and the decided lines stayed here as
 history with a pointer to their new owner.
 
 ## Outcome
@@ -77,9 +82,9 @@ Generate and display one sport-agnostic plan proposal for the user-selected next
 1–7 days, based on active goals, active explicitly accepted coaching context,
 training history within ADR-013's bounds, and the owner's planning note. The
 proposal contains exactly the requested number of consecutive owner-local dates,
-dated sessions and personal activity candidates, goal allocation,
-duration/intensity targets, alternatives, concise reasoning, and conservative
-safety behavior. It changes no plan until explicit acceptance in M3-04.
+dated sessions described at session level, goal allocation, expected duration,
+alternatives, concise reasoning, and conservative safety behavior. It changes no
+plan until explicit acceptance in M3-04.
 
 **A plan generates from goals alone.** With the roadmap path in M3-03C, that is
 not a fallback or a degraded state in this ticket — it is the whole product. The
@@ -95,8 +100,9 @@ mandatory before those uses.
 
 ## Scope
 
-1. Define strict `DetailedPlanProposal`, session, activity, target,
-   alternative, allocation, rationale, and safety schemas.
+1. Define strict `DetailedPlanProposal`, session, alternative, allocation,
+   rationale, and safety schemas. No activity, measurement, or target schema —
+   that is M3-03D.
 2. Build an owner-scoped context from active goals, eligible explicitly
    accepted memory, training history under ADR-013, the planning note under
    ADR-014, timezone, and approved generation date.
@@ -104,9 +110,10 @@ mandatory before those uses.
    note, and a collapsed-by-default summary of what the coach will receive.
 4. Accept an explicit user-selected `dayCount` from 1 through 7 and generate
    exactly that many consecutive owner-local calendar dates.
-5. Enforce server-owned limits for sessions, daily/horizon time, activities,
-   intensity/effort, target shape, and allowed context.
-6. Support sport-agnostic personal activities without a global library.
+5. Enforce server-owned limits for session count per day and per horizon, and
+   for allowed context. No minutes cap and no rest rule (decision 4).
+6. Keep sessions sport-agnostic and personal, with no global library anywhere
+   in the contract.
 7. Show priority allocation, constraints used, alternatives, uncertainty, and
    concise visible reasoning.
 8. Extract memory candidates from the planning note in the same response.
@@ -165,6 +172,8 @@ exact call count and cost before it happens.
   to M3-03C. This ticket generates from goals, memory, history, and the note.
 - **No regeneration.** The second owner-text field, the previous proposal as
   context, and the cap belong to M3-03B.
+- **No activity detail.** Activities, measurement modes, targets, and locks
+  belong to M3-03D, generated per session on demand.
 - No accepted plan version, editing, locks, personal-activity persistence, or
   transactional acceptance; those belong to M3-04.
 - No completion/logging, plan-versus-actual history, replan, diff, coaching
@@ -186,17 +195,14 @@ exact call count and cost before it happens.
   horizon.
 - Every session is assigned to one of those dates; rest/no-session days remain
   explicit in the selected-horizon representation.
-- A session contains title, sport/domain, focus, expected duration, effort or
-  recovery intent where applicable, ordered activities, goal allocation,
-  alternatives, and concise rationale.
-- An activity contains name, sport/domain, intent, optional instructions,
-  estimated minutes, one approved measurement mode, validated target,
-  alternatives, and a future lock field defaulting unlocked.
-- Measurement modes remain sport-agnostic:
-  `sets_reps_load`, `time_distance_pace`, `duration_intensity`,
-  `skill_repetitions`, or `custom`.
-- Custom targets use a bounded validated key/value shape; JSON is not an
-  arbitrary escape hatch.
+- **A session is session-level only.** It contains title, sport/domain, focus,
+  expected duration in minutes, effort or recovery intent where applicable, goal
+  allocation, alternatives, and concise rationale. It carries **no activities,
+  no measurement modes, and no targets** — those are
+  [M3-03D](M3-03D-ON-DEMAND-SESSION-DETAIL.md), generated per session on demand.
+- **At most 3 sessions on any one date**, and at most `3 × dayCount` across the
+  horizon. No cap on total minutes per day or per horizon, and no required rest
+  day (decision 4).
 - Every referenced goal is active and owner-scoped. Core/supporting priorities
   and ranks remain visible in allocation.
 - **The proposal carries a coach-authored description of the week as a whole**,
@@ -217,11 +223,20 @@ ADR-014's accepted Progress surface needs one, so this ticket bumps
 with M3-02: `RoadmapProposal` already has `summary` and needs no equivalent
 bump for this reason.
 
-Everything else in the contract list above is also unrepresented in the shipped
-stub — sport/domain, activities, measurement modes, allocation, alternatives,
-locks. M3-01 shipped deliberate stubs and named them as such, so the schema work
-here is substantially larger than wiring an existing type, and the version bump
-covers all of it at once.
+Several other fields in the contract list above are also unrepresented in the
+shipped stub — sport/domain, focus, allocation, alternatives, rationale. M3-01
+shipped deliberate stubs and named them as such, so the version bump covers all
+of it at once.
+
+**The v2 bump got smaller on 12 August 2026.** With activities, measurement
+modes, targets, and locks moved to M3-03D, v2 stays session-level: it adds the
+coach's description of the week, sport/domain, focus, allocation, alternatives,
+and rationale, and it changes the two session-count limits below. The detail
+operation gets its own schema rather than extending this one.
+
+The same commit also changes shipped validation: `MAX_SESSIONS_PER_DAY` moves
+from 2 to **3** and `MAX_SESSIONS` from a fixed 14 to **`3 × dayCount`**. Update
+`output-validation.ts` and its tests; do not add a parallel limit beside them.
 
 **The schema bump stays in this ticket even though M3-03B and M3-03C consume
 it.** One version bump owned by one ticket is the point; three tickets each
@@ -244,8 +259,9 @@ The server—not the model—must:
 - decide the safety tier from the approved rule rather than leaving it to the
   model (decision 8);
 - treat the planning note as context with no authority, per ADR-014 decision 4;
-- enforce approved maximum session count, daily duration, horizon duration,
-  activity count, target ranges, and intensity rules;
+- enforce the approved session-count bound,
+  and the structural session-count bound of 3 per day and `3 x dayCount` per
+  horizon;
 - verify dates, ranks, allocations, references, and personal ownership;
 - reject impossible overlaps and constraints that the model silently ignores;
 - apply the approved conservative safety rule; and
@@ -324,10 +340,11 @@ never decides it, and an uncertain tier resolves to the more conservative one.
    recent load.
 4. The owner confirms, and a pending state states that no plan will change
    automatically.
-5. The proposal shows the exact requested dates, daily sessions/rest, activities,
-   duration/intensity, goal allocation, constraints, alternatives, and concise
-   reasons.
-6. The owner can inspect activity details and safety/uncertainty notes.
+5. The proposal shows the exact requested dates, the sessions on each date or
+   that the date is free, each session's sport, focus, expected duration, goal
+   allocation, alternatives, and concise reasons.
+6. The owner can inspect safety and uncertainty notes. Generating the detail of
+   a session is M3-03D and is not part of this flow.
 7. Any memory candidates extracted from the planning note are presented for
    explicit accept, edit-and-accept, or reject on the accepted M2-02 review
    surface. They are independent of the plan decision.
@@ -354,11 +371,13 @@ require approval.
 2d. Memory candidates from the note are created `inferred_proposed` /
     `proposed` and are never active without explicit owner review. An invalid
     memory section is discarded and the plan still returns.
-3. Sessions/activities are sport-agnostic, personal, structured, and contain
-   no global exercise-library dependency.
-4. The selected horizon respects approved availability, time, equipment, location,
-   preference, limitation, session/activity, duration, intensity, and unit
-   constraints.
+3. Sessions are sport-agnostic, personal, structured, and contain no global
+   exercise-library dependency. No session carries activities or targets.
+4. The selected horizon respects approved availability, time, equipment,
+   location, preference, limitation, and duration constraints.
+4a. No date carries more than 3 sessions and the horizon carries no more than
+    `3 x dayCount`. There is no minutes cap and no required rest day; a
+    proposal is not rejected for lacking one.
 5. Goal priorities and allocation are visible, and material tradeoffs/
    uncertainty have concise reasons or alternatives.
 5a. Below the context minimum — no active goal, or no resolved timezone — the
@@ -396,8 +415,11 @@ describes.
 
 - Date/timezone/DST fixtures for 1, 2, and 7 local dates; rejection of 0, 8,
   mismatched counts, gaps, duplicates, and model-expanded horizons.
-- Schema fixtures for all measurement modes, custom target bounds, alternatives,
-  allocations, unknown fields, malformed values, excessive counts, and size.
+- Schema fixtures for alternatives, allocations, unknown fields, malformed
+  values, excessive counts, and size.
+- Session-count bound: 3 on one date passes, 4 is rejected; `3 x dayCount`
+  passes and one more is rejected. A horizon with no rest day and a horizon of
+  very long sessions both pass, because neither is a rule.
 - Constraint fixtures for availability, equipment, locations, time, goal
   conflicts, priorities, limitations, and insufficient context. The availability
   cases include the cold-start shape named above.
@@ -425,15 +447,15 @@ describes.
   separate spend approval and is not assumed.
 - Playwright `390x844` flow for compose screen, expand and collapse the context
   summary, write a planning note, generate, review requested dates, expand
-  activity, alternatives/safety, review memory candidates, reject, continue,
-  changed source, and safe failure.
+  alternatives/safety, review memory candidates, reject, continue, changed
+  source, and safe failure.
 - Content/secret scan across telemetry, logs, errors, HTML, snapshots,
   screenshots, URLs, and client bundles.
 
 ## Implementation guidance
 
 Reuse M3-01's adapter/gate and M3-02's source model. Put calendar, constraints,
-activity-target validation, allocation, and safety in server/domain services.
+allocation, and safety in server/domain services.
 Persist only the immutable proposal in this slice. Create any schema through a
 supported forward migration with explicit RLS and direct owner/cross-user tests.
 
@@ -453,10 +475,11 @@ friend/non-M0-06A-hosted/external behavior was added.
 
 ## Open decisions
 
-**Six remain open**, all of them numeric limits or presentation: 3, 4, 6, 7, 9,
-and 17. Decisions 1, 5, 8, 12, and 13 were answered on 12 August 2026 and are
-recorded below. Five others moved out in the split: 10, 11, and 18 to M3-03C;
-15 and 16 to M3-03B. Decided lines stay below as history.
+**Three remain open**, all presentation: 6, 9, and 17. Decisions 1, 3, 4, 5, 7,
+8, 12, and 13 were all answered on 12 August 2026 and are recorded below; 3 and 7
+were answered by moving them to M3-03D with the detail they govern. Five others
+moved out in the earlier split: 10, 11, and 18 to M3-03C; 15 and 16 to M3-03B.
+Decided lines stay below as history.
 
 1. ~~Day-count selector behavior~~ — **decided 12 August 2026, together with
    decision 13.** The selector is always visible and the approved range stays
@@ -471,9 +494,34 @@ recorded below. Five others moved out in the split: 10, 11, and 18 to M3-03C;
    contain a day that has already happened. The owner may choose a later start
    date. Manual planning currently permits a past start; M3-06 changes that so
    the product has one rule.
-3. Default units and unit-selection source.
-4. Maximum sessions/day and horizon, activities/session, daily/horizon minutes,
-   intensity bounds, and rest requirements.
+3. ~~Default units and unit-selection source~~ — **decided 12 August 2026:
+   moved to [M3-03D](M3-03D-ON-DEMAND-SESSION-DETAIL.md)** with the activity
+   detail it belongs to, and answered there by reusing M1's accepted contract.
+   Units are per-value in `is_valid_training_measurement` (`kg`/`lb`, distance
+   and pace units, a free unit string on `custom`), so there is no global unit
+   setting to decide. A session in this ticket carries minutes, which need no
+   unit choice.
+4. ~~Maximum sessions/day and horizon, activities/session, daily/horizon
+   minutes, intensity bounds, and rest requirements~~ — **decided 12 August
+   2026.**
+
+   - **Maximum 3 sessions per day.** Raised from the shipped
+     `MAX_SESSIONS_PER_DAY = 2`, because a real day can hold a short morning
+     mobility or yoga session, a run, and a gym session. The horizon maximum
+     follows as `3 × dayCount`, replacing the shipped `MAX_SESSIONS = 14`.
+   - **No daily or horizon minutes cap**, and **no rest requirement**. Neither
+     is a rule the server should own. The coach decides, and the tiered safety
+     rule in decision 8 is the guard.
+   - The 3-per-day limit is a **structural output bound, not a training rule**.
+     It exists so a malformed or runaway response is rejected rather than
+     parsed. It is set where an owner would not meet it in ordinary use.
+   - **Activities per session and intensity bounds moved to
+     [M3-03D](M3-03D-ON-DEMAND-SESSION-DETAIL.md)** with the detail operation.
+
+   Changing `MAX_SESSIONS_PER_DAY` and `MAX_SESSIONS` alters validation that
+   already ships for `fittip.seven-day-plan.v1`. That is deliberate and is part
+   of the v2 bump; the builder must update `output-validation.ts` and its tests
+   rather than adding a parallel limit.
 5. ~~Minimum required context and behavior when it is incomplete~~ — **decided
    12 August 2026: a threshold, then disclosure.** Below the minimum the server
    refuses to generate and names exactly what is missing, pointing the owner at
@@ -489,7 +537,14 @@ recorded below. Five others moved out in the split: 10, 11, and 18 to M3-03C;
    and it is not a safety failure: it says the coach has nothing to work from,
    in those terms.
 6. Goal-allocation representation and visible tradeoff copy.
-7. Activity target limits and custom measurement schema.
+7. ~~Activity target limits and custom measurement schema~~ — **decided
+   12 August 2026: reuse M1's accepted contract verbatim, in
+   [M3-03D](M3-03D-ON-DEMAND-SESSION-DETAIL.md).** The AI is bound by exactly
+   `is_valid_training_measurement` — the same five modes, the same key sets, the
+   same bounds — with nothing added and nothing tightened. A target the AI
+   proposes is therefore a target M1 can already store, so acceptance in M3-04
+   cannot fail on a shape the coach was allowed to produce. This ticket carries
+   no activity, so the decision travels with the detail operation.
 8. ~~Safety thresholds and whether a signal pauses all generation or only an
    affected activity~~ — **decided 12 August 2026: tiered by severity.**
 
