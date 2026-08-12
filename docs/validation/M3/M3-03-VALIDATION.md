@@ -2,11 +2,11 @@
 
 **Ticket:** [M3-03](../../backlog/M3/M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md)
 
-**Status:** **incomplete — first of two builder handoffs.** This record covers
-the foundation half only. The commit below delivers no user-visible behavior and
-is **not ready for independent review as a ticket** or for product-owner
-acceptance; the second builder's commit completes it. M3-02 was delivered the
-same way (`94880d6` then `8226887`).
+**Status:** **in development — complete ticket awaiting corrected exact-commit
+CI, hosted migration verification, independent review, and product-owner
+acceptance.** The first-builder foundation handoff remains below as permanent
+history; the complete-ticket handoff and subsequent correction evidence follow
+it.
 
 **Branch:** `ticket/m3-03-selected-horizon-plan-proposal`
 
@@ -410,10 +410,16 @@ not exist; all other assertions and product behavior remain unchanged.
 inside its own positioned visible label so controls no longer overlap at 390px,
 while keeping the radio directly operable and preserving focus-visible styling.
 
+**Independent-review correction:**
+`cf60ed64a29840da503fc8e52956f1db889a9e9a` - addresses the review-blocking
+dialog, duration-contract/database, accepted-constraint fixture, local-date
+rollover, and memory partial-success findings. The review of `b597ee0` requested
+changes; it is superseded and is not approval of this target.
+
 **Branch:** `ticket/m3-03-selected-horizon-plan-proposal`
 
 **Complete ticket range:**
-`git diff bd859db..b597ee017a377ce5418a280041f4b4f56aa5e8aa`
+`git diff bd859db..cf60ed64a29840da503fc8e52956f1db889a9e9a`
 
 ### Delivered behavior
 
@@ -481,23 +487,25 @@ npx.cmd playwright test e2e/m3-03-plan-proposal.spec.ts --config=e2e/m3-03.playw
 
 ### Changed files: complete ticket
 
-`git diff --stat bd859db..b597ee017a377ce5418a280041f4b4f56aa5e8aa`:
+`git diff --stat bd859db..cf60ed64a29840da503fc8e52956f1db889a9e9a`:
 
 ```text
  .github/workflows/ci.yml                           |   10 +
- docs/validation/M3/M3-03-VALIDATION.md             |  725 +++++++++++
+ docs/validation/M3/M3-03-VALIDATION.md             |  778 ++++++++++++
  docs/validation/README.md                          |    1 +
  e2e/m3-03-plan-proposal.spec.ts                    |  210 ++++
  e2e/m3-03.playwright.config.ts                     |   16 +
- src/app/home/plan/proposal/action-state.ts         |   25 +
- src/app/home/plan/proposal/actions.ts              |  196 +++
+ src/app/home/plan/proposal/action-state.ts         |   26 +
+ src/app/home/plan/proposal/actions.test.ts         |   97 ++
+ src/app/home/plan/proposal/actions.ts              |  205 ++++
  src/app/home/plan/proposal/error.tsx               |   13 +
  src/app/home/plan/proposal/loading.tsx             |    7 +
  src/app/home/plan/proposal/page.tsx                |  131 ++
  src/app/home/plan/proposal/proposal.module.css     |  471 ++++++++
  .../plan-proposal/plan-proposal-days.test.tsx      |   57 +
  .../plan-proposal/plan-proposal-days.tsx           |  131 ++
- .../plan-proposal/plan-proposal-manager.tsx        |  401 +++++++
+ .../plan-proposal/plan-proposal-manager.test.tsx   |  120 ++
+ .../plan-proposal/plan-proposal-manager.tsx        |  556 +++++++++
  src/components/planning/plan-editor.tsx            |    4 +
  src/features/plan-proposal/plan-proposal-copy.ts   |   17 +
  src/lib/supabase/database.types.ts                 |  295 +++++
@@ -510,25 +518,27 @@ npx.cmd playwright test e2e/m3-03-plan-proposal.spec.ts --config=e2e/m3-03.playw
  src/server/ai/contracts.ts                         |   93 +-
  src/server/ai/errors.ts                            |    7 +
  src/server/ai/fixtures/fixture-adapter.ts          |   13 +-
- src/server/ai/fixtures/fixture-corpus.ts           |  479 +++++++-
- src/server/ai/fixtures/synthetic-plan.test.ts      |  120 ++
- src/server/ai/fixtures/synthetic-plan.ts           |  186 +++
+ src/server/ai/fixtures/fixture-corpus.ts           |  499 +++++++-
+ src/server/ai/fixtures/synthetic-plan.test.ts      |  196 +++
+ src/server/ai/fixtures/synthetic-plan.ts           |  363 ++++++
  src/server/ai/openai-prompt.test.ts                |   93 ++
- src/server/ai/openai-prompt.ts                     |  236 +++-
- src/server/ai/output-validation.test.ts            |  186 ++-
- src/server/ai/output-validation.ts                 |  403 ++++++-
+ src/server/ai/openai-prompt.ts                     |  238 +++-
+ src/server/ai/output-validation.test.ts            |  196 ++-
+ src/server/ai/output-validation.ts                 |  404 +++++--
  src/server/ai/plan-horizon.test.ts                 |  157 +++
  src/server/ai/plan-horizon.ts                      |  133 +++
  src/server/plan-proposal/plan-proposal-records.ts  |   60 +
- .../plan-proposal/plan-proposal-service.test.ts    |  169 +++
- src/server/plan-proposal/plan-proposal-service.ts  |  209 ++++
+ .../plan-proposal/plan-proposal-service.test.ts    |  211 ++++
+ src/server/plan-proposal/plan-proposal-service.ts  |  220 ++++
  src/server/plan-proposal/plan-safety.test.ts       |   65 +
  src/server/plan-proposal/plan-safety.ts            |   34 +
  .../repositories/plan-proposal-repository.test.ts  |  118 ++
  .../repositories/plan-proposal-repository.ts       |  263 +++++
  .../20260812131303_m3_03_plan_proposals.sql        | 1248 ++++++++++++++++++++
+ ...60812191935_remove_plan_session_minutes_cap.sql |  185 +++
+ .../m3_03_plan_duration_correction.test.sql        |   84 ++
  .../tests/database/m3_03_plan_proposals.test.sql   | 1012 ++++++++++++++++
- 44 files changed, 8154 insertions(+), 215 deletions(-)
+ 48 files changed, 9193 insertions(+), 219 deletions(-)
 ```
 
 **Nothing was deleted or renamed.** Non-obvious purposes added by the second
@@ -547,9 +557,15 @@ builder:
 
 ### Data, migration, API, privacy, and security effects
 
-The first-builder migration, RLS, grants, RPCs, generated types, content floor,
-and privacy effects remain exactly as recorded above. The second builder added
-no migration, type regeneration, package, credential, or environment file.
+The first-builder migration, RLS, grants, RPCs, generated types, and privacy
+effects remain exactly as recorded above. The correction adds the forward
+`20260812191935_remove_plan_session_minutes_cap.sql` migration. It replaces
+only the private `plan_content_is_valid(jsonb,date,date)` body so every positive
+integer duration is valid and zero, negative, fractional, and all existing
+schema/size/horizon violations remain invalid. It preserves the function's
+signature, invoker security, empty search path, and revoked privileges. No
+table, row, policy, grant, generated type, package, credential, environment
+file, or client-visible API shape changed.
 
 All proposal reads repeat `user_id` after verified claims and rely on owner
 `SELECT` RLS. All mutations use the already committed `SECURITY DEFINER` RPCs;
@@ -592,8 +608,10 @@ Relevant `vercel-react-best-practices` checks applied:
 
 ### Tests and final local results
 
-**CI for exact review target SHA
-`b597ee017a377ce5418a280041f4b4f56aa5e8aa`: green.**
+**CI for the previous review target SHA
+`b597ee017a377ce5418a280041f4b4f56aa5e8aa`: green, but superseded by the
+correction target. CI for `cf60ed64a29840da503fc8e52956f1db889a9e9a`
+is pending the lead push.**
 
 [Run 31613150945](https://github.com/mattiss01/fittip/actions/runs/31613150945)
 completed successfully on 12 August 2026. Its three jobs passed: lint, types,
@@ -715,21 +733,100 @@ acceptance.
    eligible reported completion signal has an uncertain tier and conservatively
    pauses all. The reviewer must judge that this correctly applies the approved
    uncertain-tier rule rather than inventing severity from completion text.
-5. The ordinary fixture treats an accepted constraint as a limitation and
-   substitutes generic recovery work. It does not parse the constraint's text or
-   claim what body area/sport it affects. This is deliberately conservative but
-   less specific than a live proposal could be.
+5. The fixture now deterministically applies explicit accepted constraint text
+   for availability, time window, maximum duration, location, equipment and
+   named activity restrictions. It remains a bounded fixture rather than a
+   general natural-language planner; unrecognized wording is presented in the
+   proposal assumptions instead of being silently treated as fully understood.
 6. M3-03B regeneration, M3-03C roadmap input, M3-03D activity detail, and M3-04
    editing/locks/acceptance remain absent.
+
+### Independent-review correction evidence
+
+The independent review of `b597ee017a377ce5418a280041f4b4f56aa5e8aa`
+requested changes for five product defects and this record's stale headline.
+The exact implementation correction is
+`cf60ed64a29840da503fc8e52956f1db889a9e9a`:
+
+- Continue and Reject now move focus into their modal dialog, make the rest of
+  the document inert, contain Tab and Shift+Tab, close on Escape, and restore
+  focus to the invoking button. Focused component coverage exercises both
+  dialogs and the outside-document inert boundary.
+- TypeScript validation, fixture cases, the structured-output prompt, and the
+  forward database validator now accept every positive safe integer duration,
+  including 900 minutes. Zero, negative, fractional, and non-number durations
+  remain invalid. The already-applied `20260812131303` migration was not edited.
+- The deterministic fixture applies explicit accepted constraint records to
+  session dates, time-window intent, duration, location, equipment, and named
+  activity selection. Focused cases cover weekdays/before-work/30-minutes,
+  home/no-equipment/no-pool, no-swimming, and an ordinary limitation removing
+  only the affected activity while other work continues. Planning-note prose is
+  still not used to decide a safety tier.
+- The compose store schedules one owner-local date-boundary notification and
+  also checks on window focus/visibility. A mounted compose resets its date
+  input to the new local today across midnight without polling churn.
+- Proposal persistence still completes before memory candidates are written.
+  If that independent write fails, the domain returns a typed partial result and
+  the action shows a sanitized warning that the proposal was saved but possible
+  memory updates were not. Completed replays still do not call the provider,
+  finish a second proposal, or repeat a memory write.
+
+No file was deleted or renamed. New correction files whose purpose needs an
+explicit note:
+
+- `supabase/migrations/20260812191935_remove_plan_session_minutes_cap.sql` -
+  forward replacement of the private content validator; no schema signature or
+  privilege change.
+- `supabase/tests/database/m3_03_plan_duration_correction.test.sql` - pgTAP
+  proof for 900, 1, 0, -1, and 1.5 minute values.
+- `src/app/home/plan/proposal/actions.test.ts` - proves the sanitized
+  user-visible partial-success mapping.
+- `src/components/plan-proposal/plan-proposal-manager.test.tsx` - proves the
+  modal focus/inert contract and deterministic owner-local midnight rollover.
+
+Focused correction results:
+
+| Command or check | Result |
+| --- | --- |
+| first `npx.cmd supabase db reset --local` | timed out after about 124 seconds with no output; reported, then rerun |
+| `npx.cmd supabase db reset --local` rerun | pass - all migrations applied from zero, including `20260812191935` |
+| `npx.cmd supabase db lint --local --level warning --fail-on warning` | pass - no results |
+| `npx.cmd supabase db advisors --local --type all --level warn --fail-on warn` | pass - no issues |
+| `npx.cmd supabase test db --local supabase/tests/database` | pass - 11 files, 709 assertions |
+| focused Vitest set for actions, dialogs/date rollover, validation, fixture constraints, prompt, orchestration, safety, and network gate | pass - 8 files, 126 tests; the final constraint-only rerun passed 11 tests and final dialog-only rerun passed 2 tests |
+| `npm.cmd run typecheck` | pass |
+| `npm.cmd run lint` | pass |
+| `npx.cmd playwright test --config=e2e/m3-03.playwright.config.ts --list` | pass - exactly 1 test at `390x844` collected |
+| full local M3-03 Playwright execution | not run; the required local Supabase environment variables were not improvised |
+| generated-type comparison after clean reset and `types:patch` | no semantic diff; `database.types.ts` was not committed in this correction |
+| `git diff --check` | clean |
+
+The selected project skills affected the correction as follows:
+`frontend-design` preserved the existing approved visual direction while fixing
+keyboard/touch focus behavior; `vercel-react-best-practices` kept request state
+isolated and the partial result serialized without shared mutable state;
+`schema-change` required the forward migration plus clean reset, lint, advisors,
+pgTAP, and generated-type comparison; `mobile-e2e` required the exact ticket
+collection check and honest no-credential limitation; `validation-record`
+required this append-only correction history and exact target reconciliation.
+
+The earlier hosted verification covers only repository migration
+`20260812131303`. It does **not** prove that the new forward migration
+`20260812191935` ran. Before renewed independent review, the product owner must
+apply that exact committed migration in timestamp order and the lead must record
+matching remote history, the unchanged private-function privilege boundary,
+and hosted validation that a proposal containing a positive integer duration
+above 240 persists while a non-positive duration remains rejected. CI and a
+READY Preview for `cf60ed64a29840da503fc8e52956f1db889a9e9a` are also pending.
 
 ### Independent reviewer checklist: complete ticket
 
 Review exact pushed commit
-`b597ee017a377ce5418a280041f4b4f56aa5e8aa` and exact range
-`git diff bd859db..b597ee017a377ce5418a280041f4b4f56aa5e8aa`. Reconcile the
-44-file manifest above against the diff. Use the lead-recorded CI run for this
-SHA; do not use the superseded `e40c0b5`, `85d5052`, `112caa2`, or `ac2f603`
-runs or re-run CI's suites.
+`cf60ed64a29840da503fc8e52956f1db889a9e9a` and exact range
+`git diff bd859db..cf60ed64a29840da503fc8e52956f1db889a9e9a`. Reconcile the
+48-file manifest above against the diff. Use the lead-recorded CI run for this
+SHA; do not use the superseded `b597ee0`, `e40c0b5`, `85d5052`, `112caa2`, or
+`ac2f603` runs or re-run CI's suites.
 
 Judge what CI cannot:
 
@@ -776,3 +873,20 @@ Judge what CI cannot:
 10. **Hosted dependency.** Do not approve the Preview until the lead records the
    product-owner-run founder migration/history, RLS/privilege/advisor, and
    authenticated owner-read evidence for the exact committed migration.
+11. **Modal accessibility.** Exercise Continue and Reject by keyboard: initial
+    focus enters, both Tab directions stay contained, Escape closes, the full
+    outside document is inert while open, and focus returns to the invoker.
+12. **Uncapped duration parity.** Confirm the TypeScript validator, response
+    schema/prompt, fixture corpus, forward SQL validator, and pgTAP agree on any
+    positive integer including 900, while the previous migration is unchanged.
+13. **Accepted-constraint application.** Confirm the fixture reads only
+    accepted constraint records for availability/time/duration/location/
+    equipment/activity choices, removes swimming when explicitly forbidden,
+    and does not promote planning-note prose to a safety decision.
+14. **Owner-local rollover.** Confirm an open compose schedules the next local
+    calendar boundary without polling and resets an edited start date to the new
+    owner-local today, including focus/visibility recovery after suspension.
+15. **Memory partial success.** Force candidate persistence failure after a
+    valid proposal write and confirm proposal durability, a typed sanitized
+    user-visible partial state, and no duplicate generation or memory write on
+    completed replay.
