@@ -1,8 +1,8 @@
 # M3-03: Selected-horizon plan proposal
 
-**Status:** proposed — not approved for implementation
+**Status:** in development — approved by the product owner on 12 August 2026
 
-**Triage:** needs-triage
+**Triage:** ready-for-agent
 
 **Milestone:** M3
 
@@ -42,6 +42,65 @@ founder-hosted use
 [M3-03D](M3-03D-ON-DEMAND-SESSION-DETAIL.md),
 [M3-04](M3-04-PLAN-EDIT-LOCK-ACCEPTANCE.md), and
 [M3-05](M3-05-M3-VALIDATION-SLICE.md)
+
+## Agent brief
+
+**Outcome.** Generate, validate, persist, and display one **session-level** plan
+proposal covering 1-7 owner-selected consecutive local dates, built from active
+goals, eligible accepted memory, ADR-013 training history, and the owner's
+planning note. The owner can reject it. Nothing is accepted.
+
+**Tier 1** - schema, migration, RLS, an AI provider path, and spend.
+
+**Hard constraints**
+
+- **Session-level only.** A session has title, sport/domain, focus, expected
+  minutes, intent, one primary goal, zero or more unweighted secondary goals,
+  alternatives, rationale. **No activities, measurement modes, or targets**, and
+  no weight or percentage anywhere in the schema or the surface.
+- **Bounds:** at most 3 sessions on a date and `3 x dayCount` per horizon. No
+  minutes cap and no rest requirement - a horizon with neither is valid.
+- `fittip.seven-day-plan.v1` -> **`v2`**. In `output-validation.ts` change
+  `MAX_SESSIONS_PER_DAY` 2 -> 3 and `MAX_SESSIONS` 14 -> `3 x dayCount` **in
+  place**; do not add a parallel limit. Add the week description, 1-600 chars.
+- **Context minimum:** at least one active goal and a resolved timezone. Below
+  it, refuse before any provider call, naming what is missing, consuming no
+  idempotency key and no spend reservation.
+- **Safety is tiered and server-decided.** Ordinary limitation pauses only the
+  affected activity and the rest of the horizon generates; severe, acute, or
+  worsening pauses all generation with a rest-focused response. The model never
+  decides the tier; an uncertain tier resolves to the conservative one.
+- `startDate` is owner-local today or later. Day count is remembered across
+  requests; **start date always resets to today**. The planning note is never
+  prefilled.
+- Undecided memory candidates are retained as `proposed` on M2-02's surface and
+  are never active without explicit review.
+- ADR-014: the planning note carries no authority. ADR-015: `SECURITY DEFINER`
+  RPCs take no owner argument and derive it from `auth.uid()`.
+- Fixture-only. No `FITTIP_AI_*` variable is set anywhere and no live call is
+  authorized; `resolveCoachAIRuntimeMode` must still return `fixture`.
+
+**Non-goals** - activities and targets (M3-03D), roadmap input (M3-03C),
+regeneration (M3-03B), acceptance/editing/locks (M3-04). Do not widen into any
+of them; stop and report instead.
+
+**Acceptance criteria** are the numbered list under "Acceptance criteria" below.
+The four that most often go wrong: exact date-count for 1, 2, and 7 days with
+DST; the context-minimum refusal spending nothing; both safety tiers proven by
+fixture rather than asserted; and every requested date rendering as its own
+block with rest days explicit.
+
+**Expected to change.** `src/server/ai/{contracts,output-validation,context,
+context-source,openai-prompt,composition}.ts`; a new `src/server/plan-proposal/`
+domain module and `src/server/repositories/plan-proposal-repository.ts`; a new
+surface under `src/app/home/plan/`; one forward migration in
+`supabase/migrations/` with pgTAP; a per-ticket Playwright spec and config.
+
+**Project skills**, read from `.agents/skills/<name>/SKILL.md` - Claude Code does
+not auto-discover them: `vercel-react-best-practices` and `frontend-design`.
+Decision 9 fixes the layout shape; the skill governs styling, not structure.
+
+Read only this section unless you hit an ambiguity it does not resolve.
 
 ## Split into four tickets, 12 August 2026
 
