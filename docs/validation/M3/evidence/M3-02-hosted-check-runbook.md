@@ -178,7 +178,11 @@ that), then come back. Note the `user_id` that appears; 2.2 needs it.
 
 ### 2.2 The owner sees their rows; a stranger sees none
 
-Replace `OWNER_UUID` with the `user_id` from 2.1. The second subject is a
+**Substitute before running.** Replace **both** occurrences of `OWNER_UUID`
+with the `user_id` from 2.1 — there is one in this block and one in 2.3.
+Pasting the block unedited fails with
+`22P02: invalid input syntax for type uuid: "OWNER_UUID"`, which is the
+placeholder doing its job rather than a finding. The second subject is a
 literal random UUID and must stay one — it is the stranger.
 
 ```sql
