@@ -383,7 +383,7 @@ records green CI, a matching READY Preview, the founder-hosted migration and
 security checks, independent review, and product-owner acceptance.
 
 **Exact review target:**
-`85d5052eff020c215dc827a76d8a5763cbe8f63e`
+`e40c0b542ab4c58dc9d4ece8af8d481a0a14639e`
 
 **Initial implementation commit:**
 `0cf2eca190a912261730e2a41ab26b258c5a0eb8`
@@ -400,10 +400,15 @@ security checks, independent review, and product-owner acceptance.
 the collapsed `<details>` is not visible, while preserving the post-expand
 visible assertion and all product behavior.
 
+**Accessible day-radio locator correction:**
+`e40c0b542ab4c58dc9d4ece8af8d481a0a14639e` - selects and verifies day 3 by
+its exposed `radio "3"` role instead of searching for a nested label that does
+not exist; all other assertions and product behavior remain unchanged.
+
 **Branch:** `ticket/m3-03-selected-horizon-plan-proposal`
 
 **Complete ticket range:**
-`git diff bd859db..85d5052eff020c215dc827a76d8a5763cbe8f63e`
+`git diff bd859db..e40c0b542ab4c58dc9d4ece8af8d481a0a14639e`
 
 ### Delivered behavior
 
@@ -471,13 +476,13 @@ npx.cmd playwright test e2e/m3-03-plan-proposal.spec.ts --config=e2e/m3-03.playw
 
 ### Changed files: complete ticket
 
-`git diff --stat bd859db..85d5052eff020c215dc827a76d8a5763cbe8f63e`:
+`git diff --stat bd859db..e40c0b542ab4c58dc9d4ece8af8d481a0a14639e`:
 
 ```text
  .github/workflows/ci.yml                           |   10 +
- docs/validation/M3/M3-03-VALIDATION.md             |  693 +++++++++++
+ docs/validation/M3/M3-03-VALIDATION.md             |  708 +++++++++++
  docs/validation/README.md                          |    1 +
- e2e/m3-03-plan-proposal.spec.ts                    |  215 ++++
+ e2e/m3-03-plan-proposal.spec.ts                    |  210 ++++
  e2e/m3-03.playwright.config.ts                     |   16 +
  src/app/home/plan/proposal/action-state.ts         |   25 +
  src/app/home/plan/proposal/actions.ts              |  196 +++
@@ -518,7 +523,7 @@ npx.cmd playwright test e2e/m3-03-plan-proposal.spec.ts --config=e2e/m3-03.playw
  .../repositories/plan-proposal-repository.ts       |  263 +++++
  .../20260812131303_m3_03_plan_proposals.sql        | 1248 ++++++++++++++++++++
  .../tests/database/m3_03_plan_proposals.test.sql   | 1012 ++++++++++++++++
- 44 files changed, 8120 insertions(+), 215 deletions(-)
+ 44 files changed, 8130 insertions(+), 215 deletions(-)
 ```
 
 **Nothing was deleted or renamed.** Non-obvious purposes added by the second
@@ -583,7 +588,16 @@ Relevant `vercel-react-best-practices` checks applied:
 ### Tests and final local results
 
 **CI for exact review target SHA
-`85d5052eff020c215dc827a76d8a5763cbe8f63e`: pending lead push.**
+`e40c0b542ab4c58dc9d4ece8af8d481a0a14639e`: pending lead push.**
+
+[Run 31610743244](https://github.com/mattiss01/fittip/actions/runs/31610743244)
+for `85d5052eff020c215dc827a76d8a5763cbe8f63e` was red. Its M3-03 failure was
+exactly the day-3 locator searching for a nested `label` beneath the labelled
+group even though the accessibility snapshot exposes `radio "3"`. The static
+and database jobs passed. The same run also had unrelated authentication and
+onboarding lost-transition failures and an M1-04 timeout failure. No
+known-defect exception is claimed. The M3-03 locator now uses the exposed radio;
+that run is superseded and is not final evidence for this ticket.
 
 [Run 31608863224](https://github.com/mattiss01/fittip/actions/runs/31608863224)
 for `112caa2b7c03866ecec4b3a2161de782f568af2b` was red only because the new
@@ -606,6 +620,7 @@ superseded. Do not treat the local checks below as the ticket's automated gate.
 | safe local environment injection attempt | blocked by command policy before execution; no key was printed or persisted |
 | local screenshots and manual 390px observation | not captured because the browser test did not execute |
 | `npx.cmd playwright test --config=e2e/m3-03.playwright.config.ts --list` after assertion correction | pass; collected exactly 1 test in 1 file |
+| `npx.cmd playwright test --config=e2e/m3-03.playwright.config.ts --list` after radio-locator correction | pass; collected exactly 1 test in 1 file |
 | `git diff --check` | clean |
 
 Tests added or changed by the second builder:
@@ -631,9 +646,10 @@ Tests added or changed by the second builder:
 ### Remaining limitations and lead gates
 
 1. CI has not run for exact review target
-   `85d5052eff020c215dc827a76d8a5763cbe8f63e` because the lead owns the push;
-   runs for `112caa2` and `ac2f603` are superseded for the distinct reasons
-   recorded above.
+   `e40c0b542ab4c58dc9d4ece8af8d481a0a14639e` because the lead owns the push;
+   runs for `85d5052`, `112caa2`, and `ac2f603` are superseded for the distinct
+   reasons recorded above. No exception is claimed for the unrelated failures
+   in run 31610743244.
 2. The local Playwright flow was collected but skipped; no screenshot or manual
    390px observation is claimed. CI and the matching Preview must supply browser
    evidence.
@@ -658,11 +674,11 @@ Tests added or changed by the second builder:
 ### Independent reviewer checklist: complete ticket
 
 Review exact pushed commit
-`85d5052eff020c215dc827a76d8a5763cbe8f63e` and exact range
-`git diff bd859db..85d5052eff020c215dc827a76d8a5763cbe8f63e`. Reconcile the
+`e40c0b542ab4c58dc9d4ece8af8d481a0a14639e` and exact range
+`git diff bd859db..e40c0b542ab4c58dc9d4ece8af8d481a0a14639e`. Reconcile the
 44-file manifest above against the diff. Use the lead-recorded CI run for this
-SHA; do not use the superseded `112caa2` or `ac2f603` runs or re-run CI's
-suites.
+SHA; do not use the superseded `85d5052`, `112caa2`, or `ac2f603` runs or
+re-run CI's suites.
 
 Judge what CI cannot:
 
@@ -697,7 +713,8 @@ Judge what CI cannot:
    M3-03 step after M3-02 on port 3018, using the ticket config, one worker,
    retain-on-failure trace, and separate report/output paths without changing
    any existing step or retry. Confirm the follow-up test-only correction uses
-   visibility for pre-expand copy and retains the post-expand visible assertion.
+   visibility for pre-expand copy and retains the post-expand visible assertion;
+   and confirm day 3 is selected and remembered through the accessible radio.
 9. **390px judgment on the matching Preview.** Verify every requested date and
    explicit rest day, one-tap session details, visible primary/unweighted
    secondary goals, serious-coach tone, focus, touch targets, no horizontal
