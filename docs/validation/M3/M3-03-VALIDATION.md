@@ -383,7 +383,7 @@ records green CI, a matching READY Preview, the founder-hosted migration and
 security checks, independent review, and product-owner acceptance.
 
 **Exact review target:**
-`e40c0b542ab4c58dc9d4ece8af8d481a0a14639e`
+`b597ee017a377ce5418a280041f4b4f56aa5e8aa`
 
 **Initial implementation commit:**
 `0cf2eca190a912261730e2a41ab26b258c5a0eb8`
@@ -405,10 +405,15 @@ visible assertion and all product behavior.
 its exposed `radio "3"` role instead of searching for a nested label that does
 not exist; all other assertions and product behavior remain unchanged.
 
+**Day-radio touch-target correction:**
+`b597ee017a377ce5418a280041f4b4f56aa5e8aa` - contains each invisible radio
+inside its own positioned visible label so controls no longer overlap at 390px,
+while keeping the radio directly operable and preserving focus-visible styling.
+
 **Branch:** `ticket/m3-03-selected-horizon-plan-proposal`
 
 **Complete ticket range:**
-`git diff bd859db..e40c0b542ab4c58dc9d4ece8af8d481a0a14639e`
+`git diff bd859db..b597ee017a377ce5418a280041f4b4f56aa5e8aa`
 
 ### Delivered behavior
 
@@ -476,11 +481,11 @@ npx.cmd playwright test e2e/m3-03-plan-proposal.spec.ts --config=e2e/m3-03.playw
 
 ### Changed files: complete ticket
 
-`git diff --stat bd859db..e40c0b542ab4c58dc9d4ece8af8d481a0a14639e`:
+`git diff --stat bd859db..b597ee017a377ce5418a280041f4b4f56aa5e8aa`:
 
 ```text
  .github/workflows/ci.yml                           |   10 +
- docs/validation/M3/M3-03-VALIDATION.md             |  708 +++++++++++
+ docs/validation/M3/M3-03-VALIDATION.md             |  725 +++++++++++
  docs/validation/README.md                          |    1 +
  e2e/m3-03-plan-proposal.spec.ts                    |  210 ++++
  e2e/m3-03.playwright.config.ts                     |   16 +
@@ -489,7 +494,7 @@ npx.cmd playwright test e2e/m3-03-plan-proposal.spec.ts --config=e2e/m3-03.playw
  src/app/home/plan/proposal/error.tsx               |   13 +
  src/app/home/plan/proposal/loading.tsx             |    7 +
  src/app/home/plan/proposal/page.tsx                |  131 ++
- src/app/home/plan/proposal/proposal.module.css     |  464 ++++++++
+ src/app/home/plan/proposal/proposal.module.css     |  471 ++++++++
  .../plan-proposal/plan-proposal-days.test.tsx      |   57 +
  .../plan-proposal/plan-proposal-days.tsx           |  131 ++
  .../plan-proposal/plan-proposal-manager.tsx        |  401 +++++++
@@ -523,7 +528,7 @@ npx.cmd playwright test e2e/m3-03-plan-proposal.spec.ts --config=e2e/m3-03.playw
  .../repositories/plan-proposal-repository.ts       |  263 +++++
  .../20260812131303_m3_03_plan_proposals.sql        | 1248 ++++++++++++++++++++
  .../tests/database/m3_03_plan_proposals.test.sql   | 1012 ++++++++++++++++
- 44 files changed, 8130 insertions(+), 215 deletions(-)
+ 44 files changed, 8154 insertions(+), 215 deletions(-)
 ```
 
 **Nothing was deleted or renamed.** Non-obvious purposes added by the second
@@ -588,7 +593,15 @@ Relevant `vercel-react-best-practices` checks applied:
 ### Tests and final local results
 
 **CI for exact review target SHA
-`e40c0b542ab4c58dc9d4ece8af8d481a0a14639e`: pending lead push.**
+`b597ee017a377ce5418a280041f4b4f56aa5e8aa`: pending lead push.**
+
+[Run 31612075271](https://github.com/mattiss01/fittip/actions/runs/31612075271)
+for `e40c0b542ab4c58dc9d4ece8af8d481a0a14639e` was red because radio 7's
+unbounded invisible input overlapped the selected radio 3 and intercepted its
+pointer events at 390px. This was a real touch-target defect. All legacy browser
+flows and the static and database jobs were green. Each input is now bounded to
+its own visible label; that run is superseded and is not final evidence for this
+ticket.
 
 [Run 31610743244](https://github.com/mattiss01/fittip/actions/runs/31610743244)
 for `85d5052eff020c215dc827a76d8a5763cbe8f63e` was red. Its M3-03 failure was
@@ -621,6 +634,7 @@ superseded. Do not treat the local checks below as the ticket's automated gate.
 | local screenshots and manual 390px observation | not captured because the browser test did not execute |
 | `npx.cmd playwright test --config=e2e/m3-03.playwright.config.ts --list` after assertion correction | pass; collected exactly 1 test in 1 file |
 | `npx.cmd playwright test --config=e2e/m3-03.playwright.config.ts --list` after radio-locator correction | pass; collected exactly 1 test in 1 file |
+| `npx.cmd playwright test --config=e2e/m3-03.playwright.config.ts --list` after touch-target correction | pass; collected exactly 1 test in 1 file; the full local flow was not executed because the required Supabase environment variables remain absent |
 | `git diff --check` | clean |
 
 Tests added or changed by the second builder:
@@ -646,10 +660,10 @@ Tests added or changed by the second builder:
 ### Remaining limitations and lead gates
 
 1. CI has not run for exact review target
-   `e40c0b542ab4c58dc9d4ece8af8d481a0a14639e` because the lead owns the push;
-   runs for `85d5052`, `112caa2`, and `ac2f603` are superseded for the distinct
-   reasons recorded above. No exception is claimed for the unrelated failures
-   in run 31610743244.
+   `b597ee017a377ce5418a280041f4b4f56aa5e8aa` because the lead owns the push;
+   runs for `e40c0b5`, `85d5052`, `112caa2`, and `ac2f603` are superseded for
+   the distinct reasons recorded above. No exception is claimed for the
+   unrelated failures in run 31610743244.
 2. The local Playwright flow was collected but skipped; no screenshot or manual
    390px observation is claimed. CI and the matching Preview must supply browser
    evidence.
@@ -674,11 +688,11 @@ Tests added or changed by the second builder:
 ### Independent reviewer checklist: complete ticket
 
 Review exact pushed commit
-`e40c0b542ab4c58dc9d4ece8af8d481a0a14639e` and exact range
-`git diff bd859db..e40c0b542ab4c58dc9d4ece8af8d481a0a14639e`. Reconcile the
+`b597ee017a377ce5418a280041f4b4f56aa5e8aa` and exact range
+`git diff bd859db..b597ee017a377ce5418a280041f4b4f56aa5e8aa`. Reconcile the
 44-file manifest above against the diff. Use the lead-recorded CI run for this
-SHA; do not use the superseded `85d5052`, `112caa2`, or `ac2f603` runs or
-re-run CI's suites.
+SHA; do not use the superseded `e40c0b5`, `85d5052`, `112caa2`, or `ac2f603`
+runs or re-run CI's suites.
 
 Judge what CI cannot:
 
@@ -714,7 +728,9 @@ Judge what CI cannot:
    retain-on-failure trace, and separate report/output paths without changing
    any existing step or retry. Confirm the follow-up test-only correction uses
    visibility for pre-expand copy and retains the post-expand visible assertion;
-   and confirm day 3 is selected and remembered through the accessible radio.
+   confirm day 3 is selected and remembered through the accessible radio; and
+   confirm each invisible radio covers only its own visible label while direct
+   touch and keyboard focus remain operable at 390px.
 9. **390px judgment on the matching Preview.** Verify every requested date and
    explicit rest day, one-tap session details, visible primary/unweighted
    secondary goals, serious-coach tone, focus, touch targets, no horizontal
