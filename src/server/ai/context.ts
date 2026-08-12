@@ -96,7 +96,19 @@ export type CoachAIContextLimits = {
     targetableGoals: number;
     historicalGoals: number;
     memory: number;
+    /**
+     * The whole `trainingHistory` object: the completion list, the missed-session
+     * list, and the window envelope that carries the disclosure counts.
+     */
     trainingHistory: number;
+    /**
+     * The share of `trainingHistory` the completion list alone may occupy.
+     * Sessions are added newest-first until this binds, which is the trim
+     * ADR-013 decisions 1 and 7 approve. The remainder of `trainingHistory` is
+     * reserved for the miss list and the envelope, neither of which trims by
+     * bytes, so neither may be allowed to push the source into a denial.
+     */
+    trainingHistoryCompletions: number;
     planCommitments: number;
     planningNote: number;
     regenerationFeedback: number;
@@ -108,40 +120,48 @@ export type CoachAIContextLimits = {
 
 /**
  * The approved per-source allocation for `create_roadmap`, derived on
- * 11 August 2026 and recorded with its arithmetic in the M3-02 validation
- * record.
+ * 11 August 2026, re-derived on 12 August 2026 against a raised input ceiling,
+ * and recorded with its arithmetic in the M3-02 validation record.
  *
  * The binding constraint is not ADR-013's "roughly 30,000 bytes". It is
- * M3-01B's approved `maxInputTokens: 8_000` together with the adapter's refusal
- * guard, which estimates four characters per token over the **whole message
- * set**. That budget is 32,000 characters. The measured static prefix for this
- * operation is 5,789 characters and the wrapper about 40, leaving roughly
- * 26,100 for the serialized context; 24,000 bytes sits inside that with about
- * 7% headroom.
+ * `maxInputTokens` together with the adapter's refusal guard, which estimates
+ * four characters per token over the **whole message set**. The measured static
+ * prefix for this operation is 5,810 characters — `openai-prompt.test.ts` caps
+ * it at 6,000 — and the user-message wrapper is 32, so the context ceiling is
+ * `4 * maxInputTokens` less roughly 6,064.
  *
- * ADR-013 estimated 30,000 bytes and M3-01B set 8,000 tokens against that
- * estimate, but neither figure accounted for the static prompt or for JSON
- * punctuation, so the two do not in fact fit together. Raising
- * `maxInputTokens` changes the reservation price and is therefore a spend
- * decision belonging to the product owner, so this ticket sizes the context to
- * the approved ceiling rather than the other way round and records the gap as
- * a limitation.
+ * The first derivation sized the context to M3-01B's `maxInputTokens: 8_000`,
+ * which left 24,000 bytes and gave training history 5,800 — about 11 sessions
+ * at the corpus's largest session, against ADR-013's 20-session cap. The
+ * product owner decided on 12 August 2026 to raise the ceiling instead, so the
+ * full window fits. This table is the re-derivation. Only the training-history
+ * line moved; every other source keeps the allocation approved on 11 August.
  *
- * Every per-source number is either fixed by an accepted ADR or derived from
- * the shared synthetic corpus in `docs/decisions/support/m3-01b-bakeoff/`:
+ * Every number is either fixed by an accepted ADR or measured against the
+ * shared synthetic corpus in `docs/decisions/support/m3-01b-bakeoff/`, whose 24
+ * sessions serialize through `toCompletionReference` to 323-501 bytes, mean
+ * 392, and whose memory items run 177-1,082 bytes:
  *
  * | source              | items | bytes  | basis                             |
  * | ------------------- | ----- | ------ | --------------------------------- |
  * | targetable goals    | 12    |  4,000 | 12 x 326-byte worst case = 3,912  |
  * | historical goals    |  8    |  2,400 | 8 x 300; background only          |
  * | memory              | 20    |  5,600 | corpus mean 420 B/item, max 1,082 |
- * | training history    | 20    |  5,800 | corpus mean 511 B/session         |
+ * | - history: sessions | 20    | 10,200 | 20 x the 501-byte corpus worst    |
+ * | - history: misses   | 20    |  5,000 | 20 x 249-byte structural worst    |
+ * | - history: envelope |       |    200 | window dates and counts: 147      |
+ * | training history    |       | 15,400 | the three lines above             |
  * | plan commitments    | 12    |  1,400 | about 115 B/entry                 |
  * | planning note       |  1    |  1,200 | ADR-014 decision 4, fixed         |
  * | regeneration note   |  1    |    600 | ADR-014 decision 4, fixed         |
  * | previous proposal   |  1    |  2,200 | reduced form, regeneration only   |
- * | sum of parts        |       | 23,200 |                                   |
- * | envelope + total    |       | 24,000 | 800 for keys, dates, goal ids     |
+ * | sum of parts        |       | 32,800 |                                   |
+ * | envelope + total    |       | 33,700 | 900 for keys and dates; 769 used  |
+ *
+ * That total sets the ceiling: `ceil((6_000 + 64 + 33_700) / 4)` is 9,941, so
+ * `maxInputTokens` is 10,000 — the smallest hundred above the requirement,
+ * because a reservation charges the whole ceiling before the call and every
+ * token of slack is money held on every generation.
  *
  * The sum of the parts is below the total, so the whole-context check can only
  * fire after a per-source check has already named a source — which is what
@@ -154,6 +174,12 @@ export type CoachAIContextLimits = {
  * refusing to generate because they trained a lot would be a refusal they could
  * not act on. ADR-013 decisions 1 and 7 make that a bounded, disclosed
  * reduction instead.
+ *
+ * That is also why training history is split into a completion sub-budget and a
+ * whole-source ceiling. Only the completion list trims by bytes. The miss list
+ * trims by count alone, up to 20 entries of 249 bytes, and the envelope is
+ * fixed — so a whole-source ceiling that did not reserve room for both would
+ * turn a full miss list into exactly the denial ADR-013 forbids.
  */
 export const COACH_AI_CONTEXT_LIMITS = {
   create_roadmap: {
@@ -166,17 +192,22 @@ export const COACH_AI_CONTEXT_LIMITS = {
       targetableGoals: 4_000,
       historicalGoals: 2_400,
       memory: 5_600,
-      trainingHistory: 5_800,
+      trainingHistory: 15_400,
+      trainingHistoryCompletions: 10_200,
       planCommitments: 1_400,
       planningNote: 1_200,
       regenerationFeedback: 600,
       previousProposal: 2_200,
-      total: 24_000,
+      total: 33_700,
     },
   },
   // M3-03 owns the seven-day plan. This is the same shape with a shorter
   // history allocation and no regeneration lineage yet, so the type is
   // satisfied without this ticket deciding an operation it does not implement.
+  // Its completion sub-budget is left at the 5,800 M3-02 derived, because a
+  // week's plan is not a roadmap and M3-03 owns that number; only the
+  // miss-list and envelope reservation is applied, so this operation cannot
+  // carry the denial path either.
   create_seven_day_plan: {
     maxTargetableGoals: 12,
     maxHistoricalGoals: 5,
@@ -187,12 +218,13 @@ export const COACH_AI_CONTEXT_LIMITS = {
       targetableGoals: 4_000,
       historicalGoals: 1_600,
       memory: 5_600,
-      trainingHistory: 5_800,
+      trainingHistory: 11_000,
+      trainingHistoryCompletions: 5_800,
       planCommitments: 1_400,
       planningNote: 1_200,
       regenerationFeedback: 600,
       previousProposal: 2_200,
-      total: 23_000,
+      total: 28_500,
     },
   },
 } as const satisfies Record<CoachAIOperation, CoachAIContextLimits>;
@@ -302,7 +334,9 @@ export function buildCoachAIContext(
     { ...records.training, horizonEndDate: compose.horizonEndDate },
     {
       maxSessions: limits.maxTrainingSessions,
-      maxBytes: limits.bytes.trainingHistory,
+      // The completion sub-budget, not the whole-source ceiling: the miss list
+      // and the envelope share that ceiling and neither trims by bytes.
+      maxBytes: limits.bytes.trainingHistoryCompletions,
       maxPlanCommitments: limits.maxPlanCommitments,
       maxPlanCommitmentBytes: limits.bytes.planCommitments,
     },
@@ -373,11 +407,16 @@ export function buildCoachAIContext(
   // allocation with disclosure, so these two can only fire if the selection and
   // the budget disagree. That is a configuration defect rather than something
   // an owner did, and it should fail loudly rather than quietly send more than
-  // the budget. The envelope allowance absorbs the array brackets the
-  // per-entry accounting does not include.
+  // the budget.
+  //
+  // The whole-source ceiling is checked here, not the completion sub-budget:
+  // the selection bounds completions by bytes but bounds the miss list by count
+  // alone, so the ceiling has to have reserved room for a full miss list. It
+  // has — 5,000 bytes of the 15,400 — which is what stops an owner who missed
+  // twenty planned sessions from being denied a roadmap for it.
   refuseOver(
     usage.training_history,
-    limits.bytes.trainingHistory + 200,
+    limits.bytes.trainingHistory,
     "training_history",
   );
   refuseOver(

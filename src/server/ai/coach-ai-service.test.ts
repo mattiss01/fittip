@@ -286,7 +286,7 @@ describe("a successful proposal", () => {
     });
 
     expect(telemetry.records.at(-1)).toMatchObject({
-      estimatedCostMicroUsd: 54_000,
+      estimatedCostMicroUsd: 60_000,
       chargedCostMicroUsd: 10_500,
       costReconciled: true,
       currency: "USD",
@@ -467,7 +467,7 @@ describe("idempotency across requests", () => {
 
     expect(second).toBe(first);
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(budget.snapshot().spentTotalMicroUsd).toBe(54_000);
+    expect(budget.snapshot().spentTotalMicroUsd).toBe(60_000);
     expect(telemetry.records.at(-1)?.outcome).toBe("replayed");
   });
 
@@ -511,7 +511,7 @@ describe("idempotency across requests", () => {
 
     expect(await second).toBe(await first);
     expect(adapter.invocations).toBe(1);
-    expect(budget.snapshot().spentTotalMicroUsd).toBe(54_000);
+    expect(budget.snapshot().spentTotalMicroUsd).toBe(60_000);
   });
 
   it("treats a reused caller key over changed context as a conflict", async () => {
@@ -605,7 +605,7 @@ describe("failure handling", () => {
     });
     // A call that produced nothing usable was still a call.
     expect(budget.snapshot()).toMatchObject({
-      spentTotalMicroUsd: 54_000,
+      spentTotalMicroUsd: 60_000,
       activeRequests: 0,
     });
   });
@@ -664,7 +664,7 @@ describe("failure handling", () => {
     expect(telemetry.records.at(-1)).toMatchObject({
       outcome: "failed",
       errorCode: "deadline_exceeded",
-      chargedCostMicroUsd: 54_000,
+      chargedCostMicroUsd: 60_000,
       costReconciled: false,
     });
     // Carried forward from M3-01's independent review. The concurrency slot is
@@ -732,15 +732,15 @@ describe("durable spend", () => {
     expect(ledger.reserved).toEqual([
       {
         operation: "create_roadmap",
-        reservedMicroUsd: 54_000,
+        reservedMicroUsd: 60_000,
         rateCardVersion: "fixture-2026-08",
         currency: "USD",
       },
     ]);
     // Unknown usage is never treated as zero, so the whole reservation stands.
-    expect(ledger.settled).toEqual([54_000]);
+    expect(ledger.settled).toEqual([60_000]);
     expect(telemetry.records.at(-1)).toMatchObject({
-      chargedCostMicroUsd: 54_000,
+      chargedCostMicroUsd: 60_000,
     });
   });
 
@@ -791,7 +791,7 @@ describe("durable spend", () => {
     ).toBe("provider_unavailable");
 
     // A failed call is not a free call: the reservation stands in full.
-    expect(ledger.settled).toEqual([54_000]);
+    expect(ledger.settled).toEqual([60_000]);
   });
 
   it("waits for the durable write before reporting a provider failure", async () => {
@@ -816,7 +816,7 @@ describe("durable spend", () => {
     // made, but the write has not landed. Returning here would let a serverless
     // instance freeze before the RPC leaves the process, after which the hold
     // expires and the ledger records a call the provider billed as zero.
-    await vi.waitFor(() => expect(ledger.settled).toEqual([54_000]));
+    await vi.waitFor(() => expect(ledger.settled).toEqual([60_000]));
     expect(seen).toEqual([]);
 
     release();

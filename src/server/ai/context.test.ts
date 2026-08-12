@@ -9,6 +9,7 @@ import {
   type CoachAIGoalRecord,
   type CoachAIOwnedRecords,
 } from "@/server/ai/context";
+import { COACH_AI_LIVE_LIMITS } from "@/server/ai/budget";
 import { CoachAIError } from "@/server/ai/errors";
 import type { MemoryItemView } from "@/server/memory/memory-records";
 import type { TrainingHistoryRecords } from "@/server/training/training-history-context";
@@ -213,18 +214,51 @@ describe("the per-source context allocation", () => {
     expect(sumOfParts).toBeLessThanOrEqual(limits.bytes.total);
   });
 
-  it("fits inside the input ceiling M3-01B approved", () => {
+  it("fits inside the approved input ceiling with the real prompt in front of it", () => {
     // The binding constraint is not ADR-013's "roughly 30,000 bytes"; it is
-    // `maxInputTokens: 8_000` and the adapter's four-characters-per-token
-    // refusal guard over the whole message set. Raising that ceiling is a spend
-    // decision and belongs to the product owner, so the context is sized to fit
-    // it rather than the other way round.
-    const staticPrefixBudget = 5_000;
+    // `maxInputTokens` and the adapter's four-characters-per-token refusal
+    // guard over the whole message set. Measured against the prefix budget
+    // `openai-prompt.test.ts` enforces rather than against today's prefix, so
+    // this cannot pass only because the prompt happens to be short right now.
+    const staticPrefixBudget = 6_000;
+    const wrapperAllowance = 64;
     const estimatedTokens = Math.ceil(
-      (staticPrefixBudget + limits.bytes.total) / 4,
+      (staticPrefixBudget + wrapperAllowance + limits.bytes.total) / 4,
     );
 
-    expect(estimatedTokens).toBeLessThan(8_000);
+    expect(estimatedTokens).toBe(9_941);
+    expect(estimatedTokens).toBeLessThanOrEqual(
+      COACH_AI_LIVE_LIMITS.maxInputTokens,
+    );
+    expect(COACH_AI_LIVE_LIMITS.maxInputTokens).toBe(10_000);
+  });
+
+  it("reserves room in the training-history ceiling for a full miss list", () => {
+    // Only the completion list trims by bytes. The miss list trims by count
+    // alone — up to `maxTrainingSessions` entries of 249 bytes at the
+    // allowlist's field caps — and the window envelope is fixed at 147. A
+    // whole-source ceiling that did not reserve for both would turn an owner
+    // who missed twenty planned sessions into a denial, which is exactly what
+    // ADR-013 decisions 1 and 7 forbid for this source.
+    const missListWorstCase = limits.maxTrainingSessions * 249;
+    const envelope = 147;
+
+    expect(
+      limits.bytes.trainingHistoryCompletions + missListWorstCase + envelope,
+    ).toBeLessThanOrEqual(limits.bytes.trainingHistory);
+  });
+
+  it("carries the whole 20-session window for a corpus-realistic history", () => {
+    // The point of the 12 August 2026 decision to raise `maxInputTokens`. At
+    // the previous 5,800-byte allocation the window held about 11 sessions at
+    // the corpus's largest session; ADR-013's cap is 20.
+    const largestCorpusSession = 501;
+
+    expect(
+      Math.floor(
+        limits.bytes.trainingHistoryCompletions / largestCorpusSession,
+      ),
+    ).toBeGreaterThanOrEqual(limits.maxTrainingSessions);
   });
 
   it("names the memory source when curated memory exceeds its allocation", () => {
@@ -283,6 +317,53 @@ describe("the per-source context allocation", () => {
     );
   });
 
+  it("still generates for an owner whose window is full and who missed everything", () => {
+    // The denial this ticket's re-derivation removed. `selectTrainingHistoryContext`
+    // bounds the completion list by bytes but bounds the miss list by count
+    // alone, so a full window plus a full miss list at the allowlist's field
+    // caps used to exceed the source ceiling and refuse — a `context_too_large`
+    // an owner could neither see nor act on, which is exactly what ADR-013
+    // decisions 1 and 7 rule out for this source.
+    const completions = Array.from({ length: 25 }, (_, index) => ({
+      localDate: shiftDate(TODAY, -index),
+      status: "completed",
+      title: "t".repeat(120),
+      sport: "s".repeat(80),
+      durationMinutes: 90,
+      perceivedEffort: 7,
+      feeling: "as_expected",
+      painReported: false,
+      illnessReported: false,
+      injuryReported: false,
+      severeFatigueReported: false,
+      note: "n".repeat(400),
+      replacementDescription: null,
+      correctionReason: null,
+      activityNames: ["a".repeat(120)],
+    }));
+    const plannedSessions = Array.from({ length: 25 }, (_, index) => ({
+      localDate: shiftDate(TODAY, -(index + 1)),
+      title: "t".repeat(120),
+      sport: "s".repeat(80),
+      isLocked: false,
+      hasCompletion: false,
+    }));
+
+    const assembled = build({
+      training: { ...EMPTY_TRAINING, completions, plannedSessions },
+    });
+
+    expect(
+      assembled.context.trainingHistory.missedPlannedSessions,
+    ).toHaveLength(20);
+    expect(assembled.context.trainingHistory.sessionsIncluded).toBeGreaterThan(
+      0,
+    );
+    expect(assembled.usage.training_history).toBeLessThanOrEqual(
+      limits.bytes.trainingHistory,
+    );
+  });
+
   it("trims training history by count and discloses the reduction", () => {
     // ADR-013 decision 1: a bounded reduction, not a denial, and the coach is
     // told how many sessions the window held against how many it received. A
@@ -312,13 +393,14 @@ describe("the per-source context allocation", () => {
 
     const history = assembled.context.trainingHistory;
     expect(history.sessionsInWindow).toBe(30);
-    // Trimmed by the session cap or the byte allocation, whichever binds first,
-    // and the disclosure always states what actually travelled.
-    expect(history.sessionsIncluded).toBeLessThanOrEqual(20);
+    // Since 12 August 2026 the count cap is what binds, not the byte
+    // allocation: the full 20-session window travels and the trim is the cap
+    // ADR-013 decision 1 set. The disclosure still states what actually went.
+    expect(history.sessionsIncluded).toBe(20);
     expect(history.sessionsIncluded).toBeLessThan(history.sessionsInWindow);
     expect(history.completions).toHaveLength(history.sessionsIncluded);
     expect(assembled.usage.training_history).toBeLessThanOrEqual(
-      limits.bytes.trainingHistory + 200,
+      limits.bytes.trainingHistory,
     );
     // Newest first, so the trim keeps the most recent training.
     expect(assembled.context.trainingHistory.completions[0].localDate).toBe(

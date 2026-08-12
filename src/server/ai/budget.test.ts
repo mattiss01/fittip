@@ -22,8 +22,8 @@ const RATE_CARD: CoachAIRateCard = {
   validUntil: "2026-09-01T00:00:00.000Z",
 };
 
-/** 8,000 input tokens at $3/M plus 2,000 output tokens at $15/M. */
-const UPPER_BOUND_MICRO_USD = 24_000 + 30_000;
+/** 10,000 input tokens at $3/M plus 2,000 output tokens at $15/M. */
+const UPPER_BOUND_MICRO_USD = 30_000 + 30_000;
 
 function reserve(
   budget: CoachAIBudget,
@@ -268,12 +268,22 @@ describe("the approved live caps", () => {
       rateCard: requireApprovedCoachAIModel("openai", "gpt-5.6-luna").rateCard,
     });
 
-    // 8,000 input at $0.20/M plus 3,000 output at $1.20/M. The per-request
+    // 10,000 input at $0.20/M plus 3,000 output at $1.20/M. The per-request
     // ceiling is 8,000, so the reservation clears it with headroom — the
-    // fixture ceiling of 250,000 would have admitted a request costing 48 times
+    // fixture ceiling of 250,000 would have admitted a request costing 45 times
     // what a real proposal costs, which is not a ceiling.
-    expect(reservation.reservedMicroUsd).toBe(5_200);
+    //
+    // This figure is what the 12 August 2026 input-ceiling decision cost: it
+    // was 5,200 at `maxInputTokens: 8_000`, so the 2,000,000 micro-USD daily
+    // ceiling now admits 357 generations a day rather than 384.
+    expect(reservation.reservedMicroUsd).toBe(5_600);
     expect(COACH_AI_LIVE_LIMITS.perRequestCostCeilingMicroUsd).toBe(8_000);
+    expect(
+      Math.floor(
+        COACH_AI_LIVE_LIMITS.dailyCostCeilingMicroUsd /
+          reservation.reservedMicroUsd,
+      ),
+    ).toBe(357);
   });
 
   it("permits no automatic retry", () => {

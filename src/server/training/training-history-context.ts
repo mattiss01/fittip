@@ -33,11 +33,13 @@ export const TRAINING_HISTORY_WINDOW_DAYS = 56;
  * for the first time, and the numbers come from the shared synthetic corpus in
  * `docs/decisions/support/m3-01b-bakeoff/` rather than from a guess:
  *
- * - A session in that corpus serializes to 393-625 bytes, mean 511, with
- *   realistic notes of 60-180 characters.
+ * - A raw corpus session is 393-625 bytes, mean 511. Through the allowlist in
+ *   `toCompletionReference` — which drops the id, the timezone and the revision
+ *   number, and reduces activities to names — the 24 corpus sessions serialize
+ *   to 323-501 bytes, mean 392. The second figure is the one the byte budget
+ *   counts, and `context.ts` sizes the completion sub-budget at 20 x 501.
  * - The ADR's drafted 2,000-character `note` allowance is 2,000 bytes for one
- *   session against a 5,000-byte allocation for the whole window. Twenty
- *   sessions at that allowance is 40,000 bytes — eight times the allocation and
+ *   session. Twenty sessions at that allowance is 40,000 bytes for one field —
  *   more than the entire context ceiling — so the drafted number cannot coexist
  *   with any session count worth having.
  * - 400 characters is two to six times the longest note in the corpus, and the

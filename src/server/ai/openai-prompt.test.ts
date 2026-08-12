@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { COACH_AI_LIVE_LIMITS } from "@/server/ai/budget";
 import { COACH_AI_CONTEXT_LIMITS } from "@/server/ai/context";
 import {
   COACH_AI_FIXTURE_CONTEXT,
@@ -22,9 +23,16 @@ describe("the roadmap prompt", () => {
     const prefix = coachAIStaticPrefix("create_roadmap");
 
     expect(prefix.length).toBeLessThanOrEqual(STATIC_PREFIX_BUDGET);
+    // Against the budget rather than today's length, because the allocation in
+    // `context.ts` was derived against the budget: a prefix that grew to 6,000
+    // must still fit under the ceiling without the context shrinking.
     const worstCase =
-      prefix.length + 64 + COACH_AI_CONTEXT_LIMITS.create_roadmap.bytes.total;
-    expect(Math.ceil(worstCase / 4)).toBeLessThan(8_000);
+      STATIC_PREFIX_BUDGET +
+      64 +
+      COACH_AI_CONTEXT_LIMITS.create_roadmap.bytes.total;
+    expect(Math.ceil(worstCase / 4)).toBeLessThanOrEqual(
+      COACH_AI_LIVE_LIMITS.maxInputTokens,
+    );
   });
 
   it("is byte-identical on every request, so a cache hit is possible at all", () => {

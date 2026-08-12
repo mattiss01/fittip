@@ -96,6 +96,38 @@ finishing, are fixed here. Each has a test that fails without the fix.
 
 ---
 
+## Found while re-deriving the ceiling: defect 9
+
+**A full missed-session list denied generation.** Pre-existing since `94880d6`,
+fixed in the input-ceiling commit, and found by measuring rather than by reading
+— it is the reason the training-history allocation is now split in two.
+
+`selectTrainingHistoryContext` bounds the completion list by bytes, adding
+sessions newest-first until the budget binds, which is ADR-013 decisions 1 and
+7's disclosed trim. It bounds the **missed**-session list by count alone: up to
+`maxTrainingSessions` entries, no byte check. `context.ts` then compared the
+whole `trainingHistory` object — completions, misses, and envelope — against
+`bytes.trainingHistory + 200`, and 200 bytes cannot hold a miss list. Twenty
+missed sessions measure 1,759 bytes corpus-shaped and 4,979 at the allowlist's
+field caps, against an envelope allowance of 200.
+
+So an owner with a busy window who had missed planned sessions got
+`context_too_large` naming `training_history` — a denial they could neither see
+nor act on, which is precisely what ADR-013 rules out for this source, and which
+the comment above that check asserted could only fire on "a configuration defect
+rather than something an owner did". It was reachable on real data: a full
+window plus a full miss list is an owner who logged a lot and stuck to little.
+
+Raising the completion budget from 5,800 to 10,200 would have made it strictly
+more likely, so it had to be fixed with the re-derivation rather than after it.
+`bytes.trainingHistory` is now the whole-source ceiling (15,400) and
+`bytes.trainingHistoryCompletions` (10,200) is the share the completion list may
+occupy; the remainder is reserved for a full miss list and the envelope, and the
+`+ 200` fudge is gone. `context.test.ts` covers it two ways: a structural
+assertion that the reservation is arithmetically sufficient, and a behavioural
+one that 25 maximal completions plus 25 missed sessions assembles rather than
+throwing. The behavioural test fails on the previous limits.
+
 ## Found by independent review: defect 8
 
 **An uncertain same-key retry made a second provider call.** Fixed in
@@ -475,26 +507,46 @@ None used. No `.env*` file was read.
 The product owner approves these numbers at acceptance, so here is the
 derivation rather than the assertion.
 
+**This section was re-derived on 12 August 2026** after the product owner
+decided to raise `maxInputTokens`. What the first derivation concluded — that
+8,000 tokens and ADR-013's 20-session window do not fit together — is unchanged
+and is why the decision was taken. The table below is the second derivation.
+
 ### What actually binds
 
-Not ADR-013's "roughly 30,000 bytes". The binding constraint is M3-01B's
-approved `maxInputTokens: 8_000` together with the adapter's refusal guard,
-which estimates four characters per token over the **whole message set**. That
-is a 32,000-character budget. The measured static prompt prefix for
-`create_roadmap` is **5,789 characters**, leaving roughly 26,100 for the
-serialized context.
+Not ADR-013's "roughly 30,000 bytes". The binding constraint is
+`maxInputTokens` together with the adapter's refusal guard, which estimates four
+characters per token over the **whole message set**, so the context ceiling is
+`4 × maxInputTokens` less the prompt.
 
-ADR-013 estimated 30,000 bytes of context and M3-01B set 8,000 tokens against
-that estimate, but neither figure accounted for the static prompt or for JSON
-punctuation. **The two do not fit together.** Raising `maxInputTokens` changes
-the reservation price and is therefore a spend decision belonging to the product
-owner, so this ticket sized the context to the approved ceiling and recorded the
-gap as limitation 4.
+The measured static prompt prefix for `create_roadmap` is **5,810 characters**,
+and the user-message wrapper is **32**. (The first derivation recorded 5,789. It
+counted `SYSTEM_PROMPT` plus the operation instructions and omitted the
+21-character `\n\n# This request\n\n` join that `coachAIStaticPrefix` inserts.
+The prompt itself has not changed since `94880d6`; only the measurement was
+short. The direction of the error was the unsafe one, which is why the figure
+is now taken from `coachAIStaticPrefix` itself.) `openai-prompt.test.ts` caps
+the prefix at 6,000, and the derivation below uses that budget rather than
+today's length, so the allocation cannot be made to fit by a prompt that happens
+to be short right now.
+
+At M3-01B's `maxInputTokens: 8_000` that left 24,000 bytes of context, of which
+training history got 5,800 — about 11 sessions at the corpus's largest session,
+against ADR-013's cap of 20.
+
+### The 12 August 2026 decision
+
+**The product owner decided on 12 August 2026 to raise `maxInputTokens` so that
+ADR-013's full 20-session window fits, without costing it out first.** This
+ticket implements that decision and reports its cost below. `deadlineMs`, the
+rate card, the per-request ceiling, and the daily and total ceilings are
+unchanged; ADR-013 itself is untouched.
 
 ### Measurements
 
 Taken against the shared synthetic corpus at
-`docs/decisions/support/m3-01b-bakeoff/scenarios/`:
+`docs/decisions/support/m3-01b-bakeoff/scenarios/`. **No provider call was made
+for any of it.**
 
 | Scenario | goals | memory | training | compact bytes |
 | --- | --- | --- | --- | --- |
@@ -503,13 +555,34 @@ Taken against the shared synthetic corpus at
 | returning-trail-runner | 5+2 (1,219 B) | 6 (2,527 B) | 12 (6,143 B) | 10,425 |
 | strength-athlete | 4+1 (758 B) | 4 (996 B) | 6 (3,009 B) | 5,038 |
 
-Per-item: a session is 393–625 bytes (mean 511); a memory item is 177–1,082
-bytes (mean 420); a goal is about 170 bytes measured and 326 at maximum field
-lengths.
+Per-item: a memory item is 177–1,082 bytes (mean 420); a goal is about 170 bytes
+measured and 326 at maximum field lengths.
+
+**Sessions were re-measured for this derivation, and the earlier figure was
+measuring the wrong object.** A raw corpus session is 393–625 bytes (mean 511),
+but the budget counts what `toCompletionReference` emits, which drops the id,
+the timezone and the revision number and reduces activities to names. Through
+the allowlist the 24 corpus sessions across the three scenarios that have a
+history serialize to **323–501 bytes, mean 392**, counted as the selection
+counts them (`JSON.stringify(reference).length + 1`). The completion sub-budget
+is sized at 20 × the 501-byte corpus worst case.
+
+The whole-source ceiling has two more parts, both measured the same way:
+
+- the window envelope — start and end dates, `sessionsInWindow`,
+  `sessionsIncluded` — is **147 bytes**;
+- the missed-session list is up to 20 entries; **1,759 bytes** corpus-shaped and
+  **4,979 bytes** (249 per entry) with `title` and `sport` at their allowlist
+  caps.
+
+The outer context envelope — every key, the three dates, `hasSafetySignal`, and
+a full 12-id `goalsOutsideHorizon` — measures **769 bytes**, so the 800-byte
+allowance the first derivation used held with 31 bytes to spare. It is 900 now.
 
 Indented serialization measured 21–32% larger than compact across the four
-scenarios, so the request now sends compact JSON. At an 8,000-token ceiling,
-indentation was a fifth of the input budget spent on whitespace.
+scenarios, so the request sends compact JSON. Since a reservation charges the
+whole input ceiling before the call, indentation was whitespace the owner would
+have held budget for.
 
 ### The approved table
 
@@ -518,16 +591,93 @@ indentation was a fifth of the input budget spent on whitespace.
 | Targetable goals | 12 | 4,000 | 12 × 326 worst case = 3,912 | deny, source named |
 | Historical goals | 8 | 2,400 | 8 × 300; background only | deny, source named |
 | Memory | 20 | 5,600 | mean 420 B/item; max item 1,082 | deny, source named |
-| Training history | 20 sessions | 5,800 | mean 511 B/session | **trim + disclose** |
+| — history: completions | 20 sessions | 10,200 | 20 × the 501 B corpus worst case | **trim + disclose** |
+| — history: miss list | 20 | 5,000 | 20 × 249 B structural worst case | trim by count |
+| — history: envelope | | 200 | measured 147 | fixed |
+| **Training history** | | **15,400** | the three lines above | **trim + disclose** |
 | Plan commitments | 12 | 1,400 | about 115 B/entry | **trim + disclose** |
 | Planning note | 1 | 1,200 | ADR-014 decision 4, fixed | reject at compose |
 | Regeneration feedback | 1 | 600 | ADR-014 decision 4, fixed | reject at compose |
 | Previous proposal | 1 | 2,200 | reduced form, regeneration only | deny, source named |
-| **Sum of parts** | | **23,200** | | |
-| **Envelope + total** | | **24,000** | 800 for keys, dates, goal ids | |
+| **Sum of parts** | | **32,800** | | |
+| **Envelope + total** | | **33,700** | 900 for keys and dates; 769 used | |
 
-Worst case: 5,789 + 64 + 24,000 = 29,853 characters ≈ 7,464 estimated tokens
-against the 8,000 ceiling, about 7% headroom. A test asserts it.
+Only the training-history line moved. Every other source keeps the allocation
+approved on 11 August.
+
+### The value that follows, and why not a rounder one
+
+`ceil((6,000 + 64 + 33,700) / 4) = 9,941`, so **`maxInputTokens` is 10,000** —
+the smallest hundred above what the derivation requires. It is not sized with
+comfortable slack on purpose: a reservation charges the whole ceiling before the
+call, so every unused token is money held on every generation. Against today's
+actual prefix the worst case is `5,810 + 32 + 33,700 = 39,542` characters ≈
+**9,886 estimated tokens**, 114 under the ceiling.
+
+`context.test.ts` asserts the 9,941 and the 10,000 together, and
+`openai-prompt.test.ts` asserts the same inequality from the prompt's side, so
+neither the prompt nor the allocation can grow past the ceiling unnoticed.
+
+`COACH_AI_FIXTURE_LIMITS.maxInputTokens` moved to 10,000 as well. It is inert —
+the fixture adapter enforces no input ceiling and its rate card is zero — but
+leaving it at 8,000 would mean a fixture run nominally refusing a context the
+live path accepts, which is the kind of two-constants-that-happen-to-agree drift
+M3-01B limitation 17 was about.
+
+### What raising the ceiling costs
+
+Against the approved `gpt-5.6-luna` rate card ($0.20/M input, $1.20/M output),
+with `maxOutputTokens` unchanged at 3,000:
+
+| | at 8,000 | at 10,000 |
+| --- | --- | --- |
+| Reservation per call | 1,600 + 3,600 = **5,200** µUSD | 2,000 + 3,600 = **5,600** µUSD |
+| Against the 8,000 µUSD per-request ceiling | 65% | 70% |
+| Generations the 2,000,000 µUSD **daily** ceiling admits | **384** | **357** |
+| Generations the 20,000,000 µUSD total ceiling admits | 3,846 | 3,571 |
+
+**357 generations a day**, down 27 (−7.0%). The same arithmetic holds at the
+database, which is the authoritative ceiling: `reserve_ai_spend` carries
+`c_per_request_ceiling = 8000` and `c_daily_ceiling = 2000000`, and 5,600 clears
+the per-request ceiling unchanged, so no migration is needed and none was
+written.
+
+Two things make that 7% narrower than it looks:
+
+1. **The ceiling is the hold, not the charge.** `CoachAIBudget.settle` and
+   `settle_ai_spend` reconcile to the tokens the provider reports, so a
+   generation that succeeds costs what it actually used regardless of the
+   ceiling. 357 is the floor that applies when *nothing* reconciles — every call
+   failing, timing out, or returning unusable usage.
+2. **357/day is far above anything this environment can reach.** The owner rate
+   limit is 3 `create_roadmap` requests per 60-second window, and `production`
+   is the owner-only founder environment. The daily ceiling was not the binding
+   constraint before this change and is not after it.
+
+**What does bind is the product owner's €10/month provider-side cap**, and it
+binds far lower than either. At about $10.80, a month of fully-unreconciled
+reservations is 1,928 generations (down from 2,076), roughly **64 a day
+sustained** — versus the daily ceiling's own $2.00/day, which over 30 days is
+$60, about 5.5× the monthly cap. That was already true at 8,000 tokens; this
+change moves it by 7%, it does not create it.
+
+The real, non-hypothetical cost increase is second-order and small: the context
+now carries up to 20 sessions instead of about 11, so a settled call's actual
+input rises by roughly 9 × 400 bytes ≈ 900 tokens ≈ **180 µUSD**, about +8% on a
+~2,300 µUSD settled generation, or $0.00018.
+
+**No stop condition was met**, so the decision was implemented as approved.
+
+### `deadlineMs` still holds
+
+Checked, not changed — 30,000 ms is a separately approved number. M3-01B
+measured `gpt-5.6-luna` at 13.4 s producing 1,513 output tokens.
+`maxOutputTokens` is unchanged, and decode time dominates; the extra input is
+prefill only, roughly 1,000 more tokens of a prompt the provider reads in one
+pass. The expected increase is well under a second against 16.6 s of existing
+margin. Nothing here warrants moving it. This is an argument from where the time
+goes, not a measurement — limitation 2's single live validation pass is what
+would measure it.
 
 ### Two properties that matter more than the numbers
 
@@ -783,12 +933,29 @@ and every path is still fixture-only without `FITTIP_AI_LIVE`.
    synthetic corpus, and every test runs against authored fixtures. Whether
    `gpt-5.6-luna` can actually hold contiguous non-overlapping phase coverage
    and exact planning-note excerpts is unproven.
-4. **The context ceiling is tighter than ADR-013 anticipated.** 24,000 bytes,
-   not 30,000, because `maxInputTokens: 8_000` and a 5,789-character prompt
-   prefix do not leave 30,000. In a rich history this trims the window to
-   roughly 11 sessions of the 20-session cap. The trim is disclosed and never
-   denies, but the product owner may wish to raise `maxInputTokens` — a spend
-   decision I did not make.
+4. ~~**The context ceiling is tighter than ADR-013 anticipated.**~~ **Closed by
+   the product owner's decision of 12 August 2026.** `maxInputTokens` is 10,000,
+   the context ceiling is 33,700 bytes, and the training-history allocation of
+   15,400 carries ADR-013's full 20-session window for any corpus-realistic
+   history rather than about 11 sessions. See "The per-source context
+   allocation" for the derivation and for what it cost.
+
+   Two things about it the product owner should still know, neither of which
+   makes it an open question:
+
+   - **The daily ceiling admits 357 generations a day instead of 384**, because
+     a reservation charges the whole input ceiling before the call. That is a
+     ceiling on the *hold*; a settled generation still charges what it used. The
+     €10/month provider cap binds at roughly 64 a day and always did.
+   - **20 sessions fit for a corpus-realistic history, not for every possible
+     one.** A session at the allowlist's field caps is 2,875 bytes, so a window
+     of 20 maximal sessions is 57,500 — an input ceiling of about 24,000 tokens,
+     which the 8,000 µUSD per-request ceiling would refuse. Sizing to that is
+     not available without also moving spend ceilings. An owner who writes a
+     400-character note on every session for eight weeks will therefore still
+     see a trim, disclosed, never a denial. Nothing in the decision required
+     otherwise, but "the full 20-session window fits" means for realistic
+     histories.
 5. ~~**`sport` is null on every completion reference.**~~ **Closed, verified.**
    A completion still carries no sport column of its own — both `title` and
    `sport` live on `completed_activities` — so the coaching path now reads them

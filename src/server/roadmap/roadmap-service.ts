@@ -72,10 +72,11 @@ export type RoadmapGenerationDependencies = {
  *
  * ADR-014 decision 2a says only the immediately previous proposal travels,
  * never the chain. It does not say the whole envelope must: a v2 proposal is
- * capped at 16,000 bytes and the entire context budget is 24,000, so sending
- * one verbatim would leave nothing for the goals, memory and history that make
- * the critique meaningful. What the coach needs to act on feedback is the shape
- * it produced — the title, the summary, and each phase's focus and dates.
+ * capped at 16,000 bytes against a 2,200-byte allocation for this source, so
+ * sending one verbatim would leave nothing for the goals, memory and history
+ * that make the critique meaningful. What the coach needs to act on feedback is
+ * the shape it produced — the title, the summary, and each phase's focus and
+ * dates.
  */
 export function reducePreviousProposal(
   content: RoadmapProposal,

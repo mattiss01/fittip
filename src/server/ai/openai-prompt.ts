@@ -384,9 +384,10 @@ export function coachAIStaticPrefix(operation: CoachAIOperation): string {
  * Static prefix first, volatile context last.
  *
  * The context is serialized compactly rather than indented. Indentation
- * measured 21-32% larger across the four bake-off scenarios, and at
- * `maxInputTokens: 8_000` that is a fifth of the whole input budget spent on
- * whitespace no model needs. The owner text is delimited and labelled as the
+ * measured 21-32% larger across the four bake-off scenarios, which is a large
+ * share of the input budget spent on whitespace no model needs — and, because a
+ * reservation charges `maxInputTokens` before the call, whitespace the owner
+ * would pay a held ceiling for. The owner text is delimited and labelled as the
  * athlete's own words, which reduces accidental injection; what actually makes
  * the boundary safe is the output validator, not the labelling.
  */
