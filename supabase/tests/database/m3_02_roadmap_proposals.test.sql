@@ -338,19 +338,26 @@ select set_config(
 );
 
 select lives_ok(
-  $$select set_config(
-    'test.token',
-    (public.begin_roadmap_generation(
+  $$select set_config('test.token', r.completion_token::text, true),
+           set_config('test.claim_state', r.state, true)
+    from public.begin_roadmap_generation(
       'roadmap-key-000000001',
       'roadmap-fingerprint-0001',
       current_setting('test.start')::date,
       current_setting('test.end')::date,
       0,
       current_setting('test.note')
-    )).completion_token::text,
-    true
-  )$$,
+    ) as r$$,
   'an owner can claim one paid generation attempt'
+);
+
+-- The discriminator the provider call is gated on. Only the caller whose insert
+-- opened the attempt is told 'claimed'; a replay is told the stored status, so
+-- an uncertain retry cannot buy a second provider call.
+select is(
+  current_setting('test.claim_state'),
+  'claimed',
+  'a fresh claim reports claimed, the one state that authorizes a provider call'
 );
 
 select is(

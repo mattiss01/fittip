@@ -31,8 +31,9 @@ import { addDays } from "@/server/roadmap/roadmap-records";
  * instances both calling the provider before either tried to insert.
  *
  * The claim is what closes that race, and it is also what makes an uncertain
- * retry cheap: the same key returns the existing claim, and a caller holding a
- * `pending`, `completed` or `failed` state invokes no provider at all.
+ * retry cheap: the same key returns the existing claim, and only the caller
+ * whose insert opened the attempt — the one holding `claimed` — invokes the
+ * provider at all. Every other state stops.
  */
 
 export type RoadmapGenerationInput = {
@@ -133,19 +134,25 @@ export async function generateRoadmapProposal(
     regenerationFeedback: input.regenerationFeedback,
   });
 
-  // An uncertain same-key retry stops here. A `pending` claim is an attempt
-  // this process lost track of; it is reported honestly rather than retried,
-  // because the provider may already have generated — and charged for — a
-  // response. A regeneration deliberately uses a new key instead.
-  if (claim.state === "completed") {
-    return {
-      status: "proposal",
-      proposalId: claim.proposalId as string,
-      memoryCandidateCount: 0,
-    };
-  }
-  if (claim.state === "failed") {
-    return { status: "failed", code: "provider_unavailable" };
+  // An uncertain same-key retry stops here. Only `claimed` — the state the
+  // database returns to the caller whose insert opened the attempt — continues
+  // to the provider; anything else is a replay and must not buy a second call.
+  // A `pending` replay is an attempt this process lost track of, and it is
+  // reported honestly rather than retried, because the provider may already
+  // have generated — and charged for — a response. A regeneration deliberately
+  // uses a new key instead.
+  if (claim.state !== "claimed") {
+    if (claim.state === "completed") {
+      return {
+        status: "proposal",
+        proposalId: claim.proposalId as string,
+        memoryCandidateCount: 0,
+      };
+    }
+    if (claim.state === "failed") {
+      return { status: "failed", code: "provider_unavailable" };
+    }
+    return { status: "pending" };
   }
 
   const contextSource = new RepositoryCoachAIContextSource(

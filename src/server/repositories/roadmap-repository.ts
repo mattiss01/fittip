@@ -84,7 +84,13 @@ export class RoadmapConflictError extends Error {
 export type RoadmapGenerationClaim = {
   generationId: string;
   completionToken: string;
-  state: "pending" | "completed" | "failed";
+  /**
+   * `claimed` is returned only to the caller whose insert opened the attempt,
+   * and is the only state that authorizes a provider call. A replay of the same
+   * key returns the stored state instead — `pending` while the original attempt
+   * is still in flight, or its outcome once it has finished.
+   */
+  state: "claimed" | "pending" | "completed" | "failed";
   regenerationNumber: number;
   proposalId: string | null;
 };

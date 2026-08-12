@@ -134,6 +134,27 @@ describe("generateRoadmapProposal", () => {
     expect(propose).not.toHaveBeenCalled();
   });
 
+  // The defect this covers: `pending` is what a same-key retry sees while the
+  // first attempt is still in flight, and a second provider call would be a
+  // second charge that attaches to no proposal.
+  it("calls no provider for a key whose attempt is still in flight", async () => {
+    const roadmaps = repository();
+    roadmaps.beginGeneration.mockResolvedValue({
+      generationId: "00000000-0000-4000-8000-000000000020",
+      completionToken: TOKEN,
+      state: "pending",
+      regenerationNumber: 0,
+      proposalId: null,
+    });
+
+    await expect(
+      generateRoadmapProposal(initialRequest(), dependencies(roadmaps)),
+    ).resolves.toEqual({ status: "pending" });
+    expect(propose).not.toHaveBeenCalled();
+    expect(roadmaps.finishGenerationWithProposal).not.toHaveBeenCalled();
+    expect(roadmaps.finishGenerationAsFailed).not.toHaveBeenCalled();
+  });
+
   it("closes a failed attempt with a bounded code and no provider text", async () => {
     const roadmaps = repository();
     propose.mockRejectedValue(new CoachAIError("provider_unavailable"));
@@ -216,7 +237,9 @@ function repository() {
     beginGeneration: vi.fn().mockResolvedValue({
       generationId: "00000000-0000-4000-8000-000000000020",
       completionToken: TOKEN,
-      state: "pending",
+      // A fresh claim: this caller's insert opened the attempt, so it is the
+      // one that may call the provider.
+      state: "claimed",
       regenerationNumber: 1,
       proposalId: null,
     }),

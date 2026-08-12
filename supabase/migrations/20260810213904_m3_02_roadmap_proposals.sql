@@ -728,7 +728,9 @@ begin
       message = 'Invalid roadmap request.';
   end if;
 
-  -- Decision 1: four to fifty-two weeks, and never a start in the past.
+  -- Decision 1: four to fifty-two weeks, and a start no earlier than the day
+  -- before UTC today. The single day of slack is deliberate: the owner's local
+  -- today can legitimately be one day behind or ahead of the server's.
   if p_start_date < (v_now at time zone 'utc')::date - 1
     or p_end_date < p_start_date + 27
     or p_end_date > p_start_date + 365
@@ -754,9 +756,11 @@ begin
       message = 'Invalid roadmap request.';
   end if;
 
-  -- Same key, same fingerprint replays the claim; the caller then invokes no
-  -- provider for any of pending, completed, or failed. A different fingerprint
-  -- under the same key is a conflict, not a silent second call.
+  -- Same key, same fingerprint replays the claim, returning the stored status —
+  -- pending, completed, or failed — and never 'claimed'. That is the whole
+  -- discriminator: only the fresh insert below reports 'claimed', so only the
+  -- caller that actually opened the attempt invokes the provider. A different
+  -- fingerprint under the same key is a conflict, not a silent second call.
   select * into v_existing
   from public.roadmap_generation_requests
   where user_id = v_user_id
@@ -894,7 +898,11 @@ begin
     v_now,
     v_now
   )
-  returning id, completion_token, status, regeneration_number, proposal_id
+  -- The row is stored 'pending'; the receipt reports 'claimed'. Only this path
+  -- runs for the caller that won the insert, so 'claimed' is the one state that
+  -- authorizes a provider call. A replay above returns the stored 'pending'
+  -- instead, and stops.
+  returning id, completion_token, 'claimed', regeneration_number, proposal_id
   into v_receipt;
 
   return v_receipt;

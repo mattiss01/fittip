@@ -127,6 +127,24 @@ describe("M3-02 roadmap server actions", () => {
     expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan/roadmap");
   });
 
+  // The service now answers a resumed same-key attempt with `pending` instead
+  // of calling the provider again, which is what makes this branch reachable.
+  it("tells the owner an attempt is still running without claiming a proposal", async () => {
+    generateRoadmapProposalMock.mockResolvedValue({ status: "pending" });
+
+    const result = await generateRoadmapAction(
+      INITIAL_ROADMAP_ACTION_STATE,
+      form({}),
+    );
+
+    expect(result).toMatchObject({
+      status: "pending",
+      message:
+        "Building your roadmap proposal... Your current roadmap stays unchanged.",
+    });
+    expect(result).not.toHaveProperty("proposalId");
+  });
+
   it("refuses a regeneration with no feedback before any provider call", async () => {
     const result = await generateRoadmapAction(
       INITIAL_ROADMAP_ACTION_STATE,
