@@ -2,10 +2,17 @@
 
 **Ticket:** [M3-02](../../backlog/M3/M3-02-ROADMAP-PROPOSAL.md)
 
-**Status:** **independently reviewed and approved at `593a6c2`; awaiting the
-lead's hosted verification and product-owner acceptance.** The whole ticket is
-delivered: schema, AI boundary, repository, domain orchestration, server
-actions, the `390x844` interface, and the Playwright flow.
+**Status:** **awaiting re-review at `d55c343`.** The whole ticket is delivered:
+schema, AI boundary, repository, domain orchestration, server actions, the
+`390x844` interface, and the Playwright flow.
+
+`593a6c2` was independently reviewed and approved. **`d55c343` invalidates that
+approval and its Preview**, as expected and as planned: it carries the product
+owner's decision of 12 August 2026 to raise `maxInputTokens`, which closes
+limitation 4 and also fixes a denial the sizing work exposed (defect 9). It is a
+spend change, so it is Tier 1 and needs a re-review. The re-reviewer can bound
+the work to `git diff 593a6c2..d55c343` — thirteen files, no schema, no
+migration, no user-visible copy.
 
 Independent review of `cb1f6c5` rejected it on one defect — a same-key uncertain
 retry made a second provider call — which is fixed in `593a6c2` (defect 8
@@ -37,8 +44,10 @@ Approval of `cb1f6c5` and of its Preview was invalidated by `593a6c2`.
 - `593a6c250d789da48cd8cbbc1f71c50a93dedf69` (`593a6c2`) — the same-key retry
   defect independent review found (defect 8), plus two comment/manifest
   corrections it also raised.
+- `d55c343581687ec8d0c3348b51117254f5e1d64b` (`d55c343`) — the product owner's
+  12 August 2026 input-ceiling decision, and defect 9.
 
-**Implementation review target:** `593a6c250d789da48cd8cbbc1f71c50a93dedf69`
+**Implementation review target:** `d55c343581687ec8d0c3348b51117254f5e1d64b`
 
 **Base:** `851378c` (the docs-only commit that moved the ticket to
 `in development`)
@@ -372,6 +381,58 @@ state at `593a6c2`, before the defect-8 entry was added.
 ```
 
 Nothing was deleted or renamed at any point in the range.
+
+### `d55c343`: the input-ceiling change
+
+`git diff --stat 593a6c2..d55c343` — everything the 12 August decision touched.
+Nothing was added, deleted, or renamed.
+
+```
+ docs/validation/M3/M3-02-VALIDATION.md          | 563 +++++++++++++++++-----
+ src/server/ai/ai-privacy.test.ts                |   4 +-
+ src/server/ai/budget.test.ts                    |  20 +-
+ src/server/ai/budget.ts                         |  22 +-
+ src/server/ai/coach-ai-service.test.ts          |  20 +-
+ src/server/ai/composition.test.ts               |   2 +-
+ src/server/ai/context.test.ts                   | 106 ++++-
+ src/server/ai/context.ts                        |  95 ++--
+ src/server/ai/model-binding.ts                  |   6 +-
+ src/server/ai/openai-prompt.test.ts             |  12 +-
+ src/server/ai/openai-prompt.ts                  |   7 +-
+ src/server/roadmap/roadmap-service.ts           |   9 +-
+ src/server/training/training-history-context.ts |  10 +-
+ 13 files changed, 688 insertions(+), 188 deletions(-)
+```
+
+Two files in that stat carry the decision; the rest follow from it.
+
+- `src/server/ai/budget.ts` — `maxInputTokens` 8,000 → 10,000 in both
+  `COACH_AI_LIVE_LIMITS` and `COACH_AI_FIXTURE_LIMITS`. **This is the whole
+  spend change.** Nothing else in either object moved: not `deadlineMs`, not
+  `maxOutputTokens`, not `maxAttempts`, and not the per-request, daily or total
+  cost ceilings.
+- `src/server/ai/context.ts` — the re-derived allocation, and the
+  `trainingHistory` / `trainingHistoryCompletions` split that defect 9 needed.
+  `bytes.trainingHistory` changes meaning: it was the budget handed to
+  `selectTrainingHistoryContext`, and is now the whole-source ceiling.
+
+The rest:
+
+- `src/server/ai/ai-privacy.test.ts`, `coach-ai-service.test.ts` — the fixture
+  reservation figure. `COACH_AI_FIXTURE_LIMITS` at these suites' $3/$15 test
+  card is 10,000 × 3 + 2,000 × 15 = 60,000 µUSD, not 54,000. Arithmetic only;
+  no assertion proves less than it did.
+- `src/server/ai/budget.test.ts` — the same arithmetic for `UPPER_BOUND_MICRO_USD`,
+  plus the live-caps test, which now pins 5,600 **and** the 357 generations a day
+  that follow from it, so the cost of the ceiling cannot move unremarked.
+- `src/server/ai/composition.test.ts` — the binding's `maxInputTokens`.
+- `src/server/ai/context.test.ts`, `openai-prompt.test.ts` — see the tests
+  section below.
+- `src/server/ai/model-binding.ts`, `openai-prompt.ts`,
+  `src/server/roadmap/roadmap-service.ts`,
+  `src/server/training/training-history-context.ts` — comments only, each of
+  which stated a number this change invalidated. No behaviour in any of the
+  four.
 
 Files from the second half whose purpose is not evident from path and diff:
 
@@ -736,18 +797,21 @@ Proven by:
 ## Tests and final results
 
 **CI run for the review target:**
-<https://github.com/mattiss01/fittip/actions/runs/31566079817> for
-`593a6c250d789da48cd8cbbc1f71c50a93dedf69` — the defect-8 fix. **Success**, all
-three jobs green: `Lint, types, unit tests, build` (2m4s),
-`Migrations, RLS, advisors, concurrency` (4m39s), and
-`390px production browser flows` (7m31s). Observed and recorded by the builder
-after the push; the commit that adds this line changes only this record, under
-the evidence-commit exception.
+<https://github.com/mattiss01/fittip/actions/runs/31568339585> for
+`d55c343581687ec8d0c3348b51117254f5e1d64b` — the input-ceiling change and defect
+9. **Success**, all three jobs green: `Lint, types, unit tests, build`,
+`Migrations, RLS, advisors, concurrency`, and `390px production browser flows`.
+Observed and recorded by the builder after the push; the commit that adds this
+line changes only this record, under the evidence-commit exception.
 
 **CI run for the previously reviewed commit:**
-<https://github.com/mattiss01/fittip/actions/runs/31502290454> for `cb1f6c5` —
-**success**, all three jobs green. That commit is no longer the review target;
-`593a6c2` supersedes it.
+<https://github.com/mattiss01/fittip/actions/runs/31566079817> for `593a6c2` —
+**success**, all three jobs green: `Lint, types, unit tests, build` (2m4s),
+`Migrations, RLS, advisors, concurrency` (4m39s), and
+`390px production browser flows` (7m31s). That commit is no longer the review
+target; `d55c343` supersedes it. Before it,
+<https://github.com/mattiss01/fittip/actions/runs/31502290454> for `cb1f6c5` was
+green too.
 
 Two earlier runs on this branch were red, and both were real:
 
@@ -799,6 +863,37 @@ the defect-8 fix, because that fix edits the migration in place.
 | Live provider call | **none made.** `FITTIP_AI_LIVE` was never set, so every run resolved to the fixture composition. |
 
 ### Tests added or changed
+
+At `d55c343`, for the input-ceiling decision and defect 9:
+
+- `src/server/ai/context.test.ts` — three new, one rewritten, one strengthened.
+  New: the training-history ceiling arithmetically reserves room for a full miss
+  list; the completion sub-budget carries all 20 sessions at the corpus's worst
+  case; and the behavioural one — 25 maximal completions plus 25 missed sessions
+  assembles instead of throwing, which is defect 9 and which fails on the
+  previous limits. Rewritten: the input-ceiling test now measures against the
+  6,000-character prefix budget and the wrapper, pins the derivation at 9,941,
+  and asserts `COACH_AI_LIVE_LIMITS.maxInputTokens` rather than a literal — the
+  old version used a 5,000-character stand-in for a prefix that measures 5,810,
+  so it was checking a prompt that does not exist. Strengthened: the trim test
+  now asserts the full 20 sessions travel, where it previously allowed anything
+  up to 20.
+- `src/server/ai/openai-prompt.test.ts` — the prefix-budget test now measures
+  the worst case from the budget rather than from today's prefix length, and
+  compares against `COACH_AI_LIVE_LIMITS.maxInputTokens` instead of a literal
+  8,000, so the prompt and the allocation cannot drift apart from either side.
+- `src/server/ai/budget.test.ts` — the live-caps test additionally pins the 357
+  generations a day the new reservation admits under the unchanged daily
+  ceiling.
+
+Everything else in that commit's test diff is the fixture reservation
+arithmetic described above.
+
+Local result at `d55c343`: `npm run test:run -- src/server/ai src/server/training
+src/server/roadmap src/architecture` — 18 files, **320 tests passed**. `npm run
+lint`, `npm run typecheck` and `git diff --check` clean (line-ending warnings
+only). No provider call, in any form, at any point; the corpus measurements were
+taken with a throwaway Vitest harness that was deleted before the commit.
 
 New in the second half, each covering a defect above:
 
@@ -912,14 +1007,28 @@ write — the AI cannot persist, accept, or mutate anything, and
 `roadmap_envelope_extra_field` proves a `goalUpdates` field is rejected in full.
 No friend data, external user, or public registration. No non-M0-06A hosted
 behavior. No analytics sink. No new secret, dependency, remote resource,
-provider, model, or spend ceiling. **No provider API call was made** — not to
-explore, not to sanity-check, not once.
+provider, or model. **No provider API call was made** — not to explore, not to
+sanity-check, not once, at any point in the range including `d55c343`.
+
+**One spend-adjacent number changed, and only one.** `maxInputTokens` went from
+8,000 to 10,000 on the product owner's decision of 12 August 2026. No cost
+ceiling moved: `perRequestCostCeilingMicroUsd` is 8,000,
+`dailyCostCeilingMicroUsd` 2,000,000 and `totalCostCeilingMicroUsd` 20,000,000
+in the application, and `c_per_request_ceiling`, `c_daily_ceiling` and
+`c_total_ceiling` are unchanged in `reserve_ai_spend`. The rate card,
+`maxOutputTokens`, `maxAttempts` and `deadlineMs` are unchanged. What the raised
+ceiling does to spend is worked out in full under "What raising the ceiling
+costs".
 
 ## Known limitations
 
 All nine were re-checked against what is true at `cb1f6c5`. The defect-8 fix in
 `593a6c2` changes none of them: it removes a way to make a second provider call,
 and every path is still fixture-only without `FITTIP_AI_LIVE`.
+
+`d55c343` **closes limitation 4** and adds limitation 15. It changes none of the
+others; every path is still fixture-only without `FITTIP_AI_LIVE`, and
+limitations 2 and 3 — the two that only a live call can close — are untouched.
 
 1. ~~**The ticket is roughly half delivered.**~~ **Closed.** The interface,
    actions, repository, domain operation and mobile flow are delivered, and the
@@ -1027,11 +1136,64 @@ as a follow-up rather than an acceptance blocker:
     provider. It is a copy and user-experience edge, and it wants a follow-up
     ticket.
 
+Raised by the input-ceiling change at `d55c343`:
+
+15. **ADR-013's recorded amendment now cites two stale figures.** Its rationale
+    for the `note` truncation says "against a 5,800-byte allocation for the
+    whole training-history source and a 24,000-byte whole-context ceiling".
+    Those are 15,400 and 33,700 as of this commit. **Every parameter the
+    amendment actually sets is unchanged** — session cap 20, `note` 400,
+    `replacement_description` and `correction_reason` 240, forward window 180
+    days — and its conclusion survives the new numbers unharmed: 20 sessions at
+    a 2,000-character note allowance is still 40,000 bytes for one field, still
+    more than the whole context ceiling. The ADR was deliberately not edited:
+    the product owner accepted that amendment as it stands and this ticket was
+    scoped not to touch it. It wants a one-line correction under separate
+    approval.
+
+    The same section's "a serialized session measures 393-625 bytes with a mean
+    of 511" remains literally true of a raw corpus session. It is simply not the
+    object the byte budget counts, which is what the re-measurement corrected.
+
 ## Independent reviewer checklist
 
-Review `git diff 851378c..593a6c2`, and confirm the CI run above is green for
-`593a6c250d789da48cd8cbbc1f71c50a93dedf69`. Do not re-run lint, typecheck,
+Review `git diff 851378c..d55c343`, and confirm the CI run above is green for
+`d55c343581687ec8d0c3348b51117254f5e1d64b`. Do not re-run lint, typecheck,
 tests, or build — CI ran them.
+
+**Re-review after the second review.** `593a6c2` was approved in full, so a
+re-reviewer can bound the work to `git diff 593a6c2..d55c343` — thirteen files,
+no schema, no migration, no user-visible copy — and take the rest as reviewed.
+Judgment that change needs:
+
+1. **Is the derivation actually a derivation?** Every figure in "The per-source
+   context allocation" is reproducible: the prefix from `coachAIStaticPrefix`,
+   the session sizes from `toCompletionReference` over
+   `docs/decisions/support/m3-01b-bakeoff/scenarios/`. Re-measure anything that
+   looks convenient. In particular, 10,000 is claimed to be the smallest
+   hundred above the requirement rather than a round number chosen first.
+2. **Did the spend change stay inside its boundary?** The only intended
+   behavioural change in `budget.ts` is `maxInputTokens`. Confirm `deadlineMs`,
+   `maxOutputTokens`, `maxAttempts`, and the three cost ceilings are untouched
+   in both limit objects, that no migration changed, and that
+   `reserve_ai_spend`'s `c_per_request_ceiling` of 8,000 still bounds a 5,600
+   µUSD reservation.
+3. **Is the training-history split correct, not just larger?**
+   `bytes.trainingHistory` now means the whole source and
+   `bytes.trainingHistoryCompletions` the completion list. Confirm the only
+   value passed to `selectTrainingHistoryContext` as `maxBytes` is the latter,
+   that `refuseOver` checks the former, and that the reservation for the miss
+   list is genuinely sufficient at the allowlist's field caps rather than at
+   corpus sizes.
+4. **Does anything still deny where ADR-013 requires a trim?** Defect 9 was one
+   instance of a general shape: a sub-list bounded by count sharing a ceiling
+   with one bounded by bytes. `planCommitments` keeps a `+ 100` allowance of the
+   same kind; judge whether it has the same problem. (It is bounded by bytes
+   inside the selection, which is why it was left alone — check that.)
+5. **The unchanged `deadlineMs`.** The record argues from where the latency goes
+   rather than from a measurement, because measuring it needs a live call. Judge
+   whether that argument is good enough to ship on, or whether it should be a
+   named limitation instead.
 
 **Re-review after the first review.** The first review approved everything at
 `cb1f6c5` except defect 8, so a re-reviewer needing to bound the work can read
