@@ -2,9 +2,12 @@
 
 **Ticket:** [M3-02](../../backlog/M3/M3-02-ROADMAP-PROPOSAL.md)
 
-**Status:** **complete — ready for independent review.** The whole ticket is
-delivered: schema, AI boundary, repository, domain orchestration, server
-actions, the `390x844` interface, and the Playwright flow.
+**Status:** **reviewed once; one review defect fixed and awaiting re-review.**
+The whole ticket is delivered: schema, AI boundary, repository, domain
+orchestration, server actions, the `390x844` interface, and the Playwright flow.
+Independent review of `cb1f6c5` approved everything except one defect, fixed in
+`593a6c2`. Approval of `cb1f6c5` and of its Preview is invalidated by that
+commit; the review target is now `593a6c2`.
 
 **Branch:** `ticket/m3-02-roadmap-proposal`
 
@@ -19,6 +22,11 @@ actions, the `390x844` interface, and the Playwright flow.
 - `2a392be` — Prettier on five files the work-in-progress commit never
   formatted.
 - `cb1f6c5` — the edit re-read fix continuous integration found (defect 6).
+- `593a6c250d789da48cd8cbbc1f71c50a93dedf69` (`593a6c2`) — the same-key retry
+  defect independent review found (defect 8), plus two comment/manifest
+  corrections it also raised.
+
+**Implementation review target:** `593a6c250d789da48cd8cbbc1f71c50a93dedf69`
 
 **Base:** `851378c` (the docs-only commit that moved the ticket to
 `in development`)
@@ -73,6 +81,82 @@ finishing, are fixed here. Each has a test that fails without the fix.
    and reloads.
 7. **The lost-render defect reproduces on this surface.** See "The transition
    that never commits" below.
+
+---
+
+## Found by independent review: defect 8
+
+**An uncertain same-key retry made a second provider call.** Fixed in
+`593a6c2`. This is the defect review found in `cb1f6c5`, and it contradicted two
+approved contracts word for word: ADR-015 function 1 ("the caller invokes no
+provider when that state is `pending`, `completed`, or `failed`") and the ticket
+brief's hard constraint ("Same-key uncertain retries never make another provider
+call").
+
+`begin_roadmap_generation` returned `'pending'` for a fresh insert **and** for a
+replayed in-flight claim, with nothing in the receipt to tell them apart.
+`generateRoadmapProposal` stopped on `completed` and on `failed` and had no
+branch for `pending`, so it fell through to the provider. The comment above that
+block already described the correct behavior; the branch had never been written,
+and the service test's repository fixture hardcoded `state: "pending"` for every
+call while asserting the provider *was* invoked, which is why no test caught it.
+
+The scenario it opened: `roadmap-manager.tsx` deliberately holds one idempotency
+key stable while the compose screen is open, precisely so an uncertain retry
+reuses the claim. Request A claims and the provider call is in flight. The
+transition is lost — three of six runs on this surface — or the owner
+double-taps before the disable renders. Request B replays the same key, does not
+stop, calls the provider a second time and takes a second spend reservation.
+Whichever `finish` lands first wins; the other gets `PT409`, so the second charge
+buys nothing and attaches to no proposal.
+
+**No real money was at risk.** Without `FITTIP_AI_LIVE=enabled` every path
+resolves to the fixture adapter. The founder environment is where that flag gets
+enabled, which is why this had to be fixed before the live validation pass.
+
+The fix introduces a discriminator. The fresh insert now returns the receipt
+state `'claimed'`; the stored row status is still `'pending'`, and the replay
+path still returns the stored status. `'claimed'` is the only state
+`generateRoadmapProposal` continues on — it stops on *anything else* rather than
+enumerating stop states — and a replayed `pending` now returns the
+`{ status: "pending" }` result `RoadmapGenerationResult` already declared and
+nothing had ever returned.
+
+**A previously dead copy path is now live.** `actions.ts` mapped that result to
+the approved string *"Building your roadmap proposal... Your current roadmap
+stays unchanged."* and was unreachable. A resumed attempt now renders it. The
+product owner sees the same copy the compose form already shows while a
+generation runs, so nothing new appears on screen; the change is that a retry
+reports the truth instead of buying a second generation.
+
+Three tests, each failing without the fix:
+
+- `roadmap-service.test.ts` — "calls no provider for a key whose attempt is
+  still in flight". The repository fixture now returns `'claimed'` for a fresh
+  claim, which is what the corrected function actually returns.
+- `actions.test.ts` — "tells the owner an attempt is still running without
+  claiming a proposal", asserting the exact copy and that no `proposalId` is
+  claimed.
+- `m3_02_roadmap_proposals.test.sql` — "a fresh claim reports claimed, the one
+  state that authorizes a provider call", beside the existing assertion that a
+  replay reports the stored `pending`.
+
+**The migration was corrected in place rather than patched forward.** It has
+never been applied to any persistent environment: it is not merged to `master`,
+it has not been applied to the founder project, and CI applies every migration
+from zero on each run. A patch migration correcting a function that never really
+existed would be noise in the history. Re-verified from a clean local reset —
+see the table under "Tests and final results".
+
+Two smaller review findings, fixed in the same commit:
+
+- The comment on the horizon check in `begin_roadmap_generation` claimed "never
+  a start in the past" while the check deliberately permits a start one day
+  before UTC today as local-timezone tolerance. Behavior unchanged; the comment
+  now says what the code does.
+- The "Changed files" manifest below under-reported the reviewed range: its
+  diffstat covered only `94880d6 8226887 403e025` and omitted `2a392be` and
+  `cb1f6c5`. It is regenerated for the whole range.
 
 ---
 
@@ -155,77 +239,82 @@ Screenshots for every step: `docs/validation/M3/evidence/M3-02-*-390x844.png`.
 
 ## Changed files
 
-```
- docs/decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md |   43 +
- src/lib/supabase/database.types.ts                        |  450 +++++
- src/server/ai/budget.test.ts                              |    7 +-
- src/server/ai/budget.ts                                   |   25 +-
- src/server/ai/coach-ai-service.test.ts                    |  177 +-
- src/server/ai/coach-ai-service.ts                         |   27 +-
- src/server/ai/composition.test.ts                         |  219 +++
- src/server/ai/composition.ts                              |  204 +++
- src/server/ai/context-source.ts                           |  179 +-
- src/server/ai/context.test.ts                             |  676 +++++---
- src/server/ai/context.ts                                  |  331 +++-
- src/server/ai/contracts.ts                                |  194 ++-
- src/server/ai/enablement.ts                               |   28 +
- src/server/ai/fixtures/fixture-corpus.ts                  |  649 +++++--
- src/server/ai/idempotency.ts                              |    7 +
- src/server/ai/model-binding.ts                            |  140 ++
- src/server/ai/openai-adapter.test.ts                      |   16 +
- src/server/ai/openai-prompt.test.ts                       |  170 ++
- src/server/ai/openai-prompt.ts                            |  299 +++-
- src/server/ai/output-validation.test.ts                   |  304 +++-
- src/server/ai/output-validation.ts                        |  671 +++++++-
- src/server/ai/owner-text.test.ts                          |  109 ++
- src/server/ai/owner-text.ts                               |   88 +
- src/server/training/training-history-context.ts           |  302 ++++
- supabase/migrations/20260810213904_m3_02_roadmap_proposals.sql | 1821 ++++++
- supabase/tests/database/m3_02_roadmap_proposals.test.sql       | 1314 ++++++
- 26 files changed, 7793 insertions(+), 657 deletions(-)
-```
-
-`git diff --stat 94880d6 8226887 403e025` — the second half, excluding this
-record and the seven screenshots:
+`git diff --stat 851378c..593a6c2` — the whole ticket range, every commit from
+the base to the review target. The earlier version of this section covered only
+`94880d6 8226887 403e025` and so under-reported `2a392be` and `cb1f6c5`;
+independent review caught that. This record and its seven screenshots are inside
+the range and appear in the stat; the line count shown for this record is its
+state at `593a6c2`, before the defect-8 entry was added.
 
 ```
- .github/workflows/ci.yml                           |  13 +
- e2e/m3-02-roadmap.spec.ts                          | 316 ++++++
- e2e/m3-02.playwright.config.ts                     |  19 +
- package.json                                       |   1 +
- src/app/home/plan/roadmap/action-state.ts          |  42 ++
- src/app/home/plan/roadmap/actions.test.ts          | 286 ++++++
- src/app/home/plan/roadmap/actions.ts               | 373 ++++++++
- src/app/home/plan/roadmap/error.tsx                |  21 +
- src/app/home/plan/roadmap/loading.tsx              |  13 +
- src/app/home/plan/roadmap/page.test.tsx            | 236 +++++
- src/app/home/plan/roadmap/page.tsx                 | 264 +++++
- src/app/home/plan/roadmap/roadmap.module.css       | 579 ++++++++++
- src/components/planning/plan-editor.tsx            |   6 +
- src/components/roadmap/roadmap-editor.tsx          | 364 +++++++
- src/components/roadmap/roadmap-manager.test.tsx    | 466 ++++++++
- src/components/roadmap/roadmap-manager.tsx         | 771 +++++++++++++
- src/components/roadmap/roadmap-spine.tsx           | 171 +++
- src/server/ai/coach-ai-service.ts                  |  75 +-
- src/server/ai/composition.ts                       |   9 +-
- src/server/ai/context-source.test.ts               | 222 ++++
- src/server/ai/context-source.ts                    |  66 +-
- src/server/ai/context.ts                           |   7 +
- src/server/ai/contracts.ts                         |  15 +
- src/server/ai/fixtures/fixture-adapter.ts          |  22 +
- src/server/ai/fixtures/synthetic-roadmap.ts        | 256 +++++
- src/server/repositories/completion-repository.test.ts |  99 ++
- src/server/repositories/completion-repository.ts   |  67 ++
- src/server/repositories/roadmap-repository.test.ts | 245 +++++
- src/server/repositories/roadmap-repository.ts      | 531 +++++++++
- src/server/roadmap/roadmap-edit.ts                 |  62 ++
- src/server/roadmap/roadmap-records.ts              | 260 +++++
- src/server/roadmap/roadmap-service.test.ts         | 283 ++++++
- src/server/roadmap/roadmap-service.ts              | 236 +++++
- supabase/tests/integration/m3_02_concurrent_acceptance.mjs | 401 ++++++
+ .github/workflows/ci.yml                                     |   13 +
+ docs/decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md    |   43 +
+ docs/validation/M3/M3-02-VALIDATION.md                       |  762 +++++++++++
+ docs/validation/M3/evidence/M3-02-accepted-390x844.png       |  Bin 0 -> 103491 bytes
+ docs/validation/M3/evidence/M3-02-compose-390x844.png        |  Bin 0 -> 73996 bytes
+ docs/validation/M3/evidence/M3-02-decline-390x844.png        |  Bin 0 -> 120911 bytes
+ docs/validation/M3/evidence/M3-02-edit-390x844.png           |  Bin 0 -> 114363 bytes
+ docs/validation/M3/evidence/M3-02-empty-390x844.png          |  Bin 0 -> 38403 bytes
+ docs/validation/M3/evidence/M3-02-proposal-390x844.png       |  Bin 0 -> 119772 bytes
+ docs/validation/M3/evidence/M3-02-regenerate-390x844.png     |  Bin 0 -> 85945 bytes
+ docs/validation/README.md                                    |    1 +
+ e2e/m3-02-roadmap.spec.ts                                    |  320 +++++
+ e2e/m3-02.playwright.config.ts                               |   19 +
+ package.json                                                 |    1 +
+ src/app/home/plan/roadmap/action-state.ts                    |   42 +
+ src/app/home/plan/roadmap/actions.test.ts                    |  304 +++++
+ src/app/home/plan/roadmap/actions.ts                         |  373 ++++++
+ src/app/home/plan/roadmap/error.tsx                          |   21 +
+ src/app/home/plan/roadmap/loading.tsx                        |   13 +
+ src/app/home/plan/roadmap/page.test.tsx                      |  236 ++++
+ src/app/home/plan/roadmap/page.tsx                           |  264 ++++
+ src/app/home/plan/roadmap/roadmap.module.css                 |  584 ++++++++
+ src/components/planning/plan-editor.tsx                      |    6 +
+ src/components/roadmap/roadmap-editor.tsx                    |  364 +++++
+ src/components/roadmap/roadmap-manager.test.tsx              |  518 ++++++++
+ src/components/roadmap/roadmap-manager.tsx                   |  801 +++++++++++
+ src/components/roadmap/roadmap-spine.tsx                     |  174 +++
+ src/lib/supabase/database.types.ts                           |  450 +++++++
+ src/server/ai/budget.test.ts                                 |    7 +-
+ src/server/ai/budget.ts                                      |   25 +-
+ src/server/ai/coach-ai-service.test.ts                       |  177 ++-
+ src/server/ai/coach-ai-service.ts                            |  102 +-
+ src/server/ai/composition.test.ts                            |  219 +++
+ src/server/ai/composition.ts                                 |  209 +++
+ src/server/ai/context-source.test.ts                         |  222 ++++
+ src/server/ai/context-source.ts                              |  191 ++-
+ src/server/ai/context.test.ts                                |  676 +++++++---
+ src/server/ai/context.ts                                     |  338 ++++-
+ src/server/ai/contracts.ts                                   |  209 ++-
+ src/server/ai/enablement.ts                                  |   28 +
+ src/server/ai/fixtures/fixture-adapter.ts                    |   22 +
+ src/server/ai/fixtures/fixture-corpus.ts                     |  649 ++++++---
+ src/server/ai/fixtures/synthetic-roadmap.ts                  |  259 ++++
+ src/server/ai/idempotency.ts                                 |    7 +
+ src/server/ai/model-binding.ts                               |  140 ++
+ src/server/ai/openai-adapter.test.ts                         |   16 +
+ src/server/ai/openai-prompt.test.ts                          |  170 +++
+ src/server/ai/openai-prompt.ts                               |  299 ++++-
+ src/server/ai/output-validation.test.ts                      |  304 ++++-
+ src/server/ai/output-validation.ts                           |  671 ++++++++--
+ src/server/ai/owner-text.test.ts                             |  109 ++
+ src/server/ai/owner-text.ts                                  |   88 ++
+ src/server/repositories/completion-repository.test.ts        |   99 ++
+ src/server/repositories/completion-repository.ts             |   67 +
+ src/server/repositories/roadmap-repository.test.ts           |  245 ++++
+ src/server/repositories/roadmap-repository.ts                |  537 ++++++++
+ src/server/roadmap/roadmap-edit.ts                           |   62 +
+ src/server/roadmap/roadmap-records.ts                        |  260 ++++
+ src/server/roadmap/roadmap-service.test.ts                   |  306 +++++
+ src/server/roadmap/roadmap-service.ts                        |  242 ++++
+ src/server/training/training-history-context.ts              |  302 +++++
+ .../migrations/20260810213904_m3_02_roadmap_proposals.sql    | 1829 ++++++++++++++++++++++++++
+ supabase/tests/database/m3_02_roadmap_proposals.test.sql     | 1321 +++++++++++++++++++
+ supabase/tests/integration/m3_02_concurrent_acceptance.mjs   |  401 ++++++
+ 64 files changed, 15448 insertions(+), 669 deletions(-)
 ```
 
-Nothing was deleted or renamed in either commit.
+Nothing was deleted or renamed at any point in the range.
 
 Files from the second half whose purpose is not evident from path and diff:
 
@@ -471,11 +560,19 @@ Proven by:
 
 ## Tests and final results
 
-**CI run for the reviewed commit:**
-<https://github.com/mattiss01/fittip/actions/runs/31502290454> for `cb1f6c5`.
-Its result is recorded with acceptance under the evidence-commit exception: a
-record cannot contain the run URL of the commit that adds it, and the commit
-that adds this line changes only this record.
+**CI run for the review target:**
+<https://github.com/mattiss01/fittip/actions/runs/31566079817> for
+`593a6c250d789da48cd8cbbc1f71c50a93dedf69` — the defect-8 fix. **Success**, all
+three jobs green: `Lint, types, unit tests, build` (2m4s),
+`Migrations, RLS, advisors, concurrency` (4m39s), and
+`390px production browser flows` (7m31s). Observed and recorded by the builder
+after the push; the commit that adds this line changes only this record, under
+the evidence-commit exception.
+
+**CI run for the previously reviewed commit:**
+<https://github.com/mattiss01/fittip/actions/runs/31502290454> for `cb1f6c5` —
+**success**, all three jobs green. That commit is no longer the review target;
+`593a6c2` supersedes it.
 
 Two earlier runs on this branch were red, and both were real:
 
@@ -504,7 +601,8 @@ rather than a defect, and no known-defect exception is claimed or needed.
 
 The table below records what CI does not cover, plus what was observed locally
 while building. The database rows are from the first half and were re-checked
-only where this half touched them.
+only where this half touched them; the migration was re-verified from zero for
+the defect-8 fix, because that fix edits the migration in place.
 
 | Command or check | Result |
 | --- | --- |
@@ -512,6 +610,9 @@ only where this half touched them.
 | `npx supabase db lint --local --level warning --fail-on warning` | `No schema errors found` |
 | `npx supabase db advisors --local --type all --level warn --fail-on warn` | `No issues found` |
 | `npx supabase test db --local supabase/tests/database` | 9 files, 618 assertions, `Result: PASS` (106 new) |
+| **At `593a6c2`:** `db reset --local`, `db lint`, `db advisors`, `test db` | all four re-run on the edited migration: 11 migrations from zero, `No schema errors found`, `No issues found`, 9 files / **619** assertions / `Result: PASS` |
+| **At `593a6c2`:** `npm run test:run -- roadmap-service.test.ts roadmap-repository.test.ts` and `-- actions.test.ts` | 3 files, 38 tests passed |
+| **At `593a6c2`:** `npm run lint`, `npm run typecheck`, `git diff --check` | clean (line-ending warnings only) |
 | `npm run test:m3-02-concurrency` | `4 rounds of 6 contenders, replay, and cross-owner isolation all held` |
 | `npm run lint` | clean |
 | `npm run typecheck` | clean |
@@ -570,6 +671,13 @@ independent memory section, and a six-case ADR-014 decision-4 injection suite),
 Mechanically updated for the new context and compose shapes:
 `coach-ai-service.test.ts`, `openai-adapter.test.ts`, `budget.test.ts`.
 
+Added in `593a6c2` for defect 8: one case in `roadmap-service.test.ts`, one in
+`actions.test.ts`, and one pgTAP assertion, all listed under "Found by
+independent review" above. The `roadmap-service.test.ts` repository fixture was
+corrected at the same time — it returned `state: "pending"` for every call,
+which is not what the function returns for a fresh claim, and that wrong fixture
+is why the suite asserted the provider *was* invoked on a state that must stop.
+
 ### Source selection and output schema versions
 
 - `COACH_AI_SCHEMA_VERSIONS.create_roadmap`: `fittip.roadmap.v1` →
@@ -586,8 +694,11 @@ Mechanically updated for the new context and compose shapes:
 
 From pgTAP, all against a real Postgres:
 
-- Same key and fingerprint replays the claim and creates no second request; a
-  different fingerprint under the same key is `PT409`.
+- A fresh claim reports the receipt state `'claimed'`, and only that state
+  authorizes a provider call. Same key and fingerprint replays the claim,
+  reporting the stored status instead — `pending` while the first attempt is in
+  flight — and creates no second request; a different fingerprint under the same
+  key is `PT409`.
 - Replaying a completion token returns the existing proposal; different content
   against a finished request is `PT409`.
 - A memory-candidate batch replays to the same items rather than duplicating.
@@ -631,7 +742,9 @@ explore, not to sanity-check, not once.
 
 ## Known limitations
 
-All nine were re-checked against what is true at `cb1f6c5`.
+All nine were re-checked against what is true at `cb1f6c5`. The defect-8 fix in
+`593a6c2` changes none of them: it removes a way to make a second provider call,
+and every path is still fixture-only without `FITTIP_AI_LIVE`.
 
 1. ~~**The ticket is roughly half delivered.**~~ **Closed.** The interface,
    actions, repository, domain operation and mobile flow are delivered, and the
@@ -709,8 +822,31 @@ Raised while finishing this half:
 
 ## Independent reviewer checklist
 
-Review `git diff 851378c..cb1f6c5`, and confirm the CI run above is green for
-`cb1f6c5` — it is: all three jobs passed. Do not re-run lint, typecheck, tests, or build — CI ran them.
+Review `git diff 851378c..593a6c2`, and confirm the CI run above is green for
+`593a6c250d789da48cd8cbbc1f71c50a93dedf69`. Do not re-run lint, typecheck,
+tests, or build — CI ran them.
+
+**Re-review after the first review.** The first review approved everything at
+`cb1f6c5` except defect 8, so a re-reviewer needing to bound the work can read
+`git diff cb1f6c5..593a6c2` — six files — and take the rest as already reviewed.
+Judgment that fix needs:
+
+1. **Is `'claimed'` genuinely unreachable except on a fresh insert?**
+   `begin_roadmap_generation` returns it from the `RETURNING` clause of the
+   insert only; the replay path returns the stored status and the stored status
+   is constrained to `pending`/`completed`/`failed`. Confirm no other path can
+   produce it, and that the row itself is still written `'pending'`.
+2. **Does the service now stop on everything that is not `'claimed'`?** It must
+   fail closed on a state nobody has thought of yet, not fall through to the
+   provider.
+3. **The in-place migration edit.** The migration has not been applied to
+   `master` or to the founder project, and CI applies every migration from zero,
+   so it was corrected rather than patched forward. Confirm that reasoning still
+   holds at the time of review — if the migration has reached any persistent
+   environment, this becomes a forward migration instead.
+4. **The resumed-attempt state.** A `pending` result claims no proposal and
+   saves nothing. Confirm the surface does not present it as a failure or as a
+   success, and that the owner has a way forward.
 
 Judgment CI cannot supply, on the second half:
 
