@@ -593,7 +593,13 @@ Relevant `vercel-react-best-practices` checks applied:
 ### Tests and final local results
 
 **CI for exact review target SHA
-`b597ee017a377ce5418a280041f4b4f56aa5e8aa`: pending lead push.**
+`b597ee017a377ce5418a280041f4b4f56aa5e8aa`: green.**
+
+[Run 31613150945](https://github.com/mattiss01/fittip/actions/runs/31613150945)
+completed successfully on 12 August 2026. Its three jobs passed: lint, types,
+unit tests and production build; migrations from zero, database lint, security
+and performance advisors, pgTAP and concurrency; and every 390px production
+browser flow, including the isolated M3-03 selected-horizon proposal step.
 
 [Run 31612075271](https://github.com/mattiss01/fittip/actions/runs/31612075271)
 for `e40c0b542ab4c58dc9d4ece8af8d481a0a14639e` was red because radio 7's
@@ -657,32 +663,63 @@ Tests added or changed by the second builder:
   reject, remembered count/reset date/empty note, private no-store response,
   browser/page-error checks, and cleanup in `finally`.
 
+### Hosted verification completed - 12 August 2026
+
+The product owner ran the complete
+`C:\Users\msche\AppData\Local\Temp\fittip-m3-03-hosted-check.md` runbook and
+reported that every step worked as expected. This is product-owner-attested
+evidence; raw SQL and CLI output was not pasted into the repository.
+
+- The founder project was `mahhfyxhgcmcbqkvudcm`. The dry run identified only
+  `20260812131303_m3_03_plan_proposals.sql`; the migration applied successfully,
+  and local and remote history matched at all twelve repository versions through
+  `20260812131303`.
+- Hosted database lint was clean. Advisors produced no unexpected or new
+  `plan_*` finding.
+- The four plan tables existed with RLS enabled. The only client policies were
+  the four authenticated owner-select policies; no client write policy or
+  direct write privilege existed. `completion_token` was absent from the
+  authenticated column-level SELECT grant.
+- The four plan mutation functions were `SECURITY DEFINER`, had an empty search
+  path, derived ownership from `auth.uid()`, accepted no owner argument, and
+  were executable by `authenticated` but not by `anon` or `service_role`.
+  `plan_content_is_valid` remained unreachable to all three client roles.
+- On the matching READY Preview
+  `https://fittip-nd4nacq3b-mattis-3657s-projects.vercel.app`, the founder
+  completed the 390x844 fixture-only compose flow, selected three days, saw the
+  expected date/rest cards and session-level disclosure, and reloaded the open
+  proposal through the authenticated hosted read path. No live provider call
+  was made.
+- Under a simulated authenticated owner, hosted row counts matched the founder
+  records. The fixed stranger UUID saw zero rows across requests, proposals,
+  sources, and decisions. Selecting `completion_token` as the owner failed with
+  the expected SQLSTATE `42501` permission denial.
+
+This closes the hosted migration/history, schema, RLS/privilege, advisor,
+authenticated-owner-read, denied-cross-user-read, and mobile Preview gates for
+independent review. It does not replace exact-commit review or product-owner
+acceptance.
+
 ### Remaining limitations and lead gates
 
-1. CI has not run for exact review target
-   `b597ee017a377ce5418a280041f4b4f56aa5e8aa` because the lead owns the push;
-   runs for `e40c0b5`, `85d5052`, `112caa2`, and `ac2f603` are superseded for
-   the distinct reasons recorded above. No exception is claimed for the
-   unrelated failures in run 31610743244.
-2. The local Playwright flow was collected but skipped; no screenshot or manual
-   390px observation is claimed. CI and the matching Preview must supply browser
-   evidence.
-3. The founder migration is not applied or verified by this builder. Before
-   review/acceptance, the product owner must run the hosted check: exact remote
-   migration history, schema, RLS/privileges, advisors, and authenticated owner
-   read path. A READY Preview does not establish any of them.
-4. No live provider call was made or authorized. The proposal is a deterministic
+1. Runs for `e40c0b5`, `85d5052`, `112caa2`, and `ac2f603` are superseded for
+   the distinct reasons recorded above. Exact-target run 31613150945 is green;
+   no CI exception is claimed.
+2. The local Playwright flow was collected but skipped because the required
+   Supabase environment was unavailable. CI executed the exact M3-03 390px
+   flow, and the product owner completed the matching hosted Preview pass.
+3. No live provider call was made or authorized. The proposal is a deterministic
    fixture, not evidence of model quality.
-5. The safety schema has an explicit severe-fatigue flag but no accepted
+4. The safety schema has an explicit severe-fatigue flag but no accepted
    severity/acute/worsening field for pain, illness, or injury. Therefore any
    eligible reported completion signal has an uncertain tier and conservatively
    pauses all. The reviewer must judge that this correctly applies the approved
    uncertain-tier rule rather than inventing severity from completion text.
-6. The ordinary fixture treats an accepted constraint as a limitation and
+5. The ordinary fixture treats an accepted constraint as a limitation and
    substitutes generic recovery work. It does not parse the constraint's text or
    claim what body area/sport it affects. This is deliberately conservative but
    less specific than a live proposal could be.
-7. M3-03B regeneration, M3-03C roadmap input, M3-03D activity detail, and M3-04
+6. M3-03B regeneration, M3-03C roadmap input, M3-03D activity detail, and M3-04
    editing/locks/acceptance remain absent.
 
 ### Independent reviewer checklist: complete ticket
