@@ -1038,6 +1038,64 @@ in the application, and `c_per_request_ceiling`, `c_daily_ceiling` and
 ceiling does to spend is worked out in full under "What raising the ceiling
 costs".
 
+## Hosted verification
+
+Performed 12 August 2026 against the founder project `mahhfyxhgcmcbqkvudcm`,
+with the product owner's explicit per-occasion authorization. The reviewed
+commit is `d55c343`; its migration is the only one this ticket adds.
+
+**Preview:**
+`https://fittip-git-ticket-m3-02-roadmap-proposal-mattis-3657s-projects.vercel.app/`
+
+**Migration history — exact, no drift.** `supabase migration list --linked`
+returns eleven pairs with `local` equal to `remote` at every position, ending
+`20260810213904` / `20260810213904`, which is this ticket's
+`m3_02_roadmap_proposals`. Nothing is applied that the repository does not
+carry, and nothing the repository carries is missing.
+
+**Database lint.** `db lint --linked --level warning --fail-on warning` →
+`No schema errors found`, empty result set.
+
+**Advisors.** `db advisors --linked --type all --level warn` returns thirteen
+warnings: twelve lint `0029` and one `auth_leaked_password_protection`.
+
+M3-01B recorded eight on the same project — seven `0029` plus the same Auth
+setting. The five new ones are exactly this ticket's ADR-015 functions:
+`begin_roadmap_generation`, `finish_roadmap_generation`,
+`record_roadmap_memory_candidates`, `apply_roadmap_proposal_change`, and
+`accept_roadmap_proposal`. No warning appeared that this ticket does not
+account for.
+
+Lint `0029` flags the pattern FitTip's entire write model is built on —
+`SECURITY DEFINER` RPCs granted to `authenticated`, with direct table writes
+revoked and ownership derived server-side — and cannot see that second half.
+It is accepted here on the same basis M3-01B recorded, and for the same reason.
+`auth_leaked_password_protection` is an Auth configuration setting unrelated to
+this ticket and is not addressed here.
+
+**The advisor output independently confirms the hosted signatures take no owner
+argument**, which is ADR-015's central authorization claim proven against the
+deployed database rather than against the repository:
+
+| Function | Hosted signature |
+| --- | --- |
+| `begin_roadmap_generation` | `p_idempotency_key, p_request_fingerprint, p_start_date, p_end_date, p_expected_head_revision, p_planning_note, p_previous_proposal_id, p_regeneration_feedback` |
+| `finish_roadmap_generation` | `p_completion_token, p_outcome, p_schema_version, p_prompt_version, p_provider_code, p_model_code, p_rate_card_version, p_spend_reservation_id, p_planning_note, p_regeneration_feedback, p_content, p_sources, p_safe_failure_code` |
+| `record_roadmap_memory_candidates` | `p_completion_token, p_expected_memory_revision, p_candidates` |
+| `apply_roadmap_proposal_change` | `p_operation, p_proposal_id, p_content` |
+| `accept_roadmap_proposal` | `p_proposal_id, p_expected_head_revision` |
+
+None carries a user id. Every owner is derived from `auth.uid()` inside the
+function, as ADR-015 requires.
+
+**Still outstanding**, and recorded as such rather than assumed: the
+authenticated owner read and the denied cross-user read against the Preview, the
+product owner's `390x844` acceptance pass, and the hosted privilege-boundary
+check in the SQL editor that M3-01B performed for its own tables. CI proves the
+privilege boundary from zero on every run and the hosted history matches the
+repository exactly, so the hosted grants follow from the same migration — but
+that is an inference, and M3-01B checked it directly.
+
 ## Known limitations
 
 All nine were re-checked against what is true at `cb1f6c5`. The defect-8 fix in
@@ -1108,10 +1166,12 @@ limitations 2 and 3 — the two that only a live call can close — are untouche
 8. **ADR-013 was edited.** A new "Recorded amendments" section, which that ADR
    explicitly instructs. No existing decision text changed. The reviewer and the
    product owner should confirm they accept it being recorded that way.
-9. **Nothing is deployed.** No push to the founder project, no Preview
-   verification, no hosted migration. The lead's step, and the one that must
-   happen before acceptance: this ticket adds a migration, so the Preview does
-   not prove itself.
+9. **Partly closed on 12 August 2026.** The migration is applied to the founder
+   project and remote history, lint, advisors, and the hosted function
+   signatures are verified — see "Hosted verification" above. **Still open:** the
+   authenticated owner read and denied cross-user read on the Preview, the
+   product owner's `390x844` acceptance pass, and the hosted privilege-boundary
+   check in the SQL editor that M3-01B performed for its own tables.
 
 Raised while finishing this half:
 
