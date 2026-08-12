@@ -64,12 +64,14 @@ export function PlanProposalManager({
   const [continueOpen, setContinueOpen] = useState(false);
   const [dayCount, setDayCount] = useState(rememberedDayCount);
   const browserContext = useSyncExternalStore(
-    subscribeNothing,
+    subscribeBrowserContext,
     readBrowserContext,
     () => "|",
   );
   const [timezoneName, today] = browserContext.split("|");
   const idempotencyInput = useRef<HTMLInputElement>(null);
+  const continueButton = useRef<HTMLButtonElement>(null);
+  const rejectButton = useRef<HTMLButtonElement>(null);
   const lostRender = useLostRenderRecovery(generatePending || decisionPending);
 
   async function reject() {
@@ -114,84 +116,90 @@ export function PlanProposalManager({
 
       {proposal ? (
         <section className={styles.review} aria-labelledby="proposal-title">
-          <p className={styles.sectionLabel}>Proposal · nothing accepted</p>
-          <h2 id="proposal-title">A shape for these days.</h2>
-          <p className={styles.weekDescription}>{proposal.weekDescription}</p>
-          {proposalDays}
+          <div
+            aria-hidden={continueOpen || confirmReject ? true : undefined}
+            inert={continueOpen || confirmReject ? true : undefined}
+          >
+            <p className={styles.sectionLabel}>Proposal · nothing accepted</p>
+            <h2 id="proposal-title">A shape for these days.</h2>
+            <p className={styles.weekDescription}>{proposal.weekDescription}</p>
+            {proposalDays}
 
-          {proposal.assumptions.length ? (
-            <details className={styles.reviewNotes}>
-              <summary>Assumptions</summary>
-              <ul>
-                {proposal.assumptions.map((item) => (
-                  <li key={item}>{item}</li>
+            {proposal.assumptions.length ? (
+              <details className={styles.reviewNotes}>
+                <summary>Assumptions</summary>
+                <ul>
+                  {proposal.assumptions.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
+            {proposal.uncertainties.length ? (
+              <details className={styles.reviewNotes}>
+                <summary>Uncertainties</summary>
+                {proposal.uncertainties.map((item) => (
+                  <div key={item.statement} className={styles.uncertainty}>
+                    <strong>{item.statement}</strong>
+                    <p>{item.whyItMatters}</p>
+                    <p>Watch: {item.whatToWatch}</p>
+                  </div>
                 ))}
-              </ul>
-            </details>
-          ) : null}
-          {proposal.uncertainties.length ? (
-            <details className={styles.reviewNotes}>
-              <summary>Uncertainties</summary>
-              {proposal.uncertainties.map((item) => (
-                <div key={item.statement} className={styles.uncertainty}>
-                  <strong>{item.statement}</strong>
-                  <p>{item.whyItMatters}</p>
-                  <p>Watch: {item.whatToWatch}</p>
-                </div>
-              ))}
-            </details>
-          ) : null}
-          {proposal.safetyConsiderations.length ? (
-            <section
-              className={styles.safetyNotes}
-              aria-labelledby="safety-notes-title"
-            >
-              <h3 id="safety-notes-title">Safety considerations</h3>
-              <ul>
-                {proposal.safetyConsiderations.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
+              </details>
+            ) : null}
+            {proposal.safetyConsiderations.length ? (
+              <section
+                className={styles.safetyNotes}
+                aria-labelledby="safety-notes-title"
+              >
+                <h3 id="safety-notes-title">Safety considerations</h3>
+                <ul>
+                  {proposal.safetyConsiderations.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
 
-          {openMemoryCandidateCount > 0 ? (
-            <aside className={styles.memoryPanel}>
-              <h3>Possible memory updates</h3>
-              <p>
-                {openMemoryCandidateCount} note{" "}
-                {openMemoryCandidateCount === 1 ? "needs" : "need"} your review.
-                None is active yet.
-              </p>
-              <Link href="/home/you/memory">Review memory</Link>
-            </aside>
-          ) : null}
+            {openMemoryCandidateCount > 0 ? (
+              <aside className={styles.memoryPanel}>
+                <h3>Possible memory updates</h3>
+                <p>
+                  {openMemoryCandidateCount} note{" "}
+                  {openMemoryCandidateCount === 1 ? "needs" : "need"} your
+                  review. None is active yet.
+                </p>
+                <Link href="/home/you/memory">Review memory</Link>
+              </aside>
+            ) : null}
 
-          <div className={styles.actionDock}>
-            <p>This stays separate from your accepted plan.</p>
-            <button
-              className={styles.primaryAction}
-              onClick={() => setContinueOpen(true)}
-              type="button"
-            >
-              Continue
-            </button>
-            <button
-              className={styles.secondaryAction}
-              disabled={decisionPending}
-              onClick={() => setConfirmReject(true)}
-              type="button"
-            >
-              {PLAN_PROPOSAL_COPY.rejectAction}
-            </button>
+            <div className={styles.actionDock}>
+              <p>This stays separate from your accepted plan.</p>
+              <button
+                className={styles.primaryAction}
+                onClick={() => setContinueOpen(true)}
+                ref={continueButton}
+                type="button"
+              >
+                Continue
+              </button>
+              <button
+                className={styles.secondaryAction}
+                disabled={decisionPending}
+                onClick={() => setConfirmReject(true)}
+                ref={rejectButton}
+                type="button"
+              >
+                {PLAN_PROPOSAL_COPY.rejectAction}
+              </button>
+            </div>
           </div>
 
           {continueOpen ? (
-            <div
-              className={styles.dialog}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="continue-title"
+            <ProposalDialog
+              labelledBy="continue-title"
+              onClose={() => setContinueOpen(false)}
+              restoreFocusTo={continueButton}
             >
               <h3 id="continue-title">Proposal saved for review</h3>
               <p>
@@ -205,14 +213,13 @@ export function PlanProposalManager({
               >
                 Keep reviewing
               </button>
-            </div>
+            </ProposalDialog>
           ) : null}
           {confirmReject ? (
-            <div
-              className={styles.dialog}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="reject-title"
+            <ProposalDialog
+              labelledBy="reject-title"
+              onClose={() => setConfirmReject(false)}
+              restoreFocusTo={rejectButton}
             >
               <h3 id="reject-title">Reject proposal?</h3>
               <p>{PLAN_PROPOSAL_COPY.rejectConfirm}</p>
@@ -233,7 +240,7 @@ export function PlanProposalManager({
               >
                 Keep proposal
               </button>
-            </div>
+            </ProposalDialog>
           ) : null}
         </section>
       ) : (
@@ -337,17 +344,165 @@ export function PlanProposalManager({
   );
 }
 
+function ProposalDialog({
+  labelledBy,
+  onClose,
+  restoreFocusTo,
+  children,
+}: {
+  labelledBy: string;
+  onClose: () => void;
+  restoreFocusTo: React.RefObject<HTMLButtonElement | null>;
+  children: React.ReactNode;
+}) {
+  const dialog = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const restoreOutsideTree = makeOutsideTreeInert(dialog.current);
+    const frame = requestAnimationFrame(() => {
+      focusableElements(dialog.current)[0]?.focus();
+    });
+    const invoker = restoreFocusTo.current;
+    return () => {
+      cancelAnimationFrame(frame);
+      restoreOutsideTree();
+      requestAnimationFrame(() => invoker?.focus());
+    };
+  }, [restoreFocusTo]);
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+      return;
+    }
+    if (event.key !== "Tab") return;
+
+    const focusable = focusableElements(dialog.current);
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (!first || !last) return;
+    if (
+      event.shiftKey &&
+      (document.activeElement === first ||
+        !dialog.current?.contains(document.activeElement))
+    ) {
+      event.preventDefault();
+      last.focus();
+    } else if (
+      !event.shiftKey &&
+      (document.activeElement === last ||
+        !dialog.current?.contains(document.activeElement))
+    ) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  return (
+    <div
+      aria-labelledby={labelledBy}
+      aria-modal="true"
+      className={styles.dialog}
+      onKeyDown={handleKeyDown}
+      ref={dialog}
+      role="dialog"
+    >
+      {children}
+    </div>
+  );
+}
+
+function makeOutsideTreeInert(start: HTMLElement | null): () => void {
+  const changed: { element: HTMLElement; hadInert: boolean }[] = [];
+  let branch: HTMLElement | null = start;
+  while (branch?.parentElement) {
+    for (const sibling of branch.parentElement.children) {
+      if (sibling === branch || !(sibling instanceof HTMLElement)) continue;
+      changed.push({
+        element: sibling,
+        hadInert: sibling.hasAttribute("inert"),
+      });
+      sibling.setAttribute("inert", "");
+    }
+    branch = branch.parentElement;
+  }
+  return () => {
+    for (const { element, hadInert } of changed) {
+      if (!hadInert) element.removeAttribute("inert");
+    }
+  };
+}
+
+function focusableElements(root: HTMLElement | null): HTMLElement[] {
+  return Array.from(
+    root?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+    ) ?? [],
+  ).filter(
+    (element) =>
+      !element.hasAttribute("hidden") &&
+      element.getAttribute("aria-hidden") !== "true",
+  );
+}
+
 function newIdempotencyKey(): string {
   return `pk_${crypto.randomUUID().replaceAll("-", "")}`;
 }
 
-function subscribeNothing() {
-  return () => {};
+export function subscribeBrowserContext(onStoreChange: () => void) {
+  let snapshot = readBrowserContext();
+  let timer = 0;
+
+  const scheduleDateChange = () => {
+    window.clearTimeout(timer);
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    timer = window.setTimeout(
+      notifyIfChanged,
+      millisecondsUntilDateChange(new Date(), zone),
+    );
+  };
+  const notifyIfChanged = () => {
+    const next = readBrowserContext();
+    if (next !== snapshot) {
+      snapshot = next;
+      onStoreChange();
+    }
+    scheduleDateChange();
+  };
+  const handleVisibility = () => {
+    if (document.visibilityState === "visible") notifyIfChanged();
+  };
+
+  window.addEventListener("focus", notifyIfChanged);
+  document.addEventListener("visibilitychange", handleVisibility);
+  scheduleDateChange();
+  return () => {
+    window.clearTimeout(timer);
+    window.removeEventListener("focus", notifyIfChanged);
+    document.removeEventListener("visibilitychange", handleVisibility);
+  };
 }
 
-function readBrowserContext(): string {
+export function readBrowserContext(): string {
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return `${zone}|${isoDateInTimezone(new Date(), zone)}`;
+}
+
+export function millisecondsUntilDateChange(now: Date, zone: string): number {
+  const currentDate = isoDateInTimezone(now, zone);
+  let low = now.getTime() + 1;
+  let high = now.getTime() + 27 * 60 * 60 * 1000;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (isoDateInTimezone(new Date(middle), zone) === currentDate) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+  return Math.max(1, low - now.getTime());
 }
 
 function useLostRenderRecovery(pending: boolean): boolean {

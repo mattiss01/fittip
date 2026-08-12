@@ -34,6 +34,11 @@ export type PlanProposalGenerationInput = {
 
 export type PlanProposalGenerationResult =
   | { status: "proposal"; proposalId: string; memoryCandidateCount: number }
+  | {
+      status: "proposal-partial";
+      proposalId: string;
+      code: "memory_candidates_not_saved";
+    }
   | { status: "safety-hold" }
   | { status: "pending" }
   | { status: "failed"; code: string };
@@ -194,7 +199,13 @@ export async function generatePlanProposal(
       memoryCandidateCount = receipt.itemIds.length;
     } catch {
       // Independent decision boundary: a memory conflict never rolls back a
-      // valid proposal, and no candidate becomes active here.
+      // valid proposal, and no candidate becomes active here. The typed partial
+      // result prevents the surface from presenting candidate loss as success.
+      return {
+        status: "proposal-partial",
+        proposalId,
+        code: "memory_candidates_not_saved",
+      };
     }
   }
 

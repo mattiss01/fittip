@@ -62,6 +62,35 @@ describe("plan proposal orchestration", () => {
     expect(deps.goals.list).not.toHaveBeenCalled();
     expect(deps.proposals.beginGeneration).not.toHaveBeenCalled();
   });
+
+  it("keeps the proposal but reports typed partial success when memory candidates cannot persist", async () => {
+    const deps = dependencies({ memoryFailure: true });
+
+    await expect(
+      generatePlanProposal(
+        { ...input(), planningNote: "Weekdays before work." },
+        deps,
+      ),
+    ).resolves.toEqual({
+      status: "proposal-partial",
+      proposalId: "70000000-0000-4000-8000-000000000001",
+      code: "memory_candidates_not_saved",
+    });
+    expect(deps.proposals.finishGenerationWithProposal).toHaveBeenCalledOnce();
+    expect(deps.proposals.recordMemoryCandidates).toHaveBeenCalledOnce();
+  });
+
+  it("replays a completed proposal without generating or writing memory again", async () => {
+    const deps = dependencies({ completedReplay: true });
+
+    await expect(generatePlanProposal(input(), deps)).resolves.toEqual({
+      status: "proposal",
+      proposalId: "70000000-0000-4000-8000-000000000001",
+      memoryCandidateCount: 0,
+    });
+    expect(deps.proposals.finishGenerationWithProposal).not.toHaveBeenCalled();
+    expect(deps.proposals.recordMemoryCandidates).not.toHaveBeenCalled();
+  });
 });
 
 function input() {
@@ -80,23 +109,36 @@ function dependencies(
     memory?: MemoryItemView[];
     completionSignal?: boolean;
     noGoal?: boolean;
+    memoryFailure?: boolean;
+    completedReplay?: boolean;
   } = {},
 ) {
   const proposals = {
-    beginGeneration: vi.fn().mockResolvedValue({
-      generationId: "60000000-0000-4000-8000-000000000001",
-      completionToken: "50000000-0000-4000-8000-000000000001",
-      state: "claimed",
-      proposalId: null,
-    }),
+    beginGeneration: vi.fn().mockResolvedValue(
+      options.completedReplay
+        ? {
+            generationId: "60000000-0000-4000-8000-000000000001",
+            completionToken: null,
+            state: "completed",
+            proposalId: "70000000-0000-4000-8000-000000000001",
+          }
+        : {
+            generationId: "60000000-0000-4000-8000-000000000001",
+            completionToken: "50000000-0000-4000-8000-000000000001",
+            state: "claimed",
+            proposalId: null,
+          },
+    ),
     finishGenerationWithProposal: vi
       .fn()
       .mockResolvedValue("70000000-0000-4000-8000-000000000001"),
     finishGenerationAsFailed: vi.fn().mockResolvedValue(undefined),
-    recordMemoryCandidates: vi.fn().mockResolvedValue({
-      collectionRevision: 2,
-      itemIds: [],
-    }),
+    recordMemoryCandidates: options.memoryFailure
+      ? vi.fn().mockRejectedValue(new Error("private database detail"))
+      : vi.fn().mockResolvedValue({
+          collectionRevision: 2,
+          itemIds: [],
+        }),
   };
   return {
     proposals,

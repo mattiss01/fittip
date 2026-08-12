@@ -26,30 +26,49 @@ import { normalizeOwnerText } from "@/server/ai/owner-text";
 
 const DAY_MS = 86_400_000;
 const MAX_SECONDARY_GOALS = 3;
+const WEEKDAYS = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+] as const;
+const SPORTS = [
+  ["swim", "Swimming"],
+  ["run", "Running"],
+  ["cycl", "Cycling"],
+  ["bike", "Cycling"],
+  ["strength", "Strength"],
+  ["yoga", "Yoga"],
+  ["walk", "Walking"],
+] as const;
 
 export function synthesizePlanBody(context: CoachAIContext): string {
   const dates = horizonDates(context);
   const goals = context.targetableGoals;
   const primary = goals[0];
-  const hasAcceptedLimitation = context.memory.some(
-    (item) => item.memoryType === "constraint",
-  );
+  const constraints = fixtureConstraints(context);
+  const hasAcceptedLimitation = constraints.contents.length > 0;
 
   // Every second day carries a session, so a horizon of two days or more shows
   // both a training day and an explicit rest day — which is the thing the
   // surface most needs to be reviewable.
-  const sessionDates = dates.filter((_date, index) => index % 2 === 0);
+  const eligibleDates = dates.filter((date) => isAvailable(date, constraints));
+  const sessionDates = eligibleDates.filter((_date, index) => index % 2 === 0);
+  const sport = constrainedSport(primary, constraints);
 
   const sessions = sessionDates.map((date, index) => ({
     date,
     title: hasAcceptedLimitation
       ? index === 0
-        ? "Non-conflicting recovery session"
-        : "Gentle supporting session"
+        ? `Constraint-aware ${sport.toLowerCase()} session`
+        : `Supporting ${sport.toLowerCase()} session`
       : index === 0
         ? "Easy aerobic session"
         : "Steadier session",
-    sport: hasAcceptedLimitation ? "General recovery" : sportFor(primary),
+    sport,
     focus: bound(
       hasAcceptedLimitation
         ? "Gentle work outside the accepted limitation."
@@ -60,13 +79,13 @@ export function synthesizePlanBody(context: CoachAIContext): string {
     ),
     intent: bound(
       hasAcceptedLimitation
-        ? "Stop if this conflicts with the accepted limitation; otherwise keep it comfortable."
+        ? `${constraints.timeWindow ? `Schedule this ${constraints.timeWindow}. ` : ""}Stop if this conflicts with the accepted limitation; otherwise keep it comfortable.`
         : index === 0
           ? "Conversational the whole way. Finish feeling you could go again."
           : "Comfortably hard in the middle, easy either side of it.",
       300,
     ),
-    durationMinutes: index === 0 ? 45 : 50,
+    durationMinutes: constrainedMinutes(index === 0 ? 45 : 50, constraints),
     primaryGoalId: primary?.id ?? "",
     secondaryGoalIds: goals.slice(1, 1 + MAX_SECONDARY_GOALS).map((g) => g.id),
     alternatives:
@@ -81,7 +100,12 @@ export function synthesizePlanBody(context: CoachAIContext): string {
             },
           ]
         : null,
-    rationale: bound(rationaleFor(primary, context), 300),
+    rationale: bound(
+      hasAcceptedLimitation
+        ? `${rationaleFor(primary, context)} Accepted constraints determine the date, duration and setting used here.`
+        : rationaleFor(primary, context),
+      300,
+    ),
   }));
 
   const plan = {
@@ -95,6 +119,11 @@ export function synthesizePlanBody(context: CoachAIContext): string {
         "Your recent training is representative of what you can sustain.",
         200,
       ),
+      ...constraints.contents
+        .slice(0, 3)
+        .map((content) =>
+          bound(`Applied accepted constraint: ${content}`, 200),
+        ),
     ],
     uncertainties: null,
     // An eligible reported signal is resolved by the surface before this
@@ -104,7 +133,7 @@ export function synthesizePlanBody(context: CoachAIContext): string {
     safetyConsiderations: hasAcceptedLimitation
       ? [
           bound(
-            "An accepted limitation is active. This leaves out work that conflicts with it and continues only with non-conflicting sessions.",
+            "Accepted constraints are active. Only affected activities, dates, durations or settings are left out; non-conflicting sessions continue.",
             240,
           ),
         ]
@@ -112,6 +141,152 @@ export function synthesizePlanBody(context: CoachAIContext): string {
   };
 
   return JSON.stringify({ plan, memoryCandidates: memoryCandidates(context) });
+}
+
+type FixtureConstraints = {
+  contents: string[];
+  maxMinutes: number | null;
+  allowedWeekdays: Set<number> | null;
+  unavailableWeekdays: Set<number>;
+  blockedSports: Set<string>;
+  comfortableSports: string[];
+  setting: "home" | "indoors" | "outdoors" | null;
+  timeWindow: string | null;
+  equipmentFree: boolean;
+};
+
+function fixtureConstraints(context: CoachAIContext): FixtureConstraints {
+  const contents = context.memory
+    .filter((item) => item.memoryType === "constraint")
+    .map((item) => item.content);
+  const text = contents.join(" ").toLowerCase();
+  const minuteMatches = [
+    ...text.matchAll(
+      /(?:only have|at most|maximum|max|up to)\s+(\d{1,7})\s+minutes?\b/g,
+    ),
+  ]
+    .map((match) => Number(match[1]))
+    .filter((value) => Number.isSafeInteger(value) && value > 0);
+  const allowedWeekdays = allowedDays(text);
+  const unavailableWeekdays = new Set<number>();
+  for (const [index, day] of WEEKDAYS.entries()) {
+    if (
+      new RegExp(
+        `(?:no|never|unavailable|cannot|can't|do not|don't)(?:\\s+\\w+){0,4}\\s+(?:on\\s+)?${day}s?\\b`,
+        "i",
+      ).test(text)
+    ) {
+      unavailableWeekdays.add(index);
+    }
+  }
+
+  const blockedSports = new Set<string>();
+  const comfortableSports: string[] = [];
+  for (const [needle, sport] of SPORTS) {
+    if (
+      new RegExp(
+        `(?:no|avoid|cannot|can't|do not|don't)\\s+(?:go\\s+)?${needle}\\w*`,
+        "i",
+      ).test(text)
+    ) {
+      blockedSports.add(sport);
+    }
+    if (
+      new RegExp(
+        `${needle}\\w*\\s+(?:is|feels?)\\s+(?:comfortable|okay|fine)`,
+        "i",
+      ).test(text)
+    ) {
+      comfortableSports.push(sport);
+    }
+  }
+  const equipmentFree =
+    /\b(?:no (?:gym|equipment|weights)|without equipment)\b/i.test(text);
+  if (equipmentFree) blockedSports.add("Strength");
+  if (/\bno pool\b/i.test(text)) blockedSports.add("Swimming");
+  if (/\bno (?:bike|bicycle)\b/i.test(text)) blockedSports.add("Cycling");
+
+  return {
+    contents,
+    maxMinutes: minuteMatches.length > 0 ? Math.min(...minuteMatches) : null,
+    allowedWeekdays,
+    unavailableWeekdays,
+    blockedSports,
+    comfortableSports,
+    setting: /\b(?:at home|home only)\b/i.test(text)
+      ? "home"
+      : /\bindoor(?:s)? only\b/i.test(text)
+        ? "indoors"
+        : /\boutdoor(?:s)? only\b/i.test(text)
+          ? "outdoors"
+          : null,
+    timeWindow:
+      text.match(
+        /\b(before work|after work|in the morning|in the evening|at lunch(?:time)?)\b/i,
+      )?.[1] ?? null,
+    equipmentFree,
+  };
+}
+
+function allowedDays(text: string): Set<number> | null {
+  if (
+    /\bweekdays? only\b|\bonly (?:train|available) on weekdays?\b/i.test(text)
+  ) {
+    return new Set([1, 2, 3, 4, 5]);
+  }
+  if (
+    /\bweekends? only\b|\bonly (?:train|available) on weekends?\b/i.test(text)
+  ) {
+    return new Set([0, 6]);
+  }
+  const match = text.match(
+    /\b(?:only train|available only|only available)(?:\s+on)?\s+([^.]*)/i,
+  );
+  if (!match) return null;
+  const days = new Set<number>();
+  for (const [index, day] of WEEKDAYS.entries()) {
+    if (new RegExp(`\\b${day}s?\\b`, "i").test(match[1] ?? "")) days.add(index);
+  }
+  return days.size > 0 ? days : null;
+}
+
+function isAvailable(date: string, constraints: FixtureConstraints): boolean {
+  const weekday = new Date(`${date}T00:00:00.000Z`).getUTCDay();
+  return (
+    !constraints.unavailableWeekdays.has(weekday) &&
+    (constraints.allowedWeekdays === null ||
+      constraints.allowedWeekdays.has(weekday))
+  );
+}
+
+function constrainedMinutes(
+  proposed: number,
+  constraints: FixtureConstraints,
+): number {
+  return constraints.maxMinutes === null
+    ? proposed
+    : Math.min(proposed, constraints.maxMinutes);
+}
+
+function constrainedSport(
+  goal: CoachAIGoalReference | undefined,
+  constraints: FixtureConstraints,
+): string {
+  if (constraints.setting === "home") return "Home mobility";
+  if (constraints.setting === "indoors") return "Indoor mobility";
+  if (constraints.setting === "outdoors") return "Walking";
+
+  const goalSport = sportFor(goal);
+  const candidates = [
+    goalSport,
+    ...constraints.comfortableSports,
+    constraints.equipmentFree ? "Walking" : "Mobility",
+    "Walking",
+  ];
+  return (
+    candidates.find((candidate) => !constraints.blockedSports.has(candidate)) ??
+    "Mobility"
+  );
 }
 
 /**
@@ -142,9 +317,11 @@ function horizonDates(context: CoachAIContext): string[] {
 }
 
 function sportFor(goal: CoachAIGoalReference | undefined): string {
-  return bound(
-    goal ? goal.category.replace(/_/g, " ") : "General training",
-    60,
+  if (!goal) return "General training";
+  const haystack = `${goal.title} ${goal.category}`.toLowerCase();
+  return (
+    SPORTS.find(([needle]) => haystack.includes(needle))?.[1] ??
+    bound(goal.category.replace(/_/g, " "), 60)
   );
 }
 

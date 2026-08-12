@@ -134,8 +134,6 @@ const MAX_ALTERNATIVES_PER_SESSION = 2;
 const MAX_PLAN_ASSUMPTIONS = 4;
 const MAX_PLAN_UNCERTAINTIES = 3;
 const MAX_PLAN_SAFETY_CONSIDERATIONS = 3;
-const MIN_SESSION_MINUTES = 10;
-const MAX_SESSION_MINUTES = 240;
 const DAY_MS = 86_400_000;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -962,8 +960,7 @@ function validatePlanSession(
   if (
     typeof entry.durationMinutes !== "number" ||
     !Number.isSafeInteger(entry.durationMinutes) ||
-    entry.durationMinutes < MIN_SESSION_MINUTES ||
-    entry.durationMinutes > MAX_SESSION_MINUTES
+    entry.durationMinutes <= 0
   ) {
     return rejected("invalid_duration");
   }

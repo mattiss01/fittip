@@ -84,6 +84,15 @@ export async function generatePlanProposalAction(
         memoryCandidateCount: result.memoryCandidateCount,
       };
     }
+    if (result.status === "proposal-partial") {
+      return {
+        status: "partial",
+        message:
+          "The proposal was saved, but its possible memory updates could not be saved. Review the proposal normally; nothing was accepted.",
+        submission,
+        proposalId: result.proposalId,
+      };
+    }
     if (result.status === "safety-hold") {
       return { status: "safety-hold", message: "", submission };
     }

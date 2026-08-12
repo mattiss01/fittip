@@ -104,7 +104,7 @@ For each session:
 - "title" names it in the athlete's own vocabulary. "sport" is the sport or movement domain.
 - "focus" is what the session is training, in a phrase or a sentence.
 - "intent" tells the athlete how it should feel and how hard to go.
-- "durationMinutes" is the whole session, warm-up and cool-down included, between 10 and 240.
+- "durationMinutes" is the whole session, warm-up and cool-down included, as a positive integer. Do not impose a minutes cap.
 - "primaryGoalId" is the one goal the session mainly serves. "secondaryGoalIds" are other goals it also helps, in any number including none. All of them are unweighted: never express attention as a percentage, a share, or a ratio, and never name the same goal twice on one session.
 - "rationale" says why this session, on this day, for this athlete.
 - "alternatives" are up to two whole replacement sessions, each with the condition under which to take it instead. Use them where you are genuinely uncertain rather than to pad.
@@ -410,7 +410,9 @@ const PLAN_SCHEMA = {
               },
               durationMinutes: {
                 type: "integer",
-                description: "The whole session, 10 to 240.",
+                minimum: 1,
+                description:
+                  "The whole session as a positive integer. There is no minutes cap.",
               },
               primaryGoalId: {
                 type: "string",

@@ -1,6 +1,7 @@
 export type PlanProposalActionStatus =
   | "idle"
   | "proposal"
+  | "partial"
   | "rejected"
   | "safety-hold"
   | "pending"

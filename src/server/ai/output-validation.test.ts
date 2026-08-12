@@ -366,6 +366,16 @@ describe("the seven day plan validator", () => {
     );
   });
 
+  it("accepts a very long positive integer session without a minutes cap", () => {
+    const result = validatePlanCandidate({
+      body: findCoachAIFixtureCase("very_long_session_allowed").body,
+      context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    });
+
+    if (result.outcome !== "accepted") throw new Error("expected acceptance");
+    expect(result.response.plan.sessions[0]?.durationMinutes).toBe(900);
+  });
+
   it("keeps the plan and the memory section independent", () => {
     const result = validatePlanCandidate({
       body: findCoachAIFixtureCase("plan_memory_candidate_paraphrased").body,

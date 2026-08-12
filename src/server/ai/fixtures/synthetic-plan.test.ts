@@ -83,11 +83,11 @@ describe("the synthetic plan body", () => {
     expect(withLimitation.response.plan.sessions.length).toBeGreaterThan(0);
     expect(
       withLimitation.response.plan.sessions.every(
-        (session) => session.sport === "General recovery",
+        (session) => session.sport !== "Running",
       ),
     ).toBe(true);
     expect(withLimitation.response.plan.safetyConsiderations).toEqual([
-      expect.stringContaining("leaves out work that conflicts"),
+      expect.stringContaining("Only affected activities"),
     ]);
 
     const withoutSignal = validatePlanCandidate({
@@ -101,6 +101,65 @@ describe("the synthetic plan body", () => {
       throw new Error("expected acceptance");
     }
     expect(withoutSignal.response.plan.safetyConsiderations).toBeUndefined();
+  });
+
+  it("respects accepted availability, time and duration constraints", () => {
+    const context = withConstraint(
+      "Only train on Mondays and Wednesdays before work. At most 30 minutes.",
+    );
+    const result = validatePlanCandidate({
+      body: synthesizePlanBody(context),
+      context,
+    });
+    if (result.outcome !== "accepted") throw new Error("expected acceptance");
+
+    expect(result.response.plan.sessions).toHaveLength(1);
+    expect(result.response.plan.sessions[0]).toMatchObject({
+      date: "2026-08-05",
+      durationMinutes: 30,
+      intent: expect.stringContaining("before work"),
+    });
+    expect(result.response.plan.assumptions).toEqual(
+      expect.arrayContaining([expect.stringContaining("before work")]),
+    );
+  });
+
+  it("respects accepted location and equipment constraints", () => {
+    const context = withConstraint(
+      "Train at home. No gym, equipment, weights or pool this week.",
+      "Swim 5 km comfortably",
+    );
+    const result = validatePlanCandidate({
+      body: synthesizePlanBody(context),
+      context,
+    });
+    if (result.outcome !== "accepted") throw new Error("expected acceptance");
+
+    expect(result.response.plan.sessions.length).toBeGreaterThan(0);
+    expect(
+      result.response.plan.sessions.every(
+        (session) => session.sport === "Home mobility",
+      ),
+    ).toBe(true);
+  });
+
+  it("removes swimming only when an accepted activity restriction forbids it", () => {
+    const context = withConstraint(
+      "No swimming until the pool reopens.",
+      "Swim 5 km comfortably",
+    );
+    const result = validatePlanCandidate({
+      body: synthesizePlanBody(context),
+      context,
+    });
+    if (result.outcome !== "accepted") throw new Error("expected acceptance");
+
+    expect(result.response.plan.sessions.length).toBeGreaterThan(0);
+    expect(
+      result.response.plan.sessions.every(
+        (session) => session.sport !== "Swimming",
+      ),
+    ).toBe(true);
   });
 
   it("quotes the planning note exactly when it proposes memory", () => {
@@ -118,3 +177,20 @@ describe("the synthetic plan body", () => {
     }
   });
 });
+
+function withConstraint(content: string, goalTitle?: string): CoachAIContext {
+  return {
+    ...COACH_AI_FIXTURE_PLAN_CONTEXT,
+    targetableGoals: COACH_AI_FIXTURE_PLAN_CONTEXT.targetableGoals.map(
+      (goal, index) =>
+        index === 0 && goalTitle ? { ...goal, title: goalTitle } : goal,
+    ),
+    memory: [
+      {
+        id: "c3000000-0000-4000-8000-000000000001",
+        memoryType: "constraint",
+        content,
+      },
+    ],
+  };
+}

@@ -819,7 +819,7 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
     note: "The horizon is the server's. A model that extends it produces nothing.",
   },
   {
-    name: "impossible_duration",
+    name: "very_long_session_allowed",
     operation: "create_seven_day_plan",
     body: planEnvelope(
       planWith((plan) => {
@@ -831,8 +831,24 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
       }),
     ),
     context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "accepted" },
+    note: "The contract deliberately has no minutes cap; fifteen hours remains valid.",
+  },
+  {
+    name: "non_positive_duration",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.sessions = [
+          planSession("2026-08-04", "Invalid duration", {
+            durationMinutes: 0,
+          }),
+        ];
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
     expected: { outcome: "rejected", reason: "invalid_duration" },
-    note: "Fifteen hours is not a session.",
+    note: "Durations remain positive integers even though they have no cap.",
   },
   {
     name: "unowned_goal_reference",
