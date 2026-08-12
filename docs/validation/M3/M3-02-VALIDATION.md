@@ -16,6 +16,10 @@ reported back. The lead named all three as outstanding when requesting
 acceptance. They remain open under limitation 9 rather than being treated as
 done.
 
+**All three were run later the same day and all held**, so acceptance is no
+longer resting on an inference — see "Completed later the same day" under Hosted
+verification. The `390x844` pass is the one item of limitation 9 still open.
+
 `593a6c2` was independently reviewed and approved. `d55c343` invalidated that
 approval and its Preview, as expected and as planned: it carries the product
 owner's decision of 12 August 2026 to raise `maxInputTokens`, which closes
@@ -1105,6 +1109,47 @@ privilege boundary from zero on every run and the hosted history matches the
 repository exactly, so the hosted grants follow from the same migration — but
 that is an inference, and M3-01B checked it directly.
 
+### Completed later the same day: the privilege boundary and the two reads
+
+Run by the product owner on 12 August 2026 in the founder project's SQL editor,
+following
+[`evidence/M3-02-hosted-check-runbook.md`](evidence/M3-02-hosted-check-runbook.md),
+with the lead reading each result. The lead could not run any of it: `link`,
+`db push`, `db remote`, and `projects` are denied in `.claude/settings.json`,
+the CLI login needs a TTY, and `.env.local` is unreadable to the agent by the
+same config. The inference above is now a direct check.
+
+| Check | Expectation | Result |
+| --- | --- | --- |
+| Column `SELECT` for `authenticated` | 16 of 17 columns; `completion_token` absent | exactly those 16, token absent |
+| Table grants, six tables | `authenticated` `SELECT` only; `anon` absent | exactly that |
+| `service_role` on those tables | the migration's revoke must have held | **no privileges at all** |
+| `relrowsecurity` | `true` on all six | `true` on all six |
+| Policies | six, one per table, `{authenticated}`, `SELECT` | exactly six; no write policy exists |
+| Five ADR-015 functions | `SECURITY DEFINER`, `search_path=""`, `authenticated` only | all five |
+| Four helper functions | `SECURITY INVOKER`, executable by nobody | all four; `anon`, `authenticated`, `service_role` all false |
+| Owner read, simulated role | the owner's own counts, no error | matched the counts taken as `postgres` |
+| Cross-user read, random subject | `0` on all six tables | `0` on all six |
+| `completion_token` as its owner | `42501 permission denied` | `42501` |
+
+**`service_role` holds nothing on these six tables**, which is stricter than
+M3-01B, where it retained Supabase's default seven privileges and the product
+owner accepted that as *that* ticket's limitation 6. The explicit revoke in this
+migration held on the deployed database.
+
+The cross-user denial is not vacuous: the owner's counts were read first and
+were non-zero on `roadmap_proposals`, `roadmap_versions`, and `roadmap_heads`,
+so there was something for a stranger to fail to see. The owner's user id is
+deliberately not recorded here; the counts and outcomes are what make the
+evidence checkable.
+
+**What this does and does not prove.** It proves the authorization boundary at
+the database, isolated from the application — arguably stronger than the
+through-the-Preview read originally named, because it cannot be satisfied by an
+application-layer filter. It does **not** exercise the hosted authenticated read
+path through Next.js. That is the `390x844` pass, which is now the only part of
+limitation 9 still open.
+
 ## Known limitations
 
 All nine were re-checked against what is true at `cb1f6c5`. The defect-8 fix in
@@ -1176,12 +1221,15 @@ limitations 2 and 3 — the two that only a live call can close — are untouche
    that ADR explicitly instructs. No existing decision text changed. The
    independent reviewer confirmed that, and the product owner accepted it as
    recorded on 12 August 2026.
-9. **Partly closed on 12 August 2026.** The migration is applied to the founder
-   project and remote history, lint, advisors, and the hosted function
-   signatures are verified — see "Hosted verification" above. **Still open:** the
-   authenticated owner read and denied cross-user read on the Preview, the
-   product owner's `390x844` acceptance pass, and the hosted privilege-boundary
-   check in the SQL editor that M3-01B performed for its own tables.
+9. ~~**Partly closed on 12 August 2026.**~~ **Closed except the `390x844`
+   pass**, later the same day. The migration, remote history, lint, advisors,
+   and hosted function signatures were verified first; the privilege boundary,
+   the authenticated owner read, and the denied cross-user read were then run
+   directly in the SQL editor and all held — see "Completed later the same day"
+   above for the full table. **Still open:** the product owner's `390x844`
+   acceptance pass, which is also the only remaining check on the hosted
+   authenticated read path through the application rather than through the
+   database.
 
 Raised while finishing this half:
 
