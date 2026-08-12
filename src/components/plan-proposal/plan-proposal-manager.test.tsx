@@ -88,7 +88,7 @@ describe("plan proposal manager", () => {
     outsideButton.remove();
   });
 
-  it("resets the compose start date when owner-local today rolls over", () => {
+  it("resets the compose start date when owner-local today rolls over", async () => {
     vi.setSystemTime(new Date("2026-08-12T21:59:59.900Z"));
     renderManager({ proposal: null });
 
@@ -97,7 +97,9 @@ describe("plan proposal manager", () => {
     fireEvent.change(startDate, { target: { value: "2026-08-15" } });
     expect(startDate).toHaveValue("2026-08-15");
 
-    act(() => vi.advanceTimersByTime(101));
+    await act(async () => {
+      await vi.advanceTimersToNextTimerAsync();
+    });
 
     expect(screen.getByLabelText("Start date")).toHaveValue("2026-08-13");
   });
