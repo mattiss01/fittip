@@ -2,17 +2,35 @@
 
 **Ticket:** [M3-02](../../backlog/M3/M3-02-ROADMAP-PROPOSAL.md)
 
-**Status:** **awaiting re-review at `d55c343`.** The whole ticket is delivered:
-schema, AI boundary, repository, domain orchestration, server actions, the
-`390x844` interface, and the Playwright flow.
+**Status:** **independently reviewed and approved at `d55c343`; awaiting the
+lead's hosted verification and product-owner acceptance.** The whole ticket is
+delivered: schema, AI boundary, repository, domain orchestration, server
+actions, the `390x844` interface, and the Playwright flow.
 
-`593a6c2` was independently reviewed and approved. **`d55c343` invalidates that
-approval and its Preview**, as expected and as planned: it carries the product
+`593a6c2` was independently reviewed and approved. `d55c343` invalidated that
+approval and its Preview, as expected and as planned: it carries the product
 owner's decision of 12 August 2026 to raise `maxInputTokens`, which closes
 limitation 4 and also fixes a denial the sizing work exposed (defect 9). It is a
-spend change, so it is Tier 1 and needs a re-review. The re-reviewer can bound
-the work to `git diff 593a6c2..d55c343` — thirteen files, no schema, no
-migration, no user-visible copy.
+spend change, so it is Tier 1 and needed a re-review.
+
+**That re-review of `593a6c2..d55c343` approved `d55c343` on 12 August 2026.**
+The reviewer recomputed all four numeric derivations independently rather than
+reading the table: sum of parts 32,800 ≤ total 33,700; training-history split
+10,200 + 5,000 + 200 = 15,400; token ceiling `ceil((6,000 + 64 + 33,700)/4)` =
+9,941 ≤ 10,000; reservation 10,000 × 0.2 + 3,000 × 1.2 = 5,600 µUSD, inside the
+8,000 per-request ceiling, giving 357 generations per day. It confirmed that the
+trim-never-deny property now holds *more* strongly than before, because the trim
+binds on the completion sub-budget while the refusal binds on the whole-source
+ceiling; that defect 9 was real for realistic data rather than only at field
+caps, and that its new test genuinely throws on the previous limits; that the
+`claimed` discriminator and the limitation-17 model/rate-card binding are both
+untouched and intact; and that the two caveats are honestly stated.
+
+One observation recorded from that pass: headroom against the token guard is now
+236 characters of 40,000 (~0.6%), down from ~7%. Every contributing input is
+capped and every cap is asserted, so the failure mode of future prompt growth is
+a red `openai-prompt.test.ts` rather than a runtime refusal in front of an
+owner — but it is the test suite holding that margin now, not the arithmetic.
 
 Independent review of `cb1f6c5` rejected it on one defect — a same-key uncertain
 retry made a second provider call — which is fixed in `593a6c2` (defect 8
