@@ -383,7 +383,7 @@ records green CI, a matching READY Preview, the founder-hosted migration and
 security checks, independent review, and product-owner acceptance.
 
 **Exact review target:**
-`b597ee017a377ce5418a280041f4b4f56aa5e8aa`
+`a70a4ef48a94b66b8ac03cc4e4ccc337cf7b7254`
 
 **Initial implementation commit:**
 `0cf2eca190a912261730e2a41ab26b258c5a0eb8`
@@ -416,10 +416,15 @@ dialog, duration-contract/database, accepted-constraint fixture, local-date
 rollover, and memory partial-success findings. The review of `b597ee0` requested
 changes; it is superseded and is not approval of this target.
 
+**Midnight-rollover test correction:**
+`a70a4ef48a94b66b8ac03cc4e4ccc337cf7b7254` - awaits the next calculated
+fake-timer boundary and React store flush deterministically, preserving the
+exact new owner-local date assertion after CI exposed a fixed-delay race.
+
 **Branch:** `ticket/m3-03-selected-horizon-plan-proposal`
 
 **Complete ticket range:**
-`git diff bd859db..cf60ed64a29840da503fc8e52956f1db889a9e9a`
+`git diff bd859db..a70a4ef48a94b66b8ac03cc4e4ccc337cf7b7254`
 
 ### Delivered behavior
 
@@ -487,11 +492,11 @@ npx.cmd playwright test e2e/m3-03-plan-proposal.spec.ts --config=e2e/m3-03.playw
 
 ### Changed files: complete ticket
 
-`git diff --stat bd859db..cf60ed64a29840da503fc8e52956f1db889a9e9a`:
+`git diff --stat bd859db..a70a4ef48a94b66b8ac03cc4e4ccc337cf7b7254`:
 
 ```text
  .github/workflows/ci.yml                           |   10 +
- docs/validation/M3/M3-03-VALIDATION.md             |  778 ++++++++++++
+ docs/validation/M3/M3-03-VALIDATION.md             |  892 ++++++++++++++
  docs/validation/README.md                          |    1 +
  e2e/m3-03-plan-proposal.spec.ts                    |  210 ++++
  e2e/m3-03.playwright.config.ts                     |   16 +
@@ -504,7 +509,7 @@ npx.cmd playwright test e2e/m3-03-plan-proposal.spec.ts --config=e2e/m3-03.playw
  src/app/home/plan/proposal/proposal.module.css     |  471 ++++++++
  .../plan-proposal/plan-proposal-days.test.tsx      |   57 +
  .../plan-proposal/plan-proposal-days.tsx           |  131 ++
- .../plan-proposal/plan-proposal-manager.test.tsx   |  120 ++
+ .../plan-proposal/plan-proposal-manager.test.tsx   |  122 ++
  .../plan-proposal/plan-proposal-manager.tsx        |  556 +++++++++
  src/components/planning/plan-editor.tsx            |    4 +
  src/features/plan-proposal/plan-proposal-copy.ts   |   17 +
@@ -538,7 +543,7 @@ npx.cmd playwright test e2e/m3-03-plan-proposal.spec.ts --config=e2e/m3-03.playw
  ...60812191935_remove_plan_session_minutes_cap.sql |  185 +++
  .../m3_03_plan_duration_correction.test.sql        |   84 ++
  .../tests/database/m3_03_plan_proposals.test.sql   | 1012 ++++++++++++++++
- 48 files changed, 9193 insertions(+), 219 deletions(-)
+ 48 files changed, 9309 insertions(+), 219 deletions(-)
 ```
 
 **Nothing was deleted or renamed.** Non-obvious purposes added by the second
@@ -608,10 +613,21 @@ Relevant `vercel-react-best-practices` checks applied:
 
 ### Tests and final local results
 
-**CI for the previous review target SHA
-`b597ee017a377ce5418a280041f4b4f56aa5e8aa`: green, but superseded by the
-correction target. CI for `cf60ed64a29840da503fc8e52956f1db889a9e9a`
-is pending the lead push.**
+**CI for correction target SHA
+`cf60ed64a29840da503fc8e52956f1db889a9e9a`: red in Vitest and superseded.
+CI for `a70a4ef48a94b66b8ac03cc4e4ccc337cf7b7254` is pending the lead push.**
+
+[Run 31633879309](https://github.com/mattiss01/fittip/actions/runs/31633879309)
+failed only in Vitest at
+`src/components/plan-proposal/plan-proposal-manager.test.tsx:102`: the
+owner-local rollover test expected `2026-08-13` but observed the manually edited
+`2026-08-15`. The database reset, lint, security/performance advisors, pgTAP,
+concurrency harnesses, production build, and every 390px browser flow including
+M3-03 passed. Vercel deployment completed. The test had advanced a fixed 101 ms
+synchronously even though the component schedules the calculated next calendar
+boundary and React's external-store update may flush asynchronously under suite
+load. The correction awaits the next scheduled fake timer and React flush while
+retaining the exact expected new local date.
 
 [Run 31613150945](https://github.com/mattiss01/fittip/actions/runs/31613150945)
 completed successfully on 12 August 2026. Its three jobs passed: lint, types,
@@ -816,17 +832,31 @@ The earlier hosted verification covers only repository migration
 apply that exact committed migration in timestamp order and the lead must record
 matching remote history, the unchanged private-function privilege boundary,
 and hosted validation that a proposal containing a positive integer duration
-above 240 persists while a non-positive duration remains rejected. CI and a
-READY Preview for `cf60ed64a29840da503fc8e52956f1db889a9e9a` are also pending.
+above 240 persists while a non-positive duration remains rejected. The Vercel
+deployment for `cf60ed64a29840da503fc8e52956f1db889a9e9a` completed, but its CI
+run was red and is superseded. CI and a matching READY Preview for
+`a70a4ef48a94b66b8ac03cc4e4ccc337cf7b7254` are pending.
+
+### Midnight-rollover CI correction evidence
+
+The exact test-only correction is
+`a70a4ef48a94b66b8ac03cc4e4ccc337cf7b7254`. It changes no production code,
+schema, API, behavior, fixture, authorization, privacy boundary, or provider
+path. The red-capable focused file passed alone before the correction, matching
+the CI-only/order-sensitive symptom, and the first local whole-suite run also
+passed. After the correction, the focused file passed ten consecutive runs and
+the whole suite passed again: 78 files and 810 tests. The expected value remains
+`2026-08-13`; no assertion or behavior was weakened. `git diff --check` is
+clean.
 
 ### Independent reviewer checklist: complete ticket
 
 Review exact pushed commit
-`cf60ed64a29840da503fc8e52956f1db889a9e9a` and exact range
-`git diff bd859db..cf60ed64a29840da503fc8e52956f1db889a9e9a`. Reconcile the
+`a70a4ef48a94b66b8ac03cc4e4ccc337cf7b7254` and exact range
+`git diff bd859db..a70a4ef48a94b66b8ac03cc4e4ccc337cf7b7254`. Reconcile the
 48-file manifest above against the diff. Use the lead-recorded CI run for this
-SHA; do not use the superseded `b597ee0`, `e40c0b5`, `85d5052`, `112caa2`, or
-`ac2f603` runs or re-run CI's suites.
+SHA; do not use the superseded `cf60ed6`, `b597ee0`, `e40c0b5`, `85d5052`,
+`112caa2`, or `ac2f603` runs or re-run CI's suites.
 
 Judge what CI cannot:
 
