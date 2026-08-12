@@ -85,9 +85,25 @@ const PLAN_BODY = JSON.stringify({
 function context(overrides: Partial<CoachAIContext> = {}): CoachAIContext {
   return {
     today: "2026-08-10",
+    horizonStartDate: "2026-08-10",
+    horizonEndDate: "2026-11-01",
     targetableGoals: [],
     historicalGoals: [],
+    goalsOutsideHorizon: [],
     memory: [],
+    trainingHistory: {
+      windowStartDate: "2026-06-16",
+      windowEndDate: "2026-08-10",
+      sessionsInWindow: 0,
+      sessionsIncluded: 0,
+      completions: [],
+      missedPlannedSessions: [],
+    },
+    planCommitments: [],
+    hasSafetySignal: false,
+    planningNote: null,
+    regenerationFeedback: null,
+    previousProposal: null,
     ...overrides,
   };
 }

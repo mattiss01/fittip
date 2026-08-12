@@ -204,6 +204,49 @@ The whole-context byte ceiling remains a denial.
 - Nothing here approves a provider, model, retention term, or spend. ADR-006 and
   M3-01B's open decisions continue to govern those.
 
+## Recorded amendments to the tuning parameters
+
+The Consequences above name the session cap, the per-field truncation lengths,
+and the forward-window length as tuning parameters that may be amended without
+reopening this ADR, provided the amendment is recorded here. This section is
+that record. No decision above is changed.
+
+**Set by M3-02 on 11 August 2026**, for `create_roadmap`:
+
+| Parameter                            | Draft | Set    |
+| ------------------------------------ | ----- | ------ |
+| Session cap within the 8-week window | none  | 20     |
+| `note` truncation                    | 2000  | 400    |
+| `replacement_description` truncation | 500   | 240    |
+| `correction_reason` truncation       | 500   | 240    |
+| Forward locked-entry window          | none  | 180 days |
+
+The reason the drafted free-text lengths could not stand: 20 sessions at a
+2,000-character `note` allowance is 40,000 bytes for that one field, against a
+5,800-byte allocation for the whole training-history source and a 24,000-byte
+whole-context ceiling. The drafted number cannot coexist with any session count
+worth having.
+
+400 characters is two to six times the longest note in the shared synthetic
+corpus at `docs/decisions/support/m3-01b-bakeoff/`, where a serialized session
+measures 393-625 bytes with a mean of 511. Truncation therefore rarely fires,
+and decision 4's argument still holds when it does, because the explaining
+sentence comes first.
+
+M3-02 also adds a **byte** trim alongside the count trim: sessions are added
+newest-first until either the cap or the allocation is reached. This stays
+within decision 7's "bounded reductions, not denials", and `sessionsIncluded`
+against `sessionsInWindow` continues to disclose it, so a trimmed window never
+reads as a complete one. History is the one source whose size the owner cannot
+see or curate, which is why it reduces rather than denying while goals and
+memory deny with the source named.
+
+The forward window is 180 days for `create_roadmap`. Decision 5 requires it to
+be longer here than for `create_seven_day_plan`, which M3-03 sets.
+
+These figures are recorded in the M3-02 validation record with their arithmetic
+and are subject to the product owner's approval of that record.
+
 ## Related decision made in the same session
 
 The compose step for a plan proposal introduces a **planning note** — owner

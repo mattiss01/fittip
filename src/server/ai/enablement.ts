@@ -158,6 +158,34 @@ export function requireCoachAILiveEnablement(
 }
 
 /**
+ * The credential itself, for the composition root and nothing else.
+ *
+ * `requireCoachAILiveEnablement` deliberately checks the credential and does
+ * not return it, so that the gate's own result cannot carry a secret into a
+ * log, an error, or a telemetry record. But the adapter needs the value, and
+ * something has to read it. Naming the variable in a second module would put
+ * the secret's name in two places, and `ai-privacy.test.ts` asserts that it
+ * lives in exactly one — so the read happens here, behind a function that
+ * returns the value and nothing about it.
+ *
+ * Call it only after the gate has passed. It repeats the gate's shape checks
+ * rather than trusting the caller to have run them.
+ */
+export function readCoachAICredential(
+  environment: Record<string, string | undefined> = process.env,
+): string {
+  const credential = environment[CREDENTIAL_VARIABLE];
+  if (
+    typeof credential !== "string" ||
+    credential.trim().length < MINIMUM_CREDENTIAL_LENGTH ||
+    credential.trim() !== credential
+  ) {
+    throw new CoachAIError("credential_unavailable");
+  }
+  return credential;
+}
+
+/**
  * Any `NEXT_PUBLIC_*` variable naming AI generically or naming a model
  * provider. Next.js inlines those into client code, so their mere existence
  * means the boundary has already been crossed.

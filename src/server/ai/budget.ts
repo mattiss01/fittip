@@ -42,7 +42,10 @@ export const COACH_AI_FIXTURE_LIMITS: CoachAILimits = {
   maxRequestsPerOwnerWindow: 6,
   maxRequestsPerOperationWindow: 3,
   maxConcurrentRequests: 1,
-  maxInputTokens: 8_000,
+  // Tracks the live ceiling so a fixture run cannot accept a context the live
+  // path refuses, or refuse one it accepts. The fixture rate card is zero, so
+  // this number buys nothing and costs nothing here.
+  maxInputTokens: 10_000,
   maxOutputTokens: 2_000,
   deadlineMs: 30_000,
   maxAttempts: 1,
@@ -60,8 +63,19 @@ export const COACH_AI_FIXTURE_LIMITS: CoachAILimits = {
  * description to the plan schema, and a ceiling that fits today's schema but
  * not the next one produces a truncation that looks exactly like a model
  * failure. `perRequestCostCeilingMicroUsd` drops from the fixture value of
- * 250,000 to 8,000 because a reservation costs 5,200 at luna's rates, and a
- * ceiling 48 times the thing it bounds is not a ceiling.
+ * 250,000 to 8,000 because a reservation costs 5,600 at luna's rates, and a
+ * ceiling 45 times the thing it bounds is not a ceiling.
+ *
+ * `maxInputTokens` rose from M3-01B's 8,000 to 10,000 on the product owner's
+ * decision of 12 August 2026, so that ADR-013's full 20-session training window
+ * fits alongside the other sources at their approved allocations rather than
+ * being trimmed to about 11. `context.ts` carries the derivation. The price is
+ * paid on every call and not only on a large one, because a reservation charges
+ * the ceiling before the call: 1,600 micro-USD of held input became 2,000, so
+ * the 2,000,000 micro-USD daily ceiling admits 357 generations a day instead of
+ * 384. Settlement still reconciles to the tokens the provider reports, so a
+ * generation that succeeds costs what it actually used; the reduction applies
+ * to the hold, and to calls that never reconcile.
  *
  * These numbers are the local fast path. The authoritative ceilings are the
  * database's, in `reserve_ai_spend`, because this process cannot be trusted to
@@ -74,7 +88,7 @@ export const COACH_AI_LIVE_LIMITS: CoachAILimits = {
   maxRequestsPerOwnerWindow: 6,
   maxRequestsPerOperationWindow: 3,
   maxConcurrentRequests: 1,
-  maxInputTokens: 8_000,
+  maxInputTokens: 10_000,
   maxOutputTokens: 3_000,
   deadlineMs: 30_000,
   // Decision 5: zero automatic retries. A call that fails after the provider
@@ -98,26 +112,15 @@ export type CoachAIRateCard = {
 export type CoachAIRateCardSource = () => CoachAIRateCard | null;
 
 /**
- * `gpt-5.6-luna` at $0.20 / $1.20 per million input / output tokens, read on
- * 10 August 2026.
+ * There is no rate card in this module, deliberately.
  *
- * M3-01B decision 6: the rate card is a constant in this repository, versioned
- * and updated by deploy, never fetched at runtime — a price lookup that can
- * fail is one more thing between the owner and a proposal. Past `validUntil`
- * the price is stale, stale is unknown, and unknown denies, because a wrong
- * price near a hard ceiling is worse than no proposal.
- *
- * Against `COACH_AI_LIVE_LIMITS` a reservation charges 8,000 x 200,000/1e6 plus
- * 3,000 x 1,200,000/1e6 = 5,200 micro-USD, inside the 8,000 per-request
- * ceiling with headroom.
+ * A price that lives beside the mechanism that spends it can drift from the
+ * model it prices, which is exactly what M3-01B limitation 17 recorded: a
+ * `FITTIP_AI_MODEL` of `gpt-5.5` against luna's card would have priced every
+ * reservation 25x low. Every rate card now belongs to a provider/model binding
+ * in `src/server/ai/model-binding.ts` and cannot be obtained without naming the
+ * model it prices.
  */
-export const OPENAI_GPT_5_6_LUNA_RATE_CARD: CoachAIRateCard = {
-  version: "openai-gpt-5.6-luna-2026-08-10",
-  currency: "USD",
-  inputMicroUsdPerMillionTokens: 200_000,
-  outputMicroUsdPerMillionTokens: 1_200_000,
-  validUntil: "2027-02-01T00:00:00.000Z",
-};
 
 /**
  * A rate card source over a fixed card. Injected rather than read from module

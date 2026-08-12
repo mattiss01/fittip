@@ -34,3 +34,4 @@ Validation records and their visual evidence are grouped by milestone.
 
 - [M3-01 server-only AI boundary and fixture adapters](M3/M3-01-VALIDATION.md) — in development; builder handoff complete, independent review, CI, Preview verification, and acceptance pending
 - [M3-01B one approved real-provider adapter](M3/M3-01B-VALIDATION.md) — accepted 10 August 2026 against the independently reviewed commit `e5adc9b` after two review rounds; migration applied and verified on the founder project; limitation 17 carries into M3-02 as a hard constraint
+- [M3-02 high-level roadmap proposal](M3/M3-02-VALIDATION.md) — **incomplete**; commit `94880d6` delivers the ADR-015 schema, the `fittip.roadmap.v2` contract, the per-source context allocation, and the composition root that closes M3-01B limitation 17. The repository, server actions, `390x844` interface, and Playwright flow are not delivered, so the commit is not ready for independent review or acceptance

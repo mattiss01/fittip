@@ -1282,11 +1282,351 @@ export type Database = {
         };
         Relationships: [];
       };
+      roadmap_generation_requests: {
+        Row: {
+          completion_token: string;
+          created_at: string;
+          expected_head_revision: number;
+          failure_code: string | null;
+          id: string;
+          idempotency_key: string;
+          planning_note_hash: string | null;
+          previous_proposal_id: string | null;
+          proposal_id: string | null;
+          regeneration_feedback_hash: string | null;
+          regeneration_number: number;
+          request_fingerprint: string;
+          requested_end_date: string;
+          requested_start_date: string;
+          status: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          completion_token?: string;
+          created_at?: string;
+          expected_head_revision: number;
+          failure_code?: string | null;
+          id?: string;
+          idempotency_key: string;
+          planning_note_hash?: string | null;
+          previous_proposal_id?: string | null;
+          proposal_id?: string | null;
+          regeneration_feedback_hash?: string | null;
+          regeneration_number?: number;
+          request_fingerprint: string;
+          requested_end_date: string;
+          requested_start_date: string;
+          status?: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          completion_token?: string;
+          created_at?: string;
+          expected_head_revision?: number;
+          failure_code?: string | null;
+          id?: string;
+          idempotency_key?: string;
+          planning_note_hash?: string | null;
+          previous_proposal_id?: string | null;
+          proposal_id?: string | null;
+          regeneration_feedback_hash?: string | null;
+          regeneration_number?: number;
+          request_fingerprint?: string;
+          requested_end_date?: string;
+          requested_start_date?: string;
+          status?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_generation_requests_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      roadmap_heads: {
+        Row: {
+          current_version_id: string | null;
+          revision: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          current_version_id?: string | null;
+          revision?: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          current_version_id?: string | null;
+          revision?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_heads_current_fkey";
+            columns: ["current_version_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "roadmap_versions";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "roadmap_heads_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      roadmap_proposal_decisions: {
+        Row: {
+          accepted_version_id: string | null;
+          decided_at: string;
+          decision: string;
+          proposal_id: string;
+          user_id: string;
+        };
+        Insert: {
+          accepted_version_id?: string | null;
+          decided_at?: string;
+          decision: string;
+          proposal_id: string;
+          user_id: string;
+        };
+        Update: {
+          accepted_version_id?: string | null;
+          decided_at?: string;
+          decision?: string;
+          proposal_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_proposal_decisions_accepted_fkey";
+            columns: ["accepted_version_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "roadmap_versions";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "roadmap_proposal_decisions_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "roadmap_proposal_decisions_proposal_fkey";
+            columns: ["proposal_id", "user_id"];
+            isOneToOne: true;
+            referencedRelation: "roadmap_proposals";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      roadmap_proposal_sources: {
+        Row: {
+          ordinal: number;
+          proposal_id: string;
+          record_id: string;
+          revision_id: string | null;
+          revision_number: number | null;
+          source_kind: string;
+          user_id: string;
+        };
+        Insert: {
+          ordinal: number;
+          proposal_id: string;
+          record_id: string;
+          revision_id?: string | null;
+          revision_number?: number | null;
+          source_kind: string;
+          user_id: string;
+        };
+        Update: {
+          ordinal?: number;
+          proposal_id?: string;
+          record_id?: string;
+          revision_id?: string | null;
+          revision_number?: number | null;
+          source_kind?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_proposal_sources_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "roadmap_proposal_sources_proposal_fkey";
+            columns: ["proposal_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "roadmap_proposals";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      roadmap_proposals: {
+        Row: {
+          content: Json;
+          created_at: string;
+          generation_request_id: string;
+          id: string;
+          model_code: string;
+          origin: string;
+          planning_note: string | null;
+          prompt_version: string;
+          provider_code: string;
+          rate_card_version: string;
+          regeneration_feedback: string | null;
+          schema_version: string;
+          source_proposal_id: string | null;
+          spend_reservation_id: string | null;
+          user_id: string;
+        };
+        Insert: {
+          content: Json;
+          created_at?: string;
+          generation_request_id: string;
+          id?: string;
+          model_code: string;
+          origin: string;
+          planning_note?: string | null;
+          prompt_version: string;
+          provider_code: string;
+          rate_card_version: string;
+          regeneration_feedback?: string | null;
+          schema_version: string;
+          source_proposal_id?: string | null;
+          spend_reservation_id?: string | null;
+          user_id: string;
+        };
+        Update: {
+          content?: Json;
+          created_at?: string;
+          generation_request_id?: string;
+          id?: string;
+          model_code?: string;
+          origin?: string;
+          planning_note?: string | null;
+          prompt_version?: string;
+          provider_code?: string;
+          rate_card_version?: string;
+          regeneration_feedback?: string | null;
+          schema_version?: string;
+          source_proposal_id?: string | null;
+          spend_reservation_id?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_proposals_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "roadmap_proposals_request_fkey";
+            columns: ["generation_request_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "roadmap_generation_requests";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "roadmap_proposals_source_fkey";
+            columns: ["source_proposal_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "roadmap_proposals";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "roadmap_proposals_spend_fkey";
+            columns: ["spend_reservation_id"];
+            isOneToOne: false;
+            referencedRelation: "ai_spend_reservations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      roadmap_versions: {
+        Row: {
+          accepted_at: string;
+          content: Json;
+          id: string;
+          previous_version_id: string | null;
+          source_proposal_id: string;
+          user_id: string;
+          version_number: number;
+        };
+        Insert: {
+          accepted_at?: string;
+          content: Json;
+          id?: string;
+          previous_version_id?: string | null;
+          source_proposal_id: string;
+          user_id: string;
+          version_number: number;
+        };
+        Update: {
+          accepted_at?: string;
+          content?: Json;
+          id?: string;
+          previous_version_id?: string | null;
+          source_proposal_id?: string;
+          user_id?: string;
+          version_number?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_versions_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "roadmap_versions_previous_fkey";
+            columns: ["previous_version_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "roadmap_versions";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "roadmap_versions_proposal_fkey";
+            columns: ["source_proposal_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "roadmap_proposals";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
+      accept_roadmap_proposal: {
+        Args: { p_expected_head_revision: number; p_proposal_id: string };
+        Returns: Database["public"]["CompositeTypes"]["roadmap_acceptance_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "roadmap_acceptance_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       apply_goal_change: {
         Args: {
           p_activity_areas?: string[];
@@ -1350,9 +1690,76 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      apply_roadmap_proposal_change: {
+        Args: { p_content?: Json; p_operation: string; p_proposal_id: string };
+        Returns: Database["public"]["CompositeTypes"]["roadmap_proposal_change_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "roadmap_proposal_change_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      begin_roadmap_generation: {
+        Args: {
+          p_end_date: string;
+          p_expected_head_revision: number;
+          p_idempotency_key: string;
+          p_planning_note?: string;
+          p_previous_proposal_id?: string;
+          p_regeneration_feedback?: string;
+          p_request_fingerprint: string;
+          p_start_date: string;
+        };
+        Returns: Database["public"]["CompositeTypes"]["roadmap_generation_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "roadmap_generation_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      finish_roadmap_generation: {
+        Args: {
+          p_completion_token: string;
+          p_content?: Json;
+          p_model_code?: string;
+          p_outcome: string;
+          p_planning_note?: string;
+          p_prompt_version?: string;
+          p_provider_code?: string;
+          p_rate_card_version?: string;
+          p_regeneration_feedback?: string;
+          p_safe_failure_code?: string;
+          p_schema_version?: string;
+          p_sources?: Json;
+          p_spend_reservation_id?: string;
+        };
+        Returns: Database["public"]["CompositeTypes"]["roadmap_generation_result"];
+        SetofOptions: {
+          from: "*";
+          to: "roadmap_generation_result";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       is_valid_training_measurement: {
         Args: { p_mode: string; p_value: Json };
         Returns: boolean;
+      };
+      record_roadmap_memory_candidates: {
+        Args: {
+          p_candidates: Json;
+          p_completion_token: string;
+          p_expected_memory_revision: number;
+        };
+        Returns: Database["public"]["CompositeTypes"]["roadmap_memory_candidate_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "roadmap_memory_candidate_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       reserve_ai_spend: {
         Args: {
@@ -1368,6 +1775,24 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      roadmap_content_is_valid: {
+        Args: { p_content: Json; p_end_date: string; p_start_date: string };
+        Returns: boolean;
+      };
+      roadmap_normalize_owner_text: {
+        Args: { p_value: string };
+        Returns: string;
+      };
+      roadmap_owner_text_hash: { Args: { p_value: string }; Returns: string };
+      roadmap_technical_codes_are_accepted: {
+        Args: {
+          p_has_spend_reservation: boolean;
+          p_model_code: string;
+          p_provider_code: string;
+          p_rate_card_version: string;
+        };
+        Returns: boolean;
       };
       save_manual_plan_version: {
         Args: {
@@ -1498,6 +1923,31 @@ export type Database = {
         publication_id: string | null;
         goal_collection_revision: number | null;
         memory_collection_revision: number | null;
+      };
+      roadmap_acceptance_receipt: {
+        proposal_id: string | null;
+        version_id: string | null;
+        head_revision: number | null;
+        result: string | null;
+      };
+      roadmap_generation_receipt: {
+        generation_id: string | null;
+        completion_token: string | null;
+        state: string | null;
+        regeneration_number: number | null;
+        proposal_id: string | null;
+      };
+      roadmap_generation_result: {
+        state: string | null;
+        proposal_id: string | null;
+      };
+      roadmap_memory_candidate_receipt: {
+        collection_revision: number | null;
+        item_ids: string[] | null;
+      };
+      roadmap_proposal_change_receipt: {
+        proposal_id: string | null;
+        result: string | null;
       };
     };
   };

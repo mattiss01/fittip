@@ -14,36 +14,218 @@ import type {
   CoachAIGoalReference,
   CoachAIMemoryReference,
   CoachAIOperation,
+  CoachAIPreviousProposalReference,
+  CoachAISourceReference,
 } from "@/server/ai/contracts";
 import { CoachAIError } from "@/server/ai/errors";
+import {
+  PLANNING_NOTE_MAX_LENGTH,
+  REGENERATION_FEEDBACK_MAX_LENGTH,
+} from "@/server/ai/owner-text";
+import {
+  selectTrainingHistoryContext,
+  type TrainingHistoryRecords,
+} from "@/server/training/training-history-context";
 
 /**
  * Context assembly: the one place that decides which owner records become
- * provider input. Eligibility comes from the two accepted server gates
- * (`selectActiveGoalContext` for goals, `selectActiveMemoryContext` for memory);
- * this module adds the field allowlist, the reference ceilings, and the
- * serialized size ceiling, and fails closed on anything it cannot vouch for.
+ * provider input.
+ *
+ * Eligibility comes from the accepted server gates — `selectActiveGoalContext`
+ * for goals (ADR-012), `selectActiveMemoryContext` for memory (M2-02), and
+ * `selectTrainingHistoryContext` for training history (ADR-013). This module
+ * adds the field allowlist, the per-source ceilings, and the whole-context
+ * ceiling, and fails closed on anything it cannot vouch for.
+ *
+ * ## Why the budget is per source
+ *
+ * ADR-014's closing finding: the old shape allowed 40 memory items at
+ * `MEMORY_CONTENT_MAX_LENGTH` 1000 against a single 12,000-byte total. Forty
+ * maximal items is 40,000 bytes — more than three times the ceiling the code
+ * enforced — and assembly *denied* rather than reducing, so an owner who
+ * curated a large memory could not generate at all and the error did not say
+ * which source was at fault. Both halves of that are fixed here: every source
+ * carries its own allocation, and a refusal names the source.
+ *
+ * ## What each behaviour on overflow is, and where it was approved
+ *
+ * - Goals, memory, and the previous proposal **deny**, naming the source.
+ *   M3-02 decision 4a: "When any source exceeds its approved byte allocation,
+ *   generation is unavailable with that source named; nothing is silently
+ *   truncated beyond ADR-013's already approved per-field truncation."
+ * - Training history and plan commitments are **trimmed by count and
+ *   disclosed**, which ADR-013 decisions 1, 5 and 7 approve as a bounded
+ *   reduction rather than a denial.
+ * - The planning note and the feedback are **rejected at compose**, per
+ *   ADR-014 decision 3, before they ever reach this module.
  */
+
+export type CoachAIContextSourceName =
+  | "targetable_goals"
+  | "historical_goals"
+  | "memory"
+  | "training_history"
+  | "plan_commitments"
+  | "planning_note"
+  | "regeneration_feedback"
+  | "previous_proposal"
+  | "whole_context";
+
+/**
+ * A refusal that can say which source was too large.
+ *
+ * It keeps `context_too_large` as its code, so a caller that maps codes to
+ * screens is unaffected, and adds the source for the compose screen, which
+ * decision 4a requires to name it.
+ */
+export class CoachAIContextTooLargeError extends CoachAIError {
+  constructor(readonly source: CoachAIContextSourceName) {
+    super("context_too_large");
+    this.name = "CoachAIContextTooLargeError";
+  }
+}
 
 export type CoachAIContextLimits = {
   maxTargetableGoals: number;
   maxHistoricalGoals: number;
   maxMemoryItems: number;
-  maxSerializedBytes: number;
+  maxTrainingSessions: number;
+  maxPlanCommitments: number;
+  /** Per-source ceilings on the serialized bytes of that source alone. */
+  bytes: {
+    targetableGoals: number;
+    historicalGoals: number;
+    memory: number;
+    /**
+     * The whole `trainingHistory` object: the completion list, the missed-session
+     * list, and the window envelope that carries the disclosure counts.
+     */
+    trainingHistory: number;
+    /**
+     * The share of `trainingHistory` the completion list alone may occupy.
+     * Sessions are added newest-first until this binds, which is the trim
+     * ADR-013 decisions 1 and 7 approve. The remainder of `trainingHistory` is
+     * reserved for the miss list and the envelope, neither of which trims by
+     * bytes, so neither may be allowed to push the source into a denial.
+     */
+    trainingHistoryCompletions: number;
+    planCommitments: number;
+    planningNote: number;
+    regenerationFeedback: number;
+    previousProposal: number;
+    /** The sum of the parts plus the envelope. Never smaller than the sum. */
+    total: number;
+  };
 };
 
+/**
+ * The approved per-source allocation for `create_roadmap`, derived on
+ * 11 August 2026, re-derived on 12 August 2026 against a raised input ceiling,
+ * and recorded with its arithmetic in the M3-02 validation record.
+ *
+ * The binding constraint is not ADR-013's "roughly 30,000 bytes". It is
+ * `maxInputTokens` together with the adapter's refusal guard, which estimates
+ * four characters per token over the **whole message set**. The measured static
+ * prefix for this operation is 5,810 characters — `openai-prompt.test.ts` caps
+ * it at 6,000 — and the user-message wrapper is 32, so the context ceiling is
+ * `4 * maxInputTokens` less roughly 6,064.
+ *
+ * The first derivation sized the context to M3-01B's `maxInputTokens: 8_000`,
+ * which left 24,000 bytes and gave training history 5,800 — about 11 sessions
+ * at the corpus's largest session, against ADR-013's 20-session cap. The
+ * product owner decided on 12 August 2026 to raise the ceiling instead, so the
+ * full window fits. This table is the re-derivation. Only the training-history
+ * line moved; every other source keeps the allocation approved on 11 August.
+ *
+ * Every number is either fixed by an accepted ADR or measured against the
+ * shared synthetic corpus in `docs/decisions/support/m3-01b-bakeoff/`, whose 24
+ * sessions serialize through `toCompletionReference` to 323-501 bytes, mean
+ * 392, and whose memory items run 177-1,082 bytes:
+ *
+ * | source              | items | bytes  | basis                             |
+ * | ------------------- | ----- | ------ | --------------------------------- |
+ * | targetable goals    | 12    |  4,000 | 12 x 326-byte worst case = 3,912  |
+ * | historical goals    |  8    |  2,400 | 8 x 300; background only          |
+ * | memory              | 20    |  5,600 | corpus mean 420 B/item, max 1,082 |
+ * | - history: sessions | 20    | 10,200 | 20 x the 501-byte corpus worst    |
+ * | - history: misses   | 20    |  5,000 | 20 x 249-byte structural worst    |
+ * | - history: envelope |       |    200 | window dates and counts: 147      |
+ * | training history    |       | 15,400 | the three lines above             |
+ * | plan commitments    | 12    |  1,400 | about 115 B/entry                 |
+ * | planning note       |  1    |  1,200 | ADR-014 decision 4, fixed         |
+ * | regeneration note   |  1    |    600 | ADR-014 decision 4, fixed         |
+ * | previous proposal   |  1    |  2,200 | reduced form, regeneration only   |
+ * | sum of parts        |       | 32,800 |                                   |
+ * | envelope + total    |       | 33,700 | 900 for keys and dates; 769 used  |
+ *
+ * That total sets the ceiling: `ceil((6_000 + 64 + 33_700) / 4)` is 9,941, so
+ * `maxInputTokens` is 10,000 — the smallest hundred above the requirement,
+ * because a reservation charges the whole ceiling before the call and every
+ * token of slack is money held on every generation.
+ *
+ * The sum of the parts is below the total, so the whole-context check can only
+ * fire after a per-source check has already named a source — which is what
+ * keeps "generation is unavailable" from being an error nobody can act on.
+ *
+ * Two sources behave differently on overflow, and the difference is deliberate.
+ * Goals, memory, the note and the previous proposal are things the owner can
+ * see and curate, so exceeding them denies with the source named (decision 4a).
+ * Training history is not: it is whatever the owner happened to log, and
+ * refusing to generate because they trained a lot would be a refusal they could
+ * not act on. ADR-013 decisions 1 and 7 make that a bounded, disclosed
+ * reduction instead.
+ *
+ * That is also why training history is split into a completion sub-budget and a
+ * whole-source ceiling. Only the completion list trims by bytes. The miss list
+ * trims by count alone, up to 20 entries of 249 bytes, and the envelope is
+ * fixed — so a whole-source ceiling that did not reserve room for both would
+ * turn a full miss list into exactly the denial ADR-013 forbids.
+ */
 export const COACH_AI_CONTEXT_LIMITS = {
   create_roadmap: {
     maxTargetableGoals: 12,
-    maxHistoricalGoals: 10,
-    maxMemoryItems: 40,
-    maxSerializedBytes: 12_000,
+    maxHistoricalGoals: 8,
+    maxMemoryItems: 20,
+    maxTrainingSessions: 20,
+    maxPlanCommitments: 12,
+    bytes: {
+      targetableGoals: 4_000,
+      historicalGoals: 2_400,
+      memory: 5_600,
+      trainingHistory: 15_400,
+      trainingHistoryCompletions: 10_200,
+      planCommitments: 1_400,
+      planningNote: 1_200,
+      regenerationFeedback: 600,
+      previousProposal: 2_200,
+      total: 33_700,
+    },
   },
+  // M3-03 owns the seven-day plan. This is the same shape with a shorter
+  // history allocation and no regeneration lineage yet, so the type is
+  // satisfied without this ticket deciding an operation it does not implement.
+  // Its completion sub-budget is left at the 5,800 M3-02 derived, because a
+  // week's plan is not a roadmap and M3-03 owns that number; only the
+  // miss-list and envelope reservation is applied, so this operation cannot
+  // carry the denial path either.
   create_seven_day_plan: {
     maxTargetableGoals: 12,
     maxHistoricalGoals: 5,
-    maxMemoryItems: 40,
-    maxSerializedBytes: 10_000,
+    maxMemoryItems: 20,
+    maxTrainingSessions: 20,
+    maxPlanCommitments: 12,
+    bytes: {
+      targetableGoals: 4_000,
+      historicalGoals: 1_600,
+      memory: 5_600,
+      trainingHistory: 11_000,
+      trainingHistoryCompletions: 5_800,
+      planCommitments: 1_400,
+      planningNote: 1_200,
+      regenerationFeedback: 600,
+      previousProposal: 2_200,
+      total: 28_500,
+    },
   },
 } as const satisfies Record<CoachAIOperation, CoachAIContextLimits>;
 
@@ -77,12 +259,29 @@ export type CoachAIOwnedRecords = {
   memoryCollectionRevision: number;
   goals: CoachAIGoalRecord[];
   memory: MemoryItemView[];
+  training: TrainingHistoryRecords;
+  /**
+   * The exact records that informed the request, as ids and revisions. Carried
+   * from the context source rather than derived here, because only the source
+   * knows which revision of each record it actually read.
+   */
+  sources?: CoachAISourceReference[];
+};
+
+export type CoachAIComposeInput = {
+  horizonStartDate: string;
+  horizonEndDate: string;
+  planningNote: string | null;
+  regenerationFeedback: string | null;
+  previousProposal: CoachAIPreviousProposalReference | null;
 };
 
 export type CoachAIAssembledContext = {
   context: CoachAIContext;
   serialized: string;
   serializedBytes: number;
+  /** Per-source byte usage, for the compose disclosure and for tests. */
+  usage: Record<Exclude<CoachAIContextSourceName, "whole_context">, number>;
   /**
    * Which owner-scoped records informed the request. Returned to the domain
    * caller so a proposal can record its provenance; deliberately absent from
@@ -94,40 +293,149 @@ export type CoachAIAssembledContext = {
 export function buildCoachAIContext(
   operation: CoachAIOperation,
   records: CoachAIOwnedRecords,
+  compose: CoachAIComposeInput,
   limits: CoachAIContextLimits = COACH_AI_CONTEXT_LIMITS[operation],
 ): CoachAIAssembledContext {
-  if (!isIsoDate(records.today)) {
+  if (
+    !isIsoDate(records.today) ||
+    !isIsoDate(compose.horizonStartDate) ||
+    !isIsoDate(compose.horizonEndDate) ||
+    compose.horizonEndDate <= compose.horizonStartDate
+  ) {
     throw new CoachAIError("context_invalid");
   }
 
   const goals = selectActiveGoalContext(records.goals);
   const memoryItems = selectActiveMemoryContext(records.memory, records.today);
 
-  if (
-    goals.targetable.length > limits.maxTargetableGoals ||
-    goals.historical.length > limits.maxHistoricalGoals ||
-    memoryItems.length > limits.maxMemoryItems
-  ) {
-    throw new CoachAIError("context_too_large");
+  if (goals.targetable.length > limits.maxTargetableGoals) {
+    throw new CoachAIContextTooLargeError("targetable_goals");
   }
+  if (goals.historical.length > limits.maxHistoricalGoals) {
+    throw new CoachAIContextTooLargeError("historical_goals");
+  }
+  if (memoryItems.length > limits.maxMemoryItems) {
+    throw new CoachAIContextTooLargeError("memory");
+  }
+
+  const targetableGoals = goals.targetable.map(toGoalReference);
+  const historicalGoals = goals.historical.map(toGoalReference);
+
+  // Decision 1: name every active goal whose target lies outside the selected
+  // horizon, so the proposal cannot imply that the roadmap reaches it.
+  const goalsOutsideHorizon = targetableGoals
+    .filter(
+      (goal) =>
+        goal.targetDate !== null && goal.targetDate > compose.horizonEndDate,
+    )
+    .map((goal) => goal.id);
+
+  const training = selectTrainingHistoryContext(
+    { ...records.training, horizonEndDate: compose.horizonEndDate },
+    {
+      maxSessions: limits.maxTrainingSessions,
+      // The completion sub-budget, not the whole-source ceiling: the miss list
+      // and the envelope share that ceiling and neither trims by bytes.
+      maxBytes: limits.bytes.trainingHistoryCompletions,
+      maxPlanCommitments: limits.maxPlanCommitments,
+      maxPlanCommitmentBytes: limits.bytes.planCommitments,
+    },
+  );
 
   const context: CoachAIContext = {
     today: records.today,
-    targetableGoals: goals.targetable.map(toGoalReference),
-    historicalGoals: goals.historical.map(toGoalReference),
+    horizonStartDate: compose.horizonStartDate,
+    horizonEndDate: compose.horizonEndDate,
+    targetableGoals,
+    historicalGoals,
+    goalsOutsideHorizon,
     memory: memoryItems.map(toMemoryReference),
+    trainingHistory: training.history,
+    planCommitments: training.planCommitments,
+    hasSafetySignal: training.hasSafetySignal,
+    planningNote: assertBounded(
+      compose.planningNote,
+      PLANNING_NOTE_MAX_LENGTH,
+      "planning_note",
+    ),
+    regenerationFeedback: assertBounded(
+      compose.regenerationFeedback,
+      REGENERATION_FEEDBACK_MAX_LENGTH,
+      "regeneration_feedback",
+    ),
+    previousProposal: compose.previousProposal,
   };
+
+  const usage = {
+    targetable_goals: jsonBytes(context.targetableGoals),
+    historical_goals: jsonBytes(context.historicalGoals),
+    memory: jsonBytes(context.memory),
+    training_history: jsonBytes(context.trainingHistory),
+    plan_commitments: jsonBytes(context.planCommitments),
+    planning_note: jsonBytes(context.planningNote),
+    regeneration_feedback: jsonBytes(context.regenerationFeedback),
+    previous_proposal: jsonBytes(context.previousProposal),
+  };
+
+  // Ordered deliberately: the sources that deny are checked before the total,
+  // so an owner is told which source to reduce rather than that "there is too
+  // much to consider".
+  refuseOver(
+    usage.targetable_goals,
+    limits.bytes.targetableGoals,
+    "targetable_goals",
+  );
+  refuseOver(
+    usage.historical_goals,
+    limits.bytes.historicalGoals,
+    "historical_goals",
+  );
+  refuseOver(usage.memory, limits.bytes.memory, "memory");
+  refuseOver(usage.planning_note, limits.bytes.planningNote, "planning_note");
+  refuseOver(
+    usage.regeneration_feedback,
+    limits.bytes.regenerationFeedback,
+    "regeneration_feedback",
+  );
+  refuseOver(
+    usage.previous_proposal,
+    limits.bytes.previousProposal,
+    "previous_proposal",
+  );
+
+  // Training history and plan commitments were already trimmed to their
+  // allocation with disclosure, so these two can only fire if the selection and
+  // the budget disagree. That is a configuration defect rather than something
+  // an owner did, and it should fail loudly rather than quietly send more than
+  // the budget.
+  //
+  // The whole-source ceiling is checked here, not the completion sub-budget:
+  // the selection bounds completions by bytes but bounds the miss list by count
+  // alone, so the ceiling has to have reserved room for a full miss list. It
+  // has — 5,000 bytes of the 15,400 — which is what stops an owner who missed
+  // twenty planned sessions from being denied a roadmap for it.
+  refuseOver(
+    usage.training_history,
+    limits.bytes.trainingHistory,
+    "training_history",
+  );
+  refuseOver(
+    usage.plan_commitments,
+    limits.bytes.planCommitments + 100,
+    "plan_commitments",
+  );
 
   const serialized = JSON.stringify(context);
   const serializedBytes = byteLength(serialized);
-  if (serializedBytes > limits.maxSerializedBytes) {
-    throw new CoachAIError("context_too_large");
+  if (serializedBytes > limits.bytes.total) {
+    throw new CoachAIContextTooLargeError("whole_context");
   }
 
   return {
     context,
     serialized,
     serializedBytes,
+    usage,
     references: {
       goalIds: [...context.targetableGoals, ...context.historicalGoals].map(
         (goal) => goal.id,
@@ -139,6 +447,33 @@ export function buildCoachAIContext(
 
 export function byteLength(value: string): number {
   return new TextEncoder().encode(value).length;
+}
+
+function jsonBytes(value: unknown): number {
+  return value === null || value === undefined
+    ? 0
+    : byteLength(JSON.stringify(value));
+}
+
+function refuseOver(
+  used: number,
+  allowed: number,
+  source: CoachAIContextSourceName,
+): void {
+  if (used > allowed) throw new CoachAIContextTooLargeError(source);
+}
+
+function assertBounded(
+  value: string | null,
+  max: number,
+  source: CoachAIContextSourceName,
+): string | null {
+  if (value === null) return null;
+  if (typeof value !== "string" || value.length === 0) {
+    throw new CoachAIError("context_invalid");
+  }
+  if (value.length > max) throw new CoachAIContextTooLargeError(source);
+  return value;
 }
 
 /**

@@ -101,6 +101,9 @@ jobs:
       - name: M3-01B concurrent spend reservations
         run: npm run test:m3-01b-concurrency
 
+      - name: M3-02 concurrent roadmap acceptance
+        run: npm run test:m3-02-concurrency
+
       - name: Stop local Supabase stack
         if: always()
         run: npx supabase stop --no-backup
@@ -215,6 +218,16 @@ jobs:
           .github/scripts/with-server.sh 3016 \
             npx playwright test --config=e2e/m2-02.playwright.config.ts \
               --workers=1 --trace=retain-on-failure --output=test-results/m2-02
+
+      - name: M3-02 roadmap proposals
+        # Report every broken flow in one run, not just the first.
+        if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-02
+        run: |
+          .github/scripts/with-server.sh 3017 \
+            npx playwright test --config=e2e/m3-02.playwright.config.ts \
+              --workers=1 --trace=retain-on-failure --output=test-results/m3-02
 
       - name: Upload Playwright report
         if: failure()

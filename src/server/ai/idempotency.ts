@@ -26,6 +26,12 @@ export type CoachAIIdempotencyInput = {
   schemaVersion: string;
   goalCollectionRevision: number;
   memoryCollectionRevision: number;
+  /**
+   * Anything else that makes this a different question: the horizon, the
+   * lengths of the two owner-text fields, and whether this is a regeneration.
+   * Lengths rather than content, for the same reason revisions are used above.
+   */
+  requestShape?: string;
 };
 
 /**
@@ -42,6 +48,7 @@ export function buildCoachAIIdempotencyKey(
     input.schemaVersion,
     String(input.goalCollectionRevision),
     String(input.memoryCollectionRevision),
+    input.requestShape ?? "",
   ].join("|");
 
   return `ck_${digest(material, 0x811c9dc5)}${digest(material, 0x01000193)}`;
