@@ -237,7 +237,12 @@ The server—not the model—must:
 
 - derive owner, timezone, generation date, requested day count, and exact date
   range;
+- refuse before calling the provider when the context minimum is not met — at
+  least one active goal and a resolved owner timezone — naming exactly what is
+  missing (decision 5);
 - fetch eligible M1 training/M2 context records;
+- decide the safety tier from the approved rule rather than leaving it to the
+  model (decision 8);
 - treat the planning note as context with no authority, per ADR-014 decision 4;
 - enforce approved maximum session count, daily duration, horizon duration,
   activity count, target ranges, and intensity rules;
@@ -264,6 +269,14 @@ approval before implementation.
   promise. A later chat feature may offer deeper explanation.
 
 ## Safety behavior
+
+**The rule is tiered by severity**, decided 12 August 2026 (decision 8). An
+ordinary limitation or mild signal pauses **only the affected activity** and the
+rest of the horizon still generates with reduced load, rest, or non-conflicting
+alternatives. A severe, acute, or worsening signal pauses **all generation** and
+returns a rest-focused response. The server decides the tier against the
+approved rule, from explicitly accepted context and the planning note; the model
+never decides it, and an uncertain tier resolves to the more conservative one.
 
 - Plans are suggestions and remain unaccepted.
 - Pain, illness, injury, or severe fatigue yields rest, reduced load, pause, or
@@ -303,7 +316,9 @@ approval before implementation.
 2. The owner chooses the explicit **Propose a plan** action. This opens the
    compose screen; it does not start generation.
 3. On the compose screen the owner selects how many next days to generate, from
-   1 through 7, confirms the start date, and may write a planning note. A
+   1 through 7 — defaulting to 7 first time and to their last count after —
+   confirms the start date, which always opens on today, and may write a
+   planning note. A
    disclosure — collapsed by default so the screen stays short at 390px —
    summarizes what the coach will receive: active goals, active constraints, and
    recent load.
@@ -346,8 +361,23 @@ require approval.
    constraints.
 5. Goal priorities and allocation are visible, and material tradeoffs/
    uncertainty have concise reasons or alternatives.
+5a. Below the context minimum — no active goal, or no resolved timezone — the
+    server refuses before any provider call, names what is missing, and consumes
+    no idempotency key or spend reservation. At or above it, the plan generates
+    and discloses what the coach did not have.
+5b. The day-count selector defaults to 7 on first use and remembers the last
+    count; the start date resets to owner-local today on every request and is
+    never remembered.
+5c. Undecided memory candidates survive the owner leaving the proposal screen,
+    remain `proposed`, and appear on M2-02's review surface. None is ever active
+    without explicit review.
 6. Safety behavior is conservative and non-diagnostic; unsafe or impossible
    output is rejected in full.
+6a. An ordinary limitation pauses only the affected activity and the rest of the
+    horizon still generates. A severe, acute, or worsening signal pauses all
+    generation and returns a rest-focused response advising a qualified
+    professional. The tier is decided by the server, proven by fixtures at both
+    tiers rather than asserted.
 7. The model cannot choose owner/date limits, access records directly, persist
    a plan, or accept its own output.
 8. Proposal/source records are owner-scoped, immutable as generated evidence,
@@ -377,8 +407,17 @@ describes.
   and over-length rejection at the compose step.
 - Memory-extraction cases: valid candidates, an invalid memory section with a
   valid plan section, and proof that no candidate is ever created active.
-- Safety cases for ordinary limitation, pain/illness/severe fatigue, and
-  prohibited diagnosis/treatment/safety claims.
+- Safety cases at **both tiers**: an ordinary limitation leaves the rest of the
+  horizon generating with an alternative, a severe/acute/worsening signal pauses
+  all generation, an ambiguous signal resolves to the conservative tier, and
+  prohibited diagnosis/treatment/safety claims are rejected.
+- Context-minimum cases: no active goal and no timezone each refuse before the
+  provider call with no key or reservation consumed; one active goal plus a
+  timezone and nothing else generates and discloses what was thin.
+- Selector memory: the day count persists across requests and the start date
+  resets to today, including across a date change while the app is open.
+- An undecided memory candidate survives navigation away from the proposal and
+  is still `proposed`, not active.
 - Owner/anonymous/cross-user proposal/source/RLS tests.
 - Idempotency, changed-source, concurrent request, provider failure, invalid
   output, and zero-direct-write tests.
@@ -414,12 +453,19 @@ friend/non-M0-06A-hosted/external behavior was added.
 
 ## Open decisions
 
-Eleven remain here. Five moved: 10 and 11 to M3-03C, 15 and 16 to M3-03B, and 18
-to M3-03C. Decided lines stay below as history.
+**Six remain open**, all of them numeric limits or presentation: 3, 4, 6, 7, 9,
+and 17. Decisions 1, 5, 8, 12, and 13 were answered on 12 August 2026 and are
+recorded below. Five others moved out in the split: 10, 11, and 18 to M3-03C;
+15 and 16 to M3-03B. Decided lines stay below as history.
 
-1. Day-count selector behavior: the approved range is 1–7. Recommendation:
-   default first use to 7 and remember the last choice thereafter while always
-   showing the selector.
+1. ~~Day-count selector behavior~~ — **decided 12 August 2026, together with
+   decision 13.** The selector is always visible and the approved range stays
+   1–7. It defaults to 7 on first use and **remembers the day count** across
+   requests. The **start date always resets to the owner's local today**, and is
+   never remembered. The asymmetry is deliberate: a remembered day count is
+   still correct next week, but a remembered start date is not — last week's
+   "next Monday" is a past or wrong date today, and a silently stale start date
+   is the kind of error nobody notices until the plan covers the wrong days.
 2. ~~Start-date rule~~ — **decided 8 August 2026.** A proposal starts on the
    owner's local today or later, never in the past, so a proposal can never
    contain a day that has already happened. The owner may choose a later start
@@ -428,17 +474,54 @@ to M3-03C. Decided lines stay below as history.
 3. Default units and unit-selection source.
 4. Maximum sessions/day and horizon, activities/session, daily/horizon minutes,
    intensity bounds, and rest requirements.
-5. Minimum required context and behavior when it is incomplete.
+5. ~~Minimum required context and behavior when it is incomplete~~ — **decided
+   12 August 2026: a threshold, then disclosure.** Below the minimum the server
+   refuses to generate and names exactly what is missing, pointing the owner at
+   goals or onboarding; it does not call the provider. At or above it, the plan
+   generates and the response discloses what the coach did not have.
+
+   **The minimum is at least one active goal and a resolved owner timezone.**
+   Training history, accepted memory, and a planning note are all optional — an
+   owner with one goal and nothing else must be able to plan their first week,
+   which is the case a threshold set any higher would block.
+
+   The refusal is a server decision made before the call, not a model judgement,
+   and it is not a safety failure: it says the coach has nothing to work from,
+   in those terms.
 6. Goal-allocation representation and visible tradeoff copy.
 7. Activity target limits and custom measurement schema.
-8. Safety thresholds and whether a signal pauses all generation or only an
-   affected activity.
+8. ~~Safety thresholds and whether a signal pauses all generation or only an
+   affected activity~~ — **decided 12 August 2026: tiered by severity.**
+
+   - **An ordinary limitation or mild signal pauses only the affected
+     activity.** The rest of the horizon still generates, with reduced load,
+     rest, or non-conflicting alternatives. A sore knee must not stop the owner
+     planning a swim.
+   - **A severe, acute, or worsening signal pauses all generation.** The
+     response is rest-focused, states plainly that it is not planning training
+     right now, and advises stopping the relevant activity and consulting a
+     qualified professional.
+
+   Both tiers stay non-diagnostic. The tier is decided by the server against the
+   approved rule, from explicitly accepted context and the planning note — never
+   by the model, and never inferred from free text the owner has not had
+   reviewed. Where the tier is uncertain, take the more conservative one.
+
+   The numeric thresholds that separate the tiers are part of decision 4 and are
+   still open.
 9. Exact proposal layout, alternatives, and reasoning. The regeneration action
    in the original wording moved to M3-03B.
-12. What happens to undecided memory candidates when the owner leaves the
-    proposal screen — discarded, or retained as `proposed` for later review.
-13. Whether the day-count and start-date selectors remember the last choice
-    across requests, given that the planning note deliberately does not.
+12. ~~What happens to undecided memory candidates when the owner leaves the
+    proposal screen~~ — **decided 12 August 2026: retained as `proposed`.** They
+    stay on M2-02's memory review surface for later decision. Candidates are
+    already independent of the plan decision, and a durable constraint the owner
+    mentioned is worth keeping whether or not they liked that week's plan.
+    Retention never makes a candidate active — explicit owner review is still
+    the only path to that, exactly as acceptance criterion 2d requires.
+13. ~~Whether the day-count and start-date selectors remember the last choice
+    across requests~~ — **decided 12 August 2026 with decision 1.** Day count is
+    remembered; start date is not. The planning note continues not to be, per
+    ADR-014 decision 2.
 14. ~~The regeneration cap per horizon~~ — **decided 9 August 2026: 3**, as a
     product guardrail rather than a spend control. **Now owned by
     [M3-03B](M3-03B-PLAN-REGENERATION.md)**, together with the open question of
