@@ -35,6 +35,30 @@ That is a structural probe, so the finding is real. M3-02 must re-test it
 against the real prompt before the roadmap surface is accepted; `gpt-5.5` is
 the fallback at 25× the price and half the speed.
 
+**Correction, 12 August 2026 — the re-test moves to M3-03.** The paragraph above
+stands as the decision that was taken, and it was taken before the roadmap
+contract existed. The contract that emerged cannot express the defect.
+`fittip.roadmap.v2` validates `schemaVersion`, `title`, `summary`, `startDate`,
+`endDate`, `phases`, `assumptions`, `uncertainties`, `reviewPoints`, and
+`safetyConsiderations`; a phase carries `title`, `focus`, `startDate`,
+`endDate`, `goalAttention`, and `milestones`. There is no session, no weekday,
+and no availability anywhere in it, and `findUnknownField` rejects any field not
+on those lists — so the model cannot place a session on a day even if it tries.
+Sessions with dates first exist in `fittip.seven-day-plan`, which is
+[M3-03](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md)'s output. The defect is a
+session-placement defect and it is re-tested there, against M3-03's acceptance
+criterion 4. M3-02 was accepted on 12 August 2026 with it open as that ticket's
+limitation 2; nothing was skipped, the check was simply assigned to a surface
+that could not perform it.
+
+**No live provider call is authorized as of 12 August 2026.** The product owner
+declined one for M3-02 on the same day, once it was established that the only
+thing it could still close there was limitation 3 — whether `gpt-5.6-luna` holds
+the v2 roadmap contract. The adapter and composition root exist and are wired;
+`resolveCoachAIRuntimeMode` returns `fixture` because none of the six
+`FITTIP_AI_*` variables is set anywhere, so every path is fixture-only and no
+spend is possible. M3-03 needs a key and configuration, not adapter work.
+
 **Both context ADRs are accepted as of 9 August 2026.**
 [ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md) (training
 history) and [ADR-014](../../decisions/ADR-014-PLANNING-NOTE-BOUNDARY.md) (the

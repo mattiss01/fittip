@@ -126,6 +126,34 @@ of this ticket and needs no API key to exercise.
 Save the good shapes as fixtures. The provider is reached only inside M3-01B's
 bounded validation budget, once the prompt is settled.
 
+## Inherited 12 August 2026: the luna available-days defect
+
+M3-01B found that on one of two cold-start runs, `gpt-5.6-luna` placed sessions
+outside the athlete's stated available days. The M3 backlog assigned the re-test
+to M3-02, and M3-02 recorded it as its limitation 2 without being able to run
+it: `fittip.roadmap.v2` has no session, no weekday, and no availability field,
+and its validator rejects any field not on the schema's list. The defect cannot
+occur in a roadmap, so it cannot be re-tested against one.
+
+**It is re-tested here**, because `fittip.seven-day-plan` is where a session
+first carries a `date` and where availability is an input. Acceptance criterion
+4 already requires the selected horizon to respect approved availability; this
+note records that the criterion is also discharging a known, named model defect
+rather than only asserting a general property. Two consequences for whoever
+builds this:
+
+- The availability fixtures in the test plan must include the shape that
+  provoked it — a cold start, no prior context, availability stated only in
+  constraints — and not merely a well-formed happy path.
+- A model that fails it is a model decision, not a prompt bug to iterate away.
+  `gpt-5.5` is the recorded fallback at 25× the price and half the speed, and
+  that trade is the product owner's to make.
+
+**No live provider call is authorized.** The product owner declined one on
+12 August 2026. Off-API prompt work against the synthetic corpus is unaffected;
+the re-test needs a real call and therefore needs separate approval with an
+exact call count and cost before it happens.
+
 ## Non-goals
 
 - No accepted plan version, editing, locks, personal-activity persistence, or

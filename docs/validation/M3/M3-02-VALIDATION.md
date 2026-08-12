@@ -1163,15 +1163,26 @@ limitations 2 and 3 — the two that only a live call can close — are untouche
 1. ~~**The ticket is roughly half delivered.**~~ **Closed.** The interface,
    actions, repository, domain operation and mobile flow are delivered, and the
    flow passes at `390x844`.
-2. **The luna available-days defect is not re-tested.** M3-01B recorded that on
-   one of two cold-start runs `gpt-5.6-luna` placed sessions outside the
-   athlete's stated available days. M3-02 owns re-testing it against the real
-   prompt. That belongs to the lead's single live validation pass under
-   separately granted spend approval, and it has **not** happened.
+2. ~~**The luna available-days defect is not re-tested.**~~ **Reassigned to
+   M3-03 on 12 August 2026.** M3-01B recorded that on one of two cold-start runs
+   `gpt-5.6-luna` placed sessions outside the athlete's stated available days,
+   and the M3 backlog gave M3-02 the re-test. M3-02 cannot perform it:
+   `fittip.roadmap.v2` has no session, no weekday, and no availability field,
+   and `findUnknownField` rejects anything not on the schema's list, so the
+   defect cannot occur in a roadmap. Sessions with dates first exist in
+   `fittip.seven-day-plan`. The re-test now sits with M3-03's acceptance
+   criterion 4; see the correction note in `M3-BACKLOG.md` and the inherited
+   section in M3-03. This limitation was open at acceptance and is not being
+   retroactively claimed as satisfied — it moved, it did not close.
 3. **The v2 prompt has never met a model.** It was drafted off-API against the
    synthetic corpus, and every test runs against authored fixtures. Whether
    `gpt-5.6-luna` can actually hold contiguous non-overlapping phase coverage
    and exact planning-note excerpts is unproven.
+
+   **Open by decision, 12 August 2026.** With limitation 2 reassigned, a live
+   call would close only this. The product owner declined one for now. It stays
+   open and unproven rather than being softened; the roadmap surface ships on
+   fixtures, which is what limitation 13 says out loud.
 4. ~~**The context ceiling is tighter than ADR-013 anticipated.**~~ **Closed by
    the product owner's decision of 12 August 2026.** `maxInputTokens` is 10,000,
    the context ceiling is 33,700 bytes, and the training-history allocation of
