@@ -370,3 +370,310 @@ supply:
 
 Do not re-run lint, typecheck, `test:run`, `build`, or the database matrix; cite
 the CI run for `0cf2eca` once the branch is pushed.
+
+---
+
+## Second builder handoff: complete ticket
+
+The first-builder record above remains the permanent foundation handoff. This
+section supersedes only its **incomplete-ticket** warning: M3-03 now has its
+remaining repository, orchestration, safety, server-action, surface, and mobile
+test half. The ticket remains **in development** until the lead pushes it and
+records green CI, a matching READY Preview, the founder-hosted migration and
+security checks, independent review, and product-owner acceptance.
+
+**Exact implementation review target:**
+`ac2f60339503f4ef9de84c15189962b63e4e8037`
+
+**Initial implementation commit:**
+`0cf2eca190a912261730e2a41ab26b258c5a0eb8`
+
+**Second implementation commit:**
+`ac2f60339503f4ef9de84c15189962b63e4e8037`
+
+**Branch:** `ticket/m3-03-selected-horizon-plan-proposal`
+
+**Complete ticket range:**
+`git diff bd859db..ac2f60339503f4ef9de84c15189962b63e4e8037`
+
+### Delivered behavior
+
+- **Plan** now links to **Propose a plan**, a separate
+  `/home/plan/proposal` route. Opening the route performs no generation.
+- The compose screen always shows a 1-7 day selector, remembers the newest
+  requested day count, resets start date to the browser-resolved local today,
+  and opens the planning note empty. The collapsed context disclosure counts
+  active goals, accepted memory, and recorded sessions; it does not require or
+  warn about an absent roadmap.
+- The authenticated action validates owner, timezone, horizon, note, and
+  idempotency input server-side. It loads owner-scoped goals, memory,
+  completions, and current-plan context in parallel. Context-minimum and safety
+  refusals happen before the durable generation claim.
+- The generation service uses the existing fixture composition explicitly with
+  an empty environment, so no deployment setting can make this M3-03 surface
+  live. It claims one database attempt, persists only a validated proposal and
+  minimized sources, then records valid note excerpts as independent proposed
+  memory candidates. Replays do not make another attempt.
+- The server safety service never asks the model for a tier and ignores the
+  planning note for classification. An accepted limitation follows the ordinary
+  fixture branch: conflicting work is left out and non-conflicting recovery
+  sessions continue. An eligible reported completion signal carries no accepted
+  severity in today's schema, so its tier is uncertain and conservatively
+  pauses all generation before a claim. The screen then gives a rest-focused,
+  non-diagnostic stop-and-consult response.
+- The proposal review renders every requested calendar date as its own indexed
+  day card, including explicit planned rest. A session summary shows title,
+  sport, minutes, and primary goal; focus, intent, rationale, alternatives, and
+  unweighted secondary goals sit behind one disclosure.
+- The owner can inspect assumptions, uncertainty and safety notes, continue to
+  an honest M3-04 boundary notice, review proposed memory independently, or
+  reject the proposal. This ticket has no accept, edit, lock, activity-detail,
+  or regeneration operation.
+- Compose and reject use the existing shared lost-render timing primitive. No
+  fourth watchdog was added.
+
+### Mobile demo path
+
+For the product-owner Preview pass at `390x844`:
+
+1. Open `/home/plan`, then choose **Propose a plan**.
+2. Select 1, 2, or 7 days, confirm that start date is local today, expand
+   **What the coach will use**, and optionally enter a planning note.
+3. Choose **Generate plan proposal**. Confirm every selected date has a card,
+   a rest day says **Planned rest**, and session detail is collapsed initially.
+4. Expand one session and inspect focus, intent, rationale, alternatives, and
+   unweighted secondary goals. Inspect assumptions, uncertainty, safety, and
+   any memory-review link.
+5. Choose **Continue** and confirm it says M3-04 owns editing, locking and
+   acceptance. Close it, reject the proposal, and confirm the compose screen
+   returns with the day count remembered, start date reset to today, and the
+   note empty.
+
+The local production configuration is
+`e2e/m3-03.playwright.config.ts`, fixed to port `3018`, timezone
+`Europe/Berlin`, and viewport `390x844`. With the local Supabase environment
+available, run:
+
+```powershell
+npm.cmd run build
+npm.cmd run start -- -p 3018
+npx.cmd playwright test e2e/m3-03-plan-proposal.spec.ts --config=e2e/m3-03.playwright.config.ts
+```
+
+### Changed files: complete ticket
+
+`git diff --stat bd859db..ac2f60339503f4ef9de84c15189962b63e4e8037`:
+
+```text
+ docs/validation/M3/M3-03-VALIDATION.md             |  372 ++++++
+ docs/validation/README.md                          |    1 +
+ e2e/m3-03-plan-proposal.spec.ts                    |  215 ++++
+ e2e/m3-03.playwright.config.ts                     |   16 +
+ src/app/home/plan/proposal/action-state.ts         |   25 +
+ src/app/home/plan/proposal/actions.ts              |  196 +++
+ src/app/home/plan/proposal/error.tsx               |   13 +
+ src/app/home/plan/proposal/loading.tsx             |    7 +
+ src/app/home/plan/proposal/page.tsx                |  131 ++
+ src/app/home/plan/proposal/proposal.module.css     |  464 ++++++++
+ .../plan-proposal/plan-proposal-days.test.tsx      |   57 +
+ .../plan-proposal/plan-proposal-days.tsx           |  131 ++
+ .../plan-proposal/plan-proposal-manager.tsx        |  401 +++++++
+ src/components/planning/plan-editor.tsx            |    4 +
+ src/features/plan-proposal/plan-proposal-copy.ts   |   17 +
+ src/lib/supabase/database.types.ts                 |  295 +++++
+ src/server/ai/coach-ai-service.test.ts             |  162 ++-
+ src/server/ai/coach-ai-service.ts                  |   26 +-
+ src/server/ai/composition.ts                       |   36 +-
+ src/server/ai/context-source.ts                    |    3 +
+ src/server/ai/context.test.ts                      |   50 +
+ src/server/ai/context.ts                           |   98 +-
+ src/server/ai/contracts.ts                         |   93 +-
+ src/server/ai/errors.ts                            |    7 +
+ src/server/ai/fixtures/fixture-adapter.ts          |   13 +-
+ src/server/ai/fixtures/fixture-corpus.ts           |  479 +++++++-
+ src/server/ai/fixtures/synthetic-plan.test.ts      |  120 ++
+ src/server/ai/fixtures/synthetic-plan.ts           |  186 +++
+ src/server/ai/openai-prompt.test.ts                |   93 ++
+ src/server/ai/openai-prompt.ts                     |  236 +++-
+ src/server/ai/output-validation.test.ts            |  186 ++-
+ src/server/ai/output-validation.ts                 |  403 ++++++-
+ src/server/ai/plan-horizon.test.ts                 |  157 +++
+ src/server/ai/plan-horizon.ts                      |  133 +++
+ src/server/plan-proposal/plan-proposal-records.ts  |   60 +
+ .../plan-proposal/plan-proposal-service.test.ts    |  169 +++
+ src/server/plan-proposal/plan-proposal-service.ts  |  209 ++++
+ src/server/plan-proposal/plan-safety.test.ts       |   65 +
+ src/server/plan-proposal/plan-safety.ts            |   34 +
+ .../repositories/plan-proposal-repository.test.ts  |  118 ++
+ .../repositories/plan-proposal-repository.ts       |  263 +++++
+ .../20260812131303_m3_03_plan_proposals.sql        | 1248 ++++++++++++++++++++
+ .../tests/database/m3_03_plan_proposals.test.sql   | 1012 ++++++++++++++++
+ 43 files changed, 7789 insertions(+), 215 deletions(-)
+```
+
+**Nothing was deleted or renamed.** Non-obvious purposes added by the second
+builder:
+
+- `src/server/ai/context-source.ts` - accepts an injected, server-validated
+  browser timezone for the plan operation while leaving M3-02's default null.
+- `src/server/ai/fixtures/synthetic-plan.ts` - the fixture now demonstrates the
+  ordinary safety branch by continuing only generic, non-conflicting recovery
+  work around an accepted constraint.
+- `src/features/plan-proposal/plan-proposal-copy.ts` - keeps approved text in a
+  client-safe module; importing the server-only domain record module into the
+  client correctly failed the first production build.
+- `src/components/planning/plan-editor.tsx` - adds only the explicit entry link;
+  accepted manual-plan behavior is unchanged.
+
+### Data, migration, API, privacy, and security effects
+
+The first-builder migration, RLS, grants, RPCs, generated types, content floor,
+and privacy effects remain exactly as recorded above. The second builder added
+no migration, type regeneration, package, credential, or environment file.
+
+All proposal reads repeat `user_id` after verified claims and rely on owner
+`SELECT` RLS. All mutations use the already committed `SECURITY DEFINER` RPCs;
+none takes or receives an owner argument. Database errors collapse to bounded
+authentication, conflict, or persistence errors. The browser receives only the
+rendered proposal, goal title map, counts, and action state; it receives no
+source records, reservation token, completion token, provider detail, or owner
+id.
+
+The browser supplies an IANA timezone discovered from `Intl`. The server
+validates it by resolving the zone and recomputes owner-local today; the
+database independently refuses a past start. The day count is remembered only
+in the owner-scoped generation-request record that already exists. No browser
+storage is used for request inputs or proposal data.
+
+The planning note is returned only to the same compose surface after a rejected
+submission so the in-progress correction is not lost. It starts empty on route
+entry and after a completed or rejected proposal. The note never enters an
+error, log, source reference, or pending request as plaintext; persistence and
+memory-excerpt rules remain the first builder's database boundary.
+
+No provider host, credential, live flag, or `FITTIP_AI_*` variable was added.
+The plan composition receives `environment: {}` and resolves fixture even if a
+deployment has live variables for another operation. The only service-role key
+reference is the ticket Playwright harness, used to create and always delete a
+synthetic local account; it is never imported by application code or persisted.
+
+Relevant `vercel-react-best-practices` checks applied:
+
+- `server-auth-actions`: both actions authenticate like public endpoints.
+- `server-no-shared-module-state`: request, owner, timezone, idempotency, and
+  safety state are local to one invocation.
+- `server-serialization`: the page reduces repositories to displayed fields and
+  counts before crossing the Server/Client boundary.
+- `async-parallel` and `server-parallel-fetching`: independent repository
+  construction and reads use `Promise.all`; the generation dependency chain
+  remains ordered where claim, call, persistence, and memory require it.
+- `bundle-barrel-imports`: client modules import direct, client-safe paths and
+  no server domain or repository module.
+
+### Tests and final local results
+
+**CI for exact implementation SHA
+`ac2f60339503f4ef9de84c15189962b63e4e8037`: pending lead push.** Do not treat
+the local checks below as the ticket's automated gate.
+
+| Command or check | Result |
+| --- | --- |
+| `npx.cmd vitest run` with the two architecture tests and five focused M3-03 files | pass - 7 files, 32 tests |
+| `npm.cmd run typecheck` | pass |
+| `npm.cmd run lint` | pass |
+| `npm.cmd run build` | pass; `/home/plan/proposal` compiled as a dynamic route |
+| first `npm.cmd run build` | failed: the client imported `server-only` through `plan-proposal-records.ts`; copy was split into a client-safe feature module, then the build passed |
+| ticket Playwright command | collected exactly 1 `390x844` test, **skipped** because the three local Supabase environment variables were absent |
+| safe local environment injection attempt | blocked by command policy before execution; no key was printed or persisted |
+| local screenshots and manual 390px observation | not captured because the browser test did not execute |
+| `git diff --check` | clean |
+
+Tests added or changed by the second builder:
+
+- `plan-proposal-service.test.ts` - fixture persistence with zero reservation,
+  ordinary limitation continuation, uncertain signal pause before claim, and
+  both context-minimum refusals before claim/read as applicable.
+- `plan-safety.test.ts` - ordinary, uncertain-conservative, and planning-note
+  non-inference branches.
+- `plan-proposal-repository.test.ts` - no owner argument, nullable note omission,
+  rejection RPC, bounded conflict/error mapping, and anonymous denial before RPC.
+- `synthetic-plan.test.ts` - ordinary limitation continues only general recovery
+  work and carries explicit conservative consideration; no limitation invents
+  none.
+- `plan-proposal-days.test.tsx` - exact day blocks, explicit rest, primary-goal
+  labels, collapsed details, and no percentage text.
+- `m3-03-plan-proposal.spec.ts` and config - one disposable-account production
+  flow at exactly `390x844`: no roadmap, collapsed context disclosure, selected
+  dates, empty note, every day/rest rendering, no overflow, Continue boundary,
+  reject, remembered count/reset date/empty note, private no-store response,
+  browser/page-error checks, and cleanup in `finally`.
+
+### Remaining limitations and lead gates
+
+1. CI has not run for the implementation SHA because the lead owns the push.
+2. The local Playwright flow was collected but skipped; no screenshot or manual
+   390px observation is claimed. CI and the matching Preview must supply browser
+   evidence.
+3. The founder migration is not applied or verified by this builder. Before
+   review/acceptance, the product owner must run the hosted check: exact remote
+   migration history, schema, RLS/privileges, advisors, and authenticated owner
+   read path. A READY Preview does not establish any of them.
+4. No live provider call was made or authorized. The proposal is a deterministic
+   fixture, not evidence of model quality.
+5. The safety schema has an explicit severe-fatigue flag but no accepted
+   severity/acute/worsening field for pain, illness, or injury. Therefore any
+   eligible reported completion signal has an uncertain tier and conservatively
+   pauses all. The reviewer must judge that this correctly applies the approved
+   uncertain-tier rule rather than inventing severity from completion text.
+6. The ordinary fixture treats an accepted constraint as a limitation and
+   substitutes generic recovery work. It does not parse the constraint's text or
+   claim what body area/sport it affects. This is deliberately conservative but
+   less specific than a live proposal could be.
+7. M3-03B regeneration, M3-03C roadmap input, M3-03D activity detail, and M3-04
+   editing/locks/acceptance remain absent.
+
+### Independent reviewer checklist: complete ticket
+
+Review exact pushed commit
+`ac2f60339503f4ef9de84c15189962b63e4e8037` and exact range
+`git diff bd859db..ac2f60339503f4ef9de84c15189962b63e4e8037`. Reconcile the
+43-file manifest above against the diff. Use the lead-recorded CI run for this
+SHA; do not re-run CI's suites.
+
+Judge what CI cannot:
+
+1. **The two foundation scope widenings.** Decide whether the plan
+   `{plan, memoryCandidates}` envelope plus `validatePlanCandidate` route is
+   required by criterion 2d, and whether the rejection record/RPC is required
+   by criterion 10. Report either as out of scope if the diff does not justify
+   it.
+2. **The shared one-day bound.** Confirm changing context validation from `<=`
+   to `<` enables a one-day plan without weakening M3-02's separately enforced
+   28-day roadmap minimum.
+3. **The plan prompt budget.** Recalculate the separate 7,000-character prefix:
+   `ceil((7,000 + 64 + 28,500) / 4) = 8,891`, inside 10,000. Treat this as
+   spend-adjacent and judge the arithmetic rather than this record.
+4. **Safety ownership and order.** Confirm the server, not the model, decides
+   the tier; planning-note prose has no classification authority; both the
+   context minimum and pause-all branch happen before `beginGeneration`; an
+   accepted limitation continues non-conflicting fixture work; and an eligible
+   signal's missing severity resolves conservatively. Judge limitation 5 above
+   explicitly.
+5. **Fixture-only enforcement.** Confirm the surface passes `environment: {}`,
+   constructs only `FixtureCoachAI`, reaches no provider host, takes no live
+   reservation, and does not introduce a credential or live variable.
+6. **Authorization and replay.** Confirm every repository call authenticates,
+   reads repeat owner predicates, RPCs receive no owner, a reused key cannot buy
+   another attempt, and no completion token or raw database/provider error
+   reaches the browser.
+7. **Proposal-only semantics.** Confirm there is no accept/edit/lock/detail/
+   regeneration operation, no accepted-plan write, and Continue describes the
+   M3-04 boundary without implying acceptance.
+8. **390px judgment on the matching Preview.** Verify every requested date and
+   explicit rest day, one-tap session details, visible primary/unweighted
+   secondary goals, serious-coach tone, focus, touch targets, no horizontal
+   overflow, reduced motion, honest loading/error/offline/reject/continue
+   states, day-count memory/date reset/note reset, and no roadmap requirement.
+9. **Hosted dependency.** Do not approve the Preview until the lead records the
+   product-owner-run founder migration/history, RLS/privilege/advisor, and
+   authenticated owner-read evidence for the exact committed migration.
