@@ -229,6 +229,16 @@ jobs:
             npx playwright test --config=e2e/m3-02.playwright.config.ts \
               --workers=1 --trace=retain-on-failure --output=test-results/m3-02
 
+      - name: M3-03 selected-horizon plan proposals
+        # Report every broken flow in one run, not just the first.
+        if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-03
+        run: |
+          .github/scripts/with-server.sh 3018 \
+            npx playwright test --config=e2e/m3-03.playwright.config.ts \
+              --workers=1 --trace=retain-on-failure --output=test-results/m3-03
+
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v7
