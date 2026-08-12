@@ -49,19 +49,20 @@ export function synthesizePlanBody(context: CoachAIContext): string {
   const dates = horizonDates(context);
   const goals = context.targetableGoals;
   const primary = goals[0];
-  const constraints = fixtureConstraints(context);
-  const hasAcceptedLimitation = constraints.contents.length > 0;
+  const fixtureInput = fixturePlanInput(context);
+  const { constraints, preferences } = fixtureInput;
+  const hasAppliedLimitation = fixtureInput.hasRecognizedAcceptedConstraint;
 
   // Every second day carries a session, so a horizon of two days or more shows
   // both a training day and an explicit rest day — which is the thing the
   // surface most needs to be reviewable.
   const eligibleDates = dates.filter((date) => isAvailable(date, constraints));
   const sessionDates = eligibleDates.filter((_date, index) => index % 2 === 0);
-  const sport = constrainedSport(primary, constraints);
+  const sport = constrainedSport(primary, constraints, preferences);
 
   const sessions = sessionDates.map((date, index) => ({
     date,
-    title: hasAcceptedLimitation
+    title: hasAppliedLimitation
       ? index === 0
         ? `Constraint-aware ${sport.toLowerCase()} session`
         : `Supporting ${sport.toLowerCase()} session`
@@ -70,7 +71,7 @@ export function synthesizePlanBody(context: CoachAIContext): string {
         : "Steadier session",
     sport,
     focus: bound(
-      hasAcceptedLimitation
+      hasAppliedLimitation
         ? "Gentle work outside the accepted limitation."
         : index === 0
           ? "Repeatable easy work you could do again tomorrow."
@@ -78,14 +79,18 @@ export function synthesizePlanBody(context: CoachAIContext): string {
       300,
     ),
     intent: bound(
-      hasAcceptedLimitation
+      hasAppliedLimitation
         ? `${constraints.timeWindow ? `Schedule this ${constraints.timeWindow}. ` : ""}Stop if this conflicts with the accepted limitation; otherwise keep it comfortable.`
         : index === 0
           ? "Conversational the whole way. Finish feeling you could go again."
           : "Comfortably hard in the middle, easy either side of it.",
       300,
     ),
-    durationMinutes: constrainedMinutes(index === 0 ? 45 : 50, constraints),
+    durationMinutes: constrainedMinutes(
+      index === 0 ? 45 : 50,
+      date,
+      constraints,
+    ),
     primaryGoalId: primary?.id ?? "",
     secondaryGoalIds: goals.slice(1, 1 + MAX_SECONDARY_GOALS).map((g) => g.id),
     alternatives:
@@ -101,8 +106,8 @@ export function synthesizePlanBody(context: CoachAIContext): string {
           ]
         : null,
     rationale: bound(
-      hasAcceptedLimitation
-        ? `${rationaleFor(primary, context)} Accepted constraints determine the date, duration and setting used here.`
+      fixtureInput.hasAppliedScheduling
+        ? `${rationaleFor(primary, context)} Available planning inputs shape the scheduling details used here.`
         : rationaleFor(primary, context),
       300,
     ),
@@ -119,21 +124,34 @@ export function synthesizePlanBody(context: CoachAIContext): string {
         "Your recent training is representative of what you can sustain.",
         200,
       ),
-      ...constraints.contents
+      ...fixtureInput.appliedAcceptedMemory
         .slice(0, 3)
-        .map((content) =>
-          bound(`Applied accepted constraint: ${content}`, 200),
+        .map((item) =>
+          bound(`Applied accepted ${item.type}: ${item.content}`, 200),
         ),
     ],
-    uncertainties: null,
+    uncertainties: fixtureInput.unrecognizedAcceptedMemory
+      .slice(0, 3)
+      .map((item) => ({
+        statement: bound(
+          `Accepted ${item.type} needs review: ${item.content}`,
+          200,
+        ),
+        whyItMatters:
+          "The fixture could not apply that wording without guessing what it changes.",
+        whatToWatch:
+          "Review the proposed dates, duration, setting and sport against it.",
+      })),
     // An eligible reported signal is resolved by the surface before this
     // fixture is invoked: without accepted severity its tier is uncertain and
     // generation pauses. An accepted ordinary limitation instead leaves out
     // conflicting work while the rest of the horizon continues.
-    safetyConsiderations: hasAcceptedLimitation
+    safetyConsiderations: fixtureInput.hasAcceptedConstraint
       ? [
           bound(
-            "Accepted constraints are active. Only affected activities, dates, durations or settings are left out; non-conflicting sessions continue.",
+            hasAppliedLimitation
+              ? "Accepted constraints are active. Only affected activities, dates, durations or settings are left out; non-conflicting sessions continue."
+              : "An accepted constraint is active, but this fixture could not apply its wording without guessing. Review the proposal against it before continuing.",
             240,
           ),
         ]
@@ -144,8 +162,9 @@ export function synthesizePlanBody(context: CoachAIContext): string {
 }
 
 type FixtureConstraints = {
-  contents: string[];
   maxMinutes: number | null;
+  weekdayMaxMinutes: number | null;
+  weekendMaxMinutes: number | null;
   allowedWeekdays: Set<number> | null;
   unavailableWeekdays: Set<number>;
   blockedSports: Set<string>;
@@ -155,18 +174,115 @@ type FixtureConstraints = {
   equipmentFree: boolean;
 };
 
-function fixtureConstraints(context: CoachAIContext): FixtureConstraints {
-  const contents = context.memory
-    .filter((item) => item.memoryType === "constraint")
-    .map((item) => item.content);
+type FixturePreferences = {
+  preferredSports: string[];
+};
+
+type FixturePlanInput = {
+  constraints: FixtureConstraints;
+  preferences: FixturePreferences;
+  appliedAcceptedMemory: {
+    type: "constraint" | "preference";
+    content: string;
+  }[];
+  unrecognizedAcceptedMemory: {
+    type: "constraint" | "preference";
+    content: string;
+  }[];
+  hasAcceptedConstraint: boolean;
+  hasRecognizedAcceptedConstraint: boolean;
+  hasAppliedScheduling: boolean;
+};
+
+function fixturePlanInput(context: CoachAIContext): FixturePlanInput {
+  const acceptedConstraints = context.memory.filter(
+    (item) => item.memoryType === "constraint",
+  );
+  const acceptedPreferences = context.memory.filter(
+    (item) => item.memoryType === "preference",
+  );
+  const parsedAccepted = acceptedConstraints.map((item) => ({
+    item,
+    parsed: parseConstraints([item.content]),
+  }));
+  const parsedNote = parseConstraints(
+    context.planningNote === null ? [] : [context.planningNote],
+  );
+  const parsedPreferences = acceptedPreferences.map((item) => ({
+    item,
+    sports: preferredSports(item.content),
+  }));
+  const accepted = mergeConstraints(
+    parsedAccepted.map(({ parsed }) => parsed.constraints),
+  );
+  const constraints = mergeConstraints([accepted, parsedNote.constraints]);
+  const preferences = {
+    preferredSports: parsedPreferences.flatMap(({ sports }) => sports),
+  };
+
+  return {
+    constraints,
+    preferences,
+    appliedAcceptedMemory: [
+      ...parsedAccepted
+        .filter(({ parsed }) => parsed.recognized)
+        .map(({ item }) => ({
+          type: "constraint" as const,
+          content: item.content,
+        })),
+      ...parsedPreferences
+        .filter(({ sports }) => sports.length > 0)
+        .map(({ item }) => ({
+          type: "preference" as const,
+          content: item.content,
+        })),
+    ],
+    unrecognizedAcceptedMemory: [
+      ...parsedAccepted
+        .filter(({ parsed }) => !parsed.recognized)
+        .map(({ item }) => ({
+          type: "constraint" as const,
+          content: item.content,
+        })),
+      ...parsedPreferences
+        .filter(({ sports }) => sports.length === 0)
+        .map(({ item }) => ({
+          type: "preference" as const,
+          content: item.content,
+        })),
+    ],
+    hasAcceptedConstraint: acceptedConstraints.length > 0,
+    hasRecognizedAcceptedConstraint: parsedAccepted.some(
+      ({ parsed }) => parsed.recognized,
+    ),
+    hasAppliedScheduling:
+      parsedAccepted.some(({ parsed }) => parsed.recognized) ||
+      parsedNote.recognized ||
+      preferences.preferredSports.length > 0,
+  };
+}
+
+function parseConstraints(contents: string[]): {
+  constraints: FixtureConstraints;
+  recognized: boolean;
+} {
   const text = contents.join(" ").toLowerCase();
   const minuteMatches = [
     ...text.matchAll(
-      /(?:only have|at most|maximum|max|up to)\s+(\d{1,7})\s+minutes?\b/g,
+      /(?:only have|at most|maximum|max|up to)\s+(\d{1,7})\s+minutes?\b(?:\s+on\s+(weekdays?|weekends?))?/g,
     ),
   ]
-    .map((match) => Number(match[1]))
-    .filter((value) => Number.isSafeInteger(value) && value > 0);
+    .map((match) => ({
+      value: Number(match[1]),
+      days: match[2] ?? null,
+    }))
+    .filter(({ value }) => Number.isSafeInteger(value) && value > 0);
+  const minimumFor = (days: string | null) => {
+    const values = minuteMatches
+      .filter((match) => match.days === days)
+      .map((match) => match.value);
+    return values.length > 0 ? Math.min(...values) : null;
+  };
   const allowedWeekdays = allowedDays(text);
   const unavailableWeekdays = new Set<number>();
   for (const [index, day] of WEEKDAYS.entries()) {
@@ -206,26 +322,83 @@ function fixtureConstraints(context: CoachAIContext): FixtureConstraints {
   if (/\bno pool\b/i.test(text)) blockedSports.add("Swimming");
   if (/\bno (?:bike|bicycle)\b/i.test(text)) blockedSports.add("Cycling");
 
-  return {
-    contents,
-    maxMinutes: minuteMatches.length > 0 ? Math.min(...minuteMatches) : null,
+  const setting = /\b(?:at home|home only)\b/i.test(text)
+    ? "home"
+    : /\bindoor(?:s)? only\b/i.test(text)
+      ? "indoors"
+      : /\boutdoor(?:s)? only\b/i.test(text)
+        ? "outdoors"
+        : null;
+  const timeWindow =
+    text.match(
+      /\b(before work|after work|in the morning|in the evening|at lunch(?:time)?)\b/i,
+    )?.[1] ?? null;
+  const constraints: FixtureConstraints = {
+    maxMinutes: minimumFor(null),
+    weekdayMaxMinutes: minimumFor("weekday") ?? minimumFor("weekdays"),
+    weekendMaxMinutes: minimumFor("weekend") ?? minimumFor("weekends"),
     allowedWeekdays,
     unavailableWeekdays,
     blockedSports,
     comfortableSports,
-    setting: /\b(?:at home|home only)\b/i.test(text)
-      ? "home"
-      : /\bindoor(?:s)? only\b/i.test(text)
-        ? "indoors"
-        : /\boutdoor(?:s)? only\b/i.test(text)
-          ? "outdoors"
-          : null,
-    timeWindow:
-      text.match(
-        /\b(before work|after work|in the morning|in the evening|at lunch(?:time)?)\b/i,
-      )?.[1] ?? null,
+    setting,
+    timeWindow,
     equipmentFree,
   };
+  return {
+    constraints,
+    recognized:
+      minuteMatches.length > 0 ||
+      allowedWeekdays !== null ||
+      unavailableWeekdays.size > 0 ||
+      blockedSports.size > 0 ||
+      comfortableSports.length > 0 ||
+      setting !== null ||
+      timeWindow !== null ||
+      equipmentFree,
+  };
+}
+
+function mergeConstraints(items: FixtureConstraints[]): FixtureConstraints {
+  const allowed = items
+    .map((item) => item.allowedWeekdays)
+    .filter((item): item is Set<number> => item !== null);
+  return {
+    maxMinutes: minimum(items.map((item) => item.maxMinutes)),
+    weekdayMaxMinutes: minimum(items.map((item) => item.weekdayMaxMinutes)),
+    weekendMaxMinutes: minimum(items.map((item) => item.weekendMaxMinutes)),
+    allowedWeekdays:
+      allowed.length === 0
+        ? null
+        : new Set(
+            [...allowed[0]].filter((day) =>
+              allowed.every((days) => days.has(day)),
+            ),
+          ),
+    unavailableWeekdays: new Set(
+      items.flatMap((item) => [...item.unavailableWeekdays]),
+    ),
+    blockedSports: new Set(items.flatMap((item) => [...item.blockedSports])),
+    comfortableSports: items.flatMap((item) => item.comfortableSports),
+    setting: items.find((item) => item.setting !== null)?.setting ?? null,
+    timeWindow:
+      items.find((item) => item.timeWindow !== null)?.timeWindow ?? null,
+    equipmentFree: items.some((item) => item.equipmentFree),
+  };
+}
+
+function minimum(values: (number | null)[]): number | null {
+  const present = values.filter((value): value is number => value !== null);
+  return present.length > 0 ? Math.min(...present) : null;
+}
+
+function preferredSports(text: string): string[] {
+  return SPORTS.filter(([needle]) =>
+    new RegExp(
+      `\\bprefer(?:s|red)?\\s+(?:to\\s+)?(?:go\\s+)?${needle}\\w*`,
+      "i",
+    ).test(text),
+  ).map(([, sport]) => sport);
 }
 
 function allowedDays(text: string): Set<number> | null {
@@ -261,16 +434,22 @@ function isAvailable(date: string, constraints: FixtureConstraints): boolean {
 
 function constrainedMinutes(
   proposed: number,
+  date: string,
   constraints: FixtureConstraints,
 ): number {
-  return constraints.maxMinutes === null
-    ? proposed
-    : Math.min(proposed, constraints.maxMinutes);
+  const weekday = new Date(`${date}T00:00:00.000Z`).getUTCDay();
+  const dayLimit =
+    weekday === 0 || weekday === 6
+      ? constraints.weekendMaxMinutes
+      : constraints.weekdayMaxMinutes;
+  const limit = minimum([constraints.maxMinutes, dayLimit]);
+  return limit === null ? proposed : Math.min(proposed, limit);
 }
 
 function constrainedSport(
   goal: CoachAIGoalReference | undefined,
   constraints: FixtureConstraints,
+  preferences: FixturePreferences,
 ): string {
   if (constraints.setting === "home") return "Home mobility";
   if (constraints.setting === "indoors") return "Indoor mobility";
@@ -278,8 +457,9 @@ function constrainedSport(
 
   const goalSport = sportFor(goal);
   const candidates = [
-    goalSport,
+    ...preferences.preferredSports,
     ...constraints.comfortableSports,
+    goalSport,
     constraints.equipmentFree ? "Walking" : "Mobility",
     "Walking",
   ];

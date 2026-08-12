@@ -29,6 +29,27 @@ describe("plan safety decision", () => {
     });
   });
 
+  it("never lets an accepted preference override a safety pause", () => {
+    expect(
+      decidePlanSafety(
+        context({
+          hasSafetySignal: true,
+          memory: [
+            {
+              id: "c3000000-0000-4000-8000-000000000001",
+              memoryType: "preference",
+              content: "Prefer swimming.",
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      tier: "severe",
+      generation: "pause-all",
+      reason: "uncertain",
+    });
+  });
+
   it("does not infer a tier from planning-note text", () => {
     expect(
       decidePlanSafety(

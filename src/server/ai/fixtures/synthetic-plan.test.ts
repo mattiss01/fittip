@@ -162,6 +162,118 @@ describe("the synthetic plan body", () => {
     ).toBe(true);
   });
 
+  it("uses an accepted sport preference when it does not conflict", () => {
+    const context = withMemory([
+      { memoryType: "preference", content: "Prefer swimming." },
+    ]);
+    const result = validatePlanCandidate({
+      body: synthesizePlanBody(context),
+      context,
+    });
+    if (result.outcome !== "accepted") throw new Error("expected acceptance");
+
+    expect(result.response.plan.sessions.length).toBeGreaterThan(0);
+    expect(
+      result.response.plan.sessions.every(
+        (session) => session.sport === "Swimming",
+      ),
+    ).toBe(true);
+    expect(result.response.plan.assumptions).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Applied accepted preference: Prefer swimming"),
+      ]),
+    );
+  });
+
+  it("never lets a preference override an accepted prohibition", () => {
+    const context = withMemory([
+      { memoryType: "preference", content: "Prefer swimming." },
+      { memoryType: "constraint", content: "No swimming this week." },
+    ]);
+    const result = validatePlanCandidate({
+      body: synthesizePlanBody(context),
+      context,
+    });
+    if (result.outcome !== "accepted") throw new Error("expected acceptance");
+
+    expect(result.response.plan.sessions.length).toBeGreaterThan(0);
+    expect(
+      result.response.plan.sessions.every(
+        (session) => session.sport !== "Swimming",
+      ),
+    ).toBe(true);
+  });
+
+  it("applies the shipped planning-note weekday duration without treating it as safety", () => {
+    const context = {
+      ...horizonOf(7),
+      memory: [],
+      planningNote: "I only have 45 minutes on weekdays.",
+    };
+    const result = validatePlanCandidate({
+      body: synthesizePlanBody(context),
+      context,
+    });
+    if (result.outcome !== "accepted") throw new Error("expected acceptance");
+
+    const weekdaySessions = result.response.plan.sessions.filter((session) => {
+      const day = new Date(`${session.date}T00:00:00.000Z`).getUTCDay();
+      return day >= 1 && day <= 5;
+    });
+    expect(weekdaySessions.length).toBeGreaterThan(0);
+    expect(
+      weekdaySessions.every((session) => session.durationMinutes <= 45),
+    ).toBe(true);
+    expect(result.response.plan.safetyConsiderations).toBeUndefined();
+  });
+
+  it("keeps accepted constraints above planning-note scheduling limits", () => {
+    const context = {
+      ...withConstraint("At most 30 minutes. No swimming."),
+      planningNote: "I only have 45 minutes on weekdays. Prefer swimming.",
+    };
+    const result = validatePlanCandidate({
+      body: synthesizePlanBody(context),
+      context,
+    });
+    if (result.outcome !== "accepted") throw new Error("expected acceptance");
+
+    expect(
+      result.response.plan.sessions.every(
+        (session) =>
+          session.durationMinutes <= 30 && session.sport !== "Swimming",
+      ),
+    ).toBe(true);
+  });
+
+  it("surfaces unrecognized accepted constraints for review instead of claiming they were applied", () => {
+    const content = "Keep the whole week aligned with my unusual rotation.";
+    const context = withConstraint(content);
+    const result = validatePlanCandidate({
+      body: synthesizePlanBody(context),
+      context,
+    });
+    if (result.outcome !== "accepted") throw new Error("expected acceptance");
+
+    expect(result.response.plan.assumptions ?? []).not.toEqual(
+      expect.arrayContaining([expect.stringContaining(content)]),
+    );
+    expect(result.response.plan.uncertainties).toEqual([
+      expect.objectContaining({
+        statement: expect.stringContaining(content),
+        whyItMatters: expect.stringContaining("could not apply"),
+      }),
+    ]);
+    expect(
+      result.response.plan.sessions.some((session) =>
+        session.title.startsWith("Constraint-aware"),
+      ),
+    ).toBe(false);
+    expect(result.response.plan.safetyConsiderations).toEqual([
+      expect.stringContaining("could not apply its wording"),
+    ]);
+  });
+
   it("quotes the planning note exactly when it proposes memory", () => {
     const result = validatePlanCandidate({
       body: synthesizePlanBody(COACH_AI_FIXTURE_PLAN_CONTEXT),
@@ -179,18 +291,22 @@ describe("the synthetic plan body", () => {
 });
 
 function withConstraint(content: string, goalTitle?: string): CoachAIContext {
+  return withMemory([{ memoryType: "constraint", content }], goalTitle);
+}
+
+function withMemory(
+  items: { memoryType: "constraint" | "preference"; content: string }[],
+  goalTitle?: string,
+): CoachAIContext {
   return {
     ...COACH_AI_FIXTURE_PLAN_CONTEXT,
     targetableGoals: COACH_AI_FIXTURE_PLAN_CONTEXT.targetableGoals.map(
       (goal, index) =>
         index === 0 && goalTitle ? { ...goal, title: goalTitle } : goal,
     ),
-    memory: [
-      {
-        id: "c3000000-0000-4000-8000-000000000001",
-        memoryType: "constraint",
-        content,
-      },
-    ],
+    memory: items.map((item, index) => ({
+      id: `c3000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+      ...item,
+    })),
   };
 }
