@@ -1,6 +1,6 @@
 # M3-03: Selected-horizon plan proposal
 
-**Status:** in development — approved by the product owner on 12 August 2026
+**Status:** testable — independently approved on 12 August 2026; awaiting product-owner acceptance
 
 **Triage:** ready-for-agent
 

@@ -2,8 +2,8 @@
 
 **Ticket:** [M3-03](../../backlog/M3/M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md)
 
-**Status:** **in development — corrected exact-commit CI, Preview, and hosted
-migration verification complete; awaiting independent review and product-owner
+**Status:** **testable — exact commit independently approved with green CI,
+READY Preview, and founder-hosted verification; awaiting product-owner
 acceptance.** The first-builder foundation handoff remains below as permanent
 history; the complete-ticket handoff and subsequent correction evidence follow
 it.
@@ -1045,3 +1045,44 @@ previous hosted migration and private-validator evidence remains applicable
 because this correction has no database effect, but the matching fixture
 behavior and visible uncertainty still require exact-commit CI, Preview, and
 independent review before acceptance.
+
+### Final exact-commit independent approval — 12 August 2026
+
+The final implementation target is
+`86aa31505985cb3b914513d2dd119bcc65722c67`. Its exact-SHA
+[CI run 31639879356](https://github.com/mattiss01/fittip/actions/runs/31639879356)
+completed green across lint/types/unit/build; migrations, RLS, advisors,
+pgTAP, and concurrency; and every 390px production browser flow, including the
+isolated M3-03 flow. The matching Vercel Preview reached READY at
+`https://fittip-2lv3vdoy2-mattis-3657s-projects.vercel.app`.
+
+The same independent reviewer who requested the earlier corrections re-read
+the exact full `bd859db..86aa315` diff and returned **APPROVE** with zero
+Standards findings and zero Spec findings. The reviewer reconciled all 48 files,
+9,696 insertions, and 219 deletions with no omitted or unexpected file and no
+deletion or rename.
+
+The approval explicitly confirms:
+
+- accepted sport preferences affect eligible fixture activity, while accepted
+  prohibitions and server safety retain precedence;
+- the shipped 45-minute weekday planning note constrains weekday sessions,
+  accepted hard limits remain stricter, and planning-note prose never assigns
+  safety severity;
+- unrecognized accepted constraint or preference wording appears as bounded
+  uncertainty and is never claimed as applied;
+- modal accessibility, owner-local rollover, typed memory partial success,
+  uncapped positive durations, fixture-only execution, proposal-only scope,
+  authentication, RLS, owner-derived RPCs, replay, privacy, prompt budget, and
+  the M3-03B/C seams remain correct;
+- the earlier hosted migration, private-validator, authenticated 900-minute
+  persistence, zero-minute rejection, RLS, privilege, and authenticated-owner
+  evidence remains applicable because `a70a4ef..86aa315` changes no database,
+  authorization, or persistence code.
+
+The reviewer did not personally exercise an authenticated browser in this
+focused final pass. Exact-SHA CI executed the M3-03 browser flow, and the product
+owner's earlier matching hosted walkthrough supplies the manual visual,
+keyboard, touch, and authenticated evidence. Product-owner acceptance of exact
+commit `86aa31505985cb3b914513d2dd119bcc65722c67` remains the only open pre-merge
+gate.
