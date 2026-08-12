@@ -176,14 +176,26 @@ owner — and it proves nothing. In that case generate one roadmap proposal on
 <https://fittip-gilt.vercel.app> first (the 390px pass in Part 3 does exactly
 that), then come back. Note the `user_id` that appears; 2.2 needs it.
 
-### 2.2 The owner sees their rows; a stranger sees none
+### How to run 2.2a–2.2c
 
-**Substitute before running.** Replace **both** occurrences of `OWNER_UUID`
-with the `user_id` from 2.1 — there is one in this block and one in 2.3.
-Pasting the block unedited fails with
-`22P02: invalid input syntax for type uuid: "OWNER_UUID"`, which is the
-placeholder doing its job rather than a finding. The second subject is a
-literal random UUID and must stay one — it is the stranger.
+**One block per run.** Each of the three blocks below is self-contained: paste
+it into the SQL editor on its own, run it, read the single table it returns,
+then clear the editor and move to the next. Do not paste two blocks together —
+the whole point of splitting them is that each returns exactly one result and
+there is no guessing which table belongs to which subject.
+
+**Substitute first.** Replace `OWNER_UUID` with the `user_id` from 2.1. It
+appears once per block. Pasting a block unedited fails with
+`22P02: invalid input syntax for type uuid: "OWNER_UUID"` — that is the
+placeholder doing its job, not a finding.
+
+Every block opens `begin;` and ends `rollback;`. That is deliberate and is why
+these are safe to run against the founder database: `set local` only exists
+inside a transaction, and the rollback guarantees the simulated role and the
+faked claims cannot outlive the query. Nothing is written, changed, or left
+behind.
+
+### 2.2a The owner sees their own rows
 
 ```sql
 begin;
@@ -192,34 +204,52 @@ select set_config('request.jwt.claims',
 set local role authenticated;
 
 select 'owner' as subject,
-       (select count(*) from public.roadmap_proposals)          as proposals,
-       (select count(*) from public.roadmap_versions)           as versions,
-       (select count(*) from public.roadmap_heads)              as heads,
+       (select count(*) from public.roadmap_proposals)           as proposals,
+       (select count(*) from public.roadmap_versions)            as versions,
+       (select count(*) from public.roadmap_heads)               as heads,
        (select count(*) from public.roadmap_generation_requests) as requests,
-       (select count(*) from public.roadmap_proposal_sources)   as sources,
-       (select count(*) from public.roadmap_proposal_decisions) as decisions;
+       (select count(*) from public.roadmap_proposal_sources)    as sources,
+       (select count(*) from public.roadmap_proposal_decisions)  as decisions;
 
-reset role;
+rollback;
+```
+
+**Expect:** one row, no error, with `proposals`, `versions`, and `heads`
+matching the counts from 2.1 and the other three non-zero. This is the
+authenticated owner read — it proves the owner can reach their own data through
+RLS, not merely that the policy exists.
+
+### 2.2b A stranger sees nothing
+
+The subject here is a literal random UUID and must stay one. Do **not**
+substitute it — it is the stranger.
+
+```sql
+begin;
 select set_config('request.jwt.claims',
                   '{"sub":"00000000-0000-4000-8000-0000000000ff","role":"authenticated"}', true);
 set local role authenticated;
 
 select 'stranger' as subject,
-       (select count(*) from public.roadmap_proposals)          as proposals,
-       (select count(*) from public.roadmap_versions)           as versions,
-       (select count(*) from public.roadmap_heads)              as heads,
+       (select count(*) from public.roadmap_proposals)           as proposals,
+       (select count(*) from public.roadmap_versions)            as versions,
+       (select count(*) from public.roadmap_heads)               as heads,
        (select count(*) from public.roadmap_generation_requests) as requests,
-       (select count(*) from public.roadmap_proposal_sources)   as sources,
-       (select count(*) from public.roadmap_proposal_decisions) as decisions;
+       (select count(*) from public.roadmap_proposal_sources)    as sources,
+       (select count(*) from public.roadmap_proposal_decisions)  as decisions;
 
 rollback;
 ```
 
-**Expect:** the `owner` row matches the counts from 2.1 with no error. The
-`stranger` row is **`0` in every column**. A non-zero stranger count on any
-table is a cross-user leak and a stop-everything finding.
+**Expect: `0` in every column.** A non-zero count on any table is a cross-user
+leak and a stop-everything finding. This only means something because 2.2a
+returned non-zero counts for the same tables — zero rows are invisible to
+everyone, including their owner.
 
-### 2.3 The withheld column is actually withheld
+### 2.2c The withheld column is actually withheld
+
+**This block is meant to fail, and the error is the evidence.** Run it last,
+because the failure aborts the batch.
 
 ```sql
 begin;
@@ -227,17 +257,21 @@ select set_config('request.jwt.claims',
                   '{"sub":"OWNER_UUID","role":"authenticated"}', true);
 set local role authenticated;
 
-select count(*) from public.roadmap_generation_requests;   -- expect: succeeds
 select completion_token from public.roadmap_generation_requests limit 1;
 
 rollback;
 ```
 
-**Expect:** the first statement succeeds. The second fails with
-**`42501 permission denied for table roadmap_generation_requests`** (or
-`... for column completion_token`, depending on the server's phrasing). A
-result set instead of an error means the column grant did not take, and the
-finish-generation capability is readable by its owner.
+**Expect an error:** `42501 permission denied for table
+roadmap_generation_requests`, or `... for column completion_token` depending on
+the server's phrasing. Copy the error text back — that is the result.
+
+**A returned table instead of an error is the failure case.** It would mean the
+column grant did not take and the finish-generation capability is readable by
+the owner, which is exactly what 1.1 said should be impossible.
+
+The editor rolls the transaction back itself when a statement errors, so the
+unreached `rollback;` costs nothing.
 
 ---
 
