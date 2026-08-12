@@ -13,7 +13,8 @@
 **Source:** recorded as a known limitation by
 [M2-05](../../validation/M2/M2-05-VALIDATION.md#known-limitations) on 31 July
 2026, which asked for exactly this ticket; confirmed on a second surface by the
-M2-02 builder on 2 August 2026
+M2-02 builder on 2 August 2026, and on a third by M3-02 on 12 August 2026 at the
+highest rate yet measured
 
 **Blocks:** nothing today. Every surface that mutates data will keep paying a
 per-ticket mitigation tax until it is understood.
@@ -25,7 +26,7 @@ transition carrying that result never commits. The surface stays in its
 pre-submit state with controls disabled, and without a mitigation the user sees
 a form that silently did nothing.
 
-Two surfaces have now measured it directly.
+Three surfaces have now measured it directly.
 
 **Goals, M2-05, 31 July 2026.** Three recoveries in twenty flows on
 `next@16.2.11` / `react@19.2.7`. M2-05 built detection and recovery for the
@@ -51,6 +52,26 @@ more than M2-05 was able to rule out.
 Estimated per-mutation rate on the memory surface: **~1.5%**, which is why a
 twelve-mutation flow failed roughly one run in six.
 
+**Roadmap, M3-02, 12 August 2026.** **Three of six** local compose runs left the
+screen on "Building your roadmap proposal…" for ever — by far the highest rate
+recorded, and on the surface with the fewest mutations per flow. In every case
+the server had already answered `200` in about 300 ms with a complete payload
+carrying both the action result and the revalidated page including the rendered
+spine, and a manual reload showed the proposal every time. No page error, no
+failed request. Recorded as M3-02's limitation 11, mitigated and not fixed.
+
+Two things that measurement adds:
+
+- **The result was not merely complete, it was rendered.** The dropped payload
+  contained the revalidated page's own markup, which narrows the failure to the
+  commit rather than to anything upstream of it.
+- **`mutation-watchdog.ts` now has a third consumer**, and M3-02 used only its
+  "a reply arrived and never rendered" half — `watchGoalMutation`'s ten-second
+  confirmation budget belongs to a form save, while a roadmap generation is one
+  provider call with no honest fixed deadline. A module named for goals is now
+  load-bearing for three features and one of them needs half of it. That is
+  acceptance criterion 4 arriving whether or not a root cause is found.
+
 ## Why this is worth its own ticket
 
 M2-05 wrote: *"Only the goals surface is protected. `/home/plan` and `/home/log`
@@ -67,9 +88,10 @@ The cost is now visible and repeating:
 - Every new mutating surface must independently discover the race, usually
   through an intermittent browser failure that looks like a flake.
 - Each one carries its own recovery code. `src/features/goals/mutation-watchdog.ts`
-  is now imported by the memory surface, so a module named for goals is
-  load-bearing for a second feature. Its name is wrong and its home is wrong,
-  but renaming it touches M2-05's accepted code and so keeps being deferred.
+  is now imported by the memory **and** roadmap surfaces, so a module named for
+  goals is load-bearing for three features. Its name is wrong and its home is
+  wrong, but renaming it touches M2-05's accepted code and so keeps being
+  deferred.
 - Users still see an unrequested self-reload roughly once in sixty-odd
   mutations. The mitigation is honest, but it is a mitigation.
 - `/home/plan` and `/home/log` remain unmeasured and unprotected.

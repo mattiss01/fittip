@@ -68,6 +68,8 @@ commercial use, or production.
 | P1 | [M3-04 Plan edit, lock, and acceptance](M3-04-PLAN-EDIT-LOCK-ACCEPTANCE.md) | proposed | M3-02 and M3-03 accepted | Structured edits, session/activity locks, side-by-side review, reuse of the M1 personal-activity/version model, transactional immutable roadmap/detailed-plan acceptance; no change to logging and no replan | Approve editable fields, lock inheritance, diff/copy, activity reuse/snapshot, version/current-pointer, transaction, and retention decisions |
 | P1 | [M3-07 Replanning an accepted horizon](M3-07-REPLAN-ACCEPTED-HORIZON.md) | proposed | M3-04 accepted | Ask the coach for a new plan over dates that already have an accepted version; new immutable version supersedes, locks survive, completed history untouched. No structured reporting UX, alternatives, or clarifying questions — those stay M4 | Approve five open decisions, then Tier 1 builder, reviewer, Preview, acceptance |
 | P2 | [M3-06 A plan never starts in the past](M3-06-PAST-DATED-PLAN-HORIZONS.md) | proposed | none | Change accepted M1 behaviour so a plan version's start date is owner-local today or later; horizon shrinks as the week passes and superseded versions retain past content | Approve the four open questions, then Tier 1 builder, reviewer, Preview, acceptance |
+| P2 | [M3-08 Bounded completion source references](M3-08-BOUNDED-COMPLETION-SOURCES.md) | proposed | none | Record only the completions that reached the coach as proposal sources, so correcting an old unsent completion stops falsely conflicting a pending proposal; no ADR-013 window or schema change | Answer the two open questions, then Tier 2 builder, reviewer, Preview, acceptance |
+| P3 | [M3-09 Simultaneous same-key submit](M3-09-SIMULTANEOUS-SAME-KEY-SUBMIT.md) | proposed | none | Two truly concurrent same-key roadmap requests make the loser report a persistence failure that did not happen; fold the `23505` into the existing replay path via a forward migration. Not a spend or data defect | Approve dispatch, then Tier 1 builder, reviewer, hosted migration evidence, Preview, acceptance |
 | P1 | [M3-05 Consolidated M3 validation](M3-05-M3-VALIDATION-SLICE.md) | proposed | M3-01 through M3-04 accepted | Independent clean local validation, mock and opt-in live evidence, cost/token cap, schema failures, authorization, proposals/versioning/locks/acceptance, 390px accessibility, secret/content-log scan; no new behavior | Approve validator, exact commits, fixtures/live cap, evidence retention, accessibility checklist, and blocker statement |
 
 ## Dependency chain
@@ -84,7 +86,21 @@ Accepted M2 goals + coaching context + guided onboarding + targeted closeout
 
 M3-06 (a plan never starts in the past) sits outside this chain, blocks
 nothing, and changes accepted M1 behaviour rather than adding an M3 slice.
+
+M3-08 and M3-09 also sit outside it. Both are M3-02 follow-ups filed from that
+ticket's known limitations on 12 August 2026; neither blocks M3-03.
 ```
+
+M3-02's remaining limitations did not all become tickets. Limitation 11, the
+App Router transition that never commits, already has
+one — [M2-09](../M2/M2-09-APP-ROUTER-LOST-RENDER.md), where M3-02's measurement is
+recorded as the third and worst-affected surface. Limitations 2, 3, and 13 close
+with a live provider call rather than with code, limitation 9 with the hosted
+checks in
+[`M3-02-hosted-check-runbook.md`](../../validation/M3/evidence/M3-02-hosted-check-runbook.md),
+and limitation 15 with a one-line correction to ADR-013's recorded amendment
+under separate product-owner approval. Limitation 7 folds into M3-03 or M3-04,
+which expose planned-session ids anyway.
 
 M3-01 was split on 3 August 2026. The boundary — authorization, context
 allowlist, schema validation, budget accounting, fail-closed behavior — needs no
