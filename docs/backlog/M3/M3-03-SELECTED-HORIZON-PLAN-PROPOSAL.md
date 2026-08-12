@@ -196,8 +196,10 @@ exact call count and cost before it happens.
 - Every session is assigned to one of those dates; rest/no-session days remain
   explicit in the selected-horizon representation.
 - **A session is session-level only.** It contains title, sport/domain, focus,
-  expected duration in minutes, effort or recovery intent where applicable, goal
-  allocation, alternatives, and concise rationale. It carries **no activities,
+  expected duration in minutes, effort or recovery intent where applicable,
+  **one primary goal and any number of unweighted secondary goals**,
+  alternatives, and concise rationale. Attention is never expressed as a
+  percentage (decision 6). It carries **no activities,
   no measurement modes, and no targets** — those are
   [M3-03D](M3-03D-ON-DEMAND-SESSION-DETAIL.md), generated per session on demand.
 - **At most 3 sessions on any one date**, and at most `3 × dayCount` across the
@@ -206,7 +208,7 @@ exact call count and cost before it happens.
 - Every referenced goal is active and owner-scoped. Core/supporting priorities
   and ranks remain visible in allocation.
 - **The proposal carries a coach-authored description of the week as a whole**,
-  separate from any per-session rationale. Added 9 August 2026 — see the schema
+  1 to 600 characters, separate from any per-session rationale (decision 17). Added 9 August 2026 — see the schema
   bump below. The field is written here; the Progress surface that displays it
   is M3-03C.
 
@@ -340,9 +342,10 @@ never decides it, and an uncertain tier resolves to the more conservative one.
    recent load.
 4. The owner confirms, and a pending state states that no plan will change
    automatically.
-5. The proposal shows the exact requested dates, the sessions on each date or
-   that the date is free, each session's sport, focus, expected duration, goal
-   allocation, alternatives, and concise reasons.
+5. The proposal shows every requested date as its own block, rest days included
+   and explicit. Each session shows title, sport, duration, and its primary
+   goal; focus, reasoning, alternatives, and secondary goals are one tap away.
+   See decision 9 for the shape.
 6. The owner can inspect safety and uncertainty notes. Generating the detail of
    a session is M3-03D and is not part of this flow.
 7. Any memory candidates extracted from the planning note are presented for
@@ -380,6 +383,11 @@ require approval.
     proposal is not rejected for lacking one.
 5. Goal priorities and allocation are visible, and material tradeoffs/
    uncertainty have concise reasons or alternatives.
+5d. Each session carries exactly one primary goal and zero or more unweighted
+    secondary goals. No percentage or weight appears anywhere in the schema or
+    the surface.
+5e. Every requested date renders as its own block including rest days, and a
+    rest day reads as planned rather than as missing data.
 5a. Below the context minimum — no active goal, or no resolved timezone — the
     server refuses before any provider call, names what is missing, and consumes
     no idempotency key or spend reservation. At or above it, the plan generates
@@ -417,6 +425,11 @@ describes.
   mismatched counts, gaps, duplicates, and model-expanded horizons.
 - Schema fixtures for alternatives, allocations, unknown fields, malformed
   values, excessive counts, and size.
+- Goal references: a session with one primary and three secondaries validates;
+  a session with no primary is rejected; a secondary naming an inactive or
+  unowned goal is rejected; no weight field is accepted anywhere.
+- The description of the week: 1 character passes, 600 passes, 601 is rejected,
+  and an absent description is rejected.
 - Session-count bound: 3 on one date passes, 4 is rejected; `3 x dayCount`
   passes and one more is rejected. A horizon with no rest day and a horizon of
   very long sessions both pass, because neither is a rule.
@@ -475,11 +488,15 @@ friend/non-M0-06A-hosted/external behavior was added.
 
 ## Open decisions
 
-**Three remain open**, all presentation: 6, 9, and 17. Decisions 1, 3, 4, 5, 7,
-8, 12, and 13 were all answered on 12 August 2026 and are recorded below; 3 and 7
-were answered by moving them to M3-03D with the detail they govern. Five others
-moved out in the earlier split: 10, 11, and 18 to M3-03C; 15 and 16 to M3-03B.
-Decided lines stay below as history.
+**None remain open.** Every decision this ticket owns was answered on 12 August
+2026 - 1, 3, 4, 5, 6, 7, 8, 9, 12, 13, and 17 - with 3 and 7 answered by moving
+them to M3-03D with the detail they govern. Five others moved out in the earlier
+split: 10, 11, and 18 to M3-03C; 15 and 16 to M3-03B. Decision 2 was already
+decided on 8 August 2026 and 14 on 9 August 2026.
+
+The ticket is decision-complete and ready for the product owner to move to
+`approved`. It is **not** approved by the decisions being answered; that is a
+separate act.
 
 1. ~~Day-count selector behavior~~ — **decided 12 August 2026, together with
    decision 13.** The selector is always visible and the approved range stays
@@ -536,7 +553,22 @@ Decided lines stay below as history.
    The refusal is a server decision made before the call, not a model judgement,
    and it is not a safety failure: it says the coach has nothing to work from,
    in those terms.
-6. Goal-allocation representation and visible tradeoff copy.
+6. ~~Goal-allocation representation and visible tradeoff copy~~ - **decided
+   12 August 2026: one primary goal, optional unweighted secondaries.**
+
+   Each session names **one primary goal** it serves and may name any number of
+   **secondary goals**, all unweighted. This changes the v1 shape, which carried
+   a single `goalId`.
+
+   **Weights were considered and rejected.** A coach claiming a run is "70%
+   endurance, 30% weight loss" has invented those numbers, the owner cannot
+   check them, and a percentage invites being read as measurement. Unweighted
+   primary-plus-secondary says the true thing - this session mainly serves that
+   goal and also helps these - without manufacturing precision.
+
+   Tradeoff copy is prose, not numbers: where available time cannot serve every
+   goal, the proposal says which goal gave way and why, in the session or
+   horizon rationale.
 7. ~~Activity target limits and custom measurement schema~~ — **decided
    12 August 2026: reuse M1's accepted contract verbatim, in
    [M3-03D](M3-03D-ON-DEMAND-SESSION-DETAIL.md).** The AI is bound by exactly
@@ -564,8 +596,49 @@ Decided lines stay below as history.
 
    The numeric thresholds that separate the tiers are part of decision 4 and are
    still open.
-9. Exact proposal layout, alternatives, and reasoning. The regeneration action
+9. ~~Exact proposal layout, alternatives, and reasoning~~ - **decided
+   12 August 2026: day cards with a session summary.** The regeneration action
    in the original wording moved to M3-03B.
+
+   Every date in the horizon gets a block, **rest days included and explicit**.
+   Each session shows title, sport, duration, and its primary goal. Focus,
+   reasoning, and alternatives are one tap away rather than inline.
+
+   ```text
+   +-----------------------------+
+   | Mon 18 Aug                  |
+   | +-------------------------+ |
+   | | Easy aerobic run        | |
+   | | Running - 45 min        | |
+   | | * Sub-50 10k            | |
+   | +-------------------------+ |
+   | +-------------------------+ |
+   | | Mobility                | |
+   | | Yoga - 20 min           | |
+   | | * Stay injury-free      | |
+   | +-------------------------+ |
+   +-----------------------------+
+   | Tue 19 Aug                  |
+   |   No session planned        |
+   +-----------------------------+
+   | Wed 20 Aug                  |
+   | +-------------------------+ |
+   | | Threshold intervals     | |
+   | | Running - 60 min        | |
+   | | * Sub-50 10k            | |
+   | | tap for focus and why   | |
+   | +-------------------------+ |
+   +-----------------------------+
+   ```
+
+   The two alternatives were a fully expanded proposal, rejected because a
+   seven-day week becomes a very long page on a phone and the shape of the week
+   is lost in prose; and one compact row per day, rejected because judging a
+   proposal would mean opening every day one at a time.
+
+   This is the shape, not the styling. Spacing, type, and exact controls are the
+   builder's, under the `frontend-design` project skill and the product owner's
+   `390x844` acceptance pass.
 12. ~~What happens to undecided memory candidates when the owner leaves the
     proposal screen~~ — **decided 12 August 2026: retained as `proposed`.** They
     stay on M2-02's memory review surface for later decision. Candidates are
@@ -581,15 +654,21 @@ Decided lines stay below as history.
     product guardrail rather than a spend control. **Now owned by
     [M3-03B](M3-03B-PLAN-REGENERATION.md)**, together with the open question of
     the copy shown at the cap.
-17. What the coach's description of the week should cover, and how long it may
-    be. It is the v2 field behind the Progress section, and an unbounded one
-    would grow output tokens on every request. The field is defined here even
-    though M3-03C displays it.
+17. ~~What the coach's description of the week should cover, and how long it
+    may be~~ - **decided 12 August 2026: 1 to 600 characters**, matching the
+    roadmap's existing `summary` bound rather than inventing a second one. It
+    covers what the week is trying to achieve, how it serves the goals, and the
+    main tradeoff or thing to watch. That is four or five lines on a phone. The
+    field is defined here even though M3-03C displays it.
 
 ## Approval gate
 
 **Tier 1.** Schema, migration, RLS, an AI provider path, and spend: approved
 ticket, distinct builder, distinct independent reviewer, hosted migration
 evidence against the founder project, Preview verification, and product-owner
-acceptance. The open decisions above are product-owner decisions and must be
-answered before dispatch.
+acceptance.
+
+**All open decisions were answered on 12 August 2026**, so the remaining gate is
+the product owner moving this to `approved`, after which the lead writes the
+`## Agent brief` against the scope actually dispatched and spawns a distinct
+builder.
