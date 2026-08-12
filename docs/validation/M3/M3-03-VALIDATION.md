@@ -2,8 +2,8 @@
 
 **Ticket:** [M3-03](../../backlog/M3/M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md)
 
-**Status:** **in development — complete ticket awaiting corrected exact-commit
-CI, hosted migration verification, independent review, and product-owner
+**Status:** **in development — corrected exact-commit CI, Preview, and hosted
+migration verification complete; awaiting independent review and product-owner
 acceptance.** The first-builder foundation handoff remains below as permanent
 history; the complete-ticket handoff and subsequent correction evidence follow
 it.
@@ -920,3 +920,43 @@ Judge what CI cannot:
     valid proposal write and confirm proposal durability, a typed sanitized
     user-visible partial state, and no duplicate generation or memory write on
     completed replay.
+
+### Corrected exact-commit CI, Preview, and hosted delta — 12 August 2026
+
+The final review target is
+`a70a4ef48a94b66b8ac03cc4e4ccc337cf7b7254`. Its exact-SHA
+[CI run 31635932400](https://github.com/mattiss01/fittip/actions/runs/31635932400)
+completed green across all three jobs: lint/types/unit/build; migrations, RLS,
+advisors, pgTAP, and concurrency; and every 390px production browser flow,
+including the isolated M3-03 flow. This supersedes red run 31633879309 without
+claiming an exception.
+
+The matching Vercel Preview reached READY at
+`https://fittip-3phw9fkch-mattis-3657s-projects.vercel.app`.
+
+The product owner ran the complete delta runbook at
+`C:\Users\msche\AppData\Local\Temp\fittip-m3-03-duration-correction-hosted-check.md`
+and reported all five parts passed. This is product-owner-attested evidence;
+raw CLI and SQL output was not pasted into the repository.
+
+- Founder migration history now contains the exact forward migration
+  `20260812191935_remove_plan_session_minutes_cap.sql` after
+  `20260812131303`; the dry-run/apply/history, database lint, and advisor checks
+  passed with no reported drift or new `plan_*` warning.
+- The hosted `plan_content_is_valid(jsonb,date,date)` signature, invoker
+  security, empty search path, and denied execute grants remained unchanged.
+- Through the authenticated `begin_plan_generation` and
+  `finish_plan_generation` persistence path, a valid 900-minute proposal
+  completed and its stored duration read back as 900; the transaction was
+  rolled back afterward.
+- A separate authenticated transaction with zero minutes failed with the
+  expected invalid-plan boundary and did not persist a proposal.
+- At 390x844 on the matching Preview, fixture generation/reload, Continue and
+  Reject keyboard focus entry/containment/Escape/restoration, inert background,
+  radio touch/keyboard operation, visible focus, and horizontal fit all passed.
+  No live provider call was authorized or made.
+
+This closes the corrected exact-commit CI, READY Preview, forward-migration
+history, hosted validator parity, unchanged private-function boundary, and
+manual keyboard/mobile delta gates. Independent exact-commit review and
+product-owner acceptance remain open.
