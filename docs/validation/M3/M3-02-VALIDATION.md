@@ -16,9 +16,10 @@ reported back. The lead named all three as outstanding when requesting
 acceptance. They remain open under limitation 9 rather than being treated as
 done.
 
-**All three were run later the same day and all held**, so acceptance is no
-longer resting on an inference — see "Completed later the same day" under Hosted
-verification. The `390x844` pass is the one item of limitation 9 still open.
+**All three were run later the same day and all held**, and the product owner's
+mobile pass followed — see "Completed later the same day" and "The mobile
+acceptance pass" under Hosted verification. Acceptance no longer rests on an
+inference, and limitation 9 is closed.
 
 `593a6c2` was independently reviewed and approved. `d55c343` invalidated that
 approval and its Preview, as expected and as planned: it carries the product
@@ -1147,8 +1148,33 @@ evidence checkable.
 the database, isolated from the application — arguably stronger than the
 through-the-Preview read originally named, because it cannot be satisfied by an
 application-layer filter. It does **not** exercise the hosted authenticated read
-path through Next.js. That is the `390x844` pass, which is now the only part of
-limitation 9 still open.
+path through Next.js. That is the mobile pass below.
+
+### The mobile acceptance pass, 12 August 2026
+
+The product owner walked the application on a **physical phone** against the
+founder production deployment and reported no problems.
+
+Recorded precisely, because the distinction matters to anyone reading this
+later:
+
+- It was a real device, not a `390x844` emulated viewport. That is a stronger
+  check of touch targets, focus behaviour, and real rendering than devtools
+  gives, and a weaker check of the exact width the ticket specifies. Both are
+  true; neither is a substitute for the other.
+- It was a holistic pass — "everything looks fine" — not an itemised walk of the
+  runbook's seven points. It carries the weight of the product owner's judgement
+  on the surface, which is the thing CI cannot supply and the thing acceptance
+  actually needs.
+- It exercised the hosted authenticated read path through the application, which
+  is what the database-level checks above deliberately could not.
+
+**It does not disprove limitation 11.** The lost-render defect fired on three of
+six local compose runs, so a clean walk is an entirely likely outcome and says
+nothing about whether the race is gone. The mitigation stands and M2-09 still
+owns the cause.
+
+**Limitation 9 is closed.**
 
 ## Known limitations
 
@@ -1232,15 +1258,14 @@ limitations 2 and 3 — the two that only a live call can close — are untouche
    that ADR explicitly instructs. No existing decision text changed. The
    independent reviewer confirmed that, and the product owner accepted it as
    recorded on 12 August 2026.
-9. ~~**Partly closed on 12 August 2026.**~~ **Closed except the `390x844`
-   pass**, later the same day. The migration, remote history, lint, advisors,
-   and hosted function signatures were verified first; the privilege boundary,
-   the authenticated owner read, and the denied cross-user read were then run
-   directly in the SQL editor and all held — see "Completed later the same day"
-   above for the full table. **Still open:** the product owner's `390x844`
-   acceptance pass, which is also the only remaining check on the hosted
-   authenticated read path through the application rather than through the
-   database.
+9. ~~**Partly closed on 12 August 2026.**~~ **Closed on 12 August 2026.** The
+   migration, remote history, lint, advisors, and hosted function signatures
+   were verified first; the privilege boundary, the authenticated owner read,
+   and the denied cross-user read were then run directly in the SQL editor and
+   all held; the product owner then walked the surface on a physical phone
+   against founder production and reported no problems. See "Completed later the
+   same day" and "The mobile acceptance pass" above, including what the mobile
+   pass does not establish.
 
 Raised while finishing this half:
 
