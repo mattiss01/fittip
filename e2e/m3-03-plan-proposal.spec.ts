@@ -47,10 +47,7 @@ test.describe("M3-03 selected-horizon plan proposal", () => {
       await disclosure.click();
       await expect(page.getByText("No roadmap is required.")).toBeVisible();
 
-      await page
-        .getByLabel("Days to propose")
-        .locator("label", { hasText: "3" })
-        .click();
+      await page.getByRole("radio", { name: "3" }).check();
       await expect(page.getByLabel("Start date")).toHaveValue(ownerToday());
       await expect(
         page.getByLabel("Anything the coach should account for? (optional)"),
@@ -98,9 +95,7 @@ test.describe("M3-03 selected-horizon plan proposal", () => {
       ).toBeVisible({ timeout: 30_000 });
 
       // Remembered day count, but no remembered start date or note.
-      await expect(
-        page.getByLabel("Days to propose").locator("label", { hasText: "3" }),
-      ).toHaveAttribute("data-selected", "true");
+      await expect(page.getByRole("radio", { name: "3" })).toBeChecked();
       await expect(page.getByLabel("Start date")).toHaveValue(ownerToday());
       await expect(
         page.getByLabel("Anything the coach should account for? (optional)"),
