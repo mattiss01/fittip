@@ -383,7 +383,7 @@ records green CI, a matching READY Preview, the founder-hosted migration and
 security checks, independent review, and product-owner acceptance.
 
 **Exact review target:**
-`a70a4ef48a94b66b8ac03cc4e4ccc337cf7b7254`
+`86aa31505985cb3b914513d2dd119bcc65722c67`
 
 **Initial implementation commit:**
 `0cf2eca190a912261730e2a41ab26b258c5a0eb8`
@@ -421,10 +421,16 @@ changes; it is superseded and is not approval of this target.
 fake-timer boundary and React store flush deterministically, preserving the
 exact new owner-local date assertion after CI exposed a fixed-delay race.
 
+**Fixture planning-input correction:**
+`86aa31505985cb3b914513d2dd119bcc65722c67` - applies accepted sport
+preferences and recognized planning-note scheduling constraints behind hard
+accepted constraints and server safety, while surfacing unrecognized accepted
+wording as uncertainty instead of claiming it was applied.
+
 **Branch:** `ticket/m3-03-selected-horizon-plan-proposal`
 
 **Complete ticket range:**
-`git diff bd859db..a70a4ef48a94b66b8ac03cc4e4ccc337cf7b7254`
+`git diff bd859db..86aa31505985cb3b914513d2dd119bcc65722c67`
 
 ### Delivered behavior
 
@@ -492,11 +498,11 @@ npx.cmd playwright test e2e/m3-03-plan-proposal.spec.ts --config=e2e/m3-03.playw
 
 ### Changed files: complete ticket
 
-`git diff --stat bd859db..a70a4ef48a94b66b8ac03cc4e4ccc337cf7b7254`:
+`git diff --stat bd859db..86aa31505985cb3b914513d2dd119bcc65722c67`:
 
 ```text
  .github/workflows/ci.yml                           |   10 +
- docs/validation/M3/M3-03-VALIDATION.md             |  892 ++++++++++++++
+ docs/validation/M3/M3-03-VALIDATION.md             |  962 +++++++++++++++
  docs/validation/README.md                          |    1 +
  e2e/m3-03-plan-proposal.spec.ts                    |  210 ++++
  e2e/m3-03.playwright.config.ts                     |   16 +
@@ -524,8 +530,8 @@ npx.cmd playwright test e2e/m3-03-plan-proposal.spec.ts --config=e2e/m3-03.playw
  src/server/ai/errors.ts                            |    7 +
  src/server/ai/fixtures/fixture-adapter.ts          |   13 +-
  src/server/ai/fixtures/fixture-corpus.ts           |  499 +++++++-
- src/server/ai/fixtures/synthetic-plan.test.ts      |  196 +++
- src/server/ai/fixtures/synthetic-plan.ts           |  363 ++++++
+ src/server/ai/fixtures/synthetic-plan.test.ts      |  312 +++++
+ src/server/ai/fixtures/synthetic-plan.ts           |  543 +++++++++
  src/server/ai/openai-prompt.test.ts                |   93 ++
  src/server/ai/openai-prompt.ts                     |  238 +++-
  src/server/ai/output-validation.test.ts            |  196 ++-
@@ -535,7 +541,7 @@ npx.cmd playwright test e2e/m3-03-plan-proposal.spec.ts --config=e2e/m3-03.playw
  src/server/plan-proposal/plan-proposal-records.ts  |   60 +
  .../plan-proposal/plan-proposal-service.test.ts    |  211 ++++
  src/server/plan-proposal/plan-proposal-service.ts  |  220 ++++
- src/server/plan-proposal/plan-safety.test.ts       |   65 +
+ src/server/plan-proposal/plan-safety.test.ts       |   86 ++
  src/server/plan-proposal/plan-safety.ts            |   34 +
  .../repositories/plan-proposal-repository.test.ts  |  118 ++
  .../repositories/plan-proposal-repository.ts       |  263 +++++
@@ -543,7 +549,7 @@ npx.cmd playwright test e2e/m3-03-plan-proposal.spec.ts --config=e2e/m3-03.playw
  ...60812191935_remove_plan_session_minutes_cap.sql |  185 +++
  .../m3_03_plan_duration_correction.test.sql        |   84 ++
  .../tests/database/m3_03_plan_proposals.test.sql   | 1012 ++++++++++++++++
- 48 files changed, 9309 insertions(+), 219 deletions(-)
+ 48 files changed, 9696 insertions(+), 219 deletions(-)
 ```
 
 **Nothing was deleted or renamed.** Non-obvious purposes added by the second
@@ -613,9 +619,10 @@ Relevant `vercel-react-best-practices` checks applied:
 
 ### Tests and final local results
 
-**CI for correction target SHA
-`cf60ed64a29840da503fc8e52956f1db889a9e9a`: red in Vitest and superseded.
-CI for `a70a4ef48a94b66b8ac03cc4e4ccc337cf7b7254` is pending the lead push.**
+**CI for exact current review target
+`86aa31505985cb3b914513d2dd119bcc65722c67` is pending the lead push.** The
+green `a70a4ef` run and the earlier red `cf60ed6` run remain recorded below as
+superseded history.
 
 [Run 31633879309](https://github.com/mattiss01/fittip/actions/runs/31633879309)
 failed only in Vitest at
@@ -852,11 +859,11 @@ clean.
 ### Independent reviewer checklist: complete ticket
 
 Review exact pushed commit
-`a70a4ef48a94b66b8ac03cc4e4ccc337cf7b7254` and exact range
-`git diff bd859db..a70a4ef48a94b66b8ac03cc4e4ccc337cf7b7254`. Reconcile the
+`86aa31505985cb3b914513d2dd119bcc65722c67` and exact range
+`git diff bd859db..86aa31505985cb3b914513d2dd119bcc65722c67`. Reconcile the
 48-file manifest above against the diff. Use the lead-recorded CI run for this
-SHA; do not use the superseded `cf60ed6`, `b597ee0`, `e40c0b5`, `85d5052`,
-`112caa2`, or `ac2f603` runs or re-run CI's suites.
+SHA; do not use the superseded `a70a4ef`, `cf60ed6`, `b597ee0`, `e40c0b5`,
+`85d5052`, `112caa2`, or `ac2f603` runs or re-run CI's suites.
 
 Judge what CI cannot:
 
@@ -909,10 +916,12 @@ Judge what CI cannot:
 12. **Uncapped duration parity.** Confirm the TypeScript validator, response
     schema/prompt, fixture corpus, forward SQL validator, and pgTAP agree on any
     positive integer including 900, while the previous migration is unchanged.
-13. **Accepted-constraint application.** Confirm the fixture reads only
-    accepted constraint records for availability/time/duration/location/
-    equipment/activity choices, removes swimming when explicitly forbidden,
-    and does not promote planning-note prose to a safety decision.
+13. **Fixture planning inputs.** Confirm accepted hard constraints conservatively
+    precede planning-note scheduling and accepted preferences; direct
+    preferences affect eligible sports; the shipped weekday note caps weekday
+    sessions at 45 minutes; prohibited swimming remains prohibited; note prose
+    never decides safety; and unrecognized accepted wording appears as an
+    uncertainty rather than an applied assumption.
 14. **Owner-local rollover.** Confirm an open compose schedules the next local
     calendar boundary without polling and resets an edited start date to the new
     owner-local today, including focus/visibility recovery after suspension.
@@ -958,5 +967,81 @@ raw CLI and SQL output was not pasted into the repository.
 
 This closes the corrected exact-commit CI, READY Preview, forward-migration
 history, hosted validator parity, unchanged private-function boundary, and
-manual keyboard/mobile delta gates. Independent exact-commit review and
-product-owner acceptance remain open.
+manual keyboard/mobile delta gates for `a70a4ef`. Independent re-review then
+requested the fixture planning-input correction below, so that commit and its
+Preview are superseded for final review. Product-owner acceptance remains open.
+
+### Fixture planning-input re-review correction
+
+Independent re-review of `a70a4ef48a94b66b8ac03cc4e4ccc337cf7b7254`
+requested changes because the deterministic fixture ignored accepted preference
+memory, ignored recognized planning-note scheduling constraints, and claimed
+all accepted constraint wording had been applied even when it was not
+recognized. The exact implementation correction is
+`86aa31505985cb3b914513d2dd119bcc65722c67`.
+
+The fixture now uses this deterministic precedence:
+
+1. Server-decided safety remains outside and before fixture generation.
+2. Accepted hard constraints are combined conservatively: prohibited sports
+   and unavailable days are unions, allowed-day sets intersect, duration caps
+   take the lowest value, and an accepted setting/time window wins over a note.
+3. Recognized planning-note content may further narrow ordinary scheduling,
+   including the shipped `I only have 45 minutes on weekdays` note. It does not
+   classify severity or turn safety off.
+4. Recognized accepted sport preferences influence the remaining eligible
+   sport. A preference never revives a prohibited sport or overrides a required
+   setting.
+5. Goal-derived and generic fixture defaults apply only after those inputs.
+
+The recognition remains deliberately bounded rather than attempting general
+natural-language interpretation. It covers the already-supported explicit
+availability, time-window, duration, location, equipment, and named activity
+forms, plus direct accepted sport preferences such as `Prefer swimming`.
+Unrecognized accepted constraint or preference wording is no longer placed in
+an `Applied accepted ...` assumption or given a constraint-aware session title.
+It appears in the existing uncertainty surface with a direct request to compare
+the proposal against that memory. Nothing is silently treated as understood.
+
+Correction-only diff for `86aa31505985cb3b914513d2dd119bcc65722c67`:
+
+```text
+ src/server/ai/fixtures/synthetic-plan.test.ts | 130 ++++++++++++-
+ src/server/ai/fixtures/synthetic-plan.ts      | 262 ++++++++++++++++++++++----
+ src/server/plan-proposal/plan-safety.test.ts  |  21 +++
+ 3 files changed, 365 insertions(+), 48 deletions(-)
+```
+
+Nothing was deleted or renamed. All three paths state their purpose directly;
+there is no non-obvious new file. The correction changes no schema, migration,
+row, API shape, authorization/RLS path, credential, package, workflow, or
+provider/spend behavior. It reuses the existing proposal assumptions,
+uncertainties, safety considerations, and session fields, so no React, route,
+or visible layout file changed. The selected frontend and React skills therefore
+preserved the approved serious-coach 390px surface and server/client boundary
+without introducing a new visual or bundle direction.
+
+Focused local evidence:
+
+| Command or check | Result |
+| --- | --- |
+| focused fixture, output-validation, proposal-service, and safety Vitest run | pass - 4 files, 107 tests |
+| `npm.cmd run typecheck` | pass |
+| `npm.cmd run lint` | pass |
+| `npx.cmd playwright test --config=e2e/m3-03.playwright.config.ts --list` | pass - exactly 1 test at `390x844` collected |
+| full local M3-03 Playwright execution | not run; no credential or local provider environment was improvised |
+| `git diff --check` | clean |
+
+New focused cases prove that accepted `Prefer swimming` selects swimming when
+eligible, accepted `No swimming` wins over that preference, a safety signal
+still pauses all despite the preference, the shipped weekday note caps weekday
+sessions at 45 minutes without creating a safety consideration, a 30-minute
+accepted cap and swimming prohibition win over looser note text, and
+unrecognized accepted constraint wording is surfaced only as uncertainty.
+
+CI and a matching READY Preview for
+`86aa31505985cb3b914513d2dd119bcc65722c67` are pending the lead push. The
+previous hosted migration and private-validator evidence remains applicable
+because this correction has no database effect, but the matching fixture
+behavior and visible uncertainty still require exact-commit CI, Preview, and
+independent review before acceptance.
