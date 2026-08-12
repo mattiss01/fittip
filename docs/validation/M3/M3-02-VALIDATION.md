@@ -2,10 +2,19 @@
 
 **Ticket:** [M3-02](../../backlog/M3/M3-02-ROADMAP-PROPOSAL.md)
 
-**Status:** **independently reviewed and approved at `d55c343`; awaiting the
-lead's hosted verification and product-owner acceptance.** The whole ticket is
-delivered: schema, AI boundary, repository, domain orchestration, server
-actions, the `390x844` interface, and the Playwright flow.
+**Status:** **accepted by the product owner on 12 August 2026** against
+`d55c343`, its green continuous-integration run, and the Preview at
+`https://fittip-git-ticket-m3-02-roadmap-proposal-mattis-3657s-projects.vercel.app/`.
+The whole ticket is delivered: schema, AI boundary, repository, domain
+orchestration, server actions, the `390x844` interface, and the Playwright flow.
+
+**Recorded honestly for the audit trail:** acceptance was granted after the
+hosted migration and its history, lint, advisor, and function-signature
+verification, but **without** the authenticated owner read, the denied
+cross-user read, or the hosted privilege-boundary check being separately
+reported back. The lead named all three as outstanding when requesting
+acceptance. They remain open under limitation 9 rather than being treated as
+done.
 
 `593a6c2` was independently reviewed and approved. `d55c343` invalidated that
 approval and its Preview, as expected and as planned: it carries the product
@@ -1163,9 +1172,10 @@ limitations 2 and 3 — the two that only a live call can close — are untouche
    read does not expose planned-session ids, so a planned date with no
    completion on it counts as a miss. Coarser than an id join; it never invents
    a miss.
-8. **ADR-013 was edited.** A new "Recorded amendments" section, which that ADR
-   explicitly instructs. No existing decision text changed. The reviewer and the
-   product owner should confirm they accept it being recorded that way.
+8. **Closed. ADR-013 was edited** — a new "Recorded amendments" section, which
+   that ADR explicitly instructs. No existing decision text changed. The
+   independent reviewer confirmed that, and the product owner accepted it as
+   recorded on 12 August 2026.
 9. **Partly closed on 12 August 2026.** The migration is applied to the founder
    project and remote history, lint, advisors, and the hosted function
    signatures are verified — see "Hosted verification" above. **Still open:** the
@@ -1189,9 +1199,9 @@ Raised while finishing this half:
     untouched. Three of six local compose runs hit it. An owner will
     occasionally see a brief notice and a reload where nothing should have
     happened at all.
-12. **Two new copy strings** are not from the ticket's approved list. See "The
-    transition that never commits" above. They need the product owner's word at
-    acceptance.
+12. ~~**Two new copy strings** are not from the ticket's approved list.~~
+    **Closed.** The product owner approved both as written on 12 August 2026.
+    They join the approved copy list for this surface.
 13. **The synthetic fixture roadmap is not a coach.** Everything demonstrable on
     a Preview without `FITTIP_AI_LIVE` comes from
     `synthesizeRoadmapBody`: structurally valid, deterministic, and deliberately
