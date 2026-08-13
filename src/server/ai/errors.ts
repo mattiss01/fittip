@@ -13,6 +13,7 @@ export const COACH_AI_ERROR_CODES = [
   "provider_unconfigured",
   "credential_unavailable",
   "context_invalid",
+  "context_below_minimum",
   "context_too_large",
   "rate_limited",
   "concurrency_limited",
@@ -40,6 +41,12 @@ const SAFE_MESSAGES: Record<CoachAIErrorCode, string> = {
   provider_unconfigured: "Coaching suggestions are unavailable.",
   credential_unavailable: "Coaching suggestions are unavailable.",
   context_invalid: "Your goals and memory could not be prepared for this.",
+  // M3-03 decision 5. Not a safety failure and not an error the owner caused:
+  // it says the coach has nothing to work from, in those terms. The caller
+  // names exactly what is missing from the error's `missing` list rather than
+  // from this sentence, which stays free of owner content.
+  context_below_minimum:
+    "There is not enough set up yet for the coach to plan from.",
   context_too_large: "There is too much to consider for one suggestion.",
   rate_limited: "The suggestion limit has been reached. Try again later.",
   concurrency_limited: "A suggestion is already being prepared.",

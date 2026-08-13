@@ -105,6 +105,8 @@ export class RepositoryCoachAIContextSource implements CoachAIContextSource {
     private readonly completions: CompletionReader,
     private readonly plans: PlanReader,
     private readonly today: () => string = utcIsoDate,
+    /** M3-03 supplies the browser-resolved IANA zone after server validation. */
+    private readonly timezoneName: () => string | null = () => null,
   ) {}
 
   async load(owner: CoachAIOwner): Promise<CoachAILoadedRecords> {
@@ -201,6 +203,7 @@ export class RepositoryCoachAIContextSource implements CoachAIContextSource {
       goals: goalCollection.goals,
       memory: memoryCollection.items,
       training,
+      timezoneName: this.timezoneName(),
       sources,
     };
   }

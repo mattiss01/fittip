@@ -1,7 +1,11 @@
 import "server-only";
 
 import { CoachAIBudget } from "@/server/ai/budget";
-import { COACH_AI_OPERATIONS, type CoachAI } from "@/server/ai/contracts";
+import {
+  COACH_AI_OPERATIONS,
+  type CoachAI,
+  type CoachAIOperation,
+} from "@/server/ai/contracts";
 import type { CoachAIContextSource } from "@/server/ai/context-source";
 import {
   CoachAIService,
@@ -69,7 +73,7 @@ export type CoachAICompositionInput = {
   /**
    * The fixture case to answer with. Present only in a fixture composition;
    * naming one has no effect on a live service. Omitting it synthesizes a
-   * roadmap from the request's own context, which is what makes the surface
+   * proposal from the request's own context, which is what makes the surface
    * reviewable on a Preview without a provider — a corpus literal carries fixed
    * dates and goal ids and would be rejected against any real owner.
    */
@@ -117,6 +121,28 @@ export function resolveCoachAIRuntimeMode(
 export function createRoadmapCoachAIService(
   input: CoachAICompositionInput,
 ): CoachAIComposition {
+  return createCoachAIService("create_roadmap", input);
+}
+
+/**
+ * The plan coaching service.
+ *
+ * Identical wiring to the roadmap's, with one deliberate difference: the
+ * enablement gate is asked about `create_seven_day_plan`, so an operation
+ * allowlist that permits roadmaps and not plans refuses here rather than
+ * quietly authorizing both. Nothing else differs, and nothing else should — two
+ * composition roots that drift are two ways to be misconfigured.
+ */
+export function createPlanCoachAIService(
+  input: CoachAICompositionInput,
+): CoachAIComposition {
+  return createCoachAIService("create_seven_day_plan", input);
+}
+
+function createCoachAIService(
+  operation: CoachAIOperation,
+  input: CoachAICompositionInput,
+): CoachAIComposition {
   const environment = input.environment ?? process.env;
   const telemetry = input.telemetry ?? new InMemoryCoachAITelemetrySink();
   const mode = resolveCoachAIRuntimeMode(environment);
@@ -128,8 +154,8 @@ export function createRoadmapCoachAIService(
     const binding = FIXTURE_COACH_AI_BINDING;
     const adapter: CoachAI = new FixtureCoachAI(
       Object.fromEntries(
-        COACH_AI_OPERATIONS.map((operation) => [
-          operation,
+        COACH_AI_OPERATIONS.map((scripted) => [
+          scripted,
           input.fixtureCaseName
             ? { caseName: input.fixtureCaseName }
             : { synthesizeFromContext: true },
@@ -160,7 +186,7 @@ export function createRoadmapCoachAIService(
   // allowlist, and credential presence. It returns the configured provider and
   // model codes without returning the credential itself.
   const enablement = requireCoachAILiveEnablement({
-    operation: "create_roadmap",
+    operation,
     ownerId: input.owner.id,
     environment,
   });

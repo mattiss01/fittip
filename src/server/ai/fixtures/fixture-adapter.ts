@@ -11,6 +11,7 @@ import {
   findCoachAIFixtureCase,
   type CoachAIFixtureCase,
 } from "@/server/ai/fixtures/fixture-corpus";
+import { synthesizePlanBody } from "@/server/ai/fixtures/synthetic-plan";
 import { synthesizeRoadmapBody } from "@/server/ai/fixtures/synthetic-roadmap";
 
 /**
@@ -27,7 +28,7 @@ export type CoachAIFixtureScript = {
   /** A case name from the corpus. */
   readonly caseName?: string;
   /**
-   * Answer with a roadmap derived from the request's own context instead of a
+   * Answer with a proposal derived from the request's own context instead of a
    * corpus literal. Every corpus body has fixed dates and fixed goal ids, so a
    * real owner rejects all of them; this is what makes the surface reviewable
    * without a provider. Still a pure function of its input, and still no
@@ -76,13 +77,11 @@ export class FixtureCoachAI implements CoachAI {
     }
 
     if (script.synthesizeFromContext) {
-      if (operation !== "create_roadmap") {
-        // M3-03 owns the seven-day plan. Synthesizing one here would be
-        // inventing an operation's behaviour outside the ticket that decides it.
-        throw new CoachAIError("invalid_input");
-      }
       return {
-        body: synthesizeRoadmapBody(request.context),
+        body:
+          operation === "create_roadmap"
+            ? synthesizeRoadmapBody(request.context)
+            : synthesizePlanBody(request.context),
         reportedInputTokens: script.reportedInputTokens ?? null,
         reportedOutputTokens: script.reportedOutputTokens ?? null,
       };

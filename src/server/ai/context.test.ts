@@ -4,6 +4,7 @@ import {
   buildCoachAIContext,
   byteLength,
   COACH_AI_CONTEXT_LIMITS,
+  CoachAIContextBelowMinimumError,
   CoachAIContextTooLargeError,
   type CoachAIComposeInput,
   type CoachAIGoalRecord,
@@ -584,6 +585,55 @@ describe("what the assembled context refuses", () => {
     expect(() => build({ goals: [goal({ id: "not-a-uuid" })] })).toThrow(
       CoachAIError,
     );
+  });
+
+  it("accepts a horizon that starts and ends on the same date", () => {
+    // A one-day plan is a real request. The bound is "ends before it starts",
+    // not "is not longer than a day".
+    expect(() =>
+      buildCoachAIContext(
+        "create_seven_day_plan",
+        records({ timezoneName: "Europe/Berlin" }),
+        { ...COMPOSE, horizonStartDate: TODAY, horizonEndDate: TODAY },
+      ),
+    ).not.toThrow();
+  });
+
+  it("refuses the plan operation below its context minimum", () => {
+    const compose = {
+      ...COMPOSE,
+      horizonStartDate: TODAY,
+      horizonEndDate: "2026-08-16",
+    };
+
+    expect(() =>
+      buildCoachAIContext(
+        "create_seven_day_plan",
+        records({ goals: [], timezoneName: "Europe/Berlin" }),
+        compose,
+      ),
+    ).toThrow(CoachAIContextBelowMinimumError);
+
+    expect(() =>
+      buildCoachAIContext(
+        "create_seven_day_plan",
+        records({ timezoneName: null }),
+        compose,
+      ),
+    ).toThrow(CoachAIContextBelowMinimumError);
+
+    // A goal that is not active does not meet the minimum either: the threshold
+    // is what the coach may actually be pointed at, not what exists.
+    expect(() =>
+      buildCoachAIContext(
+        "create_seven_day_plan",
+        records({
+          goals: [goal({ status: "achieved" })],
+          timezoneName: "Europe/Berlin",
+        }),
+        compose,
+      ),
+    ).toThrow(CoachAIContextBelowMinimumError);
   });
 
   it("measures bytes rather than characters", () => {

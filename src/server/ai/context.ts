@@ -85,6 +85,37 @@ export class CoachAIContextTooLargeError extends CoachAIError {
   }
 }
 
+/**
+ * What a plan cannot be generated without (M3-03 decision 5).
+ *
+ * Deliberately short. Training history, accepted memory, a roadmap and a
+ * planning note are all optional — an owner with one goal and nothing else must
+ * be able to plan their first week, which is the case a threshold set any
+ * higher would block.
+ */
+export const PLAN_CONTEXT_REQUIREMENTS = [
+  "active_goal",
+  "resolved_timezone",
+] as const;
+
+export type PlanContextRequirement = (typeof PLAN_CONTEXT_REQUIREMENTS)[number];
+
+/**
+ * The refusal below the context minimum.
+ *
+ * It carries what is missing so the compose screen can name it, and it is
+ * thrown from context assembly on purpose: assembly runs before the idempotency
+ * key is claimed and before any reservation is taken, so a refusal here spends
+ * nothing and consumes no key. Moving this check later would quietly make the
+ * cheapest possible refusal the most expensive one.
+ */
+export class CoachAIContextBelowMinimumError extends CoachAIError {
+  constructor(readonly missing: readonly PlanContextRequirement[]) {
+    super("context_below_minimum");
+    this.name = "CoachAIContextBelowMinimumError";
+  }
+}
+
 export type CoachAIContextLimits = {
   maxTargetableGoals: number;
   maxHistoricalGoals: number;
@@ -201,13 +232,20 @@ export const COACH_AI_CONTEXT_LIMITS = {
       total: 33_700,
     },
   },
-  // M3-03 owns the seven-day plan. This is the same shape with a shorter
-  // history allocation and no regeneration lineage yet, so the type is
-  // satisfied without this ticket deciding an operation it does not implement.
-  // Its completion sub-budget is left at the 5,800 M3-02 derived, because a
-  // week's plan is not a roadmap and M3-03 owns that number; only the
-  // miss-list and envelope reservation is applied, so this operation cannot
-  // carry the denial path either.
+  // M3-03 kept every number M3-02 provisionally set here, and this comment
+  // records that as a decision rather than as inheritance. A selected horizon
+  // is one to seven days, so the plan needs no larger goal, memory, or history
+  // allocation than a roadmap does, and it needs a smaller total: 28,500 rather
+  // than 33,700, because there is no 52-week forward window to describe.
+  //
+  // The 5,200 bytes of headroom that buys is spent on the prompt.
+  // `openai-prompt.test.ts` holds the plan prefix under 7,000 characters rather
+  // than the roadmap's 6,000, and the same ceiling still binds:
+  // `ceil((7_000 + 64 + 28_500) / 4)` is 8,891 against `maxInputTokens` 10,000.
+  // The extra thousand characters are what state the horizon rule, the
+  // unweighted-allocation rule, and the "no sets, reps, or paces" boundary to
+  // the model, all three of which the validator would otherwise only reject
+  // after the call had been paid for.
   create_seven_day_plan: {
     maxTargetableGoals: 12,
     maxHistoricalGoals: 5,
@@ -261,6 +299,14 @@ export type CoachAIOwnedRecords = {
   memory: MemoryItemView[];
   training: TrainingHistoryRecords;
   /**
+   * The IANA zone `today` was derived in. Optional because `create_roadmap`
+   * does not require one and M3-02's accepted context source does not supply
+   * it; required in fact for `create_seven_day_plan`, where every date in the
+   * horizon is an owner-local calendar date and a plan built in the wrong zone
+   * covers the wrong days.
+   */
+  timezoneName?: string | null;
+  /**
    * The exact records that informed the request, as ids and revisions. Carried
    * from the context source rather than derived here, because only the source
    * knows which revision of each record it actually read.
@@ -300,13 +346,31 @@ export function buildCoachAIContext(
     !isIsoDate(records.today) ||
     !isIsoDate(compose.horizonStartDate) ||
     !isIsoDate(compose.horizonEndDate) ||
-    compose.horizonEndDate <= compose.horizonStartDate
+    // A one-day horizon is a legitimate plan request, so the bound is "ends
+    // before it starts" rather than "is not longer than a day". `create_roadmap`
+    // is unaffected: its own four-week minimum is enforced by the database and
+    // by the horizon derivation that produced these dates.
+    compose.horizonEndDate < compose.horizonStartDate
   ) {
     throw new CoachAIError("context_invalid");
   }
 
   const goals = selectActiveGoalContext(records.goals);
   const memoryItems = selectActiveMemoryContext(records.memory, records.today);
+
+  // Decision 5: the threshold, checked before anything is claimed or reserved.
+  // It names every missing requirement at once rather than the first one, so an
+  // owner who is missing both is not sent round twice.
+  if (operation === "create_seven_day_plan") {
+    const missing: PlanContextRequirement[] = [];
+    if (goals.targetable.length === 0) missing.push("active_goal");
+    if (!isResolvedTimezone(records.timezoneName)) {
+      missing.push("resolved_timezone");
+    }
+    if (missing.length > 0) {
+      throw new CoachAIContextBelowMinimumError(missing);
+    }
+  }
 
   if (goals.targetable.length > limits.maxTargetableGoals) {
     throw new CoachAIContextTooLargeError("targetable_goals");
@@ -517,6 +581,24 @@ function toMemoryReference(item: MemoryItemView): CoachAIMemoryReference {
 
 function isBounded(value: unknown, max: number): value is string {
   return typeof value === "string" && value.length > 0 && value.length <= max;
+}
+
+/**
+ * "Resolved" means the runtime can actually compute a local date in it. A
+ * stored string nobody has ever asked `Intl` about is a zone name, not a
+ * resolved timezone, and the difference only shows up as a plan on the wrong
+ * days.
+ */
+export function isResolvedTimezone(value: unknown): value is string {
+  if (typeof value !== "string" || value.length === 0 || value.length > 100) {
+    return false;
+  }
+  try {
+    new Intl.DateTimeFormat("en-CA", { timeZone: value }).format();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function isIsoDate(value: unknown): value is string {

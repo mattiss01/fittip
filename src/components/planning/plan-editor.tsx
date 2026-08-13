@@ -371,6 +371,10 @@ export function PlanEditor({
             <Link className="back-link" href="/home/plan/roadmap">
               Roadmap →
             </Link>
+            <span aria-hidden="true"> · </span>
+            <Link className="back-link" href="/home/plan/proposal">
+              Propose a plan →
+            </Link>
           </div>
           <div className="version-stamp" aria-label="Current plan version">
             <span>Accepted</span>
