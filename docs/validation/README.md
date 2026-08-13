@@ -32,6 +32,11 @@ Validation records and their visual evidence are grouped by milestone.
   identified upstream and fixed in `next@16.3.0`, which this repository does
   not run. No fix and no version bump in this ticket; the shared recovery is
   consolidated and the two unmeasured surfaces are measured
+- [M2-11 next@16.3.0 upgrade and re-measurement](M2/M2-11-VALIDATION.md) —
+  builder handoff; `/home/plan` navigation measured at 9/250 before the
+  upgrade and 0/250 after on M2-09's probe. The CI retry stopgap is removed on
+  that measurement; every application-side mitigation stays, because the four
+  watchdog surfaces were never measured on either build
 - [M2 visual evidence](M2/evidence/)
 
 ## M3
