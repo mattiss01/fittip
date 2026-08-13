@@ -631,3 +631,76 @@ Judgment this record needs and continuous integration cannot supply:
     record's.** The six screenshots attest that six surfaces render without
     overflow or console errors on `16.3.0`; they do not attest that anything
     looks or feels right.
+
+## Criterion 8, the independent review, and the lead's hosted gates — 13 August 2026
+
+### Criterion 8: the continuous-integration runs, and what the flaky count now means
+
+Both runs on the ticket branch are green, and neither claims an exception:
+
+| Commit | Run | Result |
+| --- | --- | --- |
+| `8764324` — the reviewed implementation | [31725108592](https://github.com/mattiss01/fittip/actions/runs/31725108592) | green |
+| `7585f1f` — the four post-review corrections | [31740289410](https://github.com/mattiss01/fittip/actions/runs/31740289410) | green |
+
+**The post-removal flaky reading: zero, across both runs.** The string `flaky`
+does not appear anywhere in either run's log, and no retry was attempted,
+because `--retries=2` no longer exists on the step. The Vitest suite reports 78
+files / 816 tests.
+
+That reading has to be stated carefully, and this record already explains why:
+before the removal, `flaky` was the signal that a run had failed and recovered,
+so its absence was informative. After the removal there is no retry, so a
+recovered run is impossible and the word cannot appear whatever happens. The
+measurement has changed instrument. What "zero flaky" now means is only that
+the step passed on its first and only attempt, twice.
+
+**Two green runs is weak evidence, and is not what carries the removal.** At the
+historical rate M2-09 measured — seven red in thirty-five runs, about one in
+five — two consecutive clean runs would occur roughly 64% of the time by chance
+even if nothing had been fixed. The removal rests on the local paired
+measurement of 9/250 against 0/250 and on the upstream mechanism, exactly as the
+mitigation section and `.github/workflows/ci.yml` both state. These two runs are
+consistent with that case; they do not establish it. The rollback trigger stands
+unchanged: a red `Authentication and planning flows` on unchanged code means
+restore the line, not re-open the diagnosis.
+
+### Independent review
+
+A reviewer distinct from the builder, and from M2-09's reviewer, approved
+`843c06b..8764324` with six non-blocking observations, then re-reviewed
+`8764324..7585f1f` after all four corrections and returned the range
+`843c06b..7585f1f` approved with no blocking findings.
+
+Two things it verified mechanically rather than by reading the claim, both of
+which are the kind of thing a record cannot self-certify:
+
+- The record is **append-only after the before figures landed**. Across every
+  subsequent commit there is no deletion originating in the before-measurements
+  section, so no rate, denominator or latency figure has been altered since
+  `91ba7a9` — a stronger property than "no number changed".
+- The `src/` correction is **comment-only**, established by stripping all
+  comments from `transition-watchdog.ts` at both commits and comparing: 37 code
+  lines to 37, identical, with every budget and verdict intact.
+
+### Hosted verification is scoped, for the same reason it was on M2-09
+
+Preview for `7585f1f`: `https://fittip-6b4qmhq9o-mattis-3657s-projects.vercel.app`,
+state `Ready`, deployment `dpl_9TuLuiPnLU5kLwLunwT7vGcrczPS`, which is the
+identifier GitHub's Vercel commit status reports for that commit.
+
+Vercel deployment protection gates the Preview, so application behavior is not
+observable there by the lead or the reviewer. Attested: the deployment exists,
+reached `Ready`, and is bound to `7585f1f`. **Not attested: any application-level
+behavior on the Preview**, including the `390x844` rendering of the six surfaces
+and the unauthenticated boundary. No protection-bypass token was used or
+requested.
+
+This matters more on this ticket than it did on M2-09, and the difference should
+not be glossed. M2-09 changed no route, action, or rendered output; this ticket
+upgrades the framework underneath every one of them. Continuous integration
+executed the full 390px production browser matrix on `16.3.0` at both commits,
+and the six committed screenshots show the upgraded build's surfaces — but
+neither can judge whether a surface looks and feels right. **The product owner's
+`390x844` pass on the Preview is the evidence this ticket most needs and is the
+one thing no agent here can supply.**
