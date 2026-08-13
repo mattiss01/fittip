@@ -18,11 +18,16 @@ import { expect, test, type Page } from "@playwright/test";
  * - `/home/plan` — a client-side navigation whose segment must replace
  *   `loading.tsx`. This is the M2-06 class that continuous integration has
  *   been counting.
- * - `/home/log` — a `useActionState` form save. Unlike goals, memory, roadmap
- *   and the plan proposal, `saveQuickLog` does not call `revalidatePath`, so
- *   the reply carries a typed result and no re-rendered tree.
+ * - `/home/log` — arriving at the surface, and then a `useActionState` form
+ *   save on it. The two are counted apart: unlike goals, memory, roadmap and
+ *   the plan proposal, `saveQuickLog` does not call `revalidatePath`, so the
+ *   save's reply carries a typed result and no re-rendered tree, while the
+ *   navigation is the same segment transition as any other.
  *
- * Every count is per transition, not per flow.
+ * Every count is per transition, not per flow. Each `/home/log` iteration
+ * leaves one more unplanned actual behind, so the Today surface grows through
+ * the run; the bounded action and navigation timeouts in the config exist so
+ * that shows up as an aborted attempt rather than a hung run.
  */
 
 const localEnvironmentReady = Boolean(
@@ -46,15 +51,36 @@ const COMMIT_BUDGET_MS = 15_000;
 type Measurement =
   | { outcome: "committed"; elapsed: number }
   | { outcome: "lost" }
-  | { outcome: "error" };
+  | { outcome: "error" }
+  | { outcome: "aborted" };
 
 type Tally = {
   attempts: number;
   lost: number;
   errors: number;
+  aborted: number;
   /** Commit latency of every transition that did commit, in milliseconds. */
   committed: number[];
 };
+
+/**
+ * The harness must never decide the rate by failing. An iteration that throws
+ * — a control that never became clickable, a navigation that never finished —
+ * is counted apart from a lost render rather than folded into it or allowed to
+ * abort the run, because it is a fact about this probe and not about the
+ * defect.
+ */
+async function guard(
+  label: string,
+  measure: () => Promise<Measurement>,
+): Promise<Measurement> {
+  try {
+    return await measure();
+  } catch (error) {
+    console.log(`[M2-09] ${label} aborted: ${(error as Error).message}`);
+    return { outcome: "aborted" };
+  }
+}
 
 test.describe("M2-09 lost-render rate", () => {
   test.skip(!localEnvironmentReady, "requires the local Supabase environment");
@@ -73,7 +99,10 @@ test.describe("M2-09 lost-render rate", () => {
 
       const plan = newTally();
       for (let run = 0; run < PLAN_RUNS; run += 1) {
-        record(plan, await measurePlanNavigation(page));
+        record(
+          plan,
+          await guard("plan navigation", () => measurePlanNavigation(page)),
+        );
       }
       report("/home/plan client-side navigation", plan);
 
@@ -83,10 +112,15 @@ test.describe("M2-09 lost-render rate", () => {
       const logArrival = newTally();
       const logSave = newTally();
       for (let run = 0; run < LOG_RUNS; run += 1) {
-        const arrival = await measureQuickLogArrival(page);
+        const arrival = await guard("log navigation", () =>
+          measureQuickLogArrival(page),
+        );
         record(logArrival, arrival);
         if (arrival.outcome !== "committed") continue;
-        record(logSave, await measureQuickLogSave(page));
+        record(
+          logSave,
+          await guard("log save", () => measureQuickLogSave(page)),
+        );
       }
       report("/home/log client-side navigation", logArrival);
       report("/home/log quick-log save", logSave);
@@ -190,13 +224,14 @@ async function measureQuickLogSave(page: Page): Promise<Measurement> {
 }
 
 function newTally(): Tally {
-  return { attempts: 0, lost: 0, errors: 0, committed: [] };
+  return { attempts: 0, lost: 0, errors: 0, aborted: 0, committed: [] };
 }
 
 function record(tally: Tally, measurement: Measurement) {
   tally.attempts += 1;
   if (measurement.outcome === "lost") tally.lost += 1;
   if (measurement.outcome === "error") tally.errors += 1;
+  if (measurement.outcome === "aborted") tally.aborted += 1;
   if (measurement.outcome === "committed") {
     tally.committed.push(measurement.elapsed);
   }
@@ -208,7 +243,11 @@ function record(tally: Tally, measurement: Measurement) {
  * only comparable figure is a healthy plan transition of 11-478 ms.
  */
 function report(surface: string, tally: Tally) {
-  const rate = tally.attempts ? (tally.lost / tally.attempts) * 100 : 0;
+  if (!tally.attempts) {
+    console.log(`[M2-09] RESULT ${surface}: not measured in this run`);
+    return;
+  }
+  const rate = (tally.lost / tally.attempts) * 100;
   const sorted = tally.committed.toSorted((a, b) => a - b);
   const at = (fraction: number) =>
     sorted.length
@@ -218,7 +257,8 @@ function report(surface: string, tally: Tally) {
       : NaN;
   console.log(
     `[M2-09] RESULT ${surface}: ${tally.lost} lost / ${tally.attempts} ` +
-      `transitions (${rate.toFixed(2)}%), ${tally.errors} rejected; ` +
+      `transitions (${rate.toFixed(2)}%), ${tally.errors} rejected, ` +
+      `${tally.aborted} aborted; ` +
       `committed latency min ${sorted[0]} ms, median ${at(0.5)} ms, ` +
       `p95 ${at(0.95)} ms, max ${sorted[sorted.length - 1]} ms ` +
       `over ${sorted.length} samples`,

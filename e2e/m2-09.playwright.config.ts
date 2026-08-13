@@ -10,6 +10,12 @@ export default defineConfig({
   // probe; this only has to be larger than the whole run.
   timeout: 60 * 60_000,
   use: {
+    // Bounded so a wedged surface is counted and reported rather than left to
+    // retry until the whole run's timeout. A `/home/log` run stalled at
+    // attempt 205 without these, after ~200 accumulated unplanned actuals made
+    // the Today surface large.
+    actionTimeout: 20_000,
+    navigationTimeout: 30_000,
     baseURL: "http://localhost:3019",
     ...devices["Desktop Chrome"],
     viewport: { width: 390, height: 844 },
