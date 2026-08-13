@@ -154,18 +154,28 @@ jobs:
       #
       # This step alone retries. `planning.spec.ts` opens `/home/plan` through
       # the App Router transition that M2-09 tracks: the segment intermittently
-      # never replaces its loading boundary, which M2-06 made detectable and
-      # nobody has yet explained. Measured at roughly one run in five, it
+      # never replaces its loading boundary, which M2-06 made detectable. It
       # reddened seven of the last thirty-five runs on commits that touched no
       # application code, which teaches every reader to re-run instead of read.
+      #
+      # M2-09 kept this stopgap rather than removing it, and the reason is now
+      # a fact rather than an open question. The cause is upstream: React's
+      # `useDeferredValue` can stick on a stale value
+      # (facebook/react#35821), and `layout-router` routes every segment's
+      # payload through it. The fix is React PR 36134, which reaches this
+      # application only through `next@16.3.0`; every `16.2.x` release,
+      # including the pinned `16.2.11`, vendors the React canary that predates
+      # it. No application change removes the race, so removing the retries now
+      # would only restore a red job on unchanged code.
       #
       # Two retries absorb intermittency, not breakage. A plan surface that is
       # genuinely broken fails all three attempts and still blocks the job; only
       # a defect that passes on a re-draw is let through, and Playwright reports
-      # it as `flaky` rather than swallowing it, so M2-09 keeps accruing its
-      # rate from continuous integration instead of losing every occurrence to a
-      # red job. Remove this the moment M2-09 lands a fix - the retry count is
-      # the measurement, so a run that stops reporting flaky is the evidence.
+      # it as `flaky` rather than swallowing it, so the occurrence rate keeps
+      # accruing from continuous integration instead of being lost to a red job.
+      # Remove this when the framework upgrade that carries the fix is accepted
+      # and verified - the retry count is the measurement, so a run that stops
+      # reporting flaky is the evidence.
       #
       # Deliberately scoped to this step. The other browser steps do not carry
       # this defect and must keep failing on the first attempt.
