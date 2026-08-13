@@ -170,6 +170,12 @@ jobs:
       # measurement does not bound the rate on a shared runner, where the
       # defect used to appear far more often than the 4% per navigation
       # measured locally.
+      #
+      # If it is ever restored, scope it to this step again. No browser step
+      # carries retries today, so there is nothing left to scope it against,
+      # but the norm is the point: every other step must keep failing on its
+      # first attempt. A retry that is not aimed at one named, diagnosed
+      # defect is a way of not reading the result.
       - name: Authentication and planning flows
         env:
           PLAYWRIGHT_HTML_REPORT: playwright-report/auth-planning
