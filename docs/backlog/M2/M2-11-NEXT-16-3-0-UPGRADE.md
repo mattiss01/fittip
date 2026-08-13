@@ -1,6 +1,6 @@
 # M2-11: Upgrade to `next@16.3.0` and re-measure the lost render
 
-**Status:** proposed — not approved for implementation
+**Status:** in development — approved by the product owner on 13 August 2026
 
 **Triage:** ready-for-agent
 
@@ -17,6 +17,66 @@ exists on identical apparatus
 
 **Blocks:** nothing. Every mutating surface keeps its recovery code and the
 continuous-integration stopgap keeps its retries until this lands.
+
+## Agent brief
+
+**Outcome.** Upgrade `next` to `16.3.0`, re-measure every transition on M2-09's
+existing probe, and remove a mitigation only where the after-measurement
+supports removing it.
+
+**Tier 2.** No schema, authorization, privacy, or spend. Stop and re-dispatch as
+Tier 1 if anything reaches those.
+
+**The hypothesis is falsifiable and you must let it fail.** `/home/plan`
+navigation is at a floor of 4.00% (10/250). If `16.3.0` does not take it to
+zero, the M2-09 diagnosis is wrong: report that, keep every mitigation, change
+nothing else, and stop. Do not look for a second cause — that re-opens M2-09,
+not this ticket. A null result honestly reported is a complete delivery.
+
+**Hard constraints**
+
+- **Reuse `e2e/m2-09-lost-render.probe.ts` on `e2e/m2-09.playwright.config.ts`,
+  port 3019.** Do not write a second harness. A rate from different apparatus is
+  not comparable to M2-09's, and comparability is the entire reason this ticket
+  is separate. Extending the probe with the `/home/plan` save is expected; a
+  rewrite of what it already measures is not.
+- **The React pins stay at `19.2.7`, and this is already decided.** Latest
+  stable React is `19.2.8` — the 19.2 line. The `useDeferredValue` fix exists
+  only in the 19.3 canary that Next vendors, so raising the pins cannot bring
+  the fix to the Vitest suite and cannot close the test-versus-production
+  divergence. Confirm both facts yourself, record the divergence as a known
+  limitation, and leave the pins alone. Do not bump them as housekeeping.
+- **No mitigation leaves without a number behind it.** M2-09's criterion 5
+  stands. Every removal names the measurement that justifies it; every retention
+  says why it stayed. A surface whose rate was never measured keeps its
+  recovery, whatever the other surfaces show.
+- **`.github/workflows/ci.yml` is a separate commit**, per the tooling and
+  supply-chain rule, exactly as M2-09 did it.
+- **No Next 17, no canary, no React major, no application redesign.**
+
+**Non-goals.** No new recovery behavior, no change to any surface's mutation
+flow, no new AI, planning, schema, authorization, or spend behavior.
+
+**Acceptance criteria.** The nine in this ticket, unchanged. Criteria 4, 6, and
+9 are the ones that get quietly skipped: `/home/plan`'s own save measured
+before **and** after inside this ticket, mitigation removals each carrying their
+justifying measurement, and the honest null-result path if the rate does not
+move.
+
+**Expected to change.** `package.json` and `package-lock.json`;
+`e2e/m2-09-lost-render.probe.ts` for the `/home/plan` save;
+`.github/workflows/ci.yml` in its own commit; and, only if the measurements
+support it, `src/lib/app-router/transition-watchdog.ts` with its four consumers
+in `src/components/{goals,memory,roadmap,plan-proposal}/`.
+
+**Skills.** Read these paths explicitly; Claude Code does not auto-discover
+them. `.agents/skills/mobile-e2e/SKILL.md` for the measurement runs and their
+env vars, `.agents/skills/vercel-react-best-practices/SKILL.md` if the upgrade
+requires any component change, `.agents/skills/diagnosing-bugs/SKILL.md` if the
+upgrade breaks something unrelated, and `.agents/skills/validation-record/SKILL.md`
+for the handoff.
+
+Read only this section unless you hit an ambiguity it does not resolve.
 
 ## Outcome
 
@@ -70,21 +130,27 @@ The apparatus is `e2e/m2-09-lost-render.probe.ts` on
 harness: a rate measured on different apparatus is not comparable to these, and
 comparability is the whole reason this ticket exists.
 
-## The React pins are a real question, not a formality
+## The React pins — raised as a decision, resolved as a fact
 
 `package.json` pins `react`, `react-dom`, and `@types/react` at `19.2.7`.
-`next@16.3.0`'s peer range is `^19.0.0`, so `16.3.0` accepts them unchanged and
-the upgrade does not force a React bump.
+`next@16.3.0`'s peer range is `^19.0.0`, so it accepts them unchanged and the
+upgrade does not force a React bump.
 
-But those pins are not inert, and M2-09 only proved they are bypassed *in the
-browser*. They are the React that the Vitest component suite runs against,
-because jsdom tests do not go through Next's compiler aliasing. So the suite
-tests one React and production runs another, and that gap widens with this
-upgrade rather than narrowing.
+Those pins are not inert. M2-09 proved they are bypassed *in the browser*, but
+they are the React the Vitest component suite runs against, because jsdom tests
+do not go through Next's compiler aliasing. The suite tests one React while
+production runs another.
 
-Decide it deliberately: leave the pins and record that the suite runs a
-different React than production, or raise them and say what that is expected to
-change. Do not raise them silently as housekeeping.
+This was drafted as a product-owner decision on 13 August 2026 and resolved the
+same day, before dispatch, because it turned out not to be a preference. Latest
+stable React is `19.2.8` — the 19.2 line. The `useDeferredValue` fix lives only
+in the 19.3 canary that Next vendors and has no stable release. So **no
+available pin closes the divergence**, and raising `19.2.7` to `19.2.8` would
+change the suite's React without bringing it the fix.
+
+The pins therefore stay, and the divergence is recorded as a known limitation
+rather than resolved. It closes when React 19.3 ships stable, which is not this
+ticket's event to wait for.
 
 ## Non-goals
 
@@ -110,7 +176,9 @@ change. Do not raise them silently as housekeeping.
    `useTransition` plus `router.refresh()`, which is `#86055`'s exact reported
    shape, and M2-09 left it unmeasured and unprotected. It is measured before and
    after within this ticket, so it gets its own comparison.
-5. The React pin decision above is taken and recorded, either way.
+5. The React pins are confirmed to stay at `19.2.7`, with both facts behind
+   that verified in the upgraded tree rather than taken from this ticket, and
+   the test-versus-production React divergence recorded as a known limitation.
 6. Mitigations are removed only where the after-measurement supports it. Each
    removal names the measurement that justifies it; each retention says why.
    Removing the recovery from a surface whose rate was never measured is not
@@ -146,8 +214,9 @@ right.
 
 ## Approval gate
 
-The product owner approves the upgrade, the tier, and the React pin decision.
-Expected **Tier 2** — no schema, authorization, privacy, or spend — but it
+The product owner approved the upgrade and the tier on 13 August 2026. The
+React pin decision was resolved as a fact before dispatch — see above — and did
+not need one. **Tier 2** — no schema, authorization, privacy, or spend — but it
 changes every runtime surface, so the product owner may raise it. It stops and
 re-dispatches as Tier 1 if anything reaches schema, authorization, privacy, or
 spend.

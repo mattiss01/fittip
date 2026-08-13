@@ -83,7 +83,7 @@ production.
 | P2 | [M2-08 Regenerating database types breaks typecheck](M2-08-TYPE-GENERATION-DRIFT.md) | accepted | none | Documented type regeneration drops `\| null` from nine `save_training_completion` parameters and reddens typecheck on unchanged `master`; identify generator regression versus wrong RPC signature before proposing a fix | Approve the investigation; tier depends on the cause |
 | P1 | [M2-09 App Router transitions drop a mutation result](M2-09-APP-ROUTER-LOST-RENDER.md) | accepted | none | A server action returns 200 with a correct body and the transition never commits; measured on goals (3 in 20), memory (1 in 6, with a 33ms trace ruling out slowness), and roadmap (3 in 6); identify the cause, measure `/home/plan` and `/home/log`, and consolidate the shared recovery if none is found | Accepted 13 August 2026 at `3677421`. The cause is upstream and not in this repository; the remedy is a `next@16.3.0` upgrade taken as a separate ticket |
 | P2 | [M2-10 Focus is lost after every mutation](M2-10-FOCUS-LOST-AFTER-MUTATION.md) | proposed | M2-02 accepted | Both management surfaces drop focus to `body` when the acting control unmounts, so a keyboard or screen-reader user restarts from the top after every change; decide where focus belongs per mutation kind and apply it to goals and memory together | Approve the focus destinations, then normal implementation, review, Preview, and acceptance |
-| P1 | [M2-11 Upgrade to `next@16.3.0` and re-measure](M2-11-NEXT-16-3-0-UPGRADE.md) | proposed | M2-09 accepted | Take the upgrade carrying the upstream `useDeferredValue` fix; re-measure all four transitions on M2-09's probe, measure `/home/plan`'s own save for the first time, decide the React pins, and remove a mitigation or the CI retries only where the after-measurement supports it | Approve the upgrade, the tier, and the React pin decision; expected Tier 2 |
+| P1 | [M2-11 Upgrade to `next@16.3.0` and re-measure](M2-11-NEXT-16-3-0-UPGRADE.md) | in development | M2-09 accepted | Take the upgrade carrying the upstream `useDeferredValue` fix; re-measure all four transitions on M2-09's probe, measure `/home/plan`'s own save for the first time, decide the React pins, and remove a mitigation or the CI retries only where the after-measurement supports it | Approved 13 August 2026 and dispatched Tier 2; the React pin question resolved as a fact before dispatch, not as a decision |
 
 ## Dependency chain
 
@@ -133,8 +133,7 @@ this repository.** Next vendors its own React build, so the `react` pin in
 predates the upstream `useDeferredValue` fix by a week. The remedy is a
 `next@16.3.0` upgrade, which the product owner chose to take as a separate
 ticket so the rate can be re-measured on the same probe. That is
-[M2-11](M2-11-NEXT-16-3-0-UPGRADE.md), drafted 13 August 2026 and still
-proposed. It carries a falsifiable hypothesis rather than a task list: if
+[M2-11](M2-11-NEXT-16-3-0-UPGRADE.md), drafted and approved on 13 August 2026. It carries a falsifiable hypothesis rather than a task list: if
 `16.3.0` does not take `/home/plan` to zero, the M2-09 diagnosis is wrong and
 the ticket says so instead of hunting a second cause.
 
