@@ -217,6 +217,15 @@ is something else: the **mutation reply** on goals, memory, roadmap and the
 plan proposal — a `useActionState` or `useTransition` submission whose
 revalidated tree must commit before the surface stops looking frozen.
 
+Those are not two descriptions of one transition, and the code settles it
+rather than the prose. `watchTransition` is armed by `submittedAt`,
+`respondedAt` and `consumedAt`: it can only reach a verdict about a submission
+that is outstanding, and it has no input by which a navigation could even
+register. **It structurally cannot fire on a segment arrival.** So the four
+kept surfaces are not merely unmeasured — they are a different transition
+class, and a clean navigation figure is not a weak signal about them but no
+signal at all.
+
 Those four surfaces produced no number on `16.2.11` and no number on `16.3.0`.
 M2-09 did not measure them and neither did this ticket. The mechanism argues
 they are the same class — they all `revalidatePath`, so their replies all pass
@@ -257,10 +266,18 @@ the removal being safe without establishing it — at the historical rate, one
 clean run would happen about four times in five by chance even if nothing had
 been fixed.
 
-What carries the removal is the 250-transition paired measurement, not the
-one CI run. If that step reddens on the plan surface after this lands, the
-correct response is to restore `--retries=2` and re-open the removal, not to
-re-open M2-09's diagnosis.
+What carries the removal is the 250-transition paired measurement **together
+with the mechanism behind it**, not the one CI run. The distinction matters:
+the change is a fixed defect in the vendored React build, not a probabilistic
+improvement that a runner's timing could undo. A rate that moved for a known
+reason generalises to other hardware in a way that a rate which merely
+improved would not. The local figure is the evidence that the fix reached this
+application; the fix itself is why it should hold on a runner nobody here
+controls.
+
+If that step reddens on the plan surface after this lands, the correct
+response is to restore `--retries=2` and re-open the removal, not to re-open
+M2-09's diagnosis.
 
 ### Criterion 8's flaky count, and why the after figure has to be read carefully
 
@@ -462,14 +479,34 @@ added or changed, because no application code changed.
    removal, where the historical rate was far higher than the local one.
 3. **The four watchdog surfaces were not measured, on either build.** Their
    mitigations are kept for that reason. This ticket's clean navigation
-   numbers are not evidence about them.
+   numbers are not evidence about them — `watchTransition` cannot fire on a
+   navigation at all, so they are a different transition class rather than a
+   related one.
 4. **`/home/plan`'s editor save was already zero before the upgrade**, so it
    supplies no before/after signal. Criterion 4 is satisfied by measuring it
    twice, not by it showing an improvement.
-5. **That save was measured on a plan with no sessions.** `#86055` reports
-   that a page with more content fails more often, so the null result is
-   bounded to a minimal payload. A full seven-day plan with sessions and
-   activities was not measured.
+5. **That save's null result is bounded on two axes, and both matter because
+   criterion 4 exists to test `#86055`'s shape.**
+   - *Payload.* The measured plan carries no sessions. `#86055` reports that a
+     page with more content fails more often, so the null bounds the rate for a
+     minimal payload. A full seven-day plan with sessions and activities was
+     not measured.
+   - *Client warmth.* Every iteration begins `page.goto("/home/plan")`, so
+     every measured save was the first client transition after a fresh
+     hydration on a cold router cache. `#86055` concerns saves on a **warm**
+     client, where a segment has already been navigated to and cached. A
+     repeated save without an intervening document load was never measured.
+
+   Either bound alone is enough reason not to read the pre-upgrade 0/250 as
+   "this surface does not exhibit the defect". The honest reading is that this
+   surface did not exhibit it *under these two preconditions*.
+
+   **This does not weaken the navigation figures.** `measurePlanNavigation`
+   starts from a fresh document too — `page.goto("/home/today")`, then a
+   `next/link` click — and it still reproduced the defect at 3.60% before the
+   upgrade. So a fresh document is demonstrably not a precondition that
+   suppresses this class; it just happens to be the one under which the save
+   was measured.
 6. **The `/home/log` navigation denominator is 201 before and 199 after**, not
    250. The remaining attempts aborted on the accumulated-actuals stall that
    M2-09 first hit. The rate is reported both ways wherever it appears.
