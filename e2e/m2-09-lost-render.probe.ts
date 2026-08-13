@@ -77,11 +77,19 @@ test.describe("M2-09 lost-render rate", () => {
       }
       report("/home/plan client-side navigation", plan);
 
-      const log = newTally();
+      // The navigation to `/home/log` and the save that follows it are two
+      // separate transitions and are counted separately. Folding them together
+      // would attribute a segment that never rendered to the form action.
+      const logArrival = newTally();
+      const logSave = newTally();
       for (let run = 0; run < LOG_RUNS; run += 1) {
-        record(log, await measureQuickLogSave(page));
+        const arrival = await measureQuickLogArrival(page);
+        record(logArrival, arrival);
+        if (arrival.outcome !== "committed") continue;
+        record(logSave, await measureQuickLogSave(page));
       }
-      report("/home/log quick-log save", log);
+      report("/home/log client-side navigation", logArrival);
+      report("/home/log quick-log save", logSave);
     } finally {
       await deleteLocalUser(request, userId);
     }
@@ -118,20 +126,39 @@ async function measurePlanNavigation(page: Page): Promise<Measurement> {
 }
 
 /**
- * Today -> Log through a `next/link`, then one unplanned actual. The save is
- * the measured transition: `useActionState` resolves and the surface must
- * replace the form with the recorded fact.
+ * Today -> Log through a `next/link`. The quick-log route has no `loading.tsx`,
+ * so a lost transition here leaves the Today surface on screen under the log
+ * URL rather than an empty shell.
  */
-async function measureQuickLogSave(page: Page): Promise<Measurement> {
+async function measureQuickLogArrival(page: Page): Promise<Measurement> {
   await page.goto("/home/today");
   await page
     .getByRole("link", { name: /Log unplanned/ })
     .first()
     .click();
   await expect(page).toHaveURL(/\/home\/log$/);
-  await expect(page.getByRole("radio", { name: "Unplanned" })).toBeChecked({
-    timeout: COMMIT_BUDGET_MS,
-  });
+  const startedAt = Date.now();
+  try {
+    await expect(page.getByRole("radio", { name: "Unplanned" })).toBeChecked({
+      timeout: COMMIT_BUDGET_MS,
+    });
+  } catch {
+    console.log(
+      `[M2-09] log navigation lost after ${Date.now() - startedAt} ms`,
+    );
+    return { outcome: "lost" };
+  }
+  const elapsed = Date.now() - startedAt;
+  console.log(`[M2-09] log navigation committed in ${elapsed} ms`);
+  return { outcome: "committed", elapsed };
+}
+
+/**
+ * One unplanned actual on a `/home/log` that has already rendered. The save is
+ * the measured transition: `useActionState` resolves and the surface must
+ * replace the form with the recorded fact.
+ */
+async function measureQuickLogSave(page: Page): Promise<Measurement> {
   await page.getByLabel("Duration in minutes").fill("30");
   const startedAt = Date.now();
   await page.getByRole("button", { name: "Save actual" }).click();
