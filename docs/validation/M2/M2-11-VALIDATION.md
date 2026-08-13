@@ -2,7 +2,8 @@
 
 **Ticket:** [M2-11](../../backlog/M2/M2-11-NEXT-16-3-0-UPGRADE.md)
 
-**Lifecycle state:** in development — builder handoff
+**Lifecycle state:** accepted — product owner accepted exact independently
+reviewed commit `7585f1f` on 13 August 2026
 
 **Branch:** `ticket/m2-11-next-16-3-0-upgrade`
 
@@ -704,3 +705,17 @@ and the six committed screenshots show the upgraded build's surfaces — but
 neither can judge whether a surface looks and feels right. **The product owner's
 `390x844` pass on the Preview is the evidence this ticket most needs and is the
 one thing no agent here can supply.**
+
+## Product-owner acceptance — 13 August 2026
+
+The product owner accepted exact independently reviewed commit
+`7585f1fa71dc5a1e4c4c2a6548e6bf609e9f175b` in chat, against Preview
+`https://fittip-6b4qmhq9o-mattis-3657s-projects.vercel.app`, with all five
+known limitations stated in the acceptance request — including that hosted
+verification was scoped rather than passed, and that the `390x844` judgment on
+`16.3.0` was theirs to make because no agent in this pipeline could supply it.
+
+`origin/master` was `843c06b` and had not diverged from the branch point, so the
+accepted commit and its evidence-only descendant integrated as a fast-forward
+rather than a merge commit. `7585f1f` is contained in `master` exactly as
+reviewed, with no conflict resolution and no integration edit in the range.
