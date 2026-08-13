@@ -27,7 +27,7 @@ import {
   RECOVERY_NOTICE_MS,
   RENDER_GRACE_MS,
   WATCH_INTERVAL_MS,
-} from "@/features/goals/mutation-watchdog";
+} from "@/lib/app-router/transition-watchdog";
 import { MemoryManager, type MemoryView } from "./memory-manager";
 
 const TODAY = "2026-08-01";

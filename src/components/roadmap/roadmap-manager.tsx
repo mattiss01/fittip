@@ -24,16 +24,14 @@ import {
 } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { RoadmapEditor } from "@/components/roadmap/roadmap-editor";
-// M2-05 established this watchdog for the goal surface and M2-02 reused it for
-// memory. The timing rules are not goal-specific and this surface reproduces
-// the same defect, so they are reused rather than duplicated. The module name
-// is now too narrow; renaming it touches accepted code and belongs elsewhere.
+// Only the "a reply arrived and never rendered" half is taken. See
+// `useLostRenderRecovery` below for why the confirmation budget is not.
 import {
   latestActionResponseAt,
   RECOVERY_NOTICE_MS,
   RENDER_GRACE_MS,
   WATCH_INTERVAL_MS,
-} from "@/features/goals/mutation-watchdog";
+} from "@/lib/app-router/transition-watchdog";
 
 /**
  * The roadmap review surface.
@@ -692,7 +690,7 @@ function newIdempotencyKey(): string {
  * "Building your roadmap proposal…" for ever while the server had already
  * answered 200 with the complete proposal, and a reload showed it every time.
  *
- * Only the "a reply arrived and never rendered" half of `watchGoalMutation` is
+ * Only the "a reply arrived and never rendered" half of `watchTransition` is
  * used. Its ten-second confirmation budget belongs to a form save; a roadmap
  * generation is one provider call and has no honest fixed deadline, so a
  * silent request is left to keep waiting behind the pending copy rather than

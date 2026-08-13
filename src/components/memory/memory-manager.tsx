@@ -15,18 +15,16 @@ import {
 } from "@/app/home/you/memory/action-state";
 import { changeMemoryAction } from "@/app/home/you/memory/actions";
 import styles from "@/app/home/you/memory/memory.module.css";
-// M2-05 established this watchdog for the goal surface. The timing rules are
-// not goal-specific and the memory surface reproduces the same defect (see
-// `useMutationStall` below), so they are reused rather than duplicated. The
-// module name is now too narrow; renaming it touches M2-05's accepted code and
-// belongs to a separate ticket.
+// The timing rules are not memory-specific: this surface reproduces the same
+// App Router defect as goals, roadmap and the plan proposal (see
+// `useMutationStall` below), so all four share one module.
 import {
   latestActionResponseAt,
   RECOVERY_NOTICE_MS,
-  watchGoalMutation,
+  watchTransition,
   WATCH_INTERVAL_MS,
-  type GoalMutationWatch,
-} from "@/features/goals/mutation-watchdog";
+  type TransitionWatch,
+} from "@/lib/app-router/transition-watchdog";
 
 export type MemoryRevisionView = {
   id: string;
@@ -649,7 +647,7 @@ function ConfirmedAction({
  * the change succeeded — the action answers 200 for every outcome — so neither
  * claims it did.
  */
-type MutationStall = Exclude<GoalMutationWatch, "waiting">;
+type MutationStall = Exclude<TransitionWatch, "waiting">;
 
 function useMutationStall(
   pending: boolean,
@@ -663,7 +661,7 @@ function useMutationStall(
   } | null>(null);
   const respondedAt = useRef<number | null>(null);
   // The newest response the previous mutation had already accounted for. See
-  // `watchGoalMutation`: this is what makes a reply that beats the pending
+  // `watchTransition`: this is what makes a reply that beats the pending
   // render detectable.
   const consumedAt = useRef<number | null>(null);
   const key = `${submission}:${pending}`;
@@ -696,7 +694,7 @@ function useMutationStall(
     const submittedAt = performance.now();
     let reload = 0;
     const interval = window.setInterval(() => {
-      const verdict = watchGoalMutation({
+      const verdict = watchTransition({
         submittedAt,
         respondedAt: respondedAt.current,
         consumedAt: consumedAt.current,
@@ -770,7 +768,7 @@ function markRecovered(recovered: boolean) {
   }
 }
 
-function stallNotice(stall: GoalMutationWatch | null) {
+function stallNotice(stall: TransitionWatch | null) {
   if (stall === "lost-render") {
     // Says only what is known. A reply arrived and never rendered; whether it
     // saved, was rejected, or failed validation is not observable here, so the

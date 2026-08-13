@@ -39,7 +39,7 @@ import {
   RECOVERY_NOTICE_MS,
   RENDER_GRACE_MS,
   WATCH_INTERVAL_MS,
-} from "@/features/goals/mutation-watchdog";
+} from "@/lib/app-router/transition-watchdog";
 
 const PROPOSAL_ID = "00000000-0000-4000-8000-000000000010";
 const DECLINED_ID = "00000000-0000-4000-8000-000000000011";

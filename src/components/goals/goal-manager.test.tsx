@@ -27,7 +27,7 @@ import {
   RECOVERY_NOTICE_MS,
   RENDER_GRACE_MS,
   WATCH_INTERVAL_MS,
-} from "@/features/goals/mutation-watchdog";
+} from "@/lib/app-router/transition-watchdog";
 import { GoalManager, type GoalView } from "./goal-manager";
 
 const RECOVERY_FLAG = "fittip.goals.recovered:v1";

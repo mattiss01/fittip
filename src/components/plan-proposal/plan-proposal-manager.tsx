@@ -23,7 +23,7 @@ import {
   RECOVERY_NOTICE_MS,
   RENDER_GRACE_MS,
   WATCH_INTERVAL_MS,
-} from "@/features/goals/mutation-watchdog";
+} from "@/lib/app-router/transition-watchdog";
 import { isoDateInTimezone } from "@/features/completions/local-date";
 import { PLAN_PROPOSAL_COPY } from "@/features/plan-proposal/plan-proposal-copy";
 

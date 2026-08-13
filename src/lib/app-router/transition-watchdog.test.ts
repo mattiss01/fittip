@@ -4,13 +4,13 @@ import {
   CONFIRMATION_BUDGET_MS,
   latestActionResponseAt,
   RENDER_GRACE_MS,
-  watchGoalMutation,
-} from "./mutation-watchdog";
+  watchTransition,
+} from "./transition-watchdog";
 
-describe("watchGoalMutation", () => {
+describe("watchTransition", () => {
   it("waits while a mutation is still in flight", () => {
     expect(
-      watchGoalMutation({
+      watchTransition({
         submittedAt: 1_000,
         respondedAt: null,
         consumedAt: null,
@@ -21,7 +21,7 @@ describe("watchGoalMutation", () => {
 
   it("waits while a fresh response is still being rendered", () => {
     expect(
-      watchGoalMutation({
+      watchTransition({
         submittedAt: 1_000,
         respondedAt: 1_100,
         consumedAt: null,
@@ -32,7 +32,7 @@ describe("watchGoalMutation", () => {
 
   it("reports a lost render once a response has not reached the surface", () => {
     expect(
-      watchGoalMutation({
+      watchTransition({
         submittedAt: 1_000,
         respondedAt: 1_100,
         consumedAt: null,
@@ -43,7 +43,7 @@ describe("watchGoalMutation", () => {
 
   it("ignores a response the previous mutation already accounted for", () => {
     expect(
-      watchGoalMutation({
+      watchTransition({
         submittedAt: 5_000,
         respondedAt: 1_100,
         consumedAt: 1_100,
@@ -56,7 +56,7 @@ describe("watchGoalMutation", () => {
     // The reply beat the render, so it looks older than `submittedAt`. It is
     // still newer than anything the previous mutation saw, so it counts.
     expect(
-      watchGoalMutation({
+      watchTransition({
         submittedAt: 1_050,
         respondedAt: 1_020,
         consumedAt: 900,
@@ -67,7 +67,7 @@ describe("watchGoalMutation", () => {
 
   it("reports an unconfirmed mutation rather than assuming it applied", () => {
     expect(
-      watchGoalMutation({
+      watchTransition({
         submittedAt: 1_000,
         respondedAt: null,
         consumedAt: null,
@@ -78,7 +78,7 @@ describe("watchGoalMutation", () => {
 
   it("reports unconfirmed when the only response is an accounted-for one", () => {
     expect(
-      watchGoalMutation({
+      watchTransition({
         submittedAt: 1_000,
         respondedAt: 900,
         consumedAt: 900,
@@ -89,7 +89,7 @@ describe("watchGoalMutation", () => {
 
   it("prefers the lost render when both budgets have elapsed", () => {
     expect(
-      watchGoalMutation({
+      watchTransition({
         submittedAt: 1_000,
         respondedAt: 1_200,
         consumedAt: null,

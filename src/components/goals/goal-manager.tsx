@@ -18,10 +18,10 @@ import styles from "@/app/home/you/goals/goals.module.css";
 import {
   latestActionResponseAt,
   RECOVERY_NOTICE_MS,
-  watchGoalMutation,
+  watchTransition,
   WATCH_INTERVAL_MS,
-  type GoalMutationWatch,
-} from "@/features/goals/mutation-watchdog";
+  type TransitionWatch,
+} from "@/lib/app-router/transition-watchdog";
 
 export type GoalView = {
   id: string;
@@ -701,7 +701,7 @@ function HistorySection({
  * assumed either way. Neither case can tell whether the change succeeded — the
  * action answers 200 for every outcome — so neither claims it did.
  */
-type MutationStall = Exclude<GoalMutationWatch, "waiting">;
+type MutationStall = Exclude<TransitionWatch, "waiting">;
 
 function useMutationStall(
   pending: boolean,
@@ -715,7 +715,7 @@ function useMutationStall(
   } | null>(null);
   const respondedAt = useRef<number | null>(null);
   // The newest response the previous mutation had already accounted for. See
-  // `watchGoalMutation`: this is what makes a reply that beats the pending
+  // `watchTransition`: this is what makes a reply that beats the pending
   // render detectable.
   const consumedAt = useRef<number | null>(null);
   const key = `${submission}:${pending}`;
@@ -748,7 +748,7 @@ function useMutationStall(
     const submittedAt = performance.now();
     let reload = 0;
     const interval = window.setInterval(() => {
-      const verdict = watchGoalMutation({
+      const verdict = watchTransition({
         submittedAt,
         respondedAt: respondedAt.current,
         consumedAt: consumedAt.current,
@@ -822,7 +822,7 @@ function markRecovered(recovered: boolean) {
   }
 }
 
-function stallNotice(stall: GoalMutationWatch | null) {
+function stallNotice(stall: TransitionWatch | null) {
   if (stall === "lost-render") {
     // Says only what is known. A reply arrived and never rendered; whether it
     // saved, was rejected as stale, or failed validation is not observable

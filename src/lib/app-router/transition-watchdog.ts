@@ -1,26 +1,36 @@
 /**
- * M2-05: a goal mutation whose result never reaches the surface.
+ * An App Router transition whose result never reaches the surface.
  *
- * The goal surface submits through `useActionState`, so both the typed result
- * and the revalidated server tree arrive inside one App Router transition.
- * That transition intermittently never commits: the server answers, but React
- * renders nothing further, so the page stays on "Saving goal change…" for ever
- * with stale content and no message. A user sees a surface that silently did
- * nothing.
+ * A mutating surface submits through `useActionState` or `useTransition`, so
+ * the typed result and any revalidated server tree arrive inside one App
+ * Router transition. That transition intermittently never commits: the server
+ * answers, but React renders nothing further, so the page stays on its pending
+ * copy for ever with stale content and no message. A user sees a surface that
+ * silently did nothing.
+ *
+ * M2-05 built these rules for the goal surface; memory, roadmap and the plan
+ * proposal then reused them, so they live here rather than under any one
+ * feature. M2-09 identified the cause upstream — React's `useDeferredValue`
+ * can stick on a stale value (facebook/react#35821), and `layout-router`
+ * routes every segment's payload through it — and the fix ships in
+ * `next@16.3.0`, which this repository does not yet run. Until that version
+ * bump is approved, verified and shown to have removed the race, this
+ * watchdog is what stands between a user and a silently dead form. Do not
+ * remove it before then.
  *
  * What these rules can observe is narrow, and the copy they drive must not
  * exceed it. A resource timing entry proves that a **response arrived**. It
- * does not prove what the response said: `changeGoalAction` answers 200 for a
+ * does not prove what the response said: these actions answer 200 for a
  * validation failure, a stale conflict, a core-limit conflict, an
  * archive-required conflict, an expired session, and a persistence error just
- * as it does for a success. So the outcome here is only ever "a reply came
+ * as they do for a success. So the outcome here is only ever "a reply came
  * back and never rendered" or "nothing came back at all" — never "it saved".
  *
  * They are kept free of React so the timing decisions can be tested directly
  * rather than inferred from a component.
  */
 
-export type GoalMutationWatch = "waiting" | "lost-render" | "unconfirmed";
+export type TransitionWatch = "waiting" | "lost-render" | "unconfirmed";
 
 /**
  * A response that has already arrived should reach the surface far inside this
@@ -49,8 +59,14 @@ export const RECOVERY_NOTICE_MS = 500;
  * pending render commits, so a reply that beat that commit would look older
  * than its own submission and be missed. A response newer than everything the
  * last mutation accounted for belongs to this one, whenever it arrived.
+ *
+ * The two verdicts are separable on purpose, and a caller may use only one.
+ * The roadmap surface takes the "a reply arrived and never rendered" half
+ * alone: a ten-second confirmation budget belongs to a form save, while a
+ * provider call has no honest fixed deadline and must not be declared
+ * unconfirmed while it is still legitimately running.
  */
-export function watchGoalMutation({
+export function watchTransition({
   submittedAt,
   respondedAt,
   consumedAt,
@@ -60,7 +76,7 @@ export function watchGoalMutation({
   respondedAt: number | null;
   consumedAt: number | null;
   now: number;
-}): GoalMutationWatch {
+}): TransitionWatch {
   const unaccountedFor =
     respondedAt !== null && (consumedAt === null || respondedAt > consumedAt);
   if (unaccountedFor && now - respondedAt >= RENDER_GRACE_MS) {
