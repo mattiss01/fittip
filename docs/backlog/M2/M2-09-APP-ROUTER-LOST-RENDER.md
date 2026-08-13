@@ -1,6 +1,9 @@
 # M2-09: App Router transitions intermittently drop a mutation result
 
-**Status:** proposed — not approved for implementation
+**Status:** in development — investigation approved by the product owner on
+13 August 2026
+
+**Triage:** ready-for-agent
 
 **Milestone:** M2 — goals, editable coaching context, and guided onboarding
 
@@ -18,6 +21,67 @@ highest rate yet measured
 
 **Blocks:** nothing today. Every surface that mutates data will keep paying a
 per-ticket mitigation tax until it is understood.
+
+## Agent brief
+
+**Outcome.** Explain why an App Router transition drops a completed server-action
+result, or record honestly that it could not be explained and what was ruled
+out. Measure the two unmeasured surfaces. Leave the shared recovery in one
+correctly named home that no single feature owns.
+
+**Tier 2**, because the likely landing — consolidating a module four components
+import, and touching `.github/**` — is Tier 2 even though the investigation
+itself is measurement. Stop and re-dispatch as Tier 1 if anything reaches
+schema, authorization, privacy, or spend.
+
+**Investigation before design.** Do not write a fix before you can state the
+mechanism. "Not identified, here is what was ruled out and on what evidence" is
+a valid result; a speculative fix on top of two mitigations is not.
+
+**Hard constraints**
+
+- **Check upstream first, before any code.** `next@16.2.11`, `react@19.2.7`
+  issue trackers and release notes. If it is fixed upstream, **report that and
+  stop** — a framework version bump is the product owner's decision, not yours,
+  and it does not happen inside this ticket without a separate approval.
+- **Remove no mitigation.** `watchGoalMutation` and its consumers stay until
+  evidence shows the race is gone. They are the only thing between a user and a
+  silently dead form.
+- **Consolidation moves the module, it does not redesign it.** If you reach
+  criterion 4, relocate and rename the existing behavior out of
+  `src/features/goals/` to a home no feature owns, update all four consumers,
+  and keep the two halves separable — M3-02 uses only the "a reply arrived and
+  never rendered" half, because a provider call has no honest fixed deadline
+  while a form save does. No new recovery semantics.
+- **Every rate carries its denominator.** State runs per surface and the
+  observed rate against them; a rate without one is not a measurement. Repeated
+  390px runs are slow, so bound them and say what you spent.
+- **No live AI call.** None is authorized. `/home/plan` measurement is
+  fixture-only, exactly as M3-03 shipped it.
+
+**Non-goals.** No redesign of accepted goal, memory, roadmap, or plan models,
+schemas, or actions. No new AI, planning, or onboarding behavior. No focus-order
+work — that is M2-10.
+
+**Acceptance criteria.** The seven already in this ticket, unchanged. Criteria 1,
+2, and 6 are the ones that get quietly skipped: the recorded cause *or* recorded
+non-cause, `/home/plan` **and** `/home/log` measured whatever the result, and the
+`--retries=2` stopgap on `Authentication and planning flows` either removed or
+re-justified in writing. It does not survive by being forgotten.
+
+**Expected to change.** `src/features/goals/mutation-watchdog.ts` and its four
+consumers (`goal-manager.tsx`, `memory-manager.tsx`, `roadmap-manager.tsx`,
+`plan-proposal-manager.tsx`) plus their tests; `.github/workflows/ci.yml` around
+line 178, **committed separately** as a tooling change; possibly `e2e/` specs and
+configs for the `/home/log` measurement.
+
+**Skills.** Read these paths explicitly; Claude Code does not auto-discover
+them. `.agents/skills/diagnosing-bugs/SKILL.md` for the loop,
+`.agents/skills/mobile-e2e/SKILL.md` for the 390px measurement runs and their
+env vars, `.agents/skills/vercel-react-best-practices/SKILL.md` if you touch the
+client components, `.agents/skills/validation-record/SKILL.md` for the handoff.
+
+Read only this section unless you hit an ambiguity it does not resolve.
 
 ## Observed behavior
 
