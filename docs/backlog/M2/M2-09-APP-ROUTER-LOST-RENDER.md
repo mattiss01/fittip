@@ -1,7 +1,9 @@
 # M2-09: App Router transitions intermittently drop a mutation result
 
-**Status:** in development — investigation approved by the product owner on
-13 August 2026
+**Status:** testable — builder handoff complete on 13 August 2026 at `c9f1f74`,
+awaiting independent review and product-owner acceptance. The cause is
+identified and it is upstream; the remedy is a `next@16.3.0` upgrade, which this
+ticket does not take and which needs its own approval and ticket.
 
 **Triage:** ready-for-agent
 
