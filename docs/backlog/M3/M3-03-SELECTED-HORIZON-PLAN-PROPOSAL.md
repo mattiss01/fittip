@@ -1,6 +1,6 @@
 # M3-03: Selected-horizon plan proposal
 
-**Status:** testable — independently approved on 12 August 2026; awaiting product-owner acceptance
+**Status:** accepted — product-owner accepted and merged as `2714fba` on 13 August 2026
 
 **Triage:** ready-for-agent
 

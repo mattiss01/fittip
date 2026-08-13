@@ -2,9 +2,9 @@
 
 **Ticket:** [M3-03](../../backlog/M3/M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md)
 
-**Status:** **testable — exact commit independently approved with green CI,
-READY Preview, and founder-hosted verification; awaiting product-owner
-acceptance.** The first-builder foundation handoff remains below as permanent
+**Status:** **accepted — product-owner accepted, merged to master, deployed to
+the founder environment, and post-merge verified.** The first-builder
+foundation handoff remains below as permanent
 history; the complete-ticket handoff and subsequent correction evidence follow
 it.
 
@@ -1086,3 +1086,39 @@ owner's earlier matching hosted walkthrough supplies the manual visual,
 keyboard, touch, and authenticated evidence. Product-owner acceptance of exact
 commit `86aa31505985cb3b914513d2dd119bcc65722c67` remains the only open pre-merge
 gate.
+
+### Product-owner acceptance, merge, and production verification — 13 August 2026
+
+The product owner explicitly accepted exact independently reviewed
+implementation commit `86aa31505985cb3b914513d2dd119bcc65722c67` in chat.
+
+The accepted ticket branch, including its evidence-only descendants, was
+merged with current `origin/master` as
+`2714fba88160f5c37e4c201abd788b1eda7dd8d5` and pushed to `master`. Current
+master already contained the newer M3-03B decision record. The single merge
+conflict was confined to the M3 backlog table and was resolved by preserving
+both M3-03's `testable` acceptance evidence and M3-03B's "all decisions
+answered" state. No runtime file required conflict resolution, and reviewed
+implementation commit `86aa315` is an ancestor of the merge.
+
+Post-merge evidence:
+
+- Exact master [CI run 31677864505](https://github.com/mattiss01/fittip/actions/runs/31677864505)
+  completed green across lint/types/unit/build; migrations from zero, RLS,
+  database lint, advisors, pgTAP, and concurrency; and every 390px production
+  browser flow including M3-03.
+- The exact master Vercel Production deployment reached READY at
+  `https://fittip-2nv6kw4fy-mattis-3657s-projects.vercel.app`; the founder
+  alias is `https://fittip-gilt.vercel.app`.
+- An unauthenticated request to `/home/plan/proposal` on the founder alias
+  returned `303` to `/`, preserving the application authentication boundary.
+- At exactly 390x844 on the founder alias, the authenticated product owner
+  generated a three-day fixture proposal, reloaded it, and reported that it
+  still displayed correctly. No live AI call was authorized or made.
+- The previously completed founder migration-history, private validator,
+  RLS/privilege, owner/stranger, 900-minute persistence, and zero-minute
+  rejection checks remain the hosted database evidence for the same unchanged
+  runtime and exact committed migrations.
+
+M3-03 is accepted. Its dependent tickets remain separately governed and are
+not authorized for implementation by this acceptance.
