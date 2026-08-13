@@ -2,7 +2,8 @@
 
 **Ticket:** [M2-09](../../backlog/M2/M2-09-APP-ROUTER-LOST-RENDER.md)
 
-**Lifecycle state:** testable — awaiting independent exact-commit review
+**Lifecycle state:** testable — independently reviewed and approved over
+`bb5885e..6d86903` with no blocking findings; awaiting product-owner acceptance
 
 **Branch:** `ticket/m2-09-app-router-lost-render`
 
@@ -18,11 +19,19 @@ commit that approved the investigation
 | `7a7bce0d219581e79d73435e7436eb831d19e3dc` | re-justify the continuous-integration stopgap (tooling, committed separately) |
 | `297d1f49784a77b94d43ef57965a3875880d593a` | count the log navigation and the log save separately |
 | `c9f1f7436999676e92376a8ea550584064d4ac1e` | bound the harness so a wedged surface cannot hang a run |
+| `7d875743dbb93a81e0f18a489aff66b6cbb676c1` | this record |
+| `6d8690397072895db370f67a57cb03ef498c46ff` | move the ticket to testable |
 
-**Review target:** `c9f1f7436999676e92376a8ea550584064d4ac1e` — the branch
-head at handoff. Review the range
-`bb5885e83ba4100c6904559c64e59b3fd0dfd125..c9f1f7436999676e92376a8ea550584064d4ac1e`
-plus the commit that adds this record.
+**Review target:** `c9f1f7436999676e92376a8ea550584064d4ac1e` — the last commit
+that changes code. The review covered the range from the base to
+`6d8690397072895db370f67a57cb03ef498c46ff`, which also carries this record and
+the ticket's lifecycle line.
+
+**After review**, this record gained the disclosures the reviewer asked for:
+how each `/home/log` figure was aggregated, which harness produced which
+figure, the bound the probe's clock placement puts on both navigation rates,
+and the third-party report of this symptom on `16.2.6`. That commit changes no
+code and no measured value.
 
 ## Summary
 
@@ -127,6 +136,28 @@ Both `16.2.x` releases vendor the canary cut a week **before** the React fix
 merged. There is no patch-level escape: the remedy is a minor upgrade to
 `next@16.3.0`, which also carries the `#84299` fix.
 
+That inference is also attested directly, which matters because the rest of
+this section reaches the same conclusion only by comparing dates. `#86055`
+carries a report dated 2026-05-25, two months after the React fix merged, from
+a third party running **`16.2.6`**:
+
+> I was trying to mutate data via a server action on a dynamic route. The
+> server action re-validates some paths and returns the object
+> `{ success: true, serverErrors: null }`. When the server action was called,
+> the button to update the data was stuck in a disabled state because the
+> server action returned `undefined` instead of the object I defined. Once I
+> removed the file `loading.tsx` from the same directory where the dynamic
+> route page was located, everything worked as usual.
+>
+> The Next.js version I am using is `16.2.6`.
+
+That is this repository's symptom, on this repository's release line, from
+someone with no connection to it: a revalidating server action whose typed
+result never reaches the surface, leaving the control disabled. The issue's
+reporter replied "welcome to the ones desperately waiting for v16.3.0 to be
+released". So the `16.2.x` line is not merely computed to lack the fix; it is
+observed to lack it.
+
 **This is the product owner's decision and it is not taken here.** It needs its
 own ticket: a version bump, a full re-measurement against these numbers, and
 only then the removal of the mitigations and the continuous-integration
@@ -169,18 +200,42 @@ The `/home/plan` figure comes from one run of 250; both `/home/log` figures
 come from a second run after the harness was corrected. They are not one
 continuous sample and are not presented as one.
 
-The second run was **stopped at attempt 205 of 250**, so the `/home/log`
-denominators are 204 and 199, not 250. It stopped making progress with no
-further output: the click that opens the quick-log surface had no action
-timeout at the time, so a control that never became actionable retried until
-the run's own hour-long timeout. Each iteration leaves one more unplanned
-actual behind, and by attempt 205 the Today surface carried about 200 of them.
-Whether that was the defect on a large payload or an actionability problem
-under a fixed overlay was **not diagnosed** — the run was killed and its trace
-is gone. The harness now bounds actions and navigations and counts a thrown
-iteration as `aborted`, separately from a lost render, so a repeat reports
-instead of hanging. The synthetic account the killed run left behind was
-deleted by hand and the local auth table verified empty.
+### Which harness produced each figure, and how each was computed
+
+Neither run used the reviewed harness, and one of the three rows was not
+computed by the harness at all. Both facts are recorded here so nobody has to
+reconstruct them from the commit history.
+
+| Row | Produced by | Aggregated by |
+| --- | --- | --- |
+| `/home/plan` navigation | `e0542ea` | the probe's own `report()`, printed as a `[M2-09] RESULT` line |
+| `/home/log` navigation | `297d1f4` | **hand-computed** from the per-iteration lines |
+| `/home/log` save | `297d1f4` | **hand-computed** from the per-iteration lines |
+
+Between those two commits and the reviewed `c9f1f74`, the measurement
+functions and `COMMIT_BUDGET_MS` are unchanged; `c9f1f74` adds only the `guard`
+wrapper, the `aborted` bucket and the config's action and navigation timeouts.
+The reviewed harness would therefore have produced the same numbers, but it did
+not produce these.
+
+The `/home/log` run was **stopped at attempt 205 of 250**, so `report()` never
+ran and there is no `[M2-09] RESULT` line for either `/home/log` row. Its two
+counts and four quantiles were computed from that run's per-iteration
+`[M2-09] log navigation …` and `[M2-09] log save …` lines — one line per
+transition, which is the same input `report()` consumes. The denominators are
+204 and 199, not 250.
+
+Why it stopped: it made no further progress and printed nothing more. The click
+that opens the quick-log surface had no action timeout at the time, so a
+control that never became actionable retried until the run's own hour-long
+timeout. Each iteration leaves one more unplanned actual behind, and by attempt
+205 the Today surface carried about 200 of them. Whether that was the defect on
+a large payload or an actionability problem under a fixed overlay was **not
+diagnosed** — the run was killed and its trace is gone. The harness now bounds
+actions and navigations and counts a thrown iteration as `aborted`, separately
+from a lost render, so a repeat reports instead of hanging. The synthetic
+account the killed run left behind was deleted by hand and the local auth table
+verified empty.
 
 ### What the numbers say
 
@@ -204,6 +259,24 @@ while no committed navigation exceeded 422 ms. The quick-log route has no
 `loading.tsx`, so the answer to question 3's `loading.tsx` sub-question is that
 a loading boundary is not required for this class; it only changes what the
 user is left staring at.
+
+Its committed latencies are bimodal in a second, harmless way that the
+`/home/plan` reading does not share: a 7 ms median against a 394 ms p95. That
+is the router prefetch, not the defect — an already-prefetched segment paints
+in single-digit milliseconds and a cold one takes about the same 400 ms
+`/home/plan` takes. Both modes are two orders of magnitude below the 15 s
+ceiling, so neither is near the boundary that separates committed from lost.
+
+**What the probe cannot see, on this surface only.** In
+`measureQuickLogArrival` the clock starts *after* the URL assertion, so the
+measured window excludes whatever that assertion absorbed, and that assertion
+runs on Playwright's default 5 s expect budget. A transition whose URL change
+itself lagged past 5 s would therefore have been counted `aborted` rather than
+`lost`. Neither effect touches these numbers — the run recorded zero aborted
+attempts, and every loss was recorded with the URL already changed — but the
+`/home/log` navigation rate is a floor for that reason, not a two-sided
+estimate. `measurePlanNavigation` has the same shape; the same caveat applies
+to it.
 
 **The `/home/log` save did not fail once in 199.** This is the sharpest
 structural result in the run, and it lines up with the mechanism above:
@@ -262,8 +335,12 @@ There is no new surface to demonstrate. To reproduce the measurement at
    `npx.cmd playwright test --config=e2e/m2-09.playwright.config.ts --workers=1`
    Set `M2_09_PLAN_RUNS` and `M2_09_LOG_RUNS` to bound the run; each defaults
    to 120.
-4. Read the `[M2-09] RESULT` lines. Without the service-role key the probe
-   skips silently.
+4. Read the `[M2-09] RESULT` lines — one per surface, printed when that
+   surface's loop finishes. A run that is interrupted, or that ends its test
+   early, prints none of them: the counts then have to be recovered from the
+   per-iteration `[M2-09] …` lines, one per transition, which is how the two
+   `/home/log` rows above were obtained. Keep the run's output. Without the
+   service-role key the probe skips silently.
 
 The four surfaces that use the watchdog keep their existing acceptance paths;
 `e2e/m2-01-goals.spec.ts`, `e2e/m2-02-memory.spec.ts`, `e2e/m3-02-roadmap.spec.ts`
@@ -327,8 +404,10 @@ keys under their existing names.
 
 The probe uses `SUPABASE_SERVICE_ROLE_KEY` at test runtime only, to create and
 delete one disposable confirmed user, exactly as the existing specs do. It
-never reaches application code and is never logged or persisted. Both runs
-deleted their synthetic account.
+never reaches application code and is never logged or persisted. The first run
+deleted its synthetic account itself; the second was killed before its cleanup
+could run, and that account was deleted by hand with the local auth table
+verified empty afterwards.
 
 ## Tests and final results
 
@@ -366,9 +445,9 @@ The measurement harness is not a test and has no assertions to add.
 2. **The version bump is not done and must not be inferred as approved.** It
    needs its own ticket: bump, re-measure against the rates above, then decide
    about the mitigations and the retries.
-3. **Attribution is by symptom, upstream diagnosis and version arithmetic**, not
-   by observing the stuck fiber in this application. See "What could not be
-   established".
+3. **Attribution is by symptom, upstream diagnosis, version arithmetic and one
+   third-party report on `16.2.6`**, not by observing the stuck fiber in this
+   application. See "What could not be established".
 4. **Two upstream defects, one remedy.** Which one produced which historical
    FitTip occurrence is unknown.
 5. **Local only.** No hosted rate was measured, on Vercel or anywhere else.
@@ -388,13 +467,22 @@ The measurement harness is not a test and has no assertions to add.
    `#86055`'s exact shape; it is unmeasured and unprotected.
 10. **No mitigation was removed** and the `--retries=2` stopgap stays, both
     deliberately, per acceptance criteria 5 and 6.
+11. **No figure here was produced by the reviewed harness**, and the two
+    `/home/log` figures were not produced by any `report()` call. See "Which
+    harness produced each figure, and how each was computed".
+12. **Both navigation rates are floors.** The clock starts after the URL
+    assertion, which runs on a 5 s budget, so a transition that stalled before
+    the URL changed would have been counted `aborted` rather than `lost`.
+    Neither run recorded an aborted attempt, so nothing was actually lost this
+    way — but the measurement cannot exclude it.
 
 ## Independent reviewer checklist
 
 Review commit `c9f1f7436999676e92376a8ea550584064d4ac1e` on
 `ticket/m2-09-app-router-lost-render`, diff range
-`bb5885e83ba4100c6904559c64e59b3fd0dfd125..c9f1f7436999676e92376a8ea550584064d4ac1e`. Confirm the continuous-
-integration run for that exact SHA is green; do not re-run its suites.
+`bb5885e83ba4100c6904559c64e59b3fd0dfd125..c9f1f7436999676e92376a8ea550584064d4ac1e`
+Confirm the continuous-integration run for that exact SHA is green; do not
+re-run its suites.
 
 Judgment this record needs and continuous integration cannot supply:
 
