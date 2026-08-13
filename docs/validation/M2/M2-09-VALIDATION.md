@@ -602,3 +602,43 @@ accepted commit and its evidence-only descendant integrated as a fast-forward
 rather than a merge commit. The accepted commit `3677421` is therefore contained
 in `master` exactly as reviewed, with no conflict resolution and no integration
 edit anywhere in the range.
+
+### Post-merge integration and hosted verification — 13 August 2026
+
+`master` is `4814cb4f...` (`git push origin ticket/...:master`, fast-forward from
+`bb5885e`). The accepted commit `3677421` is contained in it unchanged.
+
+- Exact `master` continuous integration:
+  [run 31685795208](https://github.com/mattiss01/fittip/actions/runs/31685795208)
+  — green across lint, types, unit and build; migrations from zero, RLS,
+  database lint, advisors, pgTAP and the concurrency harnesses; and every 390px
+  production browser flow. No exception claimed.
+- Production deployment `dpl_F7vJNE2whTkMrN9LqNHS7B2UCrNp` reached `Ready` at
+  `https://fittip-3cwig03ps-mattis-3657s-projects.vercel.app`. GitHub's Vercel
+  commit status for `4814cb4` reports that same deployment identifier, so the
+  binding is evidence rather than assumption. Founder alias:
+  `https://fittip-gilt.vercel.app`.
+
+**The boundary check that was unobservable on the Preview is closed here.**
+Production carries no Vercel deployment protection, so requests reach
+application code. Unauthenticated on the founder alias:
+
+| Path | Result |
+| --- | --- |
+| `/` | `200` — the sign-in surface is public, as intended |
+| `/home/today` | `303` → `https://fittip-gilt.vercel.app/` |
+| `/home/plan` | `303` → `https://fittip-gilt.vercel.app/` |
+| `/home/log` | `303` → `https://fittip-gilt.vercel.app/` |
+
+`/home/plan`'s `303` carries
+`Cache-Control: private, no-cache, no-store, must-revalidate, max-age=0`, so the
+redirect away from a protected route is not cacheable.
+
+This closes limitation 1 of the acceptance request on `master`. It does not
+retroactively close it for the Preview, which remains unverifiable at the
+application level; the acceptance was granted with that gap stated, and this
+section records that the same check passed once a surface existed on which it
+could be observed.
+
+No database migration is involved in this ticket, so no founder migration
+history, schema, or advisor verification applies.
