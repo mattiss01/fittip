@@ -24,6 +24,15 @@ import { expect, test, type Page } from "@playwright/test";
  *   save's reply carries a typed result and no re-rendered tree, while the
  *   navigation is the same segment transition as any other.
  *
+ * M2-11 adds a fourth transition, which M2-09 recorded as its limitation 9:
+ *
+ * - `/home/plan` editor save — `useTransition` around `savePlanAction`
+ *   followed by `router.refresh()`. That is the exact shape reported in
+ *   `vercel/next.js#86055`, and M2-09 measured only arrival at this surface,
+ *   never its own mutation. It is appended after the existing phases rather
+ *   than interleaved, so the three M2-09 phases still run in the same order
+ *   against the same state and their rates stay comparable.
+ *
  * Every count is per transition, not per flow. Each `/home/log` iteration
  * leaves one more unplanned actual behind, so the Today surface grows through
  * the run; the bounded action and navigation timeouts in the config exist so
@@ -38,6 +47,7 @@ const localEnvironmentReady = Boolean(
 
 const PLAN_RUNS = Number(process.env.M2_09_PLAN_RUNS ?? 120);
 const LOG_RUNS = Number(process.env.M2_09_LOG_RUNS ?? 120);
+const PLAN_SAVE_RUNS = Number(process.env.M2_09_PLAN_SAVE_RUNS ?? 120);
 
 /**
  * M2-06 measured a healthy plan transition at 11-478 ms, occasionally about
@@ -124,6 +134,26 @@ test.describe("M2-09 lost-render rate", () => {
       }
       report("/home/log client-side navigation", logArrival);
       report("/home/log quick-log save", logSave);
+
+      // The plan editor warns before unload while its draft is dirty, and a
+      // save that never commits leaves it dirty for ever. Playwright dismisses
+      // an unhandled dialog, and dismissing a `beforeunload` prompt cancels the
+      // navigation — so without this the iteration after a lost save could not
+      // reload to recover. Accepting is also correct for the editor's own
+      // `window.confirm` paths, none of which this phase reaches: the plan it
+      // saves has no sessions, so no range change can drop one.
+      page.on("dialog", (dialog) => {
+        void dialog.accept();
+      });
+
+      const planSave = newTally();
+      for (let run = 0; run < PLAN_SAVE_RUNS; run += 1) {
+        record(
+          planSave,
+          await guard("plan save", () => measurePlanSave(page, run)),
+        );
+      }
+      report("/home/plan editor save", planSave);
     } finally {
       await deleteLocalUser(request, userId);
     }
@@ -220,6 +250,68 @@ async function measureQuickLogSave(page: Page): Promise<Measurement> {
   }
   const elapsed = Date.now() - startedAt;
   console.log(`[M2-09] log save committed in ${elapsed} ms`);
+  return { outcome: "committed", elapsed };
+}
+
+/**
+ * One accepted plan version from the plan editor. The measured transition is
+ * `handleSave`: `useTransition` wraps `savePlanAction`, and on success the
+ * callback sets the result and calls `router.refresh()`. Both updates are
+ * inside the transition, so the acceptance notice reaches the screen only once
+ * the refreshed segment payload commits — which is the transition that
+ * `#86055` reports getting stuck, leaving the control disabled and the notice
+ * absent.
+ *
+ * The document is loaded fresh each iteration rather than saving repeatedly on
+ * a warm client, so a wedged surface cannot carry into the next attempt. That
+ * load is not the measured window: the clock starts at the click.
+ *
+ * The horizon alternates between 6 and 7 days because the editor disables its
+ * save control unless the draft differs from the accepted plan. `dayCount` is
+ * persisted and returned by the page, so alternating it makes every iteration
+ * a genuine change.
+ */
+async function measurePlanSave(page: Page, run: number): Promise<Measurement> {
+  await page.goto("/home/plan");
+  await expect(page.getByRole("heading", { name: /Plan what/ })).toBeVisible({
+    timeout: COMMIT_BUDGET_MS,
+  });
+  await page
+    .getByRole("button", { name: run % 2 === 0 ? "6" : "7", exact: true })
+    .click();
+  const save = page.getByRole("button", { name: "Save plan" });
+  await expect(save).toBeEnabled();
+  const startedAt = Date.now();
+  await save.click();
+  const saved = page.getByText(/Plan version \d+ accepted/);
+  // The editor renders one `save-message` block; it carries `role="status"` on
+  // success and `role="alert"` on every rejection, so this is scoped to the
+  // save's own reply and cannot match another surface's alert.
+  const failed = page.locator("div.save-message[role='alert']");
+  try {
+    await expect(saved.or(failed).first()).toBeVisible({
+      timeout: COMMIT_BUDGET_MS,
+    });
+  } catch {
+    const stillSaving = await page
+      .getByRole("button", { name: "Saving…" })
+      .isVisible();
+    console.log(
+      `[M2-09] plan save lost after ${Date.now() - startedAt} ms ` +
+        `(control still disabled: ${stillSaving})`,
+    );
+    return { outcome: "lost" };
+  }
+  if (await failed.count()) {
+    // A rejected save is not a lost render, for the same reason as the quick
+    // log: the reply arrived and rendered.
+    console.log(
+      `[M2-09] plan save rejected: ${await failed.first().innerText()}`,
+    );
+    return { outcome: "error" };
+  }
+  const elapsed = Date.now() - startedAt;
+  console.log(`[M2-09] plan save committed in ${elapsed} ms`);
   return { outcome: "committed", elapsed };
 }
 
