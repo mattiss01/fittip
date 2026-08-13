@@ -2,8 +2,8 @@
 
 **Ticket:** [M2-09](../../backlog/M2/M2-09-APP-ROUTER-LOST-RENDER.md)
 
-**Lifecycle state:** testable — independently reviewed and approved over
-`bb5885e..3677421` with no blocking findings; awaiting product-owner acceptance
+**Lifecycle state:** accepted — product owner accepted exact independently
+reviewed commit `3677421` on 13 August 2026
 
 **Branch:** `ticket/m2-09-app-router-lost-render`
 
@@ -583,3 +583,22 @@ would be a blocker.
    decided on 13 August 2026 to take it as a separate ticket after this one,
    re-measured with this ticket's probe so a before-and-after rate exists on
    identical apparatus.
+
+## Product-owner acceptance — 13 August 2026
+
+The product owner accepted exact independently reviewed commit
+`3677421360f5fb538c49cecbfff8d2cf6fc9073f` in chat, against Preview
+`https://fittip-9lsezk2nc-mattis-3657s-projects.vercel.app`, with the five known
+limitations above stated in the acceptance request — including that hosted
+verification was scoped rather than passed, because Vercel deployment protection
+made the application boundary unobservable to both the lead and the reviewer.
+
+The acceptance was requested and given for the investigation this ticket is, not
+for a fix. The defect is not repaired by this work; it is explained, measured,
+and assigned a remedy that the product owner chose to take separately.
+
+`origin/master` was `bb5885e` and had not diverged from the branch point, so the
+accepted commit and its evidence-only descendant integrated as a fast-forward
+rather than a merge commit. The accepted commit `3677421` is therefore contained
+in `master` exactly as reviewed, with no conflict resolution and no integration
+edit anywhere in the range.

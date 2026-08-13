@@ -59,7 +59,7 @@ the `security definer` function behind M1-03's completion write. The product
 owner declined that blast radius and chose to patch the generated types, which
 also fixed a second defect — the documented command silently dropped the
 `graphql_public` schema. Its entry is appended to the closeout under
-post-closure Tier 3 entries. M2-07, M2-09, and M2-10 remain open.
+post-closure Tier 3 entries. M2-07 and M2-10 remain open.
 
 The governing product direction is the approved
 [F-003 goals, editable coaching context, and guided onboarding](../../product/F-003-GOALS-MEMORY-GUIDED-ONBOARDING.md).
@@ -81,7 +81,7 @@ production.
 | P1 | [M2-06 Plan page intermittently does not finish rendering](M2-06-PLAN-PAGE-RENDER-TIMEOUT.md) | accepted | M1 milestone closeout accepted | Investigate a plan route that intermittently never replaces its loading state; identify what the render waits on; make a failed render show an honest error; stop a committed URL alone from passing the navigation assertion | Approve the investigation, then normal implementation, review, Preview, and acceptance for any correction |
 | P2 | [M2-07 Goal review follow-ups](M2-07-GOAL-REVIEW-FOLLOWUPS.md) | proposed | M2-01 accepted | Eight findings from M2-01's second independent review; two pgTAP guards that cannot fail, unasserted RLS predicates, a wiped create draft, and four smaller client and test corrections; no migration expected | Approve the scope, then normal implementation, review, Preview, and acceptance |
 | P2 | [M2-08 Regenerating database types breaks typecheck](M2-08-TYPE-GENERATION-DRIFT.md) | accepted | none | Documented type regeneration drops `\| null` from nine `save_training_completion` parameters and reddens typecheck on unchanged `master`; identify generator regression versus wrong RPC signature before proposing a fix | Approve the investigation; tier depends on the cause |
-| P1 | [M2-09 App Router transitions drop a mutation result](M2-09-APP-ROUTER-LOST-RENDER.md) | in development | none | A server action returns 200 with a correct body and the transition never commits; measured on goals (3 in 20), memory (1 in 6, with a 33ms trace ruling out slowness), and roadmap (3 in 6); identify the cause, measure `/home/plan` and `/home/log`, and consolidate the shared recovery if none is found | Investigation approved 13 August 2026 and dispatched Tier 2; normal builder, independent review, Preview, and acceptance |
+| P1 | [M2-09 App Router transitions drop a mutation result](M2-09-APP-ROUTER-LOST-RENDER.md) | accepted | none | A server action returns 200 with a correct body and the transition never commits; measured on goals (3 in 20), memory (1 in 6, with a 33ms trace ruling out slowness), and roadmap (3 in 6); identify the cause, measure `/home/plan` and `/home/log`, and consolidate the shared recovery if none is found | Accepted 13 August 2026 at `3677421`. The cause is upstream and not in this repository; the remedy is a `next@16.3.0` upgrade taken as a separate ticket |
 | P2 | [M2-10 Focus is lost after every mutation](M2-10-FOCUS-LOST-AFTER-MUTATION.md) | proposed | M2-02 accepted | Both management surfaces drop focus to `body` when the acting control unmounts, so a keyboard or screen-reader user restarts from the top after every change; decide where focus belongs per mutation kind and apply it to goals and memory together | Approve the focus destinations, then normal implementation, review, Preview, and acceptance |
 
 ## Dependency chain
@@ -126,15 +126,22 @@ why, and left goals broken, so it is one ticket deciding one answer for both.
 M2-09 is the framework race that M2-05 mitigated on goals and asked to have
 filed separately. It was not filed, and M2-02 then paid for it again — a red
 continuous-integration run, a trace investigation, and an unplanned correction.
-Two surfaces now carry their own recovery for a defect nobody has explained.
+**It was accepted on 13 August 2026, and the answer is that the defect is not in
+this repository.** Next vendors its own React build, so the `react` pin in
+`package.json` never runs; the vendored canary in every `16.2.x` release
+predates the upstream `useDeferredValue` fix by a week. The remedy is a
+`next@16.3.0` upgrade, which the product owner chose to take as a separate
+ticket so the rate can be re-measured on the same probe.
 
 On 3 August 2026 `/home/plan` stopped being unmeasured: the
 `Authentication and planning flows` step had reddened seven of the last
 thirty-five runs on M2-06's plan-render assertion, four of them on commits that
 changed only documentation. The product owner approved a Tier 3 `--retries=2`
 stopgap on that one step so the gate stops firing on unchanged code, and M2-09
-owns removing it. `/home/log` remains unmeasured. Filing this ticket is how
-that stops being rediscovered one ticket at a time.
+owned removing it. It did not remove it: no application change can, so the
+stopgap was re-justified in writing with a checkable condition for removal —
+the accepted framework upgrade. Both `/home/plan` and `/home/log` are now
+measured, at a floor of 4.00% and 2.45% per navigation.
 
 ## Ticket rule
 
