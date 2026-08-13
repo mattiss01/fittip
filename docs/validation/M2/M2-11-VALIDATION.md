@@ -357,27 +357,34 @@ surface it visits already has a committed CI flow.
 
 ## Changed files
 
-`git diff --stat 843c06b..6476ac6`:
+`git diff --stat 843c06b..f2d49ea`:
 
 ```
- .github/workflows/ci.yml                           |  43 +--
- docs/validation/M2/M2-11-VALIDATION.md             | 178 +++++++++
+ .github/workflows/ci.yml                           |  47 +-
+ docs/backlog/M2/M2-11-NEXT-16-3-0-UPGRADE.md       |   6 +-
+ docs/validation/M2/M2-11-VALIDATION.md             | 596 +++++++++++++++++++++
  .../validation/M2/evidence/M2-11-goals-390x844.png | Bin 0 -> 40899 bytes
  .../M2/evidence/M2-11-memory-390x844.png           | Bin 0 -> 34031 bytes
  .../M2/evidence/M2-11-plan-editor-390x844.png      | Bin 0 -> 45646 bytes
  .../M2/evidence/M2-11-plan-proposal-390x844.png    | Bin 0 -> 41619 bytes
  .../M2/evidence/M2-11-roadmap-390x844.png          | Bin 0 -> 38403 bytes
  .../validation/M2/evidence/M2-11-today-390x844.png | Bin 0 -> 48049 bytes
- e2e/m2-09-lost-render.probe.ts                     |  92 +++++
- package-lock.json                                  | 417 +++++++++++----------
+ docs/validation/README.md                          |   5 +
+ e2e/m2-09-lost-render.probe.ts                     |  92 ++++
+ package-lock.json                                  | 417 +++++++-------
  package.json                                       |   2 +-
- 11 files changed, 502 insertions(+), 230 deletions(-)
+ src/lib/app-router/transition-watchdog.ts          |  27 +-
+ 14 files changed, 957 insertions(+), 235 deletions(-)
 ```
 
-That stat is taken at `6476ac6`, before this section was added, so its line
-count for this record is lower than the file's final length. Excluding
-`docs/`, the whole ticket is four files: `.github/workflows/ci.yml`,
-`e2e/m2-09-lost-render.probe.ts`, `package.json`, `package-lock.json`.
+That stat is taken at `f2d49ea`, the last commit before this section was
+corrected, so its line count for this record is lower than the file's final
+length. The only file the following commit touches is this record.
+
+Excluding `docs/`, the whole ticket is five files:
+`.github/workflows/ci.yml`, `e2e/m2-09-lost-render.probe.ts`,
+`package.json`, `package-lock.json`, and
+`src/lib/app-router/transition-watchdog.ts`.
 
 Commits, in order:
 
@@ -389,7 +396,22 @@ Commits, in order:
 | `60698af886b9d8f88c00fea2cdd38d9728899653` | the after measurements |
 | `8cc53f0fdf945b111c33331e383e70407143b76f` | the CI retry stopgap, removed (tooling, committed separately) |
 | `37199a1cfefecd3596d525701a56368e07db1fa8` | the 390x844 evidence |
-| `6476ac6` | the mitigation decisions |
+| `6476ac6e28d61e33ef9f8fea4270c3ca91865e46` | the mitigation decisions |
+| `cf98ec1fde8a55735fd4f2852fcfab22b4d5c2f6` | the manifest, effects, limitations and reviewer checklist |
+| `87643249f77722ebb24a422e35454e2ba007eea6` | the ticket to `testable` |
+
+**After independent review**, which returned approved with no blocking
+findings, four corrections:
+
+| SHA | Correction |
+| --- | --- |
+| `6f0664f5b230b0d299475cc4fe6695058364b46a` | `ci.yml`: restore the retry-scoping norm the rewrite dropped (tooling, committed separately) |
+| `4741e78bbbc818c4912b30d52477a3e8db758fcc` | `transition-watchdog.ts`: the header stated the opposite of the truth after the bump |
+| `f2d49eaf71dc5a1e4c4c2a6548e6bf609e9f175b` | the retention argument, the plan-save null's second bound, and one over-claiming sentence |
+| this commit | the manifest, which did not cover the full reviewed range |
+
+None of the four changes a measured value, a rate, a denominator or a
+mitigation decision.
 
 Nothing was deleted or renamed. No file's purpose is obscure from its path
 except:
@@ -400,6 +422,18 @@ except:
   to M2-09's. This is the file the reviewer should read most carefully, because
   a change to an existing measurement function would silently invalidate the
   comparison this whole ticket rests on.
+- `src/lib/app-router/transition-watchdog.ts` — **comment only**, and the only
+  `src/` file this ticket touches. Its header asserted that the repository did
+  not run `next@16.3.0` and that the watchdog must not be removed before it
+  did; both became false at `8910ed0`. No timing rule, budget, threshold,
+  comparison or verdict changed. Verify with
+  `git diff 843c06b..HEAD -- src/` — every changed line is inside the leading
+  block comment.
+- `docs/validation/README.md` — the index entry this record is required to
+  have.
+- `docs/backlog/M2/M2-11-NEXT-16-3-0-UPGRADE.md` — the `Status:` line moved
+  from `in development` to `testable`. No acceptance criterion, constraint or
+  brief line was edited.
 
 ## Data, migration, API, privacy, and security effects
 
@@ -544,10 +578,11 @@ added or changed, because no application code changed.
 
 ## Independent reviewer checklist
 
-Review commit `6476ac6` — or the branch head if the lead adds further record
-commits — on `ticket/m2-11-next-16-3-0-upgrade`, diff range
-`843c06bd..<head>`. Confirm the CI run for that exact SHA is green; do not
-re-run its suites.
+Review the branch head on `ticket/m2-11-next-16-3-0-upgrade`, diff range
+`843c06bd..<head>`. The first review covered `843c06b..8764324` and returned
+approved; the four post-review corrections above are what a re-review needs to
+cover, and under AGENTS.md they invalidate approval of `8764324` until then.
+Confirm the CI run for the exact head SHA is green; do not re-run its suites.
 
 Judgment this record needs and continuous integration cannot supply:
 
@@ -565,8 +600,10 @@ Judgment this record needs and continuous integration cannot supply:
    `git log -p 91ba7a9e..HEAD -- docs/validation/M2/M2-11-VALIDATION.md`
    should show the before table only as unchanged context.
 3. **No mitigation was removed without a number, and none was kept without a
-   reason.** `git diff 843c06b..HEAD -- src/` must be empty. The one removal is
-   in `.github/workflows/ci.yml` alone. Judge whether the transition that
+   reason.** `git diff 843c06b..HEAD -- src/` must touch exactly one file and,
+   within it, only the leading block comment — no timing rule, budget,
+   threshold, comparison or verdict. The one behavioral removal is in
+   `.github/workflows/ci.yml` alone. Judge whether the transition that
    `planning.spec.ts` exercises really is the one measured at 9/250 → 0/250 —
    if it is not, that removal is unjustified.
 4. **The kept mitigations are kept for the right reason.** The record's claim
