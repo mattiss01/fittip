@@ -719,3 +719,49 @@ verification was scoped rather than passed, and that the `390x844` judgment on
 accepted commit and its evidence-only descendant integrated as a fast-forward
 rather than a merge commit. `7585f1f` is contained in `master` exactly as
 reviewed, with no conflict resolution and no integration edit in the range.
+
+### Post-merge integration and hosted verification — 13 August 2026
+
+`master` is `68baf13`, a fast-forward from `843c06b`. The accepted commit
+`7585f1f` is contained in it unchanged.
+
+- Exact `master` continuous integration:
+  [run 31744970643](https://github.com/mattiss01/fittip/actions/runs/31744970643)
+  — green across lint, types, unit and build; migrations from zero, RLS,
+  database lint, advisors, pgTAP and the concurrency harnesses; and every 390px
+  production browser flow on `next@16.3.0`. No exception claimed.
+- **Third consecutive run with no `flaky` marker and no retry** on
+  `Authentication and planning flows`, now on `master`. The caveat recorded
+  under criterion 8 still applies and does not weaken with repetition: the
+  instrument changed when the retries were removed, so the absence of the word
+  is no longer the measurement it was. At M2-09's historical one-in-five rate,
+  three consecutive clean runs would still occur about half the time by chance.
+  The removal continues to rest on the paired measurement and the mechanism.
+- Production deployment reached `Ready` at
+  `https://fittip-1r7iruphn-mattis-3657s-projects.vercel.app`. Founder alias:
+  `https://fittip-gilt.vercel.app`.
+
+**The boundary check the Preview could not supply, run on production:**
+
+| Path | Result |
+| --- | --- |
+| `/` | `200` — the sign-in surface is public, as intended |
+| `/home/today` | `303` → `https://fittip-gilt.vercel.app/` |
+| `/home/plan` | `303` → `https://fittip-gilt.vercel.app/` |
+| `/home/log` | `303` → `https://fittip-gilt.vercel.app/` |
+
+`/home/plan`'s `303` carries
+`Cache-Control: private, no-cache, no-store, must-revalidate, max-age=0`. The
+authentication boundary and its cache posture are therefore unchanged by the
+framework upgrade, which is the single most valuable thing this check could have
+told us: a minor Next upgrade touches routing and middleware, and `src/proxy.ts`
+is where that boundary lives.
+
+This closes limitation 1 on `master`. It does not retroactively verify the
+Preview, which remains unobservable at the application level; acceptance was
+granted with that gap stated.
+
+No database migration is involved in this ticket, so no founder migration
+history, schema, or advisor verification applies. No hosted measurement of the
+lost-render rate was taken, so M2-06's hosted-rate gap stays open exactly as
+limitation 12 records.
