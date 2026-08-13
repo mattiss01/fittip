@@ -1,6 +1,10 @@
 # M2-11: Upgrade to `next@16.3.0` and re-measure the lost render
 
-**Status:** in development — approved by the product owner on 13 August 2026
+**Status:** testable — builder handoff complete on 13 August 2026; see
+[M2-11 validation](../../validation/M2/M2-11-VALIDATION.md). The hypothesis
+held: `/home/plan` navigation measured 9/250 before the upgrade and 0/250
+after, on the same apparatus, machine and session. Independent review, CI for
+the reviewed commit, Preview verification, and acceptance are pending.
 
 **Triage:** ready-for-agent
 
