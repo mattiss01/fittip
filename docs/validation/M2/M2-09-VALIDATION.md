@@ -3,7 +3,7 @@
 **Ticket:** [M2-09](../../backlog/M2/M2-09-APP-ROUTER-LOST-RENDER.md)
 
 **Lifecycle state:** testable — independently reviewed and approved over
-`bb5885e..6d86903` with no blocking findings; awaiting product-owner acceptance
+`bb5885e..3677421` with no blocking findings; awaiting product-owner acceptance
 
 **Branch:** `ticket/m2-09-app-router-lost-render`
 
@@ -173,8 +173,8 @@ Stated plainly, because the attribution above is strong but not complete.
   re-run under instrumentation that could separate the two.
 - **The reconciler was not stepped through.** The attribution rests on the
   symptom match, on the upstream maintainer's own diagnosis of this exact
-  symptom, and on version arithmetic — not on observing the stuck fiber in this
-  application. A React-internals repro was not built, because upstream already
+  symptom, on version arithmetic, and on one third-party report of this symptom
+  on `16.2.6` — not on observing the stuck fiber in this application. A React-internals repro was not built, because upstream already
   has one and a bisect here could not change the remedy.
 - **Nothing was measured on Vercel.** Every rate below is a local production
   build. M2-06's gap on hosted rates is not closed by this ticket.
@@ -480,7 +480,7 @@ The measurement harness is not a test and has no assertions to add.
 
 Review commit `c9f1f7436999676e92376a8ea550584064d4ac1e` on
 `ticket/m2-09-app-router-lost-render`, diff range
-`bb5885e83ba4100c6904559c64e59b3fd0dfd125..c9f1f7436999676e92376a8ea550584064d4ac1e`
+`bb5885e83ba4100c6904559c64e59b3fd0dfd125..c9f1f7436999676e92376a8ea550584064d4ac1e`.
 Confirm the continuous-integration run for that exact SHA is green; do not
 re-run its suites.
 
@@ -511,3 +511,75 @@ Judgment this record needs and continuous integration cannot supply:
    the retries to be removed.
 7. **Nothing here bumps a framework version** or touches schema, authorization,
    privacy or spend.
+
+## Independent review outcome and lead gates — 13 August 2026
+
+The independent reviewer, a different agent from the builder, returned
+**approved** with no blocking findings over `bb5885e..3677421`. It verified the
+diagnosis's load-bearing facts itself rather than accepting the record's prose:
+the vendored-React aliasing, `layout-router.js:319`, the canary build present in
+this checkout, PR #36134's merge date against that canary's cut date, both
+upstream issues' state and closing comments through the GitHub API, and the
+claim that `src/app/home/log/actions.ts` is the only `"use server"` file in the
+repository without `revalidatePath`. It confirmed the watchdog move is
+character-for-character behavior-preserving once comments are stripped, and that
+`3677421` moved no figure, rate, quantile or causal claim.
+
+Continuous integration, both green and neither claiming an exception:
+
+- `6d86903`, the code and first record commit —
+  [run 31682748465](https://github.com/mattiss01/fittip/actions/runs/31682748465).
+- `3677421`, the record correction —
+  [run 31684615004](https://github.com/mattiss01/fittip/actions/runs/31684615004).
+  A validation-record-only commit needs no run of its own under AGENTS.md's
+  evidence-commit exception. This one has a green one anyway, so the exception
+  is not being relied on.
+
+### The Preview belongs to `6d86903`, and why that is the right surface for `3677421`
+
+Preview: `https://fittip-9lsezk2nc-mattis-3657s-projects.vercel.app`, state
+`Ready`, deployment `dpl_faRqKEsP1zYGw9Fp4GnCwx12VVUD`. That identifier is the
+one GitHub's own Vercel commit status reports for `6d86903`, so the deployment
+is bound to the commit by evidence rather than by assumption.
+
+Acceptance is requested against `3677421`, one commit later, and no deployment
+exists for it. The reason this is not the drift AGENTS.md's re-review rule exists
+to catch: `3677421` changes exactly one file,
+`docs/validation/M2/M2-09-VALIDATION.md`, which is not a build input for
+`next build`. A deployment of `3677421` would be byte-identical to the one
+above and would produce no new evidence. This reasoning is recorded so a later
+reader can re-derive it; it is not a general rule that record-only commits never
+invalidate a Preview.
+
+### Hosted verification is scoped, because the boundary check was not observable
+
+Vercel deployment protection intercepts this Preview at the edge. Unauthenticated
+requests to `/`, `/home/today`, `/home/plan` and `/home/log` all return `302` to
+`vercel.com/sso-api`. The public sign-in page at `/` is gated identically to the
+protected routes, which is what identifies this as blanket platform protection
+rather than FitTip routing. No request reaches application code.
+
+Attested: the deployment exists, reached `Ready`, is bound to `6d86903`, and
+serves every probed path behind the platform gate.
+
+**Not attested: any application-level behavior on this Preview**, including the
+unauthenticated `303 → /` boundary, the four watchdog surfaces, and any 390px
+rendering. Neither the lead nor the reviewer could observe them, and neither
+recorded a pass. A protection-bypass token was not used, not requested, and is
+not authorized.
+
+This gap is low-consequence for this ticket specifically and would not be on
+another. The diff changes no route, server action, authorization path, or
+rendered output, and CI's 390px production browser flows exercise all four
+consumer surfaces at this exact SHA. On a ticket that touched authorization it
+would be a blocker.
+
+### Open at the point of the acceptance request
+
+1. The product owner's own `390x844` pass on the Preview, which requires
+   clearing the Vercel SSO gate in a browser. That is the normal acceptance
+   path and the only remaining evidence this ticket needs.
+2. The `next@16.3.0` upgrade is deliberately not taken here. The product owner
+   decided on 13 August 2026 to take it as a separate ticket after this one,
+   re-measured with this ticket's probe so a before-and-after rate exists on
+   identical apparatus.
