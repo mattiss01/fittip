@@ -12,11 +12,28 @@
  * proposal then reused them, so they live here rather than under any one
  * feature. M2-09 identified the cause upstream — React's `useDeferredValue`
  * can stick on a stale value (facebook/react#35821), and `layout-router`
- * routes every segment's payload through it — and the fix ships in
- * `next@16.3.0`, which this repository does not yet run. Until that version
- * bump is approved, verified and shown to have removed the race, this
- * watchdog is what stands between a user and a silently dead form. Do not
- * remove it before then.
+ * routes every segment's payload through it.
+ *
+ * M2-11 took the fix: this repository now runs `next@16.3.0`, which vendors a
+ * React canary cut after facebook/react#36134 merged. Re-measured on M2-09's
+ * probe at 250 transitions per side, `/home/plan` client-side navigation went
+ * from 9 lost of 250 to 0 of 250, and `/home/log` navigation from 2 of 201 to
+ * 0 of 199.
+ *
+ * **These four surfaces still keep this watchdog, and the reason is not
+ * caution.** What M2-11 measured is a segment *arrival* — a navigation
+ * committing its payload. What these rules watch is an in-flight *mutation
+ * reply*: `watchTransition` is armed by `submittedAt`, `respondedAt` and
+ * `consumedAt`, so it can only ever observe a submission that is outstanding
+ * and structurally cannot fire on a navigation. That is a different
+ * transition class, and it has never been measured on either framework
+ * version. Removing this on M2-11's numbers would be inferring a result
+ * nobody has observed.
+ *
+ * What licenses removing it: a measurement of these four surfaces' own
+ * mutation replies on `16.3.0`, at a denominator comparable to M2-11's,
+ * finding zero. Extending `e2e/m2-09-lost-render.probe.ts` with a phase per
+ * surface is the intended route.
  *
  * What these rules can observe is narrow, and the copy they drive must not
  * exceed it. A resource timing entry proves that a **response arrived**. It
