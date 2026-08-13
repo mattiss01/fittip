@@ -176,3 +176,101 @@ The stall onset is essentially identical across the upgrade, which is what a
 harness limitation rather than a product behavior should look like. Every
 abort in both runs is a `locator.click: Timeout 20000ms exceeded` on that link;
 no abort in either run was a navigation or a save.
+
+### Why these numbers should be believed
+
+The before figures were written into this record and committed as `91ba7a9e`
+**before** the `next` pin was touched. At that moment the after figures did not
+exist and could not be guessed. No before figure in this record has been edited
+since; the commit history shows it.
+
+That ordering is the reason a reader should trust the comparison, and it was
+the point of taking the upgrade as a separate ticket from M2-09. The one
+number the whole ticket turns on — 9 lost of 250 on the pre-fix build — was
+recorded by an agent that did not yet know whether the after would be zero.
+
+## Mitigation decisions — acceptance criterion 6
+
+M2-09's criterion 5 stands: no mitigation is removed without a measurement
+behind it, and a surface whose rate was never measured keeps its recovery
+whatever the other surfaces show.
+
+**One mitigation was removed. Every application-side mitigation stays.**
+`src/` is untouched across this ticket's entire commit range.
+
+| Mitigation | Decision | The measurement, or the absence of one |
+| --- | --- | --- |
+| `--retries=2` on CI's `Authentication and planning flows` | **removed**, `8cc53f0f` | `planning.spec.ts` opens `/home/plan` through the transition this ticket measured at 9 / 250 before and 0 / 250 after |
+| `transition-watchdog` on `/home/you/goals` | kept | never measured, on either build |
+| `transition-watchdog` on `/home/you/memory` | kept | never measured, on either build |
+| `transition-watchdog` lost-render half on `/home/plan/roadmap` | kept | never measured, on either build |
+| `transition-watchdog` lost-render half on `/home/plan/proposal` | kept | never measured, on either build |
+
+### Why a clean navigation number does not license removing the watchdog
+
+This is the distinction the ticket is most likely to be got wrong on, so it is
+written out rather than left implicit.
+
+What was measured is **arrival at a segment** on `/home/plan` and `/home/log`,
+plus two **saves** on `/home/log` and `/home/plan`. What the watchdog protects
+is something else: the **mutation reply** on goals, memory, roadmap and the
+plan proposal — a `useActionState` or `useTransition` submission whose
+revalidated tree must commit before the surface stops looking frozen.
+
+Those four surfaces produced no number on `16.2.11` and no number on `16.3.0`.
+M2-09 did not measure them and neither did this ticket. The mechanism argues
+they are the same class — they all `revalidatePath`, so their replies all pass
+through `layout-router`'s `useDeferredValue`, and the upstream fix should reach
+them identically. But an argument from mechanism is exactly what criterion 6
+refuses to accept in place of a measurement, and it is what M2-09 already
+supplied. Removing four surfaces' recovery on it would be inferring the result
+this ticket exists to observe.
+
+So they keep it. The cost of that decision is bounded and visible: some code
+whose only future is to be deleted, on four surfaces where the reload it
+triggers should now never fire. The cost of the other decision is a user
+losing a saved goal to a silently dead form.
+
+### What would license removing them later
+
+A ticket that measures those four surfaces' own mutation replies on `16.3.0`,
+at a denominator comparable to this one, and finds zero. That is a
+straightforward extension of `e2e/m2-09-lost-render.probe.ts` — a fifth,
+sixth, seventh and eighth phase — and it is deliberately not done here,
+because measuring four more surfaces is not the ticket that was dispatched.
+
+A cheaper, weaker signal is already accruing: the watchdog fires a visible
+recovery reload, and CI's `m2-01`, `m2-02`, `m3-02` and `m3-03` browser flows
+exercise all four surfaces on every push. A run of those flows that never
+recovers is evidence, just not measured evidence.
+
+### The CI retry removal, and the limit of what justifies it
+
+Criterion 7 asked for removal-if-supported or re-justification in writing.
+It is removed, and the honest scope of the justification is this:
+
+The paired local measurement is strong for the transition and weak for the
+runner. M2-09 recorded that CI saw this defect in roughly one run in five,
+far above the 4% per navigation measured locally, on hardware nobody here
+controls. A single green CI run for this commit is therefore consistent with
+the removal being safe without establishing it — at the historical rate, one
+clean run would happen about four times in five by chance even if nothing had
+been fixed.
+
+What carries the removal is the 250-transition paired measurement, not the
+one CI run. If that step reddens on the plan surface after this lands, the
+correct response is to restore `--retries=2` and re-open the removal, not to
+re-open M2-09's diagnosis.
+
+### Criterion 8's flaky count, and why the after figure has to be read carefully
+
+Removing the retries changes what CI can report. With `--retries=2`, an
+occurrence of this defect surfaced as `flaky`; without them it is a hard
+failure. Both configurations still detect an occurrence — a green run without
+retries means the same thing a zero-flaky run with retries would have meant —
+but the word `flaky` will not appear for this step again whatever happens, so
+a future reader must not read its absence as the measurement.
+
+Before, from M2-09's record: seven of thirty-five runs red on the plan
+transition, and the retry count accruing as the running measurement. After: to
+be read from the CI run for this branch's head, which the lead records below.
