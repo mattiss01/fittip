@@ -89,3 +89,90 @@ otherwise empty plan. `#86055` reports that a page with more content fails more
 often, so this null result bounds the rate for a minimal payload and does not
 exclude one for a full plan. Recorded as a known limitation rather than
 resolved.
+
+## The after measurements
+
+Same apparatus, same denominators, same machine, same session. `next@16.3.0`,
+harness commit `fe6e9f38` unchanged, application code unchanged. One run,
+26.2 minutes wall clock.
+
+| Transition | Before — `16.2.11` | After — `16.3.0` |
+| --- | --- | --- |
+| `/home/plan` client-side navigation | 9 / 250 — 3.60% | **0 / 250 — 0.00%** |
+| `/home/log` client-side navigation | 2 / 250 — 0.80% (2 / 201 measured — 1.00%) | **0 / 250 — 0.00% (0 / 199 measured)** |
+| `/home/log` quick-log save | 0 / 199 — 0.00% | 0 / 199 — 0.00% |
+| `/home/plan` editor save | 0 / 250 — 0.00% | 0 / 250 — 0.00% |
+
+Committed latency after the upgrade (min / median / p95 / max):
+
+| Transition | Latency | Samples |
+| --- | --- | --- |
+| `/home/plan` navigation | 4 / 10 / 387 / 406 ms | 250 |
+| `/home/log` navigation | 5 / 386 / 404 / 419 ms | 199 |
+| `/home/log` quick-log save | 403 / 549 / 1604 / 1665 ms | 199 |
+| `/home/plan` editor save | 136 / 170 / 229 / 479 ms | 250 |
+
+All four figures are `[M2-09] RESULT` lines from the probe's own `report()`.
+The run completed; nothing was hand-computed and nothing was recovered from
+per-iteration lines.
+
+### The hypothesis held
+
+The ticket put one falsifiable claim under test: `next@16.3.0` takes
+`/home/plan` navigation from a floor of 4.00% to zero. **It did.** Zero losses
+in 250 transitions, on the apparatus that recorded nine in 250 on the same
+machine roughly an hour earlier, and ten in 250 when M2-09 measured it.
+
+`/home/log` navigation moved with it, from 2 / 201 measured to 0 / 199. That
+is the second surface M2-09 identified as exhibiting the same segment
+transition, and it is now clean at its own denominator.
+
+Neither result is proof that the rate is exactly zero. A null result at 250
+bounds the rate; it does not exclude one below roughly one in 250. What
+carries the conclusion is the paired design: the same harness, machine, build
+pipeline and session produced 9 / 250 before and 0 / 250 after, with the only
+change being the vendored React build.
+
+### What did not move, and why that is not evidence of a fix
+
+Two of the four transitions were already at zero before the upgrade and are
+still at zero after it. They contribute nothing to the case that the upgrade
+fixed anything, and they are not presented as if they did.
+
+- **`/home/log` quick-log save**: 0 / 199 before, 0 / 199 after. Consistent
+  with M2-09's structural finding that `saveQuickLog` is the one mutating
+  action that does not `revalidatePath`, so its reply never passes through
+  `layout-router`'s `useDeferredValue`.
+- **`/home/plan` editor save**: 0 / 250 before, 0 / 250 after. This is the
+  transition the ticket expected to be most exposed, being `#86055`'s exact
+  shape. It was not exposed at this denominator on the pre-fix build.
+
+### An unclaimed observation about latency
+
+`/home/plan` navigation's committed-latency median moved from 372 ms to 10 ms,
+while `/home/log` navigation's moved the other way, from 6 ms to 386 ms. Both
+distributions still span the same 4–420 ms range, and both remain two orders
+of magnitude below the 15-second ceiling that separates committed from lost,
+so neither shift affects a single classification.
+
+These look like changes in when the router serves a prefetched segment rather
+than a rendered one. That is a guess, it was not investigated, and no
+conclusion in this record depends on it. It is written down because it is
+visible in the data and a reader would otherwise wonder whether it was noticed.
+
+### Both runs' aborts, and why they are not losses
+
+The `/home/log` phase aborts in both runs for the reason M2-09 diagnosed: each
+iteration leaves one more unplanned actual on the Today surface, and past
+roughly 200 the "Log unplanned" link stops becoming actionable inside the
+20-second action budget.
+
+| Run | Measured before the stall | Aborted |
+| --- | --- | --- |
+| Before, `16.2.11` | 201 | 49 |
+| After, `16.3.0` | 199 | 51 |
+
+The stall onset is essentially identical across the upgrade, which is what a
+harness limitation rather than a product behavior should look like. Every
+abort in both runs is a `locator.click: Timeout 20000ms exceeded` on that link;
+no abort in either run was a navigation or a save.
