@@ -152,40 +152,31 @@ jobs:
       # The per-ticket configs already set their own longer timeouts and are
       # deliberately left alone.
       #
-      # This step alone retries. `planning.spec.ts` opens `/home/plan` through
-      # the App Router transition that M2-09 tracks: the segment intermittently
-      # never replaces its loading boundary, which M2-06 made detectable. It
-      # reddened seven of the last thirty-five runs on commits that touched no
-      # application code, which teaches every reader to re-run instead of read.
+      # This step carried `--retries=2` from M2-05 until M2-11 removed them.
+      # `planning.spec.ts` opens `/home/plan` through the App Router transition
+      # that M2-09 traced to React's `useDeferredValue` sticking on a stale
+      # value (facebook/react#35821), fixed by React PR 36134 and reaching this
+      # application only through the React build Next vendors. It reddened
+      # seven of thirty-five runs on commits that touched no application code.
       #
-      # M2-09 kept this stopgap rather than removing it, and the reason is now
-      # a fact rather than an open question. The cause is upstream: React's
-      # `useDeferredValue` can stick on a stale value
-      # (facebook/react#35821), and `layout-router` routes every segment's
-      # payload through it. The fix is React PR 36134, which reaches this
-      # application only through `next@16.3.0`; every `16.2.x` release,
-      # including the pinned `16.2.11`, vendors the React canary that predates
-      # it. No application change removes the race, so removing the retries now
-      # would only restore a red job on unchanged code.
+      # M2-11 took `next@16.3.0`, which vendors the post-fix canary, and
+      # re-measured that exact transition on M2-09's probe: 9 lost of 250
+      # before the upgrade and 0 of 250 after, on one machine, one session and
+      # one harness. That is the measurement this line was waiting for, so it
+      # is gone rather than re-justified for a third ticket.
       #
-      # Two retries absorb intermittency, not breakage. A plan surface that is
-      # genuinely broken fails all three attempts and still blocks the job; only
-      # a defect that passes on a re-draw is let through, and Playwright reports
-      # it as `flaky` rather than swallowing it, so the occurrence rate keeps
-      # accruing from continuous integration instead of being lost to a red job.
-      # Remove this when the framework upgrade that carries the fix is accepted
-      # and verified - the retry count is the measurement, so a run that stops
-      # reporting flaky is the evidence.
-      #
-      # Deliberately scoped to this step. The other browser steps do not carry
-      # this defect and must keep failing on the first attempt.
+      # If this step reddens again on the plan surface, restore `--retries=2`
+      # and re-open the removal - not the diagnosis. A local paired
+      # measurement does not bound the rate on a shared runner, where the
+      # defect used to appear far more often than the 4% per navigation
+      # measured locally.
       - name: Authentication and planning flows
         env:
           PLAYWRIGHT_HTML_REPORT: playwright-report/auth-planning
         run: |
           .github/scripts/with-server.sh 3000 \
             npx playwright test e2e/auth.spec.ts e2e/planning.spec.ts \
-              --workers=1 --timeout=180000 --retries=2 \
+              --workers=1 --timeout=180000 \
               --trace=retain-on-failure \
               --output=test-results/auth-planning
 
