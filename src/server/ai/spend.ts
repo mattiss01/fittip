@@ -13,7 +13,7 @@ import type { CoachAIOperation } from "@/server/ai/contracts";
  *
  * This module declares the seam and nothing else. It imports no database
  * client, no repository, and no Supabase type, so the AI subtree keeps its
- * invariant that only `owner.ts` and `context-source.ts` reach the database.
+ * invariant that only `owner.ts` reaches the database.
  * The implementation lives in `src/server/repositories/ai-spend-repository.ts`,
  * outside this subtree.
  */

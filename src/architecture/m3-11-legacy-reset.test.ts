@@ -1,0 +1,88 @@
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { extname, join } from "node:path";
+
+import { describe, expect, it } from "vitest";
+
+const root = process.cwd();
+const legacyModules = [
+  "src/server/repositories/training-record-repository.ts",
+  "src/server/repositories/completion-repository.ts",
+  "src/server/repositories/plan-proposal-repository.ts",
+  "src/server/training/training-records.ts",
+  "src/server/training/past-plan-protection.ts",
+  "src/server/completions/completion-records.ts",
+  "src/server/plan-proposal/plan-proposal-service.ts",
+  "src/app/home/plan/actions.ts",
+  "src/app/home/log/actions.ts",
+  "src/app/home/plan/proposal/actions.ts",
+  "src/app/home/plan/roadmap/actions.ts",
+] as const;
+
+const maintenancePages = [
+  "src/app/home/plan/page.tsx",
+  "src/app/home/today/page.tsx",
+  "src/app/home/log/page.tsx",
+  "src/app/home/progress/page.tsx",
+  "src/app/home/plan/roadmap/page.tsx",
+  "src/app/home/plan/proposal/page.tsx",
+] as const;
+
+const legacyTables = [
+  "plan_proposal_decisions",
+  "plan_proposal_sources",
+  "plan_proposals",
+  "plan_generation_requests",
+  "completed_activities",
+  "completion_heads",
+  "completed_sessions",
+  "planned_activities",
+  "planned_sessions",
+  "detailed_plan_heads",
+  "detailed_plan_versions",
+] as const;
+
+const legacyRpcs = [
+  "save_manual_plan_version",
+  "save_training_completion",
+  "begin_plan_generation",
+  "finish_plan_generation",
+  "record_plan_memory_candidates",
+  "reject_plan_proposal",
+] as const;
+
+describe("M3-11 legacy runtime closure", () => {
+  it("removes every legacy server entry point", () => {
+    for (const path of legacyModules) {
+      expect(existsSync(join(root, path)), path).toBe(false);
+    }
+  });
+
+  it("keeps every affected route on the one maintenance module", () => {
+    for (const path of maintenancePages) {
+      const source = readFileSync(join(root, path), "utf8");
+      expect(source, path).toContain("TrainingMaintenance");
+      expect(source, path).not.toMatch(/@\/server\/|@\/lib\/supabase/);
+    }
+  });
+
+  it("contains no application call to a removed table or RPC", () => {
+    const source = sourceFiles(join(root, "src"))
+      .map((path) => readFileSync(path, "utf8"))
+      .join("\n");
+
+    for (const table of legacyTables) {
+      expect(source).not.toContain(`.from("${table}")`);
+    }
+    for (const rpc of legacyRpcs) {
+      expect(source).not.toContain(`.rpc("${rpc}"`);
+    }
+  });
+});
+
+function sourceFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) return sourceFiles(path);
+    return [".ts", ".tsx"].includes(extname(entry.name)) ? [path] : [];
+  });
+}

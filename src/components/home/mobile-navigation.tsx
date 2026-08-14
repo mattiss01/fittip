@@ -21,6 +21,7 @@ export function MobileNavigation() {
         {DESTINATIONS.map(({ href, label, mark }) => {
           const current =
             pathname === href ||
+            (href === "/home/plan" && pathname.startsWith("/home/plan/")) ||
             (href === "/home/progress" &&
               pathname.startsWith("/home/progress/"));
           return (

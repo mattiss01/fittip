@@ -18,30 +18,16 @@ describe("server repository import boundary", () => {
     }
   });
 
-  // M3-10 adds the sixth call site deliberately: each allowlisted RPC is an
+  // M3-11 removes the two legacy training call sites. Each remaining RPC is an
   // atomic owner-scoped mutation whose conflict must reach the caller
   // unchanged, so an automatic retry could re-run a change the user was told
   // to review.
-  it("disables retries only for the six approved atomic RPCs", () => {
+  it("disables retries only for the four approved atomic RPCs", () => {
     const sources = sourceFiles(join(process.cwd(), "src")).filter(
       (path) => !path.endsWith(".test.ts") && !path.endsWith(".test.tsx"),
     );
     const retryFiles = sources.filter((path) =>
       readFileSync(path, "utf8").includes(".retry(false)"),
-    );
-    const trainingRepositoryPath = join(
-      process.cwd(),
-      "src",
-      "server",
-      "repositories",
-      "training-record-repository.ts",
-    );
-    const completionRepositoryPath = join(
-      process.cwd(),
-      "src",
-      "server",
-      "repositories",
-      "completion-repository.ts",
     );
     const goalRepositoryPath = join(
       process.cwd(),
@@ -71,8 +57,6 @@ describe("server repository import boundary", () => {
       "repositories",
       "rolling-plan-repository.ts",
     );
-    const trainingRepository = readFileSync(trainingRepositoryPath, "utf8");
-    const completionRepository = readFileSync(completionRepositoryPath, "utf8");
     const goalRepository = readFileSync(goalRepositoryPath, "utf8");
     const memoryRepository = readFileSync(memoryRepositoryPath, "utf8");
     const onboardingRepository = readFileSync(onboardingRepositoryPath, "utf8");
@@ -83,21 +67,11 @@ describe("server repository import boundary", () => {
 
     expect(retryFiles.sort()).toEqual(
       [
-        trainingRepositoryPath,
-        completionRepositoryPath,
         goalRepositoryPath,
         memoryRepositoryPath,
         onboardingRepositoryPath,
         rollingPlanRepositoryPath,
       ].sort(),
-    );
-    expect(trainingRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
-    expect(trainingRepository).toMatch(
-      /\.rpc\(\s*"save_manual_plan_version",[\s\S]*?\)\s*\.retry\(false\)/,
-    );
-    expect(completionRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
-    expect(completionRepository).toMatch(
-      /\.rpc\(\s*"save_training_completion",[\s\S]*?\)\s*\.retry\(false\)/,
     );
     expect(goalRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
     expect(goalRepository).toMatch(
@@ -121,15 +95,12 @@ describe("server repository import boundary", () => {
 /**
  * M3-01 adds `src/server/ai`, the module that decides what user data may ever
  * leave this system. Two invariants protect it: the browser cannot import it,
- * and inside it only the two named seams may reach the database.
+ * and inside it only the owner seam may reach the database.
  */
 describe("server-only AI boundary", () => {
   const aiRoot = join(process.cwd(), "src", "server", "ai");
-  /** The only modules permitted to touch Auth claims or a repository. */
-  const databaseSeams = [
-    join(aiRoot, "owner.ts"),
-    join(aiRoot, "context-source.ts"),
-  ];
+  /** The only module permitted to touch Auth claims or a repository. */
+  const databaseSeams = [join(aiRoot, "owner.ts")];
 
   it("keeps client components from importing the AI module", () => {
     const aiImport =
@@ -151,7 +122,7 @@ describe("server-only AI boundary", () => {
     }
   });
 
-  it("lets only the two named seams reach the database", () => {
+  it("lets only the owner seam reach the database", () => {
     const databaseImport =
       /from\s+["'](?:@\/server\/repositories\/|@\/lib\/supabase\/|@\/lib\/auth\/verified-user)/;
     const aiFiles = sourceFiles(aiRoot).filter(

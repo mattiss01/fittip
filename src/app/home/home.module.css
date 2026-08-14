@@ -370,6 +370,17 @@
   line-height: 1.55;
 }
 
+.maintenanceCard {
+  max-width: 42rem;
+  margin-top: 2rem;
+  border-left: 0.6rem solid var(--ledger-signal);
+}
+
+.maintenanceCard h2 {
+  margin-top: 0.45rem;
+  font-size: clamp(2rem, 9vw, 3.6rem);
+}
+
 .timelineItem {
   position: relative;
   padding-left: 1.15rem;

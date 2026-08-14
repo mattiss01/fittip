@@ -27,7 +27,7 @@ import {
 import {
   parseTrainingMeasurement,
   TRAINING_MEASUREMENT_MODES,
-} from "@/server/training/training-records";
+} from "@/server/training/training-measurements";
 
 type RollingPlanClient = SupabaseClient<Database> | ServerUserClient;
 
