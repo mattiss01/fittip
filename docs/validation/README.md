@@ -41,6 +41,8 @@ Validation records and their visual evidence are grouped by milestone.
 
 ## M3
 
+- [M3-10 rolling-plan foundation](M3/M3-10-VALIDATION.md) — in development;
+  Tier 1 builder and independent reviewer dispatched
 - [M3-01 server-only AI boundary and fixture adapters](M3/M3-01-VALIDATION.md) — in development; builder handoff complete, independent review, CI, Preview verification, and acceptance pending
 - [M3-01B one approved real-provider adapter](M3/M3-01B-VALIDATION.md) — accepted 10 August 2026 against the independently reviewed commit `e5adc9b` after two review rounds; migration applied and verified on the founder project; limitation 17 carries into M3-02 as a hard constraint
 - [M3-03 selected-horizon plan proposal](M3/M3-03-VALIDATION.md) — **incomplete**; commit `0cf2eca` delivers the plan-proposal schema and its `SECURITY DEFINER` transactions, the `fittip.seven-day-plan.v2` contract and validator, the selected-horizon derivation with the context-minimum refusal, and the v2 prompt and grammar. The repository, domain service, safety-tier decision, server actions, `390x844` interface, and Playwright flow are not delivered, so the commit is not ready for independent review as a ticket or for acceptance
