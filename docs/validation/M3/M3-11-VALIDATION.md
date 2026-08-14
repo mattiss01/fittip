@@ -13,13 +13,18 @@
 `cc60c11357cbeae1fa14b2fbe3293384d79945f7`
 
 **Exact implementation review target:**
-`8486fa35b40a8512fc634590a2125cf18d783668`
+`60583aab45dfb87d34eef89f0cbc49f5358d2373`
 
 **Implementation commit:**
 `e370dbe20d410488b13fd7ecd69a39f7f741314e`
 
 **Isolated CI/tooling commit:**
 `8486fa35b40a8512fc634590a2125cf18d783668`
+
+**Builder correction commit:**
+`60583aab45dfb87d34eef89f0cbc49f5358d2373` — updates the preserved
+authentication browser journey for the maintenance heading and the permanent
+onboarding entry under You.
 
 **Final validation evidence head:** the evidence-only commit containing this
 record follows the implementation target and changes no runtime, schema, or CI
@@ -63,12 +68,15 @@ request waterfall, or cross-request state.
 ## Complete change manifest
 
 `git diff --stat
-cc60c11357cbeae1fa14b2fbe3293384d79945f7..8486fa35b40a8512fc634590a2125cf18d783668`:
+cc60c11357cbeae1fa14b2fbe3293384d79945f7..60583aab45dfb87d34eef89f0cbc49f5358d2373`:
 
 ```text
  .github/workflows/ci.yml                           |   81 +-
  README.md                                          |   16 +-
+ docs/validation/M3/M3-11-VALIDATION.md             |  408 ++++++
  .../M3/evidence/M3-11-maintenance-390x844.png      |  Bin 0 -> 57513 bytes
+ docs/validation/README.md                          |    2 +
+ e2e/auth.spec.ts                                   |   14 +-
  e2e/m1-03-quick-log.spec.ts                        |  244 ----
  e2e/m1-03.playwright.config.ts                     |   14 -
  e2e/m1-04-today-progress.spec.ts                   |  192 ---
@@ -192,7 +200,7 @@ cc60c11357cbeae1fa14b2fbe3293384d79945f7..8486fa35b40a8512fc634590a2125cf18d7836
  .../integration/m1_01_concurrent_data_api.mjs      |  209 ----
  .../integration/m3_02_concurrent_acceptance.mjs    |  401 ------
  .../integration/m3_11_seeded_reset.mjs             |   55 +
- 126 files changed, 1534 insertions(+), 24887 deletions(-)
+ 129 files changed, 1949 insertions(+), 24896 deletions(-)
 ```
 
 Navigation notes for non-obvious files:
@@ -274,6 +282,7 @@ other file is renamed.
 | `npm run build` | PASS; all six maintenance routes compiled as dynamic authenticated routes |
 | M3-11 production Playwright | PASS; 1 test at exactly `390x844`, all six routes, no skip |
 | mobile cache/overflow/focus/console/page/legacy-request assertions | PASS |
+| preserved production auth journey after maintenance correction | INCOMPLETE locally; maintenance redirect and You/onboarding entry passed, then the unchanged onboarding flow timed out after its step-5 save remained pending beyond the 5-second assertion; exact-target CI is required |
 | `git diff --check` | PASS |
 | exact-review-target CI | Pending lead push |
 | matching Vercel Preview | Pending lead push |
@@ -294,7 +303,7 @@ matching Preview, and explicit product acceptance are recorded.
 ### A. Preflight — read-only, no export
 
 1. Record exact reviewed implementation
-   `8486fa35b40a8512fc634590a2125cf18d783668`, evidence head, CI URL, Preview
+   `60583aab45dfb87d34eef89f0cbc49f5358d2373`, evidence head, CI URL, Preview
    URL/deployment Git SHA, founder project ref, and migration SHA-256. Abort on
    any mismatch or dirty checkout.
 2. Confirm the linked project is the owner-approved FitTip founder project and
@@ -387,7 +396,7 @@ matching Preview, and explicit product acceptance are recorded.
 ## Independent reviewer checklist
 
 - Review exact implementation target
-  `8486fa35b40a8512fc634590a2125cf18d783668` against approved base
+  `60583aab45dfb87d34eef89f0cbc49f5358d2373` against approved base
   `cc60c11357cbeae1fa14b2fbe3293384d79945f7`; treat the later validation-only
   commit as evidence.
 - Reconcile the complete stat, deletions, renames, and navigation notes against
