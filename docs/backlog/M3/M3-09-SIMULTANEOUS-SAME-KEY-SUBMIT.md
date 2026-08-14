@@ -2,6 +2,9 @@
 
 **Status:** proposed — not approved for implementation
 
+**Dispatch state:** parked outside the F-005 replacement chain. This remains a
+real P3 roadmap concurrency defect and does not block rolling-plan delivery.
+
 **Triage:** ready-for-agent
 
 **Milestone:** M3 — AI coaching proposals

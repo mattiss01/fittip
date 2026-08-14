@@ -6,15 +6,16 @@
 must not be approved or dispatched. Its replacement is F-005 delivery slice 7
 and can be drafted only after rolling-plan proposal application is accepted.
 
-**Triage:** ready-for-agent
+**Triage:** needs-triage
 
 **Milestone:** M3
 
 **Priority:** P1
 
-**Depends on:** [M3-03 accepted](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md). It
-needs a proposal to regenerate from and the `fittip.seven-day-plan.v2` contract
-M3-03 defines.
+**Depends on:** this historical draft followed
+[M3-03 accepted](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md). Its replacement
+contract depends on M3-15 accepted and reuses only the still-approved
+`fittip.seven-day-plan.v2` boundary and F-005 regeneration decisions.
 
 **Split from:** [M3-03](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md) on 12 August
 2026. M3-03 carried sixteen open decisions across five separable concerns; see

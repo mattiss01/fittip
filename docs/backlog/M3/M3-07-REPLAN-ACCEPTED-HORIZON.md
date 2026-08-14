@@ -1,8 +1,13 @@
 # M3-07: Replanning an accepted horizon
 
-**Status:** proposed — not approved for implementation
+**Status:** retired — no replacement in F-005, decided 14 August 2026
 
-**Triage:** needs-triage
+**Triage:** wontfix
+
+**Disposition:** Do not dispatch. M3-15 proposes additions beside existing Plan
+content and the owner edits existing sessions directly. A future Coach-driven
+replacement or cancellation capability requires a new approved feature and
+ticket.
 
 **Milestone:** M3
 

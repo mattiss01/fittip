@@ -1,8 +1,11 @@
 # M3-08: Roadmap source references list completions that never travelled
 
-**Status:** proposed — not approved for implementation
+**Status:** retired — merged into M3-14 by the product owner on 14 August 2026
 
-**Triage:** needs-triage
+**Triage:** wontfix
+
+**Disposition:** Do not patch the legacy completion-source path separately.
+M3-14 carries the exact-sent-completion source rule into replacement AI context.
 
 **Milestone:** M3 — AI coaching proposals
 

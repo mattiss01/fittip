@@ -1,8 +1,12 @@
 # M3-06: A plan never starts in the past
 
-**Status:** proposed — not approved for implementation
+**Status:** retired — behavior absorbed by F-005 on 14 August 2026
 
-**Triage:** needs-triage
+**Triage:** wontfix
+
+**Disposition:** Do not dispatch. A rolling Plan has no bounded start date;
+F-005 owns the rule that manual planning permits owner-local today and future
+only.
 
 **Milestone:** M3 (filed here as the active milestone; the behaviour being
 changed is M1's, following the M2-06 precedent)

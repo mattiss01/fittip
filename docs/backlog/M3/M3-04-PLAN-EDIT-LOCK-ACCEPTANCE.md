@@ -1,6 +1,11 @@
 # M3-04: Plan editing, locks, and acceptance
 
-**Status:** proposed — not approved for implementation
+**Status:** retired — superseded by F-005 on 14 August 2026
+
+**Triage:** wontfix
+
+**Disposition:** Do not dispatch this whole-version contract. M3-11 owns manual
+continuous planning and M3-15 owns AI proposal application.
 
 **Milestone:** M3
 

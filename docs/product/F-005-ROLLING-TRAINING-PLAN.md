@@ -539,29 +539,29 @@ surface, show a maintenance state, or be temporarily unavailable as individual
 tickets demand. No ticket must add dual writes, compatibility synchronization,
 or an interim usable release merely to keep the old planning flow active.
 
-1. **Rolling-plan foundation — Tier 1.** New owner-scoped current-state schema,
+1. **M3-10: Rolling-plan foundation — Tier 1.** New owner-scoped current-state schema,
    atomic append-only change log, plan revision, RLS, privileges, indexes,
    concurrency, and generated types, introduced without activating the new path
    or deleting old data.
-2. **Manual continuous planning — Tier 1.** Build arbitrary-date one-off
+2. **M3-11: Manual continuous planning — Tier 1.** Build arbitrary-date one-off
    changes and understandable history against the dormant new model.
-3. **Private saved-session library — Tier 1.** Owner-scoped templates,
+3. **M3-12: Private saved-session library — Tier 1.** Owner-scoped templates,
    current-value copy reuse, edit/delete behavior, same-owner enforcement, RLS,
    and the mobile save/select/review flow.
-4. **Recurring session series — Tier 1.** Constrained rules, bounded expansion,
+4. **M3-13: Recurring session series — Tier 1.** Constrained rules, bounded expansion,
    occurrence exceptions, this-and-future changes, DST behavior, and history.
-5. **Replacement consumer readiness — Tier 1.** Prepare Plan, Today, logging,
+5. **M3-14: Replacement consumer readiness — Tier 1.** Prepare Plan, Today, logging,
    Progress, and AI context to use only the rolling-plan model at activation.
-6. **AI proposal application — Tier 1.** Generate fresh proposals and adapt
+6. **M3-15: AI proposal application — Tier 1.** Generate fresh proposals and adapt
    M3-03 proposal semantics into a combined current-plan/proposal timeline,
    staged per-item choices, one atomic **Finish review** action, conflicts,
    locks, source revalidation, and mobile review.
-7. **Regeneration on the rolling plan — Tier 1.** Revise M3-03B after proposal
+7. **M3-03B: Regeneration on the rolling plan — Tier 1.** Revise M3-03B after proposal
    application is accepted; preserve **Will be added**, omit **Rejected**,
    revise unresolved items, require overall feedback unless a rejected item has
    feedback, retain only the immediate predecessor, and keep the three-round
    chain cap.
-8. **Clean cutover and activation — Tier 1.** After every replacement path above
+8. **M3-16: Clean cutover and activation — Tier 1.** After every replacement path above
    is accepted, run the approved destructive migration, expire affected roadmap
    proposals, initialize empty rolling plans, activate every replacement
    consumer together, and verify preserved domains. Bring the founder app back
@@ -590,18 +590,27 @@ acceptance before the next slice starts.
   plan shape.
 - M3-03B stays proposed and undispatched until the rolling-plan foundation and
   AI proposal-application contract are accepted.
-- M3-03C remains conceptually compatible: a roadmap can still be a bounded AI
-  input, but its open decisions remain separately gated.
-- M3-03D must link detail to a stable proposed or planned session rather than a
-  whole accepted plan version.
-- M3-04 is replaced by manual rolling-plan changes and AI proposal application;
-  its whole-version acceptance architecture must not be dispatched.
+- M3-03C is retired as a standalone ticket. Its roadmap-input and visible
+  proposal-reasoning behavior moves into M3-15.
+- M3-03D remains a deferred optional enhancement after cutover. It must link
+  detail to a stable proposed or planned session rather than a whole accepted
+  plan version.
+- M3-04 is retired. M3-11 owns manual rolling-plan changes and M3-15 owns AI
+  proposal application; its whole-version acceptance architecture must never
+  be dispatched.
 - M3-06 is retired if this model is approved because a rolling plan has no
   bounded start date. Its rule against retroactive planning moves here.
-- M3-07 is rewritten as a bounded AI proposal to change future unlocked
-  sessions in the rolling plan; it no longer supersedes a whole plan version.
-- M3-05 must validate the replacement dependency chain rather than the current
-  M3-01-through-M3-04 chain.
+- M3-07 is retired without replacement. The approved Coach flow proposes
+  additions beside existing Plan content and does not modify or supersede
+  existing sessions. Any future Coach-driven replacement or cancellation is a
+  new separately approved capability.
+- M3-08 is retired as a standalone ticket. Its exact-sent-completion source rule
+  moves into M3-14 while replacement AI context is built.
+- M3-05 is retired. M3-16 owns the narrow final hosted end-to-end closeout;
+  ticket-level review, CI, Preview, hosted evidence, and acceptance remain at
+  every slice and are not duplicated by a second exhaustive validation pass.
+- M3-09 remains a parked P3 roadmap-concurrency defect outside the replacement
+  dependency chain.
 
 ## Approved product decisions
 
@@ -685,8 +694,8 @@ feature brief and ADR-016 on 14 August 2026:
     replacement; maintenance or temporary unavailability is acceptable. Do not
     add dual writes, compatibility synchronization, or an interim manual-only
     release. Activate the complete rolling-plan experience only after all
-    replacement paths are accepted. Keep M3-03B, M3-04, M3-06, M3-07, and M3-05
-    paused until their replacement dependencies and scopes are approved.
+    replacement paths are accepted. Keep every replacement ticket proposed
+    until its predecessor is accepted and its own exact scope is approved.
 16. **Destructive deployment protocol — decided 14 August 2026:** prove the
     exact migration locally from clean and seeded old-model databases; require
     exact-commit independent review and green CI; and verify a Vercel maintenance
@@ -710,6 +719,15 @@ feature brief and ADR-016 on 14 August 2026:
     feedback is required unless a rejected item has feedback. Use a fresh
     request/charge, the same horizon, only the immediate predecessor, and the
     three-round cap.
+19. **M3 replacement-ticket map — decided 14 August 2026:** deliver F-005 as
+    M3-10, M3-11, M3-12, M3-13, M3-14, M3-15, rewritten M3-03B, and M3-16 in
+    that order. Retire M3-03C, M3-04, M3-05, M3-06, M3-07, and M3-08 as
+    standalone implementation tickets: M3-03C's relevant behavior moves into
+    M3-15, M3-08's source rule moves into M3-14, and M3-16 owns the final hosted
+    closeout. Defer M3-03D until after cutover and park M3-09 outside the chain.
+    M3-07 receives no replacement because this feature proposes additions and
+    preserves direct owner editing of existing Plan content; AI-driven changes
+    to existing sessions require a new approved feature if wanted later.
 
 ## Approval boundary
 
