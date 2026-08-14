@@ -15,16 +15,54 @@
 **Exact implementation review target:**
 `312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46`
 
-**Exact-target CI run:** _pending lead push._ Record the run URL for
-`312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46` here; it must be green before review.
+**Exact-target CI run:**
+[31842432354](https://github.com/mattiss01/fittip/actions/runs/31842432354) —
+green on all three jobs for exactly
+`312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46`, including the 390px browser flows.
+The lead pushed that commit as `ticket/m3-11-review-target` to obtain a run at
+the implementation SHA rather than at the evidence head. The evidence head
+`0df233b` has its own green run,
+[31842418730](https://github.com/mattiss01/fittip/actions/runs/31842418730).
 
-**Matching Vercel Preview:** _pending lead push._ Record the Preview URL and
-deployment ID here, and confirm the deployment's reported Git SHA is exactly
-`312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46`.
+This supersedes run `31838200437`, which belongs to the rejected `60583aa` and
+was cited in the builder handoff as the authentication-flow evidence. That
+citation is withdrawn: the browser job is green on the target's own run, so no
+cross-SHA borrowing is needed. The builder's local `auth.spec.ts` failure is a
+Node 22.14.0 environment artifact against the repository's `>=24.18.0`
+requirement and does not reproduce in CI.
+
+**Matching Vercel Preview:**
+`https://fittip-eekbx1f3a-mattis-3657s-projects.vercel.app`
+(deployment `5913704119`, state `success`).
+
+The deployment's reported Git SHA is `0df233b`, the evidence head, **not**
+`312a8ba`. Vercel did not build the `ticket/m3-11-review-target` ref, so no
+Preview exists at the implementation SHA. The two commits differ by exactly one
+file — this validation record, under `docs/` — as
+`git diff --stat 312a8ba..0df233b` shows: 1 file changed, 47 insertions, 25
+deletions, no runtime, schema, route, style, or test change. The deployed
+application is therefore byte-identical to the review target, and this Preview
+is the correct hosted surface for reviewing `312a8ba`. Recorded as an exact
+statement of what was verified rather than as a claim of SHA equality.
+
+**Preview database state:** the Preview runs against the founder Supabase
+project with the 11 legacy tables still present; the M3-11 migration has not
+been applied to any hosted project. This is the intended order, not a gap. The
+maintenance routes are static and query-free, so they must render correctly
+before the destructive migration runs — exactly what runbook steps B1-B2
+require and what this Preview demonstrates.
 
 **Superseded review target:** `60583aab45dfb87d34eef89f0cbc49f5358d2373` —
 rejected by independent review on both Standards and Spec axes. Its green CI
 run and `READY` Preview are historical only and approve nothing.
+
+**Helper refs — do not review from these branch names.** Two non-ticket refs
+exist on `origin` solely to trigger exact-SHA CI:
+`ticket/m3-11-review-target` at `312a8ba` (current, correct) and
+`ticket/m3-11-implementation-review` at the rejected `60583aa` (stale, left by
+the previous builder). The stale ref is a trap for anyone selecting a review
+target by branch name. The lead deletes both after independent review; until
+then, resolve the target by SHA, never by ref.
 
 **Implementation commit:**
 `e370dbe20d410488b13fd7ecd69a39f7f741314e`
