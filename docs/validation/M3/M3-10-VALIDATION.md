@@ -14,16 +14,27 @@
 **Implementation base:**
 `ef1a0de4e0d4e8e5d2fe4d3d7a8ada056535dbb7`
 
-**Exact implementation review target:** pending builder commit
+**Exact implementation review target:**
+`f15f53b7973f5c4251e9b5813dd2940567ef1bc9`
 
-**Initial implementation commit:** pending
+**Initial implementation commit:**
+`7248ad3d5c5407066dc06c9bc573b9dd516b8927`
 
-**Builder correction commits:** none yet
+**Builder correction commits:**
+`f15f53b7973f5c4251e9b5813dd2940567ef1bc9` - isolated CI invocation,
+package-script wiring, and repeatable harness cleanup diagnostics
 
 ## Delivered behavior
 
-Pending builder handoff. The approved contract is a dormant foundation and has
-no user-visible route or activated consumer.
+The dormant foundation now stores one owner rolling plan with directly readable
+one-off session/activity state, one monotonic revision, and append-only grouped
+before/after history. A small `RollingPlan` interface exposes only bounded
+`getPlanSlice` and atomic `applyChangeSet` operations. The in-memory and
+Postgres adapters support add, edit, move, lock, and cancellation; cancellation
+retains the stable session identity and its history.
+
+There is no user-visible route or activated consumer. Existing bounded-plan
+runtime behavior is unchanged.
 
 ## Mobile demo path
 
@@ -32,25 +43,85 @@ The existing `390x844` CI flows must remain green as regression evidence.
 
 ## Changed files
 
-Pending builder commit. Record `git diff --stat
-ef1a0de4e0d4e8e5d2fe4d3d7a8ada056535dbb7..<review-target>` here, followed only
-by navigation notes for non-obvious files and explicit deleted/renamed entries.
+`git diff --stat
+ef1a0de4e0d4e8e5d2fe4d3d7a8ada056535dbb7..f15f53b7973f5c4251e9b5813dd2940567ef1bc9`:
+
+```text
+ .github/workflows/ci.yml                           |   3 +
+ docs/backlog/M3/M3-10-ROLLING-PLAN-FOUNDATION.md   |  62 ++-
+ docs/backlog/M3/M3-BACKLOG.md                      |   2 +-
+ docs/validation/M3/M3-10-VALIDATION.md             |  90 ++++
+ docs/validation/README.md                          |   2 +
+ package.json                                       |   1 +
+ src/lib/supabase/database.types.ts                 | 290 +++++++++-
+ .../repositories/rolling-plan-repository.test.ts   | 184 +++++++
+ src/server/repositories/rolling-plan-repository.ts | 218 ++++++++
+ .../rolling-plan/in-memory-rolling-plan-adapter.ts | 142 +++++
+ src/server/rolling-plan/rolling-plan.test.ts       | 133 +++++
+ src/server/rolling-plan/rolling-plan.ts            | 384 +++++++++++++
+ ...0260814164502_m3_10_rolling_plan_foundation.sql | 597 +++++++++++++++++++++
+ .../m3_10_rolling_plan_foundation.test.sql         | 382 +++++++++++++
+ .../m3_10_concurrent_rolling_plan_changes.mjs      | 192 +++++++
+ 15 files changed, 2673 insertions(+), 9 deletions(-)
+```
+
+Navigation notes:
+
+- `rolling-plan.ts` owns the validation boundary and the two-operation public
+  module interface; persistence and authorization mechanics are absent from it.
+- `in-memory-rolling-plan-adapter.ts` is the transactional test adapter behind
+  the same interface as Postgres.
+- The concurrency harness uses two real requests at the same revision, verifies
+  state/history/revision after every race, tests cross-owner denial, and fails
+  if cleanup of either synthetic owner fails.
+- `.github/workflows/ci.yml`, `package.json`, and the harness-only diagnostics
+  are isolated in tooling commit `f15f53b`.
+
+No file was deleted or renamed.
 
 ## Data, migration, API, privacy, and security effects
 
-Pending implementation evidence. The approved direction is one forward local
-migration, owner-scoped dormant records, a least-privilege owner-derived atomic
-transaction, RLS and same-owner constraints, generated types, and no browser
-storage, external service, provider call, spend, old-data mutation, activation,
-or hosted builder command.
+- One new forward migration creates `rolling_plans`, current session/activity
+  tables, and append-only change-set/change-entry history. No existing table or
+  row is changed, backfilled, synchronized, or deleted.
+- Composite foreign keys enforce same-owner plan, session, activity, personal
+  activity, change-set, and history relationships. Account teardown cascades
+  owned history with its plan; authenticated application roles have no direct
+  mutation privilege, so this cannot become an ordinary Plan deletion path.
+- RLS is enabled on all five exposed owned tables. Authenticated owners receive
+  direct `SELECT` only; anonymous and cross-owner access is denied. Direct
+  application-role `INSERT`, `UPDATE`, and `DELETE` are revoked.
+- `apply_rolling_plan_change_set(bigint, uuid, text, jsonb)` is the only write
+  API. It derives `auth.uid()`, uses an empty `search_path`, a bounded owner
+  advisory lock, expected-revision and idempotency checks, and one transaction
+  for current state, immutable before/after history, and revision advancement.
+  Anonymous and service-role execution are revoked; no service-role application
+  client was added.
+- Generated database types include the new tables, receipt composite, and RPC.
+  The Postgres adapter rejects nullable or unknown generated receipt fields
+  rather than coercing incomplete persistence results.
+- No browser storage, route/API handler, external service, provider call, spend,
+  old-data mutation, activation, or hosted command was introduced.
 
 ## Tests and final results
 
-**Exact-commit CI:** pending builder commit and push.
+**Exact-commit CI:** pending lead push for
+`f15f53b7973f5c4251e9b5813dd2940567ef1bc9`.
 
 | Command or check | Result |
 |---|---|
-| `git diff --check` | Pending builder handoff |
+| README type-generation sequence after clean reset | PASS; generated types committed |
+| `npx supabase db reset --local` | PASS; every migration applied from zero |
+| focused pgTAP file | PASS; 56 assertions |
+| `npm run test:m3-10-concurrency` twice consecutively | PASS; 12 genuine races per run, owner cleanup verified |
+| `npx supabase db lint --local --level warning --fail-on warning` | PASS; no issues |
+| `npx supabase db advisors --local --type all --level warn --fail-on warn` | PASS; no issues |
+| `npm run typecheck` | PASS |
+| focused Vitest module/repository files | PASS; 2 files, 10 tests |
+| focused ESLint for new TypeScript/JavaScript | PASS |
+| focused Prettier check for tooling files | PASS |
+| `git diff --check` | PASS |
+| Exact-SHA CI | Pending lead push; this is the full-suite evidence |
 | Hosted Vercel Preview | Pending lead push and deployment |
 | Founder migration/history/RLS verification | Pending independently reviewed commit |
 
@@ -66,6 +137,8 @@ clean migrations, database lint/advisors, pgTAP, concurrency, and browser flows.
   part of M3-10.
 - Builder work is local and branch-only. Hosted migration application and
   founder verification remain lead-owned gates after independent review.
+- The builder deliberately did not run the complete application/browser suite;
+  exact-commit CI after the lead push is the required full-suite evidence.
 
 ## Independent reviewer checklist
 
