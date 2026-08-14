@@ -32,20 +32,34 @@ insert into public.roadmap_proposal_decisions (
   accepted_version_id,
   decided_at
 )
-select distinct
+-- Selected from roadmap_proposals alone, with both predicates as EXISTS
+-- subqueries. A join to roadmap_proposal_sources would fan out to one row per
+-- matching source, and DISTINCT cannot collapse that fan-out here because
+-- clock_timestamp() is VOLATILE and is evaluated per input row beneath the
+-- unique step, making every duplicate tuple distinct. A real proposal carries
+-- one plan_version source plus one completion source per completion group, so
+-- the join shape would raise a duplicate-key error on the proposal_id primary
+-- key and abort the whole reset. Selecting from the primary-key relation emits
+-- exactly one row per proposal by construction.
+select
   proposal.id,
   proposal.user_id,
   'expired',
   null::uuid,
   pg_catalog.clock_timestamp()
 from public.roadmap_proposals as proposal
-join public.roadmap_proposal_sources as source
-  on source.proposal_id = proposal.id
-  and source.user_id = proposal.user_id
-left join public.roadmap_proposal_decisions as decision
-  on decision.proposal_id = proposal.id
-where source.source_kind in ('plan_version', 'completion')
-  and decision.proposal_id is null;
+where exists (
+    select 1
+    from public.roadmap_proposal_sources as source
+    where source.proposal_id = proposal.id
+      and source.user_id = proposal.user_id
+      and source.source_kind in ('plan_version', 'completion')
+  )
+  and not exists (
+    select 1
+    from public.roadmap_proposal_decisions as decision
+    where decision.proposal_id = proposal.id
+  );
 
 -- The roadmap runtime currently composes legacy completion context. Its rows
 -- remain readable, but every mutation fails closed until M3-15 supplies the

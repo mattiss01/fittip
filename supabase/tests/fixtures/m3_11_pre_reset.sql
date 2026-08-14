@@ -106,6 +106,34 @@ values (
   '{"duration_minutes":30,"intensity":"easy"}'::jsonb
 );
 
+-- A second, independent completion group. The legacy AI context emitted one
+-- `completion` roadmap source per completion group, so a real undecided
+-- proposal references more than one legacy record.
+insert into public.completed_sessions (
+  id, user_id, completion_group_id, revision_number, planned_session_id,
+  actual_local_date, timezone_name, duration_minutes, status,
+  idempotency_key, idempotency_fingerprint
+)
+values (
+  '31100000-0000-4000-8000-000000000034',
+  '31100000-0000-4000-8000-000000000001',
+  '31100000-0000-4000-8000-000000000035',
+  1,
+  null,
+  '2026-08-14', 'Europe/Berlin', 45, 'unplanned',
+  '31100000-0000-4000-8000-000000000036',
+  '89abcdef0123456789abcdef01234567'
+);
+insert into public.completion_heads (
+  user_id, completion_group_id, current_completion_id, revision
+)
+values (
+  '31100000-0000-4000-8000-000000000001',
+  '31100000-0000-4000-8000-000000000035',
+  '31100000-0000-4000-8000-000000000034',
+  1
+);
+
 insert into public.goal_collections (user_id, revision)
 values ('31100000-0000-4000-8000-000000000001', 1);
 insert into public.goals (
@@ -307,6 +335,64 @@ values
     '31100000-0000-4000-8000-000000000001',
     'rejected', null,
     '2026-08-14 18:05:00+00'
+  );
+
+-- The fan-out case. This undecided proposal carries four provenance rows, three
+-- of which name a legacy record: one `plan_version` and one `completion` per
+-- completion group, which is the shape the legacy AI context actually emitted.
+-- The reset must still record exactly one `expired` decision for it; a
+-- per-source expansion would violate the decision primary key and abort the
+-- whole migration.
+insert into public.roadmap_generation_requests (
+  id, user_id, completion_token, idempotency_key, request_fingerprint,
+  requested_start_date, requested_end_date, expected_head_revision,
+  status
+)
+values (
+  '31100000-0000-4000-8000-0000000000b0',
+  '31100000-0000-4000-8000-000000000001',
+  '31100000-0000-4000-8000-0000000000b1',
+  'm3-11-roadmap-multi-source', 'm3-11-roadmap-multi-source-fingerprint',
+  '2026-08-15', '2026-09-11', 1, 'pending'
+);
+insert into public.roadmap_proposals (
+  id, user_id, generation_request_id, origin, schema_version,
+  prompt_version, provider_code, model_code, rate_card_version, content
+)
+values (
+  '31100000-0000-4000-8000-0000000000b2',
+  '31100000-0000-4000-8000-000000000001',
+  '31100000-0000-4000-8000-0000000000b0',
+  'ai_initial', 'fittip.roadmap.v2', 'reset-proof', 'fixture', 'fixture',
+  'reset-proof-v1', '{"state":"undecided-multi-source"}'::jsonb
+);
+update public.roadmap_generation_requests
+set status = 'completed',
+    proposal_id = '31100000-0000-4000-8000-0000000000b2'
+where id = '31100000-0000-4000-8000-0000000000b0';
+insert into public.roadmap_proposal_sources (
+  proposal_id, user_id, ordinal, source_kind, record_id, revision_number
+)
+values
+  (
+    '31100000-0000-4000-8000-0000000000b2',
+    '31100000-0000-4000-8000-000000000001',
+    0, 'goal', '31100000-0000-4000-8000-000000000040', 1
+  ),
+  (
+    '31100000-0000-4000-8000-0000000000b2',
+    '31100000-0000-4000-8000-000000000001',
+    1, 'plan_version', '31100000-0000-4000-8000-000000000020', 1
+  ),
+  (
+    '31100000-0000-4000-8000-0000000000b2',
+    '31100000-0000-4000-8000-000000000001',
+    2, 'completion', '31100000-0000-4000-8000-000000000031', 1
+  ),
+  (
+    '31100000-0000-4000-8000-0000000000b2',
+    '31100000-0000-4000-8000-000000000001',
+    3, 'completion', '31100000-0000-4000-8000-000000000035', 1
   );
 
 insert into public.plan_generation_requests (

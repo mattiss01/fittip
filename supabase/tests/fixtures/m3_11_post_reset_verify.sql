@@ -39,10 +39,10 @@ begin
     or (select count(*) from public.memory_revisions) <> 1
     or (select count(*) from public.onboarding_drafts) <> 1
     or (select count(*) from public.ai_spend_reservations) <> 1
-    or (select count(*) from public.roadmap_generation_requests) <> 3
-    or (select count(*) from public.roadmap_proposals) <> 3
-    or (select count(*) from public.roadmap_proposal_sources) <> 3
-    or (select count(*) from public.roadmap_proposal_decisions) <> 3
+    or (select count(*) from public.roadmap_generation_requests) <> 4
+    or (select count(*) from public.roadmap_proposals) <> 4
+    or (select count(*) from public.roadmap_proposal_sources) <> 7
+    or (select count(*) from public.roadmap_proposal_decisions) <> 4
     or (select count(*) from public.roadmap_versions) <> 1
     or (select count(*) from public.roadmap_heads) <> 1
     or (select count(*) from public.rolling_plans) <> 1
@@ -97,7 +97,7 @@ begin
         on proposal.id = request.proposal_id
         and proposal.user_id = request.user_id
       group by request.user_id
-      having count(*) = 3
+      having count(*) = 4
     )
     or not exists (
       select 1
@@ -121,6 +121,33 @@ begin
       is distinct from 'expired'
   then
     raise exception 'source-dependent roadmap proposal was not expired';
+  end if;
+
+  -- The fan-out case: the proposal carries three legacy provenance rows, so a
+  -- per-source expansion would have tried to write three decisions for one
+  -- primary key and aborted the migration. Assert the single expired row and
+  -- its null accepted version explicitly rather than inferring it from the
+  -- migration having completed.
+  if (select count(*) from public.roadmap_proposal_decisions
+      where proposal_id = '31100000-0000-4000-8000-0000000000b2') <> 1
+    or not exists (
+      select 1
+      from public.roadmap_proposal_decisions
+      where proposal_id = '31100000-0000-4000-8000-0000000000b2'
+        and decision = 'expired'
+        and accepted_version_id is null
+    )
+  then
+    raise exception
+      'multi-source roadmap proposal did not get exactly one expired decision';
+  end if;
+
+  if (select count(*) from public.roadmap_proposal_sources
+      where proposal_id = '31100000-0000-4000-8000-0000000000b2'
+        and source_kind in ('plan_version', 'completion')) <> 3
+  then
+    raise exception
+      'the multi-source expiry case no longer has multiple legacy sources';
   end if;
 
   if not exists (
