@@ -1,7 +1,7 @@
 # M3-10: Rolling-plan foundation
 
-**Status:** in development — approved by the product owner and dispatched on
-14 August 2026
+**Status:** testable — independently approved and hosted-verified on 14 August
+2026; awaiting product-owner acceptance
 
 ## Agent brief
 

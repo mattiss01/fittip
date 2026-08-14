@@ -3,7 +3,7 @@
 **Ticket:**
 [M3-10](../../backlog/M3/M3-10-ROLLING-PLAN-FOUNDATION.md)
 
-**Lifecycle state:** in development
+**Lifecycle state:** testable
 
 **Tier:** 1 — schema, authorization, RLS, privileged writes, and concurrency
 
@@ -206,6 +206,59 @@ name under the required empty `search_path`. Qualifying the constraint with
 The builder uses focused tests while implementing. The exact reviewed commit's
 CI run is the recorded evidence for formatting, lint, TypeScript, Vitest, build,
 clean migrations, database lint/advisors, pgTAP, concurrency, and browser flows.
+
+## Independent review and hosted verification — 14 August 2026
+
+The independent reviewer approved exact implementation target
+`397441459c0d6a84327ded9910e5926465fcb062` after the snapshot, ordering, shared
+adapter-contract, and evidence corrections. Both the Standards and Spec axes
+were clean. Evidence-only head `9cfca1377c7e9a7df41bbb7ea931677673c02441`
+changed only this validation record after the implementation target. CI run
+31827450187 was green for the target, and Vercel deployment
+`dpl_E4QyWr74CP4kGZmYCjNu6w1ygvjW` was `READY` with the same Git source SHA.
+
+The lead linked the checkout to project `mahhfyxhgcmcbqkvudcm`, **FitTip Founder
+Staging**. Before the push, remote history matched every repository migration
+through `20260812191935` and showed only
+`20260814164502_m3_10_rolling_plan_foundation.sql` pending. The dry run named
+only that file; `db push --linked` applied it; and the post-push migration list
+showed all fourteen local and remote timestamps aligned through
+`20260814164502`. The push's post-apply pg-delta catalogue cache warned that a
+temporary CA file was absent. Remote history and the catalogue checks below
+confirm the migration itself completed.
+
+Hosted database evidence:
+
+- `db lint --linked --level warning --fail-on warning` returned no schema
+  errors.
+- All five rolling-plan tables exist with RLS enabled. Their only
+  application-role table privilege is authenticated `SELECT`; authenticated
+  `INSERT`, `UPDATE`, and `DELETE`, plus anonymous `SELECT`, are false.
+- Every table has one authenticated owner-`SELECT` policy using
+  `(select auth.uid()) = user_id`; no write policy exists.
+- `get_rolling_plan_slice(date,date)` is stable, security invoker, and has an
+  empty `search_path`. `apply_rolling_plan_change_set(...)` is security definer
+  with an empty `search_path`. Only `authenticated` can execute either RPC;
+  `anon` and `service_role` cannot.
+- The active-position column is generated `ALWAYS`, and
+  `rolling_plan_sessions_active_order_key` is deferrable and initially
+  deferred.
+- A rollback-only hosted assertion probe ran as the authenticated founder
+  subject. The write RPC produced revision 1 with one plan, session, activity,
+  change set, and change entry; the owner read all five rows and the snapshot
+  RPC returned the session and activity. After switching to a different
+  authenticated subject, every table count was zero and the snapshot RPC
+  returned no plan or sessions. Any mismatch would have raised and failed the
+  query. The transaction rolled back, and a separate post-probe query confirmed
+  all five rolling-plan table counts remained zero.
+
+Hosted advisors returned seventeen project-wide warnings for intentional
+authenticated `SECURITY DEFINER` RPCs, including this ticket's atomic write
+RPC, plus the pre-existing leaked-password-protection warning. The advisor
+cannot see the complementary owner-derived identity, empty search path,
+least-privilege execute grants, revoked direct writes, and RLS boundary. Those
+properties were verified directly above; no advisor warning was suppressed or
+changed.
 
 ## Known limitations
 
