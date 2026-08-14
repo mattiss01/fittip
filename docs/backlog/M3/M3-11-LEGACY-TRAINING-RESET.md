@@ -1,88 +1,99 @@
 # M3-11: Legacy training reset
 
-**Status:** proposed — clean-break direction approved; exact ticket not approved
+**Status:** in development — approved by the product owner on 14 August 2026
 
-**Triage:** needs-triage
+**Triage:** ready
 
 **Milestone:** M3
 
 **Priority:** P1
 
-**Tier:** 1 — destructive migration, permanent data deletion, schema removal,
-authorization, and founder deployment
-
 **Depends on:** M3-10 accepted.
 
 **Blocks:** M3-12 and every later F-005 replacement slice.
 
-## Outcome
+## Agent brief
 
-Remove the complete legacy training-record model before building its
-replacements. The founder environment keeps the accepted M3-10 rolling-plan
-foundation and preserved non-training domains, but all old plan, proposal,
-completion, and correction data and runtime machinery are permanently removed.
+Remove the legacy training-record model, preserving M3-10 and named
+non-training domains; leave affected owner surfaces in accessible maintenance.
 
-Plan, Today, logging, Progress, roadmap, and plan-proposal surfaces show an
-honest maintenance state or are unavailable until their replacement ticket
-lands. Roadmap records remain preserved while their completion-dependent
-runtime is unavailable.
+**Tier:** 1 — destructive schema/data, authorization, and founder deployment.
+Use `schema-change`, `codebase-design`, `frontend-design`,
+`vercel-react-best-practices`, `mobile-e2e`, `validation-record`, and the
+Supabase skill with current official guidance.
 
-## Scope to preserve when this ticket is drafted for approval
+**Hard constraints:**
 
-- One forward migration deletes the approved legacy rows and then drops their
-  tables, functions, triggers, policies, grants, indexes, constraints, and
-  database types after verifying the exact dependency closure. Applied
-  migrations remain untouched.
-- Remove application modules, routes, actions, components, tests, fixtures, and
-  generated database types that exist only for bounded plans, legacy plan
-  proposals, completions, or completion corrections. Do not leave callable or
-  dead compatibility paths.
-- Preserve authentication/profiles, goals, explicit memory, onboarding,
-  roadmaps, personal activities, AI spend/accounting, security/audit evidence,
-  and the complete M3-10 rolling-plan foundation.
-- Preserve roadmap records, but expire each undecided roadmap proposal whose
-  recorded sources depend on removed plan or completion records. It must remain
-  impossible to accept and must not reinterpret a missing source as current.
-- Keep shared training validation needed by personal activities or the rolling
-  plan; remove only objects proven to belong exclusively to the legacy model.
-- Replace affected owner routes and navigation affordances with a small,
-  accessible maintenance state. They must not query removed schema or imply
-  that historical training remains available.
-- Prove the migration from zero and from a seeded pre-reset database, including
-  exact removed-object absence, preserved-domain counts, no dangling
-  references, M3-10 schema/RLS/grants/function behavior, and database advisors.
-- Record non-content row counts before execution. Create no export, backfill,
-  archive, compatibility view, restore path, or manual backup.
-- Preview and independent review are non-destructive. After acceptance, deploy
-  the reviewed maintenance-safe application before database deletion. Applying
-  the founder migration still requires the explicit **Run the destructive
-  cutover** confirmation against the exact reviewed commit and runbook.
-
-## Expected implementation areas
-
-- `supabase/migrations/`, `supabase/tests/database/`, the seeded migration
-  harness, and generated Supabase types.
-- Legacy training, completion, and plan-proposal repositories/modules plus their
-  callers and tests.
+- Add one forward migration; never edit an applied migration. Delete legacy
+  rows, then drop the 10 F-005 legacy tables and their exclusive functions,
+  trigger, composite types, policies, grants, indexes, and constraints.
+- Prove the dependency closure. Preserve `personal_activities`,
+  `is_valid_training_measurement`, every M3-10 object, auth/profiles, goals,
+  memory, onboarding, roadmaps, AI accounting, and security/audit evidence.
+- Preserve roadmap records; expire source-dependent undecided proposals and
+  revoke affected roadmap mutation RPCs until M3-15 replaces their context.
+- Remove legacy-only repositories, modules, actions, components, fixtures,
+  tests, architecture allowlists, and generated type surface. No compatibility
+  implementation or callable legacy write remains.
 - `/home/plan`, `/home/today`, `/home/log`, `/home/progress`,
-  `/home/plan/roadmap`, and `/home/plan/proposal`.
-- Mobile navigation, architecture guards, CI harness registration if required,
-  and `docs/validation/M3/M3-11-VALIDATION.md`.
+  `/home/plan/roadmap`, and `/home/plan/proposal` must make no legacy call and
+  use one small maintenance presentation in the existing FitTip visual system.
+- Preview and review are non-destructive. Do not contact hosted Supabase, run a
+  remote migration, delete hosted data, use a provider, or incur spend.
+- Write the exact founder preflight/execution/verification runbook, but stop
+  before execution. Hosted deletion still requires the later exact phrase
+  **Run the destructive cutover** from the product owner.
+- If a seeded-reset harness needs `.github/**`, isolate that tooling change in
+  its own commit and do not weaken any existing CI check.
 
-## Non-goals
+**Non-goals:** no manual Plan, saved sessions, recurrence, replacement
+completion/Progress/AI behavior, backfill, export, archive, backup, dual write,
+second Plan route, new provider, or deletion outside the approved legacy model.
 
-- No manual rolling-plan editor, saved-session library, recurrence, replacement
-  completion/logging, Progress, AI proposal, regeneration, or new provider use.
-- No deletion of M3-10 rolling-plan data or schema, personal activities,
-  roadmaps, goals, memory, onboarding, accounting, audit evidence, auth, or
-  profiles.
-- No dual write, compatibility synchronization, legacy archive, data export,
-  or temporary legacy read path.
+**Acceptance criteria:**
 
-## Approval boundary
+1. Clean-from-zero and seeded-pre-reset tests prove exact removed-object
+   absence, preserved counts/references, expired roadmap decisions, and no
+   dangling dependency; lint, advisors, pgTAP, and generated types pass.
+2. M3-10's authenticated owner interface, RLS, grants, concurrency, and empty
+   slice behavior remain intact; anonymous and cross-owner access stay denied.
+3. Every affected route is truthful at `390x844`, keyboard accessible, has no
+   horizontal overflow or console/page error, and performs no legacy query.
+4. Static/runtime tests prove deleted server modules and database RPCs cannot
+   be imported or called, while preserved domains remain usable or readable as
+   specified.
+5. The validation record contains the exact diff/manifest, deletion and rename
+   notes, seeded migration proof, privilege matrix, CI, Preview, limitations,
+   and the non-executed founder runbook.
 
-The product owner approved the clean-break direction and revised sequence on
-14 August 2026. This proposed ticket still needs its short `## Agent brief` and
-separate explicit approval before a Tier 1 builder may be dispatched. Approval
-of the ticket will not itself authorize the hosted deletion; execution requires
-the later exact confirmation stated above.
+**Expected areas:** one `supabase/migrations/` file, database/integration tests,
+generated types, legacy training/completion/plan-proposal modules and callers,
+the six routes above, navigation/architecture/E2E coverage, and
+`docs/validation/M3/M3-11-VALIDATION.md`.
+
+Read only this section unless you hit an ambiguity it does not resolve.
+
+## Approval and execution boundary
+
+The product owner approved the clean-break direction and revised ticket order,
+then explicitly approved this M3-11 contract on 14 August 2026. That approval
+authorizes one ticket branch, a distinct builder, an independent reviewer, and
+non-destructive Preview verification. It does not authorize the founder
+database reset.
+
+The one-time working-agreement exception is recorded verbatim in F-005. The
+founder migration may run only after the exact implementation and runbook pass
+independent review, the maintenance-safe application is deployed, and the
+product owner provides the separate execution phrase named in the brief.
+
+## Rationale and dependency notes
+
+M3-10 is accepted and already supplies the isolated rolling-plan schema and
+interface that must survive this ticket. Removing the old model now avoids a
+second Plan route, dual writes, compatibility synchronization, and months of
+dead schema while the replacement tickets are built.
+
+Roadmap records belong to a preserved domain, but the current roadmap operation
+reads legacy completion context. Its runtime therefore joins the maintenance
+window and its mutation privileges fail closed; M3-15 later restores it against
+replacement completion context without erasing its records.

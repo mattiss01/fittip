@@ -114,7 +114,7 @@ flowchart TB
 | Guided-onboarding candidates and explicit publication | [M2-03](../backlog/M2/M2-03-INTAKE-FACT-REVIEW.md) | proposed |
 | AI boundary, roadmap, and legacy selected-horizon proposals | [M3-01](../backlog/M3/M3-01-LOCAL-AI-ADAPTER-CONTROLS.md), [M3-02](../backlog/M3/M3-02-ROADMAP-PROPOSAL.md), [M3-03](../backlog/M3/M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md) | accepted |
 | Rolling Plan current state and atomic history | [M3-10](../backlog/M3/M3-10-ROLLING-PLAN-FOUNDATION.md) | accepted |
-| Legacy training reset | [M3-11](../backlog/M3/M3-11-LEGACY-TRAINING-RESET.md) | proposed |
+| Legacy training reset | [M3-11](../backlog/M3/M3-11-LEGACY-TRAINING-RESET.md) | in development |
 | Manual Plan, saved sessions, and recurrence | [M3-12](../backlog/M3/M3-12-MANUAL-CONTINUOUS-PLANNING.md), [M3-13](../backlog/M3/M3-13-PRIVATE-SAVED-SESSION-LIBRARY.md), [M3-14](../backlog/M3/M3-14-RECURRING-SESSION-SERIES.md) | proposed |
 | Replacement completions and consumer context | [M3-15](../backlog/M3/M3-15-REPLACEMENT-CONSUMER-READINESS.md) | proposed |
 | AI proposal application and regeneration | [M3-16](../backlog/M3/M3-16-AI-PROPOSAL-APPLICATION.md), [M3-03B](../backlog/M3/M3-03B-PLAN-REGENERATION.md) | proposed |
