@@ -25,7 +25,7 @@ Supabase skill with current official guidance.
 **Hard constraints:**
 
 - Add one forward migration; never edit an applied migration. Delete legacy
-  rows, then drop the 10 F-005 legacy tables and their exclusive functions,
+  rows, then drop the 11 F-005 legacy tables and their exclusive functions,
   trigger, composite types, policies, grants, indexes, and constraints.
 - Prove the dependency closure. Preserve `personal_activities`,
   `is_valid_training_measurement`, every M3-10 object, auth/profiles, goals,
