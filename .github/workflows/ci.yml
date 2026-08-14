@@ -89,6 +89,9 @@ jobs:
       - name: pgTAP authorization and constraint tests
         run: npx supabase test db --local supabase/tests/database
 
+      - name: M3-10 real Postgres adapter contract
+        run: npm run test:m3-10-adapter-contract
+
       - name: M1-01 concurrent plan writes
         run: npm run test:m1-01-concurrency
 
