@@ -104,6 +104,9 @@ jobs:
       - name: M3-02 concurrent roadmap acceptance
         run: npm run test:m3-02-concurrency
 
+      - name: M3-10 concurrent rolling-plan changes
+        run: npm run test:m3-10-concurrency
+
       - name: Stop local Supabase stack
         if: always()
         run: npx supabase stop --no-backup

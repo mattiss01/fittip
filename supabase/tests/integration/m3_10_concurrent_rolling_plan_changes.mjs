@@ -24,7 +24,7 @@ try {
     assert.deepEqual(
       attempts.map(({ status }) => status).toSorted(),
       [200, 409],
-      `round ${round}: exactly one same-revision change must commit`,
+      `round ${round}: exactly one same-revision change must commit; ${JSON.stringify(attempts)}`,
     );
     const conflict = attempts.find(({ status }) => status === 409);
     assert.equal(conflict?.body?.code, "PT409");
@@ -90,14 +90,17 @@ try {
     `M3-10 rolling-plan concurrency PASS: ${ROUNDS} same-revision races each produced one winner, one PT409 stale loser, and one atomic state/history/revision write.`,
   );
 } finally {
-  await Promise.all(
-    users.map((userId) =>
-      fetch(`${url}/auth/v1/admin/users/${userId}`, {
-        method: "DELETE",
-        headers: authorization(serviceRoleKey),
-      }),
-    ),
-  );
+  await Promise.all(users.map(deleteOwner));
+}
+
+async function deleteOwner(userId) {
+  const response = await fetch(`${url}/auth/v1/admin/users/${userId}`, {
+    method: "DELETE",
+    headers: authorization(serviceRoleKey),
+  });
+  if (!response.ok) {
+    throw new Error(`Local Supabase cleanup failed with ${response.status}.`);
+  }
 }
 
 function addArgs(round, contender) {
