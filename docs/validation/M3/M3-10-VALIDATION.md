@@ -153,7 +153,14 @@ No file was deleted or renamed.
 
 ## Tests and final results
 
-**Exact-commit CI:** pending lead push for correction target
+**Exact-commit CI:**
+[GitHub Actions run 31827450187](https://github.com/mattiss01/fittip/actions/runs/31827450187)
+passed all three jobs for correction target
+`397441459c0d6a84327ded9910e5926465fcb062`.
+
+**Matching Vercel Preview:**
+`https://fittip-e02cd3p91-mattis-3657s-projects.vercel.app` reached `READY` as
+deployment `dpl_E4QyWr74CP4kGZmYCjNu6w1ygvjW`. Vercel reports Git source SHA
 `397441459c0d6a84327ded9910e5926465fcb062`.
 
 The prior exact-head run for evidence commit `ad3b8428` is
@@ -191,9 +198,9 @@ name under the required empty `search_path`. Qualifying the constraint with
 | focused ESLint for new TypeScript/JavaScript | PASS |
 | focused Prettier checks for all correction files | PASS |
 | `git diff --check` | PASS |
-| Exact-SHA CI | Pending lead push; this is the full-suite evidence |
+| Exact-SHA CI | PASS; run 31827450187, all three jobs green for `397441459c0d6a84327ded9910e5926465fcb062` |
 | Earlier Vercel Preview | READY at the URL above for `7d29e146`; superseded by corrections |
-| Correction Vercel Preview | Pending lead push and deployment |
+| Correction Vercel Preview | READY at `https://fittip-e02cd3p91-mattis-3657s-projects.vercel.app`; deployment Git SHA matches `397441459c0d6a84327ded9910e5926465fcb062` |
 | Founder migration/history/RLS verification | Pending independently reviewed commit |
 
 The builder uses focused tests while implementing. The exact reviewed commit's
@@ -206,10 +213,9 @@ clean migrations, database lint/advisors, pgTAP, concurrency, and browser flows.
 - No recurrence, saved-session library, Recovery day label, completion path,
   proposal behavior, AI call, migration of old data, activation, or cutover is
   part of M3-10.
-- Earlier branch commits were pushed and received the green run and READY
-  Preview recorded above. This correction round remains local until the lead
-  pushes it; hosted migration application and founder verification remain
-  lead-owned gates after independent review.
+- The correction implementation target is pushed with the green run and READY
+  Preview recorded above. Hosted migration application and founder verification
+  remain lead-owned gates after independent review.
 - The builder deliberately did not run the complete application/browser suite;
   exact-commit CI after the lead push is the required full-suite evidence.
 
