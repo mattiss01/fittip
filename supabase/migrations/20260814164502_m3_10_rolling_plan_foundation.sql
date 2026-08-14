@@ -27,6 +27,9 @@ create table public.rolling_plan_sessions (
   note text,
   is_locked boolean not null default false,
   status text not null default 'active',
+  active_position smallint generated always as (
+    case when status = 'active' then position else null end
+  ) stored,
   cancelled_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -35,6 +38,9 @@ create table public.rolling_plan_sessions (
   constraint rolling_plan_sessions_plan_fkey
     foreign key (plan_id, user_id)
     references public.rolling_plans (id, user_id) on delete cascade,
+  constraint rolling_plan_sessions_active_order_key
+    unique (user_id, local_date, active_position)
+    deferrable initially deferred,
   constraint rolling_plan_sessions_position_check check (position between 0 and 99),
   constraint rolling_plan_sessions_title_check
     check (char_length(trim(title)) between 1 and 120),
@@ -147,9 +153,6 @@ create table public.rolling_plan_change_entries (
     check (octet_length(after_state::text) <= 262144)
 );
 
-create unique index rolling_plan_sessions_active_order_idx
-  on public.rolling_plan_sessions (user_id, local_date, position)
-  where status = 'active';
 create index rolling_plan_sessions_owner_slice_idx
   on public.rolling_plan_sessions (user_id, local_date, position, id);
 create index rolling_plan_sessions_plan_idx
@@ -203,6 +206,92 @@ create type public.rolling_plan_change_receipt as (
   change_set_id uuid,
   result text
 );
+
+create type public.rolling_plan_slice_receipt as (
+  plan_id uuid,
+  plan_revision bigint,
+  sessions jsonb
+);
+
+create function public.get_rolling_plan_slice(
+  p_start_date date,
+  p_end_date date
+)
+returns public.rolling_plan_slice_receipt
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  with caller as (
+    select auth.uid() as user_id
+  ),
+  owner_plan as (
+    select plan.id, plan.revision
+    from public.rolling_plans plan
+    cross join caller
+    where plan.user_id = caller.user_id
+  ),
+  bounded_sessions as (
+    select
+      session.id,
+      session.user_id,
+      session.local_date,
+      session.position,
+      session.title,
+      session.sport,
+      session.intent,
+      session.expected_duration_minutes,
+      session.note,
+      session.is_locked,
+      session.status,
+      session.cancelled_at,
+      coalesce((
+        select jsonb_agg(
+          jsonb_build_object(
+            'id', activity.id,
+            'personalActivityId', activity.personal_activity_id,
+            'position', activity.position,
+            'name', activity.name,
+            'sport', activity.sport,
+            'instructions', activity.instructions,
+            'measurementMode', activity.measurement_mode,
+            'target', activity.target,
+            'isLocked', activity.is_locked
+          ) order by activity.position, activity.id
+        )
+        from public.rolling_plan_activities activity
+        where activity.user_id = session.user_id
+          and activity.session_id = session.id
+      ), '[]'::jsonb) as activities
+    from public.rolling_plan_sessions session
+    cross join caller
+    where session.user_id = caller.user_id
+      and session.local_date between p_start_date and p_end_date
+  )
+  select (
+    (select id from owner_plan),
+    coalesce((select revision from owner_plan), 0),
+    coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'id', session.id,
+          'localDate', session.local_date,
+          'position', session.position,
+          'title', session.title,
+          'sport', session.sport,
+          'intent', session.intent,
+          'expectedDurationMinutes', session.expected_duration_minutes,
+          'note', session.note,
+          'isLocked', session.is_locked,
+          'status', session.status,
+          'cancelledAt', session.cancelled_at,
+          'activities', session.activities
+        ) order by session.local_date, session.position, session.id
+      ) from bounded_sessions session
+    ), '[]'::jsonb)
+  )::public.rolling_plan_slice_receipt;
+$$;
 
 create function public.rolling_plan_activity_input_is_valid(p_value jsonb)
 returns boolean
@@ -575,6 +664,7 @@ begin
     v_ordinal := v_ordinal + 1;
   end loop;
 
+  set constraints public.rolling_plan_sessions_active_order_key immediate;
   update public.rolling_plans set revision = v_new_revision, updated_at = v_now
   where id = v_plan.id and user_id = v_user_id;
   return (v_plan.id, v_new_revision, v_change_set_id, 'applied')
@@ -591,7 +681,11 @@ revoke all privileges on function public.rolling_plan_session_input_is_valid(jso
   from public, anon, authenticated, service_role;
 revoke all privileges on function public.rolling_plan_session_state(uuid, uuid)
   from public, anon, authenticated, service_role;
+revoke all privileges on function public.get_rolling_plan_slice(date, date)
+  from public, anon, authenticated, service_role;
 revoke all privileges on function public.apply_rolling_plan_change_set(bigint, uuid, text, jsonb)
   from public, anon, authenticated, service_role;
+grant execute on function public.get_rolling_plan_slice(date, date)
+  to authenticated;
 grant execute on function public.apply_rolling_plan_change_set(bigint, uuid, text, jsonb)
   to authenticated;

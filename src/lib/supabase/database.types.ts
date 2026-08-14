@@ -1985,6 +1985,7 @@ export type Database = {
       };
       rolling_plan_sessions: {
         Row: {
+          active_position: number | null;
           cancelled_at: string | null;
           created_at: string;
           expected_duration_minutes: number | null;
@@ -2002,6 +2003,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          active_position?: number | null;
           cancelled_at?: string | null;
           created_at?: string;
           expected_duration_minutes?: number | null;
@@ -2019,6 +2021,7 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          active_position?: number | null;
           cancelled_at?: string | null;
           created_at?: string;
           expected_duration_minutes?: number | null;
@@ -2258,6 +2261,16 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "roadmap_generation_result";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      get_rolling_plan_slice: {
+        Args: { p_end_date: string; p_start_date: string };
+        Returns: Database["public"]["CompositeTypes"]["rolling_plan_slice_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "rolling_plan_slice_receipt";
           isOneToOne: true;
           isSetofReturn: false;
         };
@@ -2531,6 +2544,11 @@ export type Database = {
         plan_revision: number | null;
         change_set_id: string | null;
         result: string | null;
+      };
+      rolling_plan_slice_receipt: {
+        plan_id: string | null;
+        plan_revision: number | null;
+        sessions: Json | null;
       };
     };
   };

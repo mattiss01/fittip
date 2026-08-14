@@ -67,47 +67,43 @@ describe("PostgresRollingPlanAdapter", () => {
     },
   );
 
-  it("scopes plan, session, and activity reads to the verified owner", async () => {
-    const planTable = table(
-      { data: { id: "plan-id", revision: 3 }, error: null },
-      true,
-    );
-    const sessionTable = table({
-      data: [
-        {
-          id: SESSION_ID,
-          local_date: "2026-08-16",
-          position: 0,
-          title: "Run",
-          sport: "Running",
-          intent: null,
-          expected_duration_minutes: 40,
-          note: null,
-          is_locked: false,
-          status: "active",
-          cancelled_at: null,
-        },
-      ],
+  it("reads one state snapshot RPC and never composes table snapshots", async () => {
+    const from = vi.fn();
+    const rpc = vi.fn().mockResolvedValue({
+      data: {
+        plan_id: "76000000-0000-4000-8000-000000000004",
+        plan_revision: 3,
+        sessions: [
+          {
+            id: SESSION_ID,
+            localDate: "2026-08-16",
+            position: 0,
+            title: "Run",
+            sport: "Running",
+            intent: null,
+            expectedDurationMinutes: 40,
+            note: null,
+            isLocked: false,
+            status: "active",
+            cancelledAt: null,
+            activities: [],
+          },
+        ],
+      },
       error: null,
     });
-    const activityTable = table({ data: [], error: null });
-    const from = vi.fn((name: string) =>
-      name === "rolling_plans"
-        ? planTable.builder
-        : name === "rolling_plan_sessions"
-          ? sessionTable.builder
-          : activityTable.builder,
+    const plan = new RollingPlan(
+      new PostgresRollingPlanAdapter(client({ from, rpc })),
     );
-    const adapter = new PostgresRollingPlanAdapter(client({ from }));
-    const slice = await adapter.getPlanSlice({
-      startDate: "2026-08-16",
-      endDate: "2026-08-17",
+    const slice = await plan.getPlanSlice("2026-08-16", "2026-08-17");
+    expect(rpc).toHaveBeenCalledOnce();
+    expect(rpc).toHaveBeenCalledWith("get_rolling_plan_slice", {
+      p_start_date: "2026-08-16",
+      p_end_date: "2026-08-17",
     });
-    expect(planTable.eq).toHaveBeenCalledWith("user_id", USER_ID);
-    expect(sessionTable.eq).toHaveBeenCalledWith("user_id", USER_ID);
-    expect(activityTable.eq).toHaveBeenCalledWith("user_id", USER_ID);
+    expect(from).not.toHaveBeenCalled();
     expect(slice).toMatchObject({
-      planId: "plan-id",
+      planId: "76000000-0000-4000-8000-000000000004",
       revision: 3,
       sessions: [{ id: SESSION_ID }],
     });
@@ -152,24 +148,6 @@ function request() {
       },
     ],
   };
-}
-
-function table(result: unknown, single = false) {
-  const eq = vi.fn();
-  const builder: Record<string, unknown> = {
-    select: vi.fn(() => builder),
-    eq,
-    gte: vi.fn(() => builder),
-    lte: vi.fn(() => builder),
-    in: vi.fn(() => builder),
-    order: vi.fn(() => builder),
-    maybeSingle: vi.fn(() => Promise.resolve(result)),
-    then: (resolve: (value: unknown) => unknown) =>
-      Promise.resolve(result).then(resolve),
-  };
-  eq.mockImplementation(() => builder);
-  if (single) delete builder.then;
-  return { builder, eq };
 }
 
 function client(overrides: Record<string, unknown>) {

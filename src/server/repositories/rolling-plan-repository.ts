@@ -22,41 +22,14 @@ import {
   type RollingPlanChangeReceipt,
   type RollingPlanChangeSet,
   type RollingPlanSession,
+  type RollingPlanSlice,
 } from "@/server/rolling-plan/rolling-plan";
-
-const SESSION_COLUMNS =
-  "id, local_date, position, title, sport, intent, expected_duration_minutes, note, is_locked, status, cancelled_at" as const;
-const ACTIVITY_COLUMNS =
-  "id, session_id, personal_activity_id, position, name, sport, instructions, measurement_mode, target, is_locked" as const;
+import {
+  parseTrainingMeasurement,
+  TRAINING_MEASUREMENT_MODES,
+} from "@/server/training/training-records";
 
 type RollingPlanClient = SupabaseClient<Database> | ServerUserClient;
-type SessionRow = Pick<
-  Database["public"]["Tables"]["rolling_plan_sessions"]["Row"],
-  | "id"
-  | "local_date"
-  | "position"
-  | "title"
-  | "sport"
-  | "intent"
-  | "expected_duration_minutes"
-  | "note"
-  | "is_locked"
-  | "status"
-  | "cancelled_at"
->;
-type ActivityRow = Pick<
-  Database["public"]["Tables"]["rolling_plan_activities"]["Row"],
-  | "id"
-  | "session_id"
-  | "personal_activity_id"
-  | "position"
-  | "name"
-  | "sport"
-  | "instructions"
-  | "measurement_mode"
-  | "target"
-  | "is_locked"
->;
 
 export class RollingPlanAuthenticationError extends Error {
   constructor(readonly accessError?: VerifiedUserAccessError) {
@@ -70,56 +43,13 @@ export class PostgresRollingPlanAdapter implements RollingPlanAdapter {
   constructor(private readonly client: RollingPlanClient) {}
 
   async getPlanSlice({ startDate, endDate }: ParsedPlanSlice) {
-    const userId = await this.getVerifiedUserId();
-    const [
-      { data: plan, error: planError },
-      { data: sessions, error: sessionsError },
-    ] = await Promise.all([
-      this.client
-        .from("rolling_plans")
-        .select("id, revision")
-        .eq("user_id", userId)
-        .maybeSingle(),
-      this.client
-        .from("rolling_plan_sessions")
-        .select(SESSION_COLUMNS)
-        .eq("user_id", userId)
-        .gte("local_date", startDate)
-        .lte("local_date", endDate)
-        .order("local_date")
-        .order("position")
-        .order("id"),
-    ]);
-    if (planError || sessionsError) throw new RollingPlanPersistenceError();
-
-    const sessionIds = sessions.map((session) => session.id);
-    let activities: ActivityRow[] = [];
-    if (sessionIds.length > 0) {
-      const { data, error } = await this.client
-        .from("rolling_plan_activities")
-        .select(ACTIVITY_COLUMNS)
-        .eq("user_id", userId)
-        .in("session_id", sessionIds)
-        .order("position")
-        .order("id");
-      if (error) throw new RollingPlanPersistenceError();
-      activities = data;
-    }
-
-    const activitiesBySession = new Map<string, RollingPlanActivity[]>();
-    for (const row of activities) {
-      const activity = toActivity(row);
-      const bucket = activitiesBySession.get(row.session_id);
-      if (bucket) bucket.push(activity);
-      else activitiesBySession.set(row.session_id, [activity]);
-    }
-    return {
-      planId: plan?.id ?? null,
-      revision: plan?.revision ?? 0,
-      sessions: sessions.map((session) =>
-        toSession(session, activitiesBySession.get(session.id) ?? []),
-      ),
-    };
+    await this.getVerifiedUserId();
+    const { data, error } = await this.client.rpc("get_rolling_plan_slice", {
+      p_start_date: startDate,
+      p_end_date: endDate,
+    });
+    if (error) throw new RollingPlanPersistenceError();
+    return parseSliceReceipt(data);
   }
 
   async applyChangeSet(
@@ -176,43 +106,134 @@ export async function createRollingPlan(): Promise<RollingPlan> {
   );
 }
 
-function toSession(
-  row: SessionRow,
-  activities: RollingPlanActivity[],
-): RollingPlanSession {
+function parseSliceReceipt(value: unknown): RollingPlanSlice {
+  const receipt = readRecord(value);
+  if (
+    !(receipt.plan_id === null || isUuid(receipt.plan_id)) ||
+    !isInteger(receipt.plan_revision, 0) ||
+    !Array.isArray(receipt.sessions)
+  ) {
+    throw new RollingPlanPersistenceError();
+  }
   return {
-    id: row.id,
-    localDate: row.local_date,
-    position: row.position,
-    title: row.title,
-    sport: row.sport,
-    ...(row.intent === null ? {} : { intent: row.intent }),
-    ...(row.expected_duration_minutes === null
-      ? {}
-      : { expectedDurationMinutes: row.expected_duration_minutes }),
-    ...(row.note === null ? {} : { note: row.note }),
-    isLocked: row.is_locked,
-    status: row.status as RollingPlanSession["status"],
-    cancelledAt: row.cancelled_at,
-    activities,
+    planId: receipt.plan_id,
+    revision: receipt.plan_revision,
+    sessions: receipt.sessions.map(parseSession),
   };
 }
 
-function toActivity(row: ActivityRow): RollingPlanActivity {
+function parseSession(value: unknown): RollingPlanSession {
+  const session = readRecord(value);
+  if (
+    !isUuid(session.id) ||
+    !isIsoDate(session.localDate) ||
+    !isInteger(session.position, 0) ||
+    typeof session.title !== "string" ||
+    typeof session.sport !== "string" ||
+    !(session.intent === null || typeof session.intent === "string") ||
+    !(
+      session.expectedDurationMinutes === null ||
+      isInteger(session.expectedDurationMinutes, 1)
+    ) ||
+    !(session.note === null || typeof session.note === "string") ||
+    typeof session.isLocked !== "boolean" ||
+    !(session.status === "active" || session.status === "cancelled") ||
+    !(
+      session.cancelledAt === null || typeof session.cancelledAt === "string"
+    ) ||
+    !Array.isArray(session.activities)
+  ) {
+    throw new RollingPlanPersistenceError();
+  }
   return {
-    id: row.id,
-    ...(row.personal_activity_id === null
+    id: session.id,
+    localDate: session.localDate,
+    position: session.position,
+    title: session.title,
+    sport: session.sport,
+    ...(session.intent === null ? {} : { intent: session.intent }),
+    ...(session.expectedDurationMinutes === null
       ? {}
-      : { personalActivityId: row.personal_activity_id }),
-    position: row.position,
-    name: row.name,
-    sport: row.sport,
-    ...(row.instructions === null ? {} : { instructions: row.instructions }),
-    measurementMode:
-      row.measurement_mode as RollingPlanActivity["measurementMode"],
-    ...(row.target === null
-      ? {}
-      : { target: row.target as RollingPlanActivity["target"] }),
-    isLocked: row.is_locked,
+      : { expectedDurationMinutes: session.expectedDurationMinutes }),
+    ...(session.note === null ? {} : { note: session.note }),
+    isLocked: session.isLocked,
+    status: session.status,
+    cancelledAt: session.cancelledAt,
+    activities: session.activities.map(parseActivity),
   };
+}
+
+function parseActivity(value: unknown): RollingPlanActivity {
+  const activity = readRecord(value);
+  if (
+    !isUuid(activity.id) ||
+    !(
+      activity.personalActivityId === null ||
+      isUuid(activity.personalActivityId)
+    ) ||
+    !isInteger(activity.position, 0) ||
+    typeof activity.name !== "string" ||
+    typeof activity.sport !== "string" ||
+    !(
+      activity.instructions === null ||
+      typeof activity.instructions === "string"
+    ) ||
+    !TRAINING_MEASUREMENT_MODES.includes(
+      activity.measurementMode as (typeof TRAINING_MEASUREMENT_MODES)[number],
+    ) ||
+    typeof activity.isLocked !== "boolean"
+  ) {
+    throw new RollingPlanPersistenceError();
+  }
+  const measurementMode =
+    activity.measurementMode as RollingPlanActivity["measurementMode"];
+  let target: RollingPlanActivity["target"];
+  if (activity.target !== null) {
+    try {
+      target = parseTrainingMeasurement(measurementMode, activity.target);
+    } catch {
+      throw new RollingPlanPersistenceError();
+    }
+  }
+  return {
+    id: activity.id,
+    ...(activity.personalActivityId === null
+      ? {}
+      : { personalActivityId: activity.personalActivityId }),
+    position: activity.position,
+    name: activity.name,
+    sport: activity.sport,
+    ...(activity.instructions === null
+      ? {}
+      : { instructions: activity.instructions }),
+    measurementMode,
+    ...(target === undefined ? {} : { target }),
+    isLocked: activity.isLocked,
+  };
+}
+
+function readRecord(value: unknown): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new RollingPlanPersistenceError();
+  }
+  return value as Record<string, unknown>;
+}
+
+function isInteger(value: unknown, minimum: number): value is number {
+  return (
+    typeof value === "number" && Number.isInteger(value) && value >= minimum
+  );
+}
+
+function isUuid(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    )
+  );
+}
+
+function isIsoDate(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }

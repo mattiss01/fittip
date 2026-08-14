@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(56);
+select plan(66);
 
 select has_table('public', 'rolling_plans', 'rolling plans table exists');
 select has_table('public', 'rolling_plan_sessions', 'rolling sessions table exists');
@@ -13,6 +13,43 @@ select has_function(
   'public', 'apply_rolling_plan_change_set',
   array['bigint', 'uuid', 'text', 'jsonb'],
   'the owner-derived atomic change function exists'
+);
+select has_function(
+  'public', 'get_rolling_plan_slice',
+  array['date', 'date'],
+  'the one-snapshot bounded read function exists'
+);
+select ok(
+  (
+    select not prosecdef and provolatile = 's' and proconfig = array['search_path=""']
+    from pg_proc
+    where oid = 'public.get_rolling_plan_slice(date,date)'::regprocedure
+  ),
+  'the read function is stable, security invoker, and has an empty search path'
+);
+select is(
+  (
+    select count(*)::bigint
+    from pg_proc
+    cross join lateral unnest(coalesce(proargnames, array[]::text[])) argument
+    where oid = 'public.get_rolling_plan_slice(date,date)'::regprocedure
+      and argument ilike '%user%'
+  ), 0::bigint,
+  'the read function accepts no owner parameter'
+);
+select ok(
+  has_function_privilege(
+    'authenticated', 'public.get_rolling_plan_slice(date,date)', 'EXECUTE'
+  ),
+  'authenticated owners can execute the bounded read function'
+);
+select ok(
+  not has_function_privilege(
+    'anon', 'public.get_rolling_plan_slice(date,date)', 'EXECUTE'
+  ) and not has_function_privilege(
+    'service_role', 'public.get_rolling_plan_slice(date,date)', 'EXECUTE'
+  ),
+  'anonymous and service roles have no read-function execution privilege'
 );
 select ok(
   (
@@ -132,7 +169,7 @@ select is(
   (
     select count(*)::bigint from pg_indexes
     where schemaname = 'public' and indexname in (
-      'rolling_plan_sessions_active_order_idx',
+      'rolling_plan_sessions_active_order_key',
       'rolling_plan_sessions_owner_slice_idx',
       'rolling_plan_activities_owner_session_idx',
       'rolling_plan_change_sets_owner_history_idx',
@@ -141,6 +178,24 @@ select is(
     )
   ), 6::bigint,
   'owner slice, ordering, and history indexes exist'
+);
+select ok(
+  (
+    select is_generated = 'ALWAYS'
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'rolling_plan_sessions'
+      and column_name = 'active_position'
+  ),
+  'active position is a generated final-state uniqueness key'
+);
+select ok(
+  (
+    select condeferrable and condeferred
+    from pg_constraint
+    where conname = 'rolling_plan_sessions_active_order_key'
+  ),
+  'active session order remains unique and is deferred to the final group state'
 );
 select ok(
   not has_function_privilege('authenticated', 'public.rolling_plan_activity_input_is_valid(jsonb)', 'EXECUTE')
@@ -214,6 +269,16 @@ select ok(
   (select before_state is null and after_state->>'title' = 'Aerobic run' from public.rolling_plan_change_entries),
   'an addition records null before and complete after state'
 );
+select ok(
+  (
+    select plan_revision = 1
+      and jsonb_array_length(sessions) = 1
+      and sessions->0->>'title' = 'Aerobic run'
+      and jsonb_array_length(sessions->0->'activities') = 1
+    from public.get_rolling_plan_slice('2026-08-16', '2026-08-16')
+  ),
+  'the owner receives revision and bounded session/activity state together'
+);
 select lives_ok(
   $$select public.apply_rolling_plan_change_set(
     0,
@@ -280,6 +345,13 @@ select set_config(
 );
 select is((select count(*)::bigint from public.rolling_plan_sessions), 0::bigint, 'RLS hides another owner current state');
 select is((select count(*)::bigint from public.rolling_plan_change_entries), 0::bigint, 'RLS hides another owner history');
+select ok(
+  (
+    select plan_id is null and plan_revision = 0 and sessions = '[]'::jsonb
+    from public.get_rolling_plan_slice('2026-08-01', '2026-08-31')
+  ),
+  'the read function exposes no other-owner plan or bounded state'
+);
 select throws_ok(
   $$select public.apply_rolling_plan_change_set(
     0,
@@ -376,6 +448,11 @@ select throws_ok(
   )$$,
   '42501', 'permission denied for function apply_rolling_plan_change_set',
   'anonymous writes are denied before the transaction'
+);
+select throws_ok(
+  $$select public.get_rolling_plan_slice('2026-08-01', '2026-08-31')$$,
+  '42501', 'permission denied for function get_rolling_plan_slice',
+  'anonymous bounded reads are denied before table access'
 );
 
 select * from finish();

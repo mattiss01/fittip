@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   parseTrainingMeasurement,
+  TRAINING_MEASUREMENT_MODES,
   TrainingRecordValidationError,
   type TrainingMeasurement,
   type TrainingMeasurementMode,
@@ -265,13 +266,10 @@ function parseActivity(value: unknown): RollingPlanActivityInput {
     "target",
     "isLocked",
   ]);
-  const measurementMode = readChoice(record.measurementMode, [
-    "sets_reps_load",
-    "time_distance_pace",
-    "duration_intensity",
-    "skill_repetitions",
-    "custom",
-  ] as const);
+  const measurementMode = readChoice(
+    record.measurementMode,
+    TRAINING_MEASUREMENT_MODES,
+  );
   if (typeof record.isLocked !== "boolean")
     throw new RollingPlanValidationError();
   let target: TrainingMeasurement | undefined;
