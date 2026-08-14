@@ -68,8 +68,36 @@ test.describe("M3-11 training maintenance", () => {
         ).toBe(true);
       }
 
-      await page.getByRole("link", { name: "Open You" }).focus();
-      await expect(page.getByRole("link", { name: "Open You" })).toBeFocused();
+      const primaryAction = page.getByRole("link", { name: "Open You" });
+      const resting = await primaryAction.evaluate(readFocusTreatment);
+      expect({
+        outlineStyle: resting.outlineStyle,
+        outlineWidth: resting.outlineWidth,
+      }).toEqual({ outlineStyle: "none", outlineWidth: "0px" });
+
+      await primaryAction.focus();
+      await expect(primaryAction).toBeFocused();
+      const focused = await primaryAction.evaluate(readFocusTreatment);
+      expect({
+        background: focused.background,
+        color: focused.color,
+        outlineColor: focused.outlineColor,
+        outlineStyle: focused.outlineStyle,
+        outlineWidth: focused.outlineWidth,
+        outlineOffset: focused.outlineOffset,
+      }).toEqual({
+        background: "rgb(20, 47, 42)",
+        color: "rgb(255, 253, 244)",
+        outlineColor: "rgb(20, 47, 42)",
+        outlineStyle: "solid",
+        outlineWidth: "3px",
+        outlineOffset: "2px",
+      });
+      // WCAG 1.4.3 for the label, 1.4.11 for the indicator against the paper
+      // the 2px offset exposes on both sides of the outline.
+      expect(focused.labelContrast).toBeGreaterThanOrEqual(4.5);
+      expect(focused.outlineContrast).toBeGreaterThanOrEqual(3);
+
       await page.screenshot({
         fullPage: true,
         path: path.join(
@@ -90,6 +118,65 @@ test.describe("M3-11 training maintenance", () => {
     }
   });
 });
+
+/**
+ * Runs in the page. Reports the resolved focus treatment of one control plus
+ * the two WCAG ratios the reviewer rejected: the label against the control's
+ * own fill, and the focus outline against the surface the 2px offset exposes
+ * on either side of it.
+ */
+function readFocusTreatment(element: Element) {
+  const parseColor = (value: string): [number, number, number] => {
+    const channels = value.match(/[\d.]+/g)?.map(Number) ?? [];
+    return [channels[0] ?? 0, channels[1] ?? 0, channels[2] ?? 0];
+  };
+  const isOpaque = (value: string) => {
+    const channels = value.match(/[\d.]+/g)?.map(Number) ?? [];
+    return channels.length > 0 && (channels[3] ?? 1) === 1;
+  };
+  const luminance = (color: string) =>
+    parseColor(color)
+      .map((channel) => {
+        const ratio = channel / 255;
+        return ratio <= 0.03928
+          ? ratio / 12.92
+          : Math.pow((ratio + 0.055) / 1.055, 2.4);
+      })
+      .reduce(
+        (total, linear, index) =>
+          total + linear * [0.2126, 0.7152, 0.0722][index],
+        0,
+      );
+  const contrast = (first: string, second: string) => {
+    const [light, dark] = [luminance(first), luminance(second)].sort(
+      (a, b) => b - a,
+    );
+    return (light + 0.05) / (dark + 0.05);
+  };
+  /** The colour a viewer actually sees behind `node`, ignoring transparency. */
+  const paintedBackground = (node: Element | null): string => {
+    for (let current = node; current; current = current.parentElement) {
+      const background = window.getComputedStyle(current).backgroundColor;
+      if (isOpaque(background)) return background;
+    }
+    return window.getComputedStyle(document.documentElement).backgroundColor;
+  };
+
+  const style = window.getComputedStyle(element);
+  const fill = paintedBackground(element);
+  const surface = paintedBackground(element.parentElement);
+
+  return {
+    background: style.backgroundColor,
+    color: style.color,
+    outlineColor: style.outlineColor,
+    outlineStyle: style.outlineStyle,
+    outlineWidth: style.outlineWidth,
+    outlineOffset: style.outlineOffset,
+    labelContrast: contrast(style.color, fill),
+    outlineContrast: contrast(style.outlineColor, surface),
+  };
+}
 
 async function signIn(
   page: import("@playwright/test").Page,

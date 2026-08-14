@@ -9,6 +9,14 @@ values (
   '{}'::jsonb
 );
 
+insert into auth.audit_log_entries (instance_id, id, payload, ip_address)
+values (
+  '00000000-0000-0000-0000-000000000000',
+  '31100000-0000-4000-8000-000000000002',
+  '{"action":"m3_11_preservation_proof"}'::json,
+  '127.0.0.1'
+);
+
 insert into public.profiles (user_id)
 values ('31100000-0000-4000-8000-000000000001');
 
@@ -110,6 +118,15 @@ values (
   'Keep moving', 'Train consistently', 'endurance', '2026-08-01',
   'core', 'active', 1
 );
+insert into public.goal_lifecycle_events (
+  id, user_id, goal_id, from_status, to_status, collection_revision
+)
+values (
+  '31100000-0000-4000-8000-000000000041',
+  '31100000-0000-4000-8000-000000000001',
+  '31100000-0000-4000-8000-000000000040',
+  'achieved', 'active', 1
+);
 
 insert into public.memory_collections (user_id, revision)
 values ('31100000-0000-4000-8000-000000000001', 1);
@@ -190,6 +207,107 @@ values (
   '31100000-0000-4000-8000-000000000001',
   0, 'plan_version', '31100000-0000-4000-8000-000000000020', 1
 );
+
+-- Accepted and rejected source-dependent roadmap proposals must remain
+-- byte-for-byte terminal while only the undecided proposal above expires.
+insert into public.roadmap_generation_requests (
+  id, user_id, completion_token, idempotency_key, request_fingerprint,
+  requested_start_date, requested_end_date, expected_head_revision,
+  status
+)
+values
+  (
+    '31100000-0000-4000-8000-000000000083',
+    '31100000-0000-4000-8000-000000000001',
+    '31100000-0000-4000-8000-000000000084',
+    'm3-11-roadmap-accepted', 'm3-11-roadmap-accepted-fingerprint',
+    '2026-08-15', '2026-09-11', 0, 'pending'
+  ),
+  (
+    '31100000-0000-4000-8000-000000000087',
+    '31100000-0000-4000-8000-000000000001',
+    '31100000-0000-4000-8000-000000000088',
+    'm3-11-roadmap-rejected', 'm3-11-roadmap-rejected-fingerprint',
+    '2026-08-15', '2026-09-11', 1, 'pending'
+  );
+insert into public.roadmap_proposals (
+  id, user_id, generation_request_id, origin, schema_version,
+  prompt_version, provider_code, model_code, rate_card_version, content
+)
+values
+  (
+    '31100000-0000-4000-8000-000000000085',
+    '31100000-0000-4000-8000-000000000001',
+    '31100000-0000-4000-8000-000000000083',
+    'ai_initial', 'fittip.roadmap.v2', 'reset-proof', 'fixture', 'fixture',
+    'reset-proof-v1', '{"state":"accepted-before-reset"}'::jsonb
+  ),
+  (
+    '31100000-0000-4000-8000-000000000089',
+    '31100000-0000-4000-8000-000000000001',
+    '31100000-0000-4000-8000-000000000087',
+    'ai_initial', 'fittip.roadmap.v2', 'reset-proof', 'fixture', 'fixture',
+    'reset-proof-v1', '{"state":"rejected-before-reset"}'::jsonb
+  );
+update public.roadmap_generation_requests
+set status = 'completed',
+    proposal_id = case id
+      when '31100000-0000-4000-8000-000000000083'
+        then '31100000-0000-4000-8000-000000000085'::uuid
+      else '31100000-0000-4000-8000-000000000089'::uuid
+    end
+where id in (
+  '31100000-0000-4000-8000-000000000083',
+  '31100000-0000-4000-8000-000000000087'
+);
+insert into public.roadmap_proposal_sources (
+  proposal_id, user_id, ordinal, source_kind, record_id, revision_number
+)
+values
+  (
+    '31100000-0000-4000-8000-000000000085',
+    '31100000-0000-4000-8000-000000000001',
+    0, 'plan_version', '31100000-0000-4000-8000-000000000020', 1
+  ),
+  (
+    '31100000-0000-4000-8000-000000000089',
+    '31100000-0000-4000-8000-000000000001',
+    0, 'completion', '31100000-0000-4000-8000-000000000030', 1
+  );
+insert into public.roadmap_versions (
+  id, user_id, version_number, source_proposal_id, content, accepted_at
+)
+values (
+  '31100000-0000-4000-8000-000000000086',
+  '31100000-0000-4000-8000-000000000001',
+  1, '31100000-0000-4000-8000-000000000085',
+  '{"state":"accepted-before-reset"}'::jsonb,
+  '2026-08-14 18:00:00+00'
+);
+insert into public.roadmap_heads (
+  user_id, revision, current_version_id, updated_at
+)
+values (
+  '31100000-0000-4000-8000-000000000001',
+  1, '31100000-0000-4000-8000-000000000086',
+  '2026-08-14 18:00:00+00'
+);
+insert into public.roadmap_proposal_decisions (
+  proposal_id, user_id, decision, accepted_version_id, decided_at
+)
+values
+  (
+    '31100000-0000-4000-8000-000000000085',
+    '31100000-0000-4000-8000-000000000001',
+    'accepted', '31100000-0000-4000-8000-000000000086',
+    '2026-08-14 18:00:00+00'
+  ),
+  (
+    '31100000-0000-4000-8000-000000000089',
+    '31100000-0000-4000-8000-000000000001',
+    'rejected', null,
+    '2026-08-14 18:05:00+00'
+  );
 
 insert into public.plan_generation_requests (
   id, user_id, completion_token, idempotency_key, request_fingerprint,

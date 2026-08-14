@@ -209,11 +209,11 @@ and `chore/**` branches, and on pull requests into `master`. It exists so a
 branch proves itself once, instead of the builder, the reviewer, and the
 post-merge check each re-running the same suites by hand.
 
-| Job        | Covers                                                                                                   |
-| ---------- | -------------------------------------------------------------------------------------------------------- |
-| `static`   | Prettier, ESLint, TypeScript, Vitest, and the production build                                           |
-| `database` | `db reset` from zero, database lint, security/performance advisors, pgTAP, and the concurrency harnesses |
-| `browser`  | The 390px production Playwright flows for authentication, planning, M1-03, M1-04, and M2-01              |
+| Job        | Covers                                                                                                     |
+| ---------- | ---------------------------------------------------------------------------------------------------------- |
+| `static`   | Prettier, ESLint, TypeScript, Vitest, and the production build                                             |
+| `database` | `db reset` from zero, database lint, security/performance advisors, pgTAP, and the concurrency harnesses   |
+| `browser`  | The 390px production Playwright flows for authentication, M2-01 goals, M2-02 memory, and M3-11 maintenance |
 
 The pipeline requires **no repository secrets**. Every job starts its own
 disposable local Supabase stack and derives that container's ephemeral

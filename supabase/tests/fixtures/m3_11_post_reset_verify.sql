@@ -27,15 +27,24 @@ begin
     raise exception 'a legacy mutation RPC still exists';
   end if;
 
-  if (select count(*) from public.profiles) <> 1
+  if (select count(*) from auth.users) <> 1
+    or (select count(*) from auth.audit_log_entries) <> 1
+    or (select count(*) from public.profiles) <> 1
     or (select count(*) from public.personal_activities) <> 1
+    or (select count(*) from public.goal_collections) <> 1
     or (select count(*) from public.goals) <> 1
+    or (select count(*) from public.goal_lifecycle_events) <> 1
+    or (select count(*) from public.memory_collections) <> 1
     or (select count(*) from public.memory_items) <> 1
     or (select count(*) from public.memory_revisions) <> 1
     or (select count(*) from public.onboarding_drafts) <> 1
     or (select count(*) from public.ai_spend_reservations) <> 1
-    or (select count(*) from public.roadmap_proposals) <> 1
-    or (select count(*) from public.roadmap_proposal_sources) <> 1
+    or (select count(*) from public.roadmap_generation_requests) <> 3
+    or (select count(*) from public.roadmap_proposals) <> 3
+    or (select count(*) from public.roadmap_proposal_sources) <> 3
+    or (select count(*) from public.roadmap_proposal_decisions) <> 3
+    or (select count(*) from public.roadmap_versions) <> 1
+    or (select count(*) from public.roadmap_heads) <> 1
     or (select count(*) from public.rolling_plans) <> 1
     or (select count(*) from public.rolling_plan_sessions) <> 1
     or (select count(*) from public.rolling_plan_activities) <> 1
@@ -46,6 +55,28 @@ begin
   end if;
 
   if not exists (
+    select 1
+    from auth.users auth_user
+    join public.profiles profile on profile.user_id = auth_user.id
+    where auth_user.id = '31100000-0000-4000-8000-000000000001'
+  )
+    or not exists (
+      select 1
+      from public.goal_collections collection
+      join public.goals goal on goal.user_id = collection.user_id
+      join public.goal_lifecycle_events event
+        on event.goal_id = goal.id
+        and event.user_id = goal.user_id
+    )
+    or not exists (
+      select 1
+      from public.memory_collections collection
+      join public.memory_items item on item.user_id = collection.user_id
+      join public.memory_revisions revision
+        on revision.id = item.current_revision_id
+        and revision.user_id = item.user_id
+    )
+    or not exists (
     select 1
     from public.memory_items item
     join public.memory_revisions revision
@@ -59,6 +90,28 @@ begin
         on personal.id = activity.personal_activity_id
         and personal.user_id = activity.user_id
     )
+    or not exists (
+      select 1
+      from public.roadmap_generation_requests request
+      join public.roadmap_proposals proposal
+        on proposal.id = request.proposal_id
+        and proposal.user_id = request.user_id
+      group by request.user_id
+      having count(*) = 3
+    )
+    or not exists (
+      select 1
+      from public.roadmap_heads head
+      join public.roadmap_versions version
+        on version.id = head.current_version_id
+        and version.user_id = head.user_id
+      join public.roadmap_proposals proposal
+        on proposal.id = version.source_proposal_id
+        and proposal.user_id = version.user_id
+      where head.revision = 1
+        and version.id = '31100000-0000-4000-8000-000000000086'
+        and version.content = '{"state":"accepted-before-reset"}'::jsonb
+    )
   then
     raise exception 'a preserved same-owner reference was broken';
   end if;
@@ -68,6 +121,36 @@ begin
       is distinct from 'expired'
   then
     raise exception 'source-dependent roadmap proposal was not expired';
+  end if;
+
+  if not exists (
+    select 1
+    from public.roadmap_proposal_decisions
+    where proposal_id = '31100000-0000-4000-8000-000000000085'
+      and decision = 'accepted'
+      and accepted_version_id = '31100000-0000-4000-8000-000000000086'
+      and decided_at = '2026-08-14 18:00:00+00'::timestamptz
+  )
+    or not exists (
+      select 1
+      from public.roadmap_proposal_decisions
+      where proposal_id = '31100000-0000-4000-8000-000000000089'
+        and decision = 'rejected'
+        and accepted_version_id is null
+        and decided_at = '2026-08-14 18:05:00+00'::timestamptz
+    )
+  then
+    raise exception 'an accepted or rejected roadmap decision changed';
+  end if;
+
+  if not exists (
+    select 1
+    from auth.audit_log_entries
+    where id = '31100000-0000-4000-8000-000000000002'
+      and payload::jsonb = '{"action":"m3_11_preservation_proof"}'::jsonb
+  )
+  then
+    raise exception 'representative auth audit evidence changed';
   end if;
 
   if pg_catalog.has_function_privilege(
