@@ -726,8 +726,16 @@ dispatch a builder, delete any data, apply a migration, change the founder
 database, enable a live provider, incur spend, or authorize external-user or
 commercial use.
 
-Before any implementation dispatch, the working agreement's permanent-record
-invariant needs a separately authorized amendment limited to this one founder
-clean cutover. The post-activation invariant remains: proposals, planned
-history, and actual completions are separate permanent records, and replanning
-never rewrites them.
+On 14 August 2026 the product owner separately authorized this one-time working
+agreement amendment:
+
+> The F-005 founder clean cutover may delete the explicitly approved pre-cutover
+> plan, proposal, and completion records after the dedicated cutover ticket,
+> reviewed commit, and final product-owner confirmation. This is a one-time
+> exception; all records created after rolling-plan activation remain permanent.
+
+`AGENTS.md` is protected from agent edits, so this approved exception is
+persisted here and must be quoted in the eventual cutover ticket's Agent brief.
+It does not authorize an earlier ticket to delete anything. The post-activation
+invariant remains: proposals, planned history, and actual completions are
+separate permanent records, and replanning never rewrites them.

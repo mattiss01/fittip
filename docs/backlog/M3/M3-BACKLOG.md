@@ -89,15 +89,16 @@ commercial use, or production.
 | P1 | [M3-01B One approved real-provider adapter](M3-01B-REAL-PROVIDER-ADAPTER.md) | accepted 10 Aug 2026 | M3-01 accepted; M0-06A accepted for hosted use | One real adapter behind the accepted contract, server-only credential path, durable fail-closed rate/budget/idempotency state via a revoked-write table and an increment-only `SECURITY DEFINER` function, cost reservation and reconciliation, opt-in live test | All values approved; dispatched 10 Aug 2026. Remaining gate: independent review, Preview, and acceptance |
 | P1 | [M3-02 Roadmap proposal](M3-02-ROADMAP-PROPOSAL.md) | accepted 12 Aug 2026 | M3-01B accepted and accepted M2 foundations | Owner-scoped structured high-level roadmap proposal with phases, milestones, uncertainty, review points, source versions, edit/reject/accept boundary; no detailed plan | Accepted against `d55c343`, merged as `04cebc8`. Three review passes; the per-source context allocation and the raised input ceiling are approved and recorded |
 | P1 | [M3-03 Selected-horizon plan proposal](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md) | accepted 13 Aug 2026 | M3-01 and M3-02 accepted | **Split 12 Aug 2026.** User-selected 1–7 consecutive owner-local dates, the `fittip.seven-day-plan.v2` bump, **session-level** sport-agnostic sessions with goal allocation, constraints, alternatives, reasoning, tiered safety, memory extraction, reject; no activity detail, no roadmap input, no regeneration, no acceptance | Accepted exact `86aa315`; merged as `2714fba`. Master CI, founder Production deployment, hosted database/security evidence, and authenticated 390px smoke passed |
-| P1 | [M3-03B Plan regeneration](M3-03B-PLAN-REGENERATION.md) | proposed | M3-03 accepted | Reject and regenerate on the same operation: prefilled planning note plus a mandatory 500-character feedback field, only the immediately previous proposal travels, cap of 3 per horizon. Feedback never produces a memory candidate | **All decisions answered 12 Aug 2026**, plus the per-chain cap and the carried feedback. Awaiting `approved`, then Tier 1 builder, reviewer, Preview, acceptance |
+| P1 | [M3-10 Rolling-plan foundation](M3-10-ROLLING-PLAN-FOUNDATION.md) | proposed | F-005 approved; ADR-016 accepted; one-cutover exception authorized | Dormant owner-scoped rolling-plan identity, current planned-session state, atomic before/after change log, owner revision, RLS/grants/indexes, and concurrency; no UI, activation, old-data mutation, or AI | Approve this exact ticket; then add its Agent brief and validation record and dispatch a Tier 1 builder plus independent reviewer |
+| P1 | [M3-03B Plan regeneration](M3-03B-PLAN-REGENERATION.md) | proposed — paused by F-005 | M3-03 accepted; replacement regeneration additionally depends on F-005 slices 1–6 | Historical pre-F-005 regeneration draft | Do not approve or dispatch this contract. Rewrite it only after rolling-plan proposal application is accepted |
 | P2 | [M3-03C Roadmap as a plan input](M3-03C-ROADMAP-AS-PLAN-INPUT.md) | proposed | M3-02 and M3-03 accepted; the Progress section also needs M3-04 | An accepted roadmap covering the requested dates is used with no extra owner action and named in the context summary; a stale one is used and marked, never dropped or blocking. Plus the collapsible "why does this plan look like this" section | Answer 4 open decisions — including whether the Progress section belongs here or in M3-04 — then Tier 2, or Tier 1 if it needs a migration |
 | P1 | [M3-03D On-demand session detail](M3-03D-ON-DEMAND-SESSION-DETAIL.md) | proposed | M3-03 accepted | Detail one session on demand into ordered activities with M1's measurement contract reused verbatim; plans stay session-level. Undetailed sessions stay valid and loggable | Answer 5 open decisions — above all what detailing does to an accepted plan version — then Tier 1 builder, reviewer, hosted migration evidence, Preview, acceptance |
-| P1 | [M3-04 Plan edit, lock, and acceptance](M3-04-PLAN-EDIT-LOCK-ACCEPTANCE.md) | proposed | M3-02 and M3-03 accepted | Structured edits, session/activity locks, side-by-side review, reuse of the M1 personal-activity/version model, transactional immutable roadmap/detailed-plan acceptance; no change to logging and no replan | Approve editable fields, lock inheritance, diff/copy, activity reuse/snapshot, version/current-pointer, transaction, and retention decisions |
-| P1 | [M3-07 Replanning an accepted horizon](M3-07-REPLAN-ACCEPTED-HORIZON.md) | proposed | M3-04 accepted | Ask the coach for a new plan over dates that already have an accepted version; new immutable version supersedes, locks survive, completed history untouched. No structured reporting UX, alternatives, or clarifying questions — those stay M4 | Approve five open decisions, then Tier 1 builder, reviewer, Preview, acceptance |
-| P2 | [M3-06 A plan never starts in the past](M3-06-PAST-DATED-PLAN-HORIZONS.md) | proposed | none | Change accepted M1 behaviour so a plan version's start date is owner-local today or later; horizon shrinks as the week passes and superseded versions retain past content | Approve the four open questions, then Tier 1 builder, reviewer, Preview, acceptance |
+| P1 | [M3-04 Plan edit, lock, and acceptance](M3-04-PLAN-EDIT-LOCK-ACCEPTANCE.md) | proposed — superseded by F-005 | — | Historical whole-version acceptance draft | Do not dispatch. Replace with F-005 manual planning and AI proposal-application slices |
+| P1 | [M3-07 Replanning an accepted horizon](M3-07-REPLAN-ACCEPTED-HORIZON.md) | proposed — replacement required | F-005 proposal application accepted | Historical whole-version replan draft | Rewrite as bounded proposals for future rolling-plan changes before approval |
+| P2 | [M3-06 A plan never starts in the past](M3-06-PAST-DATED-PLAN-HORIZONS.md) | proposed — retired by F-005 | — | Historical bounded-plan draft; its no-retroactive-planning rule now lives in F-005 | Do not dispatch |
 | P2 | [M3-08 Bounded completion source references](M3-08-BOUNDED-COMPLETION-SOURCES.md) | proposed | none | Record only the completions that reached the coach as proposal sources, so correcting an old unsent completion stops falsely conflicting a pending proposal; no ADR-013 window or schema change | Answer the two open questions, then Tier 2 builder, reviewer, Preview, acceptance |
 | P3 | [M3-09 Simultaneous same-key submit](M3-09-SIMULTANEOUS-SAME-KEY-SUBMIT.md) | proposed | none | Two truly concurrent same-key roadmap requests make the loser report a persistence failure that did not happen; fold the `23505` into the existing replay path via a forward migration. Not a spend or data defect | Approve dispatch, then Tier 1 builder, reviewer, hosted migration evidence, Preview, acceptance |
-| P1 | [M3-05 Consolidated M3 validation](M3-05-M3-VALIDATION-SLICE.md) | proposed | M3-01 through M3-04 accepted | Independent clean local validation, mock and opt-in live evidence, cost/token cap, schema failures, authorization, proposals/versioning/locks/acceptance, 390px accessibility, secret/content-log scan; no new behavior | Approve validator, exact commits, fixtures/live cap, evidence retention, accessibility checklist, and blocker statement |
+| P1 | [M3-05 Consolidated M3 validation](M3-05-M3-VALIDATION-SLICE.md) | proposed — replacement required | all F-005 replacement slices accepted | Historical M3 validation draft | Rewrite against the F-005 dependency chain before approval |
 
 ## Dependency chain
 
@@ -107,23 +108,21 @@ Accepted M2 goals + coaching context + guided onboarding + targeted closeout
     -> M3-01B one approved real-provider adapter          (provider decision)
       -> M3-02 high-level roadmap proposal
         -> M3-03 exact selected 1–7-day plan proposal
-          -> M3-03B regeneration with mandatory feedback
-          -> M3-03C the roadmap as an optional, possibly stale input
-          -> M3-03D on-demand detail for one session
-          -> M3-04 edit, locks, and transactional acceptance
-            -> M3-07 replan an accepted horizon
-              -> M3-05 independent validation
+          -> F-005 + ADR-016 approved replacement
+            -> M3-10 rolling-plan foundation
+              -> F-005 slices 2–8, drafted and accepted sequentially
+                -> rewritten M3 validation
 
-M3-06 (a plan never starts in the past) sits outside this chain, blocks
-nothing, and changes accepted M1 behaviour rather than adding an M3 slice.
+F-005 retires M3-06 and supersedes the old M3-04 contract. M3-03B and M3-07
+remain historical proposed drafts until rewritten for the rolling plan; they
+must not be approved or dispatched in their present form.
 
 M3-08 and M3-09 also sit outside it. Both are M3-02 follow-ups filed from that
 ticket's known limitations on 12 August 2026; neither blocks M3-03.
 
-M3-03B, M3-03C, and M3-03D all branch from M3-03 rather than chaining after it.
-They are independent of each other and none blocks M3-04 — though M3-03D's first
-open decision, what detailing does to an accepted plan version, has to be
-answered in step with M3-04's immutability model.
+M3-03C remains conceptually compatible but needs replacement dependencies.
+M3-03D must target stable proposed or rolling-plan sessions instead of a whole
+accepted plan version. Neither may bypass the sequential F-005 delivery chain.
 ```
 
 **M3-03 was split on 12 August 2026**, on the same reasoning that split M3-01.

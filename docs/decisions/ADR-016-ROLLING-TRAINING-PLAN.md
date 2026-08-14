@@ -111,5 +111,6 @@ use.
 
 Every implementation slice still requires its own approved ticket and delivery
 gates. The destructive founder cutover additionally requires the F-005 runbook,
-the exact reviewed commit, explicit final confirmation, and the separately
-authorized one-cutover amendment to the working agreement.
+the exact reviewed commit, and explicit final confirmation. The product owner
+separately authorized the one-cutover working-agreement exception on 14 August
+2026; F-005 records its exact text and limits.

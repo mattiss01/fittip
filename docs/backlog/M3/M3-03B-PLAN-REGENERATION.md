@@ -2,6 +2,10 @@
 
 **Status:** proposed — not approved for implementation
 
+**Dispatch state:** paused by approved F-005. This pre-rolling-plan contract
+must not be approved or dispatched. Its replacement is F-005 delivery slice 7
+and can be drafted only after rolling-plan proposal application is accepted.
+
 **Triage:** ready-for-agent
 
 **Milestone:** M3
