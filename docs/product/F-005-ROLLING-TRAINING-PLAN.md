@@ -1,13 +1,13 @@
 # F-005: One rolling training plan
 
 **Status:** approved — approved by the product owner on 14 August 2026;
-ADR-016 and implementation remain separately gated
+implementation remains separately gated
 
 **Date approved:** 14 August 2026
 
 **Milestone:** M3
 
-**Architecture proposal:**
+**Approved architecture:**
 [ADR-016](../decisions/ADR-016-ROLLING-TRAINING-PLAN.md)
 
 **Replaces for future delivery:** the bounded manual-plan model in
@@ -582,7 +582,7 @@ acceptance before the next slice starts.
   approved rolling-plan language, updates **Planned session**, **Proposal**,
   **Regeneration**, and **Replanning**, and adds the other terms above.
 - [ADR-008](../decisions/ADR-008-M1-TRAINING-RECORD-TRANSACTIONS.md) remains the
-  historical M1 decision and is superseded for new planning writes only by an
+  historical M1 decision and is superseded for new planning writes only by
   accepted ADR-016.
 - M3-03 remains accepted documentary delivery history, but its stored plan
   generation requests, proposals, sources, and decisions are deleted. Its
@@ -606,8 +606,7 @@ acceptance before the next slice starts.
 ## Approved product decisions
 
 The product owner resolved the following individual decisions and approved this
-feature brief on 14 August 2026. ADR-016 remains proposed until separately
-approved as a whole document:
+feature brief and ADR-016 on 14 August 2026:
 
 1. **Canonical name — decided 14 August 2026:** use **Rolling training plan**
    in the domain and **Plan** in the interface.
@@ -715,9 +714,9 @@ approved as a whole document:
 ## Approval boundary
 
 This approved replacement feature brief authorizes the product behavior and
-delivery decomposition above, not implementation. ADR-016 requires separate
-explicit approval. Each Tier 1 ticket still requires its own approved Agent
-brief, distinct builder and reviewer, exact-commit CI, hosted
+delivery decomposition above, not implementation. ADR-016 was approved
+separately on 14 August 2026. Each Tier 1 ticket still requires its own approved
+Agent brief, distinct builder and reviewer, exact-commit CI, hosted
 migration/RLS/privilege/read-path evidence, Preview verification, and explicit
 product-owner acceptance.
 

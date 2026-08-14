@@ -1,8 +1,8 @@
 # ADR-016: Rolling-plan persistence and history
 
-**Status:** proposed — not approved
+**Status:** accepted — approved by the product owner on 14 August 2026
 
-**Date proposed:** 14 August 2026
+**Date accepted:** 14 August 2026
 
 **Approved feature brief:**
 [F-005](../product/F-005-ROLLING-TRAINING-PLAN.md)
@@ -99,15 +99,15 @@ or full event-sourcing infrastructure.
   owner-local calendar logic.
 - The replacement is Tier 1 because it changes schema, authorization, RLS,
   concurrency, accepted-data routing, and a destructive migration boundary.
-- If approved, this ADR supersedes ADR-008 only for new planning writes; earlier
-  governance and validation remain historical evidence.
+- This ADR supersedes ADR-008 only for new planning writes; earlier governance
+  and validation remain historical evidence.
 
 ## Approval boundary
 
-The product owner approved F-005 on 14 August 2026, but this ADR remains
-proposed. Approving it would approve the persistence and history architecture
-above; it would not dispatch a ticket, apply a migration, change the founder
-database, call a provider, incur spend, or authorize wider use.
+The product owner approved F-005 and this persistence and history architecture
+on 14 August 2026. This approval does not dispatch a ticket, apply a migration,
+change the founder database, call a provider, incur spend, or authorize wider
+use.
 
 Every implementation slice still requires its own approved ticket and delivery
 gates. The destructive founder cutover additionally requires the F-005 runbook,
