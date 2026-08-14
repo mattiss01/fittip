@@ -12,9 +12,15 @@
 **Approved implementation base:**
 `cc60c11357cbeae1fa14b2fbe3293384d79945f7`
 
-**Exact implementation review target:** recorded by the evidence-only commit
-that follows this one. A record cannot contain its own SHA, so the target is
-written once the correction commit exists.
+**Exact implementation review target:**
+`312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46`
+
+**Exact-target CI run:** _pending lead push._ Record the run URL for
+`312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46` here; it must be green before review.
+
+**Matching Vercel Preview:** _pending lead push._ Record the Preview URL and
+deployment ID here, and confirm the deployment's reported Git SHA is exactly
+`312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46`.
 
 **Superseded review target:** `60583aab45dfb87d34eef89f0cbc49f5358d2373` —
 rejected by independent review on both Standards and Spec axes. Its green CI
@@ -31,13 +37,14 @@ run and `READY` Preview are historical only and approve nothing.
 - `60583aab45dfb87d34eef89f0cbc49f5358d2373` — updates the preserved
   authentication browser journey for the maintenance heading and the permanent
   onboarding entry under You.
-- The review-correction commit that carries this record — resolves the six
+- `312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46` — resolves the six
   independent-review findings recorded under "Review corrections applied".
 
-**Final validation evidence head:** the evidence-only commit containing the
-target SHA, the reconciled manifest, the exact-SHA CI URL, and the matching
-Preview follows the implementation target and changes no runtime, schema, or
-CI behavior.
+**Final validation evidence head:** the evidence-only commit that follows
+`312a8ba` records the target SHA and the reconciled manifest, and is where the
+lead writes the exact-SHA CI URL and the matching Preview. It changes only this
+document — no runtime, schema, or CI behavior — and so claims the
+evidence-commit exception in `AGENTS.md`.
 
 **Mobile evidence:**
 [390x844 maintenance screenshot](evidence/M3-11-maintenance-390x844.png) —
@@ -145,19 +152,14 @@ ticket is the wrong place to take that risk. It belongs in a Tier 3 cleanup.
 
 ## Complete change manifest
 
-The stat below covers the base through the superseded target `60583aa`. The
-evidence-only commit that follows the correction replaces it with the stat for
-the full range, base through the new review target, and adds the seven
-correction files. Reconcile against that stat, not this one.
-
 `git diff --stat
-cc60c11357cbeae1fa14b2fbe3293384d79945f7..60583aab45dfb87d34eef89f0cbc49f5358d2373`:
+cc60c11357cbeae1fa14b2fbe3293384d79945f7..312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46`:
 
 ```text
  .github/workflows/ci.yml                           |   81 +-
- README.md                                          |   16 +-
- docs/validation/M3/M3-11-VALIDATION.md             |  408 ++++++
- .../M3/evidence/M3-11-maintenance-390x844.png      |  Bin 0 -> 57513 bytes
+ README.md                                          |   26 +-
+ docs/validation/M3/M3-11-VALIDATION.md             |  919 ++++++++++++++
+ .../M3/evidence/M3-11-maintenance-390x844.png      |  Bin 0 -> 56491 bytes
  docs/validation/README.md                          |    2 +
  e2e/auth.spec.ts                                   |   14 +-
  e2e/m1-03-quick-log.spec.ts                        |  244 ----
@@ -168,13 +170,13 @@ cc60c11357cbeae1fa14b2fbe3293384d79945f7..60583aab45dfb87d34eef89f0cbc49f5358d23
  e2e/m3-02.playwright.config.ts                     |   19 -
  e2e/m3-03-plan-proposal.spec.ts                    |  210 ----
  e2e/m3-03.playwright.config.ts                     |   16 -
- e2e/m3-11-maintenance.spec.ts                      |  145 +++
+ e2e/m3-11-maintenance.spec.ts                      |  232 ++++
  ...wright.config.ts => m3-11.playwright.config.ts} |   10 +-
  e2e/planning.spec.ts                               |  322 -----
  package.json                                       |    3 +-
  scripts/patch-database-types.mjs                   |  152 +--
  scripts/patch-database-types.test.mjs              |  120 +-
- src/app/home/home.module.css                       |   11 +
+ src/app/home/home.module.css                       |   17 +-
  src/app/home/log/actions.test.ts                   |  128 --
  src/app/home/log/actions.ts                        |  157 ---
  src/app/home/log/error.tsx                         |   26 -
@@ -258,7 +260,7 @@ cc60c11357cbeae1fa14b2fbe3293384d79945f7..60583aab45dfb87d34eef89f0cbc49f5358d23
  .../repositories/completion-repository.test.ts     |  309 -----
  src/server/repositories/completion-repository.ts   |  404 ------
  .../repositories/plan-proposal-repository.test.ts  |  118 --
- src/server/repositories/plan-proposal-repository.ts|  263 ----
+ .../repositories/plan-proposal-repository.ts       |  263 ----
  src/server/repositories/rolling-plan-repository.ts |    2 +-
  .../training-record-repository.test.ts             |  471 -------
  .../repositories/training-record-repository.ts     |  629 ----------
@@ -278,13 +280,33 @@ cc60c11357cbeae1fa14b2fbe3293384d79945f7..60583aab45dfb87d34eef89f0cbc49f5358d23
  .../m3_03_plan_duration_correction.test.sql        |   84 --
  .../tests/database/m3_03_plan_proposals.test.sql   | 1012 ---------------
  .../database/m3_11_legacy_training_reset.test.sql  |  219 ++++
- .../tests/fixtures/m3_11_post_reset_verify.sql     |  107 ++
- supabase/tests/fixtures/m3_11_pre_reset.sql        |  287 +++++
+ .../tests/fixtures/m3_11_post_reset_verify.sql     |  190 +++
+ supabase/tests/fixtures/m3_11_pre_reset.sql        |  405 ++++++
  .../integration/m1_01_concurrent_data_api.mjs      |  209 ----
  .../integration/m3_02_concurrent_acceptance.mjs    |  401 ------
- .../integration/m3_11_seeded_reset.mjs             |   55 +
- 129 files changed, 1949 insertions(+), 24896 deletions(-)
+ supabase/tests/integration/m3_11_seeded_reset.mjs  |   55 +
+ 129 files changed, 2756 insertions(+), 24904 deletions(-)
 ```
+
+The review corrections alone, `git diff --stat
+60583aab45dfb87d34eef89f0cbc49f5358d2373..312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46`:
+
+```text
+ README.md                                          |  10 +-
+ docs/validation/M3/M3-11-VALIDATION.md             | 727 ++++++++++++++++++---
+ .../M3/evidence/M3-11-maintenance-390x844.png      | Bin 57513 -> 56491 bytes
+ e2e/m3-11-maintenance.spec.ts                      |  91 ++-
+ src/app/home/home.module.css                       |   6 +-
+ .../tests/fixtures/m3_11_post_reset_verify.sql     |  89 ++-
+ supabase/tests/fixtures/m3_11_pre_reset.sql        | 118 ++++
+ 7 files changed, 920 insertions(+), 121 deletions(-)
+```
+
+No file is added, deleted, or renamed by the corrections; all seven were
+already in the ticket's scope. The migration, generated types, server modules,
+`.github/**`, and `package.json` are untouched, and the migration SHA-256 below
+is unchanged from `60583aa`.
+
 
 Navigation notes for non-obvious files:
 
@@ -888,7 +910,7 @@ unset PGURI SNAPSHOTS
 
 ## Independent reviewer checklist
 
-- Review the exact implementation target recorded in this document's header
+- Review exact implementation target `312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46`
   against approved base `cc60c11357cbeae1fa14b2fbe3293384d79945f7`; treat the
   later validation-only commit as evidence. `60583aa` is superseded: its review,
   CI run, and Preview approve nothing.
