@@ -1,8 +1,8 @@
 # FitTip
 
-A personal training coach. One owner keeps goals and coaching context, plans
-training for a short horizon, logs what actually happened, and — from M3 — asks
-an AI to propose a plan they review before accepting.
+A personal training coach. One owner keeps goals and coaching context, maintains
+one continuous training plan, logs what actually happened, and asks an AI to
+propose bounded changes they review before adding them.
 
 The vocabulary below is the project's ubiquitous language. It is a glossary, not
 a spec: no schema, no implementation, no decisions. Decisions live in
@@ -49,15 +49,40 @@ An owner-created, owner-owned definition of something they do. FitTip ships no
 global exercise library; every activity belongs to the owner who made it.
 _Avoid_: exercise, movement, workout type
 
-**Detailed plan version**:
-An immutable plan covering the 1–7 consecutive owner-local dates the owner
-chose. Replanning creates a new version; it never edits an existing one.
-_Avoid_: plan (unqualified), schedule, program
+**Rolling training plan**:
+The owner's single continuous collection of planned training. It is viewed by
+date but is not itself constrained to a horizon.
+_Avoid_: detailed plan version, short plan, schedule, program
 
 **Planned session**:
-One intended training session on one date inside a plan version. It may be
-locked, meaning later planning must not move or replace it.
+One intended training session on one date in the rolling training plan. It may
+be locked, meaning later planning must not move or replace it.
 _Avoid_: workout, event, entry
+
+**Saved session**:
+An owner-private reusable session template with no planned date or completion
+state. Reuse creates an independent copy rather than a live link.
+_Avoid_: global template, shared session, exercise library
+
+**Recurring session series**:
+One owner-defined rule and session template describing repeated planned
+sessions over owner-local dates.
+_Avoid_: recurring plan, schedule rule, RRULE
+
+**Occurrence**:
+One dated instance of a recurring session series. It may inherit the series or
+carry an explicit exception.
+_Avoid_: generated row, recurrence copy, event
+
+**Plan change set**:
+One owner-approved group of Plan additions, edits, moves, cancellations, locks,
+or recurrence changes that succeeds or fails as one action.
+_Avoid_: plan version, save, mutation batch
+
+**Recovery day**:
+An optional day-level label expressing a recovery intention. It is not a
+session and may coexist with planned sessions.
+_Avoid_: rest session, empty day, no training
 
 **Completed session**:
 A permanent record of what actually happened, created separately from the plan
@@ -74,17 +99,17 @@ An append-only revision of a completed session. The trail is preserved and the
 current revision is pointed to, so history is never overwritten.
 _Avoid_: edit, update, fix
 
-**Horizon**:
-The 1–7 consecutive owner-local dates a plan or proposal covers, chosen by the
-owner.
-_Avoid_: window, period, range
+**AI planning horizon**:
+The exact 1–7 consecutive owner-local dates covered by one AI plan proposal. It
+bounds the coaching operation, not the rolling training plan.
+_Avoid_: plan duration, plan length, schedule
 
 ### Coaching AI
 
 **Proposal**:
 Structured, schema-validated output from a coaching AI. A proposal is never
-accepted data: only an explicit owner-reviewed acceptance can create a plan
-version or a roadmap version from one.
+accepted data: only an explicit owner-reviewed action can add selected content
+to the Plan or create a roadmap version from one.
 _Avoid_: suggestion, generated plan, AI plan, output
 
 **Roadmap**:
@@ -104,10 +129,9 @@ prompt, and context limits. The set is enumerated and closed.
 _Avoid_: task, action, call, endpoint
 
 **Regeneration**:
-Asking the coach for another roadmap or detailed-plan proposal after rejecting
-one. The rejected proposal created no accepted version and regeneration itself
-supersedes nothing. It is a new request carrying the rejected candidate — never
-a continuation of an earlier one, because no conversation is kept.
+Asking the coach for another roadmap or plan proposal using bounded feedback
+and the immediate predecessor. It is a new request, not a continued
+conversation, and changes no accepted data by itself.
 _Avoid_: retry, refine, iterate, redo, re-propose
 
 **Editing**:
@@ -116,10 +140,9 @@ deterministic: no coach is involved and nothing is sent anywhere.
 _Avoid_: adjusting, correcting, tweaking
 
 **Replanning**:
-Producing a new plan for dates that already have an accepted one, superseding
-that version while preserving it. What distinguishes it from regeneration is
-that a version is superseded — not the owner's reason for asking, which may be
-anything from illness to a change of mind.
+Proposing reviewed changes to future content already represented in the rolling
+training plan. Past training, completed sessions, and locked future content are
+never changed by replanning.
 _Avoid_: rescheduling, adapting, re-proposing, replan (as a noun)
 
 **Boundary**:
