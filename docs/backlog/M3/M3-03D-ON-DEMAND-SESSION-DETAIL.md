@@ -1,8 +1,8 @@
 # M3-03D: On-demand session detail
 
-**Status:** proposed — deferred until after the F-005 cutover
+**Status:** proposed — deferred until after the F-005 replacement closeout
 
-**Dispatch state:** optional post-cutover enhancement. Rewrite it against a
+**Dispatch state:** optional post-closeout enhancement. Rewrite it against a
 stable proposed or rolling-plan session before requesting approval.
 
 **Triage:** needs-triage
@@ -14,7 +14,7 @@ stable proposed or rolling-plan session before requesting approval.
 **Depends on:** [M3-03 accepted](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md) for
 the session-level plan this details, and
 [M3-01 accepted](M3-01-LOCAL-AI-ADAPTER-CONTROLS.md) for the AI boundary. A
-post-cutover rewrite additionally depends on M3-16 accepted.
+post-closeout rewrite additionally depends on M3-17 accepted.
 
 **Created:** 12 August 2026, when the product owner chose a session-level plan
 over a fully detailed one. See M3-03's "Split into four tickets".

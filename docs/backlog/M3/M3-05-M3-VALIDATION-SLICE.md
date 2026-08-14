@@ -1,11 +1,11 @@
 # M3-05: Consolidated local M3 validation slice
 
-**Status:** retired — replaced by M3-16's narrow hosted closeout on 14 August 2026
+**Status:** retired — replaced by M3-17's narrow hosted closeout on 14 August 2026
 
 **Triage:** wontfix
 
 **Disposition:** Do not dispatch this exhaustive duplicate validation pass.
-Each replacement ticket retains its own evidence gates; M3-16 verifies the
+Each replacement ticket retains its own evidence gates; M3-17 verifies the
 integrated hosted story without repeating every earlier suite.
 
 **Milestone:** M3

@@ -1,4 +1,4 @@
-# M3-15: AI proposal application
+# M3-16: AI proposal application
 
 **Status:** proposed — not approved for implementation
 
@@ -10,9 +10,9 @@
 
 **Tier:** 1 — AI calls and spend, proposal persistence, atomic Plan writes, and visible behavior
 
-**Depends on:** M3-14 accepted.
+**Depends on:** M3-15 accepted.
 
-**Blocks:** rewritten M3-03B and M3-16.
+**Blocks:** rewritten M3-03B and M3-17.
 
 **Absorbs:** the relevant roadmap-input and visible-reasoning behavior from
 retired M3-03C.
@@ -49,12 +49,12 @@ added** items enter the Plan, together in one atomic **Finish review** action.
 
 - No Coach-driven replacement, movement, or cancellation of existing Plan
   sessions; the owner edits those directly.
-- No regeneration, recurrence mutation, activation, old-data deletion, session
+- No regeneration, recurrence mutation, old-data deletion, session
   detailing, or automatic save to the private library.
 
 ## Approval boundary
 
 This shell records the approved F-005 behavior and M3-03C merge only. After
-M3-14 is accepted, roadmap staleness, persistence, UI, spend, and transaction
+M3-15 is accepted, roadmap staleness, persistence, UI, spend, and transaction
 details require one exact Agent brief and separate product-owner approval before
 Tier 1 implementation.

@@ -3,7 +3,7 @@
 **Status:** proposed — not approved for implementation
 
 **Dispatch state:** paused by approved F-005. This pre-rolling-plan contract
-must not be approved or dispatched. Its replacement is F-005 delivery slice 7
+must not be approved or dispatched. Its replacement is F-005 delivery slice 8
 and can be drafted only after rolling-plan proposal application is accepted.
 
 **Triage:** needs-triage
@@ -14,7 +14,7 @@ and can be drafted only after rolling-plan proposal application is accepted.
 
 **Depends on:** this historical draft followed
 [M3-03 accepted](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md). Its replacement
-contract depends on M3-15 accepted and reuses only the still-approved
+contract depends on M3-16 accepted and reuses only the still-approved
 `fittip.seven-day-plan.v2` boundary and F-005 regeneration decisions.
 
 **Split from:** [M3-03](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md) on 12 August

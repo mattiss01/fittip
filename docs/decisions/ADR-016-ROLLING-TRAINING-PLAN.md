@@ -4,6 +4,8 @@
 
 **Date accepted:** 14 August 2026
 
+**Legacy-reset ordering revised:** 14 August 2026
+
 **Approved feature brief:**
 [F-005](../product/F-005-ROLLING-TRAINING-PLAN.md)
 
@@ -56,10 +58,12 @@ privileges, RLS, owner-derived transactions, bounded lock waits, idempotency,
 and stale-revision checks remain mandatory; no service-role application client
 is introduced.
 
-Use the one-way clean cutover approved in F-005. Do not backfill or dual-write
-the old bounded-plan records. F-005 remains the source of truth for product
-behavior, deleted and preserved data, delivery order, and the final cutover
-protocol.
+Use the one-way legacy training reset approved in F-005 before building the
+replacement user-facing paths. Do not backfill or dual-write the old
+bounded-plan records. Delete their data and remove their tables, functions, and
+runtime modules rather than retaining a dormant compatibility model. F-005
+remains the source of truth for product behavior, deleted and preserved data,
+delivery order, and the destructive execution protocol.
 
 ## Considered options
 
@@ -97,7 +101,7 @@ or full event-sourcing infrastructure.
 - One owner revision supplies optimistic concurrency across grouped changes.
 - Recurrence requires bounded expansion, effective-date, exception, and
   owner-local calendar logic.
-- The replacement is Tier 1 because it changes schema, authorization, RLS,
+- The replacement remains Tier 1 because it changes schema, authorization, RLS,
   concurrency, accepted-data routing, and a destructive migration boundary.
 - This ADR supersedes ADR-008 only for new planning writes; earlier governance
   and validation remain historical evidence.
@@ -110,7 +114,8 @@ change the founder database, call a provider, incur spend, or authorize wider
 use.
 
 Every implementation slice still requires its own approved ticket and delivery
-gates. The destructive founder cutover additionally requires the F-005 runbook,
-the exact reviewed commit, and explicit final confirmation. The product owner
-separately authorized the one-cutover working-agreement exception on 14 August
-2026; F-005 records its exact text and limits.
+gates. The early destructive founder reset additionally requires the F-005
+runbook, the exact reviewed commit, a maintenance-safe founder deployment, and
+explicit final confirmation. The product owner revised the one-time
+working-agreement exception on 14 August 2026; F-005 records its exact text and
+limits.

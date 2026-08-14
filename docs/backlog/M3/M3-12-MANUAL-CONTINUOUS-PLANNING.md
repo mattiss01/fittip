@@ -1,4 +1,4 @@
-# M3-11: Manual continuous planning
+# M3-12: Manual continuous planning
 
 **Status:** proposed — not approved for implementation
 
@@ -10,9 +10,9 @@
 
 **Tier:** 1 — owner-scoped writes, history, authorization, RLS, and visible behavior
 
-**Depends on:** M3-10 accepted.
+**Depends on:** M3-11 accepted and the destructive founder reset recorded.
 
-**Blocks:** M3-12 and every later F-005 replacement slice.
+**Blocks:** M3-13 and every later F-005 replacement slice.
 
 ## Outcome
 
@@ -21,8 +21,9 @@ plan versions. They can add, edit, move, duplicate, lock, unlock, or cancel an
 eligible one-off session on owner-local today or a future date and inspect the
 resulting understandable plan history.
 
-This is the first user-visible client of the dormant M3-10 foundation. It does
-not activate legacy consumer replacement or preserve old-model training data.
+This is the first user-visible client of the M3-10 foundation after M3-11 has
+removed the legacy training model. It replaces `/home/plan` directly; there is
+no parallel review route or compatibility path.
 
 ## Scope to preserve when this ticket is drafted for approval
 
@@ -40,15 +41,16 @@ not activate legacy consumer replacement or preserve old-model training data.
 
 ## Non-goals
 
-- No saved-session library, recurrence, consumer activation, logging, Progress,
-  AI proposal, regeneration, or destructive cutover.
-- No past planning, completion mutation, whole-plan version, or compatibility
-  synchronization with the legacy bounded-plan model.
+- No saved-session library, recurrence, replacement logging, Progress, AI
+  proposal, regeneration, or additional destructive reset.
+- No past planning, completion mutation, whole-plan version, or legacy
+  compatibility path.
 - No global activity or exercise library.
 
 ## Approval boundary
 
-This shell records the approved F-005 decomposition only. After M3-10 is
-accepted, the lead must turn it into one exact dispatch-ready contract, add the
+This shell records the approved F-005 decomposition only. After M3-11 is
+accepted and its reset is recorded, the lead must turn it into one exact
+dispatch-ready contract, add the
 required `## Agent brief`, name all applicable project skills, and obtain
 separate product-owner approval before a Tier 1 builder is dispatched.

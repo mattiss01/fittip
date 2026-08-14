@@ -5,6 +5,8 @@ implementation remains separately gated
 
 **Date approved:** 14 August 2026
 
+**Clean-break sequence revised:** 14 August 2026
+
 **Milestone:** M3
 
 **Approved architecture:**
@@ -13,8 +15,8 @@ implementation remains separately gated
 **Replaces for future delivery:** the bounded manual-plan model in
 [F-002](F-002-MANUAL-TRAINING-PLANNING-TRACKING.md) and the unapproved former
 F-005 draft. Accepted governance and validation documents remain permanent
-history; the clean cutover deliberately deletes old-model plan, proposal, and
-completion data.
+history; the early clean reset deliberately deletes old-model plan, proposal,
+completion, and correction data and removes the legacy runtime and schema.
 
 ## User problem
 
@@ -229,8 +231,8 @@ completion correction remains the separate accepted correction flow.
 ### History and mutability
 
 - The rolling plan is one stable identity, not a mutable bag with no history.
-- History begins when the rolling-plan model is activated. The one-time clean
-  cutover deletes the founder/test data named below and is not a reusable
+- History begins with the rolling-plan model's first write. The one-time clean
+  reset deletes the founder/test data named below and is not a reusable
   replanning or deletion rule.
 - Planned sessions have stable identities and one directly readable current
   row. Every accepted manual or AI action updates current state and appends its
@@ -238,7 +240,7 @@ completion correction remains the separate accepted correction flow.
 - One plan change set groups all entries produced by one atomic owner action.
 - Removing future training marks the current session cancelled and records the
   change. It does not hard-delete the session or its earlier state.
-- After activation, past planned states, completed sessions,
+- After each replacement model's first write, past planned states, completed sessions,
   completed-activity snapshots, and completion corrections remain immutable.
 - A monotonic owner plan revision provides stale-write and concurrency checks
   without exposing whole-plan versions as separate plans.
@@ -386,16 +388,21 @@ completion correction remains the separate accepted correction flow.
 ## Migration and compatibility strategy
 
 - Use forward migrations only. Never edit an applied M1 or M3 migration.
-- Create and verify the rolling-plan model and every replacement consumer
-  before the destructive cutover. Do not backfill, translate, export, or show
-  old-model training data in the new model.
-- In one dedicated, auditable clean-cutover operation, delete all rows from
+- After the accepted M3-10 foundation, remove the legacy training model before
+  building its user-facing replacements. Do not backfill, translate, export, or
+  show old-model training data in the new model.
+- In one dedicated, auditable reset, delete all rows from
   `plan_proposal_decisions`, `plan_proposal_sources`, `plan_proposals`,
   `plan_generation_requests`, `completed_activities`, `completion_heads`,
   `completed_sessions`, `planned_activities`, `planned_sessions`,
   `detailed_plan_heads`, and `detailed_plan_versions` in a constraint-safe
-  order. The cutover initializes an empty rolling plan for each eligible owner.
-- The wipe includes accepted and rejected AI plan proposals, accepted plan
+  order, then drop those legacy tables and their exclusive functions, triggers,
+  policies, grants, indexes, constraints, and database types.
+- Remove the corresponding legacy application modules, routes, actions,
+  components, fixtures, tests, and generated type surface. Shared validation or
+  personal-activity machinery stays when a preserved or replacement domain
+  still needs it. No callable or dead compatibility implementation remains.
+- The reset includes accepted and rejected AI plan proposals, accepted plan
   versions, planned sessions and activities, completions, correction revisions,
   completion heads, and their old-model provenance. No in-app legacy archive or
   restore path is created.
@@ -406,9 +413,11 @@ completion correction remains the separate accepted correction flow.
   completion records. Preserve the roadmap record, but make any undecided
   proposal that depends on such a source explicitly expired and impossible to
   accept; never reinterpret the missing source as current.
-- Switch Plan, Today, logging, Progress, and AI context to the rolling-plan
-  model atomically with activation. After activation no application read or
-  write path may depend on the emptied old-model tables.
+- Before deletion, deploy maintenance-safe Plan, Today, logging, Progress,
+  roadmap, and plan-proposal surfaces that make no legacy database call.
+  Preserve roadmap records while their completion-dependent runtime is
+  unavailable. Restore each replacement surface only through its approved
+  ticket, with `/home/plan` returning directly as the continuous Plan.
 - New tables in exposed schemas require deliberate Data API grants, RLS,
   owner/anonymous/cross-owner tests, and indexes for owner/date, active series,
   current revision, and source lookups.
@@ -416,26 +425,26 @@ completion correction remains the separate accepted correction flow.
   row contents. Test the exact migration from a clean reset and from a seeded
   old-model database, including preserved-record counts and dangling-reference
   checks.
-- Do not create a manual backup or training-data export for the cutover. Verify
+- Do not create a manual backup or training-data export for the reset. Verify
   and record any provider-managed retention that cannot be removed by this
   application migration without presenting it as an application recovery path.
-- The clean-cutover ticket requires independent review of the exact commit and a
+- The reset ticket requires independent review of the exact commit and a
   green CI run. Its Vercel Preview verifies the maintenance state and every
   non-destructive hosted preflight available against the unchanged founder
   database; Preview verification must not apply the destructive migration.
 - Rollback is supported only before the destructive transaction commits. After
   commit the application has no legacy-data rollback; infrastructure backups
   may still retain deleted bytes under the database provider's retention rules.
-- The founder database cutover needs a separately approved runbook and an
+- The founder database reset needs a separately approved runbook and an
   explicit **Run the destructive cutover** confirmation against the exact
   independently reviewed commit. This is a narrow exception to the ordinary
   requirement to apply a committed migration before Preview acceptance; it does
   not weaken any earlier ticket's hosted migration evidence.
 - After final confirmation, apply the exact migration, reconcile remote
-  migration history, deploy the complete replacement, and immediately verify
-  authentication, empty Plan initialization, preserved-domain counts,
-  schema/RLS/privileges/advisors, authenticated owner reads, denied cross-owner
-  access, and the main `390x844` Plan/Today/logging/Progress/AI flows.
+  migration history, and immediately verify authentication, removed-object
+  absence, preserved-domain counts, the M3-10 schema/RLS/privileges/functions,
+  advisors, authenticated empty Plan reads, denied cross-owner access, and the
+  approved maintenance surfaces.
 
 ## Proposed deep modules
 
@@ -466,9 +475,10 @@ part of either interface.
 1. An authenticated owner has one rolling training plan and can add, edit,
    move, duplicate, lock, unlock, and cancel eligible future one-off sessions
    without selecting a plan horizon.
-2. The clean cutover leaves every old-model plan, plan proposal, planned
-   session/activity, completion, and completion-correction table empty, creates
-   no replacement copy, and leaves the explicitly preserved domains unchanged.
+2. The clean reset removes every old-model plan, plan proposal, planned
+   session/activity, completion, and completion-correction record plus its
+   exclusive schema/runtime surface, creates no replacement copy, and leaves
+   the explicitly preserved domains and M3-10 foundation unchanged.
 3. Daily, every-N-days, weekly, and every-N-weeks series expand correctly over
    bounded owner-local date slices, including DST boundaries, optional end
    dates, and open-ended series.
@@ -496,7 +506,7 @@ part of either interface.
    suggestion passes current-state revalidation.
 10. Stale, simultaneous, cross-owner, invalid, unsafe, locked, and conflicting
    changes write nothing and return an honest actionable result.
-11. From rolling-plan activation onward, past planned states and all
+11. From each replacement model's first write onward, past planned states and all
     completed/corrected history remain immutable under manual planning,
     recurrence changes, AI proposals, migration, and retries.
 12. Date-bounded queries use ownership/date and active-series indexes and do
@@ -506,7 +516,7 @@ part of either interface.
 14. The complete mobile paths pass at `390x844`, including long plan slices,
     recurrence editing, conflict review, proposal decisions, empty dates,
     loading, offline-safe failure, and session expiry.
-15. Outside the explicit clean cutover, no accepted-history rewrite, global
+15. Outside the explicit clean reset, no accepted-history rewrite, global
     activity library, external sink, secret, new provider/model, unapproved
     spend, friend, public registration, or commercial behavior is added.
 16. An owner can explicitly save an eligible session or Coach suggestion to a
@@ -528,56 +538,59 @@ part of either interface.
 - No redesign of goals, memory, roadmap content, activity measurement modes,
   provider selection, model selection, or spend controls.
 - No import, archive, export, compatibility view, or user-facing recovery path
-  for pre-cutover plan, proposal, or completion data.
+  for pre-reset plan, proposal, or completion data.
 
 ## Delivery plan
 
 This feature is too large for one implementation ticket. After product and
 ADR approval, draft and deliver these slices sequentially. Founder-environment
-continuity is not required during this replacement: it may remain on the legacy
-surface, show a maintenance state, or be temporarily unavailable as individual
-tickets demand. No ticket must add dual writes, compatibility synchronization,
-or an interim usable release merely to keep the old planning flow active.
+continuity is not required during this replacement. M3-11 removes the legacy
+training stack and later tickets restore the replacement surfaces sequentially.
+No ticket may add dual writes, compatibility synchronization, or another route
+merely to keep the old planning flow active.
 
 1. **M3-10: Rolling-plan foundation — Tier 1.** New owner-scoped current-state schema,
    atomic append-only change log, plan revision, RLS, privileges, indexes,
    concurrency, and generated types, introduced without activating the new path
    or deleting old data.
-2. **M3-11: Manual continuous planning — Tier 1.** Build arbitrary-date one-off
-   changes and understandable history against the dormant new model.
-3. **M3-12: Private saved-session library — Tier 1.** Owner-scoped templates,
+2. **M3-11: Legacy training reset — Tier 1.** Delete all approved old-model
+   training data, remove its exclusive database and application machinery,
+   preserve the named non-training domains and M3-10 foundation, and deploy
+   honest maintenance states before the irreversible founder migration.
+3. **M3-12: Manual continuous planning — Tier 1.** Restore `/home/plan`
+   directly as the continuous one-off Plan with understandable history.
+4. **M3-13: Private saved-session library — Tier 1.** Owner-scoped templates,
    current-value copy reuse, edit/delete behavior, same-owner enforcement, RLS,
    and the mobile save/select/review flow.
-4. **M3-13: Recurring session series — Tier 1.** Constrained rules, bounded expansion,
+5. **M3-14: Recurring session series — Tier 1.** Constrained rules, bounded expansion,
    occurrence exceptions, this-and-future changes, DST behavior, and history.
-5. **M3-14: Replacement consumer readiness — Tier 1.** Prepare Plan, Today, logging,
-   Progress, and AI context to use only the rolling-plan model at activation.
-6. **M3-15: AI proposal application — Tier 1.** Generate fresh proposals and adapt
+6. **M3-15: Replacement consumer readiness — Tier 1.** Restore Today, logging,
+   Progress, roadmap operation, replacement completion/correction history, and
+   the bounded completion-history interface for AI context.
+7. **M3-16: AI proposal application — Tier 1.** Generate fresh proposals and adapt
    M3-03 proposal semantics into a combined current-plan/proposal timeline,
    staged per-item choices, one atomic **Finish review** action, conflicts,
    locks, source revalidation, and mobile review.
-7. **M3-03B: Regeneration on the rolling plan — Tier 1.** Revise M3-03B after proposal
+8. **M3-03B: Regeneration on the rolling plan — Tier 1.** Revise M3-03B after proposal
    application is accepted; preserve **Will be added**, omit **Rejected**,
    revise unresolved items, require overall feedback unless a rejected item has
    feedback, retain only the immediate predecessor, and keep the three-round
    chain cap.
-8. **M3-16: Clean cutover and activation — Tier 1.** After every replacement path above
-   is accepted, run the approved destructive migration, expire affected roadmap
-   proposals, initialize empty rolling plans, activate every replacement
-   consumer together, and verify preserved domains. Bring the founder app back
-   as one complete rolling-plan experience rather than an interim manual-only
-   release.
+9. **M3-17: Final rolling-plan closeout — Tier 3 unless defects require their
+   own ticket.** Reconcile accepted evidence and verify the integrated founder
+   experience. It performs no later cutover, activation switch, or data change.
 
-Only one implementation builder may be active. Each slice requires an approved
-ticket, distinct builder and reviewer, exact-commit CI, Preview, hosted schema
-and authorization evidence where applicable, and explicit product-owner
-acceptance before the next slice starts.
+Only one implementation builder may be active. Every ticket requires approval,
+exact-commit evidence, and explicit product-owner acceptance before its
+dependent work starts. Tier 1 and Tier 2 slices require a distinct builder and
+reviewer plus Preview and hosted evidence under the working agreement. M3-17
+uses the Tier 3 path unless a discovered defect is separately re-tiered.
 
 ## Existing governance affected
 
 - [F-002](F-002-MANUAL-TRAINING-PLANNING-TRACKING.md), M1-01, and M1-02 remain
   accepted documentary history. Their runtime plan and completion rows are not
-  retained through the approved clean cutover.
+  retained through the approved clean reset.
 - `CONTEXT.md` now replaces **Detailed plan version** and **Horizon** with the
   approved rolling-plan language, updates **Planned session**, **Proposal**,
   **Regeneration**, and **Replanning**, and adds the other terms above.
@@ -591,11 +604,11 @@ acceptance before the next slice starts.
 - M3-03B stays proposed and undispatched until the rolling-plan foundation and
   AI proposal-application contract are accepted.
 - M3-03C is retired as a standalone ticket. Its roadmap-input and visible
-  proposal-reasoning behavior moves into M3-15.
-- M3-03D remains a deferred optional enhancement after cutover. It must link
+  proposal-reasoning behavior moves into M3-16.
+- M3-03D remains a deferred optional enhancement after closeout. It must link
   detail to a stable proposed or planned session rather than a whole accepted
   plan version.
-- M3-04 is retired. M3-11 owns manual rolling-plan changes and M3-15 owns AI
+- M3-04 is retired. M3-12 owns manual rolling-plan changes and M3-16 owns AI
   proposal application; its whole-version acceptance architecture must never
   be dispatched.
 - M3-06 is retired if this model is approved because a rolling plan has no
@@ -605,8 +618,8 @@ acceptance before the next slice starts.
   existing sessions. Any future Coach-driven replacement or cancellation is a
   new separately approved capability.
 - M3-08 is retired as a standalone ticket. Its exact-sent-completion source rule
-  moves into M3-14 while replacement AI context is built.
-- M3-05 is retired. M3-16 owns the narrow final hosted end-to-end closeout;
+  moves into M3-15 while replacement AI context is built.
+- M3-05 is retired. M3-17 owns the narrow final hosted end-to-end closeout;
   ticket-level review, CI, Preview, hosted evidence, and acceptance remain at
   every slice and are not duplicated by a second exhaustive validation pass.
 - M3-09 remains a parked P3 roadmap-concurrency defect outside the replacement
@@ -671,12 +684,14 @@ feature brief and ADR-016 on 14 August 2026:
     The AI may propose the label as an independent item with **Proposed**,
     **Will be added**, and **Rejected** choices; FitTip does not automatically
     judge whether a session contradicts it.
-12. **Clean-cutover data boundary — decided 14 August 2026:** delete all
-    pre-cutover plan versions, planned sessions/activities, AI plan proposals
+12. **Clean-reset boundary — revised 14 August 2026:** delete all
+    pre-reset plan versions, planned sessions/activities, AI plan proposals
     and decisions, completions, and correction history. Do not backfill or
     expose them. Preserve accounts/profiles, goals, memory, onboarding,
     roadmaps, personal activities, spend/accounting, and security/audit data.
-    New-model history is permanent from activation onward.
+    Also remove the legacy model's exclusive database and runtime machinery;
+    retain shared code only when a preserved or replacement domain needs it.
+    New-model history is permanent from its first write onward.
 13. **Saved-session ownership — decided 14 August 2026:** the library is private
     per user. There is no global/shared library and no cross-owner discovery or
     reuse.
@@ -687,25 +702,24 @@ feature brief and ADR-016 on 14 August 2026:
     independent one-off or recurring session. Later edits or deletion change no
     planned or completed training. Duplicate entries are allowed; V1 performs no
     automatic detection, merging, or live linking.
-15. **Cutover ordering and availability — decided 14 August 2026:** deliver the
-    eight ticket slices above sequentially, with AI proposal application and
-    regeneration completed before the final destructive cutover. Founder-app
-    availability and legacy planning continuity are not required during this
-    replacement; maintenance or temporary unavailability is acceptable. Do not
-    add dual writes, compatibility synchronization, or an interim manual-only
-    release. Activate the complete rolling-plan experience only after all
-    replacement paths are accepted. Keep every replacement ticket proposed
-    until its predecessor is accepted and its own exact scope is approved.
-16. **Destructive deployment protocol — decided 14 August 2026:** prove the
+15. **Reset ordering and availability — revised 14 August 2026:** after M3-10,
+    perform the destructive legacy reset first. Maintenance or temporary
+    unavailability is acceptable while later tickets restore `/home/plan`, the
+    saved-session library, recurrence, Today/logging/Progress, AI proposal
+    application, and regeneration in that order. Do not add dual writes,
+    compatibility synchronization, or a second Plan route. Keep every ticket
+    proposed until its predecessor is accepted and its exact scope is approved.
+16. **Destructive deployment protocol — revised 14 August 2026:** prove the
     exact migration locally from clean and seeded old-model databases; require
     exact-commit independent review and green CI; and verify a Vercel maintenance
     Preview plus non-destructive hosted preflights without changing founder
     data. Record counts but create no export or manual backup. Require an
     explicit **Run the destructive cutover** confirmation, then apply the exact
-    migration, reconcile remote history, deploy, and immediately verify
-    authentication, preserved domains, empty Plan initialization,
+    migration only after the reviewed maintenance-safe application is deployed,
+    reconcile remote history, and immediately verify authentication, removed
+    object absence, preserved domains, empty Plan reads,
     schema/RLS/privileges/advisors, authenticated owner and denied cross-owner
-    paths, and the main mobile flows. This cutover alone receives a narrow
+    paths, and the maintenance surfaces. This reset alone receives a narrow
     exception to applying its destructive migration before Preview acceptance.
 17. **Proposal review composition — decided 14 August 2026:** show current plan
     content and Coach suggestions together under each horizon date. Existing
@@ -719,12 +733,13 @@ feature brief and ADR-016 on 14 August 2026:
     feedback is required unless a rejected item has feedback. Use a fresh
     request/charge, the same horizon, only the immediate predecessor, and the
     three-round cap.
-19. **M3 replacement-ticket map — decided 14 August 2026:** deliver F-005 as
-    M3-10, M3-11, M3-12, M3-13, M3-14, M3-15, rewritten M3-03B, and M3-16 in
+19. **M3 replacement-ticket map — revised 14 August 2026:** deliver F-005 as
+    M3-10, M3-11 reset, M3-12, M3-13, M3-14, M3-15, M3-16, rewritten M3-03B,
+    and M3-17 in
     that order. Retire M3-03C, M3-04, M3-05, M3-06, M3-07, and M3-08 as
     standalone implementation tickets: M3-03C's relevant behavior moves into
-    M3-15, M3-08's source rule moves into M3-14, and M3-16 owns the final hosted
-    closeout. Defer M3-03D until after cutover and park M3-09 outside the chain.
+    M3-16, M3-08's source rule moves into M3-15, and M3-17 owns the final hosted
+    closeout. Defer M3-03D until after closeout and park M3-09 outside the chain.
     M3-07 receives no replacement because this feature proposes additions and
     preserves direct owner editing of existing Plan content; AI-driven changes
     to existing sessions require a new approved feature if wanted later.
@@ -739,21 +754,24 @@ migration/RLS/privilege/read-path evidence, Preview verification, and explicit
 product-owner acceptance.
 
 Approval preserves accepted M1/M3 governance and validation documents but
-authorizes the clean-cutover behavior as future ticket scope. It does not
+authorizes the clean-reset behavior as future ticket scope. It does not
 dispatch a builder, delete any data, apply a migration, change the founder
 database, enable a live provider, incur spend, or authorize external-user or
 commercial use.
 
-On 14 August 2026 the product owner separately authorized this one-time working
+On 14 August 2026 the product owner revised and authorized this one-time working
 agreement amendment:
 
-> The F-005 founder clean cutover may delete the explicitly approved pre-cutover
-> plan, proposal, and completion records after the dedicated cutover ticket,
-> reviewed commit, and final product-owner confirmation. This is a one-time
-> exception; all records created after rolling-plan activation remain permanent.
+> The F-005 founder reset may permanently delete the explicitly approved
+> pre-reset plan, proposal, completion, and correction records and remove their
+> exclusive legacy schema and runtime after dedicated M3-11, its reviewed
+> commit, a maintenance-safe founder deployment, and final product-owner
+> confirmation. This is a one-time exception; all records created through a
+> replacement model remain permanent from that model's first write onward.
 
 `AGENTS.md` is protected from agent edits, so this approved exception is
-persisted here and must be quoted in the eventual cutover ticket's Agent brief.
-It does not authorize an earlier ticket to delete anything. The post-activation
-invariant remains: proposals, planned history, and actual completions are
-separate permanent records, and replanning never rewrites them.
+persisted here and must be quoted in M3-11's eventual Agent brief. It does not
+authorize deletion before M3-11's independently reviewed implementation,
+maintenance-safe deployment, and final confirmation. The replacement invariant
+remains: proposals, planned history, and actual completions are separate
+permanent records, and replanning never rewrites them.

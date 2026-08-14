@@ -4,8 +4,8 @@
 
 **Triage:** wontfix
 
-**Disposition:** Do not dispatch this whole-version contract. M3-11 owns manual
-continuous planning and M3-15 owns AI proposal application.
+**Disposition:** Do not dispatch this whole-version contract. M3-12 owns manual
+continuous planning and M3-16 owns AI proposal application.
 
 **Milestone:** M3
 

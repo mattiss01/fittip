@@ -1,4 +1,4 @@
-# M3-12: Private saved-session library
+# M3-13: Private saved-session library
 
 **Status:** proposed — not approved for implementation
 
@@ -10,9 +10,9 @@
 
 **Tier:** 1 — private owner data, schema, authorization, RLS, and visible behavior
 
-**Depends on:** M3-11 accepted.
+**Depends on:** M3-12 accepted.
 
-**Blocks:** M3-13 and every later F-005 replacement slice.
+**Blocks:** M3-14 and every later F-005 replacement slice.
 
 ## Outcome
 
@@ -27,7 +27,7 @@ proposed, or completed training that already exists.
 - Explicit save from an eligible owned planned session or Coach suggestion
   without adding, accepting, moving, or otherwise changing Plan content.
 - Reuse into a reviewed one-off session now, and a stable copy boundary that
-  M3-13 can use for recurring-series templates.
+  M3-14 can use for recurring-series templates.
 - Reusable sport-agnostic session and activity fields only; exclude dates,
   occurrences, completion state, Plan locks, proposal decisions, and source
   history.
@@ -40,11 +40,11 @@ proposed, or completed training that already exists.
 
 - No live link, versioning, archive, synchronization, sharing, global library,
   recommendation engine, or automatic save of AI output.
-- No recurring-series behavior, consumer activation, AI generation,
-  regeneration, or cutover.
+- No recurring-series behavior, replacement consumers, AI generation,
+  regeneration, or destructive reset.
 
 ## Approval boundary
 
-This shell records the approved F-005 decomposition only. After M3-11 is
+This shell records the approved F-005 decomposition only. After M3-12 is
 accepted, the lead must create the exact dispatch contract and Agent brief and
 obtain separate product-owner approval before Tier 1 implementation.

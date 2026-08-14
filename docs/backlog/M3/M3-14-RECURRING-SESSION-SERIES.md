@@ -1,4 +1,4 @@
-# M3-13: Recurring session series
+# M3-14: Recurring session series
 
 **Status:** proposed — not approved for implementation
 
@@ -10,9 +10,9 @@
 
 **Tier:** 1 — temporal schema, history, authorization, RLS, and concurrency
 
-**Depends on:** M3-12 accepted.
+**Depends on:** M3-13 accepted.
 
-**Blocks:** M3-14 and every later F-005 replacement slice.
+**Blocks:** M3-15 and every later F-005 replacement slice.
 
 ## Outcome
 
@@ -41,10 +41,11 @@ changes preserve past and completed training.
 
 - No calendar import/export, reminders, background materialization, arbitrary
   recurrence language, or AI mutation of a series.
-- No consumer activation, AI proposal application, regeneration, or cutover.
+- No replacement logging/Progress/AI consumers, AI proposal application,
+  regeneration, or destructive reset.
 
 ## Approval boundary
 
-This shell records the approved F-005 decomposition only. After M3-12 is
+This shell records the approved F-005 decomposition only. After M3-13 is
 accepted, the exact schema, expansion, edit-scope, and UI contract needs its own
 Agent brief and separate product-owner approval before Tier 1 implementation.

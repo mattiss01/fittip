@@ -1,11 +1,11 @@
 # M3-03C: The roadmap as an optional plan input
 
-**Status:** retired — merged into M3-15 by the product owner on 14 August 2026
+**Status:** retired — merged into M3-16 by the product owner on 14 August 2026
 
 **Triage:** wontfix
 
 **Disposition:** Do not dispatch this standalone contract. Its roadmap-input
-and visible proposal-reasoning behavior moves into M3-15; its whole-version and
+and visible proposal-reasoning behavior moves into M3-16; its whole-version and
 legacy Progress assumptions do not.
 
 **Milestone:** M3

@@ -4,7 +4,7 @@
 
 **Triage:** wontfix
 
-**Disposition:** Do not dispatch. M3-15 proposes additions beside existing Plan
+**Disposition:** Do not dispatch. M3-16 proposes additions beside existing Plan
 content and the owner edits existing sessions directly. A future Coach-driven
 replacement or cancellation capability requires a new approved feature and
 ticket.

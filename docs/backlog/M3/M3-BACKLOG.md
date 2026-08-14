@@ -90,21 +90,22 @@ commercial use, or production.
 | P1 | [M3-02 Roadmap proposal](M3-02-ROADMAP-PROPOSAL.md) | accepted 12 Aug 2026 | M3-01B accepted and accepted M2 foundations | Owner-scoped structured high-level roadmap proposal with phases, milestones, uncertainty, review points, source versions, edit/reject/accept boundary; no detailed plan | Accepted against `d55c343`, merged as `04cebc8`. Three review passes; the per-source context allocation and the raised input ceiling are approved and recorded |
 | P1 | [M3-03 Selected-horizon plan proposal](M3-03-SELECTED-HORIZON-PLAN-PROPOSAL.md) | accepted 13 Aug 2026 | M3-01 and M3-02 accepted | **Split 12 Aug 2026.** User-selected 1–7 consecutive owner-local dates, the `fittip.seven-day-plan.v2` bump, **session-level** sport-agnostic sessions with goal allocation, constraints, alternatives, reasoning, tiered safety, memory extraction, reject; no activity detail, no roadmap input, no regeneration, no acceptance | Accepted exact `86aa315`; merged as `2714fba`. Master CI, founder Production deployment, hosted database/security evidence, and authenticated 390px smoke passed |
 | P1 | [M3-10 Rolling-plan foundation](M3-10-ROLLING-PLAN-FOUNDATION.md) | accepted | F-005 approved; ADR-016 accepted; one-cutover exception authorized | Dormant owner-scoped rolling-plan identity, current planned-session state, atomic before/after change log, owner revision, RLS/grants/indexes, and concurrency; no UI, activation, old-data mutation, or AI | Accepted by the product owner on 14 Aug 2026 against reviewed implementation `3974414`, green CI, matching Preview, and founder Supabase migration/security evidence |
-| P1 | [M3-11 Manual continuous planning](M3-11-MANUAL-CONTINUOUS-PLANNING.md) | proposed | M3-10 accepted | One-off Plan changes, manual Recovery day labels, daily caps, locks, conflicts, and understandable history on the rolling model | Draft the exact contract after M3-10 acceptance, then separately approve Tier 1 dispatch |
-| P1 | [M3-12 Private saved-session library](M3-12-PRIVATE-SAVED-SESSION-LIBRARY.md) | proposed | M3-11 accepted | Owner-only reusable session templates, explicit save, copy-by-value reuse, edit/delete, and mobile review; no sharing, live link, versioning, or dedupe | Draft the exact contract after M3-11 acceptance, then separately approve Tier 1 dispatch |
-| P1 | [M3-13 Recurring session series](M3-13-RECURRING-SESSION-SERIES.md) | proposed | M3-12 accepted | Constrained daily/weekly recurrence, bounded expansion, occurrence exceptions, this-and-future successors, DST, locks, and history | Draft the exact contract after M3-12 acceptance, then separately approve Tier 1 dispatch |
-| P1 | [M3-14 Replacement consumer readiness](M3-14-REPLACEMENT-CONSUMER-READINESS.md) | proposed | M3-13 accepted | Dormant Plan/Today/logging/Progress/AI consumers, replacement permanent completion/correction records, and M3-08's exact-sent-completion source rule | Draft the exact contract after M3-13 acceptance, then separately approve Tier 1 dispatch |
-| P1 | [M3-15 AI proposal application](M3-15-AI-PROPOSAL-APPLICATION.md) | proposed | M3-14 accepted | Fresh 1–7-day Coach proposals composed with current Plan content, M3-03C roadmap input, per-item choices, direct Plan edits, atomic Finish review, discard, locks, and conflicts | Draft the exact contract after M3-14 acceptance, then separately approve Tier 1 dispatch |
-| P1 | [M3-03B Rolling-plan proposal regeneration](M3-03B-PLAN-REGENERATION.md) | proposed — paused for rewrite | M3-15 accepted | Historical pre-F-005 draft; retain the identifier but replace the contract with F-005 preservation, omission, feedback, predecessor, charge, and cap rules | Do not dispatch the current text. Rewrite and separately approve it only after M3-15 acceptance |
-| P1 | [M3-16 Clean cutover and activation](M3-16-CLEAN-CUTOVER-ACTIVATION.md) | proposed | M3-10 through M3-15 and rewritten M3-03B accepted | Approved destructive clean cutover, complete consumer activation, preserved-domain verification, and narrow hosted milestone closeout | After all dependencies, approve the exact Tier 1 contract; execution later requires explicit **Run the destructive cutover** confirmation |
-| P2 | [M3-03C Roadmap as a plan input](M3-03C-ROADMAP-AS-PLAN-INPUT.md) | retired — merged into M3-15 | — | Historical standalone draft; relevant roadmap input and visible reasoning move into M3-15 | Do not dispatch |
-| P2 | [M3-03D On-demand session detail](M3-03D-ON-DEMAND-SESSION-DETAIL.md) | proposed — deferred | M3-16 accepted before rewrite | Optional later Coach detail for one stable proposed or rolling-plan session | Rewrite after cutover and obtain separate approval if still wanted |
-| P1 | [M3-04 Plan edit, lock, and acceptance](M3-04-PLAN-EDIT-LOCK-ACCEPTANCE.md) | retired — superseded | — | Historical whole-version draft replaced by M3-11 and M3-15 | Do not dispatch |
-| P1 | [M3-05 Consolidated M3 validation](M3-05-M3-VALIDATION-SLICE.md) | retired — replaced | — | Historical exhaustive validation draft; M3-16 owns the narrow final hosted closeout | Do not dispatch |
+| P1 | [M3-11 Legacy training reset](M3-11-LEGACY-TRAINING-RESET.md) | proposed | M3-10 accepted | Permanently delete old training records and remove their exclusive schema/runtime; preserve M3-10 and named non-training domains behind maintenance-safe routes | Add the Agent brief and separately approve Tier 1 dispatch; hosted execution later requires explicit **Run the destructive cutover** confirmation |
+| P1 | [M3-12 Manual continuous planning](M3-12-MANUAL-CONTINUOUS-PLANNING.md) | proposed | M3-11 accepted and founder reset recorded | Restore `/home/plan` directly with one-off Plan changes, Recovery day labels, caps, locks, conflicts, and understandable history | Draft the exact contract after M3-11 acceptance, then separately approve Tier 1 dispatch |
+| P1 | [M3-13 Private saved-session library](M3-13-PRIVATE-SAVED-SESSION-LIBRARY.md) | proposed | M3-12 accepted | Owner-only reusable session templates, explicit save, copy-by-value reuse, edit/delete, and mobile review; no sharing, live link, versioning, or dedupe | Draft the exact contract after M3-12 acceptance, then separately approve Tier 1 dispatch |
+| P1 | [M3-14 Recurring session series](M3-14-RECURRING-SESSION-SERIES.md) | proposed | M3-13 accepted | Constrained daily/weekly recurrence, bounded expansion, occurrence exceptions, this-and-future successors, DST, locks, and history | Draft the exact contract after M3-13 acceptance, then separately approve Tier 1 dispatch |
+| P1 | [M3-15 Replacement consumer readiness](M3-15-REPLACEMENT-CONSUMER-READINESS.md) | proposed | M3-14 accepted | Restore Today/logging/Progress/roadmap, replacement permanent completion/correction records, AI history interface, and M3-08's exact-source rule | Draft the exact contract after M3-14 acceptance, then separately approve Tier 1 dispatch |
+| P1 | [M3-16 AI proposal application](M3-16-AI-PROPOSAL-APPLICATION.md) | proposed | M3-15 accepted | Fresh 1–7-day Coach proposals composed with current Plan content, M3-03C roadmap input, per-item choices, direct Plan edits, atomic Finish review, discard, locks, and conflicts | Draft the exact contract after M3-15 acceptance, then separately approve Tier 1 dispatch |
+| P1 | [M3-03B Rolling-plan proposal regeneration](M3-03B-PLAN-REGENERATION.md) | proposed — paused for rewrite | M3-16 accepted | Historical pre-F-005 draft; retain the identifier but replace the contract with F-005 preservation, omission, feedback, predecessor, charge, and cap rules | Do not dispatch the current text. Rewrite and separately approve it only after M3-16 acceptance |
+| P1 | [M3-17 Final rolling-plan closeout](M3-17-FINAL-ROLLING-PLAN-CLOSEOUT.md) | proposed | M3-10 through M3-16 and rewritten M3-03B accepted | Narrow integrated founder verification and evidence reconciliation; no cutover, activation switch, or data change | Draft the smallest closeout contract after all dependencies; re-tier any discovered implementation work |
+| P2 | [M3-03C Roadmap as a plan input](M3-03C-ROADMAP-AS-PLAN-INPUT.md) | retired — merged into M3-16 | — | Historical standalone draft; relevant roadmap input and visible reasoning move into M3-16 | Do not dispatch |
+| P2 | [M3-03D On-demand session detail](M3-03D-ON-DEMAND-SESSION-DETAIL.md) | proposed — deferred | M3-17 accepted before rewrite | Optional later Coach detail for one stable proposed or rolling-plan session | Rewrite after closeout and obtain separate approval if still wanted |
+| P1 | [M3-04 Plan edit, lock, and acceptance](M3-04-PLAN-EDIT-LOCK-ACCEPTANCE.md) | retired — superseded | — | Historical whole-version draft replaced by M3-12 and M3-16 | Do not dispatch |
+| P1 | [M3-05 Consolidated M3 validation](M3-05-M3-VALIDATION-SLICE.md) | retired — replaced | — | Historical exhaustive validation draft; M3-17 owns the narrow final hosted closeout | Do not dispatch |
 | P2 | [M3-06 A plan never starts in the past](M3-06-PAST-DATED-PLAN-HORIZONS.md) | retired — absorbed by F-005 | — | Historical bounded-plan draft; F-005 owns today/future-only planning | Do not dispatch |
 | P1 | [M3-07 Replanning an accepted horizon](M3-07-REPLAN-ACCEPTED-HORIZON.md) | retired — no replacement | — | Historical whole-version replan draft; current Coach planning adds suggestions and never modifies existing sessions | Do not dispatch; any future AI modification capability requires a new approved feature |
-| P2 | [M3-08 Bounded completion source references](M3-08-BOUNDED-COMPLETION-SOURCES.md) | retired — merged into M3-14 | — | Historical legacy-path defect; exact sent-completion source behavior moves into replacement context | Do not dispatch separately |
-| P3 | [M3-09 Simultaneous same-key submit](M3-09-SIMULTANEOUS-SAME-KEY-SUBMIT.md) | proposed — parked | none | Real roadmap same-key concurrency copy defect, outside the F-005 chain; no duplicate spend or data | Reconsider after cutover; separate Tier 1 approval remains required |
+| P2 | [M3-08 Bounded completion source references](M3-08-BOUNDED-COMPLETION-SOURCES.md) | retired — merged into M3-15 | — | Historical legacy-path defect; exact sent-completion source behavior moves into replacement context | Do not dispatch separately |
+| P3 | [M3-09 Simultaneous same-key submit](M3-09-SIMULTANEOUS-SAME-KEY-SUBMIT.md) | proposed — parked | none | Real roadmap same-key concurrency copy defect, outside the F-005 chain; no duplicate spend or data | Reconsider after closeout; separate Tier 1 approval remains required |
 
 ## Dependency chain
 
@@ -116,22 +117,23 @@ Accepted M2 goals + coaching context + guided onboarding + targeted closeout
         -> M3-03 exact selected 1–7-day plan proposal
           -> F-005 + ADR-016 approved replacement
             -> M3-10 rolling-plan foundation
-              -> M3-11 manual continuous planning
-                -> M3-12 private saved-session library
-                  -> M3-13 recurring session series
-                    -> M3-14 replacement consumer readiness (+ M3-08 rule)
-                      -> M3-15 AI proposal application (+ M3-03C behavior)
-                        -> rewritten M3-03B regeneration
-                          -> M3-16 clean cutover, activation, hosted closeout
+              -> M3-11 legacy training reset
+                -> M3-12 manual continuous planning
+                  -> M3-13 private saved-session library
+                    -> M3-14 recurring session series
+                      -> M3-15 replacement consumer readiness (+ M3-08 rule)
+                        -> M3-16 AI proposal application (+ M3-03C behavior)
+                          -> rewritten M3-03B regeneration
+                            -> M3-17 final rolling-plan closeout
 
 M3-03C, M3-04, M3-05, M3-06, M3-07, and M3-08 are retired standalone
-contracts. M3-03C's relevant behavior moves into M3-15, M3-08's exact-source
-rule moves into M3-14, and M3-16 replaces M3-05's duplicate validation pass.
+contracts. M3-03C's relevant behavior moves into M3-16, M3-08's exact-source
+rule moves into M3-15, and M3-17 replaces M3-05's duplicate validation pass.
 M3-07 has no replacement: the approved Coach flow adds selected suggestions and
 does not modify existing Plan sessions.
 
 M3-03B keeps its identifier but its current pre-F-005 contract must be rewritten
-only after M3-15 is accepted. M3-03D is an optional post-cutover enhancement and
+only after M3-16 is accepted. M3-03D is an optional post-closeout enhancement and
 must then target a stable proposed or rolling-plan session.
 
 M3-09 remains a parked P3 roadmap defect outside the replacement chain. It is
@@ -176,7 +178,7 @@ M3-03 ships after M3-02 so the roadmap surface exists and has been judged before
 detailed planning builds on it. That is a build dependency only — revised
 8 August 2026, a weekly plan generates with no roadmap in existence, and that
 path is first-class rather than a fallback. F-005 later replaced the bounded
-destination and retired M3-04; M3-15 now owns applying selected suggestions to
+destination and retired M3-04; M3-16 now owns applying selected suggestions to
 the rolling Plan without requiring a roadmap.
 
 M3-07 was added on 8 August 2026 after the product owner observed that the
@@ -185,13 +187,13 @@ the same session's decisions: ADR-013 already puts completions and safety flags
 in context and ADR-014's planning note already carries "I got sick Tuesday", so
 there appeared to be one capability. The rolling-plan decision on 14 August
 removed the structure M3-07 depended on: there is no accepted horizon to
-supersede. M3-15 shows existing content, adds only explicitly selected Coach
+supersede. M3-16 shows existing content, adds only explicitly selected Coach
 suggestions, and leaves changes to existing sessions to the owner. M3-07 is
 therefore retired without replacement; a future AI modification capability is
 a new product decision rather than an edit to this historical draft.
 
 M3-05 is retired under the same non-duplicative validation principle previously
-used for M1-05. M3-16 owns the narrow integrated hosted closeout after every
+used for M1-05. M3-17 owns the narrow integrated hosted closeout after every
 replacement slice is independently accepted.
 
 ## Delivery approach — how M3 gets built without paying for iteration
@@ -267,7 +269,8 @@ tester count bypasses this gate.
 Each M3 ticket is independently approved, implemented, reviewed, and accepted.
 Approval of ADR-006, ADR-007, M0-06A, or an earlier M3 ticket does not approve a
 later one.
-Provider output is always a proposal. Under F-005, only M3-15's explicit atomic
+Provider output is always a proposal. Under F-005, only M3-16's explicit atomic
 **Finish review** action may add selected Coach suggestions to the rolling Plan.
-The one-time M3-16 cutover deletes the specifically approved legacy training
-records; every replacement record created after activation remains permanent.
+The one-time M3-11 reset deletes the specifically approved legacy training
+records and exclusive schema/runtime; every replacement record remains
+permanent from its model's first write onward.
