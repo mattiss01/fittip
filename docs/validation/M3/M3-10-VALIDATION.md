@@ -174,9 +174,9 @@ The corrected evidence head `7d29e146a40d80abbe2a5e8965768a0a123e8c5c`
 then passed all three jobs in
 [GitHub Actions run 31824854143](https://github.com/mattiss01/fittip/actions/runs/31824854143).
 Its matching Vercel Preview reached `READY` at
-`https://fittip-4pis99ttx-mattis-3657s-projects.vercel.app`. These results
-predate the snapshot/order/real-contract correction commits above; a new exact
-target run and Preview are therefore pending.
+`https://fittip-4pis99ttx-mattis-3657s-projects.vercel.app`. These historical
+results predate the snapshot/order/real-contract correction commits and are
+superseded by the current exact-target evidence above.
 
 The first focused pgTAP pass after drafting the deferred constraint failed
 24 of 66 assertions because `SET CONSTRAINTS` could not resolve its unqualified
