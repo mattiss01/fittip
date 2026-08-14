@@ -43,6 +43,18 @@ Verified independently during M3-11 review and again by the lead.
 All three are live, owner-reachable surfaces, which is what makes this worth a
 ticket rather than a note.
 
+### A fourth case, and the worst one
+
+`src/app/globals.css:94-95` gives **every** `input:focus` a `#f4cba0` outline
+against the `#fff` input background set at `:90`. Measured: **1.51:1** — worse
+than the three above, and live on every route with a text input, including the
+goals, memory, and onboarding surfaces already listed.
+
+This one was found during M3-11's round-two review and is the reason this ticket
+must not be scoped from the three module rules alone. Fixing only those would
+leave every input on the same routes focusing at 1.51:1 while the ticket read as
+complete.
+
 ## Precedent to follow
 
 M3-11 moved the shared `.shell a:focus-visible`, `.shell button:focus-visible`,
@@ -58,10 +70,12 @@ instead of two.
   custom properties inherit through the DOM and `var(--ledger-ink)` resolves.
   Confirm that in the browser rather than assuming it; a CSS-module class hash
   does not affect custom-property inheritance, but the DOM nesting does.
-- `src/app/globals.css` carries a second ring colour, `#f4cba0`, at lines 95 and
-  212. Line 212 targets `.plan-shell`, which M3-11 leaves dead — decide whether
-  to recolour or delete it. Line 95 is a separate, still-live case and needs its
-  own contrast measurement; do not assume it shares the 1.92:1 figure.
+- `src/app/globals.css:212` also carries `#f4cba0`, targeting `.plan-shell`,
+  which M3-11 leaves dead — decide whether to recolour or delete it. This is
+  separate from the live `:94-95` input rule measured above.
+- The `:94-95` rule is global, not scoped to `.appShell`, so a fix there has a
+  wider blast radius than the three module rules and cannot rely on the
+  `--ledger-*` tokens being in scope. Treat it as its own decision.
 - `src/app/home/plan/proposal/proposal.module.css:110` also carried `#efaa84`,
   but M3-11 deletes that file. Do not reintroduce it.
 
