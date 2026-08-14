@@ -264,6 +264,34 @@ least-privilege execute grants, revoked direct writes, and RLS boundary. Those
 properties were verified directly above; no advisor warning was suppressed or
 changed.
 
+## Post-acceptance master delivery — 14 August 2026
+
+The product owner accepted exact reviewed implementation
+`397441459c0d6a84327ded9910e5926465fcb062` and its matching Preview. The lead
+then fast-forwarded `master` without conflict or integration changes and pushed
+accepted master head `f335e2ce754ed127312bdbfc15d6be1c2a49ddcb` to the
+authorized origin.
+
+[Master CI run 31830793139](https://github.com/mattiss01/fittip/actions/runs/31830793139)
+passed all three jobs for that exact SHA. The founder production deployment
+`dpl_uMoG6EQAeurnhTL8mHiAWXrnRspR` reached `READY`/`PROMOTED`; Vercel reports
+Git source `master` at the same SHA. Its immutable URL is
+`https://fittip-m7wniaufq-mattis-3657s-projects.vercel.app`, the founder alias
+is `https://fittip-gilt.vercel.app`, and the alias returned HTTP 200.
+
+The post-merge founder Supabase smoke reconfirmed all fourteen local and remote
+migration versions aligned through `20260814164502`. All five rolling-plan
+tables remained empty. Each retained RLS, authenticated owner `SELECT`, denied
+authenticated direct mutation, and denied anonymous reads. Both RPCs retained
+an empty `search_path`, authenticated-only execute, and denied anonymous and
+service-role execute; the read remained stable/security-invoker and the write
+remained the reviewed atomic security-definer boundary.
+
+No complete local suite was repeated after the unchanged fast-forward merge;
+the exact master CI run is the post-merge suite evidence. This final
+validation-only record follows the evidence-commit exception and changes no
+runtime, schema, authorization, or deployment behavior.
+
 ## Known limitations
 
 - The new model remains dormant; no application consumer may read or write it.
