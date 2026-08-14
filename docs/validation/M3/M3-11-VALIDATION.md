@@ -13,56 +13,56 @@
 `cc60c11357cbeae1fa14b2fbe3293384d79945f7`
 
 **Exact implementation review target:**
-`312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46`
+`ce1457683d29df87501b4cdf1371ff64c05710ed`
 
-**Exact-target CI run:**
-[31842432354](https://github.com/mattiss01/fittip/actions/runs/31842432354) —
-green on all three jobs for exactly
-`312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46`, including the 390px browser flows.
-The lead pushed that commit as `ticket/m3-11-review-target` to obtain a run at
-the implementation SHA rather than at the evidence head. The evidence head
-`0df233b` has its own green run,
-[31842418730](https://github.com/mattiss01/fittip/actions/runs/31842418730).
+**Exact-target CI run:** none yet. Pending the lead's push. Nothing in this
+record may be read as automated-test evidence for `ce14576` until that run is
+green for exactly that SHA.
 
-This supersedes run `31838200437`, which belongs to the rejected `60583aa` and
-was cited in the builder handoff as the authentication-flow evidence. That
-citation is withdrawn: the browser job is green on the target's own run, so no
-cross-SHA borrowing is needed. The builder's local `auth.spec.ts` failure is a
-Node 22.14.0 environment artifact against the repository's `>=24.18.0`
-requirement and does not reproduce in CI.
+**Matching Vercel Preview:** none yet. Pending the same push.
 
-**Matching Vercel Preview:**
-`https://fittip-eekbx1f3a-mattis-3657s-projects.vercel.app`
-(deployment `5913704119`, state `success`).
+**Invalidated evidence.** Independent review rejected
+`312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46` on the Spec axis. Its green CI run
+[31842432354](https://github.com/mattiss01/fittip/actions/runs/31842432354) and
+its matching Preview `https://fittip-eekbx1f3a-mattis-3657s-projects.vercel.app`
+(deployment `5913704119`) approve nothing and are invalidated by the second
+correction round. The evidence head `0df233b` and its run
+[31842418730](https://github.com/mattiss01/fittip/actions/runs/31842418730) are
+invalidated with it. Run `31838200437` belongs to the earlier rejected `60583aa`
+and was already withdrawn.
 
-The deployment's reported Git SHA is `0df233b`, the evidence head, **not**
-`312a8ba`. Vercel did not build the `ticket/m3-11-review-target` ref, so no
-Preview exists at the implementation SHA. The two commits differ by exactly one
-file — this validation record, under `docs/` — as
-`git diff --stat 312a8ba..0df233b` shows: 1 file changed, 47 insertions, 25
-deletions, no runtime, schema, route, style, or test change. The deployed
-application is therefore byte-identical to the review target, and this Preview
-is the correct hosted surface for reviewing `312a8ba`. Recorded as an exact
-statement of what was verified rather than as a claim of SHA equality.
+CI was green on `312a8ba` because every seeded roadmap proposal carried exactly
+one provenance source, which is precisely the case the defect does not reach.
+A green run is evidence that the asserted cases hold, not that the unasserted
+one does; the second round widens the fixture so the case is asserted.
+
+The builder's local `auth.spec.ts` failure remains a Node 22.14.0 environment
+artifact against the repository's `>=24.18.0` requirement and does not reproduce
+in CI.
 
 **Preview database state:** the Preview runs against the founder Supabase
 project with the 11 legacy tables still present; the M3-11 migration has not
 been applied to any hosted project. This is the intended order, not a gap. The
 maintenance routes are static and query-free, so they must render correctly
 before the destructive migration runs — exactly what runbook steps B1-B2
-require and what this Preview demonstrates.
+require and what the Preview is there to demonstrate.
 
-**Superseded review target:** `60583aab45dfb87d34eef89f0cbc49f5358d2373` —
-rejected by independent review on both Standards and Spec axes. Its green CI
-run and `READY` Preview are historical only and approve nothing.
+**Superseded review targets:**
+
+- `60583aab45dfb87d34eef89f0cbc49f5358d2373` — rejected on both Standards and
+  Spec axes.
+- `312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46` — rejected on the Spec axis for the
+  duplicate-key defect described under "Second correction round".
+
+Their CI runs and `READY` Previews are historical only and approve nothing.
 
 **Helper refs — do not review from these branch names.** Two non-ticket refs
 exist on `origin` solely to trigger exact-SHA CI:
-`ticket/m3-11-review-target` at `312a8ba` (current, correct) and
-`ticket/m3-11-implementation-review` at the rejected `60583aa` (stale, left by
-the previous builder). The stale ref is a trap for anyone selecting a review
-target by branch name. The lead deletes both after independent review; until
-then, resolve the target by SHA, never by ref.
+`ticket/m3-11-review-target` at the rejected `312a8ba` and
+`ticket/m3-11-implementation-review` at the rejected `60583aa`. Both are now
+stale, and both are traps for anyone selecting a review target by branch name.
+The lead deletes them after independent review; until then, resolve the target
+by SHA, never by ref.
 
 **Implementation commit:**
 `e370dbe20d410488b13fd7ecd69a39f7f741314e`
@@ -77,9 +77,11 @@ then, resolve the target by SHA, never by ref.
   onboarding entry under You.
 - `312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46` — resolves the six
   independent-review findings recorded under "Review corrections applied".
+- `ce1457683d29df87501b4cdf1371ff64c05710ed` — resolves the four findings
+  recorded under "Second correction round". It is the new exact review target.
 
 **Final validation evidence head:** the evidence-only commit that follows
-`312a8ba` records the target SHA and the reconciled manifest, and is where the
+`ce14576` records the target SHA and the reconciled manifest, and is where the
 lead writes the exact-SHA CI URL and the matching Preview. It changes only this
 document — no runtime, schema, or CI behavior — and so claims the
 evidence-commit exception in `AGENTS.md`.
@@ -144,13 +146,39 @@ resolution:
    offset ring when focused, so the indicator is proven visible and not merely
    present. The 390x844 screenshot is refreshed with the action focused.
 
-   Blast radius, stated deliberately: the outline rule at
-   `src/app/home/home.module.css:97-103` is shared by every focusable element
-   in the home shell, so this changes the focus colour on all home routes, not
-   only the six maintenance routes. It is a one-token change to a rule that
-   failed WCAG 1.4.11 everywhere it applied; scoping the fix to the maintenance
-   routes would have left the same defect on the surfaces that remain in use
-   and split the focus treatment in two. No other visual rule changed.
+   Blast radius, stated precisely — the earlier wording overstated it and is
+   corrected here. The changed rule is
+   `.navigation a:focus-visible, .shell a:focus-visible,
+   .shell button:focus-visible, .card summary:focus-visible` at
+   `src/app/home/home.module.css:97-102`. Its reach is two different things:
+
+   - `.navigation a:focus-visible` reaches the bottom navigation, which the
+     home layout renders on **every** home route.
+   - `.shell` and `.card` are consumed by
+     `src/components/home/training-maintenance.tsx` (the six maintenance
+     routes) and `src/app/home/you/page.tsx`, and `.shell` is also the `<main>`
+     wrapper on the You goals, memory, and onboarding routes and their
+     `loading`/`error` states.
+
+   It does **not** follow that the `#efaa84` ring is gone from the product. The
+   identical 1.92:1 ring is still present and untouched at
+   `src/app/home/you/goals/goals.module.css:387`,
+   `src/app/home/you/memory/memory.module.css:430`, and
+   `src/app/home/you/onboarding/onboarding.module.css:181`, and
+   `src/app/globals.css:212` still carries `#f4cba0` on the now-unused
+   `.plan-shell`. Those three modules declare their own focus rules for the
+   controls inside their managers. For `input`, `textarea`, and `select` the
+   home-shell rule has no matching selector at all, so `#efaa84` unambiguously
+   still applies; for `button`, `a`, and `summary` the two rules tie on
+   specificity and the winner depends on stylesheet order in the bundle. Either
+   way the defect survives on those surfaces.
+
+   Leaving them alone is deliberate: goals, memory, and onboarding are
+   preserved domains outside M3-11's approved scope, and widening a Tier 1
+   destructive ticket to restyle them is the wrong place to take that risk. The
+   residual ring is recorded under "Known limitations" and needs its own
+   follow-up ticket, which this builder did not create. No other visual rule
+   changed.
 3. **The runbook requested the destructive phrase too early.** The phrase was
    preflight step A8, before the founder application had been deployed or
    verified. It is now section B3, an explicit authorization gate that comes
@@ -188,15 +216,91 @@ The review's advisory-only note — dead legacy selectors remaining in
 correction above, and speculative CSS deletion inside a Tier 1 destructive
 ticket is the wrong place to take that risk. It belongs in a Tier 3 cleanup.
 
+## Second correction round
+
+Independent review rejected `312a8ba` on the Spec axis. Four findings, and what
+this round does about each.
+
+1. **Blocking, Spec: the migration aborted on a duplicate key.** The statement
+   that expires source-dependent roadmap proposals read
+   `select distinct proposal.id, …, pg_catalog.clock_timestamp()` from
+   `roadmap_proposals` joined to `roadmap_proposal_sources`. `clock_timestamp()`
+   is `VOLATILE` and is evaluated per input row beneath the unique step, so
+   `DISTINCT` deduplicated a tuple that included the differing timestamp and
+   never collapsed the join's fan-out. A proposal with N matching legacy sources
+   produced up to N rows for one `proposal_id`, which is the primary key of
+   `roadmap_proposal_decisions` — see
+   `20260810213904_m3_02_roadmap_proposals.sql:225`, "One terminal decision per
+   proposal, enforced by the primary key".
+
+   Real data reaches it. At the approved base,
+   `src/server/ai/context-source.ts` emitted one `completion` source per
+   completion group **plus** a `plan_version` source, so a real undecided
+   proposal carries at least two legacy sources. The failure would have landed
+   at runbook step B5 (`supabase db push --linked`), after the destructive
+   authorization had already been given — the migration is one transaction, so
+   it would have changed nothing, but it would have stalled the cutover at its
+   least recoverable moment.
+
+   The statement now selects from `roadmap_proposals` alone and expresses both
+   predicates as `exists` / `not exists` subqueries. That removes the fan-out
+   and the need for `DISTINCT` at once, and emits exactly one row per proposal
+   by construction because `roadmap_proposals.id` is a primary key. Semantics
+   are unchanged: only proposals holding a `plan_version` or `completion`
+   source, only those with no existing decision, `decision = 'expired'`,
+   `accepted_version_id` null, and the widened check constraint still satisfied.
+   No `CASCADE`, no change to the 11-table scope, and no change to the accepted
+   fail-closed `accept_roadmap_proposal` shim.
+
+   Editing the migration file in place is correct here: it has not been applied
+   to any hosted project, so the forward-only rule does not bind. Its SHA-256
+   changes accordingly and is restated below.
+
+2. **Blocking, Standards: no regression coverage.** Every proposal in
+   `m3_11_pre_reset.sql` had exactly one source, which is exactly why a green CI
+   run missed the defect. The fixture now seeds a second completion group
+   (`completed_sessions` + `completion_heads`, an `unplanned` revision-1 row)
+   and a fourth roadmap case: an undecided proposal with four provenance rows —
+   one `goal`, one `plan_version`, and two `completion` — so three of them are
+   legacy kinds and the fan-out is N=3.
+   `m3_11_post_reset_verify.sql` asserts that this proposal ends with exactly
+   one decision row, that it is `expired` with a null `accepted_version_id`,
+   and that it still carries three legacy sources, so the case cannot be
+   silently narrowed back to N=1 without the assertion failing.
+
+   The coverage was checked for teeth rather than assumed. Run against the
+   **old** statement with the new fixtures, `npm run test:m3-11-seeded-reset`
+   fails at statement 4 of the migration, and the same statement executed
+   directly reports `duplicate key value violates unique constraint
+   "roadmap_proposal_decisions_pkey"` with
+   `DETAIL: Key (proposal_id)=(31100000-0000-4000-8000-0000000000b2) already
+   exists.` Against the corrected statement the same harness passes.
+
+3. **Standards: an unsupported accessibility claim.** The previous record
+   claimed the old `#efaa84` ring "failed WCAG 1.4.11 everywhere it applied" and
+   that scoping the fix would have "left the same defect on the surfaces that
+   remain in use". The diff does not support that: the identical ring is still
+   present on the goals, memory, and onboarding modules, which declare their own
+   focus rules. The claim and the "all home routes" radius description are
+   rewritten under "Review corrections applied" item 2 to state the actual
+   reach, and the surviving ring is now a known limitation needing its own
+   follow-up ticket. Those three files are deliberately not touched — they are
+   preserved domains outside this ticket's approved scope — and this builder did
+   not create the follow-up ticket, which is the product owner's call.
+
+4. **Minor: two undisclosed consequences.** The deleted
+   `src/app/home/progress/[id]` deep link and the retained-but-unreferenced
+   roadmap server modules are now recorded under "Known limitations".
+
 ## Complete change manifest
 
 `git diff --stat
-cc60c11357cbeae1fa14b2fbe3293384d79945f7..312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46`:
+cc60c11357cbeae1fa14b2fbe3293384d79945f7..ce1457683d29df87501b4cdf1371ff64c05710ed`:
 
 ```text
  .github/workflows/ci.yml                           |   81 +-
  README.md                                          |   26 +-
- docs/validation/M3/M3-11-VALIDATION.md             |  919 ++++++++++++++
+ docs/validation/M3/M3-11-VALIDATION.md             |  979 +++++++++++++++
  .../M3/evidence/M3-11-maintenance-390x844.png      |  Bin 0 -> 56491 bytes
  docs/validation/README.md                          |    2 +
  e2e/auth.spec.ts                                   |   14 +-
@@ -311,19 +415,19 @@ cc60c11357cbeae1fa14b2fbe3293384d79945f7..312a8ba36c3af0c8fe9a1551f26394fcaf2e3a
  src/server/training/training-measurements.ts       |  234 ++++
  src/server/training/training-records.test.ts       |  183 ---
  src/server/training/training-records.ts            |  527 --------
- .../20260814195107_m3_11_legacy_training_reset.sql |  140 +++
+ .../20260814195107_m3_11_legacy_training_reset.sql |  154 +++
  .../tests/database/m1_01_training_records.test.sql | 1195 ------------------
  .../database/m1_03_completion_writes.test.sql      |  409 ------
  .../database/m3_02_roadmap_proposals.test.sql      | 1321 --------------------
  .../m3_03_plan_duration_correction.test.sql        |   84 --
  .../tests/database/m3_03_plan_proposals.test.sql   | 1012 ---------------
  .../database/m3_11_legacy_training_reset.test.sql  |  219 ++++
- .../tests/fixtures/m3_11_post_reset_verify.sql     |  190 +++
- supabase/tests/fixtures/m3_11_pre_reset.sql        |  405 ++++++
+ .../tests/fixtures/m3_11_post_reset_verify.sql     |  217 ++++
+ supabase/tests/fixtures/m3_11_pre_reset.sql        |  491 ++++++++
  .../integration/m1_01_concurrent_data_api.mjs      |  209 ----
  .../integration/m3_02_concurrent_acceptance.mjs    |  401 ------
  supabase/tests/integration/m3_11_seeded_reset.mjs  |   55 +
- 129 files changed, 2756 insertions(+), 24904 deletions(-)
+ 129 files changed, 2943 insertions(+), 24904 deletions(-)
 ```
 
 The review corrections alone, `git diff --stat
@@ -340,19 +444,41 @@ The review corrections alone, `git diff --stat
  7 files changed, 920 insertions(+), 121 deletions(-)
 ```
 
-No file is added, deleted, or renamed by the corrections; all seven were
+No file is added, deleted, or renamed by those corrections; all seven were
 already in the ticket's scope. The migration, generated types, server modules,
-`.github/**`, and `package.json` are untouched, and the migration SHA-256 below
-is unchanged from `60583aa`.
+`.github/**`, and `package.json` were untouched, and the migration SHA-256 was
+unchanged from `60583aa`.
+
+The second correction round alone, `git diff --stat
+312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46..ce1457683d29df87501b4cdf1371ff64c05710ed`:
+
+```text
+ docs/validation/M3/M3-11-VALIDATION.md             | 110 ++++++++++++++++-----
+ .../20260814195107_m3_11_legacy_training_reset.sql |  30 ++++--
+ .../tests/fixtures/m3_11_post_reset_verify.sql     |  37 ++++++-
+ supabase/tests/fixtures/m3_11_pre_reset.sql        |  86 ++++++++++++++++
+ 4 files changed, 225 insertions(+), 38 deletions(-)
+```
+
+That range spans three commits: the lead's evidence-only `0df233b` and
+`7757b3b`, which touch this document alone, and the builder's `ce14576`, which
+touches only the three `supabase/**` files. No file is added, deleted, or
+renamed, and all four were already in the ticket's scope. Application source,
+generated types, `.github/**`, `package.json`, the Playwright specs, and the
+screenshot are untouched. The migration file itself does change, so its SHA-256
+changes with it; the new value is recorded below and supersedes the old one
+everywhere, including runbook step A1.
 
 
 Navigation notes for non-obvious files:
 
 - `m3_11_pre_reset.sql`, `m3_11_post_reset_verify.sql`, and
-  `m3_11_seeded_reset.mjs` form the local-only proof: reset to M3-10, seed one
-  row through all 11 removed tables plus representative preserved domains,
-  apply only M3-11, then assert absence, counts, references, expiration, and
-  grants.
+  `m3_11_seeded_reset.mjs` form the local-only proof: reset to M3-10, seed at
+  least one row through all 11 removed tables plus representative preserved
+  domains, apply only M3-11, then assert absence, counts, references,
+  expiration, and grants. The seed deliberately includes an undecided roadmap
+  proposal with three legacy provenance sources, which is the regression case
+  for the duplicate-key defect described under "Second correction round".
 - `training-measurements.ts` retains only the shared validation used by M3-10;
   it contains no legacy persistence model.
 - `local-date.ts` retains the pure timezone helper used by the AI horizon and
@@ -381,7 +507,11 @@ other file is renamed.
   `completion_heads`, `completed_sessions`, `planned_activities`,
   `planned_sessions`, `detailed_plan_heads`, and `detailed_plan_versions`.
 - The committed migration SHA-256 is
-  `bdf8eee66e1ebe471ce23e354a07f58eb2fc2ef3740f08bbee073562b5036951`.
+  `5a243042c1862faf91fc80502d8590d82bb7d686b5f57f1a4a3b461b8609a735`, taken over
+  the Git blob content (LF endings) so it reproduces on any checkout. It
+  replaces `bdf8eee66e1ebe471ce23e354a07f58eb2fc2ef3740f08bbee073562b5036951`,
+  which belongs to the rejected `312a8ba`; runbook step A1 must compare against
+  the new value.
 - It also drops the exclusive completion/manual-plan/plan-proposal functions,
   one completion trigger/function, and four plan receipt types. The generated
   TypeScript surface contains none of those names.
@@ -408,9 +538,31 @@ other file is renamed.
 
 ## Tests and builder results
 
+Second correction round, run against this round's tree. The first two rows are
+the negative control: they are supposed to fail, and they are what proves the
+new fixture case exercises the previously broken path rather than passing
+vacuously.
+
 | Command or check | Result |
 |---|---|
-Re-run against the corrected tree:
+| `npm run test:m3-11-seeded-reset` with the new fixtures against the **old** `select distinct … join` statement | FAILS as intended; `supabase migration up` aborts at statement 4, which is the expiry insert, and the whole migration rolls back |
+| that same old statement run directly inside `begin; … rollback;` on the seeded database | FAILS with `duplicate key value violates unique constraint "roadmap_proposal_decisions_pkey"`, `DETAIL: Key (proposal_id)=(31100000-0000-4000-8000-0000000000b2) already exists` |
+| `npm run test:m3-11-seeded-reset` with the new fixtures against the **corrected** statement | PASS; the same fixture case now yields exactly one `expired` decision and every earlier assertion still holds |
+| `npx supabase db reset --local --no-seed` | PASS; every migration applied from zero through the corrected M3-11 |
+| `npx supabase test db --local supabase/tests/database/m3_11_legacy_training_reset.test.sql` | PASS; 49 assertions |
+| `npx supabase db lint --local --level warning --fail-on warning` | PASS; no issues |
+| `npx supabase db advisors --local --type all --level warn --fail-on warn` | PASS; no issues |
+| `npm run typecheck` | PASS |
+| `npm run lint` | PASS |
+| `git diff --check` | PASS |
+
+Not re-run this round. It changes one SQL statement inside the migration, the
+two seeded fixtures, and this document — no application source, generated type,
+route, style, or Playwright spec — so the build, the 390x844 flow, the Vitest
+files, the type-generation guard, and the runbook SQL are unaffected. CI re-runs
+all of them for the new target, and that run is the authoritative evidence.
+
+First correction round, run against `312a8ba`:
 
 | Command or check | Result |
 |---|---|
@@ -937,10 +1089,34 @@ unset PGURI SNAPSHOTS
 - The runbook's SQL is proven to run and to be non-vacuous against a local
   Postgres holding the same committed migrations. It has never been run against
   the founder project, so the numbers it will report there are unknown.
-- The focus-outline correction changes the shared home-shell rule, so it alters
-  the focus colour on every home route, not only the six maintenance routes.
-  The rationale is recorded under "Review corrections applied"; the 390px
+- The focus-outline correction changes the shared home-shell rule. Through
+  `.navigation a:focus-visible` it alters the bottom-navigation focus colour on
+  every home route; through `.shell`/`.card` it reaches the six maintenance
+  routes, `/home/you`, and the You goals/memory/onboarding wrappers. The 390px
   screenshot covers the maintenance route only.
+- **The 1.92:1 `#efaa84` focus ring survives outside this ticket's scope.** It
+  is untouched at `src/app/home/you/goals/goals.module.css:387`,
+  `src/app/home/you/memory/memory.module.css:430`, and
+  `src/app/home/you/onboarding/onboarding.module.css:181`, and `#f4cba0`
+  remains at `src/app/globals.css:212` on the now-unused `.plan-shell`. Those
+  modules declare their own focus rules for the controls inside their managers,
+  so the home-shell fix does not reliably reach them — definitively not for
+  `input`/`textarea`/`select`, and only by stylesheet order for
+  `button`/`a`/`summary`. Goals, memory, and onboarding are preserved domains
+  outside M3-11's approved scope, so this was left alone deliberately. It needs
+  a follow-up ticket, which this builder did not create.
+- `src/app/home/progress/[id]/page.tsx` is deleted with no maintenance
+  replacement, so a previously reachable authenticated deep link now returns
+  404 rather than the maintenance surface. It is not one of the brief's six
+  routes, and no in-app link to it survives.
+- `src/server/repositories/roadmap-repository.ts`,
+  `src/server/roadmap/roadmap-edit.ts`, and
+  `src/server/roadmap/roadmap-records.ts` survive the reset but are imported by
+  nothing outside themselves and `roadmap-repository.test.ts`. They are
+  retained on purpose as the M3-15 seam, not by oversight. Relatedly,
+  `src/components/home/mobile-navigation.tsx:24` keeps a now-dead
+  `pathname.startsWith("/home/progress/")` branch, since no `/home/progress/*`
+  child route remains.
 - `e2e/auth.spec.ts` could not be completed on this machine. See the note under
   "Tests and builder results".
 - Dead legacy selectors remain in `home.module.css`. That was the review's
@@ -948,10 +1124,15 @@ unset PGURI SNAPSHOTS
 
 ## Independent reviewer checklist
 
-- Review exact implementation target `312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46`
+- Review exact implementation target `ce1457683d29df87501b4cdf1371ff64c05710ed`
   against approved base `cc60c11357cbeae1fa14b2fbe3293384d79945f7`; treat the
-  later validation-only commit as evidence. `60583aa` is superseded: its review,
-  CI run, and Preview approve nothing.
+  later validation-only commit as evidence. `60583aa` and `312a8ba` are both
+  superseded: their reviews, CI runs, and Previews approve nothing.
+- Confirm each of the four findings under "Second correction round" is resolved
+  in the diff. For finding 1, read the expiry statement itself and satisfy
+  yourself that it cannot emit two rows for one `proposal_id`; for finding 2,
+  check that the fixture's fan-out case really carries more than one legacy
+  source and that the post-reset assertion would fail if it did not.
 - Confirm each of the six findings under "Review corrections applied" is
   actually resolved in the diff, not merely described. In particular, check that
   the destructive phrase is requested only at runbook step B3, after B1-B2 have
@@ -972,8 +1153,11 @@ unset PGURI SNAPSHOTS
 - Confirm all six routes are static-query-free maintenance wrappers and the
   screenshot/Playwright assertions cover the approved 390px behavior, including
   the corrected contrast and the visible focus indicator.
-- Judge the shared focus-outline change on its blast radius, not only on the
-  maintenance route: it applies to every focusable element in the home shell.
+- Judge the shared focus-outline change on its actual blast radius, restated
+  under "Review corrections applied" item 2, and check the recorded residual
+  `#efaa84` ring on the goals, memory, and onboarding modules against the
+  files. Those three are deliberately unchanged and have no follow-up ticket
+  yet; that is a product-owner decision, not a builder one.
 - Use exact-SHA CI for the complete automated suite. Do not run the founder
   cutover, contact hosted Supabase, or request the destructive phrase during
   independent review.
