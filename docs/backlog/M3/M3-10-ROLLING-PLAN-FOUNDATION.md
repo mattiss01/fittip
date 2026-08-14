@@ -1,7 +1,8 @@
 # M3-10: Rolling-plan foundation
 
-**Status:** testable — independently approved and hosted-verified on 14 August
-2026; awaiting product-owner acceptance
+**Status:** accepted — accepted by the product owner on 14 August 2026 against
+reviewed implementation `397441459c0d6a84327ded9910e5926465fcb062` and its
+matching Vercel Preview
 
 ## Agent brief
 

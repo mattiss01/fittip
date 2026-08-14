@@ -3,11 +3,15 @@
 **Ticket:**
 [M3-10](../../backlog/M3/M3-10-ROLLING-PLAN-FOUNDATION.md)
 
-**Lifecycle state:** testable
+**Lifecycle state:** accepted
 
 **Tier:** 1 — schema, authorization, RLS, privileged writes, and concurrency
 
 **Product-owner approval:** 14 August 2026
+
+**Product-owner acceptance:** 14 August 2026, against reviewed implementation
+`397441459c0d6a84327ded9910e5926465fcb062` and matching Vercel deployment
+`dpl_E4QyWr74CP4kGZmYCjNu6w1ygvjW`
 
 **Branch:** `ticket/m3-10-rolling-plan-foundation`
 
