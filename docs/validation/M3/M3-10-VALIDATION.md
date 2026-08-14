@@ -15,7 +15,7 @@
 `ef1a0de4e0d4e8e5d2fe4d3d7a8ada056535dbb7`
 
 **Exact implementation review target:**
-`f15f53b7973f5c4251e9b5813dd2940567ef1bc9`
+`eec6e3c461be6a73713c40cc4a03eedce335ef35`
 
 **Initial implementation commit:**
 `7248ad3d5c5407066dc06c9bc573b9dd516b8927`
@@ -23,6 +23,10 @@
 **Builder correction commits:**
 `f15f53b7973f5c4251e9b5813dd2940567ef1bc9` - isolated CI invocation,
 package-script wiring, and repeatable harness cleanup diagnostics
+
+`eec6e3c461be6a73713c40cc4a03eedce335ef35` - add the approved rolling-plan
+atomic RPC to the retry-disabled architecture allowlist after the first CI run
+exposed the stale five-seam assertion
 
 ## Delivered behavior
 
@@ -44,15 +48,16 @@ The existing `390x844` CI flows must remain green as regression evidence.
 ## Changed files
 
 `git diff --stat
-ef1a0de4e0d4e8e5d2fe4d3d7a8ada056535dbb7..f15f53b7973f5c4251e9b5813dd2940567ef1bc9`:
+ef1a0de4e0d4e8e5d2fe4d3d7a8ada056535dbb7..eec6e3c461be6a73713c40cc4a03eedce335ef35`:
 
 ```text
  .github/workflows/ci.yml                           |   3 +
  docs/backlog/M3/M3-10-ROLLING-PLAN-FOUNDATION.md   |  62 ++-
  docs/backlog/M3/M3-BACKLOG.md                      |   2 +-
- docs/validation/M3/M3-10-VALIDATION.md             |  90 ++++
+ docs/validation/M3/M3-10-VALIDATION.md             | 163 ++++++
  docs/validation/README.md                          |   2 +
  package.json                                       |   1 +
+ src/architecture/server-boundary.test.ts           |  20 +-
  src/lib/supabase/database.types.ts                 | 290 +++++++++-
  .../repositories/rolling-plan-repository.test.ts   | 184 +++++++
  src/server/repositories/rolling-plan-repository.ts | 218 ++++++++
@@ -62,7 +67,7 @@ ef1a0de4e0d4e8e5d2fe4d3d7a8ada056535dbb7..f15f53b7973f5c4251e9b5813dd2940567ef1b
  ...0260814164502_m3_10_rolling_plan_foundation.sql | 597 +++++++++++++++++++++
  .../m3_10_rolling_plan_foundation.test.sql         | 382 +++++++++++++
  .../m3_10_concurrent_rolling_plan_changes.mjs      | 192 +++++++
- 15 files changed, 2673 insertions(+), 9 deletions(-)
+ 16 files changed, 2764 insertions(+), 11 deletions(-)
 ```
 
 Navigation notes:
@@ -76,6 +81,9 @@ Navigation notes:
   if cleanup of either synthetic owner fails.
 - `.github/workflows/ci.yml`, `package.json`, and the harness-only diagnostics
   are isolated in tooling commit `f15f53b`.
+- `server-boundary.test.ts` still rejects every unlisted retry-disabled seam and
+  now verifies the rolling-plan repository contains exactly one such call on
+  `apply_rolling_plan_change_set`.
 
 No file was deleted or renamed.
 
@@ -106,7 +114,14 @@ No file was deleted or renamed.
 ## Tests and final results
 
 **Exact-commit CI:** pending lead push for
-`f15f53b7973f5c4251e9b5813dd2940567ef1bc9`.
+`eec6e3c461be6a73713c40cc4a03eedce335ef35`.
+
+The prior exact-head run for evidence commit `ad3b8428` is
+[GitHub Actions run 31824328268](https://github.com/mattiss01/fittip/actions/runs/31824328268).
+When the correction was prepared, its database job had passed, its browser job
+was still running, and its static job had failed only in Vitest: the architecture
+test discovered six `.retry(false)` repositories but still allowlisted five.
+Prettier, ESLint, and TypeScript had passed; the build was skipped after Vitest.
 
 | Command or check | Result |
 |---|---|
@@ -118,8 +133,9 @@ No file was deleted or renamed.
 | `npx supabase db advisors --local --type all --level warn --fail-on warn` | PASS; no issues |
 | `npm run typecheck` | PASS |
 | focused Vitest module/repository files | PASS; 2 files, 10 tests |
+| `npm run test:run -- src/architecture/server-boundary.test.ts` | PASS; 1 file, 5 tests |
 | focused ESLint for new TypeScript/JavaScript | PASS |
-| focused Prettier check for tooling files | PASS |
+| focused Prettier checks for tooling and architecture files | PASS |
 | `git diff --check` | PASS |
 | Exact-SHA CI | Pending lead push; this is the full-suite evidence |
 | Hosted Vercel Preview | Pending lead push and deployment |
