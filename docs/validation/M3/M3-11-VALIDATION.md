@@ -74,6 +74,44 @@ maintenance routes are static and query-free, so they must render correctly
 before the destructive migration runs — exactly what runbook steps B1-B2
 require and what the Preview is there to demonstrate.
 
+**Independent review — round two: APPROVED on both axes.** A fresh reviewer,
+distinct from both builders and from the round-one reviewer, reviewed exactly
+`ce1457683d29df87501b4cdf1371ff64c05710ed` against base `cc60c11`.
+
+It confirmed the round-one Spec defect is fixed structurally rather than patched
+around, and independently verified: no semantic drift from the rewrite (the
+folded `user_id` predicate selects an identical set because the original was an
+inner join; `not exists` equals the old anti-join because `proposal_id` is
+`NOT NULL` as that table's primary key); the new fixture genuinely exercises the
+previously-broken path and carries an anti-erosion assertion; **no other
+volatile-under-`DISTINCT` or fan-out pattern exists** anywhere in the migration,
+fixtures, pgTAP, or runbook SQL; no dropped relation leaves an orphaned function
+behind; the 11-table closure is unchanged; and the manifest reconciles exactly.
+
+It answered the direct question — it would authorize this irreversible migration
+against real founder data — subject to two conditions that are the lead's to
+satisfy:
+
+1. **The operator must work from this record at `3266a58` or later.** The
+   migration SHA-256 changed with the fix. The copy of this record *inside the
+   review target* `ce14576` still carries the superseded `bdf8eee6…`, so an
+   operator comparing against that copy at runbook step A1 would abort on a
+   false mismatch mid-preflight. Step A1 reads the value from this record's
+   header rather than repeating a literal, so there is exactly one authoritative
+   value and it is correct from `3266a58` onward.
+2. **B1 and B2 must be genuinely completed and recorded before the phrase is
+   requested at B3.** The runbook enforces that ordering in prose only; nothing
+   mechanical prevents jumping to B3.
+
+Three findings were raised as explicitly non-blocking: the live 1.51:1
+`input:focus` ring (recorded under Known limitations and carried by M3-18), the
+`mobile-navigation.tsx` line citation (corrected under Known limitations), and
+an advisory to extend `src/architecture/m3-11-legacy-reset.test.ts` to the five
+revoked roadmap RPCs alongside the six dropped ones. The advisory is not taken
+in this ticket: no live call path exists today, and widening an architecture
+invariant is a deliberate change rather than an incidental one. It belongs with
+the M3-15 seam work that reconnects those RPCs.
+
 **Superseded review targets:**
 
 - `60583aab45dfb87d34eef89f0cbc49f5358d2373` — rejected on both Standards and
@@ -1122,8 +1160,21 @@ unset PGURI SNAPSHOTS
   is untouched at `src/app/home/you/goals/goals.module.css:387`,
   `src/app/home/you/memory/memory.module.css:430`, and
   `src/app/home/you/onboarding/onboarding.module.css:181`, and `#f4cba0`
-  remains at `src/app/globals.css:212` on the now-unused `.plan-shell`. Those
-  modules declare their own focus rules for the controls inside their managers,
+  remains at `src/app/globals.css:212` on the now-unused `.plan-shell`.
+
+  A second, **live** ring of the same class is recorded here after independent
+  review: `src/app/globals.css:94-95` gives every `input:focus` a `#f4cba0`
+  outline against the `#fff` input background set at `:90`, measuring
+  **1.51:1** — worse than the 1.92:1 above, and present on every route with a
+  text input, including the goals, memory, and onboarding surfaces. It is
+  pre-existing and untouched by M3-11. It is called out explicitly because the
+  earlier wording named `#f4cba0` only at `:212` and so read as though the
+  surviving `#f4cba0` were confined to dead code; a follow-up scoped from that
+  reading would fix the three module rules and still leave every input focusing
+  at 1.51:1. M3-18 carries this case.
+
+  Those modules declare their own focus rules for the controls inside their
+  managers,
   so the home-shell fix does not reliably reach them — definitively not for
   `input`/`textarea`/`select`, and only by stylesheet order for
   `button`/`a`/`summary`. Goals, memory, and onboarding are preserved domains
@@ -1138,9 +1189,14 @@ unset PGURI SNAPSHOTS
   `src/server/roadmap/roadmap-records.ts` survive the reset but are imported by
   nothing outside themselves and `roadmap-repository.test.ts`. They are
   retained on purpose as the M3-15 seam, not by oversight. Relatedly,
-  `src/components/home/mobile-navigation.tsx:24` keeps a now-dead
+  `src/components/home/mobile-navigation.tsx:25-26` keeps a now-dead
   `pathname.startsWith("/home/progress/")` branch, since no `/home/progress/*`
-  child route remains.
+  child route remains. The citation previously read `:24`, which is the
+  **`/home/plan/` branch and is still live** — `/home/plan/roadmap` and
+  `/home/plan/proposal` both survive as maintenance routes. Corrected after
+  independent review: a cleanup ticket following the old citation would have
+  deleted the live branch and silently broken `aria-current` on those two
+  routes.
 - `e2e/auth.spec.ts` could not be completed on this machine. See the note under
   "Tests and builder results".
 - Dead legacy selectors remain in `home.module.css`. That was the review's
