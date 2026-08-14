@@ -18,11 +18,11 @@ describe("server repository import boundary", () => {
     }
   });
 
-  // M2-03 adds the fifth call site deliberately: each allowlisted RPC is an
+  // M3-10 adds the sixth call site deliberately: each allowlisted RPC is an
   // atomic owner-scoped mutation whose conflict must reach the caller
   // unchanged, so an automatic retry could re-run a change the user was told
   // to review.
-  it("disables retries only for the five approved atomic RPCs", () => {
+  it("disables retries only for the six approved atomic RPCs", () => {
     const sources = sourceFiles(join(process.cwd(), "src")).filter(
       (path) => !path.endsWith(".test.ts") && !path.endsWith(".test.tsx"),
     );
@@ -64,11 +64,22 @@ describe("server repository import boundary", () => {
       "repositories",
       "onboarding-repository.ts",
     );
+    const rollingPlanRepositoryPath = join(
+      process.cwd(),
+      "src",
+      "server",
+      "repositories",
+      "rolling-plan-repository.ts",
+    );
     const trainingRepository = readFileSync(trainingRepositoryPath, "utf8");
     const completionRepository = readFileSync(completionRepositoryPath, "utf8");
     const goalRepository = readFileSync(goalRepositoryPath, "utf8");
     const memoryRepository = readFileSync(memoryRepositoryPath, "utf8");
     const onboardingRepository = readFileSync(onboardingRepositoryPath, "utf8");
+    const rollingPlanRepository = readFileSync(
+      rollingPlanRepositoryPath,
+      "utf8",
+    );
 
     expect(retryFiles.sort()).toEqual(
       [
@@ -77,6 +88,7 @@ describe("server repository import boundary", () => {
         goalRepositoryPath,
         memoryRepositoryPath,
         onboardingRepositoryPath,
+        rollingPlanRepositoryPath,
       ].sort(),
     );
     expect(trainingRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
@@ -98,6 +110,10 @@ describe("server repository import boundary", () => {
     expect(onboardingRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
     expect(onboardingRepository).toMatch(
       /\.rpc\(\s*"apply_onboarding_change",[\s\S]*?\)\s*\.retry\(false\)/,
+    );
+    expect(rollingPlanRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
+    expect(rollingPlanRepository).toMatch(
+      /\.rpc\(\s*"apply_rolling_plan_change_set",[\s\S]*?\)\s*\.retry\(false\)/,
     );
   });
 });
