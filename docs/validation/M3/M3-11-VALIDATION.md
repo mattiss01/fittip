@@ -15,11 +15,38 @@
 **Exact implementation review target:**
 `ce1457683d29df87501b4cdf1371ff64c05710ed`
 
-**Exact-target CI run:** none yet. Pending the lead's push. Nothing in this
-record may be read as automated-test evidence for `ce14576` until that run is
-green for exactly that SHA.
+**Exact-target CI run:**
+[31845125396](https://github.com/mattiss01/fittip/actions/runs/31845125396) —
+`headSha` is exactly `ce1457683d29df87501b4cdf1371ff64c05710ed`, green on all
+three jobs: static (lint, types, unit tests, build), database (migrations from
+zero, RLS, advisors, concurrency), and the 390px production browser flows. The
+lead pushed that commit as `ticket/m3-11-review-target` to obtain a run at the
+implementation SHA. The evidence head `3bd980f` has its own green run,
+[31845102708](https://github.com/mattiss01/fittip/actions/runs/31845102708).
 
-**Matching Vercel Preview:** none yet. Pending the same push.
+The database job is the one that matters this round: it applies the corrected
+migration from zero against the widened fixtures, which is the case that
+reproduced the duplicate-key abort before the fix.
+
+**Matching Vercel Preview:**
+`https://fittip-qyyfg9caj-mattis-3657s-projects.vercel.app`
+(deployment `5914126429`, state `success`).
+
+As in the previous round, the deployment's reported Git SHA is the evidence head
+`3bd980f`, **not** `ce14576`; Vercel does not build the `ticket/m3-11-review-target`
+ref. `git diff --stat ce14576..3bd980f` is 1 file changed, 255 insertions, 71
+deletions — this record alone, under `docs/`. No runtime, schema, migration,
+fixture, route, style, or test change, so the deployed application is
+byte-identical to the review target. Recorded as an exact statement of what was
+verified rather than as a claim of SHA equality.
+
+**Helper ref cleanup.** The two stale refs named in the previous round are
+deleted from `origin`: `ticket/m3-11-implementation-review` (pointed at the
+rejected `60583aa`) and the earlier `ticket/m3-11-review-target` (pointed at the
+rejected `312a8ba`). The name `ticket/m3-11-review-target` now exists again,
+created fresh at `ce14576`. No ref was force-updated; the old ones were deleted
+and the new one created, so no history was rewritten. Still resolve the target
+by SHA, never by ref.
 
 **Invalidated evidence.** Independent review rejected
 `312a8ba36c3af0c8fe9a1551f26394fcaf2e3a46` on the Spec axis. Its green CI run
@@ -56,13 +83,10 @@ require and what the Preview is there to demonstrate.
 
 Their CI runs and `READY` Previews are historical only and approve nothing.
 
-**Helper refs — do not review from these branch names.** Two non-ticket refs
-exist on `origin` solely to trigger exact-SHA CI:
-`ticket/m3-11-review-target` at the rejected `312a8ba` and
-`ticket/m3-11-implementation-review` at the rejected `60583aa`. Both are now
-stale, and both are traps for anyone selecting a review target by branch name.
-The lead deletes them after independent review; until then, resolve the target
-by SHA, never by ref.
+**Helper refs.** Resolved — see "Helper ref cleanup" in the header block. One
+ref, `ticket/m3-11-review-target`, exists on `origin` at the current target
+`ce14576`, solely to trigger exact-SHA CI. The two stale refs that pointed at
+rejected commits are deleted. Still resolve the target by SHA, never by ref.
 
 **Implementation commit:**
 `e370dbe20d410488b13fd7ecd69a39f7f741314e`
