@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -1822,6 +1822,261 @@ export type Database = {
           },
         ];
       };
+      rolling_plan_activities: {
+        Row: {
+          created_at: string;
+          id: string;
+          instructions: string | null;
+          is_locked: boolean;
+          measurement_mode: string;
+          name: string;
+          personal_activity_id: string | null;
+          plan_id: string;
+          position: number;
+          session_id: string;
+          sport: string;
+          target: Json | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          instructions?: string | null;
+          is_locked?: boolean;
+          measurement_mode: string;
+          name: string;
+          personal_activity_id?: string | null;
+          plan_id: string;
+          position: number;
+          session_id: string;
+          sport: string;
+          target?: Json | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          instructions?: string | null;
+          is_locked?: boolean;
+          measurement_mode?: string;
+          name?: string;
+          personal_activity_id?: string | null;
+          plan_id?: string;
+          position?: number;
+          session_id?: string;
+          sport?: string;
+          target?: Json | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "rolling_plan_activities_personal_fkey";
+            columns: ["personal_activity_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "personal_activities";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "rolling_plan_activities_session_fkey";
+            columns: ["session_id", "user_id", "plan_id"];
+            isOneToOne: false;
+            referencedRelation: "rolling_plan_sessions";
+            referencedColumns: ["id", "user_id", "plan_id"];
+          },
+        ];
+      };
+      rolling_plan_change_entries: {
+        Row: {
+          after_state: Json;
+          before_state: Json | null;
+          change_kind: string;
+          change_set_id: string;
+          created_at: string;
+          id: string;
+          ordinal: number;
+          plan_id: string;
+          session_id: string;
+          user_id: string;
+        };
+        Insert: {
+          after_state: Json;
+          before_state?: Json | null;
+          change_kind: string;
+          change_set_id: string;
+          created_at?: string;
+          id?: string;
+          ordinal: number;
+          plan_id: string;
+          session_id: string;
+          user_id: string;
+        };
+        Update: {
+          after_state?: Json;
+          before_state?: Json | null;
+          change_kind?: string;
+          change_set_id?: string;
+          created_at?: string;
+          id?: string;
+          ordinal?: number;
+          plan_id?: string;
+          session_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "rolling_plan_change_entries_change_set_fkey";
+            columns: ["change_set_id", "user_id", "plan_id"];
+            isOneToOne: false;
+            referencedRelation: "rolling_plan_change_sets";
+            referencedColumns: ["id", "user_id", "plan_id"];
+          },
+          {
+            foreignKeyName: "rolling_plan_change_entries_session_fkey";
+            columns: ["session_id", "user_id", "plan_id"];
+            isOneToOne: false;
+            referencedRelation: "rolling_plan_sessions";
+            referencedColumns: ["id", "user_id", "plan_id"];
+          },
+        ];
+      };
+      rolling_plan_change_sets: {
+        Row: {
+          created_at: string;
+          id: string;
+          idempotency_key: string;
+          plan_id: string;
+          plan_revision: number;
+          provenance: string;
+          request_fingerprint: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          idempotency_key: string;
+          plan_id: string;
+          plan_revision: number;
+          provenance: string;
+          request_fingerprint: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          idempotency_key?: string;
+          plan_id?: string;
+          plan_revision?: number;
+          provenance?: string;
+          request_fingerprint?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "rolling_plan_change_sets_plan_fkey";
+            columns: ["plan_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "rolling_plans";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      rolling_plan_sessions: {
+        Row: {
+          cancelled_at: string | null;
+          created_at: string;
+          expected_duration_minutes: number | null;
+          id: string;
+          intent: string | null;
+          is_locked: boolean;
+          local_date: string;
+          note: string | null;
+          plan_id: string;
+          position: number;
+          sport: string;
+          status: string;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          cancelled_at?: string | null;
+          created_at?: string;
+          expected_duration_minutes?: number | null;
+          id: string;
+          intent?: string | null;
+          is_locked?: boolean;
+          local_date: string;
+          note?: string | null;
+          plan_id: string;
+          position: number;
+          sport: string;
+          status?: string;
+          title: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          cancelled_at?: string | null;
+          created_at?: string;
+          expected_duration_minutes?: number | null;
+          id?: string;
+          intent?: string | null;
+          is_locked?: boolean;
+          local_date?: string;
+          note?: string | null;
+          plan_id?: string;
+          position?: number;
+          sport?: string;
+          status?: string;
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "rolling_plan_sessions_plan_fkey";
+            columns: ["plan_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "rolling_plans";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      rolling_plans: {
+        Row: {
+          created_at: string;
+          id: string;
+          revision: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          revision?: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          revision?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "rolling_plans_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -1906,6 +2161,21 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "roadmap_proposal_change_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      apply_rolling_plan_change_set: {
+        Args: {
+          p_changes: Json;
+          p_expected_plan_revision: number;
+          p_idempotency_key: string;
+          p_provenance: string;
+        };
+        Returns: Database["public"]["CompositeTypes"]["rolling_plan_change_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "rolling_plan_change_receipt";
           isOneToOne: true;
           isSetofReturn: false;
         };
@@ -2070,6 +2340,18 @@ export type Database = {
           p_rate_card_version: string;
         };
         Returns: boolean;
+      };
+      rolling_plan_activity_input_is_valid: {
+        Args: { p_value: Json };
+        Returns: boolean;
+      };
+      rolling_plan_session_input_is_valid: {
+        Args: { p_value: Json; p_with_placement: boolean };
+        Returns: boolean;
+      };
+      rolling_plan_session_state: {
+        Args: { p_session_id: string; p_user_id: string };
+        Returns: Json;
       };
       save_manual_plan_version: {
         Args: {
@@ -2242,6 +2524,12 @@ export type Database = {
       };
       roadmap_proposal_change_receipt: {
         proposal_id: string | null;
+        result: string | null;
+      };
+      rolling_plan_change_receipt: {
+        plan_id: string | null;
+        plan_revision: number | null;
+        change_set_id: string | null;
         result: string | null;
       };
     };
