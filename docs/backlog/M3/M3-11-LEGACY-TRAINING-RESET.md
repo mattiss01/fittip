@@ -1,6 +1,11 @@
 # M3-11: Legacy training reset
 
-**Status:** in development — approved by the product owner on 14 August 2026
+**Status:** accepted — implementation accepted by the product owner on 15 August
+2026 against reviewed implementation
+`ce1457683d29df87501b4cdf1371ff64c05710ed` and its matching Vercel Preview. The
+irreversible founder database cutover is **not** covered by this acceptance and
+still requires the exact phrase **Run the destructive cutover** at runbook step
+B3
 
 **Triage:** ready
 

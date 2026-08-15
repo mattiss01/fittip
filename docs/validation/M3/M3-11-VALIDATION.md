@@ -3,9 +3,23 @@
 **Ticket:**
 [M3-11](../../backlog/M3/M3-11-LEGACY-TRAINING-RESET.md)
 
-**Lifecycle state:** in development; builder handoff complete
+**Lifecycle state:** accepted — implementation only; the founder database
+cutover is not authorized
 
 **Tier:** 1 — destructive schema/data, authorization, and founder deployment
+
+**Product-owner acceptance:** 15 August 2026, against reviewed implementation
+`ce1457683d29df87501b4cdf1371ff64c05710ed`, its green exact-SHA CI run
+[31845125396](https://github.com/mattiss01/fittip/actions/runs/31845125396), and
+the matching Preview `https://fittip-qyyfg9caj-mattis-3657s-projects.vercel.app`
+(deployment `5914126429`).
+
+**Scope of that acceptance.** It covers the implementation and its merge to
+`master`, which is runbook step B1. It is explicitly **not** the destructive
+authorization. Runbook step B3 requires the exact phrase **Run the destructive
+cutover** and says in terms that product-owner acceptance of the ticket must not
+be treated as that phrase. No hosted Supabase migration, deletion, or preflight
+query has been run; sections A, B3-B6, and C of the runbook remain unexecuted.
 
 **Branch:** `ticket/m3-11-legacy-training-reset`
 
