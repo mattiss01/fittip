@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 
-import { isoDateInTimezone } from "@/features/completions/local-date";
+import { isoDateInTimezone } from "@/lib/date/local-date";
 
 export function BrowserLocalDate() {
   const label = useSyncExternalStore(

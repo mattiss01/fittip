@@ -92,9 +92,6 @@ jobs:
       - name: M3-10 real Postgres adapter contract
         run: npm run test:m3-10-adapter-contract
 
-      - name: M1-01 concurrent plan writes
-        run: npm run test:m1-01-concurrency
-
       - name: M2-01 concurrent goal mutations
         run: npm run test:m2-01-concurrency
 
@@ -104,11 +101,11 @@ jobs:
       - name: M3-01B concurrent spend reservations
         run: npm run test:m3-01b-concurrency
 
-      - name: M3-02 concurrent roadmap acceptance
-        run: npm run test:m3-02-concurrency
-
       - name: M3-10 concurrent rolling-plan changes
         run: npm run test:m3-10-concurrency
+
+      - name: M3-11 seeded legacy reset
+        run: npm run test:m3-11-seeded-reset
 
       - name: Stop local Supabase stack
         if: always()
@@ -158,59 +155,15 @@ jobs:
       # The per-ticket configs already set their own longer timeouts and are
       # deliberately left alone.
       #
-      # This step carried `--retries=2` from M2-05 until M2-11 removed them.
-      # `planning.spec.ts` opens `/home/plan` through the App Router transition
-      # that M2-09 traced to React's `useDeferredValue` sticking on a stale
-      # value (facebook/react#35821), fixed by React PR 36134 and reaching this
-      # application only through the React build Next vendors. It reddened
-      # seven of thirty-five runs on commits that touched no application code.
-      #
-      # M2-11 took `next@16.3.0`, which vendors the post-fix canary, and
-      # re-measured that exact transition on M2-09's probe: 9 lost of 250
-      # before the upgrade and 0 of 250 after, on one machine, one session and
-      # one harness. That is the measurement this line was waiting for, so it
-      # is gone rather than re-justified for a third ticket.
-      #
-      # If this step reddens again on the plan surface, restore `--retries=2`
-      # and re-open the removal - not the diagnosis. A local paired
-      # measurement does not bound the rate on a shared runner, where the
-      # defect used to appear far more often than the 4% per navigation
-      # measured locally.
-      #
-      # If it is ever restored, scope it to this step again. No browser step
-      # carries retries today, so there is nothing left to scope it against,
-      # but the norm is the point: every other step must keep failing on its
-      # first attempt. A retry that is not aimed at one named, diagnosed
-      # defect is a way of not reading the result.
-      - name: Authentication and planning flows
+      - name: Authentication flow
         env:
-          PLAYWRIGHT_HTML_REPORT: playwright-report/auth-planning
+          PLAYWRIGHT_HTML_REPORT: playwright-report/auth
         run: |
           .github/scripts/with-server.sh 3000 \
-            npx playwright test e2e/auth.spec.ts e2e/planning.spec.ts \
+            npx playwright test e2e/auth.spec.ts \
               --workers=1 --timeout=180000 \
               --trace=retain-on-failure \
-              --output=test-results/auth-planning
-
-      - name: M1-03 quick logging
-        # Report every broken flow in one run, not just the first.
-        if: ${{ !cancelled() }}
-        env:
-          PLAYWRIGHT_HTML_REPORT: playwright-report/m1-03
-        run: |
-          .github/scripts/with-server.sh 3013 \
-            npx playwright test --config=e2e/m1-03.playwright.config.ts \
-              --workers=1 --trace=retain-on-failure --output=test-results/m1-03
-
-      - name: M1-04 Today and Progress
-        # Report every broken flow in one run, not just the first.
-        if: ${{ !cancelled() }}
-        env:
-          PLAYWRIGHT_HTML_REPORT: playwright-report/m1-04
-        run: |
-          .github/scripts/with-server.sh 3014 \
-            npx playwright test --config=e2e/m1-04.playwright.config.ts \
-              --workers=1 --trace=retain-on-failure --output=test-results/m1-04
+              --output=test-results/auth
 
       - name: M2-01 goal management
         # Report every broken flow in one run, not just the first.
@@ -232,25 +185,15 @@ jobs:
             npx playwright test --config=e2e/m2-02.playwright.config.ts \
               --workers=1 --trace=retain-on-failure --output=test-results/m2-02
 
-      - name: M3-02 roadmap proposals
+      - name: M3-11 maintenance routes
         # Report every broken flow in one run, not just the first.
         if: ${{ !cancelled() }}
         env:
-          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-02
+          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-11
         run: |
-          .github/scripts/with-server.sh 3017 \
-            npx playwright test --config=e2e/m3-02.playwright.config.ts \
-              --workers=1 --trace=retain-on-failure --output=test-results/m3-02
-
-      - name: M3-03 selected-horizon plan proposals
-        # Report every broken flow in one run, not just the first.
-        if: ${{ !cancelled() }}
-        env:
-          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-03
-        run: |
-          .github/scripts/with-server.sh 3018 \
-            npx playwright test --config=e2e/m3-03.playwright.config.ts \
-              --workers=1 --trace=retain-on-failure --output=test-results/m3-03
+          .github/scripts/with-server.sh 3019 \
+            npx playwright test --config=e2e/m3-11.playwright.config.ts \
+              --workers=1 --trace=retain-on-failure --output=test-results/m3-11
 
       - name: Upload Playwright report
         if: failure()

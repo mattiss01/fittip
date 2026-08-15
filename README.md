@@ -160,19 +160,15 @@ npm run types:patch
 `git status` must be clean afterwards. If it is not, the schema changed and the
 new output belongs in your commit.
 
-Two things about that sequence are not obvious, both from
-[M2-08](docs/backlog/M2/M2-08-TYPE-GENERATION-DRIFT.md):
+Two things about that sequence are not obvious:
 
 - **No `--schema public`.** The committed file also carries `graphql_public`,
   and passing the flag silently drops it.
-- **`types:patch` restores argument nullability the generator cannot express.**
-  `supabase gen types` never emits `| null` on an RPC argument, because
-  PostgreSQL has no per-argument nullability to read — every argument of a
-  non-`STRICT` function accepts NULL. `save_training_completion` genuinely
-  takes NULL for nine of its nineteen, so the patched file describes the
-  database more accurately than the raw output does. The script is idempotent
-  and fails loudly if the generated shape stops matching what it expects. It
-  must run _after_ `format`, because it rewrites formatted declarations.
+- **Keep `types:patch` in the sequence.** M3-11 removed the legacy completion
+  function whose arguments needed a hand-maintained nullability correction.
+  The step is now a no-op guard that fails if the removed generated surface
+  reappears; retaining it keeps one stable schema workflow across old and new
+  migrations.
 
 Never hand-edit `src/lib/supabase/database.types.ts`.
 
@@ -213,11 +209,11 @@ and `chore/**` branches, and on pull requests into `master`. It exists so a
 branch proves itself once, instead of the builder, the reviewer, and the
 post-merge check each re-running the same suites by hand.
 
-| Job        | Covers                                                                                                   |
-| ---------- | -------------------------------------------------------------------------------------------------------- |
-| `static`   | Prettier, ESLint, TypeScript, Vitest, and the production build                                           |
-| `database` | `db reset` from zero, database lint, security/performance advisors, pgTAP, and the concurrency harnesses |
-| `browser`  | The 390px production Playwright flows for authentication, planning, M1-03, M1-04, and M2-01              |
+| Job        | Covers                                                                                                     |
+| ---------- | ---------------------------------------------------------------------------------------------------------- |
+| `static`   | Prettier, ESLint, TypeScript, Vitest, and the production build                                             |
+| `database` | `db reset` from zero, database lint, security/performance advisors, pgTAP, and the concurrency harnesses   |
+| `browser`  | The 390px production Playwright flows for authentication, M2-01 goals, M2-02 memory, and M3-11 maintenance |
 
 The pipeline requires **no repository secrets**. Every job starts its own
 disposable local Supabase stack and derives that container's ephemeral

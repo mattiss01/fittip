@@ -98,7 +98,7 @@
 .shell a:focus-visible,
 .shell button:focus-visible,
 .card summary:focus-visible {
-  outline: 3px solid #efaa84;
+  outline: 3px solid var(--ledger-ink);
   outline-offset: 2px;
 }
 
@@ -349,8 +349,8 @@
 }
 
 .primaryAction {
-  background: var(--ledger-signal);
-  color: white;
+  background: var(--ledger-ink);
+  color: var(--ledger-paper);
 }
 
 .secondaryAction {
@@ -368,6 +368,17 @@
 .bodyCopy {
   color: var(--ledger-muted);
   line-height: 1.55;
+}
+
+.maintenanceCard {
+  max-width: 42rem;
+  margin-top: 2rem;
+  border-left: 0.6rem solid var(--ledger-signal);
+}
+
+.maintenanceCard h2 {
+  margin-top: 0.45rem;
+  font-size: clamp(2rem, 9vw, 3.6rem);
 }
 
 .timelineItem {

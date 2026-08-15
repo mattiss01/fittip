@@ -3,10 +3,10 @@ import "server-only";
 import {
   parseTrainingMeasurement,
   TRAINING_MEASUREMENT_MODES,
-  TrainingRecordValidationError,
+  TrainingMeasurementValidationError,
   type TrainingMeasurement,
   type TrainingMeasurementMode,
-} from "@/server/training/training-records";
+} from "@/server/training/training-measurements";
 
 export type RollingPlanActivityInput = {
   personalActivityId?: string;
@@ -277,7 +277,7 @@ function parseActivity(value: unknown): RollingPlanActivityInput {
     try {
       target = parseTrainingMeasurement(measurementMode, record.target);
     } catch (error) {
-      if (error instanceof TrainingRecordValidationError)
+      if (error instanceof TrainingMeasurementValidationError)
         throw new RollingPlanValidationError();
       throw error;
     }

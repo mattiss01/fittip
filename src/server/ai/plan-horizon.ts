@@ -2,7 +2,7 @@ import "server-only";
 
 import { isResolvedTimezone } from "@/server/ai/context";
 import { CoachAIError } from "@/server/ai/errors";
-import { isoDateInTimezone } from "@/features/completions/local-date";
+import { isoDateInTimezone } from "@/lib/date/local-date";
 
 /**
  * The selected horizon: which owner-local calendar dates a plan request covers.

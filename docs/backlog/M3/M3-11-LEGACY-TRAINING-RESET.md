@@ -1,6 +1,11 @@
 # M3-11: Legacy training reset
 
-**Status:** in development — approved by the product owner on 14 August 2026
+**Status:** accepted — implementation accepted by the product owner on 15 August
+2026 against reviewed implementation
+`ce1457683d29df87501b4cdf1371ff64c05710ed` and its matching Vercel Preview. The
+irreversible founder database cutover is **not** covered by this acceptance and
+still requires the exact phrase **Run the destructive cutover** at runbook step
+B3
 
 **Triage:** ready
 
@@ -25,7 +30,7 @@ Supabase skill with current official guidance.
 **Hard constraints:**
 
 - Add one forward migration; never edit an applied migration. Delete legacy
-  rows, then drop the 10 F-005 legacy tables and their exclusive functions,
+  rows, then drop the 11 F-005 legacy tables and their exclusive functions,
   trigger, composite types, policies, grants, indexes, and constraints.
 - Prove the dependency closure. Preserve `personal_activities`,
   `is_valid_training_measurement`, every M3-10 object, auth/profiles, goals,

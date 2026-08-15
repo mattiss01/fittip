@@ -51,7 +51,7 @@ test.describe("public account authentication", () => {
     await expectPrivateSessionHeaders(await callbackResponse);
     await expect(page).toHaveURL(/\/home\/today$/);
     await expect(
-      page.getByRole("heading", { name: "Training, as it stands." }),
+      page.getByRole("heading", { name: "One plan is taking shape." }),
     ).toBeVisible();
 
     await page.getByRole("link", { name: "You", exact: true }).click();
@@ -77,20 +77,16 @@ async function completeGuidedSetup(
   await page.setViewportSize({ width: 390, height: 844 });
   expect(page.viewportSize()).toEqual({ width: 390, height: 844 });
 
-  // The Home invitation can be dismissed once, while You keeps the permanent
-  // entry. This screenshot precedes all intake entry and contains no answers.
+  // Training routes are in maintenance during M3-11. The preserved You surface
+  // keeps onboarding's permanent entry, and the screenshot contains no answers.
+  await page.getByRole("link", { name: "You", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Set up your coaching context" }),
+    page.getByRole("link", { name: "Open guided setup" }),
   ).toBeVisible();
   await page.screenshot({
     fullPage: true,
     path: path.join(m2EvidenceDirectory, "M2-03-start-390x844.png"),
   });
-  await page.getByRole("button", { name: "Not now" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Set up your coaching context" }),
-  ).toHaveCount(0);
-  await page.getByRole("link", { name: "You", exact: true }).click();
   await page.getByRole("link", { name: "Open guided setup" }).click();
   await expect(page).toHaveURL(/\/home\/you\/onboarding$/);
   await expect(page.getByText(/not sent to an AI provider/)).toBeVisible();

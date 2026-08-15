@@ -41,6 +41,8 @@ Validation records and their visual evidence are grouped by milestone.
 
 ## M3
 
+- [M3-11 legacy training reset](M3/M3-11-VALIDATION.md) — in development;
+  Tier 1 builder handoff complete, destructive founder cutover not executed
 - [M3-10 rolling-plan foundation](M3/M3-10-VALIDATION.md) — in development;
   Tier 1 builder and independent reviewer dispatched
 - [M3-01 server-only AI boundary and fixture adapters](M3/M3-01-VALIDATION.md) — in development; builder handoff complete, independent review, CI, Preview verification, and acceptance pending
