@@ -1148,6 +1148,71 @@ rm -rf "$SNAPSHOTS"
 unset PGURI SNAPSHOTS
 ```
 
+## Post-acceptance master delivery — 15 August 2026
+
+This section records runbook step **B1 only**. The founder database is
+untouched, and every irreversible step remains outstanding.
+
+**Merge.** The product owner accepted reviewed implementation
+`ce1457683d29df87501b4cdf1371ff64c05710ed` on 15 August 2026. The lead recorded
+that acceptance as branch commit
+`e513b1d` and merged the branch into `master` with `--no-ff`, producing merge
+commit `8c09cca05752c1021a3ae404a8f2180f68b312b2`, pushed to the authorized
+origin. A merge commit rather than a fast-forward was required because `master`
+carried the two M3-18 governance commits `689425e` and `b5d1d73`, which the
+branch did not. Git reported no conflict and the merge introduced no
+integration change: `git diff ticket/m3-11-legacy-training-reset master` is
+empty apart from those two M3-18 documentation files. Both M3-18 additions
+survive the merge intact. Because the merged result is the reviewed result plus
+documentation, no local suite was repeated by hand; the `master` CI run below is
+the post-merge evidence.
+
+**Master CI.**
+[Run 31891962512](https://github.com/mattiss01/fittip/actions/runs/31891962512)
+is green for exactly `8c09cca05752c1021a3ae404a8f2180f68b312b2` on all three
+jobs: "Lint, types, unit tests, build", "Migrations, RLS, advisors,
+concurrency", and "390px production browser flows".
+
+**Founder deployment.** Vercel production deployment
+`dpl_E88CVSVGx1N4apDPrSvgcYJw1N5w` reached `Ready` with target `production`.
+Its immutable URL is
+`https://fittip-dsdk61ut4-mattis-3657s-projects.vercel.app`; it holds the
+founder alias `https://fittip-gilt.vercel.app` and the branch alias
+`https://fittip-git-master-mattis-3657s-projects.vercel.app`.
+
+Stated precisely, because it is weaker than the M3-10 record's equivalent line:
+the installed Vercel CLI does not expose a deployment's Git commit SHA through
+`inspect`, `ls`, or `--debug`, so the lead did **not** read `8c09cca` back off
+the deployment. What was verified is that this is the `master`-branch production
+deployment, that it was created at 17:10:18 CEST — seconds after the `master`
+push — and that it is the deployment currently serving the founder alias.
+
+**Anonymous hosted smoke, run against the founder alias.** `/` returns HTTP 200.
+All six affected maintenance routes — `/home/plan`, `/home/today`, `/home/log`,
+`/home/progress`, `/home/plan/roadmap`, `/home/plan/proposal` — and the
+preserved `/home/you`, `/home/you/goals`, `/home/you/memory`, and
+`/home/you/onboarding` each return HTTP 303 to `/` for an unauthenticated
+request. Every one of the eleven responses carries `Cache-Control: private,
+no-cache, no-store, must-revalidate, max-age=0`. No route returned 404 or 5xx.
+That proves the anonymous authorization boundary and the private/no-store header
+rule on the founder environment; it does not prove the maintenance surface,
+because the proxy redirects authenticated and non-existent `/home/**` paths
+identically.
+
+**Runbook state after this step.**
+
+| Runbook step | State |
+|---|---|
+| A1-A9 preflight | **Not run.** No founder connection string was requested, held, or used; no hosted query was executed |
+| B1 deploy maintenance application | **Complete**, recorded above |
+| B2 verify founder application | **Partial.** The anonymous boundary and header checks above are done; the authenticated six-route maintenance check at `390x844` is outstanding |
+| B3 destructive authorization gate | **Not reached.** The exact phrase **Run the destructive cutover** has not been given. Acceptance of this ticket is explicitly not that phrase |
+| B4-B6 migrate | **Not run.** The founder Supabase project still holds all 11 legacy tables |
+| C1-C7 verification | **Not run** |
+
+Nothing in this section changes runtime, schema, authorization, or deployment
+behavior; it follows the evidence-commit exception in `AGENTS.md`.
+
 ## Known limitations
 
 - This intentionally removes all old accepted-plan and completion history;
