@@ -1405,10 +1405,37 @@ same trap will appear at C2-C5.
 | B4-B6 migrate | **Not run.** The founder project still holds all 11 legacy tables and their 143 rows |
 | C1-C7 verification | **Not run** |
 
+**Superseded by the next section.** A9 was outstanding when this section was
+written and has since been given, which closes preflight. The sentence at the
+top of this section and the A9 row in the table above are left as written.
+
 This section supersedes the final bullet under "Known limitations", which
 states that the runbook's SQL had never been run against the founder project
 and that its numbers were unknown. That was true when written and is no longer
 true; the bullet is left in place as history rather than rewritten.
+
+Nothing in this section changes runtime, schema, authorization, or deployment
+behavior; it follows the evidence-commit exception in `AGENTS.md`.
+
+## Preflight closed — A9 comprehension, 17 August 2026
+
+The product owner gave A9 on 17 August 2026, verbatim:
+
+> i understand, 143 rows deleted permanently, no backup verified
+
+That covers both halves the runbook requires: the permanent, unarchived
+deletion of the 143 rows enumerated in the A5 snapshot, and the fact that
+provider-managed retention and point-in-time recovery are outside this ticket
+and have been verified by nobody involved.
+
+**This is not the authorization.** A9 asks for understanding and the runbook
+says so in terms. The gate is B3 and it takes the exact phrase **Run the
+destructive cutover**; neither this confirmation, nor the ticket's acceptance
+on 15 August, nor any paraphrase is that phrase.
+
+**Runbook state.** A1-A9 complete. B1-B2 complete. B3 not reached. B4-B6 and
+C1-C7 not run. The founder project still holds all 11 legacy tables and their
+143 rows, and everything done so far remains reversible.
 
 Nothing in this section changes runtime, schema, authorization, or deployment
 behavior; it follows the evidence-commit exception in `AGENTS.md`.
