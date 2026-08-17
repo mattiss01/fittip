@@ -1260,6 +1260,159 @@ check. No abort or rollback condition was triggered.
 Nothing in this section changes runtime, schema, authorization, or deployment
 behavior; it follows the evidence-commit exception in `AGENTS.md`.
 
+## Founder cutover preflight, runbook A1-A8 — 17 August 2026
+
+The product owner ran the preflight against the founder project. Every step was
+read-only; no migration, deletion, or write was executed, and no query returned
+row content. **A9 is not yet given**, so preflight is not closed and B3 is not
+reachable.
+
+**Order note.** A ran after B1-B2 rather than before them. Nothing A produces
+was consumed or invalidated by that: A3-A4 gate B4, and A5-A8 are the "before"
+half of the C2-C3 diffs, so all of them gate B5 rather than B1. The reordering
+spends the runbook's cheap-abort property — an abort now leaves the founder
+environment in maintenance rather than on the old application — and gains a
+stronger snapshot, because the deployed build has no code path that can write
+to the 11 legacy tables, so they are frozen as of B1.
+
+**Environment.** Supabase CLI **v2.109.1**, PostgreSQL client 17.4, Git Bash,
+run from `C:/Users/msche/dev/fittip` on `master`. The CLI's offered upgrade to
+v2.114.0 was deliberately declined: changing the tool between preflight and
+`db push` would swap an unreviewed binary into the irreversible step and would
+also make the B4 dry-run diff show spurious version-notice lines. Snapshots are
+in a local, non-repository directory outside the checkout, deleted at C7.
+
+**A1 target.** Migration `20260814195107_m3_11_legacy_training_reset.sql`
+hashes to `5a243042c1862faf91fc80502d8590d82bb7d686b5f57f1a4a3b461b8609a735`
+over its Git blob content, matching the value recorded above. The checkout is
+clean at `master` `7b33909`, which carries reviewed implementation
+`ce1457683d29df87501b4cdf1371ff64c05710ed` through merge `8c09cca`. The
+runbook's "deployment Git SHA" item **cannot be satisfied** — the installed
+Vercel CLI exposes no deployment commit — and is the same known weakness
+recorded against B1, not a new one.
+
+**A2 destination.** Linked project is `mahhfyxhgcmcbqkvudcm`, the owner-approved
+founder project, and `origin` is exactly `https://github.com/mattiss01/fittip.git`.
+
+**A3 history.** Remote and repository match on all fourteen versions through
+`20260814164502`. `20260814195107` is the only local version with no remote
+counterpart. No drift.
+
+**A4 dry run.** `npx supabase db push --linked --dry-run` reports exactly one
+migration, `20260814195107_m3_11_legacy_training_reset.sql`, and nothing else.
+Captured to `dry-run-preflight.txt` for the B4 comparison. `--linked` reaches
+the project without incident, so **B5 needs no deviation** from the runbook's
+verbatim command.
+
+**A5 counts.** Founder data is a single account: `auth.users` 1, `profiles` 1.
+
+| Doomed relation | Rows | | Preserved relation | Rows |
+|---|---|---|---|---|
+| `plan_proposal_sources` | 98 | | `memory_revisions` | 9 |
+| `planned_sessions` | 9 | | `memory_items` | 8 |
+| `plan_generation_requests` | 7 | | `roadmap_proposal_sources` | 53 |
+| `plan_proposals` | 7 | | `roadmap_proposals` | 4 |
+| `plan_proposal_decisions` | 5 | | `roadmap_proposal_decisions` | 3 |
+| `planned_activities` | 5 | | `roadmap_generation_requests` | 3 |
+| `completed_sessions` | 3 | | `roadmap_versions` | 2 |
+| `completion_heads` | 3 | | `roadmap_heads` | 1 |
+| `detailed_plan_versions` | 3 | | `goals` | 3 |
+| `completed_activities` | 2 | | `memory_deletion_events` | 2 |
+| `detailed_plan_heads` | 1 | | `goal_collections` | 1 |
+| **Total destroyed** | **143** | | `memory_collections` | 1 |
+
+All eleven doomed tables are present. `onboarding_drafts` and
+`onboarding_publication_receipts` hold 1 row each; `ai_spend_reservations`,
+`personal_activities`, `goal_lifecycle_events`, the three remaining
+`onboarding_*` tables, and all five `rolling_plan*` tables are empty. The M3-10
+storage being empty is expected — it is dormant until M3-12. The public schema
+holds 38 tables and will hold 27 after the reset.
+
+`derived.undecided_source_dependent_roadmap_proposals` is **1**, so exactly one
+proposal will be expired.
+
+**A6 decision fingerprints.** `accepted` 2 rows,
+`40ccb01718f70a499ad56fc7bb37ec23`; `rejected` 1 row,
+`01dbcd433c51ad28c2509086493e0115`. Total 3, reconciling with the
+`roadmap_proposal_decisions` count above.
+
+**A7 dependency closure. PASS.** The main query returns **no row**: nothing
+outside the approved closure holds a normal dependency on anything the
+migration drops.
+
+The control run returns 7 rows, not the "three" the runbook predicted, and both
+differences are explained rather than waved through:
+
+- The three inbound foreign keys — from `roadmap_proposal_decisions`,
+  `roadmap_proposal_sources`, and `roadmap_versions` — each appear **twice**,
+  once for `id` and once for `user_id`, because they are composite keys and
+  `pg_depend` records one entry per referenced column. Three constraints, six
+  rows.
+- The seventh row is `trigger completed_activities_reject_inactive_result on
+  table completed_activities` depending on `reject_inactive_completion_activity()`.
+  It appears only because the control narrows the doomed *table* array to
+  `roadmap_proposals` while leaving the doomed *function* list intact, so
+  `completed_activities` is no longer recognized as doomed and the
+  owner-exclusion clause stops firing. In the main run that table **is** doomed,
+  the trigger is excluded as owned by a dropped parent, and the migration drops
+  it with the table. This row is evidence the owner-exclusion logic works, not a
+  missed dependency.
+
+The control is non-empty, so the main query's zero is a real result rather than
+a broken query.
+
+**A7 closure inventory.** The eleven tables carry 48 indexes, 111 constraints,
+11 policies, 1 trigger, and 12 inbound foreign keys between them. Every one of
+those 12 originates from another table in the same list — which is exactly what
+the main query's empty result proves, since an inbound key from a surviving
+table would have appeared there.
+
+**A8 privilege baseline.** 15 rows, five functions across `anon`,
+`authenticated`, `service_role`. Uniform today: `authenticated` can execute all
+five; `anon` and `service_role` cannot; no function falls back to public
+execute. The migration issues `revoke execute` on all five, so C2 expects
+`authenticated` to flip `t` → `f` on every one, with `anon` and `service_role`
+unchanged.
+
+**Expected C-phase deltas, stated in advance so C is a comparison rather than a
+judgement.** Anything else is a failure.
+
+| Check | Expected after `db push` |
+|---|---|
+| C3 relations | The 11 doomed relations vanish from the listing; 143 rows destroyed |
+| C3 `roadmap_proposal_decisions` | 3 → 4 |
+| C3 derived undecided count | 1 → 0 |
+| C3 decisions | `accepted` 2 / `40ccb017…` and `rejected` 1 / `01dbcd43…` **unchanged**; one new `expired` row, count 1 |
+| C3 everything else | Byte-identical |
+| C2 privileges | `authenticated` `t` → `f` on all five roadmap RPCs; `anon` and `service_role` unchanged |
+
+**Access note.** The first connection attempt failed with `password
+authentication failed for user "postgres"`. The cause was the pooler username:
+Supabase's session pooler routes by tenant and requires
+`postgres.<project-ref>`, which the plain `postgres` of the direct-connection
+endpoint does not satisfy. Corrected, access succeeded. Recorded because the
+same trap will appear at C2-C5.
+
+**Runbook state after this step.**
+
+| Runbook step | State |
+|---|---|
+| A1-A8 | **Complete**, recorded above. All read-only; no hosted write occurred |
+| A9 comprehension | **Outstanding.** The consequences were put to the product owner but no confirmation is recorded. Preflight is not closed until it is |
+| B1 deploy maintenance application | **Complete** |
+| B2 verify founder application | **Complete** |
+| B3 destructive authorization gate | **Not reached.** The exact phrase **Run the destructive cutover** has not been given |
+| B4-B6 migrate | **Not run.** The founder project still holds all 11 legacy tables and their 143 rows |
+| C1-C7 verification | **Not run** |
+
+This section supersedes the final bullet under "Known limitations", which
+states that the runbook's SQL had never been run against the founder project
+and that its numbers were unknown. That was true when written and is no longer
+true; the bullet is left in place as history rather than rewritten.
+
+Nothing in this section changes runtime, schema, authorization, or deployment
+behavior; it follows the evidence-commit exception in `AGENTS.md`.
+
 ## Known limitations
 
 - This intentionally removes all old accepted-plan and completion history;
