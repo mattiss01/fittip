@@ -92,7 +92,7 @@ input {
   font: inherit;
 }
 input:focus {
-  outline: 3px solid #f4cba0;
+  outline: 3px solid var(--foreground);
   outline-offset: 2px;
   border-color: var(--accent);
 }
@@ -201,16 +201,6 @@ button:disabled {
 .plan-shell textarea {
   min-height: 6rem;
   resize: vertical;
-}
-
-.plan-shell input:focus,
-.plan-shell select:focus,
-.plan-shell textarea:focus,
-.plan-shell button:focus-visible,
-.plan-shell a:focus-visible,
-.activity-library summary:focus-visible {
-  outline: 3px solid #f4cba0;
-  outline-offset: 2px;
 }
 
 .plan-header {

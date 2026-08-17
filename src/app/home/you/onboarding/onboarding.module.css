@@ -178,7 +178,7 @@
 .result a:focus-visible,
 .result button:focus-visible,
 .cancelForm button:focus-visible {
-  outline: 3px solid #efaa84;
+  outline: 3px solid var(--ledger-ink);
   outline-offset: 2px;
 }
 

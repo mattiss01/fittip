@@ -1,16 +1,55 @@
 # M3-18: Residual focus-ring contrast on preserved surfaces
 
-**Status:** proposed — not approved for implementation
+**Status:** in development — the product owner approved dispatch and confirmed
+Tier 3 on 17 August 2026, ahead of M3-12, so the new Plan surface is built
+against a compliant focus ring rather than swept afterwards.
 
-**Triage:** needs-triage
+**Triage:** ready
 
 **Milestone:** M3
 
 **Priority:** P2
 
-**Tier:** 3 proposed — presentation-only styling, no behavior, schema, or
-authorization change. The product owner may raise it; accessibility conformance
-is a product judgement, not the lead's.
+**Tier:** 3 — confirmed by the product owner on 17 August 2026.
+Presentation-only styling, no behavior, schema, or authorization change. The
+lead implements directly; a green CI run plus the product owner's Preview
+confirmation replaces the builder and reviewer split.
+
+## Agent brief
+
+**Outcome.** Raise every failing focus indicator to at least 3:1, applying
+M3-11's `var(--ledger-ink)` decision to the surfaces M3-11 could not reach.
+
+**Hard constraints:**
+
+- Change the focus indicator only. No component, route, server, schema, or
+  authorization change, and no other visual change on the affected routes.
+- Fix all four cases, not the three module rules alone. The global
+  `input:focus` rule is the worst and is live on every route with a text input.
+- The global rule is not scoped to `.appShell`, so it cannot rely on the
+  `--ledger-*` tokens. Use a token that resolves globally.
+- Compute each resulting ratio against every surface the 2px offset exposes.
+  Do not assert a ratio from a literal.
+- Keep the indicator absent at rest and solid when focused, the serious-coach
+  tone, the 390px path, and reduced-motion behavior intact.
+
+**Non-goals:** no focus-visible/focus semantic change, no restyling beyond the
+indicator, no cleanup of unrelated dead `.plan-shell` rules.
+
+**Acceptance:** every changed ring computes at least 3:1; no other visual
+change on the affected routes; green exact-commit CI; product-owner
+confirmation at 390px on the Preview.
+
+**Expected to change:** `src/app/globals.css`,
+`src/app/home/you/goals/goals.module.css`,
+`src/app/home/you/memory/memory.module.css`,
+`src/app/home/you/onboarding/onboarding.module.css`, and this ticket's
+validation record.
+
+**Skills.** `frontend-design` was considered and judged not applicable: a
+focus-indicator colour correction is not a material reshape of user-visible UI.
+
+Read only this section unless you hit an ambiguity it does not resolve.
 
 **Depends on:** M3-11 accepted and merged. This ticket only makes sense once the
 M3-11 focus treatment is on `master`, because it applies that same decision to
