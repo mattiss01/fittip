@@ -561,13 +561,19 @@ own pinned `testMatch`, at exactly `390x844`, and cleans up its accounts.
 Raised by the first review round and deliberately not fixed here:
 
 10. **A future non-superuser writer of `profiles` will need `EXECUTE` on
-    `is_iana_timezone_name`** — even for a row that never sets
-    `timezone_name`. The constraint short-circuits on null, so the function is
-    not called in that case today, but the requirement is a property of the
-    constraint rather than of the column, and it is easy to trip over. Right
-    now only `authenticated` can write `profiles` at all and it holds the
-    grant; `service_role` has no INSERT or UPDATE there. Whoever adds the next
-    writer needs to know this. (Reviewer's N6.)
+    `is_iana_timezone_name`** — possibly even for a row that never sets
+    `timezone_name`. The builder and the reviewer disagreed on the mechanism:
+    the builder read the constraint as short-circuiting on null so the function
+    is never called for such a row, the reviewer read Postgres as ACL-checking
+    a function referenced in a CHECK constraint at expression-initialization
+    time, which would require `EXECUTE` regardless. **Neither demonstrated it**,
+    and this record does not settle it — assume the stricter reading until
+    someone verifies it with a throwaway role. The conclusion is the same under
+    both: the requirement is a property of the constraint rather than of the
+    column, and it is easy to trip over. Right now only `authenticated` can
+    write `profiles` at all and it holds the grant; `service_role` has no
+    INSERT or UPDATE there. Whoever adds the next writer needs to know this.
+    (Reviewer's N6 and O1.)
 11. **The recovery-days foreign key `(plan_id, user_id)` has no index, and the
     `(id, user_id)` unique key is referenced by nothing.** The FK is unindexed,
     so a cascading delete of a plan scans; with one plan row per owner and one
