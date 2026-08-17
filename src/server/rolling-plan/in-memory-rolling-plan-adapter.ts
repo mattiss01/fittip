@@ -23,6 +23,11 @@ export type InMemoryRollingPlanOptions = {
   clock?: () => Date;
 };
 
+export type InMemoryRollingPlanAdapterHandle = {
+  /** Removes the stored zone, as nulling the profile column would. */
+  clearTimezone(): void;
+};
+
 export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
   private planId: string | null = null;
   private revision = 0;
@@ -33,8 +38,15 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
     { fingerprint: string; receipt: RollingPlanChangeReceipt }
   >();
   private sequence = 0;
+  private timezoneName: string | null;
 
-  constructor(private readonly options: InMemoryRollingPlanOptions = {}) {}
+  constructor(private readonly options: InMemoryRollingPlanOptions = {}) {
+    this.timezoneName = options.timezoneName ?? null;
+  }
+
+  clearTimezone() {
+    this.timezoneName = null;
+  }
 
   async getPlanSlice({
     startDate,
@@ -65,6 +77,11 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
     changeSet: RollingPlanChangeSet,
     expectedPlanRevision: number,
   ) {
+    // The zone is read before the replay lookup, matching
+    // `apply_rolling_plan_change_set`, which raises PT428 before it looks up an
+    // idempotency key. An owner whose stored zone has gone must get the same
+    // answer from either adapter, replay or not; the contract pins that.
+    const today = this.ownerToday();
     const fingerprint = JSON.stringify({ expectedPlanRevision, ...changeSet });
     const replay = this.receipts.get(changeSet.idempotencyKey);
     if (replay) {
@@ -72,7 +89,6 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
         throw new RollingPlanConflictError();
       return { ...replay.receipt, result: "replayed" as const };
     }
-    const today = this.ownerToday();
     if (expectedPlanRevision !== this.revision)
       throw new RollingPlanConflictError();
 
@@ -180,9 +196,11 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
   }
 
   private ownerToday(): string {
-    const { timezoneName, clock } = this.options;
-    if (!timezoneName) throw new RollingPlanTimezoneRequiredError();
-    return isoDateInTimezone((clock ?? (() => new Date()))(), timezoneName);
+    if (!this.timezoneName) throw new RollingPlanTimezoneRequiredError();
+    return isoDateInTimezone(
+      (this.options.clock ?? (() => new Date()))(),
+      this.timezoneName,
+    );
   }
 }
 

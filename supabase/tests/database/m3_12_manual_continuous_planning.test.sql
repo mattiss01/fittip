@@ -1,20 +1,57 @@
 -- M3-12: the durable owner time zone, Recovery day labels, and the two rules
 -- M3-10 left out. Dates here follow the wall clock on purpose: the past
 -- boundary is defined against owner-local today, so a fixed literal would test
--- something else. `pg_temp.owner_day` freezes the reference to the
--- transaction timestamp so a run spanning UTC midnight stays consistent.
+-- something else.
+--
+-- That makes agreeing with the function about "today" the whole problem.
+-- `apply_rolling_plan_change_set` derives it from the owner's stored zone and
+-- `clock_timestamp()`. Pinning this side to `now()` instead would not avoid a
+-- UTC-midnight boundary, it would manufacture one: the transaction timestamp
+-- and the statement clock can land on opposite sides of it, and the "today
+-- accepts a session" assertion would fail with PT422.
+--
+-- So both sides read the same clock, and the owner is given a stored zone
+-- whose local time is currently the middle of the day. Six zones spanning
+-- UTC-8 to UTC+13 guarantee at least one qualifies at every UTC hour, so a
+-- suite that runs in about a second cannot straddle an owner-local midnight
+-- whatever time of day it is run at.
 
 begin;
 
 create extension if not exists pgtap with schema extensions;
 
+create temporary table plan_zone as
+select name
+from pg_catalog.pg_timezone_names
+where name in (
+  'UTC', 'Europe/Berlin', 'Asia/Tokyo', 'Pacific/Auckland',
+  'America/New_York', 'America/Los_Angeles'
+)
+  and pg_catalog.date_part(
+    'hour', pg_catalog.timezone(name, pg_catalog.clock_timestamp())
+  ) between 8 and 15
+order by name
+limit 1;
+
+-- The suite reads this back while running as `authenticated` and as `anon`.
+grant select on plan_zone to public;
+
 create function pg_temp.owner_day(p_offset integer)
 returns text
 language sql
 stable
-as $$ select ((timezone('UTC', now()))::date + p_offset)::text $$;
+as $$
+  select (
+    (timezone((select name from plan_zone), clock_timestamp()))::date + p_offset
+  )::text
+$$;
 
-select plan(57);
+select plan(58);
+
+select is(
+  (select count(*)::bigint from plan_zone), 1::bigint,
+  'a stored zone whose local time is mid-day is available at every UTC hour'
+);
 
 -- Structure, privileges, and policies --------------------------------------
 
@@ -171,8 +208,11 @@ select throws_ok(
   'the zone grant opens no other profile column'
 );
 select lives_ok(
-  $$update public.profiles set timezone_name = 'UTC'
-    where user_id = '7c000000-0000-4000-8000-000000000001'$$,
+  format(
+    $$update public.profiles set timezone_name = %L
+      where user_id = '7c000000-0000-4000-8000-000000000001'$$,
+    (select name from plan_zone)
+  ),
   'the owner confirms a real IANA zone'
 );
 -- The write is confined by RLS rather than refused, so it matches no row. The

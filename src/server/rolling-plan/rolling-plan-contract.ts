@@ -6,6 +6,7 @@ import {
   RollingPlan,
   RollingPlanConflictError,
   RollingPlanRuleError,
+  RollingPlanTimezoneRequiredError,
   RollingPlanValidationError,
 } from "./rolling-plan";
 
@@ -17,6 +18,12 @@ export type RollingPlanContractSubject = {
    * against it and a fixed literal would silently stop testing the rule.
    */
   today: string;
+  /**
+   * Removes the owner's stored zone, as nulling `profiles.timezone_name`
+   * would. Required, because the ordering of the zone check against the replay
+   * lookup is part of this contract and cannot be exercised without it.
+   */
+  clearTimezone: () => Promise<void>;
   dispose?: () => Promise<void>;
 };
 
@@ -258,6 +265,26 @@ export function registerRollingPlanContract(
       });
     });
 
+    it("checks the stored zone before replaying an earlier change", async () => {
+      const { plan, day, clearTimezone } = requireSubject(subject);
+      const request = changeSet([add(randomUUID(), day(1), 0)]);
+      await plan.applyChangeSet(request, 0);
+      await expect(plan.applyChangeSet(request, 0)).resolves.toMatchObject({
+        result: "replayed",
+      });
+
+      // Without a zone neither rule can be judged, so the refusal comes before
+      // the idempotency lookup rather than after it. Both adapters answer the
+      // same way, which is only true if they order those two steps the same.
+      await clearTimezone();
+      await expect(plan.applyChangeSet(request, 0)).rejects.toThrow(
+        RollingPlanTimezoneRequiredError,
+      );
+      await expect(
+        plan.applyChangeSet(changeSet([add(randomUUID(), day(2), 0)]), 1),
+      ).rejects.toThrow(RollingPlanTimezoneRequiredError);
+    });
+
     it("sets and clears a recovery day label beside the sessions", async () => {
       const { plan, day } = requireSubject(subject);
       const sessionId = randomUUID();
@@ -348,8 +375,12 @@ export function registerRollingPlanContract(
 
 function requireSubject(subject: RollingPlanContractSubject | undefined) {
   if (!subject) throw new Error("Rolling plan contract setup failed.");
-  const { plan, today } = subject;
-  return { plan, day: (offset: number) => shiftDate(today, offset) };
+  const { plan, today, clearTimezone } = subject;
+  return {
+    plan,
+    clearTimezone,
+    day: (offset: number) => shiftDate(today, offset),
+  };
 }
 
 function shiftDate(isoDate: string, offset: number) {

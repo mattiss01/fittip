@@ -60,6 +60,15 @@ if (url && publishableKey && serviceRoleKey && isLocalUrl) {
 
       return {
         today: isoDateInTimezone(new Date(), CONTRACT_TIMEZONE),
+        // The owner's own column-scoped grant is what makes this possible; no
+        // privileged client is used to set up any part of this contract.
+        clearTimezone: async () => {
+          const { error } = await ownerClient
+            .from("profiles")
+            .update({ timezone_name: null })
+            .eq("user_id", userId);
+          if (error) throw new Error("Could not clear the contract zone.");
+        },
         plan: new RollingPlan(new PostgresRollingPlanAdapter(ownerClient)),
         dispose: async () => {
           const { error } = await admin.auth.admin.deleteUser(userId);

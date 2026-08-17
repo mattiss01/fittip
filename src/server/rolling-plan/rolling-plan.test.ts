@@ -13,15 +13,17 @@ import {
 const CONTRACT_TIMEZONE = "Europe/Berlin";
 const CONTRACT_NOW = new Date("2026-08-17T09:30:00.000Z");
 
-registerRollingPlanContract("the in-memory adapter", async () => ({
-  plan: new RollingPlan(
-    new InMemoryRollingPlanAdapter({
-      timezoneName: CONTRACT_TIMEZONE,
-      clock: () => CONTRACT_NOW,
-    }),
-  ),
-  today: isoDateInTimezone(CONTRACT_NOW, CONTRACT_TIMEZONE),
-}));
+registerRollingPlanContract("the in-memory adapter", async () => {
+  const adapter = new InMemoryRollingPlanAdapter({
+    timezoneName: CONTRACT_TIMEZONE,
+    clock: () => CONTRACT_NOW,
+  });
+  return {
+    plan: new RollingPlan(adapter),
+    today: isoDateInTimezone(CONTRACT_NOW, CONTRACT_TIMEZONE),
+    clearTimezone: async () => adapter.clearTimezone(),
+  };
+});
 
 describe("rolling plan interface validation", () => {
   it("requires bounded valid dates and rejects unknown input keys", async () => {

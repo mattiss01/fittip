@@ -147,6 +147,10 @@ function PlanDay({
     (session) => session.status === "cancelled",
   );
   const headingId = `plan-day-${date}`;
+  const addResetKey = useTargetedResetKey(
+    state.submission,
+    state.operation === "add" && state.localDate === date,
+  );
 
   return (
     <li
@@ -214,7 +218,7 @@ function PlanDay({
           <form
             className={styles.form}
             action={action}
-            key={`add-${date}-${state.submission}`}
+            key={`add-${date}-${addResetKey}`}
           >
             <input type="hidden" name="operation" value="add" />
             <input type="hidden" name="localDate" value={date} />
@@ -273,6 +277,10 @@ function PlanSessionCard({
   pending: boolean;
 }) {
   const moveDates = dates.filter((date) => date !== session.localDate);
+  const editResetKey = useTargetedResetKey(
+    state.submission,
+    state.operation === "edit" && state.sessionId === session.id,
+  );
 
   return (
     <li className={styles.session} data-locked={session.isLocked}>
@@ -327,7 +335,7 @@ function PlanSessionCard({
         <form
           className={styles.form}
           action={action}
-          key={`edit-${session.id}-${state.submission}`}
+          key={`edit-${session.id}-${editResetKey}`}
         >
           <input type="hidden" name="operation" value="edit" />
           <input type="hidden" name="sessionId" value={session.id} />
@@ -496,6 +504,25 @@ function SessionFields({
       </div>
     </>
   );
+}
+
+/**
+ * A remount key that advances only when a submission targeted *this* form.
+ *
+ * The forms are uncontrolled, so remounting is how a saved one is cleared and
+ * how a refused one is re-seeded from the returned draft. Keying on the global
+ * submission counter did both of those correctly and also remounted every other
+ * add and edit form on the surface: marking a recovery day on the first date
+ * closed an open "Add a session" on the twelfth and discarded whatever had been
+ * typed into it. Advancing per target keeps the reset and loses nothing else.
+ *
+ * The value is adjusted during render rather than in an effect, so the remount
+ * happens in the same commit as the result that caused it.
+ */
+function useTargetedResetKey(submission: number, targeted: boolean): number {
+  const [seen, setSeen] = useState(0);
+  if (targeted && submission !== seen) setSeen(submission);
+  return targeted ? submission : seen;
 }
 
 function draftOf(session: PlanSessionView): PlanActionDraft {
