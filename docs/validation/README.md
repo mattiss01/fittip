@@ -42,10 +42,12 @@ Validation records and their visual evidence are grouped by milestone.
 ## M3
 
 - [M3-12 manual continuous planning](M3/M3-12-VALIDATION.md) — in development;
-  Tier 1 builder handoff complete. The migration adds the durable owner time
-  zone, Recovery day labels, and the two planning rules M3-10 left out; the
-  `/home/plan` stub is replaced by the owner's one continuous plan. Independent
-  review, the CI run for the reviewed SHA, founder-project migration
+  Tier 1. The migration adds the durable owner time zone, Recovery day labels,
+  and the two planning rules M3-10 left out; the `/home/plan` stub is replaced
+  by the owner's one continuous plan. Round 1 of independent review rejected
+  `2a09b6c` on two delivery-gate blockers and three defects, all corrected in
+  `093b21d`; the schema, authorization and atomicity work was accepted
+  unchanged. Re-review, the CI run for `093b21d`, founder-project migration
   application, Preview verification, and acceptance are pending
 - [M3-18 residual focus-ring contrast](M3/M3-18-VALIDATION.md) — accepted
   17 August 2026 against `5f78071` with green CI and a confirmed Preview.

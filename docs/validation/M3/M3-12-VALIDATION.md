@@ -12,23 +12,47 @@ visible behavior. Dispatched by the product owner on 17 August 2026 against the
 **Branch:** `ticket/m3-12-manual-continuous-planning`, from `master` at
 `cbf271a94886d2a73e9f9b6b1e2a435cf82cee68`.
 
-**Implementation review target:** `2a09b6c` — the branch head. Two commits, both
-in scope:
+**Implementation review target:** `093b21d`. The first review round rejected
+`2a09b6c`; these corrections invalidate approval of every earlier commit.
 
 | Commit | Purpose |
 | --- | --- |
 | `d00885f` | The migration, the module and repository changes, the `/home/plan` surface, and every test that goes with them. |
 | `2a09b6c` | The two `.github/workflows/ci.yml` steps. Committed separately because `.github/**` is a tooling and supply-chain change. |
+| `029936a` | **Correction, round 1.** B1: `/home/plan` removed from the M3-11 maintenance spec's route list. B2: Prettier failure in `src/app/home/plan/actions.test.ts`. |
+| `da9963b` | **Correction, round 1.** N1 form reset key, N3 pgTAP clock divergence, N5 adapter ordering. |
+| `093b21d` | **Correction, round 1.** The three 390px screenshots regenerated against the corrected surface. |
 
-**Review range:** `git diff cbf271a..2a09b6c`. The branch head is one commit
-further on and adds only this record and its three screenshots, under the
-evidence-commit exception in `AGENTS.md`; it changes no code.
+**Review range:** `git diff cbf271a..093b21d`. The branch head is one commit
+further on and adds only this record, under the evidence-commit exception in
+`AGENTS.md`; it changes no code.
 
-**CI:** not yet run — this branch has not been pushed. The lead pushes; the run
-for `2a09b6c` is the automated-test evidence and must be recorded here before
-acceptance.
+**CI:** the run for the rejected `2a09b6c` was
+https://github.com/mattiss01/fittip/actions/runs/32045649999 — **FAILURE**, and
+it is recorded here because it is what the corrections answer. Prettier is the
+first step of the static job, so ESLint, TypeScript, Vitest and the production
+build never executed: that run establishes nothing about four of the five
+static gates. The run for `093b21d` is the automated-test evidence and must be
+recorded here, green, before acceptance.
 
 **Preview:** pending the push.
+
+## First review round: what was rejected and what changed
+
+The reviewer examined the schema, authorization, rule enforcement and atomicity
+and found nothing blocking; all five judgment calls flagged in the original
+handoff were verified and accepted. What blocked was the delivery gate and three
+real defects in the new code.
+
+| Finding | Resolution |
+| --- | --- |
+| **B1** `e2e/m3-11-maintenance.spec.ts` still listed `/home/plan` and asserted it renders the stub heading. | Removed from `routes`, with a comment saying why and pointing at the spec that now owns the route. The other five stub routes are untouched. I had updated the architecture counterpart and missed the browser one. |
+| **B2** `src/app/home/plan/actions.test.ts` failed Prettier — a real failure, not the CRLF artifact. | Formatted. See the note on verification below: the local `prettier --check` could not have caught this, and now there is a check that does. |
+| **B3** the local `test:run` flake was unadjudicated because Vitest never ran behind B2. | Diagnosed below with 12 further runs. |
+| **N1** the uncontrolled forms were keyed on the global submission counter. | Keyed per target. A regression test pins the repro and fails against the old key. |
+| **N3** `pg_temp.owner_day` used `now()` while the function uses `clock_timestamp()`. | Both sides read the same clock, and the owner's stored zone is chosen so its local time is mid-day. |
+| **N5** the two adapters ordered the zone check and the replay lookup differently. | In-memory now matches Postgres, and the shared contract pins the ordering rather than leaving it unspecified. |
+| **N4, N6, N7, N8, N9** | Recorded as limitations, not fixed. See below. |
 
 ## Delivered behavior
 
@@ -103,21 +127,29 @@ Visual evidence at `390x844`:
 
 ## Changed files
 
-`git diff --stat cbf271a..2a09b6c`:
+`git diff --stat cbf271a..093b21d` (this record's own line counts are from the
+commit before the one that updates it):
 
 ```
  .github/workflows/ci.yml                           |  13 +
- e2e/m3-12-plan.spec.ts                             | 358 ++++++++++++
+ docs/validation/M3/M3-12-VALIDATION.md             | 492 +++++++++++++++
+ .../M3/evidence/M3-12-confirm-zone-390x844.png     | Bin 0 -> 41535 bytes
+ .../M3/evidence/M3-12-daily-limit-390x844.png      | Bin 0 -> 157046 bytes
+ .../M3/evidence/M3-12-plan-window-390x844.png      | Bin 0 -> 122237 bytes
+ docs/validation/README.md                          |   6 +
+ e2e/m3-11-maintenance.spec.ts                      |   4 +-
+ e2e/m3-12-plan.spec.ts                             | 358 +++++++++++
  e2e/m3-12.playwright.config.ts                     |  20 +
  package.json                                       |   1 +
  src/app/home/plan/action-state.ts                  |  56 ++
- src/app/home/plan/actions.test.ts                  | 330 +++++++++++
- src/app/home/plan/actions.ts                       | 423 ++++++++++++++
+ src/app/home/plan/actions.test.ts                  | 328 ++++++++++
+ src/app/home/plan/actions.ts                       | 423 +++++++++++++
  src/app/home/plan/error.tsx                        |  18 +
  src/app/home/plan/loading.tsx                      |  13 +
  src/app/home/plan/page.tsx                         | 118 +++-
- src/app/home/plan/plan-manager.tsx                 | 643 +++++++++++++++++++++
- src/app/home/plan/plan.module.css                  | 421 ++++++++++++++
+ src/app/home/plan/plan-manager.test.tsx            | 249 ++++++++
+ src/app/home/plan/plan-manager.tsx                 | 670 +++++++++++++++++++++
+ src/app/home/plan/plan.module.css                  | 421 +++++++++++++
  src/app/home/plan/timezone-confirmation.tsx        |  69 +++
  src/architecture/m3-11-legacy-reset.test.ts        |  27 +-
  src/lib/date/local-date.test.ts                    |  21 +-
@@ -127,24 +159,33 @@ Visual evidence at `390x844`:
  src/server/repositories/profile-repository.ts      |  54 +-
  .../repositories/rolling-plan-repository.test.ts   |  25 +
  src/server/repositories/rolling-plan-repository.ts |  13 +-
- .../rolling-plan/in-memory-rolling-plan-adapter.ts |  56 +-
- src/server/rolling-plan/rolling-plan-contract.ts   | 211 +++++--
- src/server/rolling-plan/rolling-plan.test.ts       |  71 ++-
+ .../rolling-plan/in-memory-rolling-plan-adapter.ts |  74 ++-
+ src/server/rolling-plan/rolling-plan-contract.ts   | 242 ++++++--
+ src/server/rolling-plan/rolling-plan.test.ts       |  77 ++-
  src/server/rolling-plan/rolling-plan.ts            |  45 +-
- ...0817125029_m3_12_manual_continuous_planning.sql | 587 +++++++++++++++++++
+ ...0817125029_m3_12_manual_continuous_planning.sql | 587 ++++++++++++++++++
  .../tests/database/m0_02_authorization.test.sql    |  13 +-
  .../m3_10_rolling_plan_foundation.test.sql         |  34 +-
- .../m3_12_manual_continuous_planning.test.sql      | 458 +++++++++++++++
+ .../m3_12_manual_continuous_planning.test.sql      | 498 +++++++++++++++
  .../m3_10_concurrent_rolling_plan_changes.mjs      |  13 +-
- .../m3_10_rolling_plan_postgres.test.ts            |   7 +-
+ .../m3_10_rolling_plan_postgres.test.ts            |  16 +-
  .../integration/m3_12_concurrent_plan_rules.mjs    | 320 ++++++++++
- 32 files changed, 4500 insertions(+), 75 deletions(-)
+ 39 files changed, 5377 insertions(+), 78 deletions(-)
 ```
 
-Nothing was deleted or renamed. Three evidence screenshots are added under
-`docs/validation/M3/evidence/` in this record's own commit.
+Nothing was deleted or renamed.
 
 Files whose purpose is not evident from the path and diff:
+
+- `src/app/home/plan/plan-manager.test.tsx` — added in the correction round. Its
+  fourth case is the N1 regression: it types into the twelfth date's add form,
+  resolves a recovery-day submission on the first date, and asserts the typed
+  value and the open disclosure both survive. It fails against the old key,
+  which was checked by reverting the key and re-running.
+- `e2e/m3-11-maintenance.spec.ts` — `/home/plan` removed from the stub route
+  list. This is the browser counterpart of the architecture invariant below;
+  both assert that the reset routes stayed stubs, and M3-12 reopened exactly
+  one of them.
 
 - `src/app/home/plan/action-state.ts` — the types and initial states shared by
   the `"use server"` actions and the `"use client"` manager. It exists so
@@ -279,57 +320,94 @@ command was run and no spend was incurred.
 
 ## Tests and final results
 
-CI is the automated-test evidence and has not run yet — the branch is
-unpushed. The results below are what was observed locally while developing,
-recorded honestly and **not** offered as a substitute for the run on `2a09b6c`.
+CI is the automated-test evidence. The run for the rejected `2a09b6c` failed at
+Prettier and therefore never reached ESLint, TypeScript, Vitest or the build;
+the run for `093b21d` is what must be green. The results below are what was
+observed locally after the corrections, recorded honestly and **not** offered as
+a substitute for that run.
 
 | Command or check | Result |
 | --- | --- |
 | `npm.cmd run lint` | pass |
 | `npm.cmd run typecheck` | pass |
-| `npm.cmd run test:run -- src/app/home/plan src/server src/lib/date src/architecture` | 33 files, 520 tests, pass |
+| `npm.cmd run test:run` | 58 files, 701 tests, 1 skipped, pass — 12 consecutive runs, see below |
 | `npm.cmd run build` | pass, 19 routes |
 | `npx.cmd supabase db reset --local` | every migration applied from zero, pass |
 | `npx.cmd supabase db lint --local --level warning --fail-on warning` | no schema errors |
 | `npx.cmd supabase db advisors --local --type all --level warn --fail-on warn` | no issues found |
-| `npx.cmd supabase test db --local supabase/tests/database` | 9 files, 548 assertions, pass |
-| `npm.cmd run test:m3-10-adapter-contract` | 8 tests, pass — the real Postgres adapter on the shared contract |
+| `npx.cmd supabase test db --local supabase/tests/database` | 9 files, 549 assertions, pass |
+| `npm.cmd run test:m3-10-adapter-contract` | 9 tests, pass — the real Postgres adapter on the shared contract, including the new ordering case |
 | `npm.cmd run test:m3-10-concurrency` | pass |
 | `npm.cmd run test:m3-12-concurrency` | pass |
+| `npx.cmd playwright test --config=e2e/m3-11.playwright.config.ts` | 1 test, pass, 0 skipped — the route B1 removed |
+| Prettier over the LF-normalized staged blobs | 29 files, all clean |
 | `npx.cmd playwright test --config=e2e/m3-12.playwright.config.ts` | 2 tests, pass, 11.9s, 0 skipped |
 | `git diff --check` | clean |
 
-### One thing to be honest about: an intermittent local suite timeout
+### B3: the intermittent local suite timeout, adjudicated
 
-While finishing this ticket the full `test:run` failed three times out of eleven
-on this branch, and was green the other eight. Every failure was identical in
-shape: `Error: Test timed out in 5000ms` on the **first** test of a pre-existing
-jsdom component file this ticket does not touch —
-`src/components/home/mobile-navigation.test.tsx`,
-`src/components/goals/goal-manager.test.tsx`,
-`src/components/memory/memory-manager.test.tsx`, and in one run
-`src/components/onboarding/onboarding-manager.test.tsx`. No assertion ever
-failed; the worker never reached one.
+The first handoff reported `test:run` failing 3 times in 11 on this branch and
+could not say why. The Vitest step never ran in CI because Prettier failed ahead
+of it, so the question was still open at review. It has now been chased down.
 
-All three failing runs fell inside one five-minute window in which this machine
-was also running the Docker Supabase stack and a Next production server, and in
-which suites were being run back to back. The eight runs after that window
-settled were green, including four consecutive ones. `src/components` alone was
-green 3/3, and the unchanged `cbf271a` baseline was green 5/5 — but every one of
-those baseline runs was in the settled window, so that comparison does not by
-itself prove the branch is not implicated, and I am not claiming it does.
+**Shape.** Every failure was `Error: Test timed out in 5000ms` on the **first**
+test of a pre-existing jsdom component file this ticket does not touch:
+`mobile-navigation.test.tsx`, `goal-manager.test.tsx`, `memory-manager.test.tsx`
+and, once, `onboarding-manager.test.tsx`. No assertion ever failed — the worker
+never reached one.
 
-What is established: no test in this ticket's diff failed at any point, and the
-failures are environment-setup timeouts rather than behavior. What is not
-established: whether the extra test file this ticket adds (58 files instead of
-57) contributes measurably to worker contention on a loaded machine. CI runs on
-a clean runner and is the authority; if its `test:run` step flakes on this SHA,
-that is a blocker to resolve rather than a known-defect exception, because
-nobody has diagnosed it.
+**Cause.** `vitest.config.ts` sets `environment: "jsdom"` for every file and no
+`testTimeout`, so the default 5000 ms budget covers the first test *and* the
+jsdom environment creation in front of it. The run summaries put cumulative
+environment setup at 130–350 s. When this machine is also running the Docker
+Supabase stack, a Next production server, and back-to-back suites, that setup
+crosses 5 s and the first test in a file is recorded as a timeout.
+
+**Evidence.** All three failures fell inside one five-minute window of exactly
+that contention. With the server stopped and no build running, the full suite is
+now green **12 consecutive times** at 58 files / 701 tests / 1 skipped, on top of
+8 green runs earlier — 20 green, 0 failed, once nothing else was competing.
+
+**What I did not do.** I did not raise `testTimeout`. That is a repo-wide tooling
+decision outside this ticket, and here it would hide the symptom rather than
+address it. Nothing in this ticket's diff was ever the failing test.
+
+**What the lead must still check.** CI runs the static job on a dedicated runner
+that does not host the Docker stack, so the contention that reproduces this
+locally should not exist there. That is a prediction, not a result. Read the
+Vitest step for `093b21d`: if it flakes, it is an undiagnosed failure and a
+blocker in its own right, not a known-defect exception.
+
+### How B2 escaped, and the check that now catches it
+
+`npm.cmd run format:check` reports ~130 false failures on this checkout because
+`core.autocrlf=true` gives CRLF working files while Prettier writes LF, so a
+real failure is invisible in the noise. That is why a genuine Prettier failure in
+one file reached CI and cost four of five static gates.
+
+The reliable local equivalent of CI's Linux checkout is to run Prettier over the
+**staged blobs**, which Git has already normalized to LF:
+
+```
+git show ":<path>" | node node_modules/prettier/bin/prettier.cjs \
+  --check --stdin-filepath <path>
+```
+
+Run across all 29 formattable files in this ticket's range, that reports them
+all clean. Fed the pre-fix `actions.test.ts` blob from `d00885f`, it exits 1 —
+so it would have caught B2 before the push. This costs one command and is worth
+folding into the documented workflow.
+
+Related and worth fixing separately: the README's type-regeneration sequence
+tells you to run `npm run format`, which rewrites **185 files** to LF on this
+checkout. Every one of them is content-identical after Git's normalization, so
+`git diff` shows only the genuinely changed files, but the working tree is left
+churned and `git status` lists all 185 until they are restored. That instruction
+needs a narrower form.
 
 Tests added or changed:
 
-- `supabase/tests/database/m3_12_manual_continuous_planning.test.sql` — 57
+- `supabase/tests/database/m3_12_manual_continuous_planning.test.sql` — 58
   assertions. Structure, types, constraints, the owner/date unique key, the
   same-owner FK, the immutability trigger, the RLS state, the policy count, the
   exact table and column privilege matrix for `authenticated` and `anon`, the
@@ -341,8 +419,18 @@ Tests added or changed:
   label lifecycle with its history entry, the ten-session ceiling and the
   eleventh refusal, the cap judged on the whole change set, a label on a full
   date, cross-owner and anonymous denial, and the owner-immutability trigger.
-  Dates follow the wall clock deliberately, frozen to the transaction timestamp
-  so a run spanning UTC midnight stays consistent.
+
+  Dates follow the wall clock deliberately, because the past boundary is
+  defined against owner-local today and a fixed literal would test something
+  else. The correction round fixed how: `pg_temp.owner_day` previously read
+  `now()` while `apply_rolling_plan_change_set` reads `clock_timestamp()`, and
+  freezing one side manufactures a UTC-midnight divergence rather than
+  preventing it. Both sides now read the same clock, and the owner is given a
+  stored zone whose local time is currently between 08:00 and 15:00, chosen at
+  run time from six zones spanning UTC-8 to UTC+13. A first assertion proves
+  one qualifies; that at least one qualifies at **every** UTC hour was verified
+  separately over all 24. A suite that runs in about a second therefore cannot
+  straddle an owner-local midnight whatever time it is started.
 - `supabase/tests/integration/m3_12_concurrent_plan_rules.mjs` — twelve rounds
   racing a session change against a recovery-day change at the same expected
   revision; each round must produce exactly one 200 and one `PT409`, and the
@@ -351,13 +439,27 @@ Tests added or changed:
   `PT423`; a label accepted on that same full date; a past-date attempt
   answering `PT422` with HTTP 422; a zone-less owner answering `PT428` with
   HTTP 428 and no plan materialized; and cross-owner label invisibility.
-- `src/server/rolling-plan/rolling-plan-contract.ts` — three new contract cases
+- `src/server/rolling-plan/rolling-plan-contract.ts` — four new contract cases
   run by **both** adapters, plus every existing case re-expressed relative to
-  the subject's own `today`.
+  the subject's own `today`. The fourth was added in the correction round and
+  pins the N5 ordering: it applies a change, replays it, clears the stored zone,
+  and requires the same replay to raise `RollingPlanTimezoneRequiredError`. The
+  subject type now requires a `clearTimezone` hook so this cannot be skipped;
+  the Postgres subject implements it with the owner's own column-scoped grant
+  and no privileged client. Reverting the in-memory ordering makes this case
+  fail, which was checked.
 - `src/server/rolling-plan/rolling-plan.test.ts` — the in-memory subject now
   supplies a fixed zone and clock; two new cases cover the zone-less refusal and
   that today is derived in the owner's zone rather than the runtime's
   (23:30 UTC is already tomorrow in Auckland).
+- `src/app/home/plan/plan-manager.test.tsx` — added in the correction round. Six
+  cases: the window starts at today and offers no past date, an unlabelled empty
+  date reads as unplanned while a labelled one reads as recovery and neither
+  implies completion or a streak, a cancelled session stays visible on the
+  record, the N1 regression, the clear-on-save and re-seed-on-refusal behavior
+  that keying exists for, and the reload link appearing only on a known stale
+  state. It follows the established surface-test shape of mocking
+  `useActionState` so the result state is driven directly.
 - `src/app/home/plan/actions.test.ts` — 12 cases: position selection, duplicate
   producing an `add` under a new identity, activities carried through an edit,
   a date outside the window refused before persistence, each rule and conflict
@@ -421,9 +523,18 @@ own pinned `testMatch`, at exactly `390x844`, and cleans up its accounts.
 2. **No visible plan history**, by the product owner's decision 1 of 17 August
    2026. Change sets keep recording; nothing displays them.
 3. **The window is fourteen days from owner-local today**, defined once in
-   `PLAN_WINDOW_DAYS`. Dates outside it are neither read nor writable from this
-   surface. That bound is a product choice this ticket made; the brief said
-   "a bounded date slice" without fixing the number.
+   `PLAN_WINDOW_DAYS`. That bound is a product choice this ticket made; the
+   brief said "a bounded date slice" without fixing the number.
+
+   The reviewer's N4: it is a **write** boundary as well as a read boundary, and
+   that is not stated anywhere the owner can see. `readPlannableDate` refuses any
+   date outside `[today, today + 13]`, so a session that exists on day 20 —
+   which nothing in this ticket can create, but a later AI proposal or a
+   widened window could — would be invisible here and unreachable by move,
+   edit, lock, or cancel from this surface. The database imposes no such bound;
+   only this surface does. A later ticket that widens the horizon or introduces
+   another writer must decide whether the Plan surface paginates, states the
+   bound in the interface, or both.
 4. **Reordering within a date is not exposed.** `move` targets another date and
    the server picks the first free position, so the owner never types one.
    Position is still a first-class field in the model, so a later ticket can add
@@ -447,12 +558,62 @@ own pinned `testMatch`, at exactly `390x844`, and cleans up its accounts.
    `SUPABASE_SERVICE_ROLE_KEY`. Read the skipped count before calling a run
    green; the local run above reported 2 passed, 0 skipped.
 
+Raised by the first review round and deliberately not fixed here:
+
+10. **A future non-superuser writer of `profiles` will need `EXECUTE` on
+    `is_iana_timezone_name`** — even for a row that never sets
+    `timezone_name`. The constraint short-circuits on null, so the function is
+    not called in that case today, but the requirement is a property of the
+    constraint rather than of the column, and it is easy to trip over. Right
+    now only `authenticated` can write `profiles` at all and it holds the
+    grant; `service_role` has no INSERT or UPDATE there. Whoever adds the next
+    writer needs to know this. (Reviewer's N6.)
+11. **The recovery-days foreign key `(plan_id, user_id)` has no index, and the
+    `(id, user_id)` unique key is referenced by nothing.** The FK is unindexed,
+    so a cascading delete of a plan scans; with one plan row per owner and one
+    label row per owner-date that is negligible today, and the advisors flagged
+    neither. The unique key exists for symmetry with the other rolling-plan
+    tables, where it is the same-owner FK target. Both are cheap to correct in a
+    later migration and neither is worth one now. (Reviewer's N7.)
+12. **`e2e/m3-12-plan.spec.ts` writes its screenshots into the tracked
+    `docs/validation/M3/evidence/` path**, so every run — local or CI — leaves
+    the working tree dirty with re-encoded PNGs. That is how the evidence in
+    this record is produced, and it follows what `e2e/m2-01-goals.spec.ts` and
+    `e2e/m3-11-maintenance.spec.ts` already do, so changing it for one spec
+    would split the convention. It should be fixed for all of them at once:
+    write to `testInfo.outputPath` and copy deliberately when capturing
+    evidence. (Reviewer's N8.)
+13. **Pre-existing: `e2e/m2-09.playwright.config.ts` and
+    `e2e/m3-11.playwright.config.ts` both claim port 3019.** Latent because only
+    the M3-11 config runs in CI, and this ticket's config takes 3020, clear of
+    both. Not this ticket's to fix, but it is a live collision waiting for
+    whoever re-enables the M2-09 probe. (Reviewer's N9.)
+
 ## Independent reviewer checklist
 
-Review commit **`2a09b6c`** on `ticket/m3-12-manual-continuous-planning`, range
-`git diff cbf271a..2a09b6c`. Confirm the CI run for that exact SHA is green
-before anything else; do not re-run lint, typecheck, the Vitest suite, the
-build, the database matrix, or the browser flows.
+Review commit **`093b21d`** on `ticket/m3-12-manual-continuous-planning`, range
+`git diff cbf271a..093b21d`. Confirm the CI run for that exact SHA is green
+before anything else, and specifically that the **Vitest step executed** — the
+rejected run never reached it. Do not re-run lint, typecheck, the Vitest suite,
+the build, the database matrix, or the browser flows.
+
+Round 2 is a re-review: the corrections invalidate approval of `2a09b6c`. The
+schema, authorization, rule-enforcement and atomicity work is unchanged from
+round 1 apart from N5, so items 1–7 below can be read against round 1's
+conclusions. The correction commits are `029936a`, `da9963b` and `093b21d`, and
+these are the parts that are new:
+
+- **N1** (`plan-manager.tsx`, `plan-manager.test.tsx`) — check that
+  `useTargetedResetKey` adjusts state during render rather than in an effect,
+  that it is monotonic per form, and that the regression test would actually
+  fail against the old key. It does; I verified by reverting the key.
+- **N3** (`m3_12_manual_continuous_planning.test.sql`) — check that the zone
+  selection genuinely removes the midnight window rather than narrowing it, and
+  that the header comment now describes what the code does.
+- **N5** (`in-memory-rolling-plan-adapter.ts`, `rolling-plan-contract.ts`,
+  `m3_10_rolling_plan_postgres.test.ts`) — check that the in-memory order now
+  matches the SQL, and that `clearTimezone` on the Postgres subject uses the
+  owner's own grant rather than a privileged client.
 
 Judgment this ticket needs and CI cannot supply:
 
@@ -473,10 +634,13 @@ Judgment this ticket needs and CI cannot supply:
    change set touches is bounded, including a `move`'s source date and an
    `edit`/`cancel` on an already-past session, and that the cap is evaluated
    after the whole set rather than per subchange.
-5. **The M3-11 invariant narrowing** in
-   `src/architecture/m3-11-legacy-reset.test.ts`. This is a repo-wide invariant
-   changed deliberately; confirm the narrowing is exactly what M3-12 requires and
-   that nothing else slipped through it.
+5. **The M3-11 invariant narrowing**, now in two places:
+   `src/architecture/m3-11-legacy-reset.test.ts` and
+   `e2e/m3-11-maintenance.spec.ts`. Both assert that the routes M3-11 reset
+   stayed stubs; M3-12 reopened exactly one of them. Confirm the narrowing is
+   exactly what M3-12 requires in each, that the other five routes are still
+   covered by both, and that nothing else slipped through. Missing the browser
+   half of this pair is what failed round 1.
 6. **The M3-10 test date shift.** Confirm the century shift and the added zones
    preserve what those suites were asserting rather than papering over a
    regression the new rule introduced.
@@ -487,6 +651,8 @@ Judgment this ticket needs and CI cannot supply:
 8. **The `390x844` Preview**, once the lead has pushed and the migrations have
    been applied to the founder project in timestamp order. The visual pass is
    the product owner's.
-9. **The intermittent local suite timeout** recorded above. Check the CI
-   `test:run` step for this SHA specifically rather than assuming the local
-   observation carries over.
+9. **The B3 flake diagnosis.** It is now attributed to jsdom environment setup
+   crossing the default 5000 ms test budget under local machine contention, with
+   20 green runs and 0 failures once nothing else competed. That diagnosis
+   predicts CI is unaffected; it does not prove it. Read the Vitest step for this
+   SHA rather than accepting the prediction.
