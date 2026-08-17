@@ -1472,6 +1472,159 @@ credential at any point.
 Nothing in this section changes runtime, schema, authorization, or deployment
 behavior; it follows the evidence-commit exception in `AGENTS.md`.
 
+## Cutover executed — B4-B6 and C1-C5, 17 August 2026
+
+The destructive migration ran against the founder project on 17 August 2026,
+between roughly 13:28 and 13:40 local time, immediately after the B3 phrase was
+recorded. The product owner executed every command; the lead prepared, verified,
+and held no founder credential. **C6 is outstanding** and C7 is this section.
+
+**B4 final recheck.** `migration list --linked` was identical to A3 — fourteen
+aligned versions, `20260814195107` pending and alone. The second dry run was
+diffed against the preflight capture and
+`diff -u dry-run-preflight.txt dry-run-final.txt` printed **nothing**. The lead
+re-ran that diff independently against the same two files. Nothing had moved
+since preflight, and the CLI was still v2.109.1.
+
+**B5 migration.** `npx supabase db push --linked`, the runbook's verbatim
+command with no added option, applied
+`20260814195107_m3_11_legacy_training_reset.sql` and reported
+`Finished supabase db push`.
+
+It emitted one warning, recorded rather than smoothed over:
+
+```
+Warning: failed to cache migrations catalog: error exporting pg-delta catalog:
+failed to inspect docker image: ... open //./pipe/dockerDesktopLinuxEngine:
+The system cannot find the file specified.
+```
+
+That is a **post-apply local step**: the CLI tries to cache a catalog snapshot
+using a Docker image, and Docker Desktop was not running. The migration itself
+travelled over the Postgres connection and never touched Docker. The claim is
+not left resting on that reasoning — C1-C3 below prove the applied state
+directly, and a partial apply could not produce those results. M3-10 recorded a
+cosmetically different warning from the same post-apply step.
+
+**B6 not reached.** The migration did not fail.
+
+**C1 history.** `migration list --linked` shows `20260814195107` present in both
+Local and Remote exactly once. Confirmed by the product owner.
+
+**C2 catalog.** Run through the same query bodies as the runbook.
+
+| Assertion | Result |
+|---|---|
+| 11 legacy tables absent | all 11 resolve to empty |
+| 8 legacy functions absent | all 8 resolve to empty |
+| 4 legacy composite types absent | all 4 resolve to empty |
+| 27 preserved tables present | all 27 resolve |
+| `is_valid_training_measurement(text,jsonb)` preserved | present |
+
+**C2 privileges.** The diff against the A8 baseline shows exactly five changed
+lines and nothing else: `authenticated` `t` → `f` on `accept_roadmap_proposal`,
+`apply_roadmap_proposal_change`, `begin_roadmap_generation`,
+`finish_roadmap_generation`, and `record_roadmap_memory_candidates`. `anon` and
+`service_role` are untouched, and no function fell back to public execute.
+
+**C3 counts and decisions.** Both diffs match the pre-stated expectations line
+for line:
+
+| Expected before the push | Observed |
+|---|---|
+| 11 legacy relations vanish, 143 rows destroyed | 40 rows to 29; exactly those 11 gone |
+| `roadmap_proposal_decisions` 3 → 4 | 3 → 4 |
+| derived undecided count 1 → 0 | 1 → 0 |
+| `accepted` 2 / `40ccb017…` unchanged | byte-identical |
+| `rejected` 1 / `01dbcd43…` unchanged | byte-identical |
+| one new `expired` row, count 1 | `expired,1,af90b2119cae7df9bab4238bad18fa1f` |
+| everything else identical | identical |
+
+No unexplained line appears in any of the three diffs.
+
+**C4 lint and advisors.** `db lint --linked --level warning --fail-on warning`
+returned `No schema errors found` across `extensions`, `private`, and `public`.
+
+`db advisors --linked --type all --level warn --fail-on warn` returned seven
+warnings and exited non-zero, which is `--fail-on warn` behaving correctly
+rather than a new defect. No check was weakened and no finding suppressed. Six
+are lint `0029`, `SECURITY DEFINER` functions executable by `authenticated`:
+`apply_goal_change`, `apply_memory_change`, `apply_onboarding_change`,
+`apply_rolling_plan_change_set`, `reserve_ai_spend`, and `settle_ai_spend`.
+Every one belongs to a preserved domain. `0029` flags the pattern FitTip's write
+model is built on — `SECURITY DEFINER` RPCs granted to `authenticated`, direct
+table writes revoked, ownership derived server-side — and cannot see that second
+half; M3-01B and M3-02 recorded and accepted it on the same basis. The seventh,
+`auth_leaked_password_protection`, is an Auth project setting unrelated to this
+ticket, out of scope since M3-01B.
+
+The reconciliation is the useful part. M3-10 recorded seventeen
+`SECURITY DEFINER` findings on this project plus the Auth warning. Six remain.
+The difference is exactly the eleven functions this migration touched: the six
+legacy `SECURITY DEFINER` RPCs it dropped — `save_training_completion`,
+`save_manual_plan_version`, `reject_plan_proposal`,
+`record_plan_memory_candidates`, `finish_plan_generation`,
+`begin_plan_generation` — and the five roadmap RPCs it revoked. The other two
+dropped functions, `plan_content_is_valid` and
+`reject_inactive_completion_activity`, were `security invoker` in their original
+migrations and so were never in the list. **M3-11 reduced the exposed surface by
+eleven and added nothing.**
+
+**C5 authenticated boundary.** A rollback-only probe ran against the founder
+database as the authenticated founder subject, then as a second authenticated
+subject owning nothing, then as `anon`. Thirty assertions, all passing:
+
+- **Owner A reads, post-migration:** `profiles` 1, `goals` 3, `memory_items` 8,
+  `onboarding_drafts` 1, `roadmap_proposals` 4, `personal_activities` 0, both
+  rolling-plan tables 0, and the slice RPC returning an empty `sessions` array.
+  Every count matches the A5 snapshot, read through RLS after the drop.
+- **Owner A write/read contract:** `apply_rolling_plan_change_set` produced one
+  plan, session, change set, and change entry; `get_rolling_plan_slice` returned
+  that session and reported revision 1. M3-10's contract is intact after the
+  reset.
+- **Owner A direct mutation:** direct `INSERT` into `rolling_plans`, `UPDATE` of
+  `goals`, and `DELETE` from `memory_items` each denied with `42501`.
+- **Owner B:** `profiles`, `goals`, `memory_items`, `roadmap_proposals`,
+  `rolling_plans`, `rolling_plan_sessions` all zero, slice sessions empty.
+- **Anonymous:** `goals`, `roadmap_proposals`, `rolling_plan_sessions`,
+  `memory_items` all denied with `42501`.
+- **After `ROLLBACK`:** all five `rolling_plan*` counts 0, `goals` 3,
+  `memory_items` 8, `auth.users` 1. Nothing the probe wrote survived.
+
+A denial counted only if it raised `insufficient_privilege`; any other error
+propagated and failed the probe, so a malformed statement could not be mistaken
+for an enforced boundary.
+
+**One correction, recorded because it was a real failed run.** The probe's first
+version asserted that `get_rolling_plan_slice` returned zero rows when empty. It
+returns `public.rolling_plan_slice_receipt`, a composite, so it always returns
+exactly one row and emptiness lives in the `sessions` array. The run aborted at
+that assertion with `expected 0, got 1`. That was a defect in the probe, not in
+the database: the transaction rolled back before any write, and the corrected
+assertions passed. It is recorded rather than quietly re-run, because "the first
+attempt failed" is exactly the kind of thing a reader of this record should be
+able to see.
+
+**Runbook state.**
+
+| Runbook step | State |
+|---|---|
+| A1-A9 | **Complete** |
+| B1-B2 | **Complete** |
+| B3 authorization | **Given**, recorded verbatim above |
+| B4 final recheck | **Complete.** Empty diff |
+| B5 migrate | **Complete.** Applied, one transaction |
+| B6 failure path | **Not reached** |
+| C1-C5 | **Complete**, recorded above |
+| C6 hosted routes | **Outstanding.** The six maintenance routes and the four preserved You routes at `390x844`, authenticated, post-migration |
+| C7 record | This section; completed when C6 lands |
+
+The founder database no longer holds the 11 legacy tables or their 143 rows.
+This step is not reversible.
+
+Nothing in this section changes runtime, schema, authorization, or deployment
+behavior; it follows the evidence-commit exception in `AGENTS.md`.
+
 ## Known limitations
 
 - This intentionally removes all old accepted-plan and completion history;
