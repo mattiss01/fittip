@@ -1213,6 +1213,53 @@ identically.
 Nothing in this section changes runtime, schema, authorization, or deployment
 behavior; it follows the evidence-commit exception in `AGENTS.md`.
 
+## Founder application verification, runbook B2 — 17 August 2026
+
+This section closes the B2 row left **Partial** above. Nothing else in the
+runbook advances: the founder database is still untouched and B3 has not been
+reached.
+
+**What was checked, and by whom.** The product owner ran the authenticated
+check on the founder deployment recorded above —
+`dpl_E88CVSVGx1N4apDPrSvgcYJw1N5w` on `https://fittip-gilt.vercel.app` — and
+reported it verbatim as: "all six routes show maintenance surface, preserved
+routes load fine, pass". That is the signed-in observation the anonymous smoke
+explicitly could not produce, since the proxy redirects authenticated and
+non-existent `/home/**` paths identically.
+
+**Mapping that to B2's four conditions.**
+
+| B2 condition | Evidence |
+|---|---|
+| All six affected routes show the reviewed maintenance surface | Product-owner authenticated observation above, on the founder alias |
+| You, goals, memory, and onboarding still load | Same observation ("preserved routes load fine") |
+| No legacy call from any of the six | Structural, not observed on the wire. Each of the six pages is a bare `TrainingMaintenance` wrapper with no data access — `src/app/home/plan/page.tsx` and its five siblings — and `src/architecture/m3-11-legacy-reset.test.ts` fails if a legacy module, table, or RPC name reappears. That test is green on the `master` merge commit in run 31891962512 |
+| `private` plus `no-store` on every route | Measured anonymously on all eleven routes in the previous section; the header is set globally in `next.config.ts` and covered by `next.config.test.ts`, so it does not vary with session state |
+
+**Stated precisely, so the next step is authorized against what was actually
+seen.** The lead did not observe this session itself and holds no founder
+credentials; the surface confirmation is the product owner's, recorded as
+reported. The product owner did not state the viewport used, so this is not an
+independent repeat of the `390x844` acceptance pass — that pass was already
+made against the reviewed Preview and is recorded with the acceptance. No
+network panel or request log was inspected, which is why the legacy-call
+condition rests on the structural evidence in the table rather than on this
+check. No abort or rollback condition was triggered.
+
+**Runbook state after this step.**
+
+| Runbook step | State |
+|---|---|
+| A1-A9 preflight | **Not run.** No founder connection string has been requested, held, or used; no hosted query has been executed |
+| B1 deploy maintenance application | **Complete**, recorded in the previous section |
+| B2 verify founder application | **Complete**, recorded here. Supersedes the **Partial** row above |
+| B3 destructive authorization gate | **Not reached.** The exact phrase **Run the destructive cutover** has not been given. Neither this verification nor the ticket's acceptance is that phrase |
+| B4-B6 migrate | **Not run.** The founder Supabase project still holds all 11 legacy tables |
+| C1-C7 verification | **Not run** |
+
+Nothing in this section changes runtime, schema, authorization, or deployment
+behavior; it follows the evidence-commit exception in `AGENTS.md`.
+
 ## Known limitations
 
 - This intentionally removes all old accepted-plan and completion history;
