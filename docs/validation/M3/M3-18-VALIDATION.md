@@ -89,4 +89,26 @@ Memory, or Onboarding looks different.
 
 ## Merge and founder deployment
 
-Recorded below after acceptance.
+Merged to `master` as `0421d45` (`--no-ff`, matching the M3-11 convention) and
+pushed 17 August 2026.
+
+**`master` CI:** green, all three jobs —
+https://github.com/mattiss01/fittip/actions/runs/32030086708
+(static 1m21s, database 3m45s, browser 4m44s).
+
+**Founder deployment:** `success` at
+https://fittip-3lqjpd2m4-mattis-3657s-projects.vercel.app, reported by the
+GitHub deployments API against target `Production` and commit `0421d45` — the
+exact merge commit, read rather than inferred from an alias and a timestamp.
+
+**Hosted checks.** This ticket adds no migration, so there is no hosted schema
+step to apply or verify; the founder database is untouched by it. Anonymous
+`GET` of `/`, `/home`, and `/auth/login` returns `302` to `vercel.com/sso-api`
+on both the deployment URL and the `fittip-git-master-*` alias, so no private
+path or content is served without authentication.
+
+The visual check that actually matters for this change is the product owner's
+390px pass, recorded above against the Preview. The founder environment sits
+behind Vercel SSO, so it cannot be smoke-tested anonymously beyond the
+protection check; that is a property of the environment, not a gap in this
+ticket's evidence.
