@@ -48,7 +48,12 @@ export type RollingPlanChange =
       position: number;
     }
   | { operation: "set_lock"; sessionId: string; isLocked: boolean }
-  | { operation: "cancel"; sessionId: string };
+  | { operation: "cancel"; sessionId: string }
+  | {
+      operation: "set_recovery_day";
+      localDate: string;
+      isRecoveryDay: boolean;
+    };
 
 export type RollingPlanChangeSet = {
   idempotencyKey: string;
@@ -68,6 +73,8 @@ export type RollingPlanSlice = {
   planId: string | null;
   revision: number;
   sessions: RollingPlanSession[];
+  /** Dates inside the window the owner labelled Recovery day, ascending. */
+  recoveryDates: string[];
 };
 
 export type RollingPlanChangeReceipt = {
@@ -105,6 +112,30 @@ export class RollingPlanPersistenceError extends Error {
   constructor() {
     super("The rolling plan operation could not be completed.");
     this.name = "RollingPlanPersistenceError";
+  }
+}
+
+/** The most active sessions one owner-local date may hold. Labels never count. */
+export const ROLLING_PLAN_DAILY_SESSION_LIMIT = 10;
+
+export type RollingPlanRuleReason = "past-date" | "daily-session-limit";
+
+/**
+ * A change that parsed and was authorized, but breaks a planning rule the
+ * adapter enforces against stored state and owner-local today.
+ */
+export class RollingPlanRuleError extends Error {
+  constructor(readonly reason: RollingPlanRuleReason) {
+    super("The rolling plan change breaks a planning rule.");
+    this.name = "RollingPlanRuleError";
+  }
+}
+
+/** Owner-local today is unknown, so neither planning rule can be judged. */
+export class RollingPlanTimezoneRequiredError extends Error {
+  constructor() {
+    super("The owner has no stored time zone.");
+    this.name = "RollingPlanTimezoneRequiredError";
   }
 }
 
@@ -150,6 +181,18 @@ export function parseChangeSet(value: unknown): RollingPlanChangeSet {
 function parseChange(value: unknown): RollingPlanChange {
   const record = readRecord(value);
   const operation = record.operation;
+  // A label belongs to a date, not to a session identity, so it is the one
+  // change that carries no session id.
+  if (operation === "set_recovery_day") {
+    assertOnlyKeys(record, ["operation", "localDate", "isRecoveryDay"]);
+    if (typeof record.isRecoveryDay !== "boolean")
+      throw new RollingPlanValidationError();
+    return {
+      operation,
+      localDate: readIsoDate(record.localDate),
+      isRecoveryDay: record.isRecoveryDay,
+    };
+  }
   const sessionId = readUuid(record.sessionId);
   switch (operation) {
     case "add":

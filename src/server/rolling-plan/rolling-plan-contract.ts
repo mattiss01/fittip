@@ -5,11 +5,18 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   RollingPlan,
   RollingPlanConflictError,
+  RollingPlanRuleError,
   RollingPlanValidationError,
 } from "./rolling-plan";
 
 export type RollingPlanContractSubject = {
   plan: RollingPlan;
+  /**
+   * Owner-local today, as the adapter under test derives it. Every date in
+   * this contract is relative to it, because the past boundary is defined
+   * against it and a fixed literal would silently stop testing the rule.
+   */
+  today: string;
   dispose?: () => Promise<void>;
 };
 
@@ -30,16 +37,14 @@ export function registerRollingPlanContract(
     });
 
     it("applies add, edit, move, lock, and cancellation through bounded reads", async () => {
-      const plan = requirePlan(subject);
+      const { plan, day } = requireSubject(subject);
       const sessionId = randomUUID();
-      await plan.applyChangeSet(
-        changeSet([add(sessionId, "2026-09-01", 0)]),
-        0,
-      );
+      await plan.applyChangeSet(changeSet([add(sessionId, day(1), 0)]), 0);
 
-      const added = await plan.getPlanSlice("2026-09-01", "2026-09-01");
+      const added = await plan.getPlanSlice(day(1), day(1));
       expect(added).toMatchObject({
         revision: 1,
+        recoveryDates: [],
         sessions: [
           {
             id: sessionId,
@@ -74,7 +79,7 @@ export function registerRollingPlanContract(
           {
             operation: "move",
             sessionId,
-            localDate: "2026-09-02",
+            localDate: day(2),
             position: 1,
           },
         ]),
@@ -89,14 +94,16 @@ export function registerRollingPlanContract(
         4,
       );
 
-      expect(await plan.getPlanSlice("2026-09-01", "2026-09-01")).toEqual({
+      expect(await plan.getPlanSlice(day(1), day(1))).toEqual({
         planId: expect.any(String),
         revision: 5,
         sessions: [],
+        recoveryDates: [],
       });
-      expect(await plan.getPlanSlice("2026-09-02", "2026-09-02")).toEqual({
+      expect(await plan.getPlanSlice(day(2), day(2))).toEqual({
         planId: expect.any(String),
         revision: 5,
+        recoveryDates: [],
         sessions: [
           expect.objectContaining({
             id: sessionId,
@@ -111,31 +118,32 @@ export function registerRollingPlanContract(
     });
 
     it("rolls back every subchange when one grouped change is invalid", async () => {
-      const plan = requirePlan(subject);
+      const { plan, day } = requireSubject(subject);
       await expect(
         plan.applyChangeSet(
           changeSet([
-            add(randomUUID(), "2026-09-03", 0),
+            add(randomUUID(), day(3), 0),
             {
               operation: "move",
               sessionId: randomUUID(),
-              localDate: "2026-09-04",
+              localDate: day(4),
               position: 0,
             },
           ]),
           0,
         ),
       ).rejects.toThrow(RollingPlanValidationError);
-      expect(await plan.getPlanSlice("2026-09-01", "2026-09-30")).toEqual({
+      expect(await plan.getPlanSlice(day(0), day(30))).toEqual({
         planId: null,
         revision: 0,
         sessions: [],
+        recoveryDates: [],
       });
     });
 
     it("replays identical requests and rejects stale revisions", async () => {
-      const plan = requirePlan(subject);
-      const request = changeSet([add(randomUUID(), "2026-09-05", 0)]);
+      const { plan, day } = requireSubject(subject);
+      const request = changeSet([add(randomUUID(), day(5), 0)]);
       const applied = await plan.applyChangeSet(request, 0);
       await expect(plan.applyChangeSet(request, 0)).resolves.toMatchObject({
         changeSetId: applied.changeSetId,
@@ -143,21 +151,22 @@ export function registerRollingPlanContract(
         result: "replayed",
       });
       await expect(
-        plan.applyChangeSet(changeSet([add(randomUUID(), "2026-09-06", 0)]), 0),
+        plan.applyChangeSet(changeSet([add(randomUUID(), day(6), 0)]), 0),
       ).rejects.toThrow(RollingPlanConflictError);
-      expect(await plan.getPlanSlice("2026-09-01", "2026-09-30")).toMatchObject(
-        { revision: 1, sessions: [{ localDate: "2026-09-05" }] },
-      );
+      expect(await plan.getPlanSlice(day(0), day(30))).toMatchObject({
+        revision: 1,
+        sessions: [{ localDate: day(5) }],
+      });
     });
 
     it("swaps two occupied positions using final-state uniqueness", async () => {
-      const plan = requirePlan(subject);
+      const { plan, day } = requireSubject(subject);
       const firstId = randomUUID();
       const secondId = randomUUID();
       await plan.applyChangeSet(
         changeSet([
-          add(firstId, "2026-09-07", 0, "First"),
-          add(secondId, "2026-09-07", 1, "Second"),
+          add(firstId, day(7), 0, "First"),
+          add(secondId, day(7), 1, "Second"),
         ]),
         0,
       );
@@ -166,55 +175,187 @@ export function registerRollingPlanContract(
           {
             operation: "move",
             sessionId: firstId,
-            localDate: "2026-09-07",
+            localDate: day(7),
             position: 1,
           },
           {
             operation: "move",
             sessionId: secondId,
-            localDate: "2026-09-07",
+            localDate: day(7),
             position: 0,
           },
         ]),
         1,
       );
-      expect(await positions(plan, "2026-09-07")).toEqual([
+      expect(await positions(plan, day(7))).toEqual([
         [secondId, 0],
         [firstId, 1],
       ]);
     });
 
     it("adds into an occupied position before moving the old session", async () => {
-      const plan = requirePlan(subject);
+      const { plan, day } = requireSubject(subject);
       const oldId = randomUUID();
       const newId = randomUUID();
-      await plan.applyChangeSet(
-        changeSet([add(oldId, "2026-09-08", 0, "Old")]),
-        0,
-      );
+      await plan.applyChangeSet(changeSet([add(oldId, day(8), 0, "Old")]), 0);
       await plan.applyChangeSet(
         changeSet([
-          add(newId, "2026-09-08", 0, "New"),
+          add(newId, day(8), 0, "New"),
           {
             operation: "move",
             sessionId: oldId,
-            localDate: "2026-09-08",
+            localDate: day(8),
             position: 1,
           },
         ]),
         1,
       );
-      expect(await positions(plan, "2026-09-08")).toEqual([
+      expect(await positions(plan, day(8))).toEqual([
         [newId, 0],
         [oldId, 1],
       ]);
     });
+
+    it("plans owner-local today but refuses any date before it", async () => {
+      const { plan, day } = requireSubject(subject);
+      await expect(
+        plan.applyChangeSet(changeSet([add(randomUUID(), day(-1), 0)]), 0),
+      ).rejects.toThrow(RollingPlanRuleError);
+      await expect(
+        plan.applyChangeSet(
+          changeSet([
+            {
+              operation: "set_recovery_day",
+              localDate: day(-1),
+              isRecoveryDay: true,
+            },
+          ]),
+          0,
+        ),
+      ).rejects.toThrow(RollingPlanRuleError);
+
+      const todaySession = randomUUID();
+      await plan.applyChangeSet(
+        changeSet([add(todaySession, day(0), 0, "Today")]),
+        0,
+      );
+      await expect(
+        plan.applyChangeSet(
+          changeSet([
+            {
+              operation: "move",
+              sessionId: todaySession,
+              localDate: day(-1),
+              position: 0,
+            },
+          ]),
+          1,
+        ),
+      ).rejects.toThrow(RollingPlanRuleError);
+      expect(await plan.getPlanSlice(day(0), day(0))).toMatchObject({
+        revision: 1,
+        sessions: [{ id: todaySession }],
+      });
+    });
+
+    it("sets and clears a recovery day label beside the sessions", async () => {
+      const { plan, day } = requireSubject(subject);
+      const sessionId = randomUUID();
+      await plan.applyChangeSet(
+        changeSet([
+          add(sessionId, day(1), 0),
+          {
+            operation: "set_recovery_day",
+            localDate: day(2),
+            isRecoveryDay: true,
+          },
+        ]),
+        0,
+      );
+      expect(await plan.getPlanSlice(day(0), day(30))).toMatchObject({
+        revision: 1,
+        recoveryDates: [day(2)],
+        sessions: [{ id: sessionId, localDate: day(1) }],
+      });
+
+      // Labelling an already labelled date changes nothing, so it is not a change.
+      await expect(
+        plan.applyChangeSet(
+          changeSet([
+            {
+              operation: "set_recovery_day",
+              localDate: day(2),
+              isRecoveryDay: true,
+            },
+          ]),
+          1,
+        ),
+      ).rejects.toThrow(RollingPlanValidationError);
+
+      await plan.applyChangeSet(
+        changeSet([
+          {
+            operation: "set_recovery_day",
+            localDate: day(2),
+            isRecoveryDay: false,
+          },
+        ]),
+        1,
+      );
+      expect(await plan.getPlanSlice(day(0), day(30))).toMatchObject({
+        revision: 2,
+        recoveryDates: [],
+        sessions: [{ id: sessionId }],
+      });
+    });
+
+    it("holds one date to ten active sessions and never counts a label", async () => {
+      const { plan, day } = requireSubject(subject);
+      const ids = Array.from({ length: 10 }, () => randomUUID());
+      await plan.applyChangeSet(
+        changeSet(ids.map((id, index) => add(id, day(9), index))),
+        0,
+      );
+
+      await expect(
+        plan.applyChangeSet(
+          changeSet([add(randomUUID(), day(9), 10, "Eleventh")]),
+          1,
+        ),
+      ).rejects.toThrow(RollingPlanRuleError);
+
+      // The cap judges the state the whole change set leaves behind.
+      await plan.applyChangeSet(
+        changeSet([
+          { operation: "cancel", sessionId: ids[0] },
+          add(randomUUID(), day(9), 10, "Eleventh"),
+          {
+            operation: "set_recovery_day",
+            localDate: day(9),
+            isRecoveryDay: true,
+          },
+        ]),
+        1,
+      );
+      const slice = await plan.getPlanSlice(day(9), day(9));
+      expect(slice.recoveryDates).toEqual([day(9)]);
+      expect(
+        slice.sessions.filter((session) => session.status === "active"),
+      ).toHaveLength(10);
+    });
   });
 }
 
-function requirePlan(subject: RollingPlanContractSubject | undefined) {
+function requireSubject(subject: RollingPlanContractSubject | undefined) {
   if (!subject) throw new Error("Rolling plan contract setup failed.");
-  return subject.plan;
+  const { plan, today } = subject;
+  return { plan, day: (offset: number) => shiftDate(today, offset) };
+}
+
+function shiftDate(isoDate: string, offset: number) {
+  const shifted = new Date(`${isoDate}T00:00:00.000Z`);
+  shifted.setUTCDate(shifted.getUTCDate() + offset);
+  return shifted.toISOString().slice(0, 10);
 }
 
 function changeSet(changes: unknown[]) {

@@ -2,10 +2,12 @@ import { createClient } from "@supabase/supabase-js";
 import { describe, it } from "vitest";
 
 import type { Database } from "@/lib/supabase/database.types";
+import { isoDateInTimezone } from "@/lib/date/local-date";
 import { PostgresRollingPlanAdapter } from "@/server/repositories/rolling-plan-repository";
 import { RollingPlan } from "@/server/rolling-plan/rolling-plan";
 import { registerRollingPlanContract } from "@/server/rolling-plan/rolling-plan-contract";
 
+const CONTRACT_TIMEZONE = "UTC";
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -48,13 +50,16 @@ if (url && publishableKey && serviceRoleKey && isLocalUrl) {
       });
       if (signInError) throw new Error("Could not sign in the contract owner.");
 
+      // M3-12 derives owner-local today from this stored zone, so the contract
+      // owner confirms one exactly as the Plan surface does.
       const { error: profileError } = await ownerClient
         .from("profiles")
-        .insert({ user_id: userId });
+        .insert({ user_id: userId, timezone_name: CONTRACT_TIMEZONE });
       if (profileError)
         throw new Error("Could not create the contract profile.");
 
       return {
+        today: isoDateInTimezone(new Date(), CONTRACT_TIMEZONE),
         plan: new RollingPlan(new PostgresRollingPlanAdapter(ownerClient)),
         dispose: async () => {
           const { error } = await admin.auth.admin.deleteUser(userId);

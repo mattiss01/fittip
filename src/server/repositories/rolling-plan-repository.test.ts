@@ -8,6 +8,8 @@ import {
   RollingPlan,
   RollingPlanConflictError,
   RollingPlanPersistenceError,
+  RollingPlanRuleError,
+  RollingPlanTimezoneRequiredError,
   RollingPlanValidationError,
 } from "@/server/rolling-plan/rolling-plan";
 
@@ -43,6 +45,9 @@ describe("PostgresRollingPlanAdapter", () => {
 
   it.each([
     ["PT409", RollingPlanConflictError],
+    ["PT422", RollingPlanRuleError],
+    ["PT423", RollingPlanRuleError],
+    ["PT428", RollingPlanTimezoneRequiredError],
     ["22023", RollingPlanValidationError],
     ["23514", RollingPlanPersistenceError],
   ])(
@@ -89,6 +94,7 @@ describe("PostgresRollingPlanAdapter", () => {
             activities: [],
           },
         ],
+        recovery_dates: ["2026-08-17"],
       },
       error: null,
     });
@@ -106,7 +112,26 @@ describe("PostgresRollingPlanAdapter", () => {
       planId: "76000000-0000-4000-8000-000000000004",
       revision: 3,
       sessions: [{ id: SESSION_ID }],
+      recoveryDates: ["2026-08-17"],
     });
+  });
+
+  it("refuses a snapshot whose recovery dates are not dates", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: {
+        plan_id: "76000000-0000-4000-8000-000000000004",
+        plan_revision: 3,
+        sessions: [],
+        recovery_dates: ["not-a-date"],
+      },
+      error: null,
+    });
+    const plan = new RollingPlan(
+      new PostgresRollingPlanAdapter(client({ rpc })),
+    );
+    await expect(plan.getPlanSlice("2026-08-16", "2026-08-17")).rejects.toThrow(
+      RollingPlanPersistenceError,
+    );
   });
 
   it("does not call persistence for an anonymous session", async () => {
