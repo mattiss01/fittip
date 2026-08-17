@@ -7,6 +7,12 @@ irreversible founder database cutover is **not** covered by this acceptance and
 still requires the exact phrase **Run the destructive cutover** at runbook step
 B3
 
+**Cutover:** complete — the product owner gave the exact phrase on 17 August
+2026 and the founder database cutover was executed and verified the same day.
+Runbook steps A1-A9, B1-B6, and C1-C7 all passed with no abort condition
+triggered. Evidence is in the validation record. This line records what
+happened after the Status line above was written; that line is left as it was.
+
 **Triage:** ready
 
 **Milestone:** M3

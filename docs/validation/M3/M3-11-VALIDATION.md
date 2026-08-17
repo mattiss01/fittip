@@ -1625,6 +1625,46 @@ This step is not reversible.
 Nothing in this section changes runtime, schema, authorization, or deployment
 behavior; it follows the evidence-commit exception in `AGENTS.md`.
 
+## Cutover complete — C6 and C7, 17 August 2026
+
+**C6 hosted routes.** The product owner exercised the founder deployment at
+`https://fittip-gilt.vercel.app`, signed in, after the migration, and reported:
+all six maintenance routes render correctly, and goals and memory still hold
+their real data. That is the check B2 could not make, because at B2 the legacy
+tables still existed and a surviving legacy call would have succeeded silently.
+With the tables dropped, any surface still reaching for one would fail visibly.
+None did.
+
+Stated precisely: this is the product owner's observation on the founder
+environment, not the lead's, and it was reported as a pass rather than as
+per-route console and network transcripts. The `private`/`no-store` headers were
+measured anonymously across all eleven routes at B1 and come from
+`next.config.ts`, so they do not vary with session state. The absence of legacy
+calls also rests on the structural evidence recorded at B2 — the six pages are
+bare `TrainingMaintenance` wrappers with no data access, and
+`src/architecture/m3-11-legacy-reset.test.ts` fails if a legacy module, table,
+or RPC name reappears — now corroborated by the routes continuing to work with
+the tables physically gone.
+
+**C7 record.** This document is the record. The evidence above covers the exact
+`master` SHA, the deployment, remote migration history, the count, decision, and
+privilege diffs, the advisor output and its reconciliation, the authenticated
+owner and cross-owner results, and the route evidence. The local snapshot
+directory is deleted and `PGURI`, `PGPASSWORD`, and `SNAPSHOTS` unset.
+
+**The runbook is complete.** A1-A9, B1-B6, C1-C7. Every abort condition was
+checked and none fired. The founder Supabase project no longer holds the 11
+legacy tables or their 143 rows, and no unexplained difference appeared in any
+diff at any step.
+
+**M3-11 is fully delivered:** implementation accepted 15 August 2026, merged to
+`master`, deployed, and the founder database cutover executed and verified on 17
+August 2026. M3-12 and the later F-005 slices are unblocked, subject to the
+product owner approving each dispatch separately.
+
+Nothing in this section changes runtime, schema, authorization, or deployment
+behavior; it follows the evidence-commit exception in `AGENTS.md`.
+
 ## Known limitations
 
 - This intentionally removes all old accepted-plan and completion history;
