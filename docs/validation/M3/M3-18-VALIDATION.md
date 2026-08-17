@@ -1,6 +1,7 @@
 # M3-18 validation: residual focus-ring contrast
 
-**Status:** testable — awaiting product-owner confirmation on the Preview.
+**Status:** accepted — the product owner confirmed the Preview and accepted on
+17 August 2026 against implementation `5f78071`.
 
 **Tier:** 3, confirmed by the product owner on 17 August 2026. The lead
 implemented directly; a green CI run plus the product owner's Preview
@@ -80,8 +81,12 @@ Lint, typecheck, and production build all pass on the committed tree.
 - No automated test guards these values. A future regression would be caught by
   review, not by CI.
 
-## What the product owner is asked to confirm
+## Product-owner acceptance
 
-At 390px on the Preview, tab through Goals, Memory, and Onboarding, and into any
-text input: the focus ring is clearly visible when focused, absent at rest, and
-nothing else on those routes looks different.
+Confirmed at 390px on the Preview and accepted on 17 August 2026: the focus ring
+is clearly visible when focused, absent at rest, and nothing else on Goals,
+Memory, or Onboarding looks different.
+
+## Merge and founder deployment
+
+Recorded below after acceptance.

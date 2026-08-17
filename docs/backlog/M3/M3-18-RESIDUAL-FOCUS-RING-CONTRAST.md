@@ -1,7 +1,8 @@
 # M3-18: Residual focus-ring contrast on preserved surfaces
 
-**Status:** in development — the product owner approved dispatch and confirmed
-Tier 3 on 17 August 2026, ahead of M3-12, so the new Plan surface is built
+**Status:** accepted — the product owner confirmed the Preview and accepted on
+17 August 2026 against implementation `5f78071` and its green CI run. Dispatch
+was approved the same day, ahead of M3-12, so the new Plan surface is built
 against a compliant focus ring rather than swept afterwards.
 
 **Triage:** ready

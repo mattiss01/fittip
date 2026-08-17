@@ -41,10 +41,10 @@ Validation records and their visual evidence are grouped by milestone.
 
 ## M3
 
-- [M3-18 residual focus-ring contrast](M3/M3-18-VALIDATION.md) — testable;
-  Tier 3, lead-implemented at `5f78071`, green CI, Preview `success`. Every
-  failing focus ring now computes at least 11.39:1 against the surfaces the
-  2px offset exposes. Awaiting the product owner's 390px confirmation
+- [M3-18 residual focus-ring contrast](M3/M3-18-VALIDATION.md) — accepted
+  17 August 2026 against `5f78071` with green CI and a confirmed Preview.
+  Tier 3, lead-implemented. Every failing focus ring now computes at least
+  11.39:1 against the surfaces the 2px offset exposes
 - [M3-11 legacy training reset](M3/M3-11-VALIDATION.md) — in development;
   Tier 1 builder handoff complete, destructive founder cutover not executed
 - [M3-10 rolling-plan foundation](M3/M3-10-VALIDATION.md) — in development;
