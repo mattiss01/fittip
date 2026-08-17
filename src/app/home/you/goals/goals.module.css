@@ -384,7 +384,7 @@
 .manager select:focus-visible,
 .manager summary:focus-visible,
 .manager a:focus-visible {
-  outline: 3px solid #efaa84;
+  outline: 3px solid var(--ledger-ink);
   outline-offset: 2px;
 }
 
