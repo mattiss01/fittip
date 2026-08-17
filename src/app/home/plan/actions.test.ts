@@ -42,13 +42,11 @@ describe("plan actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     createProfileMock.mockResolvedValue({
-      getCurrentProfile: vi
-        .fn()
-        .mockResolvedValue({
-          userId: "u",
-          createdAt: "",
-          timezoneName: TIMEZONE,
-        }),
+      getCurrentProfile: vi.fn().mockResolvedValue({
+        userId: "u",
+        createdAt: "",
+        timezoneName: TIMEZONE,
+      }),
     });
   });
 
