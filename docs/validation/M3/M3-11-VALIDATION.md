@@ -1440,6 +1440,38 @@ C1-C7 not run. The founder project still holds all 11 legacy tables and their
 Nothing in this section changes runtime, schema, authorization, or deployment
 behavior; it follows the evidence-commit exception in `AGENTS.md`.
 
+**Superseded by the next section**, which records the B3 authorization. The
+"B3 not reached" statement above is left as written.
+
+## B3 destructive authorization — 17 August 2026
+
+The product owner sent the exact phrase at **13:26 local time on 17 August
+2026**, in the session that recorded A9 minutes earlier:
+
+> Run the destructive cutover
+
+It is the exact phrase the runbook requires, not a paraphrase. It was given
+after A1-A9 were complete and recorded, after B1-B2 had put the founder
+environment on the maintenance surface, and after the A9 comprehension
+confirmation naming the 143 rows and the unverified backups. That is the order
+the runbook specifies, and it is the order that actually happened.
+
+**What this authorizes.** B4's final state recheck, B5's single
+`npx supabase db push --linked`, and the C1-C7 verification that follows. It
+authorizes no wider change: no repair, squash, `--include-all`, history reset,
+manual drop, or improvised partial cleanup, and no second migration. If B5
+fails, B6 applies — stop, keep the maintenance application serving, capture the
+failure, and change nothing by hand.
+
+**Execution.** The product owner runs the commands. The repository's tooling
+rules bar an agent from `supabase link`, `db push`, or any other remote CLI
+call against the founder project, and the permission layer enforces it, so the
+lead prepares and verifies rather than executes. The lead holds no founder
+credential at any point.
+
+Nothing in this section changes runtime, schema, authorization, or deployment
+behavior; it follows the evidence-commit exception in `AGENTS.md`.
+
 ## Known limitations
 
 - This intentionally removes all old accepted-plan and completion history;
