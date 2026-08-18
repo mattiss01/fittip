@@ -22,7 +22,9 @@ describe("server repository import boundary", () => {
   // atomic owner-scoped mutation whose conflict must reach the caller
   // unchanged, so an automatic retry could re-run a change the user was told
   // to review.
-  it("disables retries only for the four approved atomic RPCs", () => {
+  // M3-13 adds the fifth: a library create is not idempotent, so an automatic
+  // retry of a dropped response would save the same session twice.
+  it("disables retries only for the five approved atomic RPCs", () => {
     const sources = sourceFiles(join(process.cwd(), "src")).filter(
       (path) => !path.endsWith(".test.ts") && !path.endsWith(".test.tsx"),
     );
@@ -57,11 +59,22 @@ describe("server repository import boundary", () => {
       "repositories",
       "rolling-plan-repository.ts",
     );
+    const savedSessionRepositoryPath = join(
+      process.cwd(),
+      "src",
+      "server",
+      "repositories",
+      "saved-session-repository.ts",
+    );
     const goalRepository = readFileSync(goalRepositoryPath, "utf8");
     const memoryRepository = readFileSync(memoryRepositoryPath, "utf8");
     const onboardingRepository = readFileSync(onboardingRepositoryPath, "utf8");
     const rollingPlanRepository = readFileSync(
       rollingPlanRepositoryPath,
+      "utf8",
+    );
+    const savedSessionRepository = readFileSync(
+      savedSessionRepositoryPath,
       "utf8",
     );
 
@@ -71,6 +84,7 @@ describe("server repository import boundary", () => {
         memoryRepositoryPath,
         onboardingRepositoryPath,
         rollingPlanRepositoryPath,
+        savedSessionRepositoryPath,
       ].sort(),
     );
     expect(goalRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
@@ -88,6 +102,10 @@ describe("server repository import boundary", () => {
     expect(rollingPlanRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
     expect(rollingPlanRepository).toMatch(
       /\.rpc\(\s*"apply_rolling_plan_change_set",[\s\S]*?\)\s*\.retry\(false\)/,
+    );
+    expect(savedSessionRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
+    expect(savedSessionRepository).toMatch(
+      /\.rpc\(\s*"apply_saved_session_change",[\s\S]*?\)\s*\.retry\(false\)/,
     );
   });
 });

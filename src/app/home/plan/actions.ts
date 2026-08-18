@@ -5,14 +5,18 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 
 import {
-  PLAN_WINDOW_DAYS,
   type PlanActionDraft,
   type PlanActionState,
   type PlanOperation,
   type TimezoneActionState,
 } from "./action-state";
+import {
+  nextPlanPosition,
+  readPlannableDate,
+  readPlanWindow,
+  type PlanWindow,
+} from "./plan-window";
 
-import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import {
   createProfileRepository,
   ProfileAuthenticationError,
@@ -42,9 +46,6 @@ const OPERATIONS: readonly PlanOperation[] = [
   "cancel",
   "set_recovery_day",
 ];
-
-/** Positions are 0-99; nothing sensible remains once a date is that deep. */
-const MAX_POSITION = 99;
 
 export async function confirmPlanTimezoneAction(
   previous: TimezoneActionState,
@@ -110,7 +111,7 @@ export async function changePlanAction(
     if (!operation) throw new RollingPlanValidationError();
     const expectedRevision = readInteger(formData.get("expectedRevision"));
     const plan = await createRollingPlan();
-    const window = await readWindow();
+    const window = await readPlanWindow();
     const slice = await plan.getPlanSlice(window.today, window.lastDate);
     if (slice.revision !== expectedRevision) {
       throw new RollingPlanConflictError();
@@ -176,20 +177,6 @@ export async function changePlanAction(
   }
 }
 
-type PlanWindow = { today: string; lastDate: string };
-
-/**
- * The window is derived from the stored zone, never from the request. An
- * owner with no stored zone has no plan yet, so this refuses rather than
- * guessing a zone on their behalf.
- */
-async function readWindow(): Promise<PlanWindow> {
-  const profile = await (await createProfileRepository()).getCurrentProfile();
-  if (!profile?.timezoneName) throw new RollingPlanTimezoneRequiredError();
-  const today = isoDateInTimezone(new Date(), profile.timezoneName);
-  return { today, lastDate: shiftIsoDate(today, PLAN_WINDOW_DAYS - 1) };
-}
-
 function buildChanges(
   operation: PlanOperation,
   formData: FormData,
@@ -214,7 +201,7 @@ function buildChanges(
         session: {
           ...readContent(formData),
           localDate,
-          position: nextPosition(slice, localDate),
+          position: nextPlanPosition(slice, localDate),
           isLocked: false,
           activities: [],
         },
@@ -248,7 +235,7 @@ function buildChanges(
         operation,
         sessionId: session.id,
         localDate,
-        position: nextPosition(slice, localDate),
+        position: nextPlanPosition(slice, localDate),
       },
     ];
   }
@@ -269,7 +256,7 @@ function buildChanges(
             : { expectedDurationMinutes: session.expectedDurationMinutes }),
           ...(session.note === undefined ? {} : { note: session.note }),
           localDate,
-          position: nextPosition(slice, localDate),
+          position: nextPlanPosition(slice, localDate),
           isLocked: false,
           activities: session.activities.map(({ id, ...activity }) => {
             void id;
@@ -302,22 +289,6 @@ function requireSession(
   return session;
 }
 
-/** The first free slot on the target date, so the owner never types a position. */
-function nextPosition(slice: RollingPlanSlice, localDate: string): number {
-  const taken = new Set(
-    slice.sessions
-      .filter(
-        (session) =>
-          session.localDate === localDate && session.status === "active",
-      )
-      .map((session) => session.position),
-  );
-  for (let position = 0; position <= MAX_POSITION; position += 1) {
-    if (!taken.has(position)) return position;
-  }
-  throw new RollingPlanValidationError();
-}
-
 function readContent(formData: FormData) {
   const minutes = optionalText(formData, "expectedDurationMinutes");
   return {
@@ -337,20 +308,6 @@ function readContent(formData: FormData) {
 
 function readOperation(value: FormDataEntryValue | null) {
   return OPERATIONS.find((operation) => operation === value);
-}
-
-function readPlannableDate(
-  value: FormDataEntryValue | null,
-  window: PlanWindow,
-): string {
-  if (
-    typeof value !== "string" ||
-    value < window.today ||
-    value > window.lastDate
-  ) {
-    throw new RollingPlanValidationError();
-  }
-  return value;
 }
 
 function readBoolean(value: FormDataEntryValue | null): boolean {
