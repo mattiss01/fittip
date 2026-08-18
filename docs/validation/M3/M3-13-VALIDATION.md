@@ -12,16 +12,22 @@ visible behavior. Dispatched by the product owner on 18 August 2026 against the
 **Branch:** `ticket/m3-13-private-saved-session-library`, from `master` at
 `ca4719c87a70b46e6658707f763a6d5c4e847928`.
 
-**Implementation review target:** `9c27a9807b2824d7e63bcea4ba88c7924bb5a981`.
+**Implementation review target:**
+`46c09c0b1a328a3a32fbb8110aa9593b39665e4a`. The first review round rejected
+`9c27a98`; this correction invalidates approval of every earlier commit.
 
 | Commit | Purpose |
 | --- | --- |
 | `1cdc8f5e55bf2c7069d58a0934dcef82f7a1e8bb` | The migration, the pgTAP suite, the server module and repository, the `/home/plan/saved` surface, both copy entry points, and every test that goes with them. |
 | `9c27a9807b2824d7e63bcea4ba88c7924bb5a981` | The two `.github/workflows/ci.yml` steps. Committed separately because `.github/**` is a tooling and supply-chain change. |
+| `46c09c0b1a328a3a32fbb8110aa9593b39665e4a` | **Correction, round 1.** The blocking browser regression: both Playwright specs now anchor their disclosure filters on `:scope > summary` instead of the whole `details` subtree. |
 
-**Review range:** `git diff ca4719c..9c27a98`. The branch head is one commit
-further on and adds only this record and its index entry, under the
-evidence-commit exception in `AGENTS.md`; `git diff 9c27a98..HEAD` touches
+**Review range:** `git diff ca4719c..46c09c0`. Five commits sit on the branch,
+in this order: `1cdc8f5`, `9c27a98`, `54bbdbc`, `46c09c0`, `10daaa4`. Two of
+them are documentation only and carry no code — `54bbdbc` added this record and
+falls *inside* the review range, and the branch head `10daaa4` adds the round-1
+corrections to it. Both are covered by the evidence-commit exception in
+`AGENTS.md`; `git diff 46c09c0..HEAD` touches
 `docs/validation/M3/M3-13-VALIDATION.md` and `docs/validation/README.md` and
 nothing else. The reviewed code and the branch head are therefore identical.
 
@@ -71,7 +77,8 @@ For the Preview, at `390x844`:
 
 ## Changed files
 
-`git diff --stat ca4719c..9c27a98`:
+The code manifest is `git diff --stat ca4719c..9c27a98` — everything the ticket
+delivered, before review. The round-1 correction is listed separately below it.
 
 ```
  .github/workflows/ci.yml                           |  13 +
@@ -112,6 +119,17 @@ For the Preview, at `390x844`:
  35 files changed, 5135 insertions(+), 55 deletions(-)
 ```
 
+**Round-1 correction**, `git diff --stat 9c27a98..46c09c0 -- e2e`:
+
+```
+ e2e/m3-12-plan.spec.ts           | 24 ++++++++++++++----------
+ e2e/m3-13-saved-sessions.spec.ts | 12 +++++++++++-
+ 2 files changed, 25 insertions(+), 11 deletions(-)
+```
+
+The rest of `git diff 9c27a98..46c09c0` is `54bbdbc`, this record and its index
+entry. Nothing else changed.
+
 Nothing was deleted or renamed.
 
 Files whose purpose is not evident from the path and diff:
@@ -123,11 +141,14 @@ Files whose purpose is not evident from the path and diff:
   rather than by a foreign key, which is why it is a module and not two inline
   object literals.
 - **`src/app/home/plan/plan-window.ts`** — new, and the only change to already
-  accepted M3-12 behavior. `readPlanWindow`, `readPlannableDate` and
-  `nextPlanPosition` were private to `src/app/home/plan/actions.ts`; reuse must
-  land on exactly the dates and positions the Plan itself offers, so they moved
-  to a shared server-only module and `actions.ts` now imports them. The bodies
-  are unchanged; `MAX_POSITION` moved with `nextPlanPosition`.
+  accepted M3-12 behavior. Three helpers were private to
+  `src/app/home/plan/actions.ts`; reuse must land on exactly the dates and
+  positions the Plan itself offers, so they moved to a shared server-only
+  module and `actions.ts` now imports them. **Two were renamed in the move:**
+  `readWindow` → `readPlanWindow` and `nextPosition` → `nextPlanPosition`;
+  `readPlannableDate` kept its name. The bodies are character-for-character
+  unchanged and no reference to the old names survives. `MAX_POSITION` moved
+  with `nextPlanPosition`.
 - **`src/app/home/plan/saved/save-to-library.tsx`** — the save entry point,
   rendered inside each planned session on `/home/plan` rather than on the
   library route. It holds its own `useActionState`, so saving never touches the
@@ -212,10 +233,25 @@ confirmed user. It never reaches application code and is never logged.
 
 ## Tests and final results
 
-The CI run for `9c27a98` is the automated-test evidence for this ticket. **The
-branch has not been pushed yet**, so no run URL exists; the lead pushes and
-records it. Everything below is what was observed locally while building, not a
-substitute for that run.
+The CI run for `46c09c0` is the automated-test evidence for this ticket. That
+run does not exist yet: the lead pushes the correction and records its URL and
+conclusion here.
+
+**The rejected run.** https://github.com/mattiss01/fittip/actions/runs/32153286060
+for `9c27a98` — static green, database green, **browser red** on the
+`M3-12 manual continuous planning` step. `e2e/m3-12-plan.spec.ts` filtered
+`details` by `hasText`, a case-insensitive substring match over the whole
+subtree; M3-13's save-to-library consequence copy ends "will not follow later
+edits", so a filter for the `Edit` disclosure matched two elements and strict
+mode threw at line 76. Nothing in the M3-12 flow past that line ran, so move,
+duplicate, lock, unlock and cancel were unexercised at that SHA. The
+known-defect exception does not apply: `master` at the branch base `ca4719c` is
+green (run 32148259497), and the failure is in behavior this ticket changed.
+`46c09c0` anchors the filter on the summary and both flows now pass locally in
+full, including every step after line 76.
+
+Everything below is what was observed locally, not a substitute for the CI run
+for `46c09c0`.
 
 | Command or check | Result |
 | --- | --- |
@@ -224,7 +260,8 @@ substitute for that run.
 | `npx.cmd supabase db advisors --local --type all --level warn --fail-on warn` | No issues found. |
 | `npx.cmd supabase test db --local supabase/tests/database` | 10 files, 620 tests, all passing. This ticket's file contributes 71. |
 | `npm.cmd run test:m3-13-concurrency` | PASS. 12 same-revision edit races each produced one winner and one `PT409` stale loser with no blended row; a delete raced against an edit resolved the same way; a cross-owner edit and a direct table write were both refused. |
-| `npx.cmd playwright test --config=e2e/m3-13.playwright.config.ts` | 1 passed, 0 skipped, 9.6s, against `build` + `start` on port 3021 at `390x844`. |
+| `npx.cmd playwright test --config=e2e/m3-13.playwright.config.ts` | 1 passed, 0 skipped, 10.1s, against `build` + `start` on port 3021 at `390x844`. Re-run at `46c09c0` after a clean `db reset`. |
+| `npx.cmd playwright test --config=e2e/m3-12.playwright.config.ts` | 2 passed, 0 skipped, 13.5s, on port 3020. Run at `46c09c0` to confirm the regression is gone and that the whole M3-12 flow — including the move, duplicate, lock, unlock and cancel steps that never ran at `9c27a98` — passes. |
 | `npm.cmd run lint`, `npm.cmd run typecheck` | Clean. |
 | `npm.cmd run test:run` | 63 files passed, 1 skipped; 736 tests passed, 1 skipped. |
 | `git diff --check` | No whitespace errors. |
@@ -336,6 +373,27 @@ every path). `validation-record` (this document).
     `EXECUTE` on `is_iana_timezone_name`** (M3-12's limitation 10). Unrelated to
     these tables — `service_role` holds nothing at all on them — but unchanged.
 
+Raised by the first review round:
+
+11. **A library card renders `intent` and `note` as two indistinguishable
+    unlabeled paragraphs.** `saved-library.tsx` prints each as a bare
+    `<p className={styles.body}>`, so an entry carrying both shows two blocks of
+    body copy with nothing saying which is the intent and which is the note.
+    The Plan surface does the same thing, so this is consistent rather than
+    novel, and it is deliberately not restyled here: it is a visible-design
+    question for the product owner's 390px pass, not a correctness defect. If
+    they want them distinguished, that is a small follow-up on both surfaces at
+    once rather than on this one alone. (Reviewer's observation.)
+12. **The migration uses bare `trunc(...)` at line 196 where most other
+    builtins in the file are `pg_catalog.`-prefixed.** Left as is, deliberately.
+    It is safe — `pg_catalog` is searched first whatever `search_path` says —
+    and the file also uses bare `nullif`, `coalesce` and `exists` throughout.
+    That is exactly the convention of
+    `20260814164502_m3_10_rolling_plan_foundation.sql`, which the brief told
+    this migration to mirror and which contains the identical bare
+    `trunc(v_position)` line. "Fixing" it here would make the mirror diverge
+    from the thing it mirrors. (Reviewer's optional note, declined with reason.)
+
 ## Judgment calls the brief did not settle
 
 Stated plainly so the reviewer can check them rather than discover them.
@@ -387,7 +445,19 @@ Stated plainly so the reviewer can check them rather than discover them.
    not an oversight: the two mean the same thing and the stricter reading is a
    trap for the next caller.
 7. **No per-owner cap on library size**, see limitation 3.
-8. **The Vitest fake adapter in `saved-sessions.test.ts` is not a shared
+8. **Adding a second disclosure and a second live region inside an existing
+   session card changed what two existing selectors matched.** The live-region
+   collision was caught while building, in `plan-manager.test.tsx`; the
+   disclosure collision was not, and it is what failed review. Both are the
+   same class: an existing selector that matched a whole subtree when it meant
+   to match a label. After the correction, every disclosure lookup in both
+   specs is anchored on `:scope > summary`, and I have re-checked the rest of
+   what M3-13 adds inside the Plan's session card against the M3-12 spec — the
+   `Name it` label, the `Save to library` button, the consequence copy and the
+   status paragraph collide with none of the labels, button names, headings,
+   `[data-plan-date]` counts or `li` filters that spec relies on. The reviewer
+   should still treat that as a claim to check rather than a guarantee.
+9. **The Vitest fake adapter in `saved-sessions.test.ts` is not a shared
    contract.** Unlike the rolling plan, there is no
    `saved-session-contract.ts` run against both an in-memory and a real
    Postgres adapter, because there is only one production adapter. The real
@@ -423,8 +493,10 @@ Judgment this ticket needs and CI cannot supply:
 4. **The `.retry(false)` widening from four to five.** Confirm the reason given
    is the real one and that the invariant still pins the exact set and count.
 5. **The `plan-window.ts` extraction.** Compare the moved bodies against
-   `ca4719c`'s `actions.ts` and confirm nothing changed but the location, and
-   that the Plan surface still bounds every write the same way it did.
+   `ca4719c`'s `actions.ts` — where two of them are spelled `readWindow` and
+   `nextPosition` — and confirm nothing changed but the location and those two
+   names, and that the Plan surface still bounds every write the same way it
+   did.
 6. **Product invariants.** Nothing here is shared, global, coach-authored, or
    cross-owner. Deleting is permanent and says so first. An empty library reads
    as empty rather than as a prompt or something to earn. No copy implies a
