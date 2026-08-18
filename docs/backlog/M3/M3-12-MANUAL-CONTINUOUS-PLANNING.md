@@ -1,7 +1,9 @@
 # M3-12: Manual continuous planning
 
-**Status:** in development — the product owner approved Tier 1 dispatch on
-17 August 2026 against this contract.
+**Status:** accepted — the product owner accepted the independently reviewed
+commit `093b21d` on 18 August 2026 and it merged to `master` as `a1aada9`. The
+founder migration was applied and verified before acceptance. Evidence in
+[`docs/validation/M3/M3-12-VALIDATION.md`](../../validation/M3/M3-12-VALIDATION.md).
 
 **Triage:** ready
 

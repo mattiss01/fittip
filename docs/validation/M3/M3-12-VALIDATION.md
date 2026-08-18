@@ -1,11 +1,9 @@
 # M3-12 validation: manual continuous planning
 
-**Status:** testable — the independent reviewer approved `093b21d` in round 2,
-exact-commit CI is green, and the founder migration has been applied and
-verified. **Product-owner acceptance against the Preview is the only remaining
-gate.** After it, the lead merges into `master`, pushes, waits for the founder
-deployment, runs the hosted smoke and security checks, and records the result
-here.
+**Status:** accepted — the product owner accepted `093b21d` on 18 August 2026.
+Merged to `master` as `a1aada9`, pushed, and deployed to the founder
+environment. Every gate is closed; see "Acceptance, merge, and founder
+deployment" at the end of this record.
 
 **Tier:** 1 — schema, migration, authorization, RLS, privileged writes, and
 visible behavior. Dispatched by the product owner on 17 August 2026 against the
@@ -767,3 +765,56 @@ Judgment this ticket needs and CI cannot supply:
    20 green runs and 0 failures once nothing else competed. That diagnosis
    predicts CI is unaffected; it does not prove it. Read the Vitest step for this
    SHA rather than accepting the prediction.
+
+## Acceptance, merge, and founder deployment
+
+**Product-owner acceptance.** Accepted on 18 August 2026 against the
+independently reviewed commit `093b21d` and the Preview
+https://fittip-4wjo8eu01-mattis-3657s-projects.vercel.app, deployed from
+`857b2f1`. That Preview serves the reviewed code unchanged: every commit
+between the two is documentation only. It is also the build the product owner
+exercised against the founder database after the migration was applied, which
+is why acceptance was requested against it rather than a later docs-only
+redeploy.
+
+**Merge.** `a1aada9`, a `--no-ff` merge of
+`ticket/m3-12-manual-continuous-planning` into `master` at `cbf271a`. `master`
+was an ancestor of the branch head, so nothing was resolved and the merged tree
+is byte-identical to the accepted head `921b621`. Under the `AGENTS.md` rule on
+clean merges, the local suite was not re-run by hand; the `master` run below is
+the post-merge evidence.
+
+The merge was made in the primary checkout `C:/Users/msche/dev/fittip`, which
+holds `master`; this ticket's Orca worktree holds the ticket branch and cannot
+check `master` out at the same time.
+
+**`master` CI.** https://github.com/mattiss01/fittip/actions/runs/32127732724 —
+**SUCCESS** for `a1aada9`.
+
+**Founder deployment.** Vercel production deployment `5960976665` for
+`a1aada9`, state `success`. The founder alias `https://fittip-gilt.vercel.app`
+was confirmed to be serving `a1aada9` by reading the most recent Production
+deployment's SHA, rather than assuming the alias had moved.
+
+**Hosted smoke and security checks**, anonymous, against the founder alias:
+
+| Check | Result |
+| --- | --- |
+| `/` | HTTP 200 |
+| `/home/plan` — the route this ticket reopened | HTTP 303 to `/`. The new surface is not readable without a session. |
+| `/home` | HTTP 303 to `/` |
+| `/home/plan` response headers | `Cache-Control: private, no-cache, no-store, must-revalidate, max-age=0`; `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` |
+| `/` response headers | `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate` |
+
+The anonymous redirect is the check that matters most here: M3-12 reopened a
+route that M3-11 had reduced to a stub, and it now serves owner data. The
+authenticated hosted behavior was exercised by the product owner before
+acceptance and is recorded in the founder-verification section above.
+
+**Follow-up raised by this closeout, not fixed here.** The correction to
+limitation 10 established that `service_role` holds `GRANT ALL` on
+`public.profiles` while lacking `EXECUTE` on `is_iana_timezone_name`. Nothing
+exercises that path today, so it is latent rather than a defect, but it is a
+trap for the next writer of that table and wants a small forward migration —
+either revoking `service_role` from `profiles` or granting it the `EXECUTE`.
+That is a schema change and belongs to its own ticket.
