@@ -214,8 +214,18 @@ function savedCard(page: Page, title: string) {
     .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
 }
 
+/** The disclosure whose own summary carries this label. */
+function disclosure(scope: Locator, label: string) {
+  // Anchored on the summary. Filtering the whole `details` subtree matched body
+  // copy as well as the label, so a disclosure whose consequence text happened
+  // to contain another disclosure's label matched both at once.
+  return scope.locator("details").filter({
+    has: scope.page().locator(":scope > summary", { hasText: label }),
+  });
+}
+
 async function openDisclosure(scope: Locator, label: string) {
-  const details = scope.locator("details").filter({ hasText: label });
+  const details = disclosure(scope, label);
   if ((await details.getAttribute("open")) === null) {
     await details.locator(":scope > summary").click();
   }
