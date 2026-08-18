@@ -1,8 +1,28 @@
 # M3-13 validation: private saved-session library
 
-**Status:** in development — builder handoff complete. Independent review of
-the exact pushed commit, the CI run for that SHA, the founder-project migration,
-Preview verification, and product-owner acceptance are all pending.
+**Status:** testable — the independent reviewer approved `46c09c0` in round 2,
+and CI is green for that code on all three jobs. **The founder-project
+migration, Preview verification, and product-owner acceptance remain pending.**
+
+**Independent review:** round 1 rejected `9c27a98` on one blocking regression;
+round 2 approved `46c09c0` on the green run 32167697854. The reviewer recorded
+that the round-1 judgments — the `SECURITY DEFINER` boundary against ADR-016,
+the revision token, copy-by-value in both directions, RLS and ownership, M3-12
+rule enforcement, the `.retry(false)` widening, and the honest states — carry
+forward unchanged, because `git diff 9c27a98..e95c832` touches only two
+Playwright specs and two documentation files.
+
+**CI:**
+
+| Run | Head | Result |
+| --- | --- | --- |
+| [32153286060](https://github.com/mattiss01/fittip/actions/runs/32153286060) | `54bbdbc` | **FAILURE** — the rejected round-1 code. Static and database jobs green; the 390px browser job failed on the M3-12 flow. |
+| [32167697854](https://github.com/mattiss01/fittip/actions/runs/32167697854) | `e95c832` | **SUCCESS** — all three jobs, code-identical to `46c09c0`. |
+
+The M3-12 browser flow did not merely stop failing. At `9c27a98` it died at
+`e2e/m3-12-plan.spec.ts:76`, so move, duplicate, lock, unlock and cancel never
+executed; in the green run both its tests pass, so those operations genuinely
+ran.
 
 **Tier:** 1 — new owner-scoped tables, RLS, grants, an owner-derived write, and
 visible behavior. Dispatched by the product owner on 18 August 2026 against the
@@ -22,14 +42,20 @@ visible behavior. Dispatched by the product owner on 18 August 2026 against the
 | `9c27a9807b2824d7e63bcea4ba88c7924bb5a981` | The two `.github/workflows/ci.yml` steps. Committed separately because `.github/**` is a tooling and supply-chain change. |
 | `46c09c0b1a328a3a32fbb8110aa9593b39665e4a` | **Correction, round 1.** The blocking browser regression: both Playwright specs now anchor their disclosure filters on `:scope > summary` instead of the whole `details` subtree. |
 
-**Review range:** `git diff ca4719c..46c09c0`. Five commits sit on the branch,
-in this order: `1cdc8f5`, `9c27a98`, `54bbdbc`, `46c09c0`, `10daaa4`. Two of
-them are documentation only and carry no code — `54bbdbc` added this record and
-falls *inside* the review range, and the branch head `10daaa4` adds the round-1
-corrections to it. Both are covered by the evidence-commit exception in
-`AGENTS.md`; `git diff 46c09c0..HEAD` touches
+**Review range:** `git diff ca4719c..46c09c0`. The branch carries these commits
+in order: `1cdc8f5`, `9c27a98`, `54bbdbc`, `46c09c0`, `e95c832`, and any
+further documentation commit recorded below. Two of them are documentation only
+and carry no code — `54bbdbc` added this record and falls *inside* the review
+range, and `e95c832` added the round-1 corrections to it. Both are covered by
+the evidence-commit exception in `AGENTS.md`; `git diff 46c09c0..HEAD` touches
 `docs/validation/M3/M3-13-VALIDATION.md` and `docs/validation/README.md` and
 nothing else. The reviewed code and the branch head are therefore identical.
+
+An earlier version of this paragraph named the head as `10daaa4`, a dangling
+object left by an amend that no ref can reach. A record cannot name the SHA of
+the commit that writes it, so this paragraph names the last commit that exists
+when it is written and describes the rest by role rather than inventing a
+number. Raised by the round-2 review as a non-blocking finding.
 
 ## Delivered behavior
 
