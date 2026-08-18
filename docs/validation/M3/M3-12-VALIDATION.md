@@ -1,8 +1,11 @@
 # M3-12 validation: manual continuous planning
 
-**Status:** in development — builder handoff complete. Independent exact-commit
-review, the CI run for the reviewed SHA, founder-project migration application,
-Preview verification, and product-owner acceptance are all pending.
+**Status:** testable — the independent reviewer approved `093b21d` in round 2,
+exact-commit CI is green, and the founder migration has been applied and
+verified. **Product-owner acceptance against the Preview is the only remaining
+gate.** After it, the lead merges into `master`, pushes, waits for the founder
+deployment, runs the hosted smoke and security checks, and records the result
+here.
 
 **Tier:** 1 — schema, migration, authorization, RLS, privileged writes, and
 visible behavior. Dispatched by the product owner on 17 August 2026 against the
@@ -23,19 +26,34 @@ visible behavior. Dispatched by the product owner on 17 August 2026 against the
 | `da9963b` | **Correction, round 1.** N1 form reset key, N3 pgTAP clock divergence, N5 adapter ordering. |
 | `093b21d` | **Correction, round 1.** The three 390px screenshots regenerated against the corrected surface. |
 
-**Review range:** `git diff cbf271a..093b21d`. The branch head is one commit
-further on and adds only this record, under the evidence-commit exception in
-`AGENTS.md`; it changes no code.
+**Review range:** `git diff cbf271a..093b21d`. The branch head is `857b2f1`,
+two commits further on. Both add only this record, under the evidence-commit
+exception in `AGENTS.md`; `git diff 093b21d..857b2f1` touches
+`docs/validation/M3/M3-12-VALIDATION.md` and `docs/validation/README.md` and
+nothing else. The reviewed code and the branch head are therefore identical,
+which is what lets the head's CI run and Preview stand as evidence for
+`093b21d`.
 
-**CI:** the run for the rejected `2a09b6c` was
-https://github.com/mattiss01/fittip/actions/runs/32045649999 — **FAILURE**, and
-it is recorded here because it is what the corrections answer. Prettier is the
-first step of the static job, so ESLint, TypeScript, Vitest and the production
-build never executed: that run establishes nothing about four of the five
-static gates. The run for `093b21d` is the automated-test evidence and must be
-recorded here, green, before acceptance.
+**Independent review:** the reviewer approved `093b21d` in round 2 on the green
+run 32069448152. Round 1 had rejected `2a09b6c`; the corrections in `029936a`,
+`da9963b` and `093b21d` answer it, and every finding's disposition is in the
+table below.
 
-**Preview:** pending the push.
+**CI:**
+
+| Run | Head | Result |
+| --- | --- | --- |
+| [32045649999](https://github.com/mattiss01/fittip/actions/runs/32045649999) | `2a09b6c` | **FAILURE** — the rejected round-1 commit. Recorded because it is what the corrections answer. Prettier is the first step of the static job, so ESLint, TypeScript, Vitest and the build never executed; it establishes nothing about four of the five static gates. |
+| [32069448152](https://github.com/mattiss01/fittip/actions/runs/32069448152) | `0bef7c7` | **SUCCESS** — the run the reviewer approved on. |
+| [32070789464](https://github.com/mattiss01/fittip/actions/runs/32070789464) | `857b2f1` | **SUCCESS** — the branch head, code-identical to `093b21d`. |
+
+Both green runs executed the Vitest step, which the rejected run never reached.
+The B3 flake predicted below did not reproduce on either.
+
+**Preview:** https://fittip-4wjo8eu01-mattis-3657s-projects.vercel.app —
+deployment `5951611516` for `857b2f1`, state `success`. This is the acceptance
+surface; it serves the reviewed code, and it reads the founder database with
+the migration applied.
 
 ## First review round: what was rejected and what changed
 
@@ -479,6 +497,74 @@ Tests added or changed:
   page errors, keyboard reach into the add form, and delete their disposable
   account in a `finally`.
 
+## Founder project: migration application and hosted verification
+
+Applied by the product owner on 18 August 2026 to the founder Supabase project
+`mahhfyxhgcmcbqkvudcm`, from the repository at `857b2f1`, using
+`npx supabase db push --linked`. The lead did not run any hosted command; every
+result below was produced by the product owner and read back from its output.
+
+**Migration history.** `npx supabase migration list --linked` returns sixteen
+versions, each with `local` equal to `remote`, ending at `20260817125029`. That
+set is identical to `supabase/migrations/` in this repository — same count, same
+versions, no entry on either side that the other lacks. There is no drift in
+either direction.
+
+**Schema, RLS, and privilege boundary.** Verified against
+`npx supabase db dump --linked --schema public`, which reports the live remote
+DDL rather than what the migration intended to do.
+
+| Assertion | Remote state |
+| --- | --- |
+| `profiles.timezone_name` exists with its constraint | `profiles_timezone_name_check`: null, or length 1–100 **and** `public.is_iana_timezone_name(timezone_name)` |
+| The privilege widening is column-scoped | `authenticated` holds `SELECT, INSERT` table-wide and `UPDATE("timezone_name")` and nothing more. No unscoped UPDATE exists, so `user_id` cannot be reassigned. |
+| The new policy is owner-bound | `profiles_owner_update_timezone`, `FOR UPDATE TO authenticated`, `auth.uid() = user_id` in both `USING` and `WITH CHECK` |
+| `is_iana_timezone_name` is minimal | `LANGUAGE sql STABLE`, `SET search_path TO ''`, **not** `SECURITY DEFINER`, body reads only `pg_catalog.pg_timezone_names`. `REVOKE ALL FROM PUBLIC`, `EXECUTE` to `authenticated` alone. |
+| `rolling_plan_recovery_days` is owner-scoped | RLS enabled; `SELECT` to `authenticated` only; **nothing granted to `anon` or `service_role`**; `rolling_plan_recovery_days_owner_select` on `auth.uid() = user_id` |
+| Its constraints are present | PK on `id`; unique `(user_id, local_date)`; unique `(id, user_id)`; composite FK `(plan_id, user_id)` → `rolling_plans (id, user_id)` `ON DELETE CASCADE` |
+| The owner-immutability trigger is live | `rolling_plan_recovery_days_owner_immutable`, `BEFORE UPDATE ... FOR EACH ROW` |
+| History carries recovery days | `rolling_plan_change_entries.session_id` is nullable, `local_date` added, `kind_check` includes `set_recovery_day`, and `target_check` enforces exactly one of the two targets |
+| The bounded read carries labels | `rolling_plan_slice_receipt` has `recovery_dates jsonb`; `get_rolling_plan_slice(date, date)` recreated, `EXECUTE` to `authenticated` alone |
+| Both new rules are in the function | `PT422`, `PT423` and `PT428` all present in `apply_rolling_plan_change_set` |
+
+**Advisors.** `npx supabase db advisors --linked --type all --level warn`
+returns seven warnings, none of them attributable to this ticket:
+
+- Six `authenticated_security_definer_function_executable`, on
+  `apply_goal_change` (M2-01), `apply_memory_change` (M2-02),
+  `apply_onboarding_change` (M2-03), `reserve_ai_spend` and `settle_ai_spend`
+  (M3-01B), and `apply_rolling_plan_change_set` (M3-10). Every one predates
+  M3-12. They describe the deliberate privileged-write boundary this codebase
+  is built on: a `SECURITY DEFINER` function is exactly how an owner's write is
+  mediated rather than granted directly. M3-12 replaced
+  `apply_rolling_plan_change_set` in place and did not change its security
+  mode, so it adds no seventh.
+- One `auth_leaked_password_protection`, an Auth project setting unrelated to
+  any schema this ticket touches.
+
+**M3-12's own two new functions are `SECURITY INVOKER`** and neither is
+flagged. No `unindexed_foreign_key` warning appeared for the recovery-days FK
+noted in limitation 11, which is consistent with what that limitation claims.
+
+Worth recording for whoever reads the next advisor run: the **local** advisors
+reported "no issues found" while the **hosted** run reports these seven. The
+local Supabase container does not run the hosted lint set that produces
+`0029_authenticated_security_definer_function_executable`, and it has no Auth
+project settings to inspect. A local "no issues found" therefore does not
+predict a clean hosted advisor run, and the hosted one is the one that counts.
+
+**Authenticated hosted read path.** The product owner exercised `/home/plan` on
+the Preview against the founder database and reported it working. The surface
+cannot render at all without the recreated `get_rolling_plan_slice` returning
+the new four-field receipt, so that read path is exercised by the page loading.
+
+**Safety of the drop.** The migration drops and recreates
+`get_rolling_plan_slice(date, date)` and `rolling_plan_slice_receipt`. On
+founder production at the time of application (`cbf271a`), nothing reached that
+RPC: `src/server/repositories/rolling-plan-repository.ts` was referenced only
+by its own test, and no route or server module imported it. The drop could not
+affect the deployment then serving the founder alias.
+
 ## Project skills applied
 
 `schema-change` — forward migration, revoked-then-granted privileges, explicit
@@ -570,10 +656,29 @@ Raised by the first review round and deliberately not fixed here:
     and this record does not settle it — assume the stricter reading until
     someone verifies it with a throwaway role. The conclusion is the same under
     both: the requirement is a property of the constraint rather than of the
-    column, and it is easy to trip over. Right now only `authenticated` can
-    write `profiles` at all and it holds the grant; `service_role` has no
-    INSERT or UPDATE there. Whoever adds the next writer needs to know this.
-    (Reviewer's N6 and O1.)
+    column, and it is easy to trip over.
+
+    **Corrected 18 August 2026 against the founder schema dump.** This
+    limitation previously claimed that "only `authenticated` can write
+    `profiles` at all" and that "`service_role` has no INSERT or UPDATE there."
+    Both are false. The hosted dump shows
+    `GRANT ALL ON TABLE "public"."profiles" TO "service_role"` — Supabase's
+    default, which M0-02 never removed because its revoke names only
+    `public, anon, authenticated`. `service_role` also bypasses RLS. So a
+    second writer of `profiles` already exists, and it does **not** hold
+    `EXECUTE` on `is_iana_timezone_name`, which this migration granted to
+    `authenticated` alone. Under the reviewer's stricter reading, a
+    service-role INSERT or UPDATE on `profiles` would fail on that ACL even if
+    it never touches `timezone_name`.
+
+    This is latent, not live: there is no service-role Supabase client
+    anywhere in `src/`, `profile-repository.ts` uses the authenticated client,
+    and the service-role key is used only by the test harnesses against
+    `auth.users`. It is also not drift — the remote grants match the
+    repository's migrations exactly. The wrong sentence was in this record,
+    not in the database. It is corrected here because its whole purpose is to
+    warn the next writer, and as written it reassured them the trap was
+    unreachable. (Reviewer's N6 and O1.)
 11. **The recovery-days foreign key `(plan_id, user_id)` has no index, and the
     `(id, user_id)` unique key is referenced by nothing.** The FK is unindexed,
     so a cascading delete of a plan scans; with one plan row per owner and one
