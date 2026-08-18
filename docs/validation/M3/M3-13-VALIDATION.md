@@ -1,8 +1,14 @@
 # M3-13 validation: private saved-session library
 
 **Status:** testable — the independent reviewer approved `46c09c0` in round 2,
-and CI is green for that code on all three jobs. **The founder-project
-migration, Preview verification, and product-owner acceptance remain pending.**
+CI is green for that code on all three jobs, and the founder migration
+`20260818143303` has been applied and verified. **The product owner's 390px
+acceptance pass on the Preview is the only remaining gate.**
+
+**Preview:** https://fittip-door7i34w-mattis-3657s-projects.vercel.app —
+deployment `5968472376` for `b292962`, state `success`. `b292962` is
+documentation only on top of `46c09c0`, so this Preview serves the reviewed
+code.
 
 **Independent review:** round 1 rejected `9c27a98` on one blocking regression;
 round 2 approved `46c09c0` on the green run 32167697854. The reviewer recorded
@@ -346,6 +352,61 @@ from the Plan's action orange, the M3-18 focus ring, reduced-motion guard, and
 copy that states consequences before actions). `mobile-e2e` (390x844 against a
 production build on an isolated port, with the disposable account deleted on
 every path). `validation-record` (this document).
+
+## Founder project: migration application and hosted verification
+
+Applied by the product owner on 18 August 2026 to the founder Supabase project
+`mahhfyxhgcmcbqkvudcm`. The lead then ran the read-only verification directly,
+on the product owner's explicit instruction to verify it rather than hand back
+commands; no write, no `db push`, and no spend.
+
+**Migration history.** `npx supabase migration list --linked` returns seventeen
+versions, each with `local` equal to `remote`, ending at `20260818143303`.
+Compared line by line against `supabase/migrations/`: seventeen and seventeen,
+diff empty. No drift in either direction.
+
+**Schema, RLS, and privilege boundary**, read from
+`npx supabase db dump --linked --schema public` — the live remote DDL, not what
+the migration intended:
+
+| Assertion | Remote state |
+| --- | --- |
+| Both tables exist | `public.saved_sessions`, `public.saved_session_activities` |
+| RLS is on | `ENABLE ROW LEVEL SECURITY` on both |
+| Grants are minimal | `SELECT` to `authenticated` on both, and nothing else. **No grant of any kind to `anon` or `service_role`.** |
+| Policies are owner-bound | `saved_sessions_owner_select` and `saved_session_activities_owner_select`, both `FOR SELECT TO authenticated USING (auth.uid() = user_id)`. No mutation policy exists, so the tables cannot be written directly by any client. |
+| The revision token is live | `saved_sessions.revision bigint NOT NULL DEFAULT 0` with `saved_sessions_revision_check (revision >= 0)` — the column the product owner's decision 2 required |
+| The owner cannot be passed in | `apply_saved_session_change` takes `p_operation, p_saved_session_id, p_expected_revision, p_name, p_title, p_sport, p_intent, p_expected_duration_minutes, p_note, p_activities`. **There is no owner parameter**, so no caller can name a subject; the function derives it from `auth.uid()`. |
+| The privileged function is contained | `SECURITY DEFINER`, `SET search_path TO ''`, `REVOKE ALL ... FROM PUBLIC`, `EXECUTE` to `authenticated` alone |
+| Its helpers are unreachable from outside | `saved_session_activity_input_is_valid` and `saved_sessions_reject_owner_change` are revoked from `PUBLIC` and granted to nobody |
+| Owner immutability is enforced in the database | `saved_sessions_owner_immutable` and `saved_session_activities_owner_immutable`, `BEFORE UPDATE ... FOR EACH ROW` |
+| `name` is required and bounded | `saved_sessions_name_check`, trimmed length 1-120 |
+
+**Advisors.** `npx supabase db advisors --linked --type all --level warn`
+returns **eight** warnings, one more than the seven recorded for M3-12:
+
+- Seven are unchanged and predate this ticket: six
+  `authenticated_security_definer_function_executable` on `apply_goal_change`,
+  `apply_memory_change`, `apply_onboarding_change`,
+  `apply_rolling_plan_change_set`, `reserve_ai_spend` and `settle_ai_spend`,
+  plus the `auth_leaked_password_protection` project setting.
+- The eighth is `apply_saved_session_change`, under the same lint. It is this
+  ticket's new function and the warning is expected: a `SECURITY DEFINER`
+  function callable by `authenticated` is precisely the owner-derived
+  transaction ADR-016 makes mandatory, and it is how every owner write in this
+  codebase is mediated rather than granted directly. It is the deliberate
+  pattern, not a regression.
+
+No new advisor *category* appeared. Nothing was flagged about the new tables
+themselves — no unindexed foreign key, no RLS gap.
+
+**What this evidence does not cover.** The Preview sits behind Vercel's SSO
+deployment protection, so an anonymous request is answered by Vercel's SSO
+redirect before it ever reaches the application. The app's own anonymous
+redirect and private cache headers therefore **cannot** be checked on a Preview
+URL; that check runs against the unprotected founder alias after the merge, as
+it did for M3-12. The authenticated hosted read and write path is the product
+owner's 390px pass on the Preview and is not claimed here.
 
 ## Known limitations
 
