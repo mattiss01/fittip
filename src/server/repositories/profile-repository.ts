@@ -12,11 +12,13 @@ import {
   type ServerUserClient,
 } from "@/lib/supabase/server-user-client";
 
-const PROFILE_COLUMNS = "user_id, created_at" as const;
+const PROFILE_COLUMNS = "user_id, created_at, timezone_name" as const;
 
 export type Profile = {
   userId: string;
   createdAt: string;
+  /** The owner's confirmed IANA zone, or null before they have confirmed one. */
+  timezoneName: string | null;
 };
 
 export class ProfileAuthenticationError extends Error {
@@ -31,6 +33,31 @@ export class ProfilePersistenceError extends Error {
     super("The profile operation could not be completed.");
     this.name = "ProfilePersistenceError";
   }
+}
+
+export class ProfileValidationError extends Error {
+  constructor() {
+    super("The profile value is not a usable IANA time zone.");
+    this.name = "ProfileValidationError";
+  }
+}
+
+/**
+ * The database is the authority: `profiles_timezone_name_check` validates the
+ * name against `pg_catalog.pg_timezone_names`. This rejects the obvious cases
+ * before a round trip, and keeps an unbounded browser string out of a query.
+ */
+export function parseTimezoneName(value: unknown): string {
+  if (typeof value !== "string") throw new ProfileValidationError();
+  const normalized = value.trim();
+  if (!/^[A-Za-z][A-Za-z0-9+_\-/]{0,99}$/.test(normalized))
+    throw new ProfileValidationError();
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: normalized });
+  } catch {
+    throw new ProfileValidationError();
+  }
+  return normalized;
 }
 
 export class ProfileRepository {
@@ -73,6 +100,30 @@ export class ProfileRepository {
     return existing ?? this.createCurrentProfile();
   }
 
+  /**
+   * Stores the zone the owner confirmed. The grant behind this is scoped to
+   * `timezone_name`, so no other profile column can be written from here.
+   */
+  async confirmTimezone(timezoneName: unknown): Promise<Profile> {
+    const parsed = parseTimezoneName(timezoneName);
+    await this.ensureCurrentProfile();
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("profiles")
+      .update({ timezone_name: parsed })
+      .eq("user_id", userId)
+      .select(PROFILE_COLUMNS)
+      .maybeSingle();
+
+    if (error) {
+      throw error.code === "23514"
+        ? new ProfileValidationError()
+        : mapPersistenceError(error.code);
+    }
+    if (!data) throw new ProfilePersistenceError();
+    return toProfile(data);
+  }
+
   private async getVerifiedUserId(): Promise<string> {
     try {
       return await requireAllowedVerifiedUser(this.client);
@@ -95,6 +146,7 @@ function toProfile(
   return {
     userId: row.user_id,
     createdAt: row.created_at,
+    timezoneName: row.timezone_name,
   };
 }
 

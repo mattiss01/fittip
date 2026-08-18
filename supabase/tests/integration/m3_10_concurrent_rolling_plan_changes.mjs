@@ -103,11 +103,18 @@ async function deleteOwner(userId) {
   }
 }
 
+// M3-12 refuses any change targeting a date before owner-local today, so each
+// round plans its own future date rather than a fixed literal.
+function futureDate(offset) {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + offset);
+  return date.toISOString().slice(0, 10);
+}
+
 function addArgs(round, contender) {
   const hex = (round * 2 + (contender === "a" ? 1 : 2))
     .toString(16)
     .padStart(12, "0");
-  const day = String(16 + round).padStart(2, "0");
   return {
     p_expected_plan_revision: round,
     p_idempotency_key: crypto.randomUUID(),
@@ -117,7 +124,7 @@ function addArgs(round, contender) {
         operation: "add",
         sessionId: `78000000-0000-4000-8000-${hex}`,
         session: {
-          localDate: `2026-08-${day}`,
+          localDate: futureDate(round + 1),
           position: contender === "a" ? 0 : 1,
           title: `Round ${round} ${contender}`,
           sport: "Running",
@@ -145,7 +152,7 @@ async function createOwner(label) {
   await request("/rest/v1/profiles", publishableKey, {
     method: "POST",
     token: session.access_token,
-    body: { user_id: created.id },
+    body: { user_id: created.id, timezone_name: "UTC" },
   });
   return { id: created.id, token: session.access_token };
 }

@@ -811,14 +811,17 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string;
+          timezone_name: string | null;
           user_id: string;
         };
         Insert: {
           created_at?: string;
+          timezone_name?: string | null;
           user_id: string;
         };
         Update: {
           created_at?: string;
+          timezone_name?: string | null;
           user_id?: string;
         };
         Relationships: [];
@@ -1227,9 +1230,10 @@ export type Database = {
           change_set_id: string;
           created_at: string;
           id: string;
+          local_date: string | null;
           ordinal: number;
           plan_id: string;
-          session_id: string;
+          session_id: string | null;
           user_id: string;
         };
         Insert: {
@@ -1239,9 +1243,10 @@ export type Database = {
           change_set_id: string;
           created_at?: string;
           id?: string;
+          local_date?: string | null;
           ordinal: number;
           plan_id: string;
-          session_id: string;
+          session_id?: string | null;
           user_id: string;
         };
         Update: {
@@ -1251,9 +1256,10 @@ export type Database = {
           change_set_id?: string;
           created_at?: string;
           id?: string;
+          local_date?: string | null;
           ordinal?: number;
           plan_id?: string;
-          session_id?: string;
+          session_id?: string | null;
           user_id?: string;
         };
         Relationships: [
@@ -1307,6 +1313,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "rolling_plan_change_sets_plan_fkey";
+            columns: ["plan_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "rolling_plans";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      rolling_plan_recovery_days: {
+        Row: {
+          created_at: string;
+          id: string;
+          local_date: string;
+          plan_id: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          local_date: string;
+          plan_id: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          local_date?: string;
+          plan_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "rolling_plan_recovery_days_plan_fkey";
             columns: ["plan_id", "user_id"];
             isOneToOne: false;
             referencedRelation: "rolling_plans";
@@ -1567,6 +1605,7 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      is_iana_timezone_name: { Args: { p_value: string }; Returns: boolean };
       is_valid_training_measurement: {
         Args: { p_mode: string; p_value: Json };
         Returns: boolean;
@@ -1711,6 +1750,7 @@ export type Database = {
         plan_id: string | null;
         plan_revision: number | null;
         sessions: Json | null;
+        recovery_dates: Json | null;
       };
     };
   };

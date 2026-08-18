@@ -4,6 +4,15 @@ import { extname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
+
+/**
+ * M3-12 reopened `/home/plan` against the M3-10 rolling-plan model, so its
+ * route module and server actions exist again under the same two paths. What
+ * M3-11 closed was the legacy detailed-plan/proposal/completion runtime, and
+ * that closure is still asserted here: the legacy server modules stay deleted,
+ * no application code calls a removed table or RPC, and the reopened surface is
+ * checked below to reach persistence only through the rolling-plan seam.
+ */
 const legacyModules = [
   "src/server/repositories/training-record-repository.ts",
   "src/server/repositories/completion-repository.ts",
@@ -12,19 +21,23 @@ const legacyModules = [
   "src/server/training/past-plan-protection.ts",
   "src/server/completions/completion-records.ts",
   "src/server/plan-proposal/plan-proposal-service.ts",
-  "src/app/home/plan/actions.ts",
   "src/app/home/log/actions.ts",
   "src/app/home/plan/proposal/actions.ts",
   "src/app/home/plan/roadmap/actions.ts",
 ] as const;
 
 const maintenancePages = [
-  "src/app/home/plan/page.tsx",
   "src/app/home/today/page.tsx",
   "src/app/home/log/page.tsx",
   "src/app/home/progress/page.tsx",
   "src/app/home/plan/roadmap/page.tsx",
   "src/app/home/plan/proposal/page.tsx",
+] as const;
+
+/** The reopened surface, which may reach only the M3-10 rolling-plan seam. */
+const rollingPlanSurface = [
+  "src/app/home/plan/page.tsx",
+  "src/app/home/plan/actions.ts",
 ] as const;
 
 const legacyTables = [
@@ -62,6 +75,16 @@ describe("M3-11 legacy runtime closure", () => {
       const source = readFileSync(join(root, path), "utf8");
       expect(source, path).toContain("TrainingMaintenance");
       expect(source, path).not.toMatch(/@\/server\/|@\/lib\/supabase/);
+    }
+  });
+
+  it("keeps the reopened plan surface on the rolling-plan seam only", () => {
+    for (const path of rollingPlanSurface) {
+      const source = readFileSync(join(root, path), "utf8");
+      expect(source, path).toMatch(/@\/server\/(rolling-plan|repositories)\//);
+      expect(source, path).not.toMatch(
+        /training-record|completion-repository|plan-proposal|past-plan-protection|@\/lib\/supabase/,
+      );
     }
   });
 

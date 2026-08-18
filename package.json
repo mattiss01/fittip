@@ -21,6 +21,7 @@
     "test:m3-11-seeded-reset": "node supabase/tests/integration/m3_11_seeded_reset.mjs",
     "test:m3-10-adapter-contract": "vitest run supabase/tests/integration/m3_10_rolling_plan_postgres.test.ts",
     "test:m3-10-concurrency": "node supabase/tests/integration/m3_10_concurrent_rolling_plan_changes.mjs",
+    "test:m3-12-concurrency": "node supabase/tests/integration/m3_12_concurrent_plan_rules.mjs",
     "test:e2e": "playwright test",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

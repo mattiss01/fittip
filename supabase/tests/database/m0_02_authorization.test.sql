@@ -55,6 +55,9 @@ select is(
   1::bigint,
   'owner INSERT policy targets authenticated users'
 );
+-- M3-12 added the third: an owner UPDATE policy that exists only so the owner
+-- can confirm their own time zone. Its privilege is column-scoped, which is
+-- why the table-wide UPDATE assertion below is still false.
 select is(
   (
     select count(*)::bigint
@@ -62,14 +65,14 @@ select is(
     where schemaname = 'public'
       and tablename = 'profiles'
   ),
-  2::bigint,
-  'profiles has only the two approved policies'
+  3::bigint,
+  'profiles has only the three approved policies'
 );
 select ok(not has_table_privilege('anon', 'public.profiles', 'SELECT'), 'anon has no SELECT privilege');
 select ok(not has_table_privilege('anon', 'public.profiles', 'INSERT'), 'anon has no INSERT privilege');
 select ok(has_table_privilege('authenticated', 'public.profiles', 'SELECT'), 'authenticated has SELECT privilege');
 select ok(has_table_privilege('authenticated', 'public.profiles', 'INSERT'), 'authenticated has INSERT privilege');
-select ok(not has_table_privilege('authenticated', 'public.profiles', 'UPDATE'), 'authenticated has no UPDATE privilege');
+select ok(not has_table_privilege('authenticated', 'public.profiles', 'UPDATE'), 'authenticated has no table-wide UPDATE privilege');
 select ok(not has_table_privilege('authenticated', 'public.profiles', 'DELETE'), 'authenticated has no DELETE privilege');
 
 insert into auth.users (id, email, raw_app_meta_data, raw_user_meta_data)
@@ -108,7 +111,7 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000
 select is((select count(*)::bigint from public.profiles where user_id = '00000000-0000-4000-8000-000000000002'), 0::bigint, 'user A cannot read user B');
 select throws_ok(
   $$ update public.profiles set created_at = now() where user_id = '00000000-0000-4000-8000-000000000001' $$,
-  '42501', 'permission denied for table profiles', 'user A cannot update their own profile'
+  '42501', 'permission denied for table profiles', 'user A cannot update a profile column outside the M3-12 grant'
 );
 select throws_ok(
   $$ delete from public.profiles where user_id = '00000000-0000-4000-8000-000000000001' $$,
@@ -150,7 +153,7 @@ select ok((select created_at is not null from public.profiles where user_id = '0
 select hasnt_column('public', 'profiles', 'email', 'profiles does not duplicate email');
 select hasnt_column('public', 'profiles', 'password', 'profiles does not store passwords');
 select hasnt_table('public', 'invites', 'no invite table exists');
-select is((select count(*)::bigint from information_schema.columns where table_schema = 'public' and table_name = 'profiles'), 2::bigint, 'profiles has exactly the two approved columns');
+select is((select count(*)::bigint from information_schema.columns where table_schema = 'public' and table_name = 'profiles'), 3::bigint, 'profiles has exactly the three approved columns');
 
 select * from finish();
 

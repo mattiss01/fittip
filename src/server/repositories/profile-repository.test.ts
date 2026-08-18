@@ -6,6 +6,7 @@ import {
   ProfileAuthenticationError,
   ProfilePersistenceError,
   ProfileRepository,
+  ProfileValidationError,
 } from "@/server/repositories/profile-repository";
 
 const USER_ID = "00000000-0000-4000-8000-000000000001";
@@ -22,6 +23,7 @@ describe("ProfileRepository", () => {
     const query = createReadQuery({
       user_id: USER_ID,
       created_at: "2026-07-23T08:00:00.000Z",
+      timezone_name: "Europe/Berlin",
       ignored: "not exposed",
     });
     const client = createClient(query.table);
@@ -30,10 +32,13 @@ describe("ProfileRepository", () => {
     await expect(repository.getCurrentProfile()).resolves.toEqual({
       userId: USER_ID,
       createdAt: "2026-07-23T08:00:00.000Z",
+      timezoneName: "Europe/Berlin",
     });
 
     expect(client.auth.getClaims).toHaveBeenCalledOnce();
-    expect(query.select).toHaveBeenCalledWith("user_id, created_at");
+    expect(query.select).toHaveBeenCalledWith(
+      "user_id, created_at, timezone_name",
+    );
     expect(query.eq).toHaveBeenCalledWith("user_id", USER_ID);
   });
 
@@ -119,6 +124,53 @@ describe("ProfileRepository", () => {
     expect(insert).toHaveBeenCalledWith({ user_id: USER_ID });
   });
 
+  it("stores a confirmed zone against the verified identity only", async () => {
+    const query = createUpdateQuery({
+      user_id: USER_ID,
+      created_at: "2026-07-23T08:00:00.000Z",
+      timezone_name: "Europe/Berlin",
+    });
+    const repository = new ProfileRepository(createClient(query.table));
+
+    await expect(
+      repository.confirmTimezone(" Europe/Berlin "),
+    ).resolves.toMatchObject({ timezoneName: "Europe/Berlin" });
+    expect(query.update).toHaveBeenCalledWith({
+      timezone_name: "Europe/Berlin",
+    });
+    expect(query.eq).toHaveBeenCalledWith("user_id", USER_ID);
+  });
+
+  it("refuses a zone the runtime cannot resolve before any query", async () => {
+    const table = vi.fn();
+    const repository = new ProfileRepository(createClient(table));
+
+    for (const value of [
+      "Nowhere/Imaginary",
+      "'; drop table profiles; --",
+      "",
+      42,
+      null,
+    ]) {
+      await expect(repository.confirmTimezone(value)).rejects.toThrow(
+        ProfileValidationError,
+      );
+    }
+    expect(table).not.toHaveBeenCalled();
+  });
+
+  it("maps the database zone constraint to a validation failure", async () => {
+    const query = createUpdateQuery(null, {
+      code: "23514",
+      message: "violates check constraint",
+    });
+    const repository = new ProfileRepository(createClient(query.table));
+
+    await expect(repository.confirmTimezone("Europe/Berlin")).rejects.toThrow(
+      ProfileValidationError,
+    );
+  });
+
   it("rejects a founder-staging non-owner before reading profile data", async () => {
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
     process.env.FITTIP_OWNER_USER_ID = USER_ID;
@@ -184,6 +236,29 @@ function createReadQuery(data: unknown, error: unknown = null) {
   const table = vi.fn().mockReturnValue({ select });
 
   return { table, select, eq, maybeSingle };
+}
+
+/**
+ * `confirmTimezone` ensures the profile exists before writing, so the table
+ * mock answers the read chain and the update chain from one object.
+ */
+function createUpdateQuery(data: unknown, error: unknown = null) {
+  const maybeSingle = vi.fn().mockResolvedValue({ data, error });
+  const returningSelect = vi.fn().mockReturnValue({ maybeSingle });
+  const eq = vi.fn().mockReturnValue({ select: returningSelect });
+  const update = vi.fn().mockReturnValue({ eq });
+  const readMaybeSingle = vi.fn().mockResolvedValue({
+    data: { user_id: USER_ID, created_at: "2026-07-23T08:00:00.000Z" },
+    error: null,
+  });
+  const table = vi.fn().mockReturnValue({
+    select: vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({ maybeSingle: readMaybeSingle }),
+    }),
+    update,
+  });
+
+  return { table, update, eq, returningSelect, maybeSingle };
 }
 
 function createInsertQuery(data: unknown, error: unknown = null) {

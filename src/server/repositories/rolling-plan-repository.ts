@@ -15,6 +15,8 @@ import {
   RollingPlan,
   RollingPlanConflictError,
   RollingPlanPersistenceError,
+  RollingPlanRuleError,
+  RollingPlanTimezoneRequiredError,
   RollingPlanValidationError,
   type ParsedPlanSlice,
   type RollingPlanActivity,
@@ -66,7 +68,13 @@ export class PostgresRollingPlanAdapter implements RollingPlanAdapter {
       })
       .retry(false);
     if (error) {
+      // The rule codes are raised only by `apply_rolling_plan_change_set`, so
+      // each maps to one honest, recoverable owner-facing outcome.
       if (error.code === "PT409") throw new RollingPlanConflictError();
+      if (error.code === "PT422") throw new RollingPlanRuleError("past-date");
+      if (error.code === "PT423")
+        throw new RollingPlanRuleError("daily-session-limit");
+      if (error.code === "PT428") throw new RollingPlanTimezoneRequiredError();
       if (error.code === "22023") throw new RollingPlanValidationError();
       throw new RollingPlanPersistenceError();
     }
@@ -111,7 +119,9 @@ function parseSliceReceipt(value: unknown): RollingPlanSlice {
   if (
     !(receipt.plan_id === null || isUuid(receipt.plan_id)) ||
     !isInteger(receipt.plan_revision, 0) ||
-    !Array.isArray(receipt.sessions)
+    !Array.isArray(receipt.sessions) ||
+    !Array.isArray(receipt.recovery_dates) ||
+    !receipt.recovery_dates.every(isIsoDate)
   ) {
     throw new RollingPlanPersistenceError();
   }
@@ -119,6 +129,7 @@ function parseSliceReceipt(value: unknown): RollingPlanSlice {
     planId: receipt.plan_id,
     revision: receipt.plan_revision,
     sessions: receipt.sessions.map(parseSession),
+    recoveryDates: receipt.recovery_dates,
   };
 }
 

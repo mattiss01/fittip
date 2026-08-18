@@ -104,6 +104,9 @@ jobs:
       - name: M3-10 concurrent rolling-plan changes
         run: npm run test:m3-10-concurrency
 
+      - name: M3-12 concurrent planning rules
+        run: npm run test:m3-12-concurrency
+
       - name: M3-11 seeded legacy reset
         run: npm run test:m3-11-seeded-reset
 
@@ -194,6 +197,16 @@ jobs:
           .github/scripts/with-server.sh 3019 \
             npx playwright test --config=e2e/m3-11.playwright.config.ts \
               --workers=1 --trace=retain-on-failure --output=test-results/m3-11
+
+      - name: M3-12 manual continuous planning
+        # Report every broken flow in one run, not just the first.
+        if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-12
+        run: |
+          .github/scripts/with-server.sh 3020 \
+            npx playwright test --config=e2e/m3-12.playwright.config.ts \
+              --workers=1 --trace=retain-on-failure --output=test-results/m3-12
 
       - name: Upload Playwright report
         if: failure()

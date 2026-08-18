@@ -1,0 +1,421 @@
+/*
+ * The Plan surface extends the FitTip ledger: cream stock, deep green ink,
+ * hard edges, offset shadow, Courier stamps. Its one signature is the day
+ * rail - a fixed left column carrying the date stamp, the today marker, and
+ * the Recovery day band. The rail encodes the only structure that is actually
+ * true here: dates are a sequence, and today is the boundary before which
+ * nothing may be planned. Nothing on this surface scores, ranks, or streaks.
+ */
+
+.page {
+  --plan-today: #d95835;
+  --plan-recovery: #557667;
+  --plan-locked: #8b341f;
+}
+
+.manager {
+  display: grid;
+  gap: 1.6rem;
+  margin-top: 1.75rem;
+}
+
+.notice {
+  position: sticky;
+  z-index: 20;
+  top: 0.75rem;
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--ledger-ink);
+  background: #e7f0dc;
+  box-shadow: 5px 5px 0 #a7b7a5;
+  line-height: 1.4;
+}
+
+.notice[data-state="conflict"],
+.notice[data-state="rule"],
+.notice[data-state="validation"],
+.notice[data-state="error"],
+.notice[data-state="session"],
+.notice[data-state="lost-render"],
+.notice[data-state="recovered"],
+.notice[data-state="unconfirmed"] {
+  background: #fff0e1;
+}
+
+.reload {
+  width: fit-content;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--ledger-ink);
+  color: var(--ledger-ink);
+  font:
+    700 0.7rem "Courier New",
+    monospace;
+  text-decoration: none;
+}
+
+.days {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.day {
+  display: grid;
+  grid-template-columns: 5.4rem 1fr;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  box-shadow: 7px 7px 0 #a7b7a5;
+}
+
+.day[data-today="true"] {
+  border-left: 7px solid var(--plan-today);
+}
+
+.rail {
+  display: grid;
+  align-content: start;
+  gap: 0.4rem;
+  padding: 1rem 0.6rem;
+  border-right: 1px solid var(--ledger-rule);
+  background: #edf0e7;
+}
+
+.day[data-recovery="true"] .rail {
+  /* The band is the label, so a Recovery day is legible before any text. */
+  background: repeating-linear-gradient(
+    135deg,
+    #dbe6dc,
+    #dbe6dc 6px,
+    #cddbcf 6px,
+    #cddbcf 12px
+  );
+}
+
+.dayStamp,
+.dayMark,
+.recoveryStamp,
+.meta,
+.lockMark,
+.sectionLabel {
+  font-family: "Courier New", monospace;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.dayStamp {
+  margin: 0;
+  color: var(--ledger-ink);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.dayMark {
+  width: fit-content;
+  margin: 0;
+  padding: 0.2rem 0.32rem;
+  background: var(--plan-today);
+  color: white;
+  font-size: 0.56rem;
+}
+
+.recoveryStamp {
+  width: fit-content;
+  margin: 0;
+  padding: 0.2rem 0.32rem;
+  border: 1px solid var(--plan-recovery);
+  color: var(--plan-recovery);
+  font-size: 0.56rem;
+}
+
+.dayBody {
+  min-width: 0;
+  padding: 0.8rem;
+}
+
+.sessionList {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session {
+  padding: 0.75rem;
+  border: 1px solid var(--ledger-rule);
+  background: #f7f5ea;
+}
+
+.session[data-locked="true"] {
+  border-left: 4px solid var(--plan-locked);
+}
+
+.session[data-cancelled="true"] {
+  border-style: dashed;
+  background: transparent;
+  color: var(--ledger-muted);
+}
+
+.sessionHeader {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.sessionHeader h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 1.2rem;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.lockMark {
+  flex: 0 0 auto;
+  padding: 0.24rem 0.34rem;
+  border: 1px solid currentColor;
+  color: var(--plan-locked);
+  font-size: 0.55rem;
+}
+
+.meta {
+  margin: 0.4rem 0 0;
+  color: var(--ledger-muted);
+  font-size: 0.6rem;
+}
+
+.body {
+  margin: 0.5rem 0 0;
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.empty {
+  margin: 0;
+  color: var(--ledger-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.sectionLabel {
+  margin: 1rem 0 0.5rem;
+  color: var(--ledger-muted);
+  font-size: 0.58rem;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.7rem;
+}
+
+.controls form {
+  margin: 0;
+}
+
+.dayControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--ledger-rule);
+}
+
+.action,
+.primary {
+  min-height: 2.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--ledger-ink);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ledger-ink);
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.primary {
+  background: var(--plan-today);
+  border-color: var(--ledger-ink);
+  color: white;
+}
+
+.action:disabled,
+.primary:disabled {
+  opacity: 0.45;
+}
+
+.disclosure {
+  margin-top: 0.5rem;
+  border: 1px solid var(--ledger-rule);
+}
+
+.disclosure > summary {
+  min-height: 2.9rem;
+  display: flex;
+  align-items: center;
+  padding: 0 0.7rem;
+  cursor: pointer;
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.form {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0 0.7rem 0.8rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.form label {
+  display: block;
+  color: var(--ledger-muted);
+  font:
+    700 0.62rem "Courier New",
+    monospace;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.form input,
+.form textarea,
+.form select {
+  width: 100%;
+  min-height: 2.9rem;
+  padding: 0.6rem;
+  border: 1px solid var(--ledger-ink);
+  border-radius: 0;
+  background: white;
+  color: var(--ledger-ink);
+  font:
+    400 1rem/1.35 Arial,
+    sans-serif;
+  text-transform: none;
+}
+
+.form textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.fieldPair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.consequence {
+  margin: 0;
+  padding: 0 0.7rem 0.8rem;
+  color: var(--ledger-muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.zoneCard {
+  padding: 1.2rem;
+  border: 1px solid var(--ledger-ink);
+  border-top: 7px solid var(--plan-today);
+  background: var(--ledger-paper);
+  box-shadow: 7px 7px 0 #a7b7a5;
+}
+
+.zoneCard h2 {
+  margin: 0 0 0.7rem;
+  font-size: clamp(1.7rem, 8vw, 2.6rem);
+  letter-spacing: -0.04em;
+}
+
+.zoneCard p {
+  margin: 0 0 1rem;
+  color: var(--ledger-muted);
+  line-height: 1.5;
+}
+
+.zoneValue {
+  display: block;
+  margin: 0 0 1rem;
+  padding: 0.7rem;
+  border: 1px solid var(--ledger-ink);
+  background: #edf0e7;
+  font:
+    700 0.9rem "Courier New",
+    monospace;
+  overflow-wrap: anywhere;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/*
+ * M3-18 set the compliant focus treatment: the ledger ink ring inside the app
+ * shell. Never reintroduce the earlier low-contrast peach.
+ */
+.manager button:focus-visible,
+.manager input:focus-visible,
+.manager textarea:focus-visible,
+.manager select:focus-visible,
+.manager summary:focus-visible,
+.manager a:focus-visible,
+.zoneCard button:focus-visible,
+.zoneCard select:focus-visible {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
+}
+
+@media (max-width: 400px) {
+  .day {
+    grid-template-columns: 4.6rem 1fr;
+  }
+
+  .fieldPair {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .day,
+  .zoneCard {
+    animation: plan-enter 260ms ease-out both;
+  }
+}
+
+@keyframes plan-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
