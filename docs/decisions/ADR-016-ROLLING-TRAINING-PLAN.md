@@ -12,6 +12,14 @@
 **Would supersede for new planning writes:**
 [ADR-008](ADR-008-M1-TRAINING-RECORD-TRANSACTIONS.md)
 
+**Recurrence representation superseded by:**
+[ADR-017](ADR-017-RECURRENCE-MATERIALIZATION.md) — the paragraph below
+beginning "Represent recurrence as effective-dated series" is superseded for
+how an occurrence is stored. Effective-dated series, this-and-future
+successors, and bounded owner-local expansion are unchanged; an occurrence
+inside the Plan window is now a real session row rather than a projection. No
+other part of this ADR is affected, and its text is not edited.
+
 ## Context
 
 ADR-008 stores planning as immutable versions of an owner-selected 1–7-day

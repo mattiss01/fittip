@@ -775,3 +775,65 @@ authorize deletion before M3-11's independently reviewed implementation,
 maintenance-safe deployment, and final confirmation. The replacement invariant
 remains: proposals, planned history, and actual completions are separate
 permanent records, and replanning never rewrites them.
+
+
+## Recorded amendments
+
+Approved product text above is permanent and is not rewritten in place. Where a
+later approved decision changes what a line means, the change is recorded here
+with its date and its reason, following the convention
+[ADR-013](../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md) already uses.
+
+### Recurrence materialization, 19 August 2026
+
+The product owner approved
+[ADR-017](../decisions/ADR-017-RECURRENCE-MATERIALIZATION.md) on 19 August 2026,
+which changes how a recurring occurrence is stored: an occurrence inside the
+Plan's fourteen-day owner-local window is a real planned-session row, written
+ahead by an owner-derived function, rather than a projection computed at read
+time.
+
+The product intent is unchanged. A series is still an owner-defined rule with a
+start date and an optional end date; open-ended still means no end date; dates
+are still owner-local calendar dates correct across daylight-saving
+transitions; past occurrences are still never rewritten; and a completed
+occurrence still retains its planned snapshot. What changes is the mechanism
+underneath, and three lines describe that mechanism.
+
+**Owner journeys → Add recurring training, step 5.** As written:
+
+> Plan, Today, AI context, and conflict checks expand only the requested date
+> slice; FitTip never creates infinite future rows.
+
+The second clause stands exactly as approved and is the reason the window is
+bounded at all. The first clause is amended: those consumers read the
+materialized fourteen-day window rather than expanding the rule themselves, and
+each is responsible for the window being current before it reads. ADR-017
+consequence 3 records that a consumer which is not the Plan can otherwise read
+an incomplete plan, and M3-15 owns closing it for Today, Progress, and AI
+context.
+
+**Owner journeys → Change a recurring occurrence, step 3.** As written:
+
+> Saving one session creates an exception.
+
+Amended: saving one session edits that occurrence's existing row and marks it
+diverged, so the materializer never revisits it. The owner-visible behavior —
+**Only this session** changes exactly one occurrence and leaves the series
+alone — is unchanged. The following sentence about **This and future sessions**
+closing the prior effective segment and creating its successor is unchanged.
+
+**Product rules → Recurrence, one-occurrence changes.** As written:
+
+> One-occurrence changes are explicit exceptions.
+
+Amended in the same way and for the same reason: the divergence is explicit and
+recorded, and it is carried as a flag on the occurrence rather than as the
+occurrence's only reason to exist. The remainder of that rule — this-and-future
+changes using effective-dated successor series, and past occurrences never
+being rewritten — is unchanged.
+
+The rule immediately above it, that open-ended means no end date "not
+pre-created infinite occurrences", **is not amended and remains true**:
+materialization never reaches beyond the fourteen-day window, whatever the
+series' end date is or is not.
