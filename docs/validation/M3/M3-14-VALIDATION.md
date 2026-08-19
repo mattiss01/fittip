@@ -298,13 +298,16 @@ code commit.
 | `npm run test:run -- src/server src/app/home/plan src/architecture` | PASS — 38 files, 571 tests |
 | `npm run lint` | PASS |
 | `npm run typecheck` | PASS |
+| `npm run build` | PASS — the production build compiles; no route added or removed |
 | `git diff --check` | PASS — no whitespace error |
 
-**Not run by this builder, and not claimed:** `npm run build`, the complete
-`npm run test:run`, and every Playwright flow. CI covers all three on the pushed
-branch, and the working agreement says the builder should let it. The 390px
-browser job is expected to pass unchanged because this ticket adds no client
-code, but that is an expectation, not an observation.
+**Not run by this builder, and not claimed:** the complete `npm run test:run`
+and every Playwright flow. CI covers both on the pushed branch, and the working
+agreement says the builder should let it. The Vitest run above covers
+`src/server`, `src/app/home/plan` and `src/architecture`, which is every
+directory this ticket touches; nothing outside them imports the changed modules.
+The 390px browser job is expected to pass unchanged because this ticket adds no
+client code, but that is an expectation, not an observation.
 
 **Also not done, and out of this builder's remit:** the founder migration has
 not been applied or verified, no Vercel Preview exists, and no hosted read path
