@@ -73,8 +73,27 @@ grouped before/after change set, one revision advance, one winner and one honest
 stale loser. A this-and-future change closes the current segment's `end_date`
 and creates a successor effective from the split date, in one change set.
 
-Whole-series editing is refused once the first occurrence has passed. Ending a
-series ends it forward and never removes a past occurrence.
+Whole-series editing is refused once the first occurrence has passed.
+
+**`end_series` ends the series forward and cancels every already-materialized
+occurrence on or after the effective date, in the same change set.** This is a
+correctness requirement created by ADR-017, not a convenience: under projection
+an ended series simply stops producing dates, but under materialization those
+occurrences are real rows and would otherwise stay on the Plan after the owner
+removed the series that produced them. The function must therefore leave no
+active occurrence of an ended segment standing in the future.
+
+It never touches an occurrence before the effective date, never touches a
+completed one, and never deletes: cancellation sets `status = 'cancelled'` with
+`cancelled_at` and records the transition, exactly as M3-12's `cancel` does.
+
+**A diverged future occurrence is cancelled with the rest** — product-owner
+decision, 19 August 2026. It is still an occurrence of the series being
+removed. M3-14B is responsible for naming it before the owner confirms.
+
+`end_series` returns the number of occurrences it cancelled and how many of
+those were diverged, so M3-14B can state the consequence before the control
+rather than after the fact.
 
 ### The materializer
 
@@ -140,7 +159,11 @@ rather than writing a second copy path.
    produce one writer, no duplicate occurrence, and no blended row.
 7. This-and-future produces a successor segment; occurrences before the split
    date are byte-identical afterwards.
-8. The founder migration is applied and verified in timestamp order, with the
+8. **`end_series` leaves no active occurrence of the ended segment on or after
+   the effective date**, including a diverged one, while every occurrence
+   before it and every completed one is byte-identical afterwards. It cancels
+   rather than deletes, and returns the affected and diverged counts.
+9. The founder migration is applied and verified in timestamp order, with the
    schema, RLS, privilege boundary, and advisors recorded.
 
 **There is no 390px acceptance pass**, because this ticket makes nothing
@@ -156,12 +179,18 @@ Do not invent a surface to produce a screenshot.
    amendment. Nothing here reopens it.
 2. **A cap collision skips the date and reports it**, rather than refusing the
    series, raising the cap, or exempting recurrence from the cap.
-3. **The ticket is split**, on the lead's recommendation: this foundation, then
+3. **Ending a series cancels its already-materialized future occurrences,
+   including diverged ones.** Raised by the product owner on 19 August 2026,
+   who asked whether an owner can remove a recurring session and everything
+   after it from the session itself. They can, and under ADR-017 the rows must
+   be cancelled explicitly — the contract did not say so before this
+   amendment.
+4. **The ticket is split**, on the lead's recommendation: this foundation, then
    [M3-14B](M3-14B-RECURRING-SERIES-SURFACE.md) for the surface. The scope
    carries a two-table migration, a session-table alteration, a constraint
    replacement, three new change operations, and a new privileged function —
    more than M3-13, whose brief already ran 73 lines against a 40-line target.
-4. **No cap on active series per owner**, consistent with M3-13's deliberately
+5. **No cap on active series per owner**, consistent with M3-13's deliberately
    unbounded library. The lead recommended a bound of twenty and the product
    owner declined it. The consequence is recorded as a limitation below rather
    than argued again here.
@@ -202,8 +231,9 @@ ticket owns:
   dependency.
 - Owner/anonymous/cross-owner, concurrency, timezone/DST, and query-bound tests.
 
-M3-14B owns the surface, the review-before-save flow, the three-way edit scope,
-the pending top-up state, and the `390x844` flow.
+M3-14B owns the surface, the review-before-save flow, the change and remove
+scopes on an occurrence, the consequence copy that names how many sessions a
+removal affects, the pending top-up state, and the `390x844` flow.
 
 ## Non-goals
 

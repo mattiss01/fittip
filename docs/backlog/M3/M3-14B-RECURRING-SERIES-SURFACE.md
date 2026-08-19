@@ -43,11 +43,14 @@ database operation a composed change set already expresses.
 - On save, the surface reports which dates were skipped for the ten-session cap
   and why. A series is still created when some dates are skipped.
 
-### Changing an occurrence
+### Changing or removing an occurrence
 
-- Opening one occurrence offers **Only this session** and **This and future
-  sessions**, and states what each will do before it is applied, matching the
-  consequence-before-action convention the Plan and the library already use.
+Opening one occurrence offers **both** a change scope and a remove scope —
+product-owner decision, 19 August 2026, on the reasoning that the occurrence is
+where the owner is looking, so it is where the choice belongs. Each scope is
+**Only this session** or **This and all future sessions**, and each states what
+it will do before it is applied, matching the consequence-before-action
+convention the Plan and the library already use.
 - **Only this session** edits that occurrence and marks it diverged, so the
   materializer never revisits it.
 - **This and future sessions** closes the current segment and creates its
@@ -57,6 +60,19 @@ database operation a composed change set already expresses.
   and the surface says so rather than failing at submit.
 - An occurrence is visibly identifiable as recurring, and a diverged one as
   changed.
+
+**Removing this and all future sessions** calls M3-14's `end_series`, which
+ends the series from that date and cancels every already-materialized
+occurrence on or after it. Before the control, the surface states the count it
+will affect and names the diverged ones inside it — "removes 4 sessions,
+including 1 you edited" — because a diverged occurrence is cancelled with the
+rest and the owner deliberately touched it. Use the counts `end_series`
+returns; do not compute a second estimate in the client that could disagree
+with what the transaction does.
+
+Say plainly that nothing before that date changes and that completed training
+is untouched. Do not call it deleting: the sessions are cancelled and the
+record is kept, and the copy should not claim otherwise.
 
 ### Keeping the window current
 
@@ -88,7 +104,10 @@ plainly in the validation record that it was added.
    other occurrence unchanged.
 4. **This and future sessions** changes the future only; earlier occurrences are
    visibly as they were.
-5. Ending a series removes no past occurrence.
+5. Removing **this and all future sessions** from an occurrence leaves no active
+   occurrence of that series on or after the chosen date, changes nothing
+   before it, and touches no completed training. The confirmation named the
+   count, including diverged occurrences, before the owner confirmed.
 6. The pending top-up state appears, is announced to assistive technology, and
    resolves; no occurrence appears without explanation.
 7. Empty, loading, invalid, stale-conflict, expired-session, missing-time-zone,
