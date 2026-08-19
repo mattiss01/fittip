@@ -1,9 +1,8 @@
 # M3-14: Recurring session series foundation
 
-**Status:** proposed — contract drafted 19 August 2026 against
-[ADR-017](../../decisions/ADR-017-RECURRENCE-MATERIALIZATION.md) and split the
-same day. Tier 1 dispatch is **not** approved and requires a separate
-product-owner decision.
+**Status:** in development — the product owner approved Tier 1 dispatch on
+19 August 2026 against this contract and
+[ADR-017](../../decisions/ADR-017-RECURRENCE-MATERIALIZATION.md).
 
 **Triage:** needs-triage
 
@@ -19,6 +18,68 @@ ADR-017 accepted.
 **Blocks:** [M3-14B](M3-14B-RECURRING-SERIES-SURFACE.md), and through it M3-15
 and every later F-005 replacement slice.
 
+## Agent brief
+
+**Outcome.** Give the rolling plan a first-class recurring series: the
+effective-dated rule, its session template, and the owner-derived function that
+materializes occurrences into the fourteen-day Plan window. **No user-visible
+surface** — M3-14B owns that. Tier 1.
+
+**Hard constraints**
+
+- One forward migration, additive; never edit an applied one. Two new tables,
+  `rolling_plan_series` and `rolling_plan_series_activities`: owner-scoped,
+  immutable `user_id` trigger, RLS on with one owner-bound select policy each,
+  `select` to `authenticated` and nothing to anyone else. Mirror M3-13's
+  `saved_session_activities`, same-owner `personal_activity_id` included.
+- `rolling_plan_sessions` gains `series_id`, `occurrence_date`, `has_diverged`,
+  nullable or defaulted so one-off sessions are untouched.
+- Replace `rolling_plan_change_entries_kind_check` to add `add_series`,
+  `edit_series`, `end_series`, `delete`; replace M3-12's `target_check` so a
+  `delete` entry carries a null `session_id` and a `local_date`.
+- `materialize_rolling_plan_series(p_expected_plan_revision,
+  p_idempotency_key)`: `security definer`, `set search_path = ''`, owner from
+  `auth.uid()` alone and **no owner argument**, window from
+  `profiles.timezone_name`, never the request. Skip a rule date when an
+  occurrence exists for `(series_id, occurrence_date)`, it precedes owner-local
+  today, it is outside the segment's range, or the date holds ten sessions.
+  Write the rest as `add` entries in **one** change set,
+  `provenance = 'series_expansion'`. **Return `unchanged` without advancing the
+  revision when nothing is missing** — two tabs depend on it. Never touch a
+  diverged occurrence, never recreate a cancelled one. Return skipped dates.
+- `end_series` **deletes** every occurrence on or after the effective date,
+  **keeps locked ones active**, touches nothing completed or earlier. Each
+  deletion writes a `delete` entry with null `session_id`, the `local_date`, and
+  the full session and activities in `before_state`. That null `session_id` is
+  what lets it survive `rolling_plan_change_entries_session_fkey`, which is
+  `on delete cascade` — **never weaken or drop that key.** Return deleted,
+  diverged, and locked-kept counts.
+- Series operations go through `apply_rolling_plan_change_set`, contract
+  unchanged: one transaction, one grouped change set, one revision advance, one
+  honest stale loser. Refuse a whole-series edit once the first occurrence has
+  passed. ADR-010 bounded lock waits.
+- Dates are owner-local `date`; no timestamp anywhere in the rule, so
+  daylight-saving correctness holds by construction.
+- Extend `src/server/rolling-plan/`, its shared adapter contract, and
+  `session-copy.ts`. No parallel module, no second copy path.
+
+**Non-goals.** No UI, route, page, Server Action, or activation switch. No
+calendar import/export, reminders, background materialization, arbitrary
+recurrence language, or AI mutation.
+
+**Acceptance criteria.** The ten below. **There is no 390px pass** — nothing
+here is visible. Do not invent a surface to screenshot.
+
+**Expected to change.** A new migration and its pgTAP file, an integration
+harness, `src/server/rolling-plan/**`, the rolling-plan repository,
+`session-copy.ts`, `database.types.ts`, and `.github/workflows/ci.yml`
+(its own commit).
+
+**Skills** from `.agents/skills/<name>/SKILL.md`: `schema-change` (migration →
+reset → pgTAP → types, in order), `codebase-design`, `validation-record`.
+
+Read only this section unless you hit an ambiguity it does not resolve.
+
 ## Outcome
 
 Give the rolling plan a first-class recurring series: the effective-dated rule,
@@ -32,141 +93,14 @@ and security evidence. M3-12 then made it visible. M3-14B does the same here.
 
 ## Contract
 
-### Representation
+The binding constraints are in the Agent brief above and are deliberately not
+repeated here. What follows is the acceptance bar, the decisions behind the
+shape, and what this ticket knowingly leaves open.
 
 Per ADR-017, an occurrence inside the Plan's fourteen-day owner-local window is
-a real `rolling_plan_sessions` row. The series is the rule and the template; the
-window is materialized ahead by an owner-derived function. ADR-017 records what
-that choice gives up, and this ticket must not quietly soften any of it.
-
-### Schema
-
-One forward migration, additive. Never edit an applied one.
-
-- **`public.rolling_plan_series`** — owner-scoped and effective-dated.
-  `rule_kind` (`daily` | `weekly`), `interval` (1–365 for daily, 1–52 for
-  weekly), `weekdays` (ISO 1–7, non-empty for weekly, null for daily),
-  `start_date`, nullable `end_date` where null means open-ended,
-  `predecessor_series_id` for a this-and-future successor, the sport-agnostic
-  session template fields M3-12 already uses, `status`, `revision`,
-  `created_at`, `updated_at`. Immutable `user_id` enforced by a
-  `before update` trigger, RLS enabled with one owner-bound select policy, and
-  `select` granted to `authenticated` alone.
-- **`public.rolling_plan_series_activities`** — the template's activities,
-  mirroring `saved_session_activities` from M3-13 including its same-owner
-  `personal_activity_id` constraint.
-- **`rolling_plan_sessions`** gains `series_id`, `occurrence_date`, and
-  `has_diverged`, all nullable or defaulted so every existing one-off session
-  is untouched. `occurrence_date` records the rule date that produced the row,
-  so an occurrence the owner has moved is still recognised as covered and is
-  never recreated on its original date.
-- The `rolling_plan_change_entries` `change_kind` CHECK constraint is replaced
-  to add `add_series`, `edit_series`, `end_series`, and `delete`, and its
-  `target_check` is replaced to admit a `delete` entry with a null `session_id`
-  and a `local_date`. Occurrence-level changes otherwise reuse the existing
-  `add`, `edit`, `move`, `set_lock`, and `cancel`; add no operation a composed
-  change set already expresses.
-
-### Series operations
-
-`apply_rolling_plan_change_set` gains `add_series`, `edit_series`, and
-`end_series`, keeping its existing contract exactly: one transaction, one
-grouped before/after change set, one revision advance, one winner and one honest
-stale loser. A this-and-future change closes the current segment's `end_date`
-and creates a successor effective from the split date, in one change set.
-
-Whole-series editing is refused once the first occurrence has passed.
-
-**`end_series` ends the series forward and deletes every already-materialized
-occurrence on or after the effective date, in the same change set**, except for
-the three exclusions below. This is a correctness requirement created by
-ADR-017, not a convenience: under projection an ended series simply stops
-producing dates, but under materialization those occurrences are real rows and
-would otherwise stay on the Plan after the owner removed the series that
-produced them.
-
-| Occurrence | Outcome |
-| --- | --- |
-| Locked | **Kept and active.** A lock excludes it from bulk removal. |
-| Completed | Untouched, with its planned snapshot. |
-| Before the effective date | Never in scope. |
-| Everything else, edited or not | **Deleted.** |
-
-Deletion rather than cancellation is a product-owner decision of 19 August 2026,
-recorded with its consequences in ADR-017. An occurrence the owner had
-individually edited is deleted with the rest.
-
-### Recording a deletion
-
-Each deletion writes a change entry with `change_kind = 'delete'`, `session_id`
-null, `local_date` set, and `before_state` carrying the full session and its
-activities.
-
-**The null `session_id` is load-bearing.**
-`rolling_plan_change_entries_session_fkey` is `on delete cascade`, so an entry
-that still referenced the session would be destroyed with it. M3-12 already made
-`session_id` nullable and added
-`rolling_plan_change_entries_target_check`; this ticket replaces that check to
-admit a `delete` entry alongside `set_recovery_day`, and adds `delete` to the
-kind check. Do not drop or weaken the cascade — ADR-017 records why that
-alternative was rejected.
-
-Accept that the deleted session's **earlier** entries cascade away with it. The
-`delete` entry preserves what the session was at removal, not how it got there.
-That is ADR-017's stated cost and must not be worked around by relaxing the
-foreign key.
-
-`end_series` returns the number of occurrences it deleted, how many of those had
-diverged, and how many locked ones it kept, so M3-14B can state the consequence
-before the control rather than after the fact.
-
-### The materializer
-
-`public.materialize_rolling_plan_series(p_expected_plan_revision, p_idempotency_key)`,
-`security definer`, `set search_path = ''`, taking its owner from `auth.uid()`
-alone and accepting no owner argument. Follow M3-13's
-`apply_saved_session_change` as its shape and ADR-010's bounded lock waits.
-
-It derives the window from `profiles.timezone_name` — never from the request —
-and for every active series overlapping that window it writes the missing
-occurrences. A rule date is skipped when:
-
-- an occurrence already exists for that `(series_id, occurrence_date)`;
-- the date is before owner-local today;
-- the date falls outside the series segment's effective range; or
-- the date already holds ten active sessions.
-
-What remains is written as `add` entries in **one** change set with
-`provenance = 'series_expansion'`, distinct from any owner provenance.
-
-Two properties are load-bearing and must be asserted, not assumed:
-
-1. **It returns `unchanged` and does not advance the revision when nothing is
-   missing.** This is what stops a Plan visit from bumping the revision, and
-   what makes two simultaneous materializations benign — one writes, the other
-   finds nothing to do.
-2. **It never touches an occurrence with `has_diverged` set**, and never
-   recreates one the owner cancelled.
-
-It returns the dates it skipped for the cap so M3-14B can name them.
-
-### Server module
-
-Extend the existing `src/server/rolling-plan/` module and its repository rather
-than adding a parallel one. The in-memory and Postgres adapters both run the
-shared contract, as they already do for M3-10's operations. Extend
-`src/server/saved-sessions/session-copy.ts` for the saved-entry-to-template copy
-rather than writing a second copy path.
-
-### Constraints
-
-- Dates are owner-local calendar dates. Storing them as `date` keeps the
-  arithmetic correct across daylight-saving transitions by construction; do not
-  introduce a timestamp anywhere in the rule.
-- Locks, the owner-local past boundary, and the ten-per-date cap are enforced
-  inside the database functions, not only in a caller.
-- No UI, no route, no Server Action, no activation switch. M3-14B owns all of
-  that.
+a real `rolling_plan_sessions` row. The series is the rule and the template.
+ADR-017 records what that choice gives up, and this ticket must not quietly
+soften any of it.
 
 ### Acceptance criteria
 
