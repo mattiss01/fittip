@@ -81,6 +81,66 @@ Specifically:
 The product owner made this decision on 19 August 2026, against the recorded
 objection below and with the consequences in this ADR stated before approval.
 
+## Series removal deletes future occurrences
+
+Decided by the product owner on 19 August 2026, after the lead raised the
+product invariant below twice and the product owner reaffirmed the choice both
+times.
+
+Ending a series from an effective date **deletes** every materialized occurrence
+on or after that date, rather than cancelling it. Three exclusions are absolute:
+
+| Occurrence | Outcome |
+| --- | --- |
+| Locked | **Kept and active.** A lock now excludes a session from bulk removal, not only from AI replacement. |
+| Completed | Untouched. It is a separate factual record with its own planned snapshot. |
+| Before the effective date | Never in scope. The sweep runs forward only. |
+| Everything else, edited or not | **Deleted.** |
+
+An occurrence the owner had individually edited is deleted with the rest. The
+lead recommended keeping those as cancelled records and was overruled; the
+product owner's reasoning is that a removed series should leave a clean Plan,
+and that a cancelled tombstone for every occurrence of a daily series makes the
+Plan unreadable.
+
+### How the record survives
+
+A deletion is written as a change entry with `change_kind = 'delete'`,
+`session_id` null, `local_date` set, and `before_state` carrying the full
+session and its activities. The null `session_id` is what lets the entry outlive
+the row: `rolling_plan_change_entries_session_fkey` is `on delete cascade`, so
+an entry that still referenced the session would be destroyed along with it.
+M3-12 already made `session_id` nullable for date-targeted entries, so this uses
+the existing shape rather than a new one.
+
+### What this gives up
+
+1. **A deleted occurrence's earlier change entries cascade away.** Its original
+   `add`, and any `edit`, `move`, or `set_lock` it accumulated, are destroyed
+   with the row. The `delete` entry's `before_state` preserves what the session
+   *was* at removal; it does not preserve *how it got there*. For an untouched
+   machine-generated occurrence that trail is only the materializer's own `add`,
+   so nothing meaningful is lost. For an occurrence the owner edited, the edit
+   history is lost and only the final content survives.
+
+   The alternative was dropping the cascade so entries outlive their sessions.
+   Rejected: it trades a bounded, describable loss for a change log whose
+   session references no longer resolve, which is worse and permanent.
+2. **In practice the owner cannot see any of it.** There is no visible
+   plan-history surface — M3-12 excluded one deliberately — so the preserved
+   `before_state` is reachable only by reading the table. Until such a surface
+   exists, a removal is indistinguishable from erasure from where the owner
+   stands.
+3. **It narrows "plans are separate permanent records."** A planned future
+   session removed by a series removal is no longer permanent as a row. The
+   product owner accepted this knowingly and it is recorded here rather than
+   left for a reader to infer from a migration.
+
+It does **not** touch the invariant that replanning never changes completed
+history, past sessions, or user-locked future content. All three are excluded
+from the sweep by construction, and locked future content is excluded because
+of this decision rather than in spite of it.
+
 ## Considered options
 
 ### Series plus projected occurrences, as ADR-016 wrote it

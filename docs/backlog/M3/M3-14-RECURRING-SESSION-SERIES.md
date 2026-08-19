@@ -61,9 +61,11 @@ One forward migration, additive. Never edit an applied one.
   so an occurrence the owner has moved is still recognised as covered and is
   never recreated on its original date.
 - The `rolling_plan_change_entries` `change_kind` CHECK constraint is replaced
-  to add `add_series`, `edit_series`, and `end_series`. Occurrence-level
-  changes reuse the existing `add`, `edit`, `move`, `set_lock`, and `cancel`;
-  add no operation a composed change set already expresses.
+  to add `add_series`, `edit_series`, `end_series`, and `delete`, and its
+  `target_check` is replaced to admit a `delete` entry with a null `session_id`
+  and a `local_date`. Occurrence-level changes otherwise reuse the existing
+  `add`, `edit`, `move`, `set_lock`, and `cancel`; add no operation a composed
+  change set already expresses.
 
 ### Series operations
 
@@ -75,25 +77,48 @@ and creates a successor effective from the split date, in one change set.
 
 Whole-series editing is refused once the first occurrence has passed.
 
-**`end_series` ends the series forward and cancels every already-materialized
-occurrence on or after the effective date, in the same change set.** This is a
-correctness requirement created by ADR-017, not a convenience: under projection
-an ended series simply stops producing dates, but under materialization those
-occurrences are real rows and would otherwise stay on the Plan after the owner
-removed the series that produced them. The function must therefore leave no
-active occurrence of an ended segment standing in the future.
+**`end_series` ends the series forward and deletes every already-materialized
+occurrence on or after the effective date, in the same change set**, except for
+the three exclusions below. This is a correctness requirement created by
+ADR-017, not a convenience: under projection an ended series simply stops
+producing dates, but under materialization those occurrences are real rows and
+would otherwise stay on the Plan after the owner removed the series that
+produced them.
 
-It never touches an occurrence before the effective date, never touches a
-completed one, and never deletes: cancellation sets `status = 'cancelled'` with
-`cancelled_at` and records the transition, exactly as M3-12's `cancel` does.
+| Occurrence | Outcome |
+| --- | --- |
+| Locked | **Kept and active.** A lock excludes it from bulk removal. |
+| Completed | Untouched, with its planned snapshot. |
+| Before the effective date | Never in scope. |
+| Everything else, edited or not | **Deleted.** |
 
-**A diverged future occurrence is cancelled with the rest** — product-owner
-decision, 19 August 2026. It is still an occurrence of the series being
-removed. M3-14B is responsible for naming it before the owner confirms.
+Deletion rather than cancellation is a product-owner decision of 19 August 2026,
+recorded with its consequences in ADR-017. An occurrence the owner had
+individually edited is deleted with the rest.
 
-`end_series` returns the number of occurrences it cancelled and how many of
-those were diverged, so M3-14B can state the consequence before the control
-rather than after the fact.
+### Recording a deletion
+
+Each deletion writes a change entry with `change_kind = 'delete'`, `session_id`
+null, `local_date` set, and `before_state` carrying the full session and its
+activities.
+
+**The null `session_id` is load-bearing.**
+`rolling_plan_change_entries_session_fkey` is `on delete cascade`, so an entry
+that still referenced the session would be destroyed with it. M3-12 already made
+`session_id` nullable and added
+`rolling_plan_change_entries_target_check`; this ticket replaces that check to
+admit a `delete` entry alongside `set_recovery_day`, and adds `delete` to the
+kind check. Do not drop or weaken the cascade — ADR-017 records why that
+alternative was rejected.
+
+Accept that the deleted session's **earlier** entries cascade away with it. The
+`delete` entry preserves what the session was at removal, not how it got there.
+That is ADR-017's stated cost and must not be worked around by relaxing the
+foreign key.
+
+`end_series` returns the number of occurrences it deleted, how many of those had
+diverged, and how many locked ones it kept, so M3-14B can state the consequence
+before the control rather than after the fact.
 
 ### The materializer
 
@@ -159,12 +184,16 @@ rather than writing a second copy path.
    produce one writer, no duplicate occurrence, and no blended row.
 7. This-and-future produces a successor segment; occurrences before the split
    date are byte-identical afterwards.
-8. **`end_series` leaves no active occurrence of the ended segment on or after
-   the effective date**, including a diverged one, while every occurrence
-   before it and every completed one is byte-identical afterwards. It cancels
-   rather than deletes, and returns the affected and diverged counts.
-9. The founder migration is applied and verified in timestamp order, with the
-   schema, RLS, privilege boundary, and advisors recorded.
+8. **`end_series` deletes every occurrence of the ended segment on or after the
+   effective date**, including a diverged one, and **keeps every locked one
+   active**. Every occurrence before the effective date and every completed one
+   is byte-identical afterwards. It returns the deleted, diverged, and
+   locked-kept counts.
+9. Each deletion leaves a `delete` change entry whose `before_state` carries the
+   full session and activities, and that entry survives the row's deletion.
+   pgTAP asserts it is still present and readable afterwards.
+10. The founder migration is applied and verified in timestamp order, with the
+    schema, RLS, privilege boundary, and advisors recorded.
 
 **There is no 390px acceptance pass**, because this ticket makes nothing
 visible. That is the accepted cost of the split, and M3-10 set the precedent.
@@ -179,18 +208,29 @@ Do not invent a surface to produce a screenshot.
    amendment. Nothing here reopens it.
 2. **A cap collision skips the date and reports it**, rather than refusing the
    series, raising the cap, or exempting recurrence from the cap.
-3. **Ending a series cancels its already-materialized future occurrences,
-   including diverged ones.** Raised by the product owner on 19 August 2026,
-   who asked whether an owner can remove a recurring session and everything
-   after it from the session itself. They can, and under ADR-017 the rows must
-   be cancelled explicitly — the contract did not say so before this
-   amendment.
-4. **The ticket is split**, on the lead's recommendation: this foundation, then
+3. **Ending a series deletes its already-materialized future occurrences,
+   including diverged ones, and keeps locked ones.** Raised by the product
+   owner on 19 August 2026, who asked whether an owner can remove a recurring
+   session and everything after it from the session itself. They can, and under
+   ADR-017 the rows must be dealt with explicitly — the contract did not say so
+   before this amendment.
+
+   The product owner then rejected cancellation twice, on the grounds that a
+   cancelled tombstone per occurrence makes the Plan unreadable, and chose
+   deletion including for occurrences they had edited. The lead recommended
+   deleting only untouched machine-generated occurrences and cancelling
+   owner-edited ones, and was overruled. ADR-017 records the three costs.
+4. **A lock excludes an occurrence from bulk removal**, not only from AI
+   replacement. This widens what a lock means: F-005 currently scopes locks to
+   AI proposals alone, and its lock rule needs the matching amendment before
+   dispatch. The owner may still cancel or delete that one session directly —
+   a lock constrains bulk operations, not deliberate individual ones.
+5. **The ticket is split**, on the lead's recommendation: this foundation, then
    [M3-14B](M3-14B-RECURRING-SERIES-SURFACE.md) for the surface. The scope
    carries a two-table migration, a session-table alteration, a constraint
    replacement, three new change operations, and a new privileged function —
    more than M3-13, whose brief already ran 73 lines against a 40-line target.
-5. **No cap on active series per owner**, consistent with M3-13's deliberately
+6. **No cap on active series per owner**, consistent with M3-13's deliberately
    unbounded library. The lead recommended a bound of twenty and the product
    owner declined it. The consequence is recorded as a limitation below rather
    than argued again here.

@@ -62,17 +62,19 @@ convention the Plan and the library already use.
   changed.
 
 **Removing this and all future sessions** calls M3-14's `end_series`, which
-ends the series from that date and cancels every already-materialized
-occurrence on or after it. Before the control, the surface states the count it
-will affect and names the diverged ones inside it — "removes 4 sessions,
-including 1 you edited" — because a diverged occurrence is cancelled with the
-rest and the owner deliberately touched it. Use the counts `end_series`
-returns; do not compute a second estimate in the client that could disagree
-with what the transaction does.
+ends the series from that date and **deletes** every already-materialized
+occurrence on or after it, except locked ones, which stay. Before the control,
+the surface states what will happen using the counts `end_series` returns — for
+example "removes 4 sessions, including 1 you edited, and keeps 1 you locked."
+Do not compute a second estimate in the client that could disagree with what
+the transaction does.
 
-Say plainly that nothing before that date changes and that completed training
-is untouched. Do not call it deleting: the sessions are cancelled and the
-record is kept, and the copy should not claim otherwise.
+The copy must be honest that this is permanent: the sessions are removed from
+the Plan, not cancelled, and there is no undo. Say plainly that nothing before
+that date changes, that completed training is untouched, and that locked
+sessions are kept. Do not soften it into "cancelled" — ADR-017 chose deletion
+deliberately, and the copy convention here is to state the consequence before
+the control rather than to make it sound smaller than it is.
 
 ### Keeping the window current
 
@@ -104,10 +106,11 @@ plainly in the validation record that it was added.
    other occurrence unchanged.
 4. **This and future sessions** changes the future only; earlier occurrences are
    visibly as they were.
-5. Removing **this and all future sessions** from an occurrence leaves no active
-   occurrence of that series on or after the chosen date, changes nothing
-   before it, and touches no completed training. The confirmation named the
-   count, including diverged occurrences, before the owner confirmed.
+5. Removing **this and all future sessions** from an occurrence removes every
+   occurrence of that series on or after the chosen date, **keeps every locked
+   one**, changes nothing before it, and touches no completed training. The
+   confirmation named the removed, edited, and locked-kept counts, and said the
+   removal is permanent, before the owner confirmed.
 6. The pending top-up state appears, is announced to assistive technology, and
    resolves; no occurrence appears without explanation.
 7. Empty, loading, invalid, stale-conflict, expired-session, missing-time-zone,
@@ -127,6 +130,9 @@ boundary, and the client-invoked top-up. Both are project copies under
 
 - A background top-up cannot report skipped dates to anyone. This surface shows
   them at creation only.
+- **A removal cannot be reviewed or undone from anywhere in the product.** The
+  `delete` change entry preserves what each session was, but there is no visible
+  plan-history surface, so the owner cannot reach it. ADR-017 consequence 2.
 - Nothing bounds series count or reclaims occurrence rows — M3-14 decision 4 and
   ADR-017 consequence 2.
 - M3-15 owns topping up before Today, Progress, and AI context read the Plan.

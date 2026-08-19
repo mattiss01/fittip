@@ -784,6 +784,30 @@ later approved decision changes what a line means, the change is recorded here
 with its date and its reason, following the convention
 [ADR-013](../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md) already uses.
 
+### Series removal and the meaning of a lock, 19 August 2026
+
+Two further decisions the product owner took on 19 August 2026, both recorded in
+[ADR-017](../decisions/ADR-017-RECURRENCE-MATERIALIZATION.md).
+
+**Removing a series from an occurrence deletes its future occurrences.** An
+owner may open one occurrence and remove that session and every later one in the
+same series. Occurrences on or after that date are deleted rather than
+cancelled, except locked ones, which are kept. Occurrences before that date and
+completed training are untouched. ADR-017 records that this narrows "plans are
+separate permanent records" for a future planned session removed this way, what
+survives in the change log, and what does not.
+
+**Product rules → Recurrence** gains that rule, and the following line is
+amended:
+
+> Locked future sessions cannot be replaced, moved, or cancelled by an AI
+> proposal. The owner may explicitly unlock them through manual planning.
+
+A lock now also excludes a session from **bulk removal by the owner**, not only
+from AI replacement. The owner may still remove that one session deliberately
+and individually; what a lock prevents is a sweep taking it along with others.
+The AI clause is unchanged, and unlocking through manual planning is unchanged.
+
 ### Recurrence materialization, 19 August 2026
 
 The product owner approved
