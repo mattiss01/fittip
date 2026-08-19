@@ -370,6 +370,204 @@ export function registerRollingPlanContract(
         slice.sessions.filter((session) => session.status === "active"),
       ).toHaveLength(10);
     });
+
+    it("materializes a series into the window and then reports unchanged", async () => {
+      const { plan, day } = requireSubject(subject);
+      const seriesId = randomUUID();
+      await plan.applyChangeSet(changeSet([addSeries(seriesId, day(0), 3)]), 0);
+
+      // Creating the rule writes no occurrence. Materialization is its own act,
+      // which is what keeps a Plan read from ever performing a write.
+      expect(await plan.getPlanSlice(day(0), day(13))).toMatchObject({
+        revision: 1,
+        sessions: [],
+      });
+
+      const first = await plan.materializeSeries(randomUUID(), 1);
+      expect(first).toMatchObject({
+        result: "applied",
+        createdCount: 5,
+        planRevision: 2,
+        skipped: [],
+      });
+
+      const filled = await plan.getPlanSlice(day(0), day(13));
+      expect(filled.sessions.map((session) => session.localDate)).toEqual([
+        day(0),
+        day(3),
+        day(6),
+        day(9),
+        day(12),
+      ]);
+      expect(
+        filled.sessions.every(
+          (session) =>
+            session.seriesId === seriesId &&
+            session.occurrenceDate === session.localDate &&
+            session.hasDiverged === false &&
+            session.isLocked === false &&
+            session.title === "Club session" &&
+            session.activities.length === 1,
+        ),
+      ).toBe(true);
+
+      // Two open tabs both call this. The second must learn it is already
+      // current without consuming a revision and without being told it is
+      // stale, so a repeat and a repeat at a stale revision answer the same.
+      const repeat = await plan.materializeSeries(randomUUID(), 2);
+      expect(repeat).toMatchObject({
+        result: "unchanged",
+        createdCount: 0,
+        changeSetId: null,
+        planRevision: 2,
+      });
+      const stale = await plan.materializeSeries(randomUUID(), 0);
+      expect(stale).toMatchObject({ result: "unchanged", planRevision: 2 });
+      expect(await plan.getPlanSlice(day(0), day(13))).toMatchObject({
+        revision: 2,
+      });
+    });
+
+    it("never revisits an occurrence the owner has changed or cancelled", async () => {
+      const { plan, day } = requireSubject(subject);
+      const seriesId = randomUUID();
+      await plan.applyChangeSet(changeSet([addSeries(seriesId, day(0), 3)]), 0);
+      await plan.materializeSeries(randomUUID(), 1);
+      const [, second, third] = (await plan.getPlanSlice(day(0), day(13)))
+        .sessions;
+
+      await plan.applyChangeSet(
+        changeSet([
+          {
+            operation: "edit",
+            sessionId: second.id,
+            session: {
+              title: "Owner changed this",
+              sport: "Running",
+              activities: [],
+            },
+          },
+          { operation: "cancel", sessionId: third.id },
+        ]),
+        2,
+      );
+      expect(await plan.materializeSeries(randomUUID(), 3)).toMatchObject({
+        result: "unchanged",
+        createdCount: 0,
+      });
+
+      const after = await plan.getPlanSlice(day(0), day(13));
+      expect(after.sessions).toHaveLength(5);
+      expect(
+        after.sessions.find((session) => session.id === second.id),
+      ).toMatchObject({ title: "Owner changed this", hasDiverged: true });
+      expect(
+        after.sessions.find((session) => session.id === third.id),
+      ).toMatchObject({ status: "cancelled" });
+    });
+
+    it("ends a series forward, keeps a locked occurrence, and reports both", async () => {
+      const { plan, day } = requireSubject(subject);
+      const seriesId = randomUUID();
+      await plan.applyChangeSet(changeSet([addSeries(seriesId, day(0), 3)]), 0);
+      await plan.materializeSeries(randomUUID(), 1);
+      const before = (await plan.getPlanSlice(day(0), day(13))).sessions;
+
+      // day(3) is edited and day(6) is locked. Ending from day(3) must delete
+      // the edited one with the rest and leave the locked one active.
+      await plan.applyChangeSet(
+        changeSet([
+          {
+            operation: "edit",
+            sessionId: before[1].id,
+            session: { title: "Edited", sport: "Running", activities: [] },
+          },
+          { operation: "set_lock", sessionId: before[2].id, isLocked: true },
+        ]),
+        2,
+      );
+
+      const ended = await plan.applyChangeSet(
+        changeSet([
+          { operation: "end_series", seriesId, effectiveDate: day(3) },
+        ]),
+        3,
+      );
+      expect(ended.seriesEffects).toEqual([
+        {
+          seriesId,
+          operation: "end_series",
+          deleted: 3,
+          divergedDeleted: 1,
+          lockedKept: 1,
+        },
+      ]);
+
+      const after = await plan.getPlanSlice(day(0), day(13));
+      expect(after.sessions.map((session) => session.localDate)).toEqual([
+        day(0),
+        day(6),
+      ]);
+      expect(after.sessions[1]).toMatchObject({
+        id: before[2].id,
+        isLocked: true,
+        status: "active",
+      });
+      // The occurrence before the effective date is untouched, field for field.
+      expect(after.sessions[0]).toEqual(before[0]);
+      expect(await plan.materializeSeries(randomUUID(), 4)).toMatchObject({
+        result: "unchanged",
+      });
+    });
+
+    it("splits a series and leaves every earlier occurrence alone", async () => {
+      const { plan, day } = requireSubject(subject);
+      const seriesId = randomUUID();
+      const successorSeriesId = randomUUID();
+      await plan.applyChangeSet(changeSet([addSeries(seriesId, day(0), 3)]), 0);
+      await plan.materializeSeries(randomUUID(), 1);
+      const before = (await plan.getPlanSlice(day(0), day(13))).sessions;
+
+      await plan.applyChangeSet(
+        changeSet([
+          {
+            operation: "edit_series",
+            seriesId,
+            effectiveDate: day(6),
+            successorSeriesId,
+            series: { ...seriesTemplate(day(6), 5), title: "Successor" },
+          },
+        ]),
+        2,
+      );
+
+      const split = await plan.getPlanSlice(day(0), day(13));
+      expect(split.sessions.map((session) => session.localDate)).toEqual([
+        day(0),
+        day(3),
+      ]);
+
+      await plan.materializeSeries(randomUUID(), 3);
+      const filled = await plan.getPlanSlice(day(0), day(13));
+      expect(filled.sessions.map((session) => session.localDate)).toEqual([
+        day(0),
+        day(3),
+        day(6),
+        day(11),
+      ]);
+      expect(
+        filled.sessions
+          .slice(2)
+          .every(
+            (session) =>
+              session.seriesId === successorSeriesId &&
+              session.title === "Successor",
+          ),
+      ).toBe(true);
+      // The two occurrences the predecessor already produced still mean what
+      // they meant, which is the whole point of an effective-dated successor.
+      expect(filled.sessions.slice(0, 2)).toEqual(before.slice(0, 2));
+    });
   });
 }
 
@@ -424,6 +622,34 @@ function add(
         },
       ],
     },
+  };
+}
+
+function seriesTemplate(startDate: string, intervalCount: number) {
+  return {
+    frequency: "daily" as const,
+    intervalCount,
+    startDate,
+    title: "Club session",
+    sport: "Running",
+    expectedDurationMinutes: 60,
+    activities: [
+      {
+        position: 0,
+        name: "Easy running",
+        sport: "Running",
+        measurementMode: "duration_intensity",
+        target: { duration_minutes: 60, intensity: "easy" },
+      },
+    ],
+  };
+}
+
+function addSeries(seriesId: string, startDate: string, intervalCount: number) {
+  return {
+    operation: "add_series",
+    seriesId,
+    series: seriesTemplate(startDate, intervalCount),
   };
 }
 

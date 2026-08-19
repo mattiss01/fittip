@@ -7,9 +7,16 @@ import type {
 } from "./saved-sessions";
 
 import type {
+  RollingPlanSeriesInput,
   RollingPlanSession,
   RollingPlanSessionInput,
 } from "@/server/rolling-plan/rolling-plan";
+
+/** The recurrence half of a series, which the library knows nothing about. */
+export type RollingPlanRecurrenceRule = Pick<
+  RollingPlanSeriesInput,
+  "frequency" | "intervalCount" | "weekdays" | "startDate" | "endDate"
+>;
 
 /**
  * The copy seam, in both directions and in one place.
@@ -76,5 +83,35 @@ export function toRollingPlanSessionInput(
       ...activity,
       isLocked: false,
     })),
+  };
+}
+
+/**
+ * Reuse, the recurring way: a library entry plus a recurrence rule becomes the
+ * template of a series. It is the same copy as `toRollingPlanSessionInput` and
+ * deliberately the same function family rather than a second copy path - what
+ * a saved session carries is decided in this file and nowhere else.
+ *
+ * The series template drops one more thing than a planned session does: a date
+ * and a position belong to an occurrence, and the rule supplies both. Nothing
+ * links the series back to the entry it was built from, so editing or deleting
+ * that entry afterwards cannot reach the series or any occurrence of it.
+ */
+export function toRollingPlanSeriesInput(
+  saved: SavedSession,
+  rule: RollingPlanRecurrenceRule,
+): RollingPlanSeriesInput {
+  return {
+    ...rule,
+    title: saved.title,
+    sport: saved.sport,
+    ...(saved.intent === undefined ? {} : { intent: saved.intent }),
+    ...(saved.expectedDurationMinutes === undefined
+      ? {}
+      : { expectedDurationMinutes: saved.expectedDurationMinutes }),
+    ...(saved.note === undefined ? {} : { note: saved.note }),
+    // A template activity carries no Plan lock, exactly as the library entry
+    // does not. An occurrence enters the Plan unlocked.
+    activities: saved.activities.map((activity) => ({ ...activity })),
   };
 }

@@ -277,7 +277,10 @@ export class RollingPlan {
    * it returns `unchanged` without advancing the revision when nothing is
    * missing, so two open tabs do not fight over the revision.
    */
-  async materializeSeries(idempotencyKey: unknown, expectedPlanRevision: unknown) {
+  async materializeSeries(
+    idempotencyKey: unknown,
+    expectedPlanRevision: unknown,
+  ) {
     return await this.adapter.materializeSeries(
       readUuid(idempotencyKey),
       readInteger(expectedPlanRevision, 0, Number.MAX_SAFE_INTEGER),
@@ -346,7 +349,8 @@ function parseChange(value: unknown): RollingPlanChange {
     const effectiveDate = readIsoDate(record.effectiveDate);
     // The successor starts on the split date. Sending a different one would
     // silently mean something else, so it is refused rather than corrected.
-    if (series.startDate !== effectiveDate) throw new RollingPlanValidationError();
+    if (series.startDate !== effectiveDate)
+      throw new RollingPlanValidationError();
     return {
       operation,
       seriesId,
@@ -480,11 +484,7 @@ function parseRecurrence(
     if (weekdays !== undefined) throw new RollingPlanValidationError();
     return { intervalCount: readInteger(intervalCount, 1, 365) };
   }
-  if (
-    !Array.isArray(weekdays) ||
-    weekdays.length < 1 ||
-    weekdays.length > 7
-  ) {
+  if (!Array.isArray(weekdays) || weekdays.length < 1 || weekdays.length > 7) {
     throw new RollingPlanValidationError();
   }
   const named = new Set<number>();
@@ -495,8 +495,9 @@ function parseRecurrence(
   }
   return {
     intervalCount: readInteger(intervalCount, 1, 52),
-    weekdays: [...named].toSorted((left, right) => left - right) as
-      RollingPlanWeekday[],
+    weekdays: [...named].toSorted(
+      (left, right) => left - right,
+    ) as RollingPlanWeekday[],
   };
 }
 

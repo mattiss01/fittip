@@ -216,7 +216,9 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
           nextSeries.set(change.seriesId, {
             ...segment,
             ...change.series,
-            ...(change.series.endDate === undefined ? { endDate: undefined } : {}),
+            ...(change.series.endDate === undefined
+              ? { endDate: undefined }
+              : {}),
           });
           sweep(
             change.seriesId,
@@ -473,7 +475,9 @@ function seriesDates(
 ): string[] {
   const start = segment.startDate > from ? segment.startDate : from;
   const end =
-    segment.endDate !== undefined && segment.endDate < to ? segment.endDate : to;
+    segment.endDate !== undefined && segment.endDate < to
+      ? segment.endDate
+      : to;
   const dates: string[] = [];
   for (let date = start; date <= end; date = shiftIsoDate(date, 1)) {
     if (segment.frequency === "daily") {
@@ -481,7 +485,7 @@ function seriesDates(
         dates.push(date);
       continue;
     }
-    const weekdays = segment.weekdays ?? [];
+    const weekdays: number[] = segment.weekdays ?? [];
     const elapsedWeeks =
       daysBetween(weekStart(segment.startDate), weekStart(date)) / 7;
     if (
@@ -505,9 +509,13 @@ function weekday(isoDate: string) {
   return new Date(`${isoDate}T00:00:00.000Z`).getUTCDay();
 }
 
-/** The Monday of the week holding this date, as `date_trunc('week', ...)` does. */
+/**
+ * The Sunday of the week holding this date, so the week the interval counts is
+ * the same week the weekday numbers describe. `rolling_plan_series_dates`
+ * anchors on the same Sunday for the same reason.
+ */
 function weekStart(isoDate: string) {
-  return shiftIsoDate(isoDate, -((weekday(isoDate) + 6) % 7));
+  return shiftIsoDate(isoDate, -weekday(isoDate));
 }
 
 /**

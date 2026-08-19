@@ -23,7 +23,10 @@ import {
   type RollingPlanAdapter,
   type RollingPlanChangeReceipt,
   type RollingPlanChangeSet,
+  type RollingPlanMaterializationReceipt,
+  type RollingPlanSeriesEffect,
   type RollingPlanSession,
+  type RollingPlanSkippedOccurrence,
   type RollingPlanSlice,
 } from "@/server/rolling-plan/rolling-plan";
 import {
@@ -74,6 +77,8 @@ export class PostgresRollingPlanAdapter implements RollingPlanAdapter {
       if (error.code === "PT422") throw new RollingPlanRuleError("past-date");
       if (error.code === "PT423")
         throw new RollingPlanRuleError("daily-session-limit");
+      if (error.code === "PT424")
+        throw new RollingPlanRuleError("series-already-started");
       if (error.code === "PT428") throw new RollingPlanTimezoneRequiredError();
       if (error.code === "22023") throw new RollingPlanValidationError();
       throw new RollingPlanPersistenceError();
@@ -93,6 +98,58 @@ export class PostgresRollingPlanAdapter implements RollingPlanAdapter {
       planRevision: data.plan_revision,
       changeSetId: data.change_set_id,
       result,
+      seriesEffects: parseSeriesEffects(data.series_effects),
+    };
+  }
+
+  /**
+   * The owner-derived top-up. Retries are deliberately left enabled here,
+   * unlike on the change set beside it: a dropped response is replayed under
+   * the same idempotency key, and by then the occurrences already exist, so a
+   * retry reports `unchanged` rather than writing anything a second time. The
+   * one atomic mutation in this file stays the one the architecture invariant
+   * in `src/architecture/server-boundary.test.ts` names, and that invariant is
+   * left exactly as it was.
+   */
+  async materializeSeries(
+    idempotencyKey: string,
+    expectedPlanRevision: number,
+  ): Promise<RollingPlanMaterializationReceipt> {
+    await this.getVerifiedUserId();
+    const { data, error } = await this.client.rpc(
+      "materialize_rolling_plan_series",
+      {
+        p_expected_plan_revision: expectedPlanRevision,
+        p_idempotency_key: idempotencyKey,
+      },
+    );
+    if (error) {
+      if (error.code === "PT409") throw new RollingPlanConflictError();
+      if (error.code === "PT422") throw new RollingPlanRuleError("past-date");
+      if (error.code === "PT423")
+        throw new RollingPlanRuleError("daily-session-limit");
+      if (error.code === "PT428") throw new RollingPlanTimezoneRequiredError();
+      if (error.code === "22023") throw new RollingPlanValidationError();
+      throw new RollingPlanPersistenceError();
+    }
+    const result = data?.result;
+    if (
+      !data ||
+      !isInteger(data.plan_revision, 0) ||
+      !isInteger(data.created_count, 0) ||
+      !(data.plan_id === null || isUuid(data.plan_id)) ||
+      !(data.change_set_id === null || isUuid(data.change_set_id)) ||
+      (result !== "applied" && result !== "replayed" && result !== "unchanged")
+    ) {
+      throw new RollingPlanPersistenceError();
+    }
+    return {
+      planId: data.plan_id,
+      planRevision: data.plan_revision,
+      changeSetId: data.change_set_id,
+      result,
+      createdCount: data.created_count,
+      skipped: parseSkipped(data.skipped),
     };
   }
 
@@ -133,6 +190,67 @@ function parseSliceReceipt(value: unknown): RollingPlanSlice {
   };
 }
 
+/**
+ * What one series operation did to the occurrences already on the Plan. A
+ * change set that touched no series carries a null here rather than an empty
+ * array, so absent and "nothing happened" stay distinguishable in the receipt.
+ */
+function parseSeriesEffects(value: unknown): RollingPlanSeriesEffect[] {
+  if (value === null || value === undefined) return [];
+  if (!Array.isArray(value)) throw new RollingPlanPersistenceError();
+  return value.map((entry) => {
+    const effect = readRecord(entry);
+    if (
+      !isUuid(effect.seriesId) ||
+      !(
+        effect.operation === "edit_series" || effect.operation === "end_series"
+      ) ||
+      !isInteger(effect.deleted, 0) ||
+      !isInteger(effect.divergedDeleted, 0) ||
+      !isInteger(effect.lockedKept, 0)
+    ) {
+      throw new RollingPlanPersistenceError();
+    }
+    return {
+      seriesId: effect.seriesId,
+      operation: effect.operation,
+      deleted: effect.deleted,
+      divergedDeleted: effect.divergedDeleted,
+      lockedKept: effect.lockedKept,
+    };
+  });
+}
+
+/** The database names its own reasons; the domain keeps its own spelling. */
+const SKIP_REASONS: Record<string, RollingPlanSkippedOccurrence["reason"]> = {
+  daily_session_limit: "daily-session-limit",
+  change_set_limit: "change-set-limit",
+};
+
+function parseSkipped(value: unknown): RollingPlanSkippedOccurrence[] {
+  if (value === null || value === undefined) return [];
+  if (!Array.isArray(value)) throw new RollingPlanPersistenceError();
+  return value.map((entry) => {
+    const skipped = readRecord(entry);
+    const reason =
+      typeof skipped.reason === "string"
+        ? SKIP_REASONS[skipped.reason]
+        : undefined;
+    if (
+      !isUuid(skipped.seriesId) ||
+      !isIsoDate(skipped.occurrenceDate) ||
+      reason === undefined
+    ) {
+      throw new RollingPlanPersistenceError();
+    }
+    return {
+      seriesId: skipped.seriesId,
+      occurrenceDate: skipped.occurrenceDate,
+      reason,
+    };
+  });
+}
+
 function parseSession(value: unknown): RollingPlanSession {
   const session = readRecord(value);
   if (
@@ -152,6 +270,13 @@ function parseSession(value: unknown): RollingPlanSession {
     !(
       session.cancelledAt === null || typeof session.cancelledAt === "string"
     ) ||
+    // A one-off session carries no occurrence identity; an occurrence carries
+    // both halves of it. Half of one would mean the row no longer says which
+    // rule produced it, which is worse than refusing to read it.
+    !(session.seriesId === null || isUuid(session.seriesId)) ||
+    !(session.occurrenceDate === null || isIsoDate(session.occurrenceDate)) ||
+    (session.seriesId === null) !== (session.occurrenceDate === null) ||
+    typeof session.hasDiverged !== "boolean" ||
     !Array.isArray(session.activities)
   ) {
     throw new RollingPlanPersistenceError();
@@ -170,6 +295,9 @@ function parseSession(value: unknown): RollingPlanSession {
     isLocked: session.isLocked,
     status: session.status,
     cancelledAt: session.cancelledAt,
+    seriesId: session.seriesId,
+    occurrenceDate: session.occurrenceDate,
+    hasDiverged: session.hasDiverged,
     activities: session.activities.map(parseActivity),
   };
 }

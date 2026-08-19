@@ -130,13 +130,22 @@ export async function changePlanAction(
     return result("saved", savedCopy(operation, formData));
   } catch (error) {
     if (error instanceof RollingPlanRuleError) {
-      return result(
-        "rule",
-        error.reason === "past-date"
-          ? "That date has already passed. Plan today or a later date."
-          : "A date holds at most ten sessions. Cancel or move one first.",
-        error.reason,
-      );
+      // This action composes no series change, so a series rule cannot reach
+      // here. M3-14B owns the surface that can produce one, and its own copy
+      // for it; forwarding an unknown reason under this action's wording would
+      // tell the owner something untrue.
+      if (
+        error.reason === "past-date" ||
+        error.reason === "daily-session-limit"
+      ) {
+        return result(
+          "rule",
+          error.reason === "past-date"
+            ? "That date has already passed. Plan today or a later date."
+            : "A date holds at most ten sessions. Cancel or move one first.",
+          error.reason,
+        );
+      }
     }
     if (error instanceof RollingPlanConflictError) {
       return result(
