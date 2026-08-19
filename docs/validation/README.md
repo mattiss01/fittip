@@ -41,8 +41,8 @@ Validation records and their visual evidence are grouped by milestone.
 
 ## M3
 
-- [M3-13 private saved-session library](M3/M3-13-VALIDATION.md) — in
-  development; Tier 1. One additive migration adds `saved_sessions` and
+- [M3-13 private saved-session library](M3/M3-13-VALIDATION.md) — accepted
+  19 August 2026; Tier 1. One additive migration adds `saved_sessions` and
   `saved_session_activities` with owner-scoped RLS, select-only client grants,
   and one owner-derived write carrying an optimistic revision token;
   `/home/plan/saved` lists, inspects, edits, reuses and deletes entries, and
@@ -50,17 +50,18 @@ Validation records and their visual evidence are grouped by milestone.
   untouched. Round 1 of independent review rejected `9c27a98` on one blocking
   browser regression — a `hasText` disclosure filter in the M3-12 spec that
   M3-13's consequence copy made ambiguous — corrected in `46c09c0`; the schema,
-  authorization and copy-by-value work was verified unchanged. Re-review, the
-  CI run for `46c09c0`, founder-project migration application, Preview
-  verification, and acceptance are pending
-- [M3-12 manual continuous planning](M3/M3-12-VALIDATION.md) — in development;
-  Tier 1. The migration adds the durable owner time zone, Recovery day labels,
-  and the two planning rules M3-10 left out; the `/home/plan` stub is replaced
-  by the owner's one continuous plan. Round 1 of independent review rejected
-  `2a09b6c` on two delivery-gate blockers and three defects, all corrected in
-  `093b21d`; the schema, authorization and atomicity work was accepted
-  unchanged. Re-review, the CI run for `093b21d`, founder-project migration
-  application, Preview verification, and acceptance are pending
+  authorization and copy-by-value work was verified unchanged. Round 2 approved
+  `46c09c0` on green run 32167697854; founder migration `20260818143303` applied
+  and verified; accepted against `46c09c0` and merged as `5e765fe` with green
+  `master` run 32233970170 and founder deployment `5979056149`
+- [M3-12 manual continuous planning](M3/M3-12-VALIDATION.md) — accepted
+  18 August 2026; Tier 1. The migration adds the durable owner time zone,
+  Recovery day labels, and the two planning rules M3-10 left out; the
+  `/home/plan` stub is replaced by the owner's one continuous plan. Round 1 of
+  independent review rejected `2a09b6c` on two delivery-gate blockers and three
+  defects, all corrected in `093b21d`; the schema, authorization and atomicity
+  work was accepted unchanged. Accepted against `093b21d` and merged as
+  `a1aada9`, with founder migration `20260817125029` applied and verified
 - [M3-18 residual focus-ring contrast](M3/M3-18-VALIDATION.md) — accepted
   17 August 2026 against `5f78071` with green CI and a confirmed Preview.
   Tier 3, lead-implemented. Every failing focus ring now computes at least

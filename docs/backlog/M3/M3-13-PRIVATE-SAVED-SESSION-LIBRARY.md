@@ -1,8 +1,10 @@
 # M3-13: Private saved-session library
 
-**Status:** in development — the product owner approved Tier 1 dispatch on
-18 August 2026 against this contract. Supersedes the decomposition shell; the
-F-005 scope it recorded is preserved below.
+**Status:** accepted 19 August 2026 — against independently reviewed `46c09c0`,
+merged as `5e765fe`, founder migration `20260818143303` applied and verified.
+Dispatch was approved on 18 August 2026 against this contract. Supersedes the
+decomposition shell; the F-005 scope it recorded is preserved below. See
+[`docs/validation/M3/M3-13-VALIDATION.md`](../../validation/M3/M3-13-VALIDATION.md).
 
 **Triage:** ready
 

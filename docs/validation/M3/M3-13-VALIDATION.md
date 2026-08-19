@@ -1,9 +1,9 @@
 # M3-13 validation: private saved-session library
 
-**Status:** testable — the independent reviewer approved `46c09c0` in round 2,
-CI is green for that code on all three jobs, and the founder migration
-`20260818143303` has been applied and verified. **The product owner's 390px
-acceptance pass on the Preview is the only remaining gate.**
+**Status:** accepted — the product owner accepted this ticket on 19 August 2026
+against the independently reviewed commit `46c09c0`. It is merged to `master` as
+`5e765fe` and deployed to the founder environment. See
+[Acceptance, merge, and founder deployment](#acceptance-merge-and-founder-deployment).
 
 **Preview:** https://fittip-door7i34w-mattis-3657s-projects.vercel.app —
 deployment `5968472376` for `b292962`, state `success`. `b292962` is
@@ -595,3 +595,70 @@ Judgment this ticket needs and CI cannot supply:
 8. **The `390x844` Preview**, once the lead has pushed and applied the
    migration to the founder project in timestamp order. The visual pass is the
    product owner's.
+
+
+## Acceptance, merge, and founder deployment
+
+**Product-owner acceptance.** Accepted on 19 August 2026 against the
+independently reviewed commit `46c09c0` and the Preview
+https://fittip-door7i34w-mattis-3657s-projects.vercel.app, deployed from
+`b292962`. That Preview serves the reviewed code unchanged: every commit between
+`46c09c0` and it is documentation only.
+
+Two things the product owner did **not** accept, because nothing asked them to,
+and which are carried forward rather than closed here:
+
+- **Limitation 11**, the unlabeled `intent` and `note` paragraphs on a library
+  card. It is a visible-design question on both this surface and the Plan, and
+  it needs its own decision and its own small ticket.
+- **Limitations 1, 3, 4, 6 and 7** are unchanged and remain the honest state of
+  this surface. Limitation 1 in particular — a saved session's activities cannot
+  be edited — becomes a live constraint the moment an activity editor exists.
+
+**Merge.** `5e765fe`, a `--no-ff` merge of
+`ticket/m3-13-private-saved-session-library` into `master` at `ca4719c`. `master`
+was an ancestor of the branch head, so nothing was resolved and the merged tree
+is byte-identical to the accepted head `77489a4`. Under the `AGENTS.md` rule on
+clean merges, the local suite was not re-run by hand; the `master` run below is
+the post-merge evidence.
+
+The merge was made in the primary checkout `C:/Users/msche/dev/fittip`, which
+holds `master`; the ticket's Orca worktree holds the ticket branch and cannot
+check `master` out at the same time.
+
+**Branch-head CI.** https://github.com/mattiss01/fittip/actions/runs/32170254625 —
+**SUCCESS** for `77489a4`, the accepted head. This is in addition to run
+32167697854 for the reviewed code recorded above.
+
+**`master` CI.** https://github.com/mattiss01/fittip/actions/runs/32233970170 —
+**SUCCESS** for `5e765fe`.
+
+**Founder deployment.** Vercel production deployment `5979056149` for `5e765fe`,
+state `success`, at
+https://fittip-69z5phdrr-mattis-3657s-projects.vercel.app. The founder alias
+`https://fittip-gilt.vercel.app` was confirmed to be serving `5e765fe` by reading
+the most recent Production deployment's SHA, rather than assuming the alias had
+moved.
+
+**Hosted smoke and security checks**, anonymous, against the founder alias:
+
+| Check | Result |
+| --- | --- |
+| `/` | HTTP 200 |
+| `/home/plan/saved` — the route this ticket added | HTTP 303 to `/`. The library is not readable without a session. |
+| `/home/plan` | HTTP 303 to `/` |
+| `/home` | HTTP 303 to `/` |
+| `/home/plan/saved` response headers | `Cache-Control: private, no-cache, no-store, must-revalidate, max-age=0`; `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` |
+| `/` response headers | `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate`; the same HSTS header |
+
+This closes the gap the pre-merge evidence named explicitly. The Preview sits
+behind Vercel's SSO deployment protection, so an anonymous request never reached
+the application there and the app's own redirect and private cache headers could
+not be checked. Against the unprotected founder alias they now have been, on the
+new route as well as the existing ones.
+
+**Follow-up raised by this closeout, not fixed here.** M3-12's closeout left one
+open item — `service_role` holds `GRANT ALL` on `public.profiles` while lacking
+`EXECUTE` on `is_iana_timezone_name` — and this ticket did not touch it.
+`service_role` holds nothing at all on the two library tables. It still wants a
+small forward migration in its own ticket.
