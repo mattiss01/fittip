@@ -34,8 +34,59 @@ export type RollingPlanSessionInput = RollingPlanSessionContent & {
   isLocked: boolean;
 };
 
+/** How Postgres numbers weekdays: 0 is Sunday through 6 is Saturday. */
+export type RollingPlanWeekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+/**
+ * A series template's activity. It carries no Plan lock for the same reason a
+ * saved session's does not: a lock belongs to a dated session, not to a rule.
+ */
+export type RollingPlanSeriesActivityInput = Omit<
+  RollingPlanActivityInput,
+  "isLocked"
+>;
+
+/**
+ * One effective-dated segment: the recurrence rule and the session template it
+ * stamps out. `endDate` absent is an explicitly open-ended series; expansion is
+ * still bounded, because only the fourteen-day window is ever asked for.
+ */
+export type RollingPlanSeriesInput = {
+  frequency: "daily" | "weekly";
+  intervalCount: number;
+  /** Weekly only, ascending and distinct. */
+  weekdays?: RollingPlanWeekday[];
+  startDate: string;
+  endDate?: string;
+  title: string;
+  sport: string;
+  intent?: string;
+  expectedDurationMinutes?: number;
+  note?: string;
+  activities: RollingPlanSeriesActivityInput[];
+};
+
 export type RollingPlanChange =
   | { operation: "add"; sessionId: string; session: RollingPlanSessionInput }
+  | {
+      operation: "add_series";
+      seriesId: string;
+      series: RollingPlanSeriesInput;
+    }
+  | {
+      /**
+       * Without `effectiveDate` this rewrites the whole segment, which is only
+       * offered before it starts. With one it closes the segment on the day
+       * before and opens `successorSeriesId` on it, leaving every earlier
+       * occurrence exactly as it was.
+       */
+      operation: "edit_series";
+      seriesId: string;
+      effectiveDate?: string;
+      successorSeriesId?: string;
+      series: RollingPlanSeriesInput;
+    }
+  | { operation: "end_series"; seriesId: string; effectiveDate: string }
   | {
       operation: "edit";
       sessionId: string;
@@ -62,12 +113,27 @@ export type RollingPlanChangeSet = {
 };
 
 export type RollingPlanActivity = RollingPlanActivityInput & { id: string };
-export type RollingPlanSession = Omit<RollingPlanSessionInput, "activities"> & {
-  id: string;
-  status: "active" | "cancelled";
-  cancelledAt: string | null;
-  activities: RollingPlanActivity[];
+
+/**
+ * What makes a session an occurrence of a rule. All three are null or false on
+ * a one-off session, which is how a Plan written before recurrence existed
+ * reads exactly as it did.
+ */
+export type RollingPlanOccurrenceIdentity = {
+  seriesId: string | null;
+  /** The rule date that produced it, which a move does not change. */
+  occurrenceDate: string | null;
+  /** True once the owner has changed this occurrence away from its rule. */
+  hasDiverged: boolean;
 };
+
+export type RollingPlanSession = Omit<RollingPlanSessionInput, "activities"> &
+  RollingPlanOccurrenceIdentity & {
+    id: string;
+    status: "active" | "cancelled";
+    cancelledAt: string | null;
+    activities: RollingPlanActivity[];
+  };
 
 export type RollingPlanSlice = {
   planId: string | null;
@@ -77,11 +143,42 @@ export type RollingPlanSlice = {
   recoveryDates: string[];
 };
 
+/**
+ * What one series operation did to the occurrences already on the Plan.
+ * `lockedKept` is the count a locked occurrence saved from removal, which the
+ * owner has to be told about because nothing else on the Plan will show it.
+ */
+export type RollingPlanSeriesEffect = {
+  seriesId: string;
+  operation: "edit_series" | "end_series";
+  deleted: number;
+  divergedDeleted: number;
+  lockedKept: number;
+};
+
 export type RollingPlanChangeReceipt = {
   planId: string;
   planRevision: number;
   changeSetId: string;
   result: "applied" | "replayed";
+  seriesEffects: RollingPlanSeriesEffect[];
+};
+
+/** A rule date the window could not take, and why. */
+export type RollingPlanSkippedOccurrence = {
+  seriesId: string;
+  occurrenceDate: string;
+  reason: "daily-session-limit" | "change-set-limit";
+};
+
+export type RollingPlanMaterializationReceipt = {
+  planId: string | null;
+  planRevision: number;
+  changeSetId: string | null;
+  /** `unchanged` means nothing was missing and the revision did not move. */
+  result: "applied" | "replayed" | "unchanged";
+  createdCount: number;
+  skipped: RollingPlanSkippedOccurrence[];
 };
 
 export type ParsedPlanSlice = { startDate: string; endDate: string };
@@ -92,6 +189,10 @@ export interface RollingPlanAdapter {
     changeSet: RollingPlanChangeSet,
     expectedPlanRevision: number,
   ): Promise<RollingPlanChangeReceipt>;
+  materializeSeries(
+    idempotencyKey: string,
+    expectedPlanRevision: number,
+  ): Promise<RollingPlanMaterializationReceipt>;
 }
 
 export class RollingPlanValidationError extends Error {
@@ -118,7 +219,20 @@ export class RollingPlanPersistenceError extends Error {
 /** The most active sessions one owner-local date may hold. Labels never count. */
 export const ROLLING_PLAN_DAILY_SESSION_LIMIT = 10;
 
-export type RollingPlanRuleReason = "past-date" | "daily-session-limit";
+/**
+ * The owner-local window a series is materialized into: today plus the next
+ * thirteen days. ADR-017 consequence 3 - nothing outside it exists as a row.
+ */
+export const ROLLING_PLAN_WINDOW_DAYS = 14;
+
+/** The most changes one change set carries, which bounds one materialization. */
+export const ROLLING_PLAN_CHANGE_SET_LIMIT = 100;
+
+export type RollingPlanRuleReason =
+  | "past-date"
+  | "daily-session-limit"
+  /** A whole-series edit was attempted after the segment already started. */
+  | "series-already-started";
 
 /**
  * A change that parsed and was authorized, but breaks a planning rule the
@@ -153,6 +267,19 @@ export class RollingPlan {
   async applyChangeSet(changeSet: unknown, expectedPlanRevision: unknown) {
     return await this.adapter.applyChangeSet(
       parseChangeSet(changeSet),
+      readInteger(expectedPlanRevision, 0, Number.MAX_SAFE_INTEGER),
+    );
+  }
+
+  /**
+   * Tops the window up with the occurrences every active series is missing.
+   * It is a write, so it is called from a Server Action and never from a read;
+   * it returns `unchanged` without advancing the revision when nothing is
+   * missing, so two open tabs do not fight over the revision.
+   */
+  async materializeSeries(idempotencyKey: unknown, expectedPlanRevision: unknown) {
+    return await this.adapter.materializeSeries(
+      readUuid(idempotencyKey),
       readInteger(expectedPlanRevision, 0, Number.MAX_SAFE_INTEGER),
     );
   }
@@ -191,6 +318,49 @@ function parseChange(value: unknown): RollingPlanChange {
       operation,
       localDate: readIsoDate(record.localDate),
       isRecoveryDay: record.isRecoveryDay,
+    };
+  }
+  // A series operation targets a rule, not a session identity.
+  if (operation === "add_series") {
+    assertOnlyKeys(record, ["operation", "seriesId", "series"]);
+    return {
+      operation,
+      seriesId: readUuid(record.seriesId),
+      series: parseSeries(record.series),
+    };
+  }
+  if (operation === "edit_series") {
+    const seriesId = readUuid(record.seriesId);
+    const series = parseSeries(record.series);
+    if (record.effectiveDate === undefined) {
+      assertOnlyKeys(record, ["operation", "seriesId", "series"]);
+      return { operation, seriesId, series };
+    }
+    assertOnlyKeys(record, [
+      "operation",
+      "seriesId",
+      "series",
+      "effectiveDate",
+      "successorSeriesId",
+    ]);
+    const effectiveDate = readIsoDate(record.effectiveDate);
+    // The successor starts on the split date. Sending a different one would
+    // silently mean something else, so it is refused rather than corrected.
+    if (series.startDate !== effectiveDate) throw new RollingPlanValidationError();
+    return {
+      operation,
+      seriesId,
+      effectiveDate,
+      successorSeriesId: readUuid(record.successorSeriesId),
+      series,
+    };
+  }
+  if (operation === "end_series") {
+    assertOnlyKeys(record, ["operation", "seriesId", "effectiveDate"]);
+    return {
+      operation,
+      seriesId: readUuid(record.seriesId),
+      effectiveDate: readIsoDate(record.effectiveDate),
     };
   }
   const sessionId = readUuid(record.sessionId);
@@ -233,6 +403,101 @@ function parseChange(value: unknown): RollingPlanChange {
     default:
       throw new RollingPlanValidationError();
   }
+}
+
+function parseSeries(value: unknown): RollingPlanSeriesInput {
+  const record = readRecord(value);
+  assertOnlyKeys(record, [
+    "frequency",
+    "intervalCount",
+    "weekdays",
+    "startDate",
+    "endDate",
+    "title",
+    "sport",
+    "intent",
+    "expectedDurationMinutes",
+    "note",
+    "activities",
+  ]);
+  const frequency = readChoice(record.frequency, ["daily", "weekly"] as const);
+  const startDate = readIsoDate(record.startDate);
+  const endDate =
+    record.endDate === undefined || record.endDate === null
+      ? undefined
+      : readIsoDate(record.endDate);
+  if (endDate !== undefined && endDate < startDate)
+    throw new RollingPlanValidationError();
+  if (!Array.isArray(record.activities) || record.activities.length > 50) {
+    throw new RollingPlanValidationError();
+  }
+  const positions = new Set<number>();
+  const activities = record.activities.map((activity) => {
+    const raw = readRecord(activity);
+    // A template activity carries no Plan lock, so naming one is a mistake
+    // rather than something to quietly normalize away.
+    if ("isLocked" in raw) throw new RollingPlanValidationError();
+    const { isLocked, ...parsed } = parseActivity({ ...raw, isLocked: false });
+    void isLocked;
+    if (positions.has(parsed.position)) throw new RollingPlanValidationError();
+    positions.add(parsed.position);
+    return parsed;
+  });
+  return {
+    frequency,
+    ...parseRecurrence(frequency, record.intervalCount, record.weekdays),
+    startDate,
+    ...(endDate === undefined ? {} : { endDate }),
+    title: readRequiredString(record.title, 120),
+    sport: readRequiredString(record.sport, 80),
+    ...optionalString("intent", record.intent, 500),
+    ...(record.expectedDurationMinutes === undefined ||
+    record.expectedDurationMinutes === null
+      ? {}
+      : {
+          expectedDurationMinutes: readInteger(
+            record.expectedDurationMinutes,
+            1,
+            10080,
+          ),
+        }),
+    ...optionalString("note", record.note, 2000),
+    activities,
+  };
+}
+
+/**
+ * The two supported shapes, and only those: every N days from one to 365, or
+ * every N weeks from one to 52 on named weekdays. No monthly, yearly, ordinal
+ * or arbitrary recurrence language exists here to be smuggled in.
+ */
+function parseRecurrence(
+  frequency: "daily" | "weekly",
+  intervalCount: unknown,
+  weekdays: unknown,
+) {
+  if (frequency === "daily") {
+    if (weekdays !== undefined) throw new RollingPlanValidationError();
+    return { intervalCount: readInteger(intervalCount, 1, 365) };
+  }
+  if (
+    !Array.isArray(weekdays) ||
+    weekdays.length < 1 ||
+    weekdays.length > 7
+  ) {
+    throw new RollingPlanValidationError();
+  }
+  const named = new Set<number>();
+  for (const weekday of weekdays) {
+    const parsed = readInteger(weekday, 0, 6);
+    if (named.has(parsed)) throw new RollingPlanValidationError();
+    named.add(parsed);
+  }
+  return {
+    intervalCount: readInteger(intervalCount, 1, 52),
+    weekdays: [...named].toSorted((left, right) => left - right) as
+      RollingPlanWeekday[],
+  };
 }
 
 function parseSession(
