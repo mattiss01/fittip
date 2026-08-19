@@ -107,6 +107,9 @@ jobs:
       - name: M3-12 concurrent planning rules
         run: npm run test:m3-12-concurrency
 
+      - name: M3-13 concurrent saved-session edits
+        run: npm run test:m3-13-concurrency
+
       - name: M3-11 seeded legacy reset
         run: npm run test:m3-11-seeded-reset
 
@@ -207,6 +210,16 @@ jobs:
           .github/scripts/with-server.sh 3020 \
             npx playwright test --config=e2e/m3-12.playwright.config.ts \
               --workers=1 --trace=retain-on-failure --output=test-results/m3-12
+
+      - name: M3-13 private saved-session library
+        # Report every broken flow in one run, not just the first.
+        if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-13
+        run: |
+          .github/scripts/with-server.sh 3021 \
+            npx playwright test --config=e2e/m3-13.playwright.config.ts \
+              --workers=1 --trace=retain-on-failure --output=test-results/m3-13
 
       - name: Upload Playwright report
         if: failure()

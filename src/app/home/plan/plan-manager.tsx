@@ -15,6 +15,7 @@ import {
 } from "./action-state";
 import { changePlanAction } from "./actions";
 import styles from "./plan.module.css";
+import { SaveToLibrary } from "./saved/save-to-library";
 
 import {
   latestActionResponseAt,
@@ -417,6 +418,8 @@ function PlanSessionCard({
           </button>
         </form>
       </details>
+
+      <SaveToLibrary sessionId={session.id} defaultName={session.title} />
 
       <details className={styles.disclosure}>
         <summary>Cancel</summary>

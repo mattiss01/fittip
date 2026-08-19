@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { PLAN_WINDOW_DAYS } from "./action-state";
@@ -43,6 +44,9 @@ export default async function PlanPage() {
           </p>
         </div>
       </header>
+      <Link className={styles.libraryLink} href="/home/plan/saved">
+        Saved sessions
+      </Link>
       {timezoneName === null ? (
         <TimezoneConfirmation />
       ) : (

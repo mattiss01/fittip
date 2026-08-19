@@ -1449,6 +1449,116 @@ export type Database = {
           },
         ];
       };
+      saved_session_activities: {
+        Row: {
+          created_at: string;
+          id: string;
+          instructions: string | null;
+          measurement_mode: string;
+          name: string;
+          personal_activity_id: string | null;
+          position: number;
+          saved_session_id: string;
+          sport: string;
+          target: Json | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          instructions?: string | null;
+          measurement_mode: string;
+          name: string;
+          personal_activity_id?: string | null;
+          position: number;
+          saved_session_id: string;
+          sport: string;
+          target?: Json | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          instructions?: string | null;
+          measurement_mode?: string;
+          name?: string;
+          personal_activity_id?: string | null;
+          position?: number;
+          saved_session_id?: string;
+          sport?: string;
+          target?: Json | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "saved_session_activities_personal_fkey";
+            columns: ["personal_activity_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "personal_activities";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "saved_session_activities_session_fkey";
+            columns: ["saved_session_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "saved_sessions";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      saved_sessions: {
+        Row: {
+          created_at: string;
+          expected_duration_minutes: number | null;
+          id: string;
+          intent: string | null;
+          name: string;
+          note: string | null;
+          revision: number;
+          sport: string;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          expected_duration_minutes?: number | null;
+          id?: string;
+          intent?: string | null;
+          name: string;
+          note?: string | null;
+          revision?: number;
+          sport: string;
+          title: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          expected_duration_minutes?: number | null;
+          id?: string;
+          intent?: string | null;
+          name?: string;
+          note?: string | null;
+          revision?: number;
+          sport?: string;
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "saved_sessions_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -1548,6 +1658,27 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "rolling_plan_change_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      apply_saved_session_change: {
+        Args: {
+          p_activities?: Json;
+          p_expected_duration_minutes?: number;
+          p_expected_revision?: number;
+          p_intent?: string;
+          p_name?: string;
+          p_note?: string;
+          p_operation: string;
+          p_saved_session_id?: string;
+          p_sport?: string;
+          p_title?: string;
+        };
+        Returns: Database["public"]["CompositeTypes"]["saved_session_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "saved_session_receipt";
           isOneToOne: true;
           isSetofReturn: false;
         };
@@ -1669,6 +1800,10 @@ export type Database = {
         Args: { p_session_id: string; p_user_id: string };
         Returns: Json;
       };
+      saved_session_activity_input_is_valid: {
+        Args: { p_value: Json };
+        Returns: boolean;
+      };
       settle_ai_spend: {
         Args: { p_charged_micro_usd: number; p_settlement_token: string };
         Returns: Database["public"]["CompositeTypes"]["ai_spend_settlement_receipt"];
@@ -1751,6 +1886,11 @@ export type Database = {
         plan_revision: number | null;
         sessions: Json | null;
         recovery_dates: Json | null;
+      };
+      saved_session_receipt: {
+        saved_session_id: string | null;
+        revision: number | null;
+        result: string | null;
       };
     };
   };

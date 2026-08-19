@@ -13,6 +13,28 @@
   --plan-locked: #8b341f;
 }
 
+.libraryLink {
+  width: fit-content;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 1.25rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--ledger-ink);
+  color: var(--ledger-ink);
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.libraryLink:focus-visible {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
+}
+
 .manager {
   display: grid;
   gap: 1.6rem;

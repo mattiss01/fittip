@@ -172,9 +172,7 @@ test.describe("M3-12 manual continuous planning", () => {
       );
 
       // Keyboard reach: the add disclosure opens and its first field takes focus.
-      const addDisclosure = day(page, tomorrow)
-        .locator("details")
-        .filter({ hasText: "Add a session" });
+      const addDisclosure = disclosure(day(page, tomorrow), "Add a session");
       await addDisclosure.locator(":scope > summary").focus();
       await page.keyboard.press("Enter");
       await page.keyboard.press("Tab");
@@ -217,9 +215,7 @@ test.describe("M3-12 manual continuous planning", () => {
         day(page, today).getByRole("heading", { name: "Session 9" }),
       ).toBeVisible();
 
-      const addDisclosure = day(page, today)
-        .locator("details")
-        .filter({ hasText: "Add a session" });
+      const addDisclosure = disclosure(day(page, today), "Add a session");
       if ((await addDisclosure.getAttribute("open")) === null) {
         await addDisclosure.locator(":scope > summary").click();
       }
@@ -273,8 +269,18 @@ function sessionCard(page: Page, date: string, title: string) {
     .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
 }
 
+/** The disclosure whose own summary carries this label. */
+function disclosure(scope: Locator, label: string) {
+  // Anchored on the summary. Filtering the whole `details` subtree matched body
+  // copy as well as the label, so a disclosure whose consequence text happened
+  // to contain another disclosure's label matched both at once.
+  return scope.locator("details").filter({
+    has: scope.page().locator(":scope > summary", { hasText: label }),
+  });
+}
+
 async function openDisclosure(scope: Locator, label: string) {
-  const details = scope.locator("details").filter({ hasText: label });
+  const details = disclosure(scope, label);
   if ((await details.getAttribute("open")) === null) {
     await details.locator(":scope > summary").click();
   }
@@ -287,9 +293,7 @@ async function addSession(
   sport: string,
   minutes?: string,
 ) {
-  const details = day(page, date)
-    .locator("details")
-    .filter({ hasText: "Add a session" });
+  const details = disclosure(day(page, date), "Add a session");
   if ((await details.getAttribute("open")) === null) {
     await details.locator(":scope > summary").click();
   }

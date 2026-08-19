@@ -212,7 +212,9 @@ describe("PlanManager", () => {
     );
 
     expect(addTitleInput(TODAY)).toHaveValue("Eleventh");
-    expect(screen.getByRole("status")).toHaveTextContent(
+    // M3-13 puts a second live region inside each session card, for the
+    // save-to-library control. The manager's own notice is the first one.
+    expect(screen.getAllByRole("status")[0]).toHaveTextContent(
       /at most ten sessions/i,
     );
   });

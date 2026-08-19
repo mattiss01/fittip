@@ -41,6 +41,18 @@ Validation records and their visual evidence are grouped by milestone.
 
 ## M3
 
+- [M3-13 private saved-session library](M3/M3-13-VALIDATION.md) — in
+  development; Tier 1. One additive migration adds `saved_sessions` and
+  `saved_session_activities` with owner-scoped RLS, select-only client grants,
+  and one owner-derived write carrying an optimistic revision token;
+  `/home/plan/saved` lists, inspects, edits, reuses and deletes entries, and
+  both copy directions are by value. `apply_rolling_plan_change_set` is
+  untouched. Round 1 of independent review rejected `9c27a98` on one blocking
+  browser regression — a `hasText` disclosure filter in the M3-12 spec that
+  M3-13's consequence copy made ambiguous — corrected in `46c09c0`; the schema,
+  authorization and copy-by-value work was verified unchanged. Re-review, the
+  CI run for `46c09c0`, founder-project migration application, Preview
+  verification, and acceptance are pending
 - [M3-12 manual continuous planning](M3/M3-12-VALIDATION.md) — in development;
   Tier 1. The migration adds the durable owner time zone, Recovery day labels,
   and the two planning rules M3-10 left out; the `/home/plan` stub is replaced

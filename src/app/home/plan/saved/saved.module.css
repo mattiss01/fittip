@@ -1,0 +1,322 @@
+/*
+ * The library extends the FitTip ledger, but it is reference material rather
+ * than the working sheet, so it is set in archival blue-black instead of the
+ * Plan's action orange. Its one signature is the catalog card: a solid name
+ * tab across the top edge, and a doubled offset shadow so every entry reads as
+ * a card that can be dealt again without leaving the stack. Nothing here
+ * scores, ranks, or counts a streak.
+ */
+
+.page {
+  --library-ink: #2f4a7a;
+  --library-stock: #f9f7ec;
+}
+
+.backLink {
+  width: fit-content;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 1.25rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--ledger-ink);
+  color: var(--ledger-ink);
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.library {
+  display: grid;
+  gap: 1.6rem;
+  margin-top: 1.5rem;
+}
+
+.notice {
+  position: sticky;
+  z-index: 20;
+  top: 0.75rem;
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--ledger-ink);
+  background: #e4ebf5;
+  box-shadow: 5px 5px 0 #a7b7a5;
+  line-height: 1.4;
+}
+
+.notice[data-state="conflict"],
+.notice[data-state="rule"],
+.notice[data-state="validation"],
+.notice[data-state="error"],
+.notice[data-state="session"] {
+  background: #fff0e1;
+}
+
+.inlineNotice {
+  margin: 0.6rem 0 0;
+  color: var(--ledger-ink);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.reload {
+  width: fit-content;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--ledger-ink);
+  color: var(--ledger-ink);
+  font:
+    700 0.7rem "Courier New",
+    monospace;
+  text-decoration: none;
+}
+
+.empty {
+  padding: 1.2rem;
+  border: 1px dashed var(--ledger-ink);
+  background: var(--ledger-paper);
+}
+
+.empty h2 {
+  margin: 0 0 0.6rem;
+  font-size: clamp(1.5rem, 7vw, 2.1rem);
+  letter-spacing: -0.03em;
+}
+
+.empty p {
+  margin: 0;
+  color: var(--ledger-muted);
+  line-height: 1.5;
+}
+
+.cards {
+  display: grid;
+  gap: 1.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The signature: a catalog card, shadowed twice so it reads as a stack. */
+.card {
+  border: 1px solid var(--ledger-ink);
+  background: var(--library-stock);
+  box-shadow:
+    4px 4px 0 #cdd6c5,
+    8px 8px 0 #a7b7a5;
+}
+
+.tab {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  background: var(--library-ink);
+  color: var(--ledger-paper);
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.07em;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+
+.cardBody {
+  min-width: 0;
+  padding: 0.9rem;
+}
+
+.cardBody h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 1.25rem;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.meta {
+  margin: 0.4rem 0 0;
+  color: var(--ledger-muted);
+  font-family: "Courier New", monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.body {
+  margin: 0.55rem 0 0;
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.activities {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.7rem 0 0;
+  padding: 0.6rem 0 0;
+  border-top: 1px solid var(--ledger-rule);
+  list-style: none;
+  color: var(--ledger-muted);
+  font-size: 0.86rem;
+}
+
+.disclosure,
+.planDisclosure {
+  margin-top: 0.55rem;
+  border: 1px solid var(--ledger-rule);
+}
+
+.disclosure > summary,
+.planDisclosure > summary {
+  min-height: 2.9rem;
+  display: flex;
+  align-items: center;
+  padding: 0 0.7rem;
+  cursor: pointer;
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.form {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0 0.7rem 0.8rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.form label {
+  display: block;
+  color: var(--ledger-muted);
+  font:
+    700 0.62rem "Courier New",
+    monospace;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.form input,
+.form textarea,
+.form select {
+  width: 100%;
+  min-height: 2.9rem;
+  padding: 0.6rem;
+  border: 1px solid var(--ledger-ink);
+  border-radius: 0;
+  background: white;
+  color: var(--ledger-ink);
+  font:
+    400 1rem/1.35 Arial,
+    sans-serif;
+  text-transform: none;
+}
+
+.form textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.fieldPair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.consequence {
+  margin: 0;
+  color: var(--ledger-muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.action,
+.primary {
+  min-height: 2.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--ledger-ink);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ledger-ink);
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.primary {
+  background: var(--library-ink, #2f4a7a);
+  border-color: var(--ledger-ink);
+  color: white;
+}
+
+.action:disabled,
+.primary:disabled {
+  opacity: 0.45;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/*
+ * M3-18 set the compliant focus treatment: the ledger ink ring inside the app
+ * shell. Never reintroduce the earlier low-contrast peach.
+ */
+.library button:focus-visible,
+.library input:focus-visible,
+.library textarea:focus-visible,
+.library select:focus-visible,
+.library summary:focus-visible,
+.library a:focus-visible,
+.backLink:focus-visible,
+.planDisclosure button:focus-visible,
+.planDisclosure input:focus-visible,
+.planDisclosure summary:focus-visible {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
+}
+
+@media (max-width: 400px) {
+  .fieldPair {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .card,
+  .empty {
+    animation: library-enter 260ms ease-out both;
+  }
+}
+
+@keyframes library-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
