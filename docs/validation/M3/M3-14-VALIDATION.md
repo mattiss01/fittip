@@ -82,9 +82,18 @@ After `48241c7` it expands to `2026-08-23, 2026-08-24, 2026-09-06, 2026-09-07,
 The fix anchors the cycle on the Sunday of the week holding the start date, so
 the week the interval counts is the week the weekday numbers describe.
 `weekStart` in the in-memory adapter carried the identical bug and got the
-identical fix in `559ebfc`. Both are covered: the pgTAP suite asserts the
-corrected expansion for that exact case, and the shared adapter contract holds
-both adapters to the same dates.
+identical fix in `559ebfc`.
+
+**Correction, independent review.** An earlier version of this paragraph claimed
+both fixes were covered by tests. Only the SQL one is. The pgTAP suite asserts
+the corrected weekly expansion for that exact case; the shared adapter contract
+holds both adapters to the same **daily** dates only, because every contract
+case uses a `daily` template. **The in-memory adapter's weekly expansion —
+`seriesDates`' weekly branch and `weekStart`, the exact code that carried this
+defect — is asserted by nothing.** That is test-double fidelity rather than
+shipped behavior, since the in-memory adapter is imported only by
+`rolling-plan.test.ts`, but the claim as written was not supported. Recorded as
+limitation 12.
 
 ## Delivered behavior
 
@@ -274,10 +283,23 @@ rather than discover them.
 
 ## Tests and final results
 
-**No continuous-integration run exists for `15e3f3c` yet** — the lead pushes,
-and this record is written before that push. The run for the reviewed SHA is the
-automated-test evidence and must be recorded here before review; nothing below
-replaces it.
+**CI:** https://github.com/mattiss01/fittip/actions/runs/32263435295 —
+**SUCCESS** on all three jobs for `76f0d29`, which is code-identical to the
+reviewed `15e3f3c`; `git diff 15e3f3c..76f0d29` touches only this record and the
+validation index. The run includes the `M3-10 real Postgres adapter contract`
+and the new `M3-14 concurrent series materialization` steps, and the 390px
+browser job the builder could only predict would pass. This is the
+automated-test evidence for this ticket.
+
+**One earlier run on this branch is red and is not a blocker.**
+https://github.com/mattiss01/fittip/actions/runs/32259783464 for `0b5dd12`
+failed its static and browser jobs. `0b5dd12` is the lead's preservation commit
+holding the stopped builder's never-executed draft; a red run is exactly what
+unrun work produces. It is not the reviewed commit and nothing depends on it.
+It is named here so a reader of the branch history does not have to guess.
+
+What follows is what the builder observed locally, kept because it is what
+actually ran, not because it substitutes for the run above.
 
 What follows is what was observed locally, and is reported only because it is
 what this builder actually ran. The clean-reset row is the full gate sequence
@@ -341,7 +363,7 @@ written, both of which cost real time to discover:
 | 5 | Re-running changes nothing and does not advance the revision | Met — pgTAP and the shared adapter contract |
 | 6 | Concurrency harness: one writer, no duplicate, no blended row | Met — `m3_14_concurrent_materialization.mjs` |
 | 7 | This-and-future produces a successor; earlier occurrences byte-identical | Met — pgTAP compares `to_jsonb` of every row before and after |
-| 8 | `end_series` deletes forward, keeps locked active, reports three counts | Met — pgTAP and the shared adapter contract |
+| 8 | `end_series` deletes forward, keeps locked active, reports three counts | Met for the two enforced exclusions. **The "completed untouched" clause is vacuous, not enforced** — the sweep has no completed predicate, and `rolling_plan_sessions.status` is only `active`/`cancelled` with no completion linkage today. Nothing is at risk now; it becomes a data-loss hazard the moment M3-15 links completions. See limitation 13 |
 | 9 | Each deletion leaves a `delete` entry that survives the row | Met — pgTAP asserts the entries are present, carry the full session and its activities, and that no entry references a vanished session |
 | 10 | Founder migration applied and verified | **Open** — lead/product-owner step |
 
@@ -382,6 +404,61 @@ written, both of which cost real time to discover:
 8. **Activities still cannot be created or edited anywhere** (M3-13 limitation
    1), so a template's activities are proved by pgTAP and the adapter contract
    rather than by clicking.
+
+Raised by the independent review of `15e3f3c` on 19 August 2026. All are
+non-blocking; the reviewer approved the commit with none of them outstanding as
+a defect in what the ticket claims to deliver.
+
+9. **`end_series` and the this-and-future split can lengthen a segment.** Both
+   set `end_date = v_effective_date - 1` unconditionally, so a segment that
+   already ended earlier has its end date pushed *out*, and the next top-up
+   materializes occurrences into the resurrected gap. Unreachable today because
+   no surface exists, but it resurrects deleted occurrences, which is the one
+   finding the reviewer most wanted closed. A `least(coalesce(end_date,
+   'infinity'), v_effective_date - 1)` guard closes it.
+10. **The sweep has no completed predicate.** See acceptance criterion 8 above.
+    Vacuous today; a data-loss hazard the moment M3-15 links completions.
+11. **The materializer's position allocation can hard-fail.** It takes
+    `max_position + 1`, so an active session at position 99 on a window date
+    makes the whole top-up raise `22023`. The Plan's own `nextPlanPosition`
+    allocates the lowest free slot instead. The two allocators disagree and the
+    materializer's is the fragile one.
+12. **The in-memory adapter's weekly expansion is asserted by nothing.** See the
+    correction under "The one defect found in the inherited migration". A weekly
+    case in `rolling-plan-contract.ts` would run against both adapters in CI.
+13. **`lockedKept` counts a locked-but-cancelled occurrence**, while the SQL
+    comment and `RollingPlanSeriesEffect`'s documentation both describe it as
+    "kept and left active". `set_lock` then `cancel` produces exactly that row,
+    and M3-14B's consequence copy would be slightly wrong as a result.
+14. **Divergence flips before the state comparison**, so a no-op `set_lock` on
+    an occurrence passes the "must change current state" guard where the same
+    call on a one-off session still fails. A small occurrence-only behavior
+    difference from M3-12.
+15. **Two cross-owner existence probes omit `user_id`.** They only convert a
+    `23505` into a `22023` on an unguessable primary key, so nothing leaks, but
+    they are the one place in the diff a same-owner predicate was not written.
+16. **`database.types.ts` lost its UTF-8 BOM on regeneration.** Incidental,
+    harmless, and unaccounted for until the review found it.
+
+## Independent review
+
+**Round 1: APPROVED** — `15e3f3c`, on 19 August 2026, against green CI run
+32263435295. The reviewer read all 1756 migration lines, the full pgTAP suite,
+the concurrency harness, and every TypeScript diff, and independently confirmed
+the documentation-only claim for the trailing commits and that
+`src/architecture/**` is byte-untouched.
+
+It ruled on all three flagged judgment calls: leaving `.retry(false)` alone is
+correct because no path double-writes and the invariant should not have been
+edited; acceptance criterion 3's DST proof is a complete decomposition rather
+than a shortcut, since the materializer's only date-producing inputs are
+`rolling_plan_series_dates` and `today + 13` and both are asserted; and
+narrowing the two plan actions was the right seam because widening
+`action-state.ts` would have pre-committed M3-14B's copy decision.
+
+It also corrected two overstated claims in this record, both fixed above by the
+lead: the in-memory weekly coverage claim, and acceptance criterion 8's
+"completed untouched" clause.
 
 ## Independent reviewer checklist
 
