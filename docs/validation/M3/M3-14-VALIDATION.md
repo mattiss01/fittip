@@ -17,7 +17,12 @@ and [ADR-017](../../decisions/ADR-017-RECURRENCE-MATERIALIZATION.md).
 **Implementation review target:**
 `15e3f3cfcceeb2a4d15046bf9d167a2923b7bb40`.
 
-**Review range:** `git diff fc547e9..15e3f3c`.
+**Review range:** `git diff fc547e9..15e3f3c`. Every commit after `15e3f3c` is
+documentation only: `git diff 15e3f3c..HEAD` touches
+`docs/validation/M3/M3-14-VALIDATION.md` and `docs/validation/README.md` and
+nothing else. They are covered by the evidence-commit exception in `AGENTS.md`
+— a record cannot carry the SHA of the commit that adds it — so the reviewed
+code and the branch head are identical.
 
 | Commit | Purpose |
 | --- | --- |
