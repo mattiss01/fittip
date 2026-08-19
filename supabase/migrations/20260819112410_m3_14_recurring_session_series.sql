@@ -318,12 +318,18 @@ as $$
       pg_catalog.mod(
         (day::date - p_start_date)::integer, p_interval_count::integer
       ) = 0
+    -- The week the interval counts must be the same week the weekday numbers
+    -- describe. `dow` numbers Sunday 0 through Saturday 6, so a week here runs
+    -- Sunday to Saturday and is anchored on the week holding the start date.
+    -- `date_trunc('week', ...)` would anchor on Monday instead, which splits
+    -- every Sunday off into the previous cycle: "every two weeks on Sunday and
+    -- Monday" would then fire Monday first and Sunday nine days later.
     when p_frequency = 'weekly' then
       extract(dow from day)::smallint = any(p_weekdays)
       and pg_catalog.mod(
         (
-          pg_catalog.date_trunc('week', day)::date
-          - pg_catalog.date_trunc('week', p_start_date::timestamp)::date
+          (day::date - extract(dow from day)::integer)
+          - (p_start_date - extract(dow from p_start_date)::integer)
         ) / 7,
         p_interval_count::integer
       ) = 0
