@@ -41,6 +41,16 @@ Validation records and their visual evidence are grouped by milestone.
 
 ## M3
 
+- [M3-14 recurring session series foundation](M3/M3-14-VALIDATION.md) — in
+  development; Tier 1 builder handoff complete against `15e3f3c`. The migration
+  adds `rolling_plan_series` and `rolling_plan_series_activities`, the
+  occurrence identity on `rolling_plan_sessions`, the three series operations on
+  `apply_rolling_plan_change_set`, and the owner-derived
+  `materialize_rolling_plan_series`. No user-visible surface and no 390px pass —
+  M3-14B owns those. Picked up from a stopped builder's never-executed draft
+  (`0b5dd12`), which was verified rather than trusted; one weekly-anchoring
+  defect was found and fixed. Independent review, the CI run for the reviewed
+  SHA, the founder migration, and acceptance are pending
 - [M3-13 private saved-session library](M3/M3-13-VALIDATION.md) — accepted
   19 August 2026; Tier 1. One additive migration adds `saved_sessions` and
   `saved_session_activities` with owner-scoped RLS, select-only client grants,
