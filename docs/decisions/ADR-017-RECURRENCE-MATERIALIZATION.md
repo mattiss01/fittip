@@ -1,8 +1,8 @@
 # ADR-017: Recurrence materialization
 
-**Status:** proposed — awaiting product-owner approval
+**Status:** accepted — approved by the product owner on 19 August 2026
 
-**Date proposed:** 19 August 2026
+**Date accepted:** 19 August 2026
 
 **Approved feature brief:**
 [F-005](../product/F-005-ROLLING-TRAINING-PLAN.md)
@@ -11,7 +11,9 @@
 [ADR-016](ADR-016-ROLLING-TRAINING-PLAN.md)
 
 **Implemented by:**
-[M3-14](../backlog/M3/M3-14-RECURRING-SESSION-SERIES.md)
+[M3-14](../backlog/M3/M3-14-RECURRING-SESSION-SERIES.md) (schema, operations,
+and the materializer) and
+[M3-14B](../backlog/M3/M3-14B-RECURRING-SERIES-SURFACE.md) (the surface)
 
 ## Context
 

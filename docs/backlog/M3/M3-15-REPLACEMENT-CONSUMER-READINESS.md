@@ -10,7 +10,11 @@
 
 **Tier:** 1 — completion history, consumer boundaries, schema, authorization, and RLS
 
-**Depends on:** M3-14 accepted.
+**Depends on:** M3-14 and [M3-14B](M3-14B-RECURRING-SERIES-SURFACE.md)
+accepted. Per
+[ADR-017](../../decisions/ADR-017-RECURRENCE-MATERIALIZATION.md) consequence 3,
+this ticket also owns topping up the recurrence window before Today, Progress,
+and AI context read the Plan; otherwise each reads an incomplete plan.
 
 **Blocks:** M3-16 and every later F-005 replacement slice.
 
