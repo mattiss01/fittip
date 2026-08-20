@@ -1,10 +1,9 @@
 # M3-14B: Recurring series surface
 
-**Status:** proposed — created 19 August 2026 when
-[M3-14](M3-14-RECURRING-SESSION-SERIES.md) was split. Dispatch is **not**
-approved and requires a separate product-owner decision after M3-14 is accepted.
+**Status:** in development — Tier 2 dispatch approved by the product owner on
+20 August 2026 against the corrected contract and Agent brief below.
 
-**Triage:** needs-triage
+**Triage:** ready-for-agent
 
 **Milestone:** M3
 
@@ -18,6 +17,59 @@ re-dispatch, not a judgement call.
 **Depends on:** M3-14 accepted, merged, and its founder migration verified.
 
 **Blocks:** M3-15 and every later F-005 replacement slice.
+
+## Agent brief
+
+**Outcome.** Let an owner create, review, change, and end recurring session
+series from the Plan at 390px, and show honestly when the fourteen-day window
+is being extended. Tier 2.
+
+**Hard constraints**
+
+- Compose only M3-14's accepted `add_series`, `edit_series`, `end_series`, and
+  `materialize_rolling_plan_series` operations plus existing owner-scoped
+  reads. No schema, grant, policy, migration, or privileged-function change;
+  stop and re-dispatch as Tier 1 if one becomes necessary.
+- Repeat from a planned session and from a saved-library entry enters one
+  review-before-save flow for bounded or open-ended daily and weekly rules.
+- Keep series reads and all mutations server-side. Authenticate every Server
+  Action, pass only minimal serializable data to client components, and never
+  import a repository or `@/server/**` from a `"use client"` file.
+- Before a future-series removal, state the permanent consequences without
+  forecast counts. After success, report the exact deleted, diverged-deleted,
+  and locked-kept counts returned by `end_series`; compute no second estimate.
+- Withhold **This and all future sessions** when a locked survivor's occurrence
+  date is after its segment end date. Do not branch on SQLSTATE or error text.
+  **Only this session** remains available.
+- Validate in the Server Action that no surface operation can place an
+  occurrence outside its segment's start/end range.
+- Materialize from a Server Action only: alongside owner Plan changes and once
+  per Plan visit when rendered data shows incomplete coverage. Never mutate
+  during render or GET/prefetch. Announce the non-blocking pending state and
+  its recovery accessibly.
+- Preserve M3-12's existing Plan behavior, serious-coach tone, keyboard focus,
+  reduced motion, private/no-store responses, and honest empty, loading,
+  invalid, stale, expired-session, missing-time-zone, and offline states.
+- Record the fifth transition-glue copy and do not consolidate it in this
+  ticket. Activities remain fixture-backed because no activity editor exists.
+
+**Non-goals.** No replacement Today, logging, Progress, or AI consumers; no AI
+series mutation, reminders, background work, arbitrary recurrence language,
+history/undo surface, or broad refactor.
+
+**Acceptance criteria.** All eight criteria below, with criterion 5 using
+consequence-before-action and authoritative counts only after success. CI must
+run the dedicated `390x844` production flow with a pinned config/test match.
+
+**Expected to change.** `src/app/home/plan/**`, the existing rolling-plan
+domain/repository seam, the saved-library reuse surface where needed, a new
+M3-14B Playwright spec/config, focused tests, and
+`docs/validation/M3/M3-14B-VALIDATION.md`. No migration or generated types.
+
+**Skills** from `.agents/skills/<name>/SKILL.md`: `frontend-design`,
+`vercel-react-best-practices`, `mobile-e2e`, and `validation-record`.
+
+Read only this section unless you hit an ambiguity it does not resolve.
 
 ## Outcome
 
@@ -64,23 +116,21 @@ convention the Plan and the library already use.
 **Removing this and all future sessions** calls M3-14's `end_series`, which
 ends the series from that date and **deletes** every already-materialized
 occurrence on or after it, except locked ones, which stay. Before the control,
-the surface states what will happen using the counts `end_series` returns — for
-example "removes 4 sessions, including 1 you edited, and keeps 1 you locked."
-Do not compute a second estimate in the client that could disagree with what
-the transaction does.
+the surface states those permanent consequences without forecast counts. After
+the transaction succeeds, it reports the exact deleted, diverged-deleted, and
+locked-kept counts from the `end_series` receipt. Do not compute a second
+estimate in either the client or the Server Action that could race the write.
 
 **A locked survivor cannot itself be removed this way.** Because `end_series`
 keeps locked occurrences alive while moving the segment's end date behind them,
 a locked occurrence outlives its own series' end date. Offering
 "this and all future sessions" on one produces an effective date past that end
 date, which M3-14's clamp turns into a change that changes nothing, and
-`apply_rolling_plan_change_set` refuses it. Either withhold that scope on an
-occurrence dated past its series' `end_date`, or map the refusal to copy that
-says plainly there is nothing after this one left to remove. **Do not branch on
-SQLSTATE:** the function remaps every check violation to `22023`, so only the
-message distinguishes this from a malformed change set. Removing that single
-session is unaffected — a lock constrains bulk operations, not deliberate
-individual ones. Recorded as M3-14 limitation 18.
+`apply_rolling_plan_change_set` refuses it. Withhold that scope on an occurrence
+dated past its series' `end_date`; do not submit the known no-op and do not
+branch on SQLSTATE or error text. Removing that single session is unaffected —
+a lock constrains bulk operations, not deliberate individual ones. Recorded as
+M3-14 limitation 18.
 
 The copy must be honest that this is permanent: the sessions are removed from
 the Plan, not cancelled, and there is no undo. Say plainly that nothing before
@@ -122,8 +172,9 @@ plainly in the validation record that it was added.
 5. Removing **this and all future sessions** from an occurrence removes every
    occurrence of that series on or after the chosen date, **keeps every locked
    one**, changes nothing before it, and touches no completed training. The
-   confirmation named the removed, edited, and locked-kept counts, and said the
-   removal is permanent, before the owner confirmed.
+   confirmation says the removal is permanent and names every consequence
+   before the owner confirms; after success, the result names the authoritative
+   removed, edited, and locked-kept counts returned by the transaction.
 6. The pending top-up state appears, is announced to assistive technology, and
    resolves; no occurrence appears without explanation.
 7. Empty, loading, invalid, stale-conflict, expired-session, missing-time-zone,
@@ -168,6 +219,7 @@ boundary, and the client-invoked top-up. Both are project copies under
 ## Approval boundary
 
 Created by the 19 August 2026 split of M3-14, which the product owner approved
-on the lead's recommendation. Dispatch, the tier at dispatch, and the
-`## Agent brief` written against it remain a separate product-owner decision,
-and cannot be taken before M3-14 is accepted.
+on the lead's recommendation. The product owner approved the corrected Tier 2
+contract and dispatch on 20 August 2026 after M3-14 was accepted. The correction
+keeps consequence copy before a future-series removal, moves authoritative
+counts to the successful result, and withholds the known locked-survivor no-op.
