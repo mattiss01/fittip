@@ -176,21 +176,10 @@ Prior evidence is superseded but establishes the corrected baseline:
   found the stale M3-12 disclosure setup. Earlier rejected targets and full
   correction detail remain in Git history.
 
-Focused builder results for the current corrections:
-
-| Check | Result |
-| --- | --- |
-| Three focused Vitest files | PASS — 21 tests |
-| Changed-file ESLint and Prettier | PASS |
-| TypeScript | PASS |
-| Next.js 16.2.11 production build | PASS |
-| Pinned M3-14B Playwright against `build` + `start`, port 3022 | PASS — 1 test at `390x844`, 10.6 seconds total |
-| `git diff --check` | PASS |
-
-The production flow generated its normal screenshot and cleaned its disposable
-owner. The screenshot was restored because the correction changes behavior,
-not the accepted evidence asset. Port 3022 was released. CI still owns the
-complete automated gate.
+Evidence CI does not produce: `git diff --check` passed for the correction and
+final evidence ranges. The builder's disposable local owner was removed and
+its isolated port was released. CI above is the sole recorded automated-test
+evidence.
 
 ## Known limitations and remaining gates
 
@@ -198,6 +187,9 @@ complete automated gate.
   or global library.
 - Transition recovery retains its approved fifth local copy; consolidation is
   outside this ticket.
+- `plannedSessionToRollingPlanSeriesInput` remains as an unused internal helper
+  after removal of the planned-session recurrence path. It exposes no route or
+  Server Action and is non-blocking cleanup debt.
 - Independent code review and fresh product-owner hosted acceptance are
   pending. The reviewer does not run a browser; the owner performs the manual
   hosted interaction and visual check.
