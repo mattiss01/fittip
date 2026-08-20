@@ -132,6 +132,15 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
       return date;
     };
     /**
+     * Closing a segment never lengthens it, in either adapter. A segment that
+     * already ends earlier keeps its own end date, because the sweep only runs
+     * from the effective date forward and so could not remove the occurrences
+     * the next materialization would write into a reopened gap. An absent end
+     * date is open-ended and always takes the new one.
+     */
+    const clampEnd = (existing: string | undefined, closed: string) =>
+      existing !== undefined && existing < closed ? existing : closed;
+    /**
      * ADR-017's removal rule in one place, as the database keeps it in one
      * function: a locked occurrence is kept and left active, a date that has
      * already passed is never in scope, and everything else of that segment
@@ -198,7 +207,12 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
         const segment = nextSeries.get(change.seriesId);
         if (!segment) throw new RollingPlanValidationError();
         requirePlannable(change.effectiveDate);
-        const closed = shiftIsoDate(change.effectiveDate, -1);
+        // Clamped first, so a segment that already ends on or before that day
+        // is a change that changes nothing rather than one that lengthens it.
+        const closed = clampEnd(
+          segment.endDate,
+          shiftIsoDate(change.effectiveDate, -1),
+        );
         if (segment.endDate === closed) throw new RollingPlanValidationError();
         nextSeries.set(change.seriesId, { ...segment, endDate: closed });
         sweep(change.seriesId, change.effectiveDate, "end_series");
@@ -240,7 +254,10 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
         requirePlannable(change.effectiveDate);
         nextSeries.set(change.seriesId, {
           ...segment,
-          endDate: shiftIsoDate(change.effectiveDate, -1),
+          endDate: clampEnd(
+            segment.endDate,
+            shiftIsoDate(change.effectiveDate, -1),
+          ),
         });
         sequence += 1;
         nextSeries.set(successorSeriesId, {

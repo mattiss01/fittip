@@ -520,6 +520,79 @@ export function registerRollingPlanContract(
       });
     });
 
+    it("never lengthens a bounded series by ending it from a later date", async () => {
+      const { plan, day } = requireSubject(subject);
+      const seriesId = randomUUID();
+      await plan.applyChangeSet(
+        changeSet([boundedSeries(seriesId, day(0), day(3))]),
+        0,
+      );
+      await plan.materializeSeries(randomUUID(), 1);
+      const before = (await plan.getPlanSlice(day(0), day(13))).sessions;
+      expect(before.map((session) => session.localDate)).toEqual([
+        day(0),
+        day(1),
+        day(2),
+        day(3),
+      ]);
+
+      // Closing a segment that already ends earlier changes nothing, so it is
+      // refused. What it must never do is push the end date out to day(7): the
+      // sweep only runs from the effective date forward, so the next
+      // materialization would fill a gap nothing could take back.
+      await expect(
+        plan.applyChangeSet(
+          changeSet([
+            { operation: "end_series", seriesId, effectiveDate: day(8) },
+          ]),
+          2,
+        ),
+      ).rejects.toThrow(RollingPlanValidationError);
+      await plan.materializeSeries(randomUUID(), 2);
+      expect(
+        (await plan.getPlanSlice(day(0), day(13))).sessions.map(
+          (session) => session.localDate,
+        ),
+      ).toEqual([day(0), day(1), day(2), day(3)]);
+    });
+
+    it("never lengthens the predecessor when the split date is later still", async () => {
+      const { plan, day } = requireSubject(subject);
+      const seriesId = randomUUID();
+      const successorSeriesId = randomUUID();
+      await plan.applyChangeSet(
+        changeSet([boundedSeries(seriesId, day(0), day(3))]),
+        0,
+      );
+      await plan.materializeSeries(randomUUID(), 1);
+
+      await plan.applyChangeSet(
+        changeSet([
+          {
+            operation: "edit_series",
+            seriesId,
+            effectiveDate: day(6),
+            successorSeriesId,
+            series: { ...seriesTemplate(day(6), 3), title: "Successor" },
+          },
+        ]),
+        2,
+      );
+      await plan.materializeSeries(randomUUID(), 3);
+
+      const after = (await plan.getPlanSlice(day(0), day(13))).sessions;
+      expect(
+        after
+          .filter((session) => session.seriesId === seriesId)
+          .map((session) => session.localDate),
+      ).toEqual([day(0), day(1), day(2), day(3)]);
+      expect(
+        after
+          .filter((session) => session.seriesId === successorSeriesId)
+          .map((session) => session.localDate),
+      ).toEqual([day(6), day(9), day(12)]);
+    });
+
     it("splits a series and leaves every earlier occurrence alone", async () => {
       const { plan, day } = requireSubject(subject);
       const seriesId = randomUUID();
@@ -642,6 +715,15 @@ function seriesTemplate(startDate: string, intervalCount: number) {
         target: { duration_minutes: 60, intensity: "easy" },
       },
     ],
+  };
+}
+
+/** An explicitly bounded daily segment, the only shape a clamp can be seen on. */
+function boundedSeries(seriesId: string, startDate: string, endDate: string) {
+  return {
+    operation: "add_series",
+    seriesId,
+    series: { ...seriesTemplate(startDate, 1), endDate },
   };
 }
 
