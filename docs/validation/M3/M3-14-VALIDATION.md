@@ -1,8 +1,9 @@
 # M3-14 validation: recurring session series foundation
 
-**Status:** in development — builder handoff complete. Independent review,
-the continuous-integration run for the reviewed commit, the founder migration,
-Vercel Preview verification, and product-owner acceptance are all pending.
+**Status:** testable — independently reviewed and approved at `0afb6f9`
+(pushed as `69f345a`), green CI run 32345200583, founder migration applied and
+verified, Vercel Preview `READY`. **Product-owner acceptance is the only step
+outstanding.**
 
 **Tier:** 1 — two new owner-scoped tables, an alteration to
 `rolling_plan_sessions`, replaced history constraints, a new `SECURITY DEFINER`
@@ -333,7 +334,9 @@ client code, but that is an expectation, not an observation.
 
 **Also not done, and out of this builder's remit:** the founder migration has
 not been applied or verified, no Vercel Preview exists, and no hosted read path
-has been exercised. Acceptance criterion 10 is therefore open.
+has been exercised. Acceptance criterion 10 is therefore open. It was closed
+later by the lead — see
+[Founder project: migration application and hosted verification](#founder-project-migration-application-and-hosted-verification).
 
 ### What the pgTAP suite proves
 
@@ -617,6 +620,75 @@ for `69f345a`, **success on all three jobs** — static, database, and browser.
 code-identical to the reviewed range; this is the same evidence-commit reasoning
 already applied to `76f0d29` against `15e3f3c`. Nothing hosted was touched, and
 no migration was applied anywhere but the local stack.
+
+## Founder project: migration application and hosted verification
+
+Applied by the product owner on 20 August 2026 to the founder Supabase project
+`mahhfyxhgcmcbqkvudcm`, after the round 2 review, so the migration reached the
+hosted database only once the file was final. The lead then ran the read-only
+verification directly, as it did for M3-13: no write, no `db push`, no spend.
+
+This closes acceptance criterion 10.
+
+**Migration history.** `npx supabase migration list --linked` returns eighteen
+versions, each with `local` equal to `remote`, ending at `20260819112410` —
+this ticket's migration. Compared against `supabase/migrations/`: eighteen and
+eighteen, `diff` empty. No drift in either direction.
+
+**Schema, RLS, and privilege boundary**, read from
+`npx supabase db dump --linked --schema public` — the live remote DDL, not what
+the migration intended:
+
+| Assertion | Remote state |
+| --- | --- |
+| Both new tables exist | `public.rolling_plan_series`, `public.rolling_plan_series_activities` |
+| RLS is on | `ENABLE ROW LEVEL SECURITY` on both |
+| Grants are minimal | `SELECT` to `authenticated` on both, and nothing else. **No grant of any kind to `anon` or `service_role`** on either table. |
+| Policies are owner-bound | `rolling_plan_series_owner_select` and `rolling_plan_series_activities_owner_select`, both `FOR SELECT TO authenticated USING (auth.uid() = user_id)`. No mutation policy exists, so neither table can be written directly by any client. |
+| Owner immutability is enforced in the database | `rolling_plan_series_owner_immutable` and `rolling_plan_series_activities_owner_immutable`, `BEFORE UPDATE ... FOR EACH ROW` |
+| The session table carries the occurrence identity | `series_id uuid`, `occurrence_date date`, `has_diverged boolean NOT NULL DEFAULT false`, with `rolling_plan_sessions_occurrence_check` holding all three null-or-set together, so a one-off session is untouched by construction |
+| The owner cannot be passed in | `materialize_rolling_plan_series(p_expected_plan_revision bigint, p_idempotency_key uuid)`. **There is no owner parameter**, so no caller can name a subject. |
+| The privileged function is contained | `SECURITY DEFINER`, `SET search_path TO ''`, `REVOKE ALL ... FROM PUBLIC`, `EXECUTE` to `authenticated` alone |
+| Its helpers are unreachable from outside | `rolling_plan_series_input_is_valid`, `rolling_plan_series_activity_input_is_valid`, `rolling_plan_series_dates`, `rolling_plan_series_state`, and `rolling_plan_series_reject_owner_change` are each revoked from `PUBLIC` and granted to nobody |
+| Every `SECURITY DEFINER` function is contained | All fourteen in `public` carry `SET search_path TO ''`, checked one by one rather than by count |
+| The history constraints were replaced, not widened | `rolling_plan_change_entries_kind_check` now admits `add_series`, `edit_series`, `end_series`, and `delete`; `rolling_plan_change_entries_target_check` requires a `delete` entry to carry a null `session_id`, a null `series_id`, and a non-null `local_date` — the shape ADR-017 needs to outlive the cascade |
+
+**The round 1 correction is live in the founder database.** The remote function
+body carries `least(coalesce(end_date, 'infinity'::date), v_effective_date - 1)`
+at both closing sites, and reports `'predecessorEndDate', v_series.end_date` for
+the split. This is the point of having applied the migration after the review
+rather than before it: the hosted database never held the defective version, so
+no second migration was needed to undo it.
+
+**Advisors.** `npx supabase db advisors --linked --type all --level warn`
+returns **nine** warnings, one more than the eight recorded for M3-13:
+
+- Eight are unchanged and predate this ticket: seven
+  `authenticated_security_definer_function_executable` on `apply_goal_change`,
+  `apply_memory_change`, `apply_onboarding_change`,
+  `apply_rolling_plan_change_set`, `apply_saved_session_change`,
+  `reserve_ai_spend`, and `settle_ai_spend`, plus the
+  `auth_leaked_password_protection` project setting.
+- The ninth is `materialize_rolling_plan_series`, under the same lint. It is
+  this ticket's new function and the warning is expected: a `SECURITY DEFINER`
+  function callable by `authenticated` is precisely the owner-derived
+  transaction ADR-016 makes mandatory, and it is how every owner write in this
+  codebase is mediated rather than granted directly. It is the deliberate
+  pattern, not a regression.
+
+No new advisor *category* appeared. Nothing was flagged about the two new tables
+themselves — no unindexed foreign key, no RLS gap — and nothing was flagged
+about the alteration to `rolling_plan_sessions`.
+
+**What this evidence does not cover.** It is entirely DDL and configuration.
+This ticket ships no surface, so there is no new authenticated hosted read path
+to exercise; what the migration does touch is the existing one, because it
+altered `rolling_plan_sessions` and replaced two history constraints. That the
+Plan still loads an owner's existing sessions on the hosted database is the
+product owner's check on the Preview, and it is not claimed here. As on M3-13,
+the Preview sits behind Vercel's SSO deployment protection, so the app's own
+anonymous redirect and private cache headers cannot be checked on a Preview URL;
+that check runs against the unprotected founder alias after the merge.
 
 ## Independent reviewer checklist
 
