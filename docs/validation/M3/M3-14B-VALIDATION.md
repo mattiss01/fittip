@@ -1,8 +1,9 @@
 # M3-14B validation: recurring series surface
 
 **Ticket:** [M3-14B](../../backlog/M3/M3-14B-RECURRING-SERIES-SURFACE.md)
-**Status:** in development — code-review corrections complete locally; fresh
-CI, Preview, independent review and product-owner acceptance are pending.
+**Status:** in development — corrected implementation has green CI and a
+matching `READY` Preview; fresh independent code review and product-owner
+acceptance are pending.
 **Tier:** 2
 **Branch:** `ticket/m3-14b-recurring-series-surface`
 **Base:** `2e2c1be4cb44f9591a6d7e0219a7ded28de547e1`
@@ -149,9 +150,15 @@ Purpose notes for non-obvious paths:
 ## CI, Preview and evidence
 
 Current implementation `49ae94bb8330d78b5d71dd7125c5595eb8eb2d40`
-has no CI run or Preview yet. The lead must push it, obtain green exact-target
-CI (or an evidence-only head under the documented exception), wait for a
-matching `READY` Preview, and request fresh independent review.
+is covered by green [CI run
+32399625879](https://github.com/mattiss01/fittip/actions/runs/32399625879)
+on evidence-only head `ad71738bbe6ae40a7cb177be91506fb198fab79e`.
+The evidence-commit exception applies because that head changes only this
+record and its index over the implementation target. All three jobs passed,
+including the complete automated gate and every pinned 390px browser flow.
+The matching Vercel Preview is `READY` at
+<https://fittip-899hity23-mattis-3657s-projects.vercel.app> (deployment
+`dpl_EmDqNUFkjQwe9T15xmZAxPskFUog`).
 
 Prior evidence is superseded but establishes the corrected baseline:
 
@@ -191,9 +198,9 @@ complete automated gate.
   or global library.
 - Transition recovery retains its approved fifth local copy; consolidation is
   outside this ticket.
-- Exact-target CI, a matching `READY` Preview, independent code review and a
-  fresh product-owner hosted acceptance are pending. The reviewer does not run
-  a browser; the owner performs the manual hosted interaction and visual check.
+- Independent code review and fresh product-owner hosted acceptance are
+  pending. The reviewer does not run a browser; the owner performs the manual
+  hosted interaction and visual check.
 
 ## Independent reviewer focus
 
