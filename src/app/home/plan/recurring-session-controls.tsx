@@ -1,16 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { RecurrenceFields } from "./recurrence-fields";
-import { INITIAL_SERIES_ACTION_STATE } from "./series-action-state";
-import { changeSeriesAction } from "./series-actions";
+import type { SeriesActionState } from "./series-action-state";
 import { seriesOccurrenceDates } from "./series-recurrence";
-import {
-  seriesStallNotice,
-  useSeriesMutationStall,
-  useSeriesRecoveredReload,
-} from "./series-transition-watch";
 import { SessionFields } from "./session-fields";
 import styles from "./plan.module.css";
 
@@ -43,8 +35,6 @@ export type RecurringSessionView = {
 
 type PlanFormAction = (formData: FormData) => void;
 
-const RECOVERY_FLAG = "fittip.plan.series-change.recovered:v1";
-
 export function RecurringSessionControls({
   today,
   session,
@@ -52,6 +42,9 @@ export function RecurringSessionControls({
   expectedRevision,
   planAction,
   planPending,
+  seriesAction,
+  seriesState,
+  seriesPending,
 }: {
   today: string;
   session: RecurringSessionView;
@@ -59,24 +52,10 @@ export function RecurringSessionControls({
   expectedRevision: number;
   planAction: PlanFormAction;
   planPending: boolean;
+  seriesAction: PlanFormAction;
+  seriesState: SeriesActionState;
+  seriesPending: boolean;
 }) {
-  const [state, seriesAction, pending] = useActionState(
-    changeSeriesAction,
-    INITIAL_SERIES_ACTION_STATE,
-  );
-  const stall = useSeriesMutationStall(
-    pending,
-    state.submission,
-    RECOVERY_FLAG,
-  );
-  const recovered = useSeriesRecoveredReload(state.submission, RECOVERY_FLAG);
-  const notice =
-    seriesStallNotice(stall) ??
-    (pending ? "Saving recurring-session change…" : null) ??
-    (recovered
-      ? "The Plan was reloaded after a recurring-session response was lost. What you see is what is saved."
-      : null);
-  const noticeState = stall ?? (recovered ? "recovered" : state.status);
   const occurrenceInsideSegment =
     session.occurrenceDate >= series.startDate &&
     (series.endDate === null || session.occurrenceDate <= series.endDate);
@@ -104,22 +83,6 @@ export function RecurringSessionControls({
 
   return (
     <>
-      <p
-        className={noticeState === "idle" ? styles.srOnly : styles.noticeInline}
-        data-state={noticeState}
-        role="status"
-        aria-live="polite"
-      >
-        {notice ?? state.message}
-      </p>
-      {state.status === "conflict" ||
-      state.status === "session" ||
-      stall === "unconfirmed" ? (
-        <a className={styles.reload} href="/home/plan">
-          Reload the current Plan
-        </a>
-      ) : null}
-
       <details className={styles.disclosure}>
         <summary>Change recurring session</summary>
         <section className={styles.scope}>
@@ -182,7 +145,7 @@ export function RecurringSessionControls({
               <button
                 className={styles.primary}
                 type="submit"
-                disabled={pending}
+                disabled={seriesPending}
               >
                 Change this and future sessions
               </button>
@@ -243,7 +206,7 @@ export function RecurringSessionControls({
               <button
                 className={styles.dangerAction}
                 type="submit"
-                disabled={pending}
+                disabled={seriesPending}
               >
                 Remove this and all future sessions
               </button>
@@ -256,6 +219,10 @@ export function RecurringSessionControls({
           </p>
         )}
       </details>
+      {seriesState.sessionId === session.id &&
+      seriesState.status === "validation" ? (
+        <p className={styles.consequence}>{seriesState.message}</p>
+      ) : null}
     </>
   );
 }

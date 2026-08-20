@@ -20,7 +20,17 @@ import {
   type PlanSeriesView,
 } from "./recurring-session-controls";
 import { SaveToLibrary } from "./saved/save-to-library";
+import {
+  INITIAL_SERIES_ACTION_STATE,
+  type SeriesActionState,
+} from "./series-action-state";
+import { changeSeriesAction } from "./series-actions";
 import { SeriesMaterializer } from "./series-materializer";
+import {
+  seriesStallNotice,
+  useSeriesMutationStall,
+  useSeriesRecoveredReload,
+} from "./series-transition-watch";
 
 import {
   latestActionResponseAt,
@@ -71,6 +81,9 @@ type DayProps = {
   state: PlanActionState;
   pending: boolean;
   seriesById: Map<string, PlanSeriesView>;
+  seriesAction: FormAction;
+  seriesState: SeriesActionState;
+  seriesPending: boolean;
 };
 
 /**
@@ -79,6 +92,7 @@ type DayProps = {
  * self-triggered.
  */
 const RECOVERY_FLAG = "fittip.plan.recovered:v1";
+const SERIES_RECOVERY_FLAG = "fittip.plan.series-change.recovered:v1";
 
 const RECOVERED_NOTICE =
   "Your last plan change did not appear, so the plan was reloaded. What you see below is what is saved.";
@@ -96,13 +110,41 @@ export function PlanManager({
     changePlanAction,
     INITIAL_PLAN_ACTION_STATE,
   );
+  const [seriesState, seriesAction, seriesPending] = useActionState(
+    changeSeriesAction,
+    INITIAL_SERIES_ACTION_STATE,
+  );
   const stall = useMutationStall(pending, state.submission);
   const recovered = useRecoveredReload(state.submission);
+  const seriesStall = useSeriesMutationStall(
+    seriesPending,
+    seriesState.submission,
+    SERIES_RECOVERY_FLAG,
+  );
+  const seriesRecovered = useSeriesRecoveredReload(
+    seriesState.submission,
+    SERIES_RECOVERY_FLAG,
+  );
+  const seriesNotice =
+    seriesStallNotice(seriesStall) ??
+    (seriesPending ? "Saving recurring-session change…" : null) ??
+    (seriesRecovered
+      ? "The Plan was reloaded after a recurring-session response was lost. What you see is what is saved."
+      : seriesState.status === "idle"
+        ? null
+        : seriesState.message);
   const notice =
+    seriesNotice ??
     stallNotice(stall) ??
     (pending ? "Saving plan change…" : null) ??
     (recovered ? RECOVERED_NOTICE : null);
-  const noticeState = stall ?? (recovered ? "recovered" : state.status);
+  const noticeState =
+    seriesStall ??
+    (seriesRecovered
+      ? "recovered"
+      : seriesState.status !== "idle"
+        ? seriesState.status
+        : (stall ?? (recovered ? "recovered" : state.status)));
   const labelled = new Set(recoveryDates);
   const seriesById = new Map(series.map((segment) => [segment.id, segment]));
 
@@ -118,7 +160,10 @@ export function PlanManager({
       </p>
       {state.conflict === "stale" ||
       state.conflict === "timezone" ||
-      stall === "unconfirmed" ? (
+      stall === "unconfirmed" ||
+      seriesState.status === "conflict" ||
+      seriesState.status === "session" ||
+      seriesStall === "unconfirmed" ? (
         <a className={styles.reload} href="/home/plan">
           Reload the current plan
         </a>
@@ -143,6 +188,9 @@ export function PlanManager({
             state={state}
             pending={pending}
             seriesById={seriesById}
+            seriesAction={seriesAction}
+            seriesState={seriesState}
+            seriesPending={seriesPending}
           />
         ))}
       </ol>
@@ -161,6 +209,9 @@ function PlanDay({
   state,
   pending,
   seriesById,
+  seriesAction,
+  seriesState,
+  seriesPending,
 }: DayProps) {
   const active = sessions
     .filter((session) => session.status === "active")
@@ -208,6 +259,9 @@ function PlanDay({
                     ? undefined
                     : seriesById.get(session.seriesId)
                 }
+                seriesAction={seriesAction}
+                seriesState={seriesState}
+                seriesPending={seriesPending}
               />
             ))}
           </ol>
@@ -298,6 +352,9 @@ function PlanSessionCard({
   pending,
   today,
   series,
+  seriesAction,
+  seriesState,
+  seriesPending,
 }: {
   session: PlanSessionView;
   dates: string[];
@@ -307,6 +364,9 @@ function PlanSessionCard({
   pending: boolean;
   today: string;
   series?: PlanSeriesView;
+  seriesAction: FormAction;
+  seriesState: SeriesActionState;
+  seriesPending: boolean;
 }) {
   const recurring =
     series !== undefined && session.occurrenceDate !== null
@@ -421,6 +481,9 @@ function PlanSessionCard({
           expectedRevision={expectedRevision}
           planAction={action}
           planPending={pending}
+          seriesAction={seriesAction}
+          seriesState={seriesState}
+          seriesPending={seriesPending}
         />
       )}
 
