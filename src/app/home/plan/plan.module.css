@@ -398,6 +398,310 @@
   white-space: nowrap;
 }
 
+.sessionMarks {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.3rem;
+}
+
+.seriesMark,
+.changedMark {
+  padding: 0.24rem 0.34rem;
+  border: 1px solid currentColor;
+  color: var(--plan-recovery);
+  font:
+    700 0.55rem "Courier New",
+    monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.changedMark {
+  color: var(--plan-today);
+}
+
+.noticeInline {
+  margin: 0.7rem 0 0;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--ledger-rule);
+  background: #e7f0dc;
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.noticeInline[data-state="conflict"],
+.noticeInline[data-state="validation"],
+.noticeInline[data-state="error"],
+.noticeInline[data-state="session"],
+.noticeInline[data-state="lost-render"],
+.noticeInline[data-state="recovered"],
+.noticeInline[data-state="unconfirmed"] {
+  background: #fff0e1;
+}
+
+.consequenceStandalone {
+  margin: 0;
+  color: var(--ledger-muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.scope {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0 0.7rem;
+  padding: 0.8rem 0;
+  border-top: 1px solid var(--ledger-rule);
+}
+
+.scope:first-of-type {
+  border-top: 0;
+}
+
+.scope h4 {
+  margin: 0;
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.permanentConsequence {
+  margin: 0;
+  padding: 0.7rem;
+  border-left: 5px solid var(--plan-locked);
+  background: #fff0e1;
+  color: var(--ledger-ink);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.dangerAction {
+  min-height: 2.9rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--ledger-ink);
+  border-radius: 0;
+  background: var(--plan-locked);
+  color: white;
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.repeatLink {
+  width: fit-content;
+  min-height: 2.9rem;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--ledger-ink);
+  color: var(--ledger-ink);
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.seriesBuilder {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.sourceCard,
+.reviewCard,
+.skippedCard,
+.extensionCard {
+  padding: 1rem;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  box-shadow: 6px 6px 0 #a7b7a5;
+}
+
+.sourceCard {
+  border-top: 7px solid var(--plan-recovery);
+}
+
+.sourceCard h2,
+.reviewCard h2,
+.skippedCard h2,
+.extensionCard h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  letter-spacing: -0.025em;
+}
+
+.seriesForm {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid var(--ledger-ink);
+  background: #f7f5ea;
+}
+
+.ruleFields,
+.weekdays {
+  min-width: 0;
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.8rem;
+  border: 1px solid var(--ledger-rule);
+}
+
+.ruleFields > legend,
+.weekdays > legend {
+  padding: 0 0.35rem;
+  color: var(--ledger-muted);
+  font:
+    700 0.62rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.weekdays {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 0;
+  border: 0;
+}
+
+.weekdays label,
+.checkField {
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem;
+  border: 1px solid var(--ledger-rule);
+  color: var(--ledger-ink);
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+}
+
+.weekdays input,
+.checkField input {
+  width: 1.1rem;
+  min-height: 1.1rem;
+  margin: 0;
+}
+
+.inlineValue {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inlineValue span,
+.fieldHint {
+  color: var(--ledger-muted);
+  font-size: 0.78rem;
+}
+
+.fieldHint {
+  margin: -0.3rem 0 0;
+  line-height: 1.4;
+}
+
+.seriesForm label {
+  display: block;
+  color: var(--ledger-muted);
+  font:
+    700 0.62rem "Courier New",
+    monospace;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.seriesForm input,
+.seriesForm textarea,
+.seriesForm select {
+  width: 100%;
+  min-height: 2.9rem;
+  padding: 0.6rem;
+  border: 1px solid var(--ledger-ink);
+  border-radius: 0;
+  background: white;
+  color: var(--ledger-ink);
+  font:
+    400 1rem/1.35 Arial,
+    sans-serif;
+  text-transform: none;
+}
+
+.seriesForm .weekdays input,
+.seriesForm .checkField input {
+  width: 1.1rem;
+  padding: 0;
+}
+
+.reviewCard {
+  display: grid;
+  gap: 0.75rem;
+  border-top: 7px solid var(--plan-today);
+  box-shadow: none;
+}
+
+.previewDates {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding-left: 1.4rem;
+  font:
+    700 0.78rem/1.4 "Courier New",
+    monospace;
+}
+
+.reviewActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.inlineError {
+  margin: 0;
+  padding: 0.65rem;
+  border-left: 5px solid var(--plan-locked);
+  background: #fff0e1;
+  line-height: 1.4;
+}
+
+.skippedCard,
+.extensionCard {
+  box-shadow: none;
+}
+
+.skippedCard ul,
+.extensionSkipped {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.65rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.extensionCard {
+  border-left: 7px solid var(--plan-recovery);
+  background: #edf0e7;
+}
+
+.extensionCard p {
+  margin: 0.55rem 0 0;
+  color: var(--ledger-muted);
+  line-height: 1.45;
+}
+
 /*
  * M3-18 set the compliant focus treatment: the ledger ink ring inside the app
  * shell. Never reintroduce the earlier low-contrast peach.
@@ -408,6 +712,11 @@
 .manager select:focus-visible,
 .manager summary:focus-visible,
 .manager a:focus-visible,
+.seriesBuilder button:focus-visible,
+.seriesBuilder input:focus-visible,
+.seriesBuilder select:focus-visible,
+.repeatLink:focus-visible,
+.dangerAction:focus-visible,
 .zoneCard button:focus-visible,
 .zoneCard select:focus-visible {
   outline: 3px solid var(--ledger-ink);
@@ -421,6 +730,10 @@
 
   .fieldPair {
     grid-template-columns: 1fr;
+  }
+
+  .weekdays {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

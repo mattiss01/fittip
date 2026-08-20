@@ -19,6 +19,7 @@ import {
   type RollingPlanChangeReceipt,
   type RollingPlanMaterializationReceipt,
   type RollingPlanSeriesEffect,
+  type RollingPlanSeries,
   type RollingPlanSeriesInput,
   type RollingPlanSession,
   type RollingPlanSkippedOccurrence,
@@ -87,6 +88,15 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
         .filter((date) => date >= startDate && date <= endDate)
         .toSorted(),
     };
+  }
+
+  async listSeries(): Promise<RollingPlanSeries[]> {
+    return [...this.series.values()]
+      .toSorted((left, right) => left.sequence - right.sequence)
+      .map(({ sequence, ...segment }) => {
+        void sequence;
+        return cloneSeries(segment);
+      });
   }
 
   async applyChangeSet(

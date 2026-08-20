@@ -147,6 +147,16 @@ function SavedSessionCard({
           </ol>
         ) : null}
 
+        <a
+          className={styles.repeatLink}
+          href={
+            "/home/plan/series/new?source=saved&id=" +
+            encodeURIComponent(session.id)
+          }
+        >
+          Repeat
+        </a>
+
         <details className={styles.disclosure}>
           <summary>Use in plan</summary>
           {dates.length === 0 ? (

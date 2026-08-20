@@ -16,6 +16,7 @@ import {
   readPlanWindow,
   type PlanWindow,
 } from "./plan-window";
+import { planChangeCopy, topUpAfterPlanChange } from "./series-materialization";
 
 import {
   createProfileRepository,
@@ -117,17 +118,23 @@ export async function changePlanAction(
       throw new RollingPlanConflictError();
     }
 
-    await plan.applyChangeSet(
+    const changes = buildChanges(operation, formData, slice, window);
+    await assertOccurrencePlacements(plan, slice, changes);
+    const receipt = await plan.applyChangeSet(
       {
         idempotencyKey: randomUUID(),
         provenance: "owner_manual",
-        changes: buildChanges(operation, formData, slice, window),
+        changes,
       },
       expectedRevision,
     );
+    const topUp = await topUpAfterPlanChange(plan, receipt.planRevision);
 
     revalidatePath("/home/plan");
-    return result("saved", savedCopy(operation, formData));
+    return result(
+      "saved",
+      planChangeCopy(savedCopy(operation, formData), topUp),
+    );
   } catch (error) {
     if (error instanceof RollingPlanRuleError) {
       // This action composes no series change, so a series rule cannot reach
@@ -183,6 +190,38 @@ export async function changePlanAction(
       );
     }
     return result("error", "The plan change could not be completed.");
+  }
+}
+
+async function assertOccurrencePlacements(
+  plan: Awaited<ReturnType<typeof createRollingPlan>>,
+  slice: RollingPlanSlice,
+  changes: RollingPlanChange[],
+) {
+  const moves = changes.filter(
+    (change): change is Extract<RollingPlanChange, { operation: "move" }> =>
+      change.operation === "move",
+  );
+  if (moves.length === 0) return;
+  const occurrenceMoves = moves.filter((move) => {
+    const session = requireSession(slice, move.sessionId);
+    return session.seriesId !== null;
+  });
+  if (occurrenceMoves.length === 0) return;
+  const series = await plan.listSeries();
+  for (const move of occurrenceMoves) {
+    const session = requireSession(slice, move.sessionId);
+    if (session.seriesId === null) continue;
+    const segment = series.find(
+      (candidate) => candidate.id === session.seriesId,
+    );
+    if (
+      !segment ||
+      move.localDate < segment.startDate ||
+      (segment.endDate !== undefined && move.localDate > segment.endDate)
+    ) {
+      throw new RollingPlanValidationError();
+    }
   }
 }
 

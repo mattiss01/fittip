@@ -66,6 +66,12 @@ export type RollingPlanSeriesInput = {
   activities: RollingPlanSeriesActivityInput[];
 };
 
+/** One stored effective-dated segment, returned through owner-scoped reads. */
+export type RollingPlanSeries = RollingPlanSeriesInput & {
+  id: string;
+  predecessorSeriesId: string | null;
+};
+
 export type RollingPlanChange =
   | { operation: "add"; sessionId: string; session: RollingPlanSessionInput }
   | {
@@ -185,6 +191,7 @@ export type ParsedPlanSlice = { startDate: string; endDate: string };
 
 export interface RollingPlanAdapter {
   getPlanSlice(input: ParsedPlanSlice): Promise<RollingPlanSlice>;
+  listSeries(): Promise<RollingPlanSeries[]>;
   applyChangeSet(
     changeSet: RollingPlanChangeSet,
     expectedPlanRevision: number,
@@ -262,6 +269,10 @@ export class RollingPlan {
     const end = readIsoDate(endDate);
     if (end < start) throw new RollingPlanValidationError();
     return await this.adapter.getPlanSlice({ startDate: start, endDate: end });
+  }
+
+  async listSeries() {
+    return await this.adapter.listSeries();
   }
 
   async applyChangeSet(changeSet: unknown, expectedPlanRevision: unknown) {

@@ -17,6 +17,7 @@ import {
   type PlanActionState,
 } from "./action-state";
 import { PlanManager, type PlanSessionView } from "./plan-manager";
+import type { PlanSeriesView } from "./recurring-session-controls";
 
 const TODAY = "2026-08-17";
 const DATES = Array.from({ length: 14 }, (_, offset) => {
@@ -31,6 +32,7 @@ const action = vi.fn();
 function renderManager(
   state: PlanActionState = INITIAL_PLAN_ACTION_STATE,
   sessions: PlanSessionView[] = [],
+  series: PlanSeriesView[] = [],
 ) {
   useActionStateMock.mockReturnValue([state, action, false]);
   return render(
@@ -40,6 +42,7 @@ function renderManager(
       expectedRevision={3}
       sessions={sessions}
       recoveryDates={[DATES[3]]}
+      series={series}
     />,
   );
 }
@@ -63,6 +66,9 @@ function session(overrides: Partial<PlanSessionView> = {}): PlanSessionView {
     isLocked: false,
     status: "active",
     activityCount: 0,
+    seriesId: null,
+    occurrenceDate: null,
+    hasDiverged: false,
     ...overrides,
   };
 }
@@ -248,4 +254,86 @@ describe("PlanManager", () => {
       screen.getByRole("link", { name: "Reload the current plan" }),
     ).toHaveAttribute("href", "/home/plan");
   });
+
+  it("identifies recurring and changed occurrences and states both scopes", () => {
+    renderManager(
+      INITIAL_PLAN_ACTION_STATE,
+      [
+        session({
+          seriesId: "7f000000-0000-4000-8000-000000000099",
+          occurrenceDate: TODAY,
+          hasDiverged: true,
+        }),
+      ],
+      [series()],
+    );
+
+    expect(screen.getByText("Recurring")).toBeVisible();
+    expect(screen.getByText("Changed")).toBeVisible();
+    fireEvent.click(
+      screen.getByText("Change recurring session", { selector: "summary" }),
+    );
+    expect(screen.getAllByText("Only this session").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("This and all future sessions").length,
+    ).toBeGreaterThan(0);
+
+    fireEvent.click(
+      screen.getByText("Remove recurring session", { selector: "summary" }),
+    );
+    expect(
+      screen.getByText(/Permanent\. Removes this occurrence/),
+    ).toBeVisible();
+    expect(screen.getByText(/Locked sessions are kept/)).toBeVisible();
+    expect(screen.getByText(/completed training is untouched/)).toBeVisible();
+    expect(screen.getByText(/no undo/)).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        name: "Remove this and all future sessions",
+      }),
+    ).toBeVisible();
+  });
+
+  it("withholds future scopes from a locked survivor past the segment end", () => {
+    renderManager(
+      INITIAL_PLAN_ACTION_STATE,
+      [
+        session({
+          isLocked: true,
+          seriesId: "7f000000-0000-4000-8000-000000000099",
+          occurrenceDate: TODAY,
+        }),
+      ],
+      [{ ...series(), endDate: DATES[0].replace(/17$/, "16") }],
+    );
+
+    fireEvent.click(
+      screen.getByText("Remove recurring session", { selector: "summary" }),
+    );
+    expect(
+      screen.queryByRole("button", {
+        name: "Remove this and all future sessions",
+      }),
+    ).toBeNull();
+    expect(screen.getByText(/only this session can be removed/i)).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Remove only this session" }),
+    ).toBeVisible();
+  });
 });
+
+function series(): PlanSeriesView {
+  return {
+    id: "7f000000-0000-4000-8000-000000000099",
+    frequency: "daily",
+    intervalCount: 1,
+    weekdays: [],
+    startDate: TODAY,
+    endDate: null,
+    title: "Aerobic run",
+    sport: "Running",
+    intent: null,
+    expectedDurationMinutes: 60,
+    note: null,
+  };
+}

@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { PLAN_WINDOW_DAYS } from "./action-state";
 import { PlanManager, type PlanSessionView } from "./plan-manager";
 import styles from "./plan.module.css";
+import type { PlanSeriesView } from "./recurring-session-controls";
+import { findUncoveredSeriesDates } from "./series-recurrence";
 import { TimezoneConfirmation } from "./timezone-confirmation";
 
 import homeStyles from "../home.module.css";
@@ -16,7 +18,10 @@ import {
   createRollingPlan,
   RollingPlanAuthenticationError,
 } from "@/server/repositories/rolling-plan-repository";
-import type { RollingPlanSession } from "@/server/rolling-plan/rolling-plan";
+import type {
+  RollingPlanSeries,
+  RollingPlanSession,
+} from "@/server/rolling-plan/rolling-plan";
 
 export const dynamic = "force-dynamic";
 
@@ -63,10 +68,13 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
   );
 
   let slice;
+  let series;
   try {
-    slice = await (
-      await createRollingPlan()
-    ).getPlanSlice(today, dates[dates.length - 1]);
+    const plan = await createRollingPlan();
+    [slice, series] = await Promise.all([
+      plan.getPlanSlice(today, dates[dates.length - 1]),
+      plan.listSeries(),
+    ]);
   } catch (error) {
     redirectOnAuthError(error);
     throw error;
@@ -83,6 +91,13 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
         expectedRevision={slice.revision}
         sessions={slice.sessions.map(toSessionView)}
         recoveryDates={slice.recoveryDates}
+        series={series.map(toSeriesView)}
+        uncoveredSeriesDates={findUncoveredSeriesDates(
+          series,
+          slice.sessions,
+          today,
+          dates[dates.length - 1],
+        )}
       />
     </>
   );
@@ -102,6 +117,25 @@ function toSessionView(session: RollingPlanSession): PlanSessionView {
     isLocked: session.isLocked,
     status: session.status,
     activityCount: session.activities.length,
+    seriesId: session.seriesId,
+    occurrenceDate: session.occurrenceDate,
+    hasDiverged: session.hasDiverged,
+  };
+}
+
+function toSeriesView(series: RollingPlanSeries): PlanSeriesView {
+  return {
+    id: series.id,
+    frequency: series.frequency,
+    intervalCount: series.intervalCount,
+    weekdays: series.weekdays ?? [],
+    startDate: series.startDate,
+    endDate: series.endDate ?? null,
+    title: series.title,
+    sport: series.sport,
+    intent: series.intent ?? null,
+    expectedDurationMinutes: series.expectedDurationMinutes ?? null,
+    note: series.note ?? null,
   };
 }
 

@@ -119,6 +119,69 @@ describe("PostgresRollingPlanAdapter", () => {
     });
   });
 
+  it("lists series with an explicit owner predicate and parsed templates", async () => {
+    const secondOrder = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: "76000000-0000-4000-8000-000000000006",
+          predecessor_series_id: null,
+          frequency: "weekly",
+          interval_count: 2,
+          weekdays: [1, 4],
+          start_date: "2026-08-17",
+          end_date: null,
+          title: "Aerobic run",
+          sport: "Running",
+          intent: null,
+          expected_duration_minutes: 45,
+          note: null,
+          created_at: "2026-08-16T10:00:00.000Z",
+          rolling_plan_series_activities: [
+            {
+              personal_activity_id: null,
+              position: 0,
+              name: "Easy running",
+              sport: "Running",
+              instructions: null,
+              measurement_mode: "duration_intensity",
+              target: { duration_minutes: 45, intensity: "easy" },
+            },
+          ],
+        },
+      ],
+      error: null,
+    });
+    const firstOrder = vi.fn().mockReturnValue({ order: secondOrder });
+    const eq = vi.fn().mockReturnValue({ order: firstOrder });
+    const select = vi.fn().mockReturnValue({ eq });
+    const from = vi.fn().mockReturnValue({ select });
+    const plan = new RollingPlan(
+      new PostgresRollingPlanAdapter(client({ from })),
+    );
+
+    await expect(plan.listSeries()).resolves.toEqual([
+      expect.objectContaining({
+        id: "76000000-0000-4000-8000-000000000006",
+        frequency: "weekly",
+        intervalCount: 2,
+        weekdays: [1, 4],
+        activities: [
+          expect.objectContaining({
+            position: 0,
+            name: "Easy running",
+            measurementMode: "duration_intensity",
+          }),
+        ],
+      }),
+    ]);
+    expect(from).toHaveBeenCalledWith("rolling_plan_series");
+    expect(eq).toHaveBeenCalledWith("user_id", USER_ID);
+    expect(firstOrder).toHaveBeenCalledWith("created_at", {
+      ascending: true,
+    });
+    expect(secondOrder).toHaveBeenCalledWith("id", { ascending: true });
+  });
+
   it("refuses a snapshot whose recovery dates are not dates", async () => {
     const rpc = vi.fn().mockResolvedValue({
       data: {
