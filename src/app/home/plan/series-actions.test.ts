@@ -133,6 +133,59 @@ describe("recurring-session actions", () => {
     expect(materializeSeries).toHaveBeenCalledWith(expect.any(String), 4);
   });
 
+  it("creates a series from new owner-entered session fields without activities", async () => {
+    const applyChangeSet = vi.fn().mockResolvedValue({
+      planRevision: 4,
+      seriesEffects: [],
+    });
+    createPlanMock.mockResolvedValue({
+      getPlanSlice: vi.fn().mockResolvedValue(slice()),
+      listSeries: vi.fn().mockResolvedValue([]),
+      applyChangeSet,
+      materializeSeries: vi.fn().mockResolvedValue({
+        planRevision: 5,
+        createdCount: 2,
+        skipped: [],
+      }),
+    });
+
+    const result = await changeSeriesAction(
+      INITIAL_SERIES_ACTION_STATE,
+      form({
+        operation: "add_series",
+        sourceKind: "new",
+        startDate: today(),
+        frequency: "weekly",
+        intervalCount: "1",
+        weekdays: ["1", "4"],
+        noEnd: "true",
+        title: "Strength and mobility",
+        sport: "Strength",
+        expectedDurationMinutes: "45",
+        intent: "Controlled work",
+        note: "Leave two reps in reserve",
+      }),
+    );
+
+    expect(result.status).toBe("saved");
+    const [changeSet] = applyChangeSet.mock.calls[0] as [RollingPlanChangeSet];
+    expect(changeSet.changes[0]).toMatchObject({
+      operation: "add_series",
+      series: {
+        frequency: "weekly",
+        weekdays: [1, 4],
+        startDate: today(),
+        title: "Strength and mobility",
+        sport: "Strength",
+        expectedDurationMinutes: 45,
+        intent: "Controlled work",
+        note: "Leave two reps in reserve",
+        activities: [],
+      },
+    });
+    expect(createSavedLibraryMock).not.toHaveBeenCalled();
+  });
+
   it("reports only the authoritative end-series effect after success", async () => {
     const applyChangeSet = vi.fn().mockResolvedValue({
       planRevision: 8,

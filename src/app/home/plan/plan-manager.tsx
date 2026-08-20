@@ -15,6 +15,7 @@ import {
   type PlanActionState,
 } from "./action-state";
 import { changePlanAction } from "./actions";
+import { CreateSession } from "./create-session";
 import styles from "./plan.module.css";
 import {
   RecurringSessionControls,
@@ -27,6 +28,7 @@ import {
 } from "./series-action-state";
 import { changeSeriesAction } from "./series-actions";
 import { SeriesMaterializer } from "./series-materializer";
+import { SessionFields } from "./session-fields";
 import {
   seriesStallNotice,
   useSeriesMutationStall,
@@ -200,6 +202,17 @@ export function PlanManager({
         uncoveredDates={uncoveredSeriesDates}
       />
 
+      <CreateSession
+        dates={dates}
+        expectedRevision={expectedRevision}
+        planAction={trackedPlanAction}
+        planState={state}
+        planPending={pending}
+        seriesAction={trackedSeriesAction}
+        seriesState={seriesState}
+        seriesPending={seriesPending}
+      />
+
       <ol className={styles.days}>
         {dates.map((date) => (
           <PlanDay
@@ -246,10 +259,6 @@ function PlanDay({
     (session) => session.status === "cancelled",
   );
   const headingId = `plan-day-${date}`;
-  const addResetKey = useTargetedResetKey(
-    state.submission,
-    state.operation === "add" && state.localDate === date,
-  );
 
   return (
     <li
@@ -320,30 +329,6 @@ function PlanDay({
             </ol>
           </>
         ) : null}
-
-        <details className={styles.disclosure}>
-          <summary>Add a session</summary>
-          <form
-            className={styles.form}
-            action={action}
-            key={`add-${date}-${addResetKey}`}
-          >
-            <input type="hidden" name="operation" value="add" />
-            <input type="hidden" name="localDate" value={date} />
-            <input
-              type="hidden"
-              name="expectedRevision"
-              value={expectedRevision}
-            />
-            <SessionFields
-              idPrefix={`add-${date}`}
-              draft={draftFor(state, "add", date)}
-            />
-            <button className={styles.primary} type="submit" disabled={pending}>
-              Add session
-            </button>
-          </form>
-        </details>
 
         <div className={styles.dayControls}>
           <form action={action}>
@@ -446,7 +431,197 @@ function PlanSessionCard({
         <p className={styles.body}>{session.note}</p>
       )}
 
-      <div className={styles.controls}>
+      <div className={styles.cardActions} data-session-actions>
+        <details className={styles.disclosure}>
+          <summary>Edit</summary>
+          <div className={styles.editorPanel}>
+            {recurring === null ? (
+              <form
+                className={styles.form}
+                action={action}
+                key={`edit-${session.id}-${editResetKey}`}
+              >
+                <input type="hidden" name="operation" value="edit" />
+                <input type="hidden" name="sessionId" value={session.id} />
+                <input
+                  type="hidden"
+                  name="expectedRevision"
+                  value={expectedRevision}
+                />
+                <SessionFields
+                  idPrefix={`edit-${session.id}`}
+                  draft={
+                    draftFor(state, "edit", session.id) ?? draftOf(session)
+                  }
+                />
+                <button
+                  className={styles.primary}
+                  type="submit"
+                  disabled={pending}
+                >
+                  Save session
+                </button>
+              </form>
+            ) : (
+              <RecurringSessionControls
+                mode="edit"
+                today={today}
+                session={{
+                  id: session.id,
+                  occurrenceDate: recurring.occurrenceDate,
+                  isLocked: session.isLocked,
+                  title: session.title,
+                  sport: session.sport,
+                  intent: session.intent,
+                  expectedDurationMinutes: session.expectedDurationMinutes,
+                  note: session.note,
+                }}
+                series={recurring.series}
+                expectedRevision={expectedRevision}
+                planAction={action}
+                planPending={pending}
+                seriesAction={seriesAction}
+                seriesState={seriesState}
+                seriesPending={seriesPending}
+              />
+            )}
+
+            {moveDates.length > 0 ? (
+              <section className={styles.scope}>
+                <h4>Move session</h4>
+                <form className={styles.form} action={action}>
+                  <input type="hidden" name="operation" value="move" />
+                  <input type="hidden" name="sessionId" value={session.id} />
+                  <input
+                    type="hidden"
+                    name="expectedRevision"
+                    value={expectedRevision}
+                  />
+                  <div className={styles.field}>
+                    <label htmlFor={`move-${session.id}`}>Move to</label>
+                    <select
+                      id={`move-${session.id}`}
+                      name="localDate"
+                      defaultValue={moveDates[0]}
+                    >
+                      {moveDates.map((date) => (
+                        <option key={date} value={date}>
+                          {stampDate(date)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {recurring === null ? null : (
+                    <p className={styles.consequenceStandalone}>
+                      Only this session moves. It becomes changed, and the new
+                      date must stay inside this series segment.
+                    </p>
+                  )}
+                  <button
+                    className={styles.primary}
+                    type="submit"
+                    disabled={pending}
+                  >
+                    Move session
+                  </button>
+                </form>
+              </section>
+            ) : null}
+
+            <section className={styles.scope}>
+              <h4>Duplicate session</h4>
+              <form className={styles.form} action={action}>
+                <input type="hidden" name="operation" value="duplicate" />
+                <input type="hidden" name="sessionId" value={session.id} />
+                <input
+                  type="hidden"
+                  name="expectedRevision"
+                  value={expectedRevision}
+                />
+                <div className={styles.field}>
+                  <label htmlFor={`duplicate-${session.id}`}>Copy to</label>
+                  <select
+                    id={`duplicate-${session.id}`}
+                    name="localDate"
+                    defaultValue={session.localDate}
+                  >
+                    {dates.map((date) => (
+                      <option key={date} value={date}>
+                        {stampDate(date)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className={styles.consequence}>
+                  The copy is a new session. It starts unlocked and carries none
+                  of this session&rsquo;s history.
+                </p>
+                <button
+                  className={styles.primary}
+                  type="submit"
+                  disabled={pending}
+                >
+                  Duplicate session
+                </button>
+              </form>
+            </section>
+
+            <SaveToLibrary sessionId={session.id} defaultName={session.title} />
+          </div>
+        </details>
+
+        <details className={styles.disclosure}>
+          <summary>Remove</summary>
+          <div className={styles.editorPanel}>
+            {recurring === null ? (
+              <>
+                <p className={styles.consequence}>
+                  Removing keeps the session on the record as cancelled. It is
+                  not deleted, and it stops being part of what you plan to do.
+                </p>
+                <form className={styles.form} action={action}>
+                  <input type="hidden" name="operation" value="cancel" />
+                  <input type="hidden" name="sessionId" value={session.id} />
+                  <input
+                    type="hidden"
+                    name="expectedRevision"
+                    value={expectedRevision}
+                  />
+                  <button
+                    className={styles.action}
+                    type="submit"
+                    disabled={pending}
+                  >
+                    Remove session
+                  </button>
+                </form>
+              </>
+            ) : (
+              <RecurringSessionControls
+                mode="remove"
+                today={today}
+                session={{
+                  id: session.id,
+                  occurrenceDate: recurring.occurrenceDate,
+                  isLocked: session.isLocked,
+                  title: session.title,
+                  sport: session.sport,
+                  intent: session.intent,
+                  expectedDurationMinutes: session.expectedDurationMinutes,
+                  note: session.note,
+                }}
+                series={recurring.series}
+                expectedRevision={expectedRevision}
+                planAction={action}
+                planPending={pending}
+                seriesAction={seriesAction}
+                seriesState={seriesState}
+                seriesPending={seriesPending}
+              />
+            )}
+          </div>
+        </details>
+
         <form action={action}>
           <input type="hidden" name="operation" value="set_lock" />
           <input type="hidden" name="sessionId" value={session.id} />
@@ -465,225 +640,7 @@ function PlanSessionCard({
           </button>
         </form>
       </div>
-
-      {recurring === null ? (
-        <details className={styles.disclosure}>
-          <summary>Edit</summary>
-          <form
-            className={styles.form}
-            action={action}
-            key={`edit-${session.id}-${editResetKey}`}
-          >
-            <input type="hidden" name="operation" value="edit" />
-            <input type="hidden" name="sessionId" value={session.id} />
-            <input
-              type="hidden"
-              name="expectedRevision"
-              value={expectedRevision}
-            />
-            <SessionFields
-              idPrefix={`edit-${session.id}`}
-              draft={draftFor(state, "edit", session.id) ?? draftOf(session)}
-            />
-            <button className={styles.primary} type="submit" disabled={pending}>
-              Save session
-            </button>
-          </form>
-        </details>
-      ) : (
-        <RecurringSessionControls
-          today={today}
-          session={{
-            id: session.id,
-            occurrenceDate: recurring.occurrenceDate,
-            isLocked: session.isLocked,
-            title: session.title,
-            sport: session.sport,
-            intent: session.intent,
-            expectedDurationMinutes: session.expectedDurationMinutes,
-            note: session.note,
-          }}
-          series={recurring.series}
-          expectedRevision={expectedRevision}
-          planAction={action}
-          planPending={pending}
-          seriesAction={seriesAction}
-          seriesState={seriesState}
-          seriesPending={seriesPending}
-        />
-      )}
-
-      {moveDates.length > 0 ? (
-        <details className={styles.disclosure}>
-          <summary>Move</summary>
-          <form className={styles.form} action={action}>
-            <input type="hidden" name="operation" value="move" />
-            <input type="hidden" name="sessionId" value={session.id} />
-            <input
-              type="hidden"
-              name="expectedRevision"
-              value={expectedRevision}
-            />
-            <div className={styles.field}>
-              <label htmlFor={`move-${session.id}`}>Move to</label>
-              <select
-                id={`move-${session.id}`}
-                name="localDate"
-                defaultValue={moveDates[0]}
-              >
-                {moveDates.map((date) => (
-                  <option key={date} value={date}>
-                    {stampDate(date)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {recurring === null ? null : (
-              <p className={styles.consequenceStandalone}>
-                Only this session moves. It becomes changed, and the new date
-                must stay inside this series segment.
-              </p>
-            )}
-            <button className={styles.primary} type="submit" disabled={pending}>
-              Move session
-            </button>
-          </form>
-        </details>
-      ) : null}
-
-      <details className={styles.disclosure}>
-        <summary>Duplicate</summary>
-        <form className={styles.form} action={action}>
-          <input type="hidden" name="operation" value="duplicate" />
-          <input type="hidden" name="sessionId" value={session.id} />
-          <input
-            type="hidden"
-            name="expectedRevision"
-            value={expectedRevision}
-          />
-          <div className={styles.field}>
-            <label htmlFor={`duplicate-${session.id}`}>Copy to</label>
-            <select
-              id={`duplicate-${session.id}`}
-              name="localDate"
-              defaultValue={session.localDate}
-            >
-              {dates.map((date) => (
-                <option key={date} value={date}>
-                  {stampDate(date)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <p className={styles.consequence}>
-            The copy is a new session. It starts unlocked and carries none of
-            this session&rsquo;s history.
-          </p>
-          <button className={styles.primary} type="submit" disabled={pending}>
-            Duplicate session
-          </button>
-        </form>
-      </details>
-
-      <a
-        className={styles.repeatLink}
-        href={
-          "/home/plan/series/new?source=plan&id=" +
-          encodeURIComponent(session.id)
-        }
-      >
-        Repeat
-      </a>
-
-      <SaveToLibrary sessionId={session.id} defaultName={session.title} />
-
-      {recurring === null ? (
-        <details className={styles.disclosure}>
-          <summary>Cancel</summary>
-          <p className={styles.consequence}>
-            Cancelling keeps the session on the record as cancelled. It is not
-            deleted, and it stops being part of what you plan to do.
-          </p>
-          <form className={styles.form} action={action}>
-            <input type="hidden" name="operation" value="cancel" />
-            <input type="hidden" name="sessionId" value={session.id} />
-            <input
-              type="hidden"
-              name="expectedRevision"
-              value={expectedRevision}
-            />
-            <button className={styles.action} type="submit" disabled={pending}>
-              Cancel session
-            </button>
-          </form>
-        </details>
-      ) : null}
     </li>
-  );
-}
-
-function SessionFields({
-  idPrefix,
-  draft,
-}: {
-  idPrefix: string;
-  draft?: PlanActionDraft;
-}) {
-  return (
-    <>
-      <div className={styles.field}>
-        <label htmlFor={`${idPrefix}-title`}>Title</label>
-        <input
-          id={`${idPrefix}-title`}
-          name="title"
-          maxLength={120}
-          required
-          defaultValue={draft?.title ?? ""}
-        />
-      </div>
-      <div className={styles.fieldPair}>
-        <div className={styles.field}>
-          <label htmlFor={`${idPrefix}-sport`}>Sport</label>
-          <input
-            id={`${idPrefix}-sport`}
-            name="sport"
-            maxLength={80}
-            required
-            defaultValue={draft?.sport ?? ""}
-          />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor={`${idPrefix}-minutes`}>Minutes</label>
-          <input
-            id={`${idPrefix}-minutes`}
-            name="expectedDurationMinutes"
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={10080}
-            defaultValue={draft?.expectedDurationMinutes ?? ""}
-          />
-        </div>
-      </div>
-      <div className={styles.field}>
-        <label htmlFor={`${idPrefix}-intent`}>Intent</label>
-        <input
-          id={`${idPrefix}-intent`}
-          name="intent"
-          maxLength={500}
-          defaultValue={draft?.intent ?? ""}
-        />
-      </div>
-      <div className={styles.field}>
-        <label htmlFor={`${idPrefix}-note`}>Note</label>
-        <textarea
-          id={`${idPrefix}-note`}
-          name="note"
-          maxLength={2000}
-          defaultValue={draft?.note ?? ""}
-        />
-      </div>
-    </>
   );
 }
 
@@ -693,9 +650,9 @@ function SessionFields({
  * The forms are uncontrolled, so remounting is how a saved one is cleared and
  * how a refused one is re-seeded from the returned draft. Keying on the global
  * submission counter did both of those correctly and also remounted every other
- * add and edit form on the surface: marking a recovery day on the first date
- * closed an open "Add a session" on the twelfth and discarded whatever had been
- * typed into it. Advancing per target keeps the reset and loses nothing else.
+ * edit form on the surface: marking a recovery day could close another open
+ * editor and discard whatever had been typed into it. Advancing per target
+ * keeps the reset and loses nothing else.
  *
  * The value is adjusted during render rather than in an effect, so the remount
  * happens in the same commit as the result that caused it.

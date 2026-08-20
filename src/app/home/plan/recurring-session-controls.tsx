@@ -36,6 +36,7 @@ export type RecurringSessionView = {
 type PlanFormAction = (formData: FormData) => void;
 
 export function RecurringSessionControls({
+  mode,
   today,
   session,
   series,
@@ -46,6 +47,7 @@ export function RecurringSessionControls({
   seriesState,
   seriesPending,
 }: {
+  mode: "edit" | "remove";
   today: string;
   session: RecurringSessionView;
   series: PlanSeriesView;
@@ -81,10 +83,9 @@ export function RecurringSessionControls({
     ...(series.endDate === null ? {} : { endDate: series.endDate }),
   };
 
-  return (
-    <>
-      <details className={styles.disclosure}>
-        <summary>Change recurring session</summary>
+  if (mode === "edit") {
+    return (
+      <>
         <section className={styles.scope}>
           <h4>Only this session</h4>
           <p className={styles.consequenceStandalone}>
@@ -157,18 +158,48 @@ export function RecurringSessionControls({
             Only this session can be changed.
           </p>
         )}
-      </details>
+      </>
+    );
+  }
 
-      <details className={styles.disclosure}>
-        <summary>Remove recurring session</summary>
+  return (
+    <>
+      <section className={styles.scope}>
+        <h4>Only this session</h4>
+        <p className={styles.consequenceStandalone}>
+          Cancels only this occurrence and keeps it on the record as cancelled.
+          The recurring rule and every other occurrence stay.
+        </p>
+        <form className={styles.form} action={planAction}>
+          <input type="hidden" name="operation" value="cancel" />
+          <input type="hidden" name="sessionId" value={session.id} />
+          <input
+            type="hidden"
+            name="expectedRevision"
+            value={expectedRevision}
+          />
+          <button
+            className={styles.action}
+            type="submit"
+            disabled={planPending}
+          >
+            Remove only this session
+          </button>
+        </form>
+      </section>
+
+      {canChangeFuture ? (
         <section className={styles.scope}>
-          <h4>Only this session</h4>
-          <p className={styles.consequenceStandalone}>
-            Cancels only this occurrence and keeps it on the record as
-            cancelled. The recurring rule and every other occurrence stay.
+          <h4>This and all future sessions</h4>
+          <p className={styles.permanentConsequence}>
+            Permanent. Removes this occurrence and every materialized occurrence
+            of this series on or after its rule date, including changed
+            occurrences. Locked sessions are kept. Nothing before this date
+            changes, completed training is untouched, and there is no undo.
+            Removed sessions are deleted from the Plan, not cancelled.
           </p>
-          <form className={styles.form} action={planAction}>
-            <input type="hidden" name="operation" value="cancel" />
+          <form className={styles.form} action={seriesAction}>
+            <input type="hidden" name="operation" value="end_series" />
             <input type="hidden" name="sessionId" value={session.id} />
             <input
               type="hidden"
@@ -176,49 +207,20 @@ export function RecurringSessionControls({
               value={expectedRevision}
             />
             <button
-              className={styles.action}
+              className={styles.dangerAction}
               type="submit"
-              disabled={planPending}
+              disabled={seriesPending}
             >
-              Remove only this session
+              Remove this and all future sessions
             </button>
           </form>
         </section>
-
-        {canChangeFuture ? (
-          <section className={styles.scope}>
-            <h4>This and all future sessions</h4>
-            <p className={styles.permanentConsequence}>
-              Permanent. Removes this occurrence and every materialized
-              occurrence of this series on or after its rule date, including
-              changed occurrences. Locked sessions are kept. Nothing before this
-              date changes, completed training is untouched, and there is no
-              undo. Removed sessions are deleted from the Plan, not cancelled.
-            </p>
-            <form className={styles.form} action={seriesAction}>
-              <input type="hidden" name="operation" value="end_series" />
-              <input type="hidden" name="sessionId" value={session.id} />
-              <input
-                type="hidden"
-                name="expectedRevision"
-                value={expectedRevision}
-              />
-              <button
-                className={styles.dangerAction}
-                type="submit"
-                disabled={seriesPending}
-              >
-                Remove this and all future sessions
-              </button>
-            </form>
-          </section>
-        ) : (
-          <p className={styles.consequence}>
-            This locked session outlived the series end date. The bulk removal
-            would change nothing, so only this session can be removed.
-          </p>
-        )}
-      </details>
+      ) : (
+        <p className={styles.consequence}>
+          This locked session outlived the series end date. The bulk removal
+          would change nothing, so only this session can be removed.
+        </p>
+      )}
       {seriesState.sessionId === session.id &&
       seriesState.status === "validation" ? (
         <p className={styles.consequence}>{seriesState.message}</p>

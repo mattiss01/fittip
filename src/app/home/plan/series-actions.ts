@@ -263,6 +263,12 @@ async function buildSeriesChange(
       const source = await (await createSavedSessionLibrary()).get(sourceId);
       if (!source) throw new RollingPlanValidationError();
       input = toRollingPlanSeriesInput(source, rule);
+    } else if (sourceKind === "new") {
+      input = {
+        ...rule,
+        ...readContent(formData),
+        activities: [],
+      };
     } else {
       throw new RollingPlanValidationError();
     }

@@ -49,33 +49,67 @@ test.describe("M3-14B recurring series surface", () => {
       await page.getByRole("button", { name: "Use " + TIMEZONE }).click();
       await expect(page.getByText(new RegExp(TIMEZONE))).toBeVisible();
 
-      // Build one source session and save the same value for the second entry
-      // path. Repeat from Plan and repeat from saved both land on one route.
-      const todayCard = planDay(page, today);
-      await openDisclosure(todayCard, "Add a session");
-      await todayCard.getByLabel("Title").fill("Aerobic base");
-      await todayCard.getByLabel("Sport").fill("Running");
-      await todayCard.getByLabel("Minutes").fill("45");
-      await todayCard.getByRole("button", { name: "Add session" }).click();
-      const source = sessionCard(page, today, "Aerobic base");
+      // There is one Plan-level create action, including while every date is
+      // empty. A non-recurring submission keeps M3-12's ordinary add path.
+      await expect(
+        page.locator("summary", { hasText: "Create session" }),
+      ).toHaveCount(1);
+      await expect(
+        page.getByText("Add a session", { exact: true }),
+      ).toHaveCount(0);
+      const create = page.locator("details").filter({
+        has: page.locator("summary", { hasText: "Create session" }),
+      });
+      await openDisclosure(page, "Create session");
+      await create.getByLabel("Date").fill(today);
+      await create.getByLabel("Title").fill("Ordinary base");
+      await create.getByLabel("Sport").fill("Running");
+      await create.getByLabel("Minutes").fill("45");
+      await create.getByRole("button", { name: "Create session" }).click();
+      const source = sessionCard(page, today, "Ordinary base");
       await expect(source).toBeVisible();
+      const exposedActions = source.locator("[data-session-actions]");
+      await expect(
+        exposedActions.locator(":scope > details > summary"),
+      ).toHaveText(["Edit", "Remove"]);
+      await expect(exposedActions.locator(":scope > form button")).toHaveText(
+        "Lock",
+      );
+      await expect(source.getByRole("link", { name: "Repeat" })).toHaveCount(0);
+
+      // Save remains available inside Edit, and saved-session reuse remains
+      // ordinary M3-13 behavior without a recurrence shortcut.
+      await openDisclosure(source, "Edit");
       await openDisclosure(source, "Save to library");
       await source.getByLabel("Name it").fill("Base template");
       await source.getByRole("button", { name: "Save to library" }).click();
       await expect(source.getByText("Saved to your library.")).toBeVisible();
+      await page.goto("/home/plan/saved");
+      const saved = savedCard(page, "Ordinary base");
+      await expect(saved.getByRole("link", { name: "Repeat" })).toHaveCount(0);
+      await openDisclosure(saved, "Use in plan");
+      await saved.getByLabel("Add to").selectOption(ownerDate(9));
+      await saved.getByRole("button", { name: "Add to plan" }).click();
+      await expect(page.locator("[role='status']").first()).toContainText(
+        "Added to your plan.",
+      );
+      await page.getByRole("link", { name: "Back to the plan" }).click();
+
+      // The same create flow reveals recurrence only when requested, with an
+      // explicit occurrence review before the bounded series write.
+      await openDisclosure(page, "Create session");
+      await create.getByLabel("Date").fill(dailyStart);
+      await create.getByLabel("Title").fill("Aerobic base");
+      await create.getByLabel("Sport").fill("Running");
+      await create.getByLabel("Minutes").fill("45");
+      await create.getByLabel("Repeat this session").check();
 
       // Bounded daily interval, with an explicit review before the write.
-      await source.getByRole("link", { name: "Repeat" }).click();
-      await expect(page).toHaveURL(/series\/new\?source=plan/);
-      await expect(
-        page.getByRole("heading", { name: "Build the rule." }),
-      ).toBeVisible();
-      await page.getByLabel("Start date").fill(dailyStart);
-      await page.getByLabel("Repeat").selectOption("daily");
-      await page.getByLabel("Every").fill("2");
-      await page.getByText("No end date", { exact: true }).click();
-      await page.getByLabel("End date", { exact: true }).fill(dailyEnd);
-      await page
+      await create.getByLabel("Repeat", { exact: true }).selectOption("daily");
+      await create.getByLabel("Every").fill("2");
+      await create.getByText("No end date", { exact: true }).click();
+      await create.getByLabel("End date", { exact: true }).fill(dailyEnd);
+      await create
         .getByRole("button", { name: "Review recurring sessions" })
         .click();
       await expect(
@@ -83,19 +117,18 @@ test.describe("M3-14B recurring series surface", () => {
       ).toBeVisible();
       await expect(page.getByText(longDate(dailyStart))).toBeVisible();
       await expect(page.getByText(longDate(secondDaily))).toBeVisible();
-      await page
-        .getByRole("button", { name: "Create recurring series" })
+      await create
+        .getByRole("button", { name: "Create recurring sessions" })
         .click();
       await expect(
         page.getByRole("status").filter({ hasText: "created" }),
       ).toBeVisible();
-      await page.getByRole("link", { name: "View the current Plan" }).click();
 
       let first = sessionCard(page, dailyStart, "Aerobic base");
       await expect(first.getByText("Recurring", { exact: true })).toBeVisible();
 
       // Only this session changes one occurrence and marks it as diverged.
-      await openDisclosure(first, "Change recurring session");
+      await openDisclosure(first, "Edit");
       const onlyThis = scope(first, "Only this session").first();
       await onlyThis.getByLabel("Title").fill("Diverged aerobic");
       await onlyThis
@@ -109,10 +142,10 @@ test.describe("M3-14B recurring series surface", () => {
 
       // This-and-future starts a successor and leaves the earlier divergence.
       let second = sessionCard(page, secondDaily, "Aerobic base");
-      await openDisclosure(second, "Change recurring session");
+      await openDisclosure(second, "Edit");
       const future = scope(second, "This and all future sessions").first();
       await future.getByLabel("Title").fill("Future steady");
-      await future.getByLabel("Repeat").selectOption("daily");
+      await future.getByLabel("Repeat", { exact: true }).selectOption("daily");
       await future.getByLabel("Every").fill("1");
       await future
         .getByRole("button", { name: "Change this and future sessions" })
@@ -129,7 +162,7 @@ test.describe("M3-14B recurring series surface", () => {
       // Consequences appear before future removal and carry no forecast count.
       const endFrom = ownerDate(5);
       const ending = sessionCard(page, endFrom, "Future steady");
-      await openDisclosure(ending, "Remove recurring session");
+      await openDisclosure(ending, "Remove");
       const futureRemoval = scope(
         ending,
         "This and all future sessions",
@@ -158,40 +191,45 @@ test.describe("M3-14B recurring series surface", () => {
       await expect(sessionCard(page, endFrom, "Future steady")).toHaveCount(0);
 
       // Fill one later date to the cap through the owner's accepted change
-      // function, then create an open-ended weekly rule from the saved entry.
+      // function, then use the same Plan create flow for an open weekly rule.
       const token = await signInForApi(
         request,
         account.email,
         account.password,
       );
       await seedFullDate(request, token, capDate, today, ownerDate(13));
-      await page.goto("/home/plan/saved");
-      const saved = savedCard(page, "Aerobic base");
-      await saved.getByRole("link", { name: "Repeat" }).click();
-      await expect(page).toHaveURL(/series\/new\?source=saved/);
-      await page.getByLabel("Start date").fill(capDate);
-      await page.getByLabel("Repeat").selectOption("weekly");
-      await page.getByLabel("Every").fill("1");
-      await chooseOnlyWeekdays(page, [
+      await page.goto("/home/plan");
+      const weeklyCreate = page.locator("details").filter({
+        has: page.locator("summary", { hasText: "Create session" }),
+      });
+      await openDisclosure(page, "Create session");
+      await weeklyCreate.getByLabel("Date").fill(capDate);
+      await weeklyCreate.getByLabel("Title").fill("Weekly strength");
+      await weeklyCreate.getByLabel("Sport").fill("Strength");
+      await weeklyCreate.getByLabel("Repeat this session").check();
+      await weeklyCreate
+        .getByLabel("Repeat", { exact: true })
+        .selectOption("weekly");
+      await weeklyCreate.getByLabel("Every").fill("1");
+      await chooseOnlyWeekdays(weeklyCreate, [
         weekday(capDate),
         weekday(weeklyVisibleDate),
       ]);
-      await page
+      await weeklyCreate
         .getByRole("button", { name: "Review recurring sessions" })
         .click();
       await expect(page.getByText(longDate(capDate))).toBeVisible();
       await expect(page.getByText(longDate(weeklyVisibleDate))).toBeVisible();
-      await page
-        .getByRole("button", { name: "Create recurring series" })
+      await weeklyCreate
+        .getByRole("button", { name: "Create recurring sessions" })
         .click();
       const skipped = page.getByRole("heading", { name: "Dates not added" });
       await expect(skipped).toBeVisible();
       const skippedCard = skipped.locator("..");
       await expect(skippedCard).toContainText(longDate(capDate));
       await expect(skippedCard).toContainText("already has ten sessions");
-      await page.getByRole("link", { name: "View the current Plan" }).click();
       await expect(
-        sessionCard(page, weeklyVisibleDate, "Aerobic base").getByText(
+        sessionCard(page, weeklyVisibleDate, "Weekly strength").getByText(
           "Recurring",
           { exact: true },
         ),
@@ -202,10 +240,7 @@ test.describe("M3-14B recurring series surface", () => {
       await expect(page.getByText(/^Offline\./)).toBeVisible();
       await page.context().setOffline(false);
       await page.goto("/home/plan/series/new");
-      await expect(
-        page.getByRole("heading", { name: "Choose a session to repeat." }),
-      ).toBeVisible();
-      await page.getByRole("link", { name: "Open the current Plan" }).click();
+      await expect(page).toHaveURL(/\/home\/plan$/);
 
       const privateResponse = await page.goto("/home/plan");
       expect(privateResponse).not.toBeNull();
@@ -213,7 +248,7 @@ test.describe("M3-14B recurring series surface", () => {
         page.getByRole("heading", { name: "Plan ahead." }),
       ).toBeVisible();
       await expect(
-        sessionCard(page, weeklyVisibleDate, "Aerobic base"),
+        sessionCard(page, weeklyVisibleDate, "Weekly strength"),
       ).toBeVisible();
       const headers = lowerCaseHeaders(privateResponse!.headers());
       expect(headers["cache-control"]).toBe(
@@ -270,9 +305,9 @@ async function openDisclosure(container: Locator, label: string) {
   await summary.click();
 }
 
-async function chooseOnlyWeekdays(page: Page, days: number[]) {
+async function chooseOnlyWeekdays(container: Locator, days: number[]) {
   for (let value = 0; value <= 6; value += 1) {
-    const checkbox = page.locator(
+    const checkbox = container.locator(
       'input[name="weekdays"][value="' + value + '"]',
     );
     const selected = days.includes(value);

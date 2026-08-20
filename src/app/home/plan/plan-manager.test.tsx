@@ -64,10 +64,8 @@ function renderManager(
   );
 }
 
-function addTitleInput(date: string) {
-  const day = document.querySelector(`[data-plan-date="${date}"]`);
-  if (!day) throw new Error(`No day rendered for ${date}.`);
-  return day.querySelector<HTMLInputElement>(`#add-${date}-title`)!;
+function createTitleInput() {
+  return document.querySelector<HTMLInputElement>("#create-session-title")!;
 }
 
 function session(overrides: Partial<PlanSessionView> = {}): PlanSessionView {
@@ -106,6 +104,10 @@ describe("PlanManager", () => {
     expect(days[0].getAttribute("data-plan-date")).toBe(TODAY);
     expect(days[0].getAttribute("data-today")).toBe("true");
     expect(days[1].getAttribute("data-today")).toBe("false");
+    expect(
+      screen.getAllByText("Create session", { selector: "summary" }),
+    ).toHaveLength(1);
+    expect(screen.queryByText("Add a session")).toBeNull();
   });
 
   it("reads an unlabelled empty date as unplanned and a labelled one as recovery", () => {
@@ -123,6 +125,48 @@ describe("PlanManager", () => {
     expect(plain.textContent).not.toMatch(/rest|complete|done|streak|missed/i);
   });
 
+  it("uses one create flow for a single session or reviewed recurrence", () => {
+    renderManager();
+    const create = screen
+      .getByText("Create session", { selector: "summary" })
+      .closest("details")!;
+    fireEvent.click(create.querySelector("summary")!);
+    const operation = create.querySelector<HTMLInputElement>(
+      "input[name='operation']",
+    )!;
+
+    expect(operation).toHaveValue("add");
+    expect(
+      screen.getByRole("button", { name: "Create session" }),
+    ).toBeVisible();
+    expect(screen.queryByText("Recurrence", { selector: "legend" })).toBeNull();
+
+    fireEvent.click(screen.getByLabelText("Repeat this session"));
+    expect(operation).toHaveValue("add_series");
+    expect(
+      screen.getByText("Recurrence", { selector: "legend" }),
+    ).toBeVisible();
+    fireEvent.change(create.querySelector("#create-session-title")!, {
+      target: { value: "Tuesday tempo" },
+    });
+    fireEvent.change(create.querySelector("#create-session-sport")!, {
+      target: { value: "Running" },
+    });
+    fireEvent.change(screen.getByLabelText("Repeat"), {
+      target: { value: "daily" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Review recurring sessions" }),
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "First occurrences" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Create recurring sessions" }),
+    ).toBeVisible();
+  });
+
   it("keeps a cancelled session on the record rather than hiding it", () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [
       session({ status: "cancelled" }),
@@ -133,19 +177,19 @@ describe("PlanManager", () => {
     expect(day.textContent).toContain("Nothing planned.");
   });
 
-  // The defect this test exists for: keying the uncontrolled forms on the
-  // global submission counter remounted all fourteen add forms and every edit
-  // form whenever anything on the surface was submitted.
-  it("does not discard typing on one date when another date is submitted", () => {
+  it("does not discard a create draft when a date control is submitted", () => {
     const { rerender } = renderManager();
-    const details = document
-      .querySelector(`[data-plan-date="${LATER}"]`)!
-      .querySelector("details")!;
+    const details = screen
+      .getByText("Create session", { selector: "summary" })
+      .closest("details")!;
     details.open = true;
-    fireEvent.change(addTitleInput(LATER), {
+    fireEvent.change(createTitleInput(), {
       target: { value: "Half in progress" },
     });
-    expect(addTitleInput(LATER)).toHaveValue("Half in progress");
+    fireEvent.change(screen.getByLabelText("Date"), {
+      target: { value: LATER },
+    });
+    expect(createTitleInput()).toHaveValue("Half in progress");
 
     // A recovery-day toggle on the first date now resolves.
     useActionStateMock.mockReturnValue([
@@ -169,17 +213,13 @@ describe("PlanManager", () => {
       />,
     );
 
-    expect(addTitleInput(LATER)).toHaveValue("Half in progress");
-    expect(
-      document
-        .querySelector(`[data-plan-date="${LATER}"]`)!
-        .querySelector("details")!.open,
-    ).toBe(true);
+    expect(createTitleInput()).toHaveValue("Half in progress");
+    expect(details.open).toBe(true);
   });
 
   it("clears the form that saved and re-seeds the form that was refused", () => {
     const { rerender } = renderManager();
-    fireEvent.change(addTitleInput(TODAY), {
+    fireEvent.change(createTitleInput(), {
       target: { value: "Aerobic run" },
     });
 
@@ -203,7 +243,7 @@ describe("PlanManager", () => {
         recoveryDates={[DATES[3]]}
       />,
     );
-    expect(addTitleInput(TODAY)).toHaveValue("");
+    expect(createTitleInput()).toHaveValue("");
 
     useActionStateMock.mockReturnValue([
       {
@@ -234,7 +274,7 @@ describe("PlanManager", () => {
       />,
     );
 
-    expect(addTitleInput(TODAY)).toHaveValue("Eleventh");
+    expect(createTitleInput()).toHaveValue("Eleventh");
     // M3-13 puts a second live region inside each session card, for the
     // save-to-library control. The manager's own notice is the first one.
     expect(screen.getAllByRole("status")[0]).toHaveTextContent(
@@ -287,17 +327,13 @@ describe("PlanManager", () => {
 
     expect(screen.getByText("Recurring")).toBeVisible();
     expect(screen.getByText("Changed")).toBeVisible();
-    fireEvent.click(
-      screen.getByText("Change recurring session", { selector: "summary" }),
-    );
+    fireEvent.click(screen.getByText("Edit", { selector: "summary" }));
     expect(screen.getAllByText("Only this session").length).toBeGreaterThan(0);
     expect(
       screen.getAllByText("This and all future sessions").length,
     ).toBeGreaterThan(0);
 
-    fireEvent.click(
-      screen.getByText("Remove recurring session", { selector: "summary" }),
-    );
+    fireEvent.click(screen.getByText("Remove", { selector: "summary" }));
     expect(
       screen.getByText(/Permanent\. Removes this occurrence/),
     ).toBeVisible();
@@ -309,6 +345,27 @@ describe("PlanManager", () => {
         name: "Remove this and all future sessions",
       }),
     ).toBeVisible();
+  });
+
+  it("exposes only Edit, Remove, and the lock control on a session card", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [session()]);
+    const card = screen
+      .getByRole("heading", { name: "Aerobic run" })
+      .closest("li")!;
+    const actionArea = card.querySelector("[data-session-actions]")!;
+
+    expect(card).toContainElement(actionArea);
+    expect(Array.from(actionArea.children)).toHaveLength(3);
+    expect(
+      Array.from(actionArea.querySelectorAll(":scope > details > summary")).map(
+        (summary) => summary.textContent,
+      ),
+    ).toEqual(["Edit", "Remove"]);
+    expect(actionArea.querySelector(":scope > form")?.textContent).toBe("Lock");
+    expect(screen.queryByRole("link", { name: "Repeat" })).toBeNull();
+    expect(screen.queryByText("Move", { selector: "summary" })).toBeNull();
+    expect(screen.queryByText("Duplicate", { selector: "summary" })).toBeNull();
+    expect(screen.queryByText("Cancel", { selector: "summary" })).toBeNull();
   });
 
   it("withholds future scopes from a locked survivor past the segment end", () => {
@@ -324,9 +381,7 @@ describe("PlanManager", () => {
       [{ ...series(), endDate: DATES[0].replace(/17$/, "16") }],
     );
 
-    fireEvent.click(
-      screen.getByText("Remove recurring session", { selector: "summary" }),
-    );
+    fireEvent.click(screen.getByText("Remove", { selector: "summary" }));
     expect(
       screen.queryByRole("button", {
         name: "Remove this and all future sessions",
@@ -370,9 +425,7 @@ describe("PlanManager", () => {
       <PlanManager {...props} sessions={[recurringSession]} />,
     );
 
-    fireEvent.click(
-      screen.getByText("Remove recurring session", { selector: "summary" }),
-    );
+    fireEvent.click(screen.getByText("Remove", { selector: "summary" }));
     fireEvent.submit(
       screen
         .getByRole("button", {

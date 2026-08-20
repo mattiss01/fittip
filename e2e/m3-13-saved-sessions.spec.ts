@@ -61,6 +61,7 @@ test.describe("M3-13 private saved-session library", () => {
       ).toBeVisible();
 
       // Save it into the library. The plan is not changed by saving.
+      await openDisclosure(seeded, "Edit");
       await openDisclosure(seeded, "Save to library");
       await expect(
         seeded.getByText(/This session stays on your plan/i),

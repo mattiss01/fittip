@@ -41,6 +41,31 @@
   margin-top: 1.75rem;
 }
 
+.createSession {
+  border: 1px solid var(--ledger-ink);
+  border-top: 7px solid var(--plan-today);
+  background: var(--ledger-paper);
+  box-shadow: 7px 7px 0 #a7b7a5;
+}
+
+.createSession > summary {
+  min-height: 3.25rem;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  cursor: pointer;
+  font:
+    700 0.74rem "Courier New",
+    monospace;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.createSession > .seriesForm {
+  border: 0;
+  border-top: 1px solid var(--ledger-rule);
+}
+
 .notice {
   position: sticky;
   z-index: 20;
@@ -242,6 +267,43 @@
 
 .controls form {
   margin: 0;
+}
+
+.cardActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  gap: 0.45rem;
+  align-items: start;
+  margin-top: 0.7rem;
+}
+
+.cardActions > .disclosure {
+  margin-top: 0;
+}
+
+.cardActions > .disclosure[open] {
+  grid-column: 1 / -1;
+}
+
+.cardActions > .disclosure > summary,
+.cardActions > form > .action {
+  width: 100%;
+}
+
+.editorPanel {
+  display: grid;
+  gap: 0.8rem;
+  padding: 0 0.7rem 0.8rem;
+}
+
+.editorPanel > .form,
+.editorPanel .scope > .form {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.editorPanel > .consequence {
+  margin-top: 0;
 }
 
 .dayControls {
@@ -734,6 +796,14 @@
 
   .weekdays {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cardActions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cardActions > form {
+    grid-column: 1 / -1;
   }
 }
 
