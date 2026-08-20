@@ -200,14 +200,12 @@ describe("recurring-session actions", () => {
       seriesEffects: [],
     });
     createPlanMock.mockResolvedValue({
-      getPlanSlice: vi
-        .fn()
-        .mockResolvedValue(
-          seriesSlice({
-            occurrenceDate: effectiveDate,
-            localDate: effectiveDate,
-          }),
-        ),
+      getPlanSlice: vi.fn().mockResolvedValue(
+        seriesSlice({
+          occurrenceDate: effectiveDate,
+          localDate: effectiveDate,
+        }),
+      ),
       listSeries: vi.fn().mockResolvedValue([segment()]),
       applyChangeSet,
       materializeSeries: vi.fn().mockResolvedValue({
