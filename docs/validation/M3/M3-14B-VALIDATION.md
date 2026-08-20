@@ -1,503 +1,217 @@
 # M3-14B validation: recurring series surface
 
-**Status:** in development — independent code review is clean for
-`abb578d8fe34b5cd5c908ccc151009f693ec185d`, its evidence-only head has green CI
-and a matching `READY` Preview, but approval is withheld until the exact Preview
-receives an authenticated 390x844 hosted inspection.
-
-**Tier:** 2 — this is the user-visible surface over M3-14's accepted schema,
-authorization and recurrence operations. It adds no schema, migration, grant,
-RLS policy, privileged function, external service or spend.
-
-**Branch:** `ticket/m3-14b-recurring-series-surface`, from `master` at
-`2e2c1be4cb44f9591a6d7e0219a7ded28de547e1`.
-
+**Ticket:** [M3-14B](../../backlog/M3/M3-14B-RECURRING-SERIES-SURFACE.md)
+**Status:** in development — code-review corrections complete locally; fresh
+CI, Preview, independent review and product-owner acceptance are pending.
+**Tier:** 2
+**Branch:** `ticket/m3-14b-recurring-series-surface`
+**Base:** `2e2c1be4cb44f9591a6d7e0219a7ded28de547e1`
 **Implementation review target:**
-`abb578d8fe34b5cd5c908ccc151009f693ec185d`.
-
+`49ae94bb8330d78b5d71dd7125c5595eb8eb2d40`
 **Review range:**
-`git diff 2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..abb578d8fe34b5cd5c908ccc151009f693ec185d`.
-The validation-record commits contain this record, its index entry and the
-local screenshot only; they are documentation/evidence under the
-evidence-commit exception in `AGENTS.md` and do not change the application or
-CI workflow.
+`git diff 2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..49ae94bb8330d78b5d71dd7125c5595eb8eb2d40`
+
+Key implementation commits:
 
 | Commit | Purpose |
 | --- | --- |
-| `29c246965eb0c24278ab5acf8978bcdc34554d9d` | Owner-scoped reads, Server Actions, review-first recurrence builder, scoped Plan controls, materialization recovery and focused unit/component coverage. |
-| `3da3fb02d70877ed8bf0ced93efcc85fddaca682` | Dedicated 390x844 production Playwright flow and a correction that keeps authoritative series-operation receipts visible after deleted cards leave the render tree. |
-| `0c59b6cd95ae051d0961a696d77b4fe63337d235` | Separate CI/tooling commit adding the pinned M3-14B browser flow to the existing browser job. |
-| `3ffdfba063b17c0beaa6d8aaca4274d8a788a08b` | Evidence-only builder validation record, index entry and local screenshot. |
-| `6939857370286f5aa82f4d74e4d88a34b6ba2dd8` | Prettier-only correction to `series-actions.test.ts` after the first exact-branch-head CI run failed formatting. |
-| `1372501341ee17cfc52aa6414520d75c8d8d9913` | Evidence-only update recording the formatting correction and its failed predecessor run. |
-| `09d6e223c96058dc928d91ac5ebb619475c48c68` | Refreshes the saved-session reuse test fixture with the materialization receipt and method added by M3-14B; application behavior is unchanged. |
-| `0796a53e36b9bfd71fa354cd9a161596d620e280` | Evidence-only head for implementation `09d6e223`; records its green CI and READY Preview under the evidence-commit exception. |
-| `a87a7df617bf9703367b6dbcedae111e71bf10db` | Corrects cross-channel Plan feedback ordering and recovered idle materialization copy, with component regressions for both review findings. |
-| `5f60b7055bf8b73ebf459f9db0ae4d66bc1cb537` | Evidence-only head for corrected implementation `a87a7df`; records the rejected target and correction handoff before the corrected CI and re-review completed. |
-| `bf4c2a20e27568fe863e09b3e38860871f7fdcfe` | Evidence-only record of the corrected CI, Preview and remaining hosted-review gate for the superseded creation model. |
-| `dd1a0f32d6fef596d365c1a11bce00f864173b1a` | Approved governance correction replacing source-session Repeat with one Plan-level Create session contract. |
-| `243b3a0f950e59253c002438b5356ed6754712ef` | Revised implementation and tests: unified single/recurring creation, limited card controls, nested session editors, removed recurrence shortcuts and updated mobile flows. |
-| `91de7c49984e90b71c3342f6e90b23467a03101e` | Evidence-only builder handoff for `243b3a0`; its CI and Vercel deployment both failed the same four test-code TypeScript errors. |
-| `235fdea2ab43d929ccb8ddd80626dff149edef22` | Test-only correction preserving locator and assertion semantics while supplying the Locator and HTMLElement types TypeScript requires. |
-| `f89a0bd7be1119985f9693f19bd4cc3aa1f5282c` | Evidence-only record of the TypeScript correction; its CI passed M3-14B and every other gate except the changed M3-12 keyboard flow. |
-| `abb578d8fe34b5cd5c908ccc151009f693ec185d` | Test-only correction normalizing the disclosure closed before proving keyboard opening and first-field focus. |
-| `b8fd4b4572aab5cb5ed043b284b4d9ac26a54b16` | Evidence-only head for implementation `abb578d`; records the keyboard correction handoff and exact review range. |
+| `29c246965eb0c24278ab5acf8978bcdc34554d9d` | Initial owner-scoped recurrence surface and focused coverage. |
+| `3da3fb02d70877ed8bf0ced93efcc85fddaca682` | Dedicated mobile flow and retained authoritative receipt. |
+| `09d6e223c96058dc928d91ac5ebb619475c48c68` | Corrected saved-reuse materialization fixture. |
+| `a87a7df617bf9703367b6dbcedae111e71bf10db` | Corrected feedback precedence and recovered-idle copy. |
+| `243b3a0f950e59253c002438b5356ed6754712ef` | Replaced source shortcuts with the unified Plan create flow. |
+| `235fdea2ab43d929ccb8ddd80626dff149edef22` | Corrected test-only TypeScript types. |
+| `abb578d8fe34b5cd5c908ccc151009f693ec185d` | Corrected the M3-12 disclosure focus setup. |
+| `cad217da994c94ffcc358506d29f3a1632460e81` | Corrected end receipts and timezone recovery; removed dead source modes and builder. |
+| `49ae94bb8330d78b5d71dd7125c5595eb8eb2d40` | Anchored default weekly creation to the selected session date. |
 
-## Delivered behavior
+## Acceptance criteria
 
-- **One Plan-level creation path.** The empty and populated Plan expose exactly
-  one **Create session** entry. It selects the owner-local date and ordinary
-  session fields first. With **Repeat this session** off, it uses M3-12's
-  owner-scoped add. With it on, it reveals daily intervals 1–365 or weekly
-  intervals 1–52 with selected weekdays and a bounded or open end. The first
-  occurrences are reviewed before the existing M3-14 `add_series` operation
-  writes anything. New sessions have no activities because the approved Plan
-  surface has no activity editor.
-- **No recurrence shortcuts.** Plan cards and saved-library entries no longer
-  offer **Repeat**. `/home/plan/series/new` redirects to the unified Plan flow.
-  Existing saved-session **Use in plan** remains ordinary M3-13 copy behavior.
-- **Card action boundary.** A Plan session card exposes only **Edit**,
-  **Remove**, and **Lock** or **Unlock**, plus informational recurring, changed
-  and locked markers. Session saving, move, duplicate, library save,
-  consequence copy and both recurrence scopes live inside Edit or Remove.
-- **Honest creation results.** A successful creation returns to the Plan with
-  the series materialized. Cap collisions are reported afterward as the exact
-  skipped dates returned by materialization; they do not prevent creation of
-  the series.
-- **Scoped changes.** “Only this session” uses the existing Plan edit path and
-  leaves that occurrence visibly changed. “This and all future sessions” uses
-  M3-14's split operation and leaves earlier, diverged, locked and completed
-  history alone.
-- **Scoped removal.** “Only this session” uses the existing Plan cancellation
-  path. Before “this and all future sessions” the page states that the action
-  is permanent, removes future unlocked occurrences including changed ones,
-  keeps locked sessions and does not alter completed training. It shows no
-  forecast count. After success, the shared Plan status region reports only
-  the operation's authoritative unchanged-deleted, changed-deleted and
-  locked-kept counts.
-- **Bounded-segment safety.** The bulk future scopes are withheld when an
-  occurrence lies past its segment end. The existing move surface now rereads
-  the owner's segments and refuses any recurring occurrence placement before
-  its segment start or after its segment end. No path branches on SQLSTATE or
-  database error text.
-- **Action-only materialization.** Materialization runs after successful Plan,
-  saved-reuse and series Server Actions. On Plan visits a small client trigger
-  invokes a Server Action once only when the rendered window is incomplete.
-  Render, GET and prefetch paths remain read-only. Pending, slow, unconfirmed,
-  recovered, offline and skipped-date states use accessible status copy. A
-  recovered receipt takes precedence over idle extension copy when no dates
-  remain uncovered.
-- **Latest-action feedback.** The shared visible and polite-live Plan status
-  keeps an authoritative future-removal receipt after its source cards unmount,
-  then yields to a newer ordinary Plan submission and its returned feedback.
-- **Existing design language.** The revised surface uses the current cream,
-  deep-green, ledger-card and day-rail system, retain visible keyboard focus
-  and reduced-motion behavior, and introduce no new visual direction.
-
-## Mobile demo path
-
-Use the exact Preview supplied by the lead after push, at a 390x844 viewport:
-
-1. Sign in, confirm an owner time zone and open `/home/plan`. Confirm the empty
-   Plan has one **Create session** entry and no per-date create controls.
-2. Create one ordinary session with **Repeat this session** off. Open **Edit**
-   to save it to the library, then confirm saved **Use in plan** remains
-   ordinary reuse and has no **Repeat** shortcut.
-3. Use **Create session** again, enable recurrence, create a bounded daily rule,
-   review its first occurrences, then create it.
-4. Open **Edit** on the first occurrence and use **Only this session**, then
-   change a later one with **This and all future sessions**.
-5. Open **Remove** on a later occurrence. Confirm the
-   consequence copy carries no projected count, perform the future removal,
-   and check the exact returned count receipt in the Plan status region.
-6. Create an open weekly rule through the same Plan entry and confirm any cap
-   collision is reported after creation.
-
-Local visual evidence:
-[M3-14B 390x844 production flow](evidence/M3-14B-390x844.png). The screenshot is
-full-page while the Playwright context itself is pinned to 390x844. The product
-owner's acceptance surface remains the exact Vercel Preview, not this image.
+1. The empty and populated Plan have one **Create session** action and no
+   per-day create actions; recurrence off creates one ordinary session on the
+   chosen date.
+2. The same flow creates reviewed daily or weekly, bounded or open series and
+   shows them correctly at `390x844`. A default weekly rule includes and follows
+   the chosen session date until the owner customizes its weekdays.
+3. A Plan card exposes only **Edit**, **Remove**, and its lock control. Other
+   operations are inside the editor, and neither Plan nor saved-library cards
+   expose recurrence shortcuts.
+4. A recurring create names dates skipped by the ten-session cap.
+5. **Only this session** changes one occurrence and leaves the rest unchanged.
+6. **This and all future sessions** changes only the future and preserves
+   earlier occurrences.
+7. Future removal states every permanent consequence before action, preserves
+   earlier, completed and locked records, and afterward reports the
+   authoritative unchanged-removed, changed-removed and locked-kept counts.
+   Unchanged removed is `deleted - divergedDeleted`, because changed removals
+   are a subset of the transaction's deleted total.
+8. Window top-up is action-only, announced accessibly, and has honest pending,
+   recovery and skipped-date outcomes.
+9. Empty, loading, invalid, stale, expired-session, missing-time-zone and
+   offline states retain specific copy and recovery.
+10. The pinned production Playwright flow at `390x844` covers ordinary and
+    recurring creation plus only-this, this-and-future and end-series scopes.
 
 ## Changed files
 
-Exact review-range stat, `git diff --stat
-2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..abb578d8fe34b5cd5c908ccc151009f693ec185d`:
+Exact base-to-implementation stat:
 
 ```text
  .github/workflows/ci.yml                           |  10 +
+ AGENTS.md                                          |   4 +-
  docs/backlog/M3/M3-14B-RECURRING-SERIES-SURFACE.md | 108 ++--
  docs/product/F-005-ROLLING-TRAINING-PLAN.md        |  17 +-
- docs/validation/M3/M3-14B-VALIDATION.md            | 455 ++++++++++++++++
+ docs/validation/M3/M3-14B-VALIDATION.md            | 503 ++++++++++++++++++
  docs/validation/M3/evidence/M3-14B-390x844.png     | Bin 0 -> 149931 bytes
  docs/validation/README.md                          |   6 +
  e2e/m3-12-plan.spec.ts                             |  53 +-
  e2e/m3-13-saved-sessions.spec.ts                   |   1 +
- e2e/m3-14b-recurring-series.spec.ts                | 482 +++++++++++++++++
+ e2e/m3-14b-recurring-series.spec.ts                | 476 +++++++++++++++++
  e2e/m3-14b.playwright.config.ts                    |  17 +
  src/app/home/plan/actions.test.ts                  |   5 +
  src/app/home/plan/actions.ts                       |  45 +-
- src/app/home/plan/create-session.tsx               | 285 ++++++++++
+ src/app/home/plan/create-session.tsx               | 284 ++++++++++
  src/app/home/plan/page.tsx                         |  42 +-
- src/app/home/plan/plan-manager.test.tsx            | 301 ++++++++++-
+ src/app/home/plan/plan-manager.test.tsx            | 313 ++++++++++-
  src/app/home/plan/plan-manager.tsx                 | 571 +++++++++++++--------
  src/app/home/plan/plan.module.css                  | 383 ++++++++++++++
- src/app/home/plan/recurrence-fields.tsx            | 126 +++++
+ src/app/home/plan/recurrence-fields.tsx            | 144 ++++++
  src/app/home/plan/recurring-session-controls.tsx   | 248 +++++++++
  src/app/home/plan/saved/actions.test.ts            |  12 +-
  src/app/home/plan/saved/actions.ts                 |  11 +-
  src/app/home/plan/saved/saved-library.test.tsx     |   1 +
  src/app/home/plan/saved/saved.module.css           |  18 +
- src/app/home/plan/series-action-state.ts           |  50 ++
- src/app/home/plan/series-actions.test.ts           | 387 ++++++++++++++
- src/app/home/plan/series-actions.ts                | 493 ++++++++++++++++++
+ src/app/home/plan/series-action-state.ts           |  51 ++
+ src/app/home/plan/series-actions.test.ts           | 363 +++++++++++++
+ src/app/home/plan/series-actions.ts                | 479 +++++++++++++++++
  src/app/home/plan/series-materialization.ts        |  40 ++
- src/app/home/plan/series-materializer.test.tsx     |  50 ++
- src/app/home/plan/series-materializer.tsx          | 132 +++++
+ src/app/home/plan/series-materializer.test.tsx     |  84 +++
+ src/app/home/plan/series-materializer.tsx          | 133 +++++
  src/app/home/plan/series-recurrence.test.ts        |  66 +++
  src/app/home/plan/series-recurrence.ts             | 119 +++++
  src/app/home/plan/series-transition-watch.ts       | 125 +++++
  src/app/home/plan/series/new/page.tsx              |   8 +
- src/app/home/plan/series/new/series-builder.tsx    | 286 +++++++++++
  src/app/home/plan/session-fields.tsx               |  67 +++
  .../repositories/rolling-plan-repository.test.ts   |  63 +++
  src/server/repositories/rolling-plan-repository.ts | 130 +++++
  .../rolling-plan/in-memory-rolling-plan-adapter.ts |  10 +
  src/server/rolling-plan/rolling-plan.ts            |  11 +
  src/server/saved-sessions/session-copy.ts          |  32 ++
- 40 files changed, 4950 insertions(+), 316 deletions(-)
+ 40 files changed, 4735 insertions(+), 318 deletions(-)
 ```
 
-Initial revised-contract implementation stat, `git diff --stat
-dd1a0f32d6fef596d365c1a11bce00f864173b1a..243b3a0f950e59253c002438b5356ed6754712ef`:
+Reviewed-target-to-current-implementation correction stat:
 
 ```text
- e2e/m3-12-plan.spec.ts                           |  48 ++-
- e2e/m3-13-saved-sessions.spec.ts                 |   1 +
- e2e/m3-14b-recurring-series.spec.ts              | 131 ++++---
- src/app/home/plan/create-session.tsx             | 285 ++++++++++++++
- src/app/home/plan/plan-manager.test.tsx          | 121 ++++--
- src/app/home/plan/plan-manager.tsx               | 457 ++++++++++-------------
- src/app/home/plan/plan.module.css                |  70 ++++
- src/app/home/plan/recurring-session-controls.tsx | 104 +++---
- src/app/home/plan/saved/saved-library.test.tsx   |   1 +
- src/app/home/plan/saved/saved-library.tsx        |  10 -
- src/app/home/plan/series-actions.test.ts         |  53 +++
- src/app/home/plan/series-actions.ts              |   6 +
- src/app/home/plan/series/new/page.tsx            | 189 +---------
- 13 files changed, 879 insertions(+), 597 deletions(-)
+ AGENTS.md                                       |   4 +-
+ docs/validation/M3/M3-14B-VALIDATION.md         | 144 ++++++++----
+ docs/validation/README.md                       |  10 +-
+ e2e/m3-14b-recurring-series.spec.ts             |  26 +--
+ src/app/home/plan/create-session.tsx            |   1 -
+ src/app/home/plan/plan-manager.test.tsx         |  18 +-
+ src/app/home/plan/recurrence-fields.tsx         |  24 +-
+ src/app/home/plan/series-action-state.ts        |   1 +
+ src/app/home/plan/series-actions.test.ts        | 170 ++++++--------
+ src/app/home/plan/series-actions.ts             |  48 ++--
+ src/app/home/plan/series-materializer.test.tsx  |  40 +++-
+ src/app/home/plan/series-materializer.tsx       |   9 +-
+ src/app/home/plan/series/new/series-builder.tsx | 286 ------------------------
+ 13 files changed, 282 insertions(+), 499 deletions(-)
 ```
 
-CI type-correction stat, `git diff --stat
-91de7c49984e90b71c3342f6e90b23467a03101e..235fdea2ab43d929ccb8ddd80626dff149edef22`:
+Purpose notes for non-obvious paths:
 
-```text
- e2e/m3-14b-recurring-series.spec.ts     | 6 +++---
- src/app/home/plan/plan-manager.test.tsx | 4 +++-
- 2 files changed, 6 insertions(+), 4 deletions(-)
-```
-
-Keyboard-focus correction stat, `git diff --stat
-f89a0bd7be1119985f9693f19bd4cc3aa1f5282c..abb578d8fe34b5cd5c908ccc151009f693ec185d`:
-
-```text
- e2e/m3-12-plan.spec.ts | 7 ++++++-
- 1 file changed, 6 insertions(+), 1 deletion(-)
-```
-
-Files whose purpose is not evident from path and diff:
-
-- `src/app/home/plan/actions.ts` validates recurring moves against the current
-  owner segment and tops up only after an accepted Plan mutation.
-- `src/app/home/plan/saved/actions.ts` tops up after a saved-session reuse so
-  that action and the generic Plan action have the same recurrence behavior.
-- `src/app/home/plan/series-materialization.ts` is the shared Server-Action-only
-  top-up helper; no page or GET imports it to perform a write.
-- `src/app/home/plan/series-transition-watch.ts` is the deliberately separate
-  fifth transition-recovery copy required by the approved brief; this ticket
-  does not consolidate the existing four copies.
-- `src/server/saved-sessions/session-copy.ts` adds the Plan-session-to-series
-  copy boundary and strips dated identity, row identity, lock and cancellation
-  state while preserving session content by value.
-- `src/server/repositories/rolling-plan-repository.ts` implements the accepted
-  owner-scoped select for series and parses its nested activity values; it adds
-  no mutation path.
-- `src/server/rolling-plan/in-memory-rolling-plan-adapter.ts` and
-  `src/server/rolling-plan/rolling-plan.ts` expose the same series read through
-  the existing domain seam for application and focused tests.
-- `.github/workflows/ci.yml` is the separately committed tooling change that
-  runs this ticket's pinned browser config on port 3022.
-- `src/app/home/plan/create-session.tsx` owns the one Plan-level form, switches
-  between the existing ordinary and series Server Actions, and requires an
-  occurrence review before recurring submission.
-- `src/app/home/plan/plan-manager.tsx` removes per-date creation and card
-  shortcuts, then nests existing move, duplicate, library-save and recurrence
-  operations under the two session editors.
-- `src/app/home/plan/series-actions.ts` accepts validated new session content as
-  an activity-free source for the accepted `add_series` operation; plan and
-  saved source-copy branches remain unchanged internally.
-- `src/app/home/plan/series/new/page.tsx` redirects the superseded standalone
-  creation URL to the unified Plan surface.
-- `src/app/home/plan/series/new/series-builder.tsx` is retained superseded
-  source with no importer. The route redirects before it can render, so it is
-  absent from the runtime bundle; cleanup is separate and non-blocking.
-- `e2e/m3-12-plan.spec.ts` and `e2e/m3-13-saved-sessions.spec.ts` follow the
-  revised control nesting while preserving those tickets' existing behavior.
-
-Nothing was deleted or renamed. The screenshot, this record and the validation
-index are evidence-only additions inside the review range; they do not change
-application behavior or CI.
+- `.github/workflows/ci.yml` pins the ticket flow in the existing browser job;
+  it is unchanged by the current corrections.
+- `AGENTS.md` assigns hosted UI verification to the product owner; reviewers
+  do not perform browser runs.
+- `series-transition-watch.ts` is the approved, deliberately separate fifth
+  transition-recovery copy.
+- `series/new/page.tsx` preserves the legacy URL only as a redirect to the
+  unified Plan entry.
+- `series/new/series-builder.tsx` was deleted after exact repository search
+  found no import or live caller. Git can recover it; no file was renamed.
 
 ## Data, API, privacy and security effects
 
-**Schema and authorization:** none. No migration, generated database type,
-grant, RLS policy, privileged function or role changed. The surface uses
-M3-14's accepted `apply_rolling_plan_change_set` and
-`materialize_rolling_plan_series` RPCs. Series are read through the accepted
-authenticated `select` grant, with both RLS and an explicit `user_id` predicate
-after verified-user authentication.
+- No schema, migration, generated type, grant, RLS policy, privileged function,
+  package, credential, external service, AI call or spend changed.
+- The existing authenticated Server Actions and owner-scoped M3-14 operations
+  remain the only recurrence mutation boundary. Browser storage is limited to
+  the existing recovery flags.
+- `add_series` now accepts only the unified flow's validated owner-entered
+  session fields. The removed Plan and saved source modes had no live caller;
+  ordinary M3-13 saved-session reuse is unchanged.
+- The corrections add no shared request state, waterfall, client repository
+  import or broad dependency. The weekly default is derived during render until
+  the owner customizes it, avoiding effect-driven mirrored state.
 
-**API:** authenticated Server Actions are the only mutation entrypoints. They
-accept validated new-session content or retained internal source identifiers,
-recurrence fields, operation scope and optimistic revision values; they reread
-the owner Plan, source and segment as applicable before composing the existing
-domain operation. No route handler, public API, provider call or client-side
-database mutation was added.
+## CI, Preview and evidence
 
-**Data:** creation and materialization add only the existing M3-14 series,
-series-activity and occurrence records. Edits, splits and ending operations use
-the already accepted permanent history semantics. The surface creates no
-parallel plan, proposal or completion record and cannot rewrite completed
-history.
+Current implementation `49ae94bb8330d78b5d71dd7125c5595eb8eb2d40`
+has no CI run or Preview yet. The lead must push it, obtain green exact-target
+CI (or an evidence-only head under the documented exception), wait for a
+matching `READY` Preview, and request fresh independent review.
 
-**Privacy and cost:** the browser receives only the signed-in owner's Plan,
-saved-session and series values needed by these screens. Server-only imports do
-not cross into client modules, no service-role credential enters application
-code, and no external service, AI call, package or spend was introduced. The
-Playwright service-role key is confined to local test setup/cleanup for each
-disposable account.
+Prior evidence is superseded but establishes the corrected baseline:
 
-## Tests and builder results
+- [CI 32394248009](https://github.com/mattiss01/fittip/actions/runs/32394248009)
+  was green on evidence head `b8fd4b4` over implementation `abb578d`; its
+  matching Preview was
+  <https://fittip-gf4t4grxo-mattis-3657s-projects.vercel.app>.
+- The product owner personally completed and accepted the authenticated prior
+  Preview check at `390x844`. Runtime commits `cad217d` and `49ae94b` invalidate
+  that acceptance; the new exact Preview requires a fresh owner check.
+- Superseded failures remain concise history: CI
+  [32392022206](https://github.com/mattiss01/fittip/actions/runs/32392022206)
+  found test-only TypeScript errors, and CI
+  [32392705787](https://github.com/mattiss01/fittip/actions/runs/32392705787)
+  found the stale M3-12 disclosure setup. Earlier rejected targets and full
+  correction detail remain in Git history.
 
-Exact evidence-head CI run
-[32392022206](https://github.com/mattiss01/fittip/actions/runs/32392022206)
-for `91de7c49984e90b71c3342f6e90b23467a03101e` failed TypeScript before Vitest,
-the production build and browser flow could run. Its matching Vercel deployment
-`dpl_Br6gMKzT1DseDVzaMrgWrgswfft6` failed on the same compilation step. The
-four errors were test code only: three Plan-root calls passed `Page` to a
-helper intentionally typed for `Locator`, and one DOM query inferred `Element`
-where `toContainElement` requires `HTMLElement | SVGElement | null`.
+Focused builder results for the current corrections:
 
-Correction `235fdea2ab43d929ccb8ddd80626dff149edef22` scopes those three calls through
-`page.locator("body")` and types the existing action-area query as
-`HTMLElement`. It does not change locator meaning, assertion strength, runtime
-code or user behavior.
-
-Exact evidence-head CI run
-[32392705787](https://github.com/mattiss01/fittip/actions/runs/32392705787)
-for `f89a0bd7be1119985f9693f19bd4cc3aa1f5282c` passed the application checks and
-build, database job, dedicated M3-14B flow and every other browser flow. It
-failed only the changed M3-12 flow at `e2e/m3-12-plan.spec.ts:182`. The retained
-trace showed that **Create session** was still open from the flow's earlier
-successful creation. Focusing its summary and pressing Enter therefore closed
-the disclosure; Tab correctly skipped the now-inactive Date field. Date is the
-first tabbable form control, so the focus assertion was correct and its assumed
-closed starting state was stale.
-
-Correction `abb578d8fe34b5cd5c908ccc151009f693ec185d` closes the disclosure only
-when the earlier flow left it open, focuses its summary, opens it with Enter,
-asserts the open state, then retains the assertion that the next Tab focuses
-Date. This changes no runtime, locator meaning or assertion strength.
-
-[CI run 32394248009](https://github.com/mattiss01/fittip/actions/runs/32394248009)
-is green on evidence-only head `b8fd4b4572aab5cb5ed043b284b4d9ac26a54b16`
-over implementation `abb578d8fe34b5cd5c908ccc151009f693ec185d`, so the
-evidence-commit exception applies. It passed formatting, ESLint, TypeScript,
-767 Vitest tests with one skip, the production build, migrations from zero,
-database lint and advisors, pgTAP, concurrency harnesses, and every pinned
-390px browser flow including corrected M3-12, M3-13 and revised M3-14B. The
-matching Vercel Preview reached `READY` at
-<https://fittip-gf4t4grxo-mattis-3657s-projects.vercel.app>.
-
-| Revised-contract command or check | Result |
+| Check | Result |
 | --- | --- |
-| `npm.cmd run test:run -- src/architecture/server-boundary.test.ts src/app/home/plan/actions.test.ts src/app/home/plan/plan-manager.test.tsx src/app/home/plan/series-actions.test.ts src/app/home/plan/series-recurrence.test.ts src/app/home/plan/saved/actions.test.ts src/app/home/plan/saved/saved-library.test.tsx` | PASS — 7 files, 52 tests before the final create-reset hardening |
-| exact final `npm.cmd run test:run -- src/app/home/plan/plan-manager.test.tsx src/app/home/plan/series-actions.test.ts` | PASS — 2 files, 17 tests after the final create-reset hardening |
-| changed-file `npx.cmd eslint` for the revised Plan, saved-library and three affected Playwright files | PASS — after replacing one effect-driven preview reset with response-versioned derived state |
-| `npx.cmd playwright test --config=e2e/m3-14b.playwright.config.ts --list` | PASS — exactly one pinned M3-14B mobile test |
-| `npm.cmd run build` | PASS — Next.js 16.2.11 production build and TypeScript, including dynamic redirect route `/home/plan/series/new` |
-| local Supabase production start plus `npx.cmd playwright test --config=e2e/m3-14b.playwright.config.ts --workers=1 --trace=retain-on-failure --output=test-results/m3-14b-revised-local` | PASS — exact implementation `243b3a0`, 1 test, 15.2 seconds test / 16.5 seconds total at exactly 390x844 |
-| revised Playwright assertions beyond behavior | PASS — private/no-store headers, no horizontal overflow, no page or console error, offline notice, legacy-route redirect and disposable-user cleanup |
-| manual inspection of `evidence/M3-14B-390x844.png` | PASS — single Plan create card and Edit/Remove/Lock card controls are legible in the existing ledger/day-rail system; the full-page image remains long because it includes the deliberate ten-session cap fixture |
-| first revised Playwright attempt | FAIL — singular text counted the Create summary and its hidden submit button; the assertion was narrowed to the Plan-level summary |
-| second revised Playwright attempt | FAIL — saved-reuse success is intentionally in the library's shared status region rather than the entry card; the assertion now follows the accepted M3-13 surface |
-| third revised Playwright attempt | FAIL — non-exact `Repeat` matched both the opt-in checkbox and frequency select; the frequency selectors now use exact labels |
+| Three focused Vitest files | PASS — 21 tests |
+| Changed-file ESLint and Prettier | PASS |
+| TypeScript | PASS |
+| Next.js 16.2.11 production build | PASS |
+| Pinned M3-14B Playwright against `build` + `start`, port 3022 | PASS — 1 test at `390x844`, 10.6 seconds total |
 | `git diff --check` | PASS |
 
-First focused correction checks:
-
-| Correction command or check | Result |
-| --- | --- |
-| `npm.cmd run typecheck` | PASS |
-| `npm.cmd run test:run -- src/app/home/plan/plan-manager.test.tsx` | PASS — 1 file, 11 tests |
-| `npx.cmd playwright test --config=e2e/m3-14b.playwright.config.ts --list` | PASS — exactly one pinned M3-14B mobile test |
-| `npx.cmd prettier --check e2e/m3-14b-recurring-series.spec.ts src/app/home/plan/plan-manager.test.tsx` | PASS |
-| `git diff --check` | PASS |
-
-The first correction changes only compile-time types around unchanged test
-queries, so its production E2E was not rerun locally. The later exact-head CI
-compiled and ran the same pinned flow for corrected target `abb578d`.
-
-Second focused correction checks:
-
-| Keyboard correction command or check | Result |
-| --- | --- |
-| `npm.cmd run test:run -- src/app/home/plan/plan-manager.test.tsx` | PASS — 1 file, 11 tests |
-| existing exact production build `L7bR7QjX9HYqeCJ9Mxaf6` plus `npx.cmd playwright test --config=e2e/m3-12.playwright.config.ts --workers=1` | PASS — 2 tests in 29.2 seconds at 390x844; the build postdates runtime target `243b3a0` and every later change is test or evidence only |
-| `npx.cmd playwright test --config=e2e/m3-14b.playwright.config.ts --list` | PASS — exactly one pinned M3-14B mobile test; its locator semantics did not change, so its production flow was not rerun |
-| `npx.cmd prettier --check e2e/m3-12-plan.spec.ts` | PASS |
-| `git diff --check` | PASS |
-
-The bounded M3-12 production run generated its normal evidence screenshots;
-they were restored to their tracked versions because this correction changes
-only test setup and assertions. Both disposable users were removed by the
-flow's `finally` cleanup, the isolated port was released, and no M3-14B
-production rerun was warranted because no M3-14B locator or runtime semantics
-changed.
-
-The three failed browser attempts reached only selector assertions; each
-disposable local user was deleted by the test's `finally` cleanup. The final
-run exercised single and recurring creation, saved reuse, card action limits,
-both recurrence scopes, authoritative removal counts, cap skips and recovery
-states. The builder deliberately did not run the complete local suite;
-exact-head CI owns that gate and is green.
-
-Historical evidence for the superseded existing-session Repeat model follows.
-It does not validate the revised implementation:
-
-The exact branch-head CI run
-[32360915486](https://github.com/mattiss01/fittip/actions/runs/32360915486)
-for `3ffdfba063b17c0beaa6d8aaca4274d8a788a08b` failed only at Prettier. Its job
-log named `src/app/home/plan/series-actions.test.ts`. Commit
-`6939857370286f5aa82f4d74e4d88a34b6ba2dd8` formats only that file. The
-sequential ESLint, TypeScript, Vitest and production-build steps were skipped;
-the browser and database jobs passed.
-
-The next exact branch-head CI run
-[32361390209](https://github.com/mattiss01/fittip/actions/runs/32361390209)
-for `1372501341ee17cfc52aa6414520d75c8d8d9913` passed Prettier, ESLint and
-TypeScript, then failed one Vitest assertion in
-`src/app/home/plan/saved/actions.test.ts`. The implementation correctly topped
-up recurring sessions after reuse, but that pre-M3-14B test fixture returned no
-`planRevision` and supplied no `materializeSeries` method. The shared recovery
-copy therefore honestly appended that recurring sessions could not be
-extended. Commit `09d6e223c96058dc928d91ac5ebb619475c48c68`
-updates only the fixture and asserts that the applied revision reaches
-materialization. The production-build step was skipped after Vitest failed;
-the browser and database jobs passed.
-
-[CI run 32362050214, attempt
-2](https://github.com/mattiss01/fittip/actions/runs/32362050214) is green on
-evidence head `0796a53e36b9bfd71fa354cd9a161596d620e280`. That head changes only this
-validation record relative to implementation
-`09d6e223c96058dc928d91ac5ebb619475c48c68`, so the evidence-commit exception
-applies. Its exact Vercel Preview reached `READY` at
-<https://fittip-er8ro3ndm-mattis-3657s-projects.vercel.app>. The independent
-reviewer could not perform an authenticated hosted browser pass because the
-Preview redirected to Vercel SSO.
-
-Independent review rejected `09d6e223c96058dc928d91ac5ebb619475c48c68`:
-the retained series receipt masked feedback from every newer ordinary Plan
-action, and a recovered idle materialization with no uncovered dates displayed
-permanent false pending copy. Correction
-`a87a7df617bf9703367b6dbcedae111e71bf10db` addresses both findings. It
-invalidates the earlier review target, CI evidence and Preview for acceptance;
-the lead owns push, new exact-SHA CI and the matching Preview.
-
-[CI run 32365738735](https://github.com/mattiss01/fittip/actions/runs/32365738735)
-is green across formatting, ESLint, TypeScript, 764 Vitest tests, the production
-build, migrations from zero, database lint, security and performance advisors,
-pgTAP, concurrency harnesses and all pinned 390px production browser flows. Its
-head is evidence-only commit `5f60b7055bf8b73ebf459f9db0ae4d66bc1cb537`
-over implementation `a87a7df617bf9703367b6dbcedae111e71bf10db`, so the
-evidence-commit exception applies. The exact matching Vercel Preview reached
-`READY` at <https://fittip-r3il6m0oj-mattis-3657s-projects.vercel.app>.
-
-Fresh independent re-review found both rejected feedback-state defects fixed,
-reconciled the full 35-file manifest, found no new implementation, security or
-scope issue, and confirmed the exact-head CI plus matching deployment. Approval
-is nevertheless withheld: desktop Chrome could pass Vercel protection, but the
-exact Preview redirected `/home/plan` to FitTip's sign-in surface because that
-browser has no authenticated FitTip application session. The only authenticated
-Plan tab belonged to a different M3-13 deployment and was not accepted as
-evidence. The desktop provider also reports no resize capability, so neither
-`/home/plan` nor `/home/plan/series/new` received an authenticated exact-Preview
-390x844 inspection.
-
-| Command or check | Result |
-| --- | --- |
-| `npm.cmd run test:run -- src/architecture/server-boundary.test.ts src/app/home/plan/series-recurrence.test.ts src/app/home/plan/series-actions.test.ts src/app/home/plan/actions.test.ts src/app/home/plan/plan-manager.test.tsx src/server/repositories/rolling-plan-repository.test.ts src/server/rolling-plan/rolling-plan.test.ts src/server/saved-sessions/session-copy.test.ts` | PASS — 8 files, 77 tests |
-| `npx.cmd eslint src/app/home/plan/plan-manager.tsx src/app/home/plan/recurring-session-controls.tsx e2e/m3-14b-recurring-series.spec.ts e2e/m3-14b.playwright.config.ts` | PASS |
-| `npm.cmd run typecheck` | PASS |
-| `npm.cmd run build` | PASS — Next.js 16.2.11 production build, including dynamic `/home/plan/series/new` |
-| local Supabase production build/start plus `npx.cmd playwright test --config=e2e/m3-14b.playwright.config.ts --workers=1 --trace=retain-on-failure --output=test-results/m3-14b-local` | PASS — 1 test, 9.8 seconds test time / 11.4 seconds run; disposable local user deleted in `finally` |
-| Playwright assertions beyond behavior | PASS — 390x844 viewport, private/no-store Plan headers, no horizontal overflow, no page or console error, offline and invalid-source recovery surfaces |
-| `npx.cmd prettier --check .github/workflows/ci.yml` | PASS after formatting |
-| `npx.cmd prettier --check src/app/home/plan/series-actions.test.ts` | PASS after the Prettier-only correction |
-| `npm.cmd run test:run -- src/app/home/plan/saved/actions.test.ts src/app/home/plan/actions.test.ts src/app/home/plan/series-actions.test.ts` | PASS — 3 files, 26 tests after the saved-reuse fixture correction |
-| `npx.cmd prettier --check src/app/home/plan/saved/actions.test.ts` | PASS after the fixture correction |
-| first focused correction Vitest run | FAIL — 1 of 10 assertions used a singular text query for copy intentionally rendered once visibly and once in the live region; the component behavior was correct and the assertion was narrowed to the visible heading |
-| `npm.cmd run test:run -- src/app/home/plan/plan-manager.test.tsx src/app/home/plan/series-materializer.test.tsx` | PASS — 2 files, 10 tests after the review correction |
-| `npx.cmd prettier --write src/app/home/plan/plan-manager.tsx src/app/home/plan/plan-manager.test.tsx src/app/home/plan/series-materializer.tsx src/app/home/plan/series-materializer.test.tsx` | PASS — focused correction files formatted; resulting changes are in the implementation correction commit |
-| `git diff --check` | PASS |
-
-The builder deliberately did not run the complete local suite merely to create
-evidence. The exact branch-head CI subsequently ran the full gate and is green.
-
-## Vercel React rules checked
-
-- `server-auth-actions`: every series mutation and materialization entrypoint
-  is an authenticated Server Action and owner values are reread server-side.
-- `server-no-shared-module-state` and request isolation: no owner, repository,
-  revision or action result is cached in module state.
-- `server-serialization`: client props contain only the Plan/series values and
-  actions required by the visible controls; repositories and Supabase clients
-  stay server-side.
-- `server-parallel-fetching`: independent owner reads on the Plan page are
-  started together rather than added as a serial waterfall.
-- Client modules import no server repository or Supabase module. Imports remain
-  direct and the new controls add no package or broad client dependency.
+The production flow generated its normal screenshot and cleaned its disposable
+owner. The screenshot was restored because the correction changes behavior,
+not the accepted evidence asset. Port 3022 was released. CI still owns the
+complete automated gate.
 
 ## Known limitations and remaining gates
 
-1. Activity rows remain fixture-backed and read-only, as approved; this ticket
-   adds no activity editor or global activity library.
-2. The fifth transition-recovery copy is intentionally recorded rather than
-   consolidated. A broader recovery refactor is outside M3-14B.
-3. A full-page evidence image is long because the flow intentionally leaves a
-   dense 14-day Plan, including a synthetic ten-session cap date. The pinned
-   viewport and overflow assertion passed; visual acceptance still belongs to
-   the 390x844 Vercel Preview.
-4. Exact corrected target `abb578d8fe34b5cd5c908ccc151009f693ec185d` is
-   pushed. Its evidence-only head has green CI and a matching `READY` Preview.
-   Independent review reconciled the complete 40-file manifest and found no
-   implementation, security or scope blocker, but approval is withheld because
-   the exact Preview has not received an authenticated 390x844 inspection. The
-   desktop provider cannot resize its Chrome window; its authenticated Plan tab
-   belonged to a superseded Preview, and navigation to the exact Preview timed
-   out. No credentials were entered and no hosted data or schema was changed.
+- Activities remain fixture-backed and read-only; there is no activity editor
+  or global library.
+- Transition recovery retains its approved fifth local copy; consolidation is
+  outside this ticket.
+- Exact-target CI, a matching `READY` Preview, independent code review and a
+  fresh product-owner hosted acceptance are pending. The reviewer does not run
+  a browser; the owner performs the manual hosted interaction and visual check.
 
 ## Independent reviewer focus
 
-Independent review inspected exact implementation
-`abb578d8fe34b5cd5c908ccc151009f693ec185d` against base
-`2e2c1be4cb44f9591a6d7e0219a7ded28de547e1`, reconciled all 40 files and found
-no blocking code, authorization, security or scope issue. Earlier targets,
-runs, Previews and reviews remain history only and are not acceptance evidence.
+Review exact implementation `49ae94bb8330d78b5d71dd7125c5595eb8eb2d40`
+against base `2e2c1be4cb44f9591a6d7e0219a7ded28de547e1` and reconcile
+the 40-file manifest above. Confirm the fresh CI and matching `READY` Preview,
+then judge:
 
-The remaining reviewer gate is an authenticated 390x844 inspection of
-<https://fittip-gf4t4grxo-mattis-3657s-projects.vercel.app/home/plan> for layout,
-spacing, focus, touch targets, serious-coach tone and the revised controls. It
-must also confirm that `/home/plan/series/new` redirects to that unified Plan
-surface. Code review already confirmed one Plan-level **Create session** entry,
-ordinary versus reviewed recurring creation, no Plan or saved-item recurrence
-shortcut, and exactly Edit, Remove and Lock/Unlock at card level.
+- `end_series` reports unchanged removals as total deleted minus the changed
+  subset while retaining the authoritative effect receipt;
+- a default weekly create includes and follows the selected date without
+  changing explicitly customized weekdays;
+- missing-time-zone materialization remains specific through recovery races;
+- Plan/saved `add_series` source modes and the unreachable builder are gone,
+  while the legacy redirect and ordinary saved reuse remain;
+- owner authentication, explicit ownership predicates, history preservation,
+  bounded segments, consequence-before-action, server/client boundaries and
+  honest recovery states remain intact.
+
+The product owner, not the reviewer, performs the fresh authenticated
+`390x844` Preview interaction and visual acceptance.

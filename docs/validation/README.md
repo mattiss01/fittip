@@ -42,11 +42,11 @@ Validation records and their visual evidence are grouped by milestone.
 ## M3
 
 - [M3-14B recurring series surface](M3/M3-14B-VALIDATION.md) — in development;
-  independent code review is clean for `abb578d`; exact evidence-head CI run
-  32394248009 is green and its matching Preview is `READY`. Approval is
-  withheld only until the exact Preview receives an authenticated 390x844
-  hosted inspection. One Plan-level Create session flow owns single and
-  recurring creation; cards are limited to Edit, Remove, and Lock
+  code-review corrections complete locally at `49ae94b`. The product owner
+  accepted the prior `abb578d` Preview, but the receipt, weekly-default and
+  recovery corrections require fresh exact-target CI, Preview, independent
+  review and owner acceptance. One Plan-level Create session flow owns single
+  and recurring creation; cards are limited to Edit, Remove, and Lock
 - [M3-14 recurring session series foundation](M3/M3-14-VALIDATION.md) — in
   development; Tier 1 builder handoff complete against `15e3f3c`. The migration
   adds `rolling_plan_series` and `rolling_plan_series_activities`, the
