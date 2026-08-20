@@ -1,11 +1,11 @@
 # M3-14B validation: recurring series surface
 
-**Status:** in development — test-only CI correction complete locally at
-`235fdea2ab43d929ccb8ddd80626dff149edef22`. CI run
-[32392022206](https://github.com/mattiss01/fittip/actions/runs/32392022206)
-and Vercel deployment `dpl_Br6gMKzT1DseDVzaMrgWrgswfft6` failed TypeScript
-on evidence head `91de7c4`; a fresh exact-SHA CI run, Preview and independent
-review are required.
+**Status:** in development — second test-only CI correction complete locally
+at `abb578d8fe34b5cd5c908ccc151009f693ec185d`. CI run
+[32392705787](https://github.com/mattiss01/fittip/actions/runs/32392705787)
+passed the application, database, M3-14B and every other browser flow, then
+failed the changed M3-12 keyboard check on evidence head `f89a0bd`; a fresh
+exact-SHA CI run, Preview and independent review are required.
 
 **Tier:** 2 — this is the user-visible surface over M3-14's accepted schema,
 authorization and recurrence operations. It adds no schema, migration, grant,
@@ -15,10 +15,10 @@ RLS policy, privileged function, external service or spend.
 `2e2c1be4cb44f9591a6d7e0219a7ded28de547e1`.
 
 **Implementation review target:**
-`235fdea2ab43d929ccb8ddd80626dff149edef22`.
+`abb578d8fe34b5cd5c908ccc151009f693ec185d`.
 
 **Review range:**
-`git diff 2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..235fdea2ab43d929ccb8ddd80626dff149edef22`.
+`git diff 2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..abb578d8fe34b5cd5c908ccc151009f693ec185d`.
 The validation-record commits contain this record, its index entry and the
 local screenshot only; they are documentation/evidence under the
 evidence-commit exception in `AGENTS.md` and do not change the application or
@@ -41,6 +41,8 @@ CI workflow.
 | `243b3a0f950e59253c002438b5356ed6754712ef` | Revised implementation and tests: unified single/recurring creation, limited card controls, nested session editors, removed recurrence shortcuts and updated mobile flows. |
 | `91de7c49984e90b71c3342f6e90b23467a03101e` | Evidence-only builder handoff for `243b3a0`; its CI and Vercel deployment both failed the same four test-code TypeScript errors. |
 | `235fdea2ab43d929ccb8ddd80626dff149edef22` | Test-only correction preserving locator and assertion semantics while supplying the Locator and HTMLElement types TypeScript requires. |
+| `f89a0bd7be1119985f9693f19bd4cc3aa1f5282c` | Evidence-only record of the TypeScript correction; its CI passed M3-14B and every other gate except the changed M3-12 keyboard flow. |
+| `abb578d8fe34b5cd5c908ccc151009f693ec185d` | Test-only correction normalizing the disclosure closed before proving keyboard opening and first-field focus. |
 
 ## Delivered behavior
 
@@ -120,16 +122,16 @@ owner's acceptance surface remains the exact Vercel Preview, not this image.
 ## Changed files
 
 Exact review-range stat, `git diff --stat
-2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..235fdea2ab43d929ccb8ddd80626dff149edef22`:
+2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..abb578d8fe34b5cd5c908ccc151009f693ec185d`:
 
 ```text
  .github/workflows/ci.yml                           |  10 +
  docs/backlog/M3/M3-14B-RECURRING-SERIES-SURFACE.md | 108 ++--
  docs/product/F-005-ROLLING-TRAINING-PLAN.md        |  17 +-
- docs/validation/M3/M3-14B-VALIDATION.md            | 419 +++++++++++++++
+ docs/validation/M3/M3-14B-VALIDATION.md            | 455 ++++++++++++++++
  docs/validation/M3/evidence/M3-14B-390x844.png     | Bin 0 -> 149931 bytes
  docs/validation/README.md                          |   6 +
- e2e/m3-12-plan.spec.ts                             |  48 +-
+ e2e/m3-12-plan.spec.ts                             |  53 +-
  e2e/m3-13-saved-sessions.spec.ts                   |   1 +
  e2e/m3-14b-recurring-series.spec.ts                | 482 +++++++++++++++++
  e2e/m3-14b.playwright.config.ts                    |  17 +
@@ -163,7 +165,7 @@ Exact review-range stat, `git diff --stat
  .../rolling-plan/in-memory-rolling-plan-adapter.ts |  10 +
  src/server/rolling-plan/rolling-plan.ts            |  11 +
  src/server/saved-sessions/session-copy.ts          |  32 ++
- 40 files changed, 4909 insertions(+), 316 deletions(-)
+ 40 files changed, 4950 insertions(+), 316 deletions(-)
 ```
 
 Initial revised-contract implementation stat, `git diff --stat
@@ -193,6 +195,14 @@ CI type-correction stat, `git diff --stat
  e2e/m3-14b-recurring-series.spec.ts     | 6 +++---
  src/app/home/plan/plan-manager.test.tsx | 4 +++-
  2 files changed, 6 insertions(+), 4 deletions(-)
+```
+
+Keyboard-focus correction stat, `git diff --stat
+f89a0bd7be1119985f9693f19bd4cc3aa1f5282c..abb578d8fe34b5cd5c908ccc151009f693ec185d`:
+
+```text
+ e2e/m3-12-plan.spec.ts | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
 ```
 
 Files whose purpose is not evident from path and diff:
@@ -278,8 +288,25 @@ where `toContainElement` requires `HTMLElement | SVGElement | null`.
 Correction `235fdea2ab43d929ccb8ddd80626dff149edef22` scopes those three calls through
 `page.locator("body")` and types the existing action-area query as
 `HTMLElement`. It does not change locator meaning, assertion strength, runtime
-code or user behavior. The lead must push it and record fresh exact-SHA CI and
-Preview evidence before re-review.
+code or user behavior.
+
+Exact evidence-head CI run
+[32392705787](https://github.com/mattiss01/fittip/actions/runs/32392705787)
+for `f89a0bd7be1119985f9693f19bd4cc3aa1f5282c` passed the application checks and
+build, database job, dedicated M3-14B flow and every other browser flow. It
+failed only the changed M3-12 flow at `e2e/m3-12-plan.spec.ts:182`. The retained
+trace showed that **Create session** was still open from the flow's earlier
+successful creation. Focusing its summary and pressing Enter therefore closed
+the disclosure; Tab correctly skipped the now-inactive Date field. Date is the
+first tabbable form control, so the focus assertion was correct and its assumed
+closed starting state was stale.
+
+Correction `abb578d8fe34b5cd5c908ccc151009f693ec185d` closes the disclosure only
+when the earlier flow left it open, focuses its summary, opens it with Enter,
+asserts the open state, then retains the assertion that the next Tab focuses
+Date. This changes no runtime, locator meaning or assertion strength. The lead
+must push it and record fresh exact-SHA CI and Preview evidence before
+re-review.
 
 | Revised-contract command or check | Result |
 | --- | --- |
@@ -296,7 +323,7 @@ Preview evidence before re-review.
 | third revised Playwright attempt | FAIL — non-exact `Repeat` matched both the opt-in checkbox and frequency select; the frequency selectors now use exact labels |
 | `git diff --check` | PASS |
 
-Focused correction checks:
+First focused correction checks:
 
 | Correction command or check | Result |
 | --- | --- |
@@ -310,6 +337,23 @@ The correction changes only compile-time types around unchanged test queries,
 so the production E2E was not rerun. The last production E2E remains behavioral
 evidence for implementation `243b3a0`; fresh CI must compile and run the same
 pinned flow for corrected target `235fdea`.
+
+Second focused correction checks:
+
+| Keyboard correction command or check | Result |
+| --- | --- |
+| `npm.cmd run test:run -- src/app/home/plan/plan-manager.test.tsx` | PASS — 1 file, 11 tests |
+| existing exact production build `L7bR7QjX9HYqeCJ9Mxaf6` plus `npx.cmd playwright test --config=e2e/m3-12.playwright.config.ts --workers=1` | PASS — 2 tests in 29.2 seconds at 390x844; the build postdates runtime target `243b3a0` and every later change is test or evidence only |
+| `npx.cmd playwright test --config=e2e/m3-14b.playwright.config.ts --list` | PASS — exactly one pinned M3-14B mobile test; its locator semantics did not change, so its production flow was not rerun |
+| `npx.cmd prettier --check e2e/m3-12-plan.spec.ts` | PASS |
+| `git diff --check` | PASS |
+
+The bounded M3-12 production run generated its normal evidence screenshots;
+they were restored to their tracked versions because this correction changes
+only test setup and assertions. Both disposable users were removed by the
+flow's `finally` cleanup, the isolated port was released, and no M3-14B
+production rerun was warranted because no M3-14B locator or runtime semantics
+changed.
 
 The three failed browser attempts reached only selector assertions; each
 disposable local user was deleted by the test's `finally` cleanup. The final
@@ -424,16 +468,17 @@ evidence. CI will run it after the lead pushes the exact branch head.
    dense 14-day Plan, including a synthetic ten-session cap date. The pinned
    viewport and overflow assertion passed; visual acceptance still belongs to
    the 390x844 Vercel Preview.
-4. Exact corrected target `235fdea2ab43d929ccb8ddd80626dff149edef22`
-   is local-only because the lead owns push. CI run 32392022206 and deployment
-   `dpl_Br6gMKzT1DseDVzaMrgWrgswfft6` failed on superseded evidence head
-   `91de7c4`; no fresh CI, Preview or independent review exists yet. No hosted
-   database was touched because this correction contains no migration.
+4. Exact corrected target `abb578d8fe34b5cd5c908ccc151009f693ec185d`
+   is local-only because the lead owns push. CI run 32392705787 failed the stale
+   M3-12 disclosure-state assumption on superseded evidence head `f89a0bd`; no
+   fresh CI, Preview or independent review exists yet. The earlier failed
+   TypeScript run and deployment remain history only. No hosted database was
+   touched because this correction contains no migration.
 
 ## Independent reviewer focus
 
 The next reviewer must inspect exact implementation
-`235fdea2ab43d929ccb8ddd80626dff149edef22` against base
+`abb578d8fe34b5cd5c908ccc151009f693ec185d` against base
 `2e2c1be4cb44f9591a6d7e0219a7ded28de547e1`, reconcile the complete ticket
 manifest, and use its new green CI run and matching Preview. Earlier targets,
 runs, Previews and reviews are history only and are not acceptance evidence.
