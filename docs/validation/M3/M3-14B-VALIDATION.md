@@ -1,11 +1,9 @@
 # M3-14B validation: recurring series surface
 
-**Status:** in development — second test-only CI correction complete locally
-at `abb578d8fe34b5cd5c908ccc151009f693ec185d`. CI run
-[32392705787](https://github.com/mattiss01/fittip/actions/runs/32392705787)
-passed the application, database, M3-14B and every other browser flow, then
-failed the changed M3-12 keyboard check on evidence head `f89a0bd`; a fresh
-exact-SHA CI run, Preview and independent review are required.
+**Status:** in development — independent code review is clean for
+`abb578d8fe34b5cd5c908ccc151009f693ec185d`, its evidence-only head has green CI
+and a matching `READY` Preview, but approval is withheld until the exact Preview
+receives an authenticated 390x844 hosted inspection.
 
 **Tier:** 2 — this is the user-visible surface over M3-14's accepted schema,
 authorization and recurrence operations. It adds no schema, migration, grant,
@@ -43,6 +41,7 @@ CI workflow.
 | `235fdea2ab43d929ccb8ddd80626dff149edef22` | Test-only correction preserving locator and assertion semantics while supplying the Locator and HTMLElement types TypeScript requires. |
 | `f89a0bd7be1119985f9693f19bd4cc3aa1f5282c` | Evidence-only record of the TypeScript correction; its CI passed M3-14B and every other gate except the changed M3-12 keyboard flow. |
 | `abb578d8fe34b5cd5c908ccc151009f693ec185d` | Test-only correction normalizing the disclosure closed before proving keyboard opening and first-field focus. |
+| `b8fd4b4572aab5cb5ed043b284b4d9ac26a54b16` | Evidence-only head for implementation `abb578d`; records the keyboard correction handoff and exact review range. |
 
 ## Delivered behavior
 
@@ -238,6 +237,9 @@ Files whose purpose is not evident from path and diff:
   saved source-copy branches remain unchanged internally.
 - `src/app/home/plan/series/new/page.tsx` redirects the superseded standalone
   creation URL to the unified Plan surface.
+- `src/app/home/plan/series/new/series-builder.tsx` is retained superseded
+  source with no importer. The route redirects before it can render, so it is
+  absent from the runtime bundle; cleanup is separate and non-blocking.
 - `e2e/m3-12-plan.spec.ts` and `e2e/m3-13-saved-sessions.spec.ts` follow the
   revised control nesting while preserving those tickets' existing behavior.
 
@@ -304,9 +306,17 @@ closed starting state was stale.
 Correction `abb578d8fe34b5cd5c908ccc151009f693ec185d` closes the disclosure only
 when the earlier flow left it open, focuses its summary, opens it with Enter,
 asserts the open state, then retains the assertion that the next Tab focuses
-Date. This changes no runtime, locator meaning or assertion strength. The lead
-must push it and record fresh exact-SHA CI and Preview evidence before
-re-review.
+Date. This changes no runtime, locator meaning or assertion strength.
+
+[CI run 32394248009](https://github.com/mattiss01/fittip/actions/runs/32394248009)
+is green on evidence-only head `b8fd4b4572aab5cb5ed043b284b4d9ac26a54b16`
+over implementation `abb578d8fe34b5cd5c908ccc151009f693ec185d`, so the
+evidence-commit exception applies. It passed formatting, ESLint, TypeScript,
+767 Vitest tests with one skip, the production build, migrations from zero,
+database lint and advisors, pgTAP, concurrency harnesses, and every pinned
+390px browser flow including corrected M3-12, M3-13 and revised M3-14B. The
+matching Vercel Preview reached `READY` at
+<https://fittip-gf4t4grxo-mattis-3657s-projects.vercel.app>.
 
 | Revised-contract command or check | Result |
 | --- | --- |
@@ -333,10 +343,9 @@ First focused correction checks:
 | `npx.cmd prettier --check e2e/m3-14b-recurring-series.spec.ts src/app/home/plan/plan-manager.test.tsx` | PASS |
 | `git diff --check` | PASS |
 
-The correction changes only compile-time types around unchanged test queries,
-so the production E2E was not rerun. The last production E2E remains behavioral
-evidence for implementation `243b3a0`; fresh CI must compile and run the same
-pinned flow for corrected target `235fdea`.
+The first correction changes only compile-time types around unchanged test
+queries, so its production E2E was not rerun locally. The later exact-head CI
+compiled and ran the same pinned flow for corrected target `abb578d`.
 
 Second focused correction checks:
 
@@ -359,8 +368,8 @@ The three failed browser attempts reached only selector assertions; each
 disposable local user was deleted by the test's `finally` cleanup. The final
 run exercised single and recurring creation, saved reuse, card action limits,
 both recurrence scopes, authoritative removal counts, cap skips and recovery
-states. The builder deliberately did not run the complete local suite; CI owns
-that gate after the lead pushes.
+states. The builder deliberately did not run the complete local suite;
+exact-head CI owns that gate and is green.
 
 Historical evidence for the superseded existing-session Repeat model follows.
 It does not validate the revised implementation:
@@ -442,7 +451,7 @@ evidence. The desktop provider also reports no resize capability, so neither
 | `git diff --check` | PASS |
 
 The builder deliberately did not run the complete local suite merely to create
-evidence. CI will run it after the lead pushes the exact branch head.
+evidence. The exact branch-head CI subsequently ran the full gate and is green.
 
 ## Vercel React rules checked
 
@@ -468,33 +477,27 @@ evidence. CI will run it after the lead pushes the exact branch head.
    dense 14-day Plan, including a synthetic ten-session cap date. The pinned
    viewport and overflow assertion passed; visual acceptance still belongs to
    the 390x844 Vercel Preview.
-4. Exact corrected target `abb578d8fe34b5cd5c908ccc151009f693ec185d`
-   is local-only because the lead owns push. CI run 32392705787 failed the stale
-   M3-12 disclosure-state assumption on superseded evidence head `f89a0bd`; no
-   fresh CI, Preview or independent review exists yet. The earlier failed
-   TypeScript run and deployment remain history only. No hosted database was
-   touched because this correction contains no migration.
+4. Exact corrected target `abb578d8fe34b5cd5c908ccc151009f693ec185d` is
+   pushed. Its evidence-only head has green CI and a matching `READY` Preview.
+   Independent review reconciled the complete 40-file manifest and found no
+   implementation, security or scope blocker, but approval is withheld because
+   the exact Preview has not received an authenticated 390x844 inspection. The
+   desktop provider cannot resize its Chrome window; its authenticated Plan tab
+   belonged to a superseded Preview, and navigation to the exact Preview timed
+   out. No credentials were entered and no hosted data or schema was changed.
 
 ## Independent reviewer focus
 
-The next reviewer must inspect exact implementation
+Independent review inspected exact implementation
 `abb578d8fe34b5cd5c908ccc151009f693ec185d` against base
-`2e2c1be4cb44f9591a6d7e0219a7ded28de547e1`, reconcile the complete ticket
-manifest, and use its new green CI run and matching Preview. Earlier targets,
-runs, Previews and reviews are history only and are not acceptance evidence.
+`2e2c1be4cb44f9591a6d7e0219a7ded28de547e1`, reconciled all 40 files and found
+no blocking code, authorization, security or scope issue. Earlier targets,
+runs, Previews and reviews remain history only and are not acceptance evidence.
 
-Human judgment should concentrate on: owner-source rereads and explicit
-ownership predicates; the absence of render/GET/prefetch writes; move and bulk
-scope withholding at segment bounds; permanent-removal copy before the action
-and authoritative counts only after it; preservation of earlier, diverged,
-locked and completed records; minimal client serialization and server/client
-boundaries; honest pending/offline/recovery states; and the 390x844 Preview's
-spacing, focus, touch and serious-coach tone. Specifically confirm that the
-future-removal receipt survives card unmount, a later ordinary Plan action owns
-both visible and assistive feedback from pending through completion, and a
-recovered idle materialization with no uncovered dates never says it is still
-extending. Confirm one Plan-level **Create session** entry exists in both empty
-and populated Plans, repeat-off uses ordinary add, repeat-on requires occurrence
-review, Plan and saved entries have no recurrence shortcut, and each session
-card exposes only Edit, Remove and its lock control with all other operations
-inside those editors.
+The remaining reviewer gate is an authenticated 390x844 inspection of
+<https://fittip-gf4t4grxo-mattis-3657s-projects.vercel.app/home/plan> for layout,
+spacing, focus, touch targets, serious-coach tone and the revised controls. It
+must also confirm that `/home/plan/series/new` redirects to that unified Plan
+surface. Code review already confirmed one Plan-level **Create session** entry,
+ordinary versus reviewed recurring creation, no Plan or saved-item recurrence
+shortcut, and exactly Edit, Remove and Lock/Unlock at card level.
