@@ -141,13 +141,25 @@ describe("PlanManager", () => {
     ).toBeVisible();
     expect(screen.queryByText("Recurrence", { selector: "legend" })).toBeNull();
 
+    fireEvent.change(screen.getByLabelText("Date"), {
+      target: { value: DATES[2] },
+    });
     fireEvent.click(screen.getByLabelText("Repeat this session"));
     expect(operation).toHaveValue("add_series");
     expect(
       screen.getByText("Recurrence", { selector: "legend" }),
     ).toBeVisible();
+    expect(screen.getByLabelText("Wed")).toBeChecked();
+    expect(screen.getByLabelText("Mon")).not.toBeChecked();
+
+    fireEvent.change(screen.getByLabelText("Date"), {
+      target: { value: DATES[3] },
+    });
+    expect(screen.getByLabelText("Thu")).toBeChecked();
+    expect(screen.getByLabelText("Wed")).not.toBeChecked();
+
     fireEvent.change(create.querySelector("#create-session-title")!, {
-      target: { value: "Tuesday tempo" },
+      target: { value: "Thursday tempo" },
     });
     fireEvent.change(create.querySelector("#create-session-sport")!, {
       target: { value: "Running" },

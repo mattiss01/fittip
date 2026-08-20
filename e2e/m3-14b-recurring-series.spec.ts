@@ -211,10 +211,16 @@ test.describe("M3-14B recurring series surface", () => {
         .getByLabel("Repeat", { exact: true })
         .selectOption("weekly");
       await weeklyCreate.getByLabel("Every").fill("1");
-      await chooseOnlyWeekdays(weeklyCreate, [
-        weekday(capDate),
-        weekday(weeklyVisibleDate),
-      ]);
+      await expect(
+        weeklyCreate.locator(
+          `input[name="weekdays"][value="${weekday(capDate)}"]`,
+        ),
+      ).toBeChecked();
+      await weeklyCreate
+        .locator(
+          `input[name="weekdays"][value="${weekday(weeklyVisibleDate)}"]`,
+        )
+        .check();
       await weeklyCreate
         .getByRole("button", { name: "Review recurring sessions" })
         .click();
@@ -303,18 +309,6 @@ async function openDisclosure(container: Locator, label: string) {
     .first();
   await expect(summary).toBeVisible();
   await summary.click();
-}
-
-async function chooseOnlyWeekdays(container: Locator, days: number[]) {
-  for (let value = 0; value <= 6; value += 1) {
-    const checkbox = container.locator(
-      'input[name="weekdays"][value="' + value + '"]',
-    );
-    const selected = days.includes(value);
-    if ((await checkbox.isChecked()) !== selected) {
-      await checkbox.setChecked(selected);
-    }
-  }
 }
 
 function ownerDate(offset: number) {

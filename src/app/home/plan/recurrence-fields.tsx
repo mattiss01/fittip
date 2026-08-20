@@ -34,6 +34,11 @@ export function RecurrenceFields({
 }) {
   const [frequency, setFrequency] = useState(initial?.frequency ?? "weekly");
   const [noEnd, setNoEnd] = useState(initial?.endDate === undefined);
+  const defaultWeekdays = initial?.weekdays ?? [weekday(startDate)];
+  const [selectedWeekdays, setSelectedWeekdays] = useState<number[] | null>(
+    null,
+  );
+  const weekdays = selectedWeekdays ?? defaultWeekdays;
 
   return (
     <fieldset className={styles.ruleFields} onInput={onRuleChange}>
@@ -81,9 +86,18 @@ export function RecurrenceFields({
                 type="checkbox"
                 name="weekdays"
                 value={value}
-                defaultChecked={
-                  initial?.weekdays?.includes(value) ?? value === 1
-                }
+                checked={weekdays.includes(value)}
+                onChange={(event) => {
+                  const checked = event.target.checked;
+                  setSelectedWeekdays((selected) => {
+                    const current = selected ?? defaultWeekdays;
+                    return checked
+                      ? current.includes(value)
+                        ? current
+                        : [...current, value]
+                      : current.filter((weekday) => weekday !== value);
+                  });
+                }}
               />
               <span>{label}</span>
             </label>
@@ -123,4 +137,8 @@ export function RecurrenceFields({
       )}
     </fieldset>
   );
+}
+
+function weekday(isoDate: string) {
+  return new Date(`${isoDate}T12:00:00.000Z`).getUTCDay();
 }
