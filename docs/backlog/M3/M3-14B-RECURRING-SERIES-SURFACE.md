@@ -1,8 +1,9 @@
 # M3-14B: Recurring series surface
 
-**Status:** in development — Tier 2 dispatch approved by the product owner on
-20 August 2026. The product owner approved the revised creation and card-action
-contract later that day; the Agent brief below is the active dispatch contract.
+**Status:** testable — exact implementation
+`49ae94bb8330d78b5d71dd7125c5595eb8eb2d40` is independently approved with
+green CI and a matching `READY` Preview. Fresh product-owner acceptance is
+pending after the final runtime corrections.
 
 **Triage:** ready-for-agent
 

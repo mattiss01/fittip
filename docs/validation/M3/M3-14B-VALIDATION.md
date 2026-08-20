@@ -1,9 +1,9 @@
 # M3-14B validation: recurring series surface
 
 **Ticket:** [M3-14B](../../backlog/M3/M3-14B-RECURRING-SERIES-SURFACE.md)
-**Status:** in development — corrected implementation has green CI and a
-matching `READY` Preview; fresh independent code review and product-owner
-acceptance are pending.
+**Status:** testable — corrected implementation has green CI, a matching
+`READY` Preview and independent approval; fresh product-owner acceptance is
+pending.
 **Tier:** 2
 **Branch:** `ticket/m3-14b-recurring-series-surface`
 **Base:** `2e2c1be4cb44f9591a6d7e0219a7ded28de547e1`
@@ -160,6 +160,13 @@ The matching Vercel Preview is `READY` at
 <https://fittip-899hity23-mattis-3657s-projects.vercel.app> (deployment
 `dpl_EmDqNUFkjQwe9T15xmZAxPskFUog`).
 
+Independent review approved exact implementation
+`49ae94bb8330d78b5d71dd7125c5595eb8eb2d40` after reconciling the 40-file
+manifest, the correction range and the evidence-only commits through
+`4daaa383c7170c45907b7ab7fffd40fa8169d8f0`. No code, authorization, security,
+scope or evidence blocker remains. Per `AGENTS.md`, the reviewer did not run a
+browser.
+
 Prior evidence is superseded but establishes the corrected baseline:
 
 - [CI 32394248009](https://github.com/mattiss01/fittip/actions/runs/32394248009)
@@ -190,9 +197,8 @@ evidence.
 - `plannedSessionToRollingPlanSeriesInput` remains as an unused internal helper
   after removal of the planned-session recurrence path. It exposes no route or
   Server Action and is non-blocking cleanup debt.
-- Independent code review and fresh product-owner hosted acceptance are
-  pending. The reviewer does not run a browser; the owner performs the manual
-  hosted interaction and visual check.
+- Fresh product-owner hosted acceptance is pending. The reviewer does not run
+  a browser; the owner performs the manual hosted interaction and visual check.
 
 ## Independent reviewer focus
 
