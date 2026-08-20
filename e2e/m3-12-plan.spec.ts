@@ -176,8 +176,13 @@ test.describe("M3-12 manual continuous planning", () => {
         page.locator("body"),
         "Create session",
       );
-      await createDisclosure.locator(":scope > summary").focus();
+      const createSummary = createDisclosure.locator(":scope > summary");
+      if ((await createDisclosure.getAttribute("open")) !== null) {
+        await createSummary.click();
+      }
+      await createSummary.focus();
       await page.keyboard.press("Enter");
+      await expect(createDisclosure).toHaveAttribute("open", "");
       await page.keyboard.press("Tab");
       await expect(createDisclosure.getByLabel("Date")).toBeFocused();
 
