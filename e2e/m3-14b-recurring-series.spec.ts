@@ -60,7 +60,7 @@ test.describe("M3-14B recurring series surface", () => {
       const create = page.locator("details").filter({
         has: page.locator("summary", { hasText: "Create session" }),
       });
-      await openDisclosure(page, "Create session");
+      await openDisclosure(page.locator("body"), "Create session");
       await create.getByLabel("Date").fill(today);
       await create.getByLabel("Title").fill("Ordinary base");
       await create.getByLabel("Sport").fill("Running");
@@ -97,7 +97,7 @@ test.describe("M3-14B recurring series surface", () => {
 
       // The same create flow reveals recurrence only when requested, with an
       // explicit occurrence review before the bounded series write.
-      await openDisclosure(page, "Create session");
+      await openDisclosure(page.locator("body"), "Create session");
       await create.getByLabel("Date").fill(dailyStart);
       await create.getByLabel("Title").fill("Aerobic base");
       await create.getByLabel("Sport").fill("Running");
@@ -202,7 +202,7 @@ test.describe("M3-14B recurring series surface", () => {
       const weeklyCreate = page.locator("details").filter({
         has: page.locator("summary", { hasText: "Create session" }),
       });
-      await openDisclosure(page, "Create session");
+      await openDisclosure(page.locator("body"), "Create session");
       await weeklyCreate.getByLabel("Date").fill(capDate);
       await weeklyCreate.getByLabel("Title").fill("Weekly strength");
       await weeklyCreate.getByLabel("Sport").fill("Strength");

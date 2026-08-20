@@ -352,7 +352,9 @@ describe("PlanManager", () => {
     const card = screen
       .getByRole("heading", { name: "Aerobic run" })
       .closest("li")!;
-    const actionArea = card.querySelector("[data-session-actions]")!;
+    const actionArea = card.querySelector<HTMLElement>(
+      "[data-session-actions]",
+    )!;
 
     expect(card).toContainElement(actionArea);
     expect(Array.from(actionArea.children)).toHaveLength(3);
