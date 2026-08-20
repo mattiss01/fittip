@@ -42,10 +42,11 @@ Validation records and their visual evidence are grouped by milestone.
 ## M3
 
 - [M3-14B recurring series surface](M3/M3-14B-VALIDATION.md) — in development;
-  Tier 2 contract revised after product-owner rejection of existing-session
-  Repeat creation. One Plan-level Create session flow now owns single and
-  recurring creation; cards are limited to Edit, Remove, and Lock. Prior target
-  `a87a7df`, CI, Preview, and review are historical only
+  revised Tier 2 implementation complete locally at `243b3a0`. One Plan-level
+  Create session flow owns single and recurring creation; cards are limited to
+  Edit, Remove, and Lock. Awaiting lead push, exact-SHA CI, Preview and
+  independent review; prior target `a87a7df` and its evidence are historical
+  only
 - [M3-14 recurring session series foundation](M3/M3-14-VALIDATION.md) — in
   development; Tier 1 builder handoff complete against `15e3f3c`. The migration
   adds `rolling_plan_series` and `rolling_plan_series_activities`, the
