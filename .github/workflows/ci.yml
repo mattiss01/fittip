@@ -110,6 +110,9 @@ jobs:
       - name: M3-13 concurrent saved-session edits
         run: npm run test:m3-13-concurrency
 
+      - name: M3-14 concurrent series materialization
+        run: npm run test:m3-14-concurrency
+
       - name: M3-11 seeded legacy reset
         run: npm run test:m3-11-seeded-reset
 

@@ -145,13 +145,20 @@ export async function changeLibraryAction(
     );
   } catch (error) {
     if (error instanceof RollingPlanRuleError) {
-      return result(
-        "rule",
-        error.reason === "past-date"
-          ? "That date has already passed. Pick today or a later date."
-          : "A date holds at most ten sessions. Cancel or move one first.",
-        error.reason,
-      );
+      // As in the plan action: this one composes no series change, so a series
+      // rule cannot reach here and is not given this action's wording.
+      if (
+        error.reason === "past-date" ||
+        error.reason === "daily-session-limit"
+      ) {
+        return result(
+          "rule",
+          error.reason === "past-date"
+            ? "That date has already passed. Pick today or a later date."
+            : "A date holds at most ten sessions. Cancel or move one first.",
+          error.reason,
+        );
+      }
     }
     if (
       error instanceof SavedSessionConflictError ||

@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -1233,6 +1233,7 @@ export type Database = {
           local_date: string | null;
           ordinal: number;
           plan_id: string;
+          series_id: string | null;
           session_id: string | null;
           user_id: string;
         };
@@ -1246,6 +1247,7 @@ export type Database = {
           local_date?: string | null;
           ordinal: number;
           plan_id: string;
+          series_id?: string | null;
           session_id?: string | null;
           user_id: string;
         };
@@ -1259,6 +1261,7 @@ export type Database = {
           local_date?: string | null;
           ordinal?: number;
           plan_id?: string;
+          series_id?: string | null;
           session_id?: string | null;
           user_id?: string;
         };
@@ -1269,6 +1272,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "rolling_plan_change_sets";
             referencedColumns: ["id", "user_id", "plan_id"];
+          },
+          {
+            foreignKeyName: "rolling_plan_change_entries_series_fkey";
+            columns: ["series_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "rolling_plan_series";
+            referencedColumns: ["id", "user_id"];
           },
           {
             foreignKeyName: "rolling_plan_change_entries_session_fkey";
@@ -1352,19 +1362,154 @@ export type Database = {
           },
         ];
       };
+      rolling_plan_series: {
+        Row: {
+          created_at: string;
+          end_date: string | null;
+          expected_duration_minutes: number | null;
+          frequency: string;
+          id: string;
+          intent: string | null;
+          interval_count: number;
+          note: string | null;
+          plan_id: string;
+          predecessor_series_id: string | null;
+          sport: string;
+          start_date: string;
+          title: string;
+          updated_at: string;
+          user_id: string;
+          weekdays: number[] | null;
+        };
+        Insert: {
+          created_at?: string;
+          end_date?: string | null;
+          expected_duration_minutes?: number | null;
+          frequency: string;
+          id: string;
+          intent?: string | null;
+          interval_count: number;
+          note?: string | null;
+          plan_id: string;
+          predecessor_series_id?: string | null;
+          sport: string;
+          start_date: string;
+          title: string;
+          updated_at?: string;
+          user_id: string;
+          weekdays?: number[] | null;
+        };
+        Update: {
+          created_at?: string;
+          end_date?: string | null;
+          expected_duration_minutes?: number | null;
+          frequency?: string;
+          id?: string;
+          intent?: string | null;
+          interval_count?: number;
+          note?: string | null;
+          plan_id?: string;
+          predecessor_series_id?: string | null;
+          sport?: string;
+          start_date?: string;
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+          weekdays?: number[] | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "rolling_plan_series_plan_fkey";
+            columns: ["plan_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "rolling_plans";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "rolling_plan_series_predecessor_fkey";
+            columns: ["predecessor_series_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "rolling_plan_series";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      rolling_plan_series_activities: {
+        Row: {
+          created_at: string;
+          id: string;
+          instructions: string | null;
+          measurement_mode: string;
+          name: string;
+          personal_activity_id: string | null;
+          position: number;
+          series_id: string;
+          sport: string;
+          target: Json | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          instructions?: string | null;
+          measurement_mode: string;
+          name: string;
+          personal_activity_id?: string | null;
+          position: number;
+          series_id: string;
+          sport: string;
+          target?: Json | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          instructions?: string | null;
+          measurement_mode?: string;
+          name?: string;
+          personal_activity_id?: string | null;
+          position?: number;
+          series_id?: string;
+          sport?: string;
+          target?: Json | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "rolling_plan_series_activities_personal_fkey";
+            columns: ["personal_activity_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "personal_activities";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "rolling_plan_series_activities_series_fkey";
+            columns: ["series_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "rolling_plan_series";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
       rolling_plan_sessions: {
         Row: {
           active_position: number | null;
           cancelled_at: string | null;
           created_at: string;
           expected_duration_minutes: number | null;
+          has_diverged: boolean;
           id: string;
           intent: string | null;
           is_locked: boolean;
           local_date: string;
           note: string | null;
+          occurrence_date: string | null;
           plan_id: string;
           position: number;
+          series_id: string | null;
           sport: string;
           status: string;
           title: string;
@@ -1376,13 +1521,16 @@ export type Database = {
           cancelled_at?: string | null;
           created_at?: string;
           expected_duration_minutes?: number | null;
+          has_diverged?: boolean;
           id: string;
           intent?: string | null;
           is_locked?: boolean;
           local_date: string;
           note?: string | null;
+          occurrence_date?: string | null;
           plan_id: string;
           position: number;
+          series_id?: string | null;
           sport: string;
           status?: string;
           title: string;
@@ -1394,13 +1542,16 @@ export type Database = {
           cancelled_at?: string | null;
           created_at?: string;
           expected_duration_minutes?: number | null;
+          has_diverged?: boolean;
           id?: string;
           intent?: string | null;
           is_locked?: boolean;
           local_date?: string;
           note?: string | null;
+          occurrence_date?: string | null;
           plan_id?: string;
           position?: number;
+          series_id?: string | null;
           sport?: string;
           status?: string;
           title?: string;
@@ -1413,6 +1564,13 @@ export type Database = {
             columns: ["plan_id", "user_id"];
             isOneToOne: false;
             referencedRelation: "rolling_plans";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "rolling_plan_sessions_series_fkey";
+            columns: ["series_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "rolling_plan_series";
             referencedColumns: ["id", "user_id"];
           },
         ];
@@ -1741,6 +1899,16 @@ export type Database = {
         Args: { p_mode: string; p_value: Json };
         Returns: boolean;
       };
+      materialize_rolling_plan_series: {
+        Args: { p_expected_plan_revision: number; p_idempotency_key: string };
+        Returns: Database["public"]["CompositeTypes"]["rolling_plan_materialization_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "rolling_plan_materialization_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       record_roadmap_memory_candidates: {
         Args: {
           p_candidates: Json;
@@ -1792,6 +1960,43 @@ export type Database = {
         Args: { p_value: Json };
         Returns: boolean;
       };
+      rolling_plan_occurrence_id: {
+        Args: { p_occurrence_date: string; p_series_id: string };
+        Returns: string;
+      };
+      rolling_plan_replace_series_activities: {
+        Args: {
+          p_activities: Json;
+          p_now: string;
+          p_series_id: string;
+          p_user_id: string;
+        };
+        Returns: undefined;
+      };
+      rolling_plan_series_activity_input_is_valid: {
+        Args: { p_value: Json };
+        Returns: boolean;
+      };
+      rolling_plan_series_dates: {
+        Args: {
+          p_end_date: string;
+          p_frequency: string;
+          p_from: string;
+          p_interval_count: number;
+          p_start_date: string;
+          p_to: string;
+          p_weekdays: number[];
+        };
+        Returns: string[];
+      };
+      rolling_plan_series_input_is_valid: {
+        Args: { p_value: Json };
+        Returns: boolean;
+      };
+      rolling_plan_series_state: {
+        Args: { p_series_id: string; p_user_id: string };
+        Returns: Json;
+      };
       rolling_plan_session_input_is_valid: {
         Args: { p_value: Json; p_with_placement: boolean };
         Returns: boolean;
@@ -1799,6 +2004,24 @@ export type Database = {
       rolling_plan_session_state: {
         Args: { p_session_id: string; p_user_id: string };
         Returns: Json;
+      };
+      rolling_plan_sweep_series_occurrences: {
+        Args: {
+          p_change_set_id: string;
+          p_first_ordinal: number;
+          p_from_date: string;
+          p_now: string;
+          p_plan_id: string;
+          p_series_id: string;
+          p_today: string;
+          p_user_id: string;
+        };
+        Returns: Json;
+      };
+      rolling_plan_weekday_set: { Args: { p_value: Json }; Returns: number[] };
+      rolling_plan_weekday_set_is_valid: {
+        Args: { p_value: number[] };
+        Returns: boolean;
       };
       saved_session_activity_input_is_valid: {
         Args: { p_value: Json };
@@ -1880,6 +2103,15 @@ export type Database = {
         plan_revision: number | null;
         change_set_id: string | null;
         result: string | null;
+        series_effects: Json | null;
+      };
+      rolling_plan_materialization_receipt: {
+        plan_id: string | null;
+        plan_revision: number | null;
+        change_set_id: string | null;
+        result: string | null;
+        created_count: number | null;
+        skipped: Json | null;
       };
       rolling_plan_slice_receipt: {
         plan_id: string | null;

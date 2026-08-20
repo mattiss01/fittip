@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { toRollingPlanSessionInput, toSavedSessionDraft } from "./session-copy";
+import {
+  toRollingPlanSeriesInput,
+  toRollingPlanSessionInput,
+  toSavedSessionDraft,
+} from "./session-copy";
 
 import type { RollingPlanSession } from "@/server/rolling-plan/rolling-plan";
 import type { SavedSession } from "@/server/saved-sessions/saved-sessions";
@@ -17,6 +21,9 @@ const plannedSession: RollingPlanSession = {
   isLocked: true,
   status: "active",
   cancelledAt: null,
+  seriesId: null,
+  occurrenceDate: null,
+  hasDiverged: false,
   activities: [
     {
       id: "77000000-0000-4000-8000-0000000000a1",
@@ -85,6 +92,11 @@ describe("saving a planned session into the library", () => {
       "isLocked",
       "status",
       "cancelledAt",
+      // M3-14. Saving an occurrence to the library saves its content, not its
+      // membership of a rule, so none of the occurrence identity travels.
+      "seriesId",
+      "occurrenceDate",
+      "hasDiverged",
     ]) {
       expect(draft).not.toHaveProperty(key);
     }
@@ -146,6 +158,16 @@ describe("reusing a library entry in the Plan", () => {
     expect(input).not.toHaveProperty("savedSessionId");
   });
 
+  it("saves an occurrence by its content, not by its rule", () => {
+    const draft = toSavedSessionDraft("From a series", {
+      ...plannedSession,
+      seriesId: "77000000-0000-4000-8000-0000000000c1",
+      occurrenceDate: "2026-08-19",
+      hasDiverged: true,
+    });
+    expect(draft).toEqual(toSavedSessionDraft("From a series", plannedSession));
+  });
+
   it("survives a round trip without gaining or losing a reusable field", () => {
     const planned = toRollingPlanSessionInput(savedSession, "2026-08-21", 0);
     const returned = toSavedSessionDraft("Tuesday tempo", {
@@ -153,6 +175,9 @@ describe("reusing a library entry in the Plan", () => {
       id: "77000000-0000-4000-8000-000000000003",
       status: "active",
       cancelledAt: null,
+      seriesId: null,
+      occurrenceDate: null,
+      hasDiverged: false,
       activities: planned.activities.map((activity, index) => ({
         ...activity,
         id: `77000000-0000-4000-8000-00000000010${index}`,
@@ -166,5 +191,82 @@ describe("reusing a library entry in the Plan", () => {
       expectedDurationMinutes: savedSession.expectedDurationMinutes,
       activities: savedSession.activities,
     });
+  });
+});
+
+describe("building a series template from a library entry", () => {
+  const rule = {
+    frequency: "weekly" as const,
+    intervalCount: 2,
+    weekdays: [1, 4] as const,
+    startDate: "2026-08-24",
+    endDate: "2026-10-05",
+  };
+
+  it("carries the reusable content and the rule, and nothing else", () => {
+    expect(
+      toRollingPlanSeriesInput(savedSession, { ...rule, weekdays: [1, 4] }),
+    ).toEqual({
+      frequency: "weekly",
+      intervalCount: 2,
+      weekdays: [1, 4],
+      startDate: "2026-08-24",
+      endDate: "2026-10-05",
+      title: "Tempo run",
+      sport: "Running",
+      intent: "Threshold work",
+      expectedDurationMinutes: 60,
+      activities: [
+        {
+          personalActivityId: "77000000-0000-4000-8000-0000000000b1",
+          position: 0,
+          name: "Tempo blocks",
+          sport: "Running",
+          measurementMode: "duration_intensity",
+          target: { duration_minutes: 24, intensity: "hard" },
+        },
+      ],
+    });
+  });
+
+  it("takes no date, no position, and no Plan lock from the library entry", () => {
+    const template = toRollingPlanSeriesInput(savedSession, {
+      ...rule,
+      weekdays: [1, 4],
+    });
+    for (const key of ["id", "name", "revision", "localDate", "position"]) {
+      expect(template).not.toHaveProperty(key);
+    }
+    // A lock belongs to a dated session. The rule stamps out unlocked ones.
+    expect(template.activities[0]).not.toHaveProperty("isLocked");
+  });
+
+  it("carries no key for a field the library entry does not have", () => {
+    const template = toRollingPlanSeriesInput(
+      {
+        ...savedSession,
+        intent: undefined,
+        expectedDurationMinutes: undefined,
+        note: undefined,
+        activities: [],
+      },
+      { frequency: "daily", intervalCount: 1, startDate: "2026-08-24" },
+    );
+    expect(template).toEqual({
+      frequency: "daily",
+      intervalCount: 1,
+      startDate: "2026-08-24",
+      title: "Tempo run",
+      sport: "Running",
+      activities: [],
+    });
+  });
+
+  it("does not link the series back to the entry it was built from", () => {
+    const template = toRollingPlanSeriesInput(savedSession, {
+      ...rule,
+      weekdays: [1, 4],
+    });
+    expect(JSON.stringify(template)).not.toContain(savedSession.id);
   });
 });
