@@ -69,6 +69,19 @@ example "removes 4 sessions, including 1 you edited, and keeps 1 you locked."
 Do not compute a second estimate in the client that could disagree with what
 the transaction does.
 
+**A locked survivor cannot itself be removed this way.** Because `end_series`
+keeps locked occurrences alive while moving the segment's end date behind them,
+a locked occurrence outlives its own series' end date. Offering
+"this and all future sessions" on one produces an effective date past that end
+date, which M3-14's clamp turns into a change that changes nothing, and
+`apply_rolling_plan_change_set` refuses it. Either withhold that scope on an
+occurrence dated past its series' `end_date`, or map the refusal to copy that
+says plainly there is nothing after this one left to remove. **Do not branch on
+SQLSTATE:** the function remaps every check violation to `22023`, so only the
+message distinguishes this from a malformed change set. Removing that single
+session is unaffected — a lock constrains bulk operations, not deliberate
+individual ones. Recorded as M3-14 limitation 18.
+
 The copy must be honest that this is permanent: the sessions are removed from
 the Plan, not cancelled, and there is no undo. Say plainly that nothing before
 that date changes, that completed training is untouched, and that locked
@@ -135,6 +148,10 @@ boundary, and the client-invoked top-up. Both are project copies under
   plan-history surface, so the owner cannot reach it. ADR-017 consequence 2.
 - Nothing bounds series count or reclaims occurrence rows — M3-14 decision 4 and
   ADR-017 consequence 2.
+- **This surface must not place an occurrence outside its series' date range.**
+  M3-14 validates only that the owner owns the `seriesId`, so nothing in the
+  database stops it, and such a row survives a later series removal. M3-14
+  limitation 17.
 - M3-15 owns topping up before Today, Progress, and AI context read the Plan.
 - Activities still cannot be created or edited anywhere, so a template's
   activities are demonstrated through a fixture rather than by clicking.

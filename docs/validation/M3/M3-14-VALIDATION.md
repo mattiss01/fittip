@@ -441,6 +441,21 @@ a defect in what the ticket claims to deliver.
     they are the one place in the diff a same-owner predicate was not written.
 16. **`database.types.ts` lost its UTF-8 BOM on regeneration.** Incidental,
     harmless, and unaccounted for until the review found it.
+17. **An `add` may place an occurrence outside its series' date range.** The
+    validation at migration lines 1358-1363 checks only that the owner owns the
+    `seriesId`; no constraint ties `occurrence_date` to the segment's
+    `start_date`/`end_date`. Pre-existing, and slightly amplified by the clamp:
+    such a row past `end_date` now survives a refused `end_series` where the
+    corrupting close would at least have swept it. M3-14B must not create the
+    situation. Raised by the round 2 review.
+18. **A locked survivor cannot be removed through "this and all future".** The
+    path in the round 1 correction above. M3-14B must either withhold the
+    remove-and-future scope on an occurrence dated past its series' `end_date`,
+    or map the refusal to honest copy — and it cannot branch on SQLSTATE,
+    because the outer handler at migration line 1553 already remaps every check
+    violation to `22023`, so only the message separates the two. Removing that
+    one session directly is unaffected, which is what decision 4 intends: a lock
+    constrains bulk operations, not deliberate individual ones.
 
 ## Independent review
 
@@ -457,6 +472,41 @@ than a shortcut, since the materializer's only date-producing inputs are
 `rolling_plan_series_dates` and `today + 13` and both are asserted; and
 narrowing the two plan actions was the right seam because widening
 `action-state.ts` would have pre-committed M3-14B's copy decision.
+
+It also corrected two overstated claims in this record, both fixed above by the
+**Round 2: APPROVED, with findings** — the correction range
+`git diff 21e30d6..0afb6f9`, on 20 August 2026, against green CI run
+32345200583 for `69f345a`. A different agent from the correction's builder.
+Approval of `15e3f3c` stands for everything outside that range.
+
+It confirmed there is no third unclamped closing site — every `end_date` write
+on `rolling_plan_series` is at migration lines 1178, 1223, 1263, 1271, and 1319,
+of which only the two closing sites needed the clamp and the whole-series edit
+at 1319 correctly writes the caller's value — and that the clamp cannot newly
+violate `rolling_plan_series_range_check`, since its result is either the stored
+`end_date` or the byte-identical pre-fix value.
+
+It checked the two implementations case by case and found them equivalent, and
+established something the correction did not claim: the two new contract cases
+run against real Postgres as well as in memory, because
+`supabase/tests/integration/m3_10_rolling_plan_postgres.test.ts` registers the
+same contract and the repository maps `22023` to `RollingPlanValidationError`.
+The `rejects.toThrow` assertion is therefore a genuine cross-implementation
+check rather than an in-memory tautology.
+
+On the `predecessorEndDate` change it confirmed `v_series` is re-populated
+`for update` on every iteration, so the mutation cannot leak into a later change
+in the same set, and that the `returning` cannot yield null. It independently
+agreed the new refusal is consistent with how the function treats every other
+no-op, and verified the negative control's "7 of 8" arithmetic against the
+assertions themselves.
+
+Its findings were four documentation defects, all fixed above by the lead — the
+false "unreachable from any surface" claim, a cited CI run that will never
+exist, the missing `git diff --stat`, and the stale reviewer checklist — plus
+limitations 17 and 18. None was a code defect. It did not re-execute the
+suites, so this record's local results remain the builder's word, corroborated
+by the green CI run.
 
 It also corrected two overstated claims in this record, both fixed above by the
 lead: the in-memory weekly coverage claim, and acceptance criterion 8's
@@ -477,6 +527,21 @@ outside that range.
 | --- | --- |
 | `03f8782e34c78e1d4e30613282adee149e9356e2` | The clamp at both closing sites in `apply_rolling_plan_change_set`, and eight pgTAP assertions that pin it. |
 | `0afb6f939b5253678c3d168c867d057146542f5d` | The same clamp in the in-memory adapter, and two adapter-contract cases that pin the two implementations together. |
+
+```
+$ git diff --stat 21e30d6..0afb6f9
+ .../rolling-plan/in-memory-rolling-plan-adapter.ts |  21 ++-
+ src/server/rolling-plan/rolling-plan-contract.ts   |  82 +++++++++++
+ ...260819112410_m3_14_recurring_session_series.sql |  22 ++-
+ .../m3_14_recurring_session_series.test.sql        | 159 ++++++++++++++++++++-
+ 4 files changed, 275 insertions(+), 9 deletions(-)
+```
+
+Two helpers carry the new coverage and are not obvious from their paths:
+`pg_temp.bounded_series_payload` in the pgTAP suite and `boundedSeries()` in
+`rolling-plan-contract.ts` both build an explicitly bounded segment, which is
+the only shape on which a clamp is observable. A sixth seeded owner, F, holds
+them. Nothing was deleted or renamed.
 
 **What changed.** Both sites now write
 `least(coalesce(end_date, 'infinity'::date), v_effective_date - 1)` instead of
@@ -501,9 +566,20 @@ unchanged, so `apply_rolling_plan_change_set` refuses the change set through the
 pre-existing `'A plan change must change current state.'` guard rather than
 writing a no-op. The adapter now refuses it too, for the same reason and with
 the same `RollingPlanValidationError`. This is a new refusal on a path that
-previously "succeeded" by corrupting the segment; it is unreachable from any
-surface today. A split is never affected, because it always creates a
-successor.
+previously "succeeded" by corrupting the segment. A split is never affected,
+because it always creates a successor.
+
+**That refusal is reachable from M3-14B**, which the correction first claimed it
+was not. The round 2 reviewer found the path and the lead confirmed it against
+the sweep at migration lines 822-838. `end_series` at date X keeps every locked
+occurrence on a date at or after X alive, with its `series_id` intact, while the
+segment's `end_date` becomes X-1 — so a locked occurrence outlives its own
+series' end date by construction, because ADR-017 says it must. M3-14B renders
+it as a recurring occurrence and offers "remove this and all future" on it,
+producing an effective date past `end_date`, which the clamp turns into a no-op
+and the guard then refuses. It is recorded as limitation 18 and as a constraint
+on M3-14B rather than changed here: refusing is the correct behavior, and
+pre-fix that same action corrupted the segment instead.
 
 **Coverage added.** A sixth pgTAP owner, F, holds a segment bounded at
 `today + 3`: it materializes no further than its own end date; ending it from
@@ -533,11 +609,20 @@ adapters are held to the invariant.
   `git diff --check`: clean. Prettier reports no change on either TypeScript
   file.
 
-The continuous-integration run for `0afb6f9` is the automated-test evidence for
-this correction; the lead records its URL when it lands. Nothing hosted was
-touched, and no migration was applied anywhere but the local stack.
+**Continuous integration.** The branch was pushed once, after the docs commit,
+so no run exists for `03f8782` or `0afb6f9` and none ever will. The evidence is
+[run 32345200583](https://github.com/mattiss01/fittip/actions/runs/32345200583)
+for `69f345a`, **success on all three jobs** — static, database, and browser.
+`git diff 0afb6f9..69f345a` touches only this record, so that run is
+code-identical to the reviewed range; this is the same evidence-commit reasoning
+already applied to `76f0d29` against `15e3f3c`. Nothing hosted was touched, and
+no migration was applied anywhere but the local stack.
 
 ## Independent reviewer checklist
+
+**Superseded for the correction.** Round 2 reviewed `21e30d6..0afb6f9` and
+approved it; see "Round 2: APPROVED" above. What follows is the round 1
+checklist, kept as written.
 
 **Review `15e3f3cfcceeb2a4d15046bf9d167a2923b7bb40`, range
 `git diff fc547e9..15e3f3c`.** Confirm the CI run for that exact SHA is green
