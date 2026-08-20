@@ -1,10 +1,11 @@
 # M3-14B validation: recurring series surface
 
-**Status:** in development — revised implementation complete locally at
-`243b3a0f950e59253c002438b5356ed6754712ef`. The lead owns push, exact-SHA CI,
-Preview readiness and independent review. Implementation `a87a7df`, its green
-CI, Preview and re-review remain historical only because the product owner
-replaced its existing-session **Repeat** creation model.
+**Status:** in development — test-only CI correction complete locally at
+`235fdea2ab43d929ccb8ddd80626dff149edef22`. CI run
+[32392022206](https://github.com/mattiss01/fittip/actions/runs/32392022206)
+and Vercel deployment `dpl_Br6gMKzT1DseDVzaMrgWrgswfft6` failed TypeScript
+on evidence head `91de7c4`; a fresh exact-SHA CI run, Preview and independent
+review are required.
 
 **Tier:** 2 — this is the user-visible surface over M3-14's accepted schema,
 authorization and recurrence operations. It adds no schema, migration, grant,
@@ -14,10 +15,10 @@ RLS policy, privileged function, external service or spend.
 `2e2c1be4cb44f9591a6d7e0219a7ded28de547e1`.
 
 **Implementation review target:**
-`243b3a0f950e59253c002438b5356ed6754712ef`.
+`235fdea2ab43d929ccb8ddd80626dff149edef22`.
 
 **Review range:**
-`git diff 2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..243b3a0f950e59253c002438b5356ed6754712ef`.
+`git diff 2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..235fdea2ab43d929ccb8ddd80626dff149edef22`.
 The validation-record commits contain this record, its index entry and the
 local screenshot only; they are documentation/evidence under the
 evidence-commit exception in `AGENTS.md` and do not change the application or
@@ -38,6 +39,8 @@ CI workflow.
 | `bf4c2a20e27568fe863e09b3e38860871f7fdcfe` | Evidence-only record of the corrected CI, Preview and remaining hosted-review gate for the superseded creation model. |
 | `dd1a0f32d6fef596d365c1a11bce00f864173b1a` | Approved governance correction replacing source-session Repeat with one Plan-level Create session contract. |
 | `243b3a0f950e59253c002438b5356ed6754712ef` | Revised implementation and tests: unified single/recurring creation, limited card controls, nested session editors, removed recurrence shortcuts and updated mobile flows. |
+| `91de7c49984e90b71c3342f6e90b23467a03101e` | Evidence-only builder handoff for `243b3a0`; its CI and Vercel deployment both failed the same four test-code TypeScript errors. |
+| `235fdea2ab43d929ccb8ddd80626dff149edef22` | Test-only correction preserving locator and assertion semantics while supplying the Locator and HTMLElement types TypeScript requires. |
 
 ## Delivered behavior
 
@@ -117,15 +120,15 @@ owner's acceptance surface remains the exact Vercel Preview, not this image.
 ## Changed files
 
 Exact review-range stat, `git diff --stat
-2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..243b3a0f950e59253c002438b5356ed6754712ef`:
+2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..235fdea2ab43d929ccb8ddd80626dff149edef22`:
 
 ```text
  .github/workflows/ci.yml                           |  10 +
  docs/backlog/M3/M3-14B-RECURRING-SERIES-SURFACE.md | 108 ++--
  docs/product/F-005-ROLLING-TRAINING-PLAN.md        |  17 +-
- docs/validation/M3/M3-14B-VALIDATION.md            | 337 ++++++++++++
- docs/validation/M3/evidence/M3-14B-390x844.png     | Bin 0 -> 247783 bytes
- docs/validation/README.md                          |   5 +
+ docs/validation/M3/M3-14B-VALIDATION.md            | 419 +++++++++++++++
+ docs/validation/M3/evidence/M3-14B-390x844.png     | Bin 0 -> 149931 bytes
+ docs/validation/README.md                          |   6 +
  e2e/m3-12-plan.spec.ts                             |  48 +-
  e2e/m3-13-saved-sessions.spec.ts                   |   1 +
  e2e/m3-14b-recurring-series.spec.ts                | 482 +++++++++++++++++
@@ -134,7 +137,7 @@ Exact review-range stat, `git diff --stat
  src/app/home/plan/actions.ts                       |  45 +-
  src/app/home/plan/create-session.tsx               | 285 ++++++++++
  src/app/home/plan/page.tsx                         |  42 +-
- src/app/home/plan/plan-manager.test.tsx            | 299 ++++++++++-
+ src/app/home/plan/plan-manager.test.tsx            | 301 ++++++++++-
  src/app/home/plan/plan-manager.tsx                 | 571 +++++++++++++--------
  src/app/home/plan/plan.module.css                  | 383 ++++++++++++++
  src/app/home/plan/recurrence-fields.tsx            | 126 +++++
@@ -160,10 +163,10 @@ Exact review-range stat, `git diff --stat
  .../rolling-plan/in-memory-rolling-plan-adapter.ts |  10 +
  src/server/rolling-plan/rolling-plan.ts            |  11 +
  src/server/saved-sessions/session-copy.ts          |  32 ++
- 40 files changed, 4824 insertions(+), 316 deletions(-)
+ 40 files changed, 4909 insertions(+), 316 deletions(-)
 ```
 
-Revised-contract correction stat, `git diff --stat
+Initial revised-contract implementation stat, `git diff --stat
 dd1a0f32d6fef596d365c1a11bce00f864173b1a..243b3a0f950e59253c002438b5356ed6754712ef`:
 
 ```text
@@ -181,6 +184,15 @@ dd1a0f32d6fef596d365c1a11bce00f864173b1a..243b3a0f950e59253c002438b5356ed6754712
  src/app/home/plan/series-actions.ts              |   6 +
  src/app/home/plan/series/new/page.tsx            | 189 +---------
  13 files changed, 879 insertions(+), 597 deletions(-)
+```
+
+CI type-correction stat, `git diff --stat
+91de7c49984e90b71c3342f6e90b23467a03101e..235fdea2ab43d929ccb8ddd80626dff149edef22`:
+
+```text
+ e2e/m3-14b-recurring-series.spec.ts     | 6 +++---
+ src/app/home/plan/plan-manager.test.tsx | 4 +++-
+ 2 files changed, 6 insertions(+), 4 deletions(-)
 ```
 
 Files whose purpose is not evident from path and diff:
@@ -254,10 +266,20 @@ disposable account.
 
 ## Tests and builder results
 
-No CI run exists yet for exact implementation
-`243b3a0f950e59253c002438b5356ed6754712ef`: the builder was explicitly told
-not to push. The lead owns the push and must replace this local-only statement
-with the exact-SHA run URL before independent review.
+Exact evidence-head CI run
+[32392022206](https://github.com/mattiss01/fittip/actions/runs/32392022206)
+for `91de7c49984e90b71c3342f6e90b23467a03101e` failed TypeScript before Vitest,
+the production build and browser flow could run. Its matching Vercel deployment
+`dpl_Br6gMKzT1DseDVzaMrgWrgswfft6` failed on the same compilation step. The
+four errors were test code only: three Plan-root calls passed `Page` to a
+helper intentionally typed for `Locator`, and one DOM query inferred `Element`
+where `toContainElement` requires `HTMLElement | SVGElement | null`.
+
+Correction `235fdea2ab43d929ccb8ddd80626dff149edef22` scopes those three calls through
+`page.locator("body")` and types the existing action-area query as
+`HTMLElement`. It does not change locator meaning, assertion strength, runtime
+code or user behavior. The lead must push it and record fresh exact-SHA CI and
+Preview evidence before re-review.
 
 | Revised-contract command or check | Result |
 | --- | --- |
@@ -273,6 +295,21 @@ with the exact-SHA run URL before independent review.
 | second revised Playwright attempt | FAIL — saved-reuse success is intentionally in the library's shared status region rather than the entry card; the assertion now follows the accepted M3-13 surface |
 | third revised Playwright attempt | FAIL — non-exact `Repeat` matched both the opt-in checkbox and frequency select; the frequency selectors now use exact labels |
 | `git diff --check` | PASS |
+
+Focused correction checks:
+
+| Correction command or check | Result |
+| --- | --- |
+| `npm.cmd run typecheck` | PASS |
+| `npm.cmd run test:run -- src/app/home/plan/plan-manager.test.tsx` | PASS — 1 file, 11 tests |
+| `npx.cmd playwright test --config=e2e/m3-14b.playwright.config.ts --list` | PASS — exactly one pinned M3-14B mobile test |
+| `npx.cmd prettier --check e2e/m3-14b-recurring-series.spec.ts src/app/home/plan/plan-manager.test.tsx` | PASS |
+| `git diff --check` | PASS |
+
+The correction changes only compile-time types around unchanged test queries,
+so the production E2E was not rerun. The last production E2E remains behavioral
+evidence for implementation `243b3a0`; fresh CI must compile and run the same
+pinned flow for corrected target `235fdea`.
 
 The three failed browser attempts reached only selector assertions; each
 disposable local user was deleted by the test's `finally` cleanup. The final
@@ -387,17 +424,16 @@ evidence. CI will run it after the lead pushes the exact branch head.
    dense 14-day Plan, including a synthetic ten-session cap date. The pinned
    viewport and overflow assertion passed; visual acceptance still belongs to
    the 390x844 Vercel Preview.
-4. Exact implementation `243b3a0f950e59253c002438b5356ed6754712ef`
-   is local-only at builder handoff because the lead owns push. It has no CI
-   run, Preview or independent review yet. Prior run 32365738735, Preview
-   `r3il6m0oj` and review validate only the superseded creation model and cannot
-   support acceptance. No hosted database was touched because this correction
-   contains no migration.
+4. Exact corrected target `235fdea2ab43d929ccb8ddd80626dff149edef22`
+   is local-only because the lead owns push. CI run 32392022206 and deployment
+   `dpl_Br6gMKzT1DseDVzaMrgWrgswfft6` failed on superseded evidence head
+   `91de7c4`; no fresh CI, Preview or independent review exists yet. No hosted
+   database was touched because this correction contains no migration.
 
 ## Independent reviewer focus
 
 The next reviewer must inspect exact implementation
-`243b3a0f950e59253c002438b5356ed6754712ef` against base
+`235fdea2ab43d929ccb8ddd80626dff149edef22` against base
 `2e2c1be4cb44f9591a6d7e0219a7ded28de547e1`, reconcile the complete ticket
 manifest, and use its new green CI run and matching Preview. Earlier targets,
 runs, Previews and reviews are history only and are not acceptance evidence.
