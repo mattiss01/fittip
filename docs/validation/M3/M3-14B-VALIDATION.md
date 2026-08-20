@@ -1,10 +1,10 @@
 # M3-14B validation: recurring series surface
 
-**Status:** in development — corrected Tier 2 implementation `a87a7df` has
-green exact-head CI, a matching `READY` Vercel Preview and a clean independent
-code re-review. Approval is withheld because the exact Preview has no
-authenticated FitTip session and could not receive the required 390x844 hosted
-pass. Product-owner acceptance is pending that hosted verification.
+**Status:** in development — on 20 August 2026 the product owner rejected the
+existing-session **Repeat** creation model and approved a revised Plan-level
+**Create session** flow with optional recurrence. Implementation `a87a7df`, its
+green CI, Preview, and clean code re-review remain historical evidence but are
+invalid for acceptance of the revised contract.
 
 **Tier:** 2 — this is the user-visible surface over M3-14's accepted schema,
 authorization and recurrence operations. It adds no schema, migration, grant,
@@ -309,16 +309,20 @@ evidence. CI will run it after the lead pushes the exact branch head.
    exact Preview without sharing credentials, then repeat the independent
    hosted mobile pass before requesting acceptance. No hosted database was
    touched by this ticket because it contains no migration.
+5. The product owner subsequently rejected creation from existing planned or
+   saved sessions. The approved replacement is one Plan-level **Create session**
+   flow that selects a date and optionally enables recurrence; cards expose only
+   **Edit**, **Remove**, and the lock control, while recurrence scopes live in
+   the session detail/editor. That product correction invalidates `a87a7df`,
+   run 32365738735, Preview `r3il6m0oj`, and its review for acceptance. A new
+   implementation target, CI run, Preview, and independent review are required.
 
 ## Independent reviewer focus
 
-The independent reviewer completed the exact code review of commit
-`a87a7df617bf9703367b6dbcedae111e71bf10db` over range
-`2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..a87a7df617bf9703367b6dbcedae111e71bf10db`.
-The code and manifest are clean, and run 32365738735 plus Preview
-`fittip-r3il6m0oj` are the only current evidence. The remaining reviewer task is
-an authenticated 390x844 pass on that exact Preview; older authenticated tabs,
-run 32362050214 and Preview `fittip-er8ro3ndm` are not acceptance evidence.
+The next reviewer must inspect the new implementation target against base
+`2e2c1be4cb44f9591a6d7e0219a7ded28de547e1`, reconcile the complete ticket
+manifest, and use its new green CI run and matching Preview. Earlier targets,
+runs, Previews, and reviews are history only and are not acceptance evidence.
 
 Human judgment should concentrate on: owner-source rereads and explicit
 ownership predicates; the absence of render/GET/prefetch writes; move and bulk

@@ -42,10 +42,10 @@ Validation records and their visual evidence are grouped by milestone.
 ## M3
 
 - [M3-14B recurring series surface](M3/M3-14B-VALIDATION.md) — in development;
-  Tier 2 correction target `a87a7df`. CI run 32365738735 is green, its matching
-  `r3il6m0oj` Preview is READY, and independent code re-review is clean. Hosted
-  review is blocked until that exact Preview has an authenticated FitTip session
-  and receives the required 390x844 pass; product-owner acceptance is pending
+  Tier 2 contract revised after product-owner rejection of existing-session
+  Repeat creation. One Plan-level Create session flow now owns single and
+  recurring creation; cards are limited to Edit, Remove, and Lock. Prior target
+  `a87a7df`, CI, Preview, and review are historical only
 - [M3-14 recurring session series foundation](M3/M3-14-VALIDATION.md) — in
   development; Tier 1 builder handoff complete against `15e3f3c`. The migration
   adds `rolling_plan_series` and `rolling_plan_series_activities`, the

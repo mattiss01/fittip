@@ -1,7 +1,8 @@
 # M3-14B: Recurring series surface
 
 **Status:** in development — Tier 2 dispatch approved by the product owner on
-20 August 2026 against the corrected contract and Agent brief below.
+20 August 2026. The product owner approved the revised creation and card-action
+contract later that day; the Agent brief below is the active dispatch contract.
 
 **Triage:** ready-for-agent
 
@@ -20,21 +21,30 @@ re-dispatch, not a judgement call.
 
 ## Agent brief
 
-**Outcome.** Let an owner create, review, change, and end recurring session
-series from the Plan at 390px, and show honestly when the fourteen-day window
-is being extended. Tier 2.
+**Outcome.** Give the Plan one **Create session** entry point for a single
+session or recurring series. Keep recurrence scopes inside the session
+detail/editor and show fourteen-day window extension honestly. Tier 2.
 
 **Hard constraints**
 
-- Compose only M3-14's accepted `add_series`, `edit_series`, `end_series`, and
-  `materialize_rolling_plan_series` operations plus existing owner-scoped
-  reads. No schema, grant, policy, migration, or privileged-function change;
-  stop and re-dispatch as Tier 1 if one becomes necessary.
-- Repeat from a planned session and from a saved-library entry enters one
-  review-before-save flow for bounded or open-ended daily and weekly rules.
+- Compose M3-14's accepted series/materialization operations plus existing
+  owner-scoped reads. No schema, grant, policy, migration, or privileged
+  function change; stop and re-dispatch as Tier 1 if one becomes necessary.
+- Show one **Create session** action in the Plan-level controls, including the
+  empty Plan. Do not put a create action on each date.
+- The unified create flow selects the session date and fields first. An optional
+  **Repeat this session** control reveals bounded or open-ended daily/weekly
+  recurrence and occurrence review. Repeat off uses M3-12's owner-scoped add;
+  repeat on composes M3-14's accepted series operations.
+- Remove recurrence creation shortcuts from planned sessions and saved-library
+  entries. Existing saved-session reuse remains ordinary M3-13 behavior.
+- A Plan session card exposes only **Edit**, **Remove**, and its lock control.
+  Informational recurring/changed markers may remain; every other action,
+  including **Save session** and recurrence scopes, belongs in its
+  detail/editor.
 - Keep series reads and all mutations server-side. Authenticate every Server
-  Action, pass only minimal serializable data to client components, and never
-  import a repository or `@/server/**` from a `"use client"` file.
+  Action, serialize minimally, and keep repositories/`@/server/**` out of
+  `"use client"` files.
 - Before a future-series removal, state the permanent consequences without
   forecast counts. After success, report the exact deleted, diverged-deleted,
   and locked-kept counts returned by `end_series`; compute no second estimate.
@@ -44,9 +54,8 @@ is being extended. Tier 2.
 - Validate in the Server Action that no surface operation can place an
   occurrence outside its segment's start/end range.
 - Materialize from a Server Action only: alongside owner Plan changes and once
-  per Plan visit when rendered data shows incomplete coverage. Never mutate
-  during render or GET/prefetch. Announce the non-blocking pending state and
-  its recovery accessibly.
+  per Plan visit when coverage is incomplete. Never mutate during render or
+  GET/prefetch; announce the non-blocking pending state and recovery accessibly.
 - Preserve M3-12's existing Plan behavior, serious-coach tone, keyboard focus,
   reduced motion, private/no-store responses, and honest empty, loading,
   invalid, stale, expired-session, missing-time-zone, and offline states.
@@ -57,13 +66,13 @@ is being extended. Tier 2.
 series mutation, reminders, background work, arbitrary recurrence language,
 history/undo surface, or broad refactor.
 
-**Acceptance criteria.** All eight criteria below, with criterion 5 using
+**Acceptance criteria.** All ten criteria below, with criterion 7 using
 consequence-before-action and authoritative counts only after success. CI must
 run the dedicated `390x844` production flow with a pinned config/test match.
 
 **Expected to change.** `src/app/home/plan/**`, the existing rolling-plan
-domain/repository seam, the saved-library reuse surface where needed, a new
-M3-14B Playwright spec/config, focused tests, and
+domain/repository seam, the saved-library surface only to remove its recurrence
+shortcut, the M3-14B Playwright spec/config, focused tests, and
 `docs/validation/M3/M3-14B-VALIDATION.md`. No migration or generated types.
 
 **Skills** from `.agents/skills/<name>/SKILL.md`: `frontend-design`,
@@ -83,23 +92,29 @@ Everything here composes M3-14's accepted operations —`add_series`,
 `edit_series`, `end_series`, and `materialize_rolling_plan_series`. Add no
 database operation a composed change set already expresses.
 
-### Creating a series
+### Creating a session or series
 
-- **Repeat** on a planned session, and creation from a saved-library entry,
-  both landing in the same review step.
-- Choose every N days (1–365) or every N weeks (1–52) on selected weekdays; a
-  start date; and an end date or explicitly **No end date**.
-- **Review the first occurrences before saving.** F-005 requires this, and it is
-  the only point at which the owner sees what the rule actually means before it
-  writes anything.
+- One **Create session** action belongs to the Plan, not to each day or an
+  existing session. It remains available when the Plan is empty.
+- The flow chooses the session date and fields, then optionally enables
+  **Repeat this session**. Without repeat it creates one ordinary Plan session.
+  With repeat it chooses every N days (1–365) or every N weeks (1–52) on
+  selected weekdays, plus an end date or explicitly **No end date**.
+- A recurring creation reviews its first occurrences before saving. F-005
+  requires this, and it is the only point at which the owner sees what the rule
+  actually means before it writes anything.
 - On save, the surface reports which dates were skipped for the ten-session cap
   and why. A series is still created when some dates are skipped.
+- Planned-session and saved-library cards do not offer **Repeat**. The saved
+  library keeps its accepted ordinary reuse behavior.
 
 ### Changing or removing an occurrence
 
-Opening one occurrence offers **both** a change scope and a remove scope —
-product-owner decision, 19 August 2026, on the reasoning that the occurrence is
-where the owner is looking, so it is where the choice belongs. Each scope is
+The Plan card exposes only **Edit**, **Remove**, and its lock control. Every
+other action, including **Save session**, belongs inside the session. Opening
+**Edit** or **Remove** takes the owner into that session's detail/editor; that
+interior surface offers both a change scope and a remove scope for a recurring
+occurrence. Each scope is
 **Only this session** or **This and all future sessions**, and each states what
 it will do before it is applied, matching the consequence-before-action
 convention the Plan and the library already use.
@@ -161,25 +176,32 @@ plainly in the validation record that it was added.
 
 ### Acceptance criteria
 
-1. An owner can create a daily-interval and a weekly-weekday series, bounded and
-   open-ended, review the first occurrences before saving, and see them on the
-   Plan at `390x844`.
-2. Skipped cap dates are named to the owner at creation.
-3. **Only this session** changes exactly one occurrence; the Plan shows every
+1. The Plan shows one **Create session** action, including when empty, and no
+   per-day create actions. It creates an ordinary session for the chosen date
+   when recurrence is off.
+2. The same flow can create a daily-interval and a weekly-weekday series,
+   bounded and open-ended, review the first occurrences before saving, and show
+   them on the Plan at `390x844`.
+3. Plan session cards expose exactly **Edit**, **Remove**, and the lock control;
+   every other action is inside the session, and planned-session and
+   saved-library cards expose no recurrence shortcut.
+4. Skipped cap dates are named to the owner at recurring creation.
+5. **Only this session** changes exactly one occurrence; the Plan shows every
    other occurrence unchanged.
-4. **This and future sessions** changes the future only; earlier occurrences are
+6. **This and future sessions** changes the future only; earlier occurrences are
    visibly as they were.
-5. Removing **this and all future sessions** from an occurrence removes every
+7. Removing **this and all future sessions** from an occurrence removes every
    occurrence of that series on or after the chosen date, **keeps every locked
    one**, changes nothing before it, and touches no completed training. The
    confirmation says the removal is permanent and names every consequence
    before the owner confirms; after success, the result names the authoritative
    removed, edited, and locked-kept counts returned by the transaction.
-6. The pending top-up state appears, is announced to assistive technology, and
+8. The pending top-up state appears, is announced to assistive technology, and
    resolves; no occurrence appears without explanation.
-7. Empty, loading, invalid, stale-conflict, expired-session, missing-time-zone,
+9. Empty, loading, invalid, stale-conflict, expired-session, missing-time-zone,
    and offline-safe states each have copy and a real recovery.
-8. The `390x844` flow covers create, only-this, this-and-future, and end,
+10. The `390x844` flow covers single create, recurring create, only-this,
+   this-and-future, and end,
    against `build` + `start` on its own port and config, with its own pinned
    `testMatch`.
 
@@ -223,3 +245,9 @@ on the lead's recommendation. The product owner approved the corrected Tier 2
 contract and dispatch on 20 August 2026 after M3-14 was accepted. The correction
 keeps consequence copy before a future-series removal, moves authoritative
 counts to the successful result, and withholds the known locked-survivor no-op.
+On 20 August 2026 the product owner rejected creation from an existing session
+and approved one Plan-level **Create session** flow with optional recurrence.
+They also approved limiting Plan session cards to **Edit**, **Remove**, and the
+lock control, with recurrence scopes inside the session detail/editor. This
+revision invalidates the prior implementation, CI, Preview, and review for
+acceptance while preserving them as delivery history.

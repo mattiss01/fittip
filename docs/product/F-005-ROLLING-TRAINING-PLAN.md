@@ -7,6 +7,12 @@ implementation remains separately gated
 
 **Clean-break sequence revised:** 14 August 2026
 
+**Session creation revised:** 20 August 2026 — the product owner approved one
+Plan-level **Create session** flow with optional recurrence. Planned-session
+cards expose only **Edit**, **Remove**, and the lock control; recurrence scopes
+and other session actions live inside the detail/editor. Saved-session reuse
+remains one-off.
+
 **Milestone:** M3
 
 **Approved architecture:**
@@ -149,7 +155,7 @@ completion correction remains the separate accepted correction flow.
    and activity fields. Date, completion state, plan locks, and history are not
    saved as template content.
 3. Later, choose **Add from saved sessions**, select a private saved session,
-   choose a date or recurrence, and review before adding it to the plan.
+   choose a date, and review before adding the one-off copy to the plan.
 4. Adding it copies the saved session's current fields into the new planned
    session. Editing or deleting the library entry later changes no existing
    planned, recurring, or completed training.
@@ -520,10 +526,11 @@ part of either interface.
     activity library, external sink, secret, new provider/model, unapproved
     spend, friend, public registration, or commercial behavior is added.
 16. An owner can explicitly save an eligible session or Coach suggestion to a
-    private library without adding it to the Plan, create a new one-off or
-    recurring session from its current fields, edit or delete the library entry,
-    and see no change to training previously created from it. Duplicate entries
-    are allowed and no revision history or live link is created.
+    private library without adding it to the Plan, create a new one-off session
+    from its current fields, edit or delete the library entry, and see no change
+    to training previously created from it. Duplicate entries are allowed and
+    no revision history or live link is created. Recurring creation starts only
+    from the Plan-level **Create session** flow.
 
 ## Non-goals
 
