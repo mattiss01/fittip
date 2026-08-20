@@ -1,9 +1,8 @@
 # M3-14 validation: recurring session series foundation
 
-**Status:** testable — independently reviewed and approved at `0afb6f9`
-(pushed as `69f345a`), green CI run 32345200583, founder migration applied and
-verified, Vercel Preview `READY`. **Product-owner acceptance is the only step
-outstanding.**
+**Status:** accepted — accepted by the product owner on 20 August 2026 against
+the independently reviewed `0afb6f9` and merged to `master` as `4b85b55`. See
+[Acceptance, merge, and founder deployment](#acceptance-merge-and-founder-deployment).
 
 **Tier:** 1 — two new owner-scoped tables, an alteration to
 `rolling_plan_sessions`, replaced history constraints, a new `SECURITY DEFINER`
@@ -689,6 +688,53 @@ product owner's check on the Preview, and it is not claimed here. As on M3-13,
 the Preview sits behind Vercel's SSO deployment protection, so the app's own
 anonymous redirect and private cache headers cannot be checked on a Preview URL;
 that check runs against the unprotected founder alias after the merge.
+
+## Acceptance, merge, and founder deployment
+
+**Accepted** by the product owner on 20 August 2026, against the independently
+reviewed commit `0afb6f9` (pushed as `69f345a`), its green CI run 32345200583,
+and the recorded founder verification. The Preview showed nothing new by
+design: this ticket ships no surface.
+
+**Merged** to `master` as `4b85b55`, a `--no-ff` merge of
+`ticket/m3-14-recurring-series-foundation`, 18 files, +5621/-23 over 16 commits.
+`master` CI run
+[32348997161](https://github.com/mattiss01/fittip/actions/runs/32348997161) is
+**green on all three jobs** — static, database, and browser. The merge was a
+clean fast-forward of a branch already based on `fc547e9`, so it changed no
+reviewed result and no local re-run was warranted.
+
+**Deployed** to the founder environment: Production deployment `5998654098` for
+`4b85b55`, state `success`,
+`https://fittip-htdtyqnyp-mattis-3657s-projects.vercel.app`. Confirmed as the
+most recent Production deployment rather than assuming the alias had moved.
+
+**Hosted smoke and security checks**, anonymous, against the founder alias
+`https://fittip-gilt.vercel.app`:
+
+| Check | Result |
+| --- | --- |
+| `/` | HTTP 200 |
+| `/home` | HTTP 303 to `/` |
+| `/home/plan` — the route whose table this ticket altered | HTTP 303 to `/` |
+| `/home/plan/saved` | HTTP 303 to `/` |
+| `/home/plan` response headers | `Cache-Control: private, no-cache, no-store, must-revalidate, max-age=0`; `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` |
+| `/` response headers | `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate`; the same HSTS header |
+
+This ticket adds no route, so these checks exist to prove the alteration to
+`rolling_plan_sessions` and the two replaced history constraints broke nothing
+that was already reachable. They did not.
+
+**What this closeout does not claim.** No authenticated hosted flow was
+exercised by the lead, because there is no surface to exercise and the
+authenticated path belongs to the product owner. M3-14B is where recurrence
+first becomes visible and first gets a 390px pass.
+
+**Follow-ups still open after this closeout**, none of them touched here:
+M3-12's `service_role` `GRANT ALL` on `public.profiles`, which still wants a
+small forward migration in its own ticket; M3-13's unlabeled intent and note
+paragraphs; and the eighteen limitations above, of which 17 and 18 are
+constraints on M3-14B and are recorded in that ticket.
 
 ## Independent reviewer checklist
 

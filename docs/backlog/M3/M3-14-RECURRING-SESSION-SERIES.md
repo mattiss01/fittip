@@ -1,8 +1,10 @@
 # M3-14: Recurring session series foundation
 
-**Status:** in development — the product owner approved Tier 1 dispatch on
-19 August 2026 against this contract and
-[ADR-017](../../decisions/ADR-017-RECURRENCE-MATERIALIZATION.md).
+**Status:** accepted — 20 August 2026, against independently reviewed
+`0afb6f9`, merged as `4b85b55`. Tier 1 dispatch was approved on 19 August 2026
+against this contract and
+[ADR-017](../../decisions/ADR-017-RECURRENCE-MATERIALIZATION.md). See
+[the validation record](../../validation/M3/M3-14-VALIDATION.md).
 
 **Triage:** needs-triage
 
