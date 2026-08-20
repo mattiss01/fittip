@@ -1,9 +1,9 @@
 # M3-14B validation: recurring series surface
 
 **Ticket:** [M3-14B](../../backlog/M3/M3-14B-RECURRING-SERIES-SURFACE.md)
-**Status:** testable — corrected implementation has green CI, a matching
-`READY` Preview and independent approval; fresh product-owner acceptance is
-pending.
+**Status:** accepted — corrected implementation has green CI, a matching
+`READY` Preview, independent approval and product-owner acceptance. It was
+merged to `master` as `b49c58d`.
 **Tier:** 2
 **Branch:** `ticket/m3-14b-recurring-series-surface`
 **Base:** `2e2c1be4cb44f9591a6d7e0219a7ded28de547e1`
@@ -165,7 +165,32 @@ Independent review approved exact implementation
 manifest, the correction range and the evidence-only commits through
 `4daaa383c7170c45907b7ab7fffd40fa8169d8f0`. No code, authorization, security,
 scope or evidence blocker remains. Per `AGENTS.md`, the reviewer did not run a
-browser.
+ browser.
+
+## Founder acceptance and closeout
+
+The product owner accepted exact implementation
+`49ae94bb8330d78b5d71dd7125c5595eb8eb2d40` after checking the corrected Preview.
+The accepted branch was merged and pushed as master commit
+`b49c58dfe76ec9099d1275441620952ab1c5ccd9`.
+
+Post-merge CI run
+[32402665196](https://github.com/mattiss01/fittip/actions/runs/32402665196)
+is green across all three jobs for that exact merge commit. The founder
+deployment is `READY` at <https://fittip-gilt.vercel.app>, deployment
+`dpl_8tUwRFFgnvaq9DVixipzqKCp3aV4`.
+
+Anonymous founder-alias smoke/security checks on 20 August 2026:
+
+| Check | Result |
+| --- | --- |
+| `/` | HTTP 200; private/no-store and HSTS headers present |
+| `/home`, `/home/plan`, `/home/plan/saved`, `/home/plan/series/new` | HTTP 303 to `/`; private/no-store and HSTS headers present |
+| `vercel logs dpl_8tUwRFFgnvaq9DVixipzqKCp3aV4 --level error --since 1h --no-follow --limit 100 --json` | No error records returned |
+
+No hosted migration was needed for M3-14B; the ticket changes no schema,
+authorization policy, grant or privileged function. The branch and `master`
+working trees were clean after the closeout push.
 
 Prior evidence is superseded but establishes the corrected baseline:
 
@@ -174,8 +199,8 @@ Prior evidence is superseded but establishes the corrected baseline:
   matching Preview was
   <https://fittip-gf4t4grxo-mattis-3657s-projects.vercel.app>.
 - The product owner personally completed and accepted the authenticated prior
-  Preview check at `390x844`. Runtime commits `cad217d` and `49ae94b` invalidate
-  that acceptance; the new exact Preview requires a fresh owner check.
+  Preview check at `390x844`; runtime commits `cad217d` and `49ae94b` superseded
+  it. The corrected acceptance and founder closeout are recorded above.
 - Superseded failures remain concise history: CI
   [32392022206](https://github.com/mattiss01/fittip/actions/runs/32392022206)
   found test-only TypeScript errors, and CI
@@ -197,8 +222,9 @@ evidence.
 - `plannedSessionToRollingPlanSeriesInput` remains as an unused internal helper
   after removal of the planned-session recurrence path. It exposes no route or
   Server Action and is non-blocking cleanup debt.
-- Fresh product-owner hosted acceptance is pending. The reviewer does not run
-  a browser; the owner performs the manual hosted interaction and visual check.
+- Founder deployment and hosted smoke/security checks are complete. Activities
+  remain fixture-backed and read-only; the unused internal conversion helper is
+  non-blocking cleanup debt.
 
 ## Independent reviewer focus
 

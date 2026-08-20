@@ -1,9 +1,8 @@
 # M3-14B: Recurring series surface
 
-**Status:** testable — exact implementation
-`49ae94bb8330d78b5d71dd7125c5595eb8eb2d40` is independently approved with
-green CI and a matching `READY` Preview. Fresh product-owner acceptance is
-pending after the final runtime corrections.
+**Status:** accepted — exact implementation
+`49ae94bb8330d78b5d71dd7125c5595eb8eb2d40` was independently approved and
+accepted by the product owner, then merged to `master` as `b49c58d`.
 
 **Triage:** ready-for-agent
 
@@ -252,3 +251,7 @@ They also approved limiting Plan session cards to **Edit**, **Remove**, and the
 lock control, with recurrence scopes inside the session detail/editor. This
 revision invalidates the prior implementation, CI, Preview, and review for
 acceptance while preserving them as delivery history.
+On 20 August 2026 the product owner accepted the corrected implementation after
+checking its Preview. The founder deployment is recorded in the validation
+record; the reviewer approved the code and did not run a browser under the
+updated delivery policy.
