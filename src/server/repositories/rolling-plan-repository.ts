@@ -25,6 +25,8 @@ import {
   type RollingPlanChangeSet,
   type RollingPlanMaterializationReceipt,
   type RollingPlanSeriesEffect,
+  type RollingPlanSeries,
+  type RollingPlanSeriesActivityInput,
   type RollingPlanSession,
   type RollingPlanSkippedOccurrence,
   type RollingPlanSlice,
@@ -35,6 +37,15 @@ import {
 } from "@/server/training/training-measurements";
 
 type RollingPlanClient = SupabaseClient<Database> | ServerUserClient;
+
+const ROLLING_PLAN_SERIES_COLUMNS = `
+  id, predecessor_series_id, frequency, interval_count, weekdays, start_date,
+  end_date, title, sport, intent, expected_duration_minutes, note, created_at,
+  rolling_plan_series_activities (
+    personal_activity_id, position, name, sport, instructions,
+    measurement_mode, target
+  )
+` as const;
 
 export class RollingPlanAuthenticationError extends Error {
   constructor(readonly accessError?: VerifiedUserAccessError) {
@@ -55,6 +66,20 @@ export class PostgresRollingPlanAdapter implements RollingPlanAdapter {
     });
     if (error) throw new RollingPlanPersistenceError();
     return parseSliceReceipt(data);
+  }
+
+  async listSeries(): Promise<RollingPlanSeries[]> {
+    const userId = await this.getVerifiedUserId();
+    // RLS confines the read already; the explicit predicate keeps ownership a
+    // property of the repository call rather than only of its backstop.
+    const { data, error } = await this.client
+      .from("rolling_plan_series")
+      .select(ROLLING_PLAN_SERIES_COLUMNS)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true });
+    if (error) throw new RollingPlanPersistenceError();
+    return (data ?? []).map(parseSeries);
   }
 
   async applyChangeSet(
@@ -348,6 +373,111 @@ function parseActivity(value: unknown): RollingPlanActivity {
     measurementMode,
     ...(target === undefined ? {} : { target }),
     isLocked: activity.isLocked,
+  };
+}
+
+function parseSeries(value: unknown): RollingPlanSeries {
+  const series = readRecord(value);
+  const activities = series.rolling_plan_series_activities;
+  if (
+    !isUuid(series.id) ||
+    !(
+      series.predecessor_series_id === null ||
+      isUuid(series.predecessor_series_id)
+    ) ||
+    !(series.frequency === "daily" || series.frequency === "weekly") ||
+    !isInteger(series.interval_count, 1) ||
+    !(
+      series.weekdays === null ||
+      (Array.isArray(series.weekdays) &&
+        series.weekdays.every((day) => isInteger(day, 0) && day <= 6))
+    ) ||
+    !isIsoDate(series.start_date) ||
+    !(series.end_date === null || isIsoDate(series.end_date)) ||
+    typeof series.title !== "string" ||
+    typeof series.sport !== "string" ||
+    !(series.intent === null || typeof series.intent === "string") ||
+    !(
+      series.expected_duration_minutes === null ||
+      isInteger(series.expected_duration_minutes, 1)
+    ) ||
+    !(series.note === null || typeof series.note === "string") ||
+    !Array.isArray(activities)
+  ) {
+    throw new RollingPlanPersistenceError();
+  }
+  if (
+    (series.frequency === "daily" && series.weekdays !== null) ||
+    (series.frequency === "weekly" &&
+      (series.weekdays === null || series.weekdays.length === 0))
+  ) {
+    throw new RollingPlanPersistenceError();
+  }
+  return {
+    id: series.id,
+    predecessorSeriesId: series.predecessor_series_id,
+    frequency: series.frequency,
+    intervalCount: series.interval_count,
+    ...(series.weekdays === null
+      ? {}
+      : { weekdays: [...new Set(series.weekdays)].toSorted() }),
+    startDate: series.start_date,
+    ...(series.end_date === null ? {} : { endDate: series.end_date }),
+    title: series.title,
+    sport: series.sport,
+    ...(series.intent === null ? {} : { intent: series.intent }),
+    ...(series.expected_duration_minutes === null
+      ? {}
+      : { expectedDurationMinutes: series.expected_duration_minutes }),
+    ...(series.note === null ? {} : { note: series.note }),
+    activities: activities
+      .map(parseSeriesActivity)
+      .toSorted((left, right) => left.position - right.position),
+  };
+}
+
+function parseSeriesActivity(value: unknown): RollingPlanSeriesActivityInput {
+  const activity = readRecord(value);
+  if (
+    !(
+      activity.personal_activity_id === null ||
+      isUuid(activity.personal_activity_id)
+    ) ||
+    !isInteger(activity.position, 0) ||
+    typeof activity.name !== "string" ||
+    typeof activity.sport !== "string" ||
+    !(
+      activity.instructions === null ||
+      typeof activity.instructions === "string"
+    ) ||
+    !TRAINING_MEASUREMENT_MODES.includes(
+      activity.measurement_mode as (typeof TRAINING_MEASUREMENT_MODES)[number],
+    )
+  ) {
+    throw new RollingPlanPersistenceError();
+  }
+  const measurementMode =
+    activity.measurement_mode as RollingPlanSeriesActivityInput["measurementMode"];
+  let target: RollingPlanSeriesActivityInput["target"];
+  if (activity.target !== null) {
+    try {
+      target = parseTrainingMeasurement(measurementMode, activity.target);
+    } catch {
+      throw new RollingPlanPersistenceError();
+    }
+  }
+  return {
+    ...(activity.personal_activity_id === null
+      ? {}
+      : { personalActivityId: activity.personal_activity_id }),
+    position: activity.position,
+    name: activity.name,
+    sport: activity.sport,
+    ...(activity.instructions === null
+      ? {}
+      : { instructions: activity.instructions }),
+    measurementMode,
+    ...(target === undefined ? {} : { target }),
   };
 }
 

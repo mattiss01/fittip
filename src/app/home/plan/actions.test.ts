@@ -55,6 +55,11 @@ describe("plan actions", () => {
     createPlanMock.mockResolvedValue({
       getPlanSlice: vi.fn().mockResolvedValue(slice()),
       applyChangeSet,
+      materializeSeries: vi.fn().mockResolvedValue({
+        planRevision: 1,
+        createdCount: 0,
+        skipped: [],
+      }),
     });
 
     const result = await changePlanAction(

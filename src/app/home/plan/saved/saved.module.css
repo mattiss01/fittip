@@ -270,6 +270,24 @@
   opacity: 0.45;
 }
 
+.repeatLink {
+  width: fit-content;
+  min-height: 2.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0.7rem 0 0;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--ledger-ink);
+  color: var(--ledger-ink);
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
 .srOnly {
   position: absolute;
   width: 1px;

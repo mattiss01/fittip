@@ -102,7 +102,7 @@ test.describe("M3-12 manual continuous planning", () => {
 
       // Duplicate to tomorrow, then move the copy on a day.
       const source = sessionCard(page, today, "Long aerobic run");
-      await openDisclosure(source, "Duplicate");
+      await openDisclosure(source, "Edit");
       await source
         .locator("form")
         .filter({
@@ -116,7 +116,7 @@ test.describe("M3-12 manual continuous planning", () => {
       ).toBeVisible();
 
       const copy = sessionCard(page, tomorrow, "Long aerobic run");
-      await openDisclosure(copy, "Move");
+      await openDisclosure(copy, "Edit");
       await copy
         .locator("form")
         .filter({ has: page.getByRole("button", { name: "Move session" }) })
@@ -148,13 +148,13 @@ test.describe("M3-12 manual continuous planning", () => {
         path: path.join(evidenceDirectory, "M3-12-plan-window-390x844.png"),
       });
 
-      // Cancel keeps the identity on the record rather than deleting it.
+      // Remove keeps the identity on the record rather than deleting it.
       const doomed = sessionCard(page, today, "Long aerobic run");
-      await openDisclosure(doomed, "Cancel");
+      await openDisclosure(doomed, "Remove");
       await expect(
         doomed.getByText(/keeps the session on the record/i),
       ).toBeVisible();
-      await doomed.getByRole("button", { name: "Cancel session" }).click();
+      await doomed.getByRole("button", { name: "Remove session" }).click();
       await expect(day(page, today).getByText("Cancelled")).toBeVisible();
       await expect(
         day(page, today).getByText("Running · Cancelled, kept on the record"),
@@ -171,12 +171,20 @@ test.describe("M3-12 manual continuous planning", () => {
         "false",
       );
 
-      // Keyboard reach: the add disclosure opens and its first field takes focus.
-      const addDisclosure = disclosure(day(page, tomorrow), "Add a session");
-      await addDisclosure.locator(":scope > summary").focus();
+      // Keyboard reach: the single Plan create flow opens and starts on date.
+      const createDisclosure = disclosure(
+        page.locator("body"),
+        "Create session",
+      );
+      const createSummary = createDisclosure.locator(":scope > summary");
+      if ((await createDisclosure.getAttribute("open")) !== null) {
+        await createSummary.click();
+      }
+      await createSummary.focus();
       await page.keyboard.press("Enter");
+      await expect(createDisclosure).toHaveAttribute("open", "");
       await page.keyboard.press("Tab");
-      await expect(addDisclosure.getByLabel("Title")).toBeFocused();
+      await expect(createDisclosure.getByLabel("Date")).toBeFocused();
 
       expect(
         await page.evaluate(
@@ -215,19 +223,27 @@ test.describe("M3-12 manual continuous planning", () => {
         day(page, today).getByRole("heading", { name: "Session 9" }),
       ).toBeVisible();
 
-      const addDisclosure = disclosure(day(page, today), "Add a session");
-      if ((await addDisclosure.getAttribute("open")) === null) {
-        await addDisclosure.locator(":scope > summary").click();
+      const createDisclosure = disclosure(
+        page.locator("body"),
+        "Create session",
+      );
+      if ((await createDisclosure.getAttribute("open")) === null) {
+        await createDisclosure.locator(":scope > summary").click();
       }
-      await addDisclosure.getByLabel("Title").fill("Eleventh");
-      await addDisclosure.getByLabel("Sport").fill("Running");
-      await addDisclosure.getByRole("button", { name: "Add session" }).click();
+      await createDisclosure.getByLabel("Date").fill(today);
+      await createDisclosure.getByLabel("Title").fill("Eleventh");
+      await createDisclosure.getByLabel("Sport").fill("Running");
+      await createDisclosure
+        .getByRole("button", { name: "Create session" })
+        .click();
 
       const notice = page.locator("[role='status']").first();
       await expect(notice).toHaveAttribute("data-state", "rule");
       await expect(notice).toContainText(/at most ten sessions/i);
       // The refused draft is returned rather than thrown away.
-      await expect(addDisclosure.getByLabel("Title")).toHaveValue("Eleventh");
+      await expect(createDisclosure.getByLabel("Title")).toHaveValue(
+        "Eleventh",
+      );
       await expect(
         day(page, today).getByRole("heading", { name: "Eleventh" }),
       ).toBeHidden();
@@ -293,14 +309,15 @@ async function addSession(
   sport: string,
   minutes?: string,
 ) {
-  const details = disclosure(day(page, date), "Add a session");
+  const details = disclosure(page.locator("body"), "Create session");
   if ((await details.getAttribute("open")) === null) {
     await details.locator(":scope > summary").click();
   }
+  await details.getByLabel("Date").fill(date);
   await details.getByLabel("Title").fill(title);
   await details.getByLabel("Sport").fill(sport);
   if (minutes) await details.getByLabel("Minutes").fill(minutes);
-  await details.getByRole("button", { name: "Add session" }).click();
+  await details.getByRole("button", { name: "Create session" }).click();
   await expect(
     day(page, date).getByRole("heading", { name: title, exact: true }),
   ).toBeVisible();

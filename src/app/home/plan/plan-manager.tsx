@@ -2,6 +2,7 @@
 
 import {
   useActionState,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -14,8 +15,25 @@ import {
   type PlanActionState,
 } from "./action-state";
 import { changePlanAction } from "./actions";
+import { CreateSession } from "./create-session";
 import styles from "./plan.module.css";
+import {
+  RecurringSessionControls,
+  type PlanSeriesView,
+} from "./recurring-session-controls";
 import { SaveToLibrary } from "./saved/save-to-library";
+import {
+  INITIAL_SERIES_ACTION_STATE,
+  type SeriesActionState,
+} from "./series-action-state";
+import { changeSeriesAction } from "./series-actions";
+import { SeriesMaterializer } from "./series-materializer";
+import { SessionFields } from "./session-fields";
+import {
+  seriesStallNotice,
+  useSeriesMutationStall,
+  useSeriesRecoveredReload,
+} from "./series-transition-watch";
 
 import {
   latestActionResponseAt,
@@ -37,6 +55,9 @@ export type PlanSessionView = {
   isLocked: boolean;
   status: "active" | "cancelled";
   activityCount: number;
+  seriesId: string | null;
+  occurrenceDate: string | null;
+  hasDiverged: boolean;
 };
 
 type Props = {
@@ -46,9 +67,12 @@ type Props = {
   expectedRevision: number;
   sessions: PlanSessionView[];
   recoveryDates: string[];
+  series?: PlanSeriesView[];
+  uncoveredSeriesDates?: string[];
 };
 
 type FormAction = (formData: FormData) => void;
+type ActionChannel = "plan" | "series";
 
 type DayProps = {
   date: string;
@@ -60,6 +84,10 @@ type DayProps = {
   action: FormAction;
   state: PlanActionState;
   pending: boolean;
+  seriesById: Map<string, PlanSeriesView>;
+  seriesAction: FormAction;
+  seriesState: SeriesActionState;
+  seriesPending: boolean;
 };
 
 /**
@@ -68,6 +96,7 @@ type DayProps = {
  * self-triggered.
  */
 const RECOVERY_FLAG = "fittip.plan.recovered:v1";
+const SERIES_RECOVERY_FLAG = "fittip.plan.series-change.recovered:v1";
 
 const RECOVERED_NOTICE =
   "Your last plan change did not appear, so the plan was reloaded. What you see below is what is saved.";
@@ -78,19 +107,79 @@ export function PlanManager({
   expectedRevision,
   sessions,
   recoveryDates,
+  series = [],
+  uncoveredSeriesDates = [],
 }: Props) {
   const [state, action, pending] = useActionState(
     changePlanAction,
     INITIAL_PLAN_ACTION_STATE,
   );
+  const [seriesState, seriesAction, seriesPending] = useActionState(
+    changeSeriesAction,
+    INITIAL_SERIES_ACTION_STATE,
+  );
+  const [latestActionChannel, setLatestActionChannel] =
+    useState<ActionChannel | null>(null);
+  const trackedPlanAction = useCallback(
+    (formData: FormData) => {
+      setLatestActionChannel("plan");
+      action(formData);
+    },
+    [action],
+  );
+  const trackedSeriesAction = useCallback(
+    (formData: FormData) => {
+      setLatestActionChannel("series");
+      seriesAction(formData);
+    },
+    [seriesAction],
+  );
   const stall = useMutationStall(pending, state.submission);
   const recovered = useRecoveredReload(state.submission);
-  const notice =
+  const seriesStall = useSeriesMutationStall(
+    seriesPending,
+    seriesState.submission,
+    SERIES_RECOVERY_FLAG,
+  );
+  const seriesRecovered = useSeriesRecoveredReload(
+    seriesState.submission,
+    SERIES_RECOVERY_FLAG,
+  );
+  const seriesNotice =
+    seriesStallNotice(seriesStall) ??
+    (seriesPending ? "Saving recurring-session change…" : null) ??
+    (seriesRecovered
+      ? "The Plan was reloaded after a recurring-session response was lost. What you see is what is saved."
+      : seriesState.status === "idle"
+        ? null
+        : seriesState.message);
+  const showSeriesNotice =
+    latestActionChannel === "series" ||
+    (latestActionChannel === null && seriesNotice !== null);
+  const planNotice =
     stallNotice(stall) ??
     (pending ? "Saving plan change…" : null) ??
     (recovered ? RECOVERED_NOTICE : null);
-  const noticeState = stall ?? (recovered ? "recovered" : state.status);
+  const activeNotice = showSeriesNotice ? seriesNotice : planNotice;
+  const seriesFirstNoticeState =
+    seriesStall ??
+    (seriesRecovered
+      ? "recovered"
+      : seriesState.status !== "idle"
+        ? seriesState.status
+        : (stall ?? (recovered ? "recovered" : state.status)));
+  const noticeState = showSeriesNotice
+    ? seriesFirstNoticeState
+    : (stall ?? (recovered ? "recovered" : state.status));
+  const showReload = showSeriesNotice
+    ? seriesState.status === "conflict" ||
+      seriesState.status === "session" ||
+      seriesStall === "unconfirmed"
+    : state.conflict === "stale" ||
+      state.conflict === "timezone" ||
+      stall === "unconfirmed";
   const labelled = new Set(recoveryDates);
+  const seriesById = new Map(series.map((segment) => [segment.id, segment]));
 
   return (
     <div className={styles.manager}>
@@ -100,15 +189,29 @@ export function PlanManager({
         role="status"
         aria-live="polite"
       >
-        {notice ?? state.message}
+        {activeNotice ?? (showSeriesNotice ? "" : state.message)}
       </p>
-      {state.conflict === "stale" ||
-      state.conflict === "timezone" ||
-      stall === "unconfirmed" ? (
+      {showReload ? (
         <a className={styles.reload} href="/home/plan">
           Reload the current plan
         </a>
       ) : null}
+
+      <SeriesMaterializer
+        expectedRevision={expectedRevision}
+        uncoveredDates={uncoveredSeriesDates}
+      />
+
+      <CreateSession
+        dates={dates}
+        expectedRevision={expectedRevision}
+        planAction={trackedPlanAction}
+        planState={state}
+        planPending={pending}
+        seriesAction={trackedSeriesAction}
+        seriesState={seriesState}
+        seriesPending={seriesPending}
+      />
 
       <ol className={styles.days}>
         {dates.map((date) => (
@@ -120,9 +223,13 @@ export function PlanManager({
             isRecoveryDay={labelled.has(date)}
             sessions={sessions.filter((session) => session.localDate === date)}
             expectedRevision={expectedRevision}
-            action={action}
+            action={trackedPlanAction}
             state={state}
             pending={pending}
+            seriesById={seriesById}
+            seriesAction={trackedSeriesAction}
+            seriesState={seriesState}
+            seriesPending={seriesPending}
           />
         ))}
       </ol>
@@ -140,6 +247,10 @@ function PlanDay({
   action,
   state,
   pending,
+  seriesById,
+  seriesAction,
+  seriesState,
+  seriesPending,
 }: DayProps) {
   const active = sessions
     .filter((session) => session.status === "active")
@@ -148,10 +259,6 @@ function PlanDay({
     (session) => session.status === "cancelled",
   );
   const headingId = `plan-day-${date}`;
-  const addResetKey = useTargetedResetKey(
-    state.submission,
-    state.operation === "add" && state.localDate === date,
-  );
 
   return (
     <li
@@ -181,6 +288,15 @@ function PlanDay({
                 action={action}
                 state={state}
                 pending={pending}
+                today={today}
+                series={
+                  session.seriesId === null
+                    ? undefined
+                    : seriesById.get(session.seriesId)
+                }
+                seriesAction={seriesAction}
+                seriesState={seriesState}
+                seriesPending={seriesPending}
               />
             ))}
           </ol>
@@ -214,30 +330,6 @@ function PlanDay({
           </>
         ) : null}
 
-        <details className={styles.disclosure}>
-          <summary>Add a session</summary>
-          <form
-            className={styles.form}
-            action={action}
-            key={`add-${date}-${addResetKey}`}
-          >
-            <input type="hidden" name="operation" value="add" />
-            <input type="hidden" name="localDate" value={date} />
-            <input
-              type="hidden"
-              name="expectedRevision"
-              value={expectedRevision}
-            />
-            <SessionFields
-              idPrefix={`add-${date}`}
-              draft={draftFor(state, "add", date)}
-            />
-            <button className={styles.primary} type="submit" disabled={pending}>
-              Add session
-            </button>
-          </form>
-        </details>
-
         <div className={styles.dayControls}>
           <form action={action}>
             <input type="hidden" name="operation" value="set_recovery_day" />
@@ -269,6 +361,11 @@ function PlanSessionCard({
   action,
   state,
   pending,
+  today,
+  series,
+  seriesAction,
+  seriesState,
+  seriesPending,
 }: {
   session: PlanSessionView;
   dates: string[];
@@ -276,8 +373,23 @@ function PlanSessionCard({
   action: FormAction;
   state: PlanActionState;
   pending: boolean;
+  today: string;
+  series?: PlanSeriesView;
+  seriesAction: FormAction;
+  seriesState: SeriesActionState;
+  seriesPending: boolean;
 }) {
-  const moveDates = dates.filter((date) => date !== session.localDate);
+  const recurring =
+    series !== undefined && session.occurrenceDate !== null
+      ? { series, occurrenceDate: session.occurrenceDate }
+      : null;
+  const moveDates = dates.filter(
+    (date) =>
+      date !== session.localDate &&
+      (series === undefined ||
+        (date >= series.startDate &&
+          (series.endDate === null || date <= series.endDate))),
+  );
   const editResetKey = useTargetedResetKey(
     state.submission,
     state.operation === "edit" && state.sessionId === session.id,
@@ -287,9 +399,17 @@ function PlanSessionCard({
     <li className={styles.session} data-locked={session.isLocked}>
       <div className={styles.sessionHeader}>
         <h3>{session.title}</h3>
-        {session.isLocked ? (
-          <span className={styles.lockMark}>Locked</span>
-        ) : null}
+        <div className={styles.sessionMarks}>
+          {session.seriesId === null ? null : (
+            <span className={styles.seriesMark}>Recurring</span>
+          )}
+          {session.hasDiverged ? (
+            <span className={styles.changedMark}>Changed</span>
+          ) : null}
+          {session.isLocked ? (
+            <span className={styles.lockMark}>Locked</span>
+          ) : null}
+        </div>
       </div>
       <p className={styles.meta}>
         {[
@@ -311,7 +431,197 @@ function PlanSessionCard({
         <p className={styles.body}>{session.note}</p>
       )}
 
-      <div className={styles.controls}>
+      <div className={styles.cardActions} data-session-actions>
+        <details className={styles.disclosure}>
+          <summary>Edit</summary>
+          <div className={styles.editorPanel}>
+            {recurring === null ? (
+              <form
+                className={styles.form}
+                action={action}
+                key={`edit-${session.id}-${editResetKey}`}
+              >
+                <input type="hidden" name="operation" value="edit" />
+                <input type="hidden" name="sessionId" value={session.id} />
+                <input
+                  type="hidden"
+                  name="expectedRevision"
+                  value={expectedRevision}
+                />
+                <SessionFields
+                  idPrefix={`edit-${session.id}`}
+                  draft={
+                    draftFor(state, "edit", session.id) ?? draftOf(session)
+                  }
+                />
+                <button
+                  className={styles.primary}
+                  type="submit"
+                  disabled={pending}
+                >
+                  Save session
+                </button>
+              </form>
+            ) : (
+              <RecurringSessionControls
+                mode="edit"
+                today={today}
+                session={{
+                  id: session.id,
+                  occurrenceDate: recurring.occurrenceDate,
+                  isLocked: session.isLocked,
+                  title: session.title,
+                  sport: session.sport,
+                  intent: session.intent,
+                  expectedDurationMinutes: session.expectedDurationMinutes,
+                  note: session.note,
+                }}
+                series={recurring.series}
+                expectedRevision={expectedRevision}
+                planAction={action}
+                planPending={pending}
+                seriesAction={seriesAction}
+                seriesState={seriesState}
+                seriesPending={seriesPending}
+              />
+            )}
+
+            {moveDates.length > 0 ? (
+              <section className={styles.scope}>
+                <h4>Move session</h4>
+                <form className={styles.form} action={action}>
+                  <input type="hidden" name="operation" value="move" />
+                  <input type="hidden" name="sessionId" value={session.id} />
+                  <input
+                    type="hidden"
+                    name="expectedRevision"
+                    value={expectedRevision}
+                  />
+                  <div className={styles.field}>
+                    <label htmlFor={`move-${session.id}`}>Move to</label>
+                    <select
+                      id={`move-${session.id}`}
+                      name="localDate"
+                      defaultValue={moveDates[0]}
+                    >
+                      {moveDates.map((date) => (
+                        <option key={date} value={date}>
+                          {stampDate(date)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {recurring === null ? null : (
+                    <p className={styles.consequenceStandalone}>
+                      Only this session moves. It becomes changed, and the new
+                      date must stay inside this series segment.
+                    </p>
+                  )}
+                  <button
+                    className={styles.primary}
+                    type="submit"
+                    disabled={pending}
+                  >
+                    Move session
+                  </button>
+                </form>
+              </section>
+            ) : null}
+
+            <section className={styles.scope}>
+              <h4>Duplicate session</h4>
+              <form className={styles.form} action={action}>
+                <input type="hidden" name="operation" value="duplicate" />
+                <input type="hidden" name="sessionId" value={session.id} />
+                <input
+                  type="hidden"
+                  name="expectedRevision"
+                  value={expectedRevision}
+                />
+                <div className={styles.field}>
+                  <label htmlFor={`duplicate-${session.id}`}>Copy to</label>
+                  <select
+                    id={`duplicate-${session.id}`}
+                    name="localDate"
+                    defaultValue={session.localDate}
+                  >
+                    {dates.map((date) => (
+                      <option key={date} value={date}>
+                        {stampDate(date)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className={styles.consequence}>
+                  The copy is a new session. It starts unlocked and carries none
+                  of this session&rsquo;s history.
+                </p>
+                <button
+                  className={styles.primary}
+                  type="submit"
+                  disabled={pending}
+                >
+                  Duplicate session
+                </button>
+              </form>
+            </section>
+
+            <SaveToLibrary sessionId={session.id} defaultName={session.title} />
+          </div>
+        </details>
+
+        <details className={styles.disclosure}>
+          <summary>Remove</summary>
+          <div className={styles.editorPanel}>
+            {recurring === null ? (
+              <>
+                <p className={styles.consequence}>
+                  Removing keeps the session on the record as cancelled. It is
+                  not deleted, and it stops being part of what you plan to do.
+                </p>
+                <form className={styles.form} action={action}>
+                  <input type="hidden" name="operation" value="cancel" />
+                  <input type="hidden" name="sessionId" value={session.id} />
+                  <input
+                    type="hidden"
+                    name="expectedRevision"
+                    value={expectedRevision}
+                  />
+                  <button
+                    className={styles.action}
+                    type="submit"
+                    disabled={pending}
+                  >
+                    Remove session
+                  </button>
+                </form>
+              </>
+            ) : (
+              <RecurringSessionControls
+                mode="remove"
+                today={today}
+                session={{
+                  id: session.id,
+                  occurrenceDate: recurring.occurrenceDate,
+                  isLocked: session.isLocked,
+                  title: session.title,
+                  sport: session.sport,
+                  intent: session.intent,
+                  expectedDurationMinutes: session.expectedDurationMinutes,
+                  note: session.note,
+                }}
+                series={recurring.series}
+                expectedRevision={expectedRevision}
+                planAction={action}
+                planPending={pending}
+                seriesAction={seriesAction}
+                seriesState={seriesState}
+                seriesPending={seriesPending}
+              />
+            )}
+          </div>
+        </details>
+
         <form action={action}>
           <input type="hidden" name="operation" value="set_lock" />
           <input type="hidden" name="sessionId" value={session.id} />
@@ -330,182 +640,7 @@ function PlanSessionCard({
           </button>
         </form>
       </div>
-
-      <details className={styles.disclosure}>
-        <summary>Edit</summary>
-        <form
-          className={styles.form}
-          action={action}
-          key={`edit-${session.id}-${editResetKey}`}
-        >
-          <input type="hidden" name="operation" value="edit" />
-          <input type="hidden" name="sessionId" value={session.id} />
-          <input
-            type="hidden"
-            name="expectedRevision"
-            value={expectedRevision}
-          />
-          <SessionFields
-            idPrefix={`edit-${session.id}`}
-            draft={draftFor(state, "edit", session.id) ?? draftOf(session)}
-          />
-          <button className={styles.primary} type="submit" disabled={pending}>
-            Save session
-          </button>
-        </form>
-      </details>
-
-      <details className={styles.disclosure}>
-        <summary>Move</summary>
-        <form className={styles.form} action={action}>
-          <input type="hidden" name="operation" value="move" />
-          <input type="hidden" name="sessionId" value={session.id} />
-          <input
-            type="hidden"
-            name="expectedRevision"
-            value={expectedRevision}
-          />
-          <div className={styles.field}>
-            <label htmlFor={`move-${session.id}`}>Move to</label>
-            <select
-              id={`move-${session.id}`}
-              name="localDate"
-              defaultValue={moveDates[0]}
-            >
-              {moveDates.map((date) => (
-                <option key={date} value={date}>
-                  {stampDate(date)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button className={styles.primary} type="submit" disabled={pending}>
-            Move session
-          </button>
-        </form>
-      </details>
-
-      <details className={styles.disclosure}>
-        <summary>Duplicate</summary>
-        <form className={styles.form} action={action}>
-          <input type="hidden" name="operation" value="duplicate" />
-          <input type="hidden" name="sessionId" value={session.id} />
-          <input
-            type="hidden"
-            name="expectedRevision"
-            value={expectedRevision}
-          />
-          <div className={styles.field}>
-            <label htmlFor={`duplicate-${session.id}`}>Copy to</label>
-            <select
-              id={`duplicate-${session.id}`}
-              name="localDate"
-              defaultValue={session.localDate}
-            >
-              {dates.map((date) => (
-                <option key={date} value={date}>
-                  {stampDate(date)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <p className={styles.consequence}>
-            The copy is a new session. It starts unlocked and carries none of
-            this session&rsquo;s history.
-          </p>
-          <button className={styles.primary} type="submit" disabled={pending}>
-            Duplicate session
-          </button>
-        </form>
-      </details>
-
-      <SaveToLibrary sessionId={session.id} defaultName={session.title} />
-
-      <details className={styles.disclosure}>
-        <summary>Cancel</summary>
-        <p className={styles.consequence}>
-          Cancelling keeps the session on the record as cancelled. It is not
-          deleted, and it stops being part of what you plan to do.
-        </p>
-        <form className={styles.form} action={action}>
-          <input type="hidden" name="operation" value="cancel" />
-          <input type="hidden" name="sessionId" value={session.id} />
-          <input
-            type="hidden"
-            name="expectedRevision"
-            value={expectedRevision}
-          />
-          <button className={styles.action} type="submit" disabled={pending}>
-            Cancel session
-          </button>
-        </form>
-      </details>
     </li>
-  );
-}
-
-function SessionFields({
-  idPrefix,
-  draft,
-}: {
-  idPrefix: string;
-  draft?: PlanActionDraft;
-}) {
-  return (
-    <>
-      <div className={styles.field}>
-        <label htmlFor={`${idPrefix}-title`}>Title</label>
-        <input
-          id={`${idPrefix}-title`}
-          name="title"
-          maxLength={120}
-          required
-          defaultValue={draft?.title ?? ""}
-        />
-      </div>
-      <div className={styles.fieldPair}>
-        <div className={styles.field}>
-          <label htmlFor={`${idPrefix}-sport`}>Sport</label>
-          <input
-            id={`${idPrefix}-sport`}
-            name="sport"
-            maxLength={80}
-            required
-            defaultValue={draft?.sport ?? ""}
-          />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor={`${idPrefix}-minutes`}>Minutes</label>
-          <input
-            id={`${idPrefix}-minutes`}
-            name="expectedDurationMinutes"
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={10080}
-            defaultValue={draft?.expectedDurationMinutes ?? ""}
-          />
-        </div>
-      </div>
-      <div className={styles.field}>
-        <label htmlFor={`${idPrefix}-intent`}>Intent</label>
-        <input
-          id={`${idPrefix}-intent`}
-          name="intent"
-          maxLength={500}
-          defaultValue={draft?.intent ?? ""}
-        />
-      </div>
-      <div className={styles.field}>
-        <label htmlFor={`${idPrefix}-note`}>Note</label>
-        <textarea
-          id={`${idPrefix}-note`}
-          name="note"
-          maxLength={2000}
-          defaultValue={draft?.note ?? ""}
-        />
-      </div>
-    </>
   );
 }
 
@@ -515,9 +650,9 @@ function SessionFields({
  * The forms are uncontrolled, so remounting is how a saved one is cleared and
  * how a refused one is re-seeded from the returned draft. Keying on the global
  * submission counter did both of those correctly and also remounted every other
- * add and edit form on the surface: marking a recovery day on the first date
- * closed an open "Add a session" on the twelfth and discarded whatever had been
- * typed into it. Advancing per target keeps the reset and loses nothing else.
+ * edit form on the surface: marking a recovery day could close another open
+ * editor and discard whatever had been typed into it. Advancing per target
+ * keeps the reset and loses nothing else.
  *
  * The value is adjusted during render rather than in an effect, so the remount
  * happens in the same commit as the result that caused it.

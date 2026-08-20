@@ -89,6 +89,7 @@ describe("the saved session library surface", () => {
       // The reuse form answers to the plan; the entry forms answer to the entry.
       expect(["2", "4"]).toContain(input.value);
     }
+    expect(screen.queryByRole("link", { name: "Repeat" })).toBeNull();
   });
 
   it("says what deleting does before it can happen", () => {

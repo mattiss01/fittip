@@ -16,6 +16,10 @@ import {
   readPlannableDate,
   readPlanWindow,
 } from "../plan-window";
+import {
+  planChangeCopy,
+  topUpAfterPlanChange,
+} from "../series-materialization";
 import { ProfileAuthenticationError } from "@/server/repositories/profile-repository";
 import {
   createRollingPlan,
@@ -116,10 +120,10 @@ export async function changeLibraryAction(
     const library = await createSavedSessionLibrary();
 
     if (operation === "reuse") {
-      await reuse(library, formData);
+      const topUp = await reuse(library, formData);
       revalidatePath("/home/plan");
       revalidatePath("/home/plan/saved");
-      return result("saved", "Added to your plan.");
+      return result("saved", planChangeCopy("Added to your plan.", topUp));
     }
 
     await library.applyChange(
@@ -230,7 +234,7 @@ async function reuse(
   const slice = await plan.getPlanSlice(window.today, window.lastDate);
   if (slice.revision !== expectedRevision) throw new RollingPlanConflictError();
 
-  await plan.applyChangeSet(
+  const receipt = await plan.applyChangeSet(
     {
       idempotencyKey: randomUUID(),
       provenance: "owner_saved_session",
@@ -248,6 +252,7 @@ async function reuse(
     },
     expectedRevision,
   );
+  return await topUpAfterPlanChange(plan, receipt.planRevision);
 }
 
 function saveFailure(

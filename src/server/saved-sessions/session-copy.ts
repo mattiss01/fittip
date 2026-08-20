@@ -115,3 +115,35 @@ export function toRollingPlanSeriesInput(
     activities: saved.activities.map((activity) => ({ ...activity })),
   };
 }
+
+/**
+ * Repeat from the Plan: reusable session content becomes a series template.
+ * The dated occurrence identity, Plan position, locks, cancellation state and
+ * activity row identities all stop at this copy boundary.
+ */
+export function plannedSessionToRollingPlanSeriesInput(
+  session: RollingPlanSession,
+  rule: RollingPlanRecurrenceRule,
+): RollingPlanSeriesInput {
+  return {
+    ...rule,
+    title: session.title,
+    sport: session.sport,
+    ...(session.intent === undefined ? {} : { intent: session.intent }),
+    ...(session.expectedDurationMinutes === undefined
+      ? {}
+      : { expectedDurationMinutes: session.expectedDurationMinutes }),
+    ...(session.note === undefined ? {} : { note: session.note }),
+    activities: session.activities.map(
+      ({
+        id,
+        isLocked,
+        ...activity
+      }): RollingPlanSeriesInput["activities"][number] => {
+        void id;
+        void isLocked;
+        return activity;
+      },
+    ),
+  };
+}

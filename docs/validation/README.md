@@ -41,6 +41,11 @@ Validation records and their visual evidence are grouped by milestone.
 
 ## M3
 
+- [M3-14B recurring series surface](M3/M3-14B-VALIDATION.md) — testable;
+  corrected implementation `49ae94b` is independently approved with green CI
+  run 32399625879 and a matching `READY` Preview. Fresh owner acceptance is
+  pending. One Plan-level Create session flow owns single and recurring
+  creation; cards are limited to Edit, Remove, and Lock
 - [M3-14 recurring session series foundation](M3/M3-14-VALIDATION.md) — in
   development; Tier 1 builder handoff complete against `15e3f3c`. The migration
   adds `rolling_plan_series` and `rolling_plan_series_activities`, the
