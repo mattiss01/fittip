@@ -1,8 +1,9 @@
 # M3-14B validation: recurring series surface
 
-**Status:** in development — Tier 2 builder correction round 2 complete.
-Corrected exact-commit CI, independent review, Vercel Preview verification,
-hosted verification and product-owner acceptance are pending.
+**Status:** in development — Tier 2 builder correction round 3 complete.
+Independent review rejected implementation `09d6e223` on two feedback-state
+findings. Corrected exact-commit CI, a matching Vercel Preview, independent
+re-review, hosted verification and product-owner acceptance are pending.
 
 **Tier:** 2 — this is the user-visible surface over M3-14's accepted schema,
 authorization and recurrence operations. It adds no schema, migration, grant,
@@ -12,10 +13,10 @@ RLS policy, privileged function, external service or spend.
 `2e2c1be4cb44f9591a6d7e0219a7ded28de547e1`.
 
 **Implementation review target:**
-`09d6e223c96058dc928d91ac5ebb619475c48c68`.
+`a87a7df617bf9703367b6dbcedae111e71bf10db`.
 
 **Review range:**
-`git diff 2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..09d6e223c96058dc928d91ac5ebb619475c48c68`.
+`git diff 2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..a87a7df617bf9703367b6dbcedae111e71bf10db`.
 The validation-record commits contain this record, its index entry and the
 local screenshot only; they are documentation/evidence under the
 evidence-commit exception in `AGENTS.md` and do not change the application or
@@ -30,6 +31,8 @@ CI workflow.
 | `6939857370286f5aa82f4d74e4d88a34b6ba2dd8` | Prettier-only correction to `series-actions.test.ts` after the first exact-branch-head CI run failed formatting. |
 | `1372501341ee17cfc52aa6414520d75c8d8d9913` | Evidence-only update recording the formatting correction and its failed predecessor run. |
 | `09d6e223c96058dc928d91ac5ebb619475c48c68` | Refreshes the saved-session reuse test fixture with the materialization receipt and method added by M3-14B; application behavior is unchanged. |
+| `0796a53e36b9bfd71fa354cd9a161596d620e280` | Evidence-only head for implementation `09d6e223`; records its green CI and READY Preview under the evidence-commit exception. |
+| `a87a7df617bf9703367b6dbcedae111e71bf10db` | Corrects cross-channel Plan feedback ordering and recovered idle materialization copy, with component regressions for both review findings. |
 
 ## Delivered behavior
 
@@ -63,7 +66,12 @@ CI workflow.
   saved-reuse and series Server Actions. On Plan visits a small client trigger
   invokes a Server Action once only when the rendered window is incomplete.
   Render, GET and prefetch paths remain read-only. Pending, slow, unconfirmed,
-  recovered, offline and skipped-date states use accessible status copy.
+  recovered, offline and skipped-date states use accessible status copy. A
+  recovered receipt takes precedence over idle extension copy when no dates
+  remain uncovered.
+- **Latest-action feedback.** The shared visible and polite-live Plan status
+  keeps an authoritative future-removal receipt after its source cards unmount,
+  then yields to a newer ordinary Plan submission and its returned feedback.
 - **Existing design language.** The new surfaces use the current cream,
   deep-green, ledger-card and day-rail system, retain visible keyboard focus
   and reduced-motion behavior, and introduce no new visual direction.
@@ -91,11 +99,11 @@ owner's acceptance surface remains the exact Vercel Preview, not this image.
 ## Changed files
 
 Exact review-range stat, `git diff --stat
-2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..09d6e223c96058dc928d91ac5ebb619475c48c68`:
+2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..a87a7df617bf9703367b6dbcedae111e71bf10db`:
 
 ```text
  .github/workflows/ci.yml                           |  10 +
- docs/validation/M3/M3-14B-VALIDATION.md            | 254 +++++++++++
+ docs/validation/M3/M3-14B-VALIDATION.md            | 277 ++++++++++++
  docs/validation/M3/evidence/M3-14B-390x844.png     | Bin 0 -> 247783 bytes
  docs/validation/README.md                          |   4 +
  e2e/m3-14b-recurring-series.spec.ts                | 447 +++++++++++++++++++
@@ -103,8 +111,8 @@ Exact review-range stat, `git diff --stat
  src/app/home/plan/actions.test.ts                  |   5 +
  src/app/home/plan/actions.ts                       |  45 +-
  src/app/home/plan/page.tsx                         |  42 +-
- src/app/home/plan/plan-manager.test.tsx            |  88 ++++
- src/app/home/plan/plan-manager.tsx                 | 306 +++++++++----
+ src/app/home/plan/plan-manager.test.tsx            | 202 ++++++++-
+ src/app/home/plan/plan-manager.tsx                 | 342 +++++++++++----
  src/app/home/plan/plan.module.css                  | 313 +++++++++++++
  src/app/home/plan/recurrence-fields.tsx            | 126 ++++++
  src/app/home/plan/recurring-session-controls.tsx   | 246 +++++++++++
@@ -116,6 +124,7 @@ Exact review-range stat, `git diff --stat
  src/app/home/plan/series-actions.test.ts           | 334 ++++++++++++++
  src/app/home/plan/series-actions.ts                | 487 +++++++++++++++++++++
  src/app/home/plan/series-materialization.ts        |  40 ++
+ src/app/home/plan/series-materializer.test.tsx     |  50 +++
  src/app/home/plan/series-materializer.tsx          | 132 ++++++
  src/app/home/plan/series-recurrence.test.ts        |  66 +++
  src/app/home/plan/series-recurrence.ts             | 119 +++++
@@ -128,7 +137,7 @@ Exact review-range stat, `git diff --stat
  .../rolling-plan/in-memory-rolling-plan-adapter.ts |  10 +
  src/server/rolling-plan/rolling-plan.ts            |  11 +
  src/server/saved-sessions/session-copy.ts          |  32 ++
- 34 files changed, 4009 insertions(+), 88 deletions(-)
+ 35 files changed, 4225 insertions(+), 95 deletions(-)
 ```
 
 Files whose purpose is not evident from path and diff:
@@ -207,9 +216,25 @@ copy therefore honestly appended that recurring sessions could not be
 extended. Commit `09d6e223c96058dc928d91ac5ebb619475c48c68`
 updates only the fixture and asserts that the applied revision reaches
 materialization. The production-build step was skipped after Vitest failed;
-the browser and database jobs passed. Corrected exact-commit CI and a Vercel
-Preview do not exist yet and are not claimed. The lead owns push, corrected
-exact-SHA CI, Preview readiness and hosted gates.
+the browser and database jobs passed.
+
+[CI run 32362050214, attempt
+2](https://github.com/mattiss01/fittip/actions/runs/32362050214) is green on
+evidence head `0796a53e36b9bfd71fa354cd9a161596d620e280`. That head changes only this
+validation record relative to implementation
+`09d6e223c96058dc928d91ac5ebb619475c48c68`, so the evidence-commit exception
+applies. Its exact Vercel Preview reached `READY` at
+<https://fittip-er8ro3ndm-mattis-3657s-projects.vercel.app>. The independent
+reviewer could not perform an authenticated hosted browser pass because the
+Preview redirected to Vercel SSO.
+
+Independent review rejected `09d6e223c96058dc928d91ac5ebb619475c48c68`:
+the retained series receipt masked feedback from every newer ordinary Plan
+action, and a recovered idle materialization with no uncovered dates displayed
+permanent false pending copy. Correction
+`a87a7df617bf9703367b6dbcedae111e71bf10db` addresses both findings. It
+invalidates the earlier review target, CI evidence and Preview for acceptance;
+the lead owns push, new exact-SHA CI and the matching Preview.
 
 | Command or check | Result |
 | --- | --- |
@@ -223,6 +248,9 @@ exact-SHA CI, Preview readiness and hosted gates.
 | `npx.cmd prettier --check src/app/home/plan/series-actions.test.ts` | PASS after the Prettier-only correction |
 | `npm.cmd run test:run -- src/app/home/plan/saved/actions.test.ts src/app/home/plan/actions.test.ts src/app/home/plan/series-actions.test.ts` | PASS — 3 files, 26 tests after the saved-reuse fixture correction |
 | `npx.cmd prettier --check src/app/home/plan/saved/actions.test.ts` | PASS after the fixture correction |
+| first focused correction Vitest run | FAIL — 1 of 10 assertions used a singular text query for copy intentionally rendered once visibly and once in the live region; the component behavior was correct and the assertion was narrowed to the visible heading |
+| `npm.cmd run test:run -- src/app/home/plan/plan-manager.test.tsx src/app/home/plan/series-materializer.test.tsx` | PASS — 2 files, 10 tests after the review correction |
+| `npx.cmd prettier --write src/app/home/plan/plan-manager.tsx src/app/home/plan/plan-manager.test.tsx src/app/home/plan/series-materializer.tsx src/app/home/plan/series-materializer.test.tsx` | PASS — focused correction files formatted; resulting changes are in the implementation correction commit |
 | `git diff --check` | PASS |
 
 The builder deliberately did not run the complete local suite merely to create
@@ -252,21 +280,22 @@ evidence. CI will run it after the lead pushes the exact branch head.
    dense 14-day Plan, including a synthetic ten-session cap date. The pinned
    viewport and overflow assertion passed; visual acceptance still belongs to
    the 390x844 Vercel Preview.
-4. The first exact-branch-head CI run failed on the corrected Prettier finding.
-   The second passed formatting, lint and types but exposed the now-corrected
-   stale saved-reuse materialization fixture in Vitest. Corrected exact-commit
-   CI, distinct independent review, Preview readiness, hosted verification and
-   product-owner acceptance are pending. No hosted database or deployment was
-   touched by the builder.
+4. Green CI run 32362050214 attempt 2 and the READY Preview belong to
+   evidence-only head `0796a53` over rejected implementation `09d6e223`. The
+   reviewer was redirected to Vercel SSO and had no authenticated hosted
+   browser. Correction `a87a7df` now needs its own push, exact-commit CI,
+   matching READY Preview, independent re-review, hosted verification and
+   product-owner acceptance. No hosted database was touched by this builder.
 
 ## Independent reviewer focus
 
-Review exact commit `09d6e223c96058dc928d91ac5ebb619475c48c68`
-over range `2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..09d6e223c96058dc928d91ac5ebb619475c48c68`.
-Use the Git diff as the source of truth. The two predecessor runs linked above
-failed at Prettier and the stale saved-reuse test fixture respectively;
-confirm the corrected exact-commit CI run is green once the lead supplies it.
-Do not rerun suites CI already ran.
+Review exact commit `a87a7df617bf9703367b6dbcedae111e71bf10db`
+over range `2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..a87a7df617bf9703367b6dbcedae111e71bf10db`.
+Use the Git diff as the source of truth. Prior implementation `09d6e223` was
+rejected on the two feedback-state findings recorded above. Confirm the lead's
+new exact-commit CI run is green and use its matching Preview; do not treat run
+32362050214 or Preview `fittip-er8ro3ndm` as acceptance evidence for the new
+target, and do not rerun suites CI already ran.
 
 Human judgment should concentrate on: owner-source rereads and explicit
 ownership predicates; the absence of render/GET/prefetch writes; move and bulk
@@ -274,4 +303,8 @@ scope withholding at segment bounds; permanent-removal copy before the action
 and authoritative counts only after it; preservation of earlier, diverged,
 locked and completed records; minimal client serialization and server/client
 boundaries; honest pending/offline/recovery states; and the 390x844 Preview's
-spacing, focus, touch and serious-coach tone.
+spacing, focus, touch and serious-coach tone. Specifically confirm that the
+future-removal receipt survives card unmount, a later ordinary Plan action owns
+both visible and assistive feedback from pending through completion, and a
+recovered idle materialization with no uncovered dates never says it is still
+extending.
