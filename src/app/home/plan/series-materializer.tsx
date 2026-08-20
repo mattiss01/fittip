@@ -34,6 +34,7 @@ export function SeriesMaterializer({
     RECOVERY_FLAG,
   );
   const recovered = useSeriesRecoveredReload(state.submission, RECOVERY_FLAG);
+  const recoveredIdle = recovered && state.status === "idle";
 
   useEffect(() => {
     if (uncoveredDates.length === 0 || attempted.current) return;
@@ -47,20 +48,20 @@ export function SeriesMaterializer({
     uncoveredDates.length === 0 &&
     state.status === "idle" &&
     !pending &&
-    !recovered
+    !recoveredIdle
   ) {
     return null;
   }
 
-  const extending = pending || (state.status === "idle" && !recovered);
+  const extending = pending || (state.status === "idle" && !recoveredIdle);
   const notice =
     seriesStallNotice(stall) ??
     (extending
       ? "Extending your recurring sessions…"
-      : recovered
+      : recoveredIdle
         ? "The Plan was reloaded after the extension response was lost. What you see is what is saved."
         : state.message);
-  const noticeState = stall ?? (recovered ? "recovered" : state.status);
+  const noticeState = stall ?? (recoveredIdle ? "recovered" : state.status);
 
   return (
     <section

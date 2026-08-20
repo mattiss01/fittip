@@ -122,7 +122,6 @@ export function CreateSession({
           name="operation"
           value={repeat ? "add_series" : "add"}
         />
-        <input type="hidden" name="sourceKind" value="new" />
         <input type="hidden" name="startDate" value={selectedDate} />
         <input type="hidden" name="expectedRevision" value={expectedRevision} />
         <div className={styles.field}>

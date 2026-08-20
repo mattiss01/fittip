@@ -41,6 +41,7 @@ export type MaterializeActionState = {
   submission: number;
   createdCount?: number;
   skipped?: SeriesSkippedDate[];
+  conflict?: "stale" | "timezone";
 };
 
 export const INITIAL_MATERIALIZE_ACTION_STATE: MaterializeActionState = {

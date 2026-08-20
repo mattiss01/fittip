@@ -440,7 +440,7 @@ describe("PlanManager", () => {
     seriesState = {
       status: "saved",
       message:
-        "Future recurring sessions removed permanently: 2 unchanged removed, 1 changed removed, 1 locked kept.",
+        "Future recurring sessions removed permanently: 1 unchanged removed, 1 changed removed, 1 locked kept.",
       submission: 1,
       operation: "end_series",
       sessionId: recurringSession.id,
@@ -450,7 +450,7 @@ describe("PlanManager", () => {
 
     const managerStatus = screen.getAllByRole("status")[0];
     expect(managerStatus).toBeVisible();
-    expect(managerStatus).toHaveTextContent(/2 unchanged removed/);
+    expect(managerStatus).toHaveTextContent(/1 unchanged removed/);
 
     fireEvent.submit(
       screen

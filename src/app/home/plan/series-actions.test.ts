@@ -1,16 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const {
-  createPlanMock,
-  createProfileMock,
-  createSavedLibraryMock,
-  revalidatePathMock,
-} = vi.hoisted(() => ({
-  createPlanMock: vi.fn(),
-  createProfileMock: vi.fn(),
-  createSavedLibraryMock: vi.fn(),
-  revalidatePathMock: vi.fn(),
-}));
+const { createPlanMock, createProfileMock, revalidatePathMock } = vi.hoisted(
+  () => ({
+    createPlanMock: vi.fn(),
+    createProfileMock: vi.fn(),
+    revalidatePathMock: vi.fn(),
+  }),
+);
 
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 vi.mock("@/server/repositories/rolling-plan-repository", async (original) => {
@@ -25,14 +21,6 @@ vi.mock("@/server/repositories/profile-repository", async (original) => {
     await original<typeof import("@/server/repositories/profile-repository")>();
   return { ...actual, createProfileRepository: createProfileMock };
 });
-vi.mock("@/server/repositories/saved-session-repository", async (original) => {
-  const actual =
-    await original<
-      typeof import("@/server/repositories/saved-session-repository")
-    >();
-  return { ...actual, createSavedSessionLibrary: createSavedLibraryMock };
-});
-
 import {
   INITIAL_MATERIALIZE_ACTION_STATE,
   INITIAL_SERIES_ACTION_STATE,
@@ -42,12 +30,14 @@ import {
   materializePlanSeriesAction,
 } from "./series-actions";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
-import type { RollingPlanChangeSet } from "@/server/rolling-plan/rolling-plan";
+import {
+  RollingPlanTimezoneRequiredError,
+  type RollingPlanChangeSet,
+} from "@/server/rolling-plan/rolling-plan";
 
 const TIMEZONE = "Europe/Berlin";
 const SESSION_ID = "7e100000-0000-4000-8000-000000000001";
 const SERIES_ID = "7e100000-0000-4000-8000-000000000002";
-const SAVED_ID = "7e100000-0000-4000-8000-000000000003";
 const today = () => isoDateInTimezone(new Date(), TIMEZONE);
 
 describe("recurring-session actions", () => {
@@ -62,77 +52,6 @@ describe("recurring-session actions", () => {
     });
   });
 
-  it("creates from the server-read saved entry and reports materializer skips", async () => {
-    const applyChangeSet = vi.fn().mockResolvedValue({
-      planRevision: 4,
-      seriesEffects: [],
-    });
-    const materializeSeries = vi.fn().mockResolvedValue({
-      planRevision: 5,
-      createdCount: 2,
-      skipped: [
-        {
-          seriesId: SERIES_ID,
-          occurrenceDate: shiftIsoDate(today(), 1),
-          reason: "daily-session-limit",
-        },
-      ],
-    });
-    createPlanMock.mockResolvedValue({
-      getPlanSlice: vi.fn().mockResolvedValue(slice()),
-      listSeries: vi.fn().mockResolvedValue([]),
-      applyChangeSet,
-      materializeSeries,
-    });
-    createSavedLibraryMock.mockResolvedValue({
-      get: vi.fn().mockResolvedValue({
-        id: SAVED_ID,
-        revision: 1,
-        name: "Tempo",
-        title: "Tempo run",
-        sport: "Running",
-        activities: [],
-        updatedAt: "",
-      }),
-    });
-
-    const result = await changeSeriesAction(
-      INITIAL_SERIES_ACTION_STATE,
-      form({
-        operation: "add_series",
-        sourceKind: "saved",
-        sourceId: SAVED_ID,
-        startDate: today(),
-        frequency: "daily",
-        intervalCount: "1",
-        noEnd: "false",
-        endDate: shiftIsoDate(today(), 2),
-      }),
-    );
-
-    expect(result).toMatchObject({
-      status: "saved",
-      skipped: [
-        {
-          occurrenceDate: shiftIsoDate(today(), 1),
-          reason: "daily-session-limit",
-        },
-      ],
-    });
-    const [changeSet] = applyChangeSet.mock.calls[0] as [RollingPlanChangeSet];
-    expect(changeSet.provenance).toBe("owner_series");
-    expect(changeSet.changes[0]).toMatchObject({
-      operation: "add_series",
-      series: {
-        frequency: "daily",
-        startDate: today(),
-        endDate: shiftIsoDate(today(), 2),
-        title: "Tempo run",
-      },
-    });
-    expect(materializeSeries).toHaveBeenCalledWith(expect.any(String), 4);
-  });
-
   it("creates a series from new owner-entered session fields without activities", async () => {
     const applyChangeSet = vi.fn().mockResolvedValue({
       planRevision: 4,
@@ -145,7 +64,13 @@ describe("recurring-session actions", () => {
       materializeSeries: vi.fn().mockResolvedValue({
         planRevision: 5,
         createdCount: 2,
-        skipped: [],
+        skipped: [
+          {
+            seriesId: SERIES_ID,
+            occurrenceDate: shiftIsoDate(today(), 1),
+            reason: "daily-session-limit",
+          },
+        ],
       }),
     });
 
@@ -153,7 +78,6 @@ describe("recurring-session actions", () => {
       INITIAL_SERIES_ACTION_STATE,
       form({
         operation: "add_series",
-        sourceKind: "new",
         startDate: today(),
         frequency: "weekly",
         intervalCount: "1",
@@ -167,7 +91,15 @@ describe("recurring-session actions", () => {
       }),
     );
 
-    expect(result.status).toBe("saved");
+    expect(result).toMatchObject({
+      status: "saved",
+      skipped: [
+        {
+          occurrenceDate: shiftIsoDate(today(), 1),
+          reason: "daily-session-limit",
+        },
+      ],
+    });
     const [changeSet] = applyChangeSet.mock.calls[0] as [RollingPlanChangeSet];
     expect(changeSet.changes[0]).toMatchObject({
       operation: "add_series",
@@ -183,8 +115,35 @@ describe("recurring-session actions", () => {
         activities: [],
       },
     });
-    expect(createSavedLibraryMock).not.toHaveBeenCalled();
   });
+
+  it.each(["plan", "saved"])(
+    "rejects the removed %s source mode",
+    async (sourceKind) => {
+      const applyChangeSet = vi.fn();
+      createPlanMock.mockResolvedValue({
+        getPlanSlice: vi.fn().mockResolvedValue(slice()),
+        listSeries: vi.fn().mockResolvedValue([]),
+        applyChangeSet,
+      });
+
+      const result = await changeSeriesAction(
+        INITIAL_SERIES_ACTION_STATE,
+        form({
+          operation: "add_series",
+          sourceKind,
+          sourceId: SESSION_ID,
+          startDate: today(),
+          frequency: "daily",
+          intervalCount: "1",
+          noEnd: "true",
+        }),
+      );
+
+      expect(result.status).toBe("validation");
+      expect(applyChangeSet).not.toHaveBeenCalled();
+    },
+  );
 
   it("reports only the authoritative end-series effect after success", async () => {
     const applyChangeSet = vi.fn().mockResolvedValue({
@@ -219,7 +178,7 @@ describe("recurring-session actions", () => {
       status: "saved",
       effect: { deleted: 2, divergedDeleted: 1, lockedKept: 1 },
     });
-    expect(result.message).toContain("2 unchanged removed");
+    expect(result.message).toContain("1 unchanged removed");
     expect(result.message).toContain("1 changed removed");
     expect(result.message).toContain("1 locked kept");
     expect(result.message).not.toMatch(/expect|forecast|estimate/i);
@@ -317,6 +276,23 @@ describe("recurring-session actions", () => {
     });
     expect(materializeSeries).toHaveBeenCalledWith(expect.any(String), 3);
     expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan");
+  });
+
+  it("preserves the missing-time-zone conflict while materializing", async () => {
+    createPlanMock.mockResolvedValue({
+      materializeSeries: vi
+        .fn()
+        .mockRejectedValue(new RollingPlanTimezoneRequiredError()),
+    });
+
+    await expect(
+      materializePlanSeriesAction(INITIAL_MATERIALIZE_ACTION_STATE, form({})),
+    ).resolves.toMatchObject({
+      status: "conflict",
+      conflict: "timezone",
+      message:
+        "Confirm your time zone before recurring sessions can be extended.",
+    });
   });
 });
 

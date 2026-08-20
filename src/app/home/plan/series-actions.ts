@@ -20,10 +20,6 @@ import {
   RollingPlanAuthenticationError,
 } from "@/server/repositories/rolling-plan-repository";
 import {
-  createSavedSessionLibrary,
-  SavedSessionAuthenticationError,
-} from "@/server/repositories/saved-session-repository";
-import {
   RollingPlanConflictError,
   RollingPlanPersistenceError,
   RollingPlanRuleError,
@@ -35,11 +31,7 @@ import {
   type RollingPlanSession,
   type RollingPlanSlice,
 } from "@/server/rolling-plan/rolling-plan";
-import {
-  plannedSessionToRollingPlanSeriesInput,
-  toRollingPlanSeriesInput,
-  type RollingPlanRecurrenceRule,
-} from "@/server/saved-sessions/session-copy";
+import { type RollingPlanRecurrenceRule } from "@/server/saved-sessions/session-copy";
 
 const OPERATIONS: readonly SeriesOperation[] = [
   "add_series",
@@ -108,10 +100,11 @@ export async function changeSeriesAction(
           candidate.seriesId === change.seriesId,
       );
       if (!effect) throw new RollingPlanPersistenceError();
+      const unchangedDeleted = effect.deleted - effect.divergedDeleted;
       return result(
         "saved",
         planChangeCopy(
-          `Future recurring sessions removed permanently: ${effect.deleted} unchanged removed, ${effect.divergedDeleted} changed removed, ${effect.lockedKept} locked kept. Nothing before this session or in completed training changed.`,
+          `Future recurring sessions removed permanently: ${unchangedDeleted} unchanged removed, ${effect.divergedDeleted} changed removed, ${effect.lockedKept} locked kept. Nothing before this session or in completed training changed.`,
           topUp,
         ),
         { effect },
@@ -167,12 +160,11 @@ export async function changeSeriesAction(
     if (error instanceof RollingPlanValidationError) {
       return result(
         "validation",
-        "Check the recurrence, dates, and source session. Nothing was changed.",
+        "Check the recurrence, dates, and session details. Nothing was changed.",
       );
     }
     if (
       error instanceof RollingPlanAuthenticationError ||
-      error instanceof SavedSessionAuthenticationError ||
       error instanceof ProfileAuthenticationError
     ) {
       return result(
@@ -221,6 +213,14 @@ export async function materializePlanSeriesAction(
       return result(
         "conflict",
         "The Plan changed while recurring sessions were extending. Reload to continue.",
+        { conflict: "stale" },
+      );
+    }
+    if (error instanceof RollingPlanTimezoneRequiredError) {
+      return result(
+        "conflict",
+        "Confirm your time zone before recurring sessions can be extended.",
+        { conflict: "timezone" },
       );
     }
     if (
@@ -253,25 +253,11 @@ async function buildSeriesChange(
       throw new RollingPlanValidationError();
     }
     assertRuleHasOccurrence(rule);
-    const sourceKind = formData.get("sourceKind");
-    const sourceId = formData.get("sourceId");
-    let input: RollingPlanSeriesInput;
-    if (sourceKind === "plan") {
-      const source = requireSession(slice, sourceId);
-      input = plannedSessionToRollingPlanSeriesInput(source, rule);
-    } else if (sourceKind === "saved") {
-      const source = await (await createSavedSessionLibrary()).get(sourceId);
-      if (!source) throw new RollingPlanValidationError();
-      input = toRollingPlanSeriesInput(source, rule);
-    } else if (sourceKind === "new") {
-      input = {
-        ...rule,
-        ...readContent(formData),
-        activities: [],
-      };
-    } else {
-      throw new RollingPlanValidationError();
-    }
+    const input: RollingPlanSeriesInput = {
+      ...rule,
+      ...readContent(formData),
+      activities: [],
+    };
     return { operation, seriesId: randomUUID(), series: input };
   }
 
