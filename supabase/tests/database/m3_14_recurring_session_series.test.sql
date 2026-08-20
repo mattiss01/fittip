@@ -9,7 +9,9 @@
 --   C  a date already at the ten-session cap;
 --   D  a segment that already started: refused whole-series edit, accepted
 --      this-and-future split, and byte-identical earlier occurrences;
---   E  another owner, who reaches none of it.
+--   E  another owner, who reaches none of it;
+--   F  a bounded segment that ending or splitting it from a later date must
+--      never lengthen.
 --
 -- Dates follow the wall clock for the same reason M3-12's and M3-13's suites
 -- do: every rule here is defined against owner-local today, so a fixed literal
@@ -116,6 +118,29 @@ as $$
   )))
 $$;
 
+-- The same payload with an explicit end date. A bounded segment is the only
+-- shape a later effective date could lengthen, so the clamp on `end_series` and
+-- on a this-and-future split cannot be exercised without one.
+create function pg_temp.bounded_series_payload(
+  p_series_id uuid,
+  p_operation text,
+  p_start_date text,
+  p_end_date text,
+  p_title text
+)
+returns jsonb
+language sql
+stable
+as $$
+  select jsonb_build_array(jsonb_build_object(
+    'operation', p_operation,
+    'seriesId', p_series_id,
+    'series', (pg_temp.series_payload(
+      p_series_id, p_operation, 'daily', 1, null, p_start_date, p_title
+    )->0->'series') || jsonb_build_object('endDate', p_end_date)
+  ))
+$$;
+
 -- Receipts are captured rather than re-read, because `(f()).*` evaluates the
 -- function once per output column and would apply a change set five times.
 create temporary table change_receipt (
@@ -142,7 +167,7 @@ create temporary table snapshot (
 );
 grant all on change_receipt, materialization, snapshot to public;
 
-select plan(94);
+select plan(102);
 
 select is(
   (select count(*)::bigint from series_zone), 1::bigint,
@@ -352,7 +377,8 @@ values
   ('7d000000-0000-4000-8000-000000000002', 'series-weekly@example.test', '{}', '{}'),
   ('7d000000-0000-4000-8000-000000000003', 'series-cap@example.test', '{}', '{}'),
   ('7d000000-0000-4000-8000-000000000004', 'series-split@example.test', '{}', '{}'),
-  ('7d000000-0000-4000-8000-000000000005', 'series-outsider@example.test', '{}', '{}');
+  ('7d000000-0000-4000-8000-000000000005', 'series-outsider@example.test', '{}', '{}'),
+  ('7d000000-0000-4000-8000-000000000006', 'series-bounded@example.test', '{}', '{}');
 insert into public.profiles (user_id, timezone_name)
 select id, (select name from series_zone) from auth.users
 where id::text like '7d000000-0000-4000-8000-0000000000%';
@@ -951,6 +977,133 @@ select is(
    where id = '7d000000-0000-4000-8000-0000000000b1'),
   0::bigint,
   'the other owner series is untouched and still invisible'
+);
+
+-- Owner F: ending or splitting never lengthens a segment ------------------------
+
+-- Both closing paths write the day before the effective date. Without a clamp
+-- an effective date past an existing end date pushes that end date outward, and
+-- the sweep cannot take the difference back because it only runs from the
+-- effective date forward: the next materialization simply fills the reopened
+-- gap.
+
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"7d000000-0000-4000-8000-000000000006","role":"authenticated"}', true);
+
+insert into change_receipt
+select 'f-add', * from public.apply_rolling_plan_change_set(
+  pg_temp.rev('7d000000-0000-4000-8000-000000000006'),
+  '7d000000-0000-4000-8000-00000000f101', 'owner_manual',
+  pg_temp.bounded_series_payload(
+    '7d000000-0000-4000-8000-0000000000f1', 'add_series',
+    pg_temp.owner_day(0), pg_temp.owner_day(3), 'Bounded row'));
+insert into materialization
+select 'f-first', * from public.materialize_rolling_plan_series(
+  pg_temp.rev('7d000000-0000-4000-8000-000000000006'),
+  '7d000000-0000-4000-8000-00000000f102');
+select is(
+  (select array_agg(occurrence_date order by occurrence_date)
+   from public.rolling_plan_sessions
+   where series_id = '7d000000-0000-4000-8000-0000000000f1'),
+  array[
+    pg_temp.owner_day(0), pg_temp.owner_day(1),
+    pg_temp.owner_day(2), pg_temp.owner_day(3)
+  ]::date[],
+  'a bounded segment materializes no further than its own end date'
+);
+
+-- Clamped, the close leaves the segment exactly as it was, so the change set
+-- is refused by the same rule that refuses any other change that changes
+-- nothing. What it must never do is push the end date out to day(7).
+select throws_ok(
+  format($$select * from public.apply_rolling_plan_change_set(
+    %s, '7d000000-0000-4000-8000-00000000f103', 'owner_manual',
+    %L::jsonb)$$,
+    pg_temp.rev('7d000000-0000-4000-8000-000000000006'),
+    jsonb_build_array(jsonb_build_object(
+      'operation', 'end_series',
+      'seriesId', '7d000000-0000-4000-8000-0000000000f1',
+      'effectiveDate', pg_temp.owner_day(8)))),
+  '22023', 'A plan change must change current state.',
+  'ending a segment from a date after its end date changes nothing and is refused'
+);
+select is(
+  (select end_date from public.rolling_plan_series
+   where id = '7d000000-0000-4000-8000-0000000000f1'),
+  pg_temp.owner_day(3)::date,
+  'and leaves that end date exactly where it was'
+);
+
+insert into materialization
+select 'f-second', * from public.materialize_rolling_plan_series(
+  pg_temp.rev('7d000000-0000-4000-8000-000000000006'),
+  '7d000000-0000-4000-8000-00000000f104');
+select is(
+  (select count(*)::bigint from public.rolling_plan_sessions
+   where series_id = '7d000000-0000-4000-8000-0000000000f1'
+     and occurrence_date > pg_temp.owner_day(3)::date),
+  0::bigint,
+  'so the next materialization writes nothing into the gap that would have opened'
+);
+select is(
+  (select array_agg(occurrence_date order by occurrence_date)
+   from public.rolling_plan_sessions
+   where series_id = '7d000000-0000-4000-8000-0000000000f1'),
+  array[
+    pg_temp.owner_day(0), pg_temp.owner_day(1),
+    pg_temp.owner_day(2), pg_temp.owner_day(3)
+  ]::date[],
+  'and the segment still holds exactly the occurrences it held before'
+);
+
+insert into change_receipt
+select 'f-add-2', * from public.apply_rolling_plan_change_set(
+  pg_temp.rev('7d000000-0000-4000-8000-000000000006'),
+  '7d000000-0000-4000-8000-00000000f105', 'owner_manual',
+  pg_temp.bounded_series_payload(
+    '7d000000-0000-4000-8000-0000000000f2', 'add_series',
+    pg_temp.owner_day(0), pg_temp.owner_day(3), 'Bounded swim'));
+insert into materialization
+select 'f-third', * from public.materialize_rolling_plan_series(
+  pg_temp.rev('7d000000-0000-4000-8000-000000000006'),
+  '7d000000-0000-4000-8000-00000000f106');
+
+insert into change_receipt
+select 'f-split', * from public.apply_rolling_plan_change_set(
+  pg_temp.rev('7d000000-0000-4000-8000-000000000006'),
+  '7d000000-0000-4000-8000-00000000f107', 'owner_manual',
+  jsonb_build_array(
+    (pg_temp.series_payload(
+      '7d000000-0000-4000-8000-0000000000f2', 'edit_series', 'daily', 3, null,
+      pg_temp.owner_day(6), 'Successor')->0)
+    || jsonb_build_object(
+      'effectiveDate', pg_temp.owner_day(6),
+      'successorSeriesId', '7d000000-0000-4000-8000-0000000000f3')));
+select is(
+  (select end_date from public.rolling_plan_series
+   where id = '7d000000-0000-4000-8000-0000000000f2'),
+  pg_temp.owner_day(3)::date,
+  'splitting from a date after the end date does not push the predecessor out'
+);
+select is(
+  (select after_state->>'predecessorEndDate'
+   from public.rolling_plan_change_entries
+   where series_id = '7d000000-0000-4000-8000-0000000000f3'),
+  pg_temp.owner_day(3),
+  'and the recorded change reports the end date the predecessor actually kept'
+);
+
+insert into materialization
+select 'f-fourth', * from public.materialize_rolling_plan_series(
+  pg_temp.rev('7d000000-0000-4000-8000-000000000006'),
+  '7d000000-0000-4000-8000-00000000f108');
+select is(
+  (select count(*)::bigint from public.rolling_plan_sessions
+   where series_id = '7d000000-0000-4000-8000-0000000000f2'
+     and occurrence_date > pg_temp.owner_day(3)::date),
+  0::bigint,
+  'so the predecessor gains no occurrence between its end date and the split'
 );
 
 -- Owner immutability -----------------------------------------------------------

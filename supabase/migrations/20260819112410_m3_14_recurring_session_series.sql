@@ -1214,8 +1214,16 @@ begin
             raise exception using errcode = 'PT422',
               message = 'A plan change cannot target a date before today.';
           end if;
+          -- Ending a segment never lengthens it. A segment that already
+          -- ends earlier keeps its own end date, because the sweep below only
+          -- runs from the effective date forward and so could never remove the
+          -- occurrences a pushed-out end date would let the next
+          -- materialization write into the reopened gap.
           update public.rolling_plan_series set
-            end_date = v_effective_date - 1, updated_at = v_now
+            end_date = least(
+              coalesce(end_date, 'infinity'::date), v_effective_date - 1
+            ),
+            updated_at = v_now
           where id = v_series_id and user_id = v_user_id;
           v_sweep_from := v_effective_date;
           v_after := public.rolling_plan_series_state(v_user_id, v_series_id);
@@ -1249,9 +1257,15 @@ begin
             or (v_series_input->>'startDate')::date <> v_effective_date
             or exists (select 1 from public.rolling_plan_series where id = v_successor_series_id)
           then raise exception using errcode = '22023', message = 'Invalid rolling plan series change.'; end if;
+          -- Closing the predecessor never lengthens it either; the clamp is
+          -- the same one `end_series` applies, for the same reason.
           update public.rolling_plan_series set
-            end_date = v_effective_date - 1, updated_at = v_now
-          where id = v_series_id and user_id = v_user_id;
+            end_date = least(
+              coalesce(end_date, 'infinity'::date), v_effective_date - 1
+            ),
+            updated_at = v_now
+          where id = v_series_id and user_id = v_user_id
+          returning end_date into v_series.end_date;
           insert into public.rolling_plan_series (
             id, user_id, plan_id, predecessor_series_id, frequency, interval_count,
             weekdays, start_date, end_date, title, sport, intent,
@@ -1277,7 +1291,7 @@ begin
           v_after := public.rolling_plan_series_state(v_user_id, v_successor_series_id)
             || pg_catalog.jsonb_build_object(
               'predecessorSeriesId', v_series_id,
-              'predecessorEndDate', (v_effective_date - 1)::text
+              'predecessorEndDate', v_series.end_date::text
             );
         else
           -- A whole-series edit rewrites what every occurrence of the segment
