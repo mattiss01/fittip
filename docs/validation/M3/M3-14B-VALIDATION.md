@@ -1,9 +1,10 @@
 # M3-14B validation: recurring series surface
 
-**Status:** in development — Tier 2 builder correction round 3 complete.
-Independent review rejected implementation `09d6e223` on two feedback-state
-findings. Corrected exact-commit CI, a matching Vercel Preview, independent
-re-review, hosted verification and product-owner acceptance are pending.
+**Status:** in development — corrected Tier 2 implementation `a87a7df` has
+green exact-head CI, a matching `READY` Vercel Preview and a clean independent
+code re-review. Approval is withheld because the exact Preview has no
+authenticated FitTip session and could not receive the required 390x844 hosted
+pass. Product-owner acceptance is pending that hosted verification.
 
 **Tier:** 2 — this is the user-visible surface over M3-14's accepted schema,
 authorization and recurrence operations. It adds no schema, migration, grant,
@@ -33,6 +34,7 @@ CI workflow.
 | `09d6e223c96058dc928d91ac5ebb619475c48c68` | Refreshes the saved-session reuse test fixture with the materialization receipt and method added by M3-14B; application behavior is unchanged. |
 | `0796a53e36b9bfd71fa354cd9a161596d620e280` | Evidence-only head for implementation `09d6e223`; records its green CI and READY Preview under the evidence-commit exception. |
 | `a87a7df617bf9703367b6dbcedae111e71bf10db` | Corrects cross-channel Plan feedback ordering and recovered idle materialization copy, with component regressions for both review findings. |
+| `5f60b7055bf8b73ebf459f9db0ae4d66bc1cb537` | Evidence-only head for corrected implementation `a87a7df`; records the rejected target and correction handoff before the corrected CI and re-review completed. |
 
 ## Delivered behavior
 
@@ -236,6 +238,26 @@ permanent false pending copy. Correction
 invalidates the earlier review target, CI evidence and Preview for acceptance;
 the lead owns push, new exact-SHA CI and the matching Preview.
 
+[CI run 32365738735](https://github.com/mattiss01/fittip/actions/runs/32365738735)
+is green across formatting, ESLint, TypeScript, 764 Vitest tests, the production
+build, migrations from zero, database lint, security and performance advisors,
+pgTAP, concurrency harnesses and all pinned 390px production browser flows. Its
+head is evidence-only commit `5f60b7055bf8b73ebf459f9db0ae4d66bc1cb537`
+over implementation `a87a7df617bf9703367b6dbcedae111e71bf10db`, so the
+evidence-commit exception applies. The exact matching Vercel Preview reached
+`READY` at <https://fittip-r3il6m0oj-mattis-3657s-projects.vercel.app>.
+
+Fresh independent re-review found both rejected feedback-state defects fixed,
+reconciled the full 35-file manifest, found no new implementation, security or
+scope issue, and confirmed the exact-head CI plus matching deployment. Approval
+is nevertheless withheld: desktop Chrome could pass Vercel protection, but the
+exact Preview redirected `/home/plan` to FitTip's sign-in surface because that
+browser has no authenticated FitTip application session. The only authenticated
+Plan tab belonged to a different M3-13 deployment and was not accepted as
+evidence. The desktop provider also reports no resize capability, so neither
+`/home/plan` nor `/home/plan/series/new` received an authenticated exact-Preview
+390x844 inspection.
+
 | Command or check | Result |
 | --- | --- |
 | `npm.cmd run test:run -- src/architecture/server-boundary.test.ts src/app/home/plan/series-recurrence.test.ts src/app/home/plan/series-actions.test.ts src/app/home/plan/actions.test.ts src/app/home/plan/plan-manager.test.tsx src/server/repositories/rolling-plan-repository.test.ts src/server/rolling-plan/rolling-plan.test.ts src/server/saved-sessions/session-copy.test.ts` | PASS — 8 files, 77 tests |
@@ -280,22 +302,23 @@ evidence. CI will run it after the lead pushes the exact branch head.
    dense 14-day Plan, including a synthetic ten-session cap date. The pinned
    viewport and overflow assertion passed; visual acceptance still belongs to
    the 390x844 Vercel Preview.
-4. Green CI run 32362050214 attempt 2 and the READY Preview belong to
-   evidence-only head `0796a53` over rejected implementation `09d6e223`. The
-   reviewer was redirected to Vercel SSO and had no authenticated hosted
-   browser. Correction `a87a7df` now needs its own push, exact-commit CI,
-   matching READY Preview, independent re-review, hosted verification and
-   product-owner acceptance. No hosted database was touched by this builder.
+4. Corrected CI run 32365738735 is green and the matching `r3il6m0oj` Preview is
+   `READY`. Independent code re-review is clean, but hosted review remains
+   blocked because the exact Preview has no authenticated FitTip session and
+   the available desktop browser cannot resize to 390x844. Authenticate that
+   exact Preview without sharing credentials, then repeat the independent
+   hosted mobile pass before requesting acceptance. No hosted database was
+   touched by this ticket because it contains no migration.
 
 ## Independent reviewer focus
 
-Review exact commit `a87a7df617bf9703367b6dbcedae111e71bf10db`
-over range `2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..a87a7df617bf9703367b6dbcedae111e71bf10db`.
-Use the Git diff as the source of truth. Prior implementation `09d6e223` was
-rejected on the two feedback-state findings recorded above. Confirm the lead's
-new exact-commit CI run is green and use its matching Preview; do not treat run
-32362050214 or Preview `fittip-er8ro3ndm` as acceptance evidence for the new
-target, and do not rerun suites CI already ran.
+The independent reviewer completed the exact code review of commit
+`a87a7df617bf9703367b6dbcedae111e71bf10db` over range
+`2e2c1be4cb44f9591a6d7e0219a7ded28de547e1..a87a7df617bf9703367b6dbcedae111e71bf10db`.
+The code and manifest are clean, and run 32365738735 plus Preview
+`fittip-r3il6m0oj` are the only current evidence. The remaining reviewer task is
+an authenticated 390x844 pass on that exact Preview; older authenticated tabs,
+run 32362050214 and Preview `fittip-er8ro3ndm` are not acceptance evidence.
 
 Human judgment should concentrate on: owner-source rereads and explicit
 ownership predicates; the absence of render/GET/prefetch writes; move and bulk

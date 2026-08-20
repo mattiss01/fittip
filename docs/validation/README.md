@@ -42,10 +42,10 @@ Validation records and their visual evidence are grouped by milestone.
 ## M3
 
 - [M3-14B recurring series surface](M3/M3-14B-VALIDATION.md) — in development;
-  Tier 2 correction target `a87a7df`. Independent review rejected `09d6e223`
-  on cross-channel feedback ordering and false recovered-extension pending
-  copy. New exact-commit CI, matching Preview, re-review, hosted verification
-  and product-owner acceptance are pending
+  Tier 2 correction target `a87a7df`. CI run 32365738735 is green, its matching
+  `r3il6m0oj` Preview is READY, and independent code re-review is clean. Hosted
+  review is blocked until that exact Preview has an authenticated FitTip session
+  and receives the required 390x844 pass; product-owner acceptance is pending
 - [M3-14 recurring session series foundation](M3/M3-14-VALIDATION.md) — in
   development; Tier 1 builder handoff complete against `15e3f3c`. The migration
   adds `rolling_plan_series` and `rolling_plan_series_activities`, the
