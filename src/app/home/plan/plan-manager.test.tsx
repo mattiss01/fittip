@@ -1,8 +1,16 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { useActionStateMock } = vi.hoisted(() => ({
+const {
+  useActionStateMock,
+  changePlanActionMock,
+  changeSeriesActionMock,
+  materializePlanSeriesActionMock,
+} = vi.hoisted(() => ({
   useActionStateMock: vi.fn(),
+  changePlanActionMock: vi.fn(),
+  changeSeriesActionMock: vi.fn(),
+  materializePlanSeriesActionMock: vi.fn(),
 }));
 
 vi.mock("react", async (importOriginal) => {
@@ -10,7 +18,11 @@ vi.mock("react", async (importOriginal) => {
   return { ...actual, useActionState: useActionStateMock };
 });
 
-vi.mock("./actions", () => ({ changePlanAction: vi.fn() }));
+vi.mock("./actions", () => ({ changePlanAction: changePlanActionMock }));
+vi.mock("./series-actions", () => ({
+  changeSeriesAction: changeSeriesActionMock,
+  materializePlanSeriesAction: materializePlanSeriesActionMock,
+}));
 
 import {
   INITIAL_PLAN_ACTION_STATE,
@@ -18,6 +30,11 @@ import {
 } from "./action-state";
 import { PlanManager, type PlanSessionView } from "./plan-manager";
 import type { PlanSeriesView } from "./recurring-session-controls";
+import {
+  INITIAL_MATERIALIZE_ACTION_STATE,
+  INITIAL_SERIES_ACTION_STATE,
+  type SeriesActionState,
+} from "./series-action-state";
 
 const TODAY = "2026-08-17";
 const DATES = Array.from({ length: 14 }, (_, offset) => {
@@ -318,6 +335,99 @@ describe("PlanManager", () => {
     expect(screen.getByText(/only this session can be removed/i)).toBeVisible();
     expect(
       screen.getByRole("button", { name: "Remove only this session" }),
+    ).toBeVisible();
+  });
+
+  it("yields a retained series receipt to a newer ordinary plan action", () => {
+    let planState = INITIAL_PLAN_ACTION_STATE;
+    let planPending = false;
+    let seriesState: SeriesActionState = INITIAL_SERIES_ACTION_STATE;
+    const planDispatch = vi.fn();
+    const seriesDispatch = vi.fn();
+
+    useActionStateMock.mockImplementation((actionDefinition) => {
+      if (actionDefinition === changePlanActionMock) {
+        return [planState, planDispatch, planPending];
+      }
+      if (actionDefinition === changeSeriesActionMock) {
+        return [seriesState, seriesDispatch, false];
+      }
+      return [INITIAL_MATERIALIZE_ACTION_STATE, vi.fn(), false];
+    });
+
+    const recurringSession = session({
+      seriesId: "7f000000-0000-4000-8000-000000000099",
+      occurrenceDate: TODAY,
+    });
+    const props = {
+      today: TODAY,
+      dates: DATES,
+      expectedRevision: 3,
+      recoveryDates: [DATES[3]],
+      series: [series()],
+    };
+    const { rerender } = render(
+      <PlanManager {...props} sessions={[recurringSession]} />,
+    );
+
+    fireEvent.click(
+      screen.getByText("Remove recurring session", { selector: "summary" }),
+    );
+    fireEvent.submit(
+      screen
+        .getByRole("button", {
+          name: "Remove this and all future sessions",
+        })
+        .closest("form")!,
+    );
+    expect(seriesDispatch).toHaveBeenCalledOnce();
+
+    seriesState = {
+      status: "saved",
+      message:
+        "Future recurring sessions removed permanently: 2 unchanged removed, 1 changed removed, 1 locked kept.",
+      submission: 1,
+      operation: "end_series",
+      sessionId: recurringSession.id,
+      effect: { deleted: 2, divergedDeleted: 1, lockedKept: 1 },
+    };
+    rerender(<PlanManager {...props} sessions={[]} expectedRevision={4} />);
+
+    const managerStatus = screen.getAllByRole("status")[0];
+    expect(managerStatus).toBeVisible();
+    expect(managerStatus).toHaveTextContent(/2 unchanged removed/);
+
+    fireEvent.submit(
+      screen
+        .getAllByRole("button", { name: "Mark recovery day" })[0]
+        .closest("form")!,
+    );
+    expect(planDispatch).toHaveBeenCalledOnce();
+    planPending = true;
+    rerender(<PlanManager {...props} sessions={[]} expectedRevision={4} />);
+    expect(managerStatus).toBeVisible();
+    expect(managerStatus).toHaveTextContent(/Saving plan change/);
+    expect(managerStatus).not.toHaveTextContent(/unchanged removed/);
+
+    planPending = false;
+    planState = {
+      status: "conflict",
+      message: "Your plan changed somewhere else.",
+      submission: 1,
+      operation: "set_recovery_day",
+      localDate: TODAY,
+      conflict: "stale",
+    };
+    rerender(<PlanManager {...props} sessions={[]} expectedRevision={4} />);
+
+    expect(managerStatus).toBeVisible();
+    expect(managerStatus).toHaveAttribute("aria-live", "polite");
+    expect(managerStatus).toHaveTextContent(
+      "Your plan changed somewhere else.",
+    );
+    expect(managerStatus).not.toHaveTextContent(/unchanged removed/);
+    expect(
+      screen.getByRole("link", { name: "Reload the current plan" }),
     ).toBeVisible();
   });
 });

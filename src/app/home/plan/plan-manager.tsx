@@ -2,6 +2,7 @@
 
 import {
   useActionState,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -69,6 +70,7 @@ type Props = {
 };
 
 type FormAction = (formData: FormData) => void;
+type ActionChannel = "plan" | "series";
 
 type DayProps = {
   date: string;
@@ -114,6 +116,22 @@ export function PlanManager({
     changeSeriesAction,
     INITIAL_SERIES_ACTION_STATE,
   );
+  const [latestActionChannel, setLatestActionChannel] =
+    useState<ActionChannel | null>(null);
+  const trackedPlanAction = useCallback(
+    (formData: FormData) => {
+      setLatestActionChannel("plan");
+      action(formData);
+    },
+    [action],
+  );
+  const trackedSeriesAction = useCallback(
+    (formData: FormData) => {
+      setLatestActionChannel("series");
+      seriesAction(formData);
+    },
+    [seriesAction],
+  );
   const stall = useMutationStall(pending, state.submission);
   const recovered = useRecoveredReload(state.submission);
   const seriesStall = useSeriesMutationStall(
@@ -133,18 +151,31 @@ export function PlanManager({
       : seriesState.status === "idle"
         ? null
         : seriesState.message);
-  const notice =
-    seriesNotice ??
+  const showSeriesNotice =
+    latestActionChannel === "series" ||
+    (latestActionChannel === null && seriesNotice !== null);
+  const planNotice =
     stallNotice(stall) ??
     (pending ? "Saving plan change…" : null) ??
     (recovered ? RECOVERED_NOTICE : null);
-  const noticeState =
+  const activeNotice = showSeriesNotice ? seriesNotice : planNotice;
+  const seriesFirstNoticeState =
     seriesStall ??
     (seriesRecovered
       ? "recovered"
       : seriesState.status !== "idle"
         ? seriesState.status
         : (stall ?? (recovered ? "recovered" : state.status)));
+  const noticeState = showSeriesNotice
+    ? seriesFirstNoticeState
+    : (stall ?? (recovered ? "recovered" : state.status));
+  const showReload = showSeriesNotice
+    ? seriesState.status === "conflict" ||
+      seriesState.status === "session" ||
+      seriesStall === "unconfirmed"
+    : state.conflict === "stale" ||
+      state.conflict === "timezone" ||
+      stall === "unconfirmed";
   const labelled = new Set(recoveryDates);
   const seriesById = new Map(series.map((segment) => [segment.id, segment]));
 
@@ -156,14 +187,9 @@ export function PlanManager({
         role="status"
         aria-live="polite"
       >
-        {notice ?? state.message}
+        {activeNotice ?? (showSeriesNotice ? "" : state.message)}
       </p>
-      {state.conflict === "stale" ||
-      state.conflict === "timezone" ||
-      stall === "unconfirmed" ||
-      seriesState.status === "conflict" ||
-      seriesState.status === "session" ||
-      seriesStall === "unconfirmed" ? (
+      {showReload ? (
         <a className={styles.reload} href="/home/plan">
           Reload the current plan
         </a>
@@ -184,11 +210,11 @@ export function PlanManager({
             isRecoveryDay={labelled.has(date)}
             sessions={sessions.filter((session) => session.localDate === date)}
             expectedRevision={expectedRevision}
-            action={action}
+            action={trackedPlanAction}
             state={state}
             pending={pending}
             seriesById={seriesById}
-            seriesAction={seriesAction}
+            seriesAction={trackedSeriesAction}
             seriesState={seriesState}
             seriesPending={seriesPending}
           />

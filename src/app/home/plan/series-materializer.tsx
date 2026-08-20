@@ -52,7 +52,7 @@ export function SeriesMaterializer({
     return null;
   }
 
-  const extending = state.status === "idle" || pending;
+  const extending = pending || (state.status === "idle" && !recovered);
   const notice =
     seriesStallNotice(stall) ??
     (extending
