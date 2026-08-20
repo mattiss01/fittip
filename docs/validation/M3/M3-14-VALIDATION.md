@@ -409,13 +409,15 @@ Raised by the independent review of `15e3f3c` on 19 August 2026. All are
 non-blocking; the reviewer approved the commit with none of them outstanding as
 a defect in what the ticket claims to deliver.
 
-9. **`end_series` and the this-and-future split can lengthen a segment.** Both
-   set `end_date = v_effective_date - 1` unconditionally, so a segment that
-   already ended earlier has its end date pushed *out*, and the next top-up
-   materializes occurrences into the resurrected gap. Unreachable today because
-   no surface exists, but it resurrects deleted occurrences, which is the one
-   finding the reviewer most wanted closed. A `least(coalesce(end_date,
-   'infinity'), v_effective_date - 1)` guard closes it.
+9. **`end_series` and the this-and-future split could lengthen a segment.**
+   **Fixed** — see [Round 1 correction](#round-1-correction). Both set
+   `end_date = v_effective_date - 1` unconditionally, so a segment that already
+   ended earlier had its end date pushed *out*, and the next top-up
+   materialized occurrences into the resurrected gap. Unreachable today because
+   no surface exists, but it resurrected deleted occurrences, which is the one
+   finding the reviewer most wanted closed. Both sites now clamp with
+   `least(coalesce(end_date, 'infinity'), v_effective_date - 1)`, and the
+   in-memory adapter, which carried the same defect, clamps with them.
 10. **The sweep has no completed predicate.** See acceptance criterion 8 above.
     Vacuous today; a data-loss hazard the moment M3-15 links completions.
 11. **The materializer's position allocation can hard-fail.** It takes
@@ -459,6 +461,81 @@ narrowing the two plan actions was the right seam because widening
 It also corrected two overstated claims in this record, both fixed above by the
 lead: the in-memory weekly coverage claim, and acceptance criterion 8's
 "completed untouched" clause.
+
+## Round 1 correction
+
+The product owner chose to close limitation 9 before the migration reaches the
+founder database. The migration has never been applied to a hosted project, so
+it was corrected in place rather than by a second forward migration; its
+filename and timestamp are unchanged.
+
+**New review target:** `0afb6f939b5253678c3d168c867d057146542f5d`, range
+`git diff 21e30d6..0afb6f9`. The approval of `15e3f3c` stands for everything
+outside that range.
+
+| Commit | Purpose |
+| --- | --- |
+| `03f8782e34c78e1d4e30613282adee149e9356e2` | The clamp at both closing sites in `apply_rolling_plan_change_set`, and eight pgTAP assertions that pin it. |
+| `0afb6f939b5253678c3d168c867d057146542f5d` | The same clamp in the in-memory adapter, and two adapter-contract cases that pin the two implementations together. |
+
+**What changed.** Both sites now write
+`least(coalesce(end_date, 'infinity'::date), v_effective_date - 1)` instead of
+`v_effective_date - 1`. `coalesce(end_date, 'infinity')` leaves an open-ended
+segment behaving exactly as before, which is every segment reachable today. An
+effective date before the segment start still violates
+`rolling_plan_series_range_check` and still surfaces as `22023`; limitation 7 is
+unchanged.
+
+The split branch additionally reports the end date the predecessor actually
+kept — `returning end_date into v_series.end_date`, then
+`'predecessorEndDate', v_series.end_date::text` — because after the clamp that
+is no longer always the day before the split date, and a change entry that
+claims otherwise would be a false record.
+
+**The in-memory adapter carried the identical defect** at both of its closing
+paths and now clamps in the same place, through one `clampEnd` helper.
+
+**One behavior consequence, deliberate.** Clamped, ending a segment that
+already ends on or before the day before the effective date leaves it
+unchanged, so `apply_rolling_plan_change_set` refuses the change set through the
+pre-existing `'A plan change must change current state.'` guard rather than
+writing a no-op. The adapter now refuses it too, for the same reason and with
+the same `RollingPlanValidationError`. This is a new refusal on a path that
+previously "succeeded" by corrupting the segment; it is unreachable from any
+surface today. A split is never affected, because it always creates a
+successor.
+
+**Coverage added.** A sixth pgTAP owner, F, holds a segment bounded at
+`today + 3`: it materializes no further than its own end date; ending it from
+`today + 8` is refused and leaves the end date where it was; a subsequent
+`materialize_rolling_plan_series` writes nothing past `today + 3`; splitting it
+from `today + 6` leaves the predecessor's end date at `today + 3` and records
+that same date as `predecessorEndDate`; and the following materialization gives
+the predecessor no occurrence in the gap. The suite plan moves from 94 to 102.
+`rolling-plan-contract.ts` gains the ending case and the split case, so both
+adapters are held to the invariant.
+
+**Local results.**
+
+- `npx.cmd supabase db reset --local` from clean, then
+  `npx.cmd supabase test db --local supabase/tests/database`: **PASS**, 11
+  files, 722 assertions, `m3_14_recurring_session_series.test.sql` 102/102.
+- Negative control: the same suite against the pre-fix migration file from
+  `21e30d6`, with the new assertions in place, fails 7 of the 8 new
+  assertions (94-100). The pre-fix function accepts the close, reports the
+  predecessor's end date as `today + 5` where it must stay `today + 3`, and the
+  following materialization writes 2 occurrences into the gap. Only the first
+  new assertion, which is about the bounded rule and not the clamp, passes both
+  ways.
+- `npm.cmd run test:run -- src/server/rolling-plan/rolling-plan.test.ts`: 18
+  passed, including the two new contract cases.
+- `npm.cmd run typecheck`, `npx.cmd eslint src/server/rolling-plan/`, and
+  `git diff --check`: clean. Prettier reports no change on either TypeScript
+  file.
+
+The continuous-integration run for `0afb6f9` is the automated-test evidence for
+this correction; the lead records its URL when it lands. Nothing hosted was
+touched, and no migration was applied anywhere but the local stack.
 
 ## Independent reviewer checklist
 
