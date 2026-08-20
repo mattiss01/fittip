@@ -224,6 +224,16 @@ jobs:
             npx playwright test --config=e2e/m3-13.playwright.config.ts \
               --workers=1 --trace=retain-on-failure --output=test-results/m3-13
 
+      - name: M3-14B recurring series surface
+        # Report every broken flow in one run, not just the first.
+        if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-14b
+        run: |
+          .github/scripts/with-server.sh 3022 \
+            npx playwright test --config=e2e/m3-14b.playwright.config.ts \
+              --workers=1 --trace=retain-on-failure --output=test-results/m3-14b
+
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v7
