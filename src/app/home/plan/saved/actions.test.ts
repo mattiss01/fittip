@@ -126,7 +126,15 @@ describe("saved session actions", () => {
   });
 
   it("reuses an entry as a plain addition on the date the owner picked", async () => {
-    const applyChangeSet = vi.fn().mockResolvedValue({ result: "applied" });
+    const applyChangeSet = vi.fn().mockResolvedValue({
+      result: "applied",
+      planRevision: 2,
+    });
+    const materializeSeries = vi.fn().mockResolvedValue({
+      planRevision: 2,
+      createdCount: 0,
+      skipped: [],
+    });
     createLibraryMock.mockResolvedValue({
       get: vi.fn().mockResolvedValue(savedSession()),
       applyChange: vi.fn(),
@@ -134,6 +142,7 @@ describe("saved session actions", () => {
     createPlanMock.mockResolvedValue({
       getPlanSlice: vi.fn().mockResolvedValue(slice()),
       applyChangeSet,
+      materializeSeries,
     });
 
     await expect(
@@ -164,6 +173,7 @@ describe("saved session actions", () => {
         }),
       }),
     ]);
+    expect(materializeSeries).toHaveBeenCalledWith(expect.any(String), 2);
     expect(revalidatePathMock.mock.calls).toEqual([
       ["/home/plan"],
       ["/home/plan/saved"],
