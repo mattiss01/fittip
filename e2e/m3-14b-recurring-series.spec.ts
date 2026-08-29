@@ -71,7 +71,7 @@ test.describe("M3-14B recurring series surface", () => {
       const exposedActions = source.locator("[data-session-actions]");
       await expect(
         exposedActions.locator(":scope > details > summary"),
-      ).toHaveText(["Edit", "Remove"]);
+      ).toHaveText(["Edit", "Cancel", "Delete"]);
       await expect(exposedActions.locator(":scope > form button")).toHaveText(
         "Lock",
       );
@@ -162,7 +162,7 @@ test.describe("M3-14B recurring series surface", () => {
       // Consequences appear before future removal and carry no forecast count.
       const endFrom = ownerDate(5);
       const ending = sessionCard(page, endFrom, "Future steady");
-      await openDisclosure(ending, "Remove");
+      await openDisclosure(ending, "Cancel");
       const futureRemoval = scope(
         ending,
         "This and all future sessions",
