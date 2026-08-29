@@ -352,11 +352,35 @@ browser flows.
 proves here; this ticket adds no visible surface, so there is no 390px pass to
 run against it.
 
-**Founder migration application and hosted verification:** _pending — the lead
-applies `20260829073444` to the founder project in timestamp order, confirms
-remote migration history contains the repository's exact versions, verifies the
-schema and the RLS/privilege boundary, runs the hosted advisors, and exercises
-an authenticated hosted read path._
+**Founder migration application:** **applied, on the product owner's
+attestation.** The product owner reported on 29 August 2026 that
+`20260829073444` was applied to `mahhfyxhgcmcbqkvudcm` and that the migration
+is complete. The lead cannot run or observe this: `supabase link`, `db push`,
+and `db remote` are denied in `.claude/settings.json`, the CLI login needs a
+TTY, and the database password is unreadable to the agent.
+
+**This is an attestation, not captured output, and the record says so rather
+than implying more.** The lead supplied
+[the runbook](evidence/M3-15A-founder-migration-runbook.md) and requested the
+`migration list --linked`, advisor, privilege-boundary, and authenticated-read
+results twice; the product owner confirmed completion without returning them
+and that is their call to make. Consequently the following are **not**
+independently confirmed and are carried as limitation 9 below:
+
+- that remote migration history matches the repository at all 19 positions
+  (drift would not be visible from the attestation alone);
+- the hosted advisor output, which the local run cannot predict — the local
+  container does not run
+  `0029_authenticated_security_definer_function_executable`, which this ticket
+  is expected to trip a seventh time by design;
+- the hosted RLS and privilege boundary, and the `authenticated` / `anon` read
+  pair.
+
+The boundary itself is proven by 87 pgTAP assertions against a from-zero
+database in the green CI run, so the schema is known correct; what is unverified
+is that the founder project now matches it. Closing this needs only the
+runbook's Appendix query and its two Part 3 blocks, whenever the product owner
+chooses to run them.
 
 What follows is what this builder actually observed locally, **re-run in full
 after the `completion_activities` rename**. It is reported because it is what
@@ -438,6 +462,19 @@ defined against owner-local today.
 8. **No AI context wiring, roadmap re-grant, or backfill**, as the ticket's
    non-goals state. `ADR-013`'s send rules are unaffected; nothing new reaches
    a provider.
+9. **The founder hosted verification rests on attestation, not captured
+   output.** The product owner confirmed on 29 August 2026 that the migration
+   was applied, and did not return the `migration list --linked`, advisor,
+   privilege-boundary, or authenticated-read results the lead requested. Remote
+   history alignment at all 19 positions, the hosted advisor categories, and the
+   `authenticated` / `anon` read pair are therefore unconfirmed on the founder
+   project specifically. All of it is proven against a from-zero database by 87
+   pgTAP assertions in the green CI run, so this is a gap in hosted
+   confirmation rather than a doubt about the schema.
+   [The runbook](evidence/M3-15A-founder-migration-runbook.md) closes it in one
+   query plus two short blocks whenever the product owner chooses to run them.
+   M3-15 depends on these tables from a hosted surface and should not be
+   dispatched while this is open.
 
 ## Independent review outcome
 
