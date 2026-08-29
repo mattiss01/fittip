@@ -1,6 +1,8 @@
 # M3-19: Delete a planned session
 
-**Status:** approved for implementation — the product owner approved the third
+**Status:** in development — dispatched by the lead agent on 29 August 2026
+to a builder subagent on branch `ticket/m3-19-delete-a-planned-session`. The
+product owner approved the third
 session verb and the card relabelling on 29 August 2026, against the
 [F-005 amendment recorded the same day](../../product/F-005-ROLLING-TRAINING-PLAN.md#deleting-a-planned-session-29-august-2026).
 Tier 1 dispatch approved 29 August 2026.
