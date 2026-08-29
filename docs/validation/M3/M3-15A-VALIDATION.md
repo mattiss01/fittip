@@ -369,8 +369,13 @@ results twice; the product owner confirmed completion without returning them
 and that is their call to make. Consequently the following are **not**
 independently confirmed and are carried as limitation 9 below:
 
-- that remote migration history matches the repository at all 19 positions
-  (drift would not be visible from the attestation alone);
+- ~~that remote migration history matches the repository at all 19
+  positions~~ — **cleared 29 August 2026.** The product owner ran
+  `supabase migration list --linked` in session. It returned 19 entries, every
+  one with `local` equal to `remote`, newest `20260829073444`. The lead
+  compared the returned versions against `supabase/migrations/` mechanically:
+  identical at all 19 positions, with no local-only or remote-only row. No
+  drift;
 - the hosted advisor output, which the local run cannot predict — the local
   container does not run
   `0029_authenticated_security_definer_function_executable`, which this ticket
@@ -467,10 +472,10 @@ defined against owner-local today.
 9. **The founder hosted verification rests on attestation, not captured
    output.** The product owner confirmed on 29 August 2026 that the migration
    was applied, and did not return the `migration list --linked`, advisor,
-   privilege-boundary, or authenticated-read results the lead requested. Remote
-   history alignment at all 19 positions, the hosted advisor categories, and the
-   `authenticated` / `anon` read pair are therefore unconfirmed on the founder
-   project specifically. All of it is proven against a from-zero database by 87
+   privilege-boundary, or authenticated-read results the lead requested.
+   **Remote history alignment was subsequently confirmed** — see the cleared
+   item above — leaving the hosted advisor categories and the `authenticated` /
+   `anon` read pair unconfirmed on the founder project specifically. All of it is proven against a from-zero database by 87
    pgTAP assertions in the green CI run, so this is a gap in hosted
    confirmation rather than a doubt about the schema.
    [The runbook](evidence/M3-15A-founder-migration-runbook.md) closes it in one
