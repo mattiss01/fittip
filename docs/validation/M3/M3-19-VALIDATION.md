@@ -1,16 +1,22 @@
 # M3-19 validation: delete a planned session
 
 **Ticket:** [M3-19](../../backlog/M3/M3-19-DELETE-A-PLANNED-SESSION.md)
-**Status:** testable — builder handoff complete. Independent review, the CI
-run for the reviewed SHA, the Vercel Preview, the founder migration and
-product-owner acceptance are all outstanding.
+**Status:** testable — correction round 1 complete. Round 1 of independent
+review rejected `1e12dce` on one blocking finding, which the product owner
+resolved by accepting the behavior and requiring the surface to describe it
+honestly; `437d470` does that. Approval of `1e12dce` and its Preview is
+invalidated. A fresh CI run, re-review, a fresh Preview, the founder migration
+and product-owner acceptance are all outstanding.
 **Tier:** 1
 **Branch:** `ticket/m3-19-delete-a-planned-session`
 **Base:** `37529e20ea373034d7ede6b64e0b6dfde8d5e940`
 **Implementation review target:**
-`1e12dce8a5be752fac55525074c2e15da0e8710c`
+`437d47078cea73a908c65d5d30fd09ee2428bfff`
 **Review range:**
-`git diff 37529e20ea373034d7ede6b64e0b6dfde8d5e940..1e12dce8a5be752fac55525074c2e15da0e8710c`
+`git diff 37529e20ea373034d7ede6b64e0b6dfde8d5e940..437d47078cea73a908c65d5d30fd09ee2428bfff`
+**Superseded target:** `1e12dce8a5be752fac55525074c2e15da0e8710c`, whose
+correction range is
+`git diff 1e12dce8a5be752fac55525074c2e15da0e8710c..437d47078cea73a908c65d5d30fd09ee2428bfff`
 
 Implementation commits, in order:
 
@@ -22,6 +28,7 @@ Implementation commits, in order:
 | `a8710d355b436751133fe81b7c8ee3eb37029bbe` | The per-ticket 390px flow and its pinned config. |
 | `18db449fbd0fdd9ffcb953cb21d5a43e81f16d27` | The CI step that runs that flow. |
 | `1e12dce8a5be752fac55525074c2e15da0e8710c` | The four-control card layout at 390px, and the flow's evidence screenshots. |
+| `437d47078cea73a908c65d5d30fd09ee2428bfff` | **Review correction round 1.** Honest copy and a toast for the accepted occurrence refill, and the contract test that pins it. |
 
 ## Delivered behavior
 
@@ -54,6 +61,13 @@ The card control that read **Remove** and performed a cancel now reads
 **Cancel**. **Delete** sits beside it behind its own disclosure, so neither
 destructive verb is one stray tap away. A cancelled session's card carries the
 Delete control too.
+
+**Deleting one occurrence of a recurring series does not keep it deleted**, and
+the surface says so. The top-up that follows every plan change sees the rule
+date uncovered and writes the occurrence back in the same request; deleting a
+cancelled occurrence therefore brings it back active. That is an accepted
+product decision of 29 August 2026, described in limitation 1 and carried by
+the Delete disclosure's own copy and by the toast.
 
 ## Mobile demo path
 
@@ -187,9 +201,9 @@ Nothing was deleted or renamed.
 | Test | What it establishes |
 | --- | --- |
 | `supabase/tests/database/m3_19_delete_a_planned_session.test.sql` (new, 39 assertions) | The whole database contract: the delete itself, the surviving dated entry, the completion refusal, the lock, the cancelled target, the past boundary, the rejected unknown operation, and the cross-owner and anonymous cases against the privileged function. |
-| `src/server/rolling-plan/rolling-plan-contract.ts` (4 new cases) | The same behavior at the seam, run against **both** adapters: delete beside cancel, a locked and a cancelled target, the completion refusal, and the refusals a delete of no session or an unknown operation must produce. |
-| `src/app/home/plan/actions.test.ts` | The action composes `{operation: "delete", sessionId}`, takes a cancelled session as a target for a delete and for nothing else, and reports `PT425` in the surface's own words. |
-| `src/app/home/plan/plan-manager.test.tsx` | The card exposes Edit, Cancel, Delete and the lock and no "Remove"; each verb's copy says what it keeps; the occurrence variant says only this occurrence goes; a cancelled card carries Delete. |
+| `src/server/rolling-plan/rolling-plan-contract.ts` (5 new cases) | The same behavior at the seam, run against **both** adapters: delete beside cancel, a locked and a cancelled target, the completion refusal, the refusals a delete of no session or an unknown operation must produce, and — added in correction round 1 — that a deleted occurrence is written straight back by the next top-up, active even when it was cancelled first. |
+| `src/app/home/plan/actions.test.ts` | The action composes `{operation: "delete", sessionId}`, takes a cancelled session as a target for a delete and for nothing else, reports `PT425` in the surface's own words, and reports a refilled occurrence from one bounded read of its rule date rather than claiming it was deleted. |
+| `src/app/home/plan/plan-manager.test.tsx` | The card exposes Edit, Cancel, Delete and the lock and no "Remove"; each verb's copy says what it keeps; a one-off delete is described as permanent and an occurrence delete is not; a cancelled occurrence is told that deleting undoes the cancellation; a cancelled card carries Delete. |
 | `e2e/m3-19-delete-session.spec.ts` (new, pinned config, port 3023) | The 390px flow: cancel, delete, the lock, the completion refusal, and deleting the cancelled session. |
 
 ## Results
@@ -214,6 +228,15 @@ stack with every migration applied from zero:
 | `.github/scripts/with-server.sh 3023` with `e2e/m3-19.playwright.config.ts` | 1 passed at `390x844`; both evidence screenshots captured |
 | `git diff --check` | Clean on every commit |
 
+Correction round 1 (`437d470`) was checked the same way, against the local
+stack reset from zero: the shared contract passes 23 cases in-memory and 20
+against the real Postgres adapter — one more each, the new refill case, and it
+behaves identically in both; `src/app/home/plan`, `src/architecture` and
+`src/server` pass 629 tests across 44 files; lint, typecheck and build are
+clean; and the M3-19 browser flow passes on a freshly started server. The one
+byte-level change it made to `M3-19-card-verbs-390x844.png` was a 139x1 pixel
+caret artifact and was reverted rather than committed.
+
 One earlier iteration of the pgTAP suite failed one assertion honestly and was
 corrected rather than deleted: it claimed a cancel entry would still be
 recorded for a session that was later deleted. It is not — the entry names
@@ -233,38 +256,76 @@ Evidence CI does not produce:
 
 ## Known limitations
 
-1. **The completion refusal has no hosted path in this ticket.** Nothing in the
+1. **Deleting a recurring occurrence does not keep it deleted. Accepted
+   product decision, 29 August 2026.** Materialization coverage is "a row
+   exists for this series and rule date"
+   (`20260819112410_m3_14_recurring_session_series.sql:1699-1703`). Cancel
+   keeps the row, so cancel is stable. Delete removes it, so the date becomes
+   uncovered and `topUpAfterPlanChange` — which runs after every successful
+   change set — writes the occurrence back inside the same request, with the
+   same deterministic id. Two consequences follow, and the product owner
+   accepted both rather than withhold the control: deleting an active
+   occurrence looks like a no-op, and **deleting a cancelled occurrence brings
+   it back active, reversing a cancellation the owner already made**.
+
+   Nothing in the materializer, the migration or any change-entry shape was
+   altered to accommodate this; the decision was to ship the behavior and
+   describe it. What changed in correction round 1 is the description. The
+   Delete disclosure now tells an occurrence owner that its series writes the
+   date back, and tells a cancelled occurrence owner separately that deleting
+   undoes their cancellation; the toast reports the refill from a bounded read
+   of the rule date rather than claiming "Session deleted." over a session
+   still on screen. `rolling-plan-contract.ts` pins both halves against both
+   adapters so a later reader cannot mistake the behavior for a defect and
+   "correct" the materializer.
+
+   **M3-15B and M3-15C inherit this**, as does any F-005 copy pass: every
+   surface that offers delete over a recurring occurrence has to carry the same
+   warning, and Today in particular will show occurrences without the series
+   context the Plan card gives them. The honest way out, if the product owner
+   later wants one, is a change to what coverage means — a tombstone recording
+   that a rule date was deleted, say — which is a schema decision and a ticket
+   of its own, not a copy fix.
+
+2. **The occurrence warning is proven by component test, not by the browser
+   flow.** `e2e/m3-19-delete-session.spec.ts` exercises one-off sessions only,
+   so the 390px proof of the occurrence and cancelled-occurrence copy is
+   `plan-manager.test.tsx`. The product owner can see it on the Preview by
+   creating a recurring session and opening Delete on one occurrence.
+
+3. **The completion refusal has no hosted path in this ticket.** Nothing in the
    application writes a completion yet; the logging surface is M3-15B. The
    `PT425` path is proven in pgTAP, in the shared contract against both
    adapters, and in the local browser flow, which writes the completion through
    M3-15A's own owner-derived RPC. The product owner cannot reproduce that one
    refusal on the Preview by hand until M3-15B ships.
-2. **The past-dated refusal is proven only in pgTAP.** A session dated before
+4. **The past-dated refusal is proven only in pgTAP.** A session dated before
    owner-local today cannot be created through any surface, so neither the
    contract nor the browser flow can construct one. The pgTAP suite inserts one
    directly with `reset role`, exactly as M3-12's suite does for cancel.
-3. **The `Cancel` disclosure of a recurring occurrence still contains the
+5. **The `Cancel` disclosure of a recurring occurrence still contains the
    series-wide removal**, whose button reads "Remove this and all future
    sessions". That is a series operation and an explicit non-goal here, so its
    label was left alone; only the occurrence-scoped button inside the same
    panel was corrected. A reader may find "Cancel" an imprecise summary for a
    panel that also offers a series deletion. Correcting it means touching a
    series operation's copy, which this ticket may not do.
-4. **There is no undo, trash or restore**, by decision. A deleted session is
+6. **There is no undo, trash or restore**, by decision. A deleted session is
    recoverable only from the `delete` change entry's before state, which no
    surface reads.
-5. **The founder migration is not applied.** `20260829135426` must be applied
+7. **The founder migration is not applied.** `20260829135426` must be applied
    to the founder Supabase project in timestamp order, with remote history, the
    replaced function and an authenticated hosted read verified, before
    acceptance is requested.
 
 ## Independent reviewer focus
 
-Review exact implementation `1e12dce8a5be752fac55525074c2e15da0e8710c`
-against base `37529e20ea373034d7ede6b64e0b6dfde8d5e940`, reconcile the 22-file
-manifest above, and confirm the CI run for that SHA is green and its Vercel
-Preview reached `READY`. Do not re-run lint, typecheck, the Vitest suite, the
-build, the database matrix or the browser flows; CI covers all of them.
+Review exact implementation `437d47078cea73a908c65d5d30fd09ee2428bfff`
+against base `37529e20ea373034d7ede6b64e0b6dfde8d5e940`, reconcile the manifest
+above plus the five files of the correction range, and confirm the fresh CI run
+for that SHA is green and its Vercel Preview reached `READY`. Do not re-run
+lint, typecheck, the Vitest suite, the build, the database matrix or the
+browser flows; CI covers all of them.
 
 The judgment CI cannot supply:
 
@@ -274,10 +335,15 @@ The judgment CI cannot supply:
   `supabase/migrations/20260829073444_m3_15a_completion_foundation.sql`.
   Exactly four hunks should appear, and the migration's header names them. Any
   fifth difference is unintended.
-- **The fallthrough.** `cancel` is now an explicit `elsif` and the inner
-  chain's `else` refuses. Confirm no operation string can reach the delete
-  branch or the cancel branch by falling through, and that the outer chain's
-  own `else` is untouched.
+- **The fallthrough.** `cancel` is now an explicit `elsif` rather than the
+  inner chain's fallthrough, so no operation reaches the cancel branch by
+  default. The `else` that replaced it is **unreachable defence in depth, not
+  the closing of a live hole**: the inner chain is entered only through
+  `elsif v_operation in ('edit','move','set_lock','cancel')`, and the outer
+  chain's own `else` already rejected an unknown operation before this ticket.
+  An earlier draft of this record implied otherwise; the reviewer was right.
+  What the change is worth is that a future fifth session operation cannot land
+  in `cancel` by being written last, next to a branch that destroys a row.
 - **Order of refusals in the delete branch**: shape, then ownership and status,
   then the past boundary, then the completion. Confirm `PT425` is raised before
   the delete statement, so no raw foreign-key violation can reach a surface,
@@ -288,6 +354,13 @@ The judgment CI cannot supply:
   `series_id` null, a non-null `local_date`, the before state, and the same
   after-state shape `rolling_plan_sweep_series_occurrences` writes. Confirm no
   new change kind and no constraint change was smuggled in.
+- **Correction round 1 (`437d470`).** The accepted occurrence refill is a
+  product decision, not a defect to re-litigate. Judge only whether the
+  surface now describes it truthfully in all three states — one-off, active
+  occurrence, cancelled occurrence — and whether `occurrenceRefill` in
+  `actions.ts` can report "restored" when it is not, or claim the plan change
+  failed when it did not. Its extra read is reached only when a delete was
+  followed by a top-up that created something.
 - **Ownership.** Every statement in the new branch is owner-predicated, and the
   cross-owner and anonymous cases are asserted against the privileged function
   rather than against RLS on the table.
