@@ -113,6 +113,12 @@ jobs:
       - name: M3-14 concurrent series materialization
         run: npm run test:m3-14-concurrency
 
+      - name: M3-15A real Postgres completion contract
+        run: npm run test:m3-15a-adapter-contract
+
+      - name: M3-15A concurrent completion corrections
+        run: npm run test:m3-15a-concurrency
+
       - name: M3-11 seeded legacy reset
         run: npm run test:m3-11-seeded-reset
 

@@ -41,6 +41,23 @@ Validation records and their visual evidence are grouped by milestone.
 
 ## M3
 
+- [M3-15A replacement completion foundation](M3/M3-15A-VALIDATION.md) —
+  accepted; Tier 1, independently reviewed and accepted against `0cc8d46`.
+  Rebuilds the factual completion record M3-11 deleted, on the rolling-plan
+  foundation: one
+  owner-editable completion, its activity snapshot, the write-once planned
+  snapshot it was measured against, and the owner-derived write. No revision
+  chain, no `rest` status, and no surface — M3-15 owns that. `end_series` and
+  the series sweep now keep a completed occurrence as they keep a locked one.
+  The first CI run was red on the `M3-11 seeded legacy reset` step because the
+  dispatched brief reused a retired legacy table name; the lead corrected the
+  brief in `e56fcfc` and `0cc8d46` renames the table to `completion_activities`,
+  leaving every M3-11 assertion exactly as M3-11 wrote it. CI is green and the
+  Preview is `READY` for `267b886`, and independent review approved `0cc8d46`
+  with one record-only correction, now applied. Accepted 29 Aug 2026. The
+  founder migration is applied on the product owner's attestation; the hosted
+  history, advisor, and authenticated-read output was not captured and is
+  carried as limitation 9.
 - [M3-14B recurring series surface](M3/M3-14B-VALIDATION.md) — accepted;
   corrected implementation `49ae94b` is independently approved, owner-accepted
   and merged to `master` as `b49c58d`. Founder smoke/security checks are

@@ -24,7 +24,9 @@ describe("server repository import boundary", () => {
   // to review.
   // M3-13 adds the fifth: a library create is not idempotent, so an automatic
   // retry of a dropped response would save the same session twice.
-  it("disables retries only for the five approved atomic RPCs", () => {
+  // M3-15A adds the sixth for both reasons at once: a completion create is not
+  // idempotent, and a completion edit answers to a revision the owner read.
+  it("disables retries only for the six approved atomic RPCs", () => {
     const sources = sourceFiles(join(process.cwd(), "src")).filter(
       (path) => !path.endsWith(".test.ts") && !path.endsWith(".test.tsx"),
     );
@@ -66,6 +68,13 @@ describe("server repository import boundary", () => {
       "repositories",
       "saved-session-repository.ts",
     );
+    const completionLogRepositoryPath = join(
+      process.cwd(),
+      "src",
+      "server",
+      "repositories",
+      "completion-log-repository.ts",
+    );
     const goalRepository = readFileSync(goalRepositoryPath, "utf8");
     const memoryRepository = readFileSync(memoryRepositoryPath, "utf8");
     const onboardingRepository = readFileSync(onboardingRepositoryPath, "utf8");
@@ -77,6 +86,10 @@ describe("server repository import boundary", () => {
       savedSessionRepositoryPath,
       "utf8",
     );
+    const completionLogRepository = readFileSync(
+      completionLogRepositoryPath,
+      "utf8",
+    );
 
     expect(retryFiles.sort()).toEqual(
       [
@@ -85,6 +98,7 @@ describe("server repository import boundary", () => {
         onboardingRepositoryPath,
         rollingPlanRepositoryPath,
         savedSessionRepositoryPath,
+        completionLogRepositoryPath,
       ].sort(),
     );
     expect(goalRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
@@ -106,6 +120,10 @@ describe("server repository import boundary", () => {
     expect(savedSessionRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
     expect(savedSessionRepository).toMatch(
       /\.rpc\(\s*"apply_saved_session_change",[\s\S]*?\)\s*\.retry\(false\)/,
+    );
+    expect(completionLogRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
+    expect(completionLogRepository).toMatch(
+      /\.rpc\(\s*"apply_completion_change",[\s\S]*?\)\s*\.retry\(false\)/,
     );
   });
 });

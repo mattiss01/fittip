@@ -187,6 +187,9 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
         deleted,
         divergedDeleted,
         lockedKept,
+        // This plan holds no completions, so nothing here can be kept for
+        // carrying one. The Postgres adapter is where that survivor exists.
+        completedKept: 0,
       });
     };
 
