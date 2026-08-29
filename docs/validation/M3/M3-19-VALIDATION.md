@@ -304,3 +304,72 @@ The judgment CI cannot supply:
 
 The product owner, not the reviewer, performs the authenticated `390x844`
 Preview interaction and visual acceptance.
+
+## Lead agent: continuous integration, Preview, and the hosted gate
+
+Recorded by the lead agent on 29 August 2026, after the builder handoff.
+
+### The green run, and which commit it covers
+
+**Run:** <https://github.com/mattiss01/fittip/actions/runs/33275082378> —
+`success`, all three jobs: `Lint, types, unit tests, build`,
+`Migrations, RLS, advisors, concurrency`, and `390px production browser flows`.
+The M3-19 browser flow appears by name in the third job's log.
+
+That run's head SHA is `2d674e3`, the branch head, not `1e12dce`, the reviewed
+implementation. The seven commits were pushed together, so GitHub Actions ran
+once, on the head. The two commits are not equivalent by assertion — they are
+equivalent by check:
+
+```
+$ git diff --name-only 1e12dce..2d674e3
+docs/validation/M3/M3-19-VALIDATION.md
+docs/validation/README.md
+```
+
+The delta is two documentation files and nothing else: no source, no migration,
+no test, no workflow. So the run executed exactly the implementation under
+review. This is the evidence-commit exception used in the direction it was
+written for — a record commit that needs no run of its own — with the run
+landing on the record commit rather than before it. The reconciliation above is
+the checkable justification `AGENTS.md` requires, and it is one command.
+
+### Preview
+
+**Deployment:** `2d674e3`, environment `Preview`, state `success`.
+**URL:** <https://fittip-aek3em2l0-mattis-3657s-projects.vercel.app>
+
+### The hosted migration is not applied, and acceptance is blocked until it is
+
+`20260829135426_m3_19_delete_a_planned_session.sql` has **not** been applied to
+the founder project. A green CI run and a `READY` Preview do not prove a hosted
+migration ran; CI proves it against a from-zero disposable stack, and the
+Preview builds the application, not the database. Until it is applied, the
+Preview's Plan surface will offer a **Delete** control that the hosted database
+has no branch to serve.
+
+The lead agent cannot apply it. `supabase link`, `db push`, and `db remote` are
+denied to the agent, the CLI login needs a TTY, and the database password is not
+readable here. [The runbook](evidence/M3-19-founder-migration-runbook.md)
+carries the exact commands and the expected result of each, in the shape M3-15A
+used: apply, confirm history aligns at all 20 positions, hosted advisors, four
+SQL checks on the one function this migration replaces, and the authenticated
+hosted delete.
+
+### Evidence corrected during the build
+
+Four screenshots belonging to already-accepted tickets — `M3-12-confirm-zone`,
+`M3-12-daily-limit`, `M3-12-plan-window`, and `M3-14B-390x844` — were modified
+during the build and reverted by the lead before the branch was pushed. The
+cause was benign and the builder identified it unprompted: it re-ran the M3-12
+and M3-14B configs to confirm the relabelling had not broken them, and those
+specs rewrite their own screenshots as a side effect of passing. Both suites
+passed. The pushed branch adds only the two new M3-19 files under
+`docs/validation/M3/evidence/`, which `git diff --stat origin/master..HEAD --
+docs/validation/M3/evidence/` confirms.
+
+This is a gap in the project's own guidance rather than a builder error:
+`CLAUDE.md` forbids hand-editing accepted validation records but does not say
+that per-ticket Playwright specs generate the evidence files in place, so
+running an older ticket's config rewrites that ticket's accepted history. Worth
+a line in `CLAUDE.md` under a later documentation ticket.
