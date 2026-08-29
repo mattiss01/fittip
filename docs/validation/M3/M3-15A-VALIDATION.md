@@ -376,10 +376,27 @@ independently confirmed and are carried as limitation 9 below:
   compared the returned versions against `supabase/migrations/` mechanically:
   identical at all 19 positions, with no local-only or remote-only row. No
   drift;
-- the hosted advisor output, which the local run cannot predict — the local
-  container does not run
-  `0029_authenticated_security_definer_function_executable`, which this ticket
-  is expected to trip a seventh time by design;
+- ~~the hosted advisor output~~ — **cleared 29 August 2026.** The product
+  owner ran `supabase db advisors --linked --type all --level warn` in session.
+  It returned **10 warnings in two categories, of which exactly one is new**:
+
+  | Category | Count | Attribution |
+  | --- | --- | --- |
+  | `authenticated_security_definer_function_executable` | 9 | `apply_completion_change` is **this ticket's**, from `20260829073444`. The other eight predate it: `apply_goal_change`, `apply_memory_change`, `apply_onboarding_change`, `apply_rolling_plan_change_set`, `apply_saved_session_change`, `materialize_rolling_plan_series`, `reserve_ai_spend`, `settle_ai_spend`. |
+  | `auth_leaked_password_protection` | 1 | An Auth project setting, unrelated to any migration and unchanged by this ticket. |
+
+  The one new warning is the expected one and is **in an existing category**,
+  which is the pass condition: an owner's write is mediated by an
+  owner-derived `SECURITY DEFINER` function rather than by granting the table,
+  exactly as ADR-008 established and as the eight prior functions already do.
+  No new category appeared.
+
+  Two incidental confirmations from the same output. `save_manual_plan_version`
+  is **absent**, consistent with M3-11 having removed it. And no
+  `rls_disabled_in_public` warning fired, which is suggestive — though not
+  conclusive, since the run was filtered at `warn` — that the two new tables
+  have RLS enabled on the founder project. The boundary query below settles it
+  properly;
 - the hosted RLS and privilege boundary, and the `authenticated` / `anon` read
   pair.
 
@@ -473,9 +490,10 @@ defined against owner-local today.
    output.** The product owner confirmed on 29 August 2026 that the migration
    was applied, and did not return the `migration list --linked`, advisor,
    privilege-boundary, or authenticated-read results the lead requested.
-   **Remote history alignment was subsequently confirmed** — see the cleared
-   item above — leaving the hosted advisor categories and the `authenticated` /
-   `anon` read pair unconfirmed on the founder project specifically. All of it is proven against a from-zero database by 87
+   **Remote history alignment and the hosted advisor output were subsequently
+   confirmed** — see the two cleared items above — leaving only the
+   `authenticated` / `anon` read pair and the privilege-boundary query
+   unconfirmed on the founder project specifically. All of it is proven against a from-zero database by 87
    pgTAP assertions in the green CI run, so this is a gap in hosted
    confirmation rather than a doubt about the schema.
    [The runbook](evidence/M3-15A-founder-migration-runbook.md) closes it in one
