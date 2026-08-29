@@ -24,6 +24,8 @@
     "test:m3-12-concurrency": "node supabase/tests/integration/m3_12_concurrent_plan_rules.mjs",
     "test:m3-13-concurrency": "node supabase/tests/integration/m3_13_concurrent_saved_session_edits.mjs",
     "test:m3-14-concurrency": "node supabase/tests/integration/m3_14_concurrent_materialization.mjs",
+    "test:m3-15a-adapter-contract": "vitest run supabase/tests/integration/m3_15a_completion_postgres.test.ts",
+    "test:m3-15a-concurrency": "node supabase/tests/integration/m3_15a_concurrent_completion_edits.mjs",
     "test:e2e": "playwright test",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
