@@ -868,3 +868,63 @@ The rule immediately above it, that open-ended means no end date "not
 pre-created infinite occurrences", **is not amended and remains true**:
 materialization never reaches beyond the fourteen-day window, whatever the
 series' end date is or is not.
+
+### A completion is owner-mutable, 20 August 2026
+
+The product owner decided on 20 August 2026, while M3-15's replacement
+completion contract was being drafted, that a completion is one editable
+record rather than an append-only revision chain. The retired M1-01 model kept
+`completion_group_id`, `revision_number`, `previous_completion_id`, a
+`completion_heads` current pointer, and a `correction_reason` that a check
+constraint made mandatory on every revision after the first. None of that is
+rebuilt.
+
+The decisive evidence is that the chain had no consumer.
+[ADR-013](../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md) decision 2
+already sent the coach the current head and never the trail, and nothing in
+**Owner journeys → Review history** asks to show an owner their own edit
+history. The cost was real on the other side: fixing a mistyped duration
+required writing a reason for the correction.
+
+**Product rules → History and mutability** is amended. As written:
+
+> After each replacement model's first write, past planned states, completed
+> sessions, completed-activity snapshots, and completion corrections remain
+> immutable.
+
+Amended: past planned states remain immutable as written. A completion and its
+completed-activity snapshot are immutable **against planning, recurrence, AI
+proposals, migration, and retries** — nothing but the owner may alter them —
+and the owner may edit their own completion in place. Editing keeps no
+correction trail and requires no stated reason. "Completion corrections" as a
+separate class of permanent record no longer exists.
+
+Two nearby lines are deliberately **not** amended, and between them they carry
+what this change gives up:
+
+- **Acceptance criterion 11** already scopes its immutability to "under manual
+  planning, recurrence changes, AI proposals, migration, and retries". Owner
+  edits were never in that list, so the criterion stands exactly as approved
+  and is now the precise statement of the invariant.
+- **Owner journeys → Review history, step 4** — "A completed session continues
+  to show the immutable planned snapshot it was compared with" — stands, and
+  becomes the load-bearing immutability in the replacement model. The plan side
+  is mutable: a session can be edited, cancelled, or swept by a series change
+  after training was logged against it. So the completion must capture the
+  planned values as they stood when it was written and must never read through
+  to the live plan row.
+
+The invariant recorded in the approval boundary above is unaffected. Proposals,
+planned history, and actual completions remain separate permanent records, and
+replanning still never rewrites them.
+
+**Recovery day and the retired `rest` outcome.** The same session's contract
+drafting found that the retired model's `rest` completion status no longer has
+a coherent place. Its check constraint admitted a completion with no planned
+session only for `unplanned`; every other status required one. **Domain
+language → Recovery day** now defines recovery as an optional day-level
+planning label that "is not a session", so a `rest` completion can satisfy
+neither branch. The replacement status vocabulary is therefore `completed`,
+`partially_completed`, `skipped`, `replaced`, and `unplanned`. Nothing becomes
+unrecordable: a recovery intention is a planning label on the date, and the
+factual counterpart is a skipped planned session or simply no completion.

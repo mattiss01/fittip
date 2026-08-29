@@ -1,6 +1,19 @@
 # ADR-008: M1 training-record transactions and immutable history
 
-**Status:** accepted
+**Status:** accepted — subject model removed, transaction idiom still current
+
+**Superseded in part:** M3-11 deleted every table this ADR governs, and F-005
+replaced the whole-plan-version model with the rolling plan. What survives is
+the *idiom*, and it is still the accepted precedent for a new owner-scoped
+write boundary: an owner-derived `SECURITY DEFINER` function with an empty
+`search_path`, no service-role credential, no caller-supplied `user_id`, a
+composite receipt type, and the `PT409` stale-write conflict transport carried
+without retry. `apply_rolling_plan_change_set`, `apply_saved_session_change`,
+and M3-15A's completion write all follow it. The immutable-history half of
+this ADR does **not** carry forward to completions: see the 20 August 2026
+amendment in
+[ADR-013](ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md#recorded-amendment-to-decisions-2-and-4-20-august-2026)
+and its matching F-005 amendment.
 
 **Date:** 28 July 2026
 

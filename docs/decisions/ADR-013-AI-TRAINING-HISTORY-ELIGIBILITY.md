@@ -247,6 +247,49 @@ be longer here than for `create_seven_day_plan`, which M3-03 sets.
 These figures are recorded in the M3-02 validation record with their arithmetic
 and are subject to the product owner's approval of that record.
 
+## Recorded amendment to decisions 2 and 4, 20 August 2026
+
+Unlike the tuning section above, this one **does** change decisions recorded in
+this ADR. It is recorded here and in the Decision history below rather than by
+rewriting the decisions in place.
+
+On 20 August 2026, while M3-15's replacement completion contract was being
+drafted, the product owner decided that a completion is one owner-editable
+record rather than an append-only revision chain. `completion_heads`,
+`completion_group_id`, `revision_number`, `previous_completion_id`, and
+`correction_reason` are not rebuilt after M3-11's reset. The matching product
+amendment is recorded in
+[F-005](../product/F-005-ROLLING-TRAINING-PLAN.md#recorded-amendments).
+
+**Decision 2, "Only the current revision of a completion is visible."** Its
+mechanism is gone; its outcome is now structural. There is no correction trail
+to withhold, because there is no trail. The coach reads the single completion
+row, which is by construction the current one. The reasoning that justified the
+decision holds unchanged and is worth keeping visible: superseded values are
+ones the owner has declared wrong, feeding a coach data it has been told is
+incorrect is worse than withholding it, and context size stays predictable from
+the session count in decision 1 because one completion can only ever cost one
+record. This ADR was in fact the evidence for the product decision — a trail
+that no consumer reads is machinery without a consumer.
+
+**Decision 4, on free text.** `correction_reason` is withdrawn from the sent
+field set. `note` and `replacement_description` are unchanged and remain sent
+with per-field truncation. The `correction_reason` row in the tuning table
+above is obsolete and is left standing as the historical record of what M3-02
+set; no replacement value is needed, because the field no longer exists in the
+schema or in `CoachAICompletionReference`.
+
+Decision 4's own justification for including it — "the owner may correct a
+record for a reason that matters" — is not disputed. What changed is the price:
+that reason was only ever available because a check constraint made it
+mandatory on every revision after the first, which put a required text field in
+front of an owner fixing a mistyped duration. The coaching value of the
+occasional meaningful reason did not cover that cost.
+
+**Decisions 1, 3, 5, 6, and 7 are unchanged.** The 8-week window, the session
+cap, invisible deleted sessions, missed planned sessions, the forward
+locked-entry window, and the read-only bounded-reduction rule all stand.
+
 ## Related decision made in the same session
 
 The compose step for a plan proposal introduces a **planning note** — owner
@@ -277,3 +320,10 @@ The consequence recorded above stands and is not softened by acceptance: the
 free-text decision is justified by founder-only use, it does not survive the
 pre-friends gate unexamined, and reversing it later means a migration or
 grandfathering already-logged notes. That cost is accepted knowingly.
+
+**Amended 20 August 2026.** Decisions 2 and 4 changed when the product owner
+made a completion owner-editable rather than append-only, withdrawing
+`correction_reason` from the boundary. The section above records what changed
+and what survives. Decision 2's outcome is unchanged and is now structural
+rather than enforced by a head pointer; decision 4 loses one of its three
+free-text fields and keeps the other two.
