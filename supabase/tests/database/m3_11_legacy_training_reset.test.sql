@@ -5,7 +5,16 @@ select hasnt_table('public', 'plan_proposal_decisions', 'plan proposal decisions
 select hasnt_table('public', 'plan_proposal_sources', 'plan proposal sources are removed');
 select hasnt_table('public', 'plan_proposals', 'plan proposals are removed');
 select hasnt_table('public', 'plan_generation_requests', 'plan generation requests are removed');
-select hasnt_table('public', 'completed_activities', 'completed activities are removed');
+-- M3-15A rebuilds `completed_activities` on the rolling-plan foundation, so the
+-- name exists again. What M3-11 removed was the M1-01 shape, and that is what
+-- stays removed: the replacement hangs off `completion_id`, and nothing in it
+-- can reference a `planned_activities` row, because that table is still gone.
+select ok(
+  (select count(*) = 0 from pg_attribute
+   where attrelid = 'public.completed_activities'::regclass and not attisdropped
+     and attname in ('completed_session_id', 'planned_activity_id')),
+  'the legacy completed-activity shape is removed'
+);
 select hasnt_table('public', 'completion_heads', 'completion heads are removed');
 select hasnt_table('public', 'completed_sessions', 'completed sessions are removed');
 select hasnt_table('public', 'planned_activities', 'planned activities are removed');
