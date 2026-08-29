@@ -45,8 +45,23 @@ const OPERATIONS: readonly PlanOperation[] = [
   "duplicate",
   "set_lock",
   "cancel",
+  "delete",
   "set_recovery_day",
 ];
+
+/**
+ * The planning rules this surface can actually break, in the surface's own
+ * words. A series rule cannot reach here - M3-14B owns the surface that
+ * composes one - so forwarding an unknown reason under this wording would tell
+ * the owner something untrue, and the caller checks the reason first.
+ */
+const RULE_COPY = {
+  "past-date": "That date has already passed. Plan today or a later date.",
+  "daily-session-limit":
+    "A date holds at most ten sessions. Cancel or move one first.",
+  "session-completed":
+    "You have logged training against this session, so it cannot be deleted. Cancel it instead to keep the record.",
+} as const;
 
 export async function confirmPlanTimezoneAction(
   previous: TimezoneActionState,
@@ -137,21 +152,12 @@ export async function changePlanAction(
     );
   } catch (error) {
     if (error instanceof RollingPlanRuleError) {
-      // This action composes no series change, so a series rule cannot reach
-      // here. M3-14B owns the surface that can produce one, and its own copy
-      // for it; forwarding an unknown reason under this action's wording would
-      // tell the owner something untrue.
       if (
         error.reason === "past-date" ||
-        error.reason === "daily-session-limit"
+        error.reason === "daily-session-limit" ||
+        error.reason === "session-completed"
       ) {
-        return result(
-          "rule",
-          error.reason === "past-date"
-            ? "That date has already passed. Plan today or a later date."
-            : "A date holds at most ten sessions. Cancel or move one first.",
-          error.reason,
-        );
+        return result("rule", RULE_COPY[error.reason], error.reason);
       }
     }
     if (error instanceof RollingPlanConflictError) {
@@ -257,7 +263,13 @@ function buildChanges(
     ];
   }
 
-  const session = requireSession(slice, formData.get("sessionId"));
+  // A cancelled session is a legitimate target for a delete and for nothing
+  // else: it is exactly what an owner may next want gone.
+  const session = requireSession(
+    slice,
+    formData.get("sessionId"),
+    operation === "delete",
+  );
   if (operation === "edit") {
     return [
       {
@@ -323,15 +335,22 @@ function buildChanges(
       },
     ];
   }
-  return [{ operation: "cancel", sessionId: session.id }];
+  if (operation === "cancel") {
+    return [{ operation, sessionId: session.id }];
+  }
+  return [{ operation: "delete", sessionId: session.id }];
 }
 
 function requireSession(
   slice: RollingPlanSlice,
   value: FormDataEntryValue | null,
+  includeCancelled = false,
 ): RollingPlanSession {
   const session = slice.sessions.find(
-    (candidate) => candidate.id === value && candidate.status === "active",
+    (candidate) =>
+      candidate.id === value &&
+      (candidate.status === "active" ||
+        (includeCancelled && candidate.status === "cancelled")),
   );
   if (!session) throw new RollingPlanValidationError();
   return session;
@@ -423,6 +442,7 @@ function savedCopy(operation: PlanOperation, formData: FormData): string {
     move: "Session moved.",
     duplicate: "Session duplicated.",
     cancel: "Session cancelled.",
+    delete: "Session deleted.",
   };
   return copy[operation] ?? "Plan change saved.";
 }

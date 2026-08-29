@@ -198,6 +198,12 @@ describe("plan actions", () => {
       "daily-session-limit",
     ],
     [
+      new RollingPlanRuleError("session-completed"),
+      "rule",
+      /cannot be deleted/i,
+      "session-completed",
+    ],
+    [
       new RollingPlanConflictError(),
       "conflict",
       /changed somewhere else/i,
@@ -233,6 +239,70 @@ describe("plan actions", () => {
       expect(result.draft).toMatchObject({ title: "Aerobic run" });
     },
   );
+
+  it("composes a delete, and takes a cancelled session as its target", async () => {
+    const applyChangeSet = vi.fn().mockResolvedValue({ result: "applied" });
+    createPlanMock.mockResolvedValue({
+      getPlanSlice: vi.fn().mockResolvedValue(slice()),
+      applyChangeSet,
+      materializeSeries: vi.fn().mockResolvedValue({
+        planRevision: 1,
+        createdCount: 0,
+        skipped: [],
+      }),
+    });
+
+    const result = await changePlanAction(
+      INITIAL_PLAN_ACTION_STATE,
+      form({ operation: "delete", sessionId: SESSION_ID }),
+    );
+
+    expect(result).toMatchObject({
+      status: "saved",
+      message: "Session deleted.",
+    });
+    const [changeSet] = applyChangeSet.mock.calls[0] as [RollingPlanChangeSet];
+    expect(changeSet.changes).toEqual([
+      { operation: "delete", sessionId: SESSION_ID },
+    ]);
+
+    // A cancelled session is the one thing only a delete may target. Every
+    // other operation still refuses it before persistence is reached.
+    const cancelledSlice = {
+      ...slice(),
+      sessions: [
+        {
+          ...slice().sessions[0],
+          status: "cancelled" as const,
+          cancelledAt: "",
+        },
+      ],
+    };
+    const secondApply = vi.fn().mockResolvedValue({ result: "applied" });
+    createPlanMock.mockResolvedValue({
+      getPlanSlice: vi.fn().mockResolvedValue(cancelledSlice),
+      applyChangeSet: secondApply,
+    });
+    await expect(
+      changePlanAction(
+        INITIAL_PLAN_ACTION_STATE,
+        form({ operation: "delete", sessionId: SESSION_ID }),
+      ),
+    ).resolves.toMatchObject({ status: "saved" });
+
+    const thirdApply = vi.fn();
+    createPlanMock.mockResolvedValue({
+      getPlanSlice: vi.fn().mockResolvedValue(cancelledSlice),
+      applyChangeSet: thirdApply,
+    });
+    await expect(
+      changePlanAction(
+        INITIAL_PLAN_ACTION_STATE,
+        form({ operation: "cancel", sessionId: SESSION_ID }),
+      ),
+    ).resolves.toMatchObject({ status: "validation" });
+    expect(thirdApply).not.toHaveBeenCalled();
+  });
 
   it("reports a stale revision without calling persistence", async () => {
     const applyChangeSet = vi.fn();

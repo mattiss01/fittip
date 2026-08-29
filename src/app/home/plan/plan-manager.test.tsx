@@ -187,6 +187,15 @@ describe("PlanManager", () => {
 
     expect(day.textContent).toContain("Cancelled, kept on the record");
     expect(day.textContent).toContain("Nothing planned.");
+    // Cancelled is not the end of the line: the owner who cancelled it may
+    // next want it gone, and delete is the only verb left that can do that.
+    fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
+    expect(
+      screen.getByRole("button", { name: "Delete session" }),
+    ).toBeVisible();
+    expect(
+      day.querySelector("input[name='operation'][value='delete']"),
+    ).not.toBeNull();
   });
 
   it("does not discard a create draft when a date control is submitted", () => {
@@ -345,13 +354,17 @@ describe("PlanManager", () => {
       screen.getAllByText("This and all future sessions").length,
     ).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByText("Remove", { selector: "summary" }));
+    fireEvent.click(screen.getByText("Cancel", { selector: "summary" }));
     expect(
       screen.getByText(/Permanent\. Removes this occurrence/),
     ).toBeVisible();
     expect(screen.getByText(/Locked sessions are kept/)).toBeVisible();
     expect(screen.getByText(/completed training is untouched/)).toBeVisible();
-    expect(screen.getByText(/no undo/)).toBeVisible();
+    // Scoped: the card's own Delete panel says "no undo" too, and it means
+    // something narrower there.
+    expect(
+      screen.getByText(/Permanent\. Removes this occurrence/).textContent,
+    ).toMatch(/no undo/);
     expect(
       screen.getByRole("button", {
         name: "Remove this and all future sessions",
@@ -359,7 +372,7 @@ describe("PlanManager", () => {
     ).toBeVisible();
   });
 
-  it("exposes only Edit, Remove, and the lock control on a session card", () => {
+  it("exposes Edit, Cancel, Delete, and the lock control on a session card", () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [session()]);
     const card = screen
       .getByRole("heading", { name: "Aerobic run" })
@@ -369,17 +382,72 @@ describe("PlanManager", () => {
     )!;
 
     expect(card).toContainElement(actionArea);
-    expect(Array.from(actionArea.children)).toHaveLength(3);
+    expect(Array.from(actionArea.children)).toHaveLength(4);
     expect(
       Array.from(actionArea.querySelectorAll(":scope > details > summary")).map(
         (summary) => summary.textContent,
       ),
-    ).toEqual(["Edit", "Remove"]);
+    ).toEqual(["Edit", "Cancel", "Delete"]);
     expect(actionArea.querySelector(":scope > form")?.textContent).toBe("Lock");
+    // "Remove" is retired as a label: it could not tell the two verbs apart.
+    expect(screen.queryByText("Remove", { selector: "summary" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Repeat" })).toBeNull();
     expect(screen.queryByText("Move", { selector: "summary" })).toBeNull();
     expect(screen.queryByText("Duplicate", { selector: "summary" })).toBeNull();
-    expect(screen.queryByText("Cancel", { selector: "summary" })).toBeNull();
+  });
+
+  it("says what each removal verb keeps, and submits the matching operation", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [session()]);
+    const card = screen
+      .getByRole("heading", { name: "Aerobic run" })
+      .closest("li")!;
+
+    fireEvent.click(screen.getByText("Cancel", { selector: "summary" }));
+    expect(
+      screen.getByText(/keeps the session on the record as cancelled/i),
+    ).toBeVisible();
+    const cancelForm = screen
+      .getByRole("button", { name: "Cancel session" })
+      .closest("form")!;
+    expect(cancelForm.querySelector("input[name='operation']")).toHaveValue(
+      "cancel",
+    );
+
+    fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
+    const deletePanel = screen.getByText(
+      /does not keep it on the record/i,
+    ) as HTMLElement;
+    expect(deletePanel).toBeVisible();
+    expect(deletePanel.textContent).toMatch(/no undo/i);
+    expect(deletePanel.textContent).toMatch(/logged training against/i);
+    // A one-off session has no occurrence to reassure the owner about.
+    expect(deletePanel.textContent).not.toMatch(/recurring rule/i);
+    const deleteForm = screen
+      .getByRole("button", { name: "Delete session" })
+      .closest("form")!;
+    expect(deleteForm.querySelector("input[name='operation']")).toHaveValue(
+      "delete",
+    );
+    expect(deleteForm.querySelector("input[name='sessionId']")).toHaveValue(
+      session().id,
+    );
+    expect(card).toContainElement(deleteForm);
+  });
+
+  it("tells an occurrence owner that only this occurrence is deleted", () => {
+    renderManager(
+      INITIAL_PLAN_ACTION_STATE,
+      [
+        session({
+          seriesId: "7f000000-0000-4000-8000-000000000099",
+          occurrenceDate: TODAY,
+        }),
+      ],
+      [series()],
+    );
+
+    fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
+    expect(screen.getByText(/Only this occurrence goes/i)).toBeVisible();
   });
 
   it("withholds future scopes from a locked survivor past the segment end", () => {
@@ -395,15 +463,17 @@ describe("PlanManager", () => {
       [{ ...series(), endDate: DATES[0].replace(/17$/, "16") }],
     );
 
-    fireEvent.click(screen.getByText("Remove", { selector: "summary" }));
+    fireEvent.click(screen.getByText("Cancel", { selector: "summary" }));
     expect(
       screen.queryByRole("button", {
         name: "Remove this and all future sessions",
       }),
     ).toBeNull();
-    expect(screen.getByText(/only this session can be removed/i)).toBeVisible();
     expect(
-      screen.getByRole("button", { name: "Remove only this session" }),
+      screen.getByText(/only this session can be cancelled/i),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Cancel only this session" }),
     ).toBeVisible();
   });
 
@@ -439,7 +509,7 @@ describe("PlanManager", () => {
       <PlanManager {...props} sessions={[recurringSession]} />,
     );
 
-    fireEvent.click(screen.getByText("Remove", { selector: "summary" }));
+    fireEvent.click(screen.getByText("Cancel", { selector: "summary" }));
     fireEvent.submit(
       screen
         .getByRole("button", {

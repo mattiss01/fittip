@@ -7,7 +7,10 @@ export type PlanOperation =
   | "move"
   | "duplicate"
   | "set_lock"
+  /** Keeps the session on the record as cancelled. */
   | "cancel"
+  /** Removes the session outright. Nothing is kept. */
+  | "delete"
   | "set_recovery_day";
 
 export type PlanActionDraft = {
@@ -34,7 +37,12 @@ export type PlanActionState = {
   sessionId?: string;
   localDate?: string;
   draft?: PlanActionDraft;
-  conflict?: "stale" | "past-date" | "daily-session-limit" | "timezone";
+  conflict?:
+    | "stale"
+    | "past-date"
+    | "daily-session-limit"
+    | "session-completed"
+    | "timezone";
 };
 
 export const INITIAL_PLAN_ACTION_STATE: PlanActionState = {

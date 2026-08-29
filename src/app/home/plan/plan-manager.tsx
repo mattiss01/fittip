@@ -324,6 +324,17 @@ function PlanDay({
                   <p className={styles.meta}>
                     {session.sport} · Cancelled, kept on the record
                   </p>
+                  {/* The one control a cancelled session still needs: the
+                      owner who cancelled it may next want it gone entirely. */}
+                  <div className={styles.cardActions} data-session-actions>
+                    <DeleteSession
+                      sessionId={session.id}
+                      expectedRevision={expectedRevision}
+                      action={action}
+                      pending={pending}
+                      isOccurrence={session.seriesId !== null}
+                    />
+                  </div>
                 </li>
               ))}
             </ol>
@@ -571,13 +582,14 @@ function PlanSessionCard({
         </details>
 
         <details className={styles.disclosure}>
-          <summary>Remove</summary>
+          <summary>Cancel</summary>
           <div className={styles.editorPanel}>
             {recurring === null ? (
               <>
                 <p className={styles.consequence}>
-                  Removing keeps the session on the record as cancelled. It is
-                  not deleted, and it stops being part of what you plan to do.
+                  Cancelling keeps the session on the record as cancelled. It
+                  stops being part of what you plan to do, and you can still
+                  delete it afterwards.
                 </p>
                 <form className={styles.form} action={action}>
                   <input type="hidden" name="operation" value="cancel" />
@@ -592,7 +604,7 @@ function PlanSessionCard({
                     type="submit"
                     disabled={pending}
                   >
-                    Remove session
+                    Cancel session
                   </button>
                 </form>
               </>
@@ -622,6 +634,14 @@ function PlanSessionCard({
           </div>
         </details>
 
+        <DeleteSession
+          sessionId={session.id}
+          expectedRevision={expectedRevision}
+          action={action}
+          pending={pending}
+          isOccurrence={recurring !== null}
+        />
+
         <form action={action}>
           <input type="hidden" name="operation" value="set_lock" />
           <input type="hidden" name="sessionId" value={session.id} />
@@ -641,6 +661,62 @@ function PlanSessionCard({
         </form>
       </div>
     </li>
+  );
+}
+
+/**
+ * The second of the two removal verbs. It sits behind its own disclosure for
+ * the same reason cancel does: neither destructive verb should be one stray tap
+ * away on a phone, and holding them apart is what keeps their labels honest.
+ *
+ * The copy states the one thing that separates it from cancel - nothing is
+ * kept - and the one refusal the owner can actually walk into, so a session
+ * they have already logged does not surprise them at the button.
+ */
+function DeleteSession({
+  sessionId,
+  expectedRevision,
+  action,
+  pending,
+  isOccurrence,
+}: {
+  sessionId: string;
+  expectedRevision: number;
+  action: FormAction;
+  pending: boolean;
+  isOccurrence: boolean;
+}) {
+  return (
+    <details className={styles.disclosure}>
+      <summary>Delete</summary>
+      <div className={styles.editorPanel}>
+        <p className={styles.permanentConsequence}>
+          Permanent. Deleting removes this session from the plan and does not
+          keep it on the record. There is no undo.
+          {isOccurrence
+            ? " Only this occurrence goes: the recurring rule and every other occurrence stay."
+            : ""}{" "}
+          A session you have logged training against cannot be deleted; cancel
+          it instead.
+        </p>
+        <form className={styles.form} action={action}>
+          <input type="hidden" name="operation" value="delete" />
+          <input type="hidden" name="sessionId" value={sessionId} />
+          <input
+            type="hidden"
+            name="expectedRevision"
+            value={expectedRevision}
+          />
+          <button
+            className={styles.dangerAction}
+            type="submit"
+            disabled={pending}
+          >
+            Delete session
+          </button>
+        </form>
+      </div>
+    </details>
   );
 }
 

@@ -183,7 +183,7 @@ export function RecurringSessionControls({
             type="submit"
             disabled={planPending}
           >
-            Remove only this session
+            Cancel only this session
           </button>
         </form>
       </section>
@@ -218,7 +218,7 @@ export function RecurringSessionControls({
       ) : (
         <p className={styles.consequence}>
           This locked session outlived the series end date. The bulk removal
-          would change nothing, so only this session can be removed.
+          would change nothing, so only this session can be cancelled.
         </p>
       )}
       {seriesState.sessionId === session.id &&
