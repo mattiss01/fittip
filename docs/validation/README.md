@@ -57,7 +57,8 @@ Validation records and their visual evidence are grouped by milestone.
   with one record-only correction, now applied. Accepted 29 Aug 2026. The
   founder migration is applied on the product owner's attestation; the hosted
   history, advisor, and authenticated-read output was not captured and is
-  carried as limitation 9.
+  carried as limitation 9. Merged as `47a9fd7`; `master` CI green and the
+  founder deployment `READY`.
 - [M3-14B recurring series surface](M3/M3-14B-VALIDATION.md) — accepted;
   corrected implementation `49ae94b` is independently approved, owner-accepted
   and merged to `master` as `b49c58d`. Founder smoke/security checks are

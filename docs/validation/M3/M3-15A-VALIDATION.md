@@ -592,3 +592,32 @@ supply:
    missing record, and another owner's record; `PT428` refuses before writing;
    every persistence guard refuses a row it cannot read rather than returning
    half of one.
+
+## Merge and founder closeout
+
+**Merged:** `0cc8d466af155dc6e49c52e609a845a6f4d9450e` merged into `master` as
+**`47a9fd779c7ab779af94ded853a12558f56c24ae`** on 29 August 2026, with
+`--no-ff`. The merge was clean, with no conflicts and no post-merge fixups, so
+`AGENTS.md`'s exemption applies and the local suite was not re-run by hand.
+
+**`master` continuous integration:** green for the merge commit —
+<https://github.com/mattiss01/fittip/actions/runs/33252886120>.
+
+**Founder deployment:** `READY` for `47a9fd7` — GitHub deployment `6155761712`,
+state `success`,
+<https://fittip-22x6d6ug5-mattis-3657s-projects.vercel.app>, aliased at
+<https://fittip-gilt.vercel.app>.
+
+**Hosted smoke and security check**, 29 August 2026:
+
+| Check | Result |
+| --- | --- |
+| `GET /` | `200` |
+| `GET /home/today` | `200` — still the maintenance stub, as this ticket intends |
+| `Cache-Control` | `private, no-cache, no-store, max-age=0, must-revalidate` — the private response headers from `next.config.ts` are intact |
+| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` |
+
+This is a serve-and-headers check, which is all M3-15A can support: the ticket
+adds no surface, so there is nothing new to exercise in a browser. The founder
+database checks in limitation 9 remain open and are the ones that matter before
+M3-15.
