@@ -728,14 +728,38 @@ const ONE_OFF_WARNING =
   "Permanent. Deleting removes this session from the plan and does not keep it on the record. There is no undo.";
 
 /**
+ * What the owner loses when the series writes an occurrence back. It returns as
+ * the rule describes it, so anything the owner had made this one occurrence
+ * mean is gone: an edited title, note or duration, an edited activity list, the
+ * lock, and the date a moved occurrence was sitting on. Naming the rule date is
+ * the point of the last clause - "writes the date back" would otherwise read as
+ * this card's date, which for a moved occurrence it is not.
+ */
+const OCCURRENCE_REFILL_LOSS =
+  "What comes back is what the series says, not what you see here: a title, note, duration or activity list you had changed is replaced, the lock is cleared, and a session you had moved reappears on the series date rather than this one.";
+
+/**
+ * The way out, in the words on the control rather than in ours. The button that
+ * stops the date returning is inside the Cancel panel and reads exactly this,
+ * so the copy quotes it instead of describing it.
+ */
+const OCCURRENCE_REFILL_ESCAPE =
+  "To stop the date coming back, use “Remove this and all future sessions” under Cancel";
+
+/**
  * What deleting an occurrence really does, in the owner's terms. Both branches
- * describe the refill, because it happens either way; the cancelled branch
- * leads with the consequence the owner would not expect.
+ * describe the refill and the loss, because both happen either way; the
+ * cancelled branch leads with the consequence the owner would not expect, and
+ * sends them to a control that only the returned session carries.
  */
 function occurrenceWarning(isCancelled: boolean) {
-  return isCancelled
-    ? "This session repeats, so deleting it will not keep it deleted: its series writes the date back in the same step, and it returns active. Deleting a cancelled occurrence undoes your cancellation. To stop the date coming back, end the series from this date on the session that returns."
-    : "This session repeats, so deleting it will not keep it deleted: its series writes the date back in the same step, unlocked and active. To stop the date coming back, end the series from this date under Cancel instead.";
+  const opening = isCancelled
+    ? "This session repeats, so deleting it will not keep it deleted: its series writes the occurrence back in the same step, and it comes back active. Deleting a cancelled occurrence undoes your cancellation."
+    : "This session repeats, so deleting it will not keep it deleted: its series writes the occurrence back in the same step.";
+  const escape = isCancelled
+    ? OCCURRENCE_REFILL_ESCAPE + " on the session that returns."
+    : OCCURRENCE_REFILL_ESCAPE + " instead.";
+  return opening + " " + OCCURRENCE_REFILL_LOSS + " " + escape;
 }
 
 /**

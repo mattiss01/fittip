@@ -356,6 +356,29 @@ describe("plan actions", () => {
         form({ operation: "delete", sessionId: SESSION_ID }),
       ),
     ).resolves.toMatchObject({ status: "saved", message: "Session deleted." });
+
+    // The delete is already permanent when the confirming read fails, so the
+    // owner is told what is actually unknown rather than told the plan change
+    // failed. Without this the throw would escape into the action's catch and
+    // report a successful delete as an error.
+    createPlanMock.mockResolvedValue({
+      getPlanSlice: vi
+        .fn()
+        .mockResolvedValueOnce({ ...slice(), sessions: [occurrence] })
+        .mockRejectedValueOnce(new Error("read failed after the delete")),
+      applyChangeSet: vi
+        .fn()
+        .mockResolvedValue({ result: "applied", planRevision: 1 }),
+      materializeSeries: vi
+        .fn()
+        .mockResolvedValue({ planRevision: 2, createdCount: 1, skipped: [] }),
+    });
+    const unsure = await changePlanAction(
+      INITIAL_PLAN_ACTION_STATE,
+      form({ operation: "delete", sessionId: SESSION_ID }),
+    );
+    expect(unsure.status).toBe("saved");
+    expect(unsure.message).toMatch(/may have written the date back/i);
   });
 
   it("reports a stale revision without calling persistence", async () => {

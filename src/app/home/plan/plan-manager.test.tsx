@@ -453,8 +453,18 @@ describe("PlanManager", () => {
     expect(panel).toBeVisible();
     // The accepted behavior of 29 August 2026. Deleting an occurrence is not
     // permanent, so the panel must not claim it is.
-    expect(panel.textContent).toMatch(/writes the date back in the same step/i);
-    expect(panel.textContent).toMatch(/end the series from this date/i);
+    expect(panel.textContent).toMatch(
+      /writes the occurrence back in the same step/i,
+    );
+    // What returns is the series' version, not the owner's. Naming the losses
+    // is the whole point of this paragraph.
+    expect(panel.textContent).toMatch(/is replaced/i);
+    expect(panel.textContent).toMatch(/the lock is cleared/i);
+    expect(panel.textContent).toMatch(
+      /moved reappears on the series date rather than this one/i,
+    );
+    // The escape route quotes the control the owner will actually see.
+    expect(panel.textContent).toContain("Remove this and all future sessions");
     expect(panel.textContent).not.toMatch(/Permanent\./);
     expect(panel.textContent).not.toMatch(/no undo/i);
     expect(panel.textContent).not.toMatch(/undoes your cancellation/i);
@@ -471,8 +481,13 @@ describe("PlanManager", () => {
 
     fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
     const panel = screen.getByText(/This session repeats/i);
-    expect(panel.textContent).toMatch(/it returns active/i);
+    expect(panel.textContent).toMatch(/it comes back active/i);
     expect(panel.textContent).toMatch(/undoes your cancellation/i);
+    expect(panel.textContent).toMatch(/the lock is cleared/i);
+    // The cancelled card has no Cancel panel of its own, so the way out is on
+    // the session that returns.
+    expect(panel.textContent).toContain("Remove this and all future sessions");
+    expect(panel.textContent).toMatch(/on the session that returns/i);
   });
 
   it("withholds future scopes from a locked survivor past the segment end", () => {

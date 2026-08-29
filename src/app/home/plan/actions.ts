@@ -148,14 +148,11 @@ export async function changePlanAction(
       expectedRevision,
     );
     const topUp = await topUpAfterPlanChange(plan, receipt.planRevision);
-    const refill =
-      operation === "delete"
-        ? await occurrenceRefill(
-            plan,
-            deletedOccurrence(slice, formData),
-            topUp,
-          )
-        : "none";
+    const refill = await occurrenceRefill(
+      plan,
+      deletedOccurrence(slice, changes),
+      topUp,
+    );
 
     revalidatePath("/home/plan");
     return result(
@@ -232,12 +229,20 @@ export async function changePlanAction(
  */
 type OccurrenceRefill = "none" | "restored" | "unknown";
 
+/**
+ * The session a composed change set is about to delete, read back off the
+ * change itself rather than off the form. `requireSession` already resolved it
+ * once, under a status rule this lookup deliberately does not repeat; taking
+ * the id from the change that was actually applied is what keeps the two
+ * agreeing without a third reading of the request.
+ */
 function deletedOccurrence(
   slice: RollingPlanSlice,
-  formData: FormData,
+  changes: RollingPlanChange[],
 ): RollingPlanSession | undefined {
-  const sessionId = formData.get("sessionId");
-  return slice.sessions.find((candidate) => candidate.id === sessionId);
+  const deleted = changes.find((change) => change.operation === "delete");
+  if (!deleted) return undefined;
+  return slice.sessions.find((candidate) => candidate.id === deleted.sessionId);
 }
 
 async function occurrenceRefill(
