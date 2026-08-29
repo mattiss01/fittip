@@ -234,3 +234,85 @@ There is no 390px visual pass. M3-15A adds no user-visible surface — the
 maintenance stubs are untouched — and M3-10 and M3-14 set the precedent of
 accepting a dormant-schema ticket on schema and security evidence alone. The
 visual pass returns with M3-15.
+---
+
+## Appendix — Part 2 as a single paste
+
+Part 2 above is broken into blocks so each expectation is readable next to its
+query. Once the expectations are understood, this returns all of it as one
+labelled result set, to save eight round trips. The letters match the sections.
+
+```sql
+select line from (
+  select 'A rls        | ' || relname || ' = ' || relrowsecurity::text as line
+  from pg_class
+  where relnamespace = 'public'::regnamespace
+    and relname in ('completions', 'completion_activities')
+
+  union all
+  select 'B grant      | ' || table_name || ' | ' || grantee || ' | ' || privilege_type
+  from information_schema.role_table_grants
+  where table_schema = 'public'
+    and table_name in ('completions', 'completion_activities')
+    and grantee in ('anon', 'authenticated', 'service_role', 'PUBLIC')
+
+  union all
+  select 'C policy     | ' || tablename || ' | ' || policyname || ' | ' || cmd
+         || ' | ' || coalesce(qual, 'NULL')
+  from pg_policies
+  where schemaname = 'public'
+    and tablename in ('completions', 'completion_activities')
+
+  union all
+  select 'D function   | secdef=' || p.prosecdef::text
+         || ' | config=' || coalesce(array_to_string(p.proconfig, ','), 'NULL')
+         || ' | args=' || pg_get_function_identity_arguments(p.oid)
+  from pg_proc p
+  where p.pronamespace = 'public'::regnamespace
+    and p.proname = 'apply_completion_change'
+
+  union all
+  select 'E execute    | ' || grantee || ' | ' || privilege_type
+  from information_schema.role_routine_grants
+  where routine_schema = 'public'
+    and routine_name = 'apply_completion_change'
+
+  union all
+  select 'F fk         | ' || conname || ' | ondelete=' || confdeltype::text
+  from pg_constraint
+  where conrelid = 'public.completions'::regclass
+    and contype = 'f'
+
+  union all
+  select 'G legacy tbl | ' || table_name
+  from information_schema.tables
+  where table_schema = 'public'
+    and table_name in ('completion_heads', 'completed_activities',
+                       'completed_sessions')
+
+  union all
+  select 'H legacy col | ' || column_name
+  from information_schema.columns
+  where table_schema = 'public'
+    and table_name = 'completions'
+    and column_name in ('correction_reason', 'revision_number',
+                        'completion_group_id', 'previous_completion_id')
+) t
+order by line;
+```
+
+**Expect 8 rows and nothing else:**
+
+| Label | Rows | Expected |
+| --- | --- | --- |
+| `A rls` | 2 | both `= true` |
+| `B grant` | 2 | `authenticated \| SELECT` on each table; **no `anon` row** |
+| `C policy` | 2 | both `SELECT`, both with an `auth.uid()` predicate, neither `true` |
+| `D function` | 1 | `secdef=true`, `config=search_path=`, `args=text, uuid, bigint, jsonb` |
+| `E execute` | 1 | `authenticated \| EXECUTE` only |
+| `F fk` | 2 | `completions_plan_fkey \| ondelete=r`, plus the owner FK |
+| `G legacy tbl` | **0** | any row here is a blocker |
+| `H legacy col` | **0** | any row here is a blocker |
+
+More than 8 rows means something holds a privilege it should not. Fewer means
+an object is missing. Either way, paste what you actually get.
