@@ -141,11 +141,15 @@ evidence.
  22 files changed, 5199 insertions(+), 2 deletions(-)
 ```
 
-The two `docs/validation/**` files are this record and its index entry. Twenty
-of the twenty-two files are new; the two edited ones are
-`src/architecture/server-boundary.test.ts` and
-`src/server/repositories/rolling-plan-repository.ts`, plus the three additive
-one-to-four-line edits under `src/server/rolling-plan/`.
+The two `docs/validation/**` files are this record and its index entry. The
+split is **13 added and 9 modified**. The nine modified are
+`.github/workflows/ci.yml`, `package.json`, `docs/validation/README.md`,
+`src/lib/supabase/database.types.ts`, `src/architecture/server-boundary.test.ts`,
+`src/server/repositories/rolling-plan-repository.ts`, and the three additive
+one-to-four-line edits under `src/server/rolling-plan/`. (An earlier revision of
+this paragraph said "twenty of the twenty-two files are new … the two edited
+ones", which was wrong and contradicted its own following clause. The
+`--stat` block above was correct throughout.)
 
 **No M3-11 file appears in this range.** After the rename recorded above, the
 M3-11 reset assertions need no change at all, and both files are byte-identical
@@ -167,7 +171,7 @@ Files whose purpose is not evident from the path and diff:
   so, and a reviewer can confirm it mechanically rather than by reading 557
   lines: extract M3-14 lines 1000-1556 and diff them against the
   `create or replace function public.apply_rolling_plan_change_set(` block in
-  section 4. The result is two hunks and three changed lines.
+  section 4. The result is two hunks: two lines removed and three added.
 - `src/server/completions/completion-log-contract.ts` — the shared adapter
   contract, run against the in-memory adapter by `completion-log.test.ts` and
   against the real Postgres adapter by the integration harness. It is a
@@ -435,11 +439,86 @@ defined against owner-local today.
    non-goals state. `ADR-013`'s send rules are unaffected; nothing new reaches
    a provider.
 
+## Independent review outcome
+
+**Reviewed:** `0cc8d466af155dc6e49c52e609a845a6f4d9450e` on 29 August 2026, by
+an agent distinct from the builder, against the checklist below.
+
+**Verdict: approve with findings.** No defect in the migration, the security
+boundary, the two replaced M3-14 functions, the `.retry(false)` widening, or
+the CI change. All nine acceptance criteria met, eight proven by tests inside
+the diff.
+
+The reviewer ran the three mechanical body diffs rather than reading the
+re-emitted SQL and trusting it:
+
+- `apply_rolling_plan_change_set` — **two hunks, confirming this record's
+  claim**: `create` to `create or replace`, and the `completedKept` key on the
+  series-effect entry. Nothing else in 557 lines moved; no validation loosened,
+  no ordering, lock, or revision behavior touched.
+- `end_series` — not a standalone function but an operation branch inside the
+  above, so its diff is wholly covered by it. The branch body itself is inside
+  the verbatim region.
+- `rolling_plan_sweep_series_occurrences` — four hunks, all additive. The
+  `v_locked_kept` predicate is **byte-identical** to M3-14; `deleted` and
+  `divergedDeleted` are unchanged for occurrences carrying no completion;
+  double-counting is impossible because `v_completed_kept` requires
+  `not is_locked`; `rolling_plan_change_entries_session_fkey` is untouched.
+
+The reviewer separately confirmed that the range contains no M3-11 file, that
+all three foreign keys are composite `(id, user_id)` with no bare `(id)`
+reference, and that the M3-15A adapter contract genuinely executed in CI rather
+than self-skipping.
+
+### The one blocking finding, and its correction
+
+The reviewer checklist below named the wrong review target: commit
+`7ecb2e0`, over `c4de8a9..7ecb2e0`. It resolves but is not reachable from the
+branch head — it is the superseded pre-rename revision, whose migration uses
+`completed_activities` twenty-five times and weakens two permanent M3-11
+assertions. Following it verbatim would have approved the exact defect this
+branch was corrected for. Corrected in the commit that adds this section;
+documentation only, under the evidence-commit exception.
+
+### Non-blocking observations, carried forward
+
+1. **`series-actions.ts:107` under-reports a completed survivor.** The
+   `end_series` owner-facing copy still reads "… changed removed, N locked
+   kept" and `SeriesEffectView` does not carry `completedKept`. Correctly
+   scoped out here — the ticket forbids surface changes and `completedKept` is
+   always zero until M3-15 ships a write path. **M3-15 inherits this
+   explicitly.**
+2. **`apply_completion_change` sets no `lock_timeout` on the `create` path.**
+   The ADR-010 3-second bound is set only before the `edit` path's
+   `select … for update`. A create takes an FK `KEY SHARE` lock and can contend
+   on `completions_plan_session_key`, so two simultaneous creates against one
+   session could block unbounded rather than for three seconds. A latency edge,
+   not a correctness one: the concurrency harness proves the race still
+   resolves to one writer. Worth a future ticket if creates ever contend with a
+   long transaction.
+3. **`CompletionLog.list` enforces no maximum window width.** Owner-scoped and
+   RLS-confined, so the worst case is a large read of one's own data. This is
+   the same shape as the accepted `RollingPlan.getPlanSlice`, so it is existing
+   precedent rather than a new gap.
+
+Two further record errors the reviewer found are corrected in place above: the
+added/modified split in **Changed files**, and the description of the
+`apply_rolling_plan_change_set` diff shape.
+
 ## Independent reviewer checklist
 
-Review the exact commit `7ecb2e0a2ba19e9b986d6de3a080a42b39d31fad`, over
-`git diff c4de8a9..7ecb2e0`. Confirm the CI run for that SHA is green; do not
-re-run lint, typecheck, tests, build, or the browser flows.
+Review the exact commit `0cc8d466af155dc6e49c52e609a845a6f4d9450e`, over
+`git diff e56fcfc..0cc8d46`, matching the header of this record. Confirm the CI
+run for that SHA is green; do not re-run lint, typecheck, tests, build, or the
+browser flows.
+
+**Corrected by the lead on 29 August 2026.** This line previously named
+`7ecb2e0a2ba19e9b986d6de3a080a42b39d31fad` over `c4de8a9..7ecb2e0`. That commit
+resolves but is not reachable from the branch head: it is the superseded
+pre-rename revision, and it is the one that reuses `completed_activities` and
+weakens two permanent M3-11 removal assertions. A reviewer following it
+verbatim would have reviewed and approved exactly the defect this branch was
+corrected for. The independent reviewer caught it.
 
 The section above is navigation. The diff is the record. Judgment CI cannot
 supply:

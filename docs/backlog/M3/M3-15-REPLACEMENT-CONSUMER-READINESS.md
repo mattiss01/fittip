@@ -60,6 +60,13 @@ Everything below is what remains.
 - Every consumer calls M3-15A's top-up wrapper before reading, per ADR-017
   consequence 3. A consumer that is not the Plan otherwise reads an incomplete
   plan.
+- **Surface `completedKept`.** M3-15A taught `end_series` and the sweep to keep
+  a completed occurrence and to report it in their receipt, but
+  `src/app/home/plan/series-actions.ts` still tells the owner only how many
+  were removed and how many locked ones were kept, and `SeriesEffectView` does
+  not carry the field. The count is always zero until this ticket ships a
+  completion write path, and non-zero the moment it does. M3-15A's independent
+  reviewer flagged it on 29 August 2026 for this ticket to inherit.
 - Consumer parity, query bounds, owner/anonymous/cross-owner RLS and grants,
   source minimization, and the 390px mobile pass across all four surfaces.
 

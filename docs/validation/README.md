@@ -51,8 +51,10 @@ Validation records and their visual evidence are grouped by milestone.
   The first CI run was red on the `M3-11 seeded legacy reset` step because the
   dispatched brief reused a retired legacy table name; the lead corrected the
   brief in `e56fcfc` and `0cc8d46` renames the table to `completion_activities`,
-  leaving every M3-11 assertion exactly as M3-11 wrote it. Independent review,
-  a green CI run, Preview, the founder migration, and acceptance are open
+  leaving every M3-11 assertion exactly as M3-11 wrote it. CI is green and the
+  Preview is `READY` for `267b886`, and independent review approved `0cc8d46`
+  with one record-only correction, now applied. The founder migration and
+  product-owner acceptance are open.
 - [M3-14B recurring series surface](M3/M3-14B-VALIDATION.md) — accepted;
   corrected implementation `49ae94b` is independently approved, owner-accepted
   and merged to `master` as `b49c58d`. Founder smoke/security checks are
