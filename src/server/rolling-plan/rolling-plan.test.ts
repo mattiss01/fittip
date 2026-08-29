@@ -22,6 +22,8 @@ registerRollingPlanContract("the in-memory adapter", async () => {
     plan: new RollingPlan(adapter),
     today: isoDateInTimezone(CONTRACT_NOW, CONTRACT_TIMEZONE),
     clearTimezone: async () => adapter.clearTimezone(),
+    completeSession: async (sessionId: string) =>
+      adapter.recordCompletion(sessionId),
   };
 });
 

@@ -128,7 +128,7 @@ create temporary table snapshot (label text primary key, value jsonb);
 
 grant all on change_receipt, logged, snapshot to public;
 
-select plan(37);
+select plan(39);
 
 select is(
   (select count(*)::bigint from delete_zone), 1::bigint,
@@ -341,6 +341,13 @@ select is(
   0::bigint,
   'a session the owner already cancelled is exactly what they may next want gone'
 );
+select is(
+  (select count(*)::bigint from public.rolling_plan_change_entries
+   where user_id = '79000000-0000-4000-8000-000000000001'
+     and session_id = '79000000-0000-4000-8000-0000000000b2'),
+  0::bigint,
+  'the cancel entry that named it goes with the row, exactly as its add entry does'
+);
 
 -- 3. A lock does not refuse the owner's own deliberate act --------------------
 
@@ -505,12 +512,29 @@ select is(
 
 -- 8. Delete leaves cancel alone -----------------------------------------------
 
+-- What a completion refuses is the delete that would remove the plan entry it
+-- was measured against. It does not refuse the cancel, because cancelling
+-- keeps that entry exactly where it was.
+insert into change_receipt
+select 'cancel-completed', * from public.apply_rolling_plan_change_set(
+  pg_temp.rev('79000000-0000-4000-8000-000000000001'),
+  '79000000-0000-4000-8000-00000000e021', 'owner_manual',
+  jsonb_build_array(jsonb_build_object(
+    'operation', 'cancel', 'sessionId', '79000000-0000-4000-8000-0000000000b4')));
+
+select is(
+  (select status from public.rolling_plan_sessions
+   where id = '79000000-0000-4000-8000-0000000000b4'),
+  'cancelled',
+  'a session carrying a completion may still be cancelled, only not deleted'
+);
 select is(
   (select count(*)::bigint from public.rolling_plan_change_entries
    where user_id = '79000000-0000-4000-8000-000000000001'
-     and change_kind = 'cancel'),
+     and change_kind = 'cancel'
+     and session_id = '79000000-0000-4000-8000-0000000000b4'),
   1::bigint,
-  'the one cancel this suite performed is still recorded as a cancel'
+  'and that cancel is recorded as a cancel naming its own session'
 );
 select is(
   (select count(*)::bigint from public.rolling_plan_change_entries
