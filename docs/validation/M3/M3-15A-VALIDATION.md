@@ -35,6 +35,8 @@ SHA of the commit that adds it.
 | `3057892c3b9dc1b19036455cad5ae0f1245a2b05` | This record, as first written. Documentation only. |
 | `27a1a9fbf5483cd0fdd0f3ac9ed5556ecd6a9383` | **Not this builder's work.** The lead's correction of the amendment date in this record. Documentation only. |
 | `0cc8d466af155dc6e49c52e609a845a6f4d9450e` | The correction below: `completed_activities` renamed to `completion_activities`, and both M3-11 files restored byte-identical to `master`. |
+| `267b8861fbce3ec37228c375d96af69ea7f17893` | This record's account of that correction. Documentation only. **This is the SHA CI and the Vercel Preview ran against**, and it is identical in content to `0cc8d46` outside this file. |
+| the branch head | **Not this builder's work.** The lead's entry of the CI run URL, the Preview URL, and the founder hosted evidence into the section below. Documentation only. |
 
 ## Correction after the first continuous-integration run
 
@@ -330,15 +332,21 @@ reviewer can overturn them rather than discover them.
 
 ## Tests and final results
 
-**CI:** _pending — the lead fills in the run URL and conclusion for the exact
-reviewed SHA._ That run is the automated-test evidence for this ticket: it
+**CI:** green for the reviewed SHA `267b886` —
+<https://github.com/mattiss01/fittip/actions/runs/33243136446>. All three jobs
+succeeded: `Lint, types, unit tests, build`; `Migrations, RLS, advisors,
+concurrency`; and `390px production browser flows`. That run is the
+automated-test evidence for this ticket: it
 covers Prettier, ESLint, TypeScript, the Vitest suite, the production build,
 every migration from zero, db lint, both advisors, the pgTAP suite, all seven
 concurrency and adapter harnesses including the two added here, and the 390px
 browser flows.
 
-**Vercel Preview:** _pending — the lead pushes the branch and records the
-Preview URL and its `READY` state._
+**Vercel Preview:** `READY` for `267b886` —
+<https://fittip-4xlcejpt7-mattis-3657s-projects.vercel.app> (GitHub deployment
+`6153906301`, state `success`). The Preview builds and serves, which is what it
+proves here; this ticket adds no visible surface, so there is no 390px pass to
+run against it.
 
 **Founder migration application and hosted verification:** _pending — the lead
 applies `20260829073444` to the founder project in timestamp order, confirms
