@@ -928,3 +928,55 @@ neither branch. The replacement status vocabulary is therefore `completed`,
 `partially_completed`, `skipped`, `replaced`, and `unplanned`. Nothing becomes
 unrecordable: a recovery intention is a planning label on the date, and the
 factual counterpart is a skipped planned session or simply no completion.
+
+### Deleting a planned session, 29 August 2026
+
+The product owner approved a third session verb on 29 August 2026: an owner may
+**delete** one future planned session outright, in addition to cancelling it.
+
+The three verbs an owner has over one session are now distinct, and each answers
+a different question:
+
+- **Cancel** answers "this was planned and is not happening." The row survives
+  with `status = 'cancelled'`, stays visible under **Cancelled**, and keeps its
+  before/after change entry. Unchanged from M3-12.
+- **Delete** answers "this should never have been on the plan." The row is hard
+  deleted. What survives is the dated `delete` change entry that ADR-017 already
+  defined for series removal, carrying the before state and the local date but
+  no session id.
+- **Skip** is not a planning verb at all. It is one of the five completion
+  statuses and records what actually happened, so it belongs to the completion
+  log and its surfaces, not to the plan.
+
+**Two rules bound the new verb.**
+
+A session that carries a completion cannot be deleted. The completion's foreign
+key already restricts it; the owner-visible refusal is the new part. The record
+of what happened outlives the plan entry it was measured against, which is the
+same reasoning that made `planned_snapshot` write-once.
+
+A lock does not prevent it. The 19 August 2026 amendment above already settled
+this — "the owner may still remove that one session deliberately and
+individually; what a lock prevents is a sweep taking it along with others" —
+and deleting one session is exactly that deliberate individual act.
+
+**Product rules → History and mutability** is amended. This line:
+
+> Removing future training marks the current session cancelled and records the
+> change. It does not hard-delete the session or its earlier state.
+
+now reads: cancelling future training marks the current session cancelled and
+records the change, and does not hard-delete the session or its earlier state.
+Deleting future training hard-deletes the session row and records a dated
+`delete` change entry in its place. ADR-017 already narrowed "plans are separate
+permanent records" for a future planned session deleted by series removal; this
+narrows it identically for one deleted deliberately, and for the same reason.
+Completed training is untouched by either.
+
+**The card label is corrected.** The 20 August 2026 revision gave session cards
+**Edit**, **Remove**, and the lock control. M3-12 built **Remove** as a cancel,
+with the copy "Removing keeps the session on the record as cancelled" — a
+control whose label and behavior disagreed, which was tolerable only while
+cancel was the sole removal verb. The cards now expose **Edit**, **Cancel**,
+**Delete**, and the lock control. "Remove" is retired as a card label because it
+cannot distinguish the two verbs that now exist.

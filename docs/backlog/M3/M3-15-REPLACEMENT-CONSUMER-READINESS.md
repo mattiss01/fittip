@@ -1,8 +1,20 @@
 # M3-15: Replacement consumer readiness
 
-**Status:** proposed — not approved for implementation. Narrowed to the
-consumer surfaces on 29 August 2026 when the completion foundation was split
-out as [M3-15A](M3-15A-COMPLETION-FOUNDATION.md).
+**Status:** split — do not dispatch. Narrowed to the consumer surfaces on
+29 August 2026 when the completion foundation was split out as
+[M3-15A](M3-15A-COMPLETION-FOUNDATION.md), then split again the same day into
+four tickets when sizing showed the remainder was still four surfaces, a new
+context source, and a privilege re-grant. This file is retained as the record
+of the narrowed scope and the reasoning; the work lives in:
+
+- [M3-15B Today and logging](M3-15B-TODAY-AND-LOGGING.md) — Tier 2
+- [M3-15C Progress](M3-15C-PROGRESS.md) — Tier 2
+- [M3-15D Bounded AI completion context](M3-15D-AI-COMPLETION-CONTEXT.md) —
+  Tier 1
+- [M3-15E Roadmap restoration and privilege re-grant](M3-15E-ROADMAP-RESTORATION.md)
+  — Tier 1
+
+[M3-19](M3-19-DELETE-A-PLANNED-SESSION.md) is sequenced ahead of all four.
 
 **Triage:** needs-triage
 
@@ -82,11 +94,11 @@ Everything below is what remains.
 
 ## Approval boundary
 
-This shell records the narrowed scope only. After M3-15A is accepted, the exact
-consumer contract requires an `## Agent brief` and separate product-owner
-approval before Tier 1 implementation. This ticket is large enough that it may
-itself need splitting once drafted; four surfaces plus a privilege re-grant is
-close to the point where a 40-line brief stops being honest.
+Superseded by the four split tickets listed in the status header, each of which
+carries its own approval boundary. The warning this section originally
+recorded — that four surfaces plus a privilege re-grant is close to the point
+where a 40-line brief stops being honest — turned out to be an understatement,
+and is the reason for the second split. See [Second split](#second-split-29-august-2026).
 
 ## History
 
@@ -97,3 +109,29 @@ new schema with four user-visible surfaces and a privilege re-grant. The
 foundation became M3-15A; this ticket keeps its number so that ADR-017
 consequence 3, F-005, and M3-16 — which all say "M3-15" to mean Today,
 Progress, and AI context — continue to point at the right work.
+
+## Second split, 29 August 2026
+
+Sizing the remainder before dispatch found three things the 14 August shell had
+not accounted for.
+
+**The AI context slice is a new context source, not a rewiring.**
+`CoachAIContextSource` in `src/server/ai/context-source.ts` is a bare interface
+whose own comment records that no legacy database adapter survived M3-11. There
+is no production implementation. Every existing implementation is a fixture or
+a test stub.
+
+**The roadmap slice depends on the AI slice, not the other way round.** M3-11
+revoked the five roadmap functions until replacement completion context
+existed. Restoring the surface without a context source produces a roadmap
+generated against empty training history, which is worse than the maintenance
+stub because it looks like it worked.
+
+**The restore is a rebuild.** M3-11 deleted roughly 4,100 lines across the four
+routes. None of it can be reverted, because it targets the retired model.
+
+The split is therefore four tickets, in a forced order: M3-15B before M3-15C
+because Progress has nothing to display until completions can be written, and
+M3-15D before M3-15E for the reason above. M3-19 precedes all four so that
+Today inherits the corrected Cancel/Delete card verbs instead of shipping the
+ambiguous "Remove" label and changing it a ticket later.
