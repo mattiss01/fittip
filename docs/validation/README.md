@@ -42,7 +42,7 @@ Validation records and their visual evidence are grouped by milestone.
 ## M3
 
 - [M3-19 delete a planned session](M3/M3-19-VALIDATION.md) — testable;
-  Tier 1, correction round 1 complete against `437d470`. A forward migration
+  Tier 1, correction round 2 complete against `d422f81`. A forward migration
   re-emits `apply_rolling_plan_change_set` with a `delete` operation beside
   `cancel`: it hard deletes an active or cancelled future session, ignores
   the lock, and refuses a session carrying a completion with `PT425` before
@@ -54,8 +54,12 @@ Validation records and their visual evidence are grouped by milestone.
   deleted occurrence straight back, so deleting a cancelled occurrence
   returned it active. The product owner accepted the behavior on
   29 August 2026; `437d470` makes the copy and the toast describe it and
-  pins it in the shared adapter contract. A fresh CI run, re-review, a
-  fresh Preview, the founder migration and acceptance are outstanding
+  pins it in the shared adapter contract. Round 2 approved `437d470` with
+  findings and no blocking defect, and `d422f81` closes four of them: the
+  divergence loss the occurrence warning omitted, the real label of the
+  control it points at, coverage of the unknown refill branch, and two
+  record corrections. A fresh CI run, re-review, a fresh Preview, the
+  founder migration and acceptance are outstanding
 - [M3-15A replacement completion foundation](M3/M3-15A-VALIDATION.md) —
   accepted; Tier 1, independently reviewed and accepted against `0cc8d46`.
   Rebuilds the factual completion record M3-11 deleted, on the rolling-plan

@@ -1,22 +1,23 @@
 # M3-19 validation: delete a planned session
 
 **Ticket:** [M3-19](../../backlog/M3/M3-19-DELETE-A-PLANNED-SESSION.md)
-**Status:** testable — correction round 1 complete. Round 1 of independent
+**Status:** testable — correction round 2 complete. Round 1 of independent
 review rejected `1e12dce` on one blocking finding, which the product owner
 resolved by accepting the behavior and requiring the surface to describe it
-honestly; `437d470` does that. Approval of `1e12dce` and its Preview is
-invalidated. A fresh CI run, re-review, a fresh Preview, the founder migration
-and product-owner acceptance are all outstanding.
+honestly. Round 2 approved `437d470` with findings and no blocking defect;
+`d422f81` closes four of the five. Approval applies to `437d470` and not to
+the head, so a fresh CI run, re-review, a fresh Preview, the founder
+migration and product-owner acceptance are all outstanding.
 **Tier:** 1
 **Branch:** `ticket/m3-19-delete-a-planned-session`
 **Base:** `37529e20ea373034d7ede6b64e0b6dfde8d5e940`
-**Implementation review target:**
-`437d47078cea73a908c65d5d30fd09ee2428bfff`
+**Implementation review target:** `d422f81675968f32cbe7240ffd8c392551b5cac3`
 **Review range:**
-`git diff 37529e20ea373034d7ede6b64e0b6dfde8d5e940..437d47078cea73a908c65d5d30fd09ee2428bfff`
-**Superseded target:** `1e12dce8a5be752fac55525074c2e15da0e8710c`, whose
-correction range is
-`git diff 1e12dce8a5be752fac55525074c2e15da0e8710c..437d47078cea73a908c65d5d30fd09ee2428bfff`
+`git diff 37529e20ea373034d7ede6b64e0b6dfde8d5e940..d422f81675968f32cbe7240ffd8c392551b5cac3`
+**Superseded targets:** `1e12dce8a5be752fac55525074c2e15da0e8710c`, rejected in
+round 1, and `437d47078cea73a908c65d5d30fd09ee2428bfff`, approved in round 2.
+The round 2 correction range is
+`git diff 437d47078cea73a908c65d5d30fd09ee2428bfff..d422f81675968f32cbe7240ffd8c392551b5cac3`
 
 Implementation commits, in order:
 
@@ -29,6 +30,7 @@ Implementation commits, in order:
 | `18db449fbd0fdd9ffcb953cb21d5a43e81f16d27` | The CI step that runs that flow. |
 | `1e12dce8a5be752fac55525074c2e15da0e8710c` | The four-control card layout at 390px, and the flow's evidence screenshots. |
 | `437d47078cea73a908c65d5d30fd09ee2428bfff` | **Review correction round 1.** Honest copy and a toast for the accepted occurrence refill, and the contract test that pins it. |
+| `d422f81675968f32cbe7240ffd8c392551b5cac3` | **Review correction round 2.** The divergence loss the occurrence warning omitted, the real name of the control it points at, and coverage of the unknown refill branch. |
 
 ## Delivered behavior
 
@@ -103,32 +105,35 @@ token. See known limitations.
 
 ## Changed files
 
-Exact base-to-implementation stat:
+Exact base-to-implementation stat, base to `d422f81`:
 
 ```text
  .github/workflows/ci.yml                           |  10 +
- .../M3/evidence/M3-19-card-verbs-390x844.png       | Bin 0 -> 115204 bytes
- .../M3/evidence/M3-19-logged-refusal-390x844.png   | Bin 0 -> 105882 bytes
+ docs/validation/M3/M3-19-VALIDATION.md             | 448 ++++++++++++++
+ .../M3/evidence/M3-19-card-verbs-390x844.png       | Bin 0 -> 114936 bytes
+ .../M3/evidence/M3-19-founder-migration-runbook.md | 203 +++++++
+ .../M3/evidence/M3-19-logged-refusal-390x844.png   | Bin 0 -> 105571 bytes
+ docs/validation/README.md                          |  15 +
  e2e/m3-12-plan.spec.ts                             |   6 +-
  e2e/m3-14b-recurring-series.spec.ts                |   4 +-
  e2e/m3-19-delete-session.spec.ts                   | 316 ++++++++++
  e2e/m3-19.playwright.config.ts                     |  19 +
  src/app/home/plan/action-state.ts                  |  10 +-
- src/app/home/plan/actions.test.ts                  |  70 +++
- src/app/home/plan/actions.ts                       |  50 +-
- src/app/home/plan/plan-manager.test.tsx            |  90 ++-
- src/app/home/plan/plan-manager.tsx                 |  84 ++-
+ src/app/home/plan/actions.test.ts                  | 147 +++++
+ src/app/home/plan/actions.ts                       | 143 ++++-
+ src/app/home/plan/plan-manager.test.tsx            | 130 +++-
+ src/app/home/plan/plan-manager.tsx                 | 126 +++-
  src/app/home/plan/plan.module.css                  |  21 +-
  src/app/home/plan/recurring-session-controls.tsx   |   4 +-
  src/server/repositories/rolling-plan-repository.ts |   2 +
  .../rolling-plan/in-memory-rolling-plan-adapter.ts |  25 +
- src/server/rolling-plan/rolling-plan-contract.ts   | 131 +++-
+ src/server/rolling-plan/rolling-plan-contract.ts   | 186 +++++-
  src/server/rolling-plan/rolling-plan.test.ts       |   2 +
  src/server/rolling-plan/rolling-plan.ts            |  17 +-
  ...260829135426_m3_19_delete_a_planned_session.sql | 656 +++++++++++++++++++++
  .../m3_19_delete_a_planned_session.test.sql        | 555 +++++++++++++++++
  .../m3_10_rolling_plan_postgres.test.ts            |  16 +
- 22 files changed, 2040 insertions(+), 48 deletions(-)
+ 25 files changed, 3011 insertions(+), 50 deletions(-)
 ```
 
 Purpose notes for paths whose role is not evident from the path and diff:
@@ -202,15 +207,18 @@ Nothing was deleted or renamed.
 | --- | --- |
 | `supabase/tests/database/m3_19_delete_a_planned_session.test.sql` (new, 39 assertions) | The whole database contract: the delete itself, the surviving dated entry, the completion refusal, the lock, the cancelled target, the past boundary, the rejected unknown operation, and the cross-owner and anonymous cases against the privileged function. |
 | `src/server/rolling-plan/rolling-plan-contract.ts` (5 new cases) | The same behavior at the seam, run against **both** adapters: delete beside cancel, a locked and a cancelled target, the completion refusal, the refusals a delete of no session or an unknown operation must produce, and — added in correction round 1 — that a deleted occurrence is written straight back by the next top-up, active even when it was cancelled first. |
-| `src/app/home/plan/actions.test.ts` | The action composes `{operation: "delete", sessionId}`, takes a cancelled session as a target for a delete and for nothing else, reports `PT425` in the surface's own words, and reports a refilled occurrence from one bounded read of its rule date rather than claiming it was deleted. |
-| `src/app/home/plan/plan-manager.test.tsx` | The card exposes Edit, Cancel, Delete and the lock and no "Remove"; each verb's copy says what it keeps; a one-off delete is described as permanent and an occurrence delete is not; a cancelled occurrence is told that deleting undoes the cancellation; a cancelled card carries Delete. |
+| `src/app/home/plan/actions.test.ts` | The action composes `{operation: "delete", sessionId}`, takes a cancelled session as a target for a delete and for nothing else, reports `PT425` in the surface's own words, and reports a refilled occurrence from one bounded read of its rule date rather than claiming it was deleted. All three refill outcomes are covered, including the read that throws. |
+| `src/app/home/plan/plan-manager.test.tsx` | The card exposes Edit, Cancel, Delete and the lock and no "Remove"; each verb's copy says what it keeps; a one-off delete is described as permanent and an occurrence delete is not; an occurrence owner is told what the refill replaces and is pointed at the control's real label; a cancelled occurrence is told that deleting undoes the cancellation; a cancelled card carries Delete. |
 | `e2e/m3-19-delete-session.spec.ts` (new, pinned config, port 3023) | The 390px flow: cancel, delete, the lock, the completion refusal, and deleting the cancelled session. |
 
 ## Results
 
-The CI run for `1e12dce8a5be752fac55525074c2e15da0e8710c` is **not yet
-recorded** — the lead pushes the branch. It is the automated-test evidence for
-this ticket and must be green before review.
+No CI run exists yet for implementation `d422f816...`; the lead pushes the
+branch and records it. The runs that do exist, and exactly what each covers,
+are in the lead agent's section at the end of this record: run `33275082378`
+green over `1e12dce`, and run `33276894567` green over `437d470`. Neither
+covers the correction above, so a fresh green run is required before
+re-review.
 
 What the builder observed locally while developing, against the local Supabase
 stack with every migration applied from zero:
@@ -236,6 +244,15 @@ behaves identically in both; `src/app/home/plan`, `src/architecture` and
 clean; and the M3-19 browser flow passes on a freshly started server. The one
 byte-level change it made to `M3-19-card-verbs-390x844.png` was a 139x1 pixel
 caret artifact and was reverted rather than committed.
+
+Correction round 2 (`d422f81`) closes four review findings and changes no
+behavior. Locally: `src/app/home/plan` passes 57 tests across 7 files, lint,
+typecheck and build are clean, `git diff --check` is clean, and the M3-19
+browser flow passes on a freshly started server against the local stack reset
+from zero. Both evidence screenshots are regenerated in that commit because
+the run crossed owner-local midnight, so every date label in the window moved
+on a day; the card layout and copy in them are unchanged, which a pixel diff
+confirms.
 
 One earlier iteration of the pgTAP suite failed one assertion honestly and was
 corrected rather than deleted: it claimed a cancel entry would still be
@@ -267,6 +284,12 @@ Evidence CI does not produce:
    accepted both rather than withhold the control: deleting an active
    occurrence looks like a no-op, and **deleting a cancelled occurrence brings
    it back active, reversing a cancellation the owner already made**.
+
+   A **diverged** occurrence loses more than its place: it comes back as the
+   rule describes it, so an edited title, note, duration or activity list is
+   replaced, the lock is cleared, and an occurrence the owner had moved
+   reappears on the series date rather than the date its card was sitting on.
+   Correction round 2 added that to the warning, which had named only the lock.
 
    Nothing in the materializer, the migration or any change-entry shape was
    altered to accommodate this; the decision was to ship the behavior and
@@ -320,10 +343,10 @@ Evidence CI does not produce:
 
 ## Independent reviewer focus
 
-Review exact implementation `437d47078cea73a908c65d5d30fd09ee2428bfff`
+Review exact implementation `d422f81675968f32cbe7240ffd8c392551b5cac3`
 against base `37529e20ea373034d7ede6b64e0b6dfde8d5e940`, reconcile the manifest
-above plus the five files of the correction range, and confirm the fresh CI run
-for that SHA is green and its Vercel Preview reached `READY`. Do not re-run
+above, and confirm the fresh CI run for that SHA is green and its Vercel
+Preview reached `READY`. Do not re-run
 lint, typecheck, the Vitest suite, the build, the database matrix or the
 browser flows; CI covers all of them.
 
@@ -354,6 +377,13 @@ The judgment CI cannot supply:
   `series_id` null, a non-null `local_date`, the before state, and the same
   after-state shape `rolling_plan_sweep_series_occurrences` writes. Confirm no
   new change kind and no constraint change was smuggled in.
+- **Correction round 2 (`d422f81`).** Four round 2 findings, none behavioral.
+  Judge whether the occurrence warning is now complete — the refill, the loss of an
+  edited title, note, duration or activity list, the cleared lock, a moved
+  occurrence returning to the series date, and an escape route that quotes the
+  control's real label — and whether the `unknown` refill branch's new test
+  actually exercises the throw rather than the resolved path. The two record
+  corrections are the Results opener and the `git diff --stat` range.
 - **Correction round 1 (`437d470`).** The accepted occurrence refill is a
   product decision, not a defect to re-litigate. Judge only whether the
   surface now describes it truthfully in all three states — one-off, active
