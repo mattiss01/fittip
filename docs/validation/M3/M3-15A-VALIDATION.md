@@ -6,7 +6,7 @@ application, and product-owner acceptance are all open.
 
 **Tier:** 1 — two new owner-scoped tables, a new `SECURITY DEFINER` write
 function, and a replacement of two accepted M3-14 privileged functions.
-Dispatched by the product owner on 20 August 2026 against the `## Agent brief`
+Dispatched by the product owner on 29 August 2026 against the `## Agent brief`
 in
 [`docs/backlog/M3/M3-15A-COMPLETION-FOUNDATION.md`](../../backlog/M3/M3-15A-COMPLETION-FOUNDATION.md),
 the 20 August owner-mutable-completion amendment in
@@ -42,7 +42,7 @@ What now exists, behind an owner-derived write that no client can bypass:
 
 - One completion per record, owner-editable in place. Correcting a mistyped
   duration takes no reason and leaves no trail, because the product amendment
-  of 20 August 2026 retired the correction chain that had no consumer.
+  of 29 August 2026 retired the correction chain that had no consumer.
 - The planned session and its activities as they stood when the completion was
   written, stored on the completion. Editing, cancelling, or diverging the plan
   session afterwards leaves that snapshot byte-identical, which is what makes
