@@ -87,6 +87,150 @@ export type Database = {
           },
         ];
       };
+      completed_activities: {
+        Row: {
+          actual_measurement: Json | null;
+          completion_id: string;
+          created_at: string;
+          id: string;
+          instructions: string | null;
+          measurement_mode: string;
+          name: string;
+          personal_activity_id: string | null;
+          position: number;
+          sport: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          actual_measurement?: Json | null;
+          completion_id: string;
+          created_at?: string;
+          id?: string;
+          instructions?: string | null;
+          measurement_mode: string;
+          name: string;
+          personal_activity_id?: string | null;
+          position: number;
+          sport: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          actual_measurement?: Json | null;
+          completion_id?: string;
+          created_at?: string;
+          id?: string;
+          instructions?: string | null;
+          measurement_mode?: string;
+          name?: string;
+          personal_activity_id?: string | null;
+          position?: number;
+          sport?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "completed_activities_completion_fkey";
+            columns: ["completion_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "completions";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "completed_activities_personal_fkey";
+            columns: ["personal_activity_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "personal_activities";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      completions: {
+        Row: {
+          actual_local_date: string;
+          actual_started_at: string | null;
+          created_at: string;
+          duration_minutes: number | null;
+          feeling: string | null;
+          id: string;
+          illness_reported: boolean;
+          injury_reported: boolean;
+          note: string | null;
+          pain_reported: boolean;
+          perceived_effort: number | null;
+          plan_session_id: string | null;
+          planned_snapshot: Json | null;
+          replacement_description: string | null;
+          revision: number;
+          severe_fatigue_reported: boolean;
+          status: string;
+          timezone_name: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          actual_local_date: string;
+          actual_started_at?: string | null;
+          created_at?: string;
+          duration_minutes?: number | null;
+          feeling?: string | null;
+          id?: string;
+          illness_reported?: boolean;
+          injury_reported?: boolean;
+          note?: string | null;
+          pain_reported?: boolean;
+          perceived_effort?: number | null;
+          plan_session_id?: string | null;
+          planned_snapshot?: Json | null;
+          replacement_description?: string | null;
+          revision?: number;
+          severe_fatigue_reported?: boolean;
+          status: string;
+          timezone_name: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          actual_local_date?: string;
+          actual_started_at?: string | null;
+          created_at?: string;
+          duration_minutes?: number | null;
+          feeling?: string | null;
+          id?: string;
+          illness_reported?: boolean;
+          injury_reported?: boolean;
+          note?: string | null;
+          pain_reported?: boolean;
+          perceived_effort?: number | null;
+          plan_session_id?: string | null;
+          planned_snapshot?: Json | null;
+          replacement_description?: string | null;
+          revision?: number;
+          severe_fatigue_reported?: boolean;
+          status?: string;
+          timezone_name?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "completions_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "completions_plan_fkey";
+            columns: ["plan_session_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "rolling_plan_sessions";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
       goal_collections: {
         Row: {
           revision: number;
@@ -1732,6 +1876,21 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      apply_completion_change: {
+        Args: {
+          p_completion?: Json;
+          p_completion_id?: string;
+          p_expected_revision?: number;
+          p_operation: string;
+        };
+        Returns: Database["public"]["CompositeTypes"]["completion_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "completion_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       apply_goal_change: {
         Args: {
           p_activity_areas?: string[];
@@ -1859,6 +2018,14 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      completed_activity_input_is_valid: {
+        Args: { p_value: Json };
+        Returns: boolean;
+      };
+      completion_input_is_valid: {
+        Args: { p_operation: string; p_value: Json };
+        Returns: boolean;
       };
       finish_roadmap_generation: {
         Args: {
@@ -2052,6 +2219,11 @@ export type Database = {
       ai_spend_settlement_receipt: {
         reservation_id: string | null;
         charged_micro_usd: number | null;
+      };
+      completion_receipt: {
+        completion_id: string | null;
+        revision: number | null;
+        result: string | null;
       };
       goal_change_receipt: {
         goal_id: string | null;
