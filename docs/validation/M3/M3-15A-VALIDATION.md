@@ -1,18 +1,20 @@
 # M3-15A validation: replacement completion foundation
 
-**Status:** testable — builder handoff complete. Independent review, the CI run
-for the reviewed commit, Vercel Preview verification, founder migration
-application, and product-owner acceptance are all open.
+**Status:** accepted — the product owner accepted
+`0cc8d466af155dc6e49c52e609a845a6f4d9450e` on 29 August 2026, against the green
+CI run for that content, its `READY` Vercel Preview, and the independent review
+recorded below. The founder migration is applied on the product owner's
+attestation; the hosted output listed in limitation 9 was not captured.
 
 **Tier:** 1 — two new owner-scoped tables, a new `SECURITY DEFINER` write
 function, and a replacement of two accepted M3-14 privileged functions.
 Dispatched by the product owner on 29 August 2026 against the `## Agent brief`
 in
 [`docs/backlog/M3/M3-15A-COMPLETION-FOUNDATION.md`](../../backlog/M3/M3-15A-COMPLETION-FOUNDATION.md),
-the 20 August owner-mutable-completion amendment in
+the 29 August owner-mutable-completion amendment in
 [F-005](../../product/F-005-ROLLING-TRAINING-PLAN.md#recorded-amendments), and
 the matching amendment in
-[ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md#recorded-amendment-to-decisions-2-and-4-20-august-2026).
+[ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md#recorded-amendment-to-decisions-2-and-4).
 
 **Branch:** `ticket/m3-15a-completion-foundation`, rebased onto `master` at
 `e56fcfc42af0736c784bb763452c3e2e7008991d`.
