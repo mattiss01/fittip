@@ -5,7 +5,8 @@
 review and a green CI run. Tier 1 dispatch was approved the same day against
 this contract and delivered on branch `ticket/m3-15a-completion-foundation`.
 See [the validation record](../../validation/M3/M3-15A-VALIDATION.md),
-including limitation 9 on the uncaptured founder hosted output.
+including limitation 9, whose four founder hosted checks were all closed on
+29 August 2026.
 
 **Triage:** ready-for-agent
 

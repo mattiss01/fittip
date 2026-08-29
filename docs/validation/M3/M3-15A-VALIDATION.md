@@ -361,13 +361,10 @@ is complete. The lead cannot run or observe this: `supabase link`, `db push`,
 and `db remote` are denied in `.claude/settings.json`, the CLI login needs a
 TTY, and the database password is unreadable to the agent.
 
-**This is an attestation, not captured output, and the record says so rather
-than implying more.** The lead supplied
-[the runbook](evidence/M3-15A-founder-migration-runbook.md) and requested the
-`migration list --linked`, advisor, privilege-boundary, and authenticated-read
-results twice; the product owner confirmed completion without returning them
-and that is their call to make. Consequently the following are **not**
-independently confirmed and are carried as limitation 9 below:
+**Fully verified on 29 August 2026.** The application itself was first
+reported as an attestation without output. The product owner then ran the whole
+of [the runbook](evidence/M3-15A-founder-migration-runbook.md), and all four
+outstanding items are now closed:
 
 - ~~that remote migration history matches the repository at all 19
   positions~~ — **cleared 29 August 2026.** The product owner ran
@@ -434,7 +431,19 @@ independently confirmed and are carried as limitation 9 below:
   per-label counts stated alongside it sum to 10, and `E` legitimately returns
   two. The row count was never the test; each label matching its expectation
   is;
-- the `authenticated` / `anon` read pair.
+- ~~the `authenticated` / `anon` read pair~~ — **cleared 29 August 2026.**
+  The product owner ran the runbook's two Part 3 blocks in the SQL editor and
+  reported that both behaved as specified: as `authenticated` with their own
+  `sub` claim, `select count(*) from public.completions` returned `0`
+  **without error**; as `anon`, the same query was refused with
+  `permission denied for table completions`. Zero is the correct count — the
+  tables are new and nothing writes to them until M3-15 — and the pair together
+  is what `AGENTS.md` requires: the owner's read path works on the founder
+  project and the anonymous one does not. This is the product owner's attested
+  result rather than pasted output, which the working agreement expressly
+  allows for hosted interaction; the checks were specified in advance and each
+  has exactly one correct outcome, so the attestation answers a closed question
+  rather than summarizing one.
 
 The boundary itself is proven by 87 pgTAP assertions against a from-zero
 database in the green CI run, so the schema is known correct; what is unverified
@@ -526,10 +535,12 @@ defined against owner-local today.
    output.** The product owner confirmed on 29 August 2026 that the migration
    was applied, and did not return the `migration list --linked`, advisor,
    privilege-boundary, or authenticated-read results the lead requested.
-   **Remote history alignment, the hosted advisor output, and the full
-   privilege boundary were subsequently confirmed** — see the three cleared
-   items above — leaving only the `authenticated` / `anon` hosted read pair
-   unconfirmed on the founder project specifically. All of it is proven against a from-zero database by 87
+   **All four were subsequently confirmed and this limitation is closed** —
+   see the cleared items above. The founder project's conformance no longer
+   rests on attestation of the application step alone: history is aligned at
+   all 19 positions, the only new advisor warning falls in the existing ADR-008
+   category, the privilege boundary matches the migration, and the
+   `authenticated` / `anon` read pair behaves as specified. All of it is proven against a from-zero database by 87
    pgTAP assertions in the green CI run, so this is a gap in hosted
    confirmation rather than a doubt about the schema.
    [The runbook](evidence/M3-15A-founder-migration-runbook.md) closes it in one

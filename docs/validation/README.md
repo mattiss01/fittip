@@ -57,7 +57,11 @@ Validation records and their visual evidence are grouped by milestone.
   with one record-only correction, now applied. Accepted 29 Aug 2026. The
   founder migration is applied on the product owner's attestation; the hosted
   history, advisor, and authenticated-read output was not captured and is
-  carried as limitation 9. Merged as `47a9fd7`; `master` CI green and the
+  recorded as limitation 9, which the product owner then closed in full:
+  history aligned at all 19 positions, one new advisor warning in the existing
+  ADR-008 category, the privilege boundary confirmed, and the
+  `authenticated` / `anon` read pair behaving as specified. Merged as
+  `47a9fd7`; `master` CI green and the
   founder deployment `READY`.
 - [M3-14B recurring series surface](M3/M3-14B-VALIDATION.md) — accepted;
   corrected implementation `49ae94b` is independently approved, owner-accepted
