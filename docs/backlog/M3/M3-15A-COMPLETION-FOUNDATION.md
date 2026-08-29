@@ -32,9 +32,10 @@ function. **No surface** — M3-15 owns that. Tier 1.
 **Hard constraints**
 
 - One forward migration, additive; never edit an applied one. New
-  `completions` and `completed_activities`: owner-scoped, immutable `user_id`
+  `completions` and `completion_activities`: owner-scoped, immutable `user_id`
   trigger, RLS on with owner-bound policies, `select` to `authenticated` only.
-  Mirror M3-13's `saved_sessions` privilege shape.
+  Mirror M3-13's `saved_sessions` shape. **Never reuse a legacy table name**;
+  M3-11's removal assertions are permanent and must not be weakened.
 - `completions.plan_session_id` is nullable, references
   `rolling_plan_sessions (id, user_id)` **`on delete restrict`**. Status is
   exactly `completed`, `partially_completed`, `skipped`, `replaced`,
@@ -48,10 +49,9 @@ function. **No surface** — M3-15 owns that. Tier 1.
   when the completion was written, `jsonb`, shaped like
   `rolling_plan_change_entries.after_state`. Never read through to the live
   plan row: it is mutable, and F-005 Review history step 4 depends on this.
-- `completed_activities` snapshots name, sport, instructions, position,
-  `measurement_mode`, and `actual_measurement`, validated by the surviving
-  `is_valid_training_measurement`, same-owner FKs. Full schema now, no actuals
-  captured until the activity editor exists.
+- `completion_activities` snapshots name, sport, instructions, position,
+  `measurement_mode`, `actual_measurement`, validated by the surviving
+  `is_valid_training_measurement`, same-owner FKs. No actuals captured yet.
 - **A session carrying a completion is never hard-deleted.** Teach `end_series`
   and `rolling_plan_sweep_series_occurrences` to keep a completed occurrence as
   they keep a locked one, and report it. M3-14 criterion 8 already promises it
@@ -162,6 +162,16 @@ session-less completion only for `unplanned`, so a `rest` completion can
 satisfy neither branch. Nothing becomes unrecordable: a recovery intention is a
 label on the date, and the factual counterpart is a skipped planned session or
 simply no completion.
+
+**Why the activity table is not called `completed_activities`.** The first
+draft of this brief reused the retired M1-01 name. That was an error in the
+brief, caught by CI: `supabase/tests/fixtures/m3_11_post_reset_verify.sql` and
+`m3-11-legacy-reset.test.ts` both assert permanently that `completed_activities`
+does not exist after the reset, so recreating it forced an M3-11 assertion to be
+weakened. The correct fix is the new name, not a weaker assertion. It also
+matches the `CompletionLog` domain type, and it avoids a live table sharing a
+name with a permanently deleted one. **Every M3-11 removal assertion must be
+left exactly as M3-11 wrote it.**
 
 **Why this touches two accepted M3-14 functions.** `end_series` hard-deletes
 future occurrences. Until now nothing could collide with that, because
