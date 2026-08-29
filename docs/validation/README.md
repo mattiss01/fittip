@@ -41,6 +41,15 @@ Validation records and their visual evidence are grouped by milestone.
 
 ## M3
 
+- [M3-15A replacement completion foundation](M3/M3-15A-VALIDATION.md) —
+  testable; Tier 1 builder handoff complete against `7ecb2e0`. Rebuilds the
+  factual completion record M3-11 deleted, on the rolling-plan foundation: one
+  owner-editable completion, its activity snapshot, the write-once planned
+  snapshot it was measured against, and the owner-derived write. No revision
+  chain, no `rest` status, and no surface — M3-15 owns that. `end_series` and
+  the series sweep now keep a completed occurrence as they keep a locked one.
+  Independent review, CI, Preview, the founder migration, and acceptance are
+  open
 - [M3-14B recurring series surface](M3/M3-14B-VALIDATION.md) — accepted;
   corrected implementation `49ae94b` is independently approved, owner-accepted
   and merged to `master` as `b49c58d`. Founder smoke/security checks are
