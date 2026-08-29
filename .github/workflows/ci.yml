@@ -240,6 +240,16 @@ jobs:
             npx playwright test --config=e2e/m3-14b.playwright.config.ts \
               --workers=1 --trace=retain-on-failure --output=test-results/m3-14b
 
+      - name: M3-19 delete a planned session
+        # Report every broken flow in one run, not just the first.
+        if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-19
+        run: |
+          .github/scripts/with-server.sh 3023 \
+            npx playwright test --config=e2e/m3-19.playwright.config.ts \
+              --workers=1 --trace=retain-on-failure --output=test-results/m3-19
+
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v7
