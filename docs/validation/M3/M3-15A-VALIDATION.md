@@ -397,8 +397,44 @@ independently confirmed and are carried as limitation 9 below:
   conclusive, since the run was filtered at `warn` — that the two new tables
   have RLS enabled on the founder project. The boundary query below settles it
   properly;
-- the hosted RLS and privilege boundary, and the `authenticated` / `anon` read
-  pair.
+- ~~the hosted RLS and privilege boundary~~ — **cleared 29 August 2026.** The
+  product owner ran the runbook's Appendix query in the SQL editor. It returned
+  **11 rows**, every one as required:
+
+  | Label | Result |
+  | --- | --- |
+  | `A rls` | both tables `= true`. RLS is enabled on the founder project, which the advisor run could only hint at |
+  | `B grant` | `authenticated \| SELECT` on each table and nothing else. **`anon` absent**, and no `INSERT`, `UPDATE`, or `DELETE` for any client role — a completion cannot be written except through the validating function |
+  | `C policy` | two `SELECT` policies, both `(( SELECT auth.uid() AS uid) = user_id)`. The wrapped-subquery form is the intended one, and neither is `true` |
+  | `D function` | `secdef=true`, `config=search_path=""`, args `p_operation text, p_completion_id uuid, p_expected_revision bigint, p_completion jsonb`. The single `uuid` is the completion id: **no owner argument**, so the owner can only come from `auth.uid()` |
+  | `E execute` | `authenticated` and `postgres`. See below |
+  | `F fk` | `completions_plan_fkey \| ondelete=r` — acceptance criterion 6 holds on the founder project — and `completions_owner_fkey \| ondelete=c` |
+  | `G` / `H` | **zero rows each.** No retired legacy table, and no revision-chain or `correction_reason` column |
+
+  Two rows were not in the predicted shape and were checked against the
+  migration rather than waved through:
+
+  - **`E execute` returned `postgres` as well as `authenticated`.** Expected.
+    The migration revokes `from public, anon, authenticated, service_role` and
+    then grants to `authenticated`; `postgres` owns the function, and an owner
+    retains `EXECUTE` implicitly. No migration in this repository revokes from
+    `postgres`, and `apply_saved_session_change` uses a byte-identical revoke
+    list, so this row appears for every accepted function too. It is not
+    reachable through the Data API, which connects as `authenticator` and
+    switches only to `anon`, `authenticated`, or `service_role` — all three of
+    which are absent. Not a finding.
+  - **`completions_owner_fkey` is `on delete cascade`, not `restrict`.** Also
+    correct, and a different relationship: it points at
+    `public.profiles (user_id)`, so deleting a profile removes that owner's
+    completions. It matches `saved_sessions_owner_fkey` in accepted M3-13
+    exactly. The restrict that criterion 6 is about is
+    `completions_plan_fkey`, which is present and correct.
+
+  The lead predicted "exactly 8 rows", which was simply wrong arithmetic — the
+  per-label counts stated alongside it sum to 10, and `E` legitimately returns
+  two. The row count was never the test; each label matching its expectation
+  is;
+- the `authenticated` / `anon` read pair.
 
 The boundary itself is proven by 87 pgTAP assertions against a from-zero
 database in the green CI run, so the schema is known correct; what is unverified
@@ -490,9 +526,9 @@ defined against owner-local today.
    output.** The product owner confirmed on 29 August 2026 that the migration
    was applied, and did not return the `migration list --linked`, advisor,
    privilege-boundary, or authenticated-read results the lead requested.
-   **Remote history alignment and the hosted advisor output were subsequently
-   confirmed** — see the two cleared items above — leaving only the
-   `authenticated` / `anon` read pair and the privilege-boundary query
+   **Remote history alignment, the hosted advisor output, and the full
+   privilege boundary were subsequently confirmed** — see the three cleared
+   items above — leaving only the `authenticated` / `anon` hosted read pair
    unconfirmed on the founder project specifically. All of it is proven against a from-zero database by 87
    pgTAP assertions in the green CI run, so this is a gap in hosted
    confirmation rather than a doubt about the schema.
