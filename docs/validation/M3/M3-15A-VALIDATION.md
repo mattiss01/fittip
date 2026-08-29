@@ -14,24 +14,68 @@ the 20 August owner-mutable-completion amendment in
 the matching amendment in
 [ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md#recorded-amendment-to-decisions-2-and-4-20-august-2026).
 
-**Branch:** `ticket/m3-15a-completion-foundation`, from `master` at
-`c4de8a9`.
+**Branch:** `ticket/m3-15a-completion-foundation`, rebased onto `master` at
+`e56fcfc42af0736c784bb763452c3e2e7008991d`.
 
 **Implementation review target:**
-`7ecb2e0a2ba19e9b986d6de3a080a42b39d31fad`.
+`0cc8d466af155dc6e49c52e609a845a6f4d9450e`.
 
-**Review range:** `git diff c4de8a9..7ecb2e0`. Every commit after `7ecb2e0` is
+**Review range:** `git diff e56fcfc..0cc8d46`. Every commit after `0cc8d46` is
 documentation only — this record and the validation index — and is covered by
 the evidence-commit exception in `AGENTS.md`, because a record cannot carry the
 SHA of the commit that adds it.
 
 | Commit | Purpose |
 | --- | --- |
-| `51464a9d7ff888a350c08600c24fabad8d14f8d6` | The migration: both tables, their privileges, policies and immutability triggers, the owner-derived write, and the two replaced M3-14 functions. |
-| `16e2e007b4a52a5b69a5c9bb3910c8c7e3ad36bf` | The pgTAP suite, 87 assertions, plus the one M3-11 assertion this ticket changes. |
-| `869b0cc66c9fe91d6116ef14fcd15f82d619f8a9` | The regenerated `database.types.ts`. |
-| `40c6ea0753eeff21fc2781d0c50b4fa8af76b899` | The module, its two adapters, the shared contract, the repository, the ADR-017 top-up, and the two architecture invariants this ticket changes deliberately. |
-| `7ecb2e0a2ba19e9b986d6de3a080a42b39d31fad` | The Postgres contract harness, the concurrency harness, their npm scripts, and the two `.github/workflows/ci.yml` steps. Committed separately from product code because `.github/**` is a tooling and supply-chain change. |
+| `ff749dcfd852ef01b4b5d545c147cabe9e187c56` | The migration: both tables, their privileges, policies and immutability triggers, the owner-derived write, and the two replaced M3-14 functions. |
+| `94476e529a5b65ccbb6d129a3be6c64db89e4258` | The pgTAP suite, 87 assertions. |
+| `60835c8122f35c82a4d9a35f44b213a286c8b828` | The regenerated `database.types.ts`. |
+| `4ddd5fa9b0a5d1eab49b0a23829244fe07de400f` | The module, its two adapters, the shared contract, the repository, the ADR-017 top-up, and the `.retry(false)` invariant this ticket widens deliberately. |
+| `96eec8843a0eac694c6a5f979cfe836e4ab40d44` | The Postgres contract harness, the concurrency harness, their npm scripts, and the two `.github/workflows/ci.yml` steps. Committed separately from product code because `.github/**` is a tooling and supply-chain change. |
+| `3057892c3b9dc1b19036455cad5ae0f1245a2b05` | This record, as first written. Documentation only. |
+| `27a1a9fbf5483cd0fdd0f3ac9ed5556ecd6a9383` | **Not this builder's work.** The lead's correction of the amendment date in this record. Documentation only. |
+| `0cc8d466af155dc6e49c52e609a845a6f4d9450e` | The correction below: `completed_activities` renamed to `completion_activities`, and both M3-11 files restored byte-identical to `master`. |
+
+## Correction after the first continuous-integration run
+
+The first CI run on this branch,
+https://github.com/mattiss01/fittip/actions/runs/33242410504, was **red on the
+database job** at the `M3-11 seeded legacy reset` step:
+
+```
+ERROR: legacy table still exists: completed_activities
+```
+
+The static and browser jobs passed.
+`supabase/tests/integration/m3_11_seeded_reset.mjs` seeds the pre-reset schema,
+migrates forward, and runs
+`supabase/tests/fixtures/m3_11_post_reset_verify.sql`, which asserts
+permanently that the eleven tables M3-11 removed are gone.
+`completed_activities` is one of them. That harness runs only in CI, so a green
+`supabase test db` locally could not catch it.
+
+The cause was in the dispatched brief, which named the new table
+`completed_activities`. The lead corrected the brief on `master` in `e56fcfc`,
+renaming it to `completion_activities` and adding a general constraint: never
+reuse a legacy table name, because M3-11's removal assertions are permanent and
+must not be weakened. Reusing the name had also been the sole reason the first
+pass softened the M3-11 pgTAP assertion from plain absence to a shape check.
+
+`0cc8d46` renames the table, its ten constraints, two indexes, policy, trigger
+function, trigger, input validator, and the `CompletionActivity` domain type,
+and restores both M3-11 files byte-identical to `master`. The migration is
+edited in place rather than corrected forward, on the lead's instruction: it is
+unapplied everywhere and sits on an unmerged branch, so the forward-only rule
+does not bite yet, and a rename migration would leave a retired legacy name in
+applied history. **After the rename, nothing about M3-11 needs to change at
+all**, and `npm run test:m3-11-seeded-reset` passes locally:
+
+```
+git diff origin/master -- src/architecture/m3-11-legacy-reset.test.ts
+git diff origin/master -- supabase/tests/database/m3_11_legacy_training_reset.test.sql
+```
+
+produces no output.
 
 ## Delivered behavior
 
@@ -67,10 +111,13 @@ evidence.
 
 ## Changed files
 
+`git diff --stat e56fcfc..0cc8d46`:
+
 ```
  .github/workflows/ci.yml                           |    6 +
+ docs/validation/M3/M3-15A-VALIDATION.md            |  415 ++++++
+ docs/validation/README.md                          |    9 +
  package.json                                       |    2 +
- src/architecture/m3-11-legacy-reset.test.ts        |    7 +-
  src/architecture/server-boundary.test.ts           |   20 +-
  src/lib/supabase/database.types.ts                 |  172 +++
  src/server/completions/completion-log-contract.ts  |  366 ++++++
@@ -86,15 +133,25 @@ evidence.
  src/server/rolling-plan/rolling-plan-contract.ts   |    1 +
  src/server/rolling-plan/rolling-plan.ts            |    4 +
  ...20260829073444_m3_15a_completion_foundation.sql | 1345 ++++++++++++++++++++
- .../database/m3_11_legacy_training_reset.test.sql  |   11 +-
  .../database/m3_15a_completion_foundation.test.sql |  736 +++++++++++
  .../integration/m3_15a_completion_postgres.test.ts |  139 ++
  .../m3_15a_concurrent_completion_edits.mjs         |  291 +++++
- 22 files changed, 4791 insertions(+), 4 deletions(-)
+ 22 files changed, 5199 insertions(+), 2 deletions(-)
 ```
 
-**Nothing was deleted or renamed.** Every changed file is either new or an
-additive edit.
+The two `docs/validation/**` files are this record and its index entry. Twenty
+of the twenty-two files are new; the two edited ones are
+`src/architecture/server-boundary.test.ts` and
+`src/server/repositories/rolling-plan-repository.ts`, plus the three additive
+one-to-four-line edits under `src/server/rolling-plan/`.
+
+**No M3-11 file appears in this range.** After the rename recorded above, the
+M3-11 reset assertions need no change at all, and both files are byte-identical
+to `master`.
+
+**No file was deleted or renamed on disk.** The one rename in this ticket is a
+database table, not a file: `completed_activities` became
+`completion_activities` inside the unapplied migration, as recorded above.
 
 Files whose purpose is not evident from the path and diff:
 
@@ -118,12 +175,6 @@ Files whose purpose is not evident from the path and diff:
   top-up. It is about the plan, not about completions, and lives here because
   the brief places it here and because every M3-15 consumer that needs it reads
   the two together. See [Judgment calls](#judgment-calls) 4.
-- `src/architecture/m3-11-legacy-reset.test.ts` and
-  `supabase/tests/database/m3_11_legacy_training_reset.test.sql` — both
-  asserted that `completed_activities` no longer exists. The brief names that
-  table, so the assertions now prove the M1-01 *shape* stays removed rather
-  than the name. `completed_sessions` and `completion_heads` are untouched and
-  still asserted absent. See [Judgment calls](#judgment-calls) 5.
 - `src/architecture/server-boundary.test.ts` — the `.retry(false)` allowlist
   goes from five approved atomic RPCs to six. This is a deliberate
   architectural change, not an incidental one: a completion create is not
@@ -154,7 +205,7 @@ Four constraints carry the vocabulary and the two structural equivalences:
 | `completions_replacement_check` | `replaced` ⟺ a 1–500 character `replacement_description` |
 | `completions_snapshot_check` | a planned link ⟺ a `planned_snapshot` object |
 
-`public.completed_activities` — the per-activity snapshot. Same-owner foreign
+`public.completion_activities` — the per-activity snapshot. Same-owner foreign
 keys to `completions` (cascade) and `personal_activities`. `actual_measurement`
 is validated by the surviving `is_valid_training_measurement`. It deliberately
 holds **no** reference to `rolling_plan_activities`: an edit replaces a
@@ -266,19 +317,16 @@ reviewer can overturn them rather than discover them.
    standalone module rather than a method on the completion interface, and it
    takes a `RollingPlan` rather than creating one. No repository wrapper was
    added around it: that would be a pass-through with nothing behind it.
-5. **The M3-11 reset assertions were narrowed, not deleted.** Both the
-   architecture test and the pgTAP suite asserted `completed_activities` was
-   gone. The brief names that table, so the name is back. The pgTAP assertion
-   now proves the M1-01 shape stays removed — no `completed_session_id`, no
-   `planned_activity_id` — and the architecture test still bans every other
-   legacy table and RPC.
-6. **File names avoid the two paths M3-11 keeps reserved.** The module is
+5. **Nothing M3-11 removed is reused, in any form.** The module is
    `src/server/completions/completion-log.ts` and the repository is
    `src/server/repositories/completion-log-repository.ts`, because
    `completion-records.ts` and `completion-repository.ts` are named in
-   `m3-11-legacy-reset.test.ts` as legacy entry points that stay deleted. That
-   invariant is left exactly as it was. The domain type is `CompletionLog`, so
-   the names are consistent rather than merely test-driven.
+   `m3-11-legacy-reset.test.ts` as legacy entry points that stay deleted. The
+   table is `completion_activities` for the same reason, after the correction
+   above. Every M3-11 assertion — the architecture test, the pgTAP suite, and
+   the seeded-reset fixture — is left exactly as M3-11 wrote it. The domain
+   types are `CompletionLog` and `CompletionActivity`, so the names are
+   consistent rather than merely test-driven.
 
 ## Tests and final results
 
@@ -298,15 +346,17 @@ remote migration history contains the repository's exact versions, verifies the
 schema and the RLS/privilege boundary, runs the hosted advisors, and exercises
 an authenticated hosted read path._
 
-What follows is what this builder actually observed locally. It is reported
-because it is what ran, not as a substitute for the CI run.
+What follows is what this builder actually observed locally, **re-run in full
+after the `completion_activities` rename**. It is reported because it is what
+ran, not as a substitute for the CI run.
 
 | Command or check | Result |
 | --- | --- |
 | `npx supabase db reset --local` | PASS — all 19 migrations applied from zero |
 | `npx supabase db lint --local --level warning --fail-on warning` | PASS — no schema errors |
 | `npx supabase db advisors --local --type all --level warn --fail-on warn` | PASS — no issues found, so no new advisor category |
-| `npx supabase test db --local supabase/tests/database` | PASS — 12 files, 809 assertions, of which M3-15A contributes 87 |
+| `npx supabase test db --local supabase/tests/database` | PASS — 12 files, 809 assertions, of which M3-15A contributes 87; the M3-11 suite is back to its original 49 and green |
+| `npm run test:m3-11-seeded-reset` | PASS — the CI step that was red before the rename. Seeds the pre-reset schema, migrates forward through `20260829073444`, and the removal fixture finds none of the eleven legacy tables |
 | `npm run test:m3-15a-adapter-contract` | PASS — 9 contract cases against the real Postgres adapter |
 | `npm run test:m3-15a-concurrency` | PASS — 12 correction races plus the duplicate-create race |
 | `npm run test:m3-10-adapter-contract` | PASS — 15 cases, including the `completedKept` receipt |
@@ -318,8 +368,8 @@ because it is what ran, not as a substitute for the CI run.
 | `npx prettier --write <changed files>` | PASS — no diff, so the repository-wide `format:check` warning is line endings only |
 
 **Not run by this builder, and not claimed:** every Playwright flow, and the
-`m2_01`, `m3_01b`, `m3_11`, `m3_12`, `m3_13`, `m3_14` concurrency harnesses.
-CI covers all of them on the pushed branch. The browser job is expected to pass
+`m2_01`, `m3_01b`, `m3_12`, `m3_13`, `m3_14` concurrency harnesses. CI covers
+all of them on the pushed branch. The browser job is expected to pass
 unchanged because this ticket adds no client code, but that is an expectation
 rather than an observation.
 
@@ -359,7 +409,7 @@ defined against owner-local today.
    locked occurrences were kept. Changing that copy is a surface change this
    ticket's non-goals exclude, and no completion can exist to be kept until
    M3-15 ships a way to write one, so the count is always zero in the interim.
-4. **No actual measurement can be captured.** `completed_activities` has the
+4. **No actual measurement can be captured.** `completion_activities` has the
    full column and the write function accepts an activity list, but no editor
    exists and no caller sends one. Activities remain fixture-backed and
    read-only, as M3-14B recorded.
@@ -403,12 +453,15 @@ supply:
    streams: nothing here advances a plan revision or writes a plan table, and
    nothing but the owner can alter a completion. Confirm the retired revision
    chain is genuinely absent rather than renamed.
-5. **The six judgment calls above**, particularly 1 (one completion per planned
-   session), 2 (no future-date rule), and 5 (the narrowed M3-11 assertions).
-   Each is a decision the brief left open and any of them can be overturned.
-6. **The two architecture invariants.** The `.retry(false)` allowlist widening
-   and the M3-11 reset narrowing are both deliberate; confirm neither is wider
-   than it needed to be.
+5. **The five judgment calls above**, particularly 1 (one completion per
+   planned session) and 2 (no future-date rule). Each is a decision the brief
+   left open and either can be overturned.
+6. **The one architecture invariant this ticket changes.** The `.retry(false)`
+   allowlist goes from five approved atomic RPCs to six; confirm it is not
+   wider than it needed to be. Confirm also that no M3-11 assertion is touched:
+   the range must contain no diff under `supabase/tests/fixtures/`, and none in
+   `src/architecture/m3-11-legacy-reset.test.ts` or
+   `supabase/tests/database/m3_11_legacy_training_reset.test.sql`.
 7. **Honest states.** `PT409` says the same thing for a stale revision, a
    missing record, and another owner's record; `PT428` refuses before writing;
    every persistence guard refuses a row it cannot read rather than returning
