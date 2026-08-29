@@ -500,6 +500,7 @@ export function registerRollingPlanContract(
           deleted: 3,
           divergedDeleted: 1,
           lockedKept: 1,
+          completedKept: 0,
         },
       ]);
 

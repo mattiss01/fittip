@@ -153,6 +153,9 @@ export type RollingPlanSlice = {
  * What one series operation did to the occurrences already on the Plan.
  * `lockedKept` is the count a locked occurrence saved from removal, which the
  * owner has to be told about because nothing else on the Plan will show it.
+ * `completedKept` is the same for an occurrence that already carries a
+ * completion (M3-15A). The two never count the same occurrence: a locked one is
+ * reported as locked whether or not it was also completed.
  */
 export type RollingPlanSeriesEffect = {
   seriesId: string;
@@ -160,6 +163,7 @@ export type RollingPlanSeriesEffect = {
   deleted: number;
   divergedDeleted: number;
   lockedKept: number;
+  completedKept: number;
 };
 
 export type RollingPlanChangeReceipt = {

@@ -40,12 +40,17 @@ const rollingPlanSurface = [
   "src/app/home/plan/actions.ts",
 ] as const;
 
+/**
+ * M3-15A rebuilds `completed_activities` on the rolling-plan foundation, so
+ * that name is no longer a removed table and is deliberately absent here. What
+ * M3-11 closed stays closed: `completed_sessions`, `completion_heads`, and the
+ * legacy plan and proposal tables are still gone, and nothing may call them.
+ */
 const legacyTables = [
   "plan_proposal_decisions",
   "plan_proposal_sources",
   "plan_proposals",
   "plan_generation_requests",
-  "completed_activities",
   "completion_heads",
   "completed_sessions",
   "planned_activities",
