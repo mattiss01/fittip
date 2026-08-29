@@ -16,7 +16,11 @@ import {
   readPlanWindow,
   type PlanWindow,
 } from "./plan-window";
-import { planChangeCopy, topUpAfterPlanChange } from "./series-materialization";
+import {
+  planChangeCopy,
+  topUpAfterPlanChange,
+  type PlanTopUpResult,
+} from "./series-materialization";
 
 import {
   createProfileRepository,
@@ -144,11 +148,22 @@ export async function changePlanAction(
       expectedRevision,
     );
     const topUp = await topUpAfterPlanChange(plan, receipt.planRevision);
+    const refill =
+      operation === "delete"
+        ? await occurrenceRefill(
+            plan,
+            deletedOccurrence(slice, formData),
+            topUp,
+          )
+        : "none";
 
     revalidatePath("/home/plan");
     return result(
       "saved",
-      planChangeCopy(savedCopy(operation, formData), topUp),
+      planChangeCopy(
+        deleteCopy(refill) ?? savedCopy(operation, formData),
+        topUp,
+      ),
     );
   } catch (error) {
     if (error instanceof RollingPlanRuleError) {
@@ -197,6 +212,75 @@ export async function changePlanAction(
     }
     return result("error", "The plan change could not be completed.");
   }
+}
+
+/**
+ * Whether the top-up put a just-deleted occurrence straight back.
+ *
+ * Materialization coverage is "a row exists for this series and rule date", so
+ * deleting an occurrence uncovers its date and the top-up that follows every
+ * plan change refills it in the same request. The product owner accepted that
+ * on 29 August 2026 rather than withhold delete from an occurrence, which
+ * leaves the surface one obligation: not to report "Session deleted." over a
+ * session the owner can still see.
+ *
+ * The receipt counts what was created but never says which dates, and one
+ * top-up can serve more than one series, so the count alone cannot answer this.
+ * One bounded single-date read can. It is reached only when a delete was
+ * followed by a top-up that actually created something, so the ordinary delete
+ * pays nothing for it.
+ */
+type OccurrenceRefill = "none" | "restored" | "unknown";
+
+function deletedOccurrence(
+  slice: RollingPlanSlice,
+  formData: FormData,
+): RollingPlanSession | undefined {
+  const sessionId = formData.get("sessionId");
+  return slice.sessions.find((candidate) => candidate.id === sessionId);
+}
+
+async function occurrenceRefill(
+  plan: Awaited<ReturnType<typeof createRollingPlan>>,
+  deleted: RollingPlanSession | undefined,
+  topUp: PlanTopUpResult,
+): Promise<OccurrenceRefill> {
+  const occurrenceDate = deleted?.occurrenceDate;
+  if (
+    !deleted ||
+    deleted.seriesId === null ||
+    occurrenceDate === null ||
+    occurrenceDate === undefined ||
+    !topUp.ok ||
+    topUp.receipt.createdCount === 0
+  ) {
+    return "none";
+  }
+  try {
+    const refreshed = await plan.getPlanSlice(occurrenceDate, occurrenceDate);
+    return refreshed.sessions.some(
+      (candidate) =>
+        candidate.seriesId === deleted.seriesId &&
+        candidate.occurrenceDate === occurrenceDate,
+    )
+      ? "restored"
+      : "none";
+  } catch {
+    // The delete itself is already permanent. What is unknown is only whether
+    // the series wrote the date back, so the owner is told that much rather
+    // than told the plan change failed.
+    return "unknown";
+  }
+}
+
+function deleteCopy(refill: OccurrenceRefill): string | undefined {
+  if (refill === "restored") {
+    return "Session deleted, then written back by its recurring series. End the series from this date to stop it returning.";
+  }
+  if (refill === "unknown") {
+    return "Session deleted. Its recurring series may have written the date back. Reload to see the plan as saved.";
+  }
+  return undefined;
 }
 
 async function assertOccurrencePlacements(

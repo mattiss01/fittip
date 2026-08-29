@@ -420,8 +420,10 @@ describe("PlanManager", () => {
     expect(deletePanel).toBeVisible();
     expect(deletePanel.textContent).toMatch(/no undo/i);
     expect(deletePanel.textContent).toMatch(/logged training against/i);
-    // A one-off session has no occurrence to reassure the owner about.
-    expect(deletePanel.textContent).not.toMatch(/recurring rule/i);
+    // A one-off delete really is permanent, so it says so and says nothing
+    // about a series it does not belong to.
+    expect(deletePanel.textContent).toMatch(/^Permanent\./);
+    expect(deletePanel.textContent).not.toMatch(/repeats/i);
     const deleteForm = screen
       .getByRole("button", { name: "Delete session" })
       .closest("form")!;
@@ -434,7 +436,7 @@ describe("PlanManager", () => {
     expect(card).toContainElement(deleteForm);
   });
 
-  it("tells an occurrence owner that only this occurrence is deleted", () => {
+  it("warns an occurrence owner that its series writes the date back", () => {
     renderManager(
       INITIAL_PLAN_ACTION_STATE,
       [
@@ -447,7 +449,30 @@ describe("PlanManager", () => {
     );
 
     fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
-    expect(screen.getByText(/Only this occurrence goes/i)).toBeVisible();
+    const panel = screen.getByText(/This session repeats/i);
+    expect(panel).toBeVisible();
+    // The accepted behavior of 29 August 2026. Deleting an occurrence is not
+    // permanent, so the panel must not claim it is.
+    expect(panel.textContent).toMatch(/writes the date back in the same step/i);
+    expect(panel.textContent).toMatch(/end the series from this date/i);
+    expect(panel.textContent).not.toMatch(/Permanent\./);
+    expect(panel.textContent).not.toMatch(/no undo/i);
+    expect(panel.textContent).not.toMatch(/undoes your cancellation/i);
+  });
+
+  it("tells a cancelled occurrence owner that deleting undoes the cancel", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [
+      session({
+        status: "cancelled",
+        seriesId: "7f000000-0000-4000-8000-000000000099",
+        occurrenceDate: TODAY,
+      }),
+    ]);
+
+    fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
+    const panel = screen.getByText(/This session repeats/i);
+    expect(panel.textContent).toMatch(/it returns active/i);
+    expect(panel.textContent).toMatch(/undoes your cancellation/i);
   });
 
   it("withholds future scopes from a locked survivor past the segment end", () => {

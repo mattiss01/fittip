@@ -333,6 +333,7 @@ function PlanDay({
                       action={action}
                       pending={pending}
                       isOccurrence={session.seriesId !== null}
+                      isCancelled
                     />
                   </div>
                 </li>
@@ -669,9 +670,14 @@ function PlanSessionCard({
  * the same reason cancel does: neither destructive verb should be one stray tap
  * away on a phone, and holding them apart is what keeps their labels honest.
  *
- * The copy states the one thing that separates it from cancel - nothing is
- * kept - and the one refusal the owner can actually walk into, so a session
- * they have already logged does not surprise them at the button.
+ * A one-off session and an occurrence of a series are told different things,
+ * because delete does different things to them. Deleting a one-off is
+ * permanent. Deleting an occurrence is not: the top-up that follows every plan
+ * change sees the rule date uncovered and writes the occurrence straight back,
+ * in the same request. The product owner accepted that behavior on 29 August
+ * 2026 rather than withhold the control, so the copy has to say it - and has to
+ * say the cancelled case loudest, because there deleting reverses a decision
+ * the owner already made.
  */
 function DeleteSession({
   sessionId,
@@ -679,25 +685,23 @@ function DeleteSession({
   action,
   pending,
   isOccurrence,
+  isCancelled = false,
 }: {
   sessionId: string;
   expectedRevision: number;
   action: FormAction;
   pending: boolean;
   isOccurrence: boolean;
+  isCancelled?: boolean;
 }) {
   return (
     <details className={styles.disclosure}>
       <summary>Delete</summary>
       <div className={styles.editorPanel}>
         <p className={styles.permanentConsequence}>
-          Permanent. Deleting removes this session from the plan and does not
-          keep it on the record. There is no undo.
-          {isOccurrence
-            ? " Only this occurrence goes: the recurring rule and every other occurrence stay."
-            : ""}{" "}
-          A session you have logged training against cannot be deleted; cancel
-          it instead.
+          {isOccurrence ? occurrenceWarning(isCancelled) : ONE_OFF_WARNING} A
+          session you have logged training against cannot be deleted; cancel it
+          instead.
         </p>
         <form className={styles.form} action={action}>
           <input type="hidden" name="operation" value="delete" />
@@ -718,6 +722,20 @@ function DeleteSession({
       </div>
     </details>
   );
+}
+
+const ONE_OFF_WARNING =
+  "Permanent. Deleting removes this session from the plan and does not keep it on the record. There is no undo.";
+
+/**
+ * What deleting an occurrence really does, in the owner's terms. Both branches
+ * describe the refill, because it happens either way; the cancelled branch
+ * leads with the consequence the owner would not expect.
+ */
+function occurrenceWarning(isCancelled: boolean) {
+  return isCancelled
+    ? "This session repeats, so deleting it will not keep it deleted: its series writes the date back in the same step, and it returns active. Deleting a cancelled occurrence undoes your cancellation. To stop the date coming back, end the series from this date on the session that returns."
+    : "This session repeats, so deleting it will not keep it deleted: its series writes the date back in the same step, unlocked and active. To stop the date coming back, end the series from this date under Cancel instead.";
 }
 
 /**
