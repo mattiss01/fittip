@@ -869,9 +869,9 @@ pre-created infinite occurrences", **is not amended and remains true**:
 materialization never reaches beyond the fourteen-day window, whatever the
 series' end date is or is not.
 
-### A completion is owner-mutable, 20 August 2026
+### A completion is owner-mutable, 29 August 2026
 
-The product owner decided on 20 August 2026, while M3-15's replacement
+The product owner decided on 29 August 2026, while M3-15's replacement
 completion contract was being drafted, that a completion is one editable
 record rather than an append-only revision chain. The retired M1-01 model kept
 `completion_group_id`, `revision_number`, `previous_completion_id`, a

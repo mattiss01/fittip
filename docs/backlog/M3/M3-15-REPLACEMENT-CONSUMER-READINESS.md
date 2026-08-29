@@ -1,7 +1,7 @@
 # M3-15: Replacement consumer readiness
 
 **Status:** proposed — not approved for implementation. Narrowed to the
-consumer surfaces on 20 August 2026 when the completion foundation was split
+consumer surfaces on 29 August 2026 when the completion foundation was split
 out as [M3-15A](M3-15A-COMPLETION-FOUNDATION.md).
 
 **Triage:** needs-triage
@@ -48,7 +48,7 @@ Everything below is what remains.
 - Wire date-bounded AI context: the exact current Plan slice plus the
   separately bounded eligible completion history, through the existing
   `src/server/training/training-history-context.ts` allowlist. The
-  `correction_reason` field is gone per the 20 August 2026 ADR-013 amendment.
+  `correction_reason` field is gone per the 29 August 2026 ADR-013 amendment.
 - **M3-08's rule.** A proposal source records only completions actually
   transmitted to the Coach; byte-trimmed or otherwise unsent eligible
   completions are not sources. A correction to a sent completion conflicts;
@@ -84,7 +84,7 @@ close to the point where a 40-line brief stops being honest.
 ## History
 
 The 14 August 2026 shell carried both the completion foundation and every
-consumer. It was split on 20 August 2026, immediately before dispatch, because
+consumer. It was split on 29 August 2026, immediately before dispatch, because
 the combined scope could not be expressed in a 40-line Agent brief and mixed a
 new schema with four user-visible surfaces and a privilege re-grant. The
 foundation became M3-15A; this ticket keeps its number so that ADR-017

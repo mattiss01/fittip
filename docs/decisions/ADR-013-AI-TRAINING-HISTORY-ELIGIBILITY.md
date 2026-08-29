@@ -247,13 +247,13 @@ be longer here than for `create_seven_day_plan`, which M3-03 sets.
 These figures are recorded in the M3-02 validation record with their arithmetic
 and are subject to the product owner's approval of that record.
 
-## Recorded amendment to decisions 2 and 4, 20 August 2026
+## Recorded amendment to decisions 2 and 4
 
 Unlike the tuning section above, this one **does** change decisions recorded in
 this ADR. It is recorded here and in the Decision history below rather than by
 rewriting the decisions in place.
 
-On 20 August 2026, while M3-15's replacement completion contract was being
+On 29 August 2026, while M3-15's replacement completion contract was being
 drafted, the product owner decided that a completion is one owner-editable
 record rather than an append-only revision chain. `completion_heads`,
 `completion_group_id`, `revision_number`, `previous_completion_id`, and
@@ -321,7 +321,7 @@ free-text decision is justified by founder-only use, it does not survive the
 pre-friends gate unexamined, and reversing it later means a migration or
 grandfathering already-logged notes. That cost is accepted knowingly.
 
-**Amended 20 August 2026.** Decisions 2 and 4 changed when the product owner
+**Amended 29 August 2026.** Decisions 2 and 4 changed when the product owner
 made a completion owner-editable rather than append-only, withdrawing
 `correction_reason` from the boundary. The section above records what changed
 and what survives. Decision 2's outcome is unchanged and is now structural

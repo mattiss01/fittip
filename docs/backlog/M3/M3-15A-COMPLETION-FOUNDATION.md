@@ -1,7 +1,7 @@
 # M3-15A: Replacement completion foundation
 
 **Status:** in development — Tier 1 dispatch approved by the product owner on
-20 August 2026 against this contract, and dispatched to a builder the same day
+29 August 2026 against this contract, and dispatched to a builder the same day
 on branch `ticket/m3-15a-completion-foundation`.
 
 **Triage:** ready-for-agent
@@ -14,10 +14,10 @@ on branch `ticket/m3-15a-completion-foundation`.
 and a change to two accepted M3-14 privileged functions.
 
 **Depends on:** [M3-14B](M3-14B-RECURRING-SERIES-SURFACE.md) accepted and
-merged (`b49c58d`), and the 20 August 2026 owner-mutable-completion amendments
+merged (`b49c58d`), and the 29 August 2026 owner-mutable-completion amendments
 to [F-005](../../product/F-005-ROLLING-TRAINING-PLAN.md#recorded-amendments)
 and
-[ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md#recorded-amendment-to-decisions-2-and-4-20-august-2026).
+[ADR-013](../../decisions/ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md#recorded-amendment-to-decisions-2-and-4).
 
 **Blocks:** [M3-15](M3-15-REPLACEMENT-CONSUMER-READINESS.md) and every later
 F-005 replacement slice.
@@ -138,7 +138,7 @@ shape, and what this ticket knowingly leaves open.
 
 ### Decisions behind the shape
 
-**Why there is no revision chain.** The product owner decided on 20 August 2026
+**Why there is no revision chain.** The product owner decided on 29 August 2026
 that a completion is one editable record. The evidence was that the retired
 chain had no consumer: ADR-013 decision 2 already sent the coach the current
 head and never the trail, and F-005's Review history never asked to show an

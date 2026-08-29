@@ -10,9 +10,9 @@ write boundary: an owner-derived `SECURITY DEFINER` function with an empty
 composite receipt type, and the `PT409` stale-write conflict transport carried
 without retry. `apply_rolling_plan_change_set`, `apply_saved_session_change`,
 and M3-15A's completion write all follow it. The immutable-history half of
-this ADR does **not** carry forward to completions: see the 20 August 2026
+this ADR does **not** carry forward to completions: see the 29 August 2026
 amendment in
-[ADR-013](ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md#recorded-amendment-to-decisions-2-and-4-20-august-2026)
+[ADR-013](ADR-013-AI-TRAINING-HISTORY-ELIGIBILITY.md#recorded-amendment-to-decisions-2-and-4)
 and its matching F-005 amendment.
 
 **Date:** 28 July 2026
