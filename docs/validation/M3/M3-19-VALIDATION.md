@@ -220,6 +220,11 @@ green over `1e12dce`, and run `33276894567` green over `437d470`. Neither
 covers the correction above, so a fresh green run is required before
 re-review.
 
+Every commit after `d422f81` on this branch changes only this record and its
+index — a record cannot carry the SHA of the commit that adds it, so the run
+will land on a later head. `git diff --name-only d422f81..<head>` is the
+reconciliation, and it is one command.
+
 What the builder observed locally while developing, against the local Supabase
 stack with every migration applied from zero:
 
