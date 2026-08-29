@@ -1,7 +1,8 @@
 # M3-15A: Replacement completion foundation
 
-**Status:** approved for implementation — Tier 1 dispatch approved by the
-product owner on 20 August 2026 against this contract.
+**Status:** in development — Tier 1 dispatch approved by the product owner on
+20 August 2026 against this contract, and dispatched to a builder the same day
+on branch `ticket/m3-15a-completion-foundation`.
 
 **Triage:** ready-for-agent
 
