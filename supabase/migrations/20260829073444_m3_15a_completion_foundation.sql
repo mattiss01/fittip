@@ -115,7 +115,7 @@ create table public.completions (
 -- The factual counterpart of a planned activity. It carries the values as they
 -- were performed, not a live link to a plan activity: a plan activity is
 -- replaced wholesale by an edit, so a reference to one would dangle or lie.
-create table public.completed_activities (
+create table public.completion_activities (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null,
   completion_id uuid not null,
@@ -128,29 +128,29 @@ create table public.completed_activities (
   actual_measurement jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint completed_activities_owner_key unique (id, user_id),
-  constraint completed_activities_completion_fkey
+  constraint completion_activities_owner_key unique (id, user_id),
+  constraint completion_activities_completion_fkey
     foreign key (completion_id, user_id)
     references public.completions (id, user_id) on delete cascade,
-  constraint completed_activities_personal_fkey
+  constraint completion_activities_personal_fkey
     foreign key (personal_activity_id, user_id)
     references public.personal_activities (id, user_id),
-  constraint completed_activities_order_key unique (completion_id, position),
-  constraint completed_activities_position_check
+  constraint completion_activities_order_key unique (completion_id, position),
+  constraint completion_activities_position_check
     check (position between 0 and 99),
-  constraint completed_activities_name_check
+  constraint completion_activities_name_check
     check (char_length(trim(name)) between 1 and 120),
-  constraint completed_activities_sport_check
+  constraint completion_activities_sport_check
     check (char_length(trim(sport)) between 1 and 80),
-  constraint completed_activities_instructions_check
+  constraint completion_activities_instructions_check
     check (instructions is null or char_length(instructions) <= 2000),
-  constraint completed_activities_measurement_mode_check check (
+  constraint completion_activities_measurement_mode_check check (
     measurement_mode in (
       'sets_reps_load', 'time_distance_pace', 'duration_intensity',
       'skill_repetitions', 'custom'
     )
   ),
-  constraint completed_activities_measurement_check
+  constraint completion_activities_measurement_check
     check (public.is_valid_training_measurement(
       measurement_mode, actual_measurement))
 );
@@ -171,28 +171,28 @@ create index completions_owner_date_idx
 create index completions_plan_session_idx
   on public.completions (plan_session_id, user_id)
   where plan_session_id is not null;
-create index completed_activities_owner_completion_idx
-  on public.completed_activities (user_id, completion_id, position);
-create index completed_activities_personal_idx
-  on public.completed_activities (personal_activity_id, user_id)
+create index completion_activities_owner_completion_idx
+  on public.completion_activities (user_id, completion_id, position);
+create index completion_activities_personal_idx
+  on public.completion_activities (personal_activity_id, user_id)
   where personal_activity_id is not null;
 
 alter table public.completions enable row level security;
-alter table public.completed_activities enable row level security;
+alter table public.completion_activities enable row level security;
 
 revoke all privileges on table public.completions
   from public, anon, authenticated, service_role;
-revoke all privileges on table public.completed_activities
+revoke all privileges on table public.completion_activities
   from public, anon, authenticated, service_role;
 
 -- Owners read their own history directly. Every write arrives through the
 -- owner-derived transaction in section 3, so no client presents an owner id.
 grant select on table public.completions to authenticated;
-grant select on table public.completed_activities to authenticated;
+grant select on table public.completion_activities to authenticated;
 
 create policy completions_owner_select on public.completions
   for select to authenticated using ((select auth.uid()) = user_id);
-create policy completed_activities_owner_select on public.completed_activities
+create policy completion_activities_owner_select on public.completion_activities
   for select to authenticated using ((select auth.uid()) = user_id);
 
 -- 2. What no update may ever move ---------------------------------------------
@@ -226,7 +226,7 @@ $$;
 revoke all privileges on function public.completions_reject_immutable_change()
   from public, anon, authenticated, service_role;
 
-create function public.completed_activities_reject_immutable_change()
+create function public.completion_activities_reject_immutable_change()
 returns trigger
 language plpgsql
 security invoker
@@ -243,7 +243,7 @@ begin
 end;
 $$;
 
-revoke all privileges on function public.completed_activities_reject_immutable_change()
+revoke all privileges on function public.completion_activities_reject_immutable_change()
   from public, anon, authenticated, service_role;
 
 create trigger completions_immutable_facts
@@ -251,10 +251,10 @@ create trigger completions_immutable_facts
   for each row
   execute function public.completions_reject_immutable_change();
 
-create trigger completed_activities_immutable_facts
-  before update on public.completed_activities
+create trigger completion_activities_immutable_facts
+  before update on public.completion_activities
   for each row
-  execute function public.completed_activities_reject_immutable_change();
+  execute function public.completion_activities_reject_immutable_change();
 
 -- 3. The owner-derived write --------------------------------------------------
 
@@ -264,7 +264,7 @@ create type public.completion_receipt as (
   result text
 );
 
-create function public.completed_activity_input_is_valid(p_value jsonb)
+create function public.completion_activity_input_is_valid(p_value jsonb)
 returns boolean
 language plpgsql
 stable
@@ -318,7 +318,7 @@ exception when others then return false;
 end;
 $$;
 
-revoke all privileges on function public.completed_activity_input_is_valid(jsonb)
+revoke all privileges on function public.completion_activity_input_is_valid(jsonb)
   from public, anon, authenticated, service_role;
 
 -- The whole payload, validated before anything is locked or written. A create
@@ -441,7 +441,7 @@ begin
     for v_activity in
       select value from pg_catalog.jsonb_array_elements(p_value->'activities')
     loop
-      if not public.completed_activity_input_is_valid(v_activity) then
+      if not public.completion_activity_input_is_valid(v_activity) then
         return false;
       end if;
       if (v_activity->>'position')::integer = any(v_positions) then
@@ -567,7 +567,7 @@ begin
         raise exception using errcode = '22023',
           message = 'Invalid completed activity.';
       end if;
-      insert into public.completed_activities (
+      insert into public.completion_activities (
         user_id, completion_id, personal_activity_id, position, name, sport,
         instructions, measurement_mode, actual_measurement, created_at, updated_at
       ) values (

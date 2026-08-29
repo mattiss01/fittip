@@ -124,12 +124,12 @@ select is(
 -- Structure ------------------------------------------------------------------
 
 select has_table('public', 'completions', 'the schema persists factual completions');
-select has_table('public', 'completed_activities', 'a completion carries its own activity snapshot');
+select has_table('public', 'completion_activities', 'a completion carries its own activity snapshot');
 select col_not_null('public', 'completions', 'user_id', 'every completion has a required owner');
 select col_not_null('public', 'completions', 'status', 'every completion has a required status');
 select col_not_null('public', 'completions', 'actual_local_date', 'every completion has a required owner-local date');
 select col_not_null('public', 'completions', 'timezone_name', 'every completion records the zone its date was written in');
-select col_not_null('public', 'completed_activities', 'user_id', 'every completed activity has a required owner');
+select col_not_null('public', 'completion_activities', 'user_id', 'every completed activity has a required owner');
 
 select ok(
   (select count(*) = 0 from pg_attribute
@@ -158,16 +158,16 @@ select ok(
 );
 select ok(
   (select count(*) = 1 from pg_constraint
-   where conrelid = 'public.completed_activities'::regclass
-     and conname = 'completed_activities_completion_fkey'
+   where conrelid = 'public.completion_activities'::regclass
+     and conname = 'completion_activities_completion_fkey'
      and confrelid = 'public.completions'::regclass
      and confdeltype = 'c'),
   'removing a completion removes its own activity snapshot and nothing else'
 );
 select ok(
   (select count(*) = 1 from pg_constraint
-   where conrelid = 'public.completed_activities'::regclass
-     and conname = 'completed_activities_personal_fkey'
+   where conrelid = 'public.completion_activities'::regclass
+     and conname = 'completion_activities_personal_fkey'
      and confrelid = 'public.personal_activities'::regclass),
   'a completed activity may only reference the same owner personal activity'
 );
@@ -175,7 +175,7 @@ select ok(
   (select count(*) = 0 from pg_constraint
    where contype = 'f'
      and conrelid in (
-       'public.completions'::regclass, 'public.completed_activities'::regclass)
+       'public.completions'::regclass, 'public.completion_activities'::regclass)
      and confrelid = 'public.rolling_plan_activities'::regclass),
   'nothing points at a live plan activity, which an edit replaces wholesale'
 );
@@ -191,9 +191,9 @@ select has_index('public', 'completions', 'completions_plan_session_idx',
   'the planned-session foreign key is indexed');
 select has_index('public', 'completions', 'completions_plan_session_key',
   'a planned session can carry at most one completion');
-select has_index('public', 'completed_activities', 'completed_activities_owner_completion_idx',
+select has_index('public', 'completion_activities', 'completion_activities_owner_completion_idx',
   'a completion activities have an owner-scoped ordered access path');
-select has_index('public', 'completed_activities', 'completed_activities_personal_idx',
+select has_index('public', 'completion_activities', 'completion_activities_personal_idx',
   'the personal-activity foreign key is indexed');
 
 -- Privileges and policies ----------------------------------------------------
@@ -201,7 +201,7 @@ select has_index('public', 'completed_activities', 'completed_activities_persona
 select ok(
   (select relrowsecurity from pg_class where oid = 'public.completions'::regclass)
   and (select relrowsecurity from pg_class
-       where oid = 'public.completed_activities'::regclass),
+       where oid = 'public.completion_activities'::regclass),
   'RLS is enabled on both completion tables'
 );
 select ok(
@@ -212,26 +212,26 @@ select ok(
   'owners read their history directly but can only write it through the change function'
 );
 select ok(
-  has_table_privilege('authenticated', 'public.completed_activities', 'SELECT')
-  and not has_table_privilege('authenticated', 'public.completed_activities', 'INSERT')
-  and not has_table_privilege('authenticated', 'public.completed_activities', 'UPDATE')
-  and not has_table_privilege('authenticated', 'public.completed_activities', 'DELETE'),
+  has_table_privilege('authenticated', 'public.completion_activities', 'SELECT')
+  and not has_table_privilege('authenticated', 'public.completion_activities', 'INSERT')
+  and not has_table_privilege('authenticated', 'public.completion_activities', 'UPDATE')
+  and not has_table_privilege('authenticated', 'public.completion_activities', 'DELETE'),
   'the same holds for the activities of a completion'
 );
 select ok(
   not has_table_privilege('anon', 'public.completions', 'SELECT')
-  and not has_table_privilege('anon', 'public.completed_activities', 'SELECT'),
+  and not has_table_privilege('anon', 'public.completion_activities', 'SELECT'),
   'anonymous callers hold no completion privilege'
 );
 select ok(
   not has_table_privilege('service_role', 'public.completions', 'SELECT')
-  and not has_table_privilege('service_role', 'public.completed_activities', 'SELECT'),
+  and not has_table_privilege('service_role', 'public.completion_activities', 'SELECT'),
   'no service role privilege is introduced on the completion tables'
 );
 select is(
   (select count(*)::bigint from pg_policies
    where schemaname = 'public'
-     and tablename in ('completions', 'completed_activities')),
+     and tablename in ('completions', 'completion_activities')),
   2::bigint,
   'each completion table carries exactly one owner select policy and no mutation policy'
 );
@@ -239,7 +239,7 @@ select ok(
   (select bool_and(qual = '(( SELECT auth.uid() AS uid) = user_id)')
    from pg_policies
    where schemaname = 'public'
-     and tablename in ('completions', 'completed_activities')),
+     and tablename in ('completions', 'completion_activities')),
   'both policies confine reads to the calling owner'
 );
 select ok(
@@ -269,7 +269,7 @@ select ok(
   and not has_function_privilege('anon',
     'public.completion_input_is_valid(jsonb, text)', 'EXECUTE')
   and not has_function_privilege('authenticated',
-    'public.completed_activity_input_is_valid(jsonb)', 'EXECUTE'),
+    'public.completion_activity_input_is_valid(jsonb)', 'EXECUTE'),
   'the internal validators are reachable from no client role'
 );
 
@@ -326,11 +326,11 @@ select throws_ok(
   'direct authenticated insertion of a completion is denied'
 );
 select throws_ok(
-  $$insert into public.completed_activities (
+  $$insert into public.completion_activities (
       user_id, completion_id, position, name, sport, measurement_mode)
     values ('7f000000-0000-4000-8000-000000000001',
       '7f000000-0000-4000-8000-0000000000ff', 0, 'Direct', 'Running', 'custom')$$,
-  '42501', 'permission denied for table completed_activities',
+  '42501', 'permission denied for table completion_activities',
   'direct authenticated insertion of a completed activity is denied'
 );
 
@@ -384,13 +384,13 @@ select is(
   (select name from completion_zone),
   'the record carries the zone its local date was written in');
 select is(
-  (select count(*)::bigint from public.completed_activities),
+  (select count(*)::bigint from public.completion_activities),
   1::bigint,
   'the activity snapshot is written with the completion');
 select ok(
   (select personal_activity_id = '7f000000-0000-4000-8000-0000000000a1'::uuid
      and actual_measurement = '{"duration_minutes":58,"intensity":"easy"}'::jsonb
-   from public.completed_activities),
+   from public.completion_activities),
   'a completed activity keeps its owner personal-activity reference and measured value');
 
 select is(
@@ -471,7 +471,7 @@ select ok(
    where id = (select completion_id from logged where label = 'first')),
   'an edit replaces the whole record rather than merging into it');
 select is(
-  (select count(*)::bigint from public.completed_activities),
+  (select count(*)::bigint from public.completion_activities),
   1::bigint,
   'and it leaves the activity snapshot exactly as it was written');
 
@@ -675,7 +675,7 @@ select is(
   (select count(*)::bigint from public.completions), 0::bigint,
   'another owner reads no completion');
 select is(
-  (select count(*)::bigint from public.completed_activities), 0::bigint,
+  (select count(*)::bigint from public.completion_activities), 0::bigint,
   'and no completed activity');
 select throws_ok(
   $$select * from public.apply_completion_change('create', null, null,
@@ -727,7 +727,7 @@ select throws_ok(
   '42501', 'What a completion was measured against cannot be rewritten.',
   'the recorded zone stays put when the profile zone moves');
 select throws_ok(
-  format($$update public.completed_activities set user_id = %L$$,
+  format($$update public.completion_activities set user_id = %L$$,
     '7f000000-0000-4000-8000-000000000002'),
   '42501', 'A completed activity cannot change owner or completion.',
   'no path may move a completed activity to another owner');

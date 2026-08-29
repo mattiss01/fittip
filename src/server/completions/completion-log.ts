@@ -34,7 +34,7 @@ export const COMPLETION_FEELINGS = [
 export type CompletionFeeling = (typeof COMPLETION_FEELINGS)[number];
 
 /** What one activity of a session actually was. */
-export type CompletedActivity = {
+export type CompletionActivity = {
   personalActivityId?: string;
   position: number;
   name: string;
@@ -97,7 +97,7 @@ export type CompletionFacts = {
 export type CompletionDraft = CompletionFacts & {
   /** Absent exactly when the status is `unplanned`. */
   planSessionId?: string;
-  activities: CompletedActivity[];
+  activities: CompletionActivity[];
 };
 
 export type Completion = CompletionFacts & {
@@ -115,7 +115,7 @@ export type Completion = CompletionFacts & {
    * chain: no prior version is retained and none can be browsed.
    */
   revision: number;
-  activities: CompletedActivity[];
+  activities: CompletionActivity[];
   updatedAt: string;
 };
 
@@ -303,7 +303,7 @@ function parseFacts(value: unknown): CompletionFacts {
   };
 }
 
-function parseActivity(value: unknown): CompletedActivity {
+function parseActivity(value: unknown): CompletionActivity {
   const record = readRecord(value);
   assertOnlyKeys(record, [
     "personalActivityId",

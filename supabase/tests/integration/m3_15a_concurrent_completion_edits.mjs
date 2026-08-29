@@ -122,7 +122,7 @@ try {
     "another owner reads no completion",
   );
   assert.deepEqual(
-    await get(outsider.token, "/rest/v1/completed_activities?select=id"),
+    await get(outsider.token, "/rest/v1/completion_activities?select=id"),
     [],
     "and no completed activity",
   );

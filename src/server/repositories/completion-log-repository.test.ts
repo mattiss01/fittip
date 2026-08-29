@@ -66,7 +66,7 @@ function storedRow(overrides: Record<string, unknown> = {}) {
     planned_snapshot: PLANNED_SNAPSHOT,
     revision: 1,
     updated_at: "2026-08-20T07:00:00.000Z",
-    completed_activities: [],
+    completion_activities: [],
     ...overrides,
   };
 }
@@ -269,7 +269,7 @@ describe("PostgresCompletionLogAdapter", () => {
       eq: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({
         data: storedRow({
-          completed_activities: [
+          completion_activities: [
             {
               personal_activity_id: null,
               position: 0,

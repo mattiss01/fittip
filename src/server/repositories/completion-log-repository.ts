@@ -20,7 +20,7 @@ import {
   COMPLETION_FEELINGS,
   COMPLETION_STATUSES,
   type Completion,
-  type CompletedActivity,
+  type CompletionActivity,
   type CompletionChange,
   type CompletionLogAdapter,
   type CompletionPlannedActivity,
@@ -40,7 +40,7 @@ const COMPLETION_COLUMNS = `
   actual_started_at, duration_minutes, perceived_effort, feeling, note,
   replacement_description, pain_reported, illness_reported, injury_reported,
   severe_fatigue_reported, planned_snapshot, revision, updated_at,
-  completed_activities (
+  completion_activities (
     personal_activity_id, position, name, sport, instructions,
     measurement_mode, actual_measurement
   )
@@ -163,7 +163,7 @@ function toArguments(change: CompletionChange) {
 
 function parseCompletion(value: unknown): Completion {
   const completion = readRecord(value);
-  const activities = completion.completed_activities;
+  const activities = completion.completion_activities;
   if (
     !isUuid(completion.id) ||
     !(
@@ -241,7 +241,7 @@ function parseCompletion(value: unknown): Completion {
     revision: completion.revision,
     updatedAt: completion.updated_at,
     activities: activities
-      .map(parseCompletedActivity)
+      .map(parseCompletionActivity)
       .toSorted((left, right) => left.position - right.position),
   };
 }
@@ -304,7 +304,7 @@ function parsePlannedActivity(value: unknown): CompletionPlannedActivity {
   };
 }
 
-function parseCompletedActivity(value: unknown): CompletedActivity {
+function parseCompletionActivity(value: unknown): CompletionActivity {
   const activity = readMeasuredActivity(value, "actual_measurement");
   return {
     ...activity.identity,

@@ -87,7 +87,7 @@ export type Database = {
           },
         ];
       };
-      completed_activities: {
+      completion_activities: {
         Row: {
           actual_measurement: Json | null;
           completion_id: string;
@@ -132,14 +132,14 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "completed_activities_completion_fkey";
+            foreignKeyName: "completion_activities_completion_fkey";
             columns: ["completion_id", "user_id"];
             isOneToOne: false;
             referencedRelation: "completions";
             referencedColumns: ["id", "user_id"];
           },
           {
-            foreignKeyName: "completed_activities_personal_fkey";
+            foreignKeyName: "completion_activities_personal_fkey";
             columns: ["personal_activity_id", "user_id"];
             isOneToOne: false;
             referencedRelation: "personal_activities";
@@ -2019,7 +2019,7 @@ export type Database = {
           isSetofReturn: false;
         };
       };
-      completed_activity_input_is_valid: {
+      completion_activity_input_is_valid: {
         Args: { p_value: Json };
         Returns: boolean;
       };
