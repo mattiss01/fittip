@@ -154,8 +154,9 @@ async function renderForm(
     }
 
     if (plannedSessionId !== null) {
-      // Bounded by the day the link named, so a session id on its own can
-      // never be used to sweep the plan for what exists.
+      // One day rather than the whole window. The slice is owner-scoped
+      // either way, so this is not an access control; it keeps the read small
+      // and the not-found state specific to the day the link named.
       const slice = await (await createRollingPlan()).getPlanSlice(date, date);
       const session = slice.sessions.find(
         (candidate) => candidate.id === plannedSessionId,

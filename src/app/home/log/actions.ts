@@ -141,11 +141,13 @@ export async function logCompletionAction(
 }
 
 /**
- * The planned session must actually sit on the day the form was opened for.
- * Row Level Security and the write function both confine this to the owner
- * already; this repeats the ownership predicate at the surface and bounds the
- * lookup by the one date, so a forged id cannot be probed against the whole
- * plan.
+ * A pre-check, not an access control. Ownership is enforced by Row Level
+ * Security, by the owner-scoped slice this reads, and by the write function
+ * re-deriving the owner; this adds to none of them, because the date it bounds
+ * by is the caller's own `plannedDate` and so confines nothing the caller does
+ * not already choose. What it buys is copy: a session moved or deleted between
+ * opening the form and saving is reported as that, rather than as the generic
+ * validation failure a foreign-key violation would surface.
  */
 async function assertSessionOnDay(sessionId: string, localDate: string) {
   const slice = await (
