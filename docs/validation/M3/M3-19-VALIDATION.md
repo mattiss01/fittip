@@ -1,26 +1,34 @@
 # M3-19 validation: delete a planned session
 
 **Ticket:** [M3-19](../../backlog/M3/M3-19-DELETE-A-PLANNED-SESSION.md)
-**Status:** testable — correction round 3 complete, and the last planned
-round. Round 1 rejected `1e12dce` on one blocking finding, which the product
-owner resolved by accepting the behavior and requiring the surface to describe
-it honestly. Rounds 2 and 3 each approved with findings and no blocking defect,
-and each set is closed in the commit below it. The founder migration is
-applied. A fresh CI run, re-review, a fresh Preview and product-owner
-acceptance are outstanding.
+**Status:** testable — through five review rounds. Round 1 rejected `1e12dce`
+on one blocking finding, which the product owner resolved by accepting the
+behavior and requiring the surface to describe it honestly. Rounds 2 to 5 each
+approved with findings and no blocking defect, and each round's findings are
+closed in the commits above the target it reviewed; whether a sixth round
+follows is the reviewer's to decide. The founder migration is applied. A fresh
+CI run, re-review, a fresh Preview and product-owner acceptance are
+outstanding.
 **Tier:** 1
 **Branch:** `ticket/m3-19-delete-a-planned-session`
 **Base:** `37529e20ea373034d7ede6b64e0b6dfde8d5e940`
-**Implementation review target:** `f2f71081788ed225a800479fa5ad76371fd7c07c`
+**Implementation review target:** `368f78caf6b21eb0aa1b4483a976f463591c91e3`
 **Review range:**
-`git diff 37529e20ea373034d7ede6b64e0b6dfde8d5e940..f2f71081788ed225a800479fa5ad76371fd7c07c`
+`git diff 37529e20ea373034d7ede6b64e0b6dfde8d5e940..368f78caf6b21eb0aa1b4483a976f463591c91e3`
 **Superseded targets:** `1e12dce8a5be752fac55525074c2e15da0e8710c` rejected in
-round 1, `437d47078cea73a908c65d5d30fd09ee2428bfff` approved in round 2, and
-`d422f81675968f32cbe7240ffd8c392551b5cac3` approved in round 3. The round 3
-correction range is
-`git diff d422f81675968f32cbe7240ffd8c392551b5cac3..f2f71081788ed225a800479fa5ad76371fd7c07c`,
-which also carries the two round 2 record commits that sit between them; the
-round 3 source change is `f2f7108` alone.
+round 1, `437d47078cea73a908c65d5d30fd09ee2428bfff` approved in round 2,
+`d422f81675968f32cbe7240ffd8c392551b5cac3` approved in round 3,
+`f2f71081788ed225a800479fa5ad76371fd7c07c` approved in round 4, and
+`873e5e182f2fbd665434f0925ee1cfeb72315e61` approved in round 5. Each correction
+range runs from one target to the next and carries the record commits sitting
+between them, so the source change inside it is smaller than the range itself:
+round 3's is `f2f7108` alone
+(`git diff d422f81675968f32cbe7240ffd8c392551b5cac3..f2f71081788ed225a800479fa5ad76371fd7c07c`),
+round 4's is `41fcbc0` alone and moves a comment
+(`git diff f2f71081788ed225a800479fa5ad76371fd7c07c..41fcbc0db5e275fc2a2e0ea5376ad0a985073a97`),
+and round 5's changes no source file at all
+(`git diff 873e5e182f2fbd665434f0925ee1cfeb72315e61..368f78caf6b21eb0aa1b4483a976f463591c91e3`,
+plus the record-only commits that follow it).
 
 Implementation commits, in order:
 
@@ -35,6 +43,7 @@ Implementation commits, in order:
 | `437d47078cea73a908c65d5d30fd09ee2428bfff` | **Review correction round 1.** Honest copy and a toast for the accepted occurrence refill, and the contract test that pins it. |
 | `d422f81675968f32cbe7240ffd8c392551b5cac3` | **Review correction round 2.** The divergence loss the occurrence warning omitted, the real name of the control it points at, and coverage of the unknown refill branch. |
 | `f2f71081788ed225a800479fa5ad76371fd7c07c` | **Review correction round 3.** The occurrence warning is now conditioned on the rule date the materializer will actually refill, so it stops promising a refill that will not happen and stops naming a control that is not rendered. |
+| `41fcbc0db5e275fc2a2e0ea5376ad0a985073a97` | **Review correction round 4.** The `DeleteSession` docblock, which round 3 left stranded on `occurrenceOf` when it inserted two helpers beneath it, is back on the component it describes. Comment placement only; no executable line moved. |
 
 ## Delivered behavior
 
@@ -116,15 +125,17 @@ token. See known limitations.
 
 ## Changed files
 
-Exact base-to-implementation stat, base to `f2f7108`:
+Exact base-to-implementation stat, base to `368f78c`:
 
 ```text
  .github/workflows/ci.yml                           |  10 +
- docs/validation/M3/M3-19-VALIDATION.md             | 483 +++++++++++++++
+ docs/validation/M3/M3-19-VALIDATION.md             | 679 +++++++++++++++++++++
  .../M3/evidence/M3-19-card-verbs-390x844.png       | Bin 0 -> 114936 bytes
- .../M3/evidence/M3-19-founder-migration-runbook.md | 203 +++++++
+ .../M3-19-founder-migration-list-before.txt        |  33 +
+ .../M3/evidence/M3-19-founder-migration-push.txt   |  30 +
+ .../M3/evidence/M3-19-founder-migration-runbook.md | 203 ++++++
  .../M3/evidence/M3-19-logged-refusal-390x844.png   | Bin 0 -> 105571 bytes
- docs/validation/README.md                          |  19 +
+ docs/validation/README.md                          |  23 +
  e2e/m3-12-plan.spec.ts                             |   6 +-
  e2e/m3-14b-recurring-series.spec.ts                |   4 +-
  e2e/m3-19-delete-session.spec.ts                   | 316 ++++++++++
@@ -132,7 +143,7 @@ Exact base-to-implementation stat, base to `f2f7108`:
  src/app/home/plan/action-state.ts                  |  10 +-
  src/app/home/plan/actions.test.ts                  | 150 +++++
  src/app/home/plan/actions.ts                       | 151 ++++-
- src/app/home/plan/plan-manager.test.tsx            | 167 +++++-
+ src/app/home/plan/plan-manager.test.tsx            | 167 ++++-
  src/app/home/plan/plan-manager.tsx                 | 188 +++++-
  src/app/home/plan/plan.module.css                  |  21 +-
  src/app/home/plan/recurring-session-controls.tsx   |  49 +-
@@ -141,11 +152,14 @@ Exact base-to-implementation stat, base to `f2f7108`:
  src/server/rolling-plan/rolling-plan-contract.ts   | 186 +++++-
  src/server/rolling-plan/rolling-plan.test.ts       |   2 +
  src/server/rolling-plan/rolling-plan.ts            |  17 +-
- ...260829135426_m3_19_delete_a_planned_session.sql | 656 +++++++++++++++++++++
+ ...260829135426_m3_19_delete_a_planned_session.sql | 656 ++++++++++++++++++++
  .../m3_19_delete_a_planned_session.test.sql        | 555 +++++++++++++++++
  .../m3_10_rolling_plan_postgres.test.ts            |  16 +
- 25 files changed, 3200 insertions(+), 55 deletions(-)
+ 27 files changed, 3463 insertions(+), 55 deletions(-)
 ```
+
+That stat counts this record as it stood at `368f78c`; the record-only commits
+that close round 5 add to its own row after that point.
 
 Purpose notes for paths whose role is not evident from the path and diff:
 
@@ -187,6 +201,10 @@ Purpose notes for paths whose role is not evident from the path and diff:
   `occurrenceHasFutureRuleDate` as of round 3. It was the local `canChangeFuture`
   computation and is now shared with the Delete warning, which is what stops the
   warning naming a series-removal control the same predicate has withheld.
+- `docs/validation/M3/evidence/M3-19-founder-migration-list-before.txt` and
+  `M3-19-founder-migration-push.txt` are the unedited Supabase CLI output the
+  hosted-migration section below quotes, captured so its history-alignment
+  claim can be rechecked rather than taken on trust.
 
 Nothing was deleted or renamed.
 
@@ -408,7 +426,7 @@ Evidence CI does not produce:
 
 ## Independent reviewer focus
 
-Review exact implementation `f2f71081788ed225a800479fa5ad76371fd7c07c`
+Review exact implementation `368f78caf6b21eb0aa1b4483a976f463591c91e3`
 against base `37529e20ea373034d7ede6b64e0b6dfde8d5e940`, reconcile the manifest
 above, and confirm the fresh CI run for that SHA is green and its Vercel
 Preview reached `READY`. Do not re-run
@@ -442,6 +460,26 @@ The judgment CI cannot supply:
   `series_id` null, a non-null `local_date`, the before state, and the same
   after-state shape `rolling_plan_sweep_series_occurrences` writes. Confirm no
   new change kind and no constraint change was smuggled in.
+- **Correction round 5 (no source change).** Six findings, none behavioral and
+  all against this record. The lead closed four in `368f78c`: the founder
+  migration alignment check had anchored its grep on the capture's Local
+  column and so compared the repository with itself, the new Results row's
+  reconciliation names two files rather than one, the evidence-directory
+  sentence is reworded to the property that matters, and M3-22 is linked. The
+  builder closed two: this header, manifest and checklist, which still named
+  round 3 as the last round and `f2f7108` as the target; and the
+  delivered-behavior paragraph, which keyed the refill on today alone when
+  `occurrenceHasFutureRuleDate` also requires the date to sit inside the series
+  segment. Judge that paragraph against all three of the predicate's
+  conditions, not the one it used to name.
+- **Correction round 4 (`41fcbc0`).** The only source change is where a comment
+  sits: round 3 inserted `occurrenceOf` and `deleteScope` between the
+  `DeleteSession` docblock and the component, and this moves it back.
+  `git show 41fcbc0` is one file and two hunks, and no line in it is outside a
+  comment block. The record corrections are the `plan-manager.test.tsx` row in
+  the tests table, which now describes all three delete scopes and the test
+  round 3 added for the settled one, and the delivered-behavior paragraph,
+  which round 5 corrected again.
 - **Correction round 3 (`f2f7108`).** The only behavioral change is which
   warning an occurrence card shows. Judge whether `occurrenceHasFutureRuleDate`
   is the right predicate for both of its callers, whether the settled-occurrence
