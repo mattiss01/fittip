@@ -79,17 +79,20 @@ Delete control too.
 
 **Whether deleting one occurrence of a recurring series keeps it deleted
 depends on the occurrence's rule date**, and the surface says which case the
-owner is in. While that date is still ahead, the delete does not stick: the
-top-up that follows every plan change sees the date uncovered and writes the
-occurrence back in the same request, so deleting a cancelled occurrence brings
-it back active. That is an accepted product decision of 29 August 2026,
-described in limitation 1 and carried by the Delete disclosure's own copy and
-by the toast. Once the rule date has fallen behind today — reachable by moving
-an occurrence forward and waiting a day — nothing refills it, because the
-materializer covers only `today .. today + 13`. There the delete is as
-permanent as a one-off's, and the copy says so instead, naming no escape
-control, because the same predicate that settles the scope has withheld the one
-the refill warning quotes.
+owner is in. While that date is still one the series fills — at or after today,
+at or after the segment's start date, and not past its end date if it has one
+— the delete does not stick: the top-up that follows every plan change sees the
+date uncovered and writes the occurrence back in the same request, so deleting
+a cancelled occurrence brings it back active. That is an accepted product
+decision of 29 August 2026, described in limitation 1 and carried by the Delete
+disclosure's own copy and by the toast. Let any one of those three conditions
+fail — the date behind today, reachable by moving an occurrence forward and
+waiting a day, or outside the segment, reachable by a locked occurrence
+surviving past the end date its series was later given — and nothing refills
+it, because the materializer writes only dates its segment covers, inside
+`today .. today + 13`. There the delete is as permanent as a one-off's, and the
+copy says so instead, naming no escape control, because the same predicate that
+settles the scope has withheld the one the refill warning quotes.
 
 ## Mobile demo path
 
