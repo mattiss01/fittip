@@ -346,9 +346,9 @@ Evidence CI does not produce:
 
 ## Known limitations
 
-1. **Deleting a recurring occurrence does not keep it deleted. Accepted
-   product decision, 29 August 2026.** Materialization coverage is "a row
-   exists for this series and rule date"
+1. **Deleting a recurring occurrence the series still fills does not keep it
+   deleted. Accepted product decision, 29 August 2026.** Materialization
+   coverage is "a row exists for this series and rule date"
    (`20260819112410_m3_14_recurring_session_series.sql:1699-1703`). Cancel
    keeps the row, so cancel is stable. Delete removes it, so the date becomes
    uncovered and `topUpAfterPlanChange` — which runs after every successful
