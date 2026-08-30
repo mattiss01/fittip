@@ -1,8 +1,8 @@
 # M3-15B validation: today and logging
 
 **Ticket:** [M3-15B](../../backlog/M3/M3-15B-TODAY-AND-LOGGING.md)
-**Status:** testable — round 1 rejected; corrections below await re-review and
-product-owner acceptance.
+**Status:** testable — round 1 rejected; **round 2 independently approved on
+30 August 2026**; awaiting product-owner acceptance.
 **Tier:** 2
 **Branch:** `ticket/m3-15b-today-and-logging`
 **Base:** `8d01bb2b6c6d948a3c519ae1be32c5e13a76e3b4`
@@ -60,9 +60,13 @@ they reached the builder. None of them was disputed.
    arrangement. Reading the remainder against the real markup on the assumption
    that nothing after that line had ever run found two more defects, both also
    fixed in `40f9348`:
-   - the Plan's rail stamp reads `Recovery`, not `Recovery day`, so the
-     recovery assertion was passing only by accidentally matching the control's
-     own `Clear recovery day` label. It now asserts that flipped label.
+   - the Plan's rail stamp reads `Recovery`, not `Recovery day`. An empty
+     recovery day renders both `Clear recovery day` and `Recovery day. Nothing
+     is planned here.`, and Playwright's default case-insensitive substring
+     match takes both, so the old assertion was a two-element strict-mode
+     violation rather than a false pass. It now asserts the flipped control
+     directly. (Corrected by the lead after round 2 finding 15; the original
+     wording here named only the control label.)
    - `Completed` is a substring of `Partly completed`, so the outcome radios
      were being disambiguated by DOM order. They are anchored with
      `/^Completed/` and `/^Skipped/`.
@@ -393,10 +397,13 @@ training; corrects the first log to skipped; and finishes on the Plan asserting
 the `end_series` receipt reports `1 completed kept`. It creates a disposable
 confirmed account and deletes it in a `finally` block.
 
-**This flow has never been executed end to end.** Round 1 established that it
-aborted at step three; the locator defects are fixed, but the builder does not
-run browser flows, so the first real execution is CI's. Treat criteria 1 to 4
-as unproven in a browser until that run is green.
+**This flow has now executed end to end, once.** Round 1 established that it
+aborted at step three, and the builder does not run browser flows, so its first
+genuine execution was CI's on the round-2 tip: run
+[33329615702](https://github.com/mattiss01/fittip/actions/runs/33329615702),
+browser job green. Criteria 1 to 4 are proven in a browser as of that run.
+(This paragraph previously said the flow had never run; corrected by the lead
+when the green run existed, per the evidence-commit exception.)
 
 Changed tests:
 
@@ -422,9 +429,14 @@ Round 2 (the current target, `388b57f`):
 - The import allowlist was verified to fail when an entry is removed, so it is
   not passing vacuously.
 
-**No CI run is recorded here yet, and none can be by the builder**, which does
-not push. The lead must add the run URL for `388b57f` to this section before
-requesting re-review, and it must be green.
+**Continuous integration is green for the reviewed work.** Run
+[33329615702](https://github.com/mattiss01/fittip/actions/runs/33329615702),
+`head_sha` `7457272f179f96695a9dc436efa2185f694d3355`, conclusion `success`,
+all three jobs — `static`, `database`, and the 390px `browser` flows. That tip
+commit differs from the source target `388b57f` only by this record, so the run
+is the automated-test evidence for `388b57f` as well. The builder could not
+record this itself, since it does not push; the lead added it after the run
+existed.
 
 Any run that exists for the rejected target `8be18fe` is red, and predictably
 so: `e2e/auth.spec.ts` asserted a heading that route no longer renders, and
@@ -539,6 +551,51 @@ that to continuous integration.
    routes this ticket reopened. Dropping exactly those assertions is the
    minimum consequential change; missing the first of them was blocking
    finding 1.
+
+## Round 2 review: approved
+
+The independent reviewer approved `388b57f`, built and deployed as branch tip
+`7457272`, on 30 August 2026. It verified each round-1 finding against the diff
+rather than against the builder's claim, enumerated every `@/server/**`
+specifier across all five `rollingPlanSurface` modules to confirm the new
+import allowlist is neither vacuous nor carrying a dead entry, and confirmed
+the run's `head_sha` equals the branch ref rather than trusting the run title.
+
+It answered the four questions the lead put to it:
+
+1. **The flow's assertions now prove the criteria rather than merely passing**,
+   with two soft spots recorded as findings 13 and 14 below. Criterion 2 is the
+   strongest: the skip step asserts the `Skipped` stamp *and* `toHaveCount(0)`
+   on `Cancelled, kept on the record` for the same card, which observes the
+   "skip is not a plan operation" invariant in a browser instead of inferring
+   it. Criterion 3 is split deliberately — a browser cannot force
+   `toppedUp: false`, so that half is unit-only.
+2. **The allowlist bites**, and the two pages that moved off the strict
+   `maintenancePages` predicate are not worse off: they went from an open ban
+   to a named closed set, which is the correct replacement.
+3. **The copied safety notice is acceptable to ship.** Importing the original
+   would make a `"use client"` module a dependency of this bundle, and
+   extracting it would be a drive-by change to an accepted M2-02 surface.
+4. **Limitation 8's diagnosis is right** and the fix belongs against M3-15A.
+
+Non-blocking findings it left open, none of which gate acceptance:
+
+- **13.** The `Unplanned` stamp is asserted only by a substring of the title
+  beside it, so the record's demo step 8 claim is currently unasserted. Third
+  instance of this spec's recurring defect class.
+- **14.** The only horizontal-overflow assertion runs on `/home/plan`, a
+  surface this ticket did not change. Neither Today nor the log form is checked
+  for sideways scroll, despite Today carrying the app's one rotated element.
+- **16.** The allowlist is direct-import only. `today/page.tsx` now reaches two
+  server modules transitively through `../plan/plan-window`; no escape exists
+  today, but a relative `../../../server/…` specifier would not match the
+  `@/server/` regex.
+- **18.** The receipt is both `role="status"` and a programmatic focus target,
+  which some screen readers announce twice, and its `outline-offset` styles a
+  ring that will not render.
+
+Findings 15 and 17 were record corrections addressed to the lead and are
+applied above, at the round-1 recovery-day bullet and in `## Results`.
 
 ## Independent reviewer focus
 
