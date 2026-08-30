@@ -47,6 +47,24 @@ const rollingPlanSurface = [
   "src/app/home/log/actions.ts",
 ] as const;
 
+/**
+ * Every `@/server/**` module the reopened surface may reach. This is an
+ * allowlist rather than a pattern on purpose: the substring check below only
+ * ever proved that *one* seam import was present, so any of these modules
+ * could have imported an arbitrary additional persistence module and still
+ * passed. Two of these files also moved here from `maintenancePages`, whose
+ * predicate forbade `@/server/**` outright, so without this the move would
+ * have traded a strict check for a loose one.
+ */
+const allowedServerModules = [
+  "@/server/completions/completion-log",
+  "@/server/completions/plan-window-top-up",
+  "@/server/repositories/completion-log-repository",
+  "@/server/repositories/profile-repository",
+  "@/server/repositories/rolling-plan-repository",
+  "@/server/rolling-plan/rolling-plan",
+] as const;
+
 const legacyTables = [
   "plan_proposal_decisions",
   "plan_proposal_sources",
@@ -92,6 +110,22 @@ describe("M3-11 legacy runtime closure", () => {
       expect(source, path).not.toMatch(
         /training-record|completion-repository|plan-proposal|past-plan-protection|@\/lib\/supabase/,
       );
+    }
+  });
+
+  it("lets the reopened surface reach only allowlisted server modules", () => {
+    for (const path of rollingPlanSurface) {
+      const source = readFileSync(join(root, path), "utf8");
+      const imported = [...source.matchAll(/from "(@\/server\/[^"]+)"/g)].map(
+        (match) => match[1],
+      );
+      expect(imported.length, path).toBeGreaterThan(0);
+      for (const specifier of imported) {
+        expect(
+          allowedServerModules as readonly string[],
+          `${path} imports ${specifier}`,
+        ).toContain(specifier);
+      }
     }
   });
 
