@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import { logCompletionAction } from "./actions";
 import {
@@ -60,12 +60,28 @@ export function LogForm({ planned, existing, defaultDate, returnDate }: Props) {
   const [outcome, setOutcome] = useState<CompletionOutcome>(
     existing?.outcome ?? choices[0].value,
   );
+  const receiptHeading = useRef<HTMLHeadingElement>(null);
+  const saved = state.status === "saved";
 
-  if (state.status === "saved") {
+  // The receipt replaces the form, which takes the only live region and the
+  // focused control with it. Without this a keyboard or screen-reader user is
+  // returned to the document body with no signal that the write landed.
+  useEffect(() => {
+    if (saved) receiptHeading.current?.focus();
+  }, [saved, state.submission]);
+
+  if (saved) {
     return (
-      <section className={styles.receipt} data-log-receipt={state.result}>
+      <section
+        className={styles.receipt}
+        data-log-receipt={state.result}
+        role="status"
+        aria-live="polite"
+      >
         <p className={styles.sectionLabel}>Written</p>
-        <h2>{state.message}</h2>
+        <h2 ref={receiptHeading} tabIndex={-1}>
+          {state.message}
+        </h2>
         <p className={styles.bodyCopy}>
           Your training record is separate from your plan. Nothing on the plan
           moved because of this.

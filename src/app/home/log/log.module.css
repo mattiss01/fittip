@@ -289,6 +289,8 @@
 
 .receipt h2 {
   margin: 0;
+  /* Focused programmatically when the receipt replaces the form. */
+  outline-offset: 3px;
   font-size: 1.45rem;
   letter-spacing: -0.02em;
 }

@@ -9,8 +9,7 @@ import {
 import styles from "./today.module.css";
 
 import homeStyles from "../home.module.css";
-import { PLAN_WINDOW_DAYS } from "../plan/action-state";
-import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
+import { planWindowFor } from "../plan/plan-window";
 import type { Completion } from "@/server/completions/completion-log";
 import { readPlanWindowToppedUp } from "@/server/completions/plan-window-top-up";
 import {
@@ -90,7 +89,9 @@ export default async function TodayPage({ searchParams }: Props) {
 }
 
 async function renderDay(timezoneName: string, requested: string | null) {
-  const today = isoDateInTimezone(new Date(), timezoneName);
+  // One definition of owner-local today and of how far ahead the plan is
+  // filled, shared with the Plan surface and its writes.
+  const { today, lastDate } = planWindowFor(timezoneName);
   const date = requested ?? today;
 
   let window;
@@ -138,7 +139,7 @@ async function renderDay(timezoneName: string, requested: string | null) {
       <TodayDay
         date={date}
         today={today}
-        lastPlannedDate={shiftIsoDate(today, PLAN_WINDOW_DAYS - 1)}
+        lastPlannedDate={lastDate}
         isRecoveryDay={window.slice.recoveryDates.includes(date)}
         toppedUp={window.toppedUp}
         sessions={sessions}
