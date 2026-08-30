@@ -162,6 +162,11 @@ test.describe("M3-15B today and logging", () => {
       await expect(page.locator("[data-log-source]")).toContainText(
         "Tempo run",
       );
+      // The conservative signal handling AGENTS.md requires, in the wording
+      // M1-03 approved and M2-02 shipped.
+      await expect(
+        page.getByText(/stop training and speak to a qualified/),
+      ).toBeVisible();
       await page.getByRole("radio", { name: /^Completed/ }).check();
       await page.getByLabel("Duration (minutes)").fill("42");
       await page.getByLabel("Effort (1-10)").fill("7");

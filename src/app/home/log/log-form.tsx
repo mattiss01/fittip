@@ -6,6 +6,7 @@ import { useActionState, useState } from "react";
 import { logCompletionAction } from "./actions";
 import {
   COMPLETION_FEELING_CHOICES,
+  COMPLETION_SAFETY_NOTICE,
   COMPLETION_SIGNALS,
   INITIAL_LOG_ACTION_STATE,
   PLANNED_OUTCOMES,
@@ -243,6 +244,7 @@ export function LogForm({ planned, existing, defaultDate, returnDate }: Props) {
             <span>{signal.label}</span>
           </label>
         ))}
+        <p className={styles.safety}>{COMPLETION_SAFETY_NOTICE}</p>
       </fieldset>
 
       <div className={styles.actions}>

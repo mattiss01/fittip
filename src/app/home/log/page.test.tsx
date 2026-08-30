@@ -211,6 +211,16 @@ describe("Log", () => {
     expect(document.querySelector("[data-log-form]")).toBe(null);
   });
 
+  it("carries the established safety notice wherever a signal is reported", async () => {
+    render(await LogPage({ searchParams: Promise.resolve({}) }));
+
+    const notice = screen.getByText(/stop training and speak to a qualified/);
+    expect(notice.textContent).toContain("gives no medical advice");
+    // The four signals and the notice belong to the same fieldset, so the
+    // notice cannot be scrolled away from what it qualifies.
+    expect(notice.closest("fieldset")?.textContent).toContain("I felt pain");
+  });
+
   it("asks what was done instead only once replaced is chosen", async () => {
     render(
       await LogPage({

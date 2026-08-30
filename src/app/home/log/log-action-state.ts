@@ -90,6 +90,20 @@ export const COMPLETION_FEELING_LABELS: Record<CompletionFeelingValue, string> =
   };
 
 /**
+ * The FitTip safety notice, word for word as M1-03 approved it and M2-02
+ * shipped it on the memory surface (`src/components/memory/memory-manager.tsx`
+ * `SAFETY_NOTICE`). F-005:388 leaves that behavior unchanged, and AGENTS.md
+ * makes conservative pain, illness, injury, and severe-fatigue handling a
+ * product invariant, so the established wording is reused rather than
+ * rewritten. This is the first surface in the reset app that collects all four
+ * signals in one place. It is copied rather than imported because the memory
+ * original lives inside a client component module, and importing from there
+ * would pull that whole surface into this bundle.
+ */
+export const COMPLETION_SAFETY_NOTICE =
+  "If a symptom is severe, sudden or getting worse, stop training and speak to a qualified health professional. FitTip stores what you write here; it does not assess symptoms and gives no medical advice.";
+
+/**
  * The four signals F-005 treats conservatively. They are recorded as facts the
  * owner reported, in the owner's own words. Nothing here diagnoses, scores, or
  * advises, and nothing changes the plan because one is ticked.
@@ -118,7 +132,12 @@ export const COMPLETION_SIGNAL_STAMPS: readonly {
 export type LogActionState = {
   status: "idle" | "saved" | "validation" | "conflict" | "session" | "error";
   message: string;
-  /** Increments once per submission so a stalled reply can be keyed to it. */
+  /**
+   * Increments once per submission, so two identical replies are still
+   * distinguishable. The Plan surface keys a stall watchdog on its own
+   * counter; this surface has no watchdog yet, so nothing reads this beyond
+   * the tests. It is recorded as a known limitation rather than implied here.
+   */
   submission: number;
   result?: "created" | "updated";
   /** The day the owner returns to on Today once the write landed. */
