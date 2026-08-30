@@ -119,6 +119,8 @@ describe("Today", () => {
 
     const notice = document.querySelector('[data-today-notice="top-up"]');
     expect(notice?.textContent).toContain("not necessarily empty");
+    // The notice and an empty-day sentence beneath it would contradict.
+    expect(document.querySelector('[data-today-empty="sessions"]')).toBe(null);
   });
 
   it("says a date past the materialization window is unfilled, not empty", async () => {
@@ -132,6 +134,15 @@ describe("Today", () => {
       '[data-today-notice="beyond-window"]',
     );
     expect(notice?.textContent).toContain("unfilled rather than empty");
+    expect(document.querySelector('[data-today-empty="sessions"]')).toBe(null);
+  });
+
+  it("still says a filled day is empty when it truly is", async () => {
+    render(await TodayPage({ searchParams: Promise.resolve({}) }));
+
+    expect(
+      document.querySelector('[data-today-empty="sessions"]')?.textContent,
+    ).toBe("Nothing is planned on this day.");
   });
 
   it("stamps a logged session and links its edit instead of a second log", async () => {

@@ -149,19 +149,24 @@ export function TodayDay({
         </p>
       ) : null}
 
-      {sessions.length === 0 ? (
-        <p className={styles.empty} data-today-empty="sessions">
-          {past
-            ? "Nothing was planned on this day."
-            : "Nothing is planned on this day."}
-        </p>
-      ) : (
+      {sessions.length > 0 ? (
         <ol className={styles.sessions}>
           {sessions.map((session) => (
             <SessionCard key={session.id} date={date} session={session} />
           ))}
         </ol>
-      )}
+      ) : toppedUp && !beyondWindow ? (
+        // "Nothing planned" is a claim about the plan, and it is only true
+        // when the window this day belongs to was actually filled. When the
+        // top-up could not run, or the day is past the horizon FitTip fills
+        // ahead, the notice above is the whole answer and this sentence would
+        // contradict it.
+        <p className={styles.empty} data-today-empty="sessions">
+          {past
+            ? "Nothing was planned on this day."
+            : "Nothing is planned on this day."}
+        </p>
+      ) : null}
 
       {unattached.length === 0 ? null : (
         <section className={styles.unplanned} aria-labelledby="today-unplanned">
