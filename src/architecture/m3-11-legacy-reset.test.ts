@@ -21,13 +21,11 @@ const legacyModules = [
   "src/server/training/past-plan-protection.ts",
   "src/server/completions/completion-records.ts",
   "src/server/plan-proposal/plan-proposal-service.ts",
-  "src/app/home/log/actions.ts",
   "src/app/home/plan/proposal/actions.ts",
   "src/app/home/plan/roadmap/actions.ts",
 ] as const;
 
 const maintenancePages = [
-  "src/app/home/log/page.tsx",
   "src/app/home/progress/page.tsx",
   "src/app/home/plan/roadmap/page.tsx",
   "src/app/home/plan/proposal/page.tsx",
@@ -45,6 +43,8 @@ const rollingPlanSurface = [
   "src/app/home/plan/page.tsx",
   "src/app/home/plan/actions.ts",
   "src/app/home/today/page.tsx",
+  "src/app/home/log/page.tsx",
+  "src/app/home/log/actions.ts",
 ] as const;
 
 const legacyTables = [
