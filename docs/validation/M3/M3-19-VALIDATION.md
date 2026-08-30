@@ -383,7 +383,7 @@ Evidence CI does not produce:
    recoverable only from the `delete` change entry's before state, which no
    surface reads.
 7. **The founder migration is applied.** The product owner ran the runbook on
-   30 August 2026 and `20260829135426` is on the founder project. This entry is
+   29 August 2026 and `20260829135426` is on the founder project. This entry is
    kept rather than deleted because it was a gate: it is now met. The lead
    agent records the evidence — the pre-push history alignment and the push
    output — in its own section; this record does not restate it.
@@ -496,22 +496,62 @@ the checkable justification `AGENTS.md` requires, and it is one command.
 **Deployment:** `2d674e3`, environment `Preview`, state `success`.
 **URL:** <https://fittip-aek3em2l0-mattis-3657s-projects.vercel.app>
 
-### The hosted migration is not applied, and acceptance is blocked until it is
+### The hosted migration, applied
 
-`20260829135426_m3_19_delete_a_planned_session.sql` has **not** been applied to
-the founder project. A green CI run and a `READY` Preview do not prove a hosted
-migration ran; CI proves it against a from-zero disposable stack, and the
-Preview builds the application, not the database. Until it is applied, the
-Preview's Plan surface will offer a **Delete** control that the hosted database
-has no branch to serve.
+Recorded by the lead agent on 30 August 2026. The product owner applied
+`20260829135426_m3_19_delete_a_planned_session.sql` to the founder project
+`mahhfyxhgcmcbqkvudcm` on 29 August 2026, following
+[the runbook](evidence/M3-19-founder-migration-runbook.md). This section
+separates what is **captured** — CLI output the lead read directly — from what
+is **attested** by the product owner, because the two carry different weight
+and a reader should not have to guess which is which.
 
-The lead agent cannot apply it. `supabase link`, `db push`, and `db remote` are
-denied to the agent, the CLI login needs a TTY, and the database password is not
-readable here. [The runbook](evidence/M3-19-founder-migration-runbook.md)
-carries the exact commands and the expected result of each, in the shape M3-15A
-used: apply, confirm history aligns at all 20 positions, hosted advisors, four
-SQL checks on the one function this migration replaces, and the authenticated
-hosted delete.
+**Captured — history before the apply.** `supabase migration list --linked`
+returned 19 remote entries aligned with the repository at every position, the
+newest `20260829073444` (M3-15A), with `20260829135426` present locally and
+blank on the remote side. No remote entry the repository lacks, so no history
+drift. This is runbook step 1.2 and it is the check that matters most: it is
+what rules out someone else having written to the project.
+
+**Captured — the apply.** `supabase db push --linked` offered exactly one
+migration, `20260829135426_m3_19_delete_a_planned_session.sql`, and reported
+`Applying migration ...` followed by `Finished supabase db push.` One migration
+offered and one applied, which is what step 1.3 expects.
+
+**Captured — a warning that is not a failure.** The push emitted
+`failed to cache migrations catalog: error exporting pg-delta catalog` from a
+missing `pgdelta-target-ca.crt` inside the CLI's edge-runtime container. This is
+`pg-delta 1.0.0-alpha.27` failing to build its *diff catalog*, a convenience
+cache, after the migration had already been applied — the ordering in the output
+shows the apply completing first, and `Finished supabase db push.` is printed
+regardless. It does not affect this migration. It may make the next ticket's
+`supabase migration list` slower or noisier, and if a future run reports an
+empty or stale catalog this warning is the reason; upgrading the CLI past
+`v2.109.1` is the fix, not a repository change.
+
+**Attested by the product owner:** *"i ran the migration and all the tests of
+the runbook are working."* That covers runbook step 1.4 (history aligned at all
+20 positions after the apply), step 1.5 (hosted advisors — no new category), the
+four Part 2 SQL checks on `apply_rolling_plan_change_set` (`security definer`
+with an empty `search_path`; `EXECUTE` to `authenticated` alone; the `delete`
+branch, the explicit `cancel` branch and `PT425` all present in the deployed
+body; M3-14's four audit constraints unmoved), and the Part 3 authenticated
+hosted delete including the `delete` change entries carrying a null
+`session_id`.
+
+Under `AGENTS.md` the product owner may attest a hosted result directly and the
+lead does not repeat it. The distinction is recorded here rather than smoothed
+over so that a later reader can tell which line rests on captured output and
+which on attestation, and can ask for the missing capture if a hosted question
+ever turns on it. The two the lead would most want in the file are the
+step 1.5 advisor output and the Part 2 privilege query, since those are the two
+that speak to the security boundary rather than to behavior.
+
+**Not closable on the Preview, by design.** The `PT425` completion refusal and
+the past-dated refusal cannot be exercised by hand, because no surface can yet
+create a completion or a past-dated session. Both are proven in pgTAP, in both
+adapters, and in the local browser flow. M3-15B is the first ticket that can
+close the first of them, and it should.
 
 ### Evidence corrected during the build
 
