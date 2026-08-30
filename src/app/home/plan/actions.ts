@@ -278,9 +278,17 @@ async function occurrenceRefill(
   }
 }
 
+/**
+ * The moment the owner is looking at a session that came back is the moment
+ * they most need the way out, so the toast names the control in the words
+ * printed on it rather than describing it. It can only name it because
+ * "restored" is reachable only when the series actually refilled the date,
+ * which is also the condition under which the returned session renders that
+ * control - see `occurrenceHasFutureRuleDate`.
+ */
 function deleteCopy(refill: OccurrenceRefill): string | undefined {
   if (refill === "restored") {
-    return "Session deleted, then written back by its recurring series. End the series from this date to stop it returning.";
+    return "Session deleted, then written back by its recurring series. To stop it returning, use “Remove this and all future sessions” under Cancel on the session that came back.";
   }
   if (refill === "unknown") {
     return "Session deleted. Its recurring series may have written the date back. Reload to see the plan as saved.";

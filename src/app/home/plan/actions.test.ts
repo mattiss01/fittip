@@ -342,6 +342,9 @@ describe("plan actions", () => {
     );
     expect(back.status).toBe("saved");
     expect(back.message).toMatch(/written back by its recurring series/i);
+    // The way out is named in the words printed on the control, and only in a
+    // state where that control is on screen.
+    expect(back.message).toContain("Remove this and all future sessions");
     // The confirmation is one bounded read of the rule date, not of the window.
     expect(wrote.getPlanSlice).toHaveBeenCalledTimes(2);
     expect(wrote.getPlanSlice.mock.calls[1]).toEqual([today(), today()]);

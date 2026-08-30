@@ -35,6 +35,41 @@ export type RecurringSessionView = {
 
 type PlanFormAction = (formData: FormData) => void;
 
+/**
+ * Whether this occurrence's rule date still lies ahead inside its own segment.
+ *
+ * Two separate things hang on exactly this condition, so they read one
+ * function rather than two copies that can drift apart:
+ *
+ *   * the series-wide removal control below is offered only when it holds -
+ *     outside it the bulk removal would change nothing;
+ *   * it is also the condition under which `materialize_rolling_plan_series`
+ *     will write a deleted occurrence back. The materializer fills only
+ *     `today .. today + 13` and only between a segment's own dates, so once a
+ *     moved occurrence's rule date falls behind today, deleting it keeps it
+ *     deleted.
+ *
+ * The Delete warning in `plan-manager.tsx` is the second caller. It matters
+ * that the two agree: the warning quotes the removal control by name, and must
+ * not name a control the same predicate has withheld.
+ *
+ * It is a slight over-estimate of the refill, not an under-estimate: a rule
+ * date inside the window can still fail to refill if that date already holds
+ * ten sessions. That errs toward warning the owner that a delete may not
+ * stick, which is the safe direction for a destructive control.
+ */
+export function occurrenceHasFutureRuleDate(
+  occurrenceDate: string,
+  series: Pick<PlanSeriesView, "startDate" | "endDate">,
+  today: string,
+) {
+  return (
+    occurrenceDate >= series.startDate &&
+    (series.endDate === null || occurrenceDate <= series.endDate) &&
+    occurrenceDate >= today
+  );
+}
+
 export function RecurringSessionControls({
   mode,
   today,
@@ -58,11 +93,11 @@ export function RecurringSessionControls({
   seriesState: SeriesActionState;
   seriesPending: boolean;
 }) {
-  const occurrenceInsideSegment =
-    session.occurrenceDate >= series.startDate &&
-    (series.endDate === null || session.occurrenceDate <= series.endDate);
-  const canChangeFuture =
-    occurrenceInsideSegment && session.occurrenceDate >= today;
+  const canChangeFuture = occurrenceHasFutureRuleDate(
+    session.occurrenceDate,
+    series,
+    today,
+  );
   const canEditWhole =
     canChangeFuture &&
     series.startDate >= today &&

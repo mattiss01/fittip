@@ -18,6 +18,7 @@ import { changePlanAction } from "./actions";
 import { CreateSession } from "./create-session";
 import styles from "./plan.module.css";
 import {
+  occurrenceHasFutureRuleDate,
   RecurringSessionControls,
   type PlanSeriesView,
 } from "./recurring-session-controls";
@@ -332,7 +333,10 @@ function PlanDay({
                       expectedRevision={expectedRevision}
                       action={action}
                       pending={pending}
-                      isOccurrence={session.seriesId !== null}
+                      scope={deleteScope(
+                        occurrenceOf(session, seriesById),
+                        today,
+                      )}
                       isCancelled
                     />
                   </div>
@@ -640,7 +644,7 @@ function PlanSessionCard({
           expectedRevision={expectedRevision}
           action={action}
           pending={pending}
-          isOccurrence={recurring !== null}
+          scope={deleteScope(recurring, today)}
         />
 
         <form action={action}>
@@ -670,28 +674,74 @@ function PlanSessionCard({
  * the same reason cancel does: neither destructive verb should be one stray tap
  * away on a phone, and holding them apart is what keeps their labels honest.
  *
- * A one-off session and an occurrence of a series are told different things,
- * because delete does different things to them. Deleting a one-off is
- * permanent. Deleting an occurrence is not: the top-up that follows every plan
- * change sees the rule date uncovered and writes the occurrence straight back,
- * in the same request. The product owner accepted that behavior on 29 August
- * 2026 rather than withhold the control, so the copy has to say it - and has to
- * say the cancelled case loudest, because there deleting reverses a decision
- * the owner already made.
+ * Three sessions are told three different things, because delete does three
+ * different things to them.
+ *
+ * Deleting a one-off is permanent. Deleting an occurrence whose rule date is
+ * still ahead is not: the top-up that follows every plan change sees that date
+ * uncovered and writes the occurrence straight back, in the same request. The
+ * product owner accepted that on 29 August 2026 rather than withhold the
+ * control, so the copy says it, and says the cancelled case loudest, because
+ * there deleting reverses a decision the owner already made.
+ *
+ * An occurrence whose rule date has fallen behind today - which is reachable
+ * by moving one forward and waiting - is permanent again, because the
+ * materializer fills only `today .. today + 13`. `scope` carries which of the
+ * three this is, decided by the one predicate the series-removal control uses,
+ * so the copy never promises a refill that will not happen nor names a control
+ * that is not on screen.
  */
+/**
+ * The occurrence identity of a session, or null when it has none the surface
+ * can act on. A session naming a series the page did not load is treated as a
+ * one-off here for the same reason `PlanSessionCard` already treats it as one:
+ * without the segment's dates nothing about its rule can be stated truthfully.
+ */
+function occurrenceOf(
+  session: PlanSessionView,
+  seriesById: Map<string, PlanSeriesView>,
+) {
+  const segment =
+    session.seriesId === null ? undefined : seriesById.get(session.seriesId);
+  return segment !== undefined && session.occurrenceDate !== null
+    ? { series: segment, occurrenceDate: session.occurrenceDate }
+    : null;
+}
+
+/**
+ * Which of the three things delete does to this session. It defers to the same
+ * predicate the series-removal control uses, so the warning can quote that
+ * control by name without ever naming one the owner cannot see.
+ */
+function deleteScope(
+  recurring: { series: PlanSeriesView; occurrenceDate: string } | null,
+  today: string,
+): DeleteScope {
+  if (recurring === null) return "one-off";
+  return occurrenceHasFutureRuleDate(
+    recurring.occurrenceDate,
+    recurring.series,
+    today,
+  )
+    ? "refilled-occurrence"
+    : "settled-occurrence";
+}
+
+type DeleteScope = "one-off" | "refilled-occurrence" | "settled-occurrence";
+
 function DeleteSession({
   sessionId,
   expectedRevision,
   action,
   pending,
-  isOccurrence,
+  scope,
   isCancelled = false,
 }: {
   sessionId: string;
   expectedRevision: number;
   action: FormAction;
   pending: boolean;
-  isOccurrence: boolean;
+  scope: DeleteScope;
   isCancelled?: boolean;
 }) {
   return (
@@ -699,9 +749,8 @@ function DeleteSession({
       <summary>Delete</summary>
       <div className={styles.editorPanel}>
         <p className={styles.permanentConsequence}>
-          {isOccurrence ? occurrenceWarning(isCancelled) : ONE_OFF_WARNING} A
-          session you have logged training against cannot be deleted; cancel it
-          instead.
+          {deleteWarning(scope, isCancelled)} A session you have logged training
+          against cannot be deleted; cancel it instead.
         </p>
         <form className={styles.form} action={action}>
           <input type="hidden" name="operation" value="delete" />
@@ -747,12 +796,25 @@ const OCCURRENCE_REFILL_ESCAPE =
   "To stop the date coming back, use “Remove this and all future sessions” under Cancel";
 
 /**
+ * An occurrence the series has stopped filling. Its rule date is behind today
+ * or outside its segment, so the delete is as permanent as a one-off's. The
+ * added clause exists because an owner who has read the warning on another
+ * occurrence would otherwise expect this one to come back too, and because the
+ * control that warning points at is not rendered here.
+ */
+const SETTLED_OCCURRENCE_WARNING =
+  ONE_OFF_WARNING +
+  " Its series will not write this date back, because the date it repeats on is no longer one the series fills.";
+
+/**
  * What deleting an occurrence really does, in the owner's terms. Both branches
  * describe the refill and the loss, because both happen either way; the
  * cancelled branch leads with the consequence the owner would not expect, and
  * sends them to a control that only the returned session carries.
  */
-function occurrenceWarning(isCancelled: boolean) {
+function deleteWarning(scope: DeleteScope, isCancelled: boolean) {
+  if (scope === "one-off") return ONE_OFF_WARNING;
+  if (scope === "settled-occurrence") return SETTLED_OCCURRENCE_WARNING;
   const opening = isCancelled
     ? "This session repeats, so deleting it will not keep it deleted: its series writes the occurrence back in the same step, and it comes back active. Deleting a cancelled occurrence undoes your cancellation."
     : "This session repeats, so deleting it will not keep it deleted: its series writes the occurrence back in the same step.";

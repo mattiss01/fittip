@@ -470,14 +470,51 @@ describe("PlanManager", () => {
     expect(panel.textContent).not.toMatch(/undoes your cancellation/i);
   });
 
-  it("tells a cancelled occurrence owner that deleting undoes the cancel", () => {
-    renderManager(INITIAL_PLAN_ACTION_STATE, [
-      session({
-        status: "cancelled",
-        seriesId: "7f000000-0000-4000-8000-000000000099",
-        occurrenceDate: TODAY,
+  it("calls a moved occurrence permanent once its series stops filling that date", () => {
+    // Reachable in a day: move an occurrence forward, wait for its rule date to
+    // fall behind today. The materializer fills only today..today+13, so this
+    // delete really does stick - and the control the refill warning quotes is
+    // not rendered here either, which is why one predicate decides both.
+    renderManager(
+      INITIAL_PLAN_ACTION_STATE,
+      [
+        session({
+          localDate: DATES[4],
+          seriesId: "7f000000-0000-4000-8000-000000000099",
+          occurrenceDate: "2026-08-10",
+        }),
+      ],
+      [{ ...series(), startDate: "2026-08-01" }],
+    );
+
+    fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
+    const panel = screen.getByText(/^Permanent\./);
+    expect(panel.textContent).toMatch(/series will not write this date back/i);
+    expect(panel.textContent).not.toMatch(/This session repeats/i);
+    // Naming a control the same predicate has withheld is the defect this
+    // branch exists to prevent.
+    expect(panel.textContent).not.toContain(
+      "Remove this and all future sessions",
+    );
+    expect(
+      screen.queryByRole("button", {
+        name: "Remove this and all future sessions",
       }),
-    ]);
+    ).toBeNull();
+  });
+
+  it("tells a cancelled occurrence owner that deleting undoes the cancel", () => {
+    renderManager(
+      INITIAL_PLAN_ACTION_STATE,
+      [
+        session({
+          status: "cancelled",
+          seriesId: "7f000000-0000-4000-8000-000000000099",
+          occurrenceDate: TODAY,
+        }),
+      ],
+      [series()],
+    );
 
     fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
     const panel = screen.getByText(/This session repeats/i);
