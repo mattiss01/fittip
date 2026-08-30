@@ -774,3 +774,62 @@ The commit that adds this section carries no run of its own. That is the
 evidence-commit exception, and this is the point in the workflow it exists for:
 the lead verifies the final run and records its result when acceptance is
 recorded, which is what this paragraph does.
+
+**The merge.** `43a3140` was accepted; the branch head `747115b` — the accepted
+commit plus this record's acceptance text — was merged into `master` with
+`--no-ff` as **`bc553e9`** and pushed. The merge brought no source change beyond
+the accepted head:
+
+```
+$ git diff --name-only 747115b..bc553e9
+docs/backlog/M3/M3-20-REACTIVATE-A-CANCELLED-SESSION.md
+docs/backlog/M3/M3-21-RECURRING-SCOPE-FALLBACK-COPY.md
+docs/backlog/M3/M3-22-OFFLINE-CONSOLE-ASSERTION-FLAKE.md
+docs/backlog/M3/M3-BACKLOG.md
+```
+
+Those four are the follow-up tickets the lead filed directly on `master` in
+`ae32d7e` and `11288d5` while this ticket was in review. No source, no
+migration, no test, no workflow.
+
+**The `master` run.** [33319643221](https://github.com/mattiss01/fittip/actions/runs/33319643221)
+on `bc553e9` — `success` on all three jobs. The post-merge suite is covered, so
+the local suite was not re-run by hand; nothing about this merge changed the
+reviewed result or integrated separately developed behavior.
+
+**The founder deployment.** `bc553e9`, environment `Production`, state
+`success`, at
+<https://fittip-5s3w4jq8g-mattis-3657s-projects.vercel.app>, and it is the
+newest `Production` deployment on the repository. The stable founder alias is
+<https://fittip-gilt.vercel.app>.
+
+### Hosted smoke and security checks
+
+Run by the lead against the founder alias on 30 August 2026, unauthenticated.
+Everything reachable without credentials was checked; the rest is marked as the
+product owner's.
+
+| Check | Result |
+| --- | --- |
+| `GET /` | `200`, the signed-out landing page, `<title>FitTip</title>` |
+| `GET /home/plan` **without a session** | `303 See Other` to `/` — the authorization boundary holds and no plan data is served |
+| Private response headers on `/home/plan` | `Cache-Control: private, no-cache, no-store, must-revalidate, max-age=0`, `Pragma: no-cache`, `Expires: 0` — the values `next.config.ts` sets and `next.config.test.ts` pins |
+| Transport | `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` |
+| Newest `Production` deployment | `bc553e9`, `success`, ahead of `11288d5`, `ae32d7e` and `37529e2` |
+
+**What the lead cannot check, and why.** The per-deployment URL is behind
+Vercel deployment protection, which answers `302` to `vercel.com/sso-api` for
+an unauthenticated agent, and the alias exposes no deployment identifier in its
+headers. So the lead can establish that `bc553e9` is the newest successful
+`Production` deployment and that the alias serves a live build with the correct
+authorization redirect and private headers — but not, from here, that the alias
+resolves to that exact deployment. Nor can any authenticated surface be
+exercised: the publishable key is not in the shipped bundle, so no agent path
+reaches the hosted database. Both remain the product owner's to attest, which
+is the same boundary every hosted check in this record has respected.
+
+The three verbs on a real founder session were exercised by the product owner
+on the Preview for `43a3140` before acceptance, and the founder migration was
+applied and its history verified before that. What is outstanding is confirmation
+that the alias now serves this build, which the next authenticated visit
+settles.
