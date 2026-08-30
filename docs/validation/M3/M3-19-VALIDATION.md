@@ -239,27 +239,34 @@ Nothing was deleted or renamed.
 
 ## Results
 
-Three green runs cover the three implementations this ticket has had. None
-landed on the implementation commit itself, because a record cannot carry the
-SHA of the commit that adds it, so each run lands on the documentation head
-that follows. Each row's reconciliation is one command, and the delta is
-documentation only in every case.
+A green run covers each implementation this ticket has had. None landed on the
+implementation commit itself, because a record cannot carry the SHA of the
+commit that adds it, so each run lands on the documentation head that follows.
+Each row's reconciliation is one command, and the delta is documentation only
+in every case.
 
 | Implementation | Run | Head it ran on | Reconciliation |
 | --- | --- | --- | --- |
 | `1e12dce` | [33275082378](https://github.com/mattiss01/fittip/actions/runs/33275082378) `success` | `2d674e3` | `git diff --name-only 1e12dce..2d674e3` — this record and its index |
 | `437d470` | [33276894567](https://github.com/mattiss01/fittip/actions/runs/33276894567) `success` | `433a75e` | `git diff --name-only 437d470..433a75e` — this record and its index |
 | `d422f81` | [33277713636](https://github.com/mattiss01/fittip/actions/runs/33277713636) `success` | `dbaaa1c` | `git diff --name-only d422f81..dbaaa1c` — this record only |
+| `f2f7108` | [33309063845](https://github.com/mattiss01/fittip/actions/runs/33309063845) `success` | `28d0bbe` | `git diff --name-only f2f7108..28d0bbe` — this record only |
 
 The first row's working is set out at length in the lead agent's section at
-the end of this record; the other two are the same shape and are stated here
+the end of this record; the others are the same shape and are stated here
 rather than pointed at.
 
-**No run yet covers the round 3 implementation `f2f7108`.** It is the lead's to
-run and record when the branch is pushed, and the final run — the one
-covering whatever documentation head carries this paragraph — is the lead's
-to record at acceptance under the evidence-commit exception, because no
-commit can cite a run of itself.
+The fourth row's run went red once before it went green, on an
+`e2e/m3-14b-recurring-series.spec.ts` failure that belongs to neither this
+ticket nor that spec's product behavior. It is diagnosed in full under
+[the lead agent's section](#a-red-run-that-was-not-this-tickets-and-not-a-defect-in-what-it-tested)
+and ticketed as M3-22, because a gate that fails at random is worse than no
+gate. The `success` above is the rerun of the identical SHA.
+
+**No run yet covers the round 4 implementation `41fcbc0`.** The final run — the
+one covering whatever documentation head carries this paragraph — is the lead's
+to record at acceptance under the evidence-commit exception, because no commit
+can cite a run of itself.
 
 What the builder observed locally while developing, against the local Supabase
 stack with every migration applied from zero:
@@ -500,8 +507,58 @@ the checkable justification `AGENTS.md` requires, and it is one command.
 
 ### Preview
 
-**Deployment:** `2d674e3`, environment `Preview`, state `success`.
-**URL:** <https://fittip-aek3em2l0-mattis-3657s-projects.vercel.app>
+| Head | Environment | State | URL |
+| --- | --- | --- | --- |
+| `2d674e3` | `Preview` | `success` | <https://fittip-aek3em2l0-mattis-3657s-projects.vercel.app> |
+| `28d0bbe` | `Preview` | `success` | <https://fittip-e8u8hsbvl-mattis-3657s-projects.vercel.app> |
+
+### A red run that was not this ticket's, and not a defect in what it tested
+
+Run 33309063845 failed on its first attempt and passed on a rerun of the
+identical SHA. That alone establishes non-determinism, but a rerun-until-green
+habit is exactly what `AGENTS.md` keeps the known-defect exception narrow to
+prevent, so the cause is set out here rather than waved at.
+
+The failing assertion is `e2e/m3-14b-recurring-series.spec.ts:275`,
+`expect(consoleErrors).toEqual([])`, which collects browser console errors for
+the whole test. It caught three:
+
+```
+Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+```
+
+The trace names the three requests, and none of them is a plan surface:
+`/home/today`, `/home/progress` and `/home/you`, each carrying
+`next-router-segment-prefetch: /_tree` with `Referer: /home/plan`. They are App
+Router prefetches of the persistent bottom-navigation links, issued by the
+shared home layout, which no ticket in this milestone has touched.
+
+The timing, from the same trace, is what makes it a race:
+
+| Time (ms) | Event |
+| --- | --- |
+| 10366.1 | `setOffline(true)` — the spec's deliberate offline check |
+| 10428.2 | `setOffline(false)` |
+| 10430.9 – 10431.4 | the three console errors |
+
+The window the spec spends offline is **62 ms** wide. Whether a prefetch happens
+to be in flight across it is chance; the likely trigger is the form submit just
+before, whose Server Action calls `revalidatePath`, invalidating the client
+router cache and re-queueing a prefetch for every visible link.
+
+So the spec asserts that no console error occurred, having itself caused the
+condition that produces one. That is a latent defect in the spec, not in the
+product and not in this ticket: M3-19 round 3 changed plan-surface copy and one
+exported predicate, neither of which can make a navigation prefetch fail. It
+could only shift the preceding steps by a few milliseconds, which is all this
+assertion needs to flip. `e2e/m3-11-maintenance.spec.ts:45,117` uses the same
+collector and the same final assertion and carries the same latent defect.
+
+This is **not** the known-defect exception. That exception is for a red run
+being accepted as evidence; this run is green, on a rerun of the same commit,
+with the first attempt's cause identified rather than assumed. It is recorded
+because the next reader of run 33309063845 will see two attempts and deserves
+to know why.
 
 ### The hosted migration, applied
 
@@ -513,12 +570,35 @@ separates what is **captured** — CLI output the lead read directly — from wh
 is **attested** by the product owner, because the two carry different weight
 and a reader should not have to guess which is which.
 
+Both captures are in the file, converted from the PowerShell console's UTF-16
+to UTF-8 and otherwise unedited:
+[`migration list`](evidence/M3-19-founder-migration-list-before.txt) and
+[`db push`](evidence/M3-19-founder-migration-push.txt). Each opens with a
+PowerShell `NativeCommandError` block, which is not a failure: `npx.cmd` writes
+`Initialising login role...` to stderr and PowerShell renders any stderr from a
+native command that way.
+
 **Captured — history before the apply.** `supabase migration list --linked`
 returned 19 remote entries aligned with the repository at every position, the
 newest `20260829073444` (M3-15A), with `20260829135426` present locally and
 blank on the remote side. No remote entry the repository lacks, so no history
 drift. This is runbook step 1.2 and it is the check that matters most: it is
 what rules out someone else having written to the project.
+
+The lead checked that alignment against the repository rather than reading it
+off the table, because "aligned at every position" is the one claim in this
+section a mistake would hide rather than announce:
+
+```
+$ ls supabase/migrations/*.sql | sed 's#.*/##; s/_.*//' | sort > local
+$ grep -oE '^\s+`[0-9]{14}`' evidence/M3-19-founder-migration-list-before.txt \
+    | tr -d ' `' | sort > listed
+$ diff local listed && echo IDENTICAL
+IDENTICAL
+```
+
+Twenty versions in the repository, the same twenty in the founder history, no
+version on either side that the other lacks.
 
 **Captured — the apply.** `supabase db push --linked` offered exactly one
 migration, `20260829135426_m3_19_delete_a_planned_session.sql`, and reported
