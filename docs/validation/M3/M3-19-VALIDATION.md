@@ -1,21 +1,7 @@
 # M3-19 validation: delete a planned session
 
 **Ticket:** [M3-19](../../backlog/M3/M3-19-DELETE-A-PLANNED-SESSION.md)
-**Status:** testable — through six review rounds. Round 1 rejected `1e12dce`
-on one blocking finding, which the product owner resolved by accepting the
-behavior and requiring the surface to describe it honestly. Rounds 2 to 6 each
-approved with findings and no blocking defect, and each round's findings are
-closed in the commits above the target it reviewed. The founder migration is
-applied, the reviewed commit `43a3140` has a green run and a `success` Preview,
-and **only product-owner acceptance is outstanding.**
-
-Round 6 approved `43a3140` and named two record-only corrections — a
-reconciliation label it had left half-closed, and a review target that pointed
-at a commit with no run and no Preview — stating that with those two corrected
-the record is fit for acceptance. They are made in the commit above this line
-and nothing else was changed with them, so no round 7 is opened. The reviewed
-commit stays `43a3140`; a record-only commit after it is the evidence-commit
-exception, which is how every earlier round in this record already works.
+**Status:** accepted — product owner, 30 August 2026, against `43a3140`.
 **Tier:** 1
 **Branch:** `ticket/m3-19-delete-a-planned-session`
 **Base:** `37529e20ea373034d7ede6b64e0b6dfde8d5e940`
@@ -50,6 +36,34 @@ Implementation commits, in order:
 | `d422f81675968f32cbe7240ffd8c392551b5cac3` | **Review correction round 2.** The divergence loss the occurrence warning omitted, the real name of the control it points at, and coverage of the unknown refill branch. |
 | `f2f71081788ed225a800479fa5ad76371fd7c07c` | **Review correction round 3.** The occurrence warning is now conditioned on the rule date the materializer will actually refill, so it stops promising a refill that will not happen and stops naming a control that is not rendered. |
 | `41fcbc0db5e275fc2a2e0ea5376ad0a985073a97` | **Review correction round 4.** The `DeleteSession` docblock, which round 3 left stranded on `occurrenceOf` when it inserted two helpers beneath it, is back on the component it describes. Comment placement only; no executable line moved. |
+
+## How this ticket was delivered
+
+**Accepted** by the product owner on 30 August 2026 against the independently
+reviewed commit `43a3140`, its Preview
+<https://fittip-blpx0b9pm-mattis-3657s-projects.vercel.app>, and its green run
+[33314886345](https://github.com/mattiss01/fittip/actions/runs/33314886345).
+The branch head at acceptance was `c731659`, which adds record text only and is
+the same application build; its run
+[33315661393](https://github.com/mattiss01/fittip/actions/runs/33315661393) is
+green on all three jobs and its Preview
+<https://fittip-2p2n5bbcr-mattis-3657s-projects.vercel.app> reached `success`.
+The merge to `master` and the founder deployment are recorded at the end of
+this document.
+
+Six review rounds. Round 1 rejected `1e12dce` on one blocking finding, which
+the product owner resolved by accepting the behavior and requiring the surface
+to describe it honestly. Rounds 2 to 6 each approved with findings and no
+blocking defect, and each round's findings are closed in the commits above the
+target it reviewed. The founder migration is applied.
+
+Round 6 approved `43a3140` and named two record-only corrections — a
+reconciliation label it had left half-closed, and a review target that pointed
+at a commit with no run and no Preview — stating that with those two corrected
+the record is fit for acceptance. They were made in `c731659` and nothing else
+was changed with them, so no round 7 was opened. The reviewed commit stays
+`43a3140`; a record-only commit after it is the evidence-commit exception,
+which is how every earlier round in this record already works.
 
 ## Delivered behavior
 
@@ -741,3 +755,22 @@ This is a gap in the project's own guidance rather than a builder error:
 that per-ticket Playwright specs generate the evidence files in place, so
 running an older ticket's config rewrites that ticket's accepted history. Worth
 a line in `CLAUDE.md` under a later documentation ticket.
+
+## The final run, the merge, and the founder deployment
+
+**The final run.** The branch head at acceptance was `c731659`, whose run
+[33315661393](https://github.com/mattiss01/fittip/actions/runs/33315661393) is
+green on all three jobs — `Lint, types, unit tests, build`,
+`Migrations, RLS, advisors, concurrency`, and
+`390px production browser flows`. It reconciles against the reviewed commit as
+documentation only:
+
+```
+$ git diff --name-only 43a3140..c731659
+docs/validation/M3/M3-19-VALIDATION.md
+```
+
+The commit that adds this section carries no run of its own. That is the
+evidence-commit exception, and this is the point in the workflow it exists for:
+the lead verifies the final run and records its result when acceptance is
+recorded, which is what this paragraph does.
