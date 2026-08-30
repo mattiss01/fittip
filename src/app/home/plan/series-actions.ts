@@ -104,7 +104,7 @@ export async function changeSeriesAction(
       return result(
         "saved",
         planChangeCopy(
-          `Future recurring sessions removed permanently: ${unchangedDeleted} unchanged removed, ${effect.divergedDeleted} changed removed, ${effect.lockedKept} locked kept. Nothing before this session or in completed training changed.`,
+          `Future recurring sessions removed permanently: ${unchangedDeleted} unchanged removed, ${effect.divergedDeleted} changed removed, ${effect.lockedKept} locked kept, ${effect.completedKept} completed kept. Nothing before this session or in completed training changed.`,
           topUp,
         ),
         { effect },

@@ -5,10 +5,17 @@ export type SeriesSkippedDate = {
   reason: "daily-session-limit" | "change-set-limit";
 };
 
+/**
+ * What one series operation did to the occurrences already on the Plan. Every
+ * count the receipt carries is reported, including `completedKept`: from
+ * M3-15B an occurrence can hold a completion, and an owner ending a series has
+ * to be told which occurrences their own logged training saved from removal.
+ */
 export type SeriesEffectView = {
   deleted: number;
   divergedDeleted: number;
   lockedKept: number;
+  completedKept: number;
 };
 
 export type SeriesActionState = {

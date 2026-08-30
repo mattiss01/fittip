@@ -155,6 +155,7 @@ describe("recurring-session actions", () => {
           deleted: 2,
           divergedDeleted: 1,
           lockedKept: 1,
+          completedKept: 1,
         },
       ],
     });
@@ -176,11 +177,17 @@ describe("recurring-session actions", () => {
 
     expect(result).toMatchObject({
       status: "saved",
-      effect: { deleted: 2, divergedDeleted: 1, lockedKept: 1 },
+      effect: {
+        deleted: 2,
+        divergedDeleted: 1,
+        lockedKept: 1,
+        completedKept: 1,
+      },
     });
     expect(result.message).toContain("1 unchanged removed");
     expect(result.message).toContain("1 changed removed");
     expect(result.message).toContain("1 locked kept");
+    expect(result.message).toContain("1 completed kept");
     expect(result.message).not.toMatch(/expect|forecast|estimate/i);
   });
 
