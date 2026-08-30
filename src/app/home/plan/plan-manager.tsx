@@ -670,28 +670,6 @@ function PlanSessionCard({
 }
 
 /**
- * The second of the two removal verbs. It sits behind its own disclosure for
- * the same reason cancel does: neither destructive verb should be one stray tap
- * away on a phone, and holding them apart is what keeps their labels honest.
- *
- * Three sessions are told three different things, because delete does three
- * different things to them.
- *
- * Deleting a one-off is permanent. Deleting an occurrence whose rule date is
- * still ahead is not: the top-up that follows every plan change sees that date
- * uncovered and writes the occurrence straight back, in the same request. The
- * product owner accepted that on 29 August 2026 rather than withhold the
- * control, so the copy says it, and says the cancelled case loudest, because
- * there deleting reverses a decision the owner already made.
- *
- * An occurrence whose rule date has fallen behind today - which is reachable
- * by moving one forward and waiting - is permanent again, because the
- * materializer fills only `today .. today + 13`. `scope` carries which of the
- * three this is, decided by the one predicate the series-removal control uses,
- * so the copy never promises a refill that will not happen nor names a control
- * that is not on screen.
- */
-/**
  * The occurrence identity of a session, or null when it has none the surface
  * can act on. A session naming a series the page did not load is treated as a
  * one-off here for the same reason `PlanSessionCard` already treats it as one:
@@ -729,6 +707,28 @@ function deleteScope(
 
 type DeleteScope = "one-off" | "refilled-occurrence" | "settled-occurrence";
 
+/**
+ * The second of the two removal verbs. It sits behind its own disclosure for
+ * the same reason cancel does: neither destructive verb should be one stray tap
+ * away on a phone, and holding them apart is what keeps their labels honest.
+ *
+ * Three sessions are told three different things, because delete does three
+ * different things to them.
+ *
+ * Deleting a one-off is permanent. Deleting an occurrence whose rule date is
+ * still ahead is not: the top-up that follows every plan change sees that date
+ * uncovered and writes the occurrence straight back, in the same request. The
+ * product owner accepted that on 29 August 2026 rather than withhold the
+ * control, so the copy says it, and says the cancelled case loudest, because
+ * there deleting reverses a decision the owner already made.
+ *
+ * An occurrence whose rule date has fallen behind today - which is reachable
+ * by moving one forward and waiting - is permanent again, because the
+ * materializer fills only `today .. today + 13`. `scope` carries which of the
+ * three this is, decided by the one predicate the series-removal control uses,
+ * so the copy never promises a refill that will not happen nor names a control
+ * that is not on screen.
+ */
 function DeleteSession({
   sessionId,
   expectedRevision,
