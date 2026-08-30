@@ -103,6 +103,7 @@ commercial use, or production.
 | P1 | [M3-15D Bounded AI completion context](M3-15D-AI-COMPLETION-CONTEXT.md) | proposed | M3-15C accepted | Build the production `CoachAIContextSource`, which does not exist — M3-11 deleted the legacy adapter and left a bare interface. Bounded completion history through the ADR-013 allowlist, plus M3-08's exact-source rule | Tier 1: crosses the ADR-013 boundary. Draft the exact contract and separately approve dispatch |
 | P1 | [M3-15E Roadmap restoration and privilege re-grant](M3-15E-ROADMAP-RESTORATION.md) | proposed | M3-15D accepted | Re-grant the five roadmap RPCs M3-11 revoked and restore `/home/plan/roadmap` | Tier 1: privilege re-grant plus a hosted founder migration. Cannot generate anything before M3-15D. Draft the exact contract and separately approve dispatch |
 | P1 | [M3-16 AI proposal application](M3-16-AI-PROPOSAL-APPLICATION.md) | proposed | M3-15E accepted | Fresh 1–7-day Coach proposals composed with current Plan content, M3-03C roadmap input, per-item choices, direct Plan edits, atomic Finish review, discard, locks, and conflicts | Draft the exact contract after M3-15 acceptance, then separately approve Tier 1 dispatch |
+| P1 | [M3-20 Reactivate a cancelled session](M3-20-REACTIVATE-A-CANCELLED-SESSION.md) | proposed | M3-15 chain accepted through M3-15E | A cancelled session can currently only be deleted; every non-destructive operation refuses it. Adds a `reactivate` branch so cancellation preserves a decision the owner can revisit | Raised by the product owner on 29 Aug 2026 during M3-19 acceptance. Verb, reactivate-only scope, and sequencing after the M3-15 chain decided the same day. Tier 1: it adds an operation to `apply_rolling_plan_change_set`. Three open questions for approval, including whether it closes M3-19 limitation 1 |
 | P1 | [M3-03B Rolling-plan proposal regeneration](M3-03B-PLAN-REGENERATION.md) | proposed — paused for rewrite | M3-16 accepted | Historical pre-F-005 draft; retain the identifier but replace the contract with F-005 preservation, omission, feedback, predecessor, charge, and cap rules | Do not dispatch the current text. Rewrite and separately approve it only after M3-16 acceptance |
 | P1 | [M3-17 Final rolling-plan closeout](M3-17-FINAL-ROLLING-PLAN-CLOSEOUT.md) | proposed | M3-10 through M3-16 and rewritten M3-03B accepted | Narrow integrated founder verification and evidence reconciliation; no cutover, activation switch, or data change | Draft the smallest closeout contract after all dependencies; re-tier any discovered implementation work |
 | P2 | [M3-03C Roadmap as a plan input](M3-03C-ROADMAP-AS-PLAN-INPUT.md) | retired — merged into M3-16 | — | Historical standalone draft; relevant roadmap input and visible reasoning move into M3-16 | Do not dispatch |
@@ -114,6 +115,8 @@ commercial use, or production.
 | P2 | [M3-08 Bounded completion source references](M3-08-BOUNDED-COMPLETION-SOURCES.md) | retired — merged into M3-15 | — | Historical legacy-path defect; exact sent-completion source behavior moves into replacement context | Do not dispatch separately |
 | P3 | [M3-09 Simultaneous same-key submit](M3-09-SIMULTANEOUS-SAME-KEY-SUBMIT.md) | proposed — parked | none | Real roadmap same-key concurrency copy defect, outside the F-005 chain; no duplicate spend or data | Reconsider after closeout; separate Tier 1 approval remains required |
 | P2 | [M3-18 Residual focus-ring contrast](M3-18-RESIDUAL-FOCUS-RING-CONTRAST.md) | accepted | M3-11 accepted and merged | Goals, memory, and onboarding painted a 1.92:1 focus ring, and every text input a 1.51:1 one, against the 3:1 WCAG 2.2 SC 1.4.11 minimum; M3-11's `var(--ledger-ink)` treatment applied. Presentation only | Raised by M3-11 independent review (NEW-2). Tier 3 confirmed and dispatched 17 Aug 2026 ahead of M3-12; accepted the same day against `5f78071` with green CI and a confirmed Preview. Every ring now computes 11.39:1 or better |
+| P2 | [M3-21 Recurring scope fallback copy](M3-21-RECURRING-SCOPE-FALLBACK-COPY.md) | proposed | none | The two whole-series scope controls explain their own absence by naming the series end date, but the predicate that withholds them also fails when the occurrence's rule date has merely fallen behind today. The remove-mode string additionally asserts the session is locked when its branch does not require that | Raised by M3-19 independent review (F7), deliberately left alone as M3-14B copy outside M3-19's scope. Tier 3, copy only |
+| P1 | [M3-22 Offline console assertion flake](M3-22-OFFLINE-CONSOLE-ASSERTION-FLAKE.md) | proposed | none | Two browser specs collect console errors for the whole test and then deliberately go offline inside it, so an App Router prefetch caught in the 62 ms window fails the run at random | Diagnosed by the lead on 30 Aug 2026 from run 33309063845, red then green on the identical SHA. Tier 3, test only. P1 despite being test-only: a non-deterministic gate teaches every reader to re-run it rather than read it |
 
 ## Dependency chain
 
@@ -136,9 +139,15 @@ Accepted M2 goals + coaching context + guided onboarding + targeted closeout
                               -> M3-15C Progress
                                 -> M3-15D bounded AI completion context
                                   -> M3-15E roadmap restoration + re-grant
+                                    -> M3-20 reactivate a cancelled session
                                     -> M3-16 AI proposal application (+ M3-03C)
                                       -> rewritten M3-03B regeneration
                                         -> M3-17 final rolling-plan closeout
+
+M3-20 and M3-16 are both sequenced after M3-15E and neither blocks the other,
+so the two may be reordered. M3-20 is drawn first because it closes a trap
+rather than adding a surface. M3-21 and M3-22 depend on nothing and belong in
+no chain.
 
 M3-03C, M3-04, M3-05, M3-06, M3-07, and M3-08 are retired standalone
 contracts. M3-03C's relevant behavior moves into M3-16, M3-08's exact-source
