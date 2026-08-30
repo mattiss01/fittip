@@ -27,17 +27,24 @@ const legacyModules = [
 ] as const;
 
 const maintenancePages = [
-  "src/app/home/today/page.tsx",
   "src/app/home/log/page.tsx",
   "src/app/home/progress/page.tsx",
   "src/app/home/plan/roadmap/page.tsx",
   "src/app/home/plan/proposal/page.tsx",
 ] as const;
 
-/** The reopened surface, which may reach only the M3-10 rolling-plan seam. */
+/**
+ * The reopened surface, which may reach only the M3-10 rolling-plan seam and
+ * the M3-15A completion seam beside it. M3-15B moved Today and logging off the
+ * maintenance module and onto those two, so they are constrained here rather
+ * than left unchecked: dropping them from the list above without adding them
+ * here would have retired the only assertion covering how they reach
+ * persistence.
+ */
 const rollingPlanSurface = [
   "src/app/home/plan/page.tsx",
   "src/app/home/plan/actions.ts",
+  "src/app/home/today/page.tsx",
 ] as const;
 
 const legacyTables = [

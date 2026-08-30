@@ -1,0 +1,338 @@
+/*
+ * Today extends the FitTip ledger the Plan established: cream stock, deep
+ * green ink, hard edges, offset shadow, Courier stamps. It deliberately does
+ * not invent a second visual language for the same app.
+ *
+ * Its one signature is the outcome stamp - the tilted, outlined word struck
+ * across the top-right of a card once training has been logged against it.
+ * A day of planning is a page of intentions; the stamp is the only thing on it
+ * that is a fact, so it is the only thing allowed to shout. Nothing here
+ * scores, ranks, or streaks.
+ */
+
+.page {
+  --today-mark: #d95835;
+  --today-recovery: #557667;
+}
+
+.day {
+  display: grid;
+  gap: 1.1rem;
+  margin-top: 1.5rem;
+}
+
+.dayNav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.step {
+  min-height: 3.25rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-content: center;
+  gap: 0 0.5rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  color: var(--ledger-ink);
+  text-decoration: none;
+}
+
+.step:last-child {
+  text-align: right;
+}
+
+.step:last-child .stepMark {
+  order: 2;
+}
+
+.stepMark {
+  grid-row: span 2;
+  align-self: center;
+  font:
+    700 1.1rem "Courier New",
+    monospace;
+}
+
+.stepLabel {
+  font:
+    700 0.62rem "Courier New",
+    monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stepDate {
+  grid-column: 2;
+  color: var(--ledger-muted);
+  font-size: 0.86rem;
+}
+
+.step:last-child .stepLabel,
+.step:last-child .stepDate {
+  grid-column: 1;
+}
+
+.slip {
+  position: relative;
+  padding: 1.1rem 1rem;
+  border: 1px solid var(--ledger-ink);
+  border-left: 7px solid var(--today-mark);
+  background: var(--ledger-paper);
+  box-shadow: 7px 7px 0 #a7b7a5;
+}
+
+.slipMark {
+  margin: 0 0 0.35rem;
+  color: var(--ledger-muted);
+  font:
+    700 0.64rem "Courier New",
+    monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.slip h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.recoveryStamp {
+  width: fit-content;
+  margin: 0.6rem 0 0;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--today-recovery);
+  color: var(--today-recovery);
+  font:
+    700 0.62rem "Courier New",
+    monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.returnLink {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.6rem;
+  color: var(--ledger-ink);
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.notice {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--ledger-ink);
+  background: #fff0e1;
+  line-height: 1.45;
+}
+
+.empty {
+  margin: 0;
+  padding: 1.2rem 1rem;
+  border: 1px dashed var(--ledger-rule);
+  background: var(--ledger-wash);
+  color: var(--ledger-muted);
+}
+
+.sessions {
+  display: grid;
+  gap: 0.9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session {
+  position: relative;
+  display: grid;
+  gap: 0.55rem;
+  padding: 1rem;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  box-shadow: 5px 5px 0 #a7b7a5;
+}
+
+.session[data-cancelled="true"] {
+  background: var(--ledger-wash);
+}
+
+.session[data-locked="true"] {
+  border-left: 5px solid #8b341f;
+}
+
+.sessionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sessionHeader h4 {
+  margin: 0;
+  font-size: 1.12rem;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+/*
+ * The signature. It is struck, not printed: rotated off the grid, outlined
+ * rather than filled, and the only tilted element on the surface.
+ */
+.stamp {
+  flex: none;
+  padding: 0.28rem 0.5rem;
+  border: 2px solid var(--today-mark);
+  color: var(--today-mark);
+  font:
+    700 0.62rem "Courier New",
+    monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  rotate: -4deg;
+}
+
+.stamp[data-outcome="skipped"] {
+  border-color: var(--ledger-muted);
+  color: var(--ledger-muted);
+}
+
+.stamp[data-outcome="unplanned"] {
+  border-color: var(--today-recovery);
+  color: var(--today-recovery);
+}
+
+.marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.marks > span {
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--ledger-rule);
+  color: var(--ledger-muted);
+  font:
+    700 0.6rem "Courier New",
+    monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.meta {
+  margin: 0;
+  color: var(--ledger-muted);
+  font:
+    0.72rem "Courier New",
+    monospace;
+  letter-spacing: 0.03em;
+}
+
+.body {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.record {
+  display: grid;
+  gap: 0.5rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--ledger-rule);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 0.75rem;
+  margin: 0;
+}
+
+.facts dt {
+  color: var(--ledger-muted);
+  font:
+    700 0.6rem "Courier New",
+    monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.facts dd {
+  margin: 0.15rem 0 0;
+  font-size: 0.92rem;
+}
+
+.signals {
+  margin: 0;
+  padding: 0.5rem 0.6rem;
+  border-left: 3px solid var(--today-mark);
+  background: #fff0e1;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.unplanned {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.sectionLabel {
+  margin: 0;
+  color: var(--ledger-muted);
+  font:
+    700 0.64rem "Courier New",
+    monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.dayActions {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.primaryAction,
+.action {
+  width: 100%;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--ledger-ink);
+  font:
+    700 0.72rem "Courier New",
+    monospace;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.primaryAction {
+  background: var(--ledger-ink);
+  color: var(--ledger-paper);
+}
+
+.action {
+  background: transparent;
+  color: var(--ledger-ink);
+}
+
+.page a:focus-visible {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page * {
+    transition: none !important;
+  }
+}
