@@ -18,7 +18,9 @@ acceptance are outstanding.
 round 1, `437d47078cea73a908c65d5d30fd09ee2428bfff` approved in round 2, and
 `d422f81675968f32cbe7240ffd8c392551b5cac3` approved in round 3. The round 3
 correction range is
-`git diff d422f81675968f32cbe7240ffd8c392551b5cac3..f2f71081788ed225a800479fa5ad76371fd7c07c`
+`git diff d422f81675968f32cbe7240ffd8c392551b5cac3..f2f71081788ed225a800479fa5ad76371fd7c07c`,
+which also carries the two round 2 record commits that sit between them; the
+round 3 source change is `f2f7108` alone.
 
 Implementation commits, in order:
 
