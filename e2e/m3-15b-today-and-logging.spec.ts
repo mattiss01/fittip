@@ -68,16 +68,18 @@ test.describe("M3-15B today and logging", () => {
       await openDisclosure(doomed, "Cancel");
       await doomed.getByRole("button", { name: "Cancel session" }).click();
       await expect(
-        planCard(page, today, "Rest swap").getByText("Cancelled", {
-          exact: true,
-        }),
+        planCard(page, today, "Rest swap").getByText(
+          "Yoga · Cancelled, kept on the record",
+        ),
       ).toBeVisible();
 
       await planDay(page, dayAfter)
         .getByRole("button", { name: "Mark recovery day" })
         .click();
       await expect(
-        planDay(page, dayAfter).getByText("Recovery day"),
+        planDay(page, dayAfter).getByRole("button", {
+          name: "Clear recovery day",
+        }),
       ).toBeVisible();
 
       // ---- Today shows exactly that day, and says which day it is. ----
@@ -141,6 +143,9 @@ test.describe("M3-15B today and logging", () => {
       await expect(
         page.locator('[data-today-notice="beyond-window"]'),
       ).toContainText("unfilled rather than empty");
+      await expect(page.locator('[data-today-empty="sessions"]')).toHaveCount(
+        0,
+      );
       await page.screenshot({
         fullPage: true,
         path: path.join(evidenceDirectory, "M3-15B-unfilled-day-390x844.png"),
@@ -157,10 +162,7 @@ test.describe("M3-15B today and logging", () => {
       await expect(page.locator("[data-log-source]")).toContainText(
         "Tempo run",
       );
-      await page
-        .getByRole("radio", { name: /Completed/ })
-        .first()
-        .check();
+      await page.getByRole("radio", { name: /^Completed/ }).check();
       await page.getByLabel("Duration (minutes)").fill("42");
       await page.getByLabel("Effort (1-10)").fill("7");
       await page.getByLabel("How it felt").selectOption("good");
@@ -190,10 +192,7 @@ test.describe("M3-15B today and logging", () => {
       await todayCard(page, "Easy spin")
         .getByRole("link", { name: "Log this session" })
         .click();
-      await page
-        .getByRole("radio", { name: /Skipped/ })
-        .first()
-        .check();
+      await page.getByRole("radio", { name: /^Skipped/ }).check();
       await page.getByRole("button", { name: "Save log" }).click();
       await expect(
         page.getByRole("heading", { name: "Log saved." }),
@@ -227,10 +226,7 @@ test.describe("M3-15B today and logging", () => {
       await expect(page.locator("[data-log-source]")).toContainText(
         "Editing a log",
       );
-      await page
-        .getByRole("radio", { name: /Skipped/ })
-        .first()
-        .check();
+      await page.getByRole("radio", { name: /^Skipped/ }).check();
       await page.getByRole("button", { name: "Save log" }).click();
       await expect(
         page.getByRole("heading", { name: "Log updated." }),
@@ -248,10 +244,7 @@ test.describe("M3-15B today and logging", () => {
       await todayCard(page, "Aerobic base")
         .getByRole("link", { name: "Log this session" })
         .click();
-      await page
-        .getByRole("radio", { name: /Completed/ })
-        .first()
-        .check();
+      await page.getByRole("radio", { name: /^Completed/ }).check();
       await page.getByRole("button", { name: "Save log" }).click();
       await expect(
         page.getByRole("heading", { name: "Log saved." }),
