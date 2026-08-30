@@ -249,7 +249,10 @@ export function LogForm({ planned, existing, defaultDate, returnDate }: Props) {
         <button className={styles.primary} type="submit" disabled={pending}>
           {pending ? "Saving…" : "Save log"}
         </button>
-        <Link className={styles.secondary} href={`/home/today?date=${returnDate}`}>
+        <Link
+          className={styles.secondary}
+          href={`/home/today?date=${returnDate}`}
+        >
           Cancel
         </Link>
       </div>
