@@ -1,23 +1,24 @@
 # M3-19 validation: delete a planned session
 
 **Ticket:** [M3-19](../../backlog/M3/M3-19-DELETE-A-PLANNED-SESSION.md)
-**Status:** testable — correction round 2 complete. Round 1 of independent
-review rejected `1e12dce` on one blocking finding, which the product owner
-resolved by accepting the behavior and requiring the surface to describe it
-honestly. Round 2 approved `437d470` with findings and no blocking defect;
-`d422f81` closes four of the five. Approval applies to `437d470` and not to
-the head, so a fresh CI run, re-review, a fresh Preview, the founder
-migration and product-owner acceptance are all outstanding.
+**Status:** testable — correction round 3 complete, and the last planned
+round. Round 1 rejected `1e12dce` on one blocking finding, which the product
+owner resolved by accepting the behavior and requiring the surface to describe
+it honestly. Rounds 2 and 3 each approved with findings and no blocking defect,
+and each set is closed in the commit below it. The founder migration is
+applied. A fresh CI run, re-review, a fresh Preview and product-owner
+acceptance are outstanding.
 **Tier:** 1
 **Branch:** `ticket/m3-19-delete-a-planned-session`
 **Base:** `37529e20ea373034d7ede6b64e0b6dfde8d5e940`
-**Implementation review target:** `d422f81675968f32cbe7240ffd8c392551b5cac3`
+**Implementation review target:** `f2f71081788ed225a800479fa5ad76371fd7c07c`
 **Review range:**
-`git diff 37529e20ea373034d7ede6b64e0b6dfde8d5e940..d422f81675968f32cbe7240ffd8c392551b5cac3`
-**Superseded targets:** `1e12dce8a5be752fac55525074c2e15da0e8710c`, rejected in
-round 1, and `437d47078cea73a908c65d5d30fd09ee2428bfff`, approved in round 2.
-The round 2 correction range is
-`git diff 437d47078cea73a908c65d5d30fd09ee2428bfff..d422f81675968f32cbe7240ffd8c392551b5cac3`
+`git diff 37529e20ea373034d7ede6b64e0b6dfde8d5e940..f2f71081788ed225a800479fa5ad76371fd7c07c`
+**Superseded targets:** `1e12dce8a5be752fac55525074c2e15da0e8710c` rejected in
+round 1, `437d47078cea73a908c65d5d30fd09ee2428bfff` approved in round 2, and
+`d422f81675968f32cbe7240ffd8c392551b5cac3` approved in round 3. The round 3
+correction range is
+`git diff d422f81675968f32cbe7240ffd8c392551b5cac3..f2f71081788ed225a800479fa5ad76371fd7c07c`
 
 Implementation commits, in order:
 
@@ -31,6 +32,7 @@ Implementation commits, in order:
 | `1e12dce8a5be752fac55525074c2e15da0e8710c` | The four-control card layout at 390px, and the flow's evidence screenshots. |
 | `437d47078cea73a908c65d5d30fd09ee2428bfff` | **Review correction round 1.** Honest copy and a toast for the accepted occurrence refill, and the contract test that pins it. |
 | `d422f81675968f32cbe7240ffd8c392551b5cac3` | **Review correction round 2.** The divergence loss the occurrence warning omitted, the real name of the control it points at, and coverage of the unknown refill branch. |
+| `f2f71081788ed225a800479fa5ad76371fd7c07c` | **Review correction round 3.** The occurrence warning is now conditioned on the rule date the materializer will actually refill, so it stops promising a refill that will not happen and stops naming a control that is not rendered. |
 
 ## Delivered behavior
 
@@ -105,26 +107,26 @@ token. See known limitations.
 
 ## Changed files
 
-Exact base-to-implementation stat, base to `d422f81`:
+Exact base-to-implementation stat, base to `f2f7108`:
 
 ```text
  .github/workflows/ci.yml                           |  10 +
- docs/validation/M3/M3-19-VALIDATION.md             | 448 ++++++++++++++
+ docs/validation/M3/M3-19-VALIDATION.md             | 483 +++++++++++++++
  .../M3/evidence/M3-19-card-verbs-390x844.png       | Bin 0 -> 114936 bytes
  .../M3/evidence/M3-19-founder-migration-runbook.md | 203 +++++++
  .../M3/evidence/M3-19-logged-refusal-390x844.png   | Bin 0 -> 105571 bytes
- docs/validation/README.md                          |  15 +
+ docs/validation/README.md                          |  19 +
  e2e/m3-12-plan.spec.ts                             |   6 +-
  e2e/m3-14b-recurring-series.spec.ts                |   4 +-
  e2e/m3-19-delete-session.spec.ts                   | 316 ++++++++++
  e2e/m3-19.playwright.config.ts                     |  19 +
  src/app/home/plan/action-state.ts                  |  10 +-
- src/app/home/plan/actions.test.ts                  | 147 +++++
- src/app/home/plan/actions.ts                       | 143 ++++-
- src/app/home/plan/plan-manager.test.tsx            | 130 +++-
- src/app/home/plan/plan-manager.tsx                 | 126 +++-
+ src/app/home/plan/actions.test.ts                  | 150 +++++
+ src/app/home/plan/actions.ts                       | 151 ++++-
+ src/app/home/plan/plan-manager.test.tsx            | 167 +++++-
+ src/app/home/plan/plan-manager.tsx                 | 188 +++++-
  src/app/home/plan/plan.module.css                  |  21 +-
- src/app/home/plan/recurring-session-controls.tsx   |   4 +-
+ src/app/home/plan/recurring-session-controls.tsx   |  49 +-
  src/server/repositories/rolling-plan-repository.ts |   2 +
  .../rolling-plan/in-memory-rolling-plan-adapter.ts |  25 +
  src/server/rolling-plan/rolling-plan-contract.ts   | 186 +++++-
@@ -133,7 +135,7 @@ Exact base-to-implementation stat, base to `d422f81`:
  ...260829135426_m3_19_delete_a_planned_session.sql | 656 +++++++++++++++++++++
  .../m3_19_delete_a_planned_session.test.sql        | 555 +++++++++++++++++
  .../m3_10_rolling_plan_postgres.test.ts            |  16 +
- 25 files changed, 3011 insertions(+), 50 deletions(-)
+ 25 files changed, 3200 insertions(+), 55 deletions(-)
 ```
 
 Purpose notes for paths whose role is not evident from the path and diff:
@@ -161,6 +163,21 @@ Purpose notes for paths whose role is not evident from the path and diff:
 - `src/server/rolling-plan/in-memory-rolling-plan-adapter.ts` gains a
   `recordCompletion` test seam. Completions live outside this seam; the only
   fact modelled is the one the plan side has to consult.
+
+- `src/app/home/plan/actions.ts` carries three things beyond the delete branch.
+  `occurrenceRefill` decides whether the top-up put a just-deleted occurrence
+  straight back, from one bounded single-date read reached only when a delete
+  was followed by a top-up that created something; `deleteCopy` turns its three
+  outcomes into three toasts. `deletedOccurrence` finds the session that
+  change set is about to delete — added in round 1 reading `formData`, changed
+  in round 2 to read the id off the composed change instead, so the id it
+  reports on is the id that was applied and the request is not read a third
+  time. Its `find` predicate is deliberately *not* `requireSession`'s: that one
+  filters on status and this one must not.
+- `src/app/home/plan/recurring-session-controls.tsx` exports
+  `occurrenceHasFutureRuleDate` as of round 3. It was the local `canChangeFuture`
+  computation and is now shared with the Delete warning, which is what stops the
+  warning naming a series-removal control the same predicate has withheld.
 
 Nothing was deleted or renamed.
 
@@ -213,17 +230,27 @@ Nothing was deleted or renamed.
 
 ## Results
 
-No CI run exists yet for implementation `d422f816...`; the lead pushes the
-branch and records it. The runs that do exist, and exactly what each covers,
-are in the lead agent's section at the end of this record: run `33275082378`
-green over `1e12dce`, and run `33276894567` green over `437d470`. Neither
-covers the correction above, so a fresh green run is required before
-re-review.
+Three green runs cover the three implementations this ticket has had. None
+landed on the implementation commit itself, because a record cannot carry the
+SHA of the commit that adds it, so each run lands on the documentation head
+that follows. Each row's reconciliation is one command, and the delta is
+documentation only in every case.
 
-Every commit after `d422f81` on this branch changes only this record and its
-index — a record cannot carry the SHA of the commit that adds it, so the run
-will land on a later head. `git diff --name-only d422f81..<head>` is the
-reconciliation, and it is one command.
+| Implementation | Run | Head it ran on | Reconciliation |
+| --- | --- | --- | --- |
+| `1e12dce` | [33275082378](https://github.com/mattiss01/fittip/actions/runs/33275082378) `success` | `2d674e3` | `git diff --name-only 1e12dce..2d674e3` — this record and its index |
+| `437d470` | [33276894567](https://github.com/mattiss01/fittip/actions/runs/33276894567) `success` | `433a75e` | `git diff --name-only 437d470..433a75e` — this record and its index |
+| `d422f81` | [33277713636](https://github.com/mattiss01/fittip/actions/runs/33277713636) `success` | `dbaaa1c` | `git diff --name-only d422f81..dbaaa1c` — this record only |
+
+The first row's working is set out at length in the lead agent's section at
+the end of this record; the other two are the same shape and are stated here
+rather than pointed at.
+
+**No run yet covers the round 3 implementation `f2f7108`.** It is the lead's to
+run and record when the branch is pushed, and the final run — the one
+covering whatever documentation head carries this paragraph — is the lead's
+to record at acceptance under the evidence-commit exception, because no
+commit can cite a run of itself.
 
 What the builder observed locally while developing, against the local Supabase
 stack with every migration applied from zero:
@@ -290,6 +317,18 @@ Evidence CI does not produce:
    occurrence looks like a no-op, and **deleting a cancelled occurrence brings
    it back active, reversing a cancellation the owner already made**.
 
+   **The refill is bounded by the materialization window.** It fills only
+   `today .. today + 13`, and only between its segment's own dates. A moved
+   occurrence keeps its original rule date, so once that date falls behind
+   owner-local today the series stops filling it: the delete is permanent
+   again, and the series-removal control is withheld from that card for the
+   same reason. Round 3 made the warning say which of the two an owner is
+   looking at, deciding it with the one predicate the control itself uses. That
+   predicate slightly over-estimates the refill — a rule date inside the window
+   whose day already holds ten sessions will not be refilled either — which
+   errs toward warning that a delete may not stick, the safe direction for a
+   destructive control.
+
    A **diverged** occurrence loses more than its place: it comes back as the
    rule describes it, so an edited title, note, duration or activity list is
    replaced, the lock is cleared, and an occurrence the owner had moved
@@ -341,14 +380,15 @@ Evidence CI does not produce:
 6. **There is no undo, trash or restore**, by decision. A deleted session is
    recoverable only from the `delete` change entry's before state, which no
    surface reads.
-7. **The founder migration is not applied.** `20260829135426` must be applied
-   to the founder Supabase project in timestamp order, with remote history, the
-   replaced function and an authenticated hosted read verified, before
-   acceptance is requested.
+7. **The founder migration is applied.** The product owner ran the runbook on
+   30 August 2026 and `20260829135426` is on the founder project. This entry is
+   kept rather than deleted because it was a gate: it is now met. The lead
+   agent records the evidence — the pre-push history alignment and the push
+   output — in its own section; this record does not restate it.
 
 ## Independent reviewer focus
 
-Review exact implementation `d422f81675968f32cbe7240ffd8c392551b5cac3`
+Review exact implementation `f2f71081788ed225a800479fa5ad76371fd7c07c`
 against base `37529e20ea373034d7ede6b64e0b6dfde8d5e940`, reconcile the manifest
 above, and confirm the fresh CI run for that SHA is green and its Vercel
 Preview reached `READY`. Do not re-run
@@ -382,13 +422,20 @@ The judgment CI cannot supply:
   `series_id` null, a non-null `local_date`, the before state, and the same
   after-state shape `rolling_plan_sweep_series_occurrences` writes. Confirm no
   new change kind and no constraint change was smuggled in.
+- **Correction round 3 (`f2f7108`).** The only behavioral change is which
+  warning an occurrence card shows. Judge whether `occurrenceHasFutureRuleDate`
+  is the right predicate for both of its callers, whether the settled-occurrence
+  wording is true in every state that selects it, and whether the restored
+  toast can name the series-removal control in a state where that control is
+  absent. The record corrections are the three CI rows, the account of
+  `deletedOccurrence`, and limitation 7.
 - **Correction round 2 (`d422f81`).** Four round 2 findings, none behavioral.
-  Judge whether the occurrence warning is now complete — the refill, the loss of an
-  edited title, note, duration or activity list, the cleared lock, a moved
-  occurrence returning to the series date, and an escape route that quotes the
-  control's real label — and whether the `unknown` refill branch's new test
-  actually exercises the throw rather than the resolved path. The two record
-  corrections are the Results opener and the `git diff --stat` range.
+  Judge whether the occurrence warning is now complete — the refill, the loss
+  of an edited title, note, duration or activity list, the cleared lock, a
+  moved occurrence returning to the series date, and an escape route that
+  quotes the control's real label — and whether the `unknown` refill branch's
+  new test actually exercises the throw rather than the resolved path. The two
+  record corrections are the Results opener and the `git diff --stat` range.
 - **Correction round 1 (`437d470`).** The accepted occurrence refill is a
   product decision, not a defect to re-litigate. Judge only whether the
   surface now describes it truthfully in all three states — one-off, active
