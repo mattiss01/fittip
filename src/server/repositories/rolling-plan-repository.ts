@@ -104,6 +104,8 @@ export class PostgresRollingPlanAdapter implements RollingPlanAdapter {
         throw new RollingPlanRuleError("daily-session-limit");
       if (error.code === "PT424")
         throw new RollingPlanRuleError("series-already-started");
+      if (error.code === "PT425")
+        throw new RollingPlanRuleError("session-completed");
       if (error.code === "PT428") throw new RollingPlanTimezoneRequiredError();
       if (error.code === "22023") throw new RollingPlanValidationError();
       throw new RollingPlanPersistenceError();

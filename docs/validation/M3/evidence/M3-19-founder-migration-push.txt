@@ -1,0 +1,30 @@
+npx.cmd : Initialising login role...
+In Zeile:1 Zeichen:1
++ npx.cmd supabase db push --linked > push.txt 2>&1; cat push.txt
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Initialising login role...:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Connecting to remote database...
+Do you want to push these migrations to the remote database?
+ ÔÇó 20260829135426_m3_19_delete_a_planned_session.sql
+
+ [Y/n] Applying migration 20260829135426_m3_19_delete_a_planned_session.sql...
+Warning: failed to cache migrations catalog: error exporting pg-delta catalog: edge-runtime script produced no output:
+runtime has escaped from the event loop unexpectedly: event loop error: Error: Failed to read certificate file '/workspace/supabase/.temp/pgdelta/pgdelta-target-ca.crt': ENOENT: no such file or directory,
+open '/workspace/supabase/.temp/pgdelta/pgdelta-target-ca.crt'
+Finished supabase db push.
+    at getCertValue (file:///var/tmp/sb-compile-edge-runtime/node_modules/localhost/@supabase/pg-delta/1.0.0-alpha.27/dist/core/plan/ssl-config.js:44:27)
+    at async parseSslConfig (file:///var/tmp/sb-compile-edge-runtime/node_modules/localhost/@supabase/pg-delta/1.0.0-alpha.27/dist/core/plan/ssl-config.js:62:23)
+    at async createManagedPool (file:///var/tmp/sb-compile-edge-runtime/node_modules/localhost/@supabase/pg-delta/1.0.0-alpha.27/dist/core/postgres-config.js:340:23)
+    at async file:///var/tmp/sb-compile-edge-runtime/index.ts:10:25
+main worker has been destroyed
+event loop error: Error: Failed to read certificate file '/workspace/supabase/.temp/pgdelta/pgdelta-target-ca.crt': ENOENT: no such file or directory, open
+'/workspace/supabase/.temp/pgdelta/pgdelta-target-ca.crt'
+    at getCertValue (file:///var/tmp/sb-compile-edge-runtime/node_modules/localhost/@supabase/pg-delta/1.0.0-alpha.27/dist/core/plan/ssl-config.js:44:27)
+    at async parseSslConfig (file:///var/tmp/sb-compile-edge-runtime/node_modules/localhost/@supabase/pg-delta/1.0.0-alpha.27/dist/core/plan/ssl-config.js:62:23)
+    at async createManagedPool (file:///var/tmp/sb-compile-edge-runtime/node_modules/localhost/@supabase/pg-delta/1.0.0-alpha.27/dist/core/postgres-config.js:340:23)
+    at async file:///var/tmp/sb-compile-edge-runtime/index.ts:10:25
+
+A new version of Supabase CLI is available: v2.116.0 (currently installed v2.109.1)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

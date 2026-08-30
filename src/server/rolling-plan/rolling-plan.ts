@@ -106,6 +106,14 @@ export type RollingPlanChange =
     }
   | { operation: "set_lock"; sessionId: string; isLocked: boolean }
   | { operation: "cancel"; sessionId: string }
+  /**
+   * The hard delete beside the cancel. It keeps nothing: the row goes and a
+   * dated change entry naming no session is what remains. An already cancelled
+   * session is a legitimate target, and a lock does not refuse it - F-005's
+   * amendment of 19 August 2026 makes a lock a defence against a sweep, not
+   * against the owner's own deliberate individual act.
+   */
+  | { operation: "delete"; sessionId: string }
   | {
       operation: "set_recovery_day";
       localDate: string;
@@ -243,7 +251,13 @@ export type RollingPlanRuleReason =
   | "past-date"
   | "daily-session-limit"
   /** A whole-series edit was attempted after the segment already started. */
-  | "series-already-started";
+  | "series-already-started"
+  /**
+   * A delete was attempted on a session that already carries a completion.
+   * The record of what happened outlives the plan entry it was measured
+   * against, so the plan entry is what has to stay.
+   */
+  | "session-completed";
 
 /**
  * A change that parsed and was authorized, but breaks a planning rule the
@@ -417,6 +431,7 @@ function parseChange(value: unknown): RollingPlanChange {
         throw new RollingPlanValidationError();
       return { operation, sessionId, isLocked: record.isLocked };
     case "cancel":
+    case "delete":
       assertOnlyKeys(record, ["operation", "sessionId"]);
       return { operation, sessionId };
     default:

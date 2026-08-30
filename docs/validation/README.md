@@ -41,6 +41,29 @@ Validation records and their visual evidence are grouped by milestone.
 
 ## M3
 
+- [M3-19 delete a planned session](M3/M3-19-VALIDATION.md) — testable;
+  Tier 1, correction round 3 complete against `f2f7108`. A forward migration
+  re-emits `apply_rolling_plan_change_set` with a `delete` operation beside
+  `cancel`: it hard deletes an active or cancelled future session, ignores
+  the lock, and refuses a session carrying a completion with `PT425` before
+  the restricting foreign key can fire. `cancel` stops being the operation
+  chain's fallthrough. The audit entry is M3-14's dated `delete` shape,
+  reused unchanged, so nothing structural moves. Session cards retire the
+  "Remove" label for **Cancel** and **Delete**. Round 1 of independent review
+  rejected `1e12dce`: the top-up that follows every plan change writes a
+  deleted occurrence straight back, so deleting a cancelled occurrence
+  returned it active. The product owner accepted the behavior on
+  29 August 2026; `437d470` makes the copy and the toast describe it and
+  pins it in the shared adapter contract. Round 2 approved `437d470` with
+  findings and no blocking defect, and `d422f81` closes four of them: the
+  divergence loss the occurrence warning omitted, the real label of the
+  control it points at, coverage of the unknown refill branch, and two
+  record corrections. Round 3 approved `d422f81` the same way, and
+  `f2f7108` conditions the warning on the rule date the materializer will
+  actually refill, so it no longer promises a refill for a moved
+  occurrence whose date has passed nor names a control that is withheld
+  there. The founder migration is applied; a fresh CI run, re-review, a
+  fresh Preview and acceptance are outstanding
 - [M3-15A replacement completion foundation](M3/M3-15A-VALIDATION.md) —
   accepted; Tier 1, independently reviewed and accepted against `0cc8d46`.
   Rebuilds the factual completion record M3-11 deleted, on the rolling-plan

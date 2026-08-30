@@ -69,6 +69,22 @@ if (url && publishableKey && serviceRoleKey && isLocalUrl) {
             .eq("user_id", userId);
           if (error) throw new Error("Could not clear the contract zone.");
         },
+        // M3-15A's own owner-derived write, called exactly as the logging
+        // surface will call it. Nothing privileged is used: whether a session
+        // carries a completion has to be established the way an owner
+        // establishes it, or the delete refusal below proves nothing.
+        completeSession: async (sessionId: string) => {
+          const { error } = await ownerClient.rpc("apply_completion_change", {
+            p_operation: "create",
+            p_completion: {
+              planSessionId: sessionId,
+              status: "completed",
+              actualLocalDate: isoDateInTimezone(new Date(), CONTRACT_TIMEZONE),
+              activities: [],
+            },
+          });
+          if (error) throw new Error("Could not log the contract completion.");
+        },
         plan: new RollingPlan(new PostgresRollingPlanAdapter(ownerClient)),
         dispose: async () => {
           const { error } = await admin.auth.admin.deleteUser(userId);

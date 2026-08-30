@@ -187,6 +187,15 @@ describe("PlanManager", () => {
 
     expect(day.textContent).toContain("Cancelled, kept on the record");
     expect(day.textContent).toContain("Nothing planned.");
+    // Cancelled is not the end of the line: the owner who cancelled it may
+    // next want it gone, and delete is the only verb left that can do that.
+    fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
+    expect(
+      screen.getByRole("button", { name: "Delete session" }),
+    ).toBeVisible();
+    expect(
+      day.querySelector("input[name='operation'][value='delete']"),
+    ).not.toBeNull();
   });
 
   it("does not discard a create draft when a date control is submitted", () => {
@@ -345,13 +354,17 @@ describe("PlanManager", () => {
       screen.getAllByText("This and all future sessions").length,
     ).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByText("Remove", { selector: "summary" }));
+    fireEvent.click(screen.getByText("Cancel", { selector: "summary" }));
     expect(
       screen.getByText(/Permanent\. Removes this occurrence/),
     ).toBeVisible();
     expect(screen.getByText(/Locked sessions are kept/)).toBeVisible();
     expect(screen.getByText(/completed training is untouched/)).toBeVisible();
-    expect(screen.getByText(/no undo/)).toBeVisible();
+    // Scoped: the card's own Delete panel says "no undo" too, and it means
+    // something narrower there.
+    expect(
+      screen.getByText(/Permanent\. Removes this occurrence/).textContent,
+    ).toMatch(/no undo/);
     expect(
       screen.getByRole("button", {
         name: "Remove this and all future sessions",
@@ -359,7 +372,7 @@ describe("PlanManager", () => {
     ).toBeVisible();
   });
 
-  it("exposes only Edit, Remove, and the lock control on a session card", () => {
+  it("exposes Edit, Cancel, Delete, and the lock control on a session card", () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [session()]);
     const card = screen
       .getByRole("heading", { name: "Aerobic run" })
@@ -369,17 +382,149 @@ describe("PlanManager", () => {
     )!;
 
     expect(card).toContainElement(actionArea);
-    expect(Array.from(actionArea.children)).toHaveLength(3);
+    expect(Array.from(actionArea.children)).toHaveLength(4);
     expect(
       Array.from(actionArea.querySelectorAll(":scope > details > summary")).map(
         (summary) => summary.textContent,
       ),
-    ).toEqual(["Edit", "Remove"]);
+    ).toEqual(["Edit", "Cancel", "Delete"]);
     expect(actionArea.querySelector(":scope > form")?.textContent).toBe("Lock");
+    // "Remove" is retired as a label: it could not tell the two verbs apart.
+    expect(screen.queryByText("Remove", { selector: "summary" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Repeat" })).toBeNull();
     expect(screen.queryByText("Move", { selector: "summary" })).toBeNull();
     expect(screen.queryByText("Duplicate", { selector: "summary" })).toBeNull();
-    expect(screen.queryByText("Cancel", { selector: "summary" })).toBeNull();
+  });
+
+  it("says what each removal verb keeps, and submits the matching operation", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [session()]);
+    const card = screen
+      .getByRole("heading", { name: "Aerobic run" })
+      .closest("li")!;
+
+    fireEvent.click(screen.getByText("Cancel", { selector: "summary" }));
+    expect(
+      screen.getByText(/keeps the session on the record as cancelled/i),
+    ).toBeVisible();
+    const cancelForm = screen
+      .getByRole("button", { name: "Cancel session" })
+      .closest("form")!;
+    expect(cancelForm.querySelector("input[name='operation']")).toHaveValue(
+      "cancel",
+    );
+
+    fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
+    const deletePanel = screen.getByText(
+      /does not keep it on the record/i,
+    ) as HTMLElement;
+    expect(deletePanel).toBeVisible();
+    expect(deletePanel.textContent).toMatch(/no undo/i);
+    expect(deletePanel.textContent).toMatch(/logged training against/i);
+    // A one-off delete really is permanent, so it says so and says nothing
+    // about a series it does not belong to.
+    expect(deletePanel.textContent).toMatch(/^Permanent\./);
+    expect(deletePanel.textContent).not.toMatch(/repeats/i);
+    const deleteForm = screen
+      .getByRole("button", { name: "Delete session" })
+      .closest("form")!;
+    expect(deleteForm.querySelector("input[name='operation']")).toHaveValue(
+      "delete",
+    );
+    expect(deleteForm.querySelector("input[name='sessionId']")).toHaveValue(
+      session().id,
+    );
+    expect(card).toContainElement(deleteForm);
+  });
+
+  it("warns an occurrence owner that its series writes the date back", () => {
+    renderManager(
+      INITIAL_PLAN_ACTION_STATE,
+      [
+        session({
+          seriesId: "7f000000-0000-4000-8000-000000000099",
+          occurrenceDate: TODAY,
+        }),
+      ],
+      [series()],
+    );
+
+    fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
+    const panel = screen.getByText(/This session repeats/i);
+    expect(panel).toBeVisible();
+    // The accepted behavior of 29 August 2026. Deleting an occurrence is not
+    // permanent, so the panel must not claim it is.
+    expect(panel.textContent).toMatch(
+      /writes the occurrence back in the same step/i,
+    );
+    // What returns is the series' version, not the owner's. Naming the losses
+    // is the whole point of this paragraph.
+    expect(panel.textContent).toMatch(/is replaced/i);
+    expect(panel.textContent).toMatch(/the lock is cleared/i);
+    expect(panel.textContent).toMatch(
+      /moved reappears on the series date rather than this one/i,
+    );
+    // The escape route quotes the control the owner will actually see.
+    expect(panel.textContent).toContain("Remove this and all future sessions");
+    expect(panel.textContent).not.toMatch(/Permanent\./);
+    expect(panel.textContent).not.toMatch(/no undo/i);
+    expect(panel.textContent).not.toMatch(/undoes your cancellation/i);
+  });
+
+  it("calls a moved occurrence permanent once its series stops filling that date", () => {
+    // Reachable in a day: move an occurrence forward, wait for its rule date to
+    // fall behind today. The materializer fills only today..today+13, so this
+    // delete really does stick - and the control the refill warning quotes is
+    // not rendered here either, which is why one predicate decides both.
+    renderManager(
+      INITIAL_PLAN_ACTION_STATE,
+      [
+        session({
+          localDate: DATES[4],
+          seriesId: "7f000000-0000-4000-8000-000000000099",
+          occurrenceDate: "2026-08-10",
+        }),
+      ],
+      [{ ...series(), startDate: "2026-08-01" }],
+    );
+
+    fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
+    const panel = screen.getByText(/^Permanent\./);
+    expect(panel.textContent).toMatch(/series will not write this date back/i);
+    expect(panel.textContent).not.toMatch(/This session repeats/i);
+    // Naming a control the same predicate has withheld is the defect this
+    // branch exists to prevent.
+    expect(panel.textContent).not.toContain(
+      "Remove this and all future sessions",
+    );
+    expect(
+      screen.queryByRole("button", {
+        name: "Remove this and all future sessions",
+      }),
+    ).toBeNull();
+  });
+
+  it("tells a cancelled occurrence owner that deleting undoes the cancel", () => {
+    renderManager(
+      INITIAL_PLAN_ACTION_STATE,
+      [
+        session({
+          status: "cancelled",
+          seriesId: "7f000000-0000-4000-8000-000000000099",
+          occurrenceDate: TODAY,
+        }),
+      ],
+      [series()],
+    );
+
+    fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
+    const panel = screen.getByText(/This session repeats/i);
+    expect(panel.textContent).toMatch(/it comes back active/i);
+    expect(panel.textContent).toMatch(/undoes your cancellation/i);
+    expect(panel.textContent).toMatch(/the lock is cleared/i);
+    // The cancelled card has no Cancel panel of its own, so the way out is on
+    // the session that returns.
+    expect(panel.textContent).toContain("Remove this and all future sessions");
+    expect(panel.textContent).toMatch(/on the session that returns/i);
   });
 
   it("withholds future scopes from a locked survivor past the segment end", () => {
@@ -395,15 +540,17 @@ describe("PlanManager", () => {
       [{ ...series(), endDate: DATES[0].replace(/17$/, "16") }],
     );
 
-    fireEvent.click(screen.getByText("Remove", { selector: "summary" }));
+    fireEvent.click(screen.getByText("Cancel", { selector: "summary" }));
     expect(
       screen.queryByRole("button", {
         name: "Remove this and all future sessions",
       }),
     ).toBeNull();
-    expect(screen.getByText(/only this session can be removed/i)).toBeVisible();
     expect(
-      screen.getByRole("button", { name: "Remove only this session" }),
+      screen.getByText(/only this session can be cancelled/i),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Cancel only this session" }),
     ).toBeVisible();
   });
 
@@ -439,7 +586,7 @@ describe("PlanManager", () => {
       <PlanManager {...props} sessions={[recurringSession]} />,
     );
 
-    fireEvent.click(screen.getByText("Remove", { selector: "summary" }));
+    fireEvent.click(screen.getByText("Cancel", { selector: "summary" }));
     fireEvent.submit(
       screen
         .getByRole("button", {

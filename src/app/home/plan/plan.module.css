@@ -269,9 +269,16 @@
   margin: 0;
 }
 
+/*
+ * Four controls since M3-19 - Edit, Cancel, Delete and the lock - so they pair
+ * off two to a row instead of sharing one. At 390px a four-across row would put
+ * every label below the comfortable tap target, and the narrow-screen override
+ * that used to give the lock its own full-width row would now leave Delete
+ * alone beside a gap, so both are gone and one grid serves every width.
+ */
 .cardActions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.45rem;
   align-items: start;
   margin-top: 0.7rem;
@@ -287,6 +294,10 @@
 
 .cardActions > .disclosure > summary,
 .cardActions > form > .action {
+  width: 100%;
+}
+
+.cardActions > .disclosure .dangerAction {
   width: 100%;
 }
 
@@ -796,14 +807,6 @@
 
   .weekdays {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .cardActions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .cardActions > form {
-    grid-column: 1 / -1;
   }
 }
 

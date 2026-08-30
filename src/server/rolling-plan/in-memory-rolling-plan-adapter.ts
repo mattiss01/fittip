@@ -35,6 +35,13 @@ export type InMemoryRollingPlanOptions = {
 export type InMemoryRollingPlanAdapterHandle = {
   /** Removes the stored zone, as nulling the profile column would. */
   clearTimezone(): void;
+  /**
+   * Marks a session as carrying a completion, as writing one through
+   * `apply_completion_change` would. Completions live outside this seam, so
+   * the only thing modelled here is the one fact the plan side has to consult:
+   * whether the session may still be deleted.
+   */
+  recordCompletion(sessionId: string): void;
 };
 
 /** One stored segment: the same columns `rolling_plan_series` holds. */
@@ -56,6 +63,7 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
   >();
   private sequence = 0;
   private timezoneName: string | null;
+  private completedSessions = new Set<string>();
 
   constructor(private readonly options: InMemoryRollingPlanOptions = {}) {
     this.timezoneName = options.timezoneName ?? null;
@@ -63,6 +71,10 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
 
   clearTimezone() {
     this.timezoneName = null;
+  }
+
+  recordCompletion(sessionId: string) {
+    this.completedSessions.add(sessionId);
   }
 
   async getPlanSlice({
@@ -299,6 +311,19 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
             id: nextId("activity"),
           })),
         });
+        continue;
+      }
+      // The one operation that removes a row. It takes a cancelled session as
+      // readily as an active one, ignores the lock, and refuses only what
+      // `apply_rolling_plan_change_set` refuses: a past date, then a session
+      // whose completion would be left measuring nothing. The order matters,
+      // because it is the order the owner sees the two refusals in.
+      if (change.operation === "delete") {
+        if (!current) throw new RollingPlanValidationError();
+        touchedDates.add(requirePlannable(current.localDate));
+        if (this.completedSessions.has(change.sessionId))
+          throw new RollingPlanRuleError("session-completed");
+        next.delete(change.sessionId);
         continue;
       }
       if (!current || current.status !== "active")

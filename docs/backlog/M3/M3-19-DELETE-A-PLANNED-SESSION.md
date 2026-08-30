@@ -1,8 +1,13 @@
 # M3-19: Delete a planned session
 
-**Status:** in development — dispatched by the lead agent on 29 August 2026
-to a builder subagent on branch `ticket/m3-19-delete-a-planned-session`. The
-product owner approved the third
+**Status:** accepted — the product owner accepted on 30 August 2026 against
+implementation `43a3140`, its green CI run
+[33314886345](https://github.com/mattiss01/fittip/actions/runs/33314886345) and
+its Preview, after six independent review rounds. See
+[the validation record](../../validation/M3/M3-19-VALIDATION.md).
+
+Dispatched by the lead agent on 29 August 2026 to a builder subagent on branch
+`ticket/m3-19-delete-a-planned-session`. The product owner approved the third
 session verb and the card relabelling on 29 August 2026, against the
 [F-005 amendment recorded the same day](../../product/F-005-ROLLING-TRAINING-PLAN.md#deleting-a-planned-session-29-august-2026).
 Tier 1 dispatch approved 29 August 2026.

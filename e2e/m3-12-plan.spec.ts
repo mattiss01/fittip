@@ -148,13 +148,13 @@ test.describe("M3-12 manual continuous planning", () => {
         path: path.join(evidenceDirectory, "M3-12-plan-window-390x844.png"),
       });
 
-      // Remove keeps the identity on the record rather than deleting it.
+      // Cancel keeps the identity on the record rather than deleting it.
       const doomed = sessionCard(page, today, "Long aerobic run");
-      await openDisclosure(doomed, "Remove");
+      await openDisclosure(doomed, "Cancel");
       await expect(
         doomed.getByText(/keeps the session on the record/i),
       ).toBeVisible();
-      await doomed.getByRole("button", { name: "Remove session" }).click();
+      await doomed.getByRole("button", { name: "Cancel session" }).click();
       await expect(day(page, today).getByText("Cancelled")).toBeVisible();
       await expect(
         day(page, today).getByText("Running · Cancelled, kept on the record"),

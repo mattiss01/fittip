@@ -24,6 +24,13 @@ export type RollingPlanContractSubject = {
    * lookup is part of this contract and cannot be exercised without it.
    */
   clearTimezone: () => Promise<void>;
+  /**
+   * Records a completion against one planned session, as the owner logging
+   * training would. Required, because whether a session may still be deleted
+   * is decided by whether it carries one, and a refusal proved in only one
+   * adapter is not proved.
+   */
+  completeSession: (sessionId: string) => Promise<void>;
   dispose?: () => Promise<void>;
 };
 
@@ -120,6 +127,127 @@ export function registerRollingPlanContract(
             status: "cancelled",
             cancelledAt: expect.any(String),
           }),
+        ],
+      });
+    });
+
+    it("deletes a session outright while cancel keeps the one beside it", async () => {
+      const { plan, day } = requireSubject(subject);
+      const cancelled = randomUUID();
+      const deleted = randomUUID();
+      await plan.applyChangeSet(
+        changeSet([
+          add(cancelled, day(1), 0, "Kept"),
+          add(deleted, day(1), 1, "Gone"),
+        ]),
+        0,
+      );
+      await plan.applyChangeSet(
+        changeSet([{ operation: "cancel", sessionId: cancelled }]),
+        1,
+      );
+      await plan.applyChangeSet(
+        changeSet([{ operation: "delete", sessionId: deleted }]),
+        2,
+      );
+
+      const slice = await plan.getPlanSlice(day(1), day(1));
+      expect(slice.revision).toBe(3);
+      expect(slice.sessions).toEqual([
+        expect.objectContaining({ id: cancelled, status: "cancelled" }),
+      ]);
+    });
+
+    it("deletes a locked session, and a cancelled one, when asked directly", async () => {
+      const { plan, day } = requireSubject(subject);
+      const locked = randomUUID();
+      const cancelled = randomUUID();
+      await plan.applyChangeSet(
+        changeSet([
+          add(locked, day(2), 0, "Locked"),
+          add(cancelled, day(2), 1, "Cancelled"),
+        ]),
+        0,
+      );
+      await plan.applyChangeSet(
+        changeSet([
+          { operation: "set_lock", sessionId: locked, isLocked: true },
+          { operation: "cancel", sessionId: cancelled },
+        ]),
+        1,
+      );
+
+      // A lock defends a session from a sweep, never from the owner asking for
+      // this one session by name.
+      await plan.applyChangeSet(
+        changeSet([
+          { operation: "delete", sessionId: locked },
+          { operation: "delete", sessionId: cancelled },
+        ]),
+        2,
+      );
+      expect(await plan.getPlanSlice(day(2), day(2))).toMatchObject({
+        revision: 3,
+        sessions: [],
+      });
+    });
+
+    it("refuses to delete a session that carries a completion", async () => {
+      const { plan, day, completeSession } = requireSubject(subject);
+      const sessionId = randomUUID();
+      await plan.applyChangeSet(
+        changeSet([add(sessionId, day(0), 0, "Logged")]),
+        0,
+      );
+      await completeSession(sessionId);
+
+      const refusal = await plan
+        .applyChangeSet(changeSet([{ operation: "delete", sessionId }]), 1)
+        .then(
+          () => null,
+          (thrown: unknown) => thrown,
+        );
+      expect(refusal).toBeInstanceOf(RollingPlanRuleError);
+      expect((refusal as RollingPlanRuleError).reason).toBe(
+        "session-completed",
+      );
+      // The refusal costs the owner nothing: the session is still there and the
+      // revision has not moved, so their next change is not stale.
+      expect(await plan.getPlanSlice(day(0), day(0))).toMatchObject({
+        revision: 1,
+        sessions: [expect.objectContaining({ id: sessionId })],
+      });
+    });
+
+    it("refuses a delete naming no session, and an unknown operation", async () => {
+      const { plan, day } = requireSubject(subject);
+      const sessionId = randomUUID();
+      await plan.applyChangeSet(changeSet([add(sessionId, day(1), 0)]), 0);
+
+      await expect(
+        plan.applyChangeSet(
+          changeSet([{ operation: "delete", sessionId: randomUUID() }]),
+          1,
+        ),
+      ).rejects.toThrow(RollingPlanValidationError);
+      // Cancel used to be the fallthrough of the operation chain. An operation
+      // nobody recognizes must land nowhere rather than in the branch beside it.
+      await expect(
+        plan.applyChangeSet(
+          changeSet([{ operation: "obliterate", sessionId }]),
+          1,
+        ),
+      ).rejects.toThrow(RollingPlanValidationError);
+      await expect(
+        plan.applyChangeSet(
+          changeSet([{ operation: "delete", sessionId, localDate: day(1) }]),
+          1,
+        ),
+      ).rejects.toThrow(RollingPlanValidationError);
+      expect(await plan.getPlanSlice(day(1), day(1))).toMatchObject({
+        revision: 1,
+        sessions: [
+          expect.objectContaining({ id: sessionId, status: "active" }),
         ],
       });
     });
@@ -466,6 +594,61 @@ export function registerRollingPlanContract(
       ).toMatchObject({ status: "cancelled" });
     });
 
+    it("writes a deleted occurrence straight back, cancelled or not", async () => {
+      const { plan, day } = requireSubject(subject);
+      const seriesId = randomUUID();
+      await plan.applyChangeSet(changeSet([addSeries(seriesId, day(0), 3)]), 0);
+      await plan.materializeSeries(randomUUID(), 1);
+      const [, second, third] = (await plan.getPlanSlice(day(0), day(13)))
+        .sessions;
+
+      await plan.applyChangeSet(
+        changeSet([{ operation: "cancel", sessionId: third.id }]),
+        2,
+      );
+      await plan.applyChangeSet(
+        changeSet([
+          { operation: "delete", sessionId: second.id },
+          { operation: "delete", sessionId: third.id },
+        ]),
+        3,
+      );
+      expect(
+        (await plan.getPlanSlice(day(0), day(13))).sessions.map(
+          (session) => session.occurrenceDate,
+        ),
+      ).toEqual([day(0), day(9), day(12)]);
+
+      // Coverage is "a row exists for this series and rule date", and delete is
+      // the one operation that removes the row - cancel keeps it, which is why
+      // cancel is stable and delete is not. The next top-up therefore sees two
+      // uncovered dates and fills them. The product owner accepted this on
+      // 29 August 2026 rather than withhold delete from an occurrence, so it is
+      // pinned here: a later reader must not mistake it for a defect and
+      // "correct" the materializer, and the two consumer surfaces that inherit
+      // it need it to stay true.
+      expect(await plan.materializeSeries(randomUUID(), 4)).toMatchObject({
+        result: "applied",
+        createdCount: 2,
+      });
+      const refilled = await plan.getPlanSlice(day(0), day(13));
+      expect(
+        refilled.sessions.map((session) => session.occurrenceDate),
+      ).toEqual([day(0), day(3), day(6), day(9), day(12)]);
+      expect(
+        refilled.sessions.find((session) => session.occurrenceDate === day(3)),
+      ).toMatchObject({
+        status: "active",
+        isLocked: false,
+        hasDiverged: false,
+      });
+      // The half that reverses an owner decision: the occurrence was cancelled
+      // before it was deleted, and it comes back active.
+      expect(
+        refilled.sessions.find((session) => session.occurrenceDate === day(6)),
+      ).toMatchObject({ status: "active", cancelledAt: null });
+    });
+
     it("ends a series forward, keeps a locked occurrence, and reports both", async () => {
       const { plan, day } = requireSubject(subject);
       const seriesId = randomUUID();
@@ -647,10 +830,11 @@ export function registerRollingPlanContract(
 
 function requireSubject(subject: RollingPlanContractSubject | undefined) {
   if (!subject) throw new Error("Rolling plan contract setup failed.");
-  const { plan, today, clearTimezone } = subject;
+  const { plan, today, clearTimezone, completeSession } = subject;
   return {
     plan,
     clearTimezone,
+    completeSession,
     day: (offset: number) => shiftDate(today, offset),
   };
 }
