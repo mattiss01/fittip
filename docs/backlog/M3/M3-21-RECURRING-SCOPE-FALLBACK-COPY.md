@@ -62,6 +62,31 @@ same state from the delete side, as the `settled-occurrence` scope.
 This is an ordinary consequence of the M3-14 move semantics, not an edge case
 that needs contrivance to produce.
 
+## A second, smaller instance in the same predicate's orbit
+
+Added on 30 August 2026 from M3-19 round 6 review, finding 3. Not user-visible,
+but it is the same defect in the same place and a builder fixing the strings
+above will already be reading the predicate it gets wrong.
+
+`src/app/home/plan/plan-manager.tsx`, the `DeleteSession` docblock at roughly
+lines 711–731, describes the three delete scopes by today alone:
+
+> Deleting an occurrence whose rule date is **still ahead** is not [permanent]
+> … An occurrence whose rule date has **fallen behind today** … is permanent
+> again, because the materializer fills only `today .. today + 13`.
+
+A locked occurrence sitting past an end date its series was given later has a
+rule date ahead of today and *is* permanent, so both halves are wrong in that
+state. `plan-manager.test.tsx` builds exactly that case
+(`withholds future scopes from a locked survivor past the segment end`), and
+the predicate's own docblock in `recurring-session-controls.tsx` already says
+it correctly — "only between a segment's own dates" — so the two comments now
+contradict each other.
+
+M3-19's validation record carried the same error in prose and corrected it in
+round 5; the comment was out of that round's scope because no source file could
+change in it.
+
 ## Why it is worth a ticket
 
 The strings are not merely vague. They tell the owner that their series has
@@ -72,8 +97,8 @@ nothing; saying a false one is worse than either.
 
 ## Scope boundaries
 
-- Copy only. Do not change `occurrenceHasFutureRuleDate`, which of the three
-  conditions gates the controls, or when the controls render.
+- Copy and comments only. Do not change `occurrenceHasFutureRuleDate`, which of
+  the three conditions gates the controls, or when the controls render.
 - Do not merge the two strings into one shared component. The edit and remove
   modes say different things about what remains possible, and that difference
   is correct.
@@ -88,3 +113,5 @@ nothing; saying a false one is worse than either.
   the branch that renders it requires that.
 - No change to which controls render in which state, demonstrated by the
   existing M3-14B browser flow staying green without modification.
+- The `DeleteSession` docblock and the `occurrenceHasFutureRuleDate` docblock
+  agree with each other and with the predicate.
