@@ -1,20 +1,27 @@
 # M3-19 validation: delete a planned session
 
 **Ticket:** [M3-19](../../backlog/M3/M3-19-DELETE-A-PLANNED-SESSION.md)
-**Status:** testable — through five review rounds. Round 1 rejected `1e12dce`
+**Status:** testable — through six review rounds. Round 1 rejected `1e12dce`
 on one blocking finding, which the product owner resolved by accepting the
-behavior and requiring the surface to describe it honestly. Rounds 2 to 5 each
+behavior and requiring the surface to describe it honestly. Rounds 2 to 6 each
 approved with findings and no blocking defect, and each round's findings are
-closed in the commits above the target it reviewed; whether a sixth round
-follows is the reviewer's to decide. The founder migration is applied. A fresh
-CI run, re-review, a fresh Preview and product-owner acceptance are
-outstanding.
+closed in the commits above the target it reviewed. The founder migration is
+applied, the reviewed commit `43a3140` has a green run and a `success` Preview,
+and **only product-owner acceptance is outstanding.**
+
+Round 6 approved `43a3140` and named two record-only corrections — a
+reconciliation label it had left half-closed, and a review target that pointed
+at a commit with no run and no Preview — stating that with those two corrected
+the record is fit for acceptance. They are made in the commit above this line
+and nothing else was changed with them, so no round 7 is opened. The reviewed
+commit stays `43a3140`; a record-only commit after it is the evidence-commit
+exception, which is how every earlier round in this record already works.
 **Tier:** 1
 **Branch:** `ticket/m3-19-delete-a-planned-session`
 **Base:** `37529e20ea373034d7ede6b64e0b6dfde8d5e940`
-**Implementation review target:** `368f78caf6b21eb0aa1b4483a976f463591c91e3`
+**Implementation review target:** `43a3140cba2f347ed253180723640e01b4457341`
 **Review range:**
-`git diff 37529e20ea373034d7ede6b64e0b6dfde8d5e940..368f78caf6b21eb0aa1b4483a976f463591c91e3`
+`git diff 37529e20ea373034d7ede6b64e0b6dfde8d5e940..43a3140cba2f347ed253180723640e01b4457341`
 **Superseded targets:** `1e12dce8a5be752fac55525074c2e15da0e8710c` rejected in
 round 1, `437d47078cea73a908c65d5d30fd09ee2428bfff` approved in round 2,
 `d422f81675968f32cbe7240ffd8c392551b5cac3` approved in round 3,
@@ -27,8 +34,7 @@ round 3's is `f2f7108` alone
 round 4's is `41fcbc0` alone and moves a comment
 (`git diff f2f71081788ed225a800479fa5ad76371fd7c07c..41fcbc0db5e275fc2a2e0ea5376ad0a985073a97`),
 and round 5's changes no source file at all
-(`git diff 873e5e182f2fbd665434f0925ee1cfeb72315e61..368f78caf6b21eb0aa1b4483a976f463591c91e3`,
-plus the record-only commits that follow it).
+(`git diff 873e5e182f2fbd665434f0925ee1cfeb72315e61..43a3140cba2f347ed253180723640e01b4457341`).
 
 Implementation commits, in order:
 
@@ -272,8 +278,9 @@ in every case.
 | --- | --- | --- | --- |
 | `1e12dce` | [33275082378](https://github.com/mattiss01/fittip/actions/runs/33275082378) `success` | `2d674e3` | `git diff --name-only 1e12dce..2d674e3` — this record and its index |
 | `437d470` | [33276894567](https://github.com/mattiss01/fittip/actions/runs/33276894567) `success` | `433a75e` | `git diff --name-only 437d470..433a75e` — this record and its index |
-| `d422f81` | [33277713636](https://github.com/mattiss01/fittip/actions/runs/33277713636) `success` | `dbaaa1c` | `git diff --name-only d422f81..dbaaa1c` — this record only |
+| `d422f81` | [33277713636](https://github.com/mattiss01/fittip/actions/runs/33277713636) `success` | `dbaaa1c` | `git diff --name-only d422f81..dbaaa1c` — this record and its index |
 | `f2f7108` | [33309063845](https://github.com/mattiss01/fittip/actions/runs/33309063845) `success` | `28d0bbe` | `git diff --name-only f2f7108..28d0bbe` — this record and its index |
+| `41fcbc0` | [33314886345](https://github.com/mattiss01/fittip/actions/runs/33314886345) `success` | `43a3140` | `git diff --name-only 41fcbc0..43a3140` — this record and the two founder-migration captures |
 
 The first row's working is set out at length in the lead agent's section at
 the end of this record; the others are the same shape and are stated here
@@ -288,10 +295,11 @@ and filed as
 in `ae32d7e`, because a gate that fails at random is worse than no gate. The
 `success` above is the rerun of the identical SHA.
 
-**No run yet covers the round 4 implementation `41fcbc0`.** The final run — the
-one covering whatever documentation head carries this paragraph — is the lead's
-to record at acceptance under the evidence-commit exception, because no commit
-can cite a run of itself.
+The fifth row is the acceptance row: `43a3140` is the reviewed commit, it is
+the head this record's Results and Preview tables describe, and its run is
+green on all three jobs. The commit that adds this paragraph carries no run of
+its own — that is the evidence-commit exception, used in the direction it was
+written for, and the lead verifies that final run when acceptance is recorded.
 
 What the builder observed locally while developing, against the local Supabase
 stack with every migration applied from zero:
@@ -429,7 +437,7 @@ Evidence CI does not produce:
 
 ## Independent reviewer focus
 
-Review exact implementation `368f78caf6b21eb0aa1b4483a976f463591c91e3`
+Review exact implementation `43a3140cba2f347ed253180723640e01b4457341`
 against base `37529e20ea373034d7ede6b64e0b6dfde8d5e940`, reconcile the manifest
 above, and confirm the fresh CI run for that SHA is green and its Vercel
 Preview reached `READY`. Do not re-run
@@ -463,6 +471,17 @@ The judgment CI cannot supply:
   `series_id` null, a non-null `local_date`, the before state, and the same
   after-state shape `rolling_plan_sweep_series_occurrences` writes. Confirm no
   new change kind and no constraint change was smuggled in.
+- **Correction round 6 (no source change).** Two findings, both against this
+  record and both the lead's. The `d422f81` Results row still said "this record
+  only" where the command prints two files — the identical defect round 5
+  raised, corrected in the row below it and left standing in that one. And the
+  stated review target was `368f78c`, a commit with neither a CI run nor a
+  Preview, while the Preview table stopped two rounds earlier at `28d0bbe`; a
+  product owner cannot accept against a SHA that was never built. The target is
+  now `43a3140`, the commit round 6 reviewed, and both tables carry it. The
+  round 6 reviewer named these two corrections and stated the record would be
+  fit for acceptance with them made, which is why they close the round rather
+  than open another.
 - **Correction round 5 (no source change).** Six findings, none behavioral and
   all against this record. The lead closed four in `368f78c`: the founder
   migration alignment check had anchored its grep on the capture's Local
@@ -556,6 +575,10 @@ the checkable justification `AGENTS.md` requires, and it is one command.
 | --- | --- | --- | --- |
 | `2d674e3` | `Preview` | `success` | <https://fittip-aek3em2l0-mattis-3657s-projects.vercel.app> |
 | `28d0bbe` | `Preview` | `success` | <https://fittip-e8u8hsbvl-mattis-3657s-projects.vercel.app> |
+| `873e5e1` | `Preview` | `success` | <https://fittip-ixcbeq83t-mattis-3657s-projects.vercel.app> |
+| **`43a3140`** | `Preview` | `success` | **<https://fittip-blpx0b9pm-mattis-3657s-projects.vercel.app>** |
+
+The last row is the one acceptance is requested against.
 
 ### A red run that was not this ticket's, and not a defect in what it tested
 
