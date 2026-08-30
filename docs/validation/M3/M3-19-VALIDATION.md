@@ -239,9 +239,11 @@ Nothing was deleted or renamed.
 
 ## Results
 
-A green run covers each implementation this ticket has had. None landed on the
-implementation commit itself, because a record cannot carry the SHA of the
-commit that adds it, so each run lands on the documentation head that follows.
+A green run covers every implementation this ticket has had except the last,
+whose run is recorded at acceptance for the reason given below the table. None
+landed on the implementation commit itself, because a record cannot carry the
+SHA of the commit that adds it, so each run lands on the documentation head
+that follows.
 Each row's reconciliation is one command, and the delta is documentation only
 in every case.
 
@@ -250,7 +252,7 @@ in every case.
 | `1e12dce` | [33275082378](https://github.com/mattiss01/fittip/actions/runs/33275082378) `success` | `2d674e3` | `git diff --name-only 1e12dce..2d674e3` — this record and its index |
 | `437d470` | [33276894567](https://github.com/mattiss01/fittip/actions/runs/33276894567) `success` | `433a75e` | `git diff --name-only 437d470..433a75e` — this record and its index |
 | `d422f81` | [33277713636](https://github.com/mattiss01/fittip/actions/runs/33277713636) `success` | `dbaaa1c` | `git diff --name-only d422f81..dbaaa1c` — this record only |
-| `f2f7108` | [33309063845](https://github.com/mattiss01/fittip/actions/runs/33309063845) `success` | `28d0bbe` | `git diff --name-only f2f7108..28d0bbe` — this record only |
+| `f2f7108` | [33309063845](https://github.com/mattiss01/fittip/actions/runs/33309063845) `success` | `28d0bbe` | `git diff --name-only f2f7108..28d0bbe` — this record and its index |
 
 The first row's working is set out at length in the lead agent's section at
 the end of this record; the others are the same shape and are stated here
@@ -260,8 +262,10 @@ The fourth row's run went red once before it went green, on an
 `e2e/m3-14b-recurring-series.spec.ts` failure that belongs to neither this
 ticket nor that spec's product behavior. It is diagnosed in full under
 [the lead agent's section](#a-red-run-that-was-not-this-tickets-and-not-a-defect-in-what-it-tested)
-and ticketed as M3-22, because a gate that fails at random is worse than no
-gate. The `success` above is the rerun of the identical SHA.
+and filed as
+[M3-22](../../backlog/M3/M3-22-OFFLINE-CONSOLE-ASSERTION-FLAKE.md) on `master`
+in `ae32d7e`, because a gate that fails at random is worse than no gate. The
+`success` above is the rerun of the identical SHA.
 
 **No run yet covers the round 4 implementation `41fcbc0`.** The final run — the
 one covering whatever documentation head carries this paragraph — is the lead's
@@ -587,18 +591,31 @@ what rules out someone else having written to the project.
 
 The lead checked that alignment against the repository rather than reading it
 off the table, because "aligned at every position" is the one claim in this
-section a mistake would hide rather than announce:
+section a mistake would hide rather than announce. The check extracts the
+capture's **Remote** column — the middle field, hence the leading `|` in the
+pattern — and compares it with the repository:
 
 ```
-$ ls supabase/migrations/*.sql | sed 's#.*/##; s/_.*//' | sort > local
-$ grep -oE '^\s+`[0-9]{14}`' evidence/M3-19-founder-migration-list-before.txt \
-    | tr -d ' `' | sort > listed
-$ diff local listed && echo IDENTICAL
-IDENTICAL
+$ ls supabase/migrations/*.sql | sed 's#.*/##; s/_.*//' | sort > repo
+$ grep -oE '\|\s*`[0-9]{14}`\s*\|' \
+    evidence/M3-19-founder-migration-list-before.txt \
+    | tr -d ' `|' | sort > remote
+$ comm -13 repo remote          # remote entries the repository lacks: drift
+$ comm -23 repo remote          # repository entries not yet applied
+20260829135426
 ```
 
-Twenty versions in the repository, the same twenty in the founder history, no
-version on either side that the other lacks.
+Twenty versions in the repository, nineteen on the founder project, **nothing
+on the remote that the repository lacks**, and exactly one migration pending —
+`20260829135426`, this ticket's. The first `comm` is the one that matters: an
+empty result is what rules out someone else having written to the project.
+
+An earlier version of this paragraph ran the same comparison against the
+capture's *Local* column, which is derived from the same `supabase/migrations`
+directory as the left-hand side. That check compared the repository with itself
+and could not have detected drift. Corrected on 30 August 2026 after the
+independent reviewer caught it; the conclusion is unchanged, but it now rests
+on a check that could have failed.
 
 **Captured — the apply.** `supabase db push --linked` offered exactly one
 migration, `20260829135426_m3_19_delete_a_planned_session.sql`, and reported
@@ -648,9 +665,12 @@ during the build and reverted by the lead before the branch was pushed. The
 cause was benign and the builder identified it unprompted: it re-ran the M3-12
 and M3-14B configs to confirm the relabelling had not broken them, and those
 specs rewrite their own screenshots as a side effect of passing. Both suites
-passed. The pushed branch adds only the two new M3-19 files under
-`docs/validation/M3/evidence/`, which `git diff --stat origin/master..HEAD --
-docs/validation/M3/evidence/` confirms.
+passed. The pushed branch only **adds** files under
+`docs/validation/M3/evidence/` and modifies none, which `git diff --stat
+origin/master..HEAD -- docs/validation/M3/evidence/` confirms: the two M3-19
+screenshots and the runbook, plus the two founder-migration captures the lead
+added later. No accepted ticket's evidence is touched, which is the property
+that matters here.
 
 This is a gap in the project's own guidance rather than a builder error:
 `CLAUDE.md` forbids hand-editing accepted validation records but does not say
