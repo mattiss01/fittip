@@ -1,7 +1,13 @@
 # M3-15B: Today and logging
 
-**Status:** in development — the product owner approved the agent brief and
-Tier 2 dispatch on 30 August 2026. Split out of
+**Status:** testable — round 3 independently approved on 31 August 2026 against
+`88b3d84`, with CI run
+[33370107698](https://github.com/mattiss01/fittip/actions/runs/33370107698)
+green on all three jobs. Awaiting the product owner's 390px acceptance pass.
+The product owner approved the agent brief and Tier 2 dispatch on 30 August
+2026. Round 3 was requested by the product owner on 31 August 2026 from their
+Preview pass, and dispatched by the lead as within the same Tier 2 scope. Split
+out of
 [M3-15](M3-15-REPLACEMENT-CONSUMER-READINESS.md) on 29 August 2026.
 
 **Triage:** ready-for-agent

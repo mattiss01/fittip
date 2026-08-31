@@ -645,9 +645,18 @@ corrections and nothing else. It was dispatched as Tier 2: the create path of
 `apply_completion_change` already validates and inserts an activity list, so
 naming an unplanned log needed no schema change.
 
-**Review target:** `<lead fills in the final source commit SHA>`
-**Review range:** `git diff 19ff771..<target>`
-**Continuous integration:** `<lead fills in the run URL for that SHA>`
+**Review target:** `88b3d84` — the last source commit of round 3. `caed985`
+adds only this record, under the evidence-commit exception.
+
+**Review range:** `git diff 19ff771..caed985`, reviewed in two passes: the
+corrections at `34e69fe`, then the findings delta `34e69fe..caed985`.
+
+**Continuous integration:** run
+[33370107698](https://github.com/mattiss01/fittip/actions/runs/33370107698),
+`head_sha caed98566cf7bcb78ae84ab738a5a778dc40c13e`, **green on all three
+jobs** — static, database, and the 390px browser flows. The corrections alone
+were separately green at `34e69fe` in run
+[33369181233](https://github.com/mattiss01/fittip/actions/runs/33369181233).
 
 Round 3 commits, in order:
 
@@ -661,17 +670,17 @@ Round 3 commits, in order:
 ### Changed files
 
 ```
- e2e/m3-15b-today-and-logging.spec.ts |  85 +++++++++++++++++-
- src/app/home/log/actions.test.ts     |  98 +++++++++++++++++++--
- src/app/home/log/actions.ts          |  69 +++++++++++++--
- src/app/home/log/log-form.tsx        | 166 ++++++++++++++++++++++++++---------
- src/app/home/log/log.module.css      |  33 +++++++
- src/app/home/log/page.test.tsx       | 160 +++++++++++++++++++++++++++++++++
- src/app/home/log/page.tsx            |  10 ++-
- src/app/home/today/page.test.tsx     |  30 +++++++
+ e2e/m3-15b-today-and-logging.spec.ts |  85 +++++++++++-
+ src/app/home/log/actions.test.ts     | 100 ++++++++++++--
+ src/app/home/log/actions.ts          |  69 +++++++++-
+ src/app/home/log/log-form.tsx        | 186 ++++++++++++++++++++-------
+ src/app/home/log/log.module.css      |  33 +++++
+ src/app/home/log/page.test.tsx       | 243 +++++++++++++++++++++++++++++++++++
+ src/app/home/log/page.tsx            |  10 +-
+ src/app/home/today/page.test.tsx     |  30 +++++
  src/app/home/today/page.tsx          |   8 +-
- src/app/home/today/today-day.tsx     |  16 +++-
- 10 files changed, 606 insertions(+), 69 deletions(-)
+ src/app/home/today/today-day.tsx     |  16 ++-
+ 10 files changed, 711 insertions(+), 69 deletions(-)
 ```
 
 Nothing was deleted or renamed. No file under `supabase/` is touched, no
@@ -901,3 +910,64 @@ session test, the screenshot wording above, and the untracked root files.
 `src/app/home/log` and `src/app/home/today` is 7 files and 69 tests passing.
 Limitation 22 still stands: the warning remains a second `role="status"`
 region.
+
+## Round 3 review: approved
+
+**Reviewed:** the corrections at `34e69fe`, then the findings delta
+`34e69fe..caed985`, on 31 August 2026 by an agent distinct from the builder and
+from the lead. Both passes: **no blocking findings.**
+
+Acceptance criteria 7 and 8 are met. The reviewer did not take the activity
+payload on trust: it checked the object the action sends key-for-key against
+`completion_activity_input_is_valid` and the insert beneath it in migration
+`20260829073444`, confirmed `is_valid_training_measurement('custom', null)`
+returns true, and confirmed the `btrim` on insert matches what the action
+already trimmed. It also confirmed the key is never sent on a planned create or
+on any edit, that the note and `COMPLETION_SAFETY_NOTICE` are structural
+siblings *outside* the skip conditional and so cannot be hidden by any outcome,
+and that a planned session's title still comes from its snapshot.
+
+On the clearing warning being generalized beyond the finding that prompted it,
+the reviewer's verdict was **ship it**, on the ground that its own finding had
+under-scoped the problem: narrowing back to skip-only would leave `replaced` to
+`completed` and `replaced` to `partly completed` discarding the description in
+silence. It also noted the widened form is structurally safer rather than
+merely broader, because each warning entry is the logical complement of the
+render condition it guards rather than a hand-maintained list of outcomes, so
+it cannot go stale when an outcome or a conditional field is added.
+
+One correction to the builder's own account, found by the reviewer: the
+generated sentence is **not** byte-identical to the round 3 string. The clause
+"that you had recorded" was dropped. Both surviving assertions end at "how it
+felt" and so still match and still assert something real, but the record should
+not be read as claiming the copy is unchanged.
+
+### Non-blocking findings, recorded and not fixed
+
+1. The generated *label* half of the warning is asserted by no test. "Partly
+   completed" is reachable and unexercised. Verified correct by reading
+   `COMPLETION_OUTCOME_LABELS`; a coverage gap, not a defect.
+2. `listPhrase` is exercised at one and three items. The four-item case is
+   reachable and unasserted. Correct by inspection.
+3. "Saving this as completed removes what you did instead." reads oddly once
+   the sentence no longer names what it was instead of. It reuses the form's
+   own field label, so it is consistent with what the owner just saw.
+4. The four findings carried over from the first pass remain open: the UTF-16
+   length count, the all-negative planned-session test, the screenshot wording,
+   and the untracked root files.
+
+Findings 1 and 2 are coverage on copy that the reviewer verified by reading.
+The lead chose to record them rather than spend a fourth round and a fourth CI
+run on two assertions, and states that choice here rather than leaving the gap
+unexplained.
+
+### On the missing browser flow for the `replaced` round trip
+
+The reviewer agreed with the builder's decision and disagreed with its reason.
+The unit tests mock `applyChange`, so they prove the form's rendering and not
+that `replacement_description` lands as NULL. What makes the flow unnecessary
+is that the delta changes no persistence behavior at all: the textarea's
+unmount is accepted round 2 behavior, and `apply_completion_change` assigns
+`replacement_description` unconditionally on the same basis as the three
+numbers whose round trip the 390px flow already proves end to end. The chain is
+identical and has been demonstrated once in a browser.
