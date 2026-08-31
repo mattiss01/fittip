@@ -1,18 +1,22 @@
 # M3-15C validation: progress
 
 **Ticket:** [M3-15C](../../backlog/M3/M3-15C-PROGRESS.md)
-**Status:** testable — builder handoff complete. Independent exact-commit
-review, the continuous-integration result for the reviewed SHA, the Vercel
-Preview, and product-owner acceptance are all pending.
+**Status:** testable — round 1 of independent review rejected `fc7ef06` on two
+blocking findings and three in-scope text corrections, all corrected in
+`aee6da1`. Re-review, a green continuous-integration run for the corrected
+SHA, the Vercel Preview, and product-owner acceptance are all pending.
 **Tier:** 2
 **Branch:** `ticket/m3-15c-progress`
 **Base:** `745c2b5994467976361edf089d10e3edab7b15bf`
 **Implementation review target:**
-`fc7ef06930baf74d9b35ff31062ab3de926e5754` — the last source commit. The
+`aee6da1e285acf60b1382b4887f21a4d2e04070a` — the last source commit. The
 record commit that follows it changes no application file (the evidence-commit
 exception in `AGENTS.md`).
 **Review range:**
-`git diff 745c2b5994467976361edf089d10e3edab7b15bf..fc7ef06930baf74d9b35ff31062ab3de926e5754`
+`git diff 745c2b5994467976361edf089d10e3edab7b15bf..aee6da1e285acf60b1382b4887f21a4d2e04070a`
+**Superseded target:** `fc7ef06930baf74d9b35ff31062ab3de926e5754` — **rejected
+in round 1.** The correction range is
+`git diff fc7ef06930baf74d9b35ff31062ab3de926e5754..aee6da1e285acf60b1382b4887f21a4d2e04070a`.
 
 Implementation commits, in order:
 
@@ -22,7 +26,76 @@ Implementation commits, in order:
 | `a172ce8efd569c1c3af42a44246c4dd28a0a81dd` | Unit tests for the month bound, the target formatter, and both routes. |
 | `9153c819abdb652051a3303778c7d1e9e443c401` | The pinned 390px flow and its config on port 3025. |
 | `1444808a3cd9bcd8c2c688ebf49aaa0989dd8f1b` | The additive CI step, committed separately as a tooling change. |
-| `fc7ef06930baf74d9b35ff31062ab3de926e5754` | The M3-11 maintenance flow no longer asserts a stub on the reopened route. |
+| `fc7ef06930baf74d9b35ff31062ab3de926e5754` | The M3-11 maintenance flow no longer asserts a stub on the reopened route. **Rejected in round 1.** |
+| `d07d0df1e87ec1d8a6425b059f99020bb166e7aa` | The first validation record. It is the commit CI actually ran. |
+| `aee6da1e285acf60b1382b4887f21a4d2e04070a` | **Round 1, blocking 1 and all three also-fixes.** |
+
+## Round 1 review: rejected, and what changed
+
+Two blocking findings against `fc7ef06`, and three corrections to text this
+ticket itself introduced. None was disputed. The application code was found
+sound; every finding was in the ticket's own new test and record text.
+
+1. **The new browser flow failed, and the cause was a no-op assertion.** CI run
+   [33395347590](https://github.com/mattiss01/fittip/actions/runs/33395347590)
+   for `d07d0df` is red, and only the `M3-15C progress` step failed; every
+   other browser flow passed, including this ticket's edit to
+   `e2e/m3-11-maintenance.spec.ts`.
+
+   The flow clicked `Use Europe/Berlin` and then waited on the heading
+   `Plan ahead.`, which `src/app/home/plan/page.tsx:44` renders
+   **unconditionally**, above the `timezoneName === null` fork. It was
+   therefore already on screen when the click was dispatched, so the wait
+   resolved instantly, never waited for `confirmPlanTimezoneAction` to commit
+   and revalidate, and the following `page.goto("/home/progress")` aborted the
+   in-flight action. The failure snapshot confirms it: Progress rendered its
+   no-zone state, which is the correct behavior for an owner whose zone was
+   never stored, so `[data-progress-empty="never"]` never existed. The
+   implementation was right; the flow asserted a state unreachable from where
+   it had left the account.
+
+   Corrected in `aee6da1` by waiting on `[data-plan-date]`, which cannot exist
+   until the zone is stored, plus the absence of the zone card's own heading.
+   No timeout and no retry was used.
+
+   `e2e/m3-15b-today-and-logging.spec.ts` and `e2e/m3-12-plan.spec.ts` carry
+   the identical weak assertion and pass only because their next step waits on
+   plan-window content. The lead is filing that as a follow-up; it is
+   deliberately **not** changed here.
+
+2. **This record cited continuous-integration evidence that does not exist.**
+   It named `fc7ef06` as the review target and treated its run as the
+   evidence. There is no run for `fc7ef06`: the branch has exactly one run,
+   33395347590, for `d07d0df`, and it failed. That is corrected throughout this
+   record, and known limitation 1 below now records that the risk it predicted
+   materialized rather than leaving the prediction standing.
+
+3. **An invariant comment claimed more than the invariant enforced.** The new
+   comment in `src/architecture/m3-11-legacy-reset.test.ts` said neither
+   Progress route could acquire a plan read "without that showing up here".
+   `allowedServerModules` is shared across the whole reopened surface and
+   rightly carries `@/server/completions/plan-window-top-up` and both
+   rolling-plan modules for the Plan and Today, so either Progress route could
+   have imported the top-up and still passed. The claim was made true rather
+   than softened: a new `completionOnlySurface` list asserts the two Progress
+   sources match neither `plan-window-top-up` nor `rolling-plan`.
+
+   Related, and fixed in the same commit: `page.test.tsx` asserted that
+   `readPlanWindowToppedUp` was never called while mocking a module the page
+   does not import, so it could only ever report that an uncalled function was
+   not called. The mock and that test are removed, with a comment naming the
+   invariant test that now carries the claim.
+
+4. **`accountMonth()` could have put an unchecked claim on the screen.** It
+   fell back to the current month when the profile carried no usable creation
+   date, which would have rendered "You created your FitTip account this
+   month" without anything having established that. It now returns `null` and
+   the ordinary empty-month sentence is used instead, which is true whatever
+   the account's age. Unreachable today, since `Profile.createdAt` is always
+   present; closed anyway, and held by a test.
+
+5. **One action had two names.** The month link is "Previous month"; the
+   empty-month body said "Step back a month". The body now names the control.
 
 ## Delivered behavior
 
@@ -68,7 +141,7 @@ At `390x844`, signed in as an owner whose time zone is confirmed:
    each other.
 7. Rename that session on `/home/plan` and reopen the same record URL: the
    carbon copy still carries the old title.
-8. Step back a month: "Nothing was logged in <month>."
+8. Follow Previous month: "Nothing was logged in <month>."
 9. Open `/home/progress/not-a-uuid` and `/home/progress/<a random UUID>`: both
    answer with the same words and the same status.
 
@@ -80,8 +153,10 @@ The equivalent automated walk is
 
 ```
  .github/workflows/ci.yml                         |  10 +
+ docs/validation/M3/M3-15C-VALIDATION.md          | 345 ++++++++++++++++
+ docs/validation/README.md                        |   8 +
  e2e/m3-11-maintenance.spec.ts                    |  18 +-
- e2e/m3-15c-progress.spec.ts                      | 404 +++++++++++++++++++
+ e2e/m3-15c-progress.spec.ts                      | 410 +++++++++++++++++++
  e2e/m3-15c.playwright.config.ts                  |  23 ++
  src/app/home/progress/[id]/page.tsx              | 152 ++++++++
  src/app/home/progress/completion-detail.test.tsx | 204 ++++++++++
@@ -90,16 +165,21 @@ The equivalent automated walk is
  src/app/home/progress/loading.tsx                |  13 +
  src/app/home/progress/month.test.ts              |  70 ++++
  src/app/home/progress/month.ts                   |  72 ++++
- src/app/home/progress/page.test.tsx              | 263 +++++++++++++
- src/app/home/progress/page.tsx                   | 188 ++++++++-
+ src/app/home/progress/page.test.tsx              | 268 +++++++++++++
+ src/app/home/progress/page.tsx                   | 192 ++++++++-
  src/app/home/progress/planned-target.test.ts     |  65 +++
  src/app/home/progress/planned-target.ts          | 102 +++++
- src/app/home/progress/progress-month.tsx         | 225 +++++++++++
+ src/app/home/progress/progress-month.tsx         | 232 +++++++++++
  src/app/home/progress/progress-record.tsx        | 102 +++++
  src/app/home/progress/progress.module.css        | 477 +++++++++++++++++++++++
- src/architecture/m3-11-legacy-reset.test.ts      |  12 +-
- 19 files changed, 2563 insertions(+), 16 deletions(-)
+ src/architecture/m3-11-legacy-reset.test.ts      |  36 +-
+ 21 files changed, 2962 insertions(+), 16 deletions(-)
 ```
+
+`git diff --stat 745c2b5994467976361edf089d10e3edab7b15bf..aee6da1e285acf60b1382b4887f21a4d2e04070a`.
+The two `docs/validation/**` counts are this record and its index as they
+stood at `aee6da1`; the commit that adds this round's text grows them and
+changes no application file.
 
 Nothing was deleted or renamed. Files whose purpose is not evident from the
 path and diff:
@@ -127,7 +207,15 @@ path and diff:
 - `src/architecture/m3-11-legacy-reset.test.ts` — the deliberate invariant
   change the brief asked for: `progress/page.tsx` leaves `maintenancePages`,
   both Progress routes join `rollingPlanSurface`, and `allowedServerModules`
-  is unchanged because both routes reach only modules already on it.
+  is unchanged because both routes reach only modules already on it. Round 1
+  added a second list, `completionOnlySurface`, and an assertion that the two
+  Progress sources match neither `plan-window-top-up` nor `rolling-plan` —
+  the exclusion the shared allowlist cannot express.
+- `src/app/home/progress/page.test.tsx` — round 1 removed a mock of
+  `@/server/completions/plan-window-top-up`, a module this page does not
+  import, along with the test that asserted the mock was never called. It
+  could only ever report that an uncalled function was not called. The
+  invariant test above carries that claim now.
 
 ## Data, migration, API, privacy, and security effects
 
@@ -163,10 +251,18 @@ path and diff:
 ## Tests and final results
 
 The continuous-integration run for the reviewed SHA is the automated-test
-evidence, and **this record cannot yet cite it**: the builder does not push.
-The lead records the run URL and its conclusion for
-`fc7ef06930baf74d9b35ff31062ab3de926e5754` here after pushing the branch. A red
-or absent run for that SHA is a delivery blocker.
+evidence.
+
+| SHA | Run | Conclusion |
+| --- | --- | --- |
+| `d07d0df1e87ec1d8a6425b059f99020bb166e7aa` | [33395347590](https://github.com/mattiss01/fittip/actions/runs/33395347590) | **failure** — the `M3-15C progress` browser step, and only that step. Every other job and browser flow passed. See round 1, finding 1. |
+| `fc7ef06930baf74d9b35ff31062ab3de926e5754` | none | The branch has never had a run for this SHA. The earlier version of this record wrongly treated it as the evidence; that was round 1, finding 2. |
+| `aee6da1e285acf60b1382b4887f21a4d2e04070a` | pending | The lead records the run URL and its conclusion here after pushing. A red or absent run for this SHA is a delivery blocker. |
+
+**This flow has never passed anywhere.** The round 1 correction is reasoned
+from the failure snapshot and from the plan surface's actual render order, not
+from a green run, and no local execution is possible here. The CI run for
+`aee6da1` is its second execution and its first chance to pass.
 
 Tests added or changed:
 
@@ -177,28 +273,30 @@ Tests added or changed:
   the partly filled targets that must not be completed by guessing.
 - `src/app/home/progress/page.test.tsx` — the current-month fallback, the
   bounded read, month paging, the two empty states, the no-zone state, day
-  grouping, unplanned naming, and an assertion that
-  `readPlanWindowToppedUp` is never called.
+  grouping, unplanned naming, and the refusal to claim an account age nothing
+  established.
 - `src/app/home/progress/completion-detail.test.tsx` — the recorded sheet and
   the carbon copy, the snapshot's own title and date, the unplanned case, the
   refusal of a non-UUID before any read, and the identical answer for a missing
   and an unowned record.
+- `src/architecture/m3-11-legacy-reset.test.ts` — `completionOnlySurface`,
+  which asserts that neither Progress route can reach a plan module.
 - `e2e/m3-15c-progress.spec.ts` — the 390px flow described in the demo path.
 - `e2e/m3-11-maintenance.spec.ts` — corrected as described above.
 
-What was run locally while implementing, and what it reported. This is not the
-handoff evidence; the CI run for the reviewed SHA is.
+What was run locally while implementing and correcting, and what it reported.
+This is not the handoff evidence; the CI run for the reviewed SHA is.
 
 | Command or check | Result |
 | --- | --- |
 | `npm.cmd run typecheck` | Clean. |
 | `npm.cmd run lint` | Clean. |
-| `npm.cmd run test:run` | 76 files passed, 2 skipped; 892 tests passed, 2 skipped. |
-| `npm.cmd run build` | Succeeded; `/home/progress` and `/home/progress/[id]` both build as dynamic routes. |
+| `npm.cmd run test:run` | 76 files passed, 2 skipped; 893 tests passed, 2 skipped, after the round 1 corrections. |
+| `npm.cmd run build` | Succeeded at `fc7ef06`; `/home/progress` and `/home/progress/[id]` both build as dynamic routes. Not re-run after the round 1 corrections, which touch no route boundary; typecheck and the suite were. |
 | `npx.cmd prettier --write <changed files>` | No formatting differences remained. |
 | `git diff --check` | Clean on every commit. |
 | `npx.cmd playwright test --config=e2e/m3-15c.playwright.config.ts --list` | Collects exactly one spec, confirming the pinned `testMatch`. |
-| The M3-15C browser flow, executed | **Not run.** It needs Docker and a local Supabase stack; per `CLAUDE.md` the browser matrix is CI's job, not the builder's. See the first known limitation. |
+| The M3-15C browser flow, executed locally | **Not run**, at either SHA. It needs Docker and a local Supabase stack; per `CLAUDE.md` the browser matrix is CI's job, not the builder's. See known limitation 1. |
 
 ## Project skills applied
 
@@ -245,25 +343,31 @@ handoff evidence; the CI run for the reviewed SHA is.
 
 ## Known limitations
 
-1. **The browser flow has never been executed.** It was written by reading the
-   real markup of the Plan, Today, log, and Progress surfaces, and its
-   selectors follow the patterns that already pass in
-   `e2e/m3-15b-today-and-logging.spec.ts`, but no run has confirmed it. The CI
-   run for the reviewed SHA is the first execution. M3-15B round 1 showed what
-   this risks; the assertions here were re-read against the markup for exactly
-   that reason, and the ones most likely to be brittle were replaced with
-   narrower ones before commit.
+1. **The browser flow has still never passed, and the risk this limitation
+   predicted materialized.** Written without ever being executed, it failed on
+   its first CI run for exactly the reason recorded here — a wait that could
+   not wait, in the arrangement step. The correction in `aee6da1` is reasoned
+   from the failure snapshot and from the plan surface's actual render order,
+   and it too has never been executed: the browser matrix needs Docker and a
+   local Supabase stack, and `CLAUDE.md` puts that with CI rather than the
+   builder. **Treat the flow as unproven until a run for `aee6da1` is green.**
+   Everything after the arrangement step has still never run once, so a
+   further defect further down the flow would be a second finding of the same
+   kind rather than a surprise. The assertions there were re-read against the
+   real markup, and the two most brittle were narrowed before the first
+   commit, but reading is not running.
 2. **"An owner who has logged nothing ever" is not literally knowable, and the
    brief did not say how to know it.** Every read is bounded by the selected
    month, so no read can prove that no completion exists in any month. The
    first-run state therefore fires when the current month is empty *and* the
-   owner's account was created in that same month, and its wording claims only
-   that: "You created your FitTip account this month, and nothing is logged in
-   it yet." It never claims nothing exists anywhere. An owner who back-dates a
-   log to a month before their account existed still sees that sentence in
-   their first month, and the back-dated record is still visible in its own
-   month by paging to it. Widening this would need either an unbounded read or
-   a new adapter method, and both are outside this ticket.
+   owner's account was created in that same month *and* that creation month is
+   actually known — round 1 closed a fallback that would have guessed it. Its
+   wording claims only that: "You created your FitTip account this month, and
+   nothing is logged in it yet." It never claims nothing exists anywhere. An
+   owner who back-dates a log to a month before their account existed still sees
+   that sentence in their first month, and the back-dated record is still
+   visible in its own month by paging to it. Widening this would need either an
+   unbounded read or a new adapter method, and both are outside this ticket.
 3. **`src/lib/auth/safe-return.ts` was deliberately not touched.** Its
    allowlist still carries `^/home/progress/(?:plan|completion)-<uuid>$`, the
    legacy detail shape, and does not match the new `/home/progress/<uuid>`; it
@@ -295,15 +399,18 @@ handoff evidence; the CI run for the reviewed SHA is.
    for the CRLF reason recorded in `CLAUDE.md`. Every file this ticket touches
    was run through `prettier --write` and produced no diff.
 10. **The baseline in `CLAUDE.md` ("39 test files / 229 tests") is stale** —
-    the suite is now 78 files and 894 tests. That predates this ticket and was
+    the suite is now 78 files and 895 tests. That predates this ticket and was
     left alone.
 
 ## Independent reviewer checklist
 
 Review the exact commit
-`fc7ef06930baf74d9b35ff31062ab3de926e5754` on `ticket/m3-15c-progress`, over
-`git diff 745c2b5994467976361edf089d10e3edab7b15bf..fc7ef06930baf74d9b35ff31062ab3de926e5754`.
-Confirm the continuous-integration run for that SHA is green and that its
+`aee6da1e285acf60b1382b4887f21a4d2e04070a` on `ticket/m3-15c-progress`, over
+`git diff 745c2b5994467976361edf089d10e3edab7b15bf..aee6da1e285acf60b1382b4887f21a4d2e04070a`.
+Round 1 rejected `fc7ef06`, so no earlier commit or preview stands. The
+correction range alone is
+`git diff fc7ef06930baf74d9b35ff31062ab3de926e5754..aee6da1e285acf60b1382b4887f21a4d2e04070a`.
+Confirm the continuous-integration run for `aee6da1` is green and that its
 Vercel Preview reached `READY`. Do not re-run lint, typecheck, the unit suite,
 the build, or the browser flow; CI covers all of them.
 
@@ -317,8 +424,10 @@ What needs judgment CI cannot supply:
    invalid date, and that no unbounded read was introduced anywhere.
 3. **No plan read.** Confirm neither route imports or calls
    `readPlanWindowToppedUp`, `createRollingPlan`, or any plan seam, so viewing
-   history cannot materialize future occurrences. The architecture invariant
-   and one unit test both assert this; check the code agrees with them.
+   history cannot materialize future occurrences. Round 1 replaced an inert
+   mock with `completionOnlySurface` in the architecture test; confirm that
+   assertion is the real guard and that no comment anywhere still claims more
+   than a test enforces.
 4. **The snapshot is the completion's own copy.** Confirm the planned side is
    read only from `completion.plannedSnapshot` and never through to a live
    plan row, and that the browser flow's rename step actually proves it.
@@ -335,11 +444,17 @@ What needs judgment CI cannot supply:
    both routes moved from a list that forbade `@/server/**` outright to one
    that allows only an explicit module list, and no module was added to that
    list.
-8. **Scope.** Confirm nothing outside the brief changed. In particular confirm
+8. **The round 1 corrections themselves.** Confirm the new wait in
+   `e2e/m3-15c-progress.spec.ts` cannot resolve before the zone is stored and
+   uses no timeout or retry; that `accountMonth` returning `null` reaches the
+   ordinary empty-month sentence rather than any other branch; and that the
+   empty-month body now names the control it points at. Known limitation 1 is
+   the honest state of the flow — the rest of it has still never executed.
+9. **Scope.** Confirm nothing outside the brief changed. In particular confirm
    the `e2e/m3-11-maintenance.spec.ts` edit is the minimum needed to stop it
    asserting a stub on a route this ticket reopened, and that the CI step is
    purely additive with no existing step reordered or weakened.
-9. **Product invariants.** Confirm nothing on the surface totals, counts,
-   ranks, streaks, or charts, that no write path or Server Action exists
-   anywhere in the diff, and that the four health signals are rendered as
-   facts the owner reported rather than as a judgment.
+10. **Product invariants.** Confirm nothing on the surface totals, counts,
+    ranks, streaks, or charts, that no write path or Server Action exists
+    anywhere in the diff, and that the four health signals are rendered as
+    facts the owner reported rather than as a judgment.

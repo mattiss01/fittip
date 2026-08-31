@@ -41,13 +41,16 @@ Validation records and their visual evidence are grouped by milestone.
 
 ## M3
 
-- [M3-15C progress](M3/M3-15C-VALIDATION.md) — testable; Tier 2. Builder
-  handoff complete against `fc7ef06`. `/home/progress` reopens as one
-  owner-local calendar month of completions, addressable by a `month=YYYY-MM`
-  parameter, and `/home/progress/[id]` shows one completion beside the
-  planned snapshot it stored. Read-only: no write path, no Server Action, no
-  plan read, and no schema change. Independent review, the CI result for the
-  reviewed SHA, Preview verification, and acceptance are pending
+- [M3-15C progress](M3/M3-15C-VALIDATION.md) — testable; Tier 2.
+  `/home/progress` reopens as one owner-local calendar month of completions,
+  addressable by a `month=YYYY-MM` parameter, and `/home/progress/[id]` shows
+  one completion beside the planned snapshot it stored. Read-only: no write
+  path, no Server Action, no plan read, and no schema change. Round 1 of
+  independent review rejected `fc7ef06` on a no-op wait that made this
+  ticket's own browser flow fail on run 33395347590, and on a record that
+  cited a CI run which did not exist; both corrected in `aee6da1`, together
+  with three text corrections. Re-review, a green run for `aee6da1`, Preview
+  verification, and acceptance are pending
 
 - [M3-19 delete a planned session](M3/M3-19-VALIDATION.md) — testable;
   Tier 1, correction round 3 complete against `f2f7108`. A forward migration
