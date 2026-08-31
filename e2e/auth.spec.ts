@@ -50,9 +50,9 @@ test.describe("public account authentication", () => {
     await page.goto(confirmationUrl);
     await expectPrivateSessionHeaders(await callbackResponse);
     await expect(page).toHaveURL(/\/home\/today$/);
-    await expect(
-      page.getByRole("heading", { name: "One plan is taking shape." }),
-    ).toBeVisible();
+    // M3-15B reopened this route, so the landing assertion is Today's own
+    // heading rather than the retired maintenance stub's.
+    await expect(page.getByRole("heading", { name: "Today." })).toBeVisible();
 
     await page.getByRole("link", { name: "You", exact: true }).click();
     await page.getByRole("button", { name: "Sign out" }).click();

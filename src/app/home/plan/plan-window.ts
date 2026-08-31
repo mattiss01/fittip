@@ -27,7 +27,18 @@ export type PlanWindow = { today: string; lastDate: string };
 export async function readPlanWindow(): Promise<PlanWindow> {
   const profile = await (await createProfileRepository()).getCurrentProfile();
   if (!profile?.timezoneName) throw new RollingPlanTimezoneRequiredError();
-  const today = isoDateInTimezone(new Date(), profile.timezoneName);
+  return planWindowFor(profile.timezoneName);
+}
+
+/**
+ * The same window, for a caller that has already read the stored zone. Today
+ * has: it needs the zone for its own header and for its no-zone state, and a
+ * second profile read would buy nothing. Deriving the horizon here rather than
+ * in the caller keeps one definition of how far ahead the plan is filled,
+ * which is what `materialize_rolling_plan_series` writes to.
+ */
+export function planWindowFor(timezoneName: string): PlanWindow {
+  const today = isoDateInTimezone(new Date(), timezoneName);
   return { today, lastDate: shiftIsoDate(today, PLAN_WINDOW_DAYS - 1) };
 }
 

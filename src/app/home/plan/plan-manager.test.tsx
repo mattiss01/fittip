@@ -599,11 +599,16 @@ describe("PlanManager", () => {
     seriesState = {
       status: "saved",
       message:
-        "Future recurring sessions removed permanently: 1 unchanged removed, 1 changed removed, 1 locked kept.",
+        "Future recurring sessions removed permanently: 1 unchanged removed, 1 changed removed, 1 locked kept, 1 completed kept.",
       submission: 1,
       operation: "end_series",
       sessionId: recurringSession.id,
-      effect: { deleted: 2, divergedDeleted: 1, lockedKept: 1 },
+      effect: {
+        deleted: 2,
+        divergedDeleted: 1,
+        lockedKept: 1,
+        completedKept: 1,
+      },
     };
     rerender(<PlanManager {...props} sessions={[]} expectedRevision={4} />);
 

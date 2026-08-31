@@ -1,12 +1,12 @@
 import { expect, test } from "@playwright/test";
 import path from "node:path";
 
-// M3-12 reopened `/home/plan` against the rolling-plan model, so it is no
-// longer a maintenance stub and `e2e/m3-12-plan.spec.ts` owns that route.
-// The other five routes are still stubs and are still asserted here.
+// M3-12 reopened `/home/plan` against the rolling-plan model, and M3-15B
+// reopened `/home/today` and `/home/log` against it and the completion seam.
+// Those three are no longer maintenance stubs; `e2e/m3-12-plan.spec.ts` and
+// `e2e/m3-15b-today-and-logging.spec.ts` own them. The remaining three routes
+// are still stubs and are still asserted here.
 const routes = [
-  "/home/today",
-  "/home/log",
   "/home/progress",
   "/home/plan/roadmap",
   "/home/plan/proposal",

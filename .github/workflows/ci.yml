@@ -250,6 +250,16 @@ jobs:
             npx playwright test --config=e2e/m3-19.playwright.config.ts \
               --workers=1 --trace=retain-on-failure --output=test-results/m3-19
 
+      - name: M3-15B today and logging
+        # Report every broken flow in one run, not just the first.
+        if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-15b
+        run: |
+          .github/scripts/with-server.sh 3024 \
+            npx playwright test --config=e2e/m3-15b.playwright.config.ts \
+              --workers=1 --trace=retain-on-failure --output=test-results/m3-15b
+
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v7

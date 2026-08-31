@@ -1,7 +1,13 @@
 # M3-15B: Today and logging
 
-**Status:** in development — the product owner approved the agent brief and
-Tier 2 dispatch on 30 August 2026. Split out of
+**Status:** testable — round 3 independently approved on 31 August 2026 against
+`88b3d84`, with CI run
+[33370107698](https://github.com/mattiss01/fittip/actions/runs/33370107698)
+green on all three jobs. Awaiting the product owner's 390px acceptance pass.
+The product owner approved the agent brief and Tier 2 dispatch on 30 August
+2026. Round 3 was requested by the product owner on 31 August 2026 from their
+Preview pass, and dispatched by the lead as within the same Tier 2 scope. Split
+out of
 [M3-15](M3-15-REPLACEMENT-CONSUMER-READINESS.md) on 29 August 2026.
 
 **Triage:** ready-for-agent
@@ -33,6 +39,10 @@ Today lists and links; the log form does not open inline on the card. Today
 shows one date at a time, defaulting to owner-local today, with controls to
 move to the previous and next day.
 
+**Added on 31 August 2026, from the product owner's Preview pass.** Unplanned
+training must be nameable, and a skipped session must not ask for numbers that
+cannot exist. Both are in the two hard constraints marked **(31 Aug)** below.
+
 **Hard constraints:**
 
 - Reach persistence only through the accepted seam: `createCompletionLog()`
@@ -61,13 +71,39 @@ move to the previous and next day.
   two pages from `maintenancePages`, and **add all three new modules to
   `rollingPlanSurface`**, so they stay constrained rather than becoming
   unchecked.
+- **(31 Aug) An unplanned log carries a title and a sport, both required.**
+  Write them as one `CompletionActivity` at `position: 0` on the create
+  payload, `measurementMode: "custom"` with no measurement, no
+  `personalActivityId`. The create path already validates and inserts the
+  activity list, so **no migration and no tier change**; free text, trimmed,
+  within the existing 120 and 80 character limits. Collect them only when there
+  is no planned session, and never send the key on a planned create. Today
+  sources the unplanned title from the first completion activity
+  (`src/app/home/today/page.tsx:180` reads the planned snapshot today, which is
+  null here), keeping the existing fallback for logs already written without
+  one. **An edit cannot change them** — the write function refuses an
+  `activities` key by design — so render them as text, not as inputs that would
+  discard what the owner typed, say so in one line, and record the limitation
+  for the M3-15A follow-up.
+- **(31 Aug) A skipped outcome hides Duration, Effort, and How it felt**, which
+  are unanswerable about training that did not happen. Same conditional the
+  form already applies to the `replaced` field, on the existing `outcome`
+  state. **Keep the note and all four signals** — an owner may skip precisely
+  because of pain, and AGENTS.md makes conservative handling of those four an
+  invariant. Editing a completed log to skipped stores null for all three,
+  because the write function assigns them unconditionally and an unmounted
+  field sends nothing. That is correct: assert it, and warn before the save.
 - Owner, anonymous, and cross-owner checks on every read and write. Bound every
   query by the selected date.
 
 **Non-goals.** No Progress, roadmap, or AI context. No completion delete — a
-mistaken log is edited to `skipped`. No activity editor and no actual-measurement
-capture. No completion schema change. No new date rule: whatever the write
-function already permits is unchanged.
+mistaken log is edited to `skipped`. No completion schema change. No new date
+rule: whatever the write function already permits is unchanged. No general
+activity editor, no multi-activity list, and no actual-measurement capture: the
+unplanned title and sport above are one activity written at create time, not the
+beginning of an editor. No personal-activity record is created or linked by
+logging — `personalActivityId` stays absent, so nothing here adds an exercise
+library.
 
 **Acceptance:**
 
@@ -80,6 +116,13 @@ function already permits is unchanged.
 5. Honest empty, error, and offline states; 390px throughout.
 6. Green exact-commit CI, including a new pinned 390px flow on its own port and
    config, added to `.github/workflows/ci.yml` as an additive step.
+7. **(31 Aug)** An unplanned log is given a title and a sport, and Today shows
+   that title rather than "Unplanned training". Reopening it for an edit shows
+   both without offering to change them. An unplanned log written before this
+   change still reads correctly.
+8. **(31 Aug)** Choosing Skipped removes Duration, Effort, and How it felt, and
+   leaves the note and the four signals in place. Editing a completed log with
+   all three set to Skipped stores null for all three and keeps the signals.
 
 **Expected to change:** `src/app/home/today/page.tsx`,
 `src/app/home/log/page.tsx`, a new `src/app/home/log/actions.ts`, new Today and
@@ -88,7 +131,11 @@ Log components with their CSS module, `src/app/home/plan/series-action-state.ts`
 `src/architecture/m3-11-legacy-reset.test.ts`, a new `e2e/m3-15b-*.spec.ts` with
 its pinned config, `.github/workflows/ci.yml`, and this ticket's validation
 record. `src/components/home/training-maintenance.tsx` stays — Progress, roadmap,
-and proposal still use it.
+and proposal still use it. The 31 August additions touch
+`src/app/home/log/log-form.tsx`, `src/app/home/log/actions.ts`,
+`src/app/home/log/page.tsx`, `src/app/home/today/page.tsx`, the log CSS module,
+and the ticket's e2e spec. They touch no file under `supabase/`; if one needs
+touching, stop and report rather than proceeding.
 
 **Skills.** `vercel-react-best-practices` for the new routes, Server Actions,
 and server/client boundary; `frontend-design` for two new user-visible
@@ -124,3 +171,21 @@ verbs Today inherits are already Cancel and Delete.
   inventing one inside a Tier 2 ticket would smuggle in a product decision. The
   write function's existing behavior stands until a ticket changes it on
   purpose.
+- **31 August 2026 — unplanned training is nameable; a skip stops asking for
+  numbers.** From the product owner's Preview pass: "when I log an unplanned
+  training I cannot give it any Title or Sport. This should be possible. When I
+  log a session as skipped, the fields Duration, effort and felt should be cut
+  out." The lead verified before dispatching that the create path already
+  accepts an activity carrying `name` and `sport`, so the ticket stays Tier 2.
+  The lead decided both fields are **required** rather than optional: optional
+  fields reproduce the nameless card the owner is objecting to, and a mixed
+  data shape would land on M3-15C to disentangle.
+- **31 August 2026 — the brief exceeds its own length rule.** AGENTS.md aims at
+  40 lines and treats 60 as a limit; this brief now runs past 110. The rule says
+  that is a signal to split the ticket. The lead did not split it, because these
+  are corrections to unaccepted work on the same surface and the same seam:
+  a separate ticket would have to be sequenced behind an M3-15B the product
+  owner has declined to accept, which is a worse outcome than a long brief.
+  Recorded rather than silently tolerated. The underlying cause is that M3-15B
+  was already over the limit at dispatch on 30 August, which the lead should
+  have caught then.

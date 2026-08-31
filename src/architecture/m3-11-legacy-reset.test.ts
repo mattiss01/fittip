@@ -21,23 +21,48 @@ const legacyModules = [
   "src/server/training/past-plan-protection.ts",
   "src/server/completions/completion-records.ts",
   "src/server/plan-proposal/plan-proposal-service.ts",
-  "src/app/home/log/actions.ts",
   "src/app/home/plan/proposal/actions.ts",
   "src/app/home/plan/roadmap/actions.ts",
 ] as const;
 
 const maintenancePages = [
-  "src/app/home/today/page.tsx",
-  "src/app/home/log/page.tsx",
   "src/app/home/progress/page.tsx",
   "src/app/home/plan/roadmap/page.tsx",
   "src/app/home/plan/proposal/page.tsx",
 ] as const;
 
-/** The reopened surface, which may reach only the M3-10 rolling-plan seam. */
+/**
+ * The reopened surface, which may reach only the M3-10 rolling-plan seam and
+ * the M3-15A completion seam beside it. M3-15B moved Today and logging off the
+ * maintenance module and onto those two, so they are constrained here rather
+ * than left unchecked: dropping them from the list above without adding them
+ * here would have retired the only assertion covering how they reach
+ * persistence.
+ */
 const rollingPlanSurface = [
   "src/app/home/plan/page.tsx",
   "src/app/home/plan/actions.ts",
+  "src/app/home/today/page.tsx",
+  "src/app/home/log/page.tsx",
+  "src/app/home/log/actions.ts",
+] as const;
+
+/**
+ * Every `@/server/**` module the reopened surface may reach. This is an
+ * allowlist rather than a pattern on purpose: the substring check below only
+ * ever proved that *one* seam import was present, so any of these modules
+ * could have imported an arbitrary additional persistence module and still
+ * passed. Two of these files also moved here from `maintenancePages`, whose
+ * predicate forbade `@/server/**` outright, so without this the move would
+ * have traded a strict check for a loose one.
+ */
+const allowedServerModules = [
+  "@/server/completions/completion-log",
+  "@/server/completions/plan-window-top-up",
+  "@/server/repositories/completion-log-repository",
+  "@/server/repositories/profile-repository",
+  "@/server/repositories/rolling-plan-repository",
+  "@/server/rolling-plan/rolling-plan",
 ] as const;
 
 const legacyTables = [
@@ -85,6 +110,22 @@ describe("M3-11 legacy runtime closure", () => {
       expect(source, path).not.toMatch(
         /training-record|completion-repository|plan-proposal|past-plan-protection|@\/lib\/supabase/,
       );
+    }
+  });
+
+  it("lets the reopened surface reach only allowlisted server modules", () => {
+    for (const path of rollingPlanSurface) {
+      const source = readFileSync(join(root, path), "utf8");
+      const imported = [...source.matchAll(/from "(@\/server\/[^"]+)"/g)].map(
+        (match) => match[1],
+      );
+      expect(imported.length, path).toBeGreaterThan(0);
+      for (const specifier of imported) {
+        expect(
+          allowedServerModules as readonly string[],
+          `${path} imports ${specifier}`,
+        ).toContain(specifier);
+      }
     }
   });
 
