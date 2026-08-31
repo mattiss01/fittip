@@ -1,8 +1,11 @@
 # M3-15B validation: today and logging
 
 **Ticket:** [M3-15B](../../backlog/M3/M3-15B-TODAY-AND-LOGGING.md)
-**Status:** testable — round 1 rejected; **round 2 independently approved on
-30 August 2026**; awaiting product-owner acceptance.
+**Status:** testable — round 1 rejected; round 2 independently approved on
+30 August 2026 and then **not accepted on the product owner's Preview pass**;
+**round 3 awaits independent review.** See `## Round 3` at the end of this
+record for the current review target, range and manifest; everything above it
+is the record of rounds 1 and 2 and is kept as written.
 **Tier:** 2
 **Branch:** `ticket/m3-15b-today-and-logging`
 **Base:** `8d01bb2b6c6d948a3c519ae1be32c5e13a76e3b4`
@@ -627,3 +630,206 @@ reviewer's judgment rather than CI's:
 
 The 390px visual pass, the hosted Preview interaction, and acceptance remain
 the product owner's.
+
+## Round 3: the product owner's Preview corrections
+
+The product owner ran the round 2 Preview and did not accept it, on two points:
+
+> "what i dont like is, that when i log an unplanned training i cannot give it
+> any Title or Sport. This should be possible. When i log a session as skipped,
+> the fields Duration, effort and felt should be cut out."
+
+Both became hard constraints in the ticket brief on 31 August 2026, marked
+**(31 Aug)**, with acceptance criteria 7 and 8. Round 3 is those two
+corrections and nothing else. It was dispatched as Tier 2: the create path of
+`apply_completion_change` already validates and inserts an activity list, so
+naming an unplanned log needed no schema change.
+
+**Review target:** `<lead fills in the final source commit SHA>`
+**Review range:** `git diff 19ff771..<target>`
+**Continuous integration:** `<lead fills in the run URL for that SHA>`
+
+Round 3 commits, in order:
+
+| Commit | Purpose |
+| --- | --- |
+| `c0bc81c` | The two corrections: the unplanned title and sport, and the skipped fields. |
+| `05831d4` | Unit coverage for both, on the action, the form and Today. |
+| `bc442a1` | The same two criteria in the pinned 390px flow. |
+
+### Changed files
+
+```
+ e2e/m3-15b-today-and-logging.spec.ts |  85 +++++++++++++++++-
+ src/app/home/log/actions.test.ts     |  98 +++++++++++++++++++--
+ src/app/home/log/actions.ts          |  69 +++++++++++++--
+ src/app/home/log/log-form.tsx        | 166 ++++++++++++++++++++++++++---------
+ src/app/home/log/log.module.css      |  33 +++++++
+ src/app/home/log/page.test.tsx       | 160 +++++++++++++++++++++++++++++++++
+ src/app/home/log/page.tsx            |  10 ++-
+ src/app/home/today/page.test.tsx     |  30 +++++++
+ src/app/home/today/page.tsx          |   8 +-
+ src/app/home/today/today-day.tsx     |  16 +++-
+ 10 files changed, 606 insertions(+), 69 deletions(-)
+```
+
+Nothing was deleted or renamed. No file under `supabase/` is touched, no
+migration is added, no grant or privileged function changes, and
+`src/lib/supabase/database.types.ts` is untouched. The only file whose purpose
+is not evident from its path and diff:
+
+- `src/app/home/log/log.module.css` — beyond the two new blocks it adds
+  `input[type="text"]` to the list of field selectors the form already styled,
+  which is why the two new inputs match the surface rather than falling back to
+  the user agent.
+
+The `log-form.tsx` line count is misleading: most of it is the Duration, Effort
+and How it felt markup moved one level deeper into the new conditional,
+unchanged in content.
+
+### What changed, and why it is shaped this way
+
+**An unplanned log carries a title and a sport, both required.** They are
+written as one `CompletionActivity` at `position: 0`, `measurementMode:
+"custom"`, with no `personalActivityId` and no `actualMeasurement`. That is the
+only place a name for unplanned training can live: `plannedSnapshot` is null by
+definition, and the write function captures the snapshot from the plan row, so
+no caller can supply one. This is not the start of an activity editor and it
+creates no personal-activity record, so nothing here adds an exercise library.
+
+Both are trimmed and length-checked in the action as well as in the domain and
+the database, so the owner is told which field is wrong instead of receiving
+the generic "Check the outcome, the date, and the numbers."
+
+**The edit path cannot change them, and the form does not pretend otherwise.**
+The edit branch of `apply_completion_change` omits `activities` from its
+allowed-key list by design. Reopening an unplanned log therefore renders the
+title and sport as text with one line saying they cannot be changed yet, rather
+than as inputs that would silently discard what the owner typed. Filed as
+[M3-23](../../backlog/M3/M3-23-COMPLETION-WRITE-FOLLOW-UPS.md) item 2.
+
+**Today names the card by that activity**, falling back to "Unplanned training"
+exactly as before for a log written without one, and shows the sport beside it
+in the same marks row a planned card uses.
+
+**A skipped outcome hides Duration, Effort and How it felt.** Same conditional
+the form already applied to `replaced`, on the same `outcome` state, derived
+during render rather than mirrored into a second piece of state. The note and
+all four health signals stay, with `COMPLETION_SAFETY_NOTICE` untouched and in
+its established place: an owner may skip precisely because of pain, and
+AGENTS.md makes conservative handling of those four an invariant.
+
+Editing an existing completed log to skipped stores null for all three, because
+the write function assigns them unconditionally from the payload and an
+unmounted field submits nothing. That is the correct outcome, not a defect, and
+the form says so before the save — but only when the record actually carries
+one of the three, so the warning never appears where it would mean nothing.
+
+### Tests added or changed
+
+`src/app/home/log/actions.test.ts`
+
+- The unplanned create fixture now carries both required fields, which is the
+  contract change; three pre-existing tests use it.
+- The activity is built exactly once, at position 0, trimmed, with
+  `measurementMode: "custom"` and no other key. Proves the payload the database
+  will accept, and that no personal activity is linked.
+- A planned create's activity list stays empty even when a title and sport are
+  present in the form data. Proves the key is never sent on a planned create.
+- Five length and emptiness cases, each asserting the message names the field
+  the owner must fix and that nothing was written.
+- An edit that becomes skipped sends no `durationMinutes`, `perceivedEffort` or
+  `feeling` key while keeping the note and the reported signal. This is the
+  assertion behind the clearing behavior: the action forwards the absence
+  rather than defaulting the values back.
+
+`src/app/home/log/page.test.tsx`
+
+- Both inputs exist on an unplanned create with the right names, `required`,
+  and the 120/80 maxima; neither exists on a planned create.
+- An edit reads both back from the first activity and offers no input for
+  either; a log written before an activity was collected still reads
+  "Unplanned training".
+- Choosing Skipped removes all three fields while the note, the four signals
+  and the safety notice remain.
+- The clearing warning appears only for a record that has something to lose,
+  and does not appear for one that does not. The negative case is what stops
+  the positive one from being vacuous.
+
+`src/app/home/today/page.test.tsx`
+
+- An unplanned completion is named by its activity and shows its sport, and the
+  nameless heading is asserted absent. The pre-existing test that a completion
+  with no activity still reads "Unplanned training" is what covers the last
+  sentence of criterion 7; it needed no change, which is the point.
+
+`e2e/m3-15b-today-and-logging.spec.ts`, on the same pinned config and port 3024
+
+- Criterion 7: the unplanned log is given a title and a sport; Today shows a
+  heading of that title and the sport beside it, with "Unplanned training"
+  asserted to `toHaveCount(0)` and the `Unplanned` stamp asserted `exact` so the
+  two facts are not confused; reopening it shows both and offers neither. This
+  also closes round 2 non-blocking finding 13, which observed that the stamp was
+  asserted only as a substring of the title next to it.
+- Criterion 8: on a fresh log, the three fields are visible, then gone once
+  Skipped is chosen, with the note, the four signals and the safety notice still
+  present. On the correction of the completed Tempo run, the duration is
+  asserted to still hold "42" and the warning to be absent *before* Skipped is
+  chosen, then the field gone and the warning present after; and after the save
+  the card carries none of the three values while keeping the note and the
+  reported signal.
+- The earlier "Log a planned session" step now also asserts the effort and the
+  feeling on the card, so the later `toHaveCount(0)` assertions are about values
+  that were demonstrably there.
+
+Two screenshots are added to the flow's evidence:
+`M3-15B-skip-form-390x844.png` and `M3-15B-unplanned-edit-390x844.png`.
+
+### Round 3 results
+
+- `npm.cmd run lint`, `npm.cmd run typecheck`: clean.
+- `npm.cmd run test:run --` over `src/architecture`, `src/app/home/log` and
+  `src/app/home/today`: 7 files, 66 tests, all passing.
+- `git diff --check`: clean.
+- `npx.cmd prettier --check e2e/m3-15b-today-and-logging.spec.ts`: clean.
+- The browser flow was not run locally. CI runs it on every push, and the green
+  run for the reviewed SHA is the evidence; the lead records its URL above.
+
+### Known limitations added by round 3
+
+19. **An unplanned log's title and sport cannot be corrected.** The write
+    function refuses an `activities` key on an edit. A typo is permanent until
+    [M3-23](../../backlog/M3/M3-23-COMPLETION-WRITE-FOLLOW-UPS.md) item 2 is
+    approved and shipped, which is Tier 1 because it changes that function. The
+    form states this rather than hiding it.
+20. **Switching outcome away from and back to Skipped loses unsaved numbers.**
+    The three fields unmount, so a duration typed before choosing Skipped is
+    gone if the owner changes their mind. The same is already true of the
+    `replaced` description this mirrors. Not fixed, because retaining it means
+    lifting three more values into state for a case the flow does not require.
+21. **Sport is free text with no vocabulary.** There is no sport list anywhere
+    in this codebase and inventing one would be a product decision. Two logs of
+    the same sport spelled differently are two different strings, which matters
+    to M3-15C when it groups anything by sport.
+22. **The clearing warning is a second live region.** It carries `role="status"`
+    alongside the form's existing status paragraph. Announcement of a region
+    inserted after first render is inconsistent across screen readers, so a
+    keyboard-only owner may see it while a screen-reader owner may not hear it.
+    The text is visible above the button either way.
+
+### `vercel-react-best-practices` rules checked in round 3
+
+- `server-serialization` — `LogExistingView` gains two nullable strings and
+  `TodayCompletionView` one; the completion's full activity list never crosses
+  to the client, only the first activity's `name` and `sport`.
+- `rerender-derived-state-no-effect` — `skipped` and `clearsRecordedNumbers`
+  are derived during render from the existing `outcome` state. No new state and
+  no effect were added.
+- `rendering-conditional-render` — every new branch is a ternary, never `&&`.
+- `server-auth-actions` — the action still derives the owner from verified
+  auth claims through `createCompletionLog()`; the two new fields are
+  owner-supplied content, never an identity or an authorization input.
+- `bundle-analyzable-paths` — no new import in any module; the client boundary
+  is unchanged and `src/architecture/m3-11-legacy-reset.test.ts` needed no
+  widening.
+- `async-parallel` — no new I/O. The unplanned path still reads nothing.
