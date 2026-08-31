@@ -1,11 +1,14 @@
 # M3-15B validation: today and logging
 
 **Ticket:** [M3-15B](../../backlog/M3/M3-15B-TODAY-AND-LOGGING.md)
-**Status:** testable — round 1 rejected; round 2 independently approved on
-30 August 2026 and then **not accepted on the product owner's Preview pass**;
-**round 3 awaits independent review.** See `## Round 3` at the end of this
-record for the current review target, range and manifest; everything above it
-is the record of rounds 1 and 2 and is kept as written.
+**Status:** **accepted** — the product owner accepted on 31 August 2026 against
+reviewed commit `88b3d84` and its Preview, with two changes deferred to
+[M3-23](../../backlog/M3/M3-23-COMPLETION-WRITE-FOLLOW-UPS.md). Round 1
+rejected; round 2 independently approved on 30 August 2026 and then not
+accepted on the product owner's Preview pass; round 3 independently approved in
+two passes on 31 August 2026. See `## Round 3` and `## Acceptance` at the end
+of this record; everything above them is the record of rounds 1 and 2 and is
+kept as written.
 **Tier:** 2
 **Branch:** `ticket/m3-15b-today-and-logging`
 **Base:** `8d01bb2b6c6d948a3c519ae1be32c5e13a76e3b4`
@@ -971,3 +974,56 @@ unmount is accepted round 2 behavior, and `apply_completion_change` assigns
 `replacement_description` unconditionally on the same basis as the three
 numbers whose round trip the 390px flow already proves end to end. The chain is
 identical and has been demonstrated once in a browser.
+
+## Acceptance
+
+**Accepted by the product owner on 31 August 2026**, against reviewed commit
+`88b3d84` and Preview
+https://fittip-ngu6ra25j-mattis-3657s-projects.vercel.app, built from
+`caed985`. `708aa6f` adds only this record and the ticket status line, under
+the evidence-commit exception, so the Preview the product owner used carries
+the reviewed application code.
+
+The acceptance was conditional on nothing, but the product owner named two
+changes wanted in future work:
+
+> "i accept but it needs changes in the future. A unplanned session should not
+> be able to be logged for future dates. The Title and Sport should be
+> changeable."
+
+Both are filed as
+[M3-23](../../backlog/M3/M3-23-COMPLETION-WRITE-FOLLOW-UPS.md) items 3 and 2.
+Neither can be done at this ticket's tier: both change the accepted privileged
+function `apply_completion_change` and need a forward migration. The
+title-and-sport change settles M3-23's first open decision. The future-date
+rule closes M3-15A limitation 5, which was left open deliberately because
+inventing a date rule would have been an unapproved product decision; it now
+has one, and M3-23 records the remaining question of whether the rule covers
+planned sessions too.
+
+### Merge and founder deployment
+
+| | |
+| --- | --- |
+| Merge commit on `master` | `fa063e27c917326f82f5d2433260de8539c84f46` |
+| `master` CI for the merge | [33371959401](https://github.com/mattiss01/fittip/actions/runs/33371959401), green on all three jobs |
+| Founder deployment | 6177536720, state `success` |
+| Founder URL | https://fittip-hnio1yewy-mattis-3657s-projects.vercel.app |
+| Founder migration | **none required** — no file under `supabase/` changed |
+
+This is the first ticket in the M3-15 chain to need no hosted migration step,
+because it is the first that added no schema. Remote migration history is
+therefore unchanged and needs no re-verification.
+
+### Hosted checks
+
+The founder environment sits behind Vercel SSO, so an unauthenticated agent
+reaches the SSO redirect rather than the application. What that establishes:
+`/home/today` and `/home/log` both answer `302` to `vercel.com/sso-api`, with
+`Cache-Control: no-store, max-age=0` and `X-Robots-Tag: noindex` on the
+response, so neither new route is publicly reachable, cacheable, or indexable.
+
+The authenticated hosted pass is the product owner's, as it has been for every
+ticket in this milestone: the publishable key never reaches an agent, so no
+agent can exercise a hosted authenticated read. The product owner performed the
+390px interaction pass on the Preview and accepted on that basis.

@@ -1,9 +1,14 @@
 # M3-15B: Today and logging
 
-**Status:** testable — round 3 independently approved on 31 August 2026 against
-`88b3d84`, with CI run
-[33370107698](https://github.com/mattiss01/fittip/actions/runs/33370107698)
-green on all three jobs. Awaiting the product owner's 390px acceptance pass.
+**Status:** accepted — the product owner accepted on 31 August 2026 against
+reviewed commit `88b3d84`, its green CI run
+[33370107698](https://github.com/mattiss01/fittip/actions/runs/33370107698) and
+its Preview, after three rounds and two independent reviews. Merged as
+`fa063e2`; no founder migration was required, because no schema changed. Two
+changes the product owner asked for at acceptance are filed as
+[M3-23](M3-23-COMPLETION-WRITE-FOLLOW-UPS.md) items 2 and 3. See
+[the validation record](../../validation/M3/M3-15B-VALIDATION.md).
+
 The product owner approved the agent brief and Tier 2 dispatch on 30 August
 2026. Round 3 was requested by the product owner on 31 August 2026 from their
 Preview pass, and dispatched by the lead as within the same Tier 2 scope. Split
