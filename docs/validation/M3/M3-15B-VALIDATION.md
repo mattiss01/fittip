@@ -656,6 +656,7 @@ Round 3 commits, in order:
 | `c0bc81c` | The two corrections: the unplanned title and sport, and the skipped fields. |
 | `05831d4` | Unit coverage for both, on the action, the form and Today. |
 | `bc442a1` | The same two criteria in the pinned 390px flow. |
+| `88b3d84` | Round 3 review findings 1 and 4, after CI went green on `34e69fe`. |
 
 ### Changed files
 
@@ -724,6 +725,9 @@ the write function assigns them unconditionally from the payload and an
 unmounted field submits nothing. That is the correct outcome, not a defect, and
 the form says so before the save — but only when the record actually carries
 one of the three, so the warning never appears where it would mean nothing.
+See `### Round 3 review corrections` below: the warning was widened after
+review to cover the replacement description as well, and now names each field
+it is about.
 
 ### Tests added or changed
 
@@ -833,3 +837,67 @@ Two screenshots are added to the flow's evidence:
   is unchanged and `src/architecture/m3-11-legacy-reset.test.ts` needed no
   widening.
 - `async-parallel` — no new I/O. The unplanned path still reads nothing.
+
+### Round 3 review corrections
+
+The independent reviewer approved `34e69fe` with no blocking findings and CI
+was green on it. Two non-blocking findings in the mechanism round 3 added were
+fixed before acceptance, in `88b3d84`.
+
+**Finding 1 — the clearing warning did not cover the replacement description.**
+`replaced` is the fifth field this form unmounts by outcome, and the SQL edit
+clears `replacement_description` exactly as it clears the three numbers. A
+`replaced` log carrying only a description and no numbers therefore got no
+warning at all before losing it, which is the precise silent loss the warning
+exists to prevent.
+
+The condition is no longer "skipped, and one of three numbers is set". It is
+now a list of everything the chosen outcome would discard from an existing
+record, and the warning renders when that list is non-empty and names each
+entry. Two consequences worth the reviewer's attention:
+
+- It fires on **any** outcome change away from `replaced`, not only on a skip.
+  Editing a replaced log to completed discards the description just as a skip
+  does, and the same sentence now covers it.
+- The copy is generated rather than fixed, so it can no longer drift out of
+  step with what the form actually unmounts. It reads "Saving this as skipped
+  removes the duration, the effort and how it felt." for the case round 3
+  shipped — the existing browser and unit assertions were written against that
+  substring and are unchanged — and "Saving this as skipped removes what you
+  did instead." for the case the finding is about.
+
+**Finding 4 — one message for two different mistakes.** An empty title and an
+over-length title both returned "Give this training a title of 120 characters
+or fewer", which is wrong for the empty case and the empty case is the likelier
+one. `readActivityText` now takes a `missing` and a `tooLong` message and
+raises the one that applies, for both the title and the sport. The structure is
+unchanged; only the copy and the branch are.
+
+Tests added, in `src/app/home/log/page.test.tsx` unless noted:
+
+- A `replaced` log with a description and no numbers shows no warning at
+  `replaced`, and on skip shows one naming "what you did instead" and not the
+  duration. It also asserts the textarea is gone, which is what makes the
+  warning true rather than merely present.
+- The same log edited to `completed` warns as well, which is the half of the
+  fix the finding did not ask for.
+- A log carrying a duration, an effort and a description, but no feeling, gets
+  a warning naming exactly those three and not "how it felt". This is what
+  stops the generated copy from being a fixed string in disguise.
+- The pre-existing negative case gains a note and a second assertion: it
+  differs from the three positive fixtures only in carrying none of the four
+  values, so it cannot pass for the wrong reason.
+- In `src/app/home/log/actions.test.ts`, the five validation cases now assert
+  the two distinct messages, anchored at the start of the string.
+
+Four findings were recorded and deliberately not fixed: `value.length` counting
+UTF-16 units rather than code points — it mirrors the accepted domain rule at
+`src/server/completions/completion-log.ts`, so changing it here alone would
+create the inconsistency rather than remove it — the all-negative planned
+session test, the screenshot wording above, and the untracked root files.
+
+`npm.cmd run lint`, `npm.cmd run typecheck`, `git diff --check` and
+`npx.cmd prettier` are clean; `test:run` over `src/architecture`,
+`src/app/home/log` and `src/app/home/today` is 7 files and 69 tests passing.
+Limitation 22 still stands: the warning remains a second `role="status"`
+region.
