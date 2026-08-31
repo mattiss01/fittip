@@ -36,6 +36,14 @@ export type LogExistingView = {
   feeling: string | null;
   note: string | null;
   replacementDescription: string | null;
+  /**
+   * The first completion activity, which is where an unplanned log's title and
+   * sport live. Null on a planned log, whose name comes from the planned
+   * snapshot, and on an unplanned log written before this surface collected
+   * them.
+   */
+  activityName: string | null;
+  activitySport: string | null;
   pain: boolean;
   illness: boolean;
   injury: boolean;
@@ -62,6 +70,19 @@ export function LogForm({ planned, existing, defaultDate, returnDate }: Props) {
   );
   const receiptHeading = useRef<HTMLHeadingElement>(null);
   const saved = state.status === "saved";
+  // Training that did not happen has no duration, no effort and no way it
+  // felt, so those three are not asked. Derived during render rather than
+  // mirrored into state, so there is one source of truth for the outcome.
+  const skipped = outcome === "skipped";
+  // Saving an existing log as skipped clears exactly those three, because the
+  // write function assigns them from the payload and an unmounted field sends
+  // nothing. Say so before the save, and only when there is something to lose.
+  const clearsRecordedNumbers =
+    skipped &&
+    existing !== null &&
+    (existing.durationMinutes !== null ||
+      existing.perceivedEffort !== null ||
+      existing.feeling !== null);
 
   // The receipt replaces the form, which takes the only live region and the
   // focused control with it. Without this a keyboard or screen-reader user is
@@ -137,6 +158,54 @@ export function LogForm({ planned, existing, defaultDate, returnDate }: Props) {
             {choices[0].hint} It is recorded as {choices[0].label.toLowerCase()}{" "}
             training, with no planned session attached.
           </p>
+          {existing === null ? (
+            <>
+              <div className={styles.field}>
+                <label htmlFor="log-title">Title</label>
+                <input
+                  id="log-title"
+                  name="title"
+                  type="text"
+                  required
+                  maxLength={120}
+                  autoComplete="off"
+                />
+                <span className={styles.fieldHint}>
+                  What you did, in your own words.
+                </span>
+              </div>
+              <div className={styles.field}>
+                <label htmlFor="log-sport">Sport</label>
+                <input
+                  id="log-sport"
+                  name="sport"
+                  type="text"
+                  required
+                  maxLength={80}
+                  autoComplete="off"
+                />
+                <span className={styles.fieldHint}>
+                  Whatever you call it. FitTip keeps your own words.
+                </span>
+              </div>
+            </>
+          ) : (
+            // Read-only on purpose: the write function refuses an activity
+            // list on an edit, so an input here would take what the owner
+            // typed and drop it silently.
+            <div className={styles.readback} data-log-fixed-naming>
+              <p className={styles.sectionLabel}>Title and sport</p>
+              <p className={styles.readbackValue}>
+                {existing.activityName ?? "Unplanned training"}
+                {existing.activitySport === null
+                  ? null
+                  : ` · ${existing.activitySport}`}
+              </p>
+              <span className={styles.fieldHint}>
+                These cannot be changed yet. Everything below can.
+              </span>
+            </div>
+          )}
         </>
       ) : (
         <fieldset className={styles.choices}>
@@ -187,50 +256,61 @@ export function LogForm({ planned, existing, defaultDate, returnDate }: Props) {
         </span>
       </div>
 
-      <div className={styles.fieldPair}>
-        <div className={styles.field}>
-          <label htmlFor="log-duration">Duration (minutes)</label>
-          <input
-            id="log-duration"
-            name="durationMinutes"
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={10080}
-            step={1}
-            defaultValue={existing?.durationMinutes ?? ""}
-          />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="log-effort">Effort (1-10)</label>
-          <input
-            id="log-effort"
-            name="perceivedEffort"
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={10}
-            step={1}
-            defaultValue={existing?.perceivedEffort ?? ""}
-          />
-        </div>
-      </div>
+      {clearsRecordedNumbers ? (
+        <p className={styles.warning} data-log-clears role="status">
+          Saving this as skipped removes the duration, the effort and how it
+          felt that you had recorded. Your note and anything you reported stay.
+        </p>
+      ) : null}
 
-      <div className={styles.field}>
-        <label htmlFor="log-feeling">How it felt</label>
-        <select
-          id="log-feeling"
-          name="feeling"
-          defaultValue={existing?.feeling ?? ""}
-        >
-          <option value="">Not recorded</option>
-          {COMPLETION_FEELING_CHOICES.map((choice) => (
-            <option key={choice.value} value={choice.value}>
-              {choice.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      {skipped ? null : (
+        <>
+          <div className={styles.fieldPair}>
+            <div className={styles.field}>
+              <label htmlFor="log-duration">Duration (minutes)</label>
+              <input
+                id="log-duration"
+                name="durationMinutes"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={10080}
+                step={1}
+                defaultValue={existing?.durationMinutes ?? ""}
+              />
+            </div>
+            <div className={styles.field}>
+              <label htmlFor="log-effort">Effort (1-10)</label>
+              <input
+                id="log-effort"
+                name="perceivedEffort"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={10}
+                step={1}
+                defaultValue={existing?.perceivedEffort ?? ""}
+              />
+            </div>
+          </div>
+
+          <div className={styles.field}>
+            <label htmlFor="log-feeling">How it felt</label>
+            <select
+              id="log-feeling"
+              name="feeling"
+              defaultValue={existing?.feeling ?? ""}
+            >
+              <option value="">Not recorded</option>
+              {COMPLETION_FEELING_CHOICES.map((choice) => (
+                <option key={choice.value} value={choice.value}>
+                  {choice.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </>
+      )}
 
       <div className={styles.field}>
         <label htmlFor="log-note">Note</label>

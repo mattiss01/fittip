@@ -80,16 +80,19 @@ export async function logCompletionAction(
         requiredDate(formData.get("plannedDate")),
       );
     }
+    const unplanned = plannedSessionId === undefined;
     const receipt = await log.applyChange({
       operation: "create",
       completion: {
         ...facts,
-        ...(plannedSessionId === undefined
-          ? {}
-          : { planSessionId: plannedSessionId }),
-        // No activity editor and no actual-measurement capture exists yet, so
-        // the list is deliberately empty rather than invented.
-        activities: [],
+        ...(unplanned ? {} : { planSessionId: plannedSessionId }),
+        // A planned log is already named by the snapshot the write function
+        // captures from the plan row, so its list stays empty: no activity
+        // editor and no actual-measurement capture exists. Unplanned training
+        // has no planned side at all, so the title and sport the owner typed
+        // are written as its one activity, which is the only place a name for
+        // it can live.
+        activities: unplanned ? [readUnplannedActivity(formData)] : [],
       },
     });
     revalidatePath("/home/today");
@@ -112,6 +115,9 @@ export async function logCompletionAction(
         "Confirm your time zone on the Plan before logging training.",
         { conflict: "timezone" },
       );
+    }
+    if (error instanceof LogFieldError) {
+      return result("validation", error.message);
     }
     if (error instanceof CompletionValidationError) {
       return result(
@@ -137,6 +143,57 @@ export async function logCompletionAction(
       );
     }
     return result("error", "The log could not be saved.");
+  }
+}
+
+/**
+ * The one activity an unplanned log carries. It is not the start of an
+ * activity editor: there is exactly one, at position 0, with no personal
+ * activity linked and no measurement captured, so nothing here creates or
+ * implies an exercise library. `custom` is the measurement mode that records
+ * no measured value, which is what an untimed free-text entry is.
+ */
+function readUnplannedActivity(formData: FormData) {
+  return {
+    position: 0,
+    name: readActivityText(
+      formData,
+      "title",
+      120,
+      "Give this training a title of 120 characters or fewer, then save again. Nothing was logged.",
+    ),
+    sport: readActivityText(
+      formData,
+      "sport",
+      80,
+      "Name the sport in 80 characters or fewer, then save again. Nothing was logged.",
+    ),
+    measurementMode: "custom" as const,
+  };
+}
+
+/**
+ * Trimmed and length-checked here as well as in the domain and the database,
+ * so the owner is told which field is wrong rather than that the completion is.
+ */
+function readActivityText(
+  formData: FormData,
+  key: string,
+  max: number,
+  message: string,
+): string {
+  const value = optionalText(formData, key);
+  if (value === undefined || value.length > max) {
+    throw new LogFieldError(message);
+  }
+  return value;
+}
+
+/** A field the owner can see and fix, reported in the words of that field. */
+class LogFieldError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "LogFieldError";
   }
 }
 

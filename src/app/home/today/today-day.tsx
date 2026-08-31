@@ -18,6 +18,8 @@ export type TodayCompletionView = {
   actualLocalDate: string;
   /** The planned session's title as it stood when the log was written. */
   title: string | null;
+  /** The sport, from that snapshot or from the owner's own unplanned entry. */
+  sport: string | null;
   /** The date that planned session sat on, which a late log will not match. */
   plannedLocalDate: string | null;
   durationMinutes: number | null;
@@ -189,11 +191,17 @@ export function TodayDay({
                     {COMPLETION_OUTCOME_LABELS[completion.outcome]}
                   </span>
                 </div>
-                {completion.plannedLocalDate === null ? null : (
+                {completion.sport === null &&
+                completion.plannedLocalDate === null ? null : (
                   <div className={styles.marks}>
-                    <span>
-                      Planned for {longDay(completion.plannedLocalDate)}
-                    </span>
+                    {completion.sport === null ? null : (
+                      <span>{completion.sport}</span>
+                    )}
+                    {completion.plannedLocalDate === null ? null : (
+                      <span>
+                        Planned for {longDay(completion.plannedLocalDate)}
+                      </span>
+                    )}
                   </div>
                 )}
                 <CompletionFacts completion={completion} />

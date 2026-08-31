@@ -120,13 +120,17 @@ async function renderForm(
         );
       }
       const snapshot = completion.plannedSnapshot;
+      // A planned log is named by the snapshot; an unplanned one by the single
+      // activity it was written with. A log written before this surface
+      // collected that activity has neither, and keeps the old fallback.
+      const written = completion.activities[0] ?? null;
       return (
         <>
           <SourceCard
             label="Editing a log"
-            title={snapshot?.title ?? "Unplanned training"}
+            title={snapshot?.title ?? written?.name ?? "Unplanned training"}
             meta={[
-              snapshot?.sport ?? null,
+              snapshot?.sport ?? written?.sport ?? null,
               snapshot === null
                 ? null
                 : `Planned for ${longDay(snapshot.localDate)}`,
@@ -282,6 +286,8 @@ function toExistingView(completion: Completion): LogExistingView {
     feeling: completion.feeling ?? null,
     note: completion.note ?? null,
     replacementDescription: completion.replacementDescription ?? null,
+    activityName: completion.activities[0]?.name ?? null,
+    activitySport: completion.activities[0]?.sport ?? null,
     pain: completion.painReported,
     illness: completion.illnessReported,
     injury: completion.injuryReported,

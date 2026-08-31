@@ -166,6 +166,7 @@
 
 .form input[type="date"],
 .form input[type="number"],
+.form input[type="text"],
 .form textarea,
 .form select {
   min-height: 2.75rem;
@@ -222,6 +223,38 @@
   font-weight: 400;
   letter-spacing: normal;
   text-transform: none;
+}
+
+/*
+ * The title and sport of an unplanned log, read back rather than offered: the
+ * write path accepts them only when the record is created, so an input here
+ * would take what the owner typed and drop it.
+ */
+.readback {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px dashed var(--ledger-rule);
+  background: var(--ledger-wash);
+}
+
+.readbackValue {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+/* What saving is about to remove, said before the owner presses the button. */
+.warning {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--log-mark);
+  border-left-width: 5px;
+  background: #fff0e1;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.9rem;
+  line-height: 1.45;
 }
 
 /* Static, non-diagnostic, and shown wherever the owner reports a signal. */
