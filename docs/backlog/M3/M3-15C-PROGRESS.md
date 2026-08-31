@@ -1,9 +1,10 @@
 # M3-15C: Progress
 
-**Status:** proposed — the agent brief below was written on 31 August 2026
-against the product owner's scope decisions of that date. **Dispatch is not yet
-approved.** Split out of
-[M3-15](M3-15-REPLACEMENT-CONSUMER-READINESS.md) on 29 August 2026.
+**Status:** in development — the product owner approved dispatch on 31 August
+2026 and the lead marked the ticket in development and spawned the builder onto
+`ticket/m3-15c-progress` the same day. The agent brief below was written on
+31 August 2026 against the product owner's scope decisions of that date. Split
+out of [M3-15](M3-15-REPLACEMENT-CONSUMER-READINESS.md) on 29 August 2026.
 
 **Triage:** ready-for-agent
 
@@ -115,6 +116,10 @@ owner did. That is its own ticket.
 
 ## Decisions taken
 
+- **31 August 2026 — dispatch approved.** The product owner approved the brief
+  as written and directed the lead to mark the ticket in development and spawn
+  the builder. Tier 2, so a distinct builder followed by a distinct independent
+  reviewer, on branch `ticket/m3-15c-progress`.
 - **31 August 2026 — completions only.** The product owner chose the narrower
   of two scopes. F-005 Review history items 1 and 4 are covered here; items 2
   and 3 move to [M3-24](M3-24-PLAN-CHANGE-HISTORY.md).
