@@ -121,7 +121,7 @@ async function renderMonth(
     <ProgressMonth
       month={month}
       currentMonth={currentMonth}
-      accountMonth={accountMonth(createdAt, timezoneName, currentMonth)}
+      accountMonth={accountMonth(createdAt, timezoneName)}
       entries={completions.map(toCompletionView)}
     />
   );
@@ -131,17 +131,21 @@ async function renderMonth(
  * The owner-local month the account was created in, which is the earliest
  * month in which this owner could have had one. An empty current month that is
  * also that month is the start of the record rather than a gap in it, and the
- * empty state says so. A profile without a creation date falls back to the
- * current month, so the sentence stays true rather than being guessed at.
+ * empty state says so.
+ *
+ * `null` when there is no usable creation date. The first-run sentence tells
+ * the owner they created their account this month, so falling back to the
+ * current month here would put a claim on the screen that nothing had checked.
+ * The caller uses the ordinary empty-month sentence instead, which is true
+ * whatever the account's age.
  */
 function accountMonth(
   createdAt: string | null,
   timezoneName: string,
-  currentMonth: string,
-): string {
-  if (createdAt === null) return currentMonth;
+): string | null {
+  if (createdAt === null) return null;
   const created = new Date(createdAt);
-  if (!Number.isFinite(created.valueOf())) return currentMonth;
+  if (!Number.isFinite(created.valueOf())) return null;
   return monthOf(isoDateInTimezone(created, timezoneName));
 }
 

@@ -1,14 +1,9 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const {
-  createProfileMock,
-  createCompletionLogMock,
-  readPlanWindowToppedUpMock,
-} = vi.hoisted(() => ({
+const { createProfileMock, createCompletionLogMock } = vi.hoisted(() => ({
   createProfileMock: vi.fn(),
   createCompletionLogMock: vi.fn(),
-  readPlanWindowToppedUpMock: vi.fn(),
 }));
 
 vi.mock("@/server/repositories/profile-repository", async (original) => {
@@ -23,10 +18,6 @@ vi.mock("@/server/repositories/completion-log-repository", async (original) => {
     >();
   return { ...actual, createCompletionLog: createCompletionLogMock };
 });
-vi.mock("@/server/completions/plan-window-top-up", () => ({
-  readPlanWindowToppedUp: readPlanWindowToppedUpMock,
-}));
-
 import ProgressPage from "./page";
 import { isoDateInTimezone } from "@/lib/date/local-date";
 
@@ -109,11 +100,11 @@ describe("Progress", () => {
     ).toBe("/home/progress?month=2026-02");
   });
 
-  it("never materializes plan occurrences to show history", async () => {
-    render(await ProgressPage({ searchParams: Promise.resolve({}) }));
-
-    expect(readPlanWindowToppedUpMock).not.toHaveBeenCalled();
-  });
+  // That Progress makes no plan read at all is asserted in
+  // `src/architecture/m3-11-legacy-reset.test.ts`, against the route sources
+  // themselves. A mock of a module this page does not import can only ever
+  // report that an uncalled function was not called, so it is not repeated
+  // here as though it proved something.
 
   it("shows each entry with its outcome, its record and its signal", async () => {
     listCompletions.mockResolvedValue([completion()]);
@@ -206,6 +197,20 @@ describe("Progress", () => {
     expect(empty?.textContent).toContain("Your record starts here.");
     // The two empty states are different sentences, never the same one twice.
     expect(document.querySelector('[data-progress-empty="month"]')).toBe(null);
+  });
+
+  it("never claims an account age it does not know", async () => {
+    profileIs({ timezoneName: TIMEZONE, createdAt: "not-a-date" });
+
+    render(await ProgressPage({ searchParams: Promise.resolve({}) }));
+
+    // The first-run sentence tells the owner they created their account this
+    // month, so it must not appear when nothing established which month that
+    // was. The ordinary empty-month sentence is true either way.
+    expect(document.querySelector('[data-progress-empty="never"]')).toBe(null);
+    expect(
+      document.querySelector('[data-progress-empty="month"]'),
+    ).toBeTruthy();
   });
 
   it("refuses to guess a month for an owner with no stored zone", async () => {

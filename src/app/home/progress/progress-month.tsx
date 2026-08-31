@@ -15,8 +15,11 @@ type Props = {
   month: string;
   /** The owner-local current month, which is what the fallback means. */
   currentMonth: string;
-  /** The owner-local month the account was created in. */
-  accountMonth: string;
+  /**
+   * The owner-local month the account was created in, or `null` when there is
+   * no usable creation date and no such claim can be made.
+   */
+  accountMonth: string | null;
   /** Every completion in the month, most recent first. */
   entries: ProgressCompletionView[];
 };
@@ -163,9 +166,13 @@ function EmptyMonth({
 }: {
   month: string;
   currentMonth: string;
-  accountMonth: string;
+  accountMonth: string | null;
 }) {
-  if (month === currentMonth && currentMonth <= accountMonth) {
+  if (
+    accountMonth !== null &&
+    month === currentMonth &&
+    currentMonth <= accountMonth
+  ) {
     return (
       <div className={styles.empty} data-progress-empty="never">
         <h3 className={styles.emptyHeading}>Your record starts here.</h3>
@@ -186,8 +193,8 @@ function EmptyMonth({
           : `Nothing is logged in ${formatMonth(month)} yet.`}
       </h3>
       <p>
-        Another month may have training in it. Step back a month, or log
-        training on Today.
+        Previous month steps further back. Anything you log on Today appears
+        here, in the month you logged it for.
       </p>
     </div>
   );

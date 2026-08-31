@@ -44,9 +44,15 @@ test.describe("M3-15C progress", () => {
       // ---- The plan needs the owner's zone before any date exists. ----
       await page.goto("/home/plan");
       await page.getByRole("button", { name: `Use ${TIMEZONE}` }).click();
+      // `Plan ahead.` is rendered above the zone fork, so it is already on
+      // screen when the click is dispatched and waiting on it would resolve
+      // instantly - leaving the next navigation to abort the in-flight
+      // action. The plan window cannot exist until the zone is stored, so
+      // that is what this waits for.
+      await expect(page.locator("[data-plan-date]").first()).toBeVisible();
       await expect(
-        page.getByRole("heading", { name: "Plan ahead." }),
-      ).toBeVisible();
+        page.getByRole("heading", { name: "Confirm your time zone" }),
+      ).toHaveCount(0);
 
       // ---- An owner who has logged nothing is told so in its own words. ----
       const first = await page.goto("/home/progress");
