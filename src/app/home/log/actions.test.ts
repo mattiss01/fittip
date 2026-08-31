@@ -197,12 +197,14 @@ describe("logCompletionAction", () => {
     expect(change.completion.activities).toEqual([]);
   });
 
+  // Missing and too long are different mistakes, and a length limit is not an
+  // answer to an empty field. Empty is also the likelier of the two.
   it.each([
-    [{ title: "" }, /title of 120 characters or fewer/],
-    [{ title: "   " }, /title of 120 characters or fewer/],
-    [{ title: "t".repeat(121) }, /title of 120 characters or fewer/],
-    [{ sport: "" }, /sport in 80 characters or fewer/],
-    [{ sport: "s".repeat(81) }, /sport in 80 characters or fewer/],
+    [{ title: "" }, /^Give this training a title, then save again/],
+    [{ title: "   " }, /^Give this training a title, then save again/],
+    [{ title: "t".repeat(121) }, /^Shorten the title to 120 characters/],
+    [{ sport: "" }, /^Name the sport, then save again/],
+    [{ sport: "s".repeat(81) }, /^Shorten the sport to 80 characters/],
   ])("names the field an unplanned log is missing (%#)", async (bad, copy) => {
     const result = await logCompletionAction(
       INITIAL_LOG_ACTION_STATE,

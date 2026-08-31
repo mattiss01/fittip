@@ -6,6 +6,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { logCompletionAction } from "./actions";
 import {
   COMPLETION_FEELING_CHOICES,
+  COMPLETION_OUTCOME_LABELS,
   COMPLETION_SAFETY_NOTICE,
   COMPLETION_SIGNALS,
   INITIAL_LOG_ACTION_STATE,
@@ -74,15 +75,27 @@ export function LogForm({ planned, existing, defaultDate, returnDate }: Props) {
   // felt, so those three are not asked. Derived during render rather than
   // mirrored into state, so there is one source of truth for the outcome.
   const skipped = outcome === "skipped";
-  // Saving an existing log as skipped clears exactly those three, because the
-  // write function assigns them from the payload and an unmounted field sends
-  // nothing. Say so before the save, and only when there is something to lose.
-  const clearsRecordedNumbers =
-    skipped &&
-    existing !== null &&
-    (existing.durationMinutes !== null ||
-      existing.perceivedEffort !== null ||
-      existing.feeling !== null);
+  // Everything the chosen outcome would discard from a record that already
+  // exists. A field this form stops rendering submits nothing, and the write
+  // function assigns every one of these from the payload, so an absent key
+  // stores null. "What you did instead" belongs here for the same reason the
+  // three numbers do: it is unmounted by every outcome but `replaced`, and a
+  // log carrying only a description would otherwise lose it in silence.
+  const discarded =
+    existing === null
+      ? []
+      : [
+          ...(skipped && existing.durationMinutes !== null
+            ? ["the duration"]
+            : []),
+          ...(skipped && existing.perceivedEffort !== null
+            ? ["the effort"]
+            : []),
+          ...(skipped && existing.feeling !== null ? ["how it felt"] : []),
+          ...(outcome !== "replaced" && existing.replacementDescription !== null
+            ? ["what you did instead"]
+            : []),
+        ];
 
   // The receipt replaces the form, which takes the only live region and the
   // focused control with it. Without this a keyboard or screen-reader user is
@@ -256,12 +269,13 @@ export function LogForm({ planned, existing, defaultDate, returnDate }: Props) {
         </span>
       </div>
 
-      {clearsRecordedNumbers ? (
+      {discarded.length === 0 ? null : (
         <p className={styles.warning} data-log-clears role="status">
-          Saving this as skipped removes the duration, the effort and how it
-          felt that you had recorded. Your note and anything you reported stay.
+          Saving this as {COMPLETION_OUTCOME_LABELS[outcome].toLowerCase()}{" "}
+          removes {listPhrase(discarded)}. Your note and anything you reported
+          stay.
         </p>
-      ) : null}
+      )}
 
       {skipped ? null : (
         <>
@@ -356,6 +370,12 @@ export function LogForm({ planned, existing, defaultDate, returnDate }: Props) {
       </div>
     </form>
   );
+}
+
+/** "a, b and c", so the warning names every field rather than a count. */
+function listPhrase(items: string[]): string {
+  if (items.length < 2) return items.join("");
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
 function defaultSignal(existing: LogExistingView | null, name: string) {

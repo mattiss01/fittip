@@ -156,36 +156,36 @@ export async function logCompletionAction(
 function readUnplannedActivity(formData: FormData) {
   return {
     position: 0,
-    name: readActivityText(
-      formData,
-      "title",
-      120,
-      "Give this training a title of 120 characters or fewer, then save again. Nothing was logged.",
-    ),
-    sport: readActivityText(
-      formData,
-      "sport",
-      80,
-      "Name the sport in 80 characters or fewer, then save again. Nothing was logged.",
-    ),
+    name: readActivityText(formData, "title", 120, {
+      missing:
+        "Give this training a title, then save again. Nothing was logged.",
+      tooLong:
+        "Shorten the title to 120 characters or fewer, then save again. Nothing was logged.",
+    }),
+    sport: readActivityText(formData, "sport", 80, {
+      missing: "Name the sport, then save again. Nothing was logged.",
+      tooLong:
+        "Shorten the sport to 80 characters or fewer, then save again. Nothing was logged.",
+    }),
     measurementMode: "custom" as const,
   };
 }
 
 /**
  * Trimmed and length-checked here as well as in the domain and the database,
- * so the owner is told which field is wrong rather than that the completion is.
+ * so the owner is told which field is wrong rather than that the completion
+ * is. Missing and too long are separate messages: an empty field is the far
+ * likelier mistake, and a length limit is not an answer to it.
  */
 function readActivityText(
   formData: FormData,
   key: string,
   max: number,
-  message: string,
+  messages: { missing: string; tooLong: string },
 ): string {
   const value = optionalText(formData, key);
-  if (value === undefined || value.length > max) {
-    throw new LogFieldError(message);
-  }
+  if (value === undefined) throw new LogFieldError(messages.missing);
+  if (value.length > max) throw new LogFieldError(messages.tooLong);
   return value;
 }
 

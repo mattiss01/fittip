@@ -282,6 +282,86 @@ describe("Log", () => {
     );
   });
 
+  it("warns before a skip discards what was done instead", async () => {
+    // The likeliest shape of this: a replaced log carries a description and no
+    // numbers at all, so the three-number condition alone would say nothing.
+    getCompletion.mockResolvedValue({
+      ...completion(),
+      planSessionId: SESSION_ID,
+      status: "replaced" as const,
+      durationMinutes: undefined,
+      replacementDescription: "Swam instead.",
+      plannedSnapshot: snapshot(),
+    });
+
+    render(
+      await LogPage({
+        searchParams: Promise.resolve({ completion: COMPLETION_ID }),
+      }),
+    );
+
+    expect(document.querySelector("[data-log-clears]")).toBe(null);
+    fireEvent.click(
+      document.querySelector("input[type='radio'][value='skipped']")!,
+    );
+    const warning = document.querySelector("[data-log-clears]") as HTMLElement;
+    expect(warning.textContent).toContain("removes what you did instead");
+    expect(warning.textContent).not.toContain("the duration");
+    // The textarea it names is indeed gone, which is what makes it true.
+    expect(document.querySelector("#log-replacement")).toBe(null);
+  });
+
+  it("warns whenever a description is discarded, not only on a skip", async () => {
+    getCompletion.mockResolvedValue({
+      ...completion(),
+      planSessionId: SESSION_ID,
+      status: "replaced" as const,
+      durationMinutes: undefined,
+      replacementDescription: "Swam instead.",
+      plannedSnapshot: snapshot(),
+    });
+
+    render(
+      await LogPage({
+        searchParams: Promise.resolve({ completion: COMPLETION_ID }),
+      }),
+    );
+
+    fireEvent.click(
+      document.querySelector("input[type='radio'][value='completed']")!,
+    );
+    expect(document.querySelector("[data-log-clears]")?.textContent).toContain(
+      "removes what you did instead",
+    );
+  });
+
+  it("names every field a skip discards, and only those", async () => {
+    getCompletion.mockResolvedValue({
+      ...completion(),
+      planSessionId: SESSION_ID,
+      status: "replaced" as const,
+      perceivedEffort: 7,
+      replacementDescription: "Swam instead.",
+      plannedSnapshot: snapshot(),
+    });
+
+    render(
+      await LogPage({
+        searchParams: Promise.resolve({ completion: COMPLETION_ID }),
+      }),
+    );
+
+    fireEvent.click(
+      document.querySelector("input[type='radio'][value='skipped']")!,
+    );
+    const warning = document.querySelector("[data-log-clears]") as HTMLElement;
+    expect(warning.textContent).toContain(
+      "removes the duration, the effort and what you did instead",
+    );
+    // No feeling was recorded, so the warning does not claim to remove one.
+    expect(warning.textContent).not.toContain("how it felt");
+  });
+
   it("says nothing about clearing when there is nothing to clear", async () => {
     getCompletion.mockResolvedValue({
       ...completion(),
@@ -297,7 +377,10 @@ describe("Log", () => {
       }),
     );
 
+    // Not vacuous: this fixture differs from the three positive cases above
+    // only in carrying none of the four values the warning is about.
     expect(document.querySelector("[data-log-clears]")).toBe(null);
+    expect(document.querySelector("#log-duration")).toBe(null);
   });
 
   it("reopens an existing log against the revision it was read at", async () => {
