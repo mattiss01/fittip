@@ -188,6 +188,10 @@ test.describe("M3-15B today and logging", () => {
         logged.getByText("Completed", { exact: true }),
       ).toBeVisible();
       await expect(logged.getByText("42 min")).toBeVisible();
+      // Recorded here so the later assertion that a skip removes all three is
+      // about something that was actually there.
+      await expect(logged.getByText("7 of 10")).toBeVisible();
+      await expect(logged.getByText("Good", { exact: true })).toBeVisible();
       await expect(logged.getByText(/You reported: Pain/)).toBeVisible();
       await expect(
         logged.getByRole("link", { name: "Log this session" }),
@@ -197,7 +201,31 @@ test.describe("M3-15B today and logging", () => {
       await todayCard(page, "Easy spin")
         .getByRole("link", { name: "Log this session" })
         .click();
+      await expect(page.getByLabel("Duration (minutes)")).toBeVisible();
       await page.getByRole("radio", { name: /^Skipped/ }).check();
+      // Training that did not happen has no duration, no effort and no way it
+      // felt, so it is not asked for them.
+      await expect(page.getByLabel("Duration (minutes)")).toHaveCount(0);
+      await expect(page.getByLabel("Effort (1-10)")).toHaveCount(0);
+      await expect(page.getByLabel("How it felt")).toHaveCount(0);
+      // An owner may skip precisely because of pain: the note, the four
+      // signals and the notice that qualifies them all stay.
+      await expect(page.getByLabel("Note", { exact: true })).toBeVisible();
+      for (const signal of [
+        "I felt pain",
+        "I was ill",
+        "I was injured",
+        "I was severely fatigued",
+      ]) {
+        await expect(page.getByLabel(signal, { exact: true })).toBeVisible();
+      }
+      await expect(
+        page.getByText(/stop training and speak to a qualified/),
+      ).toBeVisible();
+      await page.screenshot({
+        fullPage: true,
+        path: path.join(evidenceDirectory, "M3-15B-skip-form-390x844.png"),
+      });
       await page.getByRole("button", { name: "Save log" }).click();
       await expect(
         page.getByRole("heading", { name: "Log saved." }),
@@ -216,13 +244,45 @@ test.describe("M3-15B today and logging", () => {
       await expect(page.locator("[data-log-fixed-outcome]")).toContainText(
         "no planned session attached",
       );
+      await page.getByLabel("Title", { exact: true }).fill("Sunrise swim");
+      await page.getByLabel("Sport", { exact: true }).fill("Swimming");
       await page.getByLabel("Duration (minutes)").fill("30");
-      await page.getByLabel("Note").fill("Walked the long way home.");
+      await page
+        .getByLabel("Note", { exact: true })
+        .fill("Walked the long way home.");
       await page.getByRole("button", { name: "Save log" }).click();
       await page.getByRole("link", { name: "Back to that day" }).click();
+
       const unplanned = page.locator("[data-today-completion]");
-      await expect(unplanned).toContainText("Unplanned training");
-      await expect(unplanned).toContainText("Unplanned");
+      await expect(unplanned).toHaveCount(1);
+      await expect(
+        unplanned.getByRole("heading", { name: "Sunrise swim", exact: true }),
+      ).toBeVisible();
+      await expect(
+        unplanned.getByText("Swimming", { exact: true }),
+      ).toBeVisible();
+      // The nameless card the owner objected to is gone, not merely joined.
+      await expect(unplanned.getByText("Unplanned training")).toHaveCount(0);
+      // "Unplanned" alone is the outcome stamp, which is a different fact.
+      await expect(
+        unplanned.getByText("Unplanned", { exact: true }),
+      ).toBeVisible();
+
+      // Reopening shows both, and offers to change neither: the write
+      // function refuses an activity list on an edit.
+      await unplanned.getByRole("link", { name: "Edit log" }).click();
+      const naming = page.locator("[data-log-fixed-naming]");
+      await expect(naming).toContainText("Sunrise swim");
+      await expect(naming).toContainText("Swimming");
+      await expect(naming).toContainText("cannot be changed yet");
+      await expect(page.getByLabel("Title", { exact: true })).toHaveCount(0);
+      await expect(page.getByLabel("Sport", { exact: true })).toHaveCount(0);
+      await page.screenshot({
+        fullPage: true,
+        path: path.join(evidenceDirectory, "M3-15B-unplanned-edit-390x844.png"),
+      });
+      await page.getByRole("link", { name: "Cancel" }).click();
+      await expect(page.locator(`[data-today-date="${today}"]`)).toBeVisible();
 
       // ---- A mistaken log is corrected, including to skipped. ----
       await todayCard(page, "Tempo run")
@@ -231,15 +291,32 @@ test.describe("M3-15B today and logging", () => {
       await expect(page.locator("[data-log-source]")).toContainText(
         "Editing a log",
       );
+      await expect(page.getByLabel("Duration (minutes)")).toHaveValue("42");
+      await expect(page.locator("[data-log-clears]")).toHaveCount(0);
       await page.getByRole("radio", { name: /^Skipped/ }).check();
+      await expect(page.getByLabel("Duration (minutes)")).toHaveCount(0);
+      await expect(page.locator("[data-log-clears]")).toContainText(
+        "removes the duration, the effort and how it felt",
+      );
       await page.getByRole("button", { name: "Save log" }).click();
       await expect(
         page.getByRole("heading", { name: "Log updated." }),
       ).toBeVisible();
       await page.getByRole("link", { name: "Back to that day" }).click();
+      const corrected = todayCard(page, "Tempo run");
       await expect(
-        todayCard(page, "Tempo run").getByText("Skipped", { exact: true }),
+        corrected.getByText("Skipped", { exact: true }),
       ).toBeVisible();
+      // The three the form stopped asking for are gone from the record.
+      await expect(corrected.getByText("42 min")).toHaveCount(0);
+      await expect(corrected.getByText("7 of 10")).toHaveCount(0);
+      await expect(corrected.getByText("Good", { exact: true })).toHaveCount(0);
+      // The note and the reported signal are facts about the owner, not about
+      // a session that happened, so they survive.
+      await expect(
+        corrected.getByText("Held the pace to the last rep."),
+      ).toBeVisible();
+      await expect(corrected.getByText(/You reported: Pain/)).toBeVisible();
       await page.screenshot({
         fullPage: true,
         path: path.join(evidenceDirectory, "M3-15B-logged-day-390x844.png"),
