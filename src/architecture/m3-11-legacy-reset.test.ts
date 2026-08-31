@@ -26,7 +26,6 @@ const legacyModules = [
 ] as const;
 
 const maintenancePages = [
-  "src/app/home/progress/page.tsx",
   "src/app/home/plan/roadmap/page.tsx",
   "src/app/home/plan/proposal/page.tsx",
 ] as const;
@@ -37,7 +36,9 @@ const maintenancePages = [
  * maintenance module and onto those two, so they are constrained here rather
  * than left unchecked: dropping them from the list above without adding them
  * here would have retired the only assertion covering how they reach
- * persistence.
+ * persistence. M3-15C moves the two Progress routes the same way, for the same
+ * reason; both read completions only, and neither may acquire a plan read
+ * without that showing up here.
  */
 const rollingPlanSurface = [
   "src/app/home/plan/page.tsx",
@@ -45,6 +46,8 @@ const rollingPlanSurface = [
   "src/app/home/today/page.tsx",
   "src/app/home/log/page.tsx",
   "src/app/home/log/actions.ts",
+  "src/app/home/progress/page.tsx",
+  "src/app/home/progress/[id]/page.tsx",
 ] as const;
 
 /**
@@ -52,9 +55,12 @@ const rollingPlanSurface = [
  * allowlist rather than a pattern on purpose: the substring check below only
  * ever proved that *one* seam import was present, so any of these modules
  * could have imported an arbitrary additional persistence module and still
- * passed. Two of these files also moved here from `maintenancePages`, whose
+ * passed. Four of these files also moved here from `maintenancePages`, whose
  * predicate forbade `@/server/**` outright, so without this the move would
  * have traded a strict check for a loose one.
+ *
+ * M3-15C added no entry: both Progress routes reach only modules that were
+ * already on this list.
  */
 const allowedServerModules = [
   "@/server/completions/completion-log",
