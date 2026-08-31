@@ -191,6 +191,36 @@ describe("Today", () => {
     expect(within(card).getByText("Unplanned training")).toBeTruthy();
   });
 
+  it("names unplanned training by the activity the owner wrote it with", async () => {
+    listCompletions.mockResolvedValue([
+      {
+        ...completion(),
+        planSessionId: null,
+        status: "unplanned" as const,
+        plannedSnapshot: null,
+        activities: [
+          {
+            position: 0,
+            name: "Sunrise swim",
+            sport: "Swimming",
+            measurementMode: "custom" as const,
+          },
+        ],
+      },
+    ]);
+
+    render(await TodayPage({ searchParams: Promise.resolve({}) }));
+
+    const card = document.querySelector(
+      `[data-today-completion="${COMPLETION_ID}"]`,
+    ) as HTMLElement;
+    expect(
+      within(card).getByRole("heading", { name: "Sunrise swim" }),
+    ).toBeTruthy();
+    expect(within(card).getByText("Swimming")).toBeTruthy();
+    expect(within(card).queryByText("Unplanned training")).toBe(null);
+  });
+
   it("refuses to guess a day for an owner with no stored zone", async () => {
     createProfileMock.mockResolvedValue({
       getCurrentProfile: vi.fn().mockResolvedValue({

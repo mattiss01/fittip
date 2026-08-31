@@ -154,6 +154,152 @@ describe("Log", () => {
     ).toContain("no planned session attached");
   });
 
+  it("asks unplanned training for a title and a sport", async () => {
+    render(await LogPage({ searchParams: Promise.resolve({}) }));
+
+    const title = document.querySelector<HTMLInputElement>("#log-title")!;
+    const sport = document.querySelector<HTMLInputElement>("#log-sport")!;
+    expect(title.name).toBe("title");
+    expect(title.required).toBe(true);
+    expect(title.maxLength).toBe(120);
+    expect(sport.name).toBe("sport");
+    expect(sport.required).toBe(true);
+    expect(sport.maxLength).toBe(80);
+    expect(screen.getByLabelText("Title")).toBe(title);
+    expect(screen.getByLabelText("Sport")).toBe(sport);
+  });
+
+  it("never offers a title or a sport on a planned session", async () => {
+    render(
+      await LogPage({
+        searchParams: Promise.resolve({
+          plannedSession: SESSION_ID,
+          date: today(),
+        }),
+      }),
+    );
+
+    expect(document.querySelector("#log-title")).toBe(null);
+    expect(document.querySelector("#log-sport")).toBe(null);
+  });
+
+  it("reads an unplanned log's title and sport back rather than offering them", async () => {
+    getCompletion.mockResolvedValue({
+      ...completion(),
+      activities: [
+        {
+          position: 0,
+          name: "Sunrise swim",
+          sport: "Swimming",
+          measurementMode: "custom" as const,
+        },
+      ],
+    });
+
+    render(
+      await LogPage({
+        searchParams: Promise.resolve({ completion: COMPLETION_ID }),
+      }),
+    );
+
+    // An input here would take what the owner typed and drop it: the write
+    // function refuses an activity list on an edit.
+    expect(document.querySelector("#log-title")).toBe(null);
+    expect(document.querySelector("#log-sport")).toBe(null);
+    const readback = document.querySelector(
+      "[data-log-fixed-naming]",
+    ) as HTMLElement;
+    expect(readback.textContent).toContain("Sunrise swim");
+    expect(readback.textContent).toContain("Swimming");
+    expect(readback.textContent).toContain("cannot be changed yet");
+  });
+
+  it("still names an unplanned log written before a title was collected", async () => {
+    getCompletion.mockResolvedValue(completion());
+
+    render(
+      await LogPage({
+        searchParams: Promise.resolve({ completion: COMPLETION_ID }),
+      }),
+    );
+
+    expect(
+      document.querySelector("[data-log-fixed-naming]")?.textContent,
+    ).toContain("Unplanned training");
+  });
+
+  it("stops asking for duration, effort and how it felt once skipped is chosen", async () => {
+    render(
+      await LogPage({
+        searchParams: Promise.resolve({
+          plannedSession: SESSION_ID,
+          date: today(),
+        }),
+      }),
+    );
+
+    expect(document.querySelector("#log-duration")).toBeTruthy();
+    fireEvent.click(
+      document.querySelector("input[type='radio'][value='skipped']")!,
+    );
+    expect(document.querySelector("#log-duration")).toBe(null);
+    expect(document.querySelector("#log-effort")).toBe(null);
+    expect(document.querySelector("#log-feeling")).toBe(null);
+    // An owner may skip precisely because of pain, so the note and all four
+    // signals stay, and so does the notice that qualifies them.
+    expect(document.querySelector("#log-note")).toBeTruthy();
+    expect(screen.getByLabelText("I felt pain")).toBeTruthy();
+    expect(screen.getByLabelText("I was ill")).toBeTruthy();
+    expect(screen.getByLabelText("I was injured")).toBeTruthy();
+    expect(screen.getByLabelText("I was severely fatigued")).toBeTruthy();
+    expect(
+      screen.getByText(/stop training and speak to a qualified/),
+    ).toBeTruthy();
+  });
+
+  it("warns before a skip clears numbers the log already carries", async () => {
+    getCompletion.mockResolvedValue({
+      ...completion(),
+      planSessionId: SESSION_ID,
+      status: "completed" as const,
+      perceivedEffort: 7,
+      feeling: "good" as const,
+      plannedSnapshot: snapshot(),
+    });
+
+    render(
+      await LogPage({
+        searchParams: Promise.resolve({ completion: COMPLETION_ID }),
+      }),
+    );
+
+    expect(document.querySelector("[data-log-clears]")).toBe(null);
+    fireEvent.click(
+      document.querySelector("input[type='radio'][value='skipped']")!,
+    );
+    expect(document.querySelector("[data-log-clears]")?.textContent).toContain(
+      "removes the duration, the effort and how it felt",
+    );
+  });
+
+  it("says nothing about clearing when there is nothing to clear", async () => {
+    getCompletion.mockResolvedValue({
+      ...completion(),
+      planSessionId: SESSION_ID,
+      status: "skipped" as const,
+      durationMinutes: undefined,
+      plannedSnapshot: snapshot(),
+    });
+
+    render(
+      await LogPage({
+        searchParams: Promise.resolve({ completion: COMPLETION_ID }),
+      }),
+    );
+
+    expect(document.querySelector("[data-log-clears]")).toBe(null);
+  });
+
   it("reopens an existing log against the revision it was read at", async () => {
     getCompletion.mockResolvedValue(completion());
 
@@ -283,6 +429,20 @@ function session() {
     seriesId: null,
     occurrenceDate: null,
     hasDiverged: false,
+    activities: [],
+  };
+}
+
+function snapshot() {
+  return {
+    localDate: today(),
+    position: 0,
+    title: "Threshold intervals",
+    sport: "Running",
+    isLocked: false,
+    status: "active" as const,
+    seriesId: null,
+    occurrenceDate: null,
     activities: [],
   };
 }

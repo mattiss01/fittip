@@ -152,19 +152,92 @@ describe("logCompletionAction", () => {
   });
 
   it("writes unplanned training with no planned session and no plan read", async () => {
-    await logCompletionAction(
-      INITIAL_LOG_ACTION_STATE,
-      form({
-        operation: "create",
-        status: "unplanned",
-        actualLocalDate: DAY,
-      }),
-    );
+    await logCompletionAction(INITIAL_LOG_ACTION_STATE, form(unplanned()));
 
     expect(getPlanSlice).not.toHaveBeenCalled();
     const [change] = applyChange.mock.calls[0];
     expect(change.completion.planSessionId).toBeUndefined();
     expect(change.completion.status).toBe("unplanned");
+  });
+
+  it("names unplanned training as its one activity, and nothing more", async () => {
+    await logCompletionAction(
+      INITIAL_LOG_ACTION_STATE,
+      form({ ...unplanned(), title: "  Sunrise swim  ", sport: " Swimming " }),
+    );
+
+    const [change] = applyChange.mock.calls[0];
+    // Trimmed exactly as the database constraint measures it, one activity at
+    // position 0, no personal activity linked and no measurement captured.
+    expect(change.completion.activities).toEqual([
+      {
+        position: 0,
+        name: "Sunrise swim",
+        sport: "Swimming",
+        measurementMode: "custom",
+      },
+    ]);
+  });
+
+  it("leaves a planned create's activity list empty and unnamed", async () => {
+    await logCompletionAction(
+      INITIAL_LOG_ACTION_STATE,
+      form({
+        operation: "create",
+        status: "completed",
+        actualLocalDate: DAY,
+        plannedSessionId: SESSION_ID,
+        plannedDate: DAY,
+        title: "Ignored",
+        sport: "Ignored",
+      }),
+    );
+
+    const [change] = applyChange.mock.calls[0];
+    expect(change.completion.activities).toEqual([]);
+  });
+
+  it.each([
+    [{ title: "" }, /title of 120 characters or fewer/],
+    [{ title: "   " }, /title of 120 characters or fewer/],
+    [{ title: "t".repeat(121) }, /title of 120 characters or fewer/],
+    [{ sport: "" }, /sport in 80 characters or fewer/],
+    [{ sport: "s".repeat(81) }, /sport in 80 characters or fewer/],
+  ])("names the field an unplanned log is missing (%#)", async (bad, copy) => {
+    const result = await logCompletionAction(
+      INITIAL_LOG_ACTION_STATE,
+      form({ ...unplanned(), ...bad }),
+    );
+
+    expect(applyChange).not.toHaveBeenCalled();
+    expect(result.status).toBe("validation");
+    expect(result.message).toMatch(copy);
+  });
+
+  it("clears duration, effort and feeling when a log becomes skipped", async () => {
+    // The skipped form unmounts those three, so nothing is submitted for
+    // them. The write function assigns all three unconditionally from the
+    // payload, so an absent key stores null: the point of this assertion is
+    // that the action forwards the absence rather than defaulting it back.
+    await logCompletionAction(
+      INITIAL_LOG_ACTION_STATE,
+      form({
+        operation: "edit",
+        completionId: COMPLETION_ID,
+        expectedRevision: "3",
+        status: "skipped",
+        actualLocalDate: DAY,
+        note: "Knee was sore.",
+        painReported: "true",
+      }),
+    );
+
+    const [change] = applyChange.mock.calls[0];
+    expect(Object.keys(change.completion)).not.toContain("durationMinutes");
+    expect(Object.keys(change.completion)).not.toContain("perceivedEffort");
+    expect(Object.keys(change.completion)).not.toContain("feeling");
+    expect(change.completion.note).toBe("Knee was sore.");
+    expect(change.completion.painReported).toBe(true);
   });
 
   it("edits a mistaken log to skipped against the revision it was read at", async () => {
@@ -237,11 +310,7 @@ describe("logCompletionAction", () => {
 
     const result = await logCompletionAction(
       INITIAL_LOG_ACTION_STATE,
-      form({
-        operation: "create",
-        status: "unplanned",
-        actualLocalDate: DAY,
-      }),
+      form(unplanned()),
     );
 
     expect(result.status).toBe(status);
@@ -259,6 +328,17 @@ describe("logCompletionAction", () => {
     expect(applyChange).not.toHaveBeenCalled();
   });
 });
+
+/** The unplanned create the form now submits, with both required fields. */
+function unplanned() {
+  return {
+    operation: "create",
+    status: "unplanned",
+    actualLocalDate: DAY,
+    title: "Sunrise swim",
+    sport: "Swimming",
+  };
+}
 
 function form(values: Record<string, string>): FormData {
   const formData = new FormData();
