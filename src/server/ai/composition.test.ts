@@ -13,6 +13,7 @@ import {
   requireLiveCoachAIModel,
 } from "@/server/ai/model-binding";
 import type { CoachAIOwner } from "@/server/ai/owner";
+import { OwnedRecordsCoachAIContextSource } from "@/server/context/coach-ai-context-source";
 import type { CoachAISpendHandle, CoachAISpendLedger } from "@/server/ai/spend";
 
 const OWNER_ID = "9f000000-0000-4000-8000-000000000001";
@@ -207,6 +208,27 @@ describe("the live composition root", () => {
     }
   });
 
+  it("serves a request that injects nothing from the production context source", () => {
+    // The seam exists so a test or a fixture composition can substitute a stub.
+    // Production passes none, so the records a real request is built from are
+    // the owner's own rather than whichever stub was wired in last.
+    expect(
+      contextSourceOf(
+        createRoadmapCoachAIService({ owner: OWNER, environment: {} }),
+      ),
+    ).toBeInstanceOf(OwnedRecordsCoachAIContextSource);
+
+    expect(
+      contextSourceOf(
+        createRoadmapCoachAIService({
+          owner: OWNER,
+          contextSource: new StubContextSource(),
+          environment: {},
+        }),
+      ),
+    ).toBeInstanceOf(StubContextSource);
+  });
+
   it("never hands the credential to anything that could return it", () => {
     const composition = compose(liveEnvironment());
     const serialized = JSON.stringify(
@@ -217,3 +239,18 @@ describe("the live composition root", () => {
     expect(serialized).not.toContain("not-a-real-key");
   });
 });
+
+/**
+ * Reaches past the service's private dependency bag on purpose: which context
+ * source a real request is served by is not otherwise observable, and it is the
+ * one thing this wiring decides about owner data.
+ */
+function contextSourceOf(
+  composition: ReturnType<typeof createRoadmapCoachAIService>,
+): CoachAIContextSource {
+  return (
+    composition.service as unknown as {
+      deps: { contextSource: CoachAIContextSource };
+    }
+  ).deps.contextSource;
+}
