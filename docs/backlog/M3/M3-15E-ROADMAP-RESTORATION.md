@@ -1,7 +1,8 @@
 # M3-15E: Roadmap surface restoration, read-only
 
-**Status:** proposed — the lead wrote the agent brief below on 14 September 2026
-and rescoped the ticket the same day; dispatch is not yet approved. Split out of
+**Status:** in development — the lead wrote the agent brief below on
+14 September 2026, rescoped the ticket the same day, and the product owner
+approved Tier 2 dispatch the same day. Split out of
 [M3-15](M3-15-REPLACEMENT-CONSUMER-READINESS.md) on 29 August 2026, and split
 again on 14 September 2026 — see *Rescope*.
 
@@ -132,6 +133,7 @@ issues no writes.
 ## Approval boundary
 
 The `## Agent brief` above was written by the lead on 14 September 2026 against
-the code as it actually stands. **Dispatch is not yet approved.** The product
-owner approved the E/F split on 14 September 2026; approving dispatch of this
-ticket is a separate decision.
+the code as it actually stands. The product owner approved the E/F split on
+14 September 2026 and, as a separate decision the same day, **approved Tier 2
+dispatch of this ticket**. No further product-owner prompt is needed to spawn
+the builder and the independent reviewer.
