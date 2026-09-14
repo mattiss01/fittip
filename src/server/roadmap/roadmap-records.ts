@@ -28,7 +28,17 @@ export type RoadmapProposalOrigin =
   | "ai_regeneration"
   | "owner_edit";
 
-export type RoadmapDecision = "accepted" | "rejected";
+/**
+ * The three terminal states a proposal can carry.
+ *
+ * `expired` is M3-11's: a proposal whose sources were legacy plan or completion
+ * records could no longer be accepted once those records were deleted, so the
+ * reset appended the state rather than rewriting or dropping the proposal. The
+ * check constraint on `roadmap_proposal_decisions` has allowed all three since
+ * that migration; this type had not caught up, so a repository read of an
+ * expired proposal produced a value no consumer could name.
+ */
+export type RoadmapDecision = "accepted" | "rejected" | "expired";
 
 export type RoadmapGoalSummary = {
   id: string;
@@ -182,6 +192,15 @@ export type RoadmapScreenState = {
   history: RoadmapVersionView[];
   /** The proposal awaiting a decision, if any. */
   openProposal: RoadmapProposalView | null;
+  /**
+   * Recent proposals, newest first, each carrying its own decision state.
+   *
+   * The open proposal is the first entry when there is one. Everything else
+   * here is settled — accepted, declined, or expired by M3-11 — and appears so
+   * that a proposal the owner remembers is visibly accounted for rather than
+   * silently missing from the screen.
+   */
+  proposalHistory: RoadmapProposalView[];
   /** Undecided candidates extracted from a planning note. */
   openMemoryCandidateCount: number;
   goals: RoadmapGoalSummary[];

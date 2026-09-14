@@ -57,7 +57,7 @@ describe("RoadmapRepository", () => {
       proposalRow(FIRST_PROPOSAL, { decision: null }),
     ]);
 
-    await expect(repository.getReviewProposals()).resolves.toEqual({
+    await expect(repository.getReviewProposals()).resolves.toMatchObject({
       open: null,
       declinedPredecessor: null,
     });
@@ -68,9 +68,28 @@ describe("RoadmapRepository", () => {
       proposalRow(SECOND_PROPOSAL, { decision: "accepted" }),
     ]);
 
-    await expect(repository.getReviewProposals()).resolves.toEqual({
+    await expect(repository.getReviewProposals()).resolves.toMatchObject({
       open: null,
       declinedPredecessor: null,
+    });
+  });
+
+  // M3-11 appended `expired` to proposals whose sources it deleted. Such a
+  // proposal is neither open nor a predecessor, so `history` is the only field
+  // a screen could read it from.
+  it("returns a settled proposal as history with the state it carries", async () => {
+    const { repository } = readingProposals([
+      proposalRow(SECOND_PROPOSAL, { decision: "expired" }),
+      proposalRow(FIRST_PROPOSAL, { decision: "accepted" }),
+    ]);
+
+    await expect(repository.getReviewProposals()).resolves.toMatchObject({
+      open: null,
+      declinedPredecessor: null,
+      history: [
+        { id: SECOND_PROPOSAL, decision: "expired" },
+        { id: FIRST_PROPOSAL, decision: "accepted" },
+      ],
     });
   });
 

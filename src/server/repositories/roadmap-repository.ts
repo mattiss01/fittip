@@ -155,10 +155,19 @@ export class RoadmapRepository {
    * that offers **Regenerate proposal** would have no predecessor to send, and
    * decision 4's "sends only the immediately previous proposal" would be lost
    * at the moment it becomes possible.
+   *
+   * `history` is every proposal this one read returned, newest first and
+   * whatever its decision. It exists because a settled proposal is neither
+   * `open` nor a predecessor and would otherwise be unreadable: M3-11 marked
+   * proposals built on deleted training records `expired`, and an owner whose
+   * only proposal is one of those would see a screen that does not mention it.
+   * It costs no second query — these are the rows the two fields above are
+   * already derived from.
    */
   async getReviewProposals(): Promise<{
     open: RoadmapProposalView | null;
     declinedPredecessor: RoadmapProposalView | null;
+    history: RoadmapProposalView[];
   }> {
     const userId = await this.getVerifiedUserId();
     const { data, error } = await this.client
@@ -192,6 +201,7 @@ export class RoadmapRepository {
         ) ?? null,
       declinedPredecessor:
         newest && newest.decision === "rejected" ? newest : null,
+      history: proposals,
     };
   }
 
