@@ -1,0 +1,477 @@
+/*
+ * Progress is the same FitTip ledger the Plan and Today established: cream
+ * stock, deep green ink, hard edges, offset shadow, Courier stamps. It does
+ * not invent a second visual language for the same app, and it reuses Today's
+ * outcome stamp so one outcome never looks like two different facts.
+ *
+ * It has two signatures of its own, and both encode something true rather than
+ * decorate the page.
+ *
+ * The month is a bound logbook: every day the owner trained is a ruled entry
+ * with its day number set in the left gutter, under one continuous rule. That
+ * is what this surface is - a dated record. Nothing here totals, ranks,
+ * streaks, or charts, and no figure on it is computed.
+ *
+ * One completion is a carbon copy beside the top sheet. What was planned is
+ * drawn as a duplicate taken at the time - washed ground, dashed edge, blue
+ * carbon ink - and what actually happened is drawn on paper. That is exactly
+ * what a stored planned snapshot is, and editing the plan afterwards does not
+ * touch it.
+ */
+
+.page {
+  --progress-mark: #d95835;
+  --progress-carbon: #3f4f68;
+  --progress-carbon-wash: #eceef3;
+}
+
+/* ---- Month navigation ---- */
+
+.monthNav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+
+.step {
+  min-height: 3.25rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-content: center;
+  gap: 0 0.5rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  color: var(--ledger-ink);
+  text-decoration: none;
+}
+
+.step:last-child {
+  text-align: right;
+}
+
+.step:last-child .stepMark {
+  order: 2;
+}
+
+.stepMark {
+  grid-row: span 2;
+  align-self: center;
+  font:
+    700 1.1rem "Courier New",
+    monospace;
+}
+
+.stepLabel {
+  font:
+    700 0.62rem "Courier New",
+    monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stepMonth {
+  grid-column: 2;
+  color: var(--ledger-muted);
+  font-size: 0.86rem;
+}
+
+.step:last-child .stepLabel,
+.step:last-child .stepMonth {
+  grid-column: 1;
+}
+
+/* ---- The month itself ---- */
+
+.month {
+  display: grid;
+  gap: 1.1rem;
+  margin-top: 1.1rem;
+}
+
+.monthHead {
+  padding: 1.1rem 1rem;
+  border: 1px solid var(--ledger-ink);
+  border-left: 7px solid var(--progress-mark);
+  background: var(--ledger-paper);
+  box-shadow: 7px 7px 0 #a7b7a5;
+}
+
+.monthMark {
+  margin: 0 0 0.35rem;
+  color: var(--ledger-muted);
+  font:
+    700 0.64rem "Courier New",
+    monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.monthHead h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.returnLink {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.6rem;
+  color: var(--ledger-ink);
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* The one continuous rule the whole month is written against. */
+.days {
+  display: grid;
+  gap: 1.1rem;
+  margin: 0;
+  padding: 0 0 0 3.4rem;
+  border-left: 1px solid var(--ledger-rule);
+  list-style: none;
+}
+
+.day {
+  position: relative;
+  display: grid;
+  gap: 0.7rem;
+}
+
+/* The day number, set out in the gutter the rule runs down. */
+.dayMark {
+  position: absolute;
+  left: -3.4rem;
+  width: 3rem;
+  margin: 0;
+  color: var(--ledger-ink);
+  text-align: right;
+}
+
+.dayNumber {
+  display: block;
+  font:
+    700 1.5rem "Courier New",
+    monospace;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.dayWeekday {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--ledger-muted);
+  font:
+    700 0.58rem "Courier New",
+    monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.entries {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entry {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  box-shadow: 5px 5px 0 #a7b7a5;
+}
+
+.entryLink {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  color: var(--ledger-ink);
+  text-decoration: underline;
+  text-underline-offset: 0.22rem;
+}
+
+/* The day is already announced by the mark in the gutter; this gives the
+   grouping a heading a screen reader can navigate by without printing the
+   date twice. */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.entryHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.entryHeader h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+/*
+ * Today's stamp, unchanged: struck rather than printed, and the only tilted
+ * element on the surface.
+ */
+.stamp {
+  flex: none;
+  padding: 0.28rem 0.5rem;
+  border: 2px solid var(--progress-mark);
+  color: var(--progress-mark);
+  font:
+    700 0.62rem "Courier New",
+    monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  rotate: -4deg;
+}
+
+.stamp[data-outcome="skipped"] {
+  border-color: var(--ledger-muted);
+  color: var(--ledger-muted);
+}
+
+.stamp[data-outcome="unplanned"] {
+  border-color: #557667;
+  color: #557667;
+}
+
+.marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.marks > span {
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--ledger-rule);
+  color: var(--ledger-muted);
+  font:
+    700 0.6rem "Courier New",
+    monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.record {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--ledger-rule);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 0.75rem;
+  margin: 0;
+}
+
+.facts dt {
+  color: var(--ledger-muted);
+  font:
+    700 0.6rem "Courier New",
+    monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.facts dd {
+  margin: 0.15rem 0 0;
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+}
+
+.body {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.signals {
+  margin: 0;
+  padding: 0.5rem 0.6rem;
+  border-left: 3px solid var(--progress-mark);
+  background: #fff0e1;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.empty {
+  margin: 0;
+  padding: 1.2rem 1rem;
+  border: 1px dashed var(--ledger-rule);
+  background: var(--ledger-wash);
+  color: var(--ledger-muted);
+  line-height: 1.5;
+}
+
+.emptyHeading {
+  margin: 0 0 0.4rem;
+  color: var(--ledger-ink);
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+}
+
+/* ---- One completion, and the copy it was measured against ---- */
+
+.sheets {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1.5rem;
+}
+
+.sheet {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1.1rem 1rem;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  box-shadow: 7px 7px 0 #a7b7a5;
+}
+
+.sheetLabel {
+  margin: 0;
+  color: var(--ledger-muted);
+  font:
+    700 0.64rem "Courier New",
+    monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.sheet h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.sheetHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/*
+ * The carbon copy: a duplicate taken at the time, in carbon ink on carbon
+ * stock, with the dashed edge of a perforated flimsy. It is not a second card
+ * of the same kind as the sheet above it, because it is not the same kind of
+ * fact.
+ */
+.carbon {
+  border: 1px dashed var(--progress-carbon);
+  background: var(--progress-carbon-wash);
+  color: var(--progress-carbon);
+  box-shadow: none;
+}
+
+.carbon .sheetLabel,
+.carbon .facts dt {
+  color: var(--progress-carbon);
+}
+
+.carbonMark {
+  width: fit-content;
+  margin: 0;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--progress-carbon);
+  color: var(--progress-carbon);
+  font:
+    700 0.58rem "Courier New",
+    monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  rotate: -2deg;
+}
+
+.carbonNote {
+  margin: 0;
+  color: var(--progress-carbon);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.activities {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activity {
+  padding: 0.65rem 0.7rem;
+  border-left: 3px solid currentColor;
+  background: #fffdf4;
+  line-height: 1.4;
+}
+
+.carbon .activity {
+  background: #f5f6f9;
+}
+
+.activityName {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.activityMeta {
+  margin: 0.2rem 0 0;
+  font:
+    0.72rem "Courier New",
+    monospace;
+  letter-spacing: 0.03em;
+}
+
+.activityNote {
+  margin: 0.3rem 0 0;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.backLink {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 1.2rem;
+  color: var(--ledger-ink);
+  font:
+    700 0.72rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.page a:focus-visible {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

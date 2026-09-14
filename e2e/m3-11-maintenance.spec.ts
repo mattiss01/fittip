@@ -1,16 +1,14 @@
 import { expect, test } from "@playwright/test";
 import path from "node:path";
 
-// M3-12 reopened `/home/plan` against the rolling-plan model, and M3-15B
-// reopened `/home/today` and `/home/log` against it and the completion seam.
-// Those three are no longer maintenance stubs; `e2e/m3-12-plan.spec.ts` and
-// `e2e/m3-15b-today-and-logging.spec.ts` own them. The remaining three routes
-// are still stubs and are still asserted here.
-const routes = [
-  "/home/progress",
-  "/home/plan/roadmap",
-  "/home/plan/proposal",
-] as const;
+// M3-12 reopened `/home/plan` against the rolling-plan model, M3-15B
+// reopened `/home/today` and `/home/log` against it and the completion seam,
+// and M3-15C reopened `/home/progress` and added `/home/progress/[id]`.
+// Those routes are no longer maintenance stubs; `e2e/m3-12-plan.spec.ts`,
+// `e2e/m3-15b-today-and-logging.spec.ts` and `e2e/m3-15c-progress.spec.ts`
+// own them. The remaining two routes are still stubs and are still asserted
+// here.
+const routes = ["/home/plan/roadmap", "/home/plan/proposal"] as const;
 
 const legacyObjects = [
   "detailed_plan",
