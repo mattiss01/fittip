@@ -1,7 +1,8 @@
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
-import type {
-  RoadmapProposalOrigin,
-  RoadmapProposalView,
+import {
+  ROADMAP_COPY,
+  type RoadmapProposalOrigin,
+  type RoadmapProposalView,
 } from "@/server/roadmap/roadmap-records";
 
 /**
@@ -13,6 +14,11 @@ import type {
  * the owner to guess which. Accepting, declining and editing are M3-15F, so
  * this file carries no button, no form, and no link that pretends to offer
  * one.
+ *
+ * Nor does it say one is coming. A state that cannot be acted on says so
+ * outright, because "Awaiting your decision" over a screen with no way to
+ * decide is the same inert affordance as a greyed-out button — it just
+ * costs the owner a search of the interface to discover it.
  */
 
 const STATE_LABELS = {
@@ -56,13 +62,18 @@ export function RoadmapProposalRecord({
         {ORIGIN_LABELS[proposal.origin]} · {startDate} → {endDate}
       </p>
       {state === "open" ? (
-        <p className={styles.recordBody}>{proposal.content.summary}</p>
+        <>
+          <p className={styles.recordBody}>{proposal.content.summary}</p>
+          {/* Without this the label above is an inert affordance in copy: it
+              says a decision is awaited while the application offers no way to
+              make one. */}
+          <p className={styles.recordNote}>
+            {ROADMAP_COPY.proposalDecisionUnavailable}
+          </p>
+        </>
       ) : null}
       {state === "expired" ? (
-        <p className={styles.recordBody}>
-          This proposal can no longer be accepted. It stays here, unchanged,
-          with everything it was built on.
-        </p>
+        <p className={styles.recordNote}>{ROADMAP_COPY.proposalExpired}</p>
       ) : null}
     </li>
   );

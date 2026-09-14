@@ -154,6 +154,7 @@ describe("Roadmap", () => {
     ) as HTMLElement;
     expect(record.getAttribute("data-roadmap-proposal-state")).toBe("expired");
     expect(within(record).getByText("Expired")).toBeTruthy();
+    expect(within(record).getByText(ROADMAP_COPY.proposalExpired)).toBeTruthy();
 
     const proposals = document.querySelector(
       "[data-roadmap-proposals]",
@@ -179,6 +180,11 @@ describe("Roadmap", () => {
     expect(record.getAttribute("data-roadmap-proposal-state")).toBe("open");
     expect(within(record).getByText("Awaiting your decision")).toBeTruthy();
     expect(within(record).queryAllByRole("button")).toHaveLength(0);
+    // The label alone would be an inert affordance: it says a decision is
+    // awaited while nothing in the application can make one.
+    expect(
+      within(record).getByText(ROADMAP_COPY.proposalDecisionUnavailable),
+    ).toBeTruthy();
   });
 
   it("offers no action-bearing control anywhere on the surface", async () => {

@@ -257,6 +257,24 @@ export const ROADMAP_COPY = {
     "FitTip cannot assess or diagnose symptoms. If symptoms are severe, sudden, or getting worse, stop the affected activity and contact a qualified health professional.",
   regenerationCapReached:
     "You have used all three regenerations for these dates. Edit the proposal directly, or change the dates to start a fresh request.",
+  /**
+   * The two sentences a proposal record carries on the read-only surface.
+   *
+   * Both are M3-15E's, and both exist for the same reason the ticket forbids a
+   * disabled button: an owner cannot tell a proposal that is waiting for them
+   * from one nothing will ever act on. `proposalDecisionUnavailable` is the
+   * more important of the two — "Awaiting your decision" is an inert
+   * affordance stated in copy if the screen offers no way to decide, and until
+   * M3-15F restores the five revoked functions there is none anywhere in the
+   * application.
+   *
+   * They are new user-visible strings rather than M3-02 decisions, so they are
+   * the product owner's to confirm.
+   */
+  proposalDecisionUnavailable:
+    "Deciding on a proposal is not available yet. This one stays here, unchanged, and nothing happens to it in the meantime.",
+  proposalExpired:
+    "This proposal can no longer be accepted. It stays here, unchanged, with everything it was built on.",
 } as const;
 
 export type RoadmapMemoryCandidateView = RoadmapMemoryCandidate & {

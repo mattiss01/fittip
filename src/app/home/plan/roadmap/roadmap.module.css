@@ -393,6 +393,17 @@
   line-height: 1.55;
 }
 
+/* What can and cannot be done with this record. Set apart from the record's
+   own content so it does not read as something the coach wrote. */
+.recordNote {
+  margin: 0.4rem 0 0;
+  padding-left: 0.7rem;
+  border-left: 2px solid var(--border);
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
 .emptyState {
   margin: 0.5rem 0 0;
   color: var(--muted);
