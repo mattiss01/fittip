@@ -1,12 +1,15 @@
 # M3-15C: Progress
 
-**Status:** in development — the product owner approved dispatch on 31 August
-2026 and the lead marked the ticket in development and spawned the builder onto
-`ticket/m3-15c-progress` the same day. The agent brief below was written on
-31 August 2026 against the product owner's scope decisions of that date. Split
-out of [M3-15](M3-15-REPLACEMENT-CONSUMER-READINESS.md) on 29 August 2026.
+**Status:** **accepted** 14 September 2026 against independently reviewed
+`0d2dfbc` after three review rounds; merged as `42debea` with green `master`
+continuous integration and a `success` founder Production deployment. No
+hosted migration was required. See the
+[validation record](../../validation/M3/M3-15C-VALIDATION.md). Dispatch was
+approved on 31 August 2026 and the agent brief below was written that day
+against the product owner's scope decisions of that date. Split out of
+[M3-15](M3-15-REPLACEMENT-CONSUMER-READINESS.md) on 29 August 2026.
 
-**Triage:** ready-for-agent
+**Triage:** done
 
 **Milestone:** M3
 

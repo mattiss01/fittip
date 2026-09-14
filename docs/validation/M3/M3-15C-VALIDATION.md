@@ -1,7 +1,8 @@
 # M3-15C validation: progress
 
 **Ticket:** [M3-15C](../../backlog/M3/M3-15C-PROGRESS.md)
-**Status:** testable — round 3 of independent review **approved** `0d2dfbc` on
+**Status:** **accepted** 14 September 2026 — see the acceptance section at the
+end of this record. Round 3 of independent review **approved** `0d2dfbc` on
 green continuous-integration run 34818795441, confirming that the three round 2
 tidy-ups move no assertion, no test outcome, and no application behavior. Round
 2 approved `4149f4c` on green run 33397607302; round 1 rejected `fc7ef06` on two
@@ -503,3 +504,39 @@ What needs judgment CI cannot supply:
     ranks, streaks, or charts, that no write path or Server Action exists
     anywhere in the diff, and that the four health signals are rendered as
     facts the owner reported rather than as a judgment.
+
+## Acceptance, merge, and the founder deployment
+
+**Accepted by the product owner on 14 September 2026** against independently
+reviewed `0d2dfbcc03e5473312adf7646d2a9218a51ee49d` and its Vercel Preview at
+`https://fittip-47bzw119y-mattis-3657s-projects.vercel.app`. The product owner
+performed the 390px hosted pass and attested the result directly, which is
+their call to make under `AGENTS.md`; the reviewer did not repeat it.
+
+| | |
+| --- | --- |
+| Accepted commit | `0d2dfbcc03e5473312adf7646d2a9218a51ee49d` |
+| Ticket-branch head merged | `d624ae4` — the evidence-only commit recording round 3 |
+| Merge commit on `master` | `42debea` |
+| `master` continuous integration | [34820048283](https://github.com/mattiss01/fittip/actions/runs/34820048283) — **success**, all three jobs |
+| Founder Production deployment | `success` at `https://fittip-6o77ipacr-mattis-3657s-projects.vercel.app` |
+
+**No hosted migration was required.** This ticket changes no file under
+`supabase/`, adds no table, column, policy, grant, index, or RPC, and leaves
+`src/lib/supabase/database.types.ts` untouched. There is therefore no founder
+migration to apply and no remote history to reconcile.
+
+**What the lead could and could not check on the hosted deployment.** Vercel
+deployment protection sits in front of the founder environment: every
+unauthenticated request to `/`, `/home/progress`, and
+`/home/progress/not-a-uuid` answers `302` to `vercel.com/sso-api` with
+`Cache-Control: no-store, max-age=0`. That is a correct and desirable outer
+boundary, and it confirms no anonymous request reaches the application at all.
+It also means the lead **could not** exercise FitTip's own authorization
+redirect, its `private, no-cache, no-store` header from `next.config.ts`, or
+any authenticated read from this checkout — the SSO layer answers first, so
+nothing here is evidence about the application's own behavior. Those
+assertions are covered by the browser flow in CI run 34820048283 and by the
+product owner's own authenticated 390px pass. This is the standing limitation
+that the agent cannot reach the hosted environment, not a gap specific to this
+ticket.
