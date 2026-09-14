@@ -544,3 +544,42 @@ The judgment this needs:
     code for it rather than a new one, and that the null-profile path still
     resolves to `context_below_minimum` rather than being swallowed by the new
     check.
+
+## Acceptance
+
+**Accepted by the product owner on 14 September 2026**, against the
+independently reviewed `ffe3c7eaf277102b35548754151b145701e6f092` and its
+Vercel Preview at https://fittip-j77en39t4-mattis-3657s-projects.vercel.app.
+
+The acceptance covers the data boundary this ticket opens: up to 20 completions
+from the last 56 owner-local days, each reduced field by field to the ADR-013
+allowlist, carrying the four health signals — pain, illness, injury, and severe
+fatigue — that leave for a US provider here for the first time in fact rather
+than in principle. The product owner was asked to approve those four
+deliberately and separately at dispatch on 14 September 2026, and did.
+
+| Step | Result |
+| --- | --- |
+| Merge to `master` | `85567a9b6f0b29b5df5ab71ae755136eb9349e3a`, a `--no-ff` merge of the ticket branch |
+| `master` continuous integration | [34851693075](https://github.com/mattiss01/fittip/actions/runs/34851693075) — success |
+| Founder deployment | `6438503969`, state `success`, https://fittip-nk6pkojd4-mattis-3657s-projects.vercel.app |
+| Hosted database migration | Not applicable — nothing under `supabase/` changed |
+
+**No 390px acceptance pass was performed, and none was owed.** This ticket adds
+no route, component, or copy; the mobile demo path section above says so. The
+acceptance is a judgment on what data leaves, not on how anything looks.
+
+**The lead performed no hosted smoke check, and could not.** Vercel deployment
+protection sits in front of the founder environment, so every unauthenticated
+request is answered `302` to `vercel.com/sso-api` before the application runs.
+That boundary is correct and desirable, but it is evidence about Vercel and
+never about FitTip. What carries each assertion instead: the green `browser`
+job for the merge commit covers the 390px flows, and the context source has no
+hosted surface to smoke — it is reached only from a coaching operation, and no
+operation is wired to a surface until M3-15E and M3-16. The first hosted
+exercise of this code will be M3-15E's, and that ticket owes the check.
+
+**Follow-up opened.** The round 2 reviewer's non-blocking tripwire coverage
+finding is carried as [M3-25](../../backlog/M3/M3-25-NETWORK-TRIPWIRE-COVERAGE.md),
+on the product owner's decision of 14 September 2026, rather than reopening
+this ticket for a third correction round.
