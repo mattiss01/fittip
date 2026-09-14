@@ -227,7 +227,7 @@ function readingProposals(rows: ReturnType<typeof proposalRow>[]) {
 
 function proposalRow(
   id: string,
-  options: { decision: "accepted" | "rejected" | null },
+  options: { decision: "accepted" | "rejected" | "expired" | null },
 ) {
   return {
     id,
