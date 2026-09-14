@@ -49,7 +49,6 @@ export const TRAINING_HISTORY_WINDOW_DAYS = 56;
 export const TRAINING_HISTORY_MAX_SESSIONS = 20;
 export const COMPLETION_NOTE_MAX_LENGTH = 400;
 export const REPLACEMENT_DESCRIPTION_MAX_LENGTH = 240;
-export const CORRECTION_REASON_MAX_LENGTH = 240;
 
 /**
  * Decision 5: beyond the horizon the coach reads locked entries only, within a
@@ -76,7 +75,6 @@ export type TrainingHistoryCompletion = {
   severeFatigueReported: boolean;
   note: string | null;
   replacementDescription: string | null;
-  correctionReason: string | null;
   activityNames: string[];
 };
 
@@ -106,6 +104,19 @@ export type TrainingHistorySelection = {
   history: CoachAITrainingHistory;
   planCommitments: CoachAIPlanCommitmentReference[];
   hasSafetySignal: boolean;
+  /**
+   * The input records this selection actually transmitted, in the order it
+   * transmitted them. They are the very objects the caller passed in, so a
+   * caller holding a map from them to its own rows can say which rows reached
+   * a provider without the allowlist ever gaining an id field.
+   *
+   * That is the whole reason this exists: M3-08's exact-source rule needs the
+   * transmitted set, `history.completions` is the redacted form and carries no
+   * identity, and giving `TrainingHistoryCompletion` an id would put one field
+   * more than ADR-013 enumerates within reach of `toCompletionReference`.
+   * Nothing serializes this field; only `history` crosses the boundary.
+   */
+  includedCompletions: TrainingHistoryCompletion[];
 };
 
 export function selectTrainingHistoryContext(
@@ -203,6 +214,7 @@ export function selectTrainingHistoryContext(
     });
 
   return {
+    includedCompletions: included,
     history: {
       windowStartDate,
       windowEndDate,
@@ -248,10 +260,6 @@ function toCompletionReference(
     replacementDescription: truncate(
       entry.replacementDescription,
       REPLACEMENT_DESCRIPTION_MAX_LENGTH,
-    ),
-    correctionReason: truncate(
-      entry.correctionReason,
-      CORRECTION_REASON_MAX_LENGTH,
     ),
     activityNames: entry.activityNames
       .slice(0, 12)

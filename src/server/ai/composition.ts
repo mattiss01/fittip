@@ -7,6 +7,7 @@ import {
   type CoachAIOperation,
 } from "@/server/ai/contracts";
 import type { CoachAIContextSource } from "@/server/ai/context-source";
+import { OwnedRecordsCoachAIContextSource } from "@/server/context/coach-ai-context-source";
 import {
   CoachAIService,
   type CoachAIProposalOutcome,
@@ -61,7 +62,13 @@ export type CoachAIRuntimeMode = "fixture" | "live";
 
 export type CoachAICompositionInput = {
   owner: CoachAIOwner;
-  contextSource: CoachAIContextSource;
+  /**
+   * Omitted by a real request, which then reads the owner's actual records
+   * through `OwnedRecordsCoachAIContextSource`. It is injectable so a test or a
+   * fixture composition can substitute a stub; production never passes one, so
+   * no stub can become what a real request is served by accident.
+   */
+  contextSource?: CoachAIContextSource;
   /**
    * Required for a live service and unused by a fixture one. The type keeps it
    * optional because a fixture run genuinely has no ledger; `#run` inside the
@@ -149,6 +156,12 @@ function createCoachAIService(
 
   const clock = input.clock ?? (() => new Date());
   const requestIds = input.requestIds ?? (() => globalThis.crypto.randomUUID());
+  // The production source needs the operation: it decides which completions the
+  // accepted limits will transmit, and records exactly those as the proposal's
+  // sources.
+  const contextSource =
+    input.contextSource ??
+    new OwnedRecordsCoachAIContextSource({ operation, clock });
 
   if (mode === "fixture") {
     const binding = FIXTURE_COACH_AI_BINDING;
@@ -169,7 +182,7 @@ function createCoachAIService(
       telemetry,
       service: new CoachAIService({
         adapter,
-        contextSource: input.contextSource,
+        contextSource,
         limits: binding.limits,
         budget: new CoachAIBudget(),
         idempotency: new CoachAIIdempotencyStore<CoachAIProposalOutcome>(),
@@ -220,7 +233,7 @@ function createCoachAIService(
     telemetry,
     service: new CoachAIService({
       adapter,
-      contextSource: input.contextSource,
+      contextSource,
       limits: binding.limits,
       budget: new CoachAIBudget(),
       idempotency: new CoachAIIdempotencyStore<CoachAIProposalOutcome>(),

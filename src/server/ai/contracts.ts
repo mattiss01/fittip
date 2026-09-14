@@ -81,7 +81,6 @@ export type CoachAICompletionReference = {
   /** Truncated before it leaves the boundary. See ADR-013 decision 4. */
   note: string | null;
   replacementDescription: string | null;
-  correctionReason: string | null;
   activityNames: string[];
 };
 

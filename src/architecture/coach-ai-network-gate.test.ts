@@ -6,8 +6,8 @@ import { describe, expect, it } from "vitest";
 import { NETWORK_FREE_COACH_AI_ADAPTERS } from "@/server/ai/network-free-adapters";
 
 /**
- * A module that can reach the network must not be able to bypass the live
- * enablement gate.
+ * A module that shapes owner data into a provider payload must not be able to
+ * reach the network outside the gated adapter.
  *
  * M3-01's independent review found the gate running only when
  * `adapter.kind === "provider"`. `kind` is a field an adapter sets about
@@ -19,10 +19,44 @@ import { NETWORK_FREE_COACH_AI_ADAPTERS } from "@/server/ai/network-free-adapter
  * It is written against the file tree rather than against today's classes, so
  * it fails on the file somebody adds next year rather than only on the ones
  * that exist now.
+ *
+ * ## Why it scans more than `src/server/ai`
+ *
+ * M3-15D's review found the scan had stopped covering its own subject. The
+ * production context source — the one module that reads a real owner's records
+ * and assembles them for a provider — lives in `src/server/context`, so a
+ * `fetch` added to it would have been caught by nothing. What the invariant is
+ * about is the data, not the directory: a socket opened anywhere that selects,
+ * reduces, or assembles owner data bound for a coach is either an ungated
+ * provider call or an exfiltration of exactly the records the boundary exists
+ * to bound. So the scan names every root that holds such a module, and the two
+ * eligibility gates that decide what is even eligible are in it for the same
+ * reason as the source that reads them.
+ *
+ * Being a superset is the intended direction. `training-measurements.ts` and
+ * the goal and memory record modules also serve surfaces that have nothing to
+ * do with a coach, and none of them has any business opening a socket either. A
+ * false positive here costs a conversation; a false negative costs an ungated
+ * provider call with owner training history in it.
  */
 
 const AI_ROOT = join(process.cwd(), "src", "server", "ai");
 const SERVICE = join(AI_ROOT, "coach-ai-service.ts");
+
+/** Every root holding a module that shapes provider-bound owner data. */
+const PROVIDER_BOUND_ROOTS = [
+  // The boundary itself: contracts, context assembly, prompts, validation,
+  // the service, and the one adapter permitted to call out.
+  AI_ROOT,
+  // `coach-ai-context-source.ts`, which reads the owner's real records.
+  join(process.cwd(), "src", "server", "context"),
+  // ADR-013's completion allowlist, which is what bounds those records.
+  join(process.cwd(), "src", "server", "training"),
+  // ADR-012's goal eligibility gate.
+  join(process.cwd(), "src", "server", "goals"),
+  // M2-02's memory eligibility gate.
+  join(process.cwd(), "src", "server", "memory"),
+];
 
 /**
  * Anything that could open a socket. Deliberately broader than the calls an
@@ -32,7 +66,7 @@ const SERVICE = join(AI_ROOT, "coach-ai-service.ts");
 const NETWORK_PRIMITIVE =
   /\b(fetch|XMLHttpRequest|WebSocket|EventSource)\b|from\s+["'](?:node:)?(?:http|https|net|tls|undici|axios)["']|require\(["'](?:node:)?(?:http|https|net|tls)["']\)/;
 
-const RUNTIME_FILES = sourceFiles(AI_ROOT).filter(
+const RUNTIME_FILES = PROVIDER_BOUND_ROOTS.flatMap(sourceFiles).filter(
   (path) => !path.endsWith(".test.ts"),
 );
 
@@ -46,6 +80,26 @@ describe("the coaching network gate cannot be bypassed", () => {
     // fails because a new adapter arrived, the ticket that added it owes an
     // approved decision and an update here — not a wider pattern.
     expect(reaching).toEqual([join(AI_ROOT, "openai-adapter.ts")]);
+    // The scan is only worth its assertion if it is actually reading the
+    // modules outside `src/server/ai`, so it says so rather than assuming it.
+    expect(RUNTIME_FILES).toContain(
+      join(
+        process.cwd(),
+        "src",
+        "server",
+        "context",
+        "coach-ai-context-source.ts",
+      ),
+    );
+    expect(RUNTIME_FILES).toContain(
+      join(
+        process.cwd(),
+        "src",
+        "server",
+        "training",
+        "training-history-context.ts",
+      ),
+    );
   });
 
   it("gates on adapter identity rather than on what an adapter claims to be", () => {

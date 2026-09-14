@@ -41,6 +41,19 @@ Validation records and their visual evidence are grouped by milestone.
 
 ## M3
 
+- [M3-15D bounded AI completion context](M3/M3-15D-VALIDATION.md) — Tier 1;
+  testable. Round 1 of independent review approved `2d85a1c` with two
+  non-blocking findings, corrected in `e26587d` (the tripwire) and `ea8d0f5`
+  (the ownership guard); a second, distinct reviewer approved the corrected
+  `ffe3c7e`, whose CI run is green on its first attempt. The coaching
+  context seam gets its first production implementation: goals, memory, the
+  owner's stored zone, the topped-up plan slice, and up to 20 completions from
+  the last 56 owner-local days, each reduced field by field to the ADR-013
+  allowlist. `correctionReason` is deleted. The corrections widen the network
+  tripwire to every module that shapes provider-bound owner data, and make the
+  service's ownership guard real by deriving `ownerId` from the profile read
+  instead of echoing the caller. No surface, no schema change, and no provider
+  call — every check ran in fixture mode
 - [M3-15C progress](M3/M3-15C-VALIDATION.md) — testable; Tier 2.
   `/home/progress` reopens as one owner-local calendar month of completions,
   addressable by a `month=YYYY-MM` parameter, and `/home/progress/[id]` shows
