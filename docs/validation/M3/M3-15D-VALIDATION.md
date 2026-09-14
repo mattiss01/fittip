@@ -1,18 +1,25 @@
 # M3-15D validation: bounded AI completion context
 
 **Ticket:** [M3-15D](../../backlog/M3/M3-15D-AI-COMPLETION-CONTEXT.md)
-**Status:** builder handoff complete. Independent exact-commit review, the
-continuous-integration run for the reviewed SHA, the Vercel Preview, and
-product-owner acceptance are all outstanding.
+**Status:** round 1 of independent review **approved**
+`2d85a1cc65b800a53f02617c5ab8fa3bb2cfee1c` with two non-blocking findings. The
+product owner approved both for correction; they are applied in
+`ea8d0f5fba19fa24c0a1b805a9c64fceebdb16b2`, which supersedes the approved
+commit and needs re-review. The continuous-integration run for the new SHA, the
+Vercel Preview, and product-owner acceptance are outstanding.
 **Tier:** 1
 **Branch:** `ticket/m3-15d-ai-completion-context`
 **Base:** `9b66e4c2356b8d58bdaab875513810ef83acd175`
 **Implementation review target:**
-`2d85a1cc65b800a53f02617c5ab8fa3bb2cfee1c` — the last source commit. The
-record commit that adds this file changes no application file (the
-evidence-commit exception in `AGENTS.md`).
+`ea8d0f5fba19fa24c0a1b805a9c64fceebdb16b2` — the last source commit. The
+record commit that follows it changes no application file (the evidence-commit
+exception in `AGENTS.md`).
 **Review range:**
-`git diff 9b66e4c2356b8d58bdaab875513810ef83acd175..2d85a1cc65b800a53f02617c5ab8fa3bb2cfee1c`
+`git diff 9b66e4c2356b8d58bdaab875513810ef83acd175..ea8d0f5fba19fa24c0a1b805a9c64fceebdb16b2`
+**Previously approved target:** `2d85a1cc65b800a53f02617c5ab8fa3bb2cfee1c`,
+approved in round 1. The correction range alone is
+`git diff 2d85a1cc65b800a53f02617c5ab8fa3bb2cfee1c..ea8d0f5fba19fa24c0a1b805a9c64fceebdb16b2`,
+which touches three files and no product behavior.
 
 Implementation commits, in order:
 
@@ -21,7 +28,56 @@ Implementation commits, in order:
 | `3d9b9f4b61ecc90cd0abd68c4d6717587ce94e05` | `correctionReason` and its truncation constant are deleted from the allowlist, the contract, and the two dependants. |
 | `f38a5eee711ffd76ae6e2e7c6172771b4e324259` | The history selection now returns the input records it actually transmitted. |
 | `1514db8b7859b4cb12fd3c7bd045c6526753f471` | The production context source, and the composition root's fallback to it. |
-| `2d85a1cc65b800a53f02617c5ab8fa3bb2cfee1c` | Its tests, including the out-of-allowlist field proof. |
+| `2d85a1cc65b800a53f02617c5ab8fa3bb2cfee1c` | Its tests, including the out-of-allowlist field proof. **Approved in round 1.** |
+| `e26587db3cc8f5146be603ef3848f7b4888f7d3e` | **Round 1, finding 1.** The network tripwire scans every module that shapes provider-bound owner data. |
+| `ea8d0f5fba19fa24c0a1b805a9c64fceebdb16b2` | **Round 1, finding 2.** `ownerId` is derived from the profile read and asserted, not echoed. |
+
+## Round 1 review: approved, and what changed
+
+Two non-blocking findings against `2d85a1c`. Neither was disputed, and the
+product owner approved both for correction rather than deferring them. The
+reviewer found no regression in either: the second is a property the source it
+replaced had too.
+
+1. **The network invariant had stopped covering its own subject.**
+   `src/architecture/coach-ai-network-gate.test.ts` scanned `src/server/ai`
+   only. The production context source is the one module that reads a real
+   owner's records and assembles them for a provider, and after this ticket
+   placed it in `src/server/context` a `fetch` added to it would have been
+   caught by nothing at all.
+
+   The scan is now a named list of roots rather than one directory, because what
+   the invariant is about is the data and not the location: a socket opened
+   anywhere that selects, reduces, or assembles owner data bound for a coach is
+   either an ungated provider call or an exfiltration of exactly the records the
+   boundary exists to bound. The roots are `src/server/ai`,
+   `src/server/context`, and the three eligibility gates in
+   `src/server/training`, `src/server/goals`, and `src/server/memory`. Being a
+   superset is the intended direction; the file's own header now says so, and
+   says why. Two assertions pin that the widened scan is genuinely reading the
+   two modules outside `src/server/ai`, so a future refactor cannot quietly
+   narrow it back.
+
+   Verified rather than assumed: a `fetch` appended to
+   `coach-ai-context-source.ts` fails `lets exactly one module reach the
+   network`, and the file was restored afterwards.
+
+2. **`ownerId` echoed the caller, so a real guard could never fire.** The source
+   set `ownerId` from the caller's own `owner.id`, which made
+   `coach-ai-service.ts`'s `records.ownerId !== input.owner.id` guard —
+   documented as "the context source must never hand back another owner's
+   records" — structurally unable to fire for this source. The reviewer
+   confirmed the legacy source did the same, so this is not a regression, but a
+   predicate that cannot fail is not a control.
+
+   `profile.userId` was already in hand from the read at the top of `load`. It
+   is now asserted against the requested owner, fails closed with
+   `owner_denied`, and is the value reported as `ownerId`. The service's guard
+   therefore compares two independently derived values, and a new test drives
+   the mismatch path so the refusal is known to be reachable.
+
+Both corrections invalidate round 1's approval of `2d85a1c`. The commit to
+re-review is `ea8d0f5`.
 
 ## Delivered behavior
 
@@ -68,17 +124,31 @@ finding.
 
 ## Changed files
 
+`git diff --stat 9b66e4c..ea8d0f5`, excluding this record and the validation
+index that names it:
+
 ```
+ src/architecture/coach-ai-network-gate.test.ts     |  60 ++-
  src/server/ai/composition.test.ts                  |  37 ++
  src/server/ai/composition.ts                       |  19 +-
  src/server/ai/context-source.ts                    |  11 +-
  src/server/ai/context.test.ts                      |   4 -
  src/server/ai/contracts.ts                         |   1 -
  src/server/ai/fixtures/fixture-corpus.ts           |   1 -
- src/server/context/coach-ai-context-source.test.ts | 494 +++++++++++++++++++++
- src/server/context/coach-ai-context-source.ts      | 273 ++++++++++++
+ src/server/context/coach-ai-context-source.test.ts | 511 +++++++++++++++++++++
+ src/server/context/coach-ai-context-source.ts      | 288 ++++++++++++
  src/server/training/training-history-context.ts    |  20 +-
- 9 files changed, 844 insertions(+), 16 deletions(-)
+ 10 files changed, 932 insertions(+), 19 deletions(-)
+```
+
+The round 1 corrections alone,
+`git diff --stat 2d85a1c..ea8d0f5`:
+
+```
+ src/architecture/coach-ai-network-gate.test.ts     | 60 ++++++++++++++++++---
+ src/server/context/coach-ai-context-source.test.ts | 19 ++++++-
+ src/server/context/coach-ai-context-source.ts      | 29 ++++++++---
+ 3 files changed, 97 insertions(+), 11 deletions(-)
 ```
 
 Nothing was deleted or renamed. `src/server/context/` is a new directory holding
@@ -87,16 +157,25 @@ one module and its test.
 Files whose purpose is not evident from the path and diff:
 
 - `src/server/context/coach-ai-context-source.ts` — the production
-  `CoachAIContextSource`. It lives outside `src/server/ai` deliberately:
-  `src/architecture/server-boundary.test.ts` holds `src/server/ai/owner.ts` as
-  the only file in that module permitted to import a repository, so that no
-  adapter, prompt, or validator can widen the context past what the domain
-  service authorized. Placing a repository-reading module there would have meant
-  weakening that invariant in the one ticket whose subject is the data boundary.
-  It sits beside the AI's other data-shaping modules instead —
-  `training/training-history-context`, `goals/goal-records`,
-  `memory/memory-records` — none of which are in `src/server/ai` either. The
-  module's own header states this.
+  `CoachAIContextSource`. It lives outside `src/server/ai` because
+  `src/architecture/server-boundary.test.ts` currently holds
+  `src/server/ai/owner.ts` as the only file in that module permitted to import a
+  repository, so that no adapter, prompt, or validator can widen the context
+  past what the domain service authorized, and it sits beside the AI's other
+  data-shaping modules — `training/training-history-context`,
+  `goals/goal-records`, `memory/memory-records` — none of which are in
+  `src/server/ai` either. The module's own header states this.
+
+  **Correcting this record's first version, which overstated the tradeoff.** It
+  said that placing the module in `src/server/ai` would have meant weakening a
+  safety property. Round 1 supplied the history that makes that wrong:
+  `src/server/ai/context-source.ts` was itself the second named `databaseSeams`
+  entry in that invariant until M3-11 (`e370dbe`) deleted the implementation
+  behind it. Restoring it would have been re-adding a previously approved named
+  seam, reviewed as a deliberate amendment — not eroding an untouched boundary.
+  The placement still stands and the reviewer judged it correct; the honest
+  statement is that both options were defensible and this one keeps the
+  invariant at a single entry.
 - `src/server/training/training-history-context.ts` — beyond the
   `correctionReason` deletion, `TrainingHistorySelection` gains
   `includedCompletions`: the input records the selection transmitted, as the
@@ -111,6 +190,13 @@ Files whose purpose is not evident from the path and diff:
   `createRoadmapCoachAIService` exists yet, so "what the composition root
   receives for a real request" was made true by making the production source the
   default rather than by wiring a route that M3-15E owns.
+- `src/architecture/coach-ai-network-gate.test.ts` — round 1, finding 1. The
+  scan widens from one directory to a named list of roots, and the file's header
+  gains the paragraph explaining what it now guards and why over-inclusion is
+  the intended direction. No assertion was weakened: the same
+  `expect(reaching).toEqual([openai-adapter.ts])` now runs over a strictly
+  larger file set, with two added assertions pinning that the set really does
+  include the modules outside `src/server/ai`.
 - `src/server/ai/composition.test.ts` — the two new assertions reach past the
   service's TypeScript-private `deps` bag. Which context source a real request
   is served by is not otherwise observable, and it is the one thing this wiring
@@ -123,14 +209,21 @@ Files whose purpose is not evident from the path and diff:
 needed a grant, a policy, or a privileged function; had it, the instruction was
 to stop and re-dispatch against M3-15A.
 
-**Ownership and authorization.** The source accepts no owner id from a caller.
-It reads only through `createProfileRepository`, `createGoalRepository`,
+**Ownership and authorization.** No read is scoped by an id the caller supplied.
+The source reads only through `createProfileRepository`, `createGoalRepository`,
 `createMemoryRepository`, `createCompletionLog`, and `createRollingPlan`, each
 of which derives identity from verified Auth claims and repeats the `user_id`
 predicate over RLS. There is no SQL, no Supabase client, and no `verified-user`
-import in the new module. `load(owner)` takes the branded `CoachAIOwner` only so
-`CoachAIService` can compare `records.ownerId` against the owner it asked about,
-which it already does.
+import in the new module.
+
+`load(owner)` takes the branded `CoachAIOwner` so the id the profile read
+returns can be checked against the id the request was made for. After round 1's
+finding 2 that check is real in both places: the source refuses with
+`owner_denied` on a mismatch, and the `ownerId` it reports is `profile.userId`
+rather than the caller's own value, so `CoachAIService`'s
+`records.ownerId !== input.owner.id` guard compares two independently derived
+values instead of a value against itself. The branded owner is still never what
+any read is scoped by.
 
 **What can now leave for an external provider.** Exactly the fields ADR-013
 decision 4 enumerates and the product owner re-approved on 14 September 2026,
@@ -147,8 +240,16 @@ decision and is asserted out by name in the tests.
 Goals and memory are handed to assembly as the repositories return them, which
 is what `CoachAIGoalRecord` and `MemoryItemView` were accepted as. Both are
 reduced by `toGoalReference` and `toMemoryReference` — field-by-field allowlists
-inside `context.ts` — before anything is serialized. Completions have no such
-second gate, which is why they are reduced in the source instead.
+inside `context.ts` — before anything is serialized.
+
+Completions are reduced in the source instead, and the accurate reason is not
+that assembly lacks a gate for them: `toCompletionReference` is a field-by-field
+gate exactly like the other two. It is that its *input* type,
+`TrainingHistoryCompletion`, is already narrower than `Completion`, so somebody
+had to map one to the other, and wherever that mapping lives is a second place
+the allowlist can be widened by accident. This record's first version said
+"completions have no such second gate", which was imprecise; round 1 corrected
+it.
 
 **The write side effect.** `readPlanWindowToppedUp` materializes missing series
 occurrences, and the source calls it exactly once, in `load`, before reading the
@@ -156,7 +257,7 @@ slice. That is ADR-017 consequence 3 and approval-boundary decision 4: a coach
 reading an untopped window plans around sessions the owner does have. It is
 deliberately the opposite of M3-15C, where viewing history must not materialize
 future training. A top-up failure never fails the read; the slice is returned
-with `toppedUp: false`.
+with `toppedUp: false`, which the source then discards — see limitation 4.
 
 **No provider call was made, and none can be made by this change.** Every check
 ran in fixture mode. No `FITTIP_AI_*` variable was set, no credential was read,
@@ -168,45 +269,64 @@ passes with `openai-adapter.ts` as the one module that can reach the network.
 
 ## Tests and final results
 
-**Continuous integration: not yet run.** The branch is local at the time of
-writing, so there is no run URL for `2d85a1cc65b800a53f02617c5ab8fa3bb2cfee1c`
-to cite. The lead pushes the branch and records the run URL and conclusion here
-before independent review. A red or absent run for that SHA is a delivery
-blocker.
+**Continuous integration: no run for the corrected SHA yet.** The round 1
+corrections are local at the time of writing, so there is no run URL for
+`ea8d0f5fba19fa24c0a1b805a9c64fceebdb16b2` to cite. The lead pushes the branch
+and records the run URL and conclusion here before re-review. A red or absent
+run for that SHA is a delivery blocker.
 
 Tests added or changed:
 
-- `src/server/context/coach-ai-context-source.test.ts` — new, 10 tests. It mocks
+- `src/server/context/coach-ai-context-source.test.ts` — new, 11 tests. It mocks
   the five repository factories and asserts: the refusal for an owner with no
   confirmed zone and for one with no profile row, and that nothing else is read
-  in that case; the owner-local derivation of today and of both window ends;
-  that the plan window is topped up with the revision the slice reported, once;
-  the field-by-field completion mapping; the out-of-allowlist proof below;
-  unplanned completions reporting a null title and sport; cancelled planned
-  sessions appearing as neither commitment nor miss; and that `sources` names
-  only the completions each operation's own limits transmit.
+  in that case; the refusal when the profile read returns a different owner than
+  the one asked about, added for round 1's finding 2; the owner-local derivation
+  of today and of both window ends; that the plan window is topped up with the
+  revision the slice reported, once; the field-by-field completion mapping; the
+  out-of-allowlist proof below; unplanned completions reporting a null title and
+  sport; cancelled planned sessions appearing as neither commitment nor miss;
+  and that `sources` names only the completions each operation's own limits
+  transmit.
 - `src/server/ai/composition.test.ts` — two assertions that a composition with
   no injected source gets `OwnedRecordsCoachAIContextSource`, and that an
   injected stub still wins.
 - `src/server/ai/context.test.ts` — four `correctionReason: null` lines removed.
   Nothing else in that file moved; no assertion changed.
+- `src/architecture/coach-ai-network-gate.test.ts` — round 1, finding 1. Two
+  assertions added, none removed or weakened; the existing
+  `lets exactly one module reach the network` now runs over five roots rather
+  than one. Checked by appending a `fetch` to `coach-ai-context-source.ts`,
+  observing the failure, and restoring the file — `git diff` confirmed the
+  restore.
 
 **Acceptance criterion 2, specifically.** The test `copies only allowlisted
 completion fields, whatever else the record carries` adds three fields to a real
 `Completion` — `actualStartedAt` with a real value, plus `clinicalNote` and
-`heartRateAverage` standing in for whatever the schema gains next — then runs
-`buildCoachAIContext` and asserts that neither the keys nor their values, nor
-the completion's id, `timezoneName`, `planSessionId`, `updatedAt`, or
-`plannedSnapshot`, appear anywhere in the serialized payload.
+`heartRateAverage` standing in for whatever the schema gains next.
+
+It then makes **two** assertions, and this record's first version credited only
+the second. The `toEqual` against an exact object literal is what pins the first
+gate: it fails on any key the mapping adds, including one a substring scan would
+miss. The scan of `buildCoachAIContext(...).serialized` is what proves the
+result end to end — that neither the added keys nor their values, nor the
+completion's id, `timezoneName`, `planSessionId`, `updatedAt`, or
+`plannedSnapshot`, survive into the payload a provider would receive. Either
+alone would be weaker than the pair.
 
 | Command or check | Result |
 | --- | --- |
-| `npm.cmd run test:run -- src/server src/architecture` | 38 files, 585 tests passed |
+| `npm.cmd run test:run -- src/server src/architecture` (at `2d85a1c`) | 38 files, 585 tests passed |
+| `npm.cmd run test:run -- src/server/context src/server/ai src/architecture` (at `ea8d0f5`) | 18 files, 368 tests passed |
 | `npm.cmd run typecheck` | passed |
 | `npm.cmd run lint` | passed |
-| `npm.cmd run build` | passed; all 21 routes compiled |
+| `npm.cmd run build` (at `2d85a1c`) | passed; all 21 routes compiled |
 | `git diff --check 9b66e4c..HEAD` | clean |
 | `npx.cmd prettier --write` on each changed file, then `git diff` | no content change |
+
+The build was not re-run after the round 1 corrections. They touch three files,
+two of them tests, and `typecheck` and `lint` both pass on the result; CI
+establishes the build for the reviewed SHA.
 
 These are the narrow checks a builder runs while implementing. They are not a
 substitute for the CI run on the reviewed SHA, and the database and browser
@@ -234,42 +354,66 @@ matrices were not run locally at all.
    that ever stops being true the source over-reports, and no type error will
    say so. It is stated in the module and repeated here rather than left to be
    rediscovered. A test asserts the two agree for both operations.
-4. **An unplanned completion carries no title and no sport.** They come from the
+
+   Round 1 found a second way this can break that the first version of this
+   record did not mention: `buildCoachAIContext` takes an optional `limits`
+   third parameter, defaulting to `COACH_AI_CONTEXT_LIMITS[operation]`. The
+   source reads that same table by operation, so exactness holds while
+   `CoachAIService` passes no third argument — which it does not today. A caller
+   that passes custom limits silently desynchronizes the two, with no error and
+   no test failure. Nothing currently does, and nothing in this ticket adds a
+   caller that could; it is recorded because it is a second unguarded
+   assumption, not because it is live.
+4. **A failed top-up is not disclosed to anyone.** `readPlanWindowToppedUp`
+   returns `toppedUp: false` and a `skipped` list when materialization could not
+   run or could not take a rule date, and the source discards both. The coach is
+   then handed a plan slice that may be short of occurrences a series would have
+   produced, with nothing saying so — which is exactly the residue ADR-017
+   consequence 3 exists to make visible, and the same class of failure ADR-013
+   decision 1 refuses for a trimmed completion window. It is not a wrong answer
+   so much as an undisclosed one. Round 1 found this; the mechanism was
+   described in this record from the start but not listed as a limitation.
+   Carrying the disclosure through to the owner needs a surface to show it on,
+   which is M3-15E.
+5. **An unplanned completion carries no title and no sport.** They come from the
    planned snapshot, and an unplanned completion has none. Reporting null is
    honest; deriving a sport from the logged activities would invent a session
    the owner never planned. The coach still sees the status, the duration, the
    effort, and the activity names.
-5. **The miss list can misread a completion logged outside the window.** A
+6. **The miss list can misread a completion logged outside the window.** A
    planned session inside the 56-day window whose completion has an
    `actualLocalDate` outside it is not in the completion read, so the session is
    reported as missed. This needs a completion recorded against a session more
    than eight weeks from its planned date, so it is rare, but it is a real way
    the adherence signal can be wrong.
-6. **The forward plan read is 180 days wide.** Nothing bounds a
+7. **The forward plan read is 180 days wide.** Nothing bounds a
    `get_rolling_plan_slice` window, and series materialization only fills 14
    days forward, so in practice the far end returns only manually created
    sessions. It has not been measured against an owner with a large hand-built
    future plan.
-7. **`sources` records completions only.** Goal and memory provenance already
+8. **`sources` records completions only.** Goal and memory provenance already
    travels as `assembled.references`; plan provenance is recorded nowhere. M3-16
    owns proposal application and is where that gap has to be closed or
    explicitly accepted.
-8. **`horizonEndDate` on the records the source returns is `today`.** `load` is
+9. **`horizonEndDate` on the records the source returns is `today`.** `load` is
    not given the compose input and must not invent a horizon; assembly replaces
    the value with the one the owner actually composed against. It is inert, but
    a reader of `CoachAIOwnedRecords` in isolation could misread it.
-9. **The composition default is an interpretation.** See the note on
+10. **The composition default is an interpretation.** See the note on
    `composition.ts` under changed files. If the product owner reads acceptance
    criterion 1 as requiring a production caller rather than a production
    default, that caller belongs to M3-15E and this ticket does not deliver it.
 
 ## Independent reviewer checklist
 
-Review `2d85a1cc65b800a53f02617c5ab8fa3bb2cfee1c` on
-`ticket/m3-15d-ai-completion-context`. The range is `git diff
-9b66e4c2356b8d58bdaab875513810ef83acd175..2d85a1cc65b800a53f02617c5ab8fa3bb2cfee1c`.
-Confirm the CI run for that exact SHA is green; do not re-run lint, typecheck,
-the Vitest suite, the build, or the browser flows.
+Review `ea8d0f5fba19fa24c0a1b805a9c64fceebdb16b2` on
+`ticket/m3-15d-ai-completion-context`. The full range is
+`git diff 9b66e4c2356b8d58bdaab875513810ef83acd175..ea8d0f5fba19fa24c0a1b805a9c64fceebdb16b2`.
+Round 1 approved everything up to `2d85a1c`, so a re-review may read only
+`git diff 2d85a1cc65b800a53f02617c5ab8fa3bb2cfee1c..ea8d0f5fba19fa24c0a1b805a9c64fceebdb16b2`
+plus items 11 and 12 below. Confirm the CI run for the exact head SHA is green;
+do not re-run lint, typecheck, the Vitest suite, the build, or the browser
+flows.
 
 The judgment this needs:
 
@@ -311,3 +455,14 @@ The judgment this needs:
 10. **Scope.** Nothing in the diff should touch a surface, a prompt, a model, a
     ceiling, `TRAINING_HISTORY_WINDOW_DAYS`, `TRAINING_HISTORY_MAX_SESSIONS`, or
     the `context.ts` sub-budgets.
+11. **The widened network scan (round 1, finding 1).** Judge whether five named
+    roots is the right expression of "every module that shapes provider-bound
+    owner data", or whether it is now wide enough to produce false positives
+    somebody will be tempted to narrow away. Confirm no assertion was weakened
+    to accommodate the wider set, and that the header now describes what it
+    guards rather than where it looks.
+12. **The ownership assertion (round 1, finding 2).** Confirm the mismatch
+    refusal is placed before any other read, that `owner_denied` is the right
+    code for it rather than a new one, and that the null-profile path still
+    resolves to `context_below_minimum` rather than being swallowed by the new
+    check.
