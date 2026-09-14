@@ -41,6 +41,14 @@ Validation records and their visual evidence are grouped by milestone.
 
 ## M3
 
+- [M3-15E roadmap surface restoration](M3/M3-15E-VALIDATION.md) — Tier 2;
+  builder handoff, not yet reviewed. `/home/plan/roadmap` leaves the M3-11
+  maintenance stub as a read surface: the current roadmap on the restored M3-02
+  spine, every superseded version, and every proposal carrying the state it
+  ended in, including the `expired` M3-11 wrote. Read-only — no Server Action,
+  no write, no migration, no provider call, and an architecture assertion that
+  no code path reaches the five revoked ADR-015 functions. Generating,
+  accepting, declining and editing are M3-15F
 - [M3-15D bounded AI completion context](M3/M3-15D-VALIDATION.md) — Tier 1;
   testable. Round 1 of independent review approved `2d85a1c` with two
   non-blocking findings, corrected in `e26587d` (the tripwire) and `ea8d0f5`
