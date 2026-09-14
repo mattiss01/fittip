@@ -135,7 +135,6 @@ export const COACH_AI_FIXTURE_SAFETY_CONTEXT: CoachAIContext = {
         severeFatigueReported: false,
         note: "Knee twinged on the descents, settled by the evening.",
         replacementDescription: null,
-        correctionReason: null,
         activityNames: ["Hill repeats"],
       },
     ],

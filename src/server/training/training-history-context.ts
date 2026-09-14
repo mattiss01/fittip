@@ -49,7 +49,6 @@ export const TRAINING_HISTORY_WINDOW_DAYS = 56;
 export const TRAINING_HISTORY_MAX_SESSIONS = 20;
 export const COMPLETION_NOTE_MAX_LENGTH = 400;
 export const REPLACEMENT_DESCRIPTION_MAX_LENGTH = 240;
-export const CORRECTION_REASON_MAX_LENGTH = 240;
 
 /**
  * Decision 5: beyond the horizon the coach reads locked entries only, within a
@@ -76,7 +75,6 @@ export type TrainingHistoryCompletion = {
   severeFatigueReported: boolean;
   note: string | null;
   replacementDescription: string | null;
-  correctionReason: string | null;
   activityNames: string[];
 };
 
@@ -248,10 +246,6 @@ function toCompletionReference(
     replacementDescription: truncate(
       entry.replacementDescription,
       REPLACEMENT_DESCRIPTION_MAX_LENGTH,
-    ),
-    correctionReason: truncate(
-      entry.correctionReason,
-      CORRECTION_REASON_MAX_LENGTH,
     ),
     activityNames: entry.activityNames
       .slice(0, 12)

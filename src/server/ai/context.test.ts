@@ -339,7 +339,6 @@ describe("the per-source context allocation", () => {
       severeFatigueReported: false,
       note: "n".repeat(400),
       replacementDescription: null,
-      correctionReason: null,
       activityNames: ["a".repeat(120)],
     }));
     const plannedSessions = Array.from({ length: 25 }, (_, index) => ({
@@ -384,7 +383,6 @@ describe("the per-source context allocation", () => {
       severeFatigueReported: false,
       note: null,
       replacementDescription: null,
-      correctionReason: null,
       activityNames: ["Easy run"],
     }));
 
@@ -428,7 +426,6 @@ describe("the per-source context allocation", () => {
             severeFatigueReported: false,
             note: "n".repeat(2000),
             replacementDescription: null,
-            correctionReason: null,
             activityNames: ["Long run"],
           },
         ],
@@ -463,7 +460,6 @@ describe("the per-source context allocation", () => {
             severeFatigueReported: false,
             note: "Rolled an ankle.",
             replacementDescription: null,
-            correctionReason: null,
             activityNames: ["Hill repeats"],
           },
         ],
