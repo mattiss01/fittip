@@ -1,26 +1,91 @@
 # M3-15E validation: roadmap surface restoration, read-only
 
 **Ticket:** [M3-15E](../../backlog/M3/M3-15E-ROADMAP-RESTORATION.md)
-**Status:** builder handoff. Independent review, the continuous-integration
-result for the reviewed SHA, the Vercel Preview, and product-owner acceptance
-are all outstanding.
+**Status:** round 1 of independent review returned two findings, both approved
+by the product owner for correction now. They are applied in `4ee7565` and
+`05ad741`, which supersede `6dbbb91` and invalidate its approval until
+re-review. The continuous-integration run for the new SHA, the Vercel Preview,
+and product-owner acceptance are outstanding.
 **Tier:** 2
 **Branch:** `ticket/m3-15e-roadmap-read`
 **Base:** `899fc1f`
-**Implementation review target:** `7f0eb24` — the last source commit. The
-record commit that adds this file changes no application file (the
-evidence-commit exception in `AGENTS.md`).
-**Review range:** `git diff 899fc1f..7f0eb24`
+**Implementation review target:** `05ad741` — the last source commit. The
+record commit that follows it changes no application file (the evidence-commit
+exception in `AGENTS.md`).
+**Review range:** `git diff 899fc1f..05ad741`
+**Previously handed off:** `7f0eb24`, whose CI run is green. The correction
+range alone is `git diff 7f0eb24..05ad741`, which touches five source files.
 
 Implementation commits, in order:
 
-| Commit    | Purpose                                                                                       |
-| --------- | --------------------------------------------------------------------------------------------- |
-| `ac05473` | `expired` becomes a state the type system and a repository read can express.                    |
-| `0622aee` | The route, its components, its stylesheet, and the deliberate invariant change.                 |
-| `b1ef91f` | The tests.                                                                                      |
-| `c82de23` | `e2e/m3-11-maintenance.spec.ts` stops asserting a stub on the reopened route.                    |
-| `7f0eb24` | The Plan links to the reopened route.                                                           |
+| Commit    | Purpose                                                                               |
+| --------- | ------------------------------------------------------------------------------------- |
+| `ac05473` | `expired` becomes a state the type system and a repository read can express.          |
+| `0622aee` | The route, its components, its stylesheet, and the deliberate invariant change.       |
+| `b1ef91f` | The tests.                                                                            |
+| `c82de23` | `e2e/m3-11-maintenance.spec.ts` stops asserting a stub on the reopened route.         |
+| `7f0eb24` | The Plan links to the reopened route.                                                 |
+| `4ee7565` | **Round 1, finding 1.** The provider session cap stops suppressing the safety notice. |
+| `05ad741` | **Round 1, finding 2.** An undecidable proposal stops claiming a decision is awaited. |
+
+## Round 1 review: two findings, both corrected
+
+Neither was disputed. The product owner approved both for correction rather
+than deferring them, and both invalidate approval of `7f0eb24`.
+
+1. **A provider cap was silently suppressing the safety notice.**
+   `hasRecentSafetySignal` called `selectTrainingHistoryContext` with no
+   `limits`, so it inherited `TRAINING_HISTORY_MAX_SESSIONS`. That selector
+   filters to the window, sorts newest-first, truncates at the cap, and *then*
+   computes `hasSafetySignal` over what survived. So a symptom reported three
+   weeks ago — still well inside the 56-day window — dropped out of the
+   computation as soon as twenty later sessions were logged, and the notice
+   stopped rendering with nothing on screen to say it had. Twenty completions in
+   56 days is about two and a half a week: an ordinary trainee, not an edge
+   case.
+
+   The cap is correct where it was set. It bounds a paid provider payload, and
+   ADR-013 decision 1 discloses the trim to the coach so a model that saw a
+   subset does not reason as though it saw everything. None of that applies to a
+   local read that transmits nothing and has nobody to disclose a trim to, where
+   the cap bounds no cost and only decides which reported symptoms the owner is
+   allowed to be reminded of. `4ee7565` passes an explicit named uncapped
+   session count at the call site. The 56-day window is untouched and still
+   M3-15D's, and `training-history-context.ts` is not modified at all.
+
+   Verified rather than assumed: the new test was run against the unfixed call
+   site and fails there, then against the fix and passes.
+
+   This was the lead's error rather than a deviation from the brief — the brief
+   named the selector and did not anticipate that a transmission cap would carry
+   into a read — but the notice it governs is a safety surface, so it is
+   recorded here in full rather than as a tidy-up.
+
+2. **An undecidable proposal claimed a decision was awaited.** The record
+   labelled `decision === null` "Awaiting your decision" and, unlike the
+   `expired` branch, said nothing further. A pre-M3-11 proposal carrying only
+   goal and memory sources was not touched by the expiry backfill, so it is
+   still open — and an owner reading that label would go looking for a control
+   that does not exist on this screen or anywhere in the application, because
+   all five functions stay revoked until M3-15F. That is the brief's "absent,
+   not present and inert" constraint failing in copy rather than in a button.
+
+   `05ad741` adds one sentence to the open branch, matched in tone to the
+   expired one. Both sentences now live in `ROADMAP_COPY` rather than inlined in
+   the component — the expired one moved there too, so the two are reviewable
+   together. **Both are new user-visible strings rather than M3-02 decisions,
+   and are the product owner's to confirm:**
+
+   - `proposalDecisionUnavailable` — "Deciding on a proposal is not available
+     yet. This one stays here, unchanged, and nothing happens to it in the
+     meantime."
+   - `proposalExpired` — "This proposal can no longer be accepted. It stays
+     here, unchanged, with everything it was built on." (Unchanged wording;
+     only its location moved.)
+
+A third finding — two records both reading "Awaiting your decision" when an
+edit and its source are both open — was routed to M3-15F, which restores the
+edit path, and is deliberately not addressed here.
 
 ## Delivered behavior
 
@@ -60,36 +125,45 @@ At `390x844`, signed in:
 3. A new account sees "No roadmap yet." and the stamp "No roadmap yet". No
    section offers to create one, because nothing can.
 4. `← Plan` returns.
-5. An owner carrying an M3-11-expired proposal sees it under **Proposals**,
-   stamped `Expired`, with no control beside it.
+Steps 3 and 4 are the whole pass on the founder account. It carries no
+pre-M3-11 roadmap data, so the empty state is all there is to see and the
+proposal record cannot be exercised there — see known limitation 2, which the
+product owner should read before accepting.
 
 There is no per-ticket Playwright flow; see known limitation 1.
 
 ## Changed files
 
 ```
+ docs/validation/M3/M3-15E-VALIDATION.md            | 353 +++++++++++++++++
+ docs/validation/README.md                          |   8 +
  e2e/m3-11-maintenance.spec.ts                      |  11 +-
  src/app/home/plan/page.tsx                         |  11 +-
  src/app/home/plan/plan.module.css                  |  14 +
  src/app/home/plan/roadmap/error.tsx                |  26 ++
  src/app/home/plan/roadmap/loading.tsx              |  13 +
- src/app/home/plan/roadmap/page.test.tsx            | 376 ++++++++++++++++++
- src/app/home/plan/roadmap/page.tsx                 | 194 +++++++++-
- src/app/home/plan/roadmap/roadmap.module.css       | 423 +++++++++++++++++++++
+ src/app/home/plan/roadmap/page.test.tsx            | 382 ++++++++++++++++++
+ src/app/home/plan/roadmap/page.tsx                 | 194 ++++++++-
+ src/app/home/plan/roadmap/roadmap.module.css       | 434 +++++++++++++++++++++
  src/architecture/m3-11-legacy-reset.test.ts        | 102 ++++-
  src/components/roadmap/roadmap-detail.tsx          |  90 +++++
- src/components/roadmap/roadmap-proposal-record.tsx |  69 ++++
+ src/components/roadmap/roadmap-proposal-record.tsx |  80 ++++
  src/components/roadmap/roadmap-screen.tsx          | 115 ++++++
  src/components/roadmap/roadmap-spine.tsx           | 178 +++++++++
  src/server/repositories/roadmap-repository.test.ts |  25 +-
  src/server/repositories/roadmap-repository.ts      |  10 +
- src/server/roadmap/roadmap-records.ts              |  21 +-
- src/server/roadmap/roadmap-safety.test.ts          |  73 ++++
- src/server/roadmap/roadmap-safety.ts               |  69 ++++
- 18 files changed, 1802 insertions(+), 18 deletions(-)
+ src/server/roadmap/roadmap-records.ts              |  39 +-
+ src/server/roadmap/roadmap-safety.test.ts          |  95 +++++
+ src/server/roadmap/roadmap-safety.ts               |  97 +++++
+ 20 files changed, 2259 insertions(+), 18 deletions(-)
 ```
 
-`git diff --stat 899fc1f..7f0eb24`. Nothing was deleted or renamed.
+`git diff --stat 899fc1f..05ad741`. Nothing was deleted or renamed. The two
+`docs/validation/**` counts are this record and its index as they stood at
+`05ad741`; the commit that adds this round's text grows them and changes no
+application file. The correction range alone is
+`git diff --stat 7f0eb24..05ad741` — five source files, listed under Round 1
+above.
 
 Files whose purpose is not evident from the path and diff:
 
@@ -104,7 +178,9 @@ Files whose purpose is not evident from the path and diff:
   read surface, which is the write-by-side-effect M3-15C refused. The mapping is
   therefore written here, field by field, and its header says plainly that it is
   **not** ADR-013's provider allowlist: nothing it produces is serialized,
-  transmitted, or displayed.
+  transmitted, or displayed. Round 1 finding 1 lives here too: the call site
+  now passes an explicit uncapped session count, and `NO_SESSION_CAP` carries
+  the reasoning for why a provider cap does not travel into a local read.
 - `src/components/roadmap/roadmap-screen.tsx` — the whole surface rendered from
   one `RoadmapScreenState`. It is where the decision to keep every component a
   Server Component is recorded: no roadmap content, and therefore no planning
@@ -173,7 +249,8 @@ Files whose purpose is not evident from the path and diff:
 
 Added or changed:
 
-- `src/app/home/plan/roadmap/page.test.tsx` (new, 11 tests) — the current
+- `src/app/home/plan/roadmap/page.test.tsx` (new, 11 tests; round 1 added two
+  assertions to existing tests, for the two sentences below) — the current
   roadmap and its spine; the honest empty state; superseded versions listed
   under the current one; an expired proposal rendering with its state and no
   control; an open proposal rendering as a record, not a prompt; **no
@@ -182,9 +259,13 @@ Added or changed:
   notice present on a reported flag and absent without one; the completion read
   bounded to a 56-day window; the memory link pointing at the surface that owns
   the candidate; and both redirect paths.
-- `src/server/roadmap/roadmap-safety.test.ts` (new, 7 tests) — each of the four
-  flags, the empty case, and that the window boundary is M3-15D's constant
-  rather than a number copied into this ticket.
+- `src/server/roadmap/roadmap-safety.test.ts` (new, 8 tests) — each of the four
+  flags, the empty case, that the window boundary is M3-15D's constant rather
+  than a number copied into this ticket, and — added in round 1 — that a
+  symptom buried under more than `TRAINING_HISTORY_MAX_SESSIONS` later sessions
+  is still reported. That last one was run against the unfixed call site and
+  fails there, so it is known to be a real guard rather than one that passes
+  either way.
 - `src/server/repositories/roadmap-repository.test.ts` — one new test that a
   settled proposal comes back as history with the state it carries. Two existing
   assertions move from `toEqual` to `toMatchObject` because the return type
@@ -267,27 +348,65 @@ for the reviewed SHA is the automated-test evidence and is outstanding.**
    this ticket will have is the product owner's manual pass on the Preview. The
    lead should decide whether that is sufficient for a Tier 2 read surface or
    whether a follow-up ticket adds the flow.
-2. **No roadmap content has ever been rendered from real data.** The five
-   ADR-015 functions are revoked, so nothing can create a roadmap version or a
-   proposal, and no fixture in the repository produces one either. Every
-   assertion about the spine, the milestones and the proposal records is made
-   against authored fixtures in the unit tests. On the Preview, an owner will
-   see the empty state and nothing else unless their account already carries
-   M3-11-expired rows. **This is the largest gap in the evidence and I could not
-   close it from here:** creating the data would require the revoked functions,
-   which is M3-15F.
-3. **The `expired` sentence is a claim about the future.** "This proposal can no
-   longer be accepted" is true by construction — the decision row is terminal
-   and `accept_roadmap_proposal` refuses a decided proposal — but it is asserted
-   in copy rather than enforced by anything in this diff. M3-15F is where that
-   refusal becomes reachable again and should be checked then.
-4. **`hasSafetySignal` may disagree with a generation's own value.** This
-   surface calls `selectTrainingHistoryContext` with the default session cap and
-   no byte budget; the AI path passes a byte sub-budget that can trim further.
-   Two owners with a great deal of recent training could therefore see the
-   notice while a generation computed the flag over a smaller included set. The
-   window and the cap are shared, which is what the brief asked for; the byte
-   budget is not, because this surface transmits nothing and has no budget.
+2. **No roadmap content has ever been rendered from real data, and the Preview
+   cannot change that.** The five ADR-015 functions are revoked, so nothing can
+   create a roadmap version or a proposal, and no fixture in the repository
+   produces one either. Every assertion about the spine, the milestones and the
+   proposal records is made against authored fixtures in the unit tests.
+
+   The product owner has confirmed directly that **their founder account holds
+   no pre-M3-11 roadmap data at all.** So the Preview will show the empty state
+   and nothing else. Concretely:
+
+   - The 390px acceptance pass exercises the empty state, the masthead, the
+     Plan link row, and the navigation back — and nothing else on the surface.
+   - **Acceptance criterion 2 is unobservable on the Preview.** An expired
+     proposal appearing as history with its state cannot be seen there, because
+     there is no expired proposal to see.
+   - The spine, the milestone and attention rendering, the superseded-version
+     list, the proposal records, and both new sentences therefore ship verified
+     by unit fixtures alone.
+
+   **This is the largest gap in the evidence and I could not close it from
+   here:** creating the data would require the revoked functions, which is
+   M3-15F. It is a fact to decide against, not a hedge — the product owner is
+   accepting a surface whose main content they will not have seen rendered.
+3. **Both proposal-record sentences are claims this diff cannot enforce.**
+   `proposalExpired` — "This proposal can no longer be accepted" — is true by
+   construction, because the decision row is terminal and
+   `accept_roadmap_proposal` refuses a decided proposal.
+   `proposalDecisionUnavailable` — "Deciding on a proposal is not available
+   yet" — is true because all five functions are revoked. Neither is enforced
+   by anything here; both are asserted in copy. M3-15F is where deciding
+   becomes reachable again, and it must retire the second sentence when it
+   does, or the screen will keep saying a decision is unavailable after it is
+   not. **That is a real trap for the next ticket and the reviewer should
+   confirm it is written into M3-15F's brief.**
+4. **`hasSafetySignal` deliberately applies neither transmission limit, and can
+   therefore disagree with a generation's own value.** This surface passes an
+   explicit uncapped session count and no byte budget; the AI path passes both
+   `TRAINING_HISTORY_MAX_SESSIONS` and a byte sub-budget, either of which trims
+   the set the flag is computed over. An owner training a lot will therefore see
+   the notice where a generation would not.
+
+   That direction is the correct one and is the point of the difference. Both
+   limits bound a paid provider payload and are disclosed to the coach under
+   ADR-013 decision 1 so a model that saw a subset does not reason as though it
+   saw everything. This read transmits nothing, costs nothing, and has no one to
+   disclose a trim to, so applying either would not bound anything — it would
+   only decide which reported symptoms the owner is allowed to be reminded of.
+   Only the 56-day window is shared, and that is what the brief meant by
+   agreeing on "recent".
+
+   Round 1 of review found this the hard way: the first commit inherited the
+   session cap by calling the selector with no limits, and because the selector
+   sorts newest-first and truncates *before* computing the flag, a symptom
+   reported three weeks ago vanished from the screen as soon as twenty later
+   sessions were logged — roughly two and a half a week, an ordinary trainee.
+   The notice would have gone quiet with nothing on screen to say so. `4ee7565`
+   fixes it at the call site; `training-history-context.ts` is unchanged,
+   because the constant is right for the AI path and is an ADR-013 tuning
+   parameter. The regression test was verified to fail without the fix.
 5. **An unconfirmed time zone falls back to UTC** for the 56-day safety window
    rather than gating the surface behind a zone prompt as Progress does. A
    roadmap spans months, so the only thing the fallback can shift is which day
@@ -303,8 +422,10 @@ for the reviewed SHA is the automated-test evidence and is outstanding.**
 
 ## Independent reviewer checklist
 
-Review the exact commit `7f0eb24` on `ticket/m3-15e-roadmap-read`, over
-`git diff 899fc1f..7f0eb24`. Confirm the CI run for `7f0eb24` is green and its
+Review the exact commit `05ad741` on `ticket/m3-15e-roadmap-read`, over
+`git diff 899fc1f..05ad741`. Round 1 found two defects against `7f0eb24`, so
+that commit and its preview no longer stand; the correction range alone is
+`git diff 7f0eb24..05ad741`. Confirm the CI run for `05ad741` is green and its
 Vercel Preview reached `READY`. Do not re-run lint, typecheck, the unit suite,
 the build, or the browser matrix; CI covers all of them.
 
@@ -333,21 +454,35 @@ What needs judgment CI cannot supply:
 5. **`RoadmapDecision` gaining `expired`.** Confirm this matches the check
    constraint in `20260814195107_m3_11_legacy_training_reset.sql` and that
    widening it cannot make an expired proposal look acceptable anywhere.
-6. **The out-of-brief file.** Judge `src/server/roadmap/roadmap-safety.ts` on
-   its stated reason: the alternative was importing the AI context source into a
-   route. Confirm its mapping is faithful to `toTrainingHistoryCompletion` and
-   that nothing it produces is serialized or shown. Known limitation 4 records
-   where it can disagree with a generation.
-7. **The Plan link.** Judge whether adding an entry point belongs in this
+6. **The out-of-brief file, and round 1 finding 1 inside it.** Judge
+   `src/server/roadmap/roadmap-safety.ts` on its stated reason: the alternative
+   was importing the AI context source into a route. Confirm its mapping is
+   faithful to `toTrainingHistoryCompletion` and that nothing it produces is
+   serialized or shown. Then confirm the correction: that `NO_SESSION_CAP`
+   genuinely disables the count trim in `selectTrainingHistoryContext` rather
+   than merely raising it somewhere the byte path could still trim; that the
+   56-day window is still M3-15D's and was not forked; that nothing in
+   `training-history-context.ts` changed; and that the new test fails without
+   the fix. Known limitation 4 records where this surface can now legitimately
+   disagree with a generation, and why that direction is the correct one.
+7. **Round 1 finding 2, and the two new strings.** Confirm the open branch's
+   sentence removes the inert affordance rather than restating it, that both
+   sentences come from `ROADMAP_COPY` and neither is inlined, and that no
+   approved M3-02 wording was altered while `proposalExpired` was moved there.
+   Both strings are new and user-visible; flag them to the product owner as a
+   copy decision, not as an implementation detail. Known limitation 3 records
+   that M3-15F must retire `proposalDecisionUnavailable` when deciding becomes
+   possible.
+8. **The Plan link.** Judge whether adding an entry point belongs in this
    ticket. It is `7f0eb24` alone and reverts cleanly.
-8. **Honest states.** Confirm the empty state, `error.tsx`, `loading.tsx` and
+9. **Honest states.** Confirm the empty state, `error.tsx`, `loading.tsx` and
    the expired sentence each say a different true thing, that none invents a
    training fact or a capability that does not exist, and that the empty state
    does not imply a roadmap can be generated today.
-9. **Product invariants.** Confirm nothing totals, scores, ranks, streaks or
-   charts; that goal attention is rendered as an ordinal level and never as a
-   share; that the safety notice is the server-owned copy and nothing near it
-   assesses a symptom; and that no preserved record is rewritten.
-10. **Scope.** Confirm nothing outside the brief changed beyond the two items
+10. **Product invariants.** Confirm nothing totals, scores, ranks, streaks or
+    charts; that goal attention is rendered as an ordinal level and never as a
+    share; that the safety notice is the server-owned copy and nothing near it
+    assesses a symptom; and that no preserved record is rewritten.
+11. **Scope.** Confirm nothing outside the brief changed beyond the two items
     called out above, and that the `e2e/m3-11-maintenance.spec.ts` edit is the
     minimum needed to stop it asserting a stub on a reopened route.

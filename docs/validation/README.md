@@ -42,8 +42,11 @@ Validation records and their visual evidence are grouped by milestone.
 ## M3
 
 - [M3-15E roadmap surface restoration](M3/M3-15E-VALIDATION.md) — Tier 2;
-  builder handoff, not yet reviewed. `/home/plan/roadmap` leaves the M3-11
-  maintenance stub as a read surface: the current roadmap on the restored M3-02
+  round 1 of independent review returned two findings, both corrected in
+  `4ee7565` (a provider session cap was suppressing the safety notice for an
+  ordinary trainee) and `05ad741` (an undecidable proposal claimed a decision
+  was awaited); `05ad741` awaits re-review. `/home/plan/roadmap` leaves the
+  M3-11 maintenance stub as a read surface: the current roadmap on the restored M3-02
   spine, every superseded version, and every proposal carrying the state it
   ended in, including the `expired` M3-11 wrote. Read-only — no Server Action,
   no write, no migration, no provider call, and an architecture assertion that
