@@ -104,6 +104,19 @@ export type TrainingHistorySelection = {
   history: CoachAITrainingHistory;
   planCommitments: CoachAIPlanCommitmentReference[];
   hasSafetySignal: boolean;
+  /**
+   * The input records this selection actually transmitted, in the order it
+   * transmitted them. They are the very objects the caller passed in, so a
+   * caller holding a map from them to its own rows can say which rows reached
+   * a provider without the allowlist ever gaining an id field.
+   *
+   * That is the whole reason this exists: M3-08's exact-source rule needs the
+   * transmitted set, `history.completions` is the redacted form and carries no
+   * identity, and giving `TrainingHistoryCompletion` an id would put one field
+   * more than ADR-013 enumerates within reach of `toCompletionReference`.
+   * Nothing serializes this field; only `history` crosses the boundary.
+   */
+  includedCompletions: TrainingHistoryCompletion[];
 };
 
 export function selectTrainingHistoryContext(
@@ -201,6 +214,7 @@ export function selectTrainingHistoryContext(
     });
 
   return {
+    includedCompletions: included,
     history: {
       windowStartDate,
       windowEndDate,
