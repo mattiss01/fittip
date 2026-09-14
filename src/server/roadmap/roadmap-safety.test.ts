@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import type { Completion } from "@/server/completions/completion-log";
 import { hasRecentSafetySignal } from "@/server/roadmap/roadmap-safety";
-import { TRAINING_HISTORY_WINDOW_DAYS } from "@/server/training/training-history-context";
+import {
+  TRAINING_HISTORY_MAX_SESSIONS,
+  TRAINING_HISTORY_WINDOW_DAYS,
+} from "@/server/training/training-history-context";
 
 const TODAY = "2026-09-14";
 
@@ -40,6 +43,25 @@ describe("hasRecentSafetySignal", () => {
         TODAY,
       ),
     ).toBe(false);
+  });
+
+  /**
+   * The cap the AI path inherits bounds a provider payload. Inheriting it here
+   * truncated the newest 20 sessions *before* the flag was computed, so an
+   * ordinary trainee — roughly two and a half sessions a week — lost the notice
+   * three weeks after reporting anything, with nothing on screen to say so.
+   */
+  it("still reports a symptom buried under more than twenty later sessions", () => {
+    const reported = completion({
+      actualLocalDate: shift(TODAY, -21),
+      painReported: true,
+    });
+    const later = Array.from({ length: 25 }, (_, offset) =>
+      completion({ actualLocalDate: shift(TODAY, -offset) }),
+    );
+
+    expect(later.length).toBeGreaterThan(TRAINING_HISTORY_MAX_SESSIONS);
+    expect(hasRecentSafetySignal([...later, reported], TODAY)).toBe(true);
   });
 
   it("reports nothing for an owner with no completions at all", () => {
