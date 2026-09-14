@@ -52,18 +52,6 @@ const rollingPlanSurface = [
 ] as const;
 
 /**
- * Every `@/server/**` module the reopened surface may reach. This is an
- * allowlist rather than a pattern on purpose: the substring check below only
- * ever proved that *one* seam import was present, so any of these modules
- * could have imported an arbitrary additional persistence module and still
- * passed. Four of these files also moved here from `maintenancePages`, whose
- * predicate forbade `@/server/**` outright, so without this the move would
- * have traded a strict check for a loose one.
- *
- * M3-15C added no entry: both Progress routes reach only modules that were
- * already on this list.
- */
-/**
  * The routes that read completions and nothing else. `allowedServerModules` is
  * shared across the whole reopened surface and rightly carries the plan
  * modules for the Plan and Today, so it cannot express this exclusion; without
@@ -79,6 +67,18 @@ const completionOnlySurface = [
   "src/app/home/progress/[id]/page.tsx",
 ] as const;
 
+/**
+ * Every `@/server/**` module the reopened surface may reach. This is an
+ * allowlist rather than a pattern on purpose: the substring check below only
+ * ever proved that *one* seam import was present, so any of these modules
+ * could have imported an arbitrary additional persistence module and still
+ * passed. Four of these files also moved here from `maintenancePages`, whose
+ * predicate forbade `@/server/**` outright, so without this the move would
+ * have traded a strict check for a loose one.
+ *
+ * M3-15C added no entry: both Progress routes reach only modules that were
+ * already on this list.
+ */
 const allowedServerModules = [
   "@/server/completions/completion-log",
   "@/server/completions/plan-window-top-up",

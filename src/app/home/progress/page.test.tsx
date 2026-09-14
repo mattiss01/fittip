@@ -102,9 +102,11 @@ describe("Progress", () => {
 
   // That Progress makes no plan read at all is asserted in
   // `src/architecture/m3-11-legacy-reset.test.ts`, against the route sources
-  // themselves. A mock of a module this page does not import can only ever
-  // report that an uncalled function was not called, so it is not repeated
-  // here as though it proved something.
+  // themselves. A mock of `plan-window-top-up` used to assert it here. That
+  // would have caught this page acquiring that one import on the one render
+  // path the test exercised, and nothing else; the invariant test covers every
+  // plan module, both routes, and every path, so the weaker check is not kept
+  // beside it.
 
   it("shows each entry with its outcome, its record and its signal", async () => {
     listCompletions.mockResolvedValue([completion()]);

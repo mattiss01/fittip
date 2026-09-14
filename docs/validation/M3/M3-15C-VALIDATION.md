@@ -1,10 +1,11 @@
 # M3-15C validation: progress
 
 **Ticket:** [M3-15C](../../backlog/M3/M3-15C-PROGRESS.md)
-**Status:** testable — round 1 of independent review rejected `fc7ef06` on two
-blocking findings and three in-scope text corrections, all corrected in
-`aee6da1`. Re-review, a green continuous-integration run for the corrected
-SHA, the Vercel Preview, and product-owner acceptance are all pending.
+**Status:** testable — round 2 of independent review **approved** `4149f4c` on
+green continuous-integration run 33397607302, with three non-blocking tidy-ups
+raised and since applied. Round 1 rejected `fc7ef06` on two blocking findings
+and three in-scope text corrections. Vercel Preview verification and
+product-owner acceptance are pending.
 **Tier:** 2
 **Branch:** `ticket/m3-15c-progress`
 **Base:** `745c2b5994467976361edf089d10e3edab7b15bf`
@@ -17,6 +18,11 @@ exception in `AGENTS.md`).
 **Superseded target:** `fc7ef06930baf74d9b35ff31062ab3de926e5754` — **rejected
 in round 1.** The correction range is
 `git diff fc7ef06930baf74d9b35ff31062ab3de926e5754..aee6da1e285acf60b1382b4887f21a4d2e04070a`.
+**Tidy-up commit:** the round 2 items below land in one further commit, which
+this record cannot name because it is that commit. It changes two comments and
+this record. No assertion, no test outcome, and no application behavior moves
+with it, so the reviewed result at `4149f4c` still stands; the lead records its
+SHA and its run at acceptance.
 
 Implementation commits, in order:
 
@@ -81,10 +87,13 @@ sound; every finding was in the ticket's own new test and record text.
    sources match neither `plan-window-top-up` nor `rolling-plan`.
 
    Related, and fixed in the same commit: `page.test.tsx` asserted that
-   `readPlanWindowToppedUp` was never called while mocking a module the page
-   does not import, so it could only ever report that an uncalled function was
-   not called. The mock and that test are removed, with a comment naming the
-   invariant test that now carries the claim.
+   `readPlanWindowToppedUp` was never called, mocking a module the page does
+   not import. That would have caught this one page acquiring this one import
+   on the one render path the test exercised, and nothing else. The mock and
+   that test are removed rather than kept beside a check that covers every
+   plan module, both routes, and every path, with a comment naming it.
+   (Round 2, item 3 corrected this paragraph's original wording, which called
+   the removed test inert.)
 
 4. **`accountMonth()` could have put an unchecked claim on the screen.** It
    fell back to the current month when the profile carried no usable creation
@@ -96,6 +105,39 @@ sound; every finding was in the ticket's own new test and record text.
 
 5. **One action had two names.** The month link is "Previous month"; the
    empty-month body said "Step back a month". The body now names the control.
+
+## Round 2 review: approved, and the three tidy-ups
+
+`4149f4c` was independently approved on green continuous-integration run
+[33397607302](https://github.com/mattiss01/fittip/actions/runs/33397607302),
+all three jobs. **The browser flow executed end to end for the first time** —
+`1 passed (9.8s)`, verified as a real execution rather than a silent skip. The
+round 1 correction was confirmed sound rather than lucky: `data-plan-date` is
+rendered only at `src/app/home/plan/plan-manager.tsx:267`, reachable only from
+the `timezoneName !== null` arm, so the new wait is structurally unreachable
+until the zone is committed.
+
+Three non-blocking items, all applied:
+
+1. **An orphaned doc comment, the same defect class as round 1's finding 3 and
+   in the same file.** Round 1 inserted `completionOnlySurface` between the
+   `allowedServerModules` docblock and its declaration, leaving two JSDoc
+   blocks stacked with the first visually documenting the wrong list. Each
+   block now sits against the list it describes. It was a move; nothing else
+   in the file changed.
+2. **Known limitation 1 had gone stale in the pessimistic direction.** It said
+   the flow had never passed and asked for it to be treated as unproven. True
+   when written, false once 33397607302 ran it end to end. Rewritten below to
+   what is now known, keeping the residue that is still true.
+3. **One rationale sentence overstated the case for a removal.** This record
+   said the deleted `page.test.tsx` mock test "could only ever report that an
+   uncalled function was not called". That is not true: had the page acquired
+   that import, the mock would have registered the call and the test would
+   have failed. It was weak — one module, one route, and only on the render
+   path the test exercised — not inert. The replacement is genuinely stronger,
+   so nothing material turns on it, but this record is permanent history, so
+   the wording now claims only what is true. The same sentence in
+   `page.test.tsx` is corrected with it.
 
 ## Delivered behavior
 
@@ -214,8 +256,9 @@ path and diff:
 - `src/app/home/progress/page.test.tsx` — round 1 removed a mock of
   `@/server/completions/plan-window-top-up`, a module this page does not
   import, along with the test that asserted the mock was never called. It
-  could only ever report that an uncalled function was not called. The
-  invariant test above carries that claim now.
+  would have caught this one page acquiring this one import on the one render
+  path it exercised; the invariant test above covers every plan module, both
+  routes, and every path, so the weaker check is not kept beside it.
 
 ## Data, migration, API, privacy, and security effects
 
@@ -257,12 +300,12 @@ evidence.
 | --- | --- | --- |
 | `d07d0df1e87ec1d8a6425b059f99020bb166e7aa` | [33395347590](https://github.com/mattiss01/fittip/actions/runs/33395347590) | **failure** — the `M3-15C progress` browser step, and only that step. Every other job and browser flow passed. See round 1, finding 1. |
 | `fc7ef06930baf74d9b35ff31062ab3de926e5754` | none | The branch has never had a run for this SHA. The earlier version of this record wrongly treated it as the evidence; that was round 1, finding 2. |
-| `aee6da1e285acf60b1382b4887f21a4d2e04070a` | pending | The lead records the run URL and its conclusion here after pushing. A red or absent run for this SHA is a delivery blocker. |
+| `aee6da1e285acf60b1382b4887f21a4d2e04070a` | none | Superseded by `4149f4c` before a run completed for it. |
+| `4149f4cd9d17dc57a34d2e22cc800d0ac20c7e25` | [33397607302](https://github.com/mattiss01/fittip/actions/runs/33397607302) | **success**, all three jobs. The `M3-15C progress` step executed end to end for the first time: `1 passed (9.8s)`, verified as a real execution rather than a silent skip. This is the run round 2 approved on. |
 
-**This flow has never passed anywhere.** The round 1 correction is reasoned
-from the failure snapshot and from the plan surface's actual render order, not
-from a green run, and no local execution is possible here. The CI run for
-`aee6da1` is its second execution and its first chance to pass.
+The tidy-up commit that follows `4149f4c` changes two comments and this
+record. It carries no assertion and no application change, so the result above
+is the reviewed result; the lead records that commit's own run at acceptance.
 
 Tests added or changed:
 
@@ -296,7 +339,7 @@ This is not the handoff evidence; the CI run for the reviewed SHA is.
 | `npx.cmd prettier --write <changed files>` | No formatting differences remained. |
 | `git diff --check` | Clean on every commit. |
 | `npx.cmd playwright test --config=e2e/m3-15c.playwright.config.ts --list` | Collects exactly one spec, confirming the pinned `testMatch`. |
-| The M3-15C browser flow, executed locally | **Not run**, at either SHA. It needs Docker and a local Supabase stack; per `CLAUDE.md` the browser matrix is CI's job, not the builder's. See known limitation 1. |
+| The M3-15C browser flow, executed locally | **Not run**, at any SHA. It needs Docker and a local Supabase stack; per `CLAUDE.md` the browser matrix is CI's job, not the builder's. It has passed once in CI, on run 33397607302. See known limitation 1. |
 
 ## Project skills applied
 
@@ -343,19 +386,16 @@ This is not the handoff evidence; the CI run for the reviewed SHA is.
 
 ## Known limitations
 
-1. **The browser flow has still never passed, and the risk this limitation
-   predicted materialized.** Written without ever being executed, it failed on
-   its first CI run for exactly the reason recorded here — a wait that could
-   not wait, in the arrangement step. The correction in `aee6da1` is reasoned
-   from the failure snapshot and from the plan surface's actual render order,
-   and it too has never been executed: the browser matrix needs Docker and a
-   local Supabase stack, and `CLAUDE.md` puts that with CI rather than the
-   builder. **Treat the flow as unproven until a run for `aee6da1` is green.**
-   Everything after the arrangement step has still never run once, so a
-   further defect further down the flow would be a second finding of the same
-   kind rather than a surprise. The assertions there were re-read against the
-   real markup, and the two most brittle were narrowed before the first
-   commit, but reading is not running.
+1. **The browser flow has passed exactly once, in CI, and has never been run
+   locally.** It was written without ever being executed and failed on its
+   first run for the reason recorded in round 1 above; the correction was
+   reasoned from the failure snapshot rather than from a run. Run 33397607302
+   then executed it end to end and it passed, which is the first and so far
+   only evidence that any of it works. The residue is real but small: one green
+   run on one CI runner, never reproduced locally, because the browser matrix
+   needs Docker and a local Supabase stack and `CLAUDE.md` puts that with CI
+   rather than the builder. A reviewer or the product owner reproducing it
+   needs that stack, not this checkout.
 2. **"An owner who has logged nothing ever" is not literally knowable, and the
    brief did not say how to know it.** Every read is bounded by the selected
    month, so no read can prove that no completion exists in any month. The
@@ -448,8 +488,9 @@ What needs judgment CI cannot supply:
    `e2e/m3-15c-progress.spec.ts` cannot resolve before the zone is stored and
    uses no timeout or retry; that `accountMonth` returning `null` reaches the
    ordinary empty-month sentence rather than any other branch; and that the
-   empty-month body now names the control it points at. Known limitation 1 is
-   the honest state of the flow — the rest of it has still never executed.
+   empty-month body now names the control it points at. Run 33397607302
+   executed the whole flow and it passed; known limitation 1 records what that
+   does and does not establish.
 9. **Scope.** Confirm nothing outside the brief changed. In particular confirm
    the `e2e/m3-11-maintenance.spec.ts` edit is the minimum needed to stop it
    asserting a stub on a route this ticket reopened, and that the CI step is
