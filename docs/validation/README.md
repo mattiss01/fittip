@@ -41,6 +41,13 @@ Validation records and their visual evidence are grouped by milestone.
 
 ## M3
 
+- [M3-15D bounded AI completion context](M3/M3-15D-VALIDATION.md) — builder
+  handoff; Tier 1. The coaching context seam gets its first production
+  implementation: goals, memory, the owner's stored zone, the topped-up plan
+  slice, and up to 20 completions from the last 56 owner-local days, each
+  reduced field by field to the ADR-013 allowlist. `correctionReason` is
+  deleted. No surface, no schema change, and no provider call — every check ran
+  in fixture mode
 - [M3-15C progress](M3/M3-15C-VALIDATION.md) — testable; Tier 2.
   `/home/progress` reopens as one owner-local calendar month of completions,
   addressable by a `month=YYYY-MM` parameter, and `/home/progress/[id]` shows
