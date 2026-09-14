@@ -1,11 +1,13 @@
 # M3-15C validation: progress
 
 **Ticket:** [M3-15C](../../backlog/M3/M3-15C-PROGRESS.md)
-**Status:** testable — round 2 of independent review **approved** `4149f4c` on
-green continuous-integration run 33397607302, with three non-blocking tidy-ups
-raised and since applied. Round 1 rejected `fc7ef06` on two blocking findings
-and three in-scope text corrections. Vercel Preview verification and
-product-owner acceptance are pending.
+**Status:** testable — round 3 of independent review **approved** `0d2dfbc` on
+green continuous-integration run 34818795441, confirming that the three round 2
+tidy-ups move no assertion, no test outcome, and no application behavior. Round
+2 approved `4149f4c` on green run 33397607302; round 1 rejected `fc7ef06` on two
+blocking findings and three in-scope text corrections. The Vercel Preview for
+`0d2dfbc` reached `success`. Product-owner acceptance is the only remaining
+gate.
 **Tier:** 2
 **Branch:** `ticket/m3-15c-progress`
 **Base:** `745c2b5994467976361edf089d10e3edab7b15bf`
@@ -18,11 +20,12 @@ exception in `AGENTS.md`).
 **Superseded target:** `fc7ef06930baf74d9b35ff31062ab3de926e5754` — **rejected
 in round 1.** The correction range is
 `git diff fc7ef06930baf74d9b35ff31062ab3de926e5754..aee6da1e285acf60b1382b4887f21a4d2e04070a`.
-**Tidy-up commit:** the round 2 items below land in one further commit, which
-this record cannot name because it is that commit. It changes two comments and
-this record. No assertion, no test outcome, and no application behavior moves
-with it, so the reviewed result at `4149f4c` still stands; the lead records its
-SHA and its run at acceptance.
+**Tidy-up commit:** `0d2dfbcc03e5473312adf7646d2a9218a51ee49d` applies the
+three round 2 items. It changes two comments and this record. Round 3 verified
+the claim rather than accepting it: the sorted line multiset of
+`m3-11-legacy-reset.test.ts` is byte-identical across `4149f4c..0d2dfbc`, so no
+array entry, predicate, or regex changed — only line order. The reviewed result
+at `4149f4c` therefore stands, and `0d2dfbc` rides on it.
 
 Implementation commits, in order:
 
@@ -302,10 +305,10 @@ evidence.
 | `fc7ef06930baf74d9b35ff31062ab3de926e5754` | none | The branch has never had a run for this SHA. The earlier version of this record wrongly treated it as the evidence; that was round 1, finding 2. |
 | `aee6da1e285acf60b1382b4887f21a4d2e04070a` | none | Superseded by `4149f4c` before a run completed for it. |
 | `4149f4cd9d17dc57a34d2e22cc800d0ac20c7e25` | [33397607302](https://github.com/mattiss01/fittip/actions/runs/33397607302) | **success**, all three jobs. The `M3-15C progress` step executed end to end for the first time: `1 passed (9.8s)`, verified as a real execution rather than a silent skip. This is the run round 2 approved on. |
+| `0d2dfbcc03e5473312adf7646d2a9218a51ee49d` | [34818795441](https://github.com/mattiss01/fittip/actions/runs/34818795441) | **success**, all three jobs. The `M3-15C progress` step ran again: `1 passed (10.2s)`. This is the run round 3 approved on. The M3-22 offline-console flake did not fire, so no known-defect exception is claimed. |
 
-The tidy-up commit that follows `4149f4c` changes two comments and this
-record. It carries no assertion and no application change, so the result above
-is the reviewed result; the lead records that commit's own run at acceptance.
+`0d2dfbc` carries no assertion and no application change, so `4149f4c` remains
+the implementation result and `0d2dfbc` the approved head of the branch.
 
 Tests added or changed:
 
@@ -386,16 +389,17 @@ This is not the handoff evidence; the CI run for the reviewed SHA is.
 
 ## Known limitations
 
-1. **The browser flow has passed exactly once, in CI, and has never been run
-   locally.** It was written without ever being executed and failed on its
+1. **The browser flow has passed twice, both times in CI, and has never been
+   run locally.** It was written without ever being executed and failed on its
    first run for the reason recorded in round 1 above; the correction was
-   reasoned from the failure snapshot rather than from a run. Run 33397607302
-   then executed it end to end and it passed, which is the first and so far
-   only evidence that any of it works. The residue is real but small: one green
-   run on one CI runner, never reproduced locally, because the browser matrix
-   needs Docker and a local Supabase stack and `CLAUDE.md` puts that with CI
-   rather than the builder. A reviewer or the product owner reproducing it
-   needs that stack, not this checkout.
+   reasoned from the failure snapshot rather than from a run. Runs 33397607302
+   and 34818795441 then executed it end to end and it passed both times. The
+   second pass re-proves the first rather than establishing anything new —
+   `0d2dfbc` changes no spec and no application code — so the residue is
+   unchanged: two green runs on CI runners, never reproduced locally, because
+   the browser matrix needs Docker and a local Supabase stack and `CLAUDE.md`
+   puts that with CI rather than the builder. A reviewer or the product owner
+   reproducing it needs that stack, not this checkout.
 2. **"An owner who has logged nothing ever" is not literally knowable, and the
    brief did not say how to know it.** Every read is bounded by the selected
    month, so no read can prove that no completion exists in any month. The
