@@ -19,7 +19,11 @@ exception in `AGENTS.md`).
 **Previously approved target:** `2d85a1cc65b800a53f02617c5ab8fa3bb2cfee1c`,
 approved in round 1. The correction range alone is
 `git diff 2d85a1cc65b800a53f02617c5ab8fa3bb2cfee1c..ea8d0f5fba19fa24c0a1b805a9c64fceebdb16b2`,
-which touches three files and no product behavior.
+which touches three source files. It changes no visible surface, but it is not
+behaviour-free: finding 2 adds a refusal path. That path is unreachable in
+practice — the profile repository filters by its own session-derived id, so the
+two identities cannot disagree today — but it is a new refusal, and round 2 of
+review reviewed it as new code rather than as a finding closed.
 
 Implementation commits, in order:
 
@@ -78,6 +82,62 @@ replaced had too.
 
 Both corrections invalidate round 1's approval of `2d85a1c`. The commit to
 re-review is `ea8d0f5`.
+
+## Round 2 review: approved for acceptance against `ffe3c7e`
+
+A second, distinct independent reviewer re-read the correction range
+`06965a9..ffe3c7e` on 14 September 2026 and returned **approve with findings**,
+none blocking. It reviewed finding 2 as new code rather than as a closed
+finding, because the fix restructured a null-check inside an authorization path
+to satisfy a type narrower, which is where a real defect would hide.
+
+**The authorization trace.** The only path that skips the ownership assertion at
+`coach-ai-context-source.ts:112` is `profile === null`, and that path is
+terminated unconditionally ten lines later by the zone refusal at line 122. So
+every value returned from `load` was read under a profile that exists *and*
+whose `userId` equals the requested owner. The null-profile case is still a
+refusal, and still the same refusal it was before the restructure
+(`context_below_minimum`, not the new code). Refusal ordering leaks nothing: the
+ownership refusal precedes the zone refusal, so a mismatched profile yields
+`owner_denied` whatever its zone state, and the mismatched owner's zone presence
+is never distinguishable. `owner_denied`'s safe message names no account,
+provider, or configuration state. The lead independently re-read lines 100–135
+and reached the same conclusion.
+
+**The tripwire.** `PROVIDER_BOUND_ROOTS` leads with `AI_ROOT`, so the scanned
+set is a strict superset of what it scanned before; the
+`expect(reaching).toEqual([openai-adapter.ts])` assertion is unchanged and now
+runs over the larger set. The reviewer settled the vacuity question by
+executing that one file — 6 passed — which proves the two new `toContain` pins
+resolve on Windows paths and that the scan is genuinely reading files outside
+`src/server/ai` rather than matching nothing.
+
+**One non-blocking finding, deferred deliberately.** The tripwire's own header
+claims its list names "every root that holds such a module", and two roots that
+shape provider-bound owner data are absent: `src/server/completions`
+(`plan-window-top-up.ts` selects the plan window that becomes
+`training.plannedSessions`; `completion-log.ts` defines the `Completion` the
+source reduces) and `src/server/rolling-plan` (`RollingPlanSession`'s
+`localDate`, `title`, `sport`, and `isLocked` are copied verbatim into the
+payload). The concrete failure is a telemetry or enrichment `fetch` added to
+`plan-window-top-up.ts` passing the gate silently — round 1's defect one
+directory over. Both roots were grepped and neither contains a network
+primitive today, so this is a coverage gap in a tripwire's stated scope rather
+than a live hole or a regression, and closing it requires no exemption. It is
+carried as a follow-up rather than a further correction round.
+`src/server/roadmap` was considered and deliberately left out: it shapes
+provider *output*, not owner input.
+
+**Scope.** The reviewer reconciled the manifest against the diff and found
+nothing outside the ticket. `docs/validation/README.md` is this ticket's own
+in-flight index entry, not an accepted record, so amending it is permitted.
+
+**One reviewer slip, corrected here.** The round 2 report states that
+`readPlanWindowToppedUp` has exactly one non-test call site repo-wide. It has
+two: this source at line 151, and `src/app/home/today/page.tsx:108`, which
+predates this ticket and is correct under the same ADR-017 consequence. The
+brief's constraint is that *this ticket* introduces no other call site, and that
+holds — the full ticket range touches no file under `src/app/`.
 
 ## Delivered behavior
 
@@ -269,11 +329,29 @@ passes with `openai-adapter.ts` as the one module that can reach the network.
 
 ## Tests and final results
 
-**Continuous integration: no run for the corrected SHA yet.** The round 1
-corrections are local at the time of writing, so there is no run URL for
-`ea8d0f5fba19fa24c0a1b805a9c64fceebdb16b2` to cite. The lead pushes the branch
-and records the run URL and conclusion here before re-review. A red or absent
-run for that SHA is a delivery blocker.
+**Continuous integration: green for the reviewed commit, on its first attempt.**
+
+| SHA | Run | Conclusion |
+| --- | --- | --- |
+| `06965a95ae1a78ff47903770a7778a905b110e36` | [34823799022](https://github.com/mattiss01/fittip/actions/runs/34823799022) | failure — `e2e/m3-14b-recurring-series.spec.ts:275` only, the M3-22 defect |
+| `ffe3c7eaf277102b35548754151b145701e6f092` | [34833095545](https://github.com/mattiss01/fittip/actions/runs/34833095545) | **success** — `static`, `database`, and `browser` all green, no rerun |
+
+`ffe3c7e` is the reviewed commit, and its run is green with no exception
+claimed. The product owner had accepted the M3-22 known-defect exception for
+this ticket on 14 September 2026, against the earlier `06965a9` run. **That
+acceptance went unused.** The flake did not recur on the reviewed SHA, so this
+record claims no exception and rests on an unqualified green run. The
+acceptance is recorded here only so the decision is not lost: M3-22 remains an
+open, undispatched Tier 3 defect, and the exception it was granted for expired
+with the run it was granted against.
+
+The green `static` job also closes the one gap the builder recorded honestly
+below — it did not re-run `build` locally after the corrections. That job runs
+`next build` on this exact SHA.
+
+**Vercel Preview:** https://fittip-j77en39t4-mattis-3657s-projects.vercel.app —
+deployment `6435062079`, state `success` for `ffe3c7e`. No migration is
+involved, so no founder hosted database step applies to this ticket.
 
 Tests added or changed:
 

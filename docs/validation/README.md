@@ -42,8 +42,10 @@ Validation records and their visual evidence are grouped by milestone.
 ## M3
 
 - [M3-15D bounded AI completion context](M3/M3-15D-VALIDATION.md) — Tier 1;
-  round 1 of independent review approved `2d85a1c` with two non-blocking
-  findings, both corrected in `ea8d0f5`, which needs re-review. The coaching
+  testable. Round 1 of independent review approved `2d85a1c` with two
+  non-blocking findings, corrected in `e26587d` (the tripwire) and `ea8d0f5`
+  (the ownership guard); a second, distinct reviewer approved the corrected
+  `ffe3c7e`, whose CI run is green on its first attempt. The coaching
   context seam gets its first production implementation: goals, memory, the
   owner's stored zone, the topped-up plan slice, and up to 20 completions from
   the last 56 owner-local days, each reduced field by field to the ADR-013
