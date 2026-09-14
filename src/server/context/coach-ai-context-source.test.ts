@@ -58,6 +58,7 @@ import { TRAINING_HISTORY_WINDOW_DAYS } from "@/server/training/training-history
 
 const OWNER_ID = "53000000-0000-4000-8000-000000000001";
 const OWNER = { id: OWNER_ID } as unknown as CoachAIOwner;
+const OTHER_OWNER_ID = "53000000-0000-4000-8000-000000000002";
 const TIMEZONE = "Europe/Berlin";
 /** 09:00 UTC is the same calendar day in Berlin, so today is unambiguous. */
 const NOW = new Date("2026-08-04T09:00:00.000Z");
@@ -118,6 +119,22 @@ describe("the production coaching context source", () => {
     });
 
     // Nothing else was read, so no window was derived in any zone at all.
+    expect(listGoals).not.toHaveBeenCalled();
+    expect(listCompletions).not.toHaveBeenCalled();
+    expect(getPlanSlice).not.toHaveBeenCalled();
+  });
+
+  it("refuses when the profile it read is not the owner it was asked about", async () => {
+    // The two ids derive from the same verified session, so this cannot happen
+    // without something upstream deriving identity twice and differently. The
+    // point of the test is that the refusal is reachable at all: while `ownerId`
+    // was the caller's own value echoed back, neither this check nor the
+    // service's `records.ownerId !== owner.id` guard could ever have fired.
+    profileIs({ timezoneName: TIMEZONE, userId: OTHER_OWNER_ID });
+
+    await expect(source().load(OWNER)).rejects.toMatchObject({
+      code: "owner_denied",
+    });
     expect(listGoals).not.toHaveBeenCalled();
     expect(listCompletions).not.toHaveBeenCalled();
     expect(getPlanSlice).not.toHaveBeenCalled();
@@ -387,7 +404,7 @@ function source(
   });
 }
 
-function profileIs(profile: { timezoneName: string | null }) {
+function profileIs(profile: { timezoneName: string | null; userId?: string }) {
   createProfileMock.mockResolvedValue({
     getCurrentProfile: vi.fn().mockResolvedValue({
       userId: OWNER_ID,

@@ -43,10 +43,12 @@ import {
  *
  * Only through the accepted owner-scoped factories. There is no SQL here, no
  * Supabase client, and no owner id parameter: every factory derives identity
- * from the verified session, and `load` is handed a `CoachAIOwner` solely so the
- * service can check that the records it gets back belong to the owner it asked
- * about. Passing an id in would create exactly the confused-deputy the brand on
- * `CoachAIOwner` exists to prevent.
+ * from the verified session. `load` is handed a `CoachAIOwner` so that the id
+ * the profile read returns can be checked against the id the request was made
+ * for, and so the service can repeat that check on what it gets back. The
+ * branded owner is never the value any read is scoped by; passing an id in to
+ * scope a read would create exactly the confused deputy the brand exists to
+ * prevent.
  *
  * ## The completion boundary
  *
@@ -99,7 +101,17 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
 
   async load(owner: CoachAIOwner): Promise<CoachAIOwnedRecords> {
     const profile = await (await createProfileRepository()).getCurrentProfile();
-    const timezoneName = profile?.timezoneName ?? null;
+
+    // The identity this source read, checked against the identity it was asked
+    // about. Both derive from the same verified session, so they can disagree
+    // only if identity was derived twice and differently — which is the case
+    // `coach-ai-service`'s own `records.ownerId !== owner.id` guard exists to
+    // catch, and which that guard could never catch here while `ownerId` was
+    // the caller's own value echoed back. Round 1 of M3-15D's review found that
+    // echo; this is what makes the predicate real rather than tautological.
+    if (profile !== null && profile.userId !== owner.id) {
+      throw new CoachAIError("owner_denied");
+    }
 
     // Every date below is an owner-local calendar date: the eligibility window,
     // the miss list, the forward commitment window. Without a confirmed zone
@@ -107,9 +119,10 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
     // server's zone would silently build a coaching context for the wrong days.
     // This is the same refusal assembly makes for a plan, raised earlier and for
     // both operations, because the source cannot even read the right window.
-    if (timezoneName === null) {
+    if (profile === null || profile.timezoneName === null) {
       throw new CoachAIContextBelowMinimumError(["resolved_timezone"]);
     }
+    const timezoneName = profile.timezoneName;
 
     const today = isoDateInTimezone(this.#clock(), timezoneName);
     const windowStartDate = shiftIsoDate(
@@ -175,7 +188,9 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
     };
 
     return {
-      ownerId: owner.id,
+      // The id the profile read returned, not the one the caller handed in, so
+      // the service's ownership guard compares two independently derived values.
+      ownerId: profile.userId,
       today,
       goalCollectionRevision: goals.revision,
       memoryCollectionRevision: memory.revision,
