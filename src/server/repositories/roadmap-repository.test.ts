@@ -57,9 +57,17 @@ describe("RoadmapRepository", () => {
       proposalRow(FIRST_PROPOSAL, { decision: null }),
     ]);
 
-    await expect(repository.getReviewProposals()).resolves.toMatchObject({
+    await expect(repository.getReviewProposals()).resolves.toEqual({
       open: null,
       declinedPredecessor: null,
+      history: [
+        {
+          ...proposalView(SECOND_PROPOSAL, "accepted"),
+          origin: "owner_edit",
+          sourceProposalId: FIRST_PROPOSAL,
+        },
+        proposalView(FIRST_PROPOSAL, null),
+      ],
     });
   });
 
@@ -68,9 +76,10 @@ describe("RoadmapRepository", () => {
       proposalRow(SECOND_PROPOSAL, { decision: "accepted" }),
     ]);
 
-    await expect(repository.getReviewProposals()).resolves.toMatchObject({
+    await expect(repository.getReviewProposals()).resolves.toEqual({
       open: null,
       declinedPredecessor: null,
+      history: [proposalView(SECOND_PROPOSAL, "accepted")],
     });
   });
 
@@ -248,6 +257,26 @@ function proposalRow(
         regeneration_number: 1,
       },
     ],
+  };
+}
+
+/** The view `proposalRow` maps to, written out rather than derived from it. */
+function proposalView(
+  id: string,
+  decision: "accepted" | "rejected" | "expired" | null,
+) {
+  return {
+    id,
+    origin: "ai_initial",
+    sourceProposalId: null as string | null,
+    content: { title: "Toward the hilly half", phases: [] },
+    planningNote: "Only 45 minutes on weekdays.",
+    regenerationFeedback: null,
+    regenerationNumber: 1,
+    startDate: "2026-08-10",
+    endDate: "2026-11-02",
+    decision,
+    createdAt: "2026-08-10T09:00:00.000Z",
   };
 }
 
