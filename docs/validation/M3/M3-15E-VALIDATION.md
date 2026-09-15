@@ -1,20 +1,24 @@
 # M3-15E validation: roadmap surface restoration, read-only
 
 **Ticket:** [M3-15E](../../backlog/M3/M3-15E-ROADMAP-RESTORATION.md)
-**Status:** round 1 of independent review returned two findings, both approved
-by the product owner for correction now. They are applied in `4ee7565` and
-`05ad741`, which supersede `6dbbb91` and invalidate its approval until
-re-review. The continuous-integration run for the new SHA, the Vercel Preview,
-and product-owner acceptance are outstanding.
+**Status:** round 2 of independent review approved `05ad741` with findings.
+CI run [34865418950](https://github.com/mattiss01/fittip/actions/runs/34865418950)
+was green for `e9d2367` (the round 1 record commit on top of `05ad741`), and
+its Preview <https://fittip-37tci7onu-mattis-3657s-projects.vercel.app>
+reached `READY`. The product owner approved correcting round 2 findings 1 and
+2 and two of the reviewer's notes; those corrections are `645520d`, `332165c`
+and `693bd46`, which supersede `05ad741` and invalidate its approval until
+re-review. The CI run and Vercel Preview for `693bd46`, round 3 review, and
+product-owner acceptance are outstanding.
 **Tier:** 2
 **Branch:** `ticket/m3-15e-roadmap-read`
 **Base:** `899fc1f`
-**Implementation review target:** `05ad741` — the last source commit. The
-record commit that follows it changes no application file (the evidence-commit
-exception in `AGENTS.md`).
-**Review range:** `git diff 899fc1f..05ad741`
-**Previously handed off:** `7f0eb24`, whose CI run is green. The correction
-range alone is `git diff 7f0eb24..05ad741`, which touches five source files.
+**Implementation review target:** `693bd46d1e37776d12628f87648367666be0878c`
+(`693bd46`) — the last source commit. The record commit that follows it changes
+no application file (the evidence-commit exception in `AGENTS.md`).
+**Review range:** `git diff 899fc1f..693bd46`
+**Previously reviewed:** `7f0eb24` (round 1) and `05ad741` (round 2). The
+round 2 correction range alone is `git diff 05ad741..693bd46`.
 
 Implementation commits, in order:
 
@@ -27,6 +31,78 @@ Implementation commits, in order:
 | `7f0eb24` | The Plan links to the reopened route.                                                 |
 | `4ee7565` | **Round 1, finding 1.** The provider session cap stops suppressing the safety notice. |
 | `05ad741` | **Round 1, finding 2.** An undecidable proposal stops claiming a decision is awaited. |
+| `645520d` | **Round 2, finding 1.** A superseded undecided proposal stops reading as open.        |
+| `332165c` | **Round 2, finding 2.** The surface's inlined copy moves into `ROADMAP_COPY`.         |
+| `693bd46` | **Round 2, note 3.** Two loosened repository assertions are exact again.              |
+
+Record-only commits `6dbbb91` and `e9d2367` sit between them and change no
+application file.
+
+## Round 2 review: approved with findings, corrected
+
+The reviewer approved `05ad741`. The product owner approved correcting findings
+1 and 2 and two notes now; the remaining notes are recorded under Known
+limitations rather than acted on.
+
+1. **Two records could both read "Awaiting your decision".**
+   `RoadmapProposalRecord` treated every `decision === null` as open. But
+   `getReviewProposals` returns `history` as every proposal it read, including
+   an undecided proposal that an owner edit superseded — which `open`
+   deliberately excludes. Such a proposal was labelled as awaiting a decision
+   nothing can ever make. This **subsumes the round 1 third finding** that was
+   routed to M3-15F; it is fixed here instead, and M3-15F no longer carries it.
+
+   `645520d` passes `openProposal`'s id down from the screen and derives
+   `decision ?? (id === openProposalId ? "open" : "superseded")`. A superseded
+   record carries its own label and sentence, no summary, and no control. The
+   state labels moved into `ROADMAP_COPY` in the same commit, because the new
+   label had to be added there. New copy, the product owner's to confirm:
+
+   - `proposalStateLabels.superseded` — "Superseded"
+   - `proposalSuperseded` — "A later proposal replaced this one before it was
+     decided. It stays here, unchanged."
+
+   The sentence names "a later proposal" rather than "your edit" because the
+   repository's `open` is the newest undecided proposal no other proposal names
+   as its source; any older undecided proposal also falls outside it, and the
+   sentence is true for both. It promises no future control. The new component
+   test was run against the unfixed component first and failed there (two of
+   its four tests, receiving `open` where `superseded` was expected).
+
+   The same commit corrects the `RoadmapScreenState.proposalHistory` doc
+   comment, which claimed the open proposal is always the first entry. Nothing
+   enforces that: a newer decided or edited proposal can precede it. The
+   comment now says consumers compare ids with `openProposal`, never position.
+
+2. **Copy was inlined despite the brief.** The origin and state label maps, the
+   empty state, the proposal and superseded-version section copy, the masthead
+   intro, the memory-count sentence, and the whole of `error.tsx` and
+   `loading.tsx` were written in components. `332165c` moves them into
+   `ROADMAP_COPY`, wording byte-identical. It also moves the "Version N" label,
+   which was not named but was inlined in three places. The memory sentence,
+   which interpolates, became a function entry; its exact rendered text was
+   verified by running the new literal assertion against the pre-change
+   `roadmap-screen.tsx`, where it passes.
+
+   `error.tsx` must be a Client Component, and `roadmap-records.ts` imports
+   `server-only` and lives under `@/server/**`, which
+   `src/architecture/server-boundary.test.ts` refuses in a client file. So the
+   error and loading copy lives in `src/lib/roadmap/roadmap-route-state-copy.ts`,
+   which imports nothing, and `ROADMAP_COPY` spreads it in. `error.tsx` imports
+   that module; `loading.tsx`, a Server Component, reads `ROADMAP_COPY`.
+
+   **The frontend-design section below was wrong** when it said only two
+   headings sat outside `ROADMAP_COPY`. It has been corrected.
+
+3. **Note: two repository assertions had been loosened.** `toEqual` became
+   `toMatchObject` when `getReviewProposals` gained `history`, so an unexpected
+   field or entry would have passed. `693bd46` restores `toEqual` with `history`
+   written out in full.
+
+4. **Note: the `proposalHistory` doc comment** — corrected in `645520d`; see
+   finding 1.
+
+Reviewer notes not acted on, recorded as known limitations 8 to 10.
 
 ## Round 1 review: two findings, both corrected
 
@@ -84,8 +160,8 @@ than deferring them, and both invalidate approval of `7f0eb24`.
      only its location moved.)
 
 A third finding — two records both reading "Awaiting your decision" when an
-edit and its source are both open — was routed to M3-15F, which restores the
-edit path, and is deliberately not addressed here.
+edit and its source are both open — was routed to M3-15F at the time. Round 2
+finding 1 subsumed it and it is fixed in `645520d`; see above.
 
 ## Delivered behavior
 
@@ -100,8 +176,10 @@ one owner-scoped pass, and shows:
   what it assumes, what could change it, and what it held back.
 - Every superseded version, listed with its number and horizon.
 - Every recent proposal as a record carrying the state it ended in — awaiting a
-  decision, accepted, declined, or the `expired` M3-11 wrote. An expired one
-  also says, in one sentence, that it can no longer be accepted.
+  decision, accepted, declined, the `expired` M3-11 wrote, or superseded. Only
+  the repository's `open` proposal reads as awaiting a decision; any other
+  undecided proposal reads as superseded. The open, expired and superseded
+  states each carry one sentence saying what can and cannot happen to it.
 - The static server-owned safety notice when an eligible completion carries one
   of the four flags. The flag is reported, never classified.
 - A link to the memory surface when a planning note left candidates undecided,
@@ -135,37 +213,47 @@ There is no per-ticket Playwright flow; see known limitation 1.
 ## Changed files
 
 ```
- docs/validation/M3/M3-15E-VALIDATION.md            | 353 +++++++++++++++++
- docs/validation/README.md                          |   8 +
+ docs/validation/M3/M3-15E-VALIDATION.md            | 488 +++++++++++++++++++++
+ docs/validation/README.md                          |  11 +
  e2e/m3-11-maintenance.spec.ts                      |  11 +-
  src/app/home/plan/page.tsx                         |  11 +-
  src/app/home/plan/plan.module.css                  |  14 +
- src/app/home/plan/roadmap/error.tsx                |  26 ++
- src/app/home/plan/roadmap/loading.tsx              |  13 +
- src/app/home/plan/roadmap/page.test.tsx            | 382 ++++++++++++++++++
- src/app/home/plan/roadmap/page.tsx                 | 194 ++++++++-
- src/app/home/plan/roadmap/roadmap.module.css       | 434 +++++++++++++++++++++
+ src/app/home/plan/roadmap/error.tsx                |  24 +
+ src/app/home/plan/roadmap/loading.tsx              |  14 +
+ src/app/home/plan/roadmap/page.test.tsx            | 413 +++++++++++++++++
+ src/app/home/plan/roadmap/page.tsx                 | 191 +++++++-
+ src/app/home/plan/roadmap/roadmap.module.css       | 434 ++++++++++++++++++
  src/architecture/m3-11-legacy-reset.test.ts        | 102 ++++-
- src/components/roadmap/roadmap-detail.tsx          |  90 +++++
+ src/components/roadmap/roadmap-detail.tsx          |  90 ++++
+ .../roadmap/roadmap-proposal-record.test.tsx       | 115 +++++
  src/components/roadmap/roadmap-proposal-record.tsx |  80 ++++
- src/components/roadmap/roadmap-screen.tsx          | 115 ++++++
- src/components/roadmap/roadmap-spine.tsx           | 178 +++++++++
- src/server/repositories/roadmap-repository.test.ts |  25 +-
+ src/components/roadmap/roadmap-screen.tsx          | 118 +++++
+ src/components/roadmap/roadmap-spine.tsx           | 178 ++++++++
+ src/lib/roadmap/roadmap-route-state-copy.ts        |  22 +
+ src/server/repositories/roadmap-repository.test.ts |  50 ++-
  src/server/repositories/roadmap-repository.ts      |  10 +
- src/server/roadmap/roadmap-records.ts              |  39 +-
- src/server/roadmap/roadmap-safety.test.ts          |  95 +++++
- src/server/roadmap/roadmap-safety.ts               |  97 +++++
- 20 files changed, 2259 insertions(+), 18 deletions(-)
+ src/server/roadmap/roadmap-records.ts              |  93 +++-
+ src/server/roadmap/roadmap-safety.test.ts          |  95 ++++
+ src/server/roadmap/roadmap-safety.ts               |  97 ++++
+ 22 files changed, 2645 insertions(+), 16 deletions(-)
 ```
 
-`git diff --stat 899fc1f..05ad741`. Nothing was deleted or renamed. The two
+`git diff --stat 899fc1f..693bd46`. Nothing was deleted or renamed. The two
 `docs/validation/**` counts are this record and its index as they stood at
-`05ad741`; the commit that adds this round's text grows them and changes no
-application file. The correction range alone is
-`git diff --stat 7f0eb24..05ad741` — five source files, listed under Round 1
-above.
+`693bd46`; the commit that adds this round's text grows them and changes no
+application file. The round 2 correction range is
+`git diff --stat 05ad741..693bd46`: eleven source and test files, listed under
+Round 2 above, plus this record and its index from `e9d2367`.
 
 Files whose purpose is not evident from the path and diff:
+
+- `src/lib/roadmap/roadmap-route-state-copy.ts` — added in round 2. The
+  `error.tsx` and `loading.tsx` copy, in a module with no imports so that a
+  Client Component may read it; `ROADMAP_COPY` spreads it in. It sits outside
+  the brief's expected file list because the brief's copy rule and the client
+  import boundary cannot both be met from `roadmap-records.ts`.
+- `src/components/roadmap/roadmap-proposal-record.test.tsx` — added in round 2.
+  The component test for the open, superseded and decided states.
 
 - `src/server/roadmap/roadmap-safety.ts` — the `hasSafetySignal` predicate,
   and the one file in the diff not named in the brief's expected list. It exists
@@ -194,7 +282,8 @@ Files whose purpose is not evident from the path and diff:
   which the `roadmap_proposal_decisions` check constraint has permitted since
   M3-11; the type had not caught up, so the repository was casting a real value
   to a type that could not name it. `RoadmapScreenState` gains
-  `proposalHistory`.
+  `proposalHistory`. `ROADMAP_COPY` gains every new wording this surface
+  shows; see Copy for the product owner to confirm.
 - `src/architecture/m3-11-legacy-reset.test.ts` — the deliberate invariant
   change the brief asked for. `roadmap/page.tsx` leaves `maintenancePages`;
   `actions.ts` stays on `legacyModules`, because this ticket creates none. It
@@ -249,8 +338,18 @@ Files whose purpose is not evident from the path and diff:
 
 Added or changed:
 
-- `src/app/home/plan/roadmap/page.test.tsx` (new, 11 tests; round 1 added two
-  assertions to existing tests, for the two sentences below) — the current
+- `src/components/roadmap/roadmap-proposal-record.test.tsx` (new in round 2,
+  4 tests) — the open proposal reads as awaiting a decision with the
+  unavailable sentence; an undecided proposal that is not the open one reads as
+  superseded, with its sentence, no "Awaiting your decision", and no button,
+  link or form; an undecided proposal is superseded when nothing is open; a
+  decided proposal keeps its own state whatever is open. Written first and run
+  red against the unfixed component.
+- `src/app/home/plan/roadmap/page.test.tsx` (new, 12 tests; round 1 added two
+  assertions to existing tests, for the two sentences below; round 2 added one
+  test proving the screen passes the open id down, so an edit and its source
+  read `open` and `superseded` with exactly one "Awaiting your decision", and
+  one assertion pinning the memory sentence's exact rendered text) — the current
   roadmap and its spine; the honest empty state; superseded versions listed
   under the current one; an expired proposal rendering with its state and no
   control; an open proposal rendering as a record, not a prompt; **no
@@ -266,19 +365,34 @@ Added or changed:
   is still reported. That last one was run against the unfixed call site and
   fails there, so it is known to be a real guard rather than one that passes
   either way.
-- `src/server/repositories/roadmap-repository.test.ts` — one new test that a
-  settled proposal comes back as history with the state it carries. Two existing
-  assertions move from `toEqual` to `toMatchObject` because the return type
-  gained a field; neither loses an assertion it was making.
+- `src/server/repositories/roadmap-repository.test.ts` (15 tests) — one new
+  test that a settled proposal comes back as history with the state it carries.
+  Two existing assertions were moved from `toEqual` to `toMatchObject` in the
+  first handoff; round 2 restored `toEqual` on both with `history` written out
+  in full.
 - `src/architecture/m3-11-legacy-reset.test.ts` — two new invariants, described
   under Changed files.
 
-Run locally, narrow: `npm.cmd run test:run -- src/architecture`,
+Round 1, run locally, narrow: `npm.cmd run test:run -- src/architecture`,
 `src/app/home/plan`, `src/server/roadmap/roadmap-safety.test.ts`,
 `src/server/repositories/roadmap-repository.test.ts`. All green.
 `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run build` and
 `git diff --check` are clean. `npx.cmd prettier --write` was run over the
 changed files only and left no diff.
+
+Round 2, at `693bd46`, run locally and narrow:
+
+- `npm.cmd run test:run -- src/components/roadmap/roadmap-proposal-record.test.tsx`
+  before the fix: red as intended, 2 failed and 2 passed.
+- `npm.cmd run test:run -- src/components/roadmap src/app/home/plan
+  src/architecture src/server/roadmap
+  src/server/repositories/roadmap-repository.test.ts`: 15 files, 118 tests
+  passed.
+- `npm.cmd run typecheck`, `npm.cmd run lint` and
+  `git diff --check 899fc1f..693bd46`: clean.
+- `npx.cmd prettier --write` over each commit's changed files: line endings
+  only; `git diff` was empty after staging.
+- `npm.cmd run build`: not run in round 2. CI's `static` job covers it.
 
 The complete suite was not run by hand and neither the database nor the browser
 matrix was run locally: CI owns that, and running another ticket's Playwright
@@ -293,7 +407,9 @@ for the reviewed SHA is the automated-test evidence and is outstanding.**
   boundary. Every roadmap component is a Server Component, so the full
   `RoadmapScreenState` can be handed down without any of it being serialized
   into a client payload. The only client file is the `error.tsx` boundary Next
-  requires, and it takes `reset` alone.
+  requires, and it takes `reset` alone. Since round 2 it imports
+  `src/lib/roadmap/roadmap-route-state-copy.ts`, a module of six string
+  constants with no imports, so no server code enters the client bundle.
 - `server-auth-actions` — no Server Action exists to authenticate. Every read
   authenticates through its repository's own verified-user check, and the page
   maps all four authentication errors to the same two redirects `/home` uses.
@@ -330,10 +446,18 @@ for the reviewed SHA is the automated-test evidence and is outstanding.**
 - No meter, percentage, confidence score, or progress badge anywhere. A roadmap
   contains no training volume, so anything that looked measurable would be
   measuring nothing.
-- Copy: active voice, sentence case, no apology in the failure state. Every
-  approved wording is imported from `ROADMAP_COPY`, and the two headings that
-  are not in it — "Held back for now" and "Superseded roadmaps" — are the
-  accepted M3-02 wordings rather than new ones.
+- Copy: active voice, sentence case, no apology in the failure state. **As
+  first handed off, this bullet said only two headings sat outside
+  `ROADMAP_COPY`. That was wrong:** the label maps, the empty state, the section
+  copy, the masthead intro, the memory sentence, and all of `error.tsx` and
+  `loading.tsx` were inlined too (round 2 finding 2). Since `332165c`, every
+  string this ticket introduced comes from `ROADMAP_COPY`. A grep of the route
+  and `src/components/roadmap` at `693bd46` finds these literals remaining, each
+  restored unchanged from the M3-02 surface at `e370dbe~1` rather than written
+  by this ticket: "← Plan", "FitTip / plan / roadmap", "Where this is going.",
+  the stamp "No roadmap yet", "Superseded roadmaps", "Held back for now",
+  "Phase N of M", "Review on …" / "Review when …", and the "Goal" fallback for
+  an unreadable goal title. Moving those is not in the approved correction.
 - Quality floor: 390px first, the cards and lists reflow with no fixed width,
   a visible 3px focus ring on every link, `:focus-within` on the phase band, and
   the one transition in the stylesheet is disabled under
@@ -364,8 +488,8 @@ for the reviewed SHA is the automated-test evidence and is outstanding.**
      proposal appearing as history with its state cannot be seen there, because
      there is no expired proposal to see.
    - The spine, the milestone and attention rendering, the superseded-version
-     list, the proposal records, and both new sentences therefore ship verified
-     by unit fixtures alone.
+     list, the proposal records, and all three proposal sentences therefore
+     ship verified by unit fixtures alone.
 
    **This is the largest gap in the evidence and I could not close it from
    here:** creating the data would require the revoked functions, which is
@@ -381,7 +505,9 @@ for the reviewed SHA is the automated-test evidence and is outstanding.**
    becomes reachable again, and it must retire the second sentence when it
    does, or the screen will keep saying a decision is unavailable after it is
    not. **That is a real trap for the next ticket and the reviewer should
-   confirm it is written into M3-15F's brief.**
+   confirm it is written into M3-15F's brief.** `proposalSuperseded`, added in
+   round 2, claims only that a later proposal replaced this one before it was
+   decided; that is true of every undecided proposal `open` excludes.
 4. **`hasSafetySignal` deliberately applies neither transmission limit, and can
    therefore disagree with a generation's own value.** This surface passes an
    explicit uncapped session count and no byte budget; the AI path passes both
@@ -419,15 +545,78 @@ for the reviewed SHA is the automated-test evidence and is outstanding.**
 7. **Not verified by me:** the hosted Preview, any authenticated hosted read,
    the 390px visual pass, and the CI result for the reviewed SHA. I have no
    reach to the hosted database and did not attempt one.
+8. **The page reads through `createProfileRepository` and
+   `createCompletionLog`, beyond the brief's list** of roadmap, goal and memory
+   repositories (round 2 reviewer note). Both were disclosed in the first
+   handoff and are necessary: the profile supplies the owner's time zone for
+   today, and the completion log supplies the 56-day window
+   `hasRecentSafetySignal` reads. Both are accepted owner-scoped factories, and
+   `allowedRoadmapModules` names them explicitly.
+9. **No automated browser or hosted evidence exists for acceptance criteria 1
+   and 2** (round 2 reviewer note). Criterion 1's 390px render and criterion
+   2's expired record are asserted only in jsdom unit tests; see limitations 1
+   and 2.
+10. **The open-proposal chip reads "Awaiting your decision" directly above
+    "Deciding on a proposal is not available yet."** (round 2 reviewer note).
+    The sentence stops the chip being an inert affordance, but the pairing may
+    still read as contradictory. That is a product-owner copy call and is not
+    changed here; see Copy for the product owner to confirm.
+
+## Copy for the product owner to confirm
+
+Every user-visible string this ticket introduced, as it stands at `693bd46`.
+All are in `ROADMAP_COPY` (`src/server/roadmap/roadmap-records.ts`), with the
+error and loading entries spread in from
+`src/lib/roadmap/roadmap-route-state-copy.ts`. None is an M3-02 decision.
+Confirm or reword each; on the founder account the Preview can show only the
+masthead intro and the empty state (known limitation 2).
+
+- `routeIntro` — "Months of direction, not a week of sessions. This is the
+  roadmap you have now, every version before it, and what was proposed along
+  the way."
+- `emptyRoadmapTitle` — "No roadmap yet." (M3-02 used "No roadmap yet" only as
+  the masthead stamp, which is unchanged.)
+- `emptyRoadmapBody` — "A roadmap is months of direction rather than a week of
+  sessions. Once you have one it stays here, with every version before it."
+- `supersededRoadmapsSupport` — "Earlier versions stay readable and
+  unchanged." (Replaces M3-02's counted "N earlier versions stay readable and
+  unchanged.", now that the versions are listed.)
+- `versionLabel` — "Version N": M3-02's stamp wording, now also on the current
+  roadmap's horizon line and on each superseded version's chip.
+- `proposalsHeading` — "Proposals"
+- `proposalsSupport` — "What was proposed, and what became of it."
+- `proposalStateLabels` — "Awaiting your decision", "Accepted", "Declined",
+  "Expired", and, new in round 2, "Superseded".
+- `proposalOriginLabels` — "From the coach", "Regenerated", "Your edit".
+- `proposalDecisionUnavailable` — "Deciding on a proposal is not available
+  yet. This one stays here, unchanged, and nothing happens to it in the
+  meantime."
+- `proposalExpired` — "This proposal can no longer be accepted. It stays
+  here, unchanged, with everything it was built on."
+- `proposalSuperseded` (round 2) — "A later proposal replaced this one before
+  it was decided. It stays here, unchanged."
+- `stateKicker` — "Roadmap" (error and loading states; M3-02 used
+  "Plan / roadmap").
+- `errorTitle` — "Your roadmap could not be read."
+- `errorBody` — "Nothing was lost and nothing was changed. This surface only
+  reads, so it is safe to try again."
+- `errorRetry` — "Retry" (M3-02's wording).
+- `loadingTitle` — "Loading your roadmap."
+- `loadingBody` — "Nothing is proposed or changed while this loads."
+
+`memoryCandidatesWaiting` ("N item(s) from a planning note are waiting for
+you. …") moved into `ROADMAP_COPY` in round 2 but is M3-02's wording, restored
+unchanged, as are `memoryPanelTitle` and `memoryReviewLink`.
 
 ## Independent reviewer checklist
 
-Review the exact commit `05ad741` on `ticket/m3-15e-roadmap-read`, over
-`git diff 899fc1f..05ad741`. Round 1 found two defects against `7f0eb24`, so
-that commit and its preview no longer stand; the correction range alone is
-`git diff 7f0eb24..05ad741`. Confirm the CI run for `05ad741` is green and its
-Vercel Preview reached `READY`. Do not re-run lint, typecheck, the unit suite,
-the build, or the browser matrix; CI covers all of them.
+Round 3. Review the exact commit `693bd46` on `ticket/m3-15e-roadmap-read`,
+over `git diff 899fc1f..693bd46`. Rounds 1 and 2 reviewed `7f0eb24` and
+`05ad741`; neither commit nor its preview stands. The round 2 correction range
+alone is `git diff 05ad741..693bd46` (the record commit `e9d2367` falls inside
+it and changes no application file). Confirm the CI run for `693bd46` is green
+and its Vercel Preview reached `READY`. Do not re-run lint, typecheck, the unit
+suite, the build, or the browser matrix; CI covers all of them.
 
 What needs judgment CI cannot supply:
 
@@ -448,7 +637,8 @@ What needs judgment CI cannot supply:
    uses.
 4. **The repository change.** Confirm `history` adds no query, that `open` and
    `declinedPredecessor` keep their exact previous semantics, and that the two
-   tests moved from `toEqual` to `toMatchObject` have not lost an assertion.
+   tests round 2 restored to `toEqual` assert the whole result, `history`
+   included, with expected values written out rather than derived.
    `open` is what M3-15F will accept against, so a change in its meaning here
    would be a defect there.
 5. **`RoadmapDecision` gaining `expired`.** Confirm this matches the check
@@ -473,16 +663,32 @@ What needs judgment CI cannot supply:
    copy decision, not as an implementation detail. Known limitation 3 records
    that M3-15F must retire `proposalDecisionUnavailable` when deciding becomes
    possible.
-8. **The Plan link.** Judge whether adding an entry point belongs in this
-   ticket. It is `7f0eb24` alone and reverts cleanly.
-9. **Honest states.** Confirm the empty state, `error.tsx`, `loading.tsx` and
-   the expired sentence each say a different true thing, that none invents a
-   training fact or a capability that does not exist, and that the empty state
-   does not imply a roadmap can be generated today.
-10. **Product invariants.** Confirm nothing totals, scores, ranks, streaks or
+8. **Round 2 finding 1: superseded proposals.** Confirm that only the proposal
+   whose id equals `openProposal`'s reads `open`; that every other undecided
+   proposal reads `superseded` with no summary and no control; that a decided
+   proposal keeps its own state regardless; and that the corrected
+   `proposalHistory` doc comment claims nothing the repository does not do.
+   Judge whether "A later proposal replaced this one before it was decided." is
+   true for every undecided proposal `getReviewProposals` excludes from `open`.
+9. **Round 2 finding 2: copy.** Confirm no string this ticket introduced
+   remains inlined in the route or `src/components/roadmap`, that every moved
+   wording is byte-identical to what it replaced, and that the remaining
+   literals listed under Project skills applied are M3-02's at `e370dbe~1`.
+   Confirm `src/lib/roadmap/roadmap-route-state-copy.ts` imports nothing, that
+   `error.tsx` imports nothing under `@/server/**`, and that spreading it into
+   `ROADMAP_COPY` cannot shadow an existing key.
+10. **The Plan link.** Judge whether adding an entry point belongs in this
+    ticket. It is `7f0eb24` alone and reverts cleanly.
+11. **Honest states.** Confirm the empty state, `error.tsx`, `loading.tsx`,
+    and the expired and superseded sentences each say a different true thing,
+    that none invents a training fact or a capability that does not exist, and
+    that the empty state does not imply a roadmap can be generated today.
+12. **Product invariants.** Confirm nothing totals, scores, ranks, streaks or
     charts; that goal attention is rendered as an ordinal level and never as a
     share; that the safety notice is the server-owned copy and nothing near it
     assesses a symptom; and that no preserved record is rewritten.
-11. **Scope.** Confirm nothing outside the brief changed beyond the two items
-    called out above, and that the `e2e/m3-11-maintenance.spec.ts` edit is the
-    minimum needed to stop it asserting a stub on a reopened route.
+13. **Scope.** Confirm nothing outside the brief changed beyond the items
+    called out under Changed files (the Plan link, `roadmap-safety.ts`, and
+    round 2's `src/lib/roadmap/roadmap-route-state-copy.ts`), and that the
+    `e2e/m3-11-maintenance.spec.ts` edit is the minimum needed to stop it
+    asserting a stub on a reopened route.

@@ -45,10 +45,14 @@ Validation records and their visual evidence are grouped by milestone.
   round 1 of independent review returned two findings, both corrected in
   `4ee7565` (a provider session cap was suppressing the safety notice for an
   ordinary trainee) and `05ad741` (an undecidable proposal claimed a decision
-  was awaited); `05ad741` awaits re-review. `/home/plan/roadmap` leaves the
-  M3-11 maintenance stub as a read surface: the current roadmap on the restored M3-02
-  spine, every superseded version, and every proposal carrying the state it
-  ended in, including the `expired` M3-11 wrote. Read-only — no Server Action,
+  was awaited). Round 2 approved `05ad741` with findings, corrected in
+  `645520d` (a superseded undecided proposal read as awaiting a decision),
+  `332165c` (inlined copy moved into `ROADMAP_COPY`) and `693bd46` (loosened
+  repository assertions); `693bd46` awaits round 3 review.
+  `/home/plan/roadmap` leaves the M3-11 maintenance stub as a read surface:
+  the current roadmap on the restored M3-02 spine, every superseded version,
+  and every proposal carrying the state it ended in, including the `expired`
+  M3-11 wrote. Read-only — no Server Action,
   no write, no migration, no provider call, and an architecture assertion that
   no code path reaches the five revoked ADR-015 functions. Generating,
   accepting, declining and editing are M3-15F
