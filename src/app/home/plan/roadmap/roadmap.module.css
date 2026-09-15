@@ -1,0 +1,434 @@
+/* A surveyed route line rather than a timeline.
+   The spine is a drawn rule down the page; each phase hangs off it as a band
+   with a node, milestones are small markers ticked back to the rule, and a
+   review point cuts the rule open — a notch you cannot read as decoration.
+   The interrupt is the one loud element on the surface; everything else stays
+   quiet, and there is deliberately no meter, percentage, or confidence badge
+   anywhere, because M3-02 decision 3 forbids implying certainty the roadmap
+   does not have.
+
+   M3-15E restores the signature as M3-02 accepted it and drops every rule that
+   styled a control: the compose form, the action dock, the confirmation dialog
+   and the pending state are all M3-15F, and nothing here can dress one up. */
+.page {
+  --roadmap-spine: #17332e;
+  --roadmap-band: #e3ebdb;
+  --roadmap-node: #2f5d50;
+  --roadmap-checkpoint: #a8481f;
+  --roadmap-rule: 3px;
+  --roadmap-gutter: 1.35rem;
+  --attention-primary: #17332e;
+  --attention-secondary: #2f5d50;
+  --attention-maintenance: #62726c;
+  --attention-deferred: #8a8f88;
+}
+
+.screen {
+  display: grid;
+  gap: 1.6rem;
+  margin-top: 1.75rem;
+}
+
+/* The static non-diagnostic copy. Server-owned, never model-authored, and
+   never editable — so it is stamped rather than set as prose the surrounding
+   content could be mistaken for. */
+.safetyNotice {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--roadmap-checkpoint);
+  border-left-width: var(--roadmap-rule);
+  background: #fff4ec;
+  color: #6d2f13;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.card {
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem 1rem 1rem 0.25rem;
+  background: var(--surface);
+  box-shadow: 7px 7px 0 #c9d8c5;
+}
+
+.cardHeading {
+  margin: 0 0 0.5rem;
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.reviewHeader {
+  margin: 0;
+  font-family: "Courier New", monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.proposalTitle {
+  margin: 0.15rem 0 0;
+  font-size: 1.6rem;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.proposalSummary {
+  margin: 0.6rem 0 0;
+  line-height: 1.6;
+}
+
+.horizon {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  font-family: "Courier New", monospace;
+  font-size: 0.75rem;
+}
+
+/* ---- The spine ---------------------------------------------------------- */
+
+.spine {
+  position: relative;
+  margin: 1.25rem 0 0;
+  padding: 0 0 0 var(--roadmap-gutter);
+  list-style: none;
+}
+
+/* The drawn rule itself. */
+.spine::before {
+  content: "";
+  position: absolute;
+  top: 0.35rem;
+  bottom: 0.35rem;
+  left: 0;
+  width: var(--roadmap-rule);
+  background: var(--roadmap-spine);
+}
+
+.phase,
+.checkpoint {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+/* The node that attaches a phase to the rule. */
+.phase::before {
+  content: "";
+  position: absolute;
+  top: 0.9rem;
+  left: calc(-1 * var(--roadmap-gutter));
+  width: 0.85rem;
+  height: 0.85rem;
+  border: var(--roadmap-rule) solid var(--roadmap-spine);
+  border-radius: 50%;
+  background: var(--surface);
+  transform: translateX(-0.28rem);
+  transition: transform 120ms ease;
+}
+
+.phaseBand {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-left: var(--roadmap-rule) solid var(--roadmap-node);
+  border-radius: 0 0.6rem 0.6rem 0;
+  background: var(--roadmap-band);
+}
+
+.phaseBand:focus-within {
+  outline: 2px solid var(--roadmap-node);
+  outline-offset: 2px;
+}
+
+.phaseIndex {
+  margin: 0;
+  color: var(--roadmap-node);
+  font-family: "Courier New", monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.phaseTitle {
+  margin: 0.15rem 0 0;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.phaseDates {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-family: "Courier New", monospace;
+  font-size: 0.74rem;
+}
+
+.phaseFocus {
+  margin: 0.55rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.attentionList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Ordinal, never a percentage: a model-generated 60/40 split would look
+   measurable against a roadmap that contains no volume to measure. */
+.attention {
+  padding: 0.2rem 0.45rem;
+  border: 1px solid currentColor;
+  border-radius: 0.2rem;
+  font-family: "Courier New", monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.attention[data-level="primary"] {
+  color: var(--attention-primary);
+}
+.attention[data-level="secondary"] {
+  color: var(--attention-secondary);
+}
+.attention[data-level="maintenance"] {
+  color: var(--attention-maintenance);
+}
+.attention[data-level="deferred"] {
+  color: var(--attention-deferred);
+}
+
+.attentionReason {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.milestoneList {
+  margin: 0.8rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.milestone {
+  position: relative;
+  padding-left: 1.1rem;
+  margin-top: 0.6rem;
+}
+
+/* The marker, ticked back toward the rule. */
+.milestone::before {
+  content: "";
+  position: absolute;
+  top: 0.42rem;
+  left: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--roadmap-node);
+}
+
+.milestoneTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.milestoneDate {
+  margin: 0.1rem 0 0;
+  color: var(--muted);
+  font-family: "Courier New", monospace;
+  font-size: 0.72rem;
+}
+
+.milestoneCriterion {
+  margin: 0.25rem 0 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+/* A review point cuts the rule open. The notch is drawn in the surface colour
+   over the spine, so the line genuinely stops rather than being overlaid. */
+.checkpoint::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(-1 * var(--roadmap-gutter));
+  width: calc(var(--roadmap-rule) + 2px);
+  background: var(--background);
+}
+
+.checkpointBody {
+  position: relative;
+  padding: 0.75rem 0.9rem;
+  border: 1px dashed var(--roadmap-checkpoint);
+  border-left: var(--roadmap-rule) solid var(--roadmap-checkpoint);
+  background: #fff4ec;
+}
+
+.checkpointKind {
+  margin: 0;
+  color: var(--roadmap-checkpoint);
+  font-family: "Courier New", monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.checkpointTitle {
+  margin: 0.15rem 0 0;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.checkpointQuestion {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* ---- Sections under the spine ------------------------------------------ */
+
+.section {
+  margin-top: 1.4rem;
+}
+
+.sectionHeading {
+  margin: 0 0 0.5rem;
+  font-family: "Courier New", monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.plainList {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.plainList li {
+  margin-top: 0.4rem;
+  line-height: 1.55;
+}
+
+.uncertainty {
+  margin-top: 0.7rem;
+  padding-left: 0.8rem;
+  border-left: 2px solid var(--border);
+}
+
+.uncertainty p {
+  margin: 0.15rem 0 0;
+  line-height: 1.5;
+}
+
+.uncertaintyMeta {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* ---- Records ------------------------------------------------------------ */
+
+.historyList {
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.historyItem {
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.historyItem:first-child {
+  border-top: 0;
+}
+
+/* The state a record ended in, set as a label rather than a status light.
+   Nothing here ranks one outcome above another: a declined proposal is a
+   decision the owner made, not a failure. */
+.state {
+  display: inline-block;
+  margin: 0;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid currentColor;
+  border-radius: 0.2rem;
+  color: var(--attention-maintenance);
+  font-family: "Courier New", monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.state[data-state="open"] {
+  color: var(--roadmap-checkpoint);
+}
+
+.state[data-state="accepted"] {
+  color: var(--roadmap-node);
+}
+
+.recordTitle {
+  margin: 0.35rem 0 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.recordBody {
+  margin: 0.35rem 0 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+/* What can and cannot be done with this record. Set apart from the record's
+   own content so it does not read as something the coach wrote. */
+.recordNote {
+  margin: 0.4rem 0 0;
+  padding-left: 0.7rem;
+  border-left: 2px solid var(--border);
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.emptyState {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.memoryPanel {
+  padding: 1.1rem;
+  border: 1px dashed var(--border);
+  border-radius: 0.6rem;
+  background: #f7f4ea;
+}
+
+.memoryPanel a {
+  display: inline-block;
+  margin-top: 0.9rem;
+}
+
+.screen a:focus-visible {
+  outline: 3px solid var(--accent-dark);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phase::before {
+    transition: none;
+  }
+}

@@ -25,9 +25,67 @@ const legacyModules = [
   "src/app/home/plan/roadmap/actions.ts",
 ] as const;
 
-const maintenancePages = [
-  "src/app/home/plan/roadmap/page.tsx",
-  "src/app/home/plan/proposal/page.tsx",
+/**
+ * M3-15E reopened `/home/plan/roadmap`, so only the proposal route is still on
+ * the maintenance module. `/home/plan/proposal` is M3-16 and stays here.
+ */
+const maintenancePages = ["src/app/home/plan/proposal/page.tsx"] as const;
+
+/**
+ * The reopened roadmap route, which reads and does not write.
+ *
+ * It gets its own allowlist rather than joining `rollingPlanSurface` below,
+ * because `allowedServerModules` is shared with the Plan and Today: adding the
+ * roadmap, goal and completion modules there would hand those two routes a
+ * roadmap repository they have no business holding, which is the loosening
+ * that list exists to prevent.
+ */
+const roadmapReadSurface = ["src/app/home/plan/roadmap/page.tsx"] as const;
+
+const allowedRoadmapModules = [
+  "@/server/goals/goal-records",
+  "@/server/repositories/completion-log-repository",
+  "@/server/repositories/goal-repository",
+  "@/server/repositories/profile-repository",
+  "@/server/repositories/roadmap-repository",
+  "@/server/roadmap/roadmap-records",
+  "@/server/roadmap/roadmap-safety",
+  "@/server/training/training-history-context",
+] as const;
+
+/**
+ * The whole reopened roadmap surface: the route and the components only it
+ * renders. The revoked-function assertion covers both, because a control that
+ * reached one of the five would be written in a component, not in the page.
+ */
+const roadmapSurfaceDirectories = [
+  "src/app/home/plan/roadmap",
+  "src/components/roadmap",
+] as const;
+
+/**
+ * M3-11 revoked all five from every role and they stay revoked until M3-15F
+ * restores them deliberately. Naming the repository methods as well as the
+ * functions is the point: the repository is the only application path to them,
+ * so a read surface that never calls one of these methods cannot reach a
+ * revoked function however the SQL below it changes.
+ */
+const revokedRoadmapFunctions = [
+  "begin_roadmap_generation",
+  "finish_roadmap_generation",
+  "record_roadmap_memory_candidates",
+  "apply_roadmap_proposal_change",
+  "accept_roadmap_proposal",
+] as const;
+
+const revokedRoadmapMethods = [
+  "beginGeneration",
+  "finishGenerationWithProposal",
+  "finishGenerationAsFailed",
+  "recordMemoryCandidates",
+  "editProposal",
+  "declineProposal",
+  "acceptProposal",
 ] as const;
 
 /**
@@ -123,6 +181,44 @@ describe("M3-11 legacy runtime closure", () => {
       const source = readFileSync(join(root, path), "utf8");
       expect(source, path).toContain("TrainingMaintenance");
       expect(source, path).not.toMatch(/@\/server\/|@\/lib\/supabase/);
+    }
+  });
+
+  it("lets the reopened roadmap route reach only its own allowlist", () => {
+    for (const path of roadmapReadSurface) {
+      const source = readFileSync(join(root, path), "utf8");
+      const imported = [...source.matchAll(/from "(@\/server\/[^"]+)"/g)].map(
+        (match) => match[1],
+      );
+      expect(imported.length, path).toBeGreaterThan(0);
+      for (const specifier of imported) {
+        expect(
+          allowedRoadmapModules as readonly string[],
+          `${path} imports ${specifier}`,
+        ).toContain(specifier);
+      }
+      expect(source, path).not.toMatch(/@\/lib\/supabase/);
+    }
+  });
+
+  it("keeps the reopened roadmap surface away from every revoked function", () => {
+    const files = roadmapSurfaceDirectories.flatMap((directory) =>
+      sourceFiles(join(root, directory)),
+    );
+    expect(files.length).toBeGreaterThan(3);
+
+    for (const path of files) {
+      const source = readFileSync(path, "utf8");
+      for (const name of revokedRoadmapFunctions) {
+        expect(source, `${path} names ${name}`).not.toContain(name);
+      }
+      for (const method of revokedRoadmapMethods) {
+        expect(source, `${path} calls ${method}`).not.toContain(`${method}(`);
+      }
+      // A read surface has no write path at all, so it has nothing to
+      // revalidate and no action to declare.
+      expect(source, path).not.toContain('"use server"');
+      expect(source, path).not.toContain("revalidatePath");
     }
   });
 

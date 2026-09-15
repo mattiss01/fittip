@@ -60,6 +60,14 @@ describe("RoadmapRepository", () => {
     await expect(repository.getReviewProposals()).resolves.toEqual({
       open: null,
       declinedPredecessor: null,
+      history: [
+        {
+          ...proposalView(SECOND_PROPOSAL, "accepted"),
+          origin: "owner_edit",
+          sourceProposalId: FIRST_PROPOSAL,
+        },
+        proposalView(FIRST_PROPOSAL, null),
+      ],
     });
   });
 
@@ -71,6 +79,26 @@ describe("RoadmapRepository", () => {
     await expect(repository.getReviewProposals()).resolves.toEqual({
       open: null,
       declinedPredecessor: null,
+      history: [proposalView(SECOND_PROPOSAL, "accepted")],
+    });
+  });
+
+  // M3-11 appended `expired` to proposals whose sources it deleted. Such a
+  // proposal is neither open nor a predecessor, so `history` is the only field
+  // a screen could read it from.
+  it("returns a settled proposal as history with the state it carries", async () => {
+    const { repository } = readingProposals([
+      proposalRow(SECOND_PROPOSAL, { decision: "expired" }),
+      proposalRow(FIRST_PROPOSAL, { decision: "accepted" }),
+    ]);
+
+    await expect(repository.getReviewProposals()).resolves.toMatchObject({
+      open: null,
+      declinedPredecessor: null,
+      history: [
+        { id: SECOND_PROPOSAL, decision: "expired" },
+        { id: FIRST_PROPOSAL, decision: "accepted" },
+      ],
     });
   });
 
@@ -208,7 +236,7 @@ function readingProposals(rows: ReturnType<typeof proposalRow>[]) {
 
 function proposalRow(
   id: string,
-  options: { decision: "accepted" | "rejected" | null },
+  options: { decision: "accepted" | "rejected" | "expired" | null },
 ) {
   return {
     id,
@@ -229,6 +257,26 @@ function proposalRow(
         regeneration_number: 1,
       },
     ],
+  };
+}
+
+/** The view `proposalRow` maps to, written out rather than derived from it. */
+function proposalView(
+  id: string,
+  decision: "accepted" | "rejected" | "expired" | null,
+) {
+  return {
+    id,
+    origin: "ai_initial",
+    sourceProposalId: null as string | null,
+    content: { title: "Toward the hilly half", phases: [] },
+    planningNote: "Only 45 minutes on weekdays.",
+    regenerationFeedback: null,
+    regenerationNumber: 1,
+    startDate: "2026-08-10",
+    endDate: "2026-11-02",
+    decision,
+    createdAt: "2026-08-10T09:00:00.000Z",
   };
 }
 

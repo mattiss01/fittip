@@ -1,5 +1,6 @@
 import "server-only";
 
+import { ROADMAP_ROUTE_STATE_COPY } from "@/lib/roadmap/roadmap-route-state-copy";
 import type {
   RoadmapMemoryCandidate,
   RoadmapProposal,
@@ -28,7 +29,17 @@ export type RoadmapProposalOrigin =
   | "ai_regeneration"
   | "owner_edit";
 
-export type RoadmapDecision = "accepted" | "rejected";
+/**
+ * The three terminal states a proposal can carry.
+ *
+ * `expired` is M3-11's: a proposal whose sources were legacy plan or completion
+ * records could no longer be accepted once those records were deleted, so the
+ * reset appended the state rather than rewriting or dropping the proposal. The
+ * check constraint on `roadmap_proposal_decisions` has allowed all three since
+ * that migration; this type had not caught up, so a repository read of an
+ * expired proposal produced a value no consumer could name.
+ */
+export type RoadmapDecision = "accepted" | "rejected" | "expired";
 
 export type RoadmapGoalSummary = {
   id: string;
@@ -182,6 +193,19 @@ export type RoadmapScreenState = {
   history: RoadmapVersionView[];
   /** The proposal awaiting a decision, if any. */
   openProposal: RoadmapProposalView | null;
+  /**
+   * Recent proposals, newest first, each carrying its own decision state.
+   *
+   * The open proposal appears here too, but nothing guarantees where: it is the
+   * newest undecided proposal that no other proposal names as its source, so a
+   * newer decided or edited proposal can precede it. Not every undecided entry
+   * is open either — an owner edit supersedes its source without deciding it.
+   * A consumer tells the open proposal apart by comparing ids with
+   * `openProposal`, never by position or by a missing decision. Everything
+   * appears so that a proposal the owner remembers is visibly accounted for
+   * rather than silently missing from the screen.
+   */
+  proposalHistory: RoadmapProposalView[];
   /** Undecided candidates extracted from a planning note. */
   openMemoryCandidateCount: number;
   goals: RoadmapGoalSummary[];
@@ -238,6 +262,73 @@ export const ROADMAP_COPY = {
     "FitTip cannot assess or diagnose symptoms. If symptoms are severe, sudden, or getting worse, stop the affected activity and contact a qualified health professional.",
   regenerationCapReached:
     "You have used all three regenerations for these dates. Edit the proposal directly, or change the dates to start a fresh request.",
+  /**
+   * The two sentences a proposal record carries on the read-only surface.
+   *
+   * Both are M3-15E's, and both exist for the same reason the ticket forbids a
+   * disabled button: an owner cannot tell a proposal that is waiting for them
+   * from one nothing will ever act on. `proposalDecisionUnavailable` is the
+   * more important of the two — "Awaiting your decision" is an inert
+   * affordance stated in copy if the screen offers no way to decide, and until
+   * M3-15F restores the five revoked functions there is none anywhere in the
+   * application.
+   *
+   * They are new user-visible strings rather than M3-02 decisions, so they are
+   * the product owner's to confirm.
+   */
+  proposalDecisionUnavailable:
+    "Deciding on a proposal is not available yet. This one stays here, unchanged, and nothing happens to it in the meantime.",
+  proposalExpired:
+    "This proposal can no longer be accepted. It stays here, unchanged, with everything it was built on.",
+  /**
+   * An undecided proposal that is not the open one.
+   *
+   * An owner edit supersedes its source without deciding it, so the source
+   * carries no decision and is still not what awaits one. Labelling it
+   * "Awaiting your decision" would put two waiting records on the screen, one
+   * of which nothing will ever decide. Also M3-15E's, and the product owner's
+   * to confirm.
+   */
+  proposalSuperseded:
+    "A later proposal replaced this one before it was decided. It stays here, unchanged.",
+  /** The state chip on each proposal record. */
+  proposalStateLabels: {
+    open: "Awaiting your decision",
+    accepted: "Accepted",
+    rejected: "Declined",
+    expired: "Expired",
+    superseded: "Superseded",
+  },
+  /** Where each proposal record says it came from. */
+  proposalOriginLabels: {
+    ai_initial: "From the coach",
+    ai_regeneration: "Regenerated",
+    owner_edit: "Your edit",
+  } satisfies Record<RoadmapProposalOrigin, string>,
+  /*
+   * The read-only surface's own framing. Everything from here to the memory
+   * sentence is M3-15E's and the product owner's to confirm. None of it offers
+   * a capability: the empty state says what a roadmap is, not how to get one,
+   * because nothing can create one yet.
+   */
+  routeIntro:
+    "Months of direction, not a week of sessions. This is the roadmap you have now, every version before it, and what was proposed along the way.",
+  emptyRoadmapTitle: "No roadmap yet.",
+  emptyRoadmapBody:
+    "A roadmap is months of direction rather than a week of sessions. Once you have one it stays here, with every version before it.",
+  supersededRoadmapsSupport: "Earlier versions stay readable and unchanged.",
+  proposalsHeading: "Proposals",
+  proposalsSupport: "What was proposed, and what became of it.",
+  /** M3-02's wording, restored unchanged; it was inlined before M3-11. */
+  memoryCandidatesWaiting: (count: number) =>
+    `${count} item${count === 1 ? "" : "s"} from a planning note are waiting for you. They are not used for coaching until you accept them.`,
+  /**
+   * "Version 3": the M3-02 masthead stamp's wording, which M3-15E also uses on
+   * the current roadmap's horizon line and on each superseded version.
+   */
+  versionLabel: (versionNumber: number) => `Version ${versionNumber}`,
+  /** `error.tsx` and `loading.tsx`; see that module for why it lives apart. */
+  ...ROADMAP_ROUTE_STATE_COPY,
 } as const;
 
 export type RoadmapMemoryCandidateView = RoadmapMemoryCandidate & {

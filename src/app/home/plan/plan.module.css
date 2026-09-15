@@ -13,6 +13,20 @@
   --plan-locked: #8b341f;
 }
 
+/* The two surfaces the Plan hands off to: the session library beside it and
+   the roadmap above it. They are set as one row so neither reads as the
+   Plan's own primary action — nothing here changes a plan. */
+.planLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+
+.planLinks .libraryLink {
+  margin-top: 0;
+}
+
 .libraryLink {
   width: fit-content;
   min-height: 2.75rem;

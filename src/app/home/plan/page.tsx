@@ -49,9 +49,14 @@ export default async function PlanPage() {
           </p>
         </div>
       </header>
-      <Link className={styles.libraryLink} href="/home/plan/saved">
-        Saved sessions
-      </Link>
+      <nav className={styles.planLinks} aria-label="Plan surfaces">
+        <Link className={styles.libraryLink} href="/home/plan/saved">
+          Saved sessions
+        </Link>
+        <Link className={styles.libraryLink} href="/home/plan/roadmap">
+          Roadmap
+        </Link>
+      </nav>
       {timezoneName === null ? (
         <TimezoneConfirmation />
       ) : (

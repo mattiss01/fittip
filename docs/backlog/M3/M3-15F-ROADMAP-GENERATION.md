@@ -69,6 +69,17 @@ it lands here. This ticket is the first to put that path back in front of the
 owner and should confirm the defect's current behaviour deliberately rather
 than rediscover it during acceptance.
 
+M3-15E's round 3 review left two copy defects on the read components this
+ticket reworks, which the product owner routed here on 15 September 2026 (see
+`docs/validation/M3/M3-15E-VALIDATION.md`, *Round 3 review*):
+
+- Restore the M3-02 "Why it matters:" and "Watch for:" labels on uncertainty
+  entries in `roadmap-detail.tsx`, via `ROADMAP_COPY`.
+- Move the approved M3-02 wordings still inlined in the roadmap `page.tsx`,
+  `roadmap-screen.tsx`, `roadmap-detail.tsx` and `roadmap-spine.tsx` into
+  `ROADMAP_COPY`, unchanged, and remove or use the orphaned
+  `reviewPointsHeading`.
+
 ## Decisions needed before dispatch
 
 1. **The live provider call.** Every AI ticket since 12 August 2026 has shipped
