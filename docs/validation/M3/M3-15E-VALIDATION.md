@@ -1,19 +1,10 @@
 # M3-15E validation: roadmap surface restoration, read-only
 
 **Ticket:** [M3-15E](../../backlog/M3/M3-15E-ROADMAP-RESTORATION.md)
-**Status:** round 3 of independent review **approved `693bd46`** on
-15 September 2026, with two copy findings the product owner chose to defer to
-M3-15F (see *Round 3 review*). CI run
-[34957935928](https://github.com/mattiss01/fittip/actions/runs/34957935928)
-was green for `e5f4c37` (the round 2 record commit on top of `693bd46`) on all
-three jobs, and its Preview
-<https://fittip-4qbp0vqju-mattis-3657s-projects.vercel.app> reached `READY`.
-Product-owner acceptance against that Preview is outstanding.
-
-Earlier rounds: round 2 approved `05ad741` with findings, corrected in
-`645520d`, `332165c` and `693bd46`; its CI run
-[34865418950](https://github.com/mattiss01/fittip/actions/runs/34865418950)
-was green for `e9d2367`.
+**Status:** accepted by the product owner on 15 September 2026 against
+`693bd46`; merged to `master` as `3570c25`, whose CI run is green and whose
+founder deployment succeeded (see *Acceptance*). Round 3 of independent review
+approved `693bd46` with two copy findings deferred to M3-15F.
 **Tier:** 2
 **Branch:** `ticket/m3-15e-roadmap-read`
 **Base:** `899fc1f`
@@ -735,3 +726,35 @@ What needs judgment CI cannot supply:
     round 2's `src/lib/roadmap/roadmap-route-state-copy.ts`), and that the
     `e2e/m3-11-maintenance.spec.ts` edit is the minimum needed to stop it
     asserting a stub on a reopened route.
+
+## Acceptance
+
+**Accepted by the product owner on 15 September 2026**, against the
+independently reviewed `693bd46d1e37776d12628f87648367666be0878c` and its
+Vercel Preview at https://fittip-4qbp0vqju-mattis-3657s-projects.vercel.app
+(deployed for the record-only `e5f4c37` on top of it). The acceptance includes
+the copy listed under *Copy for the product owner to confirm*, the product
+owner's waiver of the no-inline rule recorded under *Round 3 review*, and known
+limitations 11–13, whose fixes are carried on M3-15F.
+
+**Hosted read, attested by the product owner.** Limitation 2 expected the
+Preview to hold no roadmap data. It did: the product owner found a roadmap they
+had generated earlier and reviewed it on the Preview, reporting that it all
+looks good. So the authenticated hosted read path — the current roadmap on the
+founder Supabase project, under RLS — was exercised on real data, not only the
+empty state. This is the product owner's attestation; the lead cannot reach the
+hosted database or pass Vercel deployment protection.
+
+| Step | Result |
+| --- | --- |
+| Merge to `master` | `3570c252a55772eef9858fccc1df7c2f21c4bda4`, a `--no-ff` merge of the ticket branch at `d2882ff` |
+| `master` continuous integration | [34961870036](https://github.com/mattiss01/fittip/actions/runs/34961870036) — success |
+| Founder deployment | `6457463933`, Production, state `success`, https://fittip-kay0pm5kk-mattis-3657s-projects.vercel.app |
+| Hosted database migration | Not applicable — nothing under `supabase/` changed |
+
+**The lead's hosted smoke is limited to the protection boundary.** An
+unauthenticated request to `/home/plan/roadmap` on the founder deployment is
+answered `302` to `vercel.com/sso-api` before the application runs, as with
+M3-15D. That is evidence about Vercel, not FitTip. The route's behaviour on the
+merged code is carried by the green `master` run above and the product owner's
+authenticated Preview pass on the identical application tree.

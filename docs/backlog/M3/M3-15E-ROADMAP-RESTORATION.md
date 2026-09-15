@@ -1,8 +1,9 @@
 # M3-15E: Roadmap surface restoration, read-only
 
-**Status:** in development — the lead wrote the agent brief below on
-14 September 2026, rescoped the ticket the same day, and the product owner
-approved Tier 2 dispatch the same day. Split out of
+**Status:** accepted — by the product owner on 15 September 2026 against
+independently reviewed `693bd46`, after three review rounds; merged as
+`3570c25`. Brief written, rescoped and Tier 2 dispatch approved on
+14 September 2026. Split out of
 [M3-15](M3-15-REPLACEMENT-CONSUMER-READINESS.md) on 29 August 2026, and split
 again on 14 September 2026 — see *Rescope*.
 
