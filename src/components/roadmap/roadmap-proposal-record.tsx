@@ -19,14 +19,12 @@ import {
  * outright, because "Awaiting your decision" over a screen with no way to
  * decide is the same inert affordance as a greyed-out button — it just
  * costs the owner a search of the interface to discover it.
+ *
+ * A missing decision alone does not make a proposal open. An owner edit
+ * supersedes its source without deciding it, so the repository's `open` is the
+ * only authority on which undecided proposal awaits a decision; every other
+ * undecided one is shown as superseded.
  */
-
-const STATE_LABELS = {
-  open: "Awaiting your decision",
-  accepted: "Accepted",
-  rejected: "Declined",
-  expired: "Expired",
-} as const;
 
 const ORIGIN_LABELS: Record<RoadmapProposalOrigin, string> = {
   ai_initial: "From the coach",
@@ -36,10 +34,15 @@ const ORIGIN_LABELS: Record<RoadmapProposalOrigin, string> = {
 
 export function RoadmapProposalRecord({
   proposal,
+  openProposalId,
 }: {
   proposal: RoadmapProposalView;
+  /** `RoadmapScreenState.openProposal`'s id, or null when nothing is open. */
+  openProposalId: string | null;
 }) {
-  const state = proposal.decision ?? "open";
+  const state =
+    proposal.decision ??
+    (proposal.id === openProposalId ? "open" : "superseded");
 
   // A generation request is what carries the horizon the owner asked for. If
   // that row is unreadable the view reports empty strings rather than a wrong
@@ -55,7 +58,7 @@ export function RoadmapProposalRecord({
       data-roadmap-proposal-state={state}
     >
       <p className={styles.state} data-state={state}>
-        {STATE_LABELS[state]}
+        {ROADMAP_COPY.proposalStateLabels[state]}
       </p>
       <h3 className={styles.recordTitle}>{proposal.content.title}</h3>
       <p className={styles.horizon}>
@@ -74,6 +77,9 @@ export function RoadmapProposalRecord({
       ) : null}
       {state === "expired" ? (
         <p className={styles.recordNote}>{ROADMAP_COPY.proposalExpired}</p>
+      ) : null}
+      {state === "superseded" ? (
+        <p className={styles.recordNote}>{ROADMAP_COPY.proposalSuperseded}</p>
       ) : null}
     </li>
   );

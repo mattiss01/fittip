@@ -195,10 +195,14 @@ export type RoadmapScreenState = {
   /**
    * Recent proposals, newest first, each carrying its own decision state.
    *
-   * The open proposal is the first entry when there is one. Everything else
-   * here is settled — accepted, declined, or expired by M3-11 — and appears so
-   * that a proposal the owner remembers is visibly accounted for rather than
-   * silently missing from the screen.
+   * The open proposal appears here too, but nothing guarantees where: it is the
+   * newest undecided proposal that no other proposal names as its source, so a
+   * newer decided or edited proposal can precede it. Not every undecided entry
+   * is open either — an owner edit supersedes its source without deciding it.
+   * A consumer tells the open proposal apart by comparing ids with
+   * `openProposal`, never by position or by a missing decision. Everything
+   * appears so that a proposal the owner remembers is visibly accounted for
+   * rather than silently missing from the screen.
    */
   proposalHistory: RoadmapProposalView[];
   /** Undecided candidates extracted from a planning note. */
@@ -275,6 +279,25 @@ export const ROADMAP_COPY = {
     "Deciding on a proposal is not available yet. This one stays here, unchanged, and nothing happens to it in the meantime.",
   proposalExpired:
     "This proposal can no longer be accepted. It stays here, unchanged, with everything it was built on.",
+  /**
+   * An undecided proposal that is not the open one.
+   *
+   * An owner edit supersedes its source without deciding it, so the source
+   * carries no decision and is still not what awaits one. Labelling it
+   * "Awaiting your decision" would put two waiting records on the screen, one
+   * of which nothing will ever decide. Also M3-15E's, and the product owner's
+   * to confirm.
+   */
+  proposalSuperseded:
+    "A later proposal replaced this one before it was decided. It stays here, unchanged.",
+  /** The state chip on each proposal record. */
+  proposalStateLabels: {
+    open: "Awaiting your decision",
+    accepted: "Accepted",
+    rejected: "Declined",
+    expired: "Expired",
+    superseded: "Superseded",
+  },
 } as const;
 
 export type RoadmapMemoryCandidateView = RoadmapMemoryCandidate & {

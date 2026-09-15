@@ -49,6 +49,7 @@ import { RoadmapAuthenticationError } from "@/server/repositories/roadmap-reposi
 import { ROADMAP_COPY } from "@/server/roadmap/roadmap-records";
 
 const FIRST_PROPOSAL = "7e150000-0000-4000-8000-000000000010";
+const EDIT_PROPOSAL = "7e150000-0000-4000-8000-000000000011";
 const GOAL_ID = "7e150000-0000-4000-8000-000000000020";
 
 const getHead = vi.fn();
@@ -185,6 +186,31 @@ describe("Roadmap", () => {
     expect(
       within(record).getByText(ROADMAP_COPY.proposalDecisionUnavailable),
     ).toBeTruthy();
+  });
+
+  // An owner edit supersedes its source without deciding it. Only the
+  // repository's `open` awaits a decision, so the screen must not label both.
+  it("labels only the open proposal as awaiting a decision", async () => {
+    const edit = {
+      ...proposal({ decision: null }),
+      id: EDIT_PROPOSAL,
+      origin: "owner_edit" as const,
+      sourceProposalId: FIRST_PROPOSAL,
+    };
+    getReviewProposals.mockResolvedValue({
+      open: edit,
+      declinedPredecessor: null,
+      history: [edit, proposal({ decision: null })],
+    });
+
+    render(await RoadmapPage());
+
+    const states = [
+      ...document.querySelectorAll("[data-roadmap-proposal-state]"),
+    ].map((record) => record.getAttribute("data-roadmap-proposal-state"));
+    expect(states).toEqual(["open", "superseded"]);
+    expect(screen.getAllByText("Awaiting your decision")).toHaveLength(1);
+    expect(screen.getByText(ROADMAP_COPY.proposalSuperseded)).toBeTruthy();
   });
 
   it("offers no action-bearing control anywhere on the surface", async () => {

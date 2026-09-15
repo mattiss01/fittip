@@ -26,6 +26,7 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
     state.goals.map((goal) => [goal.id, goal.title]),
   );
   const superseded = state.history.slice(1);
+  const openProposalId = state.openProposal?.id ?? null;
 
   return (
     <div className={styles.screen}>
@@ -85,7 +86,11 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
           </p>
           <ul className={styles.historyList}>
             {state.proposalHistory.map((proposal) => (
-              <RoadmapProposalRecord key={proposal.id} proposal={proposal} />
+              <RoadmapProposalRecord
+                key={proposal.id}
+                proposal={proposal}
+                openProposalId={openProposalId}
+              />
             ))}
           </ul>
         </section>
