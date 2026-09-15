@@ -1,5 +1,6 @@
 import "server-only";
 
+import { ROADMAP_ROUTE_STATE_COPY } from "@/lib/roadmap/roadmap-route-state-copy";
 import type {
   RoadmapMemoryCandidate,
   RoadmapProposal,
@@ -298,6 +299,36 @@ export const ROADMAP_COPY = {
     expired: "Expired",
     superseded: "Superseded",
   },
+  /** Where each proposal record says it came from. */
+  proposalOriginLabels: {
+    ai_initial: "From the coach",
+    ai_regeneration: "Regenerated",
+    owner_edit: "Your edit",
+  } satisfies Record<RoadmapProposalOrigin, string>,
+  /*
+   * The read-only surface's own framing. Everything from here to the memory
+   * sentence is M3-15E's and the product owner's to confirm. None of it offers
+   * a capability: the empty state says what a roadmap is, not how to get one,
+   * because nothing can create one yet.
+   */
+  routeIntro:
+    "Months of direction, not a week of sessions. This is the roadmap you have now, every version before it, and what was proposed along the way.",
+  emptyRoadmapTitle: "No roadmap yet.",
+  emptyRoadmapBody:
+    "A roadmap is months of direction rather than a week of sessions. Once you have one it stays here, with every version before it.",
+  supersededRoadmapsSupport: "Earlier versions stay readable and unchanged.",
+  proposalsHeading: "Proposals",
+  proposalsSupport: "What was proposed, and what became of it.",
+  /** M3-02's wording, restored unchanged; it was inlined before M3-11. */
+  memoryCandidatesWaiting: (count: number) =>
+    `${count} item${count === 1 ? "" : "s"} from a planning note are waiting for you. They are not used for coaching until you accept them.`,
+  /**
+   * "Version 3": the M3-02 masthead stamp's wording, which M3-15E also uses on
+   * the current roadmap's horizon line and on each superseded version.
+   */
+  versionLabel: (versionNumber: number) => `Version ${versionNumber}`,
+  /** `error.tsx` and `loading.tsx`; see that module for why it lives apart. */
+  ...ROADMAP_ROUTE_STATE_COPY,
 } as const;
 
 export type RoadmapMemoryCandidateView = RoadmapMemoryCandidate & {

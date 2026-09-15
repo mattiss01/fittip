@@ -36,8 +36,8 @@ export function RoadmapDetail({
       <p className={styles.reviewHeader}>{ROADMAP_COPY.reviewHeader}</p>
       <h2 className={styles.proposalTitle}>{roadmap.title}</h2>
       <p className={styles.horizon}>
-        Version {version.versionNumber} · {roadmap.startDate} →{" "}
-        {roadmap.endDate}
+        {ROADMAP_COPY.versionLabel(version.versionNumber)} · {roadmap.startDate}{" "}
+        → {roadmap.endDate}
       </p>
       <p className={styles.proposalSummary}>{roadmap.summary}</p>
 

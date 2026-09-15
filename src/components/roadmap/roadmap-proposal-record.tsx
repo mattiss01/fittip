@@ -1,7 +1,6 @@
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import {
   ROADMAP_COPY,
-  type RoadmapProposalOrigin,
   type RoadmapProposalView,
 } from "@/server/roadmap/roadmap-records";
 
@@ -25,12 +24,6 @@ import {
  * only authority on which undecided proposal awaits a decision; every other
  * undecided one is shown as superseded.
  */
-
-const ORIGIN_LABELS: Record<RoadmapProposalOrigin, string> = {
-  ai_initial: "From the coach",
-  ai_regeneration: "Regenerated",
-  owner_edit: "Your edit",
-};
 
 export function RoadmapProposalRecord({
   proposal,
@@ -62,7 +55,8 @@ export function RoadmapProposalRecord({
       </p>
       <h3 className={styles.recordTitle}>{proposal.content.title}</h3>
       <p className={styles.horizon}>
-        {ORIGIN_LABELS[proposal.origin]} · {startDate} → {endDate}
+        {ROADMAP_COPY.proposalOriginLabels[proposal.origin]} · {startDate} →{" "}
+        {endDate}
       </p>
       {state === "open" ? (
         <>

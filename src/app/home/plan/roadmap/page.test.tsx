@@ -280,6 +280,11 @@ describe("Roadmap", () => {
       "[data-roadmap-memory]",
     ) as HTMLElement;
     expect(
+      within(panel).getByText(
+        "2 items from a planning note are waiting for you. They are not used for coaching until you accept them.",
+      ),
+    ).toBeTruthy();
+    expect(
       within(panel)
         .getByRole("link", { name: ROADMAP_COPY.memoryReviewLink })
         .getAttribute("href"),

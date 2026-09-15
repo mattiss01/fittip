@@ -41,11 +41,10 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
       <section className={styles.card} data-roadmap-current>
         {state.current === null ? (
           <>
-            <h2 className={styles.cardHeading}>No roadmap yet.</h2>
-            <p className={styles.emptyState}>
-              A roadmap is months of direction rather than a week of sessions.
-              Once you have one it stays here, with every version before it.
-            </p>
+            <h2 className={styles.cardHeading}>
+              {ROADMAP_COPY.emptyRoadmapTitle}
+            </h2>
+            <p className={styles.emptyState}>{ROADMAP_COPY.emptyRoadmapBody}</p>
           </>
         ) : (
           <RoadmapDetail version={state.current} goalTitles={goalTitles} />
@@ -56,7 +55,7 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
         <section className={styles.card} data-roadmap-superseded>
           <h2 className={styles.sectionHeading}>Superseded roadmaps</h2>
           <p className={styles.emptyState}>
-            Earlier versions stay readable and unchanged.
+            {ROADMAP_COPY.supersededRoadmapsSupport}
           </p>
           <ul className={styles.historyList}>
             {superseded.map((version) => (
@@ -66,7 +65,7 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
                 data-roadmap-superseded-version={version.versionNumber}
               >
                 <p className={styles.state} data-state="accepted">
-                  Version {version.versionNumber}
+                  {ROADMAP_COPY.versionLabel(version.versionNumber)}
                 </p>
                 <h3 className={styles.recordTitle}>{version.content.title}</h3>
                 <p className={styles.horizon}>
@@ -80,10 +79,10 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
 
       {state.proposalHistory.length > 0 ? (
         <section className={styles.card} data-roadmap-proposals>
-          <h2 className={styles.sectionHeading}>Proposals</h2>
-          <p className={styles.emptyState}>
-            What was proposed, and what became of it.
-          </p>
+          <h2 className={styles.sectionHeading}>
+            {ROADMAP_COPY.proposalsHeading}
+          </h2>
+          <p className={styles.emptyState}>{ROADMAP_COPY.proposalsSupport}</p>
           <ul className={styles.historyList}>
             {state.proposalHistory.map((proposal) => (
               <RoadmapProposalRecord
@@ -105,10 +104,9 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
             {ROADMAP_COPY.memoryPanelTitle}
           </h2>
           <p className={styles.emptyState}>
-            {state.openMemoryCandidateCount} item
-            {state.openMemoryCandidateCount === 1 ? "" : "s"} from a planning
-            note are waiting for you. They are not used for coaching until you
-            accept them.
+            {ROADMAP_COPY.memoryCandidatesWaiting(
+              state.openMemoryCandidateCount,
+            )}
           </p>
           <Link className={homeStyles.secondaryAction} href="/home/you/memory">
             {ROADMAP_COPY.memoryReviewLink}

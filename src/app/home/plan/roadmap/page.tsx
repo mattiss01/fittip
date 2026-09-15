@@ -25,6 +25,7 @@ import {
 } from "@/server/repositories/roadmap-repository";
 import {
   defaultRoadmapEndDate,
+  ROADMAP_COPY,
   ROADMAP_MAX_REGENERATIONS,
   type RoadmapGoalSummary,
   type RoadmapScreenState,
@@ -69,16 +70,12 @@ export default async function RoadmapPage() {
         <div>
           <p className={homeStyles.kicker}>FitTip / plan / roadmap</p>
           <h1>Where this is going.</h1>
-          <p className={homeStyles.intro}>
-            Months of direction, not a week of sessions. This is the roadmap you
-            have now, every version before it, and what was proposed along the
-            way.
-          </p>
+          <p className={homeStyles.intro}>{ROADMAP_COPY.routeIntro}</p>
         </div>
         <p className={homeStyles.stamp}>
           {state.current === null
             ? "No roadmap yet"
-            : `Version ${state.current.versionNumber}`}
+            : ROADMAP_COPY.versionLabel(state.current.versionNumber)}
         </p>
       </header>
       <RoadmapScreen state={state} />

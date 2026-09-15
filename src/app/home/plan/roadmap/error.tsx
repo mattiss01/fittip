@@ -1,6 +1,7 @@
 "use client";
 
 import homeStyles from "../../home.module.css";
+import { ROADMAP_ROUTE_STATE_COPY as COPY } from "@/lib/roadmap/roadmap-route-state-copy";
 
 /**
  * A read that failed is not a missing roadmap. This surface writes nothing, so
@@ -11,14 +12,11 @@ export default function RoadmapError({ reset }: { reset: () => void }) {
   return (
     <main className={homeStyles.shell} id="main-content">
       <section className={homeStyles.stateCard}>
-        <p className={homeStyles.kicker}>Roadmap</p>
-        <h1>Your roadmap could not be read.</h1>
-        <p>
-          Nothing was lost and nothing was changed. This surface only reads, so
-          it is safe to try again.
-        </p>
+        <p className={homeStyles.kicker}>{COPY.stateKicker}</p>
+        <h1>{COPY.errorTitle}</h1>
+        <p>{COPY.errorBody}</p>
         <button className={homeStyles.primaryAction} onClick={reset}>
-          Retry
+          {COPY.errorRetry}
         </button>
       </section>
     </main>
