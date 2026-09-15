@@ -1,15 +1,19 @@
 # M3-15E validation: roadmap surface restoration, read-only
 
 **Ticket:** [M3-15E](../../backlog/M3/M3-15E-ROADMAP-RESTORATION.md)
-**Status:** round 2 of independent review approved `05ad741` with findings.
-CI run [34865418950](https://github.com/mattiss01/fittip/actions/runs/34865418950)
-was green for `e9d2367` (the round 1 record commit on top of `05ad741`), and
-its Preview <https://fittip-37tci7onu-mattis-3657s-projects.vercel.app>
-reached `READY`. The product owner approved correcting round 2 findings 1 and
-2 and two of the reviewer's notes; those corrections are `645520d`, `332165c`
-and `693bd46`, which supersede `05ad741` and invalidate its approval until
-re-review. The CI run and Vercel Preview for `693bd46`, round 3 review, and
-product-owner acceptance are outstanding.
+**Status:** round 3 of independent review **approved `693bd46`** on
+15 September 2026, with two copy findings the product owner chose to defer to
+M3-15F (see *Round 3 review*). CI run
+[34957935928](https://github.com/mattiss01/fittip/actions/runs/34957935928)
+was green for `e5f4c37` (the round 2 record commit on top of `693bd46`) on all
+three jobs, and its Preview
+<https://fittip-4qbp0vqju-mattis-3657s-projects.vercel.app> reached `READY`.
+Product-owner acceptance against that Preview is outstanding.
+
+Earlier rounds: round 2 approved `05ad741` with findings, corrected in
+`645520d`, `332165c` and `693bd46`; its CI run
+[34865418950](https://github.com/mattiss01/fittip/actions/runs/34865418950)
+was green for `e9d2367`.
 **Tier:** 2
 **Branch:** `ticket/m3-15e-roadmap-read`
 **Base:** `899fc1f`
@@ -37,6 +41,37 @@ Implementation commits, in order:
 
 Record-only commits `6dbbb91` and `e9d2367` sit between them and change no
 application file.
+
+## Round 3 review: approved, two copy findings deferred
+
+A third independent reviewer approved `693bd46`. It confirmed CI run
+34957935928 and Preview deployment 6456750046 for `e5f4c37`, that `e5f4c37`
+changes no application file, all three round 2 corrections (including that the
+superseded derivation cannot mismatch `open` under the 20-row read limit), and
+every brief constraint across the whole ticket. No correctness, authorization
+or safety defect was found.
+
+The product owner chose to accept rather than correct the two should-fix
+findings, and routed both to M3-15F, which reworks the same components:
+
+1. **Approved M3-02 wordings remain inlined** in `page.tsx`,
+   `roadmap-screen.tsx`, `roadmap-detail.tsx` and `roadmap-spine.tsx`, against
+   the brief's "do not inline a string". Rendered text matches `e370dbe~1`
+   exactly. **Waived for this ticket by the product owner**; moving them into
+   `ROADMAP_COPY` is recorded on M3-15F.
+2. **Uncertainty entries lost their M3-02 labels.** `roadmap-detail.tsx:71-72`
+   renders `whyItMatters` and `whatToWatch` without the "Why it matters:" and
+   "Watch for:" prefixes that `roadmap-manager.tsx` carried at `e370dbe~1`.
+   Present since `0622aee` and missed in rounds 1 and 2. The earlier claim in
+   this record that the M3-02 direction was restored rather than replaced does
+   not hold for these two lines. Accepted as a known limitation; restoring them
+   is recorded on M3-15F.
+
+Two notes, not acted on: the M3-02 "When to reassess" section is gone, so
+`ROADMAP_COPY.reviewPointsHeading` is unused (each checkpoint on the spine still
+reads "Review on/when …", so nothing is lost); and a source whose edit was
+later declined reads "A later proposal replaced this one", which is a slight
+stretch rather than untrue.
 
 ## Round 2 review: approved with findings, corrected
 
@@ -561,6 +596,14 @@ for the reviewed SHA is the automated-test evidence and is outstanding.**
     The sentence stops the chip being an inert affordance, but the pairing may
     still read as contradictory. That is a product-owner copy call and is not
     changed here; see Copy for the product owner to confirm.
+11. **Uncertainty entries render without "Why it matters:" and "Watch for:"**
+    (round 3 finding 2). Accepted by the product owner as a limitation; the fix
+    is recorded on M3-15F.
+12. **Approved M3-02 wordings remain inlined in four roadmap components**
+    (round 3 finding 1). The brief's no-inline rule is waived for them in this
+    ticket by the product owner; the move is recorded on M3-15F.
+13. **`ROADMAP_COPY.reviewPointsHeading` is unused**, because the M3-02 "When
+    to reassess" section was folded into the spine's checkpoints (round 3 note).
 
 ## Copy for the product owner to confirm
 
