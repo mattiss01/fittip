@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { extname, join } from "node:path";
+import { extname, join, sep } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -22,55 +22,84 @@ const legacyModules = [
   "src/server/completions/completion-records.ts",
   "src/server/plan-proposal/plan-proposal-service.ts",
   "src/app/home/plan/proposal/actions.ts",
-  "src/app/home/plan/roadmap/actions.ts",
+  // `src/app/home/plan/roadmap/actions.ts` is deliberately absent: M3-15F
+  // restored it against the M3-10/M3-15A seam and M3-15D's context source, not
+  // against the legacy repositories this list keeps deleted. It is constrained
+  // below instead, by an allowlist and by which repository methods it may call.
 ] as const;
 
 /**
- * M3-15E reopened `/home/plan/roadmap`, so only the proposal route is still on
- * the maintenance module. `/home/plan/proposal` is M3-16 and stays here.
+ * M3-15E reopened `/home/plan/roadmap` and M3-15F restored its writes, so only
+ * the proposal route is still on the maintenance module. `/home/plan/proposal`
+ * is M3-16 and stays here.
  */
 const maintenancePages = ["src/app/home/plan/proposal/page.tsx"] as const;
 
 /**
- * The reopened roadmap route, which reads and does not write.
+ * The reopened roadmap route: the read pass and the writes beside it.
  *
  * It gets its own allowlist rather than joining `rollingPlanSurface` below,
  * because `allowedServerModules` is shared with the Plan and Today: adding the
- * roadmap, goal and completion modules there would hand those two routes a
- * roadmap repository they have no business holding, which is the loosening
- * that list exists to prevent.
+ * roadmap, goal, coaching and completion modules there would hand those two
+ * routes a roadmap repository and a coaching service they have no business
+ * holding, which is the loosening that list exists to prevent.
+ *
+ * M3-15F added `actions.ts`. The allowlist is what keeps that addition from
+ * being a hole: the actions may reach the coaching seam, the roadmap domain and
+ * the three repositories they genuinely need, and nothing else — no provider
+ * adapter, no spend ledger, no Supabase client, and no plan or training
+ * repository.
  */
-const roadmapReadSurface = ["src/app/home/plan/roadmap/page.tsx"] as const;
+const roadmapSurface = [
+  "src/app/home/plan/roadmap/page.tsx",
+  "src/app/home/plan/roadmap/actions.ts",
+] as const;
 
 const allowedRoadmapModules = [
+  "@/server/ai/context",
+  "@/server/ai/errors",
+  "@/server/ai/output-validation",
+  "@/server/ai/owner",
+  "@/server/ai/owner-text",
   "@/server/goals/goal-records",
   "@/server/repositories/completion-log-repository",
   "@/server/repositories/goal-repository",
   "@/server/repositories/profile-repository",
   "@/server/repositories/roadmap-repository",
+  "@/server/roadmap/roadmap-edit",
+  "@/server/roadmap/roadmap-generation",
   "@/server/roadmap/roadmap-records",
   "@/server/roadmap/roadmap-safety",
   "@/server/training/training-history-context",
 ] as const;
 
 /**
- * The whole reopened roadmap surface: the route and the components only it
- * renders. The revoked-function assertion covers both, because a control that
- * reached one of the five would be written in a component, not in the page.
+ * Everything the roadmap route renders, wherever it lives.
+ *
+ * The rule below is not "these files do not write" any more — M3-15F restored
+ * the write path — but "only `actions.ts` does". A component that reached a
+ * repository write method directly would bypass the one module that
+ * re-verifies the owner and revalidates the route, and it would do it from a
+ * file nobody reviews as an endpoint.
  */
 const roadmapSurfaceDirectories = [
   "src/app/home/plan/roadmap",
   "src/components/roadmap",
 ] as const;
 
+/** The only file in those directories permitted to reach a roadmap write. */
+const roadmapWriteEntryPoint = "src/app/home/plan/roadmap/actions.ts";
+
 /**
- * M3-11 revoked all five from every role and they stay revoked until M3-15F
- * restores them deliberately. Naming the repository methods as well as the
- * functions is the point: the repository is the only application path to them,
- * so a read surface that never calls one of these methods cannot reach a
- * revoked function however the SQL below it changes.
+ * The five ADR-015 functions, and the repository methods that are the only
+ * application path to them.
+ *
+ * M3-11 revoked all five from every role; M3-15F re-granted them to
+ * `authenticated`. What is asserted here is no longer that nothing reaches
+ * them, but that only the Server Action module does, and that it reaches them
+ * through the repository rather than by naming a function in SQL of its own.
  */
-const revokedRoadmapFunctions = [
+const roadmapFunctions = [
   "begin_roadmap_generation",
   "finish_roadmap_generation",
   "record_roadmap_memory_candidates",
@@ -78,7 +107,7 @@ const revokedRoadmapFunctions = [
   "accept_roadmap_proposal",
 ] as const;
 
-const revokedRoadmapMethods = [
+const roadmapWriteMethods = [
   "beginGeneration",
   "finishGenerationWithProposal",
   "finishGenerationAsFailed",
@@ -185,7 +214,7 @@ describe("M3-11 legacy runtime closure", () => {
   });
 
   it("lets the reopened roadmap route reach only its own allowlist", () => {
-    for (const path of roadmapReadSurface) {
+    for (const path of roadmapSurface) {
       const source = readFileSync(join(root, path), "utf8");
       const imported = [...source.matchAll(/from "(@\/server\/[^"]+)"/g)].map(
         (match) => match[1],
@@ -197,29 +226,55 @@ describe("M3-11 legacy runtime closure", () => {
           `${path} imports ${specifier}`,
         ).toContain(specifier);
       }
-      expect(source, path).not.toMatch(/@\/lib\/supabase/);
     }
   });
 
-  it("keeps the reopened roadmap surface away from every revoked function", () => {
+  it("keeps every roadmap write behind the one Server Action module", () => {
     const files = roadmapSurfaceDirectories.flatMap((directory) =>
       sourceFiles(join(root, directory)),
     );
     expect(files.length).toBeGreaterThan(3);
 
+    let writeEntryPoints = 0;
     for (const path of files) {
       const source = readFileSync(path, "utf8");
-      for (const name of revokedRoadmapFunctions) {
+      const isEntryPoint = path.endsWith(
+        roadmapWriteEntryPoint.replaceAll("/", sep),
+      );
+      const isTest = path.endsWith(".test.ts") || path.endsWith(".test.tsx");
+
+      // No file on this surface writes SQL or names a function directly, the
+      // entry point included: the repository is the only application path to
+      // ADR-015's five, and it is the only place that maps their conflicts.
+      for (const name of roadmapFunctions) {
         expect(source, `${path} names ${name}`).not.toContain(name);
       }
-      for (const method of revokedRoadmapMethods) {
-        expect(source, `${path} calls ${method}`).not.toContain(`${method}(`);
+      expect(source, `${path} calls rpc directly`).not.toContain(".rpc(");
+
+      const callsWrite = roadmapWriteMethods.some((method) =>
+        source.includes(`${method}(`),
+      );
+      if (callsWrite) {
+        expect(isEntryPoint, `${path} reaches a roadmap write`).toBe(true);
       }
-      // A read surface has no write path at all, so it has nothing to
-      // revalidate and no action to declare.
-      expect(source, path).not.toContain('"use server"');
+
+      if (isEntryPoint) {
+        writeEntryPoints += 1;
+        // A Server Action is a public endpoint. It declares itself as one, and
+        // it invalidates the route it changed; a write that did neither would
+        // leave the owner reading a roadmap that is no longer theirs.
+        expect(source, path).toContain('"use server"');
+        expect(source, path).toContain('revalidatePath("/home/plan/roadmap")');
+        continue;
+      }
+
+      // Everything else on the surface renders. A component that declared an
+      // action would be an endpoint nobody reviews as one.
+      if (!isTest) expect(source, path).not.toContain('"use server"');
       expect(source, path).not.toContain("revalidatePath");
     }
+
+    expect(writeEntryPoints, "the write entry point must exist").toBe(1);
   });
 
   it("keeps the reopened plan surface on the rolling-plan seam only", () => {

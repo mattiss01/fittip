@@ -13,15 +13,32 @@ const EARLIER_PROPOSAL = "7e150000-0000-4000-8000-000000000011";
 describe("RoadmapProposalRecord", () => {
   afterEach(cleanup);
 
-  it("shows the open proposal as awaiting a decision nobody can make here", () => {
+  // The record is the open proposal's line in the history, not a second place
+  // to decide it. M3-15F puts the controls on `RoadmapProposalReview` above,
+  // which shows the proposal in full; a second accept button here would be a
+  // second answer to where a decision is made.
+  it("shows the open proposal as a record and offers no control", () => {
     renderRecord(proposal(OPEN_PROPOSAL), OPEN_PROPOSAL);
 
     const record = recordFor(OPEN_PROPOSAL);
     expect(record.getAttribute("data-roadmap-proposal-state")).toBe("open");
     expect(screen.getByText("Awaiting your decision")).toBeTruthy();
-    expect(
-      screen.getByText(ROADMAP_COPY.proposalDecisionUnavailable),
-    ).toBeTruthy();
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    expect(record.querySelector("form")).toBeNull();
+  });
+
+  // The label rests on the stored provider code alone. `origin` says how a
+  // proposal came about, not who wrote it.
+  it("labels a fixture-authored proposal an example and a coach-authored one not", () => {
+    renderRecord(proposal(OPEN_PROPOSAL), OPEN_PROPOSAL);
+    expect(screen.getByText(ROADMAP_COPY.exampleLabel)).toBeTruthy();
+
+    cleanup();
+    renderRecord(
+      { ...proposal(OPEN_PROPOSAL), providerCode: "openai" },
+      OPEN_PROPOSAL,
+    );
+    expect(screen.queryByText(ROADMAP_COPY.exampleLabel)).toBeNull();
   });
 
   // An owner edit supersedes its source without deciding it, so the source is
@@ -38,9 +55,6 @@ describe("RoadmapProposalRecord", () => {
     expect(screen.getByText("Superseded")).toBeTruthy();
     expect(screen.getByText(ROADMAP_COPY.proposalSuperseded)).toBeTruthy();
     expect(screen.queryByText("Awaiting your decision")).toBeNull();
-    expect(
-      screen.queryByText(ROADMAP_COPY.proposalDecisionUnavailable),
-    ).toBeNull();
     expect(screen.queryAllByRole("button")).toHaveLength(0);
     expect(screen.queryAllByRole("link")).toHaveLength(0);
     expect(record.querySelector("form")).toBeNull();
@@ -93,6 +107,7 @@ function proposal(id: string): RoadmapProposalView {
     id,
     origin: "ai_initial",
     sourceProposalId: null,
+    providerCode: "fixture",
     content: {
       schemaVersion: "fittip.roadmap.v2",
       title: "Base and build.",

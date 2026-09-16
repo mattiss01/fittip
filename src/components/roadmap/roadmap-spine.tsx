@@ -105,7 +105,7 @@ function PhaseAndFollowingCheckpoints({
       <li className={styles.phase}>
         <div className={styles.phaseBand} tabIndex={-1}>
           <p className={styles.phaseIndex}>
-            Phase {index + 1} of {total}
+            {ROADMAP_COPY.phaseIndex(index + 1, total)}
           </p>
           <h3 className={styles.phaseTitle}>{phase.title}</h3>
           <p className={styles.phaseDates}>
@@ -167,8 +167,8 @@ function Checkpoint({ point }: { point: SpineReviewPoint }) {
       <div className={styles.checkpointBody}>
         <p className={styles.checkpointKind}>
           {point.triggerDate
-            ? `Review on ${point.triggerDate}`
-            : `Review when ${point.triggerCondition}`}
+            ? ROADMAP_COPY.reviewOnDate(point.triggerDate)
+            : ROADMAP_COPY.reviewWhenCondition(point.triggerCondition ?? "")}
         </p>
         <h3 className={styles.checkpointTitle}>{point.title}</h3>
         <p className={styles.checkpointQuestion}>{point.question}</p>

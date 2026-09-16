@@ -18,7 +18,19 @@ const {
   createCompletionLogMock: vi.fn(),
 }));
 
-vi.mock("next/navigation", () => ({ redirect: redirectMock }));
+vi.mock("next/navigation", () => ({
+  redirect: redirectMock,
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+// The controls are rendered here, not exercised. What each action does is
+// covered by `actions.test.ts`; importing the real module would drag the whole
+// write path - the coaching service included - into a jsdom render.
+vi.mock("@/app/home/plan/roadmap/actions", () => ({
+  generateRoadmapAction: vi.fn(),
+  acceptRoadmapAction: vi.fn(),
+  declineRoadmapAction: vi.fn(),
+  editRoadmapAction: vi.fn(),
+}));
 vi.mock("@/server/repositories/roadmap-repository", async (original) => {
   const actual =
     await original<typeof import("@/server/repositories/roadmap-repository")>();
@@ -165,7 +177,10 @@ describe("Roadmap", () => {
     expect(proposals.querySelector("form")).toBeNull();
   });
 
-  it("shows a proposal still awaiting a decision as a record, not a prompt", async () => {
+  // The proposal is shown in full above the roadmap it would replace, because
+  // accepting it is agreeing to all of it. Deciding from a title and a summary
+  // would be deciding from less than what gets written.
+  it("shows the open proposal in full with the three decisions", async () => {
     const open = proposal({ decision: null });
     getReviewProposals.mockResolvedValue({
       open,
@@ -175,16 +190,115 @@ describe("Roadmap", () => {
 
     render(await RoadmapPage());
 
-    const record = document.querySelector(
-      `[data-roadmap-proposal="${FIRST_PROPOSAL}"]`,
+    const review = document.querySelector(
+      `[data-roadmap-open-proposal="${FIRST_PROPOSAL}"]`,
     ) as HTMLElement;
-    expect(record.getAttribute("data-roadmap-proposal-state")).toBe("open");
-    expect(within(record).getByText("Awaiting your decision")).toBeTruthy();
-    expect(within(record).queryAllByRole("button")).toHaveLength(0);
-    // The label alone would be an inert affordance: it says a decision is
-    // awaited while nothing in the application can make one.
+    expect(within(review).getByText("Awaiting your decision")).toBeTruthy();
+    expect(within(review).getByText(ROADMAP_COPY.reviewHeader)).toBeTruthy();
     expect(
-      within(record).getByText(ROADMAP_COPY.proposalDecisionUnavailable),
+      within(review).getByRole("heading", { name: "Aerobic base" }),
+    ).toBeTruthy();
+    for (const action of [
+      ROADMAP_COPY.acceptAction,
+      ROADMAP_COPY.editAction,
+      ROADMAP_COPY.declineAction,
+    ]) {
+      expect(
+        within(review).getByRole("button", { name: action }),
+        action,
+      ).toBeTruthy();
+    }
+    // The accept form carries the head the owner actually read, so a head that
+    // moved underneath them is refused by the database rather than overwritten.
+    expect(
+      review.querySelector('input[name="expectedHeadRevision"]'),
+    ).toBeTruthy();
+    // While a proposal is open there is nothing to compose: asking again is
+    // what declining is for, and two open proposals for one horizon would make
+    // "the open proposal" ambiguous.
+    expect(document.querySelector("[data-roadmap-compose]")).toBeNull();
+  });
+
+  // The controls exist because the functions behind them exist again. None is
+  // gated on an environment, and the surface still shows no control it cannot
+  // honour.
+  it("offers the compose form when nothing is waiting for a decision", async () => {
+    render(await RoadmapPage());
+
+    const compose = document.querySelector(
+      "[data-roadmap-compose]",
+    ) as HTMLElement;
+    expect(compose.getAttribute("data-roadmap-compose")).toBe("initial");
+    expect(
+      within(compose).getByRole("button", {
+        name: ROADMAP_COPY.generateAction,
+      }),
+    ).toBeTruthy();
+    expect(
+      within(compose).getByLabelText(ROADMAP_COPY.endDateLabel),
+    ).toBeTruthy();
+    expect(
+      within(compose).queryByLabelText(ROADMAP_COPY.feedbackLabel),
+    ).toBeNull();
+  });
+
+  // Decision 4: a regeneration needs a declined predecessor, the same dates,
+  // and feedback. The form offers exactly that and nothing else.
+  it("offers a regeneration against a declined predecessor", async () => {
+    const declined = proposal({ decision: "rejected" });
+    getReviewProposals.mockResolvedValue({
+      open: null,
+      declinedPredecessor: declined,
+      history: [declined],
+    });
+
+    render(await RoadmapPage());
+
+    const compose = document.querySelector(
+      "[data-roadmap-compose]",
+    ) as HTMLElement;
+    expect(compose.getAttribute("data-roadmap-compose")).toBe("regeneration");
+    expect(
+      within(compose).getByLabelText(ROADMAP_COPY.feedbackLabel),
+    ).toBeTruthy();
+    expect(
+      (
+        compose.querySelector(
+          'input[name="previousProposalId"]',
+        ) as HTMLInputElement
+      ).value,
+    ).toBe(FIRST_PROPOSAL);
+    // The horizon is the predecessor's and cannot be moved: the database
+    // refuses a regeneration whose dates changed.
+    const endDate = within(compose).getByLabelText(
+      ROADMAP_COPY.endDateLabel,
+    ) as HTMLInputElement;
+    expect(endDate.readOnly).toBe(true);
+    expect(endDate.value).toBe("2026-12-06");
+  });
+
+  // The ceiling is a fact about these dates, not a missing control.
+  it("states the regeneration ceiling instead of offering a fourth round", async () => {
+    const declined = {
+      ...proposal({ decision: "rejected" }),
+      regenerationNumber: 3,
+    };
+    getReviewProposals.mockResolvedValue({
+      open: null,
+      declinedPredecessor: declined,
+      history: [declined],
+    });
+
+    render(await RoadmapPage());
+
+    expect(screen.getByText(ROADMAP_COPY.regenerationCapReached)).toBeTruthy();
+    expect(
+      document.querySelector('[data-roadmap-compose="regeneration"]'),
+    ).toBeNull();
+    // A first request on different dates is still possible, so the compose form
+    // stays.
+    expect(
+      document.querySelector('[data-roadmap-compose="initial"]'),
     ).toBeTruthy();
   });
 
@@ -209,37 +323,60 @@ describe("Roadmap", () => {
       ...document.querySelectorAll("[data-roadmap-proposal-state]"),
     ].map((record) => record.getAttribute("data-roadmap-proposal-state"));
     expect(states).toEqual(["open", "superseded"]);
-    expect(screen.getAllByText("Awaiting your decision")).toHaveLength(1);
+    const proposals = document.querySelector(
+      "[data-roadmap-proposals]",
+    ) as HTMLElement;
+    expect(
+      within(proposals).getAllByText("Awaiting your decision"),
+    ).toHaveLength(1);
     expect(screen.getByText(ROADMAP_COPY.proposalSuperseded)).toBeTruthy();
   });
 
-  it("offers no action-bearing control anywhere on the surface", async () => {
-    listVersions.mockResolvedValue([version(1)]);
+  // The one mitigation the product owner chose over hiding the controls: a
+  // fixture generation writes a canned roadmap into permanent history, so every
+  // surface that shows one says where the words came from. The history entries
+  // are covered as well as the proposal, because an accepted example is still
+  // an example.
+  it("labels every fixture-authored record an example, history included", async () => {
+    listVersions.mockResolvedValue([version(2), version(1)]);
+    const open = proposal({ decision: null });
     getReviewProposals.mockResolvedValue({
-      open: proposal({ decision: null }),
+      open,
       declinedPredecessor: null,
-      history: [proposal({ decision: null })],
+      history: [open],
     });
 
     render(await RoadmapPage());
 
-    expect(screen.queryAllByRole("button")).toHaveLength(0);
-    expect(document.querySelector("form")).toBeNull();
-    // The one link is the way back to the Plan, which changes nothing.
-    expect(
-      screen.getAllByRole("link").map((link) => link.getAttribute("href")),
-    ).toEqual(["/home/plan"]);
-    for (const wording of [
-      ROADMAP_COPY.generateAction,
-      ROADMAP_COPY.acceptAction,
-      ROADMAP_COPY.declineAction,
-      ROADMAP_COPY.editAction,
-      ROADMAP_COPY.regenerateAction,
-      ROADMAP_COPY.createAction,
-      ROADMAP_COPY.proposeAction,
+    for (const container of [
+      "[data-roadmap-open-proposal]",
+      "[data-roadmap-current]",
+      "[data-roadmap-superseded]",
+      "[data-roadmap-proposals]",
     ]) {
-      expect(screen.queryByText(wording), wording).toBeNull();
+      expect(
+        (document.querySelector(container) as HTMLElement).querySelector(
+          "[data-roadmap-example]",
+        ),
+        container,
+      ).toBeTruthy();
     }
+    expect(screen.getByText(ROADMAP_COPY.exampleNotice)).toBeTruthy();
+  });
+
+  it("labels nothing an example when the coach wrote it", async () => {
+    listVersions.mockResolvedValue([{ ...version(1), providerCode: "openai" }]);
+    const open = { ...proposal({ decision: null }), providerCode: "openai" };
+    getReviewProposals.mockResolvedValue({
+      open,
+      declinedPredecessor: null,
+      history: [open],
+    });
+
+    render(await RoadmapPage());
+
+    expect(document.querySelector("[data-roadmap-example]")).toBeNull();
+    expect(screen.queryByText(ROADMAP_COPY.exampleNotice)).toBeNull();
   });
 
   it("states the server-owned safety copy when recent training reported one", async () => {
@@ -374,14 +511,16 @@ function version(versionNumber: number) {
     versionNumber,
     content: roadmapContent(),
     acceptedAt: "2026-09-14T09:00:00.000Z",
+    providerCode: "fixture",
   };
 }
 
-function proposal(overrides: { decision: "expired" | null }) {
+function proposal(overrides: { decision: "expired" | "rejected" | null }) {
   return {
     id: FIRST_PROPOSAL,
     origin: "ai_initial" as const,
     sourceProposalId: null,
+    providerCode: "fixture",
     content: roadmapContent(),
     planningNote: null,
     regenerationFeedback: null,
