@@ -100,20 +100,26 @@ spec with its own `testMatch` and port.
 **Project skills:** `schema-change`, `vercel-react-best-practices`,
 `frontend-design`, `validation-record`.
 
-**Hosted evidence — one command, not a runbook.** The lead cannot apply the
-migration or reach the founder database, and the product owner asked on
-16 September 2026 for the smallest possible number of commands. Ship a single
-committed script, run as one line (`npm.cmd run hosted:m3-15f`), that applies
-the migration to the linked founder project, then verifies it: migration
-history contains the repository's exact versions, `execute` on the five
-functions is held by `authenticated` and by nobody else, the advisors are
-clean, and an authenticated read still works. It writes the full transcript to
-a git-ignored file and prints one PASS/FAIL line per check. Use
-`supabase db push --linked`, `supabase migration list --linked`,
-`supabase db query --linked` and `supabase db advisors --linked`; do not
-require `psql`, a password prompt the CLI does not already ask for, or any
-manual step between commands. Never run it yourself. Record its output in the
-validation record before requesting acceptance.
+**Hosted evidence — the commands only, no script and no SQL.** The lead cannot
+apply the migration or reach the founder database. The product owner asked on
+16 September 2026 for the fewest possible terminal commands and for no SQL
+verification. So do not write a script, a runbook, or verification queries.
+Record in the validation record exactly this, and nothing more, as what the
+product owner runs from Git Bash at the repository root:
+
+```bash
+npx.cmd supabase link --project-ref <founder project ref>   # only if not already linked
+npx.cmd supabase db push --linked
+npx.cmd supabase db advisors --linked --type security --level warn
+```
+
+Never run any of them yourself, and never write the founder project ref into
+the repository — ADR-007 gates it and it is the product owner's to supply. The
+`db push` output is the apply evidence, the advisors output is the security
+evidence, and the authenticated hosted read is the product owner's own pass on
+the Preview, not a query. The privilege boundary is proven by the pgTAP suite
+in continuous integration instead of against the hosted database; record that
+narrowing as a known limitation, in those words.
 
 Read only this section unless you hit an ambiguity it does not resolve.
 
@@ -201,10 +207,16 @@ because they shaped the brief; the brief is what a builder reads.
    chose to keep the work in one ticket on 16 September 2026, accepting the
    longer brief, one migration and one hosted runbook over two Tier 1 cycles.
    Recorded here so the overrun reads as a decision rather than as drift.
-6. **No hosted runbook.** The product owner asked for the least possible
-   number of terminal commands, so the hosted apply and its verification ship
-   as one committed script run as a single line, rather than as a paste-ready
-   sequence of steps. Recorded in the brief under *Hosted evidence*.
+6. **No hosted runbook, no script, and no hosted SQL.** The product owner
+   asked on 16 September 2026 for the fewest possible terminal commands and for
+   no SQL verification. The ticket therefore ships the three Supabase CLI
+   commands in the brief and nothing else. This narrows the hosted verification
+   AGENTS.md asks for: migration history, the schema and privilege boundary, and
+   the authenticated read are no longer checked against the founder database by
+   query. What carries them instead is `db push`'s own output, the security
+   advisors, the pgTAP suite in continuous integration, and the product owner's
+   pass on the Preview. Recorded as a deliberate product-owner narrowing rather
+   than as an omission.
 
 ## Approval boundary
 
