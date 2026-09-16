@@ -198,6 +198,60 @@ describe("RoadmapRepository", () => {
     expect((failure as Error).message).toBe("The roadmap could not be saved.");
   });
 
+  // The example label rests on this field and on nothing else, so the read has
+  // to carry what the row says rather than what the origin implies.
+  it("reads a proposal's provenance from the row", async () => {
+    const { repository } = readingProposals([
+      {
+        ...proposalRow(SECOND_PROPOSAL, { decision: null }),
+        provider_code: "openai",
+      },
+    ]);
+
+    await expect(repository.getReviewProposals()).resolves.toMatchObject({
+      open: { id: SECOND_PROPOSAL, providerCode: "openai" },
+    });
+  });
+
+  // `roadmap_versions` carries no provider column, so a version's provenance
+  // comes from the proposal it was accepted from. PostgREST returns a to-one
+  // embed as an object or as a one-element array depending on how it resolves
+  // the relationship, and both have to map to the same view.
+  it("reads a version's provenance through the proposal it came from", async () => {
+    const rows = [
+      versionRow(2, { roadmap_proposals: { provider_code: "fixture" } }),
+      versionRow(1, { roadmap_proposals: [{ provider_code: "openai" }] }),
+    ];
+
+    await expect(readingVersions(rows).listVersions()).resolves.toEqual([
+      {
+        id: "version-2",
+        versionNumber: 2,
+        content: { title: "Toward the hilly half", phases: [] },
+        acceptedAt: "2026-08-10T09:00:00.000Z",
+        providerCode: "fixture",
+      },
+      {
+        id: "version-1",
+        versionNumber: 1,
+        content: { title: "Toward the hilly half", phases: [] },
+        acceptedAt: "2026-08-10T09:00:00.000Z",
+        providerCode: "openai",
+      },
+    ]);
+  });
+
+  // An unreadable embed must not become `"fixture"`. Labelling a coach-written
+  // roadmap an example is the one error the label itself could introduce, so
+  // absence is reported as absence.
+  it("labels nothing an example when the provenance cannot be read", async () => {
+    const versions = await readingVersions([
+      versionRow(1, { roadmap_proposals: null }),
+    ]).listVersions();
+
+    expect(versions[0].providerCode).toBe("");
+  });
+
   it("does not reach a transaction function for an anonymous session", async () => {
     const rpc = vi.fn();
     const repository = new RoadmapRepository(
@@ -234,6 +288,33 @@ function readingProposals(rows: ReturnType<typeof proposalRow>[]) {
   return { repository: new RoadmapRepository(client({ from })), eq, order };
 }
 
+function readingVersions(rows: ReturnType<typeof versionRow>[]) {
+  const order = vi.fn().mockResolvedValue({ data: rows, error: null });
+  const eq = vi.fn().mockReturnValue({ order });
+  const select = vi.fn().mockReturnValue({ eq });
+  const from = vi.fn((table: string) => {
+    if (table !== "roadmap_versions") {
+      throw new Error(`Unexpected table: ${table}`);
+    }
+    return { select };
+  });
+
+  return new RoadmapRepository(client({ from }));
+}
+
+function versionRow(
+  versionNumber: number,
+  overrides: { roadmap_proposals: unknown },
+) {
+  return {
+    id: `version-${versionNumber}`,
+    version_number: versionNumber,
+    content: { title: "Toward the hilly half", phases: [] },
+    accepted_at: "2026-08-10T09:00:00.000Z",
+    ...overrides,
+  };
+}
+
 function proposalRow(
   id: string,
   options: { decision: "accepted" | "rejected" | "expired" | null },
@@ -244,6 +325,7 @@ function proposalRow(
     source_proposal_id: null as string | null,
     planning_note: "Only 45 minutes on weekdays.",
     regeneration_feedback: null,
+    provider_code: "fixture",
     content: { title: "Toward the hilly half", phases: [] },
     created_at: "2026-08-10T09:00:00.000Z",
     generation_request_id: "00000000-0000-4000-8000-000000000030",
@@ -269,6 +351,7 @@ function proposalView(
     id,
     origin: "ai_initial",
     sourceProposalId: null as string | null,
+    providerCode: "fixture",
     content: { title: "Toward the hilly half", phases: [] },
     planningNote: "Only 45 minutes on weekdays.",
     regenerationFeedback: null,
