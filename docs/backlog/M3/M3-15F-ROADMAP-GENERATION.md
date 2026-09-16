@@ -1,12 +1,12 @@
 # M3-15F: Roadmap generation, acceptance, and privilege re-grant
 
-**Status:** proposed — the lead drafted the `## Agent brief` below on
+**Status:** in development — the lead wrote the `## Agent brief` below on
 16 September 2026 against the product owner's decisions of 15-16 September 2026
-(see *Decisions taken before dispatch*). Tier 1 dispatch approval is still
-outstanding. Split out of [M3-15E](M3-15E-ROADMAP-RESTORATION.md) on
-14 September 2026, when the lead measured the restoration and found a clean
-read/write seam. See that ticket's *Rescope* section for the measurement and
-the reasoning.
+(see *Decisions taken before dispatch*), and the product owner approved Tier 1
+dispatch on 16 September 2026. Split out of
+[M3-15E](M3-15E-ROADMAP-RESTORATION.md) on 14 September 2026, when the lead
+measured the restoration and found a clean read/write seam. See that ticket's
+*Rescope* section for the measurement and the reasoning.
 
 **Triage:** needs-triage
 
@@ -100,9 +100,20 @@ spec with its own `testMatch` and port.
 **Project skills:** `schema-change`, `vercel-react-best-practices`,
 `frontend-design`, `validation-record`.
 
-**Hosted evidence.** The lead cannot apply the migration or reach the founder
-database. Write the hosted runbook as one paste-ready block for the product
-owner, and record its output before requesting acceptance.
+**Hosted evidence — one command, not a runbook.** The lead cannot apply the
+migration or reach the founder database, and the product owner asked on
+16 September 2026 for the smallest possible number of commands. Ship a single
+committed script, run as one line (`npm.cmd run hosted:m3-15f`), that applies
+the migration to the linked founder project, then verifies it: migration
+history contains the repository's exact versions, `execute` on the five
+functions is held by `authenticated` and by nobody else, the advisors are
+clean, and an authenticated read still works. It writes the full transcript to
+a git-ignored file and prints one PASS/FAIL line per check. Use
+`supabase db push --linked`, `supabase migration list --linked`,
+`supabase db query --linked` and `supabase db advisors --linked`; do not
+require `psql`, a password prompt the CLI does not already ask for, or any
+manual step between commands. Never run it yourself. Record its output in the
+validation record before requesting acceptance.
 
 Read only this section unless you hit an ambiguity it does not resolve.
 
@@ -190,6 +201,10 @@ because they shaped the brief; the brief is what a builder reads.
    chose to keep the work in one ticket on 16 September 2026, accepting the
    longer brief, one migration and one hosted runbook over two Tier 1 cycles.
    Recorded here so the overrun reads as a decision rather than as drift.
+6. **No hosted runbook.** The product owner asked for the least possible
+   number of terminal commands, so the hosted apply and its verification ship
+   as one committed script run as a single line, rather than as a paste-ready
+   sequence of steps. Recorded in the brief under *Hosted evidence*.
 
 ## Approval boundary
 
