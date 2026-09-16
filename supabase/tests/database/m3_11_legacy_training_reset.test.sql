@@ -1,5 +1,5 @@
 begin;
-select plan(49);
+select plan(33);
 
 select hasnt_table('public', 'plan_proposal_decisions', 'plan proposal decisions are removed');
 select hasnt_table('public', 'plan_proposal_sources', 'plan proposal sources are removed');
@@ -93,127 +93,20 @@ select ok(
   'roadmap decisions carry an explicit expired state'
 );
 
-select ok(
-  not has_function_privilege(
-    'authenticated',
-    'public.begin_roadmap_generation(text,text,date,date,bigint,text,uuid,text)',
-    'EXECUTE'
-  ),
-  'authenticated cannot begin roadmap generation during maintenance'
-);
-select ok(
-  not has_function_privilege(
-    'anon',
-    'public.begin_roadmap_generation(text,text,date,date,bigint,text,uuid,text)',
-    'EXECUTE'
-  ),
-  'anonymous cannot begin roadmap generation during maintenance'
-);
-select ok(
-  not has_function_privilege(
-    'service_role',
-    'public.begin_roadmap_generation(text,text,date,date,bigint,text,uuid,text)',
-    'EXECUTE'
-  ),
-  'service role cannot begin roadmap generation during maintenance'
-);
-select ok(
-  not has_function_privilege(
-    'authenticated',
-    'public.finish_roadmap_generation(uuid,text,text,text,text,text,text,uuid,text,text,jsonb,jsonb,text)',
-    'EXECUTE'
-  ),
-  'authenticated cannot finish roadmap generation during maintenance'
-);
-select ok(
-  not has_function_privilege(
-    'anon',
-    'public.finish_roadmap_generation(uuid,text,text,text,text,text,text,uuid,text,text,jsonb,jsonb,text)',
-    'EXECUTE'
-  ),
-  'anonymous cannot finish roadmap generation during maintenance'
-);
-select ok(
-  not has_function_privilege(
-    'service_role',
-    'public.finish_roadmap_generation(uuid,text,text,text,text,text,text,uuid,text,text,jsonb,jsonb,text)',
-    'EXECUTE'
-  ),
-  'service role cannot finish roadmap generation during maintenance'
-);
-select ok(
-  not has_function_privilege(
-    'authenticated',
-    'public.record_roadmap_memory_candidates(uuid,bigint,jsonb)',
-    'EXECUTE'
-  ),
-  'authenticated cannot record roadmap memory during maintenance'
-);
-select ok(
-  not has_function_privilege(
-    'anon',
-    'public.record_roadmap_memory_candidates(uuid,bigint,jsonb)',
-    'EXECUTE'
-  ),
-  'anonymous cannot record roadmap memory during maintenance'
-);
-select ok(
-  not has_function_privilege(
-    'service_role',
-    'public.record_roadmap_memory_candidates(uuid,bigint,jsonb)',
-    'EXECUTE'
-  ),
-  'service role cannot record roadmap memory during maintenance'
-);
-select ok(
-  not has_function_privilege(
-    'authenticated',
-    'public.apply_roadmap_proposal_change(text,uuid,jsonb)',
-    'EXECUTE'
-  ),
-  'authenticated cannot change roadmap proposals during maintenance'
-);
-select ok(
-  not has_function_privilege(
-    'anon',
-    'public.apply_roadmap_proposal_change(text,uuid,jsonb)',
-    'EXECUTE'
-  ),
-  'anonymous cannot change roadmap proposals during maintenance'
-);
-select ok(
-  not has_function_privilege(
-    'service_role',
-    'public.apply_roadmap_proposal_change(text,uuid,jsonb)',
-    'EXECUTE'
-  ),
-  'service role cannot change roadmap proposals during maintenance'
-);
-select ok(
-  not has_function_privilege(
-    'authenticated', 'public.accept_roadmap_proposal(uuid,bigint)', 'EXECUTE'
-  ),
-  'authenticated cannot accept roadmap proposals during maintenance'
-);
-select ok(
-  not has_function_privilege(
-    'anon', 'public.accept_roadmap_proposal(uuid,bigint)', 'EXECUTE'
-  ),
-  'anonymous cannot accept roadmap proposals during maintenance'
-);
-select ok(
-  not has_function_privilege(
-    'service_role', 'public.accept_roadmap_proposal(uuid,bigint)', 'EXECUTE'
-  ),
-  'service role cannot accept roadmap proposals during maintenance'
-);
-
-select ok(
-  pg_get_functiondef(
-    'public.accept_roadmap_proposal(uuid,bigint)'::regprocedure
-  ) !~ '(detailed_plan|completion_heads)',
-  'roadmap acceptance has no legacy relation reference'
-);
+-- The roadmap privilege boundary moved to M3-15F.
+--
+-- M3-11 revoked `execute` on all five ADR-015 functions from every role and
+-- asserted that here, recording the intent that M3-15 restore them
+-- deliberately. M3-15F is that restoration: `authenticated` holds `execute`
+-- again, and `public`, `anon` and `service_role` still do not. Asserting the
+-- old state here would now fail, and asserting the new one would put M3-15F's
+-- boundary in M3-11's suite, so the whole matrix — including the check that
+-- `accept_roadmap_proposal` names no dropped relation — lives in
+-- `m3_15f_roadmap_generation.test.sql` instead.
+--
+-- What stays here is what M3-11 permanently established and M3-15F does not
+-- touch: the dropped tables, the removed RPCs, the deleted legacy rows, and
+-- the `expired` decision state above.
 
 select * from finish();
 rollback;
