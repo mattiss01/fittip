@@ -229,7 +229,13 @@ export async function editRoadmapAction(
   } catch (error) {
     return toActionState(error, submission);
   }
-  return finishWrite();
+  // The one write that returns rather than redirects. See the editor: an edit
+  // replaces the open proposal under a control that stays on screen, and a
+  // same-route redirect did not reliably land there, so the editor reloads the
+  // document itself once this resolves. The route is still invalidated here so
+  // that nothing cached can outlive the write.
+  revalidatePath("/home/plan/roadmap");
+  return { status: "edited", message: "", submission };
 }
 
 /**

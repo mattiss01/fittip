@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useRef, useState, type FormEvent } from "react";
 
 import { INITIAL_ROADMAP_ACTION_STATE } from "@/app/home/plan/roadmap/action-state";
 import { editRoadmapAction } from "@/app/home/plan/roadmap/actions";
@@ -22,16 +22,25 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
  * edit leaves the reviewed proposal untouched on screen as well as in the
  * database.
  *
- * It posts as a form action whose state it owns, with the whole draft in one
- * JSON field. Owning the hook is not a style choice. With `useActionState` in
- * the dock and the form rendered here, the browser flow saw the edit's pending
- * state never clear — thirty seconds and counting — while the compose form,
- * which owns its own hook, completed normally every time. The component that
- * renders a form owns that form's action state, on this surface as on the rest.
+ * ## Why saving reloads the document
  *
- * A successful edit navigates, so this component only ever renders a refusal.
- * One JSON field is the encoding that survives a nested draft without the
- * server reassembling a shape from flattened field names.
+ * An edit is the one write that replaces the open proposal under a control
+ * that stays on screen, and every App Router route back to a fresh tree failed
+ * for it in the browser flow while working for the other three writes: a
+ * transition-wrapped call, a form action, a same-route redirect, and a dock
+ * keyed by proposal. In every case the edit committed — the server answered,
+ * and a reload showed the new proposal at once — and in every case the screen
+ * kept the editor open with its submission pending.
+ *
+ * Two things were proven to work, so this does exactly those two. The action is
+ * awaited directly, outside any transition, which resolved reliably from the
+ * first attempt; and a successful save then loads the document again, which
+ * cannot be served a stale tree or left mid-transition. A refusal is rendered
+ * in place, with the draft intact, because that is the case the owner has to
+ * act on here.
+ *
+ * The draft travels as one JSON field, the encoding that survives a nested
+ * shape without the server reassembling it from flattened field names.
  */
 
 const LEVELS = ["primary", "secondary", "maintenance", "deferred"] as const;
@@ -87,14 +96,36 @@ export function RoadmapEditor({
   goalTitles: Record<string, string>;
   onCancel: () => void;
 }) {
-  const [refused, formAction, saving] = useActionState(
-    editRoadmapAction,
-    INITIAL_ROADMAP_ACTION_STATE,
-  );
-  const message = refused.status === "idle" ? "" : refused.message;
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const submission = useRef(INITIAL_ROADMAP_ACTION_STATE);
   const [draft, setDraft] = useState<Draft>(() =>
     structuredClone(content as Draft),
   );
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    setMessage("");
+    try {
+      const result = await editRoadmapAction(
+        submission.current,
+        new FormData(event.currentTarget),
+      );
+      submission.current = result;
+      if (result.status === "edited") {
+        // A full load rather than a router navigation, for the reason above.
+        // The button stays disabled until the new document replaces this one.
+        globalThis.location.assign("/home/plan/roadmap");
+        return;
+      }
+      setMessage(result.message);
+    } catch {
+      setMessage(ROADMAP_CONTROL_COPY.outcomes.decisionFailed);
+    }
+    setSaving(false);
+  }
 
   const update = (mutate: (next: Draft) => void) => {
     setDraft((current) => {
@@ -122,7 +153,7 @@ export function RoadmapEditor({
         </p>
       )}
 
-      <form action={formAction} className={styles.form}>
+      <form onSubmit={save} className={styles.form}>
         <input type="hidden" name="proposalId" value={proposalId} />
         {/* `schemaVersion` is added back server-side from the accepted
             contract, never from this form, and the whole draft is revalidated

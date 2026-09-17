@@ -413,17 +413,20 @@ describe("roadmap server actions", () => {
   // proved here is that the JSON it carries is treated as a claim to be checked
   // rather than as content to be stored.
   describe("edit", () => {
+    // The one write that returns instead of redirecting; the editor reloads the
+    // document on this status. It still invalidates the route and still never
+    // reaches `redirect()`.
     it("saves a valid edit as a new proposal beside its source", async () => {
-      await expect(
-        editRoadmapAction(
-          INITIAL_ROADMAP_ACTION_STATE,
-          form({
-            proposalId: PROPOSAL_ID,
-            content: JSON.stringify(editedContent({ title: "My own wording" })),
-          }),
-        ),
-      ).rejects.toThrow("NEXT_REDIRECT:/home/plan/roadmap");
+      const result = await editRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({
+          proposalId: PROPOSAL_ID,
+          content: JSON.stringify(editedContent({ title: "My own wording" })),
+        }),
+      );
 
+      expect(result.status).toBe("edited");
+      expect(redirectMock).not.toHaveBeenCalled();
       expect(editProposal.mock.calls[0][0]).toBe(PROPOSAL_ID);
       expect(editProposal.mock.calls[0][1]).toMatchObject({
         title: "My own wording",
