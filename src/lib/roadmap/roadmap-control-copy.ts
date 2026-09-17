@@ -98,19 +98,19 @@ export const ROADMAP_CONTROL_COPY = {
     "Written by the built-in example coach, not by a coaching model. It is real in your history and you can accept, edit or decline it; the wording is an example.",
 
   /**
-   * What every action says when it comes back.
+   * What an action says when it comes back, which is only ever why it refused.
+   *
+   * A write that succeeds navigates instead of returning a sentence, so there
+   * is no success copy here and there should not be: the screen already says
+   * what happened by showing the proposal, the accepted roadmap or the declined
+   * record. A refusal is the one case where the screen would otherwise say
+   * nothing at all.
    *
    * None of these echoes a provider message, a database message, or the
    * owner's own text: the note and the feedback are the two fields ADR-014
    * admits to the coaching boundary, and neither travels in an error.
    */
   outcomes: {
-    proposalReady: "A proposal is ready below.",
-    accepted: "Accepted. This is your roadmap now.",
-    declined: "Declined. It stays in your history.",
-    edited: "Saved as a new proposal. Review it below.",
-    pendingElsewhere:
-      "That request is already running. Reload in a moment to see where it went.",
     feedbackRequired: "Say what the coach should change before asking again.",
     feedbackWithoutRegeneration:
       "Feedback belongs to a regeneration, not a first request.",

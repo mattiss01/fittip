@@ -11,7 +11,12 @@ export default defineConfig({
   // the first version is preserved. Each generation is a round trip through the
   // coaching service, so it is longer than the single-surface flows.
   timeout: 360_000,
-  expect: { timeout: 10_000 },
+  // Generous, and measured rather than guessed. One generation is around a
+  // dozen round trips to a containerized Postgres — the owner's context, the
+  // claim, the persist, the memory batch, then the whole route re-read — and on
+  // a loaded machine that ran past ten seconds more than once while this flow
+  // was being written. A shared CI runner is not faster.
+  expect: { timeout: 30_000 },
   use: {
     actionTimeout: 15_000,
     baseURL: "http://localhost:3026",

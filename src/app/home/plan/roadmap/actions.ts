@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 // A `"use server"` module may export nothing but async functions, so the state
 // type and its initial value live in `action-state.ts` and the client imports
@@ -77,6 +78,7 @@ export async function generateRoadmapAction(
   formData: FormData,
 ): Promise<RoadmapActionState> {
   const submission = previous.submission + 1;
+  let succeeded = false;
   const draft: RoadmapActionDraft = {
     endDate: text(formData, "endDate"),
     planningNote: text(formData, "planningNote"),
@@ -130,33 +132,29 @@ export async function generateRoadmapAction(
       { roadmaps },
     );
 
-    revalidatePath("/home/plan/roadmap");
-
     if (result.status === "proposal") {
-      return {
-        status: "proposal",
-        message: OUTCOMES.proposalReady,
-        submission,
-        proposalId: result.proposalId,
-        memoryCandidateCount: result.memoryCandidateCount,
-      };
-    }
-    if (result.status === "pending") {
+      // Outside the `catch` below, because a redirect is a control-flow signal
+      // rather than an error and must not be swallowed by it.
+      succeeded = true;
+    } else if (result.status === "pending") {
       return {
         status: "pending",
         message: ROADMAP_CONTROL_COPY.pending,
         submission,
       };
+    } else {
+      return {
+        status: "error",
+        message: OUTCOMES.generationFailed,
+        submission,
+        draft,
+      };
     }
-    return {
-      status: "error",
-      message: OUTCOMES.generationFailed,
-      submission,
-      draft,
-    };
   } catch (error) {
     return toActionState(error, submission, draft);
   }
+  if (succeeded) return finishWrite();
+  return { status: "error", message: OUTCOMES.generationFailed, submission };
 }
 
 export async function acceptRoadmapAction(
@@ -166,20 +164,14 @@ export async function acceptRoadmapAction(
   const submission = previous.submission + 1;
   try {
     const roadmaps = await createRoadmapRepository();
-    const acceptance = await roadmaps.acceptProposal(
+    await roadmaps.acceptProposal(
       parseRoadmapProposalId(formData.get("proposalId")),
       parseExpectedHeadRevision(formData.get("expectedHeadRevision")),
     );
-    revalidatePath("/home/plan/roadmap");
-    return {
-      status: "accepted",
-      message: OUTCOMES.accepted,
-      submission,
-      proposalId: acceptance.proposalId,
-    };
   } catch (error) {
     return toActionState(error, submission);
   }
+  return finishWrite();
 }
 
 export async function declineRoadmapAction(
@@ -189,18 +181,13 @@ export async function declineRoadmapAction(
   const submission = previous.submission + 1;
   try {
     const roadmaps = await createRoadmapRepository();
-    const proposalId = parseRoadmapProposalId(formData.get("proposalId"));
-    await roadmaps.declineProposal(proposalId);
-    revalidatePath("/home/plan/roadmap");
-    return {
-      status: "declined",
-      message: OUTCOMES.declined,
-      submission,
-      proposalId,
-    };
+    await roadmaps.declineProposal(
+      parseRoadmapProposalId(formData.get("proposalId")),
+    );
   } catch (error) {
     return toActionState(error, submission);
   }
+  return finishWrite();
 }
 
 /**
@@ -238,17 +225,31 @@ export async function editRoadmapAction(
       return invalid(editRejectionMessage(validation.reason), submission);
     }
 
-    const newId = await roadmaps.editProposal(id, validation.response.roadmap);
-    revalidatePath("/home/plan/roadmap");
-    return {
-      status: "edited",
-      message: OUTCOMES.edited,
-      submission,
-      proposalId: newId,
-    };
+    await roadmaps.editProposal(id, validation.response.roadmap);
   } catch (error) {
     return toActionState(error, submission);
   }
+  return finishWrite();
+}
+
+/**
+ * What every successful write does instead of returning a message.
+ *
+ * The route is invalidated and then navigated to. Returning a state and relying
+ * on the action response to carry the refreshed tree was not reliable: the
+ * write landed, the control reported success, and the surface went on showing
+ * the record it had replaced. A navigation ends the transition unambiguously
+ * and refetches the route, so what the owner reads is what the database holds.
+ *
+ * Nothing is lost by dropping the success sentence. Every one of these writes
+ * changes what the screen says about itself — the proposal is there, or it is
+ * accepted, or it is declined — and that change is the feedback. A failure
+ * still returns a state, because a failure is the case where the screen would
+ * otherwise say nothing at all.
+ */
+function finishWrite(): never {
+  revalidatePath("/home/plan/roadmap");
+  redirect("/home/plan/roadmap");
 }
 
 /**

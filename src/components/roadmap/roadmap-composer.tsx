@@ -76,9 +76,10 @@ export function RoadmapComposer({
 
   function submit(formData: FormData) {
     // A new attempt gets a new key; a retry of one that has not produced a
-    // proposal reuses it. `state` here is the latest rendered result, which is
-    // exactly the attempt being retried.
-    if (keyRef.current === null || state.status === "proposal") {
+    // proposal reuses it. A successful generation never returns here — it
+    // navigates — so this form only ever sees an attempt that did not produce
+    // one, and reusing the key is exactly what makes the retry cheap.
+    if (keyRef.current === null) {
       keyRef.current = globalThis.crypto.randomUUID();
     }
     formData.set("idempotencyKey", keyRef.current);

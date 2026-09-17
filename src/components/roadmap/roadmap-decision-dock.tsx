@@ -8,7 +8,6 @@ import { INITIAL_ROADMAP_ACTION_STATE } from "@/app/home/plan/roadmap/action-sta
 import {
   acceptRoadmapAction,
   declineRoadmapAction,
-  editRoadmapAction,
 } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
@@ -22,23 +21,21 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
  * one that asks first, because it is the only one that closes a proposal
  * without producing anything to look at.
  *
- * ## Why all three are form actions
+ * ## Why a successful write never reports back here
  *
- * Including the edit, whose payload is a nested draft rather than a set of
- * fields. A Server Action called imperatively from a transition invalidates the
- * route but does not reliably hand this tree the refreshed payload, and the
- * browser flow caught exactly that: the edit committed, the dock reported
- * success, and the review above it went on showing the proposal the edit came
- * from. A form action gets the new tree as part of
- * the action's own response, so the surface cannot disagree with the database
- * about which proposal is open. The draft rides as one JSON field, which costs
- * a parse the server would have to do anyway — the content is revalidated by
- * `validateRoadmapCandidate` and bounded again by the database, so malformed
- * JSON is a validation failure like any other.
+ * It navigates instead. The browser flow found that an action's own response
+ * does not reliably carry the refreshed tree to this route: the write landed,
+ * the control reported success, and the surface went on showing the record it
+ * had replaced — for as long as the flow was willing to wait. The actions
+ * therefore redirect on success, which ends the transition and refetches the
+ * route, and this dock only ever renders a refusal.
  *
- * Three separate `useActionState` hooks rather than one shared reducer: they
- * are three independent submissions with their own pending flags, and sharing
- * state would make one control's reply appear under another.
+ * Accept and decline each own a `useActionState` here, beside the form that
+ * submits it, and the editor owns its own for the same reason: the component
+ * that renders a form owns that form's action state. Separate hooks rather than
+ * one shared reducer, because they are independent submissions with their own
+ * pending flags, and sharing state would make one control's refusal appear
+ * under another.
  *
  * The client boundary stops here. Everything above this component — the
  * proposal itself, the spine, the example label — is rendered on the server, so
@@ -66,26 +63,13 @@ export function RoadmapDecisionDock({
     declineRoadmapAction,
     INITIAL_ROADMAP_ACTION_STATE,
   );
-  const [edited, editAction, saving] = useActionState(
-    editRoadmapAction,
-    INITIAL_ROADMAP_ACTION_STATE,
-  );
   const [editorOpen, setEditorOpen] = useState(false);
 
-  // The editor closes when its own submission comes back accepted, decided
-  // during render rather than in an effect: an effect would paint the editor
-  // once more over content that is already superseded. A rejected edit keeps
-  // the editor open, because the draft is the thing that needs correcting.
-  const [seenEdit, setSeenEdit] = useState(edited.submission);
-  if (seenEdit !== edited.submission) {
-    setSeenEdit(edited.submission);
-    if (edited.status === "edited") setEditorOpen(false);
-  }
-
-  const busy = accepting || declining || saving;
-  // Whichever control last reported something. All three start at submission 0,
-  // so an untouched dock shows nothing.
-  const latest = [accepted, declined, edited]
+  const busy = accepting || declining;
+  // Whichever control last refused, and why. Both start at submission 0, so an
+  // untouched dock shows nothing, and a successful write never gets here
+  // because it navigates.
+  const latest = [accepted, declined]
     .filter((state) => state.status !== "idle")
     .sort((a, b) => a.submission - b.submission)
     .at(-1);
@@ -96,9 +80,6 @@ export function RoadmapDecisionDock({
         proposalId={proposalId}
         content={content}
         goalTitles={goalTitles}
-        formAction={editAction}
-        message={edited.status === "edited" ? "" : edited.message}
-        saving={saving}
         onCancel={() => setEditorOpen(false)}
       />
     );

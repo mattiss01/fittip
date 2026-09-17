@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 
+import { INITIAL_ROADMAP_ACTION_STATE } from "@/app/home/plan/roadmap/action-state";
+import { editRoadmapAction } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
@@ -20,12 +22,16 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
  * edit leaves the reviewed proposal untouched on screen as well as in the
  * database.
  *
- * It posts as a form action, with the whole draft in one JSON field. The dock
- * above explains why that matters: an imperative Server Action call does not
- * reliably hand this tree the revalidated payload, and the browser flow caught
- * the consequence — a committed edit under a review still showing the proposal
- * it came from. One JSON field is the encoding that survives a nested draft
- * without the server reassembling a shape from flattened field names.
+ * It posts as a form action whose state it owns, with the whole draft in one
+ * JSON field. Owning the hook is not a style choice. With `useActionState` in
+ * the dock and the form rendered here, the browser flow saw the edit's pending
+ * state never clear — thirty seconds and counting — while the compose form,
+ * which owns its own hook, completed normally every time. The component that
+ * renders a form owns that form's action state, on this surface as on the rest.
+ *
+ * A successful edit navigates, so this component only ever renders a refusal.
+ * One JSON field is the encoding that survives a nested draft without the
+ * server reassembling a shape from flattened field names.
  */
 
 const LEVELS = ["primary", "secondary", "maintenance", "deferred"] as const;
@@ -73,22 +79,19 @@ export function RoadmapEditor({
   proposalId,
   content,
   goalTitles,
-  formAction,
-  message,
-  saving,
   onCancel,
 }: {
   proposalId: string;
   content: unknown;
   /** Goal id to title, so an attention row names a goal rather than a uuid. */
   goalTitles: Record<string, string>;
-  /** The dock's edit action, so the reply carries the refreshed tree with it. */
-  formAction: (formData: FormData) => void;
-  /** Why the last attempt was refused, or empty. */
-  message: string;
-  saving: boolean;
   onCancel: () => void;
 }) {
+  const [refused, formAction, saving] = useActionState(
+    editRoadmapAction,
+    INITIAL_ROADMAP_ACTION_STATE,
+  );
+  const message = refused.status === "idle" ? "" : refused.message;
   const [draft, setDraft] = useState<Draft>(() =>
     structuredClone(content as Draft),
   );
