@@ -41,6 +41,24 @@ Validation records and their visual evidence are grouped by milestone.
 
 ## M3
 
+- [M3-15F roadmap generation, acceptance, and privilege re-grant](M3/M3-15F-VALIDATION.md)
+  — in development; Tier 1 builder handoff complete. Independent review, the
+  continuous-integration run for the reviewed SHA, the hosted founder apply, the
+  Preview pass and acceptance are outstanding. One forward migration re-grants
+  `execute` on the five ADR-015 roadmap functions to `authenticated` and nobody
+  else, fixes M3-09 by treating a concurrent same-key `unique_violation` as the
+  replay it is, and gives `accept_roadmap_proposal` a working body again after
+  M3-11 replaced it with a stub naming two dropped tables. On the surface
+  M3-15E restored, an owner can generate, edit, decline, regenerate and accept a
+  roadmap; with no provider credential the built-in example coach answers and
+  everything it writes is labelled an example from its stored `provider_code`.
+  The two copy defects M3-15E deferred are fixed. The browser flow found that
+  same-route Server Action results did not reliably reach the page, so every
+  write now awaits the action and reloads the document on success; review
+  target `68958da`. The hosted verification is deliberately narrowed by the
+  product owner to three CLI commands with no SQL, so the privilege boundary is
+  proven by pgTAP in continuous integration rather than against the founder
+  database
 - [M3-15E roadmap surface restoration](M3/M3-15E-VALIDATION.md) — Tier 2;
   round 1 of independent review returned two findings, both corrected in
   `4ee7565` (a provider session cap was suppressing the safety notice for an
