@@ -689,3 +689,56 @@ These need judgment that CI cannot supply:
 10. **The removed M3-11 pgTAP assertions.** Confirm that each of the sixteen has
     an equal or stronger assertion in `m3_15f_roadmap_generation.test.sql`, and
     that nothing M3-11 permanently established was removed with them.
+
+## Correction after the first continuous-integration run
+
+The first CI run for `68958da`'s tree — run
+[35206994777](https://github.com/mattiss01/fittip/actions/runs/35206994777), for
+`c70780e` — was red on exactly one step: **M3-11 seeded legacy reset**, in the
+`database` job. Everything else passed: the `static` job, the `browser` job,
+every migration from zero, db lint, both advisors, pgTAP, and the new M3-15F
+concurrency harness.
+
+**Root cause.** `supabase/tests/fixtures/m3_11_post_reset_verify.sql` asserted
+that `accept_roadmap_proposal(uuid,bigint)` was executable by no role at all,
+which is what M3-11 left behind when it revoked a function whose body named
+tables the reset had removed. M3-15F rewrote that body and deliberately
+re-granted execute to `authenticated`, so the fixture failed for a change the
+ticket made on purpose. The branch had updated the parallel TypeScript guard in
+`src/architecture/m3-11-legacy-reset.test.ts` — see *The invariant that
+changed* — but not this SQL one.
+
+**Fix.** Commit `74c2391`, one file:
+`supabase/tests/fixtures/m3_11_post_reset_verify.sql`.
+The privilege guard now asserts only that `anon`
+and `service_role` cannot execute the function, with a comment naming M3-15F so
+the next reader sees a deliberate narrowing rather than a weakened check.
+`authenticated` access is proved by the M3-15F pgTAP suite, which covers owner,
+anonymous and cross-owner behaviour on all five roadmap functions, so widening
+this fixture to the other four re-granted functions would duplicate it. The
+migration was not touched; it is committed and correct. Nothing else changed.
+
+The legacy-dependency assertion immediately below it is unchanged and still
+passes. The new function body names neither `detailed_plan` nor
+`completion_heads`; the only occurrences in the migration are the file-level
+`--` comments at lines 8, 325 and 332, which `pg_get_functiondef` does not
+return.
+
+**Local evidence**, against the running local stack:
+
+| Command or check                                                                      | Result                                                        |
+| ------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `npm.cmd run test:m3-11-seeded-reset`, with the corrected fixture                     | "M3-11 seeded legacy reset passed." Exit 0                     |
+| The pre-fix fixture (`git show HEAD:…`) piped into `psql` against that same database  | `ERROR: roadmap acceptance remains callable`, exit 3           |
+| `has_function_privilege` for the three roles, queried directly on that database       | `authenticated` t, `anon` f, `service_role` f                  |
+| `pg_get_functiondef(…) ~ '(detailed_plan\|completion_heads)'`                          | `f`                                                            |
+| `git diff --check`                                                                     | Clean                                                          |
+
+The second and third rows are the negative control: the same database state that
+the corrected fixture accepts still fails the old one at the same line, so the
+change narrows the guard rather than disabling the harness.
+
+`74c2391` supersedes `68958da` as the implementation review target, and
+approval of `68958da` — and of any Preview built from it — does not carry over.
+The CI run for `74c2391` is the automated evidence and is not yet available at
+the time of writing.
