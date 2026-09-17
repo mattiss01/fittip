@@ -44,15 +44,29 @@ const maintenancePages = ["src/app/home/plan/proposal/page.tsx"] as const;
  * routes a roadmap repository and a coaching service they have no business
  * holding, which is the loosening that list exists to prevent.
  *
- * M3-15F added `actions.ts`. The allowlist is what keeps that addition from
- * being a hole: the actions may reach the coaching seam, the roadmap domain and
- * the three repositories they genuinely need, and nothing else — no provider
- * adapter, no spend ledger, no Supabase client, and no plan or training
- * repository.
+ * M3-15F added `actions.ts`. The two allowlists are what keep that addition
+ * from being a hole: the actions may reach the coaching seam, the roadmap
+ * domain and the three repositories they genuinely need, and nothing else — no
+ * provider adapter, no spend ledger, and no plan or training repository. The
+ * one Supabase module they may reach is named below rather than left to a
+ * pattern, because a rule that bans no specific module bans nothing.
  */
 const roadmapSurface = [
   "src/app/home/plan/roadmap/page.tsx",
   "src/app/home/plan/roadmap/actions.ts",
+] as const;
+
+/**
+ * The only `@/lib/supabase` specifier this surface may import.
+ *
+ * `actions.ts` needs it: a Server Action is a public endpoint, and
+ * `createServerUserClient` is how it re-derives the owner from verified Auth
+ * claims before touching the repository. Nothing else on this surface has a
+ * reason to hold a client — a component with one could read or write around
+ * the endpoint, and the admin client is not importable from here at all.
+ */
+const allowedRoadmapSupabaseModules = [
+  "@/lib/supabase/server-user-client",
 ] as const;
 
 const allowedRoadmapModules = [
@@ -226,6 +240,16 @@ describe("M3-11 legacy runtime closure", () => {
           `${path} imports ${specifier}`,
         ).toContain(specifier);
       }
+
+      const supabase = [
+        ...source.matchAll(/from "(@\/lib\/supabase\/[^"]+)"/g),
+      ].map((match) => match[1]);
+      for (const specifier of supabase) {
+        expect(
+          allowedRoadmapSupabaseModules as readonly string[],
+          `${path} imports ${specifier}`,
+        ).toContain(specifier);
+      }
     }
   });
 
@@ -269,11 +293,14 @@ describe("M3-11 legacy runtime closure", () => {
       }
 
       // Everything else on the surface renders. A component that declared an
-      // action would be an endpoint nobody reviews as one. A test beside it may
-      // name either, because naming one is how a test asserts about it.
+      // action would be an endpoint nobody reviews as one, and one holding a
+      // Supabase client could read or write around the endpoint entirely. A
+      // test beside it may name either, because naming one is how a test
+      // asserts about it.
       if (isTest) continue;
       expect(source, path).not.toContain('"use server"');
       expect(source, path).not.toContain("revalidatePath");
+      expect(source, path).not.toMatch(/@\/lib\/supabase/);
     }
 
     expect(writeEntryPoints, "the write entry point must exist").toBe(1);
