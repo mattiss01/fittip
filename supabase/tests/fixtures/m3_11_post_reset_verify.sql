@@ -180,12 +180,13 @@ begin
     raise exception 'representative auth audit evidence changed';
   end if;
 
+  -- M3-11 left this function revoked from every role, because the body it
+  -- inherited named tables the reset had removed. M3-15F rewrote that body and
+  -- deliberately re-granted execute to `authenticated`, so the check narrows to
+  -- the two roles that must still never reach it. `authenticated` access is
+  -- proved by the M3-15F pgTAP suite, which covers owner, anonymous, and
+  -- cross-owner behaviour on all five roadmap functions.
   if pg_catalog.has_function_privilege(
-      'authenticated',
-      'public.accept_roadmap_proposal(uuid,bigint)',
-      'EXECUTE'
-    )
-    or pg_catalog.has_function_privilege(
       'anon',
       'public.accept_roadmap_proposal(uuid,bigint)',
       'EXECUTE'
@@ -196,7 +197,7 @@ begin
       'EXECUTE'
     )
   then
-    raise exception 'roadmap acceptance remains callable';
+    raise exception 'roadmap acceptance is callable by anon or service_role';
   end if;
 
   if pg_catalog.pg_get_functiondef(
