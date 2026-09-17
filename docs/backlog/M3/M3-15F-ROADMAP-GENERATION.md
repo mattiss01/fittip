@@ -100,20 +100,26 @@ spec with its own `testMatch` and port.
 **Project skills:** `schema-change`, `vercel-react-best-practices`,
 `frontend-design`, `validation-record`.
 
-**Hosted evidence — one command, not a runbook.** The lead cannot apply the
-migration or reach the founder database, and the product owner asked on
-16 September 2026 for the smallest possible number of commands. Ship a single
-committed script, run as one line (`npm.cmd run hosted:m3-15f`), that applies
-the migration to the linked founder project, then verifies it: migration
-history contains the repository's exact versions, `execute` on the five
-functions is held by `authenticated` and by nobody else, the advisors are
-clean, and an authenticated read still works. It writes the full transcript to
-a git-ignored file and prints one PASS/FAIL line per check. Use
-`supabase db push --linked`, `supabase migration list --linked`,
-`supabase db query --linked` and `supabase db advisors --linked`; do not
-require `psql`, a password prompt the CLI does not already ask for, or any
-manual step between commands. Never run it yourself. Record its output in the
-validation record before requesting acceptance.
+**Hosted evidence — commands, not a script.** The lead cannot apply the
+migration or reach the founder database. On 16 September 2026 the product
+owner narrowed this to the fewest possible terminal commands and no SQL
+verification: *"it doesnt have to be a script. i just want the commands i need
+to run for the migration but not do any sql tests"*. Ship no script and no
+verification queries. The product owner runs, in this order:
+
+```bash
+npx.cmd supabase link --project-ref <founder project ref>   # only if not linked
+npx.cmd supabase db push --linked
+npx.cmd supabase migration list --linked
+npx.cmd supabase db advisors --linked --type security --level warn
+```
+
+Never run any of them yourself, and never write the founder project ref into
+the repository. Record their output in the validation record before requesting
+acceptance. This deliberately narrows AGENTS.md's hosted verification: nothing
+queries the hosted privilege boundary, and the authenticated hosted read is the
+product owner's own acceptance pass rather than a scripted check. Record that
+narrowing as a known limitation.
 
 Read only this section unless you hit an ambiguity it does not resolve.
 
@@ -201,10 +207,19 @@ because they shaped the brief; the brief is what a builder reads.
    chose to keep the work in one ticket on 16 September 2026, accepting the
    longer brief, one migration and one hosted runbook over two Tier 1 cycles.
    Recorded here so the overrun reads as a decision rather than as drift.
-6. **No hosted runbook.** The product owner asked for the least possible
-   number of terminal commands, so the hosted apply and its verification ship
-   as one committed script run as a single line, rather than as a paste-ready
-   sequence of steps. Recorded in the brief under *Hosted evidence*.
+6. **No hosted runbook, and no script either.** The product owner first asked
+   for the least possible number of terminal commands, which the lead drafted
+   as one committed verification script. On 16 September 2026 they narrowed it
+   again — *"it doesnt have to be a script. i just want the commands i need to
+   run for the migration but not do any sql tests"* — so the hosted step is a
+   short list of CLI commands the product owner runs by hand, with no SQL
+   verification of the hosted privilege boundary. On 17 September 2026, after
+   the independent reviewer objected that nothing would then prove the
+   migration had landed, the product owner added `supabase migration list`.
+   The brief under *Hosted evidence* is the authority; this decision was not
+   carried into it until 17 September 2026, which caused the reviewer to read
+   the validation record as claiming an authorization the ticket did not
+   contain. That was a lead error, not a builder one.
 
 ## Approval boundary
 
