@@ -36,6 +36,21 @@ export const ROADMAP_CONTROL_COPY = {
   pending:
     "Building your roadmap proposal... Your current roadmap stays unchanged.",
 
+  /**
+   * The two sentences the lost-render watchdog drives.
+   *
+   * Both are bounded by what a resource-timing entry can prove, which is that
+   * a response arrived and nothing about what it said — these actions answer
+   * 200 for a conflict, a validation failure and an expired session alike. So
+   * neither claims anything was saved: the first says the step did not appear
+   * and the page is reloading, the second says the reload happened and what is
+   * on screen is what is stored. See `@/lib/app-router/transition-watchdog`.
+   */
+  lostRender:
+    "This roadmap step did not appear. Reloading to show what is saved.",
+  recoveredReload:
+    "Your last roadmap step did not appear, so this page was reloaded. What you see below is what is saved.",
+
   /* ---- Regenerate ------------------------------------------------------- */
   regenerateTitle: "Ask for another proposal",
   regenerateAction: "Regenerate proposal",
@@ -98,19 +113,25 @@ export const ROADMAP_CONTROL_COPY = {
     "Written by the built-in example coach, not by a coaching model. It is real in your history and you can accept, edit or decline it; the wording is an example.",
 
   /**
-   * What an action says when it comes back, which is only ever why it refused.
-   *
-   * A write that succeeds navigates instead of returning a sentence, so there
-   * is no success copy here and there should not be: the screen already says
-   * what happened by showing the proposal, the accepted roadmap or the declined
-   * record. A refusal is the one case where the screen would otherwise say
-   * nothing at all.
+   * What every action says when it comes back.
    *
    * None of these echoes a provider message, a database message, or the
    * owner's own text: the note and the feedback are the two fields ADR-014
    * admits to the coaching boundary, and neither travels in an error.
    */
   outcomes: {
+    proposalReady: "A proposal is ready below.",
+    accepted: "Accepted. This is your roadmap now.",
+    declined: "Declined. It stays in your history.",
+    edited: "Saved as a new proposal. Review it below.",
+    /**
+     * An attempt under this key is already running, so no second one was made
+     * and this screen will never be told how the first ended. Reloading is the
+     * only thing the owner can do about it, so it is what the sentence asks
+     * for.
+     */
+    pendingElsewhere:
+      "That request is already running. Reload in a moment to see where it went.",
     feedbackRequired: "Say what the coach should change before asking again.",
     feedbackWithoutRegeneration:
       "Feedback belongs to a regeneration, not a first request.",

@@ -41,11 +41,13 @@ export type RoadmapActionState = {
    * before it even when both carry the same status and message.
    */
   submission: number;
-  /** The proposal the action produced or decided, where there is one. */
-  proposalId?: string;
-  /** Candidates a generation extracted from the planning note, if any. */
-  memoryCandidateCount?: number;
-  /** Returned on a rejected compose so the form keeps what was typed. */
+  /**
+   * Returned on a rejected compose so the form keeps what was typed.
+   *
+   * A form action resets an uncontrolled form when its reply commits, so the
+   * two counted fields are re-seeded from this rather than left blank under a
+   * refusal the owner has to act on.
+   */
   draft?: RoadmapActionDraft;
 };
 

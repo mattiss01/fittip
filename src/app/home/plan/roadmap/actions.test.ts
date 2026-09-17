@@ -378,9 +378,12 @@ describe("roadmap server actions", () => {
         form({ endDate, idempotencyKey: "m3-15f-generate-key-0001" }),
       );
 
+      // The running attempt will never report back to this screen, so the
+      // reply asks for the one thing that settles it rather than leaving the
+      // in-flight sentence on a tab that cannot update.
       expect(result).toMatchObject({
         status: "pending",
-        message: ROADMAP_CONTROL_COPY.pending,
+        message: OUTCOMES.pendingElsewhere,
       });
       expect(generateMock).toHaveBeenCalledTimes(1);
     });
@@ -472,6 +475,53 @@ describe("roadmap server actions", () => {
       expect(result).toMatchObject({
         status: "conflict",
         message: OUTCOMES.notAvailable,
+      });
+    });
+  });
+
+  // A write that lands renders over the tree its own reply carried, so the
+  // approved sentence is read on the screen the write produced. These four are
+  // the copy the surface promises; an empty message would leave a successful
+  // write saying nothing at all.
+  describe("what a landed write says", () => {
+    const endDate = addDays(new Date().toISOString().slice(0, 10), 84);
+
+    it("names the outcome of every successful write", async () => {
+      const generated = await generateRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({ endDate, idempotencyKey: "m3-15f-generate-key-0001" }),
+      );
+      const accepted = await acceptRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({ proposalId: PROPOSAL_ID, expectedHeadRevision: "2" }),
+      );
+      const declined = await declineRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({ proposalId: PROPOSAL_ID }),
+      );
+      const edited = await editRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({
+          proposalId: PROPOSAL_ID,
+          content: JSON.stringify(editedContent({})),
+        }),
+      );
+
+      expect(generated).toMatchObject({
+        status: "proposal",
+        message: OUTCOMES.proposalReady,
+      });
+      expect(accepted).toMatchObject({
+        status: "accepted",
+        message: OUTCOMES.accepted,
+      });
+      expect(declined).toMatchObject({
+        status: "declined",
+        message: OUTCOMES.declined,
+      });
+      expect(edited).toMatchObject({
+        status: "edited",
+        message: OUTCOMES.edited,
       });
     });
   });

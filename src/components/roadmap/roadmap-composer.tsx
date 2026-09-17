@@ -1,8 +1,13 @@
 "use client";
 
-import { useId, useRef, useState, type FormEvent } from "react";
+import { useId, useRef, useState } from "react";
 
-import { useRoadmapWrite } from "./use-roadmap-write";
+import { RoadmapWatchNotice } from "./roadmap-watch-notice";
+import {
+  isRefusal,
+  useRoadmapRecovered,
+  useRoadmapWrite,
+} from "./use-roadmap-write";
 
 import {
   ROADMAP_FEEDBACK_MAX_LENGTH,
@@ -48,16 +53,15 @@ export function RoadmapComposer({
   previousProposalId?: string;
   regenerationsRemaining: number;
 }) {
-  // A proposal that lands reloads the document, so this component only ever
-  // renders a refusal; see `use-roadmap-write.ts` for why.
   const {
-    saving: pending,
-    refused,
+    state,
     submit: write,
-  } = useRoadmapWrite(
-    generateRoadmapAction,
-    ROADMAP_CONTROL_COPY.outcomes.generationFailed,
-  );
+    pending,
+    lostRender,
+  } = useRoadmapWrite(generateRoadmapAction);
+  // Nothing composed in this document yet, so a recovery marker left by the
+  // write before the reload is this form's to explain.
+  const recovered = useRoadmapRecovered(state.submission === 0);
   const keyRef = useRef<string | null>(null);
   // Explicit ids rather than a wrapping `<label>`. A label that wraps its
   // control takes its whole text content as the accessible name, so the helper
@@ -66,25 +70,31 @@ export function RoadmapComposer({
   const fieldId = useId();
 
   // The two counted fields are controlled so the character count is the value's
-  // own length rather than a second source of truth. A refusal leaves them as
-  // typed: nothing reset them, so there is nothing to restore.
+  // own length rather than a second source of truth. A form action resets an
+  // uncontrolled form when its reply commits, so they are re-seeded from the
+  // returned draft during render rather than in an effect: an effect would
+  // paint the emptied field first and then refill it.
+  const [seenSubmission, setSeenSubmission] = useState(state.submission);
   const [note, setNote] = useState("");
   const [feedback, setFeedback] = useState("");
+  if (seenSubmission !== state.submission) {
+    setSeenSubmission(state.submission);
+    setNote(state.draft?.planningNote ?? "");
+    setFeedback(state.draft?.regenerationFeedback ?? "");
+  }
 
   const isRegeneration = mode === "regeneration";
 
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
+  function submit(formData: FormData) {
     // A new attempt gets a new key; a retry of one that has not produced a
-    // proposal reuses it. A successful generation never returns here — the
-    // document reloads — so this form only ever sees an attempt that did not
-    // produce one, and reusing the key is exactly what makes the retry cheap.
-    if (keyRef.current === null) {
+    // proposal reuses it, which is what makes the retry cheap rather than a
+    // second charge on a live binding. `state` here is the latest rendered
+    // result, which is exactly the attempt being retried.
+    if (keyRef.current === null || state.status === "proposal") {
       keyRef.current = globalThis.crypto.randomUUID();
     }
     formData.set("idempotencyKey", keyRef.current);
-    void write(formData);
+    write(formData);
   }
 
   return (
@@ -100,17 +110,21 @@ export function RoadmapComposer({
           : ROADMAP_CONTROL_COPY.composeSupport}
       </p>
 
-      {refused === null ? null : (
+      <RoadmapWatchNotice lostRender={lostRender} recovered={recovered} />
+
+      {/* Only a refusal renders here. A generation that lands removes this
+          form, so its sentence is reported to `RoadmapOutcomeNotice` instead. */}
+      {isRefusal(state) ? (
         <p
           className={styles.notice}
-          data-roadmap-notice={refused.status}
+          data-roadmap-notice={state.status}
           role="status"
         >
-          {refused.message}
+          {state.message}
         </p>
-      )}
+      ) : null}
 
-      <form onSubmit={submit} className={styles.form}>
+      <form action={submit} className={styles.form}>
         {isRegeneration && previousProposalId ? (
           <input
             type="hidden"

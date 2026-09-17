@@ -61,15 +61,11 @@ export function RoadmapProposalReview({
         />
       </article>
 
-      {/* Keyed by the proposal, because a dock belongs to one. An edit creates a
-          new open proposal at this exact position, and without the key React
-          keeps the old dock mounted — its editor still open and its submission
-          still pending — over a proposal it was never about. Generation,
-          acceptance and decline never hit this, because each of them removes
-          the component that submitted; an edit is the one write that replaces
-          the record under a control that stays on screen. */}
+      {/* Deliberately not keyed by the proposal. An edit replaces the open
+          proposal at this exact position, and remounting the dock there would
+          discard the sentence that edit just earned; the dock says how it
+          stays correct across that instead. */}
       <RoadmapDecisionDock
-        key={proposal.id}
         proposalId={proposal.id}
         content={proposal.content}
         expectedHeadRevision={expectedHeadRevision}

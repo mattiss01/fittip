@@ -578,6 +578,9 @@
 .notice[data-roadmap-notice="conflict"],
 .notice[data-roadmap-notice="cap-reached"],
 .notice[data-roadmap-notice="session"],
+.notice[data-roadmap-notice="pending"],
+.notice[data-roadmap-notice="lost-render"],
+.notice[data-roadmap-notice="recovered"],
 .notice[data-roadmap-notice="error"] {
   border-left-color: var(--roadmap-checkpoint);
   background: #fff4ec;

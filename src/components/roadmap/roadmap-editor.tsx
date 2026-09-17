@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 
-import { useRoadmapWrite } from "./use-roadmap-write";
+import { RoadmapWatchNotice } from "./roadmap-watch-notice";
 
-import { editRoadmapAction } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
@@ -23,11 +22,11 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
  * edit leaves the reviewed proposal untouched on screen as well as in the
  * database.
  *
- * Saving goes through `useRoadmapWrite` like every other roadmap write, so a
- * save that lands reloads the document and a refusal is rendered in place with
- * the draft intact — the case the owner has to act on here. The draft travels
- * as one JSON field, the encoding that survives a nested shape without the
- * server reassembling it from flattened field names.
+ * The form action, its reply and its pending flag belong to the dock above,
+ * because a landed edit closes this editor: state held here would be unmounted
+ * before the sentence it earned could be read. What is held here is the draft
+ * and nothing else. It travels as one JSON field, the encoding that survives a
+ * nested shape without the server reassembling it from flattened field names.
  */
 
 const LEVELS = ["primary", "secondary", "maintenance", "deferred"] as const;
@@ -75,27 +74,26 @@ export function RoadmapEditor({
   proposalId,
   content,
   goalTitles,
+  formAction,
+  message,
+  saving,
+  lostRender,
   onCancel,
 }: {
   proposalId: string;
   content: unknown;
   /** Goal id to title, so an attention row names a goal rather than a uuid. */
   goalTitles: Record<string, string>;
+  formAction: (formData: FormData) => void;
+  /** The edit's last refusal, or the empty string. */
+  message: string;
+  saving: boolean;
+  lostRender: boolean;
   onCancel: () => void;
 }) {
-  const { saving, refused, submit } = useRoadmapWrite(
-    editRoadmapAction,
-    ROADMAP_CONTROL_COPY.outcomes.decisionFailed,
-  );
-  const message = refused?.message ?? "";
   const [draft, setDraft] = useState<Draft>(() =>
     structuredClone(content as Draft),
   );
-
-  function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    void submit(new FormData(event.currentTarget));
-  }
 
   const update = (mutate: (next: Draft) => void) => {
     setDraft((current) => {
@@ -113,6 +111,8 @@ export function RoadmapEditor({
       <h2 className={styles.cardHeading}>{ROADMAP_CONTROL_COPY.editTitle}</h2>
       <p className={styles.emptyState}>{ROADMAP_CONTROL_COPY.editSupport}</p>
 
+      <RoadmapWatchNotice lostRender={lostRender} recovered={false} />
+
       {message === "" ? null : (
         <p
           className={styles.notice}
@@ -123,7 +123,7 @@ export function RoadmapEditor({
         </p>
       )}
 
-      <form onSubmit={save} className={styles.form}>
+      <form action={formAction} className={styles.form}>
         <input type="hidden" name="proposalId" value={proposalId} />
         {/* `schemaVersion` is added back server-side from the accepted
             contract, never from this form, and the whole draft is revalidated

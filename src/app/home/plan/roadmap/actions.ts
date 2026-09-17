@@ -134,9 +134,13 @@ export async function generateRoadmapAction(
       return landed("proposal", submission);
     }
     if (result.status === "pending") {
+      // The attempt under this key is already running somewhere else, so this
+      // screen will never be told how it ended. The copy asks for the one
+      // thing that settles it rather than leaving a pending sentence on a tab
+      // that cannot update.
       return {
         status: "pending",
-        message: ROADMAP_CONTROL_COPY.pending,
+        message: OUTCOMES.pendingElsewhere,
         submission,
       };
     }
@@ -227,22 +231,29 @@ export async function editRoadmapAction(
 }
 
 /**
- * What every successful write returns: a status that says it landed, and no
- * sentence.
+ * What every successful write returns: the status that says it landed, and the
+ * approved sentence for it.
  *
- * The client reloads the document on these statuses — see
- * `src/components/roadmap/use-roadmap-write.ts` for the browser evidence behind
- * that — so a success message would never be read. Nothing is lost by it:
- * every one of these writes changes what the screen says about itself. The
- * route is still invalidated, so that no cached payload can outlive the write.
+ * The route is invalidated first, so the revalidated tree travels back with the
+ * reply rather than behind it, and the surface renders both in one commit. That
+ * is what makes a success sentence worth returning: the screen the owner reads
+ * it on is already the screen the write produced.
  */
 function landed(
   status: "proposal" | "accepted" | "declined" | "edited",
   submission: number,
 ): RoadmapActionState {
   revalidatePath("/home/plan/roadmap");
-  return { status, message: "", submission };
+  return { status, message: SUCCESS[status], submission };
 }
+
+const SUCCESS: Record<"proposal" | "accepted" | "declined" | "edited", string> =
+  {
+    proposal: OUTCOMES.proposalReady,
+    accepted: OUTCOMES.accepted,
+    declined: OUTCOMES.declined,
+    edited: OUTCOMES.edited,
+  };
 
 /**
  * The owner's own calendar date.

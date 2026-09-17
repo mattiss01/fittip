@@ -99,6 +99,7 @@ test.describe("M3-15F roadmap generation", () => {
 
       const review = page.locator("[data-roadmap-open-proposal]");
       await expect(review).toBeVisible();
+      await expectOutcome(page, "A proposal is ready below.");
       await expect(review.getByText("Awaiting your decision")).toBeVisible();
       // Everything the built-in coach wrote says so, wherever it appears.
       await expect(
@@ -135,6 +136,7 @@ test.describe("M3-15F roadmap generation", () => {
           .locator("[data-roadmap-open-proposal]")
           .getByRole("heading", { name: "My own wording" }),
       ).toBeVisible();
+      await expectOutcome(page, "Saved as a new proposal. Review it below.");
       // The proposal the edit came from is still in the history, unchanged and
       // no longer awaiting anything.
       const proposals = page.locator("[data-roadmap-proposals]");
@@ -150,6 +152,7 @@ test.describe("M3-15F roadmap generation", () => {
         .getByRole("button", { name: "Decline proposal" })
         .click();
       await expect(page.locator("[data-roadmap-open-proposal]")).toHaveCount(0);
+      await expectOutcome(page, "Declined. It stays in your history.");
       await expect(proposals.getByText("Declined")).toBeVisible();
 
       const regenerate = page.locator('[data-roadmap-compose="regeneration"]');
@@ -169,11 +172,13 @@ test.describe("M3-15F roadmap generation", () => {
 
       const regenerated = page.locator("[data-roadmap-open-proposal]");
       await expect(regenerated).toBeVisible();
+      await expectOutcome(page, "A proposal is ready below.");
       await expect(regenerated.getByText("Regenerated")).toBeVisible();
 
       // ---- Accept: it becomes the roadmap. ----
       await regenerated.getByRole("button", { name: "Accept roadmap" }).click();
       await expect(page.locator("[data-roadmap-open-proposal]")).toHaveCount(0);
+      await expectOutcome(page, "Accepted. This is your roadmap now.");
       await expect(page.locator('[data-roadmap-version="1"]')).toBeVisible();
       await expect(
         page
@@ -229,6 +234,25 @@ test.describe("M3-15F roadmap generation", () => {
     }
   });
 });
+
+/**
+ * What the surface says after a write that landed.
+ *
+ * The approved sentence, or — when that reply never rendered and the watchdog
+ * reloaded the document instead — the notice explaining the reload. Both are
+ * true, and which one a run gets is exactly the intermittent App Router defect
+ * the watchdog exists for, so asserting only the first would fail a recovery
+ * that worked. Either way the surface has to say something: a write that
+ * changed the owner's roadmap and reported nothing is what this asserts against.
+ */
+async function expectOutcome(page: Page, sentence: string) {
+  await expect(
+    page
+      .locator("[data-roadmap-outcome]")
+      .getByText(sentence, { exact: true })
+      .or(page.locator('[data-roadmap-notice="recovered"]')),
+  ).toBeVisible();
+}
 
 async function expectNoHorizontalOverflow(page: Page) {
   const overflow = await page.evaluate(

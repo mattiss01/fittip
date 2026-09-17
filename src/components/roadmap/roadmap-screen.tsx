@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ExampleTag } from "./roadmap-body";
 import { RoadmapComposer } from "./roadmap-composer";
 import { RoadmapDetail } from "./roadmap-detail";
+import { RoadmapOutcomeNotice } from "./roadmap-outcome";
 import { RoadmapProposalRecord } from "./roadmap-proposal-record";
 import { RoadmapProposalReview } from "./roadmap-proposal-review";
 
@@ -38,11 +39,12 @@ import {
  *
  * ## The client boundary
  *
- * Three components cross it: the compose form, the decision dock, and the
- * editor inside the dock. Everything else here is a Server Component, so the
- * only roadmap content serialized into the browser is the open proposal's body,
- * which the editor needs in order to edit it. An owner's planning note is not
- * part of that body and never leaves the server.
+ * Four components cross it: the outcome notice, the compose form, the decision
+ * dock, and the editor inside the dock. Everything else here is a Server
+ * Component, so the only roadmap content serialized into the browser is the
+ * open proposal's body, which the editor needs in order to edit it. An owner's
+ * planning note is not part of that body and never leaves the server, and the
+ * outcome notice carries no content at all — only the sentence a write earned.
  */
 export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
   const goalTitles = Object.fromEntries(
@@ -58,6 +60,11 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
 
   return (
     <div className={styles.screen}>
+      {/* What the last write did, above everything it changed. It is a client
+          island of its own because every control on this surface is removed by
+          the write it performs; see `roadmap-outcome.tsx`. */}
+      <RoadmapOutcomeNotice />
+
       {/* Server-owned and never model-authored. It states the limit of what
           FitTip can do with a reported symptom; it does not assess one. */}
       {state.hasSafetySignal ? (
