@@ -107,7 +107,7 @@ create temporary table acceptance (
 
 grant all on claim, finished, change, acceptance to public;
 
-select plan(52);
+select plan(56);
 
 -- The privilege boundary ---------------------------------------------------
 
@@ -288,6 +288,25 @@ where id in (
   '6a000000-0000-4000-8000-000000000001',
   '6a000000-0000-4000-8000-000000000002'
 );
+
+-- M3-15A completion records, so the rewritten source recheck in
+-- `accept_roadmap_proposal` has real rows to verify a proposal against. They
+-- are written here, above the role switch, because `authenticated` holds only
+-- `select` on `public.completions`: every completion write arrives through
+-- M3-15A's own owner-derived function.
+insert into public.completions (
+  id, user_id, status, actual_local_date, timezone_name, revision
+)
+values
+  ('6c000000-0000-4000-8000-000000000001',
+   '6a000000-0000-4000-8000-000000000001', 'unplanned', pg_temp.day(-7),
+   'UTC', 0),
+  ('6c000000-0000-4000-8000-000000000002',
+   '6a000000-0000-4000-8000-000000000001', 'unplanned', pg_temp.day(-6),
+   'UTC', 0),
+  ('6c000000-0000-4000-8000-000000000003',
+   '6a000000-0000-4000-8000-000000000002', 'unplanned', pg_temp.day(-5),
+   'UTC', 0);
 
 set local role authenticated;
 
@@ -598,6 +617,143 @@ select is(
   'the new version links back to the one it superseded'
 );
 
+-- The source recheck, on a proposal that carries a real source ---------------
+--
+-- Every acceptance above travelled with no sources at all, so the loop in
+-- `accept_roadmap_proposal` never ran. It is the substantive thing this
+-- migration rewrote — M3-11 dropped `completion_heads`, and the recheck now
+-- reads M3-15A's `public.completions` instead — and it is the live path: the
+-- context source emits a `completion` source per session in the owner's
+-- training window, so any owner with logged training accepts through this loop.
+--
+-- A wrong predicate here fails in one of two directions, and both are the
+-- failure the function exists to prevent: an owner who can never accept their
+-- roadmap, or one who accepts a proposal built on training data that has since
+-- been corrected. The three cases below pin both directions and the ownership
+-- half.
+
+insert into claim
+select 'completion-source', * from public.begin_roadmap_generation(
+  'owner-completion-key-000000001',
+  'owner-completion-fingerprint-000000001',
+  pg_temp.day(0),
+  pg_temp.day(84),
+  2
+);
+insert into finished
+select 'completion-source', * from public.finish_roadmap_generation(
+  (select completion_token from claim where label = 'completion-source'),
+  'proposal',
+  'fittip.roadmap.v2',
+  'roadmap-2026-08-10',
+  'fixture',
+  'fixture-corpus-v1',
+  'fixture-no-spend',
+  p_content => pg_temp.roadmap(
+    pg_temp.day(0), pg_temp.day(84), 'Built on logged training'),
+  p_sources => '[{"kind":"completion",
+                  "recordId":"6c000000-0000-4000-8000-000000000001",
+                  "revisionNumber":0}]'::jsonb
+);
+
+-- Asserted rather than assumed: with no row here the acceptance below would
+-- pass without the loop iterating once, which is exactly how this path came to
+-- be untested in the first place.
+select is(
+  (select count(*)::integer from public.roadmap_proposal_sources
+   where proposal_id = (
+     select proposal_id from finished where label = 'completion-source')
+     and source_kind = 'completion'),
+  1,
+  'the completion source is recorded, so the acceptance has one to recheck'
+);
+
+insert into acceptance
+select 'completion-source', * from public.accept_roadmap_proposal(
+  (select proposal_id from finished where label = 'completion-source'), 2
+);
+select is(
+  (select result from acceptance where label = 'completion-source'), 'accepted',
+  'a completion still at the revision that travelled verifies and accepts'
+);
+
+-- The other direction: a completion corrected after it travelled.
+insert into claim
+select 'completion-corrected', * from public.begin_roadmap_generation(
+  'owner-corrected-key-0000000001',
+  'owner-corrected-fingerprint-0000000001',
+  pg_temp.day(0),
+  pg_temp.day(84),
+  3
+);
+insert into finished
+select 'completion-corrected', * from public.finish_roadmap_generation(
+  (select completion_token from claim where label = 'completion-corrected'),
+  'proposal',
+  'fittip.roadmap.v2',
+  'roadmap-2026-08-10',
+  'fixture',
+  'fixture-corpus-v1',
+  'fixture-no-spend',
+  p_content => pg_temp.roadmap(
+    pg_temp.day(0), pg_temp.day(84), 'Built on a record since corrected'),
+  p_sources => '[{"kind":"completion",
+                  "recordId":"6c000000-0000-4000-8000-000000000002",
+                  "revisionNumber":0}]'::jsonb
+);
+
+-- M3-15A's correction bumps `revision`. Applied as the session role because
+-- `authenticated` cannot write this table; the role is restored immediately.
+reset role;
+update public.completions
+set revision = 1
+where id = '6c000000-0000-4000-8000-000000000002';
+set local role authenticated;
+
+select throws_ok(
+  format(
+    $$select * from public.accept_roadmap_proposal(%L::uuid, 3)$$,
+    (select proposal_id from finished where label = 'completion-corrected')
+  ),
+  'PT409', 'Your training history changed. Review the proposal again.',
+  'a completion corrected after it travelled refuses the acceptance'
+);
+
+-- The ownership half: a source naming a completion owned by somebody else
+-- verifies against nothing, whatever revision it claims.
+insert into claim
+select 'completion-outsider', * from public.begin_roadmap_generation(
+  'owner-outsider-key-00000000001',
+  'owner-outsider-fingerprint-00000000001',
+  pg_temp.day(0),
+  pg_temp.day(84),
+  3
+);
+insert into finished
+select 'completion-outsider', * from public.finish_roadmap_generation(
+  (select completion_token from claim where label = 'completion-outsider'),
+  'proposal',
+  'fittip.roadmap.v2',
+  'roadmap-2026-08-10',
+  'fixture',
+  'fixture-corpus-v1',
+  'fixture-no-spend',
+  p_content => pg_temp.roadmap(
+    pg_temp.day(0), pg_temp.day(84), 'Built on training that is not mine'),
+  p_sources => '[{"kind":"completion",
+                  "recordId":"6c000000-0000-4000-8000-000000000003",
+                  "revisionNumber":0}]'::jsonb
+);
+
+select throws_ok(
+  format(
+    $$select * from public.accept_roadmap_proposal(%L::uuid, 3)$$,
+    (select proposal_id from finished where label = 'completion-outsider')
+  ),
+  'PT409', 'Your training history changed. Review the proposal again.',
+  'a source naming another owner''s completion never verifies'
+);
+
 -- Cross-owner ----------------------------------------------------------------
 --
 -- The outsider holds `execute` on all five, because `execute` is granted to the
@@ -683,13 +839,13 @@ select set_config(
 
 select is(
   (select count(*)::integer from public.roadmap_versions),
-  2,
+  3,
   'and nothing they attempted changed the owner''s history'
 );
 select is(
   (select array_agg(decision order by decided_at)
    from public.roadmap_proposal_decisions),
-  array['rejected', 'accepted', 'accepted'],
+  array['rejected', 'accepted', 'accepted', 'accepted'],
   'every decision on the owner''s record is still one the owner made'
 );
 
