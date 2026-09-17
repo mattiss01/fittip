@@ -250,7 +250,8 @@ async function expectOutcome(page: Page, sentence: string) {
     page
       .locator("[data-roadmap-outcome]")
       .getByText(sentence, { exact: true })
-      .or(page.locator('[data-roadmap-notice="recovered"]')),
+      .or(page.locator('[data-roadmap-notice="recovered"]'))
+      .first(),
   ).toBeVisible();
 }
 

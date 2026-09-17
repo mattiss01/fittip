@@ -161,6 +161,7 @@ function useLostRenderRecovery(pending: boolean, submission: number): boolean {
     markRecovered(false);
     const submittedAt = performance.now();
     let reload = 0;
+    let reloading = false;
     const interval = window.setInterval(() => {
       // `unconfirmed` is deliberately ignored rather than acted on: this
       // surface takes the lost-render half alone, so a request that has simply
@@ -175,10 +176,10 @@ function useLostRenderRecovery(pending: boolean, submission: number): boolean {
       window.clearInterval(interval);
       setLostFor(key);
       markRecovered(true);
-      reload = window.setTimeout(
-        () => window.location.reload(),
-        RECOVERY_NOTICE_MS,
-      );
+      reload = window.setTimeout(() => {
+        reloading = true;
+        window.location.reload();
+      }, RECOVERY_NOTICE_MS);
     }, WATCH_INTERVAL_MS);
 
     return () => {
@@ -188,6 +189,12 @@ function useLostRenderRecovery(pending: boolean, submission: number): boolean {
       // lost transition landed inside the notice window and the result is
       // already on screen.
       window.clearTimeout(reload);
+      // And in that second case the marker has to go with it. It explains a
+      // reload that then never happened, and the next control to mount with
+      // nothing submitted would tell the owner this page was reloaded when it
+      // was not. Only a reload that actually fired leaves it standing, and that
+      // path replaces the document rather than running this cleanup.
+      if (reload !== 0 && !reloading) markRecovered(false);
       consumedAt.current = respondedAt.current;
     };
   }, [key, pending]);
