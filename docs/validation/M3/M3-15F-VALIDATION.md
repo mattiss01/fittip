@@ -620,15 +620,47 @@ npx.cmd supabase db advisors --linked --type security --level warn
 These are the four commands the brief carries, and this record claims no
 authorization beyond them.
 
-- `db push --linked` applies `20260916075522_m3_15f_roadmap_generation.sql` in
-  timestamp order. Paste its output here.
-- `migration list --linked` is what proves the migration actually applied: the
-  remote column must show `20260916075522` beside the local one. The product
-  owner accepted this command on 17 September 2026 for exactly that reason.
-  Paste its output here.
-- `db advisors --linked --type security --level warn` is the security evidence.
-  Locally it reports "No issues found". Any other result on the founder project
-  is a blocker, not a note. Paste that output here.
+**The product owner ran all of them on 17 September 2026.** The results follow.
+They were produced against `20260916075522_m3_15f_roadmap_generation.sql` as
+committed, and no commit after them changes any file under `supabase/migrations/`.
+
+- `db push --linked` applied `20260916075522_m3_15f_roadmap_generation.sql` in
+  timestamp order.
+- `migration list --linked` is what proves the migration actually applied, and
+  the product owner accepted the command on 17 September 2026 for that reason.
+  It returned **21 migrations, every one with `local` equal to `remote`**, no
+  drift in either direction, ending:
+
+  ```json
+  {"local":"20260829135426","remote":"20260829135426","time":"2026-08-29 13:54:26"},
+  {"local":"20260916075522","remote":"20260916075522","time":"2026-09-16 07:55:22"}
+  ```
+
+  The repository's exact version is in remote history. That satisfies
+  `AGENTS.md`'s "remote migration history contains the repository's exact
+  versions".
+
+- `db advisors --linked --type security --level warn` returned **15 warnings in
+  two categories, five of them this ticket's, and no new category**:
+
+  | Category | Count | Attribution |
+  | --- | --- | --- |
+  | `authenticated_security_definer_function_executable` | 14 | Five are **this ticket's** re-grants: `begin_roadmap_generation`, `finish_roadmap_generation`, `record_roadmap_memory_candidates`, `apply_roadmap_proposal_change`, `accept_roadmap_proposal`. The other nine are the exact nine `M3-15A-VALIDATION.md` recorded. |
+  | `auth_leaked_password_protection` | 1 | An Auth project setting, unrelated to any migration and unchanged by this ticket. |
+
+  This is the pass condition M3-15A established: no new category appeared, and
+  every new warning is the expected one. An owner's write is mediated by an
+  owner-derived `SECURITY DEFINER` function rather than by granting the table,
+  exactly as ADR-008 requires and as the nine prior functions already do. The
+  count moved by exactly five, which is the number of functions re-granted.
+
+  Two limits on what this proves. The advisor names only the `authenticated`
+  grant, because that is the only role lint 0029 asks about, so it is **not**
+  evidence that `anon`, `public` or `service_role` lack `execute` on the
+  founder project. What covers that instead: the migration revokes from all
+  four roles immediately before each grant, and the pgTAP suite asserts the
+  resulting catalogue grants and the per-role negatives.
+
 - The authenticated hosted read is the product owner's own pass on the Preview:
   signing in and opening `/home/plan/roadmap`. It is not a query.
 
