@@ -52,13 +52,17 @@ Validation records and their visual evidence are grouped by milestone.
   M3-15E restored, an owner can generate, edit, decline, regenerate and accept a
   roadmap; with no provider credential the built-in example coach answers and
   everything it writes is labelled an example from its stored `provider_code`.
-  The two copy defects M3-15E deferred are fixed. The browser flow found that
-  same-route Server Action results did not reliably reach the page, so every
-  write now awaits the action and reloads the document on success; review
-  target `68958da`. The hosted verification is deliberately narrowed by the
-  product owner to three CLI commands with no SQL, so the privilege boundary is
-  proven by pgTAP in continuous integration rather than against the founder
-  database
+  The two copy defects M3-15E deferred are fixed. Round 1 of independent review
+  returned a missing pgTAP test for the rewritten source recheck, a write path
+  the product owner chose to rebuild, a deleted architecture invariant and
+  several untrue claims in the record; all are corrected in `5a23a9e`,
+  `9267d94`, `a29edf2`, `49a9bd0` and `ba665b0`. The writes are ordinary form
+  actions again, covered by `@/lib/app-router/transition-watchdog` as on the
+  goal, memory and recurrence surfaces, and the four approved success sentences
+  are back; review target `ba665b0`. The hosted verification is deliberately
+  narrowed by the product owner to four CLI commands with no SQL, so the
+  privilege boundary is proven by pgTAP in continuous integration rather than
+  against the founder database
 - [M3-15E roadmap surface restoration](M3/M3-15E-VALIDATION.md) — Tier 2;
   round 1 of independent review returned two findings, both corrected in
   `4ee7565` (a provider session cap was suppressing the safety notice for an

@@ -7,31 +7,40 @@ hosted founder apply, the Vercel Preview pass, and product-owner acceptance.
 **Tier:** 1
 **Branch:** `ticket/m3-15f-roadmap-generation`
 **Base:** `45acd9b`
-**Implementation review target:** `68958dad9d0610ca7d0b05ef174b67920f98a324`
-(`68958da`). This is the last source commit. The commit that adds this record
-and the four evidence images changes no application file, which is the
-evidence-commit exception in `AGENTS.md`.
-**Review range:** `git diff 45acd9b..68958da`
+**Implementation review target:**
+`ba665b031edb2f36a096d72ed85518a144a2ee4d` (`ba665b0`). This is the last source
+commit. The commit that updates this record changes no application file, which
+is the evidence-commit exception in `AGENTS.md`.
+**Review range:** `git diff 45acd9b..ba665b0`
 
 Implementation commits, in order:
 
-| Commit    | Purpose                                                                     |
-| --------- | --------------------------------------------------------------------------- |
-| `ef74712` | Migration: the five grants, the M3-09 fix, and a working acceptance body.    |
-| `a507e33` | Concurrency harness that reproduces M3-09 and proves the fix.                |
-| `b9b321d` | Write surface, example label, and the two copy defects M3-15E deferred.      |
-| `0874a94` | Unit tests for generation, the actions, and the provenance read.             |
-| `51e4cc9` | CI wiring for the harness and the 390px flow (tooling only).                 |
-| `8dfbbdd` | Edit moved to a form action; Playwright config and spec. **Insufficient.**   |
-| `c953e11` | Successful writes redirect. **Insufficient.**                                |
-| `7630b4f` | Decision dock keyed by proposal. **Insufficient.**                           |
-| `f83f213` | Edit awaited directly, then a document reload. **Worked for the edit.**      |
-| `68958da` | All four writes go through `useRoadmapWrite`. **Flow passes, 3 of 3 runs.**  |
+| Commit    | Purpose                                                                    |
+| --------- | -------------------------------------------------------------------------- |
+| `ef74712` | Migration: the five grants, the M3-09 fix, and a working acceptance body.  |
+| `a507e33` | Concurrency harness that reproduces M3-09 and proves the fix.              |
+| `b9b321d` | Write surface, example label, and the two copy defects M3-15E deferred.    |
+| `0874a94` | Unit tests for generation, the actions, and the provenance read.           |
+| `51e4cc9` | CI wiring for the harness and the 390px flow (tooling only).               |
+| `8dfbbdd` | Edit moved to a form action; Playwright config and spec. **Insufficient.** |
+| `c953e11` | Successful writes redirect. **Insufficient.**                              |
+| `7630b4f` | Decision dock keyed by proposal. **Insufficient.**                         |
+| `f83f213` | Edit awaited directly, then a document reload. **Worked for the edit.**    |
+| `68958da` | All four writes go through `useRoadmapWrite`. **Superseded by `9267d94`.** |
+| `74c2391` | M3-11 seeded-reset fixture narrowed to `anon` and `service_role`.          |
+| `5a23a9e` | pgTAP for the rewritten source recheck, against real completions.          |
+| `9267d94` | The writes go back on this repository's own transition watchdog.           |
+| `a29edf2` | The roadmap Supabase import ban narrowed rather than deleted.              |
+| `49a9bd0` | Unreadable roadmap provenance fails closed.                                |
+| `ba665b0` | The recovery marker no longer outlives a cancelled reload.                 |
 
 Commits `8dfbbdd` through `68958da` are one defect and the attempts to fix it.
 They are kept as history rather than squashed, because the record of what did
-not work is what justifies the final design. See *The defect the browser flow
-found*.
+not work is what justifies the final design. `9267d94` then replaced that
+design after the independent review; see *Correction after the independent
+review*, which is the authority on how the write path works today. The
+narrative in *The defect the browser flow found* is kept for its evidence, and
+its conclusion is superseded.
 
 ## Delivered behavior
 
@@ -58,9 +67,17 @@ and every proposal record. The open proposal also carries a sentence explaining
 what the label means. The label is read from the stored `provider_code`, so a
 roadmap written by a real coach carries no label.
 
-After a write lands, the page reloads and shows the result. There is no success
-sentence; the reload shows what changed. A refused write stays on screen and
-says why, and whatever the owner typed is kept.
+A write that lands renders its approved sentence over the screen it produced,
+without a document load, with the owner's scroll position and focus where they
+left them: "A proposal is ready below.", "Saved as a new proposal. Review it
+below.", "Declined. It stays in your history.", "Accepted. This is your roadmap
+now." A refused write stays on screen beside the control that refused and says
+why, and whatever the owner typed is kept.
+
+Behind that sits `@/lib/app-router/transition-watchdog`, as on the goal, memory
+and recurrence surfaces. When a reply arrives and never reaches the screen, the
+surface says so and reloads to show what is stored. It never says the write
+saved, because a resource-timing entry cannot prove what a 200 contained.
 
 The two copy defects M3-15E deferred are fixed:
 
@@ -88,12 +105,14 @@ npm.cmd run start -- -p 3026
 2. Open **You → Manage goals** and create one active core goal.
 3. Open **Plan → roadmap**. The screen says there is no roadmap yet and offers
    **Shape your roadmap**.
-4. Write a planning note and press **Generate roadmap proposal**. The page
-   reloads. The proposal sits above the still-empty roadmap, marked **Example**
-   and *Awaiting your decision*.
+4. Write a planning note and press **Generate roadmap proposal**. The page does
+   not reload. *A proposal is ready below.* appears at the top, and the proposal
+   sits above the still-empty roadmap, marked **Example** and *Awaiting your
+   decision*.
 5. Press **Edit proposal**, change the roadmap title, and press **Save as a new
-   proposal**. The review shows the new title. The proposal it came from is
-   listed under *Proposals* as **Superseded**.
+   proposal**. *Saved as a new proposal. Review it below.* appears and the
+   review shows the new title. The proposal it came from is listed under
+   *Proposals* as **Superseded**.
 6. Press **Decline proposal** and confirm. The proposal shows as **Declined**,
    and **Ask for another proposal** appears. Its dates are fixed, feedback is
    required, and it reads *3 regenerations left*. The count is three because
@@ -111,57 +130,83 @@ it**, so read the skipped count before calling a run green.
 
 ## Changed files
 
-`git diff --stat 45acd9b..68958da`:
+`git diff --stat 45acd9b..ba665b0`:
 
 ```
  .github/workflows/ci.yml                           |  13 +
- .../M3/evidence/M3-15F-compose-390x844.png         | Bin 0 -> 63893 bytes
- .../M3/evidence/M3-15F-proposal-390x844.png        | Bin 0 -> 189834 bytes
- e2e/m3-15f-roadmap.spec.ts                         | 311 +++++++++
+ docs/backlog/M3/M3-15F-ROADMAP-GENERATION.md       |  51 +-
+ docs/validation/M3/M3-15F-VALIDATION.md            | 744 ++++++++++++++++++
+ .../M3/evidence/M3-15F-accepted-390x844.png        | Bin 0 -> 183054 bytes
+ .../M3/evidence/M3-15F-compose-390x844.png         | Bin 0 -> 63721 bytes
+ .../M3/evidence/M3-15F-history-390x844.png         | Bin 0 -> 198781 bytes
+ .../M3/evidence/M3-15F-proposal-390x844.png        | Bin 0 -> 191897 bytes
+ docs/validation/README.md                          |  18 +
+ e2e/m3-15f-roadmap.spec.ts                         | 336 ++++++++
  e2e/m3-15f.playwright.config.ts                    |  31 +
  package.json                                       |   1 +
- src/app/home/plan/roadmap/action-state.ts          |  60 ++
- src/app/home/plan/roadmap/actions.test.ts          | 562 +++++++++++++++++
- src/app/home/plan/roadmap/actions.ts               | 398 ++++++++++++
- src/app/home/plan/roadmap/page.test.tsx            | 201 +++++-
+ src/app/home/plan/roadmap/action-state.ts          |  62 ++
+ src/app/home/plan/roadmap/actions.test.ts          | 612 +++++++++++++++
+ src/app/home/plan/roadmap/actions.ts               | 409 ++++++++++
+ src/app/home/plan/roadmap/page.test.tsx            | 201 ++++-
  src/app/home/plan/roadmap/page.tsx                 |  40 +-
- src/app/home/plan/roadmap/roadmap.module.css       | 213 +++++++
- src/architecture/m3-11-legacy-reset.test.ts        | 111 +++-
- src/components/roadmap/roadmap-body.tsx            | 131 ++++
- src/components/roadmap/roadmap-composer.tsx        | 222 +++++++
- src/components/roadmap/roadmap-decision-dock.tsx   | 148 +++++
- src/components/roadmap/roadmap-detail.tsx          |  75 +--
- src/components/roadmap/roadmap-editor.tsx          | 385 ++++++++++++
+ src/app/home/plan/roadmap/roadmap.module.css       | 216 ++++++
+ src/architecture/m3-11-legacy-reset.test.ts        | 138 +++-
+ src/components/roadmap/roadmap-body.tsx            | 134 ++++
+ src/components/roadmap/roadmap-composer.tsx        | 236 ++++++
+ src/components/roadmap/roadmap-decision-dock.tsx   | 187 +++++
+ src/components/roadmap/roadmap-detail.tsx          |  75 +-
+ src/components/roadmap/roadmap-editor.tsx          | 385 ++++++++++
+ src/components/roadmap/roadmap-outcome.tsx         |  82 ++
  .../roadmap/roadmap-proposal-record.test.tsx       |  29 +-
  src/components/roadmap/roadmap-proposal-record.tsx |  34 +-
- src/components/roadmap/roadmap-proposal-review.tsx |  80 +++
- src/components/roadmap/roadmap-screen.tsx          |  83 ++-
+ src/components/roadmap/roadmap-proposal-review.tsx |  77 ++
+ src/components/roadmap/roadmap-screen.tsx          |  90 ++-
  src/components/roadmap/roadmap-spine.tsx           |   6 +-
- src/components/roadmap/use-roadmap-write.ts        |  96 +++
- src/lib/roadmap/roadmap-control-copy.ts            | 173 +++++
- src/server/repositories/roadmap-repository.test.ts |  83 +++
- src/server/repositories/roadmap-repository.ts      |  35 +-
- src/server/roadmap/roadmap-generation.test.ts      | 271 ++++++++
- src/server/roadmap/roadmap-generation.ts           | 255 ++++++++
- src/server/roadmap/roadmap-records.ts              | 131 ++--
- .../20260916075522_m3_15f_roadmap_generation.sql   | 582 +++++++++++++++++
+ src/components/roadmap/roadmap-watch-notice.tsx    |  38 +
+ src/components/roadmap/use-roadmap-write.ts        | 247 ++++++
+ src/lib/roadmap/roadmap-control-copy.ts            | 194 +++++
+ src/server/repositories/roadmap-repository.test.ts |  89 +++
+ src/server/repositories/roadmap-repository.ts      |  50 +-
+ src/server/roadmap/roadmap-generation.test.ts      | 271 +++++++
+ src/server/roadmap/roadmap-generation.ts           | 255 ++++++
+ src/server/roadmap/roadmap-records.ts              | 156 +++-
+ .../20260916075522_m3_15f_roadmap_generation.sql   | 582 ++++++++++++++
  .../database/m3_11_legacy_training_reset.test.sql  | 137 +---
- .../database/m3_15f_roadmap_generation.test.sql    | 699 +++++++++++++++++++++
- .../integration/m3_15f_concurrent_generation.mjs   | 291 +++++++++
- 34 files changed, 5541 insertions(+), 346 deletions(-)
+ .../database/m3_15f_roadmap_generation.test.sql    | 855 +++++++++++++++++++++
+ .../tests/fixtures/m3_11_post_reset_verify.sql     |  13 +-
+ .../integration/m3_15f_concurrent_generation.mjs   | 291 +++++++
+ 42 files changed, 7010 insertions(+), 375 deletions(-)
 ```
 
-Nothing was deleted or renamed. The two images in the range come from an early,
-failing run. The record commit replaces them and adds `M3-15F-accepted` and
-`M3-15F-history`, all four from the passing run.
+Nothing was deleted or renamed. The four evidence images come from the current
+passing runs; three of them were regenerated by `ba665b0` and now show the
+restored success sentences.
+
+Four paths in the range are not application code and are accounted for here
+rather than left to the diff. `docs/validation/M3/M3-15F-VALIDATION.md` is this
+record and `docs/validation/README.md` its index entry.
+`docs/backlog/M3/M3-15F-ROADMAP-GENERATION.md` is the brief correction the
+product owner made in `8d8da9f`, which carried the hosted-evidence narrowing
+into the ticket. `.github/workflows/ci.yml` and `package.json` are `51e4cc9`'s
+tooling: the concurrency harness and the 390px roadmap flow added to the
+pipeline, and the npm script that runs the harness.
 
 These files have a purpose that the path and diff do not make obvious:
 
-- `src/components/roadmap/use-roadmap-write.ts` submits all four roadmap
-  writes. It awaits the action from the submit handler, outside any transition.
-  If the write landed, it reloads the document; if not, it returns the refusal.
-  The file's header comment records the browser evidence behind this design,
-  and the defect section below repeats it.
+- `src/components/roadmap/use-roadmap-write.ts` submits all four roadmap writes.
+  Each is an ordinary form action through `useActionState`, watched from outside
+  React by `@/lib/app-router/transition-watchdog`: a reply that arrives and never
+  renders reloads the document behind a readable notice. Its header comment
+  records why, and *Correction after the independent review* below is the
+  authority on it.
+- `src/components/roadmap/roadmap-outcome.tsx` holds the last landed outcome
+  beside React and renders it once, from `RoadmapScreen`. It exists because
+  every control on this surface is removed by the write it performs, so a
+  success sentence returned to the control that submitted is unmounted before
+  it can be read. It carries no roadmap content, only the sentence.
+- `src/components/roadmap/roadmap-watch-notice.tsx` is the only place the
+  watchdog's two sentences are written, so the compose form, the dock and the
+  editor cannot drift apart in how they explain a stalled reply.
 - `src/lib/roadmap/roadmap-control-copy.ts` holds every roadmap wording that a
   Client Component renders. `src/architecture/server-boundary.test.ts` forbids a
   `"use client"` file from importing `@/server/**`, and the compose form, the
@@ -186,9 +231,10 @@ These files have a purpose that the path and diff do not make obvious:
 - `src/components/roadmap/roadmap-proposal-review.tsx` renders the open proposal
   in full, with the decision dock. It is a Server Component rendering a client
   dock, so the only roadmap content sent to the browser is the body the editor
-  needs. The dock is keyed by proposal id, which `7630b4f` added. That key did
-  not fix the defect, but it is correct and is kept: a dock belongs to one
-  proposal.
+  needs. `7630b4f`'s `key={proposal.id}` on the dock is **removed** by
+  `9267d94`: an edit replaces the open proposal at that position, and remounting
+  the dock there discards the sentence the edit earned. The dock now says in its
+  own comment how it stays correct across an edit without the key.
 - `src/app/home/plan/roadmap/action-state.ts` holds the action result type and
   its initial value. It is separate from `actions.ts` because a `use server`
   module may export only async functions, and the client components need both.
@@ -308,9 +354,12 @@ the patch script reported that the file needs no post-generation patch.
 - Both views read `provider_code` from the stored row. A version has no
   provider column of its own, so its provider is read through
   `source_proposal_id`, under the owner `SELECT` policy on `roadmap_proposals`
-  like any other proposal read. If that read fails, the value becomes the empty
-  string, never `"fixture"`. Labelling a coach-written roadmap an example is the
-  one error the label itself could introduce.
+  like any other proposal read. `49a9bd0` changed what an unreadable embed
+  reports: it is `UNKNOWN_PROVIDER_CODE`, and the one `isExampleAuthored`
+  predicate both label sites use treats that as an example. The direction
+  matters. An accepted fixture-authored roadmap rendering as a real one, with no
+  error anywhere, is the failure the label exists to prevent; an example label on
+  a coach-written roadmap costs a second look.
 
 ### Privacy and what reaches the browser
 
@@ -340,6 +389,12 @@ in the database. No live provider call was made at any point during this
 ticket.
 
 ## The defect the browser flow found
+
+**Its conclusion is superseded by `9267d94`.** The evidence below is accurate
+and is kept, because it is what a later reader needs in order to judge the
+design that replaced it; the design it argues for — a document load after every
+write — is no longer what ships. *Correction after the independent review*,
+section 2, is the authority on the write path.
 
 This section is recorded in full for three reasons: the unit tests could not
 have caught the defect, three fixes were committed before one worked, and the
@@ -432,13 +487,25 @@ that:
 
 `actions.ts` also joins the route's import allowlist, extended only with the
 coaching and roadmap domain modules it needs. This is an allowlist rather than a
-pattern, so the surface cannot reach a provider adapter, a spend ledger, a
-Supabase client, or a plan or training repository.
+pattern, so the surface cannot reach a provider adapter, a spend ledger, or a
+plan or training repository.
+
+`a29edf2` corrects the one thing this test had lost. M3-15F's first pass deleted
+`not.toMatch(/@\/lib\/supabase/)` from the roadmap allowlist, because
+`actions.ts` legitimately imports `server-user-client`, and put nothing in its
+place — while this section and the doc comment beside the test both went on
+claiming the surface could reach no Supabase client. It now holds in two halves:
+the route allowlist names that one specifier and refuses any other
+`@/lib/supabase` import, and the surface sweep bans every `@/lib/supabase`
+import from every other non-test file in `src/app/home/plan/roadmap` and
+`src/components/roadmap`. A component holding a client could read or write
+around the endpoint that re-derives the owner, which is what the deleted line
+was protecting.
 
 ## Tests and final results
 
 The builder does not push, so **there is no continuous-integration run for
-`68958da` yet**. The lead pushes this branch. The run URL and conclusion for the
+`ba665b0` yet**. The lead pushes this branch. The run URL and conclusion for the
 exact reviewed SHA belong in this section and are not yet available. That run is
 the automated evidence for lint, typecheck, `test:run`, `build`, the migration,
 lint, advisor and pgTAP checks, both concurrency harnesses, and the 390px browser
@@ -460,6 +527,9 @@ These checks were run locally during implementation, with these results:
 | The same harness against M3-02's original `begin_roadmap_generation`                                                                               | Fails in round 1 with `23505 duplicate key value violates unique constraint "roadmap_generation_requests_key_key"`, which is the defect                                                                               |
 | Committed types compared with a clean regeneration                                                                                                 | Byte-identical; no schema-visible change                                                                                                                                                                              |
 | `npx.cmd playwright test --config=e2e/m3-15f.playwright.config.ts` (port 3026), against `68958da`                                                  | **1 passed**, then with `--repeat-each=2` **2 passed**; 0 skipped, 0 failed                                                                                                                                           |
+| The same flow against `ba665b0`, against `build` + `start`                                                                                         | **1 passed**, **1 passed**, then `--repeat-each=2` **2 passed**. Four consecutive runs, 0 skipped, 0 failed, 11-15 s each. The run before `ba665b0` failed on the false recovery notice it fixes.                      |
+| `npx.cmd supabase test db --local supabase/tests/database/m3_15f_roadmap_generation.test.sql`, against `5a23a9e`                                    | 56 tests, all pass                                                                                                                                                                                                    |
+| `npm.cmd run test:run` (whole suite), against `49a9bd0`                                                                                            | 82 files, 969 passed, 2 skipped                                                                                                                                                                                       |
 | The same flow against `b9b321d` through `f83f213`                                                                                                  | Failed each time, as described in *The defect the browser flow found*                                                                                                                                                 |
 | `git diff --check`                                                                                                                                 | Clean                                                                                                                                                                                                                 |
 
@@ -541,104 +611,123 @@ The product owner runs exactly these commands from Git Bash at the repository
 root:
 
 ```bash
-npx.cmd supabase link --project-ref <founder project ref>   # only if not already linked
+npx.cmd supabase link --project-ref <founder project ref>   # only if not linked
 npx.cmd supabase db push --linked
+npx.cmd supabase migration list --linked
 npx.cmd supabase db advisors --linked --type security --level warn
 ```
 
+These are the four commands the brief carries, and this record claims no
+authorization beyond them.
+
 - `db push --linked` applies `20260916075522_m3_15f_roadmap_generation.sql` in
-  timestamp order. Its own output is the apply evidence: it lists the migration
-  versions it is about to apply, and a clean exit means those versions are now
-  in remote history. Paste that output here.
+  timestamp order. Paste its output here.
+- `migration list --linked` is what proves the migration actually applied: the
+  remote column must show `20260916075522` beside the local one. The product
+  owner accepted this command on 17 September 2026 for exactly that reason.
+  Paste its output here.
 - `db advisors --linked --type security --level warn` is the security evidence.
   Locally it reports "No issues found". Any other result on the founder project
   is a blocker, not a note. Paste that output here.
 - The authenticated hosted read is the product owner's own pass on the Preview:
   signing in and opening `/home/plan/roadmap`. It is not a query.
 
-**Known limitation, in the brief's words:** the privilege boundary is proven by
-the pgTAP suite in continuous integration instead of against the hosted
-database. This is narrower than the hosted verification `AGENTS.md` asks for.
-Remote migration history, the schema and privilege boundary, and the
-authenticated read are no longer checked against the founder database by query.
-Instead they rest on `db push`'s own output, the security advisors, the pgTAP
-suite in continuous integration, and the product owner's pass on the Preview.
-The product owner chose this narrowing deliberately, and it is recorded on the
-ticket; it is not an omission.
+**What this narrows, in the brief's words.** Nothing queries the hosted
+privilege boundary, and the authenticated hosted read is the product owner's
+acceptance pass rather than a scripted check. `AGENTS.md` asks for both by
+query. What covers them instead is `migration list`'s remote history, `db
+push`'s own output, the security advisors, the pgTAP suite in continuous
+integration, and the product owner's pass on the Preview. The product owner
+chose this narrowing deliberately on 16 and 17 September 2026 and it is written
+into the brief; it is a decision, not an omission.
 
 ## Known limitations
 
 1. **The privilege boundary is proven by the pgTAP suite in continuous
    integration instead of against the hosted database.** *Hosted evidence*
    above describes what that narrows and what covers it instead.
-2. **After each successful write the page reloads, and there is no success
-   sentence.** The four approved success sentences were removed. Every write
-   visibly changes the screen, but this is still a reduction against the
-   ticket's copy, and it is the product owner's decision whether to accept it.
-   *The defect the browser flow found* explains why.
-3. **The root cause inside Next.js is not identified.** The evidence
-   establishes the pattern (the first same-route action redirect after a
-   document load lands, the next hangs) and establishes that a direct await
-   plus a document reload avoids it. It does not establish why the router
-   behaves this way. If a later Next.js version fixes the behaviour,
-   `useRoadmapWrite` is the one place to change back. The other surfaces in
-   this application submit Server Actions differently and were not
-   investigated here.
-4. **The failure was intermittent before the fix.** One run of an earlier
-   configuration passed generation and failed on the next write, and one failed
-   on the first generation. Three consecutive passes against `68958da` are good
-   evidence, not proof. The CI run adds a fourth run on a different machine.
-5. **No live provider call was made in any environment.** Generation used the
+2. **A stalled reply still costs a document reload, and the surface cannot say
+   whether the write saved.** That is the whole of what the watchdog can
+   observe: a resource-timing entry proves a response arrived, never what it
+   contained, and these actions answer 200 for a conflict, a validation failure
+   and an expired session too. So the notice says the step did not appear and
+   the page is reloading, and the reload is what shows the owner where their
+   roadmap stands. This is the same bargain the goal, memory and recurrence
+   surfaces make.
+3. **The root cause is upstream and identified, but not fixed here.**
+   `src/lib/app-router/transition-watchdog.ts` names it: React's
+   `useDeferredValue` can stick on a stale value (facebook/react#35821), and
+   `layout-router` routes every segment's payload through it. M2-11 took the
+   framework fix and re-measured *navigation* at 0 lost renders in 250; what
+   this surface watches is an in-flight *mutation reply*, a different transition
+   class that has never been measured on either version. What would license
+   removing the watchdog is that measurement — extending
+   `e2e/m2-09-lost-render.probe.ts` with a phase per surface — and it does not
+   exist yet. Three other surfaces keep the watchdog for the same reason.
+4. **The watchdog's render grace is 750 ms, and this is the heaviest of the four
+   surfaces.** A commit slower than that is read as a lost render. The recovery
+   is safe — the reload shows exactly what is stored — but a spurious reload is
+   a visible flash, and one local run tripped it on a regeneration before
+   `ba665b0`. Raising `RENDER_GRACE_MS` would change the goal, memory and
+   recurrence surfaces too, which is out of this ticket's scope.
+5. **The flow passed four consecutive local runs, which is evidence rather than
+   proof.** The defect it guards against is intermittent by nature. The CI run
+   adds a fifth on a different machine.
+6. **No live provider call was made in any environment.** Generation used the
    fixture coach throughout. Whether a real coach would propose anything like
    what the surface shows is unanswered by this ticket, and trying it is a
    separate spend decision.
-6. **A fixture generation writes a canned roadmap into permanent history.** The
+7. **A fixture generation writes a canned roadmap into permanent history.** The
    product owner chose visible, working controls over hidden ones, knowing this.
    The example label is the mitigation, and it rests entirely on the stored
    `provider_code`.
-7. **An owner's edit of an example is still labelled an example.**
+8. **An owner's edit of an example is still labelled an example.**
    `apply_roadmap_proposal_change` copies the source's provider code onto the
    edit. That is what the database records and what the brief requires, but an
    owner who rewrote every sentence would still see the label.
-8. **The compose form is hidden while a proposal is open.** This is not an
+9. **The compose form is hidden while a proposal is open.** This is not an
    environment gate. A second concurrent request would create a second proposal
    for the same horizon, and the repository would have to pick one of them to
    call open. The order is decide, then ask again. The database enforces that
    order by refusing a regeneration whose predecessor has not been declined.
-9. **There is no context summary.** `contextSummaryLabel`,
-   `contextSummaryHelper`, `contextEmptyGroup`, `createAction` and
-   `proposeAction` in `ROADMAP_COPY` are still unused, as they were before this
-   ticket. M3-02's disclosure listed exact counts of goals, memory items and
-   recent sessions. This route reads goals and completions but not memory, and
-   adding a read only to fill a disclosure was out of scope. A disclosure with
-   vague counts would be less honest than none. The brief named only
-   `reviewPointsHeading`, which was removed.
-10. **`reviewPointsHeading` was removed rather than used.** M3-02 marked review
+10. **There is no context summary.** `contextSummaryLabel`,
+    `contextSummaryHelper`, `contextEmptyGroup`, `createAction` and
+    `proposeAction` in `ROADMAP_COPY` are still unused, as they were before this
+    ticket. M3-02's disclosure listed exact counts of goals, memory items and
+    recent sessions. This route reads goals and completions but not memory, and
+    adding a read only to fill a disclosure was out of scope. A disclosure with
+    vague counts would be less honest than none. The brief named only
+    `reviewPointsHeading`, which was removed.
+11. **`reviewPointsHeading` was removed rather than used.** M3-02 marked review
     points on the spine and also listed them again under "When to reassess".
     M3-15E's spine places each review point where it falls and deliberately
     dropped the separate list. Restoring the list would repeat content the spine
     already shows in the right place, so the unused string was removed.
-11. **`plan_version` sources always fail acceptance.** No such proposal can be
+12. **`plan_version` sources always fail acceptance.** No such proposal can be
     undecided today, because M3-11 expired all of them, so no owner can reach
     this refusal. If one ever existed, its owner would be told their plan
     changed and would have no way to accept it.
-12. **The 390px visual pass is the product owner's.** The browser flow asserts
+13. **The 390px visual pass is the product owner's.** The browser flow asserts
     that the page does not overflow horizontally and that every control is
     present and reachable. It cannot judge whether the surface looks or feels
     right. In the full-page evidence images, the fixed primary navigation
     appears mid-page. That is how a full-page screenshot captures a fixed
     element; it is not a layout defect.
-13. **The decline confirmation is `window.confirm`.** It matches the
+14. **The decline confirmation is `window.confirm`.** It matches the
     surrounding surfaces and works from the keyboard, but it is unstyled, and it
     is the one part of this surface that does not look like FitTip.
 
 ## Independent reviewer checklist
 
-Review `68958dad9d0610ca7d0b05ef174b67920f98a324`, using
-`git diff 45acd9b..68958da`. Confirm that the continuous-integration run for
+Review `ba665b031edb2f36a096d72ed85518a144a2ee4d`, using
+`git diff 45acd9b..ba665b0`. Confirm that the continuous-integration run for
 that exact SHA is green and that the matching Vercel Preview reached `READY`.
 Do not re-run lint, typecheck, `test:run`, `build` or the browser flow; the CI
 run covers them.
+
+Round two. The migration is unchanged since the first review read it, so items
+1, 2 and 10 stand as already-answered unless the diff says otherwise; items 11
+to 13 are the corrections made since.
 
 These need judgment that CI cannot supply:
 
@@ -656,18 +745,19 @@ These need judgment that CI cannot supply:
    replacing the M3-11 stub in `accept_roadmap_proposal` is required by the
    ticket's own Tier line ("replaces an accepted function body") and by
    acceptance criterion 1, or is scope that should have been raised first.
-3. **`useRoadmapWrite` and the document reload.** Read the table in *The defect
-   the browser flow found* and the commits it cites. Then check the following.
-   - Does the evidence support the design?
-   - Is any refusal path lost, meaning a status that reloads when it should
-     render?
-   - Is `saving` held until the reload, so a second press cannot start a second
-     write?
-   - Should losing the four success sentences go to the product owner?
+3. **`useRoadmapWrite` and the watchdog.** Read *Correction after the
+   independent review*, section 2, then check the following.
+   - Does the surface ever claim a write saved on evidence that only proves a
+     response arrived?
+   - Is any refusal path lost — a status that reaches `roadmap-outcome.tsx`
+     when it should render beside its control, or the reverse?
+   - Can a second press start a second write while one is pending?
+   - The decision dock is no longer keyed by its proposal. Can a stale editor,
+     a stale draft or a stale reply survive an edit that lands?
 4. **The example label.** Is it read from `provider_code` everywhere and never
    inferred from `origin`? Does the version path read it through
-   `source_proposal_id` under the owner policy? Does a failed read produce no
-   label rather than a wrong one?
+   `source_proposal_id` under the owner policy? Does an unreadable read now fail
+   closed, and is `isExampleAuthored` the only predicate that decides it?
 5. **Ownership and the client boundary.** Does any Client Component import
    `@/server/**`? Does any component call a repository write? Is
    `expectedHeadRevision` the only owner-supplied value that reaches a write,
@@ -689,6 +779,18 @@ These need judgment that CI cannot supply:
 10. **The removed M3-11 pgTAP assertions.** Confirm that each of the sixteen has
     an equal or stronger assertion in `m3_15f_roadmap_generation.test.sql`, and
     that nothing M3-11 permanently established was removed with them.
+11. **The new source-recheck pgTAP** (`5a23a9e`). Would each of the three cases
+    fail if the predicate in the migration were wrong in the direction it
+    covers? Is the recorded-source assertion enough to prove the loop iterates?
+    Do the completions written above the role switch, and the one `reset role`
+    inside the owner section, leave the suite's privilege story intact?
+12. **`roadmap-outcome.tsx`.** It is module-level mutable state in a
+    `"use client"` module. Is it unreachable from server rendering, can it
+    mismatch on hydration, and can a sentence from one write outlive the
+    surface it belongs to?
+13. **The recovery marker** (`ba665b0`). Does a reload that actually fires still
+    leave an explanation for the document it produces, and does a cancelled one
+    leave none?
 
 ## Correction after the first continuous-integration run
 
@@ -742,3 +844,161 @@ change narrows the guard rather than disabling the harness.
 approval of `68958da` — and of any Preview built from it — does not carry over.
 The CI run for `74c2391` is the automated evidence and is not yet available at
 the time of writing.
+
+## Correction after the independent review
+
+The independent review of `2fb0755` did not approve it. It found no defect in
+the migration. What it found was a missing test, a design the product owner
+chose to replace, and documentation that said things that were not true. Five
+corrections followed, in `5a23a9e`, `9267d94`, `a29edf2`, `49a9bd0` and
+`ba665b0`.
+
+### 1. The rewritten source recheck had no behavioural test
+
+Every acceptance case in `m3_15f_roadmap_generation.test.sql` was set up with
+`p_sources => '[]'::jsonb`, so the `for v_source in …` loop in
+`accept_roadmap_proposal` never iterated once in the whole suite. The only
+assertions touching the rewrite were three regex checks on
+`pg_get_functiondef`, which prove the body's *text* names `public.completions`
+and not `completion_heads` — not that the recheck decides anything correctly.
+
+It is the live path. `src/server/context/coach-ai-context-source.ts` emits a
+`completion` source with `recordId` and `revisionNumber` for every session in
+the owner's training window, and `finish_roadmap_generation` writes each into
+`roadmap_proposal_sources`, so any founder with logged training accepts through
+this loop. A wrong predicate gives exactly what the function exists to prevent:
+a spurious `PT409` nobody can clear, or an acceptance built on training data
+that has since been corrected.
+
+`5a23a9e` adds three cases, on completions written above the role switch because
+`authenticated` holds only `select` on `public.completions`:
+
+- a source still at its recorded revision verifies, and the acceptance lands;
+- the same source refuses with the approved "Your training history changed.
+  Review the proposal again." after `public.completions.revision` is bumped;
+- a source naming another owner's completion never verifies.
+
+The recorded source row is asserted before the first acceptance, so the success
+case cannot pass with an empty loop. `plan(52)` becomes `plan(56)`, and the two
+trailing owner-history assertions move to three versions and four decisions,
+which is what the new acceptance leaves behind.
+
+### 2. The write path is back on this repository's own watchdog
+
+The document load after every successful write was the wrong answer to a defect
+this repository had already diagnosed and answered four times.
+`src/lib/app-router/transition-watchdog.ts` describes the symptom verbatim,
+names the upstream cause — React's `useDeferredValue` sticking on a stale value,
+facebook/react#35821, routed through `layout-router` — and is used by
+`plan-manager.tsx`, `series-transition-watch.ts`, `goal-manager.tsx` and
+`memory-manager.tsx`. Its own doc comment says the roadmap takes the "a reply
+arrived and never rendered" half alone, with the reasoning: a ten-second
+confirmation budget suits a form save, while a provider call has no honest fixed
+deadline and must not be declared unconfirmed while it is still legitimately
+running. M3-15F had removed the roadmap's use of it and left that comment naming
+a consumer that did not exist.
+
+The product owner decided on 17 September 2026 to rewire the writes onto it.
+`9267d94` does that. The normal path is an ordinary form action again: the reply
+carries the revalidated tree, the surface renders both in one commit, scroll
+position and focus are preserved, and there is no document load. The watchdog
+covers only the case it can observe, and its copy says the step did not appear
+and the page is reloading — never that anything saved.
+
+The four approved success sentences and `pendingElsewhere` come back with it.
+`pendingElsewhere` also fixes the second contract defect the review found: a
+`pending` reply was routed into the refusal slot, so a tab that could never
+update showed "Building your roadmap proposal…" as a static notice with no
+recovery action.
+
+**Where a success sentence can live.** Every control on this surface is removed
+by the write it performs — a generation replaces the compose form with the
+proposal, acceptance and decline remove the review the buttons sat in, and an
+edit replaces the open proposal under the dock. A sentence returned to the
+control that submitted is therefore unmounted before anybody reads it, which is
+why the sentences went missing rather than because the state change was thought
+sufficient. `roadmap-outcome.tsx` holds the last landed outcome beside React and
+is reported to from the browser the moment the server answers, before the commit
+that removes the control. It is rendered once, by `RoadmapScreen`, at a stable
+position, so the revalidated tree reconciles onto the same instance. A refusal
+is deliberately not routed there; it belongs next to the control the owner has
+to act on.
+
+`7630b4f`'s `key={proposal.id}` on the decision dock is removed for the same
+reason: it would remount the dock on a successful edit and discard that edit's
+sentence. What the key was reaching for is covered by closing the editor during
+the render that sees its own reply come back `edited`, and by the watchdog for a
+reply that never renders at all.
+
+`RoadmapActionState` loses `proposalId` and `memoryCandidateCount`, the first
+contract defect the review found: no action ever set either. `draft` stays and
+is genuinely used again, because a form action resets an uncontrolled form and
+the two counted fields are re-seeded from it during render.
+
+**`vercel-react-best-practices`, re-checked on the new write path.**
+
+- `server-auth-actions` — unchanged and still true: every action derives the
+  owner from verified claims before touching the repository.
+- No double submit: each control is disabled while any write in its component is
+  pending, and `useActionState` queues rather than racing.
+- No lost update: accept still carries `expectedHeadRevision`, which the
+  database compares against the real head under a lock.
+- Failures still surface honestly: `isRefusal` routes every non-landed status to
+  the control that produced it, with the draft intact.
+- `rerender-derived-state-no-effect` — the editor close and the draft re-seed
+  are derived during render, not in effects.
+- `rendering-usetransition-loading` is now **followed** rather than deliberately
+  declined: `useActionState`'s own pending flag drives the disabled state.
+
+**What the browser flow then caught.** A watchdog verdict arms a reload behind a
+readable notice and sets the session marker that explains it afterwards. When
+the lost transition landed inside that half-second window the timeout was
+cleared and no reload happened — but the marker stayed set, so the next control
+to mount with nothing submitted told the owner "this page was reloaded" when it
+had not been. The regeneration's own success sentence and that false explanation
+were on screen together. `ba665b0` drops the marker with the cancelled timeout;
+only a reload that actually fired leaves it standing, and that path replaces the
+document rather than running the cleanup.
+
+### 3. The deleted architecture invariant is narrowed, not gone
+
+`a29edf2`. See *The invariant that changed*, which it corrects along with this
+record.
+
+### 4. Unreadable provenance now fails closed
+
+`49a9bd0`. See *Authorization and ownership*. This was the review's "consider,
+and tell me what you decide". The decision was to fail closed: the unsafe
+direction for an invariant about labelling examples is the one where an example
+renders as a real roadmap with nothing to say otherwise. Raising a persistence
+error instead was considered and rejected —
+`roadmap_versions.source_proposal_id` is `not null` with a foreign key, so this
+is not a state the database can be in, and turning an impossible shape surprise
+into a failed read of the whole roadmap page is a worse trade than an extra
+label on a record that deserves a second look.
+
+### 5. What this record said that was not true
+
+Corrected in place, because this record has not been accepted and a record that
+misdescribes what shipped is worse than one carrying its own correction:
+
+- Known limitation 3 said the root cause was unidentified and that other
+  surfaces "submit Server Actions differently and were not investigated here".
+  Both were false; `transition-watchdog.ts` identifies it and four surfaces use
+  it.
+- *The invariant that changed* claimed the surface could reach no Supabase
+  client while nothing constrained which `@/lib/supabase` module it imported.
+- *Authorization and ownership* said an unreadable provenance produces no label.
+- The manifest showed `45acd9b..68958da` rather than the ticket's whole range,
+  and accounted for no documentation path in it.
+- The header and `docs/validation/README.md` still named `68958da` as the review
+  target after `74c2391` superseded it.
+- *Hosted evidence* listed three commands where the corrected brief carries
+  four.
+
+`ba665b0` supersedes `74c2391` as the implementation review target. Approval of
+any earlier commit on this branch, and of any Preview built from one, does not
+carry over. The continuous-integration run for `ba665b0` is the automated
+evidence and is not yet available at the time of writing; the commit that adds
+this correction changes no application file, which is the evidence-commit
+exception in `AGENTS.md`.
