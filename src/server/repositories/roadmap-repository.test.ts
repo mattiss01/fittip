@@ -6,6 +6,10 @@ import {
   RoadmapPersistenceError,
   RoadmapRepository,
 } from "@/server/repositories/roadmap-repository";
+import {
+  isExampleAuthored,
+  UNKNOWN_PROVIDER_CODE,
+} from "@/server/roadmap/roadmap-records";
 
 const USER_ID = "00000000-0000-4000-8000-000000000001";
 const FIRST_PROPOSAL = "00000000-0000-4000-8000-000000000010";
@@ -241,15 +245,17 @@ describe("RoadmapRepository", () => {
     ]);
   });
 
-  // An unreadable embed must not become `"fixture"`. Labelling a coach-written
-  // roadmap an example is the one error the label itself could introduce, so
-  // absence is reported as absence.
-  it("labels nothing an example when the provenance cannot be read", async () => {
+  // An unreadable embed is never passed off as a real provider code. It reports
+  // the sentinel, which `isExampleAuthored` treats as an example: the unsafe
+  // direction is a fixture-authored roadmap rendering as a real one with
+  // nothing anywhere to say otherwise.
+  it("fails closed when the provenance cannot be read", async () => {
     const versions = await readingVersions([
       versionRow(1, { roadmap_proposals: null }),
     ]).listVersions();
 
-    expect(versions[0].providerCode).toBe("");
+    expect(versions[0].providerCode).toBe(UNKNOWN_PROVIDER_CODE);
+    expect(isExampleAuthored(versions[0].providerCode)).toBe(true);
   });
 
   it("does not reach a transaction function for an anonymous session", async () => {

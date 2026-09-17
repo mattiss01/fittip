@@ -2,7 +2,10 @@ import { RoadmapSpine } from "./roadmap-spine";
 
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import type { RoadmapProposal } from "@/server/ai/contracts";
-import { ROADMAP_COPY } from "@/server/roadmap/roadmap-records";
+import {
+  isExampleAuthored,
+  ROADMAP_COPY,
+} from "@/server/roadmap/roadmap-records";
 
 /**
  * One roadmap, read end to end — accepted or still proposed.
@@ -122,7 +125,7 @@ export function RoadmapBody({
  * who wrote it, and an owner edit of an example is still an example.
  */
 export function ExampleTag({ providerCode }: { providerCode: string }) {
-  if (providerCode !== "fixture") return null;
+  if (!isExampleAuthored(providerCode)) return null;
   return (
     <p className={styles.exampleTag} data-roadmap-example>
       {ROADMAP_COPY.exampleLabel}

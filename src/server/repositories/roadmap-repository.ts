@@ -16,11 +16,12 @@ import type {
   RoadmapProposal,
 } from "@/server/ai/contracts";
 import type { CoachAISourceReference } from "@/server/ai/context-source";
-import type {
-  RoadmapDecision,
-  RoadmapProposalOrigin,
-  RoadmapProposalView,
-  RoadmapVersionView,
+import {
+  UNKNOWN_PROVIDER_CODE,
+  type RoadmapDecision,
+  type RoadmapProposalOrigin,
+  type RoadmapProposalView,
+  type RoadmapVersionView,
 } from "@/server/roadmap/roadmap-records";
 
 /**
@@ -513,15 +514,19 @@ function conflictReason(message: string): RoadmapConflictReason {
  *
  * PostgREST returns a to-one embed as an object or, depending on how it
  * resolves the relationship, as a one-element array; both are handled for the
- * same reason `toRequest` handles both. An unreadable embed falls back to the
- * empty string, which is not `"fixture"` and therefore never labels a
- * coach-written roadmap an example — the conservative direction is to omit the
- * label rather than to apply it to something it does not describe.
+ * same reason `toRequest` handles both.
+ *
+ * An unreadable embed reports `UNKNOWN_PROVIDER_CODE`, which
+ * `isExampleAuthored` treats as an example. `source_proposal_id` is `not null`
+ * with a foreign key, so this cannot be a normal state — but if the
+ * relationship ever stopped resolving, the alternative was an accepted
+ * fixture-authored roadmap rendering as a real one with no error anywhere,
+ * which is the one direction the example-labelling invariant cannot afford.
  */
 function toProviderCode(value: unknown): string {
   const row = Array.isArray(value) ? value[0] : value;
   const code = (row as { provider_code?: unknown } | null)?.provider_code;
-  return typeof code === "string" ? code : "";
+  return typeof code === "string" && code !== "" ? code : UNKNOWN_PROVIDER_CODE;
 }
 
 type DecisionRow = { decision: string };

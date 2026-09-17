@@ -3,6 +3,7 @@ import { RoadmapDecisionDock } from "./roadmap-decision-dock";
 
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import {
+  isExampleAuthored,
   ROADMAP_COPY,
   type RoadmapProposalView,
 } from "@/server/roadmap/roadmap-records";
@@ -46,7 +47,7 @@ export function RoadmapProposalReview({
       <h2 className={styles.cardHeading}>{ROADMAP_COPY.openProposalHeading}</h2>
       <p className={styles.emptyState}>{ROADMAP_COPY.openProposalSupport}</p>
 
-      {proposal.providerCode === "fixture" ? (
+      {isExampleAuthored(proposal.providerCode) ? (
         <p className={styles.recordNote} data-roadmap-example-notice>
           {ROADMAP_COPY.exampleNotice}
         </p>

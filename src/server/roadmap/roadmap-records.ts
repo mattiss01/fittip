@@ -205,6 +205,31 @@ export type RoadmapHeadView = {
 };
 
 /**
+ * The provider code a view reports when the stored provenance could not be
+ * read.
+ *
+ * `roadmap_versions.source_proposal_id` is `not null` with a foreign key, so
+ * this is not a state the database can be in; it exists because the read has to
+ * answer something when the embed comes back in a shape it does not recognize.
+ */
+export const UNKNOWN_PROVIDER_CODE = "unknown";
+
+/**
+ * Whether a record was written by something other than a coaching model, and
+ * therefore has to be labelled an example wherever it appears.
+ *
+ * One predicate rather than an equality test repeated per surface, because it
+ * fails closed and that decision has to hold everywhere. `fixture` is the
+ * built-in example coach. An unreadable provenance is treated the same way: the
+ * unsafe direction is a fixture-authored roadmap rendering as a real one with
+ * nothing anywhere to say otherwise, while the cost of the opposite mistake is
+ * an example label on a roadmap that has one more reason to be looked at.
+ */
+export function isExampleAuthored(providerCode: string): boolean {
+  return providerCode === "fixture" || providerCode === UNKNOWN_PROVIDER_CODE;
+}
+
+/**
  * Everything the roadmap screen renders from. Assembled server-side so the
  * client component receives one already-authorized snapshot rather than issuing
  * its own reads.
