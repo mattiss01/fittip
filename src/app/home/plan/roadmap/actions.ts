@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 // A `"use server"` module may export nothing but async functions, so the state
 // type and its initial value live in `action-state.ts` and the client imports
@@ -78,7 +77,6 @@ export async function generateRoadmapAction(
   formData: FormData,
 ): Promise<RoadmapActionState> {
   const submission = previous.submission + 1;
-  let succeeded = false;
   const draft: RoadmapActionDraft = {
     endDate: text(formData, "endDate"),
     planningNote: text(formData, "planningNote"),
@@ -133,28 +131,24 @@ export async function generateRoadmapAction(
     );
 
     if (result.status === "proposal") {
-      // Outside the `catch` below, because a redirect is a control-flow signal
-      // rather than an error and must not be swallowed by it.
-      succeeded = true;
-    } else if (result.status === "pending") {
+      return landed("proposal", submission);
+    }
+    if (result.status === "pending") {
       return {
         status: "pending",
         message: ROADMAP_CONTROL_COPY.pending,
         submission,
       };
-    } else {
-      return {
-        status: "error",
-        message: OUTCOMES.generationFailed,
-        submission,
-        draft,
-      };
     }
+    return {
+      status: "error",
+      message: OUTCOMES.generationFailed,
+      submission,
+      draft,
+    };
   } catch (error) {
     return toActionState(error, submission, draft);
   }
-  if (succeeded) return finishWrite();
-  return { status: "error", message: OUTCOMES.generationFailed, submission };
 }
 
 export async function acceptRoadmapAction(
@@ -168,10 +162,10 @@ export async function acceptRoadmapAction(
       parseRoadmapProposalId(formData.get("proposalId")),
       parseExpectedHeadRevision(formData.get("expectedHeadRevision")),
     );
+    return landed("accepted", submission);
   } catch (error) {
     return toActionState(error, submission);
   }
-  return finishWrite();
 }
 
 export async function declineRoadmapAction(
@@ -184,10 +178,10 @@ export async function declineRoadmapAction(
     await roadmaps.declineProposal(
       parseRoadmapProposalId(formData.get("proposalId")),
     );
+    return landed("declined", submission);
   } catch (error) {
     return toActionState(error, submission);
   }
-  return finishWrite();
 }
 
 /**
@@ -226,36 +220,28 @@ export async function editRoadmapAction(
     }
 
     await roadmaps.editProposal(id, validation.response.roadmap);
+    return landed("edited", submission);
   } catch (error) {
     return toActionState(error, submission);
   }
-  // The one write that returns rather than redirects. See the editor: an edit
-  // replaces the open proposal under a control that stays on screen, and a
-  // same-route redirect did not reliably land there, so the editor reloads the
-  // document itself once this resolves. The route is still invalidated here so
-  // that nothing cached can outlive the write.
-  revalidatePath("/home/plan/roadmap");
-  return { status: "edited", message: "", submission };
 }
 
 /**
- * What every successful write does instead of returning a message.
+ * What every successful write returns: a status that says it landed, and no
+ * sentence.
  *
- * The route is invalidated and then navigated to. Returning a state and relying
- * on the action response to carry the refreshed tree was not reliable: the
- * write landed, the control reported success, and the surface went on showing
- * the record it had replaced. A navigation ends the transition unambiguously
- * and refetches the route, so what the owner reads is what the database holds.
- *
- * Nothing is lost by dropping the success sentence. Every one of these writes
- * changes what the screen says about itself — the proposal is there, or it is
- * accepted, or it is declined — and that change is the feedback. A failure
- * still returns a state, because a failure is the case where the screen would
- * otherwise say nothing at all.
+ * The client reloads the document on these statuses — see
+ * `src/components/roadmap/use-roadmap-write.ts` for the browser evidence behind
+ * that — so a success message would never be read. Nothing is lost by it:
+ * every one of these writes changes what the screen says about itself. The
+ * route is still invalidated, so that no cached payload can outlive the write.
  */
-function finishWrite(): never {
+function landed(
+  status: "proposal" | "accepted" | "declined" | "edited",
+  submission: number,
+): RoadmapActionState {
   revalidatePath("/home/plan/roadmap");
-  redirect("/home/plan/roadmap");
+  return { status, message: "", submission };
 }
 
 /**

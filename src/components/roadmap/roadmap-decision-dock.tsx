@@ -1,10 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState, type FormEvent } from "react";
 
 import { RoadmapEditor } from "./roadmap-editor";
+import { useRoadmapWrite } from "./use-roadmap-write";
 
-import { INITIAL_ROADMAP_ACTION_STATE } from "@/app/home/plan/roadmap/action-state";
 import {
   acceptRoadmapAction,
   declineRoadmapAction,
@@ -23,18 +23,12 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
  *
  * ## Why a successful write never reports back here
  *
- * It navigates instead. The browser flow found that an action's own response
- * does not reliably carry the refreshed tree to this route: the write landed,
- * the control reported success, and the surface went on showing the record it
- * had replaced — for as long as the flow was willing to wait. The actions
- * therefore redirect on success, which ends the transition and refetches the
- * route, and this dock only ever renders a refusal.
+ * The document reloads instead; `use-roadmap-write.ts` records the browser
+ * evidence for that. This dock only ever renders a refusal.
  *
- * Accept and decline each own a `useActionState` here, beside the form that
- * submits it, and the editor owns its own for the same reason: the component
- * that renders a form owns that form's action state. Separate hooks rather than
- * one shared reducer, because they are independent submissions with their own
- * pending flags, and sharing state would make one control's refusal appear
+ * Accept and decline each hold their own write, beside the form that submits
+ * it, and the editor holds its own: they are independent submissions with their
+ * own saving flags, and sharing state would make one control's refusal appear
  * under another.
  *
  * The client boundary stops here. Everything above this component — the
@@ -55,24 +49,30 @@ export function RoadmapDecisionDock({
   expectedHeadRevision: number;
   goalTitles: Record<string, string>;
 }) {
-  const [accepted, acceptAction, accepting] = useActionState(
+  const accept = useRoadmapWrite(
     acceptRoadmapAction,
-    INITIAL_ROADMAP_ACTION_STATE,
+    ROADMAP_CONTROL_COPY.outcomes.decisionFailed,
   );
-  const [declined, declineAction, declining] = useActionState(
+  const decline = useRoadmapWrite(
     declineRoadmapAction,
-    INITIAL_ROADMAP_ACTION_STATE,
+    ROADMAP_CONTROL_COPY.outcomes.decisionFailed,
   );
   const [editorOpen, setEditorOpen] = useState(false);
 
-  const busy = accepting || declining;
-  // Whichever control last refused, and why. Both start at submission 0, so an
-  // untouched dock shows nothing, and a successful write never gets here
-  // because it navigates.
-  const latest = [accepted, declined]
-    .filter((state) => state.status !== "idle")
+  const busy = accept.saving || decline.saving;
+  // Whichever control last refused, and why. A write that landed never gets
+  // here, because the document reloads.
+  const latest = [accept.refused, decline.refused]
+    .filter((state) => state !== null)
     .sort((a, b) => a.submission - b.submission)
     .at(-1);
+
+  function submitWith(write: typeof accept.submit) {
+    return (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      void write(new FormData(event.currentTarget));
+    };
+  }
 
   if (editorOpen) {
     return (
@@ -103,7 +103,7 @@ export function RoadmapDecisionDock({
       )}
 
       <div className={styles.actions}>
-        <form action={acceptAction}>
+        <form onSubmit={submitWith(accept.submit)}>
           <input type="hidden" name="proposalId" value={proposalId} />
           <input
             type="hidden"
@@ -129,11 +129,12 @@ export function RoadmapDecisionDock({
         </button>
 
         <form
-          action={declineAction}
           onSubmit={(event) => {
+            event.preventDefault();
             if (!globalThis.confirm(ROADMAP_CONTROL_COPY.declineConfirm)) {
-              event.preventDefault();
+              return;
             }
+            void decline.submit(new FormData(event.currentTarget));
           }}
         >
           <input type="hidden" name="proposalId" value={proposalId} />

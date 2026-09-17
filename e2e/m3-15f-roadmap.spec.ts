@@ -154,8 +154,11 @@ test.describe("M3-15F roadmap generation", () => {
 
       const regenerate = page.locator('[data-roadmap-compose="regeneration"]');
       await expect(regenerate).toBeVisible();
+      // Three, not two: what was declined is the owner's edit, and an edit
+      // shares the generation request of the proposal it came from, so no
+      // regeneration has been spent on these dates yet.
       await expect(
-        regenerate.getByText("2 regenerations left on these dates."),
+        regenerate.getByText("3 regenerations left on these dates."),
       ).toBeVisible();
       await regenerate
         .getByLabel("What should the coach change?")

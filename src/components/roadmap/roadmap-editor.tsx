@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
-import { INITIAL_ROADMAP_ACTION_STATE } from "@/app/home/plan/roadmap/action-state";
+import { useRoadmapWrite } from "./use-roadmap-write";
+
 import { editRoadmapAction } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
@@ -22,25 +23,11 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
  * edit leaves the reviewed proposal untouched on screen as well as in the
  * database.
  *
- * ## Why saving reloads the document
- *
- * An edit is the one write that replaces the open proposal under a control
- * that stays on screen, and every App Router route back to a fresh tree failed
- * for it in the browser flow while working for the other three writes: a
- * transition-wrapped call, a form action, a same-route redirect, and a dock
- * keyed by proposal. In every case the edit committed — the server answered,
- * and a reload showed the new proposal at once — and in every case the screen
- * kept the editor open with its submission pending.
- *
- * Two things were proven to work, so this does exactly those two. The action is
- * awaited directly, outside any transition, which resolved reliably from the
- * first attempt; and a successful save then loads the document again, which
- * cannot be served a stale tree or left mid-transition. A refusal is rendered
- * in place, with the draft intact, because that is the case the owner has to
- * act on here.
- *
- * The draft travels as one JSON field, the encoding that survives a nested
- * shape without the server reassembling it from flattened field names.
+ * Saving goes through `useRoadmapWrite` like every other roadmap write, so a
+ * save that lands reloads the document and a refusal is rendered in place with
+ * the draft intact — the case the owner has to act on here. The draft travels
+ * as one JSON field, the encoding that survives a nested shape without the
+ * server reassembling it from flattened field names.
  */
 
 const LEVELS = ["primary", "secondary", "maintenance", "deferred"] as const;
@@ -96,35 +83,18 @@ export function RoadmapEditor({
   goalTitles: Record<string, string>;
   onCancel: () => void;
 }) {
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
-  const submission = useRef(INITIAL_ROADMAP_ACTION_STATE);
+  const { saving, refused, submit } = useRoadmapWrite(
+    editRoadmapAction,
+    ROADMAP_CONTROL_COPY.outcomes.decisionFailed,
+  );
+  const message = refused?.message ?? "";
   const [draft, setDraft] = useState<Draft>(() =>
     structuredClone(content as Draft),
   );
 
-  async function save(event: FormEvent<HTMLFormElement>) {
+  function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (saving) return;
-    setSaving(true);
-    setMessage("");
-    try {
-      const result = await editRoadmapAction(
-        submission.current,
-        new FormData(event.currentTarget),
-      );
-      submission.current = result;
-      if (result.status === "edited") {
-        // A full load rather than a router navigation, for the reason above.
-        // The button stays disabled until the new document replaces this one.
-        globalThis.location.assign("/home/plan/roadmap");
-        return;
-      }
-      setMessage(result.message);
-    } catch {
-      setMessage(ROADMAP_CONTROL_COPY.outcomes.decisionFailed);
-    }
-    setSaving(false);
+    void submit(new FormData(event.currentTarget));
   }
 
   const update = (mutate: (next: Draft) => void) => {

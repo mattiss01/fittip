@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useId, useRef, useState } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
+
+import { useRoadmapWrite } from "./use-roadmap-write";
 
 import {
-  INITIAL_ROADMAP_ACTION_STATE,
   ROADMAP_FEEDBACK_MAX_LENGTH,
   ROADMAP_NOTE_MAX_LENGTH,
 } from "@/app/home/plan/roadmap/action-state";
@@ -47,9 +48,15 @@ export function RoadmapComposer({
   previousProposalId?: string;
   regenerationsRemaining: number;
 }) {
-  const [state, formAction, pending] = useActionState(
+  // A proposal that lands reloads the document, so this component only ever
+  // renders a refusal; see `use-roadmap-write.ts` for why.
+  const {
+    saving: pending,
+    refused,
+    submit: write,
+  } = useRoadmapWrite(
     generateRoadmapAction,
-    INITIAL_ROADMAP_ACTION_STATE,
+    ROADMAP_CONTROL_COPY.outcomes.generationFailed,
   );
   const keyRef = useRef<string | null>(null);
   // Explicit ids rather than a wrapping `<label>`. A label that wraps its
@@ -59,31 +66,25 @@ export function RoadmapComposer({
   const fieldId = useId();
 
   // The two counted fields are controlled so the character count is the value's
-  // own length rather than a second source of truth. They are re-seeded from
-  // the returned draft when a submission comes back, during render rather than
-  // in an effect: an effect would paint the emptied field first and then
-  // refill it.
-  const [seenSubmission, setSeenSubmission] = useState(state.submission);
+  // own length rather than a second source of truth. A refusal leaves them as
+  // typed: nothing reset them, so there is nothing to restore.
   const [note, setNote] = useState("");
   const [feedback, setFeedback] = useState("");
-  if (seenSubmission !== state.submission) {
-    setSeenSubmission(state.submission);
-    setNote(state.draft?.planningNote ?? "");
-    setFeedback(state.draft?.regenerationFeedback ?? "");
-  }
 
   const isRegeneration = mode === "regeneration";
 
-  function submit(formData: FormData) {
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
     // A new attempt gets a new key; a retry of one that has not produced a
-    // proposal reuses it. A successful generation never returns here — it
-    // navigates — so this form only ever sees an attempt that did not produce
-    // one, and reusing the key is exactly what makes the retry cheap.
+    // proposal reuses it. A successful generation never returns here — the
+    // document reloads — so this form only ever sees an attempt that did not
+    // produce one, and reusing the key is exactly what makes the retry cheap.
     if (keyRef.current === null) {
       keyRef.current = globalThis.crypto.randomUUID();
     }
     formData.set("idempotencyKey", keyRef.current);
-    formAction(formData);
+    void write(formData);
   }
 
   return (
@@ -99,17 +100,17 @@ export function RoadmapComposer({
           : ROADMAP_CONTROL_COPY.composeSupport}
       </p>
 
-      {state.status === "idle" ? null : (
+      {refused === null ? null : (
         <p
           className={styles.notice}
-          data-roadmap-notice={state.status}
+          data-roadmap-notice={refused.status}
           role="status"
         >
-          {state.message}
+          {refused.message}
         </p>
       )}
 
-      <form action={submit} className={styles.form}>
+      <form onSubmit={submit} className={styles.form}>
         {isRegeneration && previousProposalId ? (
           <input
             type="hidden"
@@ -137,7 +138,7 @@ export function RoadmapComposer({
             // it would leave the owner guessing which dates they are asking
             // about.
             readOnly={isRegeneration}
-            defaultValue={state.draft?.endDate || endDate}
+            defaultValue={endDate}
           />
           <span className={styles.helper} id={`${fieldId}-end-help`}>
             {isRegeneration

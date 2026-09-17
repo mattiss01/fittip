@@ -11,9 +11,9 @@ const {
   generateMock,
 } = vi.hoisted(() => ({
   revalidatePathMock: vi.fn(),
+  // No roadmap action redirects. The mock exists so a test can say so, and
+  // throws like Next's own would if one ever started to.
   redirectMock: vi.fn((path: string) => {
-    // Next's own `redirect` throws a control-flow signal. Throwing here is what
-    // proves the action lets it past the `catch` that maps real failures.
     throw new Error(`NEXT_REDIRECT:${path}`);
   }),
   createRoadmapMock: vi.fn(),
@@ -133,20 +133,19 @@ describe("roadmap server actions", () => {
   });
 
   describe("accept", () => {
-    // A write that lands invalidates the route and then navigates to it, so the
-    // owner reads what the database holds rather than a stale tree. The
-    // redirect must reach `redirect()` rather than be swallowed by the `catch`
-    // that maps real failures, which is what the throwing mock proves.
-    it("accepts against the head the owner read, then invalidates and navigates", async () => {
-      await expect(
-        acceptRoadmapAction(
-          INITIAL_ROADMAP_ACTION_STATE,
-          form({ proposalId: PROPOSAL_ID, expectedHeadRevision: "2" }),
-        ),
-      ).rejects.toThrow("NEXT_REDIRECT:/home/plan/roadmap");
+    // A write that lands invalidates the route and reports that it landed; the
+    // client reloads the document on that status. No server redirect is used,
+    // for the browser evidence recorded in `use-roadmap-write.ts`.
+    it("accepts against the head the owner read, and invalidates the route", async () => {
+      const result = await acceptRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({ proposalId: PROPOSAL_ID, expectedHeadRevision: "2" }),
+      );
 
+      expect(result.status).toBe("accepted");
       expect(acceptProposal).toHaveBeenCalledWith(PROPOSAL_ID, 2);
       expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan/roadmap");
+      expect(redirectMock).not.toHaveBeenCalled();
     });
 
     // A head that moved is the case this expectation exists for. The refusal
@@ -215,14 +214,13 @@ describe("roadmap server actions", () => {
   });
 
   describe("decline", () => {
-    it("declines, then invalidates and navigates", async () => {
-      await expect(
-        declineRoadmapAction(
-          INITIAL_ROADMAP_ACTION_STATE,
-          form({ proposalId: PROPOSAL_ID }),
-        ),
-      ).rejects.toThrow("NEXT_REDIRECT:/home/plan/roadmap");
+    it("declines and invalidates the route", async () => {
+      const result = await declineRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({ proposalId: PROPOSAL_ID }),
+      );
 
+      expect(result.status).toBe("declined");
       expect(declineProposal).toHaveBeenCalledWith(PROPOSAL_ID);
       expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan/roadmap");
     });
@@ -246,20 +244,20 @@ describe("roadmap server actions", () => {
     const endDate = addDays(today, 84);
 
     it("derives today from the owner's zone, not from the form", async () => {
-      await expect(
-        generateRoadmapAction(
-          INITIAL_ROADMAP_ACTION_STATE,
-          form({
-            endDate,
-            planningNote: "",
-            idempotencyKey: "m3-15f-generate-key-0001",
-            // A field the action does not read. If it ever did, this value
-            // would move the horizon every later check is measured against.
-            today: "2030-01-01",
-          }),
-        ),
-      ).rejects.toThrow("NEXT_REDIRECT:/home/plan/roadmap");
+      const result = await generateRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({
+          endDate,
+          planningNote: "",
+          idempotencyKey: "m3-15f-generate-key-0001",
+          // A field the action does not read. If it ever did, this value would
+          // move the horizon every later check is measured against.
+          today: "2030-01-01",
+        }),
+      );
 
+      expect(result.status).toBe("proposal");
+      expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan/roadmap");
       expect(generateMock.mock.calls[0][0]).toMatchObject({
         startDate: today,
         endDate,
@@ -413,9 +411,6 @@ describe("roadmap server actions", () => {
   // proved here is that the JSON it carries is treated as a claim to be checked
   // rather than as content to be stored.
   describe("edit", () => {
-    // The one write that returns instead of redirecting; the editor reloads the
-    // document on this status. It still invalidates the route and still never
-    // reaches `redirect()`.
     it("saves a valid edit as a new proposal beside its source", async () => {
       const result = await editRoadmapAction(
         INITIAL_ROADMAP_ACTION_STATE,
