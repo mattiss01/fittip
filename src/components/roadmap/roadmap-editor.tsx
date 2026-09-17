@@ -1,9 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 
-import type { RoadmapActionState } from "@/app/home/plan/roadmap/action-state";
-import { editRoadmapAction } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
@@ -22,10 +20,12 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
  * edit leaves the reviewed proposal untouched on screen as well as in the
  * database.
  *
- * It posts through a transition rather than a form action because the draft is
- * nested — phases holding milestones holding goal ids — and no `FormData`
- * encoding of that survives a round trip without the component reassembling it
- * on the other side, which is one more place for the shape to drift.
+ * It posts as a form action, with the whole draft in one JSON field. The dock
+ * above explains why that matters: an imperative Server Action call does not
+ * reliably hand this tree the revalidated payload, and the browser flow caught
+ * the consequence — a committed edit under a review still showing the proposal
+ * it came from. One JSON field is the encoding that survives a nested draft
+ * without the server reassembling a shape from flattened field names.
  */
 
 const LEVELS = ["primary", "secondary", "maintenance", "deferred"] as const;
@@ -72,46 +72,32 @@ type Draft = {
 export function RoadmapEditor({
   proposalId,
   content,
-  submission,
   goalTitles,
-  onClose,
+  formAction,
+  message,
+  saving,
+  onCancel,
 }: {
   proposalId: string;
   content: unknown;
-  /** The dock's submission counter, so a result can be told from the one before. */
-  submission: number;
   /** Goal id to title, so an attention row names a goal rather than a uuid. */
   goalTitles: Record<string, string>;
-  onClose: (result: RoadmapActionState | null) => void;
+  /** The dock's edit action, so the reply carries the refreshed tree with it. */
+  formAction: (formData: FormData) => void;
+  /** Why the last attempt was refused, or empty. */
+  message: string;
+  saving: boolean;
+  onCancel: () => void;
 }) {
   const [draft, setDraft] = useState<Draft>(() =>
     structuredClone(content as Draft),
   );
-  const [saving, startSaving] = useTransition();
-  const [message, setMessage] = useState("");
 
   const update = (mutate: (next: Draft) => void) => {
     setDraft((current) => {
       const next = structuredClone(current);
       mutate(next);
       return next;
-    });
-  };
-
-  const save = () => {
-    startSaving(async () => {
-      // `schemaVersion` is added back server-side from the accepted contract,
-      // never from this form.
-      const result = await editRoadmapAction(
-        proposalId,
-        { ...draft, schemaVersion: "fittip.roadmap.v2" },
-        submission,
-      );
-      if (result.status === "edited") {
-        onClose(result);
-        return;
-      }
-      setMessage(result.message);
     });
   };
 
@@ -133,7 +119,20 @@ export function RoadmapEditor({
         </p>
       )}
 
-      <div className={styles.form}>
+      <form action={formAction} className={styles.form}>
+        <input type="hidden" name="proposalId" value={proposalId} />
+        {/* `schemaVersion` is added back server-side from the accepted
+            contract, never from this form, and the whole draft is revalidated
+            there by the validator the coach's own output goes through. */}
+        <input
+          type="hidden"
+          name="content"
+          value={JSON.stringify({
+            ...draft,
+            schemaVersion: "fittip.roadmap.v2",
+          })}
+        />
+
         <label className={styles.field}>
           <span className={styles.label}>{LABELS.title}</span>
           <input
@@ -362,8 +361,7 @@ export function RoadmapEditor({
         <div className={styles.actions}>
           <button
             className={styles.primaryAction}
-            type="button"
-            onClick={save}
+            type="submit"
             disabled={saving}
           >
             {ROADMAP_CONTROL_COPY.editSaveAction}
@@ -371,13 +369,13 @@ export function RoadmapEditor({
           <button
             className={styles.quietAction}
             type="button"
-            onClick={() => onClose(null)}
+            onClick={onCancel}
             disabled={saving}
           >
             {ROADMAP_CONTROL_COPY.editCancelAction}
           </button>
         </div>
-      </div>
+      </form>
     </section>
   );
 }

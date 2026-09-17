@@ -206,28 +206,31 @@ export async function declineRoadmapAction(
 /**
  * An edit creates a new reviewable proposal linked to its source.
  *
- * The content is revalidated by the same validator the coach's own output goes
- * through, and then bounded again inside the database. An owner is not more
- * trusted than the coach here: they are equally capable of leaving a six-day
- * gap between two phases.
- *
- * Called directly rather than through a form, because the editor holds a nested
- * draft that no `FormData` encoding would survive intact.
+ * The draft arrives as one JSON field rather than as flattened form fields,
+ * because a roadmap is nested three deep and reassembling that shape from field
+ * names would be a second, silent contract. It costs nothing in trust: the body
+ * is handed to `validateRoadmapCandidate` — the same validator the coach's own
+ * output goes through — and bounded again inside the database, so malformed
+ * JSON is a validation failure like any other. An owner is not more trusted
+ * than the coach here: they are equally capable of leaving a six-day gap
+ * between two phases.
  */
 export async function editRoadmapAction(
-  proposalId: unknown,
-  content: unknown,
-  submissionBefore: number,
+  previous: RoadmapActionState,
+  formData: FormData,
 ): Promise<RoadmapActionState> {
-  const submission = submissionBefore + 1;
+  const submission = previous.submission + 1;
   try {
     const roadmaps = await createRoadmapRepository();
-    const id = parseRoadmapProposalId(proposalId);
+    const id = parseRoadmapProposalId(formData.get("proposalId"));
     const source = await roadmaps.getProposal(id);
     if (!source) throw new RoadmapConflictError("not-available");
 
     const validation = validateRoadmapCandidate({
-      body: JSON.stringify({ roadmap: content, memoryCandidates: null }),
+      // The submitted text is handed straight to the validator, which parses it
+      // itself and rejects anything that is not a valid roadmap. Parsing here
+      // first would only move the same refusal earlier under a vaguer message.
+      body: `{"roadmap":${text(formData, "content") || "null"},"memoryCandidates":null}`,
       context: await buildEditValidationContext(source),
     });
 

@@ -1,17 +1,14 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useActionState, useState } from "react";
 
 import { RoadmapEditor } from "./roadmap-editor";
 
-import {
-  INITIAL_ROADMAP_ACTION_STATE,
-  type RoadmapActionState,
-} from "@/app/home/plan/roadmap/action-state";
+import { INITIAL_ROADMAP_ACTION_STATE } from "@/app/home/plan/roadmap/action-state";
 import {
   acceptRoadmapAction,
   declineRoadmapAction,
+  editRoadmapAction,
 } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
@@ -19,15 +16,29 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 /**
  * The three things an owner can do with the proposal that is waiting.
  *
- * No action is preselected and none is destructive-by-default: accepting keeps
+ * No action is preselected and none is destructive by default: accepting keeps
  * every earlier version, declining keeps the proposal in history, and editing
  * creates a new proposal rather than rewriting this one. Declining is the only
  * one that asks first, because it is the only one that closes a proposal
  * without producing anything to look at.
  *
- * Two separate `useActionState` hooks rather than one shared reducer. They are
- * two independent submissions with their own pending flags, and sharing state
- * would make one control's reply appear under the other.
+ * ## Why all three are form actions
+ *
+ * Including the edit, whose payload is a nested draft rather than a set of
+ * fields. A Server Action called imperatively from a transition invalidates the
+ * route but does not reliably hand this tree the refreshed payload, and the
+ * browser flow caught exactly that: the edit committed, the dock reported
+ * success, and the review above it went on showing the proposal the edit came
+ * from. A form action gets the new tree as part of
+ * the action's own response, so the surface cannot disagree with the database
+ * about which proposal is open. The draft rides as one JSON field, which costs
+ * a parse the server would have to do anyway — the content is revalidated by
+ * `validateRoadmapCandidate` and bounded again by the database, so malformed
+ * JSON is a validation failure like any other.
+ *
+ * Three separate `useActionState` hooks rather than one shared reducer: they
+ * are three independent submissions with their own pending flags, and sharing
+ * state would make one control's reply appear under another.
  *
  * The client boundary stops here. Everything above this component — the
  * proposal itself, the spine, the example label — is rendered on the server, so
@@ -47,7 +58,6 @@ export function RoadmapDecisionDock({
   expectedHeadRevision: number;
   goalTitles: Record<string, string>;
 }) {
-  const router = useRouter();
   const [accepted, acceptAction, accepting] = useActionState(
     acceptRoadmapAction,
     INITIAL_ROADMAP_ACTION_STATE,
@@ -56,35 +66,40 @@ export function RoadmapDecisionDock({
     declineRoadmapAction,
     INITIAL_ROADMAP_ACTION_STATE,
   );
-  const [editing, setEditing] = useState(false);
-  const [edited, setEdited] = useState<RoadmapActionState | null>(null);
+  const [edited, editAction, saving] = useActionState(
+    editRoadmapAction,
+    INITIAL_ROADMAP_ACTION_STATE,
+  );
+  const [editorOpen, setEditorOpen] = useState(false);
 
-  const busy = accepting || declining;
-  // Whichever control last reported something. Both start at submission 0, so
-  // an untouched dock shows nothing.
-  const latest = [accepted, declined, edited ?? INITIAL_ROADMAP_ACTION_STATE]
+  // The editor closes when its own submission comes back accepted, decided
+  // during render rather than in an effect: an effect would paint the editor
+  // once more over content that is already superseded. A rejected edit keeps
+  // the editor open, because the draft is the thing that needs correcting.
+  const [seenEdit, setSeenEdit] = useState(edited.submission);
+  if (seenEdit !== edited.submission) {
+    setSeenEdit(edited.submission);
+    if (edited.status === "edited") setEditorOpen(false);
+  }
+
+  const busy = accepting || declining || saving;
+  // Whichever control last reported something. All three start at submission 0,
+  // so an untouched dock shows nothing.
+  const latest = [accepted, declined, edited]
     .filter((state) => state.status !== "idle")
+    .sort((a, b) => a.submission - b.submission)
     .at(-1);
 
-  if (editing) {
+  if (editorOpen) {
     return (
       <RoadmapEditor
         proposalId={proposalId}
         content={content}
-        submission={accepted.submission + declined.submission}
         goalTitles={goalTitles}
-        onClose={(result) => {
-          setEditing(false);
-          if (result === null) return;
-          setEdited(result);
-          // An edit creates a *new* proposal, so the review above it has to be
-          // re-read. The action revalidates this path, but the editor closes
-          // inside the same transition that would carry the new tree, and that
-          // tree has been observed not to arrive — the review reappeared
-          // showing the proposal the edit came from. Asking for it again is one
-          // request and cannot show stale content.
-          router.refresh();
-        }}
+        formAction={editAction}
+        message={edited.status === "edited" ? "" : edited.message}
+        saving={saving}
+        onCancel={() => setEditorOpen(false)}
       />
     );
   }
@@ -126,7 +141,7 @@ export function RoadmapDecisionDock({
         <button
           className={styles.secondaryAction}
           type="button"
-          onClick={() => setEditing(true)}
+          onClick={() => setEditorOpen(true)}
           disabled={busy}
         >
           {ROADMAP_CONTROL_COPY.editAction}

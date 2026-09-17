@@ -269,8 +269,10 @@ describe("M3-11 legacy runtime closure", () => {
       }
 
       // Everything else on the surface renders. A component that declared an
-      // action would be an endpoint nobody reviews as one.
-      if (!isTest) expect(source, path).not.toContain('"use server"');
+      // action would be an endpoint nobody reviews as one. A test beside it may
+      // name either, because naming one is how a test asserts about it.
+      if (isTest) continue;
+      expect(source, path).not.toContain('"use server"');
       expect(source, path).not.toContain("revalidatePath");
     }
 
