@@ -323,9 +323,9 @@ describe("logCompletionAction", () => {
       }),
     );
 
-    expect(
-      Object.keys(applyChange.mock.calls[1][0].completion),
-    ).not.toContain("activities");
+    expect(Object.keys(applyChange.mock.calls[1][0].completion)).not.toContain(
+      "activities",
+    );
   });
 
   it("returns to the day a moved log now sits on, not the day it left", async () => {
