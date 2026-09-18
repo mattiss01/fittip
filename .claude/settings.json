@@ -71,7 +71,21 @@
       "Bash(gh run view *)",
       "Bash(gh run watch *)",
       "Bash(gh run download *)",
-      "Bash(gh run rerun *)"
+      "Bash(gh run rerun *)",
+      "Bash(npx.cmd supabase link *)",
+      "Bash(npx supabase link *)",
+      "Bash(npx.cmd supabase db push *)",
+      "Bash(npx supabase db push *)",
+      "Bash(npx.cmd supabase migration list *)",
+      "Bash(npx supabase migration list *)",
+      "Bash(npx.cmd supabase db advisors *)",
+      "Bash(npx supabase db advisors *)",
+      "Bash(npx.cmd supabase db dump *)",
+      "Bash(npx supabase db dump *)",
+      "Bash(npx.cmd supabase db diff *)",
+      "Bash(npx supabase db diff *)",
+      "Bash(npx.cmd supabase inspect *)",
+      "Bash(npx supabase inspect *)"
     ],
     "deny": [
       "Bash(rm -rf *)",
@@ -87,10 +101,6 @@
       "Bash(git clean -fd *)",
       "Bash(git filter-branch *)",
       "Bash(git worktree add *)",
-      "Bash(npx supabase link *)",
-      "Bash(npx.cmd supabase link *)",
-      "Bash(npx supabase db push *)",
-      "Bash(npx.cmd supabase db push *)",
       "Bash(npx supabase db remote *)",
       "Bash(npx.cmd supabase db remote *)",
       "Bash(npx supabase secrets *)",
@@ -108,7 +118,15 @@
       "Read(./.env.development.local)",
       "Read(./.env.production.local)",
       "Write(./.env)",
-      "Write(./.env.local)"
+      "Write(./.env.local)",
+      "Bash(npx.cmd supabase db reset --linked *)",
+      "Bash(npx supabase db reset --linked *)",
+      "Bash(npx.cmd supabase db reset --linked)",
+      "Bash(npx supabase db reset --linked)",
+      "Bash(npx.cmd supabase migration repair *)",
+      "Bash(npx supabase migration repair *)",
+      "Bash(npx.cmd supabase branches *)",
+      "Bash(npx supabase branches *)"
     ]
   }
 }

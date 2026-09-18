@@ -57,8 +57,8 @@ or anything irreversible to the owner's data.
 - Same interactive loop. Use the `schema-change` skill for database work.
 - After pushing, spawn one reviewer subagent to review that commit's diff for data,
   authorization, and privacy. It reads the diff and reports; it does not re-run CI.
-- The owner applies the migration to the founder project and checks the Preview — an agent
-  cannot reach the hosted database. Then merge.
+- Apply the migration to the founder project (ADR-018), report what `migration list` and the
+  advisors say, then merge.
 
 ### Judgment calls
 
@@ -129,8 +129,14 @@ Three jobs, about four minutes: `static` (Prettier, ESLint, TypeScript, `test:ru
 
 `README.md` has the reset / lint / advisor / pgTAP / type-generation sequence.
 
-- Never run `supabase link`, `db push`, or any other remote CLI command. `supabase/config.toml`
-  is local-only and ADR-007 gates the founder project.
+- **Applying a migration to the founder project is yours to do** (ADR-018), under three
+  conditions: a green CI run for that exact commit first; `migration list --linked` and
+  `db advisors --linked --type security` afterwards, reported to the owner; and destructive
+  DDL (`drop table`, `drop column`, `truncate`, unfiltered `delete`) asked about first.
+  `db dump`, `db diff` and `inspect` are available for diagnosis, and what they return stays
+  on this machine.
+- Never run `db reset --linked`, `migration repair`, `db remote`, `secrets`, `projects`, or
+  `branches`. `supabase/config.toml` is local-only development configuration.
 - Docker-backed local runs are slow; run them in the background rather than blocking.
 - `npm.cmd run test:e2e` needs the app serving on port 3000 plus
   `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Some specs also need
