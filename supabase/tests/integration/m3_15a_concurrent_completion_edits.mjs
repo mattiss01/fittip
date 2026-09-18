@@ -83,10 +83,15 @@ try {
   ]);
   assert.deepEqual(
     races.map(({ status }) => status).toSorted(),
-    [200, 400],
+    [200, 431],
     `one planned session takes one completion; ${JSON.stringify(races)}`,
   );
-  assert.equal(races.find(({ status }) => status === 400).body?.code, "22023");
+  // M3-23: the loser of the race is told the same thing as a caller who
+  // arrives a minute late. It used to get `22023`, which the repository
+  // collapses into "check the outcome, the date, and the numbers" - none of
+  // which is wrong. The constraint is the only authority here, so the serial
+  // and racing cases cannot drift apart.
+  assert.equal(races.find(({ status }) => status === 431).body?.code, "PT431");
   assert.equal(
     (
       await get(
