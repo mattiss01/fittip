@@ -198,7 +198,11 @@ async function renderForm(
       return (
         <>
           <SourceCard
-            label="Logging a planned session"
+            // The card names which session either way; the label must not say
+            // the owner is logging one that already carries a log.
+            label={
+              logged === null ? "Logging a planned session" : "Planned session"
+            }
             title={planned.title}
             meta={[
               planned.sport,

@@ -126,7 +126,9 @@
       "Bash(npx.cmd supabase migration repair *)",
       "Bash(npx supabase migration repair *)",
       "Bash(npx.cmd supabase branches *)",
-      "Bash(npx supabase branches *)"
+      "Bash(npx supabase branches *)",
+      "Bash(npx.cmd supabase db reset --db-url *)",
+      "Bash(npx supabase db reset --db-url *)"
     ]
   }
 }
