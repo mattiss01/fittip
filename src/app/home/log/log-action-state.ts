@@ -142,7 +142,7 @@ export type LogActionState = {
   result?: "created" | "updated";
   /** The day the owner returns to on Today once the write landed. */
   returnDate?: string;
-  conflict?: "stale" | "timezone";
+  conflict?: "stale" | "timezone" | "duplicate";
 };
 
 export const INITIAL_LOG_ACTION_STATE: LogActionState = {

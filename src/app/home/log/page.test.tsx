@@ -51,6 +51,7 @@ const today = () => isoDateInTimezone(new Date(), TIMEZONE);
 
 const getPlanSlice = vi.fn();
 const getCompletion = vi.fn();
+const findByPlanSession = vi.fn();
 
 describe("Log", () => {
   beforeEach(() => {
@@ -75,7 +76,11 @@ describe("Log", () => {
     });
     createPlanMock.mockResolvedValue({ getPlanSlice });
     getCompletion.mockResolvedValue(null);
-    createCompletionLogMock.mockResolvedValue({ get: getCompletion });
+    findByPlanSession.mockResolvedValue(null);
+    createCompletionLogMock.mockResolvedValue({
+      get: getCompletion,
+      findByPlanSession,
+    });
   });
 
   afterEach(cleanup);
@@ -183,7 +188,7 @@ describe("Log", () => {
     expect(document.querySelector("#log-sport")).toBe(null);
   });
 
-  it("reads an unplanned log's title and sport back rather than offering them", async () => {
+  it("offers an unplanned log's title and sport for correction", async () => {
     getCompletion.mockResolvedValue({
       ...completion(),
       activities: [
@@ -202,19 +207,17 @@ describe("Log", () => {
       }),
     );
 
-    // An input here would take what the owner typed and drop it: the write
-    // function refuses an activity list on an edit.
-    expect(document.querySelector("#log-title")).toBe(null);
-    expect(document.querySelector("#log-sport")).toBe(null);
-    const readback = document.querySelector(
-      "[data-log-fixed-naming]",
-    ) as HTMLElement;
-    expect(readback.textContent).toContain("Sunrise swim");
-    expect(readback.textContent).toContain("Swimming");
-    expect(readback.textContent).toContain("cannot be changed yet");
+    // Unplanned training carries its name as its one activity, so a typo in it
+    // used to be permanent.
+    expect(
+      (document.querySelector("#log-title") as HTMLInputElement).value,
+    ).toBe("Sunrise swim");
+    expect(
+      (document.querySelector("#log-sport") as HTMLInputElement).value,
+    ).toBe("Swimming");
   });
 
-  it("still names an unplanned log written before a title was collected", async () => {
+  it("leaves the naming empty on a log written before a title was collected", async () => {
     getCompletion.mockResolvedValue(completion());
 
     render(
@@ -223,9 +226,36 @@ describe("Log", () => {
       }),
     );
 
+    // It has no activity to read a name from, so the owner gives it one rather
+    // than being shown a name FitTip invented.
     expect(
-      document.querySelector("[data-log-fixed-naming]")?.textContent,
-    ).toContain("Unplanned training");
+      (document.querySelector("#log-title") as HTMLInputElement).value,
+    ).toBe("");
+  });
+
+  it("refuses a second log for a session that already has one", async () => {
+    findByPlanSession.mockResolvedValue({
+      ...completion(),
+      id: "8f000000-0000-4000-8000-0000000000c1",
+      actualLocalDate: "2026-09-14",
+    });
+
+    render(
+      await LogPage({
+        searchParams: Promise.resolve({
+          plannedSession: SESSION_ID,
+          date: today(),
+        }),
+      }),
+    );
+
+    // Said before the owner fills anything in: `list` is bounded by the actual
+    // date, so a log written on another day was invisible to this surface.
+    expect(screen.getByText("This session is already logged.")).toBeTruthy();
+    expect(document.querySelector("#log-date")).toBe(null);
+    expect(
+      screen.getByRole("link", { name: "Open that log" }).getAttribute("href"),
+    ).toBe("/home/log?completion=8f000000-0000-4000-8000-0000000000c1");
   });
 
   it("stops asking for duration, effort and how it felt once skipped is chosen", async () => {

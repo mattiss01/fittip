@@ -6,6 +6,8 @@ import { type LogActionState } from "./log-action-state";
 
 import {
   CompletionConflictError,
+  CompletionDuplicateError,
+  CompletionFutureDateError,
   CompletionPersistenceError,
   CompletionTimezoneRequiredError,
   CompletionValidationError,
@@ -53,17 +55,25 @@ export async function logCompletionAction(
       throw new CompletionValidationError();
     }
     const facts = readFacts(formData);
-    const returnDate =
-      optionalDate(formData.get("returnDate")) ??
-      (facts.actualLocalDate as string);
+    // The day the record now sits on, which is where it can be seen. Moving a
+    // log to another day and being returned to the day it left is a small lie
+    // about where the training went.
+    const returnDate = facts.actualLocalDate as string;
     const log = await createCompletionLog();
 
     if (editing) {
+      // Unplanned training carries its name as its one activity, so correcting
+      // the title or the sport means restating that list. A planned log is
+      // named by its snapshot, which is not the owner's to rewrite, so the form
+      // sends no naming for it and none is built here.
+      const renaming = formData.get("title") !== null;
       const receipt = await log.applyChange({
         operation: "edit",
         completionId: formData.get("completionId"),
         expectedRevision: readInteger(formData.get("expectedRevision")),
-        completion: facts,
+        completion: renaming
+          ? { ...facts, activities: [readUnplannedActivity(formData)] }
+          : facts,
       });
       revalidatePath("/home/today");
       revalidatePath("/home/log");
@@ -118,6 +128,21 @@ export async function logCompletionAction(
     }
     if (error instanceof LogFieldError) {
       return result("validation", error.message);
+    }
+    if (error instanceof CompletionDuplicateError) {
+      return result(
+        "conflict",
+        "That session already has a log. Open it from Today to correct it.",
+        { conflict: "duplicate" },
+      );
+    }
+    if (error instanceof CompletionFutureDateError) {
+      return result(
+        "validation",
+        editing
+          ? "Training cannot be dated in the future. Nothing was changed."
+          : "Training cannot be dated in the future. Nothing was logged.",
+      );
     }
     if (error instanceof CompletionValidationError) {
       return result(

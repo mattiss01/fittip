@@ -281,6 +281,28 @@ describe("logCompletionAction", () => {
     });
   });
 
+  it("returns to the day a moved log now sits on, not the day it left", async () => {
+    applyChange.mockResolvedValue({
+      completionId: COMPLETION_ID,
+      revision: 2,
+      result: "updated",
+    });
+
+    const result = await logCompletionAction(
+      INITIAL_LOG_ACTION_STATE,
+      form({
+        operation: "edit",
+        completionId: COMPLETION_ID,
+        expectedRevision: "1",
+        status: "completed",
+        actualLocalDate: "2026-09-18",
+        durationMinutes: "40",
+      }),
+    );
+
+    expect(result).toMatchObject({ status: "saved", returnDate: "2026-09-18" });
+  });
+
   it("never sends a planned snapshot or an activity list on an edit", async () => {
     await logCompletionAction(
       INITIAL_LOG_ACTION_STATE,

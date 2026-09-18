@@ -151,6 +151,7 @@ async function renderForm(
             }
             existing={toExistingView(completion)}
             defaultDate={completion.actualLocalDate}
+            today={today}
             returnDate={completion.actualLocalDate}
           />
         </>
@@ -177,6 +178,24 @@ async function renderForm(
           />
         );
       }
+      // `list` is bounded by the actual date, so a session logged on a
+      // different day than the one being looked at is invisible to it. Without
+      // this read the owner fills the whole form and is refused at the end.
+      const logged = await (
+        await createCompletionLog()
+      ).findByPlanSession(session.id);
+      if (logged !== null) {
+        return (
+          <Unavailable
+            label="Already logged"
+            heading="This session is already logged."
+            body={`You recorded it on ${longDay(logged.actualLocalDate)}. One planned session carries one log, and that log can be corrected.`}
+            href={`/home/log?completion=${logged.id}`}
+            action="Open that log"
+            state="already-logged"
+          />
+        );
+      }
       const planned: LogPlannedView = {
         id: session.id,
         localDate: session.localDate,
@@ -200,7 +219,8 @@ async function renderForm(
           <LogForm
             planned={planned}
             existing={null}
-            defaultDate={planned.localDate}
+            defaultDate={planned.localDate > today ? today : planned.localDate}
+            today={today}
             returnDate={planned.localDate}
           />
         </>
@@ -217,7 +237,8 @@ async function renderForm(
         <LogForm
           planned={null}
           existing={null}
-          defaultDate={date}
+          defaultDate={date > today ? today : date}
+          today={today}
           returnDate={date}
         />
       </>

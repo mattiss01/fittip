@@ -56,11 +56,23 @@ type Props = {
   existing: LogExistingView | null;
   /** The date the form starts on: the planned day, or the day it was opened. */
   defaultDate: string;
+  /**
+   * Owner-local today. The input stops here so the owner is told before the
+   * round trip; the rule itself lives in the write function, because a check
+   * only the form performs is a courtesy rather than a constraint.
+   */
+  today: string;
   /** The day on Today the owner returns to once the write lands. */
   returnDate: string;
 };
 
-export function LogForm({ planned, existing, defaultDate, returnDate }: Props) {
+export function LogForm({
+  planned,
+  existing,
+  defaultDate,
+  today,
+  returnDate,
+}: Props) {
   const [state, action, pending] = useActionState<LogActionState, FormData>(
     logCompletionAction,
     INITIAL_LOG_ACTION_STATE,
@@ -137,7 +149,6 @@ export function LogForm({ planned, existing, defaultDate, returnDate }: Props) {
         name="operation"
         value={existing === null ? "create" : "edit"}
       />
-      <input type="hidden" name="returnDate" value={returnDate} />
       {existing === null ? null : (
         <>
           <input type="hidden" name="completionId" value={existing.id} />
@@ -171,54 +182,39 @@ export function LogForm({ planned, existing, defaultDate, returnDate }: Props) {
             {choices[0].hint} It is recorded as {choices[0].label.toLowerCase()}{" "}
             training, with no planned session attached.
           </p>
-          {existing === null ? (
-            <>
-              <div className={styles.field}>
-                <label htmlFor="log-title">Title</label>
-                <input
-                  id="log-title"
-                  name="title"
-                  type="text"
-                  required
-                  maxLength={120}
-                  autoComplete="off"
-                />
-                <span className={styles.fieldHint}>
-                  What you did, in your own words.
-                </span>
-              </div>
-              <div className={styles.field}>
-                <label htmlFor="log-sport">Sport</label>
-                <input
-                  id="log-sport"
-                  name="sport"
-                  type="text"
-                  required
-                  maxLength={80}
-                  autoComplete="off"
-                />
-                <span className={styles.fieldHint}>
-                  Whatever you call it. FitTip keeps your own words.
-                </span>
-              </div>
-            </>
-          ) : (
-            // Read-only on purpose: the write function refuses an activity
-            // list on an edit, so an input here would take what the owner
-            // typed and drop it silently.
-            <div className={styles.readback} data-log-fixed-naming>
-              <p className={styles.sectionLabel}>Title and sport</p>
-              <p className={styles.readbackValue}>
-                {existing.activityName ?? "Unplanned training"}
-                {existing.activitySport === null
-                  ? null
-                  : ` · ${existing.activitySport}`}
-              </p>
-              <span className={styles.fieldHint}>
-                These cannot be changed yet. Everything below can.
-              </span>
-            </div>
-          )}
+          {/* Unplanned training carries its name as its one activity, so this
+              is the only place that name lives - and correcting it is an
+              ordinary edit, not a rewrite of anything a plan promised. */}
+          <div className={styles.field}>
+            <label htmlFor="log-title">Title</label>
+            <input
+              id="log-title"
+              name="title"
+              type="text"
+              required
+              maxLength={120}
+              autoComplete="off"
+              defaultValue={existing?.activityName ?? ""}
+            />
+            <span className={styles.fieldHint}>
+              What you did, in your own words.
+            </span>
+          </div>
+          <div className={styles.field}>
+            <label htmlFor="log-sport">Sport</label>
+            <input
+              id="log-sport"
+              name="sport"
+              type="text"
+              required
+              maxLength={80}
+              autoComplete="off"
+              defaultValue={existing?.activitySport ?? ""}
+            />
+            <span className={styles.fieldHint}>
+              Whatever you call it. FitTip keeps your own words.
+            </span>
+          </div>
         </>
       ) : (
         <fieldset className={styles.choices}>
@@ -262,10 +258,12 @@ export function LogForm({ planned, existing, defaultDate, returnDate }: Props) {
           name="actualLocalDate"
           type="date"
           required
+          max={today}
           defaultValue={existing?.actualLocalDate ?? defaultDate}
         />
         <span className={styles.fieldHint}>
-          The day the training happened, on your own calendar.
+          The day the training happened, on your own calendar. Training cannot
+          be logged before it happens, so this stops at today.
         </span>
       </div>
 

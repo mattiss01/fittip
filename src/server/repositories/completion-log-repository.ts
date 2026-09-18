@@ -13,6 +13,8 @@ import {
 } from "@/lib/supabase/server-user-client";
 import {
   CompletionConflictError,
+  CompletionDuplicateError,
+  CompletionFutureDateError,
   CompletionLog,
   CompletionPersistenceError,
   CompletionTimezoneRequiredError,
@@ -88,6 +90,18 @@ export class PostgresCompletionLogAdapter implements CompletionLogAdapter {
     return data ? parseCompletion(data) : null;
   }
 
+  async findByPlanSession(planSessionId: string): Promise<Completion | null> {
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("completions")
+      .select(COMPLETION_COLUMNS)
+      .eq("user_id", userId)
+      .eq("plan_session_id", planSessionId)
+      .maybeSingle();
+    if (error) throw new CompletionPersistenceError();
+    return data ? parseCompletion(data) : null;
+  }
+
   /**
    * The one atomic completion mutation. Retries are disabled because a create
    * is not idempotent and an edit answers to a revision: replaying a dropped
@@ -102,6 +116,8 @@ export class PostgresCompletionLogAdapter implements CompletionLogAdapter {
     if (error) {
       if (error.code === "PT409") throw new CompletionConflictError();
       if (error.code === "PT428") throw new CompletionTimezoneRequiredError();
+      if (error.code === "PT430") throw new CompletionFutureDateError();
+      if (error.code === "PT431") throw new CompletionDuplicateError();
       if (error.code === "22023") throw new CompletionValidationError();
       throw new CompletionPersistenceError();
     }

@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import {
   CompletionConflictError,
+  CompletionDuplicateError,
+  CompletionFutureDateError,
   CompletionTimezoneRequiredError,
   CompletionValidationError,
   type Completion,
@@ -76,6 +78,13 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
     return completion ? copy(completion) : null;
   }
 
+  async findByPlanSession(planSessionId: string): Promise<Completion | null> {
+    const completion = [...this.completions.values()].find(
+      (candidate) => candidate.planSessionId === planSessionId,
+    );
+    return completion ? copy(completion) : null;
+  }
+
   async applyChange(change: CompletionChange): Promise<CompletionReceipt> {
     if (change.operation === "create") return this.create(change.completion);
     const existing = this.completions.get(change.completionId);
@@ -92,14 +101,22 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
     ) {
       throw new CompletionValidationError();
     }
+    const { activities, ...facts } = change.completion;
+    // Only unplanned training may have its activities corrected: a planned
+    // completion is measured against its snapshot.
+    if (activities !== undefined && existing.planSessionId !== null) {
+      throw new CompletionValidationError();
+    }
+    // Judged in the zone the completion carries, not the current one.
+    this.requireNotFuture(facts.actualLocalDate, existing.timezoneName);
     const updated: Completion = {
-      ...change.completion,
+      ...facts,
       id: existing.id,
       planSessionId: existing.planSessionId,
       timezoneName: existing.timezoneName,
       plannedSnapshot: existing.plannedSnapshot,
       revision: existing.revision + 1,
-      activities: existing.activities,
+      activities: copy(activities ?? existing.activities),
       updatedAt: this.clock().toISOString(),
     };
     this.completions.set(updated.id, updated);
@@ -113,6 +130,7 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
   private create(draft: CompletionDraft): CompletionReceipt {
     if (this.timezoneName === null) throw new CompletionTimezoneRequiredError();
     const { planSessionId, activities, ...facts } = draft;
+    this.requireNotFuture(facts.actualLocalDate, this.timezoneName);
     let plannedSnapshot: CompletionPlannedSnapshot | null = null;
     if (planSessionId !== undefined) {
       const session = this.planSessions.get(planSessionId);
@@ -122,7 +140,7 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
           (completion) => completion.planSessionId === planSessionId,
         )
       ) {
-        throw new CompletionValidationError();
+        throw new CompletionDuplicateError();
       }
       // Copied here and never consulted again, which is the whole point.
       plannedSnapshot = copy(session);
@@ -140,6 +158,22 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
     this.completions.set(completion.id, completion);
     return { completionId: completion.id, revision: 0, result: "created" };
   }
+
+  /** Nothing is completed before it happens, in the zone that anchors it. */
+  private requireNotFuture(actualLocalDate: string, timezoneName: string) {
+    if (actualLocalDate > localDateIn(timezoneName, this.clock())) {
+      throw new CompletionFutureDateError();
+    }
+  }
+}
+
+function localDateIn(timezoneName: string, instant: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezoneName,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(instant);
 }
 
 function copy<T>(value: T): T {

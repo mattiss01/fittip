@@ -119,13 +119,23 @@ export type Completion = CompletionFacts & {
   updatedAt: string;
 };
 
+/**
+ * A correction. `activities` restates the list in full and is admitted only for
+ * a completion with no planned link — a planned one is measured against its
+ * snapshot, and rewriting that would rewrite history. Leaving the key out
+ * leaves the activities alone.
+ */
+export type CompletionEdit = CompletionFacts & {
+  activities?: CompletionActivity[];
+};
+
 export type CompletionChange =
   | { operation: "create"; completion: CompletionDraft }
   | {
       operation: "edit";
       completionId: string;
       expectedRevision: number;
-      completion: CompletionFacts;
+      completion: CompletionEdit;
     };
 
 export type CompletionReceipt = {
@@ -140,6 +150,12 @@ export type ParsedCompletionWindow = { startDate: string; endDate: string };
 export interface CompletionLogAdapter {
   list(window: ParsedCompletionWindow): Promise<Completion[]>;
   get(completionId: string): Promise<Completion | null>;
+  /**
+   * The completion written against one planned session, wherever it was dated.
+   * `list` is bounded by the actual date, so a session logged on a different
+   * day than the one being looked at is invisible to it.
+   */
+  findByPlanSession(planSessionId: string): Promise<Completion | null>;
   applyChange(change: CompletionChange): Promise<CompletionReceipt>;
 }
 
@@ -155,6 +171,26 @@ export class CompletionConflictError extends Error {
   constructor() {
     super("The completion changed before this write.");
     this.name = "CompletionConflictError";
+  }
+}
+
+/**
+ * The planned session already has a completion. Its own error because the
+ * surface has to say which refusal this is: nothing about the outcome, the
+ * date, or the numbers the owner entered is wrong.
+ */
+export class CompletionDuplicateError extends Error {
+  constructor() {
+    super("That planned session already has a completion.");
+    this.name = "CompletionDuplicateError";
+  }
+}
+
+/** Training cannot be recorded before it happens. */
+export class CompletionFutureDateError extends Error {
+  constructor() {
+    super("A completion cannot be dated after the owner's today.");
+    this.name = "CompletionFutureDateError";
   }
 }
 
@@ -192,6 +228,11 @@ export class CompletionLog {
     return await this.adapter.get(readUuid(completionId));
   }
 
+  /** What was already logged against one planned session, on any date. */
+  async findByPlanSession(planSessionId: unknown): Promise<Completion | null> {
+    return await this.adapter.findByPlanSession(readUuid(planSessionId));
+  }
+
   async applyChange(change: unknown): Promise<CompletionReceipt> {
     return await this.adapter.applyChange(parseCompletionChange(change));
   }
@@ -218,7 +259,7 @@ export function parseCompletionChange(value: unknown): CompletionChange {
           0,
           Number.MAX_SAFE_INTEGER,
         ),
-        completion: parseFacts(record.completion),
+        completion: parseEdit(record.completion),
       };
     default:
       throw new CompletionValidationError();
@@ -242,17 +283,33 @@ function parseDraft(value: unknown): CompletionDraft {
   if (named !== (facts.status === "unplanned")) {
     throw new CompletionValidationError();
   }
-  const positions = new Set<number>();
   return {
     ...facts,
     ...(named ? {} : { planSessionId: readUuid(planSessionId) }),
-    activities: activities.map((activity) => {
-      const parsed = parseActivity(activity);
-      if (positions.has(parsed.position)) throw new CompletionValidationError();
-      positions.add(parsed.position);
-      return parsed;
-    }),
+    activities: parseActivityList(activities),
   };
+}
+
+function parseEdit(value: unknown): CompletionEdit {
+  const record = readRecord(value);
+  const { activities, ...rest } = record;
+  const facts = parseFacts(rest);
+  // Absent means "leave them alone"; an explicit list replaces the whole set.
+  if (activities === undefined) return facts;
+  return { ...facts, activities: parseActivityList(activities) };
+}
+
+function parseActivityList(value: unknown): CompletionActivity[] {
+  if (!Array.isArray(value) || value.length > COMPLETION_ACTIVITY_LIMIT) {
+    throw new CompletionValidationError();
+  }
+  const positions = new Set<number>();
+  return value.map((activity) => {
+    const parsed = parseActivity(activity);
+    if (positions.has(parsed.position)) throw new CompletionValidationError();
+    positions.add(parsed.position);
+    return parsed;
+  });
 }
 
 function parseFacts(value: unknown): CompletionFacts {

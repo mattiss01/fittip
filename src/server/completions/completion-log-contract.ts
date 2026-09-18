@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   CompletionConflictError,
+  CompletionDuplicateError,
+  CompletionFutureDateError,
   CompletionTimezoneRequiredError,
   CompletionValidationError,
   type CompletionLog,
@@ -99,7 +101,7 @@ export function registerCompletionLogContract(
         requireSubject(subject);
       const planSessionId = await addPlanSession(day(1), "Aerobic run");
       const { completionId } = await completions.applyChange(
-        create(planSessionId, day(1)),
+        create(planSessionId, day(0)),
       );
       const before = await completions.get(completionId);
 
@@ -114,7 +116,7 @@ export function registerCompletionLogContract(
       const { completions, addPlanSession, day } = requireSubject(subject);
       const planSessionId = await addPlanSession(day(2), "Aerobic run");
       const { completionId } = await completions.applyChange(
-        create(planSessionId, day(2)),
+        create(planSessionId, day(0)),
       );
 
       await expect(
@@ -124,7 +126,7 @@ export function registerCompletionLogContract(
           expectedRevision: 0,
           completion: {
             status: "partially_completed",
-            actualLocalDate: day(2),
+            actualLocalDate: day(0),
             durationMinutes: 41,
             note: "Stopped early.",
           },
@@ -143,20 +145,20 @@ export function registerCompletionLogContract(
       expect(corrected?.perceivedEffort).toBeUndefined();
       expect(corrected?.feeling).toBeUndefined();
       expect(corrected?.activities).toHaveLength(1);
-      expect(await completions.list(day(2), day(2))).toHaveLength(1);
+      expect(await completions.list(day(0), day(0))).toHaveLength(1);
     });
 
     it("refuses a write at a revision the owner no longer holds", async () => {
       const { completions, addPlanSession, day } = requireSubject(subject);
       const planSessionId = await addPlanSession(day(3), "Aerobic run");
       const { completionId } = await completions.applyChange(
-        create(planSessionId, day(3)),
+        create(planSessionId, day(0)),
       );
       await completions.applyChange({
         operation: "edit",
         completionId,
         expectedRevision: 0,
-        completion: { status: "skipped", actualLocalDate: day(3) },
+        completion: { status: "skipped", actualLocalDate: day(0) },
       });
 
       await expect(
@@ -164,7 +166,7 @@ export function registerCompletionLogContract(
           operation: "edit",
           completionId,
           expectedRevision: 0,
-          completion: { status: "completed", actualLocalDate: day(3) },
+          completion: { status: "completed", actualLocalDate: day(0) },
         }),
       ).rejects.toThrow(CompletionConflictError);
       expect((await completions.get(completionId))?.status).toBe("skipped");
@@ -176,7 +178,7 @@ export function registerCompletionLogContract(
           operation: "edit",
           completionId: "75000000-0000-4000-8000-0000000000ff",
           expectedRevision: 0,
-          completion: { status: "completed", actualLocalDate: day(3) },
+          completion: { status: "completed", actualLocalDate: day(0) },
         }),
       ).rejects.toThrow(CompletionConflictError);
     });
@@ -184,12 +186,15 @@ export function registerCompletionLogContract(
     it("keeps at most one completion per planned session", async () => {
       const { completions, addPlanSession, day } = requireSubject(subject);
       const planSessionId = await addPlanSession(day(4), "Aerobic run");
-      await completions.applyChange(create(planSessionId, day(4)));
+      await completions.applyChange(create(planSessionId, day(0)));
 
+      // Its own error: nothing about the outcome, the date, or the numbers the
+      // owner entered is wrong, so the surface must be able to say which
+      // refusal this is.
       await expect(
-        completions.applyChange(create(planSessionId, day(4))),
-      ).rejects.toThrow(CompletionValidationError);
-      expect(await completions.list(day(4), day(4))).toHaveLength(1);
+        completions.applyChange(create(planSessionId, day(0))),
+      ).rejects.toThrow(CompletionDuplicateError);
+      expect(await completions.list(day(0), day(0))).toHaveLength(1);
     });
 
     it("records an unplanned completion with nothing to compare against", async () => {
@@ -198,7 +203,7 @@ export function registerCompletionLogContract(
         operation: "create",
         completion: {
           status: "unplanned",
-          actualLocalDate: day(5),
+          actualLocalDate: day(0),
           durationMinutes: 30,
           activities: [],
         },
@@ -221,7 +226,7 @@ export function registerCompletionLogContract(
           operation: "create",
           completion: {
             status: "rest",
-            actualLocalDate: day(6),
+            actualLocalDate: day(0),
             activities: [],
           },
         }),
@@ -234,7 +239,7 @@ export function registerCompletionLogContract(
           completion: {
             status: "unplanned",
             planSessionId,
-            actualLocalDate: day(6),
+            actualLocalDate: day(0),
             activities: [],
           },
         }),
@@ -244,7 +249,7 @@ export function registerCompletionLogContract(
           operation: "create",
           completion: {
             status: "completed",
-            actualLocalDate: day(6),
+            actualLocalDate: day(0),
             activities: [],
           },
         }),
@@ -255,34 +260,176 @@ export function registerCompletionLogContract(
           completion: {
             status: "replaced",
             planSessionId,
-            actualLocalDate: day(6),
+            actualLocalDate: day(0),
             activities: [],
           },
         }),
       ).rejects.toThrow(CompletionValidationError);
-      expect(await completions.list(day(6), day(6))).toEqual([]);
+      expect(await completions.list(day(0), day(0))).toEqual([]);
     });
 
     it("reads history newest first inside the window asked for", async () => {
       const { completions, addPlanSession, day } = requireSubject(subject);
+      // The plan side refuses a past date and a completion refuses a future
+      // one, so a planned session lives ahead of today and what was logged
+      // against it never does.
       const earlier = await addPlanSession(day(7), "Earlier");
       const later = await addPlanSession(day(9), "Later");
-      await completions.applyChange(create(earlier, day(7)));
-      await completions.applyChange(create(later, day(9)));
+      await completions.applyChange(create(earlier, day(-2)));
+      await completions.applyChange(create(later, day(0)));
 
       expect(
-        (await completions.list(day(7), day(9))).map(
+        (await completions.list(day(-2), day(0))).map(
           (completion) => completion.actualLocalDate,
         ),
-      ).toEqual([day(9), day(7)]);
+      ).toEqual([day(0), day(-2)]);
       expect(
-        (await completions.list(day(8), day(9))).map(
+        (await completions.list(day(-1), day(0))).map(
           (completion) => completion.actualLocalDate,
         ),
-      ).toEqual([day(9)]);
-      expect(await completions.list(day(10), day(11))).toEqual([]);
+      ).toEqual([day(0)]);
+      expect(await completions.list(day(1), day(2))).toEqual([]);
       expect(
         await completions.get("75000000-0000-4000-8000-0000000000fe"),
+      ).toBeNull();
+    });
+
+    it("refuses training dated after the owner's today", async () => {
+      const { completions, addPlanSession, day } = requireSubject(subject);
+      const planSessionId = await addPlanSession(day(1), "Tomorrow's run");
+
+      // Time passing is not completion, and the argument does not depend on
+      // whether the session was planned.
+      await expect(
+        completions.applyChange({
+          operation: "create",
+          completion: {
+            status: "unplanned",
+            actualLocalDate: day(1),
+            activities: [],
+          },
+        }),
+      ).rejects.toThrow(CompletionFutureDateError);
+      await expect(
+        completions.applyChange(create(planSessionId, day(1))),
+      ).rejects.toThrow(CompletionFutureDateError);
+      expect(await completions.list(day(1), day(1))).toEqual([]);
+
+      // A planned session still ahead of today can be logged as done today.
+      const { completionId } = await completions.applyChange(
+        create(planSessionId, day(0)),
+      );
+      await expect(
+        completions.applyChange({
+          operation: "edit",
+          completionId,
+          expectedRevision: 0,
+          completion: { status: "completed", actualLocalDate: day(1) },
+        }),
+      ).rejects.toThrow(CompletionFutureDateError);
+      expect((await completions.get(completionId))?.actualLocalDate).toBe(
+        day(0),
+      );
+    });
+
+    it("corrects the activities of unplanned training and no others", async () => {
+      const { completions, addPlanSession, day } = requireSubject(subject);
+      const { completionId } = await completions.applyChange({
+        operation: "create",
+        completion: {
+          status: "unplanned",
+          actualLocalDate: day(0),
+          activities: [
+            {
+              position: 0,
+              name: "Tepmo run",
+              sport: "Running",
+              measurementMode: "duration_intensity",
+            },
+          ],
+        },
+      });
+
+      // Naming no activities leaves the ones already written alone.
+      await completions.applyChange({
+        operation: "edit",
+        completionId,
+        expectedRevision: 0,
+        completion: { status: "unplanned", actualLocalDate: day(0) },
+      });
+      expect((await completions.get(completionId))?.activities).toHaveLength(1);
+      expect((await completions.get(completionId))?.activities[0]?.name).toBe(
+        "Tepmo run",
+      );
+
+      await completions.applyChange({
+        operation: "edit",
+        completionId,
+        expectedRevision: 1,
+        completion: {
+          status: "unplanned",
+          actualLocalDate: day(0),
+          activities: [
+            {
+              position: 0,
+              name: "Tempo run",
+              sport: "Trail running",
+              measurementMode: "duration_intensity",
+            },
+          ],
+        },
+      });
+      expect((await completions.get(completionId))?.activities).toEqual([
+        {
+          position: 0,
+          name: "Tempo run",
+          sport: "Trail running",
+          measurementMode: "duration_intensity",
+        },
+      ]);
+
+      // A planned completion is measured against its snapshot, so restating
+      // what it contained would rewrite what it was measured against.
+      const planSessionId = await addPlanSession(day(2), "Aerobic run");
+      const planned = await completions.applyChange(
+        create(planSessionId, day(0)),
+      );
+      await expect(
+        completions.applyChange({
+          operation: "edit",
+          completionId: planned.completionId,
+          expectedRevision: 0,
+          completion: {
+            status: "completed",
+            actualLocalDate: day(0),
+            activities: [],
+          },
+        }),
+      ).rejects.toThrow(CompletionValidationError);
+      expect(
+        (await completions.get(planned.completionId))?.activities,
+      ).toHaveLength(1);
+    });
+
+    it("finds what a planned session already carries, whatever day it was logged on", async () => {
+      const { completions, addPlanSession, day } = requireSubject(subject);
+      const planSessionId = await addPlanSession(day(3), "Aerobic run");
+      const { completionId } = await completions.applyChange(
+        create(planSessionId, day(-1)),
+      );
+
+      // The surface looking at day 3 cannot see this through `list`, which is
+      // bounded by the actual date - which is why the refusal used to be a
+      // surprise.
+      expect(await completions.list(day(3), day(3))).toEqual([]);
+      expect(await completions.findByPlanSession(planSessionId)).toMatchObject({
+        id: completionId,
+        actualLocalDate: day(-1),
+      });
+      expect(
+        await completions.findByPlanSession(
+          "75000000-0000-4000-8000-0000000000fd",
+        ),
       ).toBeNull();
     });
 
