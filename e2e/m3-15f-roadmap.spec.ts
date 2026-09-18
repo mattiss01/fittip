@@ -236,23 +236,27 @@ test.describe("M3-15F roadmap generation", () => {
 });
 
 /**
- * What the surface says after a write that landed.
+ * What the surface says after a write that landed: the approved sentence, and
+ * nothing else.
  *
- * The approved sentence, or — when that reply never rendered and the watchdog
- * reloaded the document instead — the notice explaining the reload. Both are
- * true, and which one a run gets is exactly the intermittent App Router defect
- * the watchdog exists for, so asserting only the first would fail a recovery
- * that worked. Either way the surface has to say something: a write that
- * changed the owner's roadmap and reported nothing is what this asserts against.
+ * This used to accept the recovery notice as an alternative, on the reasoning
+ * that a watchdog reload is also a true thing to say. That made the four
+ * approved sentences unassertable on any path the watchdog touched, which
+ * turned out to be every write after the first — the control that mounts after
+ * a write inherited that write's reply and declared the next one lost. With
+ * that fixed, a recovery here is a genuine lost render, and a genuine lost
+ * render on this flow is something a run must fail loudly on rather than pass
+ * over: it is either the upstream defect actually occurring or a new way of
+ * mistaking a healthy write for a stuck one, and only a failure tells them
+ * apart.
  */
 async function expectOutcome(page: Page, sentence: string) {
   await expect(
-    page
-      .locator("[data-roadmap-outcome]")
-      .getByText(sentence, { exact: true })
-      .or(page.locator('[data-roadmap-notice="recovered"]'))
-      .first(),
+    page.locator("[data-roadmap-outcome]").getByText(sentence, { exact: true }),
   ).toBeVisible();
+  await expect(page.locator('[data-roadmap-notice="recovered"]')).toHaveCount(
+    0,
+  );
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
