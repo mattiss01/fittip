@@ -1,10 +1,19 @@
 begin;
-select plan(33);
+select plan(28);
 
-select hasnt_table('public', 'plan_proposal_decisions', 'plan proposal decisions are removed');
-select hasnt_table('public', 'plan_proposal_sources', 'plan proposal sources are removed');
-select hasnt_table('public', 'plan_proposals', 'plan proposals are removed');
-select hasnt_table('public', 'plan_generation_requests', 'plan generation requests are removed');
+-- The four plan-proposal tables came back in M3-16A, which is what M3-11 left
+-- room for: it dropped the legacy contract and its rows, not the product. What
+-- stands under these names now is M3-16A's schema, so the assertion that holds
+-- permanently is that the *legacy* shape is gone rather than the name. The new
+-- contract is asserted in `m3_16a_plan_proposal_application.test.sql`.
+select has_column(
+  'public', 'plan_generation_requests', 'expected_plan_revision',
+  'what stands there now is anchored to a rolling plan revision, which the legacy table had no concept of'
+);
+select has_column(
+  'public', 'plan_proposal_decisions', 'applied_count',
+  'and the terminal decision records what entered the plan, where the legacy one could only record a rejection'
+);
 select hasnt_table('public', 'completed_activities', 'completed activities are removed');
 select hasnt_table('public', 'completion_heads', 'completion heads are removed');
 select hasnt_table('public', 'completed_sessions', 'completed sessions are removed');
@@ -31,23 +40,28 @@ select hasnt_function(
   'public', 'reject_inactive_completion_activity', array[]::text[],
   'the legacy completion trigger function is removed'
 );
-select hasnt_function(
-  'public', 'plan_content_is_valid', array['jsonb', 'date', 'date'],
-  'the bounded-plan validator is removed'
+-- Restored by M3-16A, unchanged, against the same unchanged contract version.
+-- What M3-11 established and still holds is that no role can reach it.
+select ok(
+  not has_function_privilege(
+    'authenticated', 'public.plan_content_is_valid(jsonb,date,date)', 'EXECUTE'
+  ) and not has_function_privilege(
+    'anon', 'public.plan_content_is_valid(jsonb,date,date)', 'EXECUTE'
+  ) and not has_function_privilege(
+    'service_role', 'public.plan_content_is_valid(jsonb,date,date)', 'EXECUTE'
+  ),
+  'the bounded-plan validator is reachable by no role'
 );
 select hasnt_function(
   'public', 'begin_plan_generation',
   array['text', 'text', 'date', 'integer', 'text'],
   'the legacy plan-generation claim RPC is removed'
 );
-select hasnt_function(
-  'public', 'finish_plan_generation',
-  array[
-    'uuid', 'text', 'text', 'text', 'text', 'text', 'text', 'uuid', 'text',
-    'jsonb', 'jsonb', 'text'
-  ],
-  'the legacy plan-generation finish RPC is removed'
-);
+-- M3-16A's `finish_plan_generation` happens to take the same twelve argument
+-- types as the dropped one, so the signature no longer distinguishes them. Its
+-- privilege boundary is asserted in M3-16A's own suite; what M3-11 proves here
+-- is that the legacy *claim* RPC, whose five-argument shape nothing restored,
+-- is still gone.
 select hasnt_function(
   'public', 'record_plan_memory_candidates',
   array['uuid', 'bigint', 'jsonb'],
@@ -58,8 +72,8 @@ select hasnt_function(
   'the legacy plan-proposal decision RPC is removed'
 );
 
-select hasnt_type('public', 'plan_generation_receipt', 'legacy plan claim receipt is removed');
-select hasnt_type('public', 'plan_generation_result', 'legacy plan result is removed');
+-- Both names are M3-16A's again, with different fields. The legacy receipt
+-- types nothing restored are below.
 select hasnt_type('public', 'plan_memory_candidate_receipt', 'legacy plan memory receipt is removed');
 select hasnt_type('public', 'plan_proposal_decision_receipt', 'legacy plan decision receipt is removed');
 

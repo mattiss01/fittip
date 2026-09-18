@@ -34,12 +34,37 @@ before any code is written.
      the form performs is a courtesy, not a constraint.
    - Careful lane: forward migration only, pgTAP for the new branches, owner applies the
      migration and checks the Preview before merge.
-3. `[ ]` **AI proposal application** — the core loop: a fresh Coach proposal composed with
-   current plan content, per-item choices, direct plan edits, an atomic finish-review,
-   discard, locks, and conflicts. Today Coach can propose but nothing can be applied.
-   Careful lane, and the largest remaining item; expect to split it once its contract is
-   written. ([M3-16](M3/M3-16-AI-PROPOSAL-APPLICATION.md))
-4. `[ ]` **Reactivate a cancelled session** — a cancelled session can currently only be
+3. `[~]` **AI proposal application — 16A, the core loop.** Generate a fresh Coach proposal
+   for 1–7 owner-local dates, review it day by day against what is already planned, decide
+   each item, and apply only the staged ones in one atomic write. Today Coach can propose
+   but nothing can be applied, and `/home/plan/proposal` is still the maintenance stub with
+   nothing linking to it. Careful lane. ([M3-16](M3/M3-16-AI-PROPOSAL-APPLICATION.md))
+   - **New schema, not a re-grant.** M3-11 dropped `plan_generation_requests`,
+     `plan_proposals`, `plan_proposal_sources`, `plan_proposal_decisions` and their five
+     functions outright, so unlike M3-15F there is nothing to restore. One forward migration
+     builds them again against the rolling-plan model, plus per-item decisions, which the
+     dropped schema never had — its decision table was one terminal row per proposal.
+   - **The finish is one atomic action and reuses the plan's single door.** It records the
+     decisions and applies the staged additions through `apply_rolling_plan_change_set`, so
+     the revision check, idempotency key, advisory lock, session validation and change-entry
+     history stay in one place rather than being written a second time. Adds a third entry to
+     the `.retry(false)` allowlist in `src/architecture/server-boundary.test.ts`, deliberately.
+   - **No paid provider call, in any environment.** Generation resolves to `FixtureCoachAI`;
+     `src/server/ai/enablement.ts` and the `FITTIP_AI_LIVE` gate are untouched. Every
+     fixture-authored proposal is labelled an example wherever it appears, on the
+     `provider_code` the adapter already stamps — never inferred from `origin`.
+   - **The proposal is a permanent record.** Applying it does not mutate it, and a session
+     the plan already holds is shown as already planned, never copied into the proposal.
+   - Owner's decisions, 18 Sep 2026: two slices rather than three, fixture coach rather than
+     authorizing live spend, and the merged already-planned timeline in this slice rather
+     than the next, so clashes are visible on the first look.
+4. `[ ]` **AI proposal application — 16B, review against the real plan.** Edit already-planned
+   sessions through the normal plan editor inside review without losing staged choices, warn
+   honestly when the proposal's context has gone stale and refresh it, and use a covering
+   accepted roadmap as plan input with its staleness marked. The plan context does not read
+   the roadmap at all today. Careful lane; constraints go on this line before code.
+   ([M3-16](M3/M3-16-AI-PROPOSAL-APPLICATION.md))
+5. `[ ]` **Reactivate a cancelled session** — a cancelled session can currently only be
    deleted; every non-destructive operation refuses it. Careful lane: it adds an operation to
    `apply_rolling_plan_change_set`. ([M3-20](M3/M3-20-REACTIVATE-A-CANCELLED-SESSION.md))
 
