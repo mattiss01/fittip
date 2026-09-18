@@ -2,8 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ConsoleErrorLog, isDisconnectionNoise } from "./console-errors";
 
-const DISCONNECTED =
-  "Failed to load resource: net::ERR_INTERNET_DISCONNECTED";
+const DISCONNECTED = "Failed to load resource: net::ERR_INTERNET_DISCONNECTED";
 const PRODUCT_ERROR = "Uncaught TypeError: cannot read properties of undefined";
 
 describe("ConsoleErrorLog", () => {
