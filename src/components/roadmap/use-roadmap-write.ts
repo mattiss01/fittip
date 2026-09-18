@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type RefObject,
 } from "react";
 
 import { reportRoadmapOutcome } from "./roadmap-outcome";
@@ -88,6 +89,20 @@ export function useRoadmapWrite(
     formData: FormData,
   ) => Promise<RoadmapActionState>,
 ): RoadmapWrite {
+  // When this write left the browser, on the clock the resource timeline uses.
+  //
+  // It is taken here rather than in the watch effect for two reasons, and both
+  // of them are defects this surface has actually shown. The effect only runs
+  // once the pending render commits, and a reply can beat that commit — a
+  // baseline taken then would swallow the very response the watch exists to
+  // catch. And the timeline belongs to the document, not to the control reading
+  // it: `buffered: true` replays every earlier response to a control that
+  // mounts after one, which on this surface is every control, because each is
+  // removed by the write it performs. Anything that answered before this
+  // instant is therefore some other write's, and treating it as this one's
+  // declared the next write lost 250 ms after submit with nothing wrong.
+  const submittedAt = useRef<number | null>(null);
+
   // The reply is reported to `roadmap-outcome` here, in the browser, the moment
   // the server answers — before React commits the tree that removes the control
   // this hook belongs to. Reporting it from a render or an effect instead would
@@ -97,6 +112,7 @@ export function useRoadmapWrite(
     previous: RoadmapActionState,
     formData: FormData,
   ): Promise<RoadmapActionState> {
+    submittedAt.current = performance.now();
     reportRoadmapOutcome(null);
     const result = await action(previous, formData);
     reportRoadmapOutcome(result);
@@ -107,7 +123,11 @@ export function useRoadmapWrite(
     watched,
     INITIAL_ROADMAP_ACTION_STATE,
   );
-  const lostRender = useLostRenderRecovery(pending, state.submission);
+  const lostRender = useLostRenderRecovery(
+    pending,
+    state.submission,
+    submittedAt,
+  );
   return { state, submit, pending, lostRender };
 }
 
@@ -122,15 +142,16 @@ export function isRefusal(state: RoadmapActionState): boolean {
   );
 }
 
-function useLostRenderRecovery(pending: boolean, submission: number): boolean {
+function useLostRenderRecovery(
+  pending: boolean,
+  submission: number,
+  /** The instant the write in flight was submitted; see `useRoadmapWrite`. */
+  submittedAt: RefObject<number | null>,
+): boolean {
   // Keyed by the submission it describes, so a later write never inherits an
   // earlier one's verdict and no effect has to reset state.
   const [lostFor, setLostFor] = useState<string | null>(null);
   const respondedAt = useRef<number | null>(null);
-  // The newest response the previous write had already accounted for. See
-  // `watchTransition`: this is what makes a reply that beats the pending
-  // render detectable.
-  const consumedAt = useRef<number | null>(null);
   const key = `${submission}:${pending}`;
 
   useEffect(() => {
@@ -159,7 +180,11 @@ function useLostRenderRecovery(pending: boolean, submission: number): boolean {
     // that set it, and the reloaded page would have nothing to explain itself
     // with.
     markRecovered(false);
-    const submittedAt = performance.now();
+    // The submit's own instant, not this effect's. Everything the resource
+    // timeline held at that moment answered an earlier write, so it is
+    // accounted for and cannot be read as this one's reply; everything after it
+    // is this write's and is not.
+    const startedAt = submittedAt.current ?? performance.now();
     let reload = 0;
     let reloading = false;
     const interval = window.setInterval(() => {
@@ -167,9 +192,9 @@ function useLostRenderRecovery(pending: boolean, submission: number): boolean {
       // surface takes the lost-render half alone, so a request that has simply
       // not answered yet keeps waiting.
       const verdict = watchTransition({
-        submittedAt,
+        submittedAt: startedAt,
         respondedAt: respondedAt.current,
-        consumedAt: consumedAt.current,
+        consumedAt: startedAt,
         now: performance.now(),
       });
       if (verdict !== "lost-render") return;
@@ -195,9 +220,8 @@ function useLostRenderRecovery(pending: boolean, submission: number): boolean {
       // was not. Only a reload that actually fired leaves it standing, and that
       // path replaces the document rather than running this cleanup.
       if (reload !== 0 && !reloading) markRecovered(false);
-      consumedAt.current = respondedAt.current;
     };
-  }, [key, pending]);
+  }, [key, pending, submittedAt]);
 
   return lostFor === key && pending;
 }
