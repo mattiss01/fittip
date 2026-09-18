@@ -1327,6 +1327,27 @@ Preview https://fittip-a38thik3y-mattis-3657s-projects.vercel.app.
 | Hosted database migration | Applied by the product owner on 17 September 2026. `migration list --linked` shows all 21 migrations with `local` equal to `remote`, `20260916075522` included. Advisors: 15 warnings in the two categories M3-15A recorded, five of them this ticket's re-granted functions, no new category. |
 | 390px pass | The product owner's own, on the Preview above |
 
+### After the merge
+
+`a1cc456` merged into `master` as `c328c0e` on 18 September 2026 and was pushed.
+The `master` continuous-integration run
+[35330052869](https://github.com/mattiss01/fittip/actions/runs/35330052869) is
+green on all three jobs for that merge commit. The founder deployment
+`6521539522` reached `success` at
+https://fittip-ast8xhff2-mattis-3657s-projects.vercel.app.
+
+The merge conflicted on the brief's *Hosted evidence* paragraph and on decision
+6, because the 16 September narrowing had been recorded on `master` in
+`a454140` while this ticket branch was already cut from `45acd9b`. That is why
+the builder and rounds 1 and 2 read a brief still demanding a script. The
+resolution keeps the branch's four commands and `migration list`, folds in
+`master`'s ADR-007 wording, and corrects decision 6's account of what happened.
+
+The lead's hosted smoke of the founder deployment returns `302` to
+`vercel.com/sso-api` for `/home/plan/roadmap`, as on every previous ticket: the
+environment is owner-only and the lead holds no session. The authenticated
+hosted check is the product owner's.
+
 What the lead could not verify, recorded so the gap is visible rather than
 implied: the lead cannot reach the founder database and cannot open the Preview,
 which sits behind Vercel SSO. The hosted apply, the hosted read and the visual
