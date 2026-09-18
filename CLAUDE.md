@@ -1,131 +1,158 @@
-@AGENTS.md
+# FitTip working agreement
 
-## Claude Code
+FitTip is a mobile-first training app for one athlete: the product owner. A Coach AI
+proposes plans; the athlete accepts, edits, and logs what actually happened. Next.js 16
+on Vercel, Supabase Postgres with Row Level Security.
 
-Tooling notes for this repository only. `AGENTS.md` above is the working agreement and wins
-on every product, delivery, and engineering question. `README.md` holds the human setup
-guide; this file records what a Claude Code session needs on top of it.
+Background when you need it: `CONTEXT.md` for the domain, `docs/decisions/` for ADRs,
+`docs/product/` for feature briefs. `README.md` is the human setup guide.
 
-### Commands
+## Product invariants
 
-Run from the repository root. PowerShell on this machine blocks `npm.ps1`, so always use
-`npm.cmd` and `npx.cmd`.
+- Plans, proposals, and actual completions are separate permanent records.
+- Replanning never changes completed history, past sessions, or user-locked future content.
+- Every owned record has a `user_id`; authorization is enforced server-side and in database
+  Row Level Security.
+- At most three active goals may be `core`; supporting goals remain distinct.
+- Memory is explicit, inspectable, editable, and statused. Inferred memory is proposed,
+  never silently treated as fact.
+- Activities are personal, AI-created or user-created definitions. Do not add a global
+  exercise library for v1 convenience.
+- AI returns schema-validated proposals only. It never directly writes user data or
+  silently changes an accepted plan.
+- Pain, illness, injury, and severe-fatigue signals use conservative, non-diagnostic
+  behavior.
 
-| Purpose                | Command                                          |
-| ---------------------- | ------------------------------------------------ |
-| Install exact tree     | `npm.cmd ci`                                     |
-| Lint                   | `npm.cmd run lint`                               |
-| Types                  | `npm.cmd run typecheck`                          |
-| Unit/component tests   | `npm.cmd run test:run`                           |
-| One test file          | `npm.cmd run test:run -- src/path/file.test.ts`  |
-| Production build       | `npm.cmd run build`                              |
-| Dev server             | `npm.cmd run dev`                                |
-| Production server      | `npm.cmd run start -- -p <port>`                 |
+## How we work
 
-- **Never run `npm run test`** — that is Vitest watch mode and it will hang the session. Use
-  `test:run`.
-- Run the narrow tests your change touches, plus `git diff --check`, before a handoff. Do not
-  execute the whole suite by hand to produce evidence — that is what continuous integration is
-  for. Current clean-tree baseline: 39 test files / 229 tests passing.
-- `npm.cmd run format:check` **fails on a clean checkout** (131 files). `core.autocrlf=true`
-  gives CRLF working files while Prettier defaults to `endOfLine: "lf"`. Do not "fix" this by
-  running `format` across the repo or by editing `.prettierrc.json`. To check your own files:
-  `npx.cmd prettier --write <changed files>` then `git diff` — no diff means the warning was
-  line endings only. The CI Prettier step runs on a Linux checkout, so it sees only real
-  failures; trust it over the local command. Prettier also ignores `AGENTS.md`, `CLAUDE.md`,
-  `docs/`, and `.claude/`, so documentation is hand-wrapped at ~80 columns; match the
-  surrounding file.
+Work is tracked in `docs/backlog/NEXT.md`: a checklist of what is next, plus a one-line log
+per merge. Follow-ups found along the way become new checklist lines, not new documents.
+`docs/backlog/M0`–`M3` and `docs/validation/` are history from the earlier protocol; read
+them for context, never extend them.
 
-### Continuous integration
+### Build lane — the default
 
-`.github/workflows/ci.yml` runs on `master`, `ticket/**`, `chore/**`, and pull requests into
-`master`. Three jobs: `static` (Prettier, ESLint, TypeScript, `test:run`, `build`), `database`
-(every migration from zero, db lint, advisors, pgTAP, the concurrency harnesses), and `browser`
-(the 390px production Playwright flows). A full run takes about four minutes.
+For anything visible or behavioral that the careful lane does not cover:
 
-- The green run for the exact reviewed commit **is** the automated-test evidence. Cite its run
-  URL in the validation record instead of pasting suite output. A red or absent run for that SHA
-  is a delivery blocker, subject only to the two exceptions in `AGENTS.md`: a red run whose every
-  failure belongs to a named, already-ticketed defect that fails identically on unchanged
-  `master`, and a commit that changes only the validation record. Both demand a written,
-  checkable justification. A failure anywhere the ticket changed behavior is a regression and
-  blocks regardless.
-- Inspect a run with `gh run list --branch <branch>`, `gh run view <id>`, and
+1. The owner says what they want. If it is not obvious, restate it in two or three lines
+   before touching code.
+2. Run `npm.cmd run dev` in the background. The owner watches at 390px.
+3. Make small changes and say what changed after each one. The owner reacts; repeat until
+   they are happy.
+4. Commit to a `ticket/<slug>` branch so CI triggers, and push. CI must be green.
+5. For anything past a copy or styling tweak, run `/code-review` on the diff and fix or
+   report what it finds.
+6. Merge to `master`, push, and add the log line.
+
+No subagents, no ticket document, no validation record, no Preview wait. Add tests where the
+logic is non-trivial; do not add a per-ticket Playwright config or screenshot evidence.
+
+### Careful lane
+
+Schema or migrations, RLS and grants, auth, the AI provider or prompt data boundary, spend,
+or anything irreversible to the owner's data.
+
+- Write three to eight lines on the checklist line first: outcome, constraints, decisions
+  the owner made.
+- Same interactive loop. Use the `schema-change` skill for database work.
+- After pushing, spawn one reviewer subagent to review that commit's diff for data,
+  authorization, and privacy. It reads the diff and reports; it does not re-run CI.
+- The owner applies the migration to the founder project and checks the Preview — an agent
+  cannot reach the hosted database. Then merge.
+
+### Judgment calls
+
+- Product, safety, privacy, cost, and architecture choices belong to the owner. Ask with
+  AskUserQuestion instead of picking a default. Record architecture decisions as ADRs.
+- Use plan mode for careful-lane work or when the scope is genuinely unclear. Otherwise make
+  the change and show it.
+- Pushing to `origin` (`https://github.com/mattiss01/fittip.git`) is pre-authorized for
+  intentional commits. Never stage secrets, `.env*`, or unrelated files. Stop and report if
+  the remote differs or Git rejects the update.
+- Preserve unrelated user changes. Do not refactor broadly without asking.
+- Report honestly: if something is untested, unfinished, or failing, say so plainly.
+
+## Engineering rules
+
+- Keep AI calls and business rules server-side, behind domain-service interfaces.
+- Use migrations for database changes. Enable RLS with explicit ownership policies on
+  exposed user-data tables.
+- Never expose service-role credentials or make authorization decisions from user-editable
+  metadata.
+- Prefer small vertical slices with automated tests. Test mobile flows at a 390px viewport.
+
+Path-scoped detail lives in `.claude/rules/` and loads when you touch matching files.
+
+## Commands
+
+PowerShell here blocks `npm.ps1`, so always use `npm.cmd` and `npx.cmd`.
+
+| Purpose              | Command                                         |
+| -------------------- | ----------------------------------------------- |
+| Install exact tree   | `npm.cmd ci`                                    |
+| Lint                 | `npm.cmd run lint`                              |
+| Types                | `npm.cmd run typecheck`                         |
+| Unit/component tests | `npm.cmd run test:run`                          |
+| One test file        | `npm.cmd run test:run -- src/path/file.test.ts` |
+| Production build     | `npm.cmd run build`                             |
+| Dev server           | `npm.cmd run dev`                               |
+| Production server    | `npm.cmd run start -- -p <port>`                |
+
+- **Never run `npm run test`** — that is Vitest watch mode and it will hang the session.
+- `npm.cmd run format:check` fails on a clean checkout (131 files) because `core.autocrlf`
+  gives CRLF working files and Prettier defaults to LF. Do not "fix" it repo-wide. To check
+  your own files: `npx.cmd prettier --write <changed files>`, then `git diff` — no diff means
+  it was line endings only. CI runs Prettier on a Linux checkout, so trust CI over the local
+  command.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on `master`, `ticket/**`, `chore/**`, and pull requests.
+Three jobs, about four minutes: `static` (Prettier, ESLint, TypeScript, `test:run`, build),
+`database` (every migration from zero, db lint, advisors, pgTAP, concurrency harnesses), and
+`browser` (390px production Playwright flows).
+
+- Green CI for the commit being merged is the automated-test evidence. Don't re-run the
+  suites by hand to produce a report.
+- A red run blocks the merge. If it is a known flake, `gh run rerun --failed` keeps the run
+  URL valid, and the log line says what flaked. An undiagnosed failure is a blocker.
+- Inspect with `gh run list --branch <branch>`, `gh run view <id>`,
   `gh run view <id> --log-failed`. For a browser failure,
-  `gh run download <id> -n playwright-report` yields the trace and page snapshot. The trace
-  names the pending action, which a spec's cleanup error frequently hides in the plain log.
-- CI needs no repository secret: each Docker job starts its own disposable Supabase stack and
-  derives that container's ephemeral keys. Never add a secret, hosted project, deployment step,
-  or paid resource to CI without product-owner approval, and never weaken a check to make a
-  branch green.
-- CI proves that an assertion holds. It cannot judge whether a mobile surface looks or feels
-  right; the 390px visual pass stays a product-owner check on the Vercel Preview.
+  `gh run download <id> -n playwright-report` has the trace.
+- CI needs no repository secret: each Docker job starts its own disposable Supabase stack.
+  Never add a secret, hosted project, deployment step, or paid resource without the owner's
+  approval, and never weaken a check to make a branch green.
+- CI proves an assertion holds. It cannot judge whether a mobile surface looks right — that
+  stays the owner's check.
 
-### Database and browser flows (need Docker + local Supabase)
+## Database and hosted environment
 
-`README.md` has the reset / lint / advisor / pgTAP / type-generation sequence. Additions:
+`README.md` has the reset / lint / advisor / pgTAP / type-generation sequence.
 
-- CI already runs the whole database and browser matrix on every push. Run these locally to
-  develop or to debug a specific failure, not to produce handoff evidence.
-- These are slow (first `npx.cmd supabase start` takes minutes). Run them in the background
-  rather than blocking on a foreground call.
-- Never run `supabase link`, `db push`, or any other remote/hosted CLI command — ADR-007 gates
-  the founder-staging project and `supabase/config.toml` is local-only.
-- `npm.cmd run test:e2e` needs the app already serving on port 3000 plus
-  `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
-  `e2e/planning.spec.ts`, `e2e/m1-04-today-progress.spec.ts`, and `e2e/m2-01-goals.spec.ts` also
-  need `SUPABASE_SERVICE_ROLE_KEY` and **skip themselves silently without it** — read the
-  skipped count before reporting a pass.
-- Every per-ticket config pins its own `testMatch`. A new one must do the same, or running it
-  bare collects every other ticket's spec on that config's port and timezone.
-- Per-ticket flows have their own config and port, e.g.
-  `npx.cmd playwright test e2e/m1-04-today-progress.spec.ts --config=e2e/m1-04.playwright.config.ts`
-  (port 3014). Acceptance evidence is captured against `build` + `start`, not `dev`.
+- Never run `supabase link`, `db push`, or any other remote CLI command. `supabase/config.toml`
+  is local-only and ADR-007 gates the founder project.
+- Docker-backed local runs are slow; run them in the background rather than blocking.
+- `npm.cmd run test:e2e` needs the app serving on port 3000 plus
+  `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Some specs also need
+  `SUPABASE_SERVICE_ROLE_KEY` and **skip silently without it** — read the skipped count before
+  calling a run green. Existing per-ticket configs pin their own `testMatch` and port.
+- Applying a migration to the founder Supabase project is the owner's action, and `production`
+  on Vercel is the owner-only founder environment, not a public launch.
 
-### Plan mode and delegation
+## Hands off
 
-- Default to plan mode whenever no approved ticket covers the request: exploration, diagnosis,
-  drafting a feature brief, ADR, or backlog ticket. Exiting plan mode means implementation
-  starts, and AGENTS.md permits that only for an approved ticket.
-- In this session you are the lead agent. Per AGENTS.md the lead never writes the
-  implementation: spawn a builder subagent, then a *different* reviewer subagent. Use plan mode
-  to prepare the handoff (ticket, named project skills, scope) rather than editing code.
-- Route product, safety, privacy, cost, and architecture choices to the product owner with
-  AskUserQuestion instead of picking a default.
-- `/security-review` and `/code-review` are useful before a handoff but do **not** satisfy the
-  independent-reviewer requirement, which needs a separate agent reviewing the exact pushed
-  commit.
-
-### Project skills live outside `.claude/`
-
-FitTip's own skills are in `.agents/skills/<name>/SKILL.md` and Claude Code does not
-auto-discover them (it only scans `.claude/skills/`). When a handoff names one — most often
-`vercel-react-best-practices` or `frontend-design` — `Read` that path explicitly. The project
-copy wins over any same-named global or plugin skill. Never edit `.agents/skills/**` or
-`skills-lock.json`; those are governance/supply-chain changes needing approval.
-
-### Stay out of / never hand-edit
-
-- `AGENTS.md`, `.agents/**`, `skills-lock.json` — Codex-owned shared config; propose a diff and
-  ask first.
 - `src/lib/supabase/database.types.ts` — generated by the Supabase CLI.
-- `supabase/migrations/*.sql` that are already applied — corrections are forward-only.
-- `docs/validation/**` records of accepted tickets, and `docs/backlog/**` acceptance/decision
-  lines — those are permanent history. Add new records instead.
-- `.env.local` and anything matching `.env*` except `.env.example` — never read into context,
-  never commit.
-- `node_modules/`, `.next/`, `supabase/.branches/`, `supabase/.temp/`, `.worktrees/`.
+- `supabase/migrations/*.sql` already applied — corrections are forward-only.
+- `docs/validation/**` and `docs/backlog/M0`–`M3` — permanent history.
+- `.env.local` and anything matching `.env*` except `.env.example` — never read, never commit.
+- `node_modules/`, `.next/`, `supabase/.branches/`, `supabase/.temp/`.
 
-### Non-obvious pitfalls
+## Pitfalls
 
-- This checkout is an Orca-managed worktree of `C:/Users/msche/dev/fittip`, so `.git` is a file,
-  not a directory. Tools that assume a `.git` directory can misread the repo. Do not create
-  further worktrees for ticket delivery — AGENTS.md requires a ticket branch in this checkout.
-- `src/architecture/*.test.ts` are repo-wide invariant tests, not unit tests. They fail if a
+- `src/architecture/*.test.ts` are repo-wide invariants, not unit tests. They fail if a
   `"use client"` file imports from `@/server/**` or a repository, or if `.retry(false)` appears
-  anywhere other than the two atomic RPC calls. A new pattern must update the invariant
-  deliberately, not incidentally.
+  outside the two atomic RPC calls. Changing a pattern there is a deliberate decision.
 - `next build` may warn about workspace root inference when more than one lockfile is visible.
-  The build still succeeds; it is a known, recorded warning.
-- Next.js 16 here: middleware is `src/proxy.ts`, route params are async, and private response
+  The build still succeeds.
+- Next.js 16: middleware is `src/proxy.ts`, route params are async, and private response
   headers come from `next.config.ts` (covered by `next.config.test.ts`).

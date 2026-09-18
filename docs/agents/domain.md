@@ -11,13 +11,12 @@ exploring the codebase.
   work in.
 - **`docs/product/F-00N-*.md`** — approved feature briefs. They define
   user-visible behaviour and are the contract a ticket implements.
-- **`AGENTS.md` § Product invariants** — hard rules that outrank convenience.
+- **`CLAUDE.md` § Product invariants** — hard rules that outrank convenience.
 
 If any of these files don't exist, **proceed silently**. Don't flag their
 absence; don't suggest creating them upfront. The `/domain-modeling` skill
 (reached via `/grill-with-docs` and `/improve-codebase-architecture`) creates
-them lazily when terms or decisions actually get resolved. There is currently
-no root `CONTEXT.md` — that's expected.
+them lazily when terms or decisions actually get resolved.
 
 ## File structure
 
@@ -25,8 +24,8 @@ Single-context repo:
 
 ```
 /
-├── CONTEXT.md              ← not yet created
-├── AGENTS.md               ← working agreement + product invariants
+├── CONTEXT.md              ← domain overview
+├── CLAUDE.md               ← working agreement + product invariants
 ├── docs/
 │   ├── decisions/          ← ADRs (ADR-001 … ADR-009)
 │   ├── product/            ← feature briefs (F-001 … F-003)
@@ -51,11 +50,11 @@ real gap (note it for `/domain-modeling`).
 
 ## Flag ADR conflicts
 
-If your output contradicts an existing ADR or a product invariant in AGENTS.md,
+If your output contradicts an existing ADR or a product invariant in CLAUDE.md,
 surface it explicitly rather than silently overriding:
 
 > _Contradicts ADR-009 (M2 goal mutation transaction) — but worth reopening
 > because…_
 
-A contradiction with an AGENTS.md product invariant is a stop-and-report, not a
+A contradiction with a CLAUDE.md product invariant is a stop-and-report, not a
 flag: those require product-owner approval to change.

@@ -1,5 +1,14 @@
 # M3 backlog
 
+**This index is closed as of 18 September 2026.** Tracking moved to
+[docs/backlog/NEXT.md](../NEXT.md) when the delivery protocol was replaced by the two lanes
+in `CLAUDE.md`. Everything below stands as written and records what was decided at the time.
+
+Carried over to `NEXT.md`: M3-22, M3-23, M3-16, M3-20, with M3-21 and M3-25 as fix-in-passing
+items and M3-24 as later work. Dropped: M3-17, which only reconciled old-protocol evidence,
+and the pre-F-005 drafts M3-03B and M3-03D, which remain ideas. M3-01 through M3-15F were
+delivered and are recorded in `docs/validation/M3/`.
+
 **Planning state:** M3-01, M3-01B, M3-02, and M3-03 are accepted. F-005 and
 ADR-016 replace the bounded-plan destination with the eight-ticket rolling-plan
 chain recorded below. Every proposed replacement ticket still requires its own

@@ -13,4 +13,5 @@ validation documentation.
 
 The governing product direction remains in the
 [Revised Product and Technical Plan](../REVISED_PRODUCT_PLAN.md). Delivery
-rules remain in [AGENTS.md](../AGENTS.md).
+rules are in [CLAUDE.md](../CLAUDE.md), and the current working list is
+[docs/backlog/NEXT.md](backlog/NEXT.md).

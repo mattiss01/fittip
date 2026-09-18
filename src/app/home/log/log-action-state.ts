@@ -92,7 +92,7 @@ export const COMPLETION_FEELING_LABELS: Record<CompletionFeelingValue, string> =
 /**
  * The FitTip safety notice, word for word as M1-03 approved it and M2-02
  * shipped it on the memory surface (`src/components/memory/memory-manager.tsx`
- * `SAFETY_NOTICE`). F-005:388 leaves that behavior unchanged, and AGENTS.md
+ * `SAFETY_NOTICE`). F-005:388 leaves that behavior unchanged, and CLAUDE.md
  * makes conservative pain, illness, injury, and severe-fatigue handling a
  * product invariant, so the established wording is reused rather than
  * rewritten. This is the first surface in the reset app that collects all four

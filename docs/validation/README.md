@@ -1,5 +1,10 @@
 # Validation
 
+**These records are history.** They were the builder handoffs and review records of the
+M0–M3 delivery protocol, which ended on 18 September 2026. Merges are now logged in
+[docs/backlog/NEXT.md](../backlog/NEXT.md), one line each. Read these for the evidence and
+limitations recorded at the time; do not add new records here.
+
 Validation records and their visual evidence are grouped by milestone.
 
 ## M0

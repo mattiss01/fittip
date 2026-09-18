@@ -162,7 +162,7 @@ test.describe("M3-15B today and logging", () => {
       await expect(page.locator("[data-log-source]")).toContainText(
         "Tempo run",
       );
-      // The conservative signal handling AGENTS.md requires, in the wording
+      // The conservative signal handling CLAUDE.md requires, in the wording
       // M1-03 approved and M2-02 shipped.
       await expect(
         page.getByText(/stop training and speak to a qualified/),

@@ -27,7 +27,7 @@ paths:
   private path back to an unauthenticated view.
 - Styling is Tailwind v4 plus co-located CSS modules. No component library or new design system
   without an approved ticket.
-- When a change materially reshapes React/App Router behavior or visible UI, apply the project
-  skills at `.agents/skills/vercel-react-best-practices/SKILL.md` and
-  `.agents/skills/frontend-design/SKILL.md`, and record which rules were checked in the ticket
-  validation record.
+- When a change materially reshapes React/App Router behavior or visible UI, use the
+  `vercel-react-best-practices` and `frontend-design` skills. Prioritize authentication,
+  request isolation, serialization, waterfalls, and bundle rules over micro-optimizations.
+  A new visible direction still needs the owner's agreement before you build it.
