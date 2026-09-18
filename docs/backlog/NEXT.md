@@ -13,7 +13,7 @@ before any code is written.
 1. `[x]` **Offline console assertion flake** — fixed by scoping the collector to the
    deliberate offline window, which stays open until the interrupted requests settle and
    their reports arrive. ([M3-22](M3/M3-22-OFFLINE-CONSOLE-ASSERTION-FLAKE.md))
-2. `[~]` **Completion write follow-ups** — three fixes to the completion write path, shipped
+2. `[x]` **Completion write follow-ups** — three fixes to the completion write path, shipped
    together on one forward migration to `apply_completion_change`.
    ([M3-23](M3/M3-23-COMPLETION-WRITE-FOLLOW-UPS.md))
    - **Wrong duplicate message.** The function already says "That session already has a
@@ -69,9 +69,21 @@ Not worth their own slot; do them when work lands nearby.
 - **M3-03B plan regeneration** and **M3-03D on-demand session detail** — pre-F-005 drafts
   that were already marked "rewrite before dispatch". They stay as ideas, not commitments.
 
+## Known limitations
+
+- **Correcting an unplanned log's title replaces its activity list wholesale.** Today that
+  list is always exactly one bare activity, so nothing is lost. If a completion ever holds
+  more than one, or one carrying a personal-activity link or a measurement, a rename would
+  discard the rest. Pre-existing to the M3-23 work, which only made renaming possible.
+- **M3-15B's accepted browser flow was rewritten** on 18 Sep 2026 (`cf33bb6`): it asserted the
+  read-only title and sport that M3-23 replaced. Its validation record still describes the
+  surface as it shipped then, which is what a record is for.
+
 ## Log
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 18 Sep 2026 | `d46a5be` | [35364797638](https://github.com/mattiss01/fittip/actions/runs/35364797638) | Completion write follow-ups: PT431 for a duplicate, correctable unplanned naming, no future-dated completion. Migration `20260918132941` applied to the founder project — 22 migrations, no drift, advisors unchanged at 14 definer + 1 auth warning. Reviewed twice; the first pass was blocking. Two notes below |
+| 18 Sep 2026 | `e9173cc` | (same run) | ADR-018: the lead applies founder-staging migrations. Bundled onto the ticket branch rather than committed separately, which is worth avoiding next time |
 | 18 Sep 2026 | `6fe22ee` | [35333826198](https://github.com/mattiss01/fittip/actions/runs/35333826198) | Offline console flake: shared `e2e/support/console-errors.ts`, both specs on it, 9 unit tests. One green run cannot prove a race is gone; the claim rests on the mechanism |
 | 18 Sep 2026 | `d7bca77`, `f08c1a8` | [35331668491](https://github.com/mattiss01/fittip/actions/runs/35331668491) | Dropped the Codex config and the old delivery protocol: one working agreement in `CLAUDE.md`, two lanes, this list |
