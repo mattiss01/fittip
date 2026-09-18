@@ -1,5 +1,10 @@
 # M3-22: The offline segment of two browser flows fails at random
 
+**Fixed on 18 September 2026 in `6fe22ee`**, taking direction 1 below. The
+diagnosis in this file stands; the delivery record is the log in
+[docs/backlog/NEXT.md](../NEXT.md). Everything below was written under the
+earlier protocol and is left as it was.
+
 **Status:** proposed — not approved for implementation. Diagnosed by the lead
 on 30 August 2026 from CI run
 [33309063845](https://github.com/mattiss01/fittip/actions/runs/33309063845).

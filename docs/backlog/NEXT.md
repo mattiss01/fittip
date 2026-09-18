@@ -10,11 +10,9 @@ before any code is written.
 
 ## Now
 
-1. `[ ]` **Offline console assertion flake** — two browser specs collect console errors for
-   the whole test and then go offline inside it, so an App Router prefetch caught in the
-   ~62 ms window fails the run at random. First, because a gate that fails at random is
-   worse than no gate, and CI is now the main safety net. Test-only.
-   ([M3-22](M3/M3-22-OFFLINE-CONSOLE-ASSERTION-FLAKE.md))
+1. `[x]` **Offline console assertion flake** — fixed by scoping the collector to the
+   deliberate offline window, which stays open until the interrupted requests settle and
+   their reports arrive. ([M3-22](M3/M3-22-OFFLINE-CONSOLE-ASSERTION-FLAKE.md))
 2. `[ ]` **Completion write follow-ups** — a duplicate log is refused with the wrong reason,
    and an unplanned log's title cannot be corrected after it is written. Careful lane: both
    change the accepted `apply_completion_change` and need a forward migration. Open question
@@ -59,4 +57,5 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 18 Sep 2026 | `6fe22ee` | [35333826198](https://github.com/mattiss01/fittip/actions/runs/35333826198) | Offline console flake: shared `e2e/support/console-errors.ts`, both specs on it, 9 unit tests. One green run cannot prove a race is gone; the claim rests on the mechanism |
 | 18 Sep 2026 | `d7bca77`, `f08c1a8` | [35331668491](https://github.com/mattiss01/fittip/actions/runs/35331668491) | Dropped the Codex config and the old delivery protocol: one working agreement in `CLAUDE.md`, two lanes, this list |
