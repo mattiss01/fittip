@@ -17,6 +17,8 @@ import {
 } from "./log-action-state";
 import styles from "./log.module.css";
 
+import homeStyles from "../home.module.css";
+
 /** The planned session this log answers to, when there is one. */
 export type LogPlannedView = {
   id: string;
@@ -62,6 +64,14 @@ type Props = {
    * only the form performs is a courtesy rather than a constraint.
    */
   today: string;
+  /**
+   * Set when this planned session already carries a log, so the owner is told
+   * before filling anything in rather than refused at the end. It lives here
+   * rather than replacing the form on the page because a server action
+   * refreshes the page it was called from: deciding this on the server would
+   * turn the owner's own receipt into this notice the moment they saved.
+   */
+  alreadyLogged?: { id: string; dayLabel: string } | null;
   /** The day on Today the owner returns to once the write lands. */
   returnDate: string;
 };
@@ -69,6 +79,7 @@ type Props = {
 export function LogForm({
   planned,
   existing,
+  alreadyLogged = null,
   defaultDate,
   today,
   returnDate,
@@ -115,6 +126,27 @@ export function LogForm({
   useEffect(() => {
     if (saved) receiptHeading.current?.focus();
   }, [saved, state.submission]);
+
+  if (alreadyLogged !== null && !saved) {
+    return (
+      <section className={homeStyles.stateCard} data-log-state="already-logged">
+        <p className={homeStyles.sectionLabel}>Already logged</p>
+        <h2>This session is already logged.</h2>
+        <p>
+          The log is dated {alreadyLogged.dayLabel}. One planned session carries
+          one log, and that log can be corrected.
+        </p>
+        <div className={homeStyles.actions}>
+          <Link
+            className={homeStyles.primaryAction}
+            href={`/home/log?completion=${alreadyLogged.id}`}
+          >
+            Open that log
+          </Link>
+        </div>
+      </section>
+    );
+  }
 
   if (saved) {
     return (
@@ -215,6 +247,22 @@ export function LogForm({
               Whatever you call it. FitTip keeps your own words.
             </span>
           </div>
+          {existing === null ? null : (
+            // What the naming was, so an edit that changes neither sends no
+            // activity list and leaves whatever else the record carries alone.
+            <>
+              <input
+                type="hidden"
+                name="originalTitle"
+                value={existing.activityName ?? ""}
+              />
+              <input
+                type="hidden"
+                name="originalSport"
+                value={existing.activitySport ?? ""}
+              />
+            </>
+          )}
         </>
       ) : (
         <fieldset className={styles.choices}>

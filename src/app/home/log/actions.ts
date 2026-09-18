@@ -62,21 +62,18 @@ export async function logCompletionAction(
     const log = await createCompletionLog();
 
     if (editing) {
-      // Unplanned training carries its name as its one activity, so correcting
-      // the title or the sport means restating that list. A planned log is
-      // named by its snapshot, which is not the owner's to rewrite, so the form
-      // sends no naming for it and none is built here.
-      const renaming = formData.get("title") !== null;
+      const renamed = readRenamedActivity(formData);
       const receipt = await log.applyChange({
         operation: "edit",
         completionId: formData.get("completionId"),
         expectedRevision: readInteger(formData.get("expectedRevision")),
-        completion: renaming
-          ? { ...facts, activities: [readUnplannedActivity(formData)] }
-          : facts,
+        completion:
+          renamed === null ? facts : { ...facts, activities: [renamed] },
       });
+      // Today only. Revalidating this route would re-render the page the owner
+      // is standing on, and the write they just made would turn it into the
+      // "already logged" notice in place of their receipt.
       revalidatePath("/home/today");
-      revalidatePath("/home/log");
       return result("saved", "Log updated.", {
         result: receipt.result,
         returnDate,
@@ -106,7 +103,6 @@ export async function logCompletionAction(
       },
     });
     revalidatePath("/home/today");
-    revalidatePath("/home/log");
     return result("saved", "Log saved.", {
       result: receipt.result,
       returnDate,
@@ -169,6 +165,30 @@ export async function logCompletionAction(
     }
     return result("error", "The log could not be saved.");
   }
+}
+
+/**
+ * The one activity an edit may restate, or null when it must not.
+ *
+ * Unplanned training carries its name as its one activity, so correcting the
+ * title or the sport means restating that list - and the write function
+ * replaces it wholesale. A planned log is named by its snapshot, which is not
+ * the owner's to rewrite, so its form sends no naming at all. Restating an
+ * unchanged list would be a write that discards anything else the activity
+ * carries, which is why an unrelated correction sends none.
+ */
+function readRenamedActivity(formData: FormData) {
+  if (formData.get("title") === null) return null;
+  const activity = readUnplannedActivity(formData);
+  const unchanged =
+    activity.name === trimmedField(formData, "originalTitle") &&
+    activity.sport === trimmedField(formData, "originalSport");
+  return unchanged ? null : activity;
+}
+
+function trimmedField(formData: FormData, field: string) {
+  const value = formData.get(field);
+  return typeof value === "string" ? value.trim() : "";
 }
 
 /**

@@ -181,21 +181,13 @@ async function renderForm(
       // `list` is bounded by the actual date, so a session logged on a
       // different day than the one being looked at is invisible to it. Without
       // this read the owner fills the whole form and is refused at the end.
+      //
+      // The form is told rather than replaced here: a server action refreshes
+      // the page it was called from, so replacing it would turn the owner's
+      // own receipt into this notice the moment they saved.
       const logged = await (
         await createCompletionLog()
       ).findByPlanSession(session.id);
-      if (logged !== null) {
-        return (
-          <Unavailable
-            label="Already logged"
-            heading="This session is already logged."
-            body={`You recorded it on ${longDay(logged.actualLocalDate)}. One planned session carries one log, and that log can be corrected.`}
-            href={`/home/log?completion=${logged.id}`}
-            action="Open that log"
-            state="already-logged"
-          />
-        );
-      }
       const planned: LogPlannedView = {
         id: session.id,
         localDate: session.localDate,
@@ -219,6 +211,14 @@ async function renderForm(
           <LogForm
             planned={planned}
             existing={null}
+            alreadyLogged={
+              logged === null
+                ? null
+                : {
+                    id: logged.id,
+                    dayLabel: longDay(logged.actualLocalDate),
+                  }
+            }
             defaultDate={planned.localDate > today ? today : planned.localDate}
             today={today}
             returnDate={planned.localDate}

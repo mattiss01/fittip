@@ -281,6 +281,53 @@ describe("logCompletionAction", () => {
     });
   });
 
+  it("restates the activity list only when the naming actually changed", async () => {
+    applyChange.mockResolvedValue({
+      completionId: COMPLETION_ID,
+      revision: 2,
+      result: "updated",
+    });
+    const naming = {
+      operation: "edit",
+      completionId: COMPLETION_ID,
+      expectedRevision: "1",
+      status: "unplanned",
+      actualLocalDate: DAY,
+      originalTitle: "Tepmo run",
+      originalSport: "Running",
+    };
+
+    await logCompletionAction(
+      INITIAL_LOG_ACTION_STATE,
+      form({ ...naming, title: "Tempo run", sport: "Running" }),
+    );
+
+    expect(applyChange.mock.calls[0][0].completion.activities).toEqual([
+      {
+        position: 0,
+        name: "Tempo run",
+        sport: "Running",
+        measurementMode: "custom",
+      },
+    ]);
+
+    // An unrelated correction sends none: restating an unchanged list would
+    // discard anything else that activity carries.
+    await logCompletionAction(
+      INITIAL_LOG_ACTION_STATE,
+      form({
+        ...naming,
+        title: "Tepmo run",
+        sport: "Running",
+        durationMinutes: "40",
+      }),
+    );
+
+    expect(
+      Object.keys(applyChange.mock.calls[1][0].completion),
+    ).not.toContain("activities");
+  });
+
   it("returns to the day a moved log now sits on, not the day it left", async () => {
     applyChange.mockResolvedValue({
       completionId: COMPLETION_ID,

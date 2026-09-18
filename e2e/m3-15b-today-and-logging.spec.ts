@@ -268,21 +268,34 @@ test.describe("M3-15B today and logging", () => {
         unplanned.getByText("Unplanned", { exact: true }),
       ).toBeVisible();
 
-      // Reopening shows both, and offers to change neither: the write
-      // function refuses an activity list on an edit.
+      // Reopening offers both for correction: unplanned training carries its
+      // name as its one activity, so this is the only place that name lives.
       await unplanned.getByRole("link", { name: "Edit log" }).click();
-      const naming = page.locator("[data-log-fixed-naming]");
-      await expect(naming).toContainText("Sunrise swim");
-      await expect(naming).toContainText("Swimming");
-      await expect(naming).toContainText("cannot be changed yet");
-      await expect(page.getByLabel("Title", { exact: true })).toHaveCount(0);
-      await expect(page.getByLabel("Sport", { exact: true })).toHaveCount(0);
+      const title = page.getByLabel("Title", { exact: true });
+      const sport = page.getByLabel("Sport", { exact: true });
+      await expect(title).toHaveValue("Sunrise swim");
+      await expect(sport).toHaveValue("Swimming");
       await page.screenshot({
         fullPage: true,
         path: path.join(evidenceDirectory, "M3-15B-unplanned-edit-390x844.png"),
       });
-      await page.getByRole("link", { name: "Cancel" }).click();
+
+      // M3-23: a typo in what the owner called their own training used to be
+      // permanent. Correcting it is an ordinary edit.
+      await title.fill("Sunrise lake swim");
+      await sport.fill("Open water");
+      await page.getByRole("button", { name: "Save log" }).click();
+      await page.getByRole("link", { name: "Back to that day" }).click();
       await expect(page.locator(`[data-today-date="${today}"]`)).toBeVisible();
+      await expect(
+        unplanned.getByRole("heading", {
+          name: "Sunrise lake swim",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        unplanned.getByText("Open water", { exact: true }),
+      ).toBeVisible();
 
       // ---- A mistaken log is corrected, including to skipped. ----
       await todayCard(page, "Tempo run")

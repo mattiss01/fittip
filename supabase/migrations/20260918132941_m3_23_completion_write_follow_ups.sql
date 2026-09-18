@@ -183,6 +183,7 @@ declare
   v_plan_session_id uuid;
   v_snapshot jsonb;
   v_activity jsonb;
+  v_constraint text;
 begin
   if v_user_id is null then
     raise exception using errcode = '42501',
@@ -227,16 +228,10 @@ begin
         raise exception using errcode = '22023',
           message = 'That planned session does not exist.';
       end if;
-      -- Its own code: the surface has to tell the owner which of several
-      -- refusals this is, and it cannot read that back out of `22023`.
-      if exists (
-        select 1 from public.completions existing
-        where existing.user_id = v_user_id
-          and existing.plan_session_id = v_plan_session_id
-      ) then
-        raise exception using errcode = 'PT431',
-          message = 'That session already has a completion.';
-      end if;
+      -- A duplicate is refused by `completions_plan_session_key` and reported
+      -- from the handler below. Reading first would answer the same question
+      -- twice and answer it differently under a race: two callers can both
+      -- pass a non-serialized `exists` and only the constraint decides.
     end if;
 
     insert into public.completions (
@@ -399,7 +394,17 @@ begin
 
   return (p_completion_id, v_revision + 1, 'updated')::public.completion_receipt;
 exception
-  when unique_violation or foreign_key_violation or check_violation
+  when unique_violation then
+    get stacked diagnostics v_constraint = constraint_name;
+    -- Its own code, whether the second caller arrives a minute or a
+    -- millisecond late: the surface has to tell the owner which refusal this
+    -- is, and nothing about the outcome, the date, or the numbers is wrong.
+    if v_constraint = 'completions_plan_session_key' then
+      raise exception using errcode = 'PT431',
+        message = 'That session already has a completion.';
+    end if;
+    raise exception using errcode = '22023', message = 'Invalid completion change.';
+  when foreign_key_violation or check_violation
     or not_null_violation or invalid_datetime_format then
     raise exception using errcode = '22023', message = 'Invalid completion change.';
 end;
