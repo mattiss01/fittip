@@ -136,52 +136,56 @@ it**, so read the skipped count before calling a run green.
 
 ## Changed files
 
-`git diff --stat 45acd9b..ba665b0`:
+`git diff --stat 45acd9b..a1cc456`:
 
 ```
- .github/workflows/ci.yml                           |  13 +
- docs/backlog/M3/M3-15F-ROADMAP-GENERATION.md       |  51 +-
- docs/validation/M3/M3-15F-VALIDATION.md            | 744 ++++++++++++++++++
- .../M3/evidence/M3-15F-accepted-390x844.png        | Bin 0 -> 183054 bytes
- .../M3/evidence/M3-15F-compose-390x844.png         | Bin 0 -> 63721 bytes
- .../M3/evidence/M3-15F-history-390x844.png         | Bin 0 -> 198781 bytes
- .../M3/evidence/M3-15F-proposal-390x844.png        | Bin 0 -> 191897 bytes
- docs/validation/README.md                          |  18 +
- e2e/m3-15f-roadmap.spec.ts                         | 336 ++++++++
- e2e/m3-15f.playwright.config.ts                    |  31 +
- package.json                                       |   1 +
- src/app/home/plan/roadmap/action-state.ts          |  62 ++
- src/app/home/plan/roadmap/actions.test.ts          | 612 +++++++++++++++
- src/app/home/plan/roadmap/actions.ts               | 409 ++++++++++
- src/app/home/plan/roadmap/page.test.tsx            | 201 ++++-
- src/app/home/plan/roadmap/page.tsx                 |  40 +-
- src/app/home/plan/roadmap/roadmap.module.css       | 216 ++++++
- src/architecture/m3-11-legacy-reset.test.ts        | 138 +++-
- src/components/roadmap/roadmap-body.tsx            | 134 ++++
- src/components/roadmap/roadmap-composer.tsx        | 236 ++++++
- src/components/roadmap/roadmap-decision-dock.tsx   | 187 +++++
- src/components/roadmap/roadmap-detail.tsx          |  75 +-
- src/components/roadmap/roadmap-editor.tsx          | 385 ++++++++++
- src/components/roadmap/roadmap-outcome.tsx         |  82 ++
- .../roadmap/roadmap-proposal-record.test.tsx       |  29 +-
- src/components/roadmap/roadmap-proposal-record.tsx |  34 +-
- src/components/roadmap/roadmap-proposal-review.tsx |  77 ++
- src/components/roadmap/roadmap-screen.tsx          |  90 ++-
- src/components/roadmap/roadmap-spine.tsx           |   6 +-
- src/components/roadmap/roadmap-watch-notice.tsx    |  38 +
- src/components/roadmap/use-roadmap-write.ts        | 247 ++++++
- src/lib/roadmap/roadmap-control-copy.ts            | 194 +++++
- src/server/repositories/roadmap-repository.test.ts |  89 +++
- src/server/repositories/roadmap-repository.ts      |  50 +-
- src/server/roadmap/roadmap-generation.test.ts      | 271 +++++++
- src/server/roadmap/roadmap-generation.ts           | 255 ++++++
- src/server/roadmap/roadmap-records.ts              | 156 +++-
- .../20260916075522_m3_15f_roadmap_generation.sql   | 582 ++++++++++++++
- .../database/m3_11_legacy_training_reset.test.sql  | 137 +---
- .../database/m3_15f_roadmap_generation.test.sql    | 855 +++++++++++++++++++++
- .../tests/fixtures/m3_11_post_reset_verify.sql     |  13 +-
- .../integration/m3_15f_concurrent_generation.mjs   | 291 +++++++
- 42 files changed, 7010 insertions(+), 375 deletions(-)
+ .github/workflows/ci.yml                           |   13 +
+ docs/backlog/M3/M3-15F-ROADMAP-GENERATION.md       |   51 +-
+ docs/validation/M3/M3-15F-VALIDATION.md            | 1036 ++++++++++++++++++++
+ .../M3/evidence/M3-15F-accepted-390x844.png        |  Bin 0 -> 183054 bytes
+ .../M3/evidence/M3-15F-compose-390x844.png         |  Bin 0 -> 63721 bytes
+ .../M3/evidence/M3-15F-history-390x844.png         |  Bin 0 -> 198781 bytes
+ .../M3/evidence/M3-15F-proposal-390x844.png        |  Bin 0 -> 191897 bytes
+ docs/validation/README.md                          |   22 +
+ e2e/m3-15f-roadmap.spec.ts                         |  340 +++++++
+ e2e/m3-15f.playwright.config.ts                    |   31 +
+ package.json                                       |    1 +
+ src/app/home/plan/roadmap/action-state.ts          |   62 ++
+ src/app/home/plan/roadmap/actions.test.ts          |  612 ++++++++++++
+ src/app/home/plan/roadmap/actions.ts               |  409 ++++++++
+ src/app/home/plan/roadmap/page.test.tsx            |  201 +++-
+ src/app/home/plan/roadmap/page.tsx                 |   40 +-
+ src/app/home/plan/roadmap/roadmap.module.css       |  216 ++++
+ src/architecture/m3-11-legacy-reset.test.ts        |  138 ++-
+ src/components/roadmap/roadmap-body.tsx            |  134 +++
+ src/components/roadmap/roadmap-composer.tsx        |  236 +++++
+ .../roadmap/roadmap-decision-dock.test.tsx         |  126 +++
+ src/components/roadmap/roadmap-decision-dock.tsx   |  195 ++++
+ src/components/roadmap/roadmap-detail.tsx          |   75 +-
+ src/components/roadmap/roadmap-editor.tsx          |  385 ++++++++
+ src/components/roadmap/roadmap-outcome.test.tsx    |   74 ++
+ src/components/roadmap/roadmap-outcome.tsx         |   82 ++
+ .../roadmap/roadmap-proposal-record.test.tsx       |   29 +-
+ src/components/roadmap/roadmap-proposal-record.tsx |   34 +-
+ src/components/roadmap/roadmap-proposal-review.tsx |   82 ++
+ src/components/roadmap/roadmap-screen.tsx          |   90 +-
+ src/components/roadmap/roadmap-spine.tsx           |    6 +-
+ .../roadmap/roadmap-watch-notice.test.tsx          |   55 ++
+ src/components/roadmap/roadmap-watch-notice.tsx    |   38 +
+ src/components/roadmap/use-roadmap-write.test.tsx  |  201 ++++
+ src/components/roadmap/use-roadmap-write.ts        |  271 +++++
+ src/lib/roadmap/roadmap-control-copy.ts            |  194 ++++
+ src/server/repositories/roadmap-repository.test.ts |   89 ++
+ src/server/repositories/roadmap-repository.ts      |   50 +-
+ src/server/roadmap/roadmap-generation.test.ts      |  271 +++++
+ src/server/roadmap/roadmap-generation.ts           |  255 +++++
+ src/server/roadmap/roadmap-records.ts              |  156 ++-
+ .../20260916075522_m3_15f_roadmap_generation.sql   |  582 +++++++++++
+ .../database/m3_11_legacy_training_reset.test.sql  |  137 +--
+ .../database/m3_15f_roadmap_generation.test.sql    |  855 ++++++++++++++++
+ .../tests/fixtures/m3_11_post_reset_verify.sql     |   13 +-
+ .../integration/m3_15f_concurrent_generation.mjs   |  291 ++++++
+ 46 files changed, 7803 insertions(+), 375 deletions(-)
 ```
 
 Nothing was deleted or renamed. The four evidence images come from the current
@@ -513,12 +517,15 @@ was protecting.
 
 ## Tests and final results
 
-The builder does not push, so **there is no continuous-integration run for
-`ba665b0` yet**. The lead pushes this branch. The run URL and conclusion for the
-exact reviewed SHA belong in this section and are not yet available. That run is
-the automated evidence for lint, typecheck, `test:run`, `build`, the migration,
-lint, advisor and pgTAP checks, both concurrency harnesses, and the 390px browser
-flows.
+**Continuous integration is green for the reviewed code.** Run
+[35327589306](https://github.com/mattiss01/fittip/actions/runs/35327589306)
+succeeded on all three jobs for `0d48b3b`, which is `a1cc456` plus this record;
+`git diff a1cc456..0d48b3b` touches no application file, so that run is the
+automated-test evidence for `a1cc456` under the evidence-commit exception.
+
+That run is the automated evidence for lint, typecheck, `test:run`, `build`, the
+migration, lint, advisor and pgTAP checks, both concurrency harnesses, and the
+390px browser flows.
 
 These checks were run locally during implementation, with these results:
 
