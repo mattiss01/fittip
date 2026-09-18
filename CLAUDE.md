@@ -56,7 +56,10 @@ or anything irreversible to the owner's data.
   the owner made.
 - Same interactive loop. Use the `schema-change` skill for database work.
 - After pushing, spawn one reviewer subagent to review that commit's diff for data,
-  authorization, and privacy. It reads the diff and reports; it does not re-run CI.
+  authorization, and privacy. It reads the diff and reports; it does not re-run CI. Tell it
+  in the prompt that this file is the working agreement and that `docs/backlog/M0`–`M3` and
+  `docs/validation/` are history — otherwise it reviews against the retired protocol and asks
+  for tiers and validation records.
 - Apply the migration to the founder project (ADR-018), report what `migration list` and the
   advisors say, then merge.
 
@@ -70,6 +73,9 @@ or anything irreversible to the owner's data.
   intentional commits. Never stage secrets, `.env*`, or unrelated files. Stop and report if
   the remote differs or Git rejects the update.
 - Preserve unrelated user changes. Do not refactor broadly without asking.
+- Commit a change to permissions, ADRs, or this file on its own, not bundled onto a product
+  branch. Both land in the same merge either way, but a reader looking for when an agent's
+  reach changed should not have to find it inside a feature.
 - Report honestly: if something is untested, unfinished, or failing, say so plainly.
 
 ## Engineering rules
@@ -99,6 +105,12 @@ PowerShell here blocks `npm.ps1`, so always use `npm.cmd` and `npx.cmd`.
 | Production server    | `npm.cmd run start -- -p <port>`                |
 
 - **Never run `npm run test`** — that is Vitest watch mode and it will hang the session.
+- Run Prettier over files you **create**, not only ones you edit. A new file is the usual way
+  a branch goes red on formatting.
+- `npm.cmd run format` rewrites line endings across the whole repository, so `git status`
+  then shows hundreds of files. Only the README's type-generation sequence needs it. After
+  running it, `git diff --numstat` names the few files with real content changes: stage those,
+  then `git checkout -- .` to drop the rest. Otherwise format the files you touched by name.
 - `npm.cmd run format:check` fails on a clean checkout (131 files) because `core.autocrlf`
   gives CRLF working files and Prettier defaults to LF. Do not "fix" it repo-wide. To check
   your own files: `npx.cmd prettier --write <changed files>`, then `git diff` — no diff means
@@ -138,12 +150,20 @@ Three jobs, about four minutes: `static` (Prettier, ESLint, TypeScript, `test:ru
 - Never run `db reset --linked`, `migration repair`, `db remote`, `secrets`, `projects`, or
   `branches`. `supabase/config.toml` is local-only development configuration.
 - Docker-backed local runs are slow; run them in the background rather than blocking.
+- **To show the owner a change**, the local stack needs an account with data. `npx.cmd supabase
+  status -o env` gives the URL and keys; pass them to `dev`/`start` explicitly. Create a
+  confirmed user through `/auth/v1/admin/users` with the service-role key, then insert its
+  `profiles` row with `docker exec supabase_db_fittip psql` — nothing but the app creates one,
+  and service_role has no privileges on that table. Plan sessions need distinct `position`
+  values per day, and every plan activity needs `isLocked`.
 - `npm.cmd run test:e2e` needs the app serving on port 3000 plus
   `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Some specs also need
   `SUPABASE_SERVICE_ROLE_KEY` and **skip silently without it** — read the skipped count before
   calling a run green. Existing per-ticket configs pin their own `testMatch` and port.
-- Applying a migration to the founder Supabase project is the owner's action, and `production`
-  on Vercel is the owner-only founder environment, not a public launch.
+- `db push` can print internal certificate errors and still finish. `migration list --linked`
+  showing the repository's version in remote history is the proof it applied; the push's own
+  output is not.
+- `production` on Vercel is the owner-only founder environment, not a public launch.
 
 ## Hands off
 
@@ -162,3 +182,5 @@ Three jobs, about four minutes: `static` (Prettier, ESLint, TypeScript, `test:ru
   The build still succeeds.
 - Next.js 16: middleware is `src/proxy.ts`, route params are async, and private response
   headers come from `next.config.ts` (covered by `next.config.test.ts`).
+- Deleting files is blocked by the permission layer. Leave leftovers (run artifacts, stray
+  screenshots) to the owner and say what they are rather than working around it.

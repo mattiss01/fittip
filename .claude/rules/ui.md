@@ -23,6 +23,12 @@ paths:
 - Every route needs honest `loading`, empty, unavailable-record, `error`, offline, and
   expired-session states with a real recovery action — and none of them may invent training
   facts.
+- **A Server Action refreshes the page it was called from**, whichever path `revalidatePath`
+  names. So a server component must not decide what to show based on a read that the action
+  itself changes: a page that swapped the form for "this session is already logged" replaced
+  the owner's own receipt the moment they saved. State that depends on "have I just written
+  this?" belongs in the client component, which is the only thing that knows. Client state
+  survives the refresh; the server's branch does not.
 - Redirect targets must pass the allowlist in `src/lib/auth/safe-return.ts`. Never echo a
   private path back to an unauthenticated view.
 - Styling is Tailwind v4 plus co-located CSS modules. No component library or new design system

@@ -23,6 +23,17 @@ paths:
 - Tests in `src/architecture/` are repo-wide invariants (client/server import boundary, the
   exact `.retry(false)` allowlist). Update them only as a deliberate decision.
 
+## When you change a surface
+
+Search `e2e/**` for assertions about it before you call the change done. Accepted flows pin
+surfaces that unit tests do not, and a spec written for the old surface is a red run nobody
+expects — updating the unit tests is not enough. Rewriting an accepted spec is legitimate when
+the surface it described was deliberately replaced; note it in the merge log so the older
+validation record is read as history rather than as a description of today.
+
+Prefer a real browser run over reasoning about Server Action behavior. The receipt-versus-
+notice bug on the log form was invisible to jsdom tests and obvious on the first flow run.
+
 ## Playwright (`e2e/**`)
 
 - The acceptance viewport is exactly `390x844`. Assert no horizontal overflow.
