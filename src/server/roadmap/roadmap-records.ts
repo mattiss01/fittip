@@ -1,5 +1,6 @@
 import "server-only";
 
+import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 import { ROADMAP_ROUTE_STATE_COPY } from "@/lib/roadmap/roadmap-route-state-copy";
 import type {
   RoadmapMemoryCandidate,
@@ -159,6 +160,18 @@ export type RoadmapProposalView = {
   id: string;
   origin: RoadmapProposalOrigin;
   sourceProposalId: string | null;
+  /**
+   * The `provider_code` stored on the row, which is the only thing that says
+   * who wrote this proposal.
+   *
+   * Read rather than derived, and `origin` is deliberately not consulted:
+   * `origin` says how the proposal came about — a first request, a
+   * regeneration, an owner's edit — which is a different fact from which coach
+   * produced the words. An owner edit inherits its source's provider code, so
+   * an edit of an example is still an example. That is what the database
+   * already records, and what the label has to reflect.
+   */
+  providerCode: string;
   content: RoadmapProposal;
   planningNote: string | null;
   regenerationFeedback: string | null;
@@ -174,12 +187,47 @@ export type RoadmapVersionView = {
   versionNumber: number;
   content: RoadmapProposal;
   acceptedAt: string;
+  /**
+   * The provider code of the proposal this version was accepted from.
+   *
+   * `roadmap_versions` carries no provider column of its own — it is an
+   * immutable copy of accepted content — so this is read through
+   * `source_proposal_id`, which the table requires and which cannot be null.
+   * Still the stored row rather than an inference: an accepted example stays
+   * labelled an example for as long as it is anybody's roadmap.
+   */
+  providerCode: string;
 };
 
 export type RoadmapHeadView = {
   revision: number;
   currentVersionId: string | null;
 };
+
+/**
+ * The provider code a view reports when the stored provenance could not be
+ * read.
+ *
+ * `roadmap_versions.source_proposal_id` is `not null` with a foreign key, so
+ * this is not a state the database can be in; it exists because the read has to
+ * answer something when the embed comes back in a shape it does not recognize.
+ */
+export const UNKNOWN_PROVIDER_CODE = "unknown";
+
+/**
+ * Whether a record was written by something other than a coaching model, and
+ * therefore has to be labelled an example wherever it appears.
+ *
+ * One predicate rather than an equality test repeated per surface, because it
+ * fails closed and that decision has to hold everywhere. `fixture` is the
+ * built-in example coach. An unreadable provenance is treated the same way: the
+ * unsafe direction is a fixture-authored roadmap rendering as a real one with
+ * nothing anywhere to say otherwise, while the cost of the opposite mistake is
+ * an example label on a roadmap that has one more reason to be looked at.
+ */
+export function isExampleAuthored(providerCode: string): boolean {
+  return providerCode === "fixture" || providerCode === UNKNOWN_PROVIDER_CODE;
+}
 
 /**
  * Everything the roadmap screen renders from. Assembled server-side so the
@@ -206,6 +254,16 @@ export type RoadmapScreenState = {
    * rather than silently missing from the screen.
    */
   proposalHistory: RoadmapProposalView[];
+  /**
+   * The newest proposal when the owner has just declined it.
+   *
+   * It is the only proposal a regeneration may carry:
+   * `begin_roadmap_generation` refuses a predecessor that is not owned,
+   * rejected, and on the same horizon. The surface needs it because the
+   * regeneration control sends it, and because a regeneration runs against the
+   * predecessor's horizon rather than against whatever the compose form shows.
+   */
+  declinedPredecessor: RoadmapProposalView | null;
   /** Undecided candidates extracted from a planning note. */
   openMemoryCandidateCount: number;
   goals: RoadmapGoalSummary[];
@@ -225,28 +283,23 @@ export type RoadmapScreenState = {
  * "Direction, not a promise." because the whole surface is a proposal. A
  * component that inlines its own wording can drift from an approved decision
  * without anyone noticing, so the components import from here.
+ *
+ * "In one place" is the whole point, so the two spreads at the end matter as
+ * much as the entries above them. A Client Component may not import this
+ * module, so its strings live in `@/lib/roadmap/*` and are spread in here:
+ * every roadmap wording stays reachable from this one constant, and the
+ * boundary decides where a string is *defined* rather than whether it is
+ * centralized at all.
+ *
+ * M3-15F moved the M3-02 wordings that were still written inside the four
+ * roadmap components into this object unchanged, restored the two uncertainty
+ * labels M3-15E dropped, and removed the orphaned `reviewPointsHeading`: the
+ * spine interleaves review points where they fall, so the separate "When to
+ * reassess" list that heading belonged to no longer exists.
  */
 export const ROADMAP_COPY = {
   createAction: "Create roadmap",
   proposeAction: "Propose a new roadmap",
-  composeTitle: "Shape your roadmap",
-  planningNoteLabel: "Anything the coach should account for? (optional)",
-  planningNoteHelper:
-    "Add commitments or constraints that your saved information does not show. Maximum 1,000 characters.",
-  generateAction: "Generate roadmap proposal",
-  generateSupport: "Nothing changes until you accept a proposal.",
-  pending:
-    "Building your roadmap proposal... Your current roadmap stays unchanged.",
-  acceptAction: "Accept roadmap",
-  editAction: "Edit proposal",
-  declineAction: "Decline proposal",
-  declineConfirm:
-    "Decline this proposal? It will stay in your roadmap history and will not become current.",
-  regenerateAction: "Regenerate proposal",
-  feedbackLabel: "What should the coach change?",
-  regenerateSupport:
-    "The previous proposal will be shared with the coach. Nothing changes until you accept.",
-  regenerateConfirm: "Generate another proposal",
   contextSummaryLabel: "What the coach will use",
   contextSummaryHelper:
     "Only active, accepted information and the bounded training window are included.",
@@ -256,28 +309,48 @@ export const ROADMAP_COPY = {
   reviewHeader: "Direction, not a promise.",
   assumptionsHeading: "What this assumes",
   uncertaintiesHeading: "What could change the direction",
-  reviewPointsHeading: "When to reassess",
+  /**
+   * The two labels M3-02 set on an uncertainty and M3-15E lost.
+   *
+   * Without them the two lines under a statement are unattributed grey text,
+   * and an owner cannot tell "this is why the direction depends on it" from
+   * "this is the thing to watch for". They are what make an uncertainty
+   * actionable rather than a disclaimer.
+   */
+  uncertaintyWhyItMatters: "Why it matters:",
+  uncertaintyWhatToWatch: "Watch for:",
+  /** M3-02's wording for the safety section of a roadmap the coach held back. */
+  heldBackHeading: "Held back for now",
   milestonePrefix: "Aim for by",
   safetyNotice:
     "FitTip cannot assess or diagnose symptoms. If symptoms are severe, sudden, or getting worse, stop the affected activity and contact a qualified health professional.",
-  regenerationCapReached:
-    "You have used all three regenerations for these dates. Edit the proposal directly, or change the dates to start a fresh request.",
   /**
-   * The two sentences a proposal record carries on the read-only surface.
-   *
-   * Both are M3-15E's, and both exist for the same reason the ticket forbids a
-   * disabled button: an owner cannot tell a proposal that is waiting for them
-   * from one nothing will ever act on. `proposalDecisionUnavailable` is the
-   * more important of the two — "Awaiting your decision" is an inert
-   * affordance stated in copy if the screen offers no way to decide, and until
-   * M3-15F restores the five revoked functions there is none anywhere in the
-   * application.
-   *
-   * They are new user-visible strings rather than M3-02 decisions, so they are
-   * the product owner's to confirm.
+   * The spine's own wordings, which were written in `roadmap-spine.tsx` until
+   * M3-15F moved them here. All three are M3-02's and unchanged: the phase
+   * ordinal, and the two ways a review point states when it happens.
    */
-  proposalDecisionUnavailable:
-    "Deciding on a proposal is not available yet. This one stays here, unchanged, and nothing happens to it in the meantime.",
+  phaseIndex: (index: number, total: number) => `Phase ${index} of ${total}`,
+  reviewOnDate: (date: string) => `Review on ${date}`,
+  reviewWhenCondition: (condition: string) => `Review when ${condition}`,
+  /**
+   * The route's own frame, moved out of `page.tsx` for the same reason.
+   * "Where this is going." is M3-02's title; the back link and the kicker are
+   * the shell's shape, stated here so no roadmap string is written in a
+   * component.
+   */
+  backLink: "← Plan",
+  routeKicker: "FitTip / plan / roadmap",
+  routeTitle: "Where this is going.",
+  noRoadmapStamp: "No roadmap yet",
+  supersededRoadmapsHeading: "Superseded roadmaps",
+  /**
+   * What an expired proposal says.
+   *
+   * M3-11 marked proposals built on deleted training records `expired`, and no
+   * ticket can make one acceptable again. It is the one state on this surface
+   * that still offers nothing, and it says so outright rather than leaving the
+   * owner to find the missing control.
+   */
   proposalExpired:
     "This proposal can no longer be accepted. It stays here, unchanged, with everything it was built on.",
   /**
@@ -286,8 +359,7 @@ export const ROADMAP_COPY = {
    * An owner edit supersedes its source without deciding it, so the source
    * carries no decision and is still not what awaits one. Labelling it
    * "Awaiting your decision" would put two waiting records on the screen, one
-   * of which nothing will ever decide. Also M3-15E's, and the product owner's
-   * to confirm.
+   * of which nothing will ever decide.
    */
   proposalSuperseded:
     "A later proposal replaced this one before it was decided. It stays here, unchanged.",
@@ -305,12 +377,6 @@ export const ROADMAP_COPY = {
     ai_regeneration: "Regenerated",
     owner_edit: "Your edit",
   } satisfies Record<RoadmapProposalOrigin, string>,
-  /*
-   * The read-only surface's own framing. Everything from here to the memory
-   * sentence is M3-15E's and the product owner's to confirm. None of it offers
-   * a capability: the empty state says what a roadmap is, not how to get one,
-   * because nothing can create one yet.
-   */
   routeIntro:
     "Months of direction, not a week of sessions. This is the roadmap you have now, every version before it, and what was proposed along the way.",
   emptyRoadmapTitle: "No roadmap yet.",
@@ -319,6 +385,10 @@ export const ROADMAP_COPY = {
   supersededRoadmapsSupport: "Earlier versions stay readable and unchanged.",
   proposalsHeading: "Proposals",
   proposalsSupport: "What was proposed, and what became of it.",
+  /** The open proposal, shown in full above the roadmap it would replace. */
+  openProposalHeading: "A proposal is waiting",
+  openProposalSupport:
+    "Read it, change it, or turn it down. Your current roadmap stays exactly as it is until you accept.",
   /** M3-02's wording, restored unchanged; it was inlined before M3-11. */
   memoryCandidatesWaiting: (count: number) =>
     `${count} item${count === 1 ? "" : "s"} from a planning note are waiting for you. They are not used for coaching until you accept them.`,
@@ -327,6 +397,8 @@ export const ROADMAP_COPY = {
    * the current roadmap's horizon line and on each superseded version.
    */
   versionLabel: (versionNumber: number) => `Version ${versionNumber}`,
+  /** Every wording a Client Component renders; see that module for why. */
+  ...ROADMAP_CONTROL_COPY,
   /** `error.tsx` and `loading.tsx`; see that module for why it lives apart. */
   ...ROADMAP_ROUTE_STATE_COPY,
 } as const;

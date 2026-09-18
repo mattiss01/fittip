@@ -41,6 +41,34 @@ Validation records and their visual evidence are grouped by milestone.
 
 ## M3
 
+- [M3-15F roadmap generation, acceptance, and privilege re-grant](M3/M3-15F-VALIDATION.md)
+  — accepted 18 September 2026 against independently reviewed `a1cc456`, after
+  three review rounds, with CI run 35327589306 green and the hosted migration
+  applied by the product owner. One forward migration re-grants
+  `execute` on the five ADR-015 roadmap functions to `authenticated` and nobody
+  else, fixes M3-09 by treating a concurrent same-key `unique_violation` as the
+  replay it is, and gives `accept_roadmap_proposal` a working body again after
+  M3-11 replaced it with a stub naming two dropped tables. On the surface
+  M3-15E restored, an owner can generate, edit, decline, regenerate and accept a
+  roadmap; with no provider credential the built-in example coach answers and
+  everything it writes is labelled an example from its stored `provider_code`.
+  The two copy defects M3-15E deferred are fixed. Round 1 of independent review
+  returned a missing pgTAP test for the rewritten source recheck, a write path
+  the product owner chose to rebuild, a deleted architecture invariant and
+  several untrue claims in the record; all are corrected in `5a23a9e`,
+  `9267d94`, `a29edf2`, `49a9bd0` and `ba665b0`. The writes are ordinary form
+  actions again, covered by `@/lib/app-router/transition-watchdog` as on the
+  goal, memory and recurrence surfaces, and the four approved success sentences
+  are back. Round 2 did not approve `ba665b0`: a control that mounts after a
+  write inherited that write's reply and declared the next one lost 250 ms after
+  submit, reloading the page over a write still in flight. Corrected in
+  `93b03a4`, with the decision dock keyed by its proposal again (`2bf0997`), a
+  browser assertion that can fail on a false recovery (`7104519`) and unit cover
+  for the client mechanism that had none (`a1cc456`); review target `a1cc456`.
+  The hosted verification is deliberately
+  narrowed by the product owner to four CLI commands with no SQL, so the
+  privilege boundary is proven by pgTAP in continuous integration rather than
+  against the founder database
 - [M3-15E roadmap surface restoration](M3/M3-15E-VALIDATION.md) — Tier 2;
   round 1 of independent review returned two findings, both corrected in
   `4ee7565` (a provider session cap was suppressing the safety notice for an

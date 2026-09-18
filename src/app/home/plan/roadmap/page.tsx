@@ -36,20 +36,19 @@ import { TRAINING_HISTORY_WINDOW_DAYS } from "@/server/training/training-history
 export const dynamic = "force-dynamic";
 
 /**
- * The roadmap, read.
+ * The roadmap.
  *
- * M3-15E reopens this route from the M3-11 maintenance stub as a read surface
- * and nothing else. Everything the screen shows is read here, in one
- * owner-scoped pass, and handed down as one already-authorized
- * `RoadmapScreenState`. There is no Server Action, no form, and no cache
- * invalidation anywhere in this directory, because there is nothing here to
- * invalidate: generating, accepting, declining and editing a roadmap are
- * M3-15F, and the five ADR-015 functions that would do any of it stay revoked
- * from every role until that ticket restores them deliberately.
+ * This module still only reads. Everything the screen shows is read here, in
+ * one owner-scoped pass, and handed down as one already-authorized
+ * `RoadmapScreenState`; the writes live in `actions.ts` beside it, where each
+ * one re-derives the owner from verified claims and revalidates this path.
  *
- * That is also why no control on this surface is merely disabled. A greyed-out
- * "Generate roadmap proposal" would promise a capability that does not exist,
- * and an owner cannot tell a button that is waiting from one that is gone.
+ * M3-15E reopened the route as a read surface because the five ADR-015
+ * functions were revoked from every role, and it deliberately showed no
+ * control rather than a disabled one — an owner cannot tell a button that is
+ * waiting from one that is gone. M3-15F restores those grants, so the controls
+ * on this surface are present and all of them work. None of them is gated on an
+ * environment, and none appears without its capability.
  */
 export default async function RoadmapPage() {
   let state: RoadmapScreenState;
@@ -64,17 +63,17 @@ export default async function RoadmapPage() {
   return (
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
       <Link className={homeStyles.backLink} href="/home/plan">
-        ← Plan
+        {ROADMAP_COPY.backLink}
       </Link>
       <header className={homeStyles.masthead}>
         <div>
-          <p className={homeStyles.kicker}>FitTip / plan / roadmap</p>
-          <h1>Where this is going.</h1>
+          <p className={homeStyles.kicker}>{ROADMAP_COPY.routeKicker}</p>
+          <h1>{ROADMAP_COPY.routeTitle}</h1>
           <p className={homeStyles.intro}>{ROADMAP_COPY.routeIntro}</p>
         </div>
         <p className={homeStyles.stamp}>
           {state.current === null
-            ? "No roadmap yet"
+            ? ROADMAP_COPY.noRoadmapStamp
             : ROADMAP_COPY.versionLabel(state.current.versionNumber)}
         </p>
       </header>
@@ -145,9 +144,11 @@ async function loadRoadmapState(): Promise<RoadmapScreenState> {
 
   const { open: openProposal, declinedPredecessor, history } = reviewProposals;
   // While a proposal is open it is its own predecessor-in-waiting; once it is
-  // declined it is the predecessor. Read-only here, and carried so that the
-  // count M3-15F offers a regeneration against is derived from the records
-  // rather than from whatever the browser remembers.
+  // declined it is the predecessor. The count a regeneration is offered against
+  // is derived from the records rather than from whatever the browser
+  // remembers, which is also why the predecessor itself is carried down: the
+  // compose form sends it, and the database refuses a regeneration whose
+  // predecessor is not owned, declined, and on the same horizon.
   const regenerationSource = openProposal ?? declinedPredecessor;
 
   return {
@@ -157,6 +158,7 @@ async function loadRoadmapState(): Promise<RoadmapScreenState> {
     history: versions,
     openProposal,
     proposalHistory: history,
+    declinedPredecessor,
     openMemoryCandidateCount,
     goals,
     defaultEndDate: defaultRoadmapEndDate(today, goals),

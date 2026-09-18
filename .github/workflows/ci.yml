@@ -119,6 +119,9 @@ jobs:
       - name: M3-15A concurrent completion corrections
         run: npm run test:m3-15a-concurrency
 
+      - name: M3-15F concurrent same-key roadmap generation
+        run: npm run test:m3-15f-concurrency
+
       - name: M3-11 seeded legacy reset
         run: npm run test:m3-11-seeded-reset
 
@@ -269,6 +272,16 @@ jobs:
           .github/scripts/with-server.sh 3025 \
             npx playwright test --config=e2e/m3-15c.playwright.config.ts \
               --workers=1 --trace=retain-on-failure --output=test-results/m3-15c
+
+      - name: M3-15F roadmap generation
+        # Report every broken flow in one run, not just the first.
+        if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-15f
+        run: |
+          .github/scripts/with-server.sh 3026 \
+            npx playwright test --config=e2e/m3-15f.playwright.config.ts \
+              --workers=1 --trace=retain-on-failure --output=test-results/m3-15f
 
       - name: Upload Playwright report
         if: failure()

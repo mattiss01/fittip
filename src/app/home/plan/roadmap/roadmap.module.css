@@ -432,3 +432,219 @@
     transition: none;
   }
 }
+
+/* ---- Controls (M3-15F) --------------------------------------------------
+   The surface's one loud element stays the checkpoint notch on the spine, so
+   nothing here competes with it. A control reads as part of the survey rather
+   than as an app chrome button: hairline rules, the band colour, monospace
+   labels in the same register as the state chips, and a single square-cornered
+   primary. The only colour spent is the checkpoint terracotta, reused for the
+   example tag, because that tag is the one piece of metadata on this screen
+   that changes how the words under it should be read. */
+
+.form {
+  display: grid;
+  gap: 1.1rem;
+  margin-top: 1.1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.label {
+  color: var(--roadmap-spine);
+  font-family: "Courier New", monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--roadmap-spine);
+  border-radius: 0;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+}
+
+.textarea {
+  min-height: 5.5rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.input:read-only {
+  background: var(--roadmap-band);
+}
+
+.input:focus-visible,
+.textarea:focus-visible {
+  outline: 3px solid var(--accent-dark);
+  outline-offset: 2px;
+}
+
+.helper {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.counter {
+  color: var(--muted);
+  font-family: "Courier New", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.actions {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 1.1rem;
+}
+
+.actions form {
+  display: contents;
+}
+
+.primaryAction,
+.secondaryAction,
+.quietAction {
+  width: 100%;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--roadmap-spine);
+  border-radius: 0;
+  font-family: "Courier New", monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.primaryAction {
+  background: var(--roadmap-spine);
+  color: #f4f7ef;
+}
+
+.secondaryAction {
+  background: var(--roadmap-band);
+  color: var(--roadmap-spine);
+}
+
+.quietAction {
+  border-color: var(--border);
+  background: transparent;
+  color: var(--muted);
+}
+
+.primaryAction:disabled,
+.secondaryAction:disabled,
+.quietAction:disabled {
+  cursor: progress;
+  opacity: 0.55;
+}
+
+.primaryAction:focus-visible,
+.secondaryAction:focus-visible,
+.quietAction:focus-visible {
+  outline: 3px solid var(--accent-dark);
+  outline-offset: 2px;
+}
+
+/* What just happened, in the interface's voice. Every state shares one shape,
+   so a refusal is not dressed up as an alarm and a success is not a
+   celebration; the left rule carries the difference. */
+.notice {
+  margin: 1rem 0 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-left: var(--roadmap-rule) solid var(--roadmap-node);
+  background: #f4f7ef;
+  line-height: 1.5;
+}
+
+.notice[data-roadmap-notice="validation"],
+.notice[data-roadmap-notice="conflict"],
+.notice[data-roadmap-notice="cap-reached"],
+.notice[data-roadmap-notice="session"],
+.notice[data-roadmap-notice="pending"],
+.notice[data-roadmap-notice="lost-render"],
+.notice[data-roadmap-notice="recovered"],
+.notice[data-roadmap-notice="error"] {
+  border-left-color: var(--roadmap-checkpoint);
+  background: #fff4ec;
+}
+
+.pending {
+  margin: 0.9rem 0 0;
+  color: var(--muted);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* The one thing on this screen that changes how the words under it should be
+   read. Same register as a state chip, in the checkpoint colour, because it is
+   metadata about the record rather than part of it. */
+.exampleTag {
+  display: inline-block;
+  margin: 0.5rem 0 0;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid currentColor;
+  border-radius: 0.2rem;
+  color: var(--roadmap-checkpoint);
+  font-family: "Courier New", monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.uncertaintyLabel {
+  color: var(--roadmap-spine);
+  font-weight: 700;
+}
+
+/* The decision, set apart from the proposal it is about by the same rule the
+   spine is drawn with, so it reads as the end of the document rather than as
+   another section of it. */
+.dock {
+  margin-top: 1.6rem;
+  padding-top: 1.2rem;
+  border-top: var(--roadmap-rule) solid var(--roadmap-spine);
+}
+
+.editGroup {
+  margin: 0;
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  display: grid;
+  gap: 1rem;
+}
+
+.editLegend {
+  padding: 0 0.35rem;
+  color: var(--roadmap-node);
+  font-family: "Courier New", monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.editRow {
+  display: grid;
+  gap: 0.7rem;
+  padding-left: 0.7rem;
+  border-left: 2px solid var(--roadmap-band);
+}

@@ -1,3 +1,5 @@
+import { ExampleTag } from "./roadmap-body";
+
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import {
   ROADMAP_COPY,
@@ -5,19 +7,18 @@ import {
 } from "@/server/roadmap/roadmap-records";
 
 /**
- * A proposal as a record, never as something to act on.
+ * A proposal as a record.
  *
- * Every proposal the owner has ever had is permanent, and the state it ended
- * in is the point of showing it: a proposal M3-11 marked `expired` is not
- * missing and not still waiting, and a screen that showed neither would leave
- * the owner to guess which. Accepting, declining and editing are M3-15F, so
- * this file carries no button, no form, and no link that pretends to offer
- * one.
+ * Every proposal the owner has ever had is permanent, and the state it ended in
+ * is the point of showing it: a proposal M3-11 marked `expired` is not missing
+ * and not still waiting, and a screen that showed neither would leave the owner
+ * to guess which.
  *
- * Nor does it say one is coming. A state that cannot be acted on says so
- * outright, because "Awaiting your decision" over a screen with no way to
- * decide is the same inert affordance as a greyed-out button — it just
- * costs the owner a search of the interface to discover it.
+ * It is a record here and only here. The open proposal is decided on above, in
+ * full, by `RoadmapProposalReview`; this entry is its line in the history, so
+ * it repeats the state and the summary and offers no second set of controls.
+ * Two accept buttons for one proposal would be two answers to the question of
+ * where a decision is made.
  *
  * A missing decision alone does not make a proposal open. An owner edit
  * supersedes its source without deciding it, so the repository's `open` is the
@@ -53,21 +54,14 @@ export function RoadmapProposalRecord({
       <p className={styles.state} data-state={state}>
         {ROADMAP_COPY.proposalStateLabels[state]}
       </p>
+      <ExampleTag providerCode={proposal.providerCode} />
       <h3 className={styles.recordTitle}>{proposal.content.title}</h3>
       <p className={styles.horizon}>
         {ROADMAP_COPY.proposalOriginLabels[proposal.origin]} · {startDate} →{" "}
         {endDate}
       </p>
       {state === "open" ? (
-        <>
-          <p className={styles.recordBody}>{proposal.content.summary}</p>
-          {/* Without this the label above is an inert affordance in copy: it
-              says a decision is awaited while the application offers no way to
-              make one. */}
-          <p className={styles.recordNote}>
-            {ROADMAP_COPY.proposalDecisionUnavailable}
-          </p>
-        </>
+        <p className={styles.recordBody}>{proposal.content.summary}</p>
       ) : null}
       {state === "expired" ? (
         <p className={styles.recordNote}>{ROADMAP_COPY.proposalExpired}</p>

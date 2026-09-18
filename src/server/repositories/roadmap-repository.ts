@@ -16,11 +16,12 @@ import type {
   RoadmapProposal,
 } from "@/server/ai/contracts";
 import type { CoachAISourceReference } from "@/server/ai/context-source";
-import type {
-  RoadmapDecision,
-  RoadmapProposalOrigin,
-  RoadmapProposalView,
-  RoadmapVersionView,
+import {
+  UNKNOWN_PROVIDER_CODE,
+  type RoadmapDecision,
+  type RoadmapProposalOrigin,
+  type RoadmapProposalView,
+  type RoadmapVersionView,
 } from "@/server/roadmap/roadmap-records";
 
 /**
@@ -40,8 +41,20 @@ import type {
 type RoadmapClient = SupabaseClient<Database> | ServerUserClient;
 
 const PROPOSAL_COLUMNS =
-  "id, origin, source_proposal_id, planning_note, regeneration_feedback, content, created_at, generation_request_id" as const;
-const VERSION_COLUMNS = "id, version_number, content, accepted_at" as const;
+  "id, origin, source_proposal_id, planning_note, regeneration_feedback, provider_code, content, created_at, generation_request_id" as const;
+/**
+ * A version plus the provenance of the proposal it was accepted from.
+ *
+ * `roadmap_versions` has no provider column: it is an immutable copy of
+ * accepted content, and adding one would duplicate a fact the proposal already
+ * carries. The embedded select follows `source_proposal_id`, which the table
+ * requires, so every version resolves one. It is read under the owner `SELECT`
+ * policy on `roadmap_proposals` like any other proposal read — a version whose
+ * source belonged to someone else could not exist, and would be invisible here
+ * if it did.
+ */
+const VERSION_COLUMNS =
+  "id, version_number, content, accepted_at, roadmap_proposals!roadmap_versions_proposal_fkey(provider_code)" as const;
 
 export class RoadmapAuthenticationError extends Error {
   constructor(readonly accessError?: VerifiedUserAccessError) {
@@ -136,6 +149,7 @@ export class RoadmapRepository {
       versionNumber: Number(row.version_number),
       content: row.content as unknown as RoadmapProposal,
       acceptedAt: row.accepted_at,
+      providerCode: toProviderCode(row.roadmap_proposals),
     }));
   }
 
@@ -495,6 +509,26 @@ function conflictReason(message: string): RoadmapConflictReason {
   return "stale";
 }
 
+/**
+ * The provider code on an embedded proposal row.
+ *
+ * PostgREST returns a to-one embed as an object or, depending on how it
+ * resolves the relationship, as a one-element array; both are handled for the
+ * same reason `toRequest` handles both.
+ *
+ * An unreadable embed reports `UNKNOWN_PROVIDER_CODE`, which
+ * `isExampleAuthored` treats as an example. `source_proposal_id` is `not null`
+ * with a foreign key, so this cannot be a normal state — but if the
+ * relationship ever stopped resolving, the alternative was an accepted
+ * fixture-authored roadmap rendering as a real one with no error anywhere,
+ * which is the one direction the example-labelling invariant cannot afford.
+ */
+function toProviderCode(value: unknown): string {
+  const row = Array.isArray(value) ? value[0] : value;
+  const code = (row as { provider_code?: unknown } | null)?.provider_code;
+  return typeof code === "string" && code !== "" ? code : UNKNOWN_PROVIDER_CODE;
+}
+
 type DecisionRow = { decision: string };
 
 function toDecisionList(value: unknown): DecisionRow[] {
@@ -519,6 +553,7 @@ function toProposalView(row: {
   source_proposal_id: string | null;
   planning_note: string | null;
   regeneration_feedback: string | null;
+  provider_code: string;
   content: unknown;
   created_at: string;
   roadmap_proposal_decisions: unknown;
@@ -531,6 +566,7 @@ function toProposalView(row: {
     id: row.id,
     origin: row.origin as RoadmapProposalOrigin,
     sourceProposalId: row.source_proposal_id,
+    providerCode: row.provider_code,
     content: row.content as RoadmapProposal,
     planningNote: row.planning_note,
     regenerationFeedback: row.regeneration_feedback,
