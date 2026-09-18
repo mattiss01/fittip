@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import path from "node:path";
 
+import { watchConsoleErrors } from "./support/console-errors";
+
 // M3-12 reopened `/home/plan` against the rolling-plan model, M3-15B
 // reopened `/home/today` and `/home/log` against it and the completion seam,
 // M3-15C reopened `/home/progress` and added `/home/progress/[id]`, and
@@ -37,12 +39,10 @@ test.describe("M3-11 training maintenance", () => {
   }) => {
     expect(page.viewportSize()).toEqual({ width: 390, height: 844 });
     const pageErrors: Error[] = [];
-    const consoleErrors: string[] = [];
     const legacyRequests: string[] = [];
     page.on("pageerror", (error) => pageErrors.push(error));
-    page.on("console", (message) => {
-      if (message.type() === "error") consoleErrors.push(message.text());
-    });
+    // Shared with M3-14B so an offline segment added here is safe by default.
+    const consoleErrors = watchConsoleErrors(page);
     page.on("request", (outbound) => {
       if (legacyObjects.some((name) => outbound.url().includes(name))) {
         legacyRequests.push(outbound.url());
@@ -113,7 +113,7 @@ test.describe("M3-11 training maintenance", () => {
 
       expect(legacyRequests).toEqual([]);
       expect(pageErrors).toEqual([]);
-      expect(consoleErrors).toEqual([]);
+      expect(consoleErrors.errors).toEqual([]);
     } finally {
       await deleteLocalUser(request, account.userId);
     }

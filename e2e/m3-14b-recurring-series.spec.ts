@@ -7,6 +7,8 @@ import {
 } from "@playwright/test";
 import path from "node:path";
 
+import { watchConsoleErrors } from "./support/console-errors";
+
 const evidenceDirectory = path.join(
   process.cwd(),
   "docs",
@@ -30,11 +32,8 @@ test.describe("M3-14B recurring series surface", () => {
   }) => {
     expect(page.viewportSize()).toEqual({ width: 390, height: 844 });
     const pageErrors: Error[] = [];
-    const consoleErrors: string[] = [];
     page.on("pageerror", (error) => pageErrors.push(error));
-    page.on("console", (message) => {
-      if (message.type() === "error") consoleErrors.push(message.text());
-    });
+    const consoleErrors = watchConsoleErrors(page);
     const account = await createConfirmedLocalUser(request);
     const today = ownerDate(0);
     const dailyStart = ownerDate(1);
@@ -242,9 +241,9 @@ test.describe("M3-14B recurring series surface", () => {
       ).toBeVisible();
 
       // Existing honest recovery surfaces remain reachable.
-      await page.context().setOffline(true);
-      await expect(page.getByText(/^Offline\./)).toBeVisible();
-      await page.context().setOffline(false);
+      await consoleErrors.whileOffline(async () => {
+        await expect(page.getByText(/^Offline\./)).toBeVisible();
+      });
       await page.goto("/home/plan/series/new");
       await expect(page).toHaveURL(/\/home\/plan$/);
 
@@ -272,7 +271,7 @@ test.describe("M3-14B recurring series surface", () => {
         path: path.join(evidenceDirectory, "M3-14B-390x844.png"),
       });
       expect(pageErrors).toEqual([]);
-      expect(consoleErrors).toEqual([]);
+      expect(consoleErrors.errors).toEqual([]);
     } finally {
       await page.context().setOffline(false);
       await deleteLocalUser(request, account.userId);

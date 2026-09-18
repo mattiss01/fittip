@@ -9,7 +9,9 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
-    exclude: [".worktrees/**", "e2e/**", "node_modules/**"],
+    // Playwright owns the browser flows; the helpers beside them are ordinary
+    // units and run here.
+    exclude: [".worktrees/**", "e2e/**/*.spec.ts", "node_modules/**"],
     setupFiles: ["./src/test/setup.ts"],
   },
 });

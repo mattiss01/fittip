@@ -11,8 +11,9 @@ paths:
 
 ## Vitest (`*.test.ts[x]`, jsdom)
 
-- Co-locate the test beside its subject. `e2e/`, `.worktrees/`, and `node_modules` are excluded
-  by `vitest.config.ts`.
+- Co-locate the test beside its subject. `vitest.config.ts` excludes `e2e/**/*.spec.ts`,
+  `.worktrees/`, and `node_modules` — Playwright owns the browser flows, but helpers under
+  `e2e/support/` are ordinary units and are tested here.
 - Import through the `@/` alias, as the app does.
 - Suites must be deterministic and isolated: no wall-clock timers, no shared module state, no
   ordering dependency. A timer in a subscription previously made the parallel component suite
