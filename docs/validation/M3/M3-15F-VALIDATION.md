@@ -8,10 +8,12 @@ hosted founder apply, the Vercel Preview pass, and product-owner acceptance.
 **Branch:** `ticket/m3-15f-roadmap-generation`
 **Base:** `45acd9b`
 **Implementation review target:**
-`ba665b031edb2f36a096d72ed85518a144a2ee4d` (`ba665b0`). This is the last source
-commit. The commit that updates this record changes no application file, which
-is the evidence-commit exception in `AGENTS.md`.
-**Review range:** `git diff 45acd9b..ba665b0`
+`a1cc456` — the last source commit, and round three's. `ba665b0` was round
+two's and is superseded; approval of it, and of any Preview built from it, does
+not carry over. The commits that update this record change no application file,
+which is the evidence-commit exception in `AGENTS.md`.
+**Review range:** `git diff 45acd9b..a1cc456`, with the documentation commits
+above it in the same branch range.
 
 Implementation commits, in order:
 
@@ -33,6 +35,10 @@ Implementation commits, in order:
 | `a29edf2` | The roadmap Supabase import ban narrowed rather than deleted.              |
 | `49a9bd0` | Unreadable roadmap provenance fails closed.                                |
 | `ba665b0` | The recovery marker no longer outlives a cancelled reload.                 |
+| `93b03a4` | A fresh control no longer inherits the previous write's reply.             |
+| `2bf0997` | `key={proposal.id}` restored on the decision dock.                         |
+| `7104519` | The browser flow asserts the approved sentence with no way out.            |
+| `a1cc456` | Unit cover for the outcome store and the watch notice.                     |
 
 Commits `8dfbbdd` through `68958da` are one defect and the attempts to fix it.
 They are kept as history rather than squashed, because the record of what did
@@ -530,10 +536,13 @@ These checks were run locally during implementation, with these results:
 | The same harness against M3-02's original `begin_roadmap_generation`                                                                               | Fails in round 1 with `23505 duplicate key value violates unique constraint "roadmap_generation_requests_key_key"`, which is the defect                                                                               |
 | Committed types compared with a clean regeneration                                                                                                 | Byte-identical; no schema-visible change                                                                                                                                                                              |
 | `npx.cmd playwright test --config=e2e/m3-15f.playwright.config.ts` (port 3026), against `68958da`                                                  | **1 passed**, then with `--repeat-each=2` **2 passed**; 0 skipped, 0 failed                                                                                                                                           |
-| The same flow against `ba665b0`, against `build` + `start`                                                                                         | **1 passed**, **1 passed**, then `--repeat-each=2` **2 passed**. Four consecutive runs, 0 skipped, 0 failed, 11-15 s each. The run before `ba665b0` failed on the false recovery notice it fixes.                      |
+| The same flow against `ba665b0`, against `build` + `start`                                                                                         | **1 passed**, **1 passed**, then `--repeat-each=2` **2 passed**. Four consecutive runs, 0 skipped, 0 failed, 11-15 s each. The run before `ba665b0` showed a false recovery notice; `ba665b0` removed the stale marker, not the false verdict behind it — see *Correction after the second independent review*, section 1. |
 | `npx.cmd supabase test db --local supabase/tests/database/m3_15f_roadmap_generation.test.sql`, against `5a23a9e`                                    | 56 tests, all pass                                                                                                                                                                                                    |
 | `npm.cmd run test:run` (whole suite), against `49a9bd0`                                                                                            | 82 files, 969 passed, 2 skipped                                                                                                                                                                                       |
 | The same flow against `b9b321d` through `f83f213`                                                                                                  | Failed each time, as described in *The defect the browser flow found*                                                                                                                                                 |
+| `npm.cmd run test:run -- src/components/roadmap/`, against `a1cc456`                                                                               | 5 files, 18 tests, pass                                                                                                                                                                                               |
+| The same flow against `a1cc456`, against `build` + `start`                                                                                         | **5 of 5 passed**, 0 skipped, 0 failed, 13-21 s each, with `expectOutcome` tightened so a recovery notice can no longer stand in for the sentence                                                                      |
+| The same flow with only `use-roadmap-write.ts` reverted to `ba665b0`                                                                               | **Failed 3 of 3** consecutive runs, at spec lines 138, 155 and 174 — the edit, the decline and the regeneration. The negative control for the round-three blocker.                                                     |
 | `git diff --check`                                                                                                                                 | Clean                                                                                                                                                                                                                 |
 
 The local Supabase and Playwright runs above were for development and debugging;
@@ -545,6 +554,9 @@ Two of these results are still worth reading as evidence:
   tests the fix rather than the scheduler.
 - Three consecutive passes of the browser flow after five configurations that
   failed.
+- The negative control on the browser flow itself, added in round three:
+  reverting `use-roadmap-write.ts` alone fails the same spec three times out of
+  three, at the three writes that follow another write.
 
 ### Project-skill rules applied
 
@@ -761,18 +773,31 @@ into the brief; it is a decision, not an omission.
 14. **The decline confirmation is `window.confirm`.** It matches the
     surrounding surfaces and works from the keyboard, but it is unstyled, and it
     is the one part of this surface that does not look like FitTip.
+15. **This checkout has no `.env.local`, so `build` + `start` produces an app
+    that cannot sign in.** Nothing is wrong with it; the file is uncommitted by
+    design and simply is not here. Both commands need
+    `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in
+    their own environment — `start` as much as `build`, because no Supabase
+    coordinate is baked into the client bundle on this surface
+    (`createBrowserUserClient` has no callers; every read and write is
+    server-side) — and the Playwright process additionally needs
+    `SUPABASE_SERVICE_ROLE_KEY` for its disposable account. Without them the
+    flow fails inside `signIn`, at `expect(page).toHaveURL(/\/home\/today$/)`,
+    which reads like a roadmap defect and is not one. Recorded because it cost
+    a round-three run to diagnose. CI is unaffected: each job derives its own
+    container's ephemeral coordinates.
 
 ## Independent reviewer checklist
 
-Review `ba665b031edb2f36a096d72ed85518a144a2ee4d`, using
-`git diff 45acd9b..ba665b0`. Confirm that the continuous-integration run for
-that exact SHA is green and that the matching Vercel Preview reached `READY`.
-Do not re-run lint, typecheck, `test:run`, `build` or the browser flow; the CI
-run covers them.
+Review `a1cc456`, using `git diff 45acd9b..a1cc456`. Confirm that the
+continuous-integration run for that exact SHA is green and that the matching
+Vercel Preview reached `READY`. Do not re-run lint, typecheck, `test:run`,
+`build` or the browser flow; the CI run covers them.
 
-Round two. The migration is unchanged since the first review read it, so items
-1, 2 and 10 stand as already-answered unless the diff says otherwise; items 11
-to 13 are the corrections made since.
+Round three. The migration is unchanged since the first review read it, so items
+1, 2 and 10 stand as already-answered unless the diff says otherwise. Items 11
+to 13 were round two's. Items 14 to 16 are round three's, and item 3's fourth
+bullet is reversed from what round two read: the dock is keyed again.
 
 These need judgment that CI cannot supply:
 
@@ -797,8 +822,9 @@ These need judgment that CI cannot supply:
    - Is any refusal path lost — a status that reaches `roadmap-outcome.tsx`
      when it should render beside its control, or the reverse?
    - Can a second press start a second write while one is pending?
-   - The decision dock is no longer keyed by its proposal. Can a stale editor,
-     a stale draft or a stale reply survive an edit that lands?
+   - The decision dock is keyed by its proposal again (`2bf0997`). Can a stale
+     editor, a stale draft or a stale reply survive an edit that lands — and
+     can the remount discard anything the owner still needed?
 4. **The example label.** Is it read from `provider_code` everywhere and never
    inferred from `origin`? Does the version path read it through
    `source_proposal_id` under the owner policy? Does an unreadable read now fail
@@ -836,6 +862,26 @@ These need judgment that CI cannot supply:
 13. **The recovery marker** (`ba665b0`). Does a reload that actually fires still
     leave an explanation for the document it produces, and does a cancelled one
     leave none?
+14. **The watch's baseline** (`93b03a4`). It is taken in the action rather than
+    in the watch effect, which is the whole fix; read *Correction after the
+    second independent review*, section 1, then judge it. Can any response that
+    answers *this* write be treated as accounted for — in particular one that
+    beats the pending render, which is the case the watchdog was built for? Can
+    any response that answers an earlier write still be read as this one's,
+    across a remount or between the three sibling hooks in the dock? Is the
+    fallback when the ref is unset (`performance.now()` in the effect) safe, or
+    does it restore the old behaviour in some path?
+15. **The browser flow's tightened assertion** (`7104519`). `expectOutcome` no
+    longer accepts a recovery notice in place of the sentence. Is every one of
+    the four approved sentences now genuinely asserted on every path, and is
+    the `count 0` on `[data-roadmap-notice="recovered"]` in the right place to
+    catch a false recovery rather than race one?
+16. **The four new client test files** (`93b03a4`, `2bf0997`, `a1cc456`). They
+    stub `PerformanceObserver`, `performance.now` and the timers, and mock the
+    Server Actions module. Does any of that stub away the thing being asserted?
+    The claim to check is that `use-roadmap-write.test.tsx` fails against
+    `ba665b0` and `roadmap-decision-dock.test.tsx` fails without the key; both
+    are cheap to verify by reverting the one file and running the one test.
 
 ## Correction after the first continuous-integration run
 
@@ -969,11 +1015,15 @@ position, so the revalidated tree reconciles onto the same instance. A refusal
 is deliberately not routed there; it belongs next to the control the owner has
 to act on.
 
-`7630b4f`'s `key={proposal.id}` on the decision dock is removed for the same
-reason: it would remount the dock on a successful edit and discard that edit's
-sentence. What the key was reaching for is covered by closing the editor during
-the render that sees its own reply come back `edited`, and by the watchdog for a
-reply that never renders at all.
+`7630b4f`'s `key={proposal.id}` on the decision dock is removed for what looked
+like the same reason: that it would remount the dock on a successful edit and
+discard that edit's sentence. **That reasoning was wrong, and `2bf0997` puts the
+key back** — see *Correction after the second independent review*, section 2.
+The sentence had already moved out of the dock in this same commit, into
+`roadmap-outcome.tsx` two paragraphs above, so no remount here could reach it.
+The rest of this paragraph's claim stands: closing the editor during the render
+that sees its own reply come back `edited` is still there, and still does
+something the key does not.
 
 `RoadmapActionState` loses `proposalId` and `memoryCandidateCount`, the first
 contract defect the review found: no action ever set either. `draft` stays and
@@ -997,13 +1047,23 @@ the two counted fields are re-seeded from it during render.
 
 **What the browser flow then caught.** A watchdog verdict arms a reload behind a
 readable notice and sets the session marker that explains it afterwards. When
-the lost transition landed inside that half-second window the timeout was
-cleared and no reload happened — but the marker stayed set, so the next control
-to mount with nothing submitted told the owner "this page was reloaded" when it
-had not been. The regeneration's own success sentence and that false explanation
-were on screen together. `ba665b0` drops the marker with the cancelled timeout;
-only a reload that actually fired leaves it standing, and that path replaces the
-document rather than running the cleanup.
+the timeout was cleared before it fired, no reload happened — but the marker
+stayed set, so the next control to mount with nothing submitted told the owner
+"this page was reloaded" when it had not been. The regeneration's own success
+sentence and that false explanation were on screen together. `ba665b0` drops the
+marker with the cancelled timeout; only a reload that actually fired leaves it
+standing, and that path replaces the document rather than running the cleanup.
+
+**That fix is correct and is kept, but it is not what was wrong here.** This
+paragraph originally read that "the lost transition landed inside that
+half-second window", which cannot be what happened: a transition that lands
+within 500 ms is not a lost render. The regeneration was never lost. The verdict
+that armed the reload was false, because the control watching it had inherited
+the reply to the decline that preceded it — the blocker round two found, fixed
+in `93b03a4` and described in *Correction after the second independent review*,
+section 1. `ba665b0` cleaned up a marker that should never have been set,
+because the reload it explained should never have been armed. Nothing in this
+record credits `ba665b0` with fixing the false recovery itself.
 
 ### 3. The deleted architecture invariant is narrowed, not gone
 
@@ -1047,3 +1107,169 @@ carry over. The continuous-integration run for `ba665b0` is the automated
 evidence and is not yet available at the time of writing; the commit that adds
 this correction changes no application file, which is the evidence-commit
 exception in `AGENTS.md`.
+
+## Correction after the second independent review
+
+The second review did not approve `ba665b0`. Round one's two blockers were
+confirmed closed and are not revisited. Everything below is new, and everything
+the second review confirmed clean — `49a9bd0`'s fail-closed provenance,
+`a29edf2`'s narrowed invariant, `5a23a9e`'s pgTAP, `ba665b0`'s marker cleanup,
+no double submit, no lost update, the hosted evidence — is untouched by it.
+
+### 1. A freshly-mounted control inherited the previous write's reply
+
+**The blocker.** `useLostRenderRecovery` observes resource timings with
+`observer.observe({ type: "resource", buffered: true })`. `buffered: true`
+replays, at mount, every resource entry already on the timeline. The timeline
+belongs to the document, not to the control reading it, so the newest entry
+named by the action URL is frequently the reply to a write that completed
+*before this control existed*. `respondedAt.current` was set from it, and
+`consumedAt.current` was `null` on a fresh mount and was written only in the
+pending effect's cleanup. `watchTransition` therefore computed
+`unaccountedFor = true` and `now - respondedAt >= RENDER_GRACE_MS = true` on the
+very first interval tick: **`lost-render` 250 ms after submit, with nothing
+wrong**, the notice on screen, the session marker set, and
+`window.location.reload()` 500 ms later over a write that was still in flight.
+
+This is structural on this surface rather than a race. `RoadmapScreen` renders
+the composer *or* the review, so every control here mounts after a write: a
+generation lands and the review and `RoadmapDecisionDock` mount; a decline or an
+accept lands and the composer mounts. The first write from any of them was armed
+to false-recover. Accept immediately after a generation, and the regeneration
+immediately after a decline, were both on that path — and the regeneration is
+the slowest write on the surface, which is exactly the one
+`use-roadmap-write.ts` says must keep waiting rather than be declared lost.
+
+**A second case the review did not name, fixed by the same change.** The three
+`useRoadmapWrite` hooks in the decision dock are siblings in one mount and share
+the document's timeline. An accept that refuses with a conflict leaves the dock
+on screen; the reply to it then sat in `respondedAt` for *decline* and *edit*
+with their `consumedAt` still `null`, so whichever the owner pressed next was
+armed the same way, without any remount at all. Filtering on the mount instant
+alone would not have caught this.
+
+**The fix** (`93b03a4`), confined to `use-roadmap-write.ts`. The baseline is the
+instant the write itself left the browser: `performance.now()` recorded at the
+top of the action wrapper in `useRoadmapWrite`, and passed to
+`useLostRenderRecovery` as both `submittedAt` and `consumedAt`. Everything the
+timeline held before that instant answered some earlier write and is accounted
+for; everything after it is this write's. The `consumedAt` ref and the cleanup
+assignment that maintained it are gone, subsumed by it.
+
+**Why the baseline is taken in the action and not in the watch effect.** The
+effect runs only once the pending render commits, and a reply can beat that
+commit — which is the case `watchTransition`'s own doc comment says the
+`consumedAt` comparison exists to catch. A baseline taken in the effect would
+have swallowed precisely the response the watch is for. Taken in the action it
+is strictly earlier than the request it describes, because the wrapper runs
+before `action()` issues anything.
+
+`src/lib/app-router/transition-watchdog.ts` is **unchanged**. Four other
+surfaces read it, and its exported behaviour is not this ticket's to move.
+
+**What this means for `ba665b0` and for known limitation 4.** `ba665b0` is
+correct and is kept: a cancelled reload must not leave a marker claiming the
+page was reloaded. But the reload it cleaned up should never have been armed.
+Its commit message and this record described a verdict arming a reload on a
+regeneration whose transition "landed inside that half-second window" — and a
+transition that lands within 500 ms was never a lost render. That was this
+blocker, seen from the wrong end. Known limitation 4 misdiagnosed it as a 750 ms
+tuning limit and has been corrected; *Correction after the independent review*,
+section 2, has been corrected too. Nothing in this record now credits `ba665b0`
+with fixing the false recovery.
+
+### 2. The dock is keyed by its proposal again
+
+`2bf0997` restores `7630b4f`'s `key={proposal.id}` on `RoadmapDecisionDock`.
+
+The reason recorded for removing it does not hold under the design that
+shipped. It was removed to stop a remount discarding the sentence a landed edit
+earned — but the same commit moved that sentence out of the dock entirely, into
+`roadmap-outcome.tsx`, rendered once by `RoadmapScreen` above the whole review.
+No remount inside the review can reach it.
+
+What the missing key cost: press Accept, get a conflict refusal rendered from
+`latest`; press Edit and save; the edit lands and `proposalId` becomes the new
+proposal, but `accept.state` still holds the conflict, so the dock under a
+brand-new proposal shows a refusal about the one before it.
+
+The render-phase editor close is kept, and is not the same mechanism. An edit's
+reply and the revalidated tree carrying the new proposal need not commit
+together; between those two commits this dock is still the old proposal's, and
+the close is what stops the editor painting over superseded content there.
+
+### 3. The browser flow can fail on the message again
+
+`7104519`. `expectOutcome` passed if the approved sentence appeared **or** any
+`[data-roadmap-notice="recovered"]` was visible. That made the four approved
+sentences unassertable on every path the watchdog touched — which, per section
+1, was every write after the first. `ba665b0` had also added `.first()` there,
+removing the strict-mode ambiguity that had been the only signal catching the
+false recovery at all.
+
+It now asserts the sentence with no disjunction, and asserts
+`[data-roadmap-notice="recovered"]` has count 0, once per write. A genuine lost
+render on this flow now fails the run loudly and is attributable, which is the
+point: it is either the upstream defect actually occurring or a new way of
+mistaking a healthy write for a stuck one, and only a failure tells them apart.
+
+### 4. The new client mechanism has unit cover
+
+None of `use-roadmap-write.ts`, `roadmap-outcome.tsx`,
+`roadmap-watch-notice.tsx` or the dock had a test file, which is why the blocker
+reached review. Four files were added, following the two precedents in this
+repository — `transition-watchdog.test.ts` for pure timing and
+`roadmap-proposal-record.test.tsx` for a jsdom component test.
+
+- `use-roadmap-write.test.tsx` — the blocker directly. It stubs
+  `PerformanceObserver` so a buffered entry from an earlier write is replayed at
+  mount, stubs `performance.now` so both sides of the comparison can be placed
+  by hand, and fakes only the timers. It asserts the verdict *and* the inputs
+  `useLostRenderRecovery` supplies to `watchTransition`, so a future change
+  cannot reach the same verdict by a different route. Three cases: an inherited
+  reply is accounted for; a reply that arrives for this write and never renders
+  is still reported; nothing is armed and no marker is written until a write is
+  actually submitted.
+- `roadmap-decision-dock.test.tsx` — a refusal is dropped when the proposal
+  under it is replaced, and kept while its own proposal is still the open one.
+- `roadmap-outcome.test.tsx` — the module-level store shows a landed write's
+  sentence, clears rather than shows a reply that did not land, and does not
+  survive the surface it belongs to.
+- `roadmap-watch-notice.test.tsx` — the two approved wordings, and silence on a
+  healthy write.
+
+### Evidence for this round
+
+Local, on this branch, with Docker and the local Supabase stack at
+`20260916075522`. The continuous-integration run for `a1cc456` is the
+automated-test evidence and is not available at the time of writing.
+
+- `npm.cmd run typecheck`, `npm.cmd run lint`, `git diff --check`, and
+  `npx.cmd prettier --check` on every changed file — all clean.
+- `npm.cmd run test:run -- src/components/roadmap/` — 5 files, 18 tests, pass.
+- The M3-15F browser flow on `build` + `start` at port 3026, with the tightened
+  assertions: **5 of 5 passed**, 13–21 s each. No synthetic account left behind
+  (`select count(*) from auth.users where email like 'fittip-m3-15f-%'` → 0).
+
+**The negative control, which is what makes this a fix rather than an
+assertion.** The same tightened spec was run against a build with only
+`src/components/roadmap/use-roadmap-write.ts` reverted to `ba665b0` and
+everything else unchanged. It **failed 3 of 3 consecutive runs**, at spec lines
+138, 155 and 174 — the edit, the decline and the regeneration, each being the
+write that follows one that had already answered, which is precisely the
+population section 1 describes. Two earlier reverted runs, on an idle machine,
+passed: the false verdict needs the write to still be in flight 250 ms after
+submit, so an unloaded machine hides it. That timing dependence is why the
+defect reached review, and it is why the unit test rather than the browser flow
+is the deterministic half of this evidence — `use-roadmap-write.test.tsx` fails
+against `ba665b0` every time, reporting `lost` for an untouched write, with
+jsdom logging the navigation the spurious reload attempted.
+
+The four `docs/validation/M3/evidence/*.png` were rewritten by these runs and
+restored afterwards. The surface did not change; they differ only because the
+fixture roadmap's dates move with the day the flow runs.
+
+`a1cc456` supersedes `ba665b0` as the implementation review target. Approval of
+any earlier commit on this branch, and of any Preview built from one, does not
+carry over. The commits that add this correction change no application file,
+which is the evidence-commit exception in `AGENTS.md`.

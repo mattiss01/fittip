@@ -59,7 +59,13 @@ Validation records and their visual evidence are grouped by milestone.
   `9267d94`, `a29edf2`, `49a9bd0` and `ba665b0`. The writes are ordinary form
   actions again, covered by `@/lib/app-router/transition-watchdog` as on the
   goal, memory and recurrence surfaces, and the four approved success sentences
-  are back; review target `ba665b0`. The hosted verification is deliberately
+  are back. Round 2 did not approve `ba665b0`: a control that mounts after a
+  write inherited that write's reply and declared the next one lost 250 ms after
+  submit, reloading the page over a write still in flight. Corrected in
+  `93b03a4`, with the decision dock keyed by its proposal again (`2bf0997`), a
+  browser assertion that can fail on a false recovery (`7104519`) and unit cover
+  for the client mechanism that had none (`a1cc456`); review target `a1cc456`.
+  The hosted verification is deliberately
   narrowed by the product owner to four CLI commands with no SQL, so the
   privilege boundary is proven by pgTAP in continuous integration rather than
   against the founder database
