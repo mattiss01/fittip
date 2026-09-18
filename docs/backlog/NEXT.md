@@ -13,11 +13,27 @@ before any code is written.
 1. `[x]` **Offline console assertion flake** — fixed by scoping the collector to the
    deliberate offline window, which stays open until the interrupted requests settle and
    their reports arrive. ([M3-22](M3/M3-22-OFFLINE-CONSOLE-ASSERTION-FLAKE.md))
-2. `[ ]` **Completion write follow-ups** — a duplicate log is refused with the wrong reason,
-   and an unplanned log's title cannot be corrected after it is written. Careful lane: both
-   change the accepted `apply_completion_change` and need a forward migration. Open question
-   for the owner: whether the title fix justifies a migration, and whether the two ship
-   together. ([M3-23](M3/M3-23-COMPLETION-WRITE-FOLLOW-UPS.md))
+2. `[~]` **Completion write follow-ups** — three fixes to the completion write path, shipped
+   together on one forward migration to `apply_completion_change`.
+   ([M3-23](M3/M3-23-COMPLETION-WRITE-FOLLOW-UPS.md))
+   - **Wrong duplicate message.** The function already says "That session already has a
+     completion", but raises it as `22023`, which the repository collapses into the generic
+     validation error. Give that branch its own errcode and message, **and** add a
+     by-session read so the form can say it before the owner fills anything in — today
+     `CompletionLog.list` is bounded by `actual_local_date`, so a completion written on
+     another day is invisible to the surface.
+   - **Unplanned title and sport are permanent.** Admit an `activities` key on the edit
+     branch when `plan_session_id` is null, replacing the list wholesale. The planned link
+     stays immutable, and this must not grow into the general activity editor M3-15A
+     described.
+   - **Future dates.** Refuse an `actualLocalDate` after owner-local today for **every**
+     completion, planned or not (owner's decision, 18 Sep 2026 — the argument doesn't depend
+     on whether it was planned, and it is their data). Anchor it in the zone the completion
+     stores, not the current profile zone. Add `max` on the date input so the owner is
+     stopped before the round trip, but the rule lives in the write function: a check only
+     the form performs is a courtesy, not a constraint.
+   - Careful lane: forward migration only, pgTAP for the new branches, owner applies the
+     migration and checks the Preview before merge.
 3. `[ ]` **AI proposal application** — the core loop: a fresh Coach proposal composed with
    current plan content, per-item choices, direct plan edits, an atomic finish-review,
    discard, locks, and conflicts. Today Coach can propose but nothing can be applied.
