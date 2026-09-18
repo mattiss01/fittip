@@ -70,7 +70,8 @@
       "Bash(gh run list *)",
       "Bash(gh run view *)",
       "Bash(gh run watch *)",
-      "Bash(gh run download *)"
+      "Bash(gh run download *)",
+      "Bash(gh run rerun *)"
     ],
     "deny": [
       "Bash(rm -rf *)",
@@ -100,12 +101,6 @@
       "Bash(vercel --prod *)",
       "Bash(vercel env *)",
       "Bash(npm publish *)",
-      "Write(./AGENTS.md)",
-      "Edit(./AGENTS.md)",
-      "Write(./.agents/**)",
-      "Edit(./.agents/**)",
-      "Write(./skills-lock.json)",
-      "Edit(./skills-lock.json)",
       "Write(./src/lib/supabase/database.types.ts)",
       "Edit(./src/lib/supabase/database.types.ts)",
       "Read(./.env)",
