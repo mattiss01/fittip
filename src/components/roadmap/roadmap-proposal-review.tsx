@@ -62,11 +62,16 @@ export function RoadmapProposalReview({
         />
       </article>
 
-      {/* Deliberately not keyed by the proposal. An edit replaces the open
-          proposal at this exact position, and remounting the dock there would
-          discard the sentence that edit just earned; the dock says how it
-          stays correct across that instead. */}
+      {/* Keyed by the proposal, because the dock's state is about one proposal
+          and nothing in it should outlive the proposal it described. An edit
+          replaces the open proposal at this exact position, and without the key
+          a refusal about the proposal that was here — a stale conflict on
+          accept, say — would render under the new one. The sentence a landed
+          write earns is not at risk: it lives in `roadmap-outcome.tsx`, which
+          `RoadmapScreen` renders above all of this and no remount here can
+          touch. */}
       <RoadmapDecisionDock
+        key={proposal.id}
         proposalId={proposal.id}
         content={proposal.content}
         expectedHeadRevision={expectedHeadRevision}

@@ -44,17 +44,25 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
  * independent submissions with their own pending flags, and sharing state
  * would make one control's reply appear under another.
  *
- * ## Why this component is not keyed by its proposal
+ * ## Why this component is keyed by its proposal
  *
- * An edit is the one write that replaces the open proposal under a control that
- * stays on screen: generation removes the compose form, and acceptance and
- * decline remove the review, so each of those discards the component that
- * submitted. Keying this dock by the proposal would remount it on a successful
- * edit and throw away the approved sentence that edit just earned. What the key
- * was reaching for — an editor left open over a record it was never about — is
- * handled where it belongs: the editor is closed during the render that sees
- * its own submission come back edited, and a reply that never renders at all is
- * the watchdog's case.
+ * Everything it holds — three replies, the editor's open state, the draft
+ * inside it — is about one proposal, and an edit is the one write that replaces
+ * the open proposal under a control that stays on screen. Without the key that
+ * state would carry over: press Accept, get a conflict, edit and save, and the
+ * dock under a brand-new proposal still shows a refusal about the one before
+ * it. The key ends each proposal's dock with the proposal.
+ *
+ * It costs nothing to do so. The sentence a landed write earns does not live
+ * here — `roadmap-outcome.tsx` holds it and `RoadmapScreen` renders it above
+ * this whole section, precisely because every control on this surface is
+ * removed by the write it performs.
+ *
+ * The editor is also closed during the render that sees its own submission come
+ * back `edited`, which is not the same thing as the key: an edit's reply and
+ * the revalidated tree that carries the new proposal need not commit together,
+ * and between those two commits this dock is still the old proposal's. A reply
+ * that never renders at all is the watchdog's case.
  *
  * The client boundary stops here. Everything above this component — the
  * proposal itself, the spine, the example label — is rendered on the server, so
