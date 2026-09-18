@@ -527,7 +527,9 @@ select throws_ok(
     jsonb_build_object(
       'planSessionId', '7f000000-0000-4000-8000-0000000000b1',
       'status', 'completed', 'actualLocalDate', '2026-01-01', 'activities', '[]'::jsonb))$$,
-  '22023', 'That session already has a completion.',
+  -- M3-23 gave this branch its own errcode. `22023` said nothing the surface
+  -- could act on, so the owner was told to check numbers that were correct.
+  'PT431', 'That session already has a completion.',
   'one planned session carries at most one completion; a second logging is an edit');
 select throws_ok(
   $$select * from public.apply_completion_change('create', null, null,
