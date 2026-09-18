@@ -227,14 +227,17 @@ These files have a purpose that the path and diff do not make obvious:
   both the accepted version and the open proposal. They are the same document at
   two moments, and showing a proposal in less detail than the version it would
   become would ask the owner to decide on less than what gets written. It also
-  exports `ExampleTag`, the only place that checks for `fixture`.
+  exports `ExampleTag`. Since `49a9bd0` the predicate that decides an example is
+  `isExampleAuthored` in `src/server/roadmap/roadmap-records.ts:228`, and two
+  places call it: `ExampleTag` and the open proposal's notice in
+  `roadmap-proposal-review.tsx`. No surface compares against `fixture` itself.
 - `src/components/roadmap/roadmap-proposal-review.tsx` renders the open proposal
   in full, with the decision dock. It is a Server Component rendering a client
   dock, so the only roadmap content sent to the browser is the body the editor
-  needs. `7630b4f`'s `key={proposal.id}` on the dock is **removed** by
-  `9267d94`: an edit replaces the open proposal at that position, and remounting
-  the dock there discards the sentence the edit earned. The dock now says in its
-  own comment how it stays correct across an edit without the key.
+  needs. `7630b4f`'s `key={proposal.id}` on the dock was removed by `9267d94`
+  and is **restored** by `2bf0997`; see *Correction after the second
+  independent review*, section 2, for why the reason given for removing it did
+  not hold.
 - `src/app/home/plan/roadmap/action-state.ts` holds the action result type and
   its initial value. It is separate from `actions.ts` because a `use server`
   module may export only async functions, and the client components need both.
@@ -573,10 +576,14 @@ Two of these results are still worth reading as evidence:
 - `rendering-conditional-render`: ternaries throughout, never `&&`.
 - `rerender-lazy-state-init`: the editor copies the draft through a lazy
   initializer, so abandoning an edit leaves the proposal under review untouched.
-- `rendering-usetransition-loading` was **deliberately not followed**. The
-  browser evidence above shows that transition-wrapped and form-action
-  submission did not reliably resolve on this route. `useRoadmapWrite` keeps a
-  plain `saving` flag instead.
+- `rendering-usetransition-loading` was **deliberately not followed** at
+  `68958da`, which is the tree this list was written against: the browser
+  evidence above showed transition-wrapped and form-action submission not
+  reliably resolving on this route, and that `useRoadmapWrite` kept a plain
+  `saving` flag. `9267d94` reversed it. The shipped rule is the one recorded
+  under *Correction after the independent review* — the flag is
+  `useActionState`'s own `pending` — and that entry, not this one, describes the
+  code under review.
 
 **`frontend-design`:**
 
@@ -696,12 +703,18 @@ into the brief; it is a decision, not an omission.
    removing the watchdog is that measurement — extending
    `e2e/m2-09-lost-render.probe.ts` with a phase per surface — and it does not
    exist yet. Three other surfaces keep the watchdog for the same reason.
-4. **The watchdog's render grace is 750 ms, and this is the heaviest of the four
-   surfaces.** A commit slower than that is read as a lost render. The recovery
-   is safe — the reload shows exactly what is stored — but a spurious reload is
-   a visible flash, and one local run tripped it on a regeneration before
-   `ba665b0`. Raising `RENDER_GRACE_MS` would change the goal, memory and
-   recurrence surfaces too, which is out of this ticket's scope.
+4. **The watchdog can still only observe that a response arrived, never what it
+   said.** It is armed by this write's own submit instant since `93b03a4`, so a
+   reply that answered before the watching control existed no longer counts —
+   which is what the local run that "tripped on a regeneration" actually was,
+   and this limitation said so wrongly until the second review; see *Correction
+   after the second independent review*, section 1. What remains true is the
+   750 ms render grace: a commit genuinely slower than that on the heaviest of
+   the four surfaces would still be read as a lost render, and the recovery is
+   a visible reload. It is safe — the reloaded page shows exactly what is
+   stored, and the notice claims nothing was saved — but it is a flash.
+   Raising `RENDER_GRACE_MS` would change the goal, memory and recurrence
+   surfaces too, which is out of this ticket's scope.
 5. **The flow passed four consecutive local runs, which is evidence rather than
    proof.** The defect it guards against is intermittent by nature. The CI run
    adds a fifth on a different machine.
