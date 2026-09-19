@@ -203,15 +203,15 @@ jobs:
             npx playwright test --config=e2e/m2-02.playwright.config.ts \
               --workers=1 --trace=retain-on-failure --output=test-results/m2-02
 
-      - name: M3-11 maintenance routes
+      - name: M3-16A plan proposal review
         # Report every broken flow in one run, not just the first.
         if: ${{ !cancelled() }}
         env:
-          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-11
+          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-16a
         run: |
           .github/scripts/with-server.sh 3019 \
-            npx playwright test --config=e2e/m3-11.playwright.config.ts \
-              --workers=1 --trace=retain-on-failure --output=test-results/m3-11
+            npx playwright test --config=e2e/m3-16a.playwright.config.ts \
+              --workers=1 --trace=retain-on-failure --output=test-results/m3-16a
 
       - name: M3-12 manual continuous planning
         # Report every broken flow in one run, not just the first.

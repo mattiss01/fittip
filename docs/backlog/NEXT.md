@@ -47,8 +47,10 @@ before any code is written.
    - **The finish is one atomic action and reuses the plan's single door.** It records the
      decisions and applies the staged additions through `apply_rolling_plan_change_set`, so
      the revision check, idempotency key, advisory lock, session validation and change-entry
-     history stay in one place rather than being written a second time. Adds a third entry to
-     the `.retry(false)` allowlist in `src/architecture/server-boundary.test.ts`, deliberately.
+     history stay in one place rather than being written a second time. It needs no
+     `.retry(false)`: the terminal decision row makes a repeat replay rather than write again,
+     so the allowlist in `src/architecture/server-boundary.test.ts` is untouched. The line
+     first said a third entry would be added; that turned out to be unnecessary.
    - **No paid provider call, in any environment.** Generation resolves to `FixtureCoachAI`;
      `src/server/ai/enablement.ts` and the `FITTIP_AI_LIVE` gate are untouched. Every
      fixture-authored proposal is labelled an example wherever it appears, on the

@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: ".",
-  testMatch: "m3-11-maintenance.spec.ts",
+  testMatch: "m3-16a-plan-proposal.spec.ts",
   timeout: 90_000,
   expect: { timeout: 5_000 },
   use: {
@@ -12,5 +12,5 @@ export default defineConfig({
     viewport: { width: 390, height: 844 },
     timezoneId: "Europe/Berlin",
   },
-  projects: [{ name: "m3-11-mobile-chromium" }],
+  projects: [{ name: "m3-16a-mobile-chromium" }],
 });

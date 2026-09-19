@@ -56,6 +56,9 @@ export default async function PlanPage() {
         <Link className={styles.libraryLink} href="/home/plan/roadmap">
           Roadmap
         </Link>
+        <Link className={styles.libraryLink} href="/home/plan/proposal">
+          Coach proposal
+        </Link>
       </nav>
       {timezoneName === null ? (
         <TimezoneConfirmation />

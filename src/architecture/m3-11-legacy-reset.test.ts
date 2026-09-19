@@ -16,24 +16,39 @@ const root = process.cwd();
 const legacyModules = [
   "src/server/repositories/training-record-repository.ts",
   "src/server/repositories/completion-repository.ts",
-  "src/server/repositories/plan-proposal-repository.ts",
   "src/server/training/training-records.ts",
   "src/server/training/past-plan-protection.ts",
   "src/server/completions/completion-records.ts",
   "src/server/plan-proposal/plan-proposal-service.ts",
-  "src/app/home/plan/proposal/actions.ts",
   // `src/app/home/plan/roadmap/actions.ts` is deliberately absent: M3-15F
   // restored it against the M3-10/M3-15A seam and M3-15D's context source, not
   // against the legacy repositories this list keeps deleted. It is constrained
   // below instead, by an allowlist and by which repository methods it may call.
+  //
+  // `src/app/home/plan/proposal/actions.ts` and
+  // `src/server/repositories/plan-proposal-repository.ts` are absent for the
+  // same reason, added by M3-16A. Neither is the module M3-11 deleted: the
+  // repository is written against the new plan-proposal schema and reaches the
+  // plan only through `apply_rolling_plan_change_set`, and the actions are
+  // constrained by their own allowlist below. `plan-proposal-service.ts`, which
+  // held the legacy orchestration against the deleted repositories, stays gone.
 ] as const;
 
 /**
- * M3-15E reopened `/home/plan/roadmap` and M3-15F restored its writes, so only
- * the proposal route is still on the maintenance module. `/home/plan/proposal`
- * is M3-16 and stays here.
+ * No route is on the maintenance module any more.
+ *
+ * `/home/plan/proposal` was the last one, and M3-16A reopened it. The check
+ * that used to live here — that each listed page rendered `TrainingMaintenance`
+ * and imported no server module — is replaced by `planProposalSurface` below,
+ * which is strictly stronger: it says which server modules that route may
+ * reach, and that only its Server Action module may write. An empty list with
+ * a loop over it would assert nothing at all, so the list and its test are
+ * gone rather than left looking like coverage.
+ *
+ * `TrainingMaintenance` itself is kept. It is the honest state for a surface
+ * whose persistence has been withdrawn, and the next ticket to withdraw one
+ * should not have to write it again.
  */
-const maintenancePages = ["src/app/home/plan/proposal/page.tsx"] as const;
 
 /**
  * The reopened roadmap route: the read pass and the writes beside it.
@@ -189,11 +204,92 @@ const allowedServerModules = [
   "@/server/rolling-plan/rolling-plan",
 ] as const;
 
+/**
+ * The tables M3-11 dropped that nothing has restored.
+ *
+ * Four plan-proposal names left this list in M3-16A, which rebuilt them against
+ * the rolling plan. They are not the legacy tables under a familiar name — the
+ * legacy ones had no plan revision, no items and no per-item decision — and the
+ * reads that reach them are confined by `allowedPlanProposalModules` below.
+ */
+/**
+ * The reopened proposal route: the read pass and the writes beside it.
+ *
+ * It gets its own allowlist for the same reason the roadmap does. The plan's
+ * own `allowedServerModules` is shared with Today, and adding the coaching
+ * seam and the proposal repository there would hand a read-only surface the
+ * ability to ask a coach for something and apply it.
+ *
+ * The one thing this surface may reach that the roadmap's may not is
+ * `rolling-plan-repository`: the review is merged against the plan, and the
+ * finish is measured against a plan revision. That is a read. The write still
+ * belongs to the database function, which assembles the change set itself — no
+ * file here may call `applyChangeSet`, and the assertion below says so.
+ */
+const planProposalSurface = [
+  "src/app/home/plan/proposal/page.tsx",
+  "src/app/home/plan/proposal/actions.ts",
+] as const;
+
+/**
+ * The only `@/lib/supabase` specifier this surface may import.
+ *
+ * `actions.ts` needs it: a Server Action is a public endpoint, and
+ * `createServerUserClient` is how it re-derives the owner from verified Auth
+ * claims before touching the repository.
+ */
+const allowedPlanProposalSupabaseModules = [
+  "@/lib/supabase/server-user-client",
+] as const;
+
+const allowedPlanProposalModules = [
+  "@/server/ai/context",
+  "@/server/ai/errors",
+  "@/server/ai/owner",
+  "@/server/ai/owner-text",
+  "@/server/goals/goal-records",
+  "@/server/plan-proposal/plan-generation",
+  "@/server/plan-proposal/plan-proposal-records",
+  "@/server/repositories/goal-repository",
+  "@/server/repositories/plan-proposal-repository",
+  "@/server/repositories/profile-repository",
+  "@/server/repositories/rolling-plan-repository",
+] as const;
+
+/** Everything the proposal route renders, wherever it lives. */
+const planProposalSurfaceDirectories = ["src/app/home/plan/proposal"] as const;
+
+/** The only file in those directories permitted to reach a proposal write. */
+const planProposalWriteEntryPoint = "src/app/home/plan/proposal/actions.ts";
+
+/**
+ * The five M3-16A functions, and the repository methods that are the only
+ * application path to them.
+ *
+ * `applyChangeSet` is on the forbidden list beside them deliberately. The plan
+ * write this ticket performs happens inside `finish_plan_proposal_review`,
+ * which calls `apply_rolling_plan_change_set` itself; a surface file that
+ * assembled its own change set would be a second way for a proposal to reach
+ * the plan, with none of the revalidation the terminal decision row provides.
+ */
+const planProposalFunctions = [
+  "begin_plan_generation",
+  "finish_plan_generation",
+  "decide_plan_proposal_item",
+  "finish_plan_proposal_review",
+  "discard_plan_proposal",
+] as const;
+
+const planProposalWriteMethods = [
+  "beginGeneration",
+  "finishGenerationWithProposal",
+  "finishGenerationAsFailed",
+  "decideItem",
+  "finishReview",
+  "applyChangeSet",
+] as const;
+
 const legacyTables = [
-  "plan_proposal_decisions",
-  "plan_proposal_sources",
-  "plan_proposals",
-  "plan_generation_requests",
   "completed_activities",
   "completion_heads",
   "completed_sessions",
@@ -203,11 +299,19 @@ const legacyTables = [
   "detailed_plan_versions",
 ] as const;
 
+/**
+ * The RPCs M3-11 dropped that nothing has restored.
+ *
+ * `begin_plan_generation` and `finish_plan_generation` left this list in
+ * M3-16A. Both names are back with different signatures and different bodies,
+ * and like the roadmap's five they are asserted below to be reachable only
+ * through the repository — no file on the proposal surface may name one.
+ * `record_plan_memory_candidates` and `reject_plan_proposal` stay: M3-16A
+ * deliberately rebuilt neither.
+ */
 const legacyRpcs = [
   "save_manual_plan_version",
   "save_training_completion",
-  "begin_plan_generation",
-  "finish_plan_generation",
   "record_plan_memory_candidates",
   "reject_plan_proposal",
 ] as const;
@@ -216,14 +320,6 @@ describe("M3-11 legacy runtime closure", () => {
   it("removes every legacy server entry point", () => {
     for (const path of legacyModules) {
       expect(existsSync(join(root, path)), path).toBe(false);
-    }
-  });
-
-  it("keeps every affected route on the one maintenance module", () => {
-    for (const path of maintenancePages) {
-      const source = readFileSync(join(root, path), "utf8");
-      expect(source, path).toContain("TrainingMaintenance");
-      expect(source, path).not.toMatch(/@\/server\/|@\/lib\/supabase/);
     }
   });
 
@@ -297,6 +393,81 @@ describe("M3-11 legacy runtime closure", () => {
       // Supabase client could read or write around the endpoint entirely. A
       // test beside it may name either, because naming one is how a test
       // asserts about it.
+      if (isTest) continue;
+      expect(source, path).not.toContain('"use server"');
+      expect(source, path).not.toContain("revalidatePath");
+      expect(source, path).not.toMatch(/@\/lib\/supabase/);
+    }
+
+    expect(writeEntryPoints, "the write entry point must exist").toBe(1);
+  });
+
+  it("lets the reopened proposal route reach only its own allowlist", () => {
+    for (const path of planProposalSurface) {
+      const source = readFileSync(join(root, path), "utf8");
+      const imported = [...source.matchAll(/from "(@\/server\/[^"]+)"/g)].map(
+        (match) => match[1],
+      );
+      expect(imported.length, path).toBeGreaterThan(0);
+      for (const specifier of imported) {
+        expect(
+          allowedPlanProposalModules as readonly string[],
+          `${path} imports ${specifier}`,
+        ).toContain(specifier);
+      }
+
+      const supabase = [
+        ...source.matchAll(/from "(@\/lib\/supabase\/[^"]+)"/g),
+      ].map((match) => match[1]);
+      for (const specifier of supabase) {
+        expect(
+          allowedPlanProposalSupabaseModules as readonly string[],
+          `${path} imports ${specifier}`,
+        ).toContain(specifier);
+      }
+    }
+  });
+
+  it("keeps every proposal write behind the one Server Action module", () => {
+    const files = planProposalSurfaceDirectories.flatMap((directory) =>
+      sourceFiles(join(root, directory)),
+    );
+    expect(files.length).toBeGreaterThan(3);
+
+    let writeEntryPoints = 0;
+    for (const path of files) {
+      const source = readFileSync(path, "utf8");
+      const isEntryPoint = path.endsWith(
+        planProposalWriteEntryPoint.replaceAll("/", sep),
+      );
+      const isTest = path.endsWith(".test.ts") || path.endsWith(".test.tsx");
+
+      // No file on this surface writes SQL or names a function directly, the
+      // entry point included: the repository is the only application path to
+      // M3-16A's five, and it is the only place that maps their conflicts.
+      for (const name of planProposalFunctions) {
+        expect(source, `${path} names ${name}`).not.toContain(name);
+      }
+      expect(source, `${path} calls rpc directly`).not.toContain(".rpc(");
+
+      const callsWrite = planProposalWriteMethods.some((method) =>
+        source.includes(`${method}(`),
+      );
+      if (callsWrite) {
+        expect(isEntryPoint, `${path} reaches a proposal write`).toBe(true);
+      }
+
+      if (isEntryPoint) {
+        writeEntryPoints += 1;
+        // A Server Action is a public endpoint. It declares itself as one, and
+        // it invalidates the routes it changed — both of them, because a
+        // finished review changes the plan the owner goes back to.
+        expect(source, path).toContain('"use server"');
+        expect(source, path).toContain('revalidatePath("/home/plan/proposal")');
+        expect(source, path).toContain('revalidatePath("/home/plan")');
+        continue;
+      }
+
       if (isTest) continue;
       expect(source, path).not.toContain('"use server"');
       expect(source, path).not.toContain("revalidatePath");
