@@ -34,7 +34,7 @@ before any code is written.
      the form performs is a courtesy, not a constraint.
    - Careful lane: forward migration only, pgTAP for the new branches, owner applies the
      migration and checks the Preview before merge.
-3. `[~]` **AI proposal application — 16A, the core loop.** Generate a fresh Coach proposal
+3. `[x]` **AI proposal application — 16A, the core loop.** Generate a fresh Coach proposal
    for 1–7 owner-local dates, review it day by day against what is already planned, decide
    each item, and apply only the staged ones in one atomic write. Today Coach can propose
    but nothing can be applied, and `/home/plan/proposal` is still the maintenance stub with
@@ -125,6 +125,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 19 Sep 2026 | `63e58d3` | [35435242207](https://github.com/mattiss01/fittip/actions/runs/35435242207) | Plan proposal core loop (16A): generate on the fixture coach, review against the plan, decide per item, atomic finish through `apply_rolling_plan_change_set`. Migration `20260918161313` applied to the founder project — 23 migrations, no drift; advisors 19 definer (+5, the five new functions) + 1 auth warning. Reviewed twice: the first pass found two blocking defects (a choice could land after Finish; no approved-pairing or reservation check), fixed in `7eaeb36`; the second found nothing blocking. The M3-11 maintenance spec was renamed and rewritten as the 16A flow; its old validation record describes the stub as it was |
 | 18 Sep 2026 | `d46a5be` | [35364797638](https://github.com/mattiss01/fittip/actions/runs/35364797638) | Completion write follow-ups: PT431 for a duplicate, correctable unplanned naming, no future-dated completion. Migration `20260918132941` applied to the founder project — 22 migrations, no drift, advisors unchanged at 14 definer + 1 auth warning. Reviewed twice; the first pass was blocking. Two notes below |
 | 18 Sep 2026 | `e9173cc` | (same run) | ADR-018: the lead applies founder-staging migrations. Bundled onto the ticket branch rather than committed separately, which is worth avoiding next time |
 | 18 Sep 2026 | `6fe22ee` | [35333826198](https://github.com/mattiss01/fittip/actions/runs/35333826198) | Offline console flake: shared `e2e/support/console-errors.ts`, both specs on it, 9 unit tests. One green run cannot prove a race is gone; the claim rests on the mechanism |
