@@ -1,16 +1,33 @@
 do $$
 declare
   removed_tables constant text[] := array[
-    'plan_proposal_decisions', 'plan_proposal_sources', 'plan_proposals',
-    'plan_generation_requests', 'completed_activities', 'completion_heads',
+    'completed_activities', 'completion_heads',
     'completed_sessions', 'planned_activities', 'planned_sessions',
     'detailed_plan_heads', 'detailed_plan_versions'
   ];
+  -- M3-16A rebuilt these four names against the rolling plan, and this check
+  -- runs after every migration, so their existence no longer says anything
+  -- about M3-11. What still does is that none of the legacy rows the fixture
+  -- seeded into them survived: the tables M3-16A created start empty, and a
+  -- row here would mean legacy proposal data outlived the reset.
+  restored_tables constant text[] := array[
+    'plan_proposal_decisions', 'plan_proposal_sources', 'plan_proposals',
+    'plan_generation_requests'
+  ];
   table_name text;
+  row_count bigint;
 begin
   foreach table_name in array removed_tables loop
     if pg_catalog.to_regclass('public.' || table_name) is not null then
       raise exception 'legacy table still exists: %', table_name;
+    end if;
+  end loop;
+
+  foreach table_name in array restored_tables loop
+    execute pg_catalog.format('select count(*) from public.%I', table_name)
+      into row_count;
+    if row_count <> 0 then
+      raise exception 'legacy rows survived the reset in: %', table_name;
     end if;
   end loop;
 

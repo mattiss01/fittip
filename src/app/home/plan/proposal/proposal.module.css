@@ -339,6 +339,32 @@
   color: var(--ledger-ink);
 }
 
+/*
+ * The one way on from a finished review. Styled as the primary action because
+ * it is the only action left on the page.
+ */
+.planLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-ink);
+  color: var(--ledger-paper);
+  font:
+    700 0.72rem "Courier New",
+    monospace;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.planLink:focus-visible {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
+}
+
 /* ---- Notices ------------------------------------------------------------ */
 
 .notice,

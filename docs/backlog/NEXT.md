@@ -60,6 +60,9 @@ before any code is written.
    - Owner's decisions, 18 Sep 2026: two slices rather than three, fixture coach rather than
      authorizing live spend, and the merged already-planned timeline in this slice rather
      than the next, so clashes are visible on the first look.
+   - Owner's decisions, 19 Sep 2026, from using it: a recovery day is offered only on a date
+     with no proposed session, no active session of their own, and no existing rest label;
+     a finished review offers one way on, back to the plan.
 4. `[ ]` **AI proposal application — 16B, review against the real plan.** Edit already-planned
    sessions through the normal plan editor inside review without losing staged choices, warn
    honestly when the proposal's context has gone stale and refresh it, and use a covering
@@ -69,6 +72,11 @@ before any code is written.
 5. `[ ]` **Reactivate a cancelled session** — a cancelled session can currently only be
    deleted; every non-destructive operation refuses it. Careful lane: it adds an operation to
    `apply_rolling_plan_change_set`. ([M3-20](M3/M3-20-REACTIVATE-A-CANCELLED-SESSION.md))
+
+6. `[ ]` **Plan proposal memory candidates** — M3-16A deliberately did not rebuild
+   `record_plan_memory_candidates`, so a planning note that states a durable constraint
+   proposes nothing on the memory surface. The roadmap path already does this; the plan
+   path should too. Careful lane: a new privileged function.
 
 ## Fix in passing
 

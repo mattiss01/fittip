@@ -239,13 +239,20 @@ function uuidFromSeed(seed: string): string {
   ].join("-");
 }
 
+/**
+ * The same two exits every other plan route uses: the denied page for a signed-
+ * in account that is not the allowed owner, and the sign-in form at `/` for
+ * everyone else. There is no `/sign-in` route.
+ */
 function redirectOnAuthError(error: unknown): void {
-  if (
+  const authError =
     error instanceof ProfileAuthenticationError ||
     error instanceof PlanProposalAuthenticationError ||
     error instanceof RollingPlanAuthenticationError ||
     error instanceof GoalAuthenticationError
-  ) {
-    redirect("/sign-in");
-  }
+      ? error
+      : null;
+  if (authError === null) return;
+  if (authError.accessError?.reason === "not-owner") redirect("/auth/denied");
+  redirect("/");
 }

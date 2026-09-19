@@ -90,6 +90,12 @@ export const PLAN_PROPOSAL_COPY = {
       ? "Discard this proposal? One staged item will not be added."
       : `Discard this proposal? ${staged} staged items will not be added.`,
 
+  /**
+   * Where the owner goes once a review is closed: back to the plan, where the
+   * sessions they just added now sit among the ones they already had.
+   */
+  finishedPlanLink: "Back to plan",
+
   /* ---- Provenance -------------------------------------------------------- */
   exampleBadge: "Example",
   exampleSupport:

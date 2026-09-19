@@ -154,9 +154,10 @@ test.describe("M3-16A plan proposal review", () => {
         page.getByText("Review finished. One item was added to your plan."),
       ).toBeVisible({ timeout: 30_000 });
 
-      // Exactly one session reached the plan, and it is the one that was
-      // staged. The rejected ones left no trace.
-      await page.goto("/home/plan");
+      // The finished review leads back to the plan, where exactly one session
+      // reached it — the one that was staged. The rejected ones left no trace.
+      await page.getByRole("link", { name: "Back to plan" }).last().click();
+      await expect(page).toHaveURL(/\/home\/plan$/);
       await expect(page.getByText("Easy aerobic session")).toHaveCount(1);
       await expect(page.getByText("Steadier session")).toHaveCount(0);
       await expect(page.getByText("Club track night")).toHaveCount(1);

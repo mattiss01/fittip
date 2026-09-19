@@ -449,6 +449,12 @@ describe("M3-11 legacy runtime closure", () => {
         expect(source, `${path} names ${name}`).not.toContain(name);
       }
       expect(source, `${path} calls rpc directly`).not.toContain(".rpc(");
+      // Not even the entry point may assemble its own change set. The plan
+      // write belongs to `finish_plan_proposal_review` alone, which is what
+      // makes the terminal decision and the plan change one transaction.
+      expect(source, `${path} applies a change set`).not.toContain(
+        "applyChangeSet(",
+      );
 
       const callsWrite = planProposalWriteMethods.some((method) =>
         source.includes(`${method}(`),

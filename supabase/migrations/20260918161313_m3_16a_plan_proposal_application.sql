@@ -371,9 +371,15 @@ revoke all privileges on table public.plan_proposal_decisions
   from public, anon, authenticated, service_role;
 
 -- Column-level SELECT, deliberately, and for the same reason the roadmap's is:
--- `completion_token` is the capability that permits finishing a generation, and
--- an owner who could read it could close their own attempt with content the
--- server never validated.
+-- `completion_token` is the capability that permits finishing a generation, so
+-- it is not left lying in a table the owner can list.
+--
+-- What this does not do is keep the token from the owner altogether.
+-- `begin_plan_generation` returns it to its caller, and `authenticated` may call
+-- both functions, so an owner calling the RPCs directly can close their own
+-- attempt with content that passed only `plan_content_is_valid` and the
+-- technical-code check — not the application's full contract validation. That
+-- reaches nothing but their own proposal, and it is the roadmap's precedent.
 grant select (
   id,
   user_id,
@@ -820,10 +826,18 @@ $$;
 -- and then the record of what the coach proposed and the record of what the
 -- owner decided on would be two different things.
 --
--- Recovery-day items are the horizon's dates that carry no proposed session.
--- They are derived, not authored: nothing in `fittip.seven-day-plan.v2` names a
--- rest day, so an empty date is offered as a label the owner may accept and
--- never as a claim the coach made.
+-- Recovery-day items are the horizon's dates that are empty in both senses:
+-- the coach proposed no session there, and the owner's plan holds no active
+-- session or recovery-day label there either. They are derived, not authored:
+-- nothing in `fittip.seven-day-plan.v2` names a rest day, so an empty date is
+-- offered as a label the owner may accept and never as a claim the coach made.
+--
+-- The plan half of that rule is the owner's decision of 19 September 2026. A
+-- date that already holds the owner's own session is not a rest day, whatever
+-- the coach left off it, and offering "Recovery day" beside that session read
+-- as nonsense. A date already labelled rest needs no second offer of the same
+-- label. Both are judged against the plan as it stands when the proposal is
+-- written; the finish still skips a rest day that has since become one.
 create function public.finish_plan_generation(
   p_completion_token uuid,
   p_outcome text,
@@ -938,7 +952,7 @@ begin
       message = 'Invalid plan result.';
   end if;
 
-  if p_schema_version is null
+  if p_schema_version is distinct from 'fittip.seven-day-plan.v2'
     or p_prompt_version is null
     or p_provider_code is null
     or p_model_code is null
@@ -952,6 +966,44 @@ begin
       message = 'Invalid plan result.';
   end if;
 
+  -- The provider, model and rate card must be a pairing somebody approved, and
+  -- a live pairing must carry a reservation while the fixture one must not.
+  -- This is what stops a paid call being recorded as a free fixture, and it is
+  -- also what the owner-facing "example" label rests on: that label reads
+  -- `provider_code`, so the database has to guarantee the code is honest. The
+  -- function is the roadmap's; it names no operation, and M3-03's dropped plan
+  -- migration used it the same way.
+  if not public.roadmap_technical_codes_are_accepted(
+    p_provider_code,
+    p_model_code,
+    p_rate_card_version,
+    p_spend_reservation_id is not null
+  ) then
+    raise exception using
+      errcode = '22023',
+      message = 'That coaching model is not approved.';
+  end if;
+
+  -- A live result must carry a settled reservation belonging to this owner,
+  -- for this operation, priced by the same rate card. Without it a proposal
+  -- could point at another owner's reservation, or at one that paid for a
+  -- roadmap.
+  if p_spend_reservation_id is not null then
+    if not exists (
+      select 1
+      from public.ai_spend_reservations
+      where id = p_spend_reservation_id
+        and user_id = v_user_id
+        and operation = 'create_seven_day_plan'
+        and settled_at is not null
+        and rate_card_version = p_rate_card_version
+    ) then
+      raise exception using
+        errcode = '22023',
+        message = 'Invalid plan result.';
+    end if;
+  end if;
+
   insert into public.plan_proposals (
     user_id, generation_request_id, origin, planning_note, schema_version,
     prompt_version, provider_code, model_code, rate_card_version,
@@ -963,9 +1015,10 @@ begin
   )
   returning id into v_proposal_id;
 
-  -- Items, in the order the surface reads them: by date, sessions on a date
-  -- before that date's recovery-day label, and proposed sessions in the order
-  -- the coach listed them. `ordinal` is the owner's stable handle on a choice;
+  -- Items, in the order the surface reads them: by date, then proposed
+  -- sessions in the order the coach listed them. A date carries either
+  -- sessions or a recovery-day item, never both, so the kind only breaks ties
+  -- for determinism. `ordinal` is the owner's stable handle on a choice;
   -- `content_index` is the way back to the rest of what the coach said.
   insert into public.plan_proposal_items (
     proposal_id, ordinal, user_id, kind, content_index, session_id,
@@ -1014,6 +1067,19 @@ begin
       from pg_catalog.jsonb_array_elements(p_content->'sessions') as proposed(value)
       where (proposed.value->>'date')::date = horizon.local_date::date
     )
+      and not exists (
+        select 1
+        from public.rolling_plan_sessions planned
+        where planned.user_id = v_user_id
+          and planned.local_date = horizon.local_date::date
+          and planned.status = 'active'
+      )
+      and not exists (
+        select 1
+        from public.rolling_plan_recovery_days recovery
+        where recovery.user_id = v_user_id
+          and recovery.local_date = horizon.local_date::date
+      )
   ) as item;
 
   -- Minimized provenance. Ids and revisions only; no copied source content.
@@ -1122,6 +1188,24 @@ begin
       errcode = 'PT409',
       message = 'That proposed item is no longer available.';
   end if;
+
+  -- The same lock the finish and the discard take. Without it, a choice made in
+  -- one tab could read "not finished" just before another tab's finish
+  -- committed, and then write after it — leaving the permanent record saying an
+  -- item was staged that never entered the plan. Held, the terminal-row check
+  -- below cannot be overtaken, and the finish sees a stable set of choices.
+  perform pg_catalog.set_config('lock_timeout', '3s', true);
+  begin
+    perform pg_catalog.pg_advisory_xact_lock(
+      62008,
+      pg_catalog.hashtext(v_user_id::text)
+    );
+  exception
+    when lock_not_available then
+      raise exception using
+        errcode = 'PT409',
+        message = 'Your plan changed. Reload and try again.';
+  end;
 
   if exists (
     select 1 from public.plan_proposal_decisions
@@ -1270,48 +1354,78 @@ begin
   into v_changes, v_applied
   from (
     select
-      item.local_date,
-      item.ordinal,
-      case item.kind
+      staged.local_date,
+      staged.ordinal,
+      case staged.kind
         when 'recovery_day' then pg_catalog.jsonb_build_object(
           'operation', 'set_recovery_day',
-          'localDate', item.local_date::text,
+          'localDate', staged.local_date::text,
           'isRecoveryDay', true
         )
         else pg_catalog.jsonb_build_object(
           'operation', 'add',
-          'sessionId', item.session_id,
+          'sessionId', staged.session_id,
           'session', pg_catalog.jsonb_build_object(
-            'localDate', item.local_date::text,
+            'localDate', staged.local_date::text,
+            -- The nth position on this date that no active session holds,
+            -- where n is this item's place among the date's staged sessions.
+            -- Not `max + n`: an owner who has moved a session to 99 would push
+            -- that past the 0-99 bound and the whole finish would be refused.
+            -- A date holds at most ten active sessions, so a free slot always
+            -- exists below 100.
             'position', (
-              coalesce((
-                select pg_catalog.max(existing.position)
+              select slot
+              from pg_catalog.generate_series(0, 99) as slot
+              where not exists (
+                select 1
                 from public.rolling_plan_sessions existing
                 where existing.user_id = v_user_id
-                  and existing.local_date = item.local_date
+                  and existing.local_date = staged.local_date
                   and existing.status = 'active'
-              ), -1)
-              + pg_catalog.row_number() over (
-                  partition by item.local_date order by item.ordinal
-                )
+                  and existing.position = slot
+              )
+              order by slot
+              offset staged.date_rank - 1
+              limit 1
             )::smallint,
-            'title', item.title,
-            'sport', item.sport,
-            'intent', item.intent,
-            'expectedDurationMinutes', item.expected_duration_minutes,
+            'title', staged.title,
+            'sport', staged.sport,
+            'intent', staged.intent,
+            'expectedDurationMinutes', staged.expected_duration_minutes,
             'isLocked', false,
             'activities', '[]'::jsonb
           )
         )
       end as entry
-    from public.plan_proposal_items item
-    join public.plan_proposal_item_decisions decision
-      on decision.proposal_id = item.proposal_id
-      and decision.ordinal = item.ordinal
-      and decision.user_id = item.user_id
-    where item.proposal_id = p_proposal_id
-      and item.user_id = v_user_id
-      and decision.decision = 'staged'
+    from (
+      select
+        item.*,
+        pg_catalog.row_number() over (
+          partition by item.local_date, item.kind order by item.ordinal
+        ) as date_rank
+      from public.plan_proposal_items item
+      join public.plan_proposal_item_decisions decision
+        on decision.proposal_id = item.proposal_id
+        and decision.ordinal = item.ordinal
+        and decision.user_id = item.user_id
+      where item.proposal_id = p_proposal_id
+        and item.user_id = v_user_id
+        and decision.decision = 'staged'
+        -- A staged rest day on a date that is already one is a choice whose
+        -- outcome already holds. Sending it would be refused by the change
+        -- function as a change that changes nothing, and that refusal would
+        -- take every other staged item down with it. It is left out, and it
+        -- is not counted as applied, because nothing was.
+        and not (
+          item.kind = 'recovery_day'
+          and exists (
+            select 1
+            from public.rolling_plan_recovery_days recovery
+            where recovery.user_id = v_user_id
+              and recovery.local_date = item.local_date
+          )
+        )
+    ) as staged
   ) as change;
 
   if v_applied = 0 then

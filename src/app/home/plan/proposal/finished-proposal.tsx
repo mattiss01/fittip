@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import styles from "./proposal.module.css";
 
 import { PLAN_PROPOSAL_COPY } from "@/lib/plan/plan-proposal-copy";
@@ -31,6 +33,9 @@ export function FinishedProposal({ proposal }: { proposal: PlanProposalView }) {
       <p className={styles.notice} data-state={applied ? "applied" : "idle"}>
         {applied ? COPY.outcomes.applied(staged) : COPY.outcomes.discarded}
       </p>
+      <Link className={styles.planLink} href="/home/plan">
+        {COPY.finishedPlanLink}
+      </Link>
       {isExampleProposal(proposal.providerCode) ? (
         <p className={styles.exampleNotice} data-state="example">
           <strong>{COPY.exampleBadge}</strong> {COPY.exampleSupport}

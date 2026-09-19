@@ -78,7 +78,7 @@ as $$
   )
 $$;
 
-select plan(81);
+select plan(96);
 
 -- Shape ----------------------------------------------------------------------
 
@@ -365,7 +365,7 @@ select is(
     'seven-day-plan-v2-2026-08-12',
     'fixture',
     'fixture-corpus-v1',
-    'rate-card-v1',
+    'fixture-no-spend',
     null,
     'I only have 45 minutes on weekdays',
     pg_temp.plan_body(pg_temp.day(0), pg_temp.day(2)),
@@ -681,7 +681,7 @@ select is(
     'seven-day-plan-v2-2026-08-12',
     'fixture',
     'fixture-corpus-v1',
-    'rate-card-v1',
+    'fixture-no-spend',
     null,
     null,
     pg_temp.plan_body(pg_temp.day(4), pg_temp.day(6)),
@@ -742,7 +742,7 @@ select is(
   (select proposal_id is not null from public.finish_plan_generation(
     (select completion_token from pg_temp_claim_three),
     'proposal', 'fittip.seven-day-plan.v2', 'seven-day-plan-v2-2026-08-12',
-    'fixture', 'fixture-corpus-v1', 'rate-card-v1', null, null,
+    'fixture', 'fixture-corpus-v1', 'fixture-no-spend', null, null,
     pg_temp.plan_body(pg_temp.day(4), pg_temp.day(6)), null, null
   )),
   true,
@@ -786,6 +786,216 @@ select is(
   (select count(*)::integer from public.rolling_plan_change_sets),
   1,
   'one change set exists across the whole suite, from the one review that applied'
+);
+
+-- What the careful-lane review found ------------------------------------------
+--
+-- The provider codes are what the owner-facing "example" label rests on, so a
+-- finish has to prove they are an approved pairing, and a live pairing has to
+-- carry a settled reservation of this owner's, for this operation.
+
+create temporary table pg_temp_claim_four (
+  generation_id uuid,
+  completion_token uuid,
+  state text,
+  proposal_id uuid
+) on commit drop;
+
+insert into pg_temp_claim_four
+select * from public.begin_plan_generation(
+  'owner-plan-key-000000004', 'owner-plan-fingerprint-0004',
+  pg_temp.day(4), 3, 1
+);
+
+select throws_ok(
+  format(
+    $$select * from public.finish_plan_generation(
+      %L::uuid, 'proposal', 'fittip.seven-day-plan.v2',
+      'seven-day-plan-v2-2026-08-12', 'fixture', 'some-other-model',
+      'fixture-no-spend', null, null, %L::jsonb, null, null)$$,
+    (select completion_token from pg_temp_claim_four),
+    pg_temp.plan_body(pg_temp.day(4), pg_temp.day(6))
+  ),
+  '22023', 'That coaching model is not approved.',
+  'a provider and model that are not an approved pairing are refused'
+);
+select throws_ok(
+  format(
+    $$select * from public.finish_plan_generation(
+      %L::uuid, 'proposal', 'fittip.seven-day-plan.v2',
+      'seven-day-plan-v2-2026-08-12', 'fixture', 'fixture-corpus-v1',
+      'fixture-no-spend', '7a000000-0000-4000-8000-0000000000e1'::uuid,
+      null, %L::jsonb, null, null)$$,
+    (select completion_token from pg_temp_claim_four),
+    pg_temp.plan_body(pg_temp.day(4), pg_temp.day(6))
+  ),
+  '22023', 'That coaching model is not approved.',
+  'a fixture result claiming a spend reservation is refused'
+);
+select throws_ok(
+  format(
+    $$select * from public.finish_plan_generation(
+      %L::uuid, 'proposal', 'fittip.seven-day-plan.v2',
+      'seven-day-plan-v2-2026-08-12', 'openai', 'gpt-5.6-luna',
+      'openai-gpt-5.6-luna-2026-08-10',
+      '7a000000-0000-4000-8000-0000000000e2'::uuid,
+      null, %L::jsonb, null, null)$$,
+    (select completion_token from pg_temp_claim_four),
+    pg_temp.plan_body(pg_temp.day(4), pg_temp.day(6))
+  ),
+  '22023', 'Invalid plan result.',
+  'a live result pointing at a reservation that is not this owner''s is refused'
+);
+
+select is(
+  (select proposal_id is not null from public.finish_plan_generation(
+    (select completion_token from pg_temp_claim_four),
+    'proposal', 'fittip.seven-day-plan.v2', 'seven-day-plan-v2-2026-08-12',
+    'fixture', 'fixture-corpus-v1', 'fixture-no-spend', null, null,
+    pg_temp.plan_body(pg_temp.day(4), pg_temp.day(6)), null, null
+  )),
+  true,
+  'the same attempt still closes with the approved fixture pairing'
+);
+
+-- The middle day of this horizon is already a recovery day, and the first day
+-- already holds a session the owner moved to position 99.
+select lives_ok(
+  format(
+    $$select * from public.apply_rolling_plan_change_set(
+      1, '7a000000-0000-4000-8000-0000000000d1'::uuid, 'owner_manual',
+      jsonb_build_array(
+        jsonb_build_object(
+          'operation', 'set_recovery_day',
+          'localDate', %L,
+          'isRecoveryDay', true),
+        jsonb_build_object(
+          'operation', 'add',
+          'sessionId', '7a000000-0000-4000-8000-0000000000d2',
+          'session', jsonb_build_object(
+            'localDate', %L, 'position', 99, 'title', 'Late swim',
+            'sport', 'Swimming', 'isLocked', false,
+            'activities', '[]'::jsonb))))$$,
+    pg_temp.day(5)::text, pg_temp.day(4)::text
+  ),
+  'the owner marks the middle day as rest and puts a session at position 99'
+);
+
+select lives_ok(
+  format(
+    $$select public.decide_plan_proposal_item(%1$L::uuid, 0, 'staged'),
+             public.decide_plan_proposal_item(%1$L::uuid, 1, 'staged'),
+             public.decide_plan_proposal_item(%1$L::uuid, 2, 'rejected')$$,
+    (select proposal_id from public.plan_generation_requests
+     where idempotency_key = 'owner-plan-key-000000004')
+  ),
+  'the owner stages the first session and the rest day that already holds'
+);
+
+create temporary table pg_temp_receipt_four (
+  proposal_id uuid,
+  decision text,
+  applied_count smallint,
+  change_set_id uuid,
+  plan_revision bigint,
+  state text
+) on commit drop;
+
+insert into pg_temp_receipt_four
+select * from public.finish_plan_proposal_review(
+  (select proposal_id from public.plan_generation_requests
+   where idempotency_key = 'owner-plan-key-000000004'),
+  2, '7a000000-0000-4000-8000-0000000000f6'::uuid
+);
+
+select is(
+  (select state from pg_temp_receipt_four), 'applied',
+  'a staged rest day that already holds does not take the rest of the finish down'
+);
+select is(
+  (select applied_count from pg_temp_receipt_four), 1::smallint,
+  'and it is not counted as applied, because nothing was'
+);
+select is(
+  (select count(*)::integer from public.rolling_plan_recovery_days
+   where local_date = pg_temp.day(5)),
+  1,
+  'the rest day is still exactly one label'
+);
+select is(
+  (select position from public.rolling_plan_sessions
+   where local_date = pg_temp.day(4) and title = 'Easy aerobic session'),
+  0::smallint,
+  'a session staged beside one at position 99 takes the first free slot, not 100'
+);
+select is(
+  (select count(*)::integer from public.rolling_plan_sessions
+   where local_date = pg_temp.day(4) and status = 'active'),
+  2,
+  'and the owner''s own session on that date is untouched'
+);
+
+-- A rest day is offered only on a genuinely empty date ------------------------
+--
+-- The owner's decision of 19 September 2026: a date that already holds their
+-- own session, or is already labelled rest, is not offered as a recovery day,
+-- whatever the coach left off it.
+
+create function pg_temp.propose(p_key text, p_start integer)
+returns uuid
+language sql
+as $$
+  select (public.finish_plan_generation(
+    (public.begin_plan_generation(
+      p_key, p_key || '-fingerprint', pg_temp.day(p_start), 3,
+      (select revision from public.rolling_plans)
+    )).completion_token,
+    'proposal', 'fittip.seven-day-plan.v2', 'seven-day-plan-v2-2026-08-12',
+    'fixture', 'fixture-corpus-v1', 'fixture-no-spend', null, null,
+    pg_temp.plan_body(pg_temp.day(p_start), pg_temp.day(p_start + 2)),
+    null, null
+  )).proposal_id
+$$;
+
+create temporary table pg_temp_empty_day (label text, proposal_id uuid)
+  on commit drop;
+insert into pg_temp_empty_day
+values
+  -- Middle day is day(4), which now holds two of the owner's sessions.
+  ('planned', pg_temp.propose('owner-plan-key-000000005', 3)),
+  -- Middle day is day(5), which is already labelled rest.
+  ('labelled', pg_temp.propose('owner-plan-key-000000006', 4));
+
+select is(
+  (select count(*)::integer from public.plan_proposal_items
+   where proposal_id = (select proposal_id from pg_temp_empty_day
+                        where label = 'planned')
+     and kind = 'recovery_day'),
+  0,
+  'a date that already holds the owner''s session is not offered as rest'
+);
+select is(
+  (select count(*)::integer from public.plan_proposal_items
+   where proposal_id = (select proposal_id from pg_temp_empty_day
+                        where label = 'planned')
+     and kind = 'session'),
+  2,
+  'while the coach''s own sessions on either side are still offered'
+);
+select is(
+  (select count(*)::integer from public.plan_proposal_items
+   where proposal_id = (select proposal_id from pg_temp_empty_day
+                        where label = 'labelled')
+     and kind = 'recovery_day'),
+  0,
+  'a date already labelled rest is not offered the same label again'
+);
+select is(
+  (select count(*)::integer from public.plan_proposal_items
+   where proposal_id = (select proposal_id from pg_temp_empty_day
+                        where label = 'labelled')),
+  2,
+  'so that proposal asks about exactly its two sessions'
 );
 
 select set_config('request.jwt.claims', null, true);
