@@ -78,6 +78,13 @@ before any code is written.
    proposes nothing on the memory surface. The roadmap path already does this; the plan
    path should too. Careful lane: a new privileged function.
 
+7. `[ ]` **Live plan proposals and the spend ledger** — two gaps the M3-16A re-review found,
+   both shared with the roadmap and harmless while the coach is fixture-only. `finish_*`
+   refuses a live result whose reservation is unsettled, but `coach-ai-service.ts` treats
+   settling as best effort, so a paid proposal is lost if the settle fails. And nothing makes
+   `spend_reservation_id` unique, so an owner calling the RPCs directly can attach one
+   reservation to several proposals. Settle before any live-provider ticket. Careful lane.
+
 ## Fix in passing
 
 Not worth their own slot; do them when work lands nearby.

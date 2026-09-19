@@ -1249,10 +1249,13 @@ $$;
 -- not weaken one if it tried: it hands over a change set and is bound by the
 -- answer.
 --
--- Positions are computed per date as one past whatever the date already holds,
--- so a staged session is appended after the owner's existing sessions rather
--- than displacing one. Two staged sessions on the same date keep the order the
--- coach proposed them in.
+-- Positions are the first slots on each date that no active session holds, so a
+-- staged session never displaces one of the owner's, and never lands past 99
+-- when the owner has moved a session to the end. Two staged sessions on the
+-- same date take their slots in the order the coach proposed them. They are
+-- worked out before `apply_rolling_plan_change_set` takes its own lock, which is
+-- safe only because that function rechecks the plan revision under the lock: a
+-- plan edit committed in between refuses the whole finish.
 --
 -- A finish that stages nothing is a legitimate finish. It closes the proposal,
 -- writes no plan row, and records `applied_count` 0 with no change set, which is
