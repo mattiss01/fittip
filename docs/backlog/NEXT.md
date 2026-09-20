@@ -1,116 +1,28 @@
 # What's next
 
-The working list. One line per outcome; follow-ups found along the way become new lines
-here rather than new documents. Merges are logged at the bottom.
+What is open, not what has happened. Follow-ups found along the way become new lines here
+rather than new documents, and a merged item's block is deleted by the merge that ships it —
+its log row at the bottom becomes the record. `CLAUDE.md` has the four retention rules and
+what they cost.
 
-States: `[ ]` not started · `[~]` in progress · `[x]` merged.
+States: `[ ]` not started · `[~]` in progress. There is no merged state; a merged item is
+gone from here.
 
 Lanes are defined in `CLAUDE.md`. A careful-lane item carries its constraints on the line
 before any code is written.
 
 ## Now
 
-1. `[x]` **Offline console assertion flake** — fixed by scoping the collector to the
-   deliberate offline window, which stays open until the interrupted requests settle and
-   their reports arrive. ([M3-22](M3/M3-22-OFFLINE-CONSOLE-ASSERTION-FLAKE.md))
-2. `[x]` **Completion write follow-ups** — three fixes to the completion write path, shipped
-   together on one forward migration to `apply_completion_change`.
-   ([M3-23](M3/M3-23-COMPLETION-WRITE-FOLLOW-UPS.md))
-   - **Wrong duplicate message.** The function already says "That session already has a
-     completion", but raises it as `22023`, which the repository collapses into the generic
-     validation error. Give that branch its own errcode and message, **and** add a
-     by-session read so the form can say it before the owner fills anything in — today
-     `CompletionLog.list` is bounded by `actual_local_date`, so a completion written on
-     another day is invisible to the surface.
-   - **Unplanned title and sport are permanent.** Admit an `activities` key on the edit
-     branch when `plan_session_id` is null, replacing the list wholesale. The planned link
-     stays immutable, and this must not grow into the general activity editor M3-15A
-     described.
-   - **Future dates.** Refuse an `actualLocalDate` after owner-local today for **every**
-     completion, planned or not (owner's decision, 18 Sep 2026 — the argument doesn't depend
-     on whether it was planned, and it is their data). Anchor it in the zone the completion
-     stores, not the current profile zone. Add `max` on the date input so the owner is
-     stopped before the round trip, but the rule lives in the write function: a check only
-     the form performs is a courtesy, not a constraint.
-   - Careful lane: forward migration only, pgTAP for the new branches, owner applies the
-     migration and checks the Preview before merge.
-3. `[x]` **AI proposal application — 16A, the core loop.** Generate a fresh Coach proposal
-   for 1–7 owner-local dates, review it day by day against what is already planned, decide
-   each item, and apply only the staged ones in one atomic write. Today Coach can propose
-   but nothing can be applied, and `/home/plan/proposal` is still the maintenance stub with
-   nothing linking to it. Careful lane. ([M3-16](M3/M3-16-AI-PROPOSAL-APPLICATION.md))
-   - **New schema, not a re-grant.** M3-11 dropped `plan_generation_requests`,
-     `plan_proposals`, `plan_proposal_sources`, `plan_proposal_decisions` and their five
-     functions outright, so unlike M3-15F there is nothing to restore. One forward migration
-     builds them again against the rolling-plan model, plus per-item decisions, which the
-     dropped schema never had — its decision table was one terminal row per proposal.
-   - **The finish is one atomic action and reuses the plan's single door.** It records the
-     decisions and applies the staged additions through `apply_rolling_plan_change_set`, so
-     the revision check, idempotency key, advisory lock, session validation and change-entry
-     history stay in one place rather than being written a second time. It needs no
-     `.retry(false)`: the terminal decision row makes a repeat replay rather than write again,
-     so the allowlist in `src/architecture/server-boundary.test.ts` is untouched. The line
-     first said a third entry would be added; that turned out to be unnecessary.
-   - **No paid provider call, in any environment.** Generation resolves to `FixtureCoachAI`;
-     `src/server/ai/enablement.ts` and the `FITTIP_AI_LIVE` gate are untouched. Every
-     fixture-authored proposal is labelled an example wherever it appears, on the
-     `provider_code` the adapter already stamps — never inferred from `origin`.
-   - **The proposal is a permanent record.** Applying it does not mutate it, and a session
-     the plan already holds is shown as already planned, never copied into the proposal.
-   - Owner's decisions, 18 Sep 2026: two slices rather than three, fixture coach rather than
-     authorizing live spend, and the merged already-planned timeline in this slice rather
-     than the next, so clashes are visible on the first look.
-   - Owner's decisions, 19 Sep 2026, from using it: a recovery day is offered only on a date
-     with no proposed session, no active session of their own, and no existing rest label;
-     a finished review offers one way on, back to the plan.
-4. `[x]` **AI proposal application — 16B, review against the real plan.** Edit already-planned
-   sessions through the normal plan editor inside review without losing staged choices, warn
-   honestly when the proposal's context has gone stale and refresh it, and use a covering
-   accepted roadmap as plan input with its staleness marked. The plan context does not read
-   the roadmap at all today. Careful lane.
-   ([M3-16](M3/M3-16-AI-PROPOSAL-APPLICATION.md))
-   - **The roadmap reaches the coach as a fixed reduced shape, never as stored.** Same fields
-     every call whatever the roadmap's size, so the boundary is a rule that can be read rather
-     than a function of how large a roadmap grew. Roadmap `title` and `summary`; the phase or
-     phases covering the horizon in full; every other phase as `title`, dates and
-     `goalAttention` reduced to `goalId` and `level`. No `focus`, no `goalAttention.reason`
-     and no milestones leave for a phase the week is not in, and `assumptions`,
-     `uncertainties`, `reviewPoints` and `safetyConsiderations` never leave at all.
-   - **Staleness is two facts, named separately, and never blocks.** Out of window — the
-     horizon reaches past the roadmap's `endDate` or starts before its `startDate`. Goal
-     missing — a phase gives attention to a goal that is gone, archived, or no longer active
-     or achieved. The line first said "changed revision"; goals carry a collection revision
-     and not a per-goal one, so the fact available is existence, which is the same predicate
-     `accept_roadmap_proposal` already applies to a goal source. Both are marked in the
-     context and on the review screen.
-   - **Over budget reduces and discloses; it never refuses.** `bytes.roadmap` is 4,000 and the
-     plan total rises 28,500 → 32,500. The prompt paragraph describing the field then took the
-     prefix past its 7,000 budget, so that rose to 7,400 in the same ticket: 9,991 estimated
-     tokens against a 10,000 ceiling, not the 9,891 this line first predicted. Past the budget
-     the non-covering phases drop `goalAttention`, then a straddling week's lesser phase drops
-     to the summary form, then the other phases go entirely — each disclosed in the envelope.
-     The covering phase is never reduced. Goals and memory deny on overflow because the owner
-     can curate them; nobody shortens a phase description to get a week planned.
-   - **The editor inside review is fields plus lock** — title, sport, duration, intent, note,
-     locked — saved immediately through the plan's own `changePlanAction`. No create, cancel,
-     delete or recurrence control on this surface.
-   - **The roadmap version is recorded as a proposal source**, so a forward migration widens
-     `plan_proposal_sources_kind_check` and replaces `finish_plan_generation`, which repeats
-     the kind list.
-   - Owner's decisions, 20 Sep 2026: the reduced shape above, arrived at by rejecting the
-     whole roadmap once its cost against the token ceiling was clear; both staleness reasons
-     named separately; fields-plus-lock rather than the whole plan day block; and lineage
-     recorded rather than deferred.
-5. `[ ]` **Reactivate a cancelled session** — a cancelled session can currently only be
+1. `[ ]` **Reactivate a cancelled session** — a cancelled session can currently only be
    deleted; every non-destructive operation refuses it. Careful lane: it adds an operation to
    `apply_rolling_plan_change_set`. ([M3-20](M3/M3-20-REACTIVATE-A-CANCELLED-SESSION.md))
 
-6. `[ ]` **Plan proposal memory candidates** — M3-16A deliberately did not rebuild
+2. `[ ]` **Plan proposal memory candidates** — M3-16A deliberately did not rebuild
    `record_plan_memory_candidates`, so a planning note that states a durable constraint
    proposes nothing on the memory surface. The roadmap path already does this; the plan
    path should too. Careful lane: a new privileged function.
 
-7. `[ ]` **Live plan proposals and the spend ledger** — two gaps the M3-16A re-review found,
+3. `[ ]` **Live plan proposals and the spend ledger** — two gaps the M3-16A re-review found,
    both shared with the roadmap and harmless while the coach is fixture-only. `finish_*`
    refuses a live result whose reservation is unsettled, but `coach-ai-service.ts` treats
    settling as best effort, so a paid proposal is lost if the settle fails. And nothing makes
@@ -166,8 +78,8 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
-| 20 Sep 2026 | `5971b48` | [35507313220](https://github.com/mattiss01/fittip/actions/runs/35507313220) | Review against the real plan (16B): the coach reads the accepted roadmap as a fixed reduced shape, a planned session is editable inside review through the plan's own action, and the surface names both what moved and which roadmap a proposal was planned under. Migration `20260920102905` applied to the founder project — 24 migrations, no drift; advisors unchanged at 19 definer + 1 auth warning, which is the expected shape for a widened check constraint plus a `create or replace` of the same signature. Reviewed once, and it found a blocking defect: the reduction ladder returned without a final fit check, on arithmetic that confused UTF-8 bytes with the UTF-16 units the validator bounds — a maximal phase in a non-Latin script measures 8,992 bytes against a 4,000 budget, which would have refused every plan generation, goals-only included. Fixed in `5971b48` along with four smaller findings. Two owner decisions changed mid-ticket and are recorded on the line above: the whole roadmap became the reduced shape once its cost against the token ceiling was clear, and the covering phase is no longer "never reduced" but "reduced last, and disclosed" |
-| 19 Sep 2026 | `63e58d3` | [35435242207](https://github.com/mattiss01/fittip/actions/runs/35435242207) | Plan proposal core loop (16A): generate on the fixture coach, review against the plan, decide per item, atomic finish through `apply_rolling_plan_change_set`. Migration `20260918161313` applied to the founder project — 23 migrations, no drift; advisors 19 definer (+5, the five new functions) + 1 auth warning. Reviewed twice: the first pass found two blocking defects (a choice could land after Finish; no approved-pairing or reservation check), fixed in `7eaeb36`; the second found nothing blocking. The M3-11 maintenance spec was renamed and rewritten as the 16A flow; its old validation record describes the stub as it was |
+| 20 Sep 2026 | `5971b48` | [35507313220](https://github.com/mattiss01/fittip/actions/runs/35507313220) | Review against the real plan (16B): the coach reads the accepted roadmap as a fixed reduced shape, a planned session is editable inside review, and the surface names what moved. Migration `20260920102905` applied to the founder project — 24 migrations, advisors unchanged. Review found one blocking defect: the reduction ladder confused UTF-8 bytes with the UTF-16 units the validator bounds, which would have refused every plan generation |
+| 19 Sep 2026 | `63e58d3` | [35435242207](https://github.com/mattiss01/fittip/actions/runs/35435242207) | Plan proposal core loop (16A): ask the fixture coach, decide per item, apply staged items atomically through `apply_rolling_plan_change_set`. Migration `20260918161313` applied to the founder project — 23 migrations, advisors +5 definer. Reviewed twice; the first pass found two blocking defects |
 | 18 Sep 2026 | `d46a5be` | [35364797638](https://github.com/mattiss01/fittip/actions/runs/35364797638) | Completion write follow-ups: PT431 for a duplicate, correctable unplanned naming, no future-dated completion. Migration `20260918132941` applied to the founder project — 22 migrations, no drift, advisors unchanged at 14 definer + 1 auth warning. Reviewed twice; the first pass was blocking. Two notes below |
 | 18 Sep 2026 | `e9173cc` | (same run) | ADR-018: the lead applies founder-staging migrations. Bundled onto the ticket branch rather than committed separately, which is worth avoiding next time |
 | 18 Sep 2026 | `6fe22ee` | [35333826198](https://github.com/mattiss01/fittip/actions/runs/35333826198) | Offline console flake: shared `e2e/support/console-errors.ts`, both specs on it, 9 unit tests. One green run cannot prove a race is gone; the claim rests on the mechanism |
