@@ -155,6 +155,40 @@ export class PlanProposalRepository {
     return data ? parseProposal(data) : null;
   }
 
+  /**
+   * The roadmap version a proposal was planned under, or `null`.
+   *
+   * The first read of `plan_proposal_sources` anywhere in the application.
+   * Lineage has been written since the table existed and never read back, so
+   * this is a new access path rather than a new column: RLS already confines it
+   * to the owner (`plan_proposal_sources_owner_select`) and the repeated
+   * `user_id` predicate is the usual second check.
+   *
+   * It reads only the roadmap kind. The goal, memory and completion sources are
+   * lineage for a record nobody is shown, and widening this to "all sources"
+   * would be reading owner records to display nothing.
+   */
+  async getRoadmapSource(
+    proposalId: string,
+  ): Promise<{ versionId: string; versionNumber: number } | null> {
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("plan_proposal_sources")
+      .select("record_id, revision_number")
+      .eq("user_id", userId)
+      .eq("proposal_id", proposalId)
+      .eq("source_kind", "roadmap_version")
+      .maybeSingle();
+    if (error) throw new PlanProposalPersistenceError();
+    if (data === null) return null;
+    return {
+      versionId: data.record_id,
+      // Written by `finish_plan_generation` from the version number, so a null
+      // here would mean a row this application did not write.
+      versionNumber: Number(data.revision_number ?? 0),
+    };
+  }
+
   async getProposal(proposalId: string): Promise<PlanProposalView | null> {
     const userId = await this.getVerifiedUserId();
     const { data, error } = await this.client

@@ -53,7 +53,58 @@ export const PLAN_PROPOSAL_COPY = {
 
   alreadyPlannedBadge: "Already planned",
   alreadyPlannedSupport:
-    "This is already on your plan. The coach knew about it, and the review leaves it alone.",
+    "This is already on your plan. The coach knew about it and did not re-propose it, and nothing here changes it unless you do.",
+
+  /* ---- Editing a planned session inside review --------------------------- */
+  editPlannedAction: "Edit",
+  editPlannedSave: "Save session",
+  editPlannedSupport:
+    "Saved to your plan straight away. Your choices above are kept.",
+  /**
+   * The same consequence the plan surface states for the "Only this session"
+   * scope. Review offers no scope choice, so the one it takes has to be named:
+   * an owner who thought they were changing the series would be wrong, and
+   * nothing else on this screen would tell them.
+   */
+  editPlannedSeriesConsequence:
+    "This repeats. Saving changes this occurrence only — it becomes visibly changed and the recurring rule never overwrites it.",
+  lockPlannedAction: "Lock",
+  unlockPlannedAction: "Unlock",
+  lockPlannedActionFor: (title: string) => `Lock ${title}`,
+  unlockPlannedActionFor: (title: string) => `Unlock ${title}`,
+
+  /* ---- Staleness --------------------------------------------------------- */
+  /**
+   * Non-blocking, and specific about what is already true. The timeline is
+   * re-read on every render, so by the time this is on screen the refresh has
+   * happened — saying "reload" would be telling the owner to do something the
+   * page did for them.
+   */
+  planChangedNotice:
+    "Your plan has changed since the coach saw it — including anything you have just edited here. The days below are up to date, and finishing checks your plan again before adding anything.",
+  /**
+   * Shown in place of the editor on a day that has fallen behind owner-local
+   * today. The plan's own write refuses a date outside its fourteen-day window,
+   * so the controls are withheld and the reason is given, rather than offering
+   * a button whose failure message would explain nothing.
+   */
+  plannedPastDay:
+    "This day has passed, so it can no longer be edited here. It stays on the timeline because the coach planned around it.",
+  roadmapHeading: "Planned under your roadmap",
+  roadmapPlannedUnder: (title: string, versionNumber: number) =>
+    `${title} — version ${versionNumber}, the roadmap you have accepted.`,
+  /**
+   * A roadmap accepted since the proposal was made. The proposal was planned
+   * under the older version, so naming the current roadmap here would name the
+   * wrong one, and the version number is the only honest thing left to say.
+   */
+  roadmapSuperseded: (versionNumber: number) =>
+    `Version ${versionNumber}, which you have since replaced. This proposal was planned under the older roadmap.`,
+  roadmapStaleOutOfWindow:
+    "These days fall outside your roadmap's own dates, so it describes a different stretch of training.",
+  roadmapStaleGoalMissing:
+    "Your roadmap gives attention to a goal you no longer hold, so part of its direction no longer applies.",
+  roadmapStaleLead: "Worth knowing:",
   proposedBadge: "Proposed",
   stagedBadge: "Will be added",
   rejectedBadge: "Rejected",

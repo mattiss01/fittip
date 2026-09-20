@@ -255,6 +255,7 @@ describe("a successful proposal", () => {
         COACH_AI_FIXTURE_HISTORICAL_GOAL_ID,
       ],
       memoryIds: ["c3000000-0000-4000-8000-000000000001"],
+      roadmapVersion: null,
     });
     expect(telemetry.records.at(-1)).toMatchObject({
       outcome: "accepted",

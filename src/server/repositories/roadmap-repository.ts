@@ -135,6 +135,41 @@ export class RoadmapRepository {
     };
   }
 
+  /**
+   * The accepted version currently in force, or `null` when none is.
+   *
+   * `listVersions()` would answer this too, and its first entry is the same
+   * row. This exists because M3-16B reads the roadmap on the plan-generation
+   * path, where every accepted version's `content` — up to 16,000 bytes each —
+   * would be read to use one. Ordering by `version_number` descending rather
+   * than joining `roadmap_heads` keeps it a single-table read; the two agree
+   * because `accept_roadmap_proposal` advances both in one transaction.
+   *
+   * A superseded version is deliberately not a candidate. The direction the
+   * owner is following is the one in force, and planning a week against a
+   * roadmap they have already replaced would be planning against a decision
+   * they reversed.
+   */
+  async getCurrentVersion(): Promise<RoadmapVersionView | null> {
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("roadmap_versions")
+      .select(VERSION_COLUMNS)
+      .eq("user_id", userId)
+      .order("version_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw new RoadmapPersistenceError();
+    if (data === null) return null;
+    return {
+      id: data.id,
+      versionNumber: Number(data.version_number),
+      content: data.content as unknown as RoadmapProposal,
+      acceptedAt: data.accepted_at,
+      providerCode: toProviderCode(data.roadmap_proposals),
+    };
+  }
+
   /** Accepted history, newest first. The current version is the first entry. */
   async listVersions(): Promise<RoadmapVersionView[]> {
     const userId = await this.getVerifiedUserId();

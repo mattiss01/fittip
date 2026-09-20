@@ -190,6 +190,8 @@ describe("coach AI context assembly", () => {
     expect(assembled.references).toEqual({
       goalIds: ["a1000000-0000-4000-8000-000000000001"],
       memoryIds: ["c3000000-0000-4000-8000-000000000001"],
+      // No roadmap was handed in, so none informed the request.
+      roadmapVersion: null,
     });
   });
 });
@@ -645,3 +647,164 @@ function shiftDate(isoDate: string, days: number): string {
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
 }
+
+/**
+ * The roadmap gate, which is the half of M3-16B that `roadmap-plan-context`'s
+ * own suite cannot reach: that module is a pure reducer and never sees which
+ * operation is being built. What is asserted here is assembly's behaviour —
+ * that a plan carries the reduction, that a roadmap request drops one even
+ * when a source hands it over, and that the version only becomes lineage when
+ * it was actually sent.
+ */
+describe("the accepted roadmap as plan context", () => {
+  const ROADMAP_VERSION = {
+    id: "b7000000-0000-4000-8000-000000000050",
+    versionNumber: 3,
+    content: {
+      schemaVersion: "fittip.roadmap.v2",
+      title: "Autumn 10k build",
+      summary: "Twelve weeks from base to a 10k time trial.",
+      startDate: "2026-08-01",
+      endDate: "2026-12-01",
+      phases: [
+        {
+          title: "Base building",
+          focus: "Aerobic volume with one quality session a week.",
+          startDate: "2026-08-01",
+          endDate: "2026-11-01",
+          goalAttention: [
+            {
+              goalId: "a1000000-0000-4000-8000-000000000001",
+              level: "primary",
+              reason: "Everything serves the half.",
+            },
+          ],
+          milestones: [
+            {
+              title: "Long run at 90 minutes",
+              observableCriterion: "One 90-minute run completed.",
+              targetDate: "2026-09-21",
+              goalIds: ["a1000000-0000-4000-8000-000000000001"],
+            },
+          ],
+        },
+        {
+          title: "Sharpening",
+          focus: "WITHHELD threshold work.",
+          startDate: "2026-11-02",
+          endDate: "2026-12-01",
+          goalAttention: [
+            {
+              goalId: "a1000000-0000-4000-8000-000000000001",
+              level: "secondary",
+              reason: "WITHHELD",
+            },
+          ],
+          milestones: [
+            {
+              title: "WITHHELD",
+              observableCriterion: "WITHHELD",
+              targetDate: "2026-11-20",
+              goalIds: [],
+            },
+          ],
+        },
+      ],
+      assumptions: ["WITHHELD four sessions a week."],
+      uncertainties: [
+        {
+          statement: "WITHHELD",
+          whyItMatters: "WITHHELD",
+          whatToWatch: "WITHHELD",
+        },
+      ],
+      reviewPoints: [{ title: "WITHHELD", question: "WITHHELD?" }],
+      safetyConsiderations: ["WITHHELD"],
+    },
+  } as unknown as NonNullable<CoachAIOwnedRecords["roadmapVersion"]>;
+
+  function plan(overrides: Partial<CoachAIOwnedRecords> = {}) {
+    return buildCoachAIContext(
+      "create_seven_day_plan",
+      records({
+        timezoneName: "Europe/Berlin",
+        roadmapVersion: ROADMAP_VERSION,
+        ...overrides,
+      }),
+      { ...COMPOSE, horizonEndDate: "2026-08-16" },
+    );
+  }
+
+  it("carries the reduction, not the stored roadmap", () => {
+    const assembled = plan();
+
+    expect(assembled.context.roadmap).not.toBeNull();
+    expect(assembled.context.roadmap?.coveringPhases).toHaveLength(1);
+    expect(assembled.context.roadmap?.coveringPhases[0].title).toBe(
+      "Base building",
+    );
+    expect(assembled.context.roadmap?.otherPhases).toEqual([
+      {
+        title: "Sharpening",
+        startDate: "2026-11-02",
+        endDate: "2026-12-01",
+        goalAttention: [
+          {
+            goalId: "a1000000-0000-4000-8000-000000000001",
+            level: "secondary",
+          },
+        ],
+      },
+    ]);
+  });
+
+  /**
+   * The assertion that matters most, and the one nothing else makes: it reads
+   * the serialized payload, which is what a provider would actually receive.
+   */
+  it("serializes nothing the owner withheld", () => {
+    expect(plan().serialized).not.toContain("WITHHELD");
+  });
+
+  it("charges the roadmap against its own byte budget", () => {
+    const assembled = plan();
+
+    expect(assembled.usage.roadmap).toBeGreaterThan(0);
+    expect(assembled.usage.roadmap).toBeLessThanOrEqual(
+      COACH_AI_CONTEXT_LIMITS.create_seven_day_plan.bytes.roadmap,
+    );
+  });
+
+  it("records the version as lineage once it has been sent", () => {
+    expect(plan().references.roadmapVersion).toEqual({
+      id: ROADMAP_VERSION.id,
+      versionNumber: 3,
+    });
+  });
+
+  /**
+   * The second of the two independent refusals. The context source already
+   * declines to read a roadmap for this operation; this proves assembly drops
+   * one anyway, so a source that changed its mind could not widen what a
+   * roadmap request sends.
+   */
+  it("drops a roadmap a source hands to create_roadmap, and records no lineage", () => {
+    const assembled = buildCoachAIContext(
+      "create_roadmap",
+      records({ roadmapVersion: ROADMAP_VERSION }),
+      COMPOSE,
+    );
+
+    expect(assembled.context.roadmap).toBeNull();
+    expect(assembled.references.roadmapVersion).toBeNull();
+    expect(assembled.usage.roadmap).toBe(0);
+    expect(assembled.serialized).not.toContain("Autumn 10k build");
+  });
+
+  it("is the ordinary goals-only path when no roadmap covers the week", () => {
+    const assembled = plan({ roadmapVersion: null });
+
+    expect(assembled.context.roadmap).toBeNull();
+    expect(assembled.references.roadmapVersion).toBeNull();
+  });
+});

@@ -155,6 +155,11 @@ export async function changePlanAction(
     );
 
     revalidatePath("/home/plan");
+    // M3-16B: the review surface renders the same sessions, and an edit made
+    // from inside a review has to show there too. Naming both paths rather than
+    // taking a return path from the form keeps the action's reach fixed at two
+    // routes this file names, instead of one a caller supplies.
+    revalidatePath("/home/plan/proposal");
     return result(
       "saved",
       planChangeCopy(

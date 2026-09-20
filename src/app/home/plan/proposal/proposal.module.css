@@ -412,3 +412,94 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* ---- M3-16B: editing a planned session, and the staleness notices -------- */
+
+/*
+ * Matched to the plan surface's own disclosure and editor panel rather than
+ * shared through a third module. The two surfaces render the same editor, so
+ * they have to look the same; a shared stylesheet for four rules would couple
+ * the proposal route's styling to the plan route's for the rest of its life.
+ */
+.disclosure {
+  margin-top: 0.5rem;
+  border: 1px solid var(--ledger-rule);
+}
+
+.disclosure > summary {
+  min-height: 2.9rem;
+  display: flex;
+  align-items: center;
+  padding: 0 0.7rem;
+  cursor: pointer;
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.editorPanel {
+  display: grid;
+  gap: 0.8rem;
+  padding: 0 0.7rem 0.8rem;
+}
+
+.editorPanel > .form {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.plannedActions {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--ledger-rule);
+}
+
+.secondary {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  color: var(--ledger-ink);
+  font:
+    700 0.72rem "Courier New",
+    monospace;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+/*
+ * Statements rather than alarms. Neither blocks anything, so neither takes the
+ * error colouring the notice states use — a warning the owner cannot act on and
+ * does not need to act on should not look like one.
+ */
+.staleNotice,
+.roadmapNotice {
+  margin: 0 0 0.9rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--ledger-rule);
+  background: var(--ledger-paper);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.roadmapNotice > h2 {
+  margin: 0 0 0.3rem;
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.staleReasons {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+}

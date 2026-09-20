@@ -143,6 +143,37 @@ test.describe("M3-16A plan proposal review", () => {
         page.getByText("One item will be added to your plan, in one change."),
       ).toBeVisible();
 
+      // M3-16B: the already-planned session is editable here, and the choices
+      // above survive the save. The staged item is what proves it — the edit
+      // revalidates this route, so a surface that held its decisions in
+      // component state would come back with the choice lost and the finish
+      // disabled again.
+      const plannedCard = page
+        .locator("article")
+        .filter({ hasText: "Club track night" });
+      await plannedCard.locator("summary").click();
+      await plannedCard.getByLabel("Title").fill("Club track night (short)");
+      await plannedCard.getByRole("button", { name: "Save session" }).click();
+
+      await expect(page.getByText("Club track night (short)")).toBeVisible({
+        timeout: 30_000,
+      });
+      await expect(
+        page.getByText("Will be added", { exact: true }),
+      ).toBeVisible();
+      await expect(finish).toBeEnabled();
+      await expect(
+        page.getByText("One item will be added to your plan, in one change."),
+      ).toBeVisible();
+
+      // The editor is inside a disclosure and the dock is fixed, so the page
+      // still must not scroll sideways with the panel open.
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true);
+
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -160,7 +191,8 @@ test.describe("M3-16A plan proposal review", () => {
       await expect(page).toHaveURL(/\/home\/plan$/);
       await expect(page.getByText("Easy aerobic session")).toHaveCount(1);
       await expect(page.getByText("Steadier session")).toHaveCount(0);
-      await expect(page.getByText("Club track night")).toHaveCount(1);
+      // Renamed from inside the review, and the rename reached the plan.
+      await expect(page.getByText("Club track night (short)")).toHaveCount(1);
 
       const primaryAction = page.getByRole("link", { name: "Coach proposal" });
       const resting = await primaryAction.evaluate(readFocusTreatment);

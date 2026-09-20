@@ -19,6 +19,7 @@ import {
   isExampleProposal,
   stagedItemCount,
   unresolvedItemCount,
+  type ProposalRoadmapView,
 } from "@/lib/plan/plan-proposal-view";
 import type { PlanProposalView } from "@/server/plan-proposal/plan-proposal-records";
 import {
@@ -34,9 +35,14 @@ import {
   ProfileAuthenticationError,
 } from "@/server/repositories/profile-repository";
 import {
+  createRoadmapRepository,
+  RoadmapAuthenticationError,
+} from "@/server/repositories/roadmap-repository";
+import {
   createRollingPlan,
   RollingPlanAuthenticationError,
 } from "@/server/repositories/rolling-plan-repository";
+import { roadmapPlanStaleReasons } from "@/server/roadmap/roadmap-plan-context";
 
 export const dynamic = "force-dynamic";
 
@@ -99,6 +105,8 @@ export default async function PlanProposalPage() {
               expectedPlanRevision={state.planRevision}
               finishKey={state.finishKey}
               days={state.days}
+              roadmap={state.roadmap}
+              planChangedSinceComposed={state.planChangedSinceComposed}
               unresolved={unresolvedItemCount(state.proposal.items)}
               staged={stagedItemCount(state.proposal.items)}
               isExample={isExampleProposal(state.proposal.providerCode)}
@@ -127,6 +135,8 @@ async function loadProposalState() {
       timezoneName,
       hasGoals: false,
       proposal: null,
+      roadmap: null,
+      planChangedSinceComposed: false,
       planRevision: 0,
       finishKey: "",
       days: [],
@@ -144,8 +154,12 @@ async function loadProposalState() {
     proposals.getLatestProposal(),
     goals.list(),
   ]);
-  const hasGoals =
-    selectActiveGoalContext(goalCollection.goals).targetable.length > 0;
+  const targetable = selectActiveGoalContext(goalCollection.goals).targetable;
+  const hasGoals = targetable.length > 0;
+  // The goals a roadmap may still be pointed at. Same set the context source
+  // checked when the proposal was made, read again now — which is the point:
+  // a goal archived since is exactly what makes a roadmap stale.
+  const targetableGoalIds = new Set(targetable.map((goal) => goal.id));
 
   // A finished proposal needs no plan read: it is shown as the record of what
   // was decided, not as a timeline to decide against.
@@ -154,6 +168,8 @@ async function loadProposalState() {
       timezoneName,
       hasGoals,
       proposal,
+      roadmap: null,
+      planChangedSinceComposed: false,
       planRevision: 0,
       finishKey: "",
       days: [],
@@ -161,8 +177,12 @@ async function loadProposalState() {
   }
 
   // The plan is read over the proposal's own horizon, not the plan window, so
-  // the review shows exactly the days it is asking about.
-  const slice = await plan.getPlanSlice(proposal.startDate, proposal.endDate);
+  // the review shows exactly the days it is asking about. The roadmap lineage
+  // is read beside it: the two are independent, and neither gates the other.
+  const [slice, roadmapSource] = await Promise.all([
+    plan.getPlanSlice(proposal.startDate, proposal.endDate),
+    proposals.getRoadmapSource(proposal.id),
+  ]);
   const planned = slice.sessions.map((session) => ({
     id: session.id,
     localDate: session.localDate,
@@ -171,12 +191,29 @@ async function loadProposalState() {
     expectedDurationMinutes: session.expectedDurationMinutes ?? null,
     isLocked: session.isLocked,
     status: session.status,
+    intent: session.intent ?? null,
+    note: session.note ?? null,
+    seriesId: session.seriesId ?? null,
   })) satisfies (PlannedSessionSummary & { localDate: string })[];
+
+  // The roadmap this proposal was planned under, re-read as it is now rather
+  // than as it was: the point of showing it is to say whether it still
+  // describes the week, which yesterday's answer cannot.
+  const roadmap =
+    roadmapSource === null
+      ? null
+      : await readRoadmapStaleness(roadmapSource, proposal, targetableGoalIds);
 
   return {
     timezoneName,
     hasGoals,
     proposal,
+    roadmap,
+    // The plan moved after the coach saw it. Not a conflict and not a blocker:
+    // the timeline below is read fresh on this very render, and the finish
+    // revalidates under the lock regardless.
+    planChangedSinceComposed:
+      slice.revision !== proposal.composedAtPlanRevision,
     planRevision: slice.revision,
     finishKey: finishKeyFor(proposal, slice.revision),
     days: buildProposalTimeline({
@@ -188,6 +225,48 @@ async function loadProposalState() {
       plannedByDate: groupPlannedByDate(planned),
       recoveryDates: slice.recoveryDates,
     }),
+  };
+}
+
+/**
+ * Whether the roadmap a proposal was planned under still describes the week.
+ *
+ * Recomputed from the current roadmap and the current goals rather than stored
+ * with the proposal. Staleness is a relationship between a roadmap and today,
+ * not a property the proposal has: a goal archived an hour ago makes a
+ * proposal's roadmap stale without anything about the proposal changing.
+ *
+ * The version is matched by id. A roadmap accepted since the proposal was made
+ * is a different version, and saying "planned under" about it would be false —
+ * so that case reports the superseded fact rather than describing the new one.
+ */
+async function readRoadmapStaleness(
+  source: { versionId: string; versionNumber: number },
+  proposal: PlanProposalView,
+  targetableGoalIds: ReadonlySet<string>,
+): Promise<ProposalRoadmapView | null> {
+  const current = await (await createRoadmapRepository()).getCurrentVersion();
+  if (current === null || current.id !== source.versionId) {
+    return {
+      title: null,
+      versionNumber: source.versionNumber,
+      isSuperseded: true,
+      staleReasons: [],
+    };
+  }
+
+  const staleReasons = roadmapPlanStaleReasons({
+    roadmap: current.content,
+    horizonStartDate: proposal.startDate,
+    horizonEndDate: proposal.endDate,
+    targetableGoalIds,
+  });
+
+  return {
+    title: current.content.title,
+    versionNumber: current.versionNumber,
+    isSuperseded: false,
+    staleReasons,
   };
 }
 
@@ -249,7 +328,11 @@ function redirectOnAuthError(error: unknown): void {
     error instanceof ProfileAuthenticationError ||
     error instanceof PlanProposalAuthenticationError ||
     error instanceof RollingPlanAuthenticationError ||
-    error instanceof GoalAuthenticationError
+    error instanceof GoalAuthenticationError ||
+    // M3-16B added the roadmap read to this page. Without it here, a signed-out
+    // owner would get a thrown error instead of the sign-in form, and only on
+    // the roadmap read — the least likely one to be noticed.
+    error instanceof RoadmapAuthenticationError
       ? error
       : null;
   if (authError === null) return;

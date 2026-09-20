@@ -17,12 +17,24 @@ const STATIC_PREFIX_BUDGET = 6_000;
 /**
  * The plan prompt gets a larger allowance than the roadmap's, and that is a
  * derivation rather than a concession. The real constraint is
- * `prefix + wrapper + context <= 4 * maxInputTokens`, and the plan operation's
- * context allocation is 28,500 bytes against the roadmap's 33,700 — a week of
- * training needs no 52-week forward window. `ceil((7_000 + 64 + 28_500) / 4)`
- * is 8,891, comfortably inside the same 10,000-token ceiling.
+ * `prefix + wrapper + context <= 4 * maxInputTokens`.
+ *
+ * M3-16B spent the slack this used to describe. The plan's context allocation
+ * was 28,500 bytes against the roadmap's 33,700 — a week of training needs no
+ * 52-week forward window — and the accepted roadmap the plan now reads raised
+ * it to 32,500. The paragraph describing that roadmap took the prefix to 6,991
+ * characters, so the budget moved 7,000 to 7,400 in the same ticket:
+ *
+ *   7,400 + 64 + 32,500 = 39,964   ceil(39,964 / 4) = 9,991  vs  10,000
+ *
+ * That is the whole ceiling. 9 tokens remain, and they are not a budget — the
+ * next source or paragraph takes bytes from something else or raises
+ * `maxInputTokens`, which charges every live call whether or not it needed the
+ * room. The assertions below read `bytes.total` rather than a literal, so they
+ * bind whatever the allocation becomes; this comment is the one thing that has
+ * to be kept honest by hand.
  */
-const PLAN_STATIC_PREFIX_BUDGET = 7_000;
+const PLAN_STATIC_PREFIX_BUDGET = 7_400;
 
 describe("the roadmap prompt", () => {
   it("stays inside the prefix budget the context allocation was derived against", () => {

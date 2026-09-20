@@ -12,6 +12,8 @@
  * shapes that carry proposal content, which no Client Component needs.
  */
 
+import type { RoadmapPlanStaleReason } from "@/lib/roadmap/roadmap-stale-reasons";
+
 /** What the owner has said about one proposed item. */
 export type PlanProposalItemDecision = "proposed" | "staged" | "rejected";
 
@@ -67,3 +69,20 @@ export const FIXTURE_PROVIDER_CODE = "fixture";
 export function isExampleProposal(providerCode: string): boolean {
   return providerCode === FIXTURE_PROVIDER_CODE;
 }
+
+/**
+ * The roadmap a proposal was planned under, as the review surface shows it.
+ *
+ * `isSuperseded` is its own fact rather than a third stale reason. The other
+ * two describe a roadmap that is still the owner's; this one says the owner has
+ * accepted a different roadmap since, so the surface cannot honestly describe
+ * the direction the proposal was built on — it only knows which version it was.
+ * That is why `title` is nullable here and nowhere else: naming the current
+ * roadmap would name the wrong one.
+ */
+export type ProposalRoadmapView = {
+  title: string | null;
+  versionNumber: number;
+  isSuperseded: boolean;
+  staleReasons: RoadmapPlanStaleReason[];
+};

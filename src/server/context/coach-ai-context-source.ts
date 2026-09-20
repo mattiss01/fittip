@@ -19,6 +19,7 @@ import { createCompletionLog } from "@/server/repositories/completion-log-reposi
 import { createGoalRepository } from "@/server/repositories/goal-repository";
 import { createMemoryRepository } from "@/server/repositories/memory-repository";
 import { createProfileRepository } from "@/server/repositories/profile-repository";
+import { createRoadmapRepository } from "@/server/repositories/roadmap-repository";
 import { createRollingPlan } from "@/server/repositories/rolling-plan-repository";
 import type { RollingPlanSession } from "@/server/rolling-plan/rolling-plan";
 import {
@@ -137,23 +138,40 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       ROADMAP_FORWARD_LOCKED_WINDOW_DAYS,
     );
 
-    // Four independent owner-scoped reads, issued together rather than as a
-    // waterfall. The plan read is the only one with a write side effect.
-    const [goals, memory, completions, planWindow] = await Promise.all([
-      (await createGoalRepository()).list(),
-      (await createMemoryRepository()).list(today),
-      (await createCompletionLog()).list(windowStartDate, today),
-      // ADR-017 consequence 3: an owner who has not opened the Plan has no
-      // materialized occurrences past their last visit, so a coach reading the
-      // window untopped plans around sessions the owner does have. M3-15D
-      // accepts that write side effect; M3-15C deliberately does not, because
-      // viewing history must not materialize future training.
-      readPlanWindowToppedUp(
-        await createRollingPlan(),
-        windowStartDate,
-        forwardEndDate,
-      ),
-    ]);
+    // Five independent owner-scoped reads, issued together rather than as a
+    // waterfall. The plan read is the only one with a write side effect, and
+    // the roadmap read is the only one an operation can skip.
+    const [goals, memory, completions, planWindow, roadmapVersion] =
+      await Promise.all([
+        (await createGoalRepository()).list(),
+        (await createMemoryRepository()).list(today),
+        (await createCompletionLog()).list(windowStartDate, today),
+        // ADR-017 consequence 3: an owner who has not opened the Plan has no
+        // materialized occurrences past their last visit, so a coach reading the
+        // window untopped plans around sessions the owner does have. M3-15D
+        // accepts that write side effect; M3-15C deliberately does not, because
+        // viewing history must not materialize future training.
+        readPlanWindowToppedUp(
+          await createRollingPlan(),
+          windowStartDate,
+          forwardEndDate,
+        ),
+        // M3-16B. Only the plan operation: a roadmap is not planned against
+        // itself, and reading one for `create_roadmap` would put owner records
+        // in hand that that operation has no business holding.
+        //
+        // This hands over the stored content unreduced, which is the one place
+        // this module differs from how it treats completions. Reducing needs
+        // the composed horizon to know which phase the week falls in, and
+        // `load` is deliberately not given the compose input. Assembly has it,
+        // and assembly is a real gate here rather than a pass-through:
+        // `buildCoachAIContext` calls `buildRoadmapPlanContext` exactly as it
+        // calls `selectTrainingHistoryContext`. Nothing is serialized before
+        // that call.
+        this.#operation === "create_seven_day_plan"
+          ? (await createRoadmapRepository()).getCurrentVersion()
+          : null,
+      ]);
 
     const completedPlanSessionIds = new Set(
       completions
@@ -198,6 +216,9 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       memory: memory.items,
       training,
       timezoneName,
+      // Unreduced on purpose; see the read above. Assembly reduces it against
+      // the composed horizon and records which version it used.
+      roadmapVersion,
       sources: this.#completionSources(training, byRecord),
     };
   }

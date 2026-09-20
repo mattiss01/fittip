@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { RoadmapPlanStaleReason } from "@/lib/roadmap/roadmap-stale-reasons";
 import type { GoalTier } from "@/server/goals/goal-records";
 import type { MemoryType } from "@/server/memory/memory-records";
 
@@ -160,6 +161,68 @@ export type CoachAIContext = {
   planningNote: string | null;
   regenerationFeedback: string | null;
   previousProposal: CoachAIPreviousProposalReference | null;
+  /**
+   * The accepted roadmap covering this horizon, reduced by
+   * `roadmap-plan-context.ts` — never the stored roadmap. `null` when no
+   * accepted version covers the week, which is the ordinary goals-only path
+   * rather than a missing requirement. Absent for `create_roadmap`: a roadmap
+   * is not planned against itself.
+   */
+  roadmap: CoachAIRoadmapContext | null;
+};
+
+/**
+ * Why a roadmap may not describe the week it is informing.
+ *
+ * Declared in `@/lib/roadmap/roadmap-stale-reasons` and re-exported here, not
+ * defined twice: the review surface is a Client Component and cannot import
+ * this module, and two copies of a union that must agree is how they stop
+ * agreeing.
+ */
+export type CoachAIRoadmapStaleReason = RoadmapPlanStaleReason;
+
+/** A phase the horizon falls in: every field the roadmap holds for it. */
+export type CoachAIRoadmapPhase = {
+  title: string;
+  focus: string;
+  startDate: string;
+  endDate: string;
+  goalAttention: RoadmapGoalAttention[];
+  milestones: RoadmapMilestone[];
+};
+
+/**
+ * A phase the week is not in. No `focus`, no `reason`, no milestones: what it
+ * is called, when it runs, and which goals it attends to.
+ */
+export type CoachAIRoadmapPhaseSummary = {
+  title: string;
+  startDate: string;
+  endDate: string;
+  goalAttention: { goalId: string; level: RoadmapGoalAttentionLevel }[];
+};
+
+export type CoachAIRoadmapContext = {
+  title: string;
+  summary: string;
+  startDate: string;
+  endDate: string;
+  isStale: boolean;
+  staleReasons: CoachAIRoadmapStaleReason[];
+  coveringPhases: CoachAIRoadmapPhase[];
+  otherPhases: CoachAIRoadmapPhaseSummary[];
+  /**
+   * The disclosed reductions. A coach that silently receives a subset reasons
+   * as though it saw everything, so every trim is counted rather than applied
+   * quietly. All zero and false is the ordinary case, and the last three fire
+   * only on a roadmap large enough that the other phases have already gone.
+   */
+  phaseGoalAttentionWithheld: number;
+  phaseDetailWithheld: number;
+  otherPhasesWithheld: number;
+  milestonesWithheld: number;
+  goalAttentionReasonsWithheld: number;
+  focusTruncated: boolean;
 };
 
 /**
@@ -317,7 +380,7 @@ export type RoadmapMemoryCandidate = CoachAIMemoryCandidate;
  * acceptance.
  */
 export type CoachAISourceReference = {
-  kind: "goal" | "memory" | "plan_version" | "completion";
+  kind: "goal" | "memory" | "plan_version" | "completion" | "roadmap_version"; // M3-16B: which accepted roadmap a plan was proposed under.
   recordId: string;
   revisionId?: string;
   revisionNumber?: number;

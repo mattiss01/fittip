@@ -6,12 +6,14 @@ const {
   createMemoryMock,
   createCompletionLogMock,
   createRollingPlanMock,
+  createRoadmapMock,
 } = vi.hoisted(() => ({
   createProfileMock: vi.fn(),
   createGoalMock: vi.fn(),
   createMemoryMock: vi.fn(),
   createCompletionLogMock: vi.fn(),
   createRollingPlanMock: vi.fn(),
+  createRoadmapMock: vi.fn(),
 }));
 
 vi.mock("@/server/repositories/profile-repository", async (original) => {
@@ -43,6 +45,11 @@ vi.mock("@/server/repositories/rolling-plan-repository", async (original) => {
     >();
   return { ...actual, createRollingPlan: createRollingPlanMock };
 });
+vi.mock("@/server/repositories/roadmap-repository", async (original) => {
+  const actual =
+    await original<typeof import("@/server/repositories/roadmap-repository")>();
+  return { ...actual, createRoadmapRepository: createRoadmapMock };
+});
 
 import {
   buildCoachAIContext,
@@ -70,6 +77,7 @@ const listGoals = vi.fn();
 const listMemory = vi.fn();
 const listCompletions = vi.fn();
 const getPlanSlice = vi.fn();
+const getCurrentVersion = vi.fn();
 const materializeSeries = vi.fn();
 
 const COMPOSE = {
@@ -105,6 +113,8 @@ describe("the production coaching context source", () => {
       getPlanSlice,
       materializeSeries,
     });
+    getCurrentVersion.mockResolvedValue(null);
+    createRoadmapMock.mockResolvedValue({ getCurrentVersion });
   });
 
   it("refuses an owner with no confirmed zone rather than defaulting to the server's", async () => {

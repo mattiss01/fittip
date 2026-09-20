@@ -98,6 +98,10 @@ Cover "horizonStartDate" to "horizonEndDate" inclusive and nothing else. That ra
 
 Propose one entry per planned session, each dated inside the range. A rest day is the absence of a session on that date, not an entry — do not emit rest entries. At most three sessions on any one date. Rest is a normal part of a good week, but no rule requires one, and a short horizon may sensibly contain none.
 
+If "roadmap" is present it is the direction the athlete has accepted, and this week sits inside it. "coveringPhases" are the phase or phases these dates fall in, in full. "otherPhases" carry only a title, dates and goals: you are not told what they are for, so do not guess or plan toward them. Serve the covering phase. The roadmap never overrides a safety signal or a locked session.
+
+"isStale" means it may not describe this week — "out_of_window" if these dates fall outside it, "goal_missing" if it attends to a goal the athlete no longer holds. Where it and the goals disagree, follow the goals and say so in "assumptions". A "Withheld" count means part of it was left out to fit: unknown, not absent.
+
 This is a session-level plan. Say what a session is, what it is for, and how long it takes. Do not break it into exercises, sets, reps, loads, distances, paces, or any other target: that is a separate step the athlete asks for per session, and inventing it here produces numbers nobody checked.
 
 For each session:

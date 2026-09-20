@@ -253,7 +253,26 @@ const allowedPlanProposalModules = [
   "@/server/repositories/goal-repository",
   "@/server/repositories/plan-proposal-repository",
   "@/server/repositories/profile-repository",
+  // M3-16B added the last two, deliberately and both read-only. The review
+  // says which accepted roadmap a proposal was planned under and whether that
+  // roadmap still describes the week, so the page reads the current version and
+  // runs the same staleness predicate the context assembly ran. Neither entry
+  // lets this surface accept, edit, or regenerate a roadmap: those live on
+  // `@/server/roadmap/roadmap-generation` and `roadmap-edit`, which stay off
+  // this list, and the assertion below still refuses a roadmap write.
+  //
+  // What this list does NOT constrain, and did not before: `proposal-review.tsx`
+  // imports `../actions` relatively, so the plan write it performs is outside
+  // every check here — these assertions match `@/server/...` specifiers only.
+  // That write is the product owner's explicit decision of 20 September 2026
+  // (a planned session is editable inside review, through the plan's own
+  // action rather than a second write path), and it is covered by
+  // `actions.test.ts` rather than by this file. Stated because the heading
+  // below says "behind the one Server Action module", and a reader should not
+  // have to discover that it means the one *proposal* Server Action module.
+  "@/server/repositories/roadmap-repository",
   "@/server/repositories/rolling-plan-repository",
+  "@/server/roadmap/roadmap-plan-context",
 ] as const;
 
 /** Everything the proposal route renders, wherever it lives. */

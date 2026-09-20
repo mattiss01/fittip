@@ -12,12 +12,20 @@ import {
   finishPlanReviewAction,
 } from "./actions";
 import styles from "./proposal.module.css";
-import type { ProposalTimelineDay } from "./proposal-timeline";
+import type {
+  PlannedSessionSummary,
+  ProposalTimelineDay,
+} from "./proposal-timeline";
+
+import { INITIAL_PLAN_ACTION_STATE } from "../action-state";
+import { changePlanAction } from "../actions";
+import { SessionFields } from "../session-fields";
 
 import { PLAN_PROPOSAL_COPY } from "@/lib/plan/plan-proposal-copy";
 import type {
   PlanProposalItemDecision,
   PlanProposalItemView,
+  ProposalRoadmapView,
 } from "@/lib/plan/plan-proposal-view";
 
 const COPY = PLAN_PROPOSAL_COPY;
@@ -40,6 +48,8 @@ export function ProposalReview({
   expectedPlanRevision,
   finishKey,
   days,
+  roadmap,
+  planChangedSinceComposed,
   unresolved,
   staged,
   isExample,
@@ -49,6 +59,8 @@ export function ProposalReview({
   /** Stable per render of the open proposal, so a retried finish replays. */
   finishKey: string;
   days: ProposalTimelineDay[];
+  roadmap: ProposalRoadmapView | null;
+  planChangedSinceComposed: boolean;
   unresolved: number;
   staged: number;
   isExample: boolean;
@@ -72,6 +84,44 @@ export function ProposalReview({
         </p>
       ) : null}
 
+      {/*
+        Both notices are statements, not warnings with an action. The timeline
+        below was read on this render, so the refresh the owner would reach for
+        has already happened, and the finish revalidates under the lock either
+        way. Telling them to reload would be asking for work already done.
+      */}
+      {planChangedSinceComposed ? (
+        <p className={styles.staleNotice} data-state="plan-changed">
+          {COPY.planChangedNotice}
+        </p>
+      ) : null}
+
+      {roadmap === null ? null : (
+        <section className={styles.roadmapNotice} data-state="roadmap">
+          <h2>{COPY.roadmapHeading}</h2>
+          <p className={styles.support}>
+            {roadmap.isSuperseded
+              ? COPY.roadmapSuperseded(roadmap.versionNumber)
+              : COPY.roadmapPlannedUnder(
+                  roadmap.title ?? "",
+                  roadmap.versionNumber,
+                )}
+          </p>
+          {roadmap.staleReasons.length > 0 ? (
+            <ul className={styles.staleReasons}>
+              {roadmap.staleReasons.map((reason) => (
+                <li key={reason}>
+                  <strong>{COPY.roadmapStaleLead}</strong>{" "}
+                  {reason === "out_of_window"
+                    ? COPY.roadmapStaleOutOfWindow
+                    : COPY.roadmapStaleGoalMissing}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      )}
+
       <ol className={styles.days}>
         {days.map((day) => (
           <li
@@ -93,32 +143,12 @@ export function ProposalReview({
 
             <div className={styles.dayBody}>
               {day.planned.map((session) => (
-                <article
-                  className={styles.planned}
+                <PlannedSession
                   key={session.id}
-                  data-cancelled={session.status === "cancelled"}
-                >
-                  <header className={styles.cardHeader}>
-                    <h3>{session.title}</h3>
-                    <span className={styles.badge} data-kind="planned">
-                      {COPY.alreadyPlannedBadge}
-                    </span>
-                  </header>
-                  <p className={styles.meta}>
-                    {[
-                      session.sport,
-                      session.expectedDurationMinutes === null
-                        ? null
-                        : `${session.expectedDurationMinutes} min`,
-                      session.isLocked ? COPY.lockedBadge : null,
-                      session.status === "cancelled"
-                        ? COPY.cancelledBadge
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                </article>
+                  session={session}
+                  expectedPlanRevision={expectedPlanRevision}
+                  isPast={day.isPast}
+                />
               ))}
 
               {day.items.map((item) => (
@@ -195,6 +225,173 @@ export function ProposalReview({
         </p>
       </div>
     </section>
+  );
+}
+
+/**
+ * A session the plan already holds, editable in place.
+ *
+ * The action is the plan surface's own `changePlanAction`, not a copy: the
+ * revision check, the placement rules, the series divergence and the top-up
+ * all live inside it, and a second write path to the same rows is a second set
+ * of rules to keep true. Reuse is safe on two facts worth stating because
+ * neither is local — `slice.revision` is the plan's revision and not a
+ * window-scoped one, so the number this form carries is the one the plan
+ * surface would carry; and a proposal horizon is at most seven days from today
+ * while the plan window is fourteen, so every session shown here is inside the
+ * window that action reads.
+ *
+ * Staged choices survive the save because they are rows in
+ * `plan_proposal_item_decisions`, not component state. The revalidate that
+ * follows re-reads them, and there is nothing in this tree for it to lose.
+ *
+ * A cancelled session is shown and not editable. Every non-destructive
+ * operation refuses it today, so offering an editor would be offering a
+ * control the server will decline; reactivating one is its own ticket.
+ */
+function PlannedSession({
+  session,
+  expectedPlanRevision,
+  isPast,
+}: {
+  session: PlannedSessionSummary;
+  expectedPlanRevision: number;
+  isPast: boolean;
+}) {
+  // Two action states rather than one shared between the editor and the lock.
+  // They share an action, but not a submission counter: the edit form is keyed
+  // on that counter so a rejected save can reset it, and with one state a press
+  // of Lock would remount the editor and throw away whatever was half-typed
+  // in it.
+  const [state, action, pending] = useActionState(
+    changePlanAction,
+    INITIAL_PLAN_ACTION_STATE,
+  );
+  const [lockState, lockAction, locking] = useActionState(
+    changePlanAction,
+    INITIAL_PLAN_ACTION_STATE,
+  );
+  const cancelled = session.status === "cancelled";
+  const notice = state.submission >= lockState.submission ? state : lockState;
+
+  return (
+    <article
+      className={styles.planned}
+      data-cancelled={cancelled}
+      data-session-id={session.id}
+    >
+      <header className={styles.cardHeader}>
+        <h3>{session.title}</h3>
+        <span className={styles.badge} data-kind="planned">
+          {COPY.alreadyPlannedBadge}
+        </span>
+      </header>
+      <p className={styles.meta}>
+        {[
+          session.sport,
+          session.expectedDurationMinutes === null
+            ? null
+            : `${session.expectedDurationMinutes} min`,
+          session.isLocked ? COPY.lockedBadge : null,
+          cancelled ? COPY.cancelledBadge : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+      </p>
+
+      {cancelled || isPast ? (
+        isPast && !cancelled ? (
+          <p className={styles.support} data-state="rule">
+            {COPY.plannedPastDay}
+          </p>
+        ) : null
+      ) : (
+        <div className={styles.plannedActions}>
+          <details className={styles.disclosure}>
+            <summary>{COPY.editPlannedAction}</summary>
+            <div className={styles.editorPanel}>
+              {session.seriesId === null ? null : (
+                <p className={styles.support} data-state="rule">
+                  {COPY.editPlannedSeriesConsequence}
+                </p>
+              )}
+              <form
+                className={styles.form}
+                action={action}
+                key={`edit-${session.id}-${state.submission}`}
+              >
+                <input type="hidden" name="operation" value="edit" />
+                <input type="hidden" name="sessionId" value={session.id} />
+                <input
+                  type="hidden"
+                  name="expectedRevision"
+                  value={expectedPlanRevision}
+                />
+                <SessionFields
+                  idPrefix={`proposal-edit-${session.id}`}
+                  draft={{
+                    title: session.title,
+                    sport: session.sport,
+                    expectedDurationMinutes:
+                      session.expectedDurationMinutes === null
+                        ? ""
+                        : String(session.expectedDurationMinutes),
+                    intent: session.intent ?? "",
+                    note: session.note ?? "",
+                  }}
+                />
+                <button
+                  className={styles.primary}
+                  type="submit"
+                  disabled={pending}
+                >
+                  {COPY.editPlannedSave}
+                </button>
+                <p className={styles.support}>{COPY.editPlannedSupport}</p>
+              </form>
+            </div>
+          </details>
+
+          <form action={lockAction}>
+            <input type="hidden" name="operation" value="set_lock" />
+            <input type="hidden" name="sessionId" value={session.id} />
+            <input
+              type="hidden"
+              name="isLocked"
+              value={session.isLocked ? "false" : "true"}
+            />
+            <input
+              type="hidden"
+              name="expectedRevision"
+              value={expectedPlanRevision}
+            />
+            <button
+              className={styles.secondary}
+              type="submit"
+              disabled={pending || locking}
+              aria-label={
+                session.isLocked
+                  ? COPY.unlockPlannedActionFor(session.title)
+                  : COPY.lockPlannedActionFor(session.title)
+              }
+            >
+              {session.isLocked
+                ? COPY.unlockPlannedAction
+                : COPY.lockPlannedAction}
+            </button>
+          </form>
+        </div>
+      )}
+
+      <p
+        className={notice.status === "idle" ? styles.srOnly : styles.notice}
+        data-state={pending || locking ? "pending" : notice.status}
+        role="status"
+        aria-live="polite"
+      >
+        {pending || locking ? "Saving…" : notice.message}
+      </p>
+    </article>
   );
 }
 
