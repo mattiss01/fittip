@@ -77,15 +77,20 @@ before any code is written.
      and no milestones leave for a phase the week is not in, and `assumptions`,
      `uncertainties`, `reviewPoints` and `safetyConsiderations` never leave at all.
    - **Staleness is two facts, named separately, and never blocks.** Out of window — the
-     horizon reaches past the roadmap's `endDate` or starts before its `startDate`. Sources
-     moved — a goal the roadmap was accepted against has changed revision since. Both are
-     marked in the context and on the review screen.
+     horizon reaches past the roadmap's `endDate` or starts before its `startDate`. Goal
+     missing — a phase gives attention to a goal that is gone, archived, or no longer active
+     or achieved. The line first said "changed revision"; goals carry a collection revision
+     and not a per-goal one, so the fact available is existence, which is the same predicate
+     `accept_roadmap_proposal` already applies to a goal source. Both are marked in the
+     context and on the review screen.
    - **Over budget reduces and discloses; it never refuses.** `bytes.roadmap` is 4,000 and the
-     plan total rises 28,500 → 32,500, which is 9,891 estimated tokens against a 10,000
-     ceiling. Past it the non-covering phases drop `goalAttention`, then a straddling week's
-     lesser phase drops to the summary form, each disclosed in the envelope. The covering
-     phase is never reduced. Goals and memory deny on overflow because the owner can curate
-     them; nobody shortens a phase description to get a week planned.
+     plan total rises 28,500 → 32,500. The prompt paragraph describing the field then took the
+     prefix past its 7,000 budget, so that rose to 7,400 in the same ticket: 9,991 estimated
+     tokens against a 10,000 ceiling, not the 9,891 this line first predicted. Past the budget
+     the non-covering phases drop `goalAttention`, then a straddling week's lesser phase drops
+     to the summary form, then the other phases go entirely — each disclosed in the envelope.
+     The covering phase is never reduced. Goals and memory deny on overflow because the owner
+     can curate them; nobody shortens a phase description to get a week planned.
    - **The editor inside review is fields plus lock** — title, sport, duration, intent, note,
      locked — saved immediately through the plan's own `changePlanAction`. No create, cancel,
      delete or recurrence control on this surface.
@@ -147,6 +152,15 @@ Not worth their own slot; do them when work lands nearby.
 - **M3-15B's accepted browser flow was rewritten** on 18 Sep 2026 (`cf33bb6`): it asserted the
   read-only title and sport that M3-23 replaced. Its validation record still describes the
   surface as it shipped then, which is what a record is for.
+- **The plan context has no headroom left.** M3-16B spent it: prefix 7,400 + wrapper 64 +
+  context 32,500 estimates 9,991 tokens against a 10,000 ceiling. The next source, or a longer
+  prompt, takes bytes from an existing source or raises `maxInputTokens` — and the second is a
+  standing spend increase, because a reservation charges the ceiling before every live call
+  whether or not the extra room was used.
+- **A superseded roadmap is named only by version.** When the owner accepts a new roadmap after
+  a proposal was made, review says which version the proposal was planned under and that it has
+  been replaced, but cannot describe it: the content of a superseded version is still stored,
+  and reading it back for display was not in this slice.
 
 ## Log
 
