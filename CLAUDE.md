@@ -30,6 +30,29 @@ per merge. Follow-ups found along the way become new checklist lines, not new do
 `docs/backlog/M0`–`M3` and `docs/validation/` are history from the earlier protocol; read
 them for context, never extend them.
 
+**Nothing accumulates in that file.** It describes what is open, not what has happened, and
+it stays near a hundred lines however long the project runs. Four rules keep it there:
+
+- **A merged item's block is deleted in the merge that ships it.** The log row becomes its
+  record. The constraints and the owner's decisions are already in the commit message and in
+  the comments of the code they shaped, which is where someone asking "why is this like
+  this?" will be standing. Measured on 20 September 2026: shipped items were 91 of the
+  file's 174 lines, against 16 for everything actually open.
+- **A log row is one or two sentences.** What changed, the migration and its founder apply if
+  there was one, and anything a reader would otherwise get wrong. A row that grows into a
+  paragraph has only moved the bloat; the detail belongs in the commit message, which is
+  where it was written first.
+- **A limitation is removed from `Known limitations` by the merge that stops it being true**,
+  and that merge's log row says so. The section is a description of today, not a history of
+  everything that was ever awkward.
+- **When the log passes roughly a hundred rows, the finished year moves to
+  `docs/backlog/LOG-<year>.md`** and `NEXT.md` keeps the current one.
+
+The cost of this is real and worth knowing: an owner decision from six weeks ago is
+recovered by reading a commit rather than by scrolling. That is the trade — the file is
+optimized for the question "what now?", which is asked every session, over "what did we
+decide in August?", which is asked rarely and answered precisely by `git log`.
+
 ### Build lane — the default
 
 For anything visible or behavioral that the careful lane does not cover:
