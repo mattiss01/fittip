@@ -1,5 +1,6 @@
 import "server-only";
 
+import { CoachAIError } from "@/server/ai/errors";
 import type {
   CoachAIRoadmapContext,
   CoachAIRoadmapPhase,
@@ -124,6 +125,9 @@ export function buildRoadmapPlanContext(
     phaseGoalAttentionWithheld: 0,
     phaseDetailWithheld: 0,
     otherPhasesWithheld: 0,
+    milestonesWithheld: 0,
+    goalAttentionReasonsWithheld: 0,
+    focusTruncated: false,
   };
   if (fits(context)) return context;
 
@@ -150,16 +154,132 @@ export function buildRoadmapPlanContext(
         ...context.otherPhases,
       ],
       phaseDetailWithheld: demoted.length,
+      // The demoted phase loses its goal attention too, so it belongs in that
+      // count. Without this the coach reads a phase with an empty
+      // `goalAttention` and a withheld total that does not explain it.
+      phaseGoalAttentionWithheld:
+        context.phaseGoalAttentionWithheld +
+        demoted.filter((phase) => phase.goalAttention.length > 0).length,
     };
     if (fits(context)) return context;
   }
 
-  // 3. The other phases go entirely, counted. The covering phase survives,
-  //    which is what the ordering above exists to guarantee.
-  return {
+  // 3. The other phases go entirely, counted.
+  context = {
     ...context,
     otherPhases: [],
     otherPhasesWithheld: context.otherPhases.length,
+  };
+  if (fits(context)) return context;
+
+  // 4. The covering phase itself, as a last resort and in the order that costs
+  //    the coach least: what the phase is measured by, then why each goal gets
+  //    its attention, then the phase description itself, truncated.
+  //
+  //    This ticket first claimed the covering phase was never reduced, on the
+  //    arithmetic that a maximal phase plus the envelope came to roughly 3,750
+  //    bytes. That was wrong twice over. The budget counts UTF-8 bytes while
+  //    the validator bounds characters (`isBounded` uses `.length`), so a
+  //    roadmap written with em dashes or in a non-Latin script is three times
+  //    the size the character limits suggest — measured, a maximal phase of
+  //    three-byte characters is 8,992 bytes. And the first measurement used a
+  //    fixture below several of the real limits.
+  //
+  //    Without these steps the function returns over budget, `context.ts`
+  //    raises `CoachAIContextTooLargeError("roadmap")`, and the owner cannot
+  //    generate any plan at all — not even the goals-only one they could have
+  //    had before they ever accepted a roadmap. Refusing was the one behaviour
+  //    the product owner ruled out on 20 September 2026, and a refusal nobody
+  //    can act on is the worst version of it.
+  context = {
+    ...context,
+    coveringPhases: context.coveringPhases.map((phase) => ({
+      ...phase,
+      milestones: [],
+    })),
+    milestonesWithheld: context.coveringPhases.reduce(
+      (total, phase) => total + phase.milestones.length,
+      0,
+    ),
+  };
+  if (fits(context)) return context;
+
+  context = {
+    ...context,
+    coveringPhases: context.coveringPhases.map((phase) => ({
+      ...phase,
+      goalAttention: phase.goalAttention.map((attention) => ({
+        goalId: attention.goalId,
+        level: attention.level,
+        reason: "",
+      })),
+    })),
+    goalAttentionReasonsWithheld: context.coveringPhases.reduce(
+      (total, phase) =>
+        total + phase.goalAttention.filter((one) => one.reason !== "").length,
+      0,
+    ),
+  };
+  if (fits(context)) return context;
+
+  //    The floor, and it is reachable only in theory. A UTF-16 code unit — the
+  //    thing the validator counts — is at most three UTF-8 bytes, so with
+  //    milestones and reasons gone the worst validator-legal roadmap serializes
+  //    to roughly 3,200 bytes: title 80 units and summary 600 at 3 bytes each,
+  //    four goal ids, the dates and the envelope. That already fits, which is
+  //    why no test can make `focusTruncated` true through the public shape.
+  //    The step stays because the bound is a property of today's validator
+  //    limits rather than of this module, and it is exactly that kind of
+  //    cross-file reasoning that was wrong the first time.
+  const reduced = truncateFocusToFit(context);
+
+  // The postcondition, asserted rather than assumed. Every earlier return is
+  // guarded by `fits`; this is the one path that reasons its way to the answer
+  // instead of checking it, and the reasoning is exactly what was wrong the
+  // first time. `context.ts` raises `context_too_large` on what this returns,
+  // so a silent overrun here becomes a refusal the owner cannot act on.
+  //
+  // It can only fire on content the roadmap validator would have rejected —
+  // measured, a roadmap at twice the validator's summary and focus limits.
+  // Such a roadmap cannot be accepted, so this is a guard against the limits
+  // moving apart later, not a path an owner can reach today.
+  if (!fits(reduced)) throw new CoachAIError("context_invalid");
+  return reduced;
+}
+
+/**
+ * Shortens the covering phase's `focus` until the whole field fits.
+ *
+ * By bytes and on a character boundary, because the budget is bytes and
+ * slicing a string mid-character would produce a replacement character that is
+ * itself three bytes — spending budget to say nothing.
+ */
+function truncateFocusToFit(
+  context: CoachAIRoadmapContext,
+): CoachAIRoadmapContext {
+  const original = context.coveringPhases.map((phase) => phase.focus);
+
+  let limit = Math.max(
+    ...context.coveringPhases.map((phase) => [...phase.focus].length),
+  );
+  let candidate = context;
+  while (limit > 0) {
+    limit = Math.floor(limit / 2);
+    candidate = {
+      ...context,
+      coveringPhases: context.coveringPhases.map((phase) => ({
+        ...phase,
+        focus: [...phase.focus].slice(0, limit).join(""),
+      })),
+    };
+    if (fits(candidate)) break;
+  }
+
+  return {
+    ...candidate,
+    focusTruncated: candidate.coveringPhases.some(
+      (phase, index) => phase.focus !== original[index],
+    ),
   };
 }
 

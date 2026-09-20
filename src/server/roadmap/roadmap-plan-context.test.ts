@@ -208,7 +208,10 @@ describe("what an accepted roadmap may tell a plan coach", () => {
     expect(Object.keys(build()).sort()).toEqual([
       "coveringPhases",
       "endDate",
+      "focusTruncated",
+      "goalAttentionReasonsWithheld",
       "isStale",
+      "milestonesWithheld",
       "otherPhases",
       "otherPhasesWithheld",
       "phaseDetailWithheld",
@@ -335,6 +338,45 @@ describe("the reduction ladder", () => {
     });
   }
 
+  /**
+   * One phase at every documented limit, and nothing else — `MIN_PHASES` is 1,
+   * so this is the shape with the least for the ladder to drop. `fill` is
+   * repeated per character, so a three-byte fill triples the byte size while
+   * leaving every character-counted validator bound satisfied.
+   */
+  function singlePhaseAtEveryLimit(fill: string): RoadmapProposal {
+    const c = (count: number) => fill.repeat(count);
+    return roadmap({
+      title: c(80),
+      summary: c(600),
+      startDate: isoDay(1),
+      endDate: isoDay(28),
+      phases: [
+        phase({
+          title: c(80),
+          focus: c(300),
+          startDate: isoDay(1),
+          endDate: isoDay(28),
+          goalAttention: Array.from({ length: 4 }, (_, slot) => ({
+            goalId: `6a000000-0000-4000-8000-00000000010${slot}`,
+            // The longest of the accepted levels.
+            level: "maintenance" as const,
+            reason: c(160),
+          })),
+          milestones: Array.from({ length: 3 }, (_, slot) => ({
+            title: c(80),
+            observableCriterion: c(200),
+            targetDate: isoDay(1 + slot),
+            goalIds: Array.from(
+              { length: 4 },
+              (__, id) => `6a000000-0000-4000-8000-00000000020${id}`,
+            ),
+          })),
+        }),
+      ],
+    });
+  }
+
   /** Six maximal phases, none of which the week straddles. */
   function maximalRoadmap(): RoadmapProposal {
     return roadmap({
@@ -431,14 +473,79 @@ describe("the reduction ladder", () => {
     expect(roadmapPlanContextBytes(context)).toBeLessThanOrEqual(
       ROADMAP_PLAN_CONTEXT_MAX_BYTES,
     );
-    // Every step fired, and each is counted rather than silent.
-    expect(context.phaseGoalAttentionWithheld).toBe(4);
+    // Every step fired, and each is counted rather than silent. The demoted
+    // covering phase is counted among the phases that lost goal attention,
+    // because it lost it too.
+    expect(context.phaseGoalAttentionWithheld).toBe(5);
     expect(context.phaseDetailWithheld).toBe(1);
     expect(context.otherPhasesWithheld).toBe(5);
     // What survives is the phase holding most of the week, undiminished.
     expect(context.coveringPhases).toHaveLength(1);
     expect(context.coveringPhases[0].focus).toBe(LONG_FOCUS);
     expect(context.coveringPhases[0].milestones).toHaveLength(3);
+  });
+
+  /**
+   * The case the first version of this ladder got wrong, and the reason the
+   * covering phase can now be reduced at all.
+   *
+   * The budget counts UTF-8 bytes; the validator that bounds the content counts
+   * characters. A roadmap written with em dashes, curly quotes or in a
+   * non-Latin script is therefore up to three times the size its character
+   * limits suggest — measured at 8,992 bytes against a 4,000 budget, on a
+   * roadmap that passes every validator rule including `MIN_PHASES` of 1, so
+   * there are no other phases left to drop.
+   *
+   * Before the last three steps existed this returned over budget and
+   * `context.ts` refused the whole request, which would have stopped the owner
+   * generating any plan at all until they hand-edited their roadmap.
+   */
+  it.each([
+    ["ascii", "x"],
+    ["em dash", "—"],
+    ["CJK", "訓"],
+  ])(
+    "fits the budget when a maximal single phase is written in %s",
+    (_label, fill: string) => {
+      const context = buildRoadmapPlanContext({
+        roadmap: singlePhaseAtEveryLimit(fill),
+        horizonStartDate: isoDay(2),
+        horizonEndDate: isoDay(8),
+        targetableGoalIds: new Set([GOAL_A, GOAL_B]),
+      });
+
+      expect(roadmapPlanContextBytes(context)).toBeLessThanOrEqual(
+        ROADMAP_PLAN_CONTEXT_MAX_BYTES,
+      );
+      // The phase is still there, and still says what it is and what it is for.
+      expect(context.coveringPhases).toHaveLength(1);
+      expect(context.coveringPhases[0].title).not.toBe("");
+      expect(context.coveringPhases[0].goalAttention).toHaveLength(4);
+    },
+  );
+
+  it("discloses every reduction it made to the covering phase", () => {
+    const context = buildRoadmapPlanContext({
+      roadmap: singlePhaseAtEveryLimit("訓"),
+      horizonStartDate: isoDay(2),
+      horizonEndDate: isoDay(8),
+      targetableGoalIds: new Set([GOAL_A, GOAL_B]),
+    });
+
+    expect(context.milestonesWithheld).toBe(3);
+    expect(context.goalAttentionReasonsWithheld).toBe(4);
+    // Dropping those two is already enough, so the phase keeps its own
+    // description. Truncating it is the floor below this, and no
+    // validator-legal roadmap reaches it — see `truncateFocusToFit`.
+    expect(context.focusTruncated).toBe(false);
+    expect([...context.coveringPhases[0].focus]).toHaveLength(300);
+    // Reasons are emptied rather than removed, so the coach still sees which
+    // goals the phase attends to and at what level.
+    expect(
+      context.coveringPhases[0].goalAttention.every(
+        (attention) => attention.reason === "",
+      ),
+    ).toBe(true);
   });
 
   it("leaves an ordinary roadmap untouched and discloses nothing", () => {

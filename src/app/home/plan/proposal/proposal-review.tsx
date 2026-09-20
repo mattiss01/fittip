@@ -147,6 +147,7 @@ export function ProposalReview({
                   key={session.id}
                   session={session}
                   expectedPlanRevision={expectedPlanRevision}
+                  isPast={day.isPast}
                 />
               ))}
 
@@ -251,15 +252,27 @@ export function ProposalReview({
 function PlannedSession({
   session,
   expectedPlanRevision,
+  isPast,
 }: {
   session: PlannedSessionSummary;
   expectedPlanRevision: number;
+  isPast: boolean;
 }) {
+  // Two action states rather than one shared between the editor and the lock.
+  // They share an action, but not a submission counter: the edit form is keyed
+  // on that counter so a rejected save can reset it, and with one state a press
+  // of Lock would remount the editor and throw away whatever was half-typed
+  // in it.
   const [state, action, pending] = useActionState(
     changePlanAction,
     INITIAL_PLAN_ACTION_STATE,
   );
+  const [lockState, lockAction, locking] = useActionState(
+    changePlanAction,
+    INITIAL_PLAN_ACTION_STATE,
+  );
   const cancelled = session.status === "cancelled";
+  const notice = state.submission >= lockState.submission ? state : lockState;
 
   return (
     <article
@@ -286,7 +299,13 @@ function PlannedSession({
           .join(" · ")}
       </p>
 
-      {cancelled ? null : (
+      {cancelled || isPast ? (
+        isPast && !cancelled ? (
+          <p className={styles.support} data-state="rule">
+            {COPY.plannedPastDay}
+          </p>
+        ) : null
+      ) : (
         <div className={styles.plannedActions}>
           <details className={styles.disclosure}>
             <summary>{COPY.editPlannedAction}</summary>
@@ -333,7 +352,7 @@ function PlannedSession({
             </div>
           </details>
 
-          <form action={action}>
+          <form action={lockAction}>
             <input type="hidden" name="operation" value="set_lock" />
             <input type="hidden" name="sessionId" value={session.id} />
             <input
@@ -349,7 +368,7 @@ function PlannedSession({
             <button
               className={styles.secondary}
               type="submit"
-              disabled={pending}
+              disabled={pending || locking}
               aria-label={
                 session.isLocked
                   ? COPY.unlockPlannedActionFor(session.title)
@@ -365,12 +384,12 @@ function PlannedSession({
       )}
 
       <p
-        className={state.status === "idle" ? styles.srOnly : styles.notice}
-        data-state={pending ? "pending" : state.status}
+        className={notice.status === "idle" ? styles.srOnly : styles.notice}
+        data-state={pending || locking ? "pending" : notice.status}
         role="status"
         aria-live="polite"
       >
-        {pending ? "Saving…" : state.message}
+        {pending || locking ? "Saving…" : notice.message}
       </p>
     </article>
   );

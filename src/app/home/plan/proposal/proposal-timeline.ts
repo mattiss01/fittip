@@ -39,6 +39,15 @@ export type PlannedSessionSummary = {
 export type ProposalTimelineDay = {
   localDate: string;
   isToday: boolean;
+  /**
+   * Owner-local, and behind today. A proposal starts on or after today, but a
+   * review left open across midnight — or a generation claimed the day
+   * before its own UTC date, which the claim function permits — puts the
+   * first day of the timeline in the past. `changePlanAction` reads its slice
+   * over `today..today+13` and refuses anything outside it, so the surface uses
+   * this to withhold controls that would fail rather than offering them.
+   */
+  isPast: boolean;
   /** Already on the plan, read-only in this slice. */
   planned: PlannedSessionSummary[];
   /** Already labelled a recovery day before this proposal existed. */
@@ -67,6 +76,7 @@ export function buildProposalTimeline(input: {
   return datesBetween(input.startDate, input.endDate).map((localDate) => ({
     localDate,
     isToday: localDate === input.today,
+    isPast: localDate < input.today,
     planned: input.plannedByDate.get(localDate) ?? [],
     isRecoveryDay: recovery.has(localDate),
     items: itemsByDate.get(localDate) ?? [],

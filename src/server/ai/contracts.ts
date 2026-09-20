@@ -212,13 +212,17 @@ export type CoachAIRoadmapContext = {
   coveringPhases: CoachAIRoadmapPhase[];
   otherPhases: CoachAIRoadmapPhaseSummary[];
   /**
-   * The three disclosed reductions. A coach that silently receives a subset
-   * reasons as though it saw everything, so each trim is counted rather than
-   * applied quietly. All zero is the ordinary case.
+   * The disclosed reductions. A coach that silently receives a subset reasons
+   * as though it saw everything, so every trim is counted rather than applied
+   * quietly. All zero and false is the ordinary case, and the last three fire
+   * only on a roadmap large enough that the other phases have already gone.
    */
   phaseGoalAttentionWithheld: number;
   phaseDetailWithheld: number;
   otherPhasesWithheld: number;
+  milestonesWithheld: number;
+  goalAttentionReasonsWithheld: number;
+  focusTruncated: boolean;
 };
 
 /**

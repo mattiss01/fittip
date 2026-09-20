@@ -81,7 +81,15 @@ export const PLAN_PROPOSAL_COPY = {
    * page did for them.
    */
   planChangedNotice:
-    "Your plan changed after the coach saw it. The days below are up to date, and finishing checks your plan again before adding anything.",
+    "Your plan has changed since the coach saw it — including anything you have just edited here. The days below are up to date, and finishing checks your plan again before adding anything.",
+  /**
+   * Shown in place of the editor on a day that has fallen behind owner-local
+   * today. The plan's own write refuses a date outside its fourteen-day window,
+   * so the controls are withheld and the reason is given, rather than offering
+   * a button whose failure message would explain nothing.
+   */
+  plannedPastDay:
+    "This day has passed, so it can no longer be edited here. It stays on the timeline because the coach planned around it.",
   roadmapHeading: "Planned under your roadmap",
   roadmapPlannedUnder: (title: string, versionNumber: number) =>
     `${title} — version ${versionNumber}, the roadmap you have accepted.`,

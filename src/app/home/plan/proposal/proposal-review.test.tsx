@@ -73,6 +73,7 @@ function day(
   return {
     localDate: "2026-09-21",
     isToday: false,
+    isPast: false,
     planned: [planned()],
     isRecoveryDay: false,
     items: [],
@@ -180,6 +181,27 @@ describe("editing a planned session inside review", () => {
 
     expect(
       screen.getByText(PLAN_PROPOSAL_COPY.editPlannedSeriesConsequence),
+    ).toBeInTheDocument();
+  });
+
+  /**
+   * A day that has fallen behind owner-local today — a review left open across
+   * midnight, or a generation that began the day before its own UTC date.
+   * `changePlanAction` reads a `today..today+13` slice and refuses anything
+   * outside it, so an Edit button there would fail with a message that
+   * explains nothing.
+   */
+  it("withholds the controls on a day that has passed, and says why", () => {
+    renderReview({ days: [day({ isPast: true })] });
+
+    expect(
+      screen.queryByRole("textbox", { name: "Title" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Lock / }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(PLAN_PROPOSAL_COPY.plannedPastDay),
     ).toBeInTheDocument();
   });
 
