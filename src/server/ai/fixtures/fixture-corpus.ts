@@ -106,6 +106,9 @@ export const COACH_AI_FIXTURE_CONTEXT: CoachAIContext = {
   planningNote: COACH_AI_FIXTURE_PLANNING_NOTE,
   regenerationFeedback: null,
   previousProposal: null,
+  // A roadmap is not planned against itself; the plan fixtures that exercise
+  // roadmap context build it explicitly.
+  roadmap: null,
 };
 
 /**

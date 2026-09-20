@@ -284,7 +284,14 @@ export class CoachAIService {
         promptVersion,
         key,
         assembled,
-        sources: records.sources ?? [],
+        // The context source knows which completions it transmitted; only
+        // assembly knows whether a roadmap survived the horizon check and the
+        // reduction. Joined here rather than in either, so a proposal's lineage
+        // names every record that actually informed it.
+        sources: [
+          ...(records.sources ?? []),
+          ...roadmapVersionSources(assembled.references.roadmapVersion),
+        ],
         draft,
       });
       begun.complete(outcome);
@@ -526,6 +533,26 @@ export class CoachAIService {
     expiry.catch(() => {});
     return Promise.race([promise, expiry]).finally(() => clearTimeout(timer));
   }
+}
+
+/**
+ * The roadmap's lineage row, or none.
+ *
+ * `revisionNumber` carries the version number rather than a revision id: a
+ * roadmap version is immutable once accepted, so its number *is* the revision,
+ * and `accept_roadmap_proposal` already compares memory sources the same way.
+ */
+function roadmapVersionSources(
+  roadmapVersion: { id: string; versionNumber: number } | null,
+): CoachAISourceReference[] {
+  if (roadmapVersion === null) return [];
+  return [
+    {
+      kind: "roadmap_version",
+      recordId: roadmapVersion.id,
+      revisionNumber: roadmapVersion.versionNumber,
+    },
+  ];
 }
 
 export type { CoachAIRateCard, CoachAITelemetryOutcome };

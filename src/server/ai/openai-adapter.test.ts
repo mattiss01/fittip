@@ -104,6 +104,7 @@ function context(overrides: Partial<CoachAIContext> = {}): CoachAIContext {
     planningNote: null,
     regenerationFeedback: null,
     previousProposal: null,
+    roadmap: null,
     ...overrides,
   };
 }

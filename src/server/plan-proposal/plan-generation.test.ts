@@ -6,12 +6,14 @@ const {
   createMemoryMock,
   createCompletionLogMock,
   createRollingPlanMock,
+  createRoadmapMock,
 } = vi.hoisted(() => ({
   createProfileMock: vi.fn(),
   createGoalMock: vi.fn(),
   createMemoryMock: vi.fn(),
   createCompletionLogMock: vi.fn(),
   createRollingPlanMock: vi.fn(),
+  createRoadmapMock: vi.fn(),
 }));
 
 vi.mock("@/server/repositories/profile-repository", async (original) => {
@@ -42,6 +44,11 @@ vi.mock("@/server/repositories/rolling-plan-repository", async (original) => {
       typeof import("@/server/repositories/rolling-plan-repository")
     >();
   return { ...actual, createRollingPlan: createRollingPlanMock };
+});
+vi.mock("@/server/repositories/roadmap-repository", async (original) => {
+  const actual =
+    await original<typeof import("@/server/repositories/roadmap-repository")>();
+  return { ...actual, createRoadmapRepository: createRoadmapMock };
 });
 
 import type { CoachAIOwner } from "@/server/ai/owner";
@@ -104,6 +111,11 @@ describe("generatePlanProposal", () => {
       materializeSeries: vi
         .fn()
         .mockResolvedValue({ createdCount: 0, skipped: [] }),
+    });
+    // No accepted roadmap: the goals-only path, which is what these assertions
+    // are about. `roadmap-plan-context.test.ts` covers the other one.
+    createRoadmapMock.mockResolvedValue({
+      getCurrentVersion: vi.fn().mockResolvedValue(null),
     });
 
     proposals.beginGeneration.mockResolvedValue({

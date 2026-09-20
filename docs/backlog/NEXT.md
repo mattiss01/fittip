@@ -63,12 +63,39 @@ before any code is written.
    - Owner's decisions, 19 Sep 2026, from using it: a recovery day is offered only on a date
      with no proposed session, no active session of their own, and no existing rest label;
      a finished review offers one way on, back to the plan.
-4. `[ ]` **AI proposal application — 16B, review against the real plan.** Edit already-planned
+4. `[~]` **AI proposal application — 16B, review against the real plan.** Edit already-planned
    sessions through the normal plan editor inside review without losing staged choices, warn
    honestly when the proposal's context has gone stale and refresh it, and use a covering
    accepted roadmap as plan input with its staleness marked. The plan context does not read
-   the roadmap at all today. Careful lane; constraints go on this line before code.
+   the roadmap at all today. Careful lane.
    ([M3-16](M3/M3-16-AI-PROPOSAL-APPLICATION.md))
+   - **The roadmap reaches the coach as a fixed reduced shape, never as stored.** Same fields
+     every call whatever the roadmap's size, so the boundary is a rule that can be read rather
+     than a function of how large a roadmap grew. Roadmap `title` and `summary`; the phase or
+     phases covering the horizon in full; every other phase as `title`, dates and
+     `goalAttention` reduced to `goalId` and `level`. No `focus`, no `goalAttention.reason`
+     and no milestones leave for a phase the week is not in, and `assumptions`,
+     `uncertainties`, `reviewPoints` and `safetyConsiderations` never leave at all.
+   - **Staleness is two facts, named separately, and never blocks.** Out of window — the
+     horizon reaches past the roadmap's `endDate` or starts before its `startDate`. Sources
+     moved — a goal the roadmap was accepted against has changed revision since. Both are
+     marked in the context and on the review screen.
+   - **Over budget reduces and discloses; it never refuses.** `bytes.roadmap` is 4,000 and the
+     plan total rises 28,500 → 32,500, which is 9,891 estimated tokens against a 10,000
+     ceiling. Past it the non-covering phases drop `goalAttention`, then a straddling week's
+     lesser phase drops to the summary form, each disclosed in the envelope. The covering
+     phase is never reduced. Goals and memory deny on overflow because the owner can curate
+     them; nobody shortens a phase description to get a week planned.
+   - **The editor inside review is fields plus lock** — title, sport, duration, intent, note,
+     locked — saved immediately through the plan's own `changePlanAction`. No create, cancel,
+     delete or recurrence control on this surface.
+   - **The roadmap version is recorded as a proposal source**, so a forward migration widens
+     `plan_proposal_sources_kind_check` and replaces `finish_plan_generation`, which repeats
+     the kind list.
+   - Owner's decisions, 20 Sep 2026: the reduced shape above, arrived at by rejecting the
+     whole roadmap once its cost against the token ceiling was clear; both staleness reasons
+     named separately; fields-plus-lock rather than the whole plan day block; and lineage
+     recorded rather than deferred.
 5. `[ ]` **Reactivate a cancelled session** — a cancelled session can currently only be
    deleted; every non-destructive operation refuses it. Careful lane: it adds an operation to
    `apply_rolling_plan_change_set`. ([M3-20](M3/M3-20-REACTIVATE-A-CANCELLED-SESSION.md))

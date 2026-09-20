@@ -160,6 +160,61 @@ export type CoachAIContext = {
   planningNote: string | null;
   regenerationFeedback: string | null;
   previousProposal: CoachAIPreviousProposalReference | null;
+  /**
+   * The accepted roadmap covering this horizon, reduced by
+   * `roadmap-plan-context.ts` — never the stored roadmap. `null` when no
+   * accepted version covers the week, which is the ordinary goals-only path
+   * rather than a missing requirement. Absent for `create_roadmap`: a roadmap
+   * is not planned against itself.
+   */
+  roadmap: CoachAIRoadmapContext | null;
+};
+
+/**
+ * Why a roadmap may not describe the week it is informing. Two facts rather
+ * than one flag; `roadmap-plan-context.ts` says what each means and why they
+ * are kept apart.
+ */
+export type CoachAIRoadmapStaleReason = "out_of_window" | "goal_missing";
+
+/** A phase the horizon falls in: every field the roadmap holds for it. */
+export type CoachAIRoadmapPhase = {
+  title: string;
+  focus: string;
+  startDate: string;
+  endDate: string;
+  goalAttention: RoadmapGoalAttention[];
+  milestones: RoadmapMilestone[];
+};
+
+/**
+ * A phase the week is not in. No `focus`, no `reason`, no milestones: what it
+ * is called, when it runs, and which goals it attends to.
+ */
+export type CoachAIRoadmapPhaseSummary = {
+  title: string;
+  startDate: string;
+  endDate: string;
+  goalAttention: { goalId: string; level: RoadmapGoalAttentionLevel }[];
+};
+
+export type CoachAIRoadmapContext = {
+  title: string;
+  summary: string;
+  startDate: string;
+  endDate: string;
+  isStale: boolean;
+  staleReasons: CoachAIRoadmapStaleReason[];
+  coveringPhases: CoachAIRoadmapPhase[];
+  otherPhases: CoachAIRoadmapPhaseSummary[];
+  /**
+   * The three disclosed reductions. A coach that silently receives a subset
+   * reasons as though it saw everything, so each trim is counted rather than
+   * applied quietly. All zero is the ordinary case.
+   */
+  phaseGoalAttentionWithheld: number;
+  phaseDetailWithheld: number;
+  otherPhasesWithheld: number;
 };
 
 /**
@@ -317,7 +372,7 @@ export type RoadmapMemoryCandidate = CoachAIMemoryCandidate;
  * acceptance.
  */
 export type CoachAISourceReference = {
-  kind: "goal" | "memory" | "plan_version" | "completion";
+  kind: "goal" | "memory" | "plan_version" | "completion" | "roadmap_version"; // M3-16B: which accepted roadmap a plan was proposed under.
   recordId: string;
   revisionId?: string;
   revisionNumber?: number;

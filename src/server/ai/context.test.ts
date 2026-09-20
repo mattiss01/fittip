@@ -190,6 +190,8 @@ describe("coach AI context assembly", () => {
     expect(assembled.references).toEqual({
       goalIds: ["a1000000-0000-4000-8000-000000000001"],
       memoryIds: ["c3000000-0000-4000-8000-000000000001"],
+      // No roadmap was handed in, so none informed the request.
+      roadmapVersion: null,
     });
   });
 });

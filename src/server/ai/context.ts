@@ -11,6 +11,7 @@ import {
 } from "@/server/memory/memory-records";
 import type {
   CoachAIContext,
+  RoadmapProposal,
   CoachAIGoalReference,
   CoachAIMemoryReference,
   CoachAIOperation,
@@ -22,6 +23,7 @@ import {
   PLANNING_NOTE_MAX_LENGTH,
   REGENERATION_FEEDBACK_MAX_LENGTH,
 } from "@/server/ai/owner-text";
+import { buildRoadmapPlanContext } from "@/server/roadmap/roadmap-plan-context";
 import {
   selectTrainingHistoryContext,
   type TrainingHistoryRecords,
@@ -69,6 +71,7 @@ export type CoachAIContextSourceName =
   | "planning_note"
   | "regeneration_feedback"
   | "previous_proposal"
+  | "roadmap"
   | "whole_context";
 
 /**
@@ -144,6 +147,13 @@ export type CoachAIContextLimits = {
     planningNote: number;
     regenerationFeedback: number;
     previousProposal: number;
+    /**
+     * M3-16B. Like training history and unlike goals, this trims rather than
+     * denies: `buildRoadmapPlanContext` reduces to this ceiling with the
+     * reduction disclosed, so the check here can only fire if that ladder and
+     * this number disagree. Zero for `create_roadmap`, which never carries one.
+     */
+    roadmap: number;
     /** The sum of the parts plus the envelope. Never smaller than the sum. */
     total: number;
   };
@@ -229,23 +239,39 @@ export const COACH_AI_CONTEXT_LIMITS = {
       planningNote: 1_200,
       regenerationFeedback: 600,
       previousProposal: 2_200,
+      // A roadmap is not planned against itself.
+      roadmap: 0,
       total: 33_700,
     },
   },
   // M3-03 kept every number M3-02 provisionally set here, and this comment
   // records that as a decision rather than as inheritance. A selected horizon
   // is one to seven days, so the plan needs no larger goal, memory, or history
-  // allocation than a roadmap does, and it needs a smaller total: 28,500 rather
-  // than 33,700, because there is no 52-week forward window to describe.
+  // allocation than a roadmap does, and it needed a smaller total: 28,500
+  // rather than 33,700, because there is no 52-week forward window to describe.
   //
-  // The 5,200 bytes of headroom that buys is spent on the prompt.
+  // The 5,200 bytes of headroom that bought is spent on the prompt.
   // `openai-prompt.test.ts` holds the plan prefix under 7,000 characters rather
-  // than the roadmap's 6,000, and the same ceiling still binds:
-  // `ceil((7_000 + 64 + 28_500) / 4)` is 8,891 against `maxInputTokens` 10,000.
-  // The extra thousand characters are what state the horizon rule, the
-  // unweighted-allocation rule, and the "no sets, reps, or paces" boundary to
-  // the model, all three of which the validator would otherwise only reject
-  // after the call had been paid for.
+  // than the roadmap's 6,000. The extra thousand characters are what state the
+  // horizon rule, the unweighted-allocation rule, and the "no sets, reps, or
+  // paces" boundary to the model, all three of which the validator would
+  // otherwise only reject after the call had been paid for.
+  //
+  // M3-16B spends the rest of it. The plan gained one source — the accepted
+  // roadmap covering the horizon — and the total rose 28,500 to 32,500 to hold
+  // it, while the prefix budget rose 7,000 to 7,400 for the paragraph that
+  // describes the field. That is the whole ceiling, with 9 tokens over:
+  //
+  //   prefix 7,400 + wrapper 64 + context 32,500 = 39,964 characters
+  //   ceil(39,964 / 4) = 9,991  against  maxInputTokens 10,000
+  //
+  // 4,000 is what that headroom allowed rather than what a roadmap wants: the
+  // stored content may reach 16,000 bytes (`ROADMAP_CONTENT_MAX_BYTES`), which
+  // is why the roadmap reaches a coach reduced by `roadmap-plan-context.ts` and
+  // never as stored. There is no headroom left after this. A source added next
+  // takes bytes from another source or raises `maxInputTokens`, and the second
+  // is a standing spend increase, because a reservation charges the ceiling
+  // before every live call whether or not the source was large.
   create_seven_day_plan: {
     maxTargetableGoals: 12,
     maxHistoricalGoals: 5,
@@ -262,7 +288,8 @@ export const COACH_AI_CONTEXT_LIMITS = {
       planningNote: 1_200,
       regenerationFeedback: 600,
       previousProposal: 2_200,
-      total: 28_500,
+      roadmap: 4_000,
+      total: 32_500,
     },
   },
 } as const satisfies Record<CoachAIOperation, CoachAIContextLimits>;
@@ -312,6 +339,28 @@ export type CoachAIOwnedRecords = {
    * knows which revision of each record it actually read.
    */
   sources?: CoachAISourceReference[];
+  /**
+   * The accepted roadmap version in force, as stored and unreduced.
+   *
+   * The one record handed to assembly whole. Reducing it needs the composed
+   * horizon to know which phase the week falls in, and the context source is
+   * deliberately not given the compose input — so `buildCoachAIContext` runs
+   * `buildRoadmapPlanContext` over it, exactly as it runs
+   * `selectTrainingHistoryContext` over training history. Nothing here is
+   * serialized: `context.roadmap` holds the reduction, and this field is not
+   * on `CoachAIContext` at all.
+   *
+   * Absent or `null` is the ordinary goals-only path, not a missing
+   * requirement.
+   */
+  roadmapVersion?: CoachAIRoadmapVersionRecord | null;
+};
+
+/** An accepted roadmap version, as the repository returns it. */
+export type CoachAIRoadmapVersionRecord = {
+  id: string;
+  versionNumber: number;
+  content: RoadmapProposal;
 };
 
 export type CoachAIComposeInput = {
@@ -333,7 +382,17 @@ export type CoachAIAssembledContext = {
    * caller so a proposal can record its provenance; deliberately absent from
    * telemetry, which carries counts only.
    */
-  references: { goalIds: string[]; memoryIds: string[] };
+  references: {
+    goalIds: string[];
+    memoryIds: string[];
+    /**
+     * The accepted roadmap version this request was actually planned under, or
+     * `null`. Returned so the domain caller can record it as a proposal source:
+     * assembly is what decided whether a roadmap was sent, so assembly is what
+     * knows whether there is lineage to record.
+     */
+    roadmapVersion: { id: string; versionNumber: number } | null;
+  };
 };
 
 export function buildCoachAIContext(
@@ -382,6 +441,29 @@ export function buildCoachAIContext(
     throw new CoachAIContextTooLargeError("memory");
   }
 
+  // M3-16B. The gate on the one record the source hands over whole: what
+  // reaches a provider is this reduction and never `records.roadmapVersion`.
+  // Guarded by operation here as well as at the source, so a source that
+  // supplied one for `create_roadmap` still sends nothing — two independent
+  // refusals, because this is the file that decides what a request carries.
+  //
+  // The goals it is checked against are the targetable ones, which is the same
+  // set `accept_roadmap_proposal` recognizes for a goal source: active or
+  // achieved and not archived.
+  const roadmapVersion =
+    operation === "create_seven_day_plan"
+      ? (records.roadmapVersion ?? null)
+      : null;
+  const roadmapContext =
+    roadmapVersion === null
+      ? null
+      : buildRoadmapPlanContext({
+          roadmap: roadmapVersion.content,
+          horizonStartDate: compose.horizonStartDate,
+          horizonEndDate: compose.horizonEndDate,
+          targetableGoalIds: new Set(goals.targetable.map((goal) => goal.id)),
+        });
+
   const targetableGoals = goals.targetable.map(toGoalReference);
   const historicalGoals = goals.historical.map(toGoalReference);
 
@@ -428,6 +510,10 @@ export function buildCoachAIContext(
       "regeneration_feedback",
     ),
     previousProposal: compose.previousProposal,
+    // `create_roadmap` never carries one, whatever the source handed in: a
+    // roadmap is not planned against itself, and a source that supplied one
+    // would otherwise quietly widen what a roadmap request sends.
+    roadmap: roadmapContext,
   };
 
   const usage = {
@@ -439,6 +525,7 @@ export function buildCoachAIContext(
     planning_note: jsonBytes(context.planningNote),
     regeneration_feedback: jsonBytes(context.regenerationFeedback),
     previous_proposal: jsonBytes(context.previousProposal),
+    roadmap: jsonBytes(context.roadmap),
   };
 
   // Ordered deliberately: the sources that deny are checked before the total,
@@ -488,6 +575,11 @@ export function buildCoachAIContext(
     limits.bytes.planCommitments + 100,
     "plan_commitments",
   );
+  // Same class as the two above: `buildRoadmapPlanContext` has already reduced
+  // to this ceiling with every step disclosed, so reaching this line means the
+  // ladder and the budget disagree. A configuration defect, not something the
+  // owner did, and it should fail loudly rather than send more than the budget.
+  refuseOver(usage.roadmap, limits.bytes.roadmap, "roadmap");
 
   const serialized = JSON.stringify(context);
   const serializedBytes = byteLength(serialized);
@@ -505,6 +597,15 @@ export function buildCoachAIContext(
         (goal) => goal.id,
       ),
       memoryIds: context.memory.map((item) => item.id),
+      // Keyed off the reduction rather than off the record that was read: a
+      // version that was read but not sent is not a source.
+      roadmapVersion:
+        context.roadmap === null || roadmapVersion === null
+          ? null
+          : {
+              id: roadmapVersion.id,
+              versionNumber: roadmapVersion.versionNumber,
+            },
     },
   };
 }
