@@ -50,7 +50,7 @@ describe("plan actions", () => {
     });
   });
 
-  it("adds a session on the first free position and revalidates only the plan", async () => {
+  it("adds a session on the first free position and revalidates both surfaces that render it", async () => {
     const applyChangeSet = vi.fn().mockResolvedValue({ result: "applied" });
     createPlanMock.mockResolvedValue({
       getPlanSlice: vi.fn().mockResolvedValue(slice()),
@@ -93,7 +93,14 @@ describe("plan actions", () => {
         }),
       }),
     ]);
-    expect(revalidatePathMock).toHaveBeenCalledExactlyOnceWith("/home/plan");
+    // Two paths, and no more. M3-16B made a planned session editable from
+    // inside a proposal review, so both surfaces render the rows this action
+    // writes and both must refresh. The count still matters: the reach is two
+    // routes this action names, never a path a caller hands it.
+    expect(revalidatePathMock.mock.calls).toEqual([
+      ["/home/plan"],
+      ["/home/plan/proposal"],
+    ]);
   });
 
   it("duplicates content under a new identity, unlocked and undated by the source", async () => {

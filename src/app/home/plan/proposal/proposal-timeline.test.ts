@@ -177,6 +177,9 @@ function planned(
     expectedDurationMinutes: 60,
     isLocked: false,
     status: "active",
+    intent: null,
+    note: null,
+    seriesId: null,
     ...overrides,
   };
 }

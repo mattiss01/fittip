@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { RoadmapPlanStaleReason } from "@/lib/roadmap/roadmap-stale-reasons";
 import type { GoalTier } from "@/server/goals/goal-records";
 import type { MemoryType } from "@/server/memory/memory-records";
 
@@ -171,11 +172,14 @@ export type CoachAIContext = {
 };
 
 /**
- * Why a roadmap may not describe the week it is informing. Two facts rather
- * than one flag; `roadmap-plan-context.ts` says what each means and why they
- * are kept apart.
+ * Why a roadmap may not describe the week it is informing.
+ *
+ * Declared in `@/lib/roadmap/roadmap-stale-reasons` and re-exported here, not
+ * defined twice: the review surface is a Client Component and cannot import
+ * this module, and two copies of a union that must agree is how they stop
+ * agreeing.
  */
-export type CoachAIRoadmapStaleReason = "out_of_window" | "goal_missing";
+export type CoachAIRoadmapStaleReason = RoadmapPlanStaleReason;
 
 /** A phase the horizon falls in: every field the roadmap holds for it. */
 export type CoachAIRoadmapPhase = {

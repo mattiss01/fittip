@@ -253,7 +253,16 @@ const allowedPlanProposalModules = [
   "@/server/repositories/goal-repository",
   "@/server/repositories/plan-proposal-repository",
   "@/server/repositories/profile-repository",
+  // M3-16B added the last two, deliberately and both read-only. The review
+  // says which accepted roadmap a proposal was planned under and whether that
+  // roadmap still describes the week, so the page reads the current version and
+  // runs the same staleness predicate the context assembly ran. Neither entry
+  // lets this surface accept, edit, or regenerate a roadmap: those live on
+  // `@/server/roadmap/roadmap-generation` and `roadmap-edit`, which stay off
+  // this list, and the assertion below still refuses a roadmap write.
+  "@/server/repositories/roadmap-repository",
   "@/server/repositories/rolling-plan-repository",
+  "@/server/roadmap/roadmap-plan-context",
 ] as const;
 
 /** Everything the proposal route renders, wherever it lives. */

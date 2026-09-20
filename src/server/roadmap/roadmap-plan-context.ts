@@ -163,6 +163,17 @@ export function buildRoadmapPlanContext(
   };
 }
 
+/**
+ * The two stale facts, exported because the review surface shows the owner the
+ * same ones the coach was told. One predicate, read twice — a second copy on
+ * the surface would be free to drift from what was actually sent.
+ */
+export function roadmapPlanStaleReasons(
+  input: RoadmapPlanContextInput,
+): CoachAIRoadmapStaleReason[] {
+  return staleness(input).staleReasons;
+}
+
 function staleness(input: RoadmapPlanContextInput): {
   isStale: boolean;
   staleReasons: CoachAIRoadmapStaleReason[];

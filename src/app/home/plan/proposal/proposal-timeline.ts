@@ -11,8 +11,8 @@ import type { PlanProposalItemView } from "@/lib/plan/plan-proposal-view";
  * The merge rule is deliberately one-directional. A session the plan already
  * holds is shown as context and is never turned into a proposed item: the coach
  * was given those sessions as context and did not re-propose them, so copying
- * one into the proposal would invent a choice the owner does not have. Editing
- * them from inside review is 16B.
+ * one into the proposal would invent a choice the owner does not have. M3-16B
+ * made those sessions editable in place; it did not change that rule.
  */
 
 export type PlannedSessionSummary = {
@@ -22,6 +22,18 @@ export type PlannedSessionSummary = {
   expectedDurationMinutes: number | null;
   isLocked: boolean;
   status: "active" | "cancelled";
+  /**
+   * M3-16B. The edit form inside review is the plan's own, so it needs every
+   * field that form writes — an editor opening on a blank intent would clear
+   * one the owner had written on the plan surface.
+   */
+  intent: string | null;
+  note: string | null;
+  /**
+   * Non-null when this occurrence belongs to a recurring series. Review offers
+   * no scope choice, so the surface uses it to say which scope it is taking.
+   */
+  seriesId: string | null;
 };
 
 export type ProposalTimelineDay = {
