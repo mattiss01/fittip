@@ -311,84 +311,56 @@ describe("plan actions", () => {
     expect(thirdApply).not.toHaveBeenCalled();
   });
 
-  it("reports a deleted occurrence that its series wrote straight back", async () => {
-    const occurrence = {
-      ...slice().sessions[0],
-      seriesId: "7e000000-0000-4000-8000-000000000099",
-      occurrenceDate: today(),
-      hasDiverged: false,
+  it("composes a reactivate for a cancelled session and for nothing else", async () => {
+    const cancelledSlice = {
+      ...slice(),
+      sessions: [
+        {
+          ...slice().sessions[0],
+          status: "cancelled" as const,
+          cancelledAt: "",
+        },
+      ],
     };
-    const planFor = (refilled: boolean) => {
-      const getPlanSlice = vi
-        .fn()
-        .mockResolvedValueOnce({ ...slice(), sessions: [occurrence] })
-        .mockResolvedValueOnce({
-          ...slice(),
-          revision: 2,
-          sessions: refilled ? [occurrence] : [],
-        });
-      return {
-        getPlanSlice,
-        applyChangeSet: vi
-          .fn()
-          .mockResolvedValue({ result: "applied", planRevision: 1 }),
-        materializeSeries: vi
-          .fn()
-          .mockResolvedValue({ planRevision: 2, createdCount: 1, skipped: [] }),
-      };
-    };
+    const applyChangeSet = vi.fn().mockResolvedValue({ result: "applied" });
+    createPlanMock.mockResolvedValue({
+      getPlanSlice: vi.fn().mockResolvedValue(cancelledSlice),
+      applyChangeSet,
+      materializeSeries: vi.fn().mockResolvedValue({
+        planRevision: 1,
+        createdCount: 0,
+        skipped: [],
+      }),
+    });
 
-    // The accepted behavior of 29 August 2026: the top-up that follows every
-    // plan change sees the rule date uncovered and refills it. The toast may
-    // not claim the session is gone while the owner can still see it.
-    const wrote = planFor(true);
-    createPlanMock.mockResolvedValue(wrote);
-    const back = await changePlanAction(
-      INITIAL_PLAN_ACTION_STATE,
-      form({ operation: "delete", sessionId: SESSION_ID }),
-    );
-    expect(back.status).toBe("saved");
-    expect(back.message).toMatch(/written back by its recurring series/i);
-    // The way out is named in the words printed on the control, and only in a
-    // state where that control is on screen.
-    expect(back.message).toContain("Remove this and all future sessions");
-    // The confirmation is one bounded read of the rule date, not of the window.
-    expect(wrote.getPlanSlice).toHaveBeenCalledTimes(2);
-    expect(wrote.getPlanSlice.mock.calls[1]).toEqual([today(), today()]);
-
-    // A top-up that created something elsewhere leaves this date empty, and
-    // then the ordinary copy is the true one.
-    const stayedGone = planFor(false);
-    createPlanMock.mockResolvedValue(stayedGone);
     await expect(
       changePlanAction(
         INITIAL_PLAN_ACTION_STATE,
-        form({ operation: "delete", sessionId: SESSION_ID }),
+        form({ operation: "reactivate", sessionId: SESSION_ID }),
       ),
-    ).resolves.toMatchObject({ status: "saved", message: "Session deleted." });
-
-    // The delete is already permanent when the confirming read fails, so the
-    // owner is told what is actually unknown rather than told the plan change
-    // failed. Without this the throw would escape into the action's catch and
-    // report a successful delete as an error.
-    createPlanMock.mockResolvedValue({
-      getPlanSlice: vi
-        .fn()
-        .mockResolvedValueOnce({ ...slice(), sessions: [occurrence] })
-        .mockRejectedValueOnce(new Error("read failed after the delete")),
-      applyChangeSet: vi
-        .fn()
-        .mockResolvedValue({ result: "applied", planRevision: 1 }),
-      materializeSeries: vi
-        .fn()
-        .mockResolvedValue({ planRevision: 2, createdCount: 1, skipped: [] }),
+    ).resolves.toMatchObject({
+      status: "saved",
+      message: "Session reactivated.",
     });
-    const unsure = await changePlanAction(
-      INITIAL_PLAN_ACTION_STATE,
-      form({ operation: "delete", sessionId: SESSION_ID }),
-    );
-    expect(unsure.status).toBe("saved");
-    expect(unsure.message).toMatch(/may have written the date back/i);
+    const [changeSet] = applyChangeSet.mock.calls[0] as [RollingPlanChangeSet];
+    // The position is the database's to choose, so the form sends none.
+    expect(changeSet.changes).toEqual([
+      { operation: "reactivate", sessionId: SESSION_ID },
+    ]);
+
+    // An active session is refused before persistence is reached.
+    const activeApply = vi.fn();
+    createPlanMock.mockResolvedValue({
+      getPlanSlice: vi.fn().mockResolvedValue(slice()),
+      applyChangeSet: activeApply,
+    });
+    await expect(
+      changePlanAction(
+        INITIAL_PLAN_ACTION_STATE,
+        form({ operation: "reactivate", sessionId: SESSION_ID }),
+      ),
+    ).resolves.toMatchObject({ status: "validation" });
+    expect(activeApply).not.toHaveBeenCalled();
   });
 
   it("reports a stale revision without calling persistence", async () => {

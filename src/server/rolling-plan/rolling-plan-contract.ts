@@ -594,7 +594,7 @@ export function registerRollingPlanContract(
       ).toMatchObject({ status: "cancelled" });
     });
 
-    it("writes a deleted occurrence straight back, cancelled or not", async () => {
+    it("keeps a deleted occurrence deleted, cancelled or not, until the rule is rewritten", async () => {
       const { plan, day } = requireSubject(subject);
       const seriesId = randomUUID();
       await plan.applyChangeSet(changeSet([addSeries(seriesId, day(0), 3)]), 0);
@@ -613,40 +613,120 @@ export function registerRollingPlanContract(
         ]),
         3,
       );
+
+      // M3-20 closed M3-19's accepted limitation: the series records the rule
+      // dates the owner deleted from, and the top-up leaves them empty.
+      expect(await plan.materializeSeries(randomUUID(), 4)).toMatchObject({
+        result: "unchanged",
+        createdCount: 0,
+      });
       expect(
         (await plan.getPlanSlice(day(0), day(13))).sessions.map(
           (session) => session.occurrenceDate,
         ),
       ).toEqual([day(0), day(9), day(12)]);
 
-      // Coverage is "a row exists for this series and rule date", and delete is
-      // the one operation that removes the row - cancel keeps it, which is why
-      // cancel is stable and delete is not. The next top-up therefore sees two
-      // uncovered dates and fills them. The product owner accepted this on
-      // 29 August 2026 rather than withhold delete from an occurrence, so it is
-      // pinned here: a later reader must not mistake it for a defect and
-      // "correct" the materializer, and the two consumer surfaces that inherit
-      // it need it to stay true.
-      expect(await plan.materializeSeries(randomUUID(), 4)).toMatchObject({
-        result: "applied",
-        createdCount: 2,
-      });
-      const refilled = await plan.getPlanSlice(day(0), day(13));
+      // Rewriting the whole rule sweeps every occurrence it produced, edited
+      // or cancelled, so the owner's skips under the old rule go too.
+      await plan.applyChangeSet(
+        changeSet([
+          {
+            operation: "edit_series",
+            seriesId,
+            series: { ...seriesTemplate(day(0), 3), title: "Rewritten" },
+          },
+        ]),
+        4,
+      );
+      await plan.materializeSeries(randomUUID(), 5);
       expect(
-        refilled.sessions.map((session) => session.occurrenceDate),
+        (await plan.getPlanSlice(day(0), day(13))).sessions.map(
+          (session) => session.occurrenceDate,
+        ),
       ).toEqual([day(0), day(3), day(6), day(9), day(12)]);
-      expect(
-        refilled.sessions.find((session) => session.occurrenceDate === day(3)),
-      ).toMatchObject({
-        status: "active",
-        isLocked: false,
-        hasDiverged: false,
+    });
+
+    it("reactivates a cancelled session after whoever took its place", async () => {
+      const { plan, day } = requireSubject(subject);
+      const returning = randomUUID();
+      const replacement = randomUUID();
+      await plan.applyChangeSet(
+        changeSet([add(returning, day(1), 0, "Returning")]),
+        0,
+      );
+      await plan.applyChangeSet(
+        changeSet([{ operation: "cancel", sessionId: returning }]),
+        1,
+      );
+      await plan.applyChangeSet(
+        changeSet([add(replacement, day(1), 0, "Replacement")]),
+        2,
+      );
+
+      await plan.applyChangeSet(
+        changeSet([{ operation: "reactivate", sessionId: returning }]),
+        3,
+      );
+      expect(await plan.getPlanSlice(day(1), day(1))).toMatchObject({
+        revision: 4,
+        sessions: [
+          expect.objectContaining({ id: replacement, position: 0 }),
+          expect.objectContaining({
+            id: returning,
+            position: 1,
+            status: "active",
+            cancelledAt: null,
+          }),
+        ],
       });
-      // The half that reverses an owner decision: the occurrence was cancelled
-      // before it was deleted, and it comes back active.
-      expect(
-        refilled.sessions.find((session) => session.occurrenceDate === day(6)),
-      ).toMatchObject({ status: "active", cancelledAt: null });
+
+      // Only a cancelled session is admitted, and a caller cannot place it.
+      await expect(
+        plan.applyChangeSet(
+          changeSet([{ operation: "reactivate", sessionId: returning }]),
+          4,
+        ),
+      ).rejects.toThrow(RollingPlanValidationError);
+      await expect(
+        plan.applyChangeSet(
+          changeSet([
+            { operation: "reactivate", sessionId: replacement, position: 0 },
+          ]),
+          4,
+        ),
+      ).rejects.toThrow(RollingPlanValidationError);
+    });
+
+    it("refuses to reactivate onto a full day", async () => {
+      const { plan, day } = requireSubject(subject);
+      const cancelled = randomUUID();
+      await plan.applyChangeSet(changeSet([add(cancelled, day(2), 0)]), 0);
+      await plan.applyChangeSet(
+        changeSet([{ operation: "cancel", sessionId: cancelled }]),
+        1,
+      );
+      await plan.applyChangeSet(
+        changeSet(
+          Array.from({ length: 10 }, (_, slot) =>
+            add(randomUUID(), day(2), slot),
+          ),
+        ),
+        2,
+      );
+
+      const refusal = await plan
+        .applyChangeSet(
+          changeSet([{ operation: "reactivate", sessionId: cancelled }]),
+          3,
+        )
+        .then(
+          () => null,
+          (thrown: unknown) => thrown,
+        );
+      expect(refusal).toBeInstanceOf(RollingPlanRuleError);
+      expect((refusal as RollingPlanRuleError).reason).toBe(
+        "daily-session-limit",
+      );
     });
 
     it("ends a series forward, keeps a locked occurrence, and reports both", async () => {

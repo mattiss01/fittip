@@ -57,6 +57,11 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
   private sessions = new Map<string, RollingPlanSession>();
   private series = new Map<string, StoredSeries>();
   private recoveryDates = new Set<string>();
+  /**
+   * `rolling_plan_series.skipped_occurrence_dates`, flattened: one
+   * `seriesId|ruleDate` key per occurrence the owner deleted.
+   */
+  private skippedOccurrences = new Set<string>();
   private receipts = new Map<
     string,
     { fingerprint: string; receipt: RollingPlanChangeReceipt }
@@ -137,6 +142,7 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
       [...this.series].map(([id, segment]) => [id, cloneSeries(segment)]),
     );
     const nextRecovery = new Set(this.recoveryDates);
+    const nextSkipped = new Set(this.skippedOccurrences);
     const touchedDates = new Set<string>();
     const seriesEffects: RollingPlanSeriesEffect[] = [];
     let sequence = this.sequence;
@@ -259,13 +265,18 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
               ? { endDate: undefined }
               : {}),
           });
-          sweep(
-            change.seriesId,
+          const sweepFrom =
             change.series.startDate < segment.startDate
               ? change.series.startDate
-              : segment.startDate,
-            "edit_series",
-          );
+              : segment.startDate;
+          // The rewritten rule answers for these dates now, so the skips the
+          // owner made under the old one go with the occurrences it sweeps.
+          for (const key of [...nextSkipped]) {
+            const [seriesId, ruleDate] = key.split("|");
+            if (seriesId === change.seriesId && ruleDate >= sweepFrom)
+              nextSkipped.delete(key);
+          }
+          sweep(change.seriesId, sweepFrom, "edit_series");
           continue;
         }
         const successorSeriesId = change.successorSeriesId;
@@ -324,6 +335,43 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
         if (this.completedSessions.has(change.sessionId))
           throw new RollingPlanRuleError("session-completed");
         next.delete(change.sessionId);
+        // Without this the next top-up would write the occurrence straight
+        // back. A rule date behind today is never filled again anyway.
+        if (
+          current.seriesId !== null &&
+          current.occurrenceDate !== null &&
+          current.occurrenceDate >= today
+        )
+          nextSkipped.add(`${current.seriesId}|${current.occurrenceDate}`);
+        continue;
+      }
+      // The only operation that admits a cancelled session and nothing else.
+      // It lands after the day's last active session, because cancelling gave
+      // its place away; a full day is left to the cap below.
+      if (change.operation === "reactivate") {
+        if (!current || current.status !== "cancelled")
+          throw new RollingPlanValidationError();
+        const localDate = requirePlannable(current.localDate);
+        touchedDates.add(localDate);
+        const taken = new Set(
+          [...next.values()]
+            .filter(
+              (session) =>
+                session.status === "active" && session.localDate === localDate,
+            )
+            .map((session) => session.position),
+        );
+        let position = Math.max(-1, ...taken) + 1;
+        if (position > 99) {
+          position = 0;
+          while (taken.has(position)) position += 1;
+        }
+        Object.assign(current, {
+          status: "active",
+          cancelledAt: null,
+          position,
+        });
+        if (current.seriesId !== null) current.hasDiverged = true;
         continue;
       }
       if (!current || current.status !== "active")
@@ -376,6 +424,7 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
     this.sessions = next;
     this.series = nextSeries;
     this.recoveryDates = nextRecovery;
+    this.skippedOccurrences = nextSkipped;
     const receipt: RollingPlanChangeReceipt = {
       planId: this.planId,
       planRevision: this.revision,
@@ -422,6 +471,8 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
     )) {
       for (const occurrenceDate of seriesDates(segment, today, windowEnd)) {
         if (covered.has(`${segment.id}|${occurrenceDate}`)) continue;
+        if (this.skippedOccurrences.has(`${segment.id}|${occurrenceDate}`))
+          continue;
         const held = counts.get(occurrenceDate) ?? 0;
         if (held >= ROLLING_PLAN_DAILY_SESSION_LIMIT) {
           skipped.push({

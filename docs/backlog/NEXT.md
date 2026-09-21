@@ -13,9 +13,18 @@ before any code is written.
 
 ## Now
 
-1. `[ ]` **Reactivate a cancelled session** — a cancelled session can currently only be
+1. `[~]` **Reactivate a cancelled session** — a cancelled session can currently only be
    deleted; every non-destructive operation refuses it. Careful lane: it adds an operation to
    `apply_rolling_plan_change_set`. ([M3-20](M3/M3-20-REACTIVATE-A-CANCELLED-SESSION.md))
+   Owner decisions, 21 Sep 2026:
+   - `reactivate` sets `active`, clears `cancelled_at`, writes a `reactivate` change entry;
+     ignores the lock (an individual act, like delete). No edit-in-place.
+   - Past-dated cancelled sessions are refused (PT422). "Did it anyway" is logged from the
+     cancelled card, which already works and keeps both facts on the record.
+   - It lands after the day's last active session; a full day is PT423. Not-cancelled is 22023.
+   - Closes M3-19 limitation 1: deleting a series occurrence stays deleted. The series keeps
+     the skipped rule dates; a rule edit that sweeps from a date clears the skips from it.
+   - Cancelled series segments stay out of scope.
 
 2. `[ ]` **Plan proposal memory candidates** — M3-16A deliberately did not rebuild
    `record_plan_memory_candidates`, so a planning note that states a durable constraint

@@ -1853,6 +1853,7 @@ export type Database = {
           note: string | null;
           plan_id: string;
           predecessor_series_id: string | null;
+          skipped_occurrence_dates: string[];
           sport: string;
           start_date: string;
           title: string;
@@ -1871,6 +1872,7 @@ export type Database = {
           note?: string | null;
           plan_id: string;
           predecessor_series_id?: string | null;
+          skipped_occurrence_dates?: string[];
           sport: string;
           start_date: string;
           title: string;
@@ -1889,6 +1891,7 @@ export type Database = {
           note?: string | null;
           plan_id?: string;
           predecessor_series_id?: string | null;
+          skipped_occurrence_dates?: string[];
           sport?: string;
           start_date?: string;
           title?: string;

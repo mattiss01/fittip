@@ -114,6 +114,12 @@ export type RollingPlanChange =
    * against the owner's own deliberate individual act.
    */
   | { operation: "delete"; sessionId: string }
+  /**
+   * Returns a cancelled session to the plan. It admits nothing else, and it
+   * lands after the day's last active session because cancelling gave its
+   * place away; a caller cannot choose the position.
+   */
+  | { operation: "reactivate"; sessionId: string }
   | {
       operation: "set_recovery_day";
       localDate: string;
@@ -432,6 +438,7 @@ function parseChange(value: unknown): RollingPlanChange {
       return { operation, sessionId, isLocked: record.isLocked };
     case "cancel":
     case "delete":
+    case "reactivate":
       assertOnlyKeys(record, ["operation", "sessionId"]);
       return { operation, sessionId };
     default:

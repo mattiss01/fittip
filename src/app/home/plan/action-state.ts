@@ -11,6 +11,8 @@ export type PlanOperation =
   | "cancel"
   /** Removes the session outright. Nothing is kept. */
   | "delete"
+  /** Returns a cancelled session to the plan, after the day's last one. */
+  | "reactivate"
   | "set_recovery_day";
 
 export type PlanActionDraft = {
