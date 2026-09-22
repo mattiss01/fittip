@@ -161,7 +161,8 @@ test.describe("M3-14B recurring series surface", () => {
       // Consequences appear before future removal and carry no forecast count.
       const endFrom = ownerDate(5);
       const ending = sessionCard(page, endFrom, "Future steady");
-      await openDisclosure(ending, "Cancel");
+      // M3-20: removing the future deletes, so it is a Delete scope.
+      await openDisclosure(ending, "Delete");
       const futureRemoval = scope(
         ending,
         "This and all future sessions",
@@ -175,7 +176,7 @@ test.describe("M3-14B recurring series surface", () => {
       await expect(permanent).not.toContainText(/\b\d+\b/);
       await futureRemoval
         .getByRole("button", {
-          name: "Remove this and all future sessions",
+          name: "Delete this and all future sessions",
         })
         .click();
       const authoritative = page

@@ -16,11 +16,7 @@ import {
   readPlanWindow,
   type PlanWindow,
 } from "./plan-window";
-import {
-  planChangeCopy,
-  topUpAfterPlanChange,
-  type PlanTopUpResult,
-} from "./series-materialization";
+import { planChangeCopy, topUpAfterPlanChange } from "./series-materialization";
 
 import {
   createProfileRepository,
@@ -50,6 +46,7 @@ const OPERATIONS: readonly PlanOperation[] = [
   "set_lock",
   "cancel",
   "delete",
+  "reactivate",
   "set_recovery_day",
 ];
 
@@ -148,11 +145,6 @@ export async function changePlanAction(
       expectedRevision,
     );
     const topUp = await topUpAfterPlanChange(plan, receipt.planRevision);
-    const refill = await occurrenceRefill(
-      plan,
-      deletedOccurrence(slice, changes),
-      topUp,
-    );
 
     revalidatePath("/home/plan");
     // M3-16B: the review surface renders the same sessions, and an edit made
@@ -162,10 +154,7 @@ export async function changePlanAction(
     revalidatePath("/home/plan/proposal");
     return result(
       "saved",
-      planChangeCopy(
-        deleteCopy(refill) ?? savedCopy(operation, formData),
-        topUp,
-      ),
+      planChangeCopy(savedCopy(operation, formData), topUp),
     );
   } catch (error) {
     if (error instanceof RollingPlanRuleError) {
@@ -214,91 +203,6 @@ export async function changePlanAction(
     }
     return result("error", "The plan change could not be completed.");
   }
-}
-
-/**
- * Whether the top-up put a just-deleted occurrence straight back.
- *
- * Materialization coverage is "a row exists for this series and rule date", so
- * deleting an occurrence uncovers its date and the top-up that follows every
- * plan change refills it in the same request. The product owner accepted that
- * on 29 August 2026 rather than withhold delete from an occurrence, which
- * leaves the surface one obligation: not to report "Session deleted." over a
- * session the owner can still see.
- *
- * The receipt counts what was created but never says which dates, and one
- * top-up can serve more than one series, so the count alone cannot answer this.
- * One bounded single-date read can. It is reached only when a delete was
- * followed by a top-up that actually created something, so the ordinary delete
- * pays nothing for it.
- */
-type OccurrenceRefill = "none" | "restored" | "unknown";
-
-/**
- * The session a composed change set is about to delete, read back off the
- * change itself rather than off the form. `requireSession` already resolved it
- * once, under a status rule this lookup deliberately does not repeat; taking
- * the id from the change that was actually applied is what keeps the two
- * agreeing without a third reading of the request.
- */
-function deletedOccurrence(
-  slice: RollingPlanSlice,
-  changes: RollingPlanChange[],
-): RollingPlanSession | undefined {
-  const deleted = changes.find((change) => change.operation === "delete");
-  if (!deleted) return undefined;
-  return slice.sessions.find((candidate) => candidate.id === deleted.sessionId);
-}
-
-async function occurrenceRefill(
-  plan: Awaited<ReturnType<typeof createRollingPlan>>,
-  deleted: RollingPlanSession | undefined,
-  topUp: PlanTopUpResult,
-): Promise<OccurrenceRefill> {
-  const occurrenceDate = deleted?.occurrenceDate;
-  if (
-    !deleted ||
-    deleted.seriesId === null ||
-    occurrenceDate === null ||
-    occurrenceDate === undefined ||
-    !topUp.ok ||
-    topUp.receipt.createdCount === 0
-  ) {
-    return "none";
-  }
-  try {
-    const refreshed = await plan.getPlanSlice(occurrenceDate, occurrenceDate);
-    return refreshed.sessions.some(
-      (candidate) =>
-        candidate.seriesId === deleted.seriesId &&
-        candidate.occurrenceDate === occurrenceDate,
-    )
-      ? "restored"
-      : "none";
-  } catch {
-    // The delete itself is already permanent. What is unknown is only whether
-    // the series wrote the date back, so the owner is told that much rather
-    // than told the plan change failed.
-    return "unknown";
-  }
-}
-
-/**
- * The moment the owner is looking at a session that came back is the moment
- * they most need the way out, so the toast names the control in the words
- * printed on it rather than describing it. It can only name it because
- * "restored" is reachable only when the series actually refilled the date,
- * which is also the condition under which the returned session renders that
- * control - see `occurrenceHasFutureRuleDate`.
- */
-function deleteCopy(refill: OccurrenceRefill): string | undefined {
-  if (refill === "restored") {
-    return "Session deleted, then written back by its recurring series. To stop it returning, use “Remove this and all future sessions” under Cancel on the session that came back.";
-  }
-  if (refill === "unknown") {
-    return "Session deleted. Its recurring series may have written the date back. Reload to see the plan as saved.";
-  }
-  return undefined;
 }
 
 async function assertOccurrencePlacements(
@@ -365,12 +269,12 @@ function buildChanges(
     ];
   }
 
-  // A cancelled session is a legitimate target for a delete and for nothing
-  // else: it is exactly what an owner may next want gone.
+  // A cancelled session is a legitimate target for a delete or a reactivate
+  // and for nothing else: it is what an owner may next want gone, or back.
   const session = requireSession(
     slice,
     formData.get("sessionId"),
-    operation === "delete",
+    operation === "delete" || operation === "reactivate",
   );
   if (operation === "edit") {
     return [
@@ -438,6 +342,10 @@ function buildChanges(
     ];
   }
   if (operation === "cancel") {
+    return [{ operation, sessionId: session.id }];
+  }
+  if (operation === "reactivate") {
+    if (session.status !== "cancelled") throw new RollingPlanValidationError();
     return [{ operation, sessionId: session.id }];
   }
   return [{ operation: "delete", sessionId: session.id }];
@@ -545,6 +453,7 @@ function savedCopy(operation: PlanOperation, formData: FormData): string {
     duplicate: "Session duplicated.",
     cancel: "Session cancelled.",
     delete: "Session deleted.",
+    reactivate: "Session reactivated.",
   };
   return copy[operation] ?? "Plan change saved.";
 }

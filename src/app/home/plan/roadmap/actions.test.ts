@@ -60,6 +60,7 @@ import {
 } from "./actions";
 import { INITIAL_ROADMAP_ACTION_STATE } from "./action-state";
 
+import { isoDateInTimezone } from "@/lib/date/local-date";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 import { CoachAIContextBelowMinimumError } from "@/server/ai/context";
 import {
@@ -240,7 +241,9 @@ describe("roadmap server actions", () => {
   });
 
   describe("generate", () => {
-    const today = new Date().toISOString().slice(0, 10);
+    // Owner-local, as the action derives it. A UTC date disagreed with it for
+    // the two hours after midnight in Berlin, every night.
+    const today = isoDateInTimezone(new Date(), TIMEZONE);
     const endDate = addDays(today, 84);
 
     it("derives today from the owner's zone, not from the form", async () => {

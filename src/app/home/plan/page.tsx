@@ -11,6 +11,10 @@ import { TimezoneConfirmation } from "./timezone-confirmation";
 import homeStyles from "../home.module.css";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import {
+  CompletionAuthenticationError,
+  createCompletionLog,
+} from "@/server/repositories/completion-log-repository";
+import {
   createProfileRepository,
   ProfileAuthenticationError,
 } from "@/server/repositories/profile-repository";
@@ -77,12 +81,30 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
 
   let slice;
   let series;
+  const loggedCancelled = new Map<string, string>();
   try {
-    const plan = await createRollingPlan();
+    const [plan, log] = await Promise.all([
+      createRollingPlan(),
+      createCompletionLog(),
+    ]);
     [slice, series] = await Promise.all([
       plan.getPlanSlice(today, dates[dates.length - 1]),
       plan.listSeries(),
     ]);
+    // Only a cancelled session needs this: one trained anyway reads as logged
+    // rather than cancelled. A log's own date can be any day before its
+    // session's, so it is looked up by session rather than by window. There
+    // are rarely more than a few cancelled sessions in fourteen days.
+    const found = await Promise.all(
+      slice.sessions
+        .filter((session) => session.status === "cancelled")
+        .map((session) => log.findByPlanSession(session.id)),
+    );
+    for (const completion of found) {
+      if (completion?.planSessionId) {
+        loggedCancelled.set(completion.planSessionId, completion.id);
+      }
+    }
   } catch (error) {
     redirectOnAuthError(error);
     throw error;
@@ -97,7 +119,12 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
         today={today}
         dates={dates}
         expectedRevision={slice.revision}
-        sessions={slice.sessions.map(toSessionView)}
+        sessions={slice.sessions.map((session) => {
+          const completionId = loggedCancelled.get(session.id);
+          return completionId === undefined
+            ? toSessionView(session)
+            : { ...toSessionView(session), completionId };
+        })}
         recoveryDates={slice.recoveryDates}
         series={series.map(toSeriesView)}
         uncoveredSeriesDates={findUncoveredSeriesDates(
@@ -150,13 +177,15 @@ function toSeriesView(series: RollingPlanSeries): PlanSeriesView {
 function redirectOnAuthError(error: unknown): void {
   const accessError =
     error instanceof ProfileAuthenticationError ||
-    error instanceof RollingPlanAuthenticationError
+    error instanceof RollingPlanAuthenticationError ||
+    error instanceof CompletionAuthenticationError
       ? error.accessError
       : undefined;
   if (accessError?.reason === "not-owner") redirect("/auth/denied");
   if (
     error instanceof ProfileAuthenticationError ||
-    error instanceof RollingPlanAuthenticationError
+    error instanceof RollingPlanAuthenticationError ||
+    error instanceof CompletionAuthenticationError
   ) {
     redirect("/");
   }

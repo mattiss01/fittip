@@ -80,6 +80,22 @@ test.describe("M3-19 delete a planned session", () => {
         day(page, today).getByText("Running · Cancelled, kept on the record"),
       ).toBeVisible();
 
+      // M3-20: a cancelled session can come back in one tap, and be cancelled
+      // again with the controls it had all along.
+      await day(page, today)
+        .getByRole("button", { name: "Reactivate", exact: true })
+        .click();
+      await expect(
+        day(page, today).getByText("Cancelled", { exact: true }),
+      ).toHaveCount(0);
+      const returned = sessionCard(page, today, "Cancel me");
+      await expect(returned).toBeVisible();
+      await openDisclosure(returned, "Cancel");
+      await returned.getByRole("button", { name: "Cancel session" }).click();
+      await expect(
+        day(page, today).getByText("Running · Cancelled, kept on the record"),
+      ).toBeVisible();
+
       // A lock defends a session from a sweep, never from the owner asking for
       // this one session by name.
       const locked = sessionCard(page, tomorrow, "Delete me");

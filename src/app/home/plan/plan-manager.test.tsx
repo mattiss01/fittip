@@ -187,8 +187,18 @@ describe("PlanManager", () => {
 
     expect(day.textContent).toContain("Cancelled, kept on the record");
     expect(day.textContent).toContain("Nothing planned.");
-    // Cancelled is not the end of the line: the owner who cancelled it may
-    // next want it gone, and delete is the only verb left that can do that.
+    // Cancelled is not the end of the line: the owner may want it back, which
+    // is one tap because nothing is lost, or gone, which sits behind its panel.
+    const reactivate = screen.getByRole("button", { name: "Reactivate" });
+    expect(reactivate).toBeVisible();
+    const reactivateForm = reactivate.closest("form")!;
+    expect(reactivateForm.querySelector("input[name='operation']")).toHaveValue(
+      "reactivate",
+    );
+    expect(reactivateForm.querySelector("input[name='sessionId']")).toHaveValue(
+      session().id,
+    );
+    expect(reactivateForm.closest("details")).toBeNull();
     fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
     expect(
       screen.getByRole("button", { name: "Delete session" }),
@@ -354,22 +364,17 @@ describe("PlanManager", () => {
       screen.getAllByText("This and all future sessions").length,
     ).toBeGreaterThan(0);
 
+    // Cancel keeps its one scope: removing the future deletes, so it lives
+    // under Delete.
     fireEvent.click(screen.getByText("Cancel", { selector: "summary" }));
     expect(
-      screen.getByText(/Permanent\. Removes this occurrence/),
+      screen.getByRole("button", { name: "Cancel only this session" }),
     ).toBeVisible();
-    expect(screen.getByText(/Locked sessions are kept/)).toBeVisible();
-    expect(screen.getByText(/completed training is untouched/)).toBeVisible();
-    // Scoped: the card's own Delete panel says "no undo" too, and it means
-    // something narrower there.
     expect(
-      screen.getByText(/Permanent\. Removes this occurrence/).textContent,
-    ).toMatch(/no undo/);
-    expect(
-      screen.getByRole("button", {
+      screen.queryByRole("button", {
         name: "Remove this and all future sessions",
       }),
-    ).toBeVisible();
+    ).toBeNull();
   });
 
   it("exposes Edit, Cancel, Delete, and the lock control on a session card", () => {
@@ -436,7 +441,7 @@ describe("PlanManager", () => {
     expect(card).toContainElement(deleteForm);
   });
 
-  it("warns an occurrence owner that its series writes the date back", () => {
+  it("asks an occurrence owner whether to delete only this session or the rest too", () => {
     renderManager(
       INITIAL_PLAN_ACTION_STATE,
       [
@@ -449,61 +454,31 @@ describe("PlanManager", () => {
     );
 
     fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
-    const panel = screen.getByText(/This session repeats/i);
-    expect(panel).toBeVisible();
-    // The accepted behavior of 29 August 2026. Deleting an occurrence is not
-    // permanent, so the panel must not claim it is.
-    expect(panel.textContent).toMatch(
-      /writes the occurrence back in the same step/i,
-    );
-    // What returns is the series' version, not the owner's. Naming the losses
-    // is the whole point of this paragraph.
-    expect(panel.textContent).toMatch(/is replaced/i);
-    expect(panel.textContent).toMatch(/the lock is cleared/i);
-    expect(panel.textContent).toMatch(
-      /moved reappears on the series date rather than this one/i,
-    );
-    // The escape route quotes the control the owner will actually see.
-    expect(panel.textContent).toContain("Remove this and all future sessions");
-    expect(panel.textContent).not.toMatch(/Permanent\./);
-    expect(panel.textContent).not.toMatch(/no undo/i);
-    expect(panel.textContent).not.toMatch(/undoes your cancellation/i);
-  });
-
-  it("calls a moved occurrence permanent once its series stops filling that date", () => {
-    // Reachable in a day: move an occurrence forward, wait for its rule date to
-    // fall behind today. The materializer fills only today..today+13, so this
-    // delete really does stick - and the control the refill warning quotes is
-    // not rendered here either, which is why one predicate decides both.
-    renderManager(
-      INITIAL_PLAN_ACTION_STATE,
-      [
-        session({
-          localDate: DATES[4],
-          seriesId: "7f000000-0000-4000-8000-000000000099",
-          occurrenceDate: "2026-08-10",
-        }),
-      ],
-      [{ ...series(), startDate: "2026-08-01" }],
-    );
-
-    fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
-    const panel = screen.getByText(/^Permanent\./);
-    expect(panel.textContent).toMatch(/series will not write this date back/i);
-    expect(panel.textContent).not.toMatch(/This session repeats/i);
-    // Naming a control the same predicate has withheld is the defect this
-    // branch exists to prevent.
-    expect(panel.textContent).not.toContain(
-      "Remove this and all future sessions",
-    );
+    const only = screen.getByRole("button", {
+      name: "Delete only this session",
+    });
+    expect(only).toBeVisible();
     expect(
-      screen.queryByRole("button", {
-        name: "Remove this and all future sessions",
-      }),
-    ).toBeNull();
+      only.closest("form")!.querySelector("input[name='operation']"),
+    ).toHaveValue("delete");
+    // M3-20: the series records the deleted date and leaves it empty.
+    expect(
+      screen.getByText(/series will not write this date back/i),
+    ).toBeVisible();
+
+    const future = screen.getByRole("button", {
+      name: "Delete this and all future sessions",
+    });
+    expect(future).toBeVisible();
+    expect(
+      future.closest("form")!.querySelector("input[name='operation']"),
+    ).toHaveValue("end_series");
+    expect(screen.getByText(/Locked sessions are kept/)).toBeVisible();
+    // The one-off's single button is not offered beside the two scopes.
+    expect(screen.queryByRole("button", { name: "Delete session" })).toBeNull();
   });
 
-  it("tells a cancelled occurrence owner that deleting undoes the cancel", () => {
+  it("offers a cancelled occurrence Reactivate and both delete scopes", () => {
     renderManager(
       INITIAL_PLAN_ACTION_STATE,
       [
@@ -516,15 +491,35 @@ describe("PlanManager", () => {
       [series()],
     );
 
+    expect(screen.getByRole("button", { name: "Reactivate" })).toBeVisible();
     fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
-    const panel = screen.getByText(/This session repeats/i);
-    expect(panel.textContent).toMatch(/it comes back active/i);
-    expect(panel.textContent).toMatch(/undoes your cancellation/i);
-    expect(panel.textContent).toMatch(/the lock is cleared/i);
-    // The cancelled card has no Cancel panel of its own, so the way out is on
-    // the session that returns.
-    expect(panel.textContent).toContain("Remove this and all future sessions");
-    expect(panel.textContent).toMatch(/on the session that returns/i);
+    expect(
+      screen.getByRole("button", { name: "Delete only this session" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        name: "Delete this and all future sessions",
+      }),
+    ).toBeVisible();
+  });
+
+  it("reads a cancelled session trained anyway as logged, with no plan controls", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [
+      session({
+        status: "cancelled",
+        completionId: "7f000000-0000-4000-8000-0000000000c1",
+      }),
+    ]);
+    const day = document.querySelector(`[data-plan-date="${TODAY}"]`)!;
+
+    expect(day.textContent).toContain("Running · Logged");
+    expect(day.textContent).not.toContain("Cancelled");
+    expect(day.textContent).not.toContain("Nothing planned.");
+    expect(
+      screen.getByRole("link", { name: "Edit log" }).getAttribute("href"),
+    ).toBe("/home/log?completion=7f000000-0000-4000-8000-0000000000c1");
+    expect(screen.queryByRole("button", { name: "Reactivate" })).toBeNull();
+    expect(screen.queryByText("Delete", { selector: "summary" })).toBeNull();
   });
 
   it("withholds future scopes from a locked survivor past the segment end", () => {
@@ -540,17 +535,15 @@ describe("PlanManager", () => {
       [{ ...series(), endDate: DATES[0].replace(/17$/, "16") }],
     );
 
-    fireEvent.click(screen.getByText("Cancel", { selector: "summary" }));
+    fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
     expect(
       screen.queryByRole("button", {
-        name: "Remove this and all future sessions",
+        name: "Delete this and all future sessions",
       }),
     ).toBeNull();
+    expect(screen.getByText(/only this session can be deleted/i)).toBeVisible();
     expect(
-      screen.getByText(/only this session can be cancelled/i),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: "Cancel only this session" }),
+      screen.getByRole("button", { name: "Delete only this session" }),
     ).toBeVisible();
   });
 
@@ -586,11 +579,11 @@ describe("PlanManager", () => {
       <PlanManager {...props} sessions={[recurringSession]} />,
     );
 
-    fireEvent.click(screen.getByText("Cancel", { selector: "summary" }));
+    fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
     fireEvent.submit(
       screen
         .getByRole("button", {
-          name: "Remove this and all future sessions",
+          name: "Delete this and all future sessions",
         })
         .closest("form")!,
     );

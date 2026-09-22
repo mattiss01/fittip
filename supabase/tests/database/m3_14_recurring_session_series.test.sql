@@ -639,8 +639,10 @@ select is(
 );
 select is(
   (select series_effects->0->>'divergedDeleted' from change_receipt where label = 'a-end'),
-  '2',
-  'and it reports how many of those the owner had already changed'
+  '1',
+  -- M3-20: only the edited one. Cancelling no longer marks an occurrence
+  -- diverged (ADR-017 as amended on 22 September 2026).
+  'and it reports how many of those the owner had already edited'
 );
 select is(
   (select series_effects->0->>'lockedKept' from change_receipt where label = 'a-end'),

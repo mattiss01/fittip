@@ -191,6 +191,68 @@ describe("recurring-session actions", () => {
     expect(result.message).not.toMatch(/expect|forecast|estimate/i);
   });
 
+  it("ends the series from a cancelled occurrence, and only ends it", async () => {
+    const cancelledSlice = {
+      ...seriesSlice(),
+      sessions: [
+        {
+          ...occurrence(),
+          status: "cancelled" as const,
+          cancelledAt: "2026-08-17T06:00:00.000Z",
+        },
+      ],
+    };
+    const applyChangeSet = vi.fn().mockResolvedValue({
+      planRevision: 8,
+      seriesEffects: [
+        {
+          seriesId: SERIES_ID,
+          operation: "end_series",
+          deleted: 1,
+          divergedDeleted: 0,
+          lockedKept: 0,
+          completedKept: 0,
+        },
+      ],
+    });
+    createPlanMock.mockResolvedValue({
+      getPlanSlice: vi.fn().mockResolvedValue(cancelledSlice),
+      listSeries: vi.fn().mockResolvedValue([segment()]),
+      applyChangeSet,
+      materializeSeries: vi.fn().mockResolvedValue({
+        planRevision: 8,
+        createdCount: 0,
+        skipped: [],
+      }),
+    });
+
+    // M3-20: the cancelled card's Delete panel offers "this and all future".
+    await expect(
+      changeSeriesAction(
+        INITIAL_SERIES_ACTION_STATE,
+        form({ operation: "end_series", sessionId: SESSION_ID }),
+      ),
+    ).resolves.toMatchObject({ status: "saved" });
+    expect(applyChangeSet.mock.calls[0][0].changes).toEqual([
+      { operation: "end_series", seriesId: SERIES_ID, effectiveDate: today() },
+    ]);
+
+    // Editing the series from a cancelled occurrence is still refused.
+    applyChangeSet.mockClear();
+    await expect(
+      changeSeriesAction(
+        INITIAL_SERIES_ACTION_STATE,
+        form({
+          operation: "edit_series",
+          sessionId: SESSION_ID,
+          title: "Changed",
+          sport: "Running",
+        }),
+      ),
+    ).resolves.toMatchObject({ status: "validation" });
+    expect(applyChangeSet).not.toHaveBeenCalled();
+  });
+
   it("withholds the known end-series no-op on an occurrence past its segment end", async () => {
     const applyChangeSet = vi.fn();
     createPlanMock.mockResolvedValue({
