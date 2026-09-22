@@ -290,11 +290,11 @@ export function RecurringDeleteControls({
         <section className={styles.scope}>
           <h4>This and all future sessions</h4>
           <p className={styles.permanentConsequence}>
-            Permanent. Removes this occurrence and every occurrence of this
-            series on or after its rule date, including changed and cancelled
-            ones, and the series stops. Locked sessions are kept. Nothing before
-            this date changes, completed training is untouched, and there is no
-            undo.
+            Permanent. Removes this occurrence and every later one of this
+            series, including changed and cancelled ones, and the series stops.
+            Locked sessions are kept, this one too if it is locked, and so is
+            any session with training logged against it. Nothing before this
+            date changes, completed training is untouched, and there is no undo.
           </p>
           <form className={styles.form} action={seriesAction}>
             <input type="hidden" name="operation" value="end_series" />
