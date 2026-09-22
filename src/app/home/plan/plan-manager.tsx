@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   useActionState,
   useCallback,
@@ -7,6 +8,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type ReactNode,
 } from "react";
 
 import {
@@ -18,6 +20,7 @@ import { changePlanAction } from "./actions";
 import { CreateSession } from "./create-session";
 import styles from "./plan.module.css";
 import {
+  RecurringDeleteControls,
   RecurringSessionControls,
   type PlanSeriesView,
 } from "./recurring-session-controls";
@@ -58,6 +61,12 @@ export type PlanSessionView = {
   seriesId: string | null;
   occurrenceDate: string | null;
   hasDiverged: boolean;
+  /**
+   * The log attached to a cancelled session, when the owner trained anyway.
+   * Such a session reads as logged here rather than as cancelled; the plan row
+   * and the log's snapshot both still record the cancellation.
+   */
+  completionId?: string;
 };
 
 type Props = {
@@ -256,9 +265,35 @@ function PlanDay({
     .filter((session) => session.status === "active")
     .toSorted((left, right) => left.position - right.position);
   const cancelled = sessions.filter(
-    (session) => session.status === "cancelled",
+    (session) =>
+      session.status === "cancelled" && session.completionId === undefined,
   );
+  const loggedAnyway = sessions
+    .filter(
+      (session) =>
+        session.status === "cancelled" && session.completionId !== undefined,
+    )
+    .toSorted((left, right) => left.position - right.position);
   const headingId = `plan-day-${date}`;
+  const cancelledOccurrenceDelete = (session: PlanSessionView) => {
+    const segment =
+      session.seriesId === null ? undefined : seriesById.get(session.seriesId);
+    if (segment === undefined || session.occurrenceDate === null) return;
+    return (
+      <RecurringDeleteControls
+        today={today}
+        sessionId={session.id}
+        occurrenceDate={session.occurrenceDate}
+        series={segment}
+        expectedRevision={expectedRevision}
+        planAction={action}
+        planPending={pending}
+        seriesAction={seriesAction}
+        seriesState={seriesState}
+        seriesPending={seriesPending}
+      />
+    );
+  };
 
   return (
     <li
@@ -300,13 +335,34 @@ function PlanDay({
               />
             ))}
           </ol>
-        ) : (
+        ) : loggedAnyway.length ? null : (
           <p className={styles.empty}>
             {isRecoveryDay
               ? "Recovery day. Nothing is planned here."
               : "Nothing planned."}
           </p>
         )}
+
+        {loggedAnyway.length ? (
+          <ol className={styles.sessionList}>
+            {loggedAnyway.map((session) => (
+              <li key={session.id} className={styles.session} data-logged>
+                <div className={styles.sessionHeader}>
+                  <h3>{session.title}</h3>
+                </div>
+                <p className={styles.meta}>{session.sport} · Logged</p>
+                <div className={styles.cardActions} data-session-actions>
+                  <Link
+                    className={styles.action}
+                    href={`/home/log?completion=${session.completionId}`}
+                  >
+                    Edit log
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ol>
+        ) : null}
 
         {cancelled.length ? (
           <>
@@ -339,7 +395,7 @@ function PlanDay({
                       expectedRevision={expectedRevision}
                       action={action}
                       pending={pending}
-                      isOccurrence={session.seriesId !== null}
+                      occurrence={cancelledOccurrenceDelete(session)}
                     />
                   </div>
                 </li>
@@ -499,7 +555,6 @@ function PlanSessionCard({
                 planAction={action}
                 planPending={pending}
                 seriesAction={seriesAction}
-                seriesState={seriesState}
                 seriesPending={seriesPending}
               />
             )}
@@ -634,7 +689,6 @@ function PlanSessionCard({
                 planAction={action}
                 planPending={pending}
                 seriesAction={seriesAction}
-                seriesState={seriesState}
                 seriesPending={seriesPending}
               />
             )}
@@ -646,7 +700,22 @@ function PlanSessionCard({
           expectedRevision={expectedRevision}
           action={action}
           pending={pending}
-          isOccurrence={session.seriesId !== null}
+          occurrence={
+            recurring === null ? undefined : (
+              <RecurringDeleteControls
+                today={today}
+                sessionId={session.id}
+                occurrenceDate={recurring.occurrenceDate}
+                series={recurring.series}
+                expectedRevision={expectedRevision}
+                planAction={action}
+                planPending={pending}
+                seriesAction={seriesAction}
+                seriesState={seriesState}
+                seriesPending={seriesPending}
+              />
+            )
+          }
         />
 
         <form action={action}>
@@ -713,38 +782,43 @@ function DeleteSession({
   expectedRevision,
   action,
   pending,
-  isOccurrence,
+  occurrence,
 }: {
   sessionId: string;
   expectedRevision: number;
   action: FormAction;
   pending: boolean;
-  isOccurrence: boolean;
+  /** An occurrence's two scopes, which replace the one-off's single form. */
+  occurrence?: ReactNode;
 }) {
   return (
     <details className={styles.disclosure}>
       <summary>Delete</summary>
       <div className={styles.editorPanel}>
-        <p className={styles.permanentConsequence}>
-          {isOccurrence ? OCCURRENCE_WARNING : ONE_OFF_WARNING} A session you
-          have logged training against cannot be deleted; cancel it instead.
-        </p>
-        <form className={styles.form} action={action}>
-          <input type="hidden" name="operation" value="delete" />
-          <input type="hidden" name="sessionId" value={sessionId} />
-          <input
-            type="hidden"
-            name="expectedRevision"
-            value={expectedRevision}
-          />
-          <button
-            className={styles.dangerAction}
-            type="submit"
-            disabled={pending}
-          >
-            Delete session
-          </button>
-        </form>
+        {occurrence ?? (
+          <>
+            <p className={styles.permanentConsequence}>
+              {ONE_OFF_WARNING} A session you have logged training against
+              cannot be deleted; cancel it instead.
+            </p>
+            <form className={styles.form} action={action}>
+              <input type="hidden" name="operation" value="delete" />
+              <input type="hidden" name="sessionId" value={sessionId} />
+              <input
+                type="hidden"
+                name="expectedRevision"
+                value={expectedRevision}
+              />
+              <button
+                className={styles.dangerAction}
+                type="submit"
+                disabled={pending}
+              >
+                Delete session
+              </button>
+            </form>
+          </>
+        )}
       </div>
     </details>
   );
@@ -752,9 +826,6 @@ function DeleteSession({
 
 const ONE_OFF_WARNING =
   "Permanent. Deleting removes this session from the plan and does not keep it on the record. There is no undo.";
-
-const OCCURRENCE_WARNING =
-  ONE_OFF_WARNING + " Its series will not write this date back.";
 
 /**
  * A remount key that advances only when a submission targeted *this* form.

@@ -37,6 +37,7 @@ vi.mock("@/server/completions/plan-window-top-up", () => ({
 }));
 
 import TodayPage from "./page";
+import type { RollingPlanSession } from "@/server/rolling-plan/rolling-plan";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 
 const TIMEZONE = "Europe/Berlin";
@@ -166,6 +167,39 @@ describe("Today", () => {
     ).toContain("Pain");
   });
 
+  it("reads a cancelled session trained anyway as logged, not cancelled", async () => {
+    const cancelled: RollingPlanSession = {
+      ...session(),
+      status: "cancelled",
+      cancelledAt: "2026-08-17T06:00:00.000Z",
+    };
+    readPlanWindowToppedUpMock.mockResolvedValue(planWindow([cancelled]));
+    listCompletions.mockResolvedValue([completion()]);
+
+    render(await TodayPage({ searchParams: Promise.resolve({}) }));
+
+    const card = document.querySelector(
+      `[data-today-session="${SESSION_ID}"]`,
+    ) as HTMLElement;
+    expect(card.getAttribute("data-cancelled")).toBe("false");
+    expect(within(card).queryByText("Cancelled, kept on the record")).toBe(
+      null,
+    );
+    expect(within(card).getByText("Partly completed")).toBeTruthy();
+
+    // Without a log it is still plainly cancelled.
+    cleanup();
+    listCompletions.mockResolvedValue([]);
+    render(await TodayPage({ searchParams: Promise.resolve({}) }));
+    const unlogged = document.querySelector(
+      `[data-today-session="${SESSION_ID}"]`,
+    ) as HTMLElement;
+    expect(unlogged.getAttribute("data-cancelled")).toBe("true");
+    expect(
+      within(unlogged).getByText("Cancelled, kept on the record"),
+    ).toBeTruthy();
+  });
+
   it("offers the log link on a planned session that has none", async () => {
     readPlanWindowToppedUpMock.mockResolvedValue(planWindow([session()]));
 
@@ -237,7 +271,7 @@ describe("Today", () => {
   });
 });
 
-function planWindow(sessions: ReturnType<typeof session>[] = []) {
+function planWindow(sessions: RollingPlanSession[] = []) {
   return {
     slice: {
       planId: "plan",
@@ -251,7 +285,7 @@ function planWindow(sessions: ReturnType<typeof session>[] = []) {
   };
 }
 
-function session() {
+function session(): RollingPlanSession {
   return {
     id: SESSION_ID,
     localDate: today(),
@@ -259,7 +293,7 @@ function session() {
     title: "Threshold intervals",
     sport: "Running",
     isLocked: false,
-    status: "active" as const,
+    status: "active",
     cancelledAt: null,
     seriesId: null,
     occurrenceDate: null,

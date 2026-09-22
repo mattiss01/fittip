@@ -261,7 +261,13 @@ async function buildSeriesChange(
     return { operation, seriesId: randomUUID(), series: input };
   }
 
-  const session = requireSession(slice, formData.get("sessionId"));
+  // Ending a series from a date is offered on a cancelled occurrence's Delete
+  // panel too: it names a series and a date, not the session's own state.
+  const session = requireSession(
+    slice,
+    formData.get("sessionId"),
+    operation === "end_series",
+  );
   if (session.seriesId === null || session.occurrenceDate === null) {
     throw new RollingPlanValidationError();
   }
@@ -407,9 +413,13 @@ function assertRuleHasOccurrence(rule: RollingPlanRecurrenceRule) {
 function requireSession(
   slice: RollingPlanSlice,
   value: FormDataEntryValue | null,
+  includeCancelled = false,
 ): RollingPlanSession {
   const session = slice.sessions.find(
-    (candidate) => candidate.id === value && candidate.status === "active",
+    (candidate) =>
+      candidate.id === value &&
+      (candidate.status === "active" ||
+        (includeCancelled && candidate.status === "cancelled")),
   );
   if (!session) throw new RollingPlanValidationError();
   return session;

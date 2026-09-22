@@ -347,10 +347,10 @@ test.describe("M3-15B today and logging", () => {
 
       await page.goto("/home/plan");
       const occurrence = planCard(page, today, "Aerobic base");
-      await openDisclosure(occurrence, "Cancel");
+      await openDisclosure(occurrence, "Delete");
       await scope(occurrence, "This and all future sessions")
         .last()
-        .getByRole("button", { name: "Remove this and all future sessions" })
+        .getByRole("button", { name: "Delete this and all future sessions" })
         .click();
       const receipt = page
         .getByRole("status")

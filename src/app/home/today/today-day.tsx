@@ -248,11 +248,16 @@ function SessionCard({
     .filter(Boolean)
     .join(" · ");
 
+  // Trained anyway: once a log is attached, the card reads as logged. The
+  // cancellation stays in the plan row and in the log's own snapshot.
+  const showsCancelled =
+    session.status === "cancelled" && session.completion === null;
+
   return (
     <li
       className={styles.session}
       data-today-session={session.id}
-      data-cancelled={session.status === "cancelled"}
+      data-cancelled={showsCancelled}
       data-locked={session.isLocked}
     >
       <div className={styles.sessionHeader}>
@@ -269,9 +274,7 @@ function SessionCard({
       <div className={styles.marks}>
         {session.isRecurring ? <span>Recurring</span> : null}
         {session.isLocked ? <span>Locked</span> : null}
-        {session.status === "cancelled" ? (
-          <span>Cancelled, kept on the record</span>
-        ) : null}
+        {showsCancelled ? <span>Cancelled, kept on the record</span> : null}
       </div>
       <p className={styles.meta}>{meta}</p>
       {session.intent === null ? null : (

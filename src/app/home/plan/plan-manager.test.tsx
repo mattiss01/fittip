@@ -364,22 +364,17 @@ describe("PlanManager", () => {
       screen.getAllByText("This and all future sessions").length,
     ).toBeGreaterThan(0);
 
+    // Cancel keeps its one scope: removing the future deletes, so it lives
+    // under Delete.
     fireEvent.click(screen.getByText("Cancel", { selector: "summary" }));
     expect(
-      screen.getByText(/Permanent\. Removes this occurrence/),
+      screen.getByRole("button", { name: "Cancel only this session" }),
     ).toBeVisible();
-    expect(screen.getByText(/Locked sessions are kept/)).toBeVisible();
-    expect(screen.getByText(/completed training is untouched/)).toBeVisible();
-    // Scoped: the card's own Delete panel says "no undo" too, and it means
-    // something narrower there.
     expect(
-      screen.getByText(/Permanent\. Removes this occurrence/).textContent,
-    ).toMatch(/no undo/);
-    expect(
-      screen.getByRole("button", {
+      screen.queryByRole("button", {
         name: "Remove this and all future sessions",
       }),
-    ).toBeVisible();
+    ).toBeNull();
   });
 
   it("exposes Edit, Cancel, Delete, and the lock control on a session card", () => {
@@ -446,7 +441,7 @@ describe("PlanManager", () => {
     expect(card).toContainElement(deleteForm);
   });
 
-  it("tells an occurrence owner that deleting it is permanent too", () => {
+  it("asks an occurrence owner whether to delete only this session or the rest too", () => {
     renderManager(
       INITIAL_PLAN_ACTION_STATE,
       [
@@ -459,15 +454,31 @@ describe("PlanManager", () => {
     );
 
     fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
-    const panel = screen.getByText(/^Permanent\. Deleting removes/);
-    expect(panel).toBeVisible();
-    // M3-20: the series records the deleted date and leaves it empty, so the
-    // owner who knows it fills its dates is told this one stays gone.
-    expect(panel.textContent).toMatch(/series will not write this date back/i);
-    expect(panel.textContent).not.toMatch(/This session repeats/i);
+    const only = screen.getByRole("button", {
+      name: "Delete only this session",
+    });
+    expect(only).toBeVisible();
+    expect(
+      only.closest("form")!.querySelector("input[name='operation']"),
+    ).toHaveValue("delete");
+    // M3-20: the series records the deleted date and leaves it empty.
+    expect(
+      screen.getByText(/series will not write this date back/i),
+    ).toBeVisible();
+
+    const future = screen.getByRole("button", {
+      name: "Delete this and all future sessions",
+    });
+    expect(future).toBeVisible();
+    expect(
+      future.closest("form")!.querySelector("input[name='operation']"),
+    ).toHaveValue("end_series");
+    expect(screen.getByText(/Locked sessions are kept/)).toBeVisible();
+    // The one-off's single button is not offered beside the two scopes.
+    expect(screen.queryByRole("button", { name: "Delete session" })).toBeNull();
   });
 
-  it("offers a cancelled occurrence the same two verbs as any cancelled session", () => {
+  it("offers a cancelled occurrence Reactivate and both delete scopes", () => {
     renderManager(
       INITIAL_PLAN_ACTION_STATE,
       [
@@ -482,9 +493,33 @@ describe("PlanManager", () => {
 
     expect(screen.getByRole("button", { name: "Reactivate" })).toBeVisible();
     fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
-    const panel = screen.getByText(/^Permanent\. Deleting removes/);
-    expect(panel.textContent).toMatch(/series will not write this date back/i);
-    expect(panel.textContent).not.toMatch(/undoes your cancellation/i);
+    expect(
+      screen.getByRole("button", { name: "Delete only this session" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        name: "Delete this and all future sessions",
+      }),
+    ).toBeVisible();
+  });
+
+  it("reads a cancelled session trained anyway as logged, with no plan controls", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [
+      session({
+        status: "cancelled",
+        completionId: "7f000000-0000-4000-8000-0000000000c1",
+      }),
+    ]);
+    const day = document.querySelector(`[data-plan-date="${TODAY}"]`)!;
+
+    expect(day.textContent).toContain("Running · Logged");
+    expect(day.textContent).not.toContain("Cancelled");
+    expect(day.textContent).not.toContain("Nothing planned.");
+    expect(
+      screen.getByRole("link", { name: "Edit log" }).getAttribute("href"),
+    ).toBe("/home/log?completion=7f000000-0000-4000-8000-0000000000c1");
+    expect(screen.queryByRole("button", { name: "Reactivate" })).toBeNull();
+    expect(screen.queryByText("Delete", { selector: "summary" })).toBeNull();
   });
 
   it("withholds future scopes from a locked survivor past the segment end", () => {
@@ -500,17 +535,15 @@ describe("PlanManager", () => {
       [{ ...series(), endDate: DATES[0].replace(/17$/, "16") }],
     );
 
-    fireEvent.click(screen.getByText("Cancel", { selector: "summary" }));
+    fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
     expect(
       screen.queryByRole("button", {
-        name: "Remove this and all future sessions",
+        name: "Delete this and all future sessions",
       }),
     ).toBeNull();
+    expect(screen.getByText(/only this session can be deleted/i)).toBeVisible();
     expect(
-      screen.getByText(/only this session can be cancelled/i),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: "Cancel only this session" }),
+      screen.getByRole("button", { name: "Delete only this session" }),
     ).toBeVisible();
   });
 
@@ -546,11 +579,11 @@ describe("PlanManager", () => {
       <PlanManager {...props} sessions={[recurringSession]} />,
     );
 
-    fireEvent.click(screen.getByText("Cancel", { selector: "summary" }));
+    fireEvent.click(screen.getByText("Delete", { selector: "summary" }));
     fireEvent.submit(
       screen
         .getByRole("button", {
-          name: "Remove this and all future sessions",
+          name: "Delete this and all future sessions",
         })
         .closest("form")!,
     );

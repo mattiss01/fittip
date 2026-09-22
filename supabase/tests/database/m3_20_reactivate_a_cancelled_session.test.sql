@@ -138,7 +138,7 @@ create temporary table snapshot (label text primary key, value jsonb);
 
 grant all on change_receipt, materialization, snapshot to public;
 
-select plan(36);
+select plan(39);
 
 select is(
   (select count(*)::bigint from reactivate_zone), 1::bigint,
@@ -579,6 +579,13 @@ select 'cancel-occurrence', * from public.apply_rolling_plan_change_set(
   pg_temp.rev('7a200000-0000-4000-8000-000000000001'),
   '7a200000-0000-4000-8000-00000000e040', 'owner_manual',
   pg_temp.one('cancel', pg_temp.occurrence('7a200000-0000-4000-8000-0000000000a1', 4)));
+select is(
+  (select has_diverged from public.rolling_plan_sessions
+   where id = pg_temp.occurrence('7a200000-0000-4000-8000-0000000000a1', 4)),
+  false,
+  'cancelling an occurrence does not mark it as changed: what it says is the rule''s'
+);
+
 insert into change_receipt
 select 'reactivate-occurrence', * from public.apply_rolling_plan_change_set(
   pg_temp.rev('7a200000-0000-4000-8000-000000000001'),
@@ -588,8 +595,58 @@ select 'reactivate-occurrence', * from public.apply_rolling_plan_change_set(
 select is(
   (select status || '|' || has_diverged::text from public.rolling_plan_sessions
    where id = pg_temp.occurrence('7a200000-0000-4000-8000-0000000000a1', 4)),
-  'active|true',
-  'a reactivated occurrence is active and still marked as diverged from its rule'
+  'active|false',
+  'a reactivated occurrence the owner never edited reads as the rule''s again'
+);
+
+-- Moving and locking leave what it says alone as well.
+insert into change_receipt
+select 'move-lock-occurrence', * from public.apply_rolling_plan_change_set(
+  pg_temp.rev('7a200000-0000-4000-8000-000000000001'),
+  '7a200000-0000-4000-8000-00000000e046', 'owner_manual',
+  jsonb_build_array(
+    jsonb_build_object(
+      'operation', 'move',
+      'sessionId', pg_temp.occurrence('7a200000-0000-4000-8000-0000000000a1', 4),
+      'localDate', pg_temp.owner_day(5), 'position', 5),
+    jsonb_build_object(
+      'operation', 'set_lock',
+      'sessionId', pg_temp.occurrence('7a200000-0000-4000-8000-0000000000a1', 4),
+      'isLocked', true)));
+
+select is(
+  (select has_diverged from public.rolling_plan_sessions
+   where id = pg_temp.occurrence('7a200000-0000-4000-8000-0000000000a1', 4)),
+  false,
+  'nor does moving or locking it'
+);
+
+-- Only an edit does, and cancelling and reactivating an edited one keeps it.
+insert into change_receipt
+select 'edit-occurrence', * from public.apply_rolling_plan_change_set(
+  pg_temp.rev('7a200000-0000-4000-8000-000000000001'),
+  '7a200000-0000-4000-8000-00000000e043', 'owner_manual',
+  jsonb_build_array(jsonb_build_object(
+    'operation', 'edit',
+    'sessionId', pg_temp.occurrence('7a200000-0000-4000-8000-0000000000a1', 6),
+    'session', jsonb_build_object(
+      'title', 'Owner changed this', 'sport', 'Running', 'activities', '[]'::jsonb))));
+insert into change_receipt
+select 'cancel-edited', * from public.apply_rolling_plan_change_set(
+  pg_temp.rev('7a200000-0000-4000-8000-000000000001'),
+  '7a200000-0000-4000-8000-00000000e044', 'owner_manual',
+  pg_temp.one('cancel', pg_temp.occurrence('7a200000-0000-4000-8000-0000000000a1', 6)));
+insert into change_receipt
+select 'reactivate-edited', * from public.apply_rolling_plan_change_set(
+  pg_temp.rev('7a200000-0000-4000-8000-000000000001'),
+  '7a200000-0000-4000-8000-00000000e045', 'owner_manual',
+  pg_temp.one('reactivate', pg_temp.occurrence('7a200000-0000-4000-8000-0000000000a1', 6)));
+
+select is(
+  (select has_diverged from public.rolling_plan_sessions
+   where id = pg_temp.occurrence('7a200000-0000-4000-8000-0000000000a1', 6)),
+  true,
+  'while one the owner edited before cancelling stays marked as changed'
 );
 
 insert into materialization

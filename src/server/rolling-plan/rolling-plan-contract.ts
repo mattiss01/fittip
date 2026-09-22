@@ -697,6 +697,53 @@ export function registerRollingPlanContract(
       ).rejects.toThrow(RollingPlanValidationError);
     });
 
+    it("marks an occurrence changed only when its content is edited", async () => {
+      const { plan, day } = requireSubject(subject);
+      const seriesId = randomUUID();
+      await plan.applyChangeSet(changeSet([addSeries(seriesId, day(0), 3)]), 0);
+      await plan.materializeSeries(randomUUID(), 1);
+      const [first, second] = (await plan.getPlanSlice(day(0), day(13)))
+        .sessions;
+
+      // ADR-017 as amended on 22 September 2026: moving, locking, cancelling
+      // and reactivating leave what the occurrence says alone.
+      await plan.applyChangeSet(
+        changeSet([
+          {
+            operation: "move",
+            sessionId: first.id,
+            localDate: day(1),
+            position: 0,
+          },
+          { operation: "set_lock", sessionId: first.id, isLocked: true },
+          { operation: "cancel", sessionId: second.id },
+        ]),
+        2,
+      );
+      await plan.applyChangeSet(
+        changeSet([{ operation: "reactivate", sessionId: second.id }]),
+        3,
+      );
+      await plan.applyChangeSet(
+        changeSet([
+          {
+            operation: "edit",
+            sessionId: second.id,
+            session: { title: "Edited", sport: "Running", activities: [] },
+          },
+        ]),
+        4,
+      );
+
+      const sessions = (await plan.getPlanSlice(day(0), day(13))).sessions;
+      expect(sessions.find((session) => session.id === first.id)).toMatchObject(
+        { hasDiverged: false, isLocked: true, localDate: day(1) },
+      );
+      expect(
+        sessions.find((session) => session.id === second.id),
+      ).toMatchObject({ hasDiverged: true, title: "Edited" });
+    });
+
     it("refuses to reactivate onto a full day", async () => {
       const { plan, day } = requireSubject(subject);
       const cancelled = randomUUID();

@@ -371,7 +371,6 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
           cancelledAt: null,
           position,
         });
-        if (current.seriesId !== null) current.hasDiverged = true;
         continue;
       }
       if (!current || current.status !== "active")
@@ -397,8 +396,10 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
       }
       if (JSON.stringify(current) === before)
         throw new RollingPlanValidationError();
-      // ADR-017: an occurrence the owner has changed is diverged from here on.
-      if (current.seriesId !== null) current.hasDiverged = true;
+      // ADR-017 as amended: only an edit changes what an occurrence says, so
+      // only an edit diverges it from its rule.
+      if (change.operation === "edit" && current.seriesId !== null)
+        current.hasDiverged = true;
     }
     const activeOrders = new Set<string>();
     const activeByDate = new Map<string, number>();

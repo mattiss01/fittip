@@ -10,6 +10,9 @@
 --
 --   * `reactivate` admits a cancelled session only, on today or later. It
 --     returns after the day's last active session and ignores the lock.
+--   * Only an edit marks an occurrence diverged (ADR-017 as amended on
+--     22 September 2026). A move, a lock, a cancel or a reactivate no longer
+--     does, and existing flags are recomputed from the edit history below.
 --   * A deleted occurrence's rule date is recorded on its series, and the
 --     materializer skips it. A whole-series edit rewrites what the rule means
 --     from its sweep date, so it clears the skips from that date too; a split
@@ -70,7 +73,24 @@ alter table public.rolling_plan_change_entries
     )
   );
 
--- 3. The change function ------------------------------------------------------
+-- 3. Divergence means edited ------------------------------------------------
+
+-- Every flag already set is recomputed from the history that set it: an
+-- occurrence is diverged exactly when an `edit` entry names it. Entries naming a
+-- session survive until that session is deleted, so the history is complete for
+-- every row this touches. Only rows whose answer changes are written.
+update public.rolling_plan_sessions session
+set has_diverged = false
+where session.series_id is not null
+  and session.has_diverged
+  and not exists (
+    select 1 from public.rolling_plan_change_entries entry
+    where entry.user_id = session.user_id
+      and entry.session_id = session.id
+      and entry.change_kind = 'edit'
+  );
+
+-- 4. The change function ------------------------------------------------------
 
 create or replace function public.apply_rolling_plan_change_set(
   p_expected_plan_revision bigint,
@@ -573,10 +593,6 @@ begin
           status = 'active', cancelled_at = null,
           position = v_position::smallint, updated_at = v_now
         where id = v_session_id and user_id = v_user_id;
-        -- ADR-017, as for every other change to an occurrence.
-        update public.rolling_plan_sessions set has_diverged = true
-        where id = v_session_id and user_id = v_user_id
-          and series_id is not null and not has_diverged;
       elsif v_operation in ('edit', 'move', 'set_lock', 'cancel') then
         select session.local_date into v_local_date
         from public.rolling_plan_sessions session
@@ -652,12 +668,16 @@ begin
           raise exception using errcode = '22023', message = 'Invalid rolling plan change.';
         end if;
 
-        -- ADR-017: an occurrence the owner has changed is diverged from its
-        -- rule from here on. The materializer never revisits an existing
-        -- occurrence, and the divergence is what a later consumer reads.
-        update public.rolling_plan_sessions set has_diverged = true
-        where id = v_session_id and user_id = v_user_id
-          and series_id is not null and not has_diverged;
+        -- ADR-017, as amended 22 September 2026: an occurrence is diverged
+        -- when its content no longer reads as its rule's, which only an edit
+        -- does. A move, a lock and a cancel leave what it says alone, so they
+        -- leave the flag alone. The materializer never revisits an existing
+        -- occurrence either way.
+        if v_operation = 'edit' then
+          update public.rolling_plan_sessions set has_diverged = true
+          where id = v_session_id and user_id = v_user_id
+            and series_id is not null and not has_diverged;
+        end if;
       else
         raise exception using errcode = '22023', message = 'Invalid rolling plan change.';
       end if;
@@ -766,7 +786,7 @@ revoke all privileges on function public.apply_rolling_plan_change_set(bigint, u
 grant execute on function public.apply_rolling_plan_change_set(bigint, uuid, text, jsonb)
   to authenticated;
 
--- 4. Materialization honours skipped rule dates ------------------------------
+-- 5. Materialization honours skipped rule dates ------------------------------
 
 -- Re-emitted verbatim from M3-14 with one added `continue`.
 

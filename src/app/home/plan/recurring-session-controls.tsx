@@ -79,7 +79,6 @@ export function RecurringSessionControls({
   planAction,
   planPending,
   seriesAction,
-  seriesState,
   seriesPending,
 }: {
   mode: "edit" | "remove";
@@ -90,7 +89,6 @@ export function RecurringSessionControls({
   planAction: PlanFormAction;
   planPending: boolean;
   seriesAction: PlanFormAction;
-  seriesState: SeriesActionState;
   seriesPending: boolean;
 }) {
   const canChangeFuture = occurrenceHasFutureRuleDate(
@@ -222,20 +220,85 @@ export function RecurringSessionControls({
           </button>
         </form>
       </section>
+    </>
+  );
+}
+
+/**
+ * The two scopes of a delete on an occurrence, in the same shape as Edit and
+ * Cancel. Both are permanent: since M3-20 the series records a deleted date and
+ * leaves it empty, and ending the series from a date removes the rest.
+ */
+export function RecurringDeleteControls({
+  today,
+  sessionId,
+  occurrenceDate,
+  series,
+  expectedRevision,
+  planAction,
+  planPending,
+  seriesAction,
+  seriesState,
+  seriesPending,
+}: {
+  today: string;
+  sessionId: string;
+  occurrenceDate: string;
+  series: PlanSeriesView;
+  expectedRevision: number;
+  planAction: PlanFormAction;
+  planPending: boolean;
+  seriesAction: PlanFormAction;
+  seriesState: SeriesActionState;
+  seriesPending: boolean;
+}) {
+  const canChangeFuture = occurrenceHasFutureRuleDate(
+    occurrenceDate,
+    series,
+    today,
+  );
+
+  return (
+    <>
+      <section className={styles.scope}>
+        <h4>Only this session</h4>
+        <p className={styles.permanentConsequence}>
+          Permanent. Deletes only this occurrence and does not keep it on the
+          record. The series will not write this date back, and every other
+          occurrence stays. A session you have logged training against cannot be
+          deleted. There is no undo.
+        </p>
+        <form className={styles.form} action={planAction}>
+          <input type="hidden" name="operation" value="delete" />
+          <input type="hidden" name="sessionId" value={sessionId} />
+          <input
+            type="hidden"
+            name="expectedRevision"
+            value={expectedRevision}
+          />
+          <button
+            className={styles.dangerAction}
+            type="submit"
+            disabled={planPending}
+          >
+            Delete only this session
+          </button>
+        </form>
+      </section>
 
       {canChangeFuture ? (
         <section className={styles.scope}>
           <h4>This and all future sessions</h4>
           <p className={styles.permanentConsequence}>
-            Permanent. Removes this occurrence and every materialized occurrence
-            of this series on or after its rule date, including changed
-            occurrences. Locked sessions are kept. Nothing before this date
-            changes, completed training is untouched, and there is no undo.
-            Removed sessions are deleted from the Plan, not cancelled.
+            Permanent. Removes this occurrence and every occurrence of this
+            series on or after its rule date, including changed and cancelled
+            ones, and the series stops. Locked sessions are kept. Nothing before
+            this date changes, completed training is untouched, and there is no
+            undo.
           </p>
           <form className={styles.form} action={seriesAction}>
             <input type="hidden" name="operation" value="end_series" />
-            <input type="hidden" name="sessionId" value={session.id} />
+            <input type="hidden" name="sessionId" value={sessionId} />
             <input
               type="hidden"
               name="expectedRevision"
@@ -246,17 +309,17 @@ export function RecurringSessionControls({
               type="submit"
               disabled={seriesPending}
             >
-              Remove this and all future sessions
+              Delete this and all future sessions
             </button>
           </form>
         </section>
       ) : (
         <p className={styles.consequence}>
-          This locked session outlived the series end date. The bulk removal
-          would change nothing, so only this session can be cancelled.
+          Its series no longer fills this date, so only this session can be
+          deleted.
         </p>
       )}
-      {seriesState.sessionId === session.id &&
+      {seriesState.sessionId === sessionId &&
       seriesState.status === "validation" ? (
         <p className={styles.consequence}>{seriesState.message}</p>
       ) : null}
