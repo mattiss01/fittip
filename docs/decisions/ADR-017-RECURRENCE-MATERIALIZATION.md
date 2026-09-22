@@ -78,6 +78,13 @@ Specifically:
   is that the exception is a flag on an existing row rather than the only row
   that exists.
 
+  *Amended 22 September 2026 by the product owner (M3-20): "changed" means its
+  content was edited. A move, a lock, a cancel, or a reactivate leaves what the
+  occurrence says as its rule says it, so none of them sets the flag, and the
+  surface's "Changed" mark follows. Existing flags were recomputed from the edit
+  history. The materializer's behavior is unaffected: it never revisits an
+  existing row, flagged or not.*
+
 The product owner made this decision on 19 August 2026, against the recorded
 objection below and with the consequences in this ADR stated before approval.
 
