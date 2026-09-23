@@ -25,7 +25,17 @@ never in question: content FitTip derives rather than content the owner wrote
 still starts `proposed`, and a caller still cannot forge `inferred_proposed`
 provenance or `author_class = 'system'`.
 
-**Date:** 1 August 2026, decision 7 amended 2 August 2026
+**Amended 23 September 2026 by decision 16.** Decision 7 said no authenticated
+path could produce `proposed`. That was true when `apply_memory_change` was the
+only authenticated memory-write surface, and it stopped being true when M3-02
+added `record_roadmap_memory_candidates` — an exception recorded then only in
+that function's own comment. Decision 16 states the exception here instead, for
+every route that holds it, so the rule and the code no longer contradict each
+other. No route gained a capability in this amendment; what changed is where the
+boundary is written down.
+
+**Date:** 1 August 2026, decision 7 amended 2 August 2026, decision 16 added
+23 September 2026
 
 **Ticket:** [M2-02](../backlog/M2/M2-02-MEMORY-MODEL-MANAGEMENT.md)
 
@@ -90,9 +100,11 @@ looking at a form that silently did nothing.
 7. Derive status, provenance, author class, and revision numbering inside the
    function. A user-created item is `user_created`, authored by `user`, and
    **active on save whichever of the four classes it belongs to** — including
-   `observed_pattern`. `proposed` is reserved for content FitTip derived, and
-   no authenticated path can produce it, because provenance and author class
-   are fixed inside the function and are not caller inputs. Accepting keeps
+   `observed_pattern`. `proposed` is reserved for content FitTip derived.
+   `apply_memory_change` cannot produce it, because provenance and author class
+   are fixed inside the function and are not caller inputs. It is no longer the
+   only authenticated memory-write surface, though: decision 16 names the
+   coaching routes that may propose, and the limits they hold to. Accepting keeps
    the item's origin provenance and the accepted revision's own provenance,
    and records the confirmation separately in `user_confirmed_at`.
    *(Amended 2 August 2026. The builder originally forced `observed_pattern`
@@ -131,6 +143,33 @@ looking at a form that silently did nothing.
 15. Keep memory content out of logs, analytics, monitoring, error messages,
     receipts, and generic audit events. A database error message is never
     forwarded to the caller; the repository raises its own generic failure.
+16. **A coaching proposal route may create `inferred_proposed` memory, and
+    nothing else may.** These routes exist because the coach reads a planning
+    note the owner wrote and may notice a durable constraint in it worth
+    remembering. Proposing it is the honest behaviour; writing it as fact would
+    not be. `record_roadmap_memory_candidates` is the first such route and the
+    plan's `record_plan_memory_candidates` is the second.
+
+    Every route of this kind: is `SECURITY DEFINER`, granted to `authenticated`
+    alone, and hardened exactly as decision 9 requires; derives the owner from
+    `auth.uid()` and takes no owner, provenance, author class or status as
+    input; may create items only with `author_class = 'system'`,
+    `provenance = 'inferred_proposed'` and `status = 'proposed'`, and may create
+    nothing else; and cannot accept, enable, edit, delete, or otherwise move an
+    item out of `proposed`. Only the owner does that, through
+    `apply_memory_change`.
+
+    Two limits are what give the rule its force, and neither is optional for a
+    new route. A `proposed` item is never eligible coaching context, so a route
+    that can propose still cannot feed its own output back to the coach as fact.
+    And every candidate must quote text the owner themselves wrote in the
+    planning note that produced it, checked inside the function, so the coach
+    cannot invent a durable claim about the owner out of its own prose.
+    Regeneration feedback does not count as such text: it is a critique of one
+    rejected proposal, not durable context about the person.
+
+    This is the whole of the exception. A route that needs more than it does not
+    belong in this decision and is a new one for the owner to make.
 
 ## Required security and concurrency evidence
 
@@ -153,6 +192,11 @@ looking at a form that silently did nothing.
 - Permanent deletion leaves no content in any revision and no content in the
   deletion evidence.
 - Memory content is absent from logs, analytics, error messages, and receipts.
+- For every route permitted by decision 16: that it creates only `proposed`
+  items carrying system author class and inferred provenance, that it cannot
+  move an item out of `proposed`, that a candidate quoting text absent from the
+  owner's planning note is refused, and that a replayed batch returns the
+  existing items rather than duplicating them.
 
 ## Alternatives considered
 
