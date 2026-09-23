@@ -18,12 +18,13 @@ before any code is written.
    proposes nothing on the memory surface. The roadmap path already does this; the plan
    path should too. Careful lane: a new privileged function.
 
-2. `[ ]` **Live plan proposals and the spend ledger** — two gaps the M3-16A re-review found,
-   both shared with the roadmap and harmless while the coach is fixture-only. `finish_*`
-   refuses a live result whose reservation is unsettled, but `coach-ai-service.ts` treats
-   settling as best effort, so a paid proposal is lost if the settle fails. And nothing makes
-   `spend_reservation_id` unique, so an owner calling the RPCs directly can attach one
-   reservation to several proposals. Settle before any live-provider ticket. Careful lane.
+2. `[ ]` **A paid proposal must not be lost when the settle fails** — the second M3-16A
+   spend gap, harmless while the coach is fixture-only. `finish_*` refuses a live result
+   whose reservation is unsettled, but `coach-ai-service.ts` fires `ledger.settle` and
+   swallows its rejection by design, so the provider is paid and the proposal is then
+   refused. Awaiting the settle harder does not fix it: the honest shape is for `finish_*`
+   to settle the reservation in the same transaction that inserts the proposal, which
+   touches both finish functions. Settle before any live-provider ticket. Careful lane.
 
 ## Fix in passing
 
@@ -74,6 +75,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 23 Sep 2026 | `80cf78f` | [35894277478](https://github.com/mattiss01/fittip/actions/runs/35894277478) | One settled spend reservation now pays for exactly one proposal: both `plan_proposals_spend_idx` and `roadmap_proposals_spend_idx` are unique, the roadmap one exempting `owner_edit` rows, which copy their source's reservation deliberately and would otherwise have made a paid roadmap uneditable. Migration `20260923165201` applied to the founder project — 26 migrations, advisors unchanged at 19 definer + 1 auth. The index built without conflict, which is the evidence that no existing row held a duplicate; review found nothing blocking |
 | 22 Sep 2026 | `49386f9` | [35712107521](https://github.com/mattiss01/fittip/actions/runs/35712107521) | Reactivate a cancelled session (M3-20), and a deleted series occurrence stays deleted, closing M3-19 limitation 1; from the owner's review, a logged cancelled session reads as logged, occurrence Delete offers only-this or all-future (moved from Cancel, so the accepted m3-14b and m3-15b flows were rewritten), and only an edit marks "Changed" (ADR-017 amended; flags recomputed, so older change-entry states may still say `hasDiverged: true`). Migration `20260921214230` applied to the founder project — 25 migrations, advisors unchanged at 19 definer + 1 auth |
 | 20 Sep 2026 | `5971b48` | [35507313220](https://github.com/mattiss01/fittip/actions/runs/35507313220) | Review against the real plan (16B): the coach reads the accepted roadmap as a fixed reduced shape, a planned session is editable inside review, and the surface names what moved. Migration `20260920102905` applied to the founder project — 24 migrations, advisors unchanged. Review found one blocking defect: the reduction ladder confused UTF-8 bytes with the UTF-16 units the validator bounds, which would have refused every plan generation |
 | 19 Sep 2026 | `63e58d3` | [35435242207](https://github.com/mattiss01/fittip/actions/runs/35435242207) | Plan proposal core loop (16A): ask the fixture coach, decide per item, apply staged items atomically through `apply_rolling_plan_change_set`. Migration `20260918161313` applied to the founder project — 23 migrations, advisors +5 definer. Reviewed twice; the first pass found two blocking defects |
