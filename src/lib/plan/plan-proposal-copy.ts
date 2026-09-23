@@ -200,7 +200,9 @@ export const PLAN_PROPOSAL_COPY = {
   // read as two different things. What differs is only where it came from.
   memoryPanelTitle: "From your planning note",
   memoryCandidatesWaiting: (count: number) =>
-    `${count} item${count === 1 ? "" : "s"} from a planning note are waiting for you. They are not used for coaching until you accept them.`,
+    count === 1
+      ? "1 item from a planning note is waiting for you. It is not used for coaching until you accept it."
+      : `${count} items from a planning note are waiting for you. They are not used for coaching until you accept them.`,
   memoryReviewLink: "Review them in memory",
 
   /* ---- Empty states ------------------------------------------------------ */

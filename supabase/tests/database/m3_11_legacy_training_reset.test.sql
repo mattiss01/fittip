@@ -90,7 +90,10 @@ select hasnt_function(
 -- came back on 23 September 2026 with M3-03's own two fields, so it is asserted
 -- present rather than absent; `plan_proposal_decision_receipt` is the one legacy
 -- receipt type nothing has restored.
-select has_type('public', 'plan_memory_candidate_receipt', 'the plan memory receipt is back, with M3-03''s fields');
+-- Existence only. The two fields are proved where they are actually relied on:
+-- the route's own suite selects the receipt into a typed temporary table, which
+-- fails on any other shape.
+select has_type('public', 'plan_memory_candidate_receipt', 'the plan memory receipt type is back');
 select hasnt_type('public', 'plan_proposal_decision_receipt', 'legacy plan decision receipt is removed');
 
 select has_table('public', 'personal_activities', 'personal activity definitions are preserved');

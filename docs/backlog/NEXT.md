@@ -13,10 +13,23 @@ before any code is written.
 
 ## Now
 
-1. `[ ]` **Plan proposal memory candidates** — M3-16A deliberately did not rebuild
+1. `[~]` **Plan proposal memory candidates** — M3-16A deliberately did not rebuild
    `record_plan_memory_candidates`, so a planning note that states a durable constraint
-   proposes nothing on the memory surface. The roadmap path already does this; the plan
-   path should too. Careful lane: a new privileged function.
+   proposes nothing on the memory surface even though the plan coach already returns
+   candidates and `validateMemoryCandidates` already checks them: `generatePlanProposal`
+   simply drops them. Outcome: it records them instead, and the plan proposal surface says
+   how many are waiting, exactly as the roadmap's does. Constraints: this is the second
+   route permitted by ADR-010 decision 16, so it holds to all of it — definer,
+   `authenticated` only, owner from `auth.uid()`, creates nothing but `proposed` items with
+   system author class and inferred provenance, cannot move one out of `proposed`, and every
+   candidate must quote text from the planning note; the batch runs in its own transaction
+   after the proposal has committed and its failure is swallowed, because one memory
+   conflict must not roll back a valid plan (ADR-015's boundary, as the roadmap path
+   already does); the source reference is `plan-proposal:<id>:<ordinal>` so a replayed batch
+   maps onto the same rows rather than duplicating them; and `roadmap_normalize_owner_text`
+   is reused rather than copied, as M3-16A already reuses it. Owner's decision (23 Sep
+   2026): amend ADR-010 rather than add a separate ADR or leave the exception in a function
+   comment — shipped separately as `4826786`. Careful lane: a new privileged function.
 
 2. `[ ]` **A paid proposal must not be lost when the settle fails** — the second M3-16A
    spend gap, harmless while the coach is fixture-only. `finish_*` refuses a live result
@@ -34,6 +47,16 @@ Not worth their own slot; do them when work lands nearby.
   "outside the active dates of its ended series", but the predicate also withholds it when
   the rule date has fallen behind today. M3-20 rewrote the Delete panel's version; Edit's
   remains. ([M3-21](M3/M3-21-RECURRING-SCOPE-FALLBACK-COPY.md))
+- A swallowed memory batch hides why it failed. Both generation paths catch the candidate
+  batch's error and return zero, so a coach that invented an excerpt (`22023`) is
+  indistinguishable from a genuine conflict (`PT409`), and neither is logged. Logging the
+  error *code* — never the content, ADR-010 decision 15 — would cost nothing and would be the
+  only signal if the TypeScript and SQL owner-text normalizers ever skew, which
+  `src/server/ai/owner-text.ts` warns they must not. Do both paths together; one alone makes
+  them differ for no reason.
+- The roadmap's memory copy says "1 item ... are waiting". `roadmap-records.ts` pluralizes the
+  noun but not the verb. The plan panel's own copy was written correctly, so the two now
+  differ; fix the roadmap's when work lands near it.
 - Network tripwire coverage: the coaching tripwire claims a complete root list but does not
   watch `src/server/completions` or `src/server/rolling-plan`. Neither holds a network
   primitive today, so this is a control overstating its coverage.

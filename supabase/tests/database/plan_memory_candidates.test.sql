@@ -278,14 +278,17 @@ select is(
 
 -- The content is the owner's own words, not the coach's ----------------------
 
+-- Counted positively on purpose. "No revision fails to quote the note" also
+-- passes when there are no revisions at all, which is exactly the state a
+-- broken route would leave behind.
 select is(
   (select count(*)::integer from public.memory_revisions
    where user_id = '7c000000-0000-4000-8000-000000000001'
      and strpos(
        'I only have 45 minutes on weekdays and my left knee complains on hills',
-       content) = 0),
-  0,
-  'every stored revision quotes the planning note the owner wrote'
+       content) > 0),
+  2,
+  'both stored revisions quote the planning note the owner wrote'
 );
 
 -- Replay ---------------------------------------------------------------------
@@ -372,11 +375,14 @@ select throws_ok(
   'a stolen completion token proposes nothing against another owner''s plan'
 );
 
+-- Unfiltered, as ADR-010's evidence list requires: a count carrying its own
+-- `where user_id = ...` would pass even if RLS let the outsider read every row
+-- the owner has. What this asserts is that the outsider sees nothing at all --
+-- neither anything they created, nor the owner's two items.
 select is(
-  (select count(*)::integer from public.memory_items
-   where user_id = '7c000000-0000-4000-8000-000000000002'),
+  (select count(*)::integer from public.memory_items),
   0,
-  'and the outsider holds no memory of their own as a result'
+  'and the outsider can see no memory whatever, their own or the owner''s'
 );
 
 select set_config('request.jwt.claims', null, true);
