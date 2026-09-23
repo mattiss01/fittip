@@ -18,12 +18,26 @@ before any code is written.
    proposes nothing on the memory surface. The roadmap path already does this; the plan
    path should too. Careful lane: a new privileged function.
 
-2. `[ ]` **Live plan proposals and the spend ledger** — two gaps the M3-16A re-review found,
-   both shared with the roadmap and harmless while the coach is fixture-only. `finish_*`
-   refuses a live result whose reservation is unsettled, but `coach-ai-service.ts` treats
-   settling as best effort, so a paid proposal is lost if the settle fails. And nothing makes
-   `spend_reservation_id` unique, so an owner calling the RPCs directly can attach one
-   reservation to several proposals. Settle before any live-provider ticket. Careful lane.
+2. `[~]` **One reservation, one proposal** — the first of the two spend-ledger gaps the
+   M3-16A re-review found. `plan_proposals_spend_idx` and `roadmap_proposals_spend_idx` are
+   plain partial indexes, so an owner calling the finish RPCs directly can attach one settled
+   reservation to any number of proposals and pay once for several results. Outcome: both
+   indexes become unique, and a second attach of the same reservation fails in the database
+   rather than in a caller. Constraints: forward-only, so the migration drops each index and
+   recreates it unique — it cannot alter the ones already applied; the uniqueness is partial
+   on `spend_reservation_id is not null`, because null is the fixture case and every
+   fixture-era proposal carries it; and each index keeps its existing name so the lookup it
+   already serves is not silently dropped. Owner's decision (23 Sep 2026): take this half on
+   its own and leave the settle redesign as its own ticket, because it is cheap and closes a
+   real hole, while the settle change touches an approved billing boundary. Careful lane.
+
+3. `[ ]` **A paid proposal must not be lost when the settle fails** — the second M3-16A
+   spend gap, harmless while the coach is fixture-only. `finish_*` refuses a live result
+   whose reservation is unsettled, but `coach-ai-service.ts` fires `ledger.settle` and
+   swallows its rejection by design, so the provider is paid and the proposal is then
+   refused. Awaiting the settle harder does not fix it: the honest shape is for `finish_*`
+   to settle the reservation in the same transaction that inserts the proposal, which
+   touches both finish functions. Settle before any live-provider ticket. Careful lane.
 
 ## Fix in passing
 
