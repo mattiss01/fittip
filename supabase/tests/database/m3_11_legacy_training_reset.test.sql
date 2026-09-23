@@ -62,19 +62,38 @@ select hasnt_function(
 -- privilege boundary is asserted in M3-16A's own suite; what M3-11 proves here
 -- is that the legacy *claim* RPC, whose five-argument shape nothing restored,
 -- is still gone.
-select hasnt_function(
-  'public', 'record_plan_memory_candidates',
-  array['uuid', 'bigint', 'jsonb'],
-  'the legacy plan-memory RPC is removed'
+-- Restored on 23 September 2026 under ADR-010 decision 16, with M3-03's exact
+-- signature and receipt shape, because the need M3-03 had is the need the plan
+-- path has again: a planning note that states a durable constraint should
+-- propose something. What M3-11 established and still holds is the reach, so
+-- that is what is asserted now. The other half -- that `authenticated` gets a
+-- route able to create nothing but a `proposed` item -- is proved in the
+-- route's own suite, which is where decision 16's evidence list lives.
+select ok(
+  has_function_privilege(
+    'authenticated',
+    'public.record_plan_memory_candidates(uuid,bigint,jsonb)', 'EXECUTE'
+  ) and not has_function_privilege(
+    'anon', 'public.record_plan_memory_candidates(uuid,bigint,jsonb)', 'EXECUTE'
+  ) and not has_function_privilege(
+    'service_role',
+    'public.record_plan_memory_candidates(uuid,bigint,jsonb)', 'EXECUTE'
+  ),
+  'the restored plan-memory RPC is reachable by the owner and by no other role'
 );
 select hasnt_function(
   'public', 'reject_plan_proposal', array['uuid'],
   'the legacy plan-proposal decision RPC is removed'
 );
 
--- Both names are M3-16A's again, with different fields. The legacy receipt
--- types nothing restored are below.
-select hasnt_type('public', 'plan_memory_candidate_receipt', 'legacy plan memory receipt is removed');
+-- Both names are M3-16A's again, with different fields. `plan_memory_candidate_receipt`
+-- came back on 23 September 2026 with M3-03's own two fields, so it is asserted
+-- present rather than absent; `plan_proposal_decision_receipt` is the one legacy
+-- receipt type nothing has restored.
+-- Existence only. The two fields are proved where they are actually relied on:
+-- the route's own suite selects the receipt into a typed temporary table, which
+-- fails on any other shape.
+select has_type('public', 'plan_memory_candidate_receipt', 'the plan memory receipt type is back');
 select hasnt_type('public', 'plan_proposal_decision_receipt', 'legacy plan decision receipt is removed');
 
 select has_table('public', 'personal_activities', 'personal activity definitions are preserved');

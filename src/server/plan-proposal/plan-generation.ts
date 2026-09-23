@@ -8,6 +8,7 @@ import {
 } from "@/server/ai/contracts";
 import { CoachAIError } from "@/server/ai/errors";
 import type { CoachAIOwner } from "@/server/ai/owner";
+import { createMemoryRepository } from "@/server/repositories/memory-repository";
 import type {
   PlanGenerationClaim,
   PlanProposalRepository,
@@ -37,13 +38,17 @@ import type {
  * binding names. A fixture result is recorded as `fixture` and is labelled an
  * example wherever it is shown.
  *
- * ## What it does not do
+ * ## Memory candidates
  *
- * It records no memory candidates. The plan's `record_plan_memory_candidates`
- * was dropped with M3-11 and M3-16A deliberately did not rebuild it, so a
- * planning note that mentions a durable constraint proposes nothing on the
- * memory surface yet. That is a gap with a line on the list, not a silent one:
- * nothing here pretends to have offered the owner a decision it never made.
+ * A planning note that states a durable constraint can now propose it. The
+ * batch is recorded after the proposal has committed, in its own transaction,
+ * and its failure is swallowed: one memory conflict must not roll back a valid
+ * plan proposal. That is ADR-015's boundary and the shape
+ * `generateRoadmapProposal` already uses.
+ *
+ * Nothing here decides anything about memory. The route it calls can create
+ * only `proposed` items -- ADR-010 decision 16 -- and the owner accepts or
+ * declines them on the memory surface, which owns that decision.
  */
 
 export type PlanGenerationInput = {
@@ -59,7 +64,7 @@ export type PlanGenerationInput = {
 };
 
 export type PlanGenerationResult =
-  | { status: "proposal"; proposalId: string }
+  | { status: "proposal"; proposalId: string; memoryCandidateCount: number }
   | { status: "pending" }
   | { status: "failed" };
 
@@ -102,7 +107,14 @@ export async function generatePlanProposal(
   // have been paid.
   if (claim.state !== "claimed") {
     if (claim.state === "completed" && claim.proposalId !== null) {
-      return { status: "proposal", proposalId: claim.proposalId };
+      // A replay reports no candidates rather than counting them again. The
+      // count describes what this call created, and this call created nothing;
+      // what is actually waiting is read from the memory surface.
+      return {
+        status: "proposal",
+        proposalId: claim.proposalId,
+        memoryCandidateCount: 0,
+      };
     }
     if (claim.state === "failed") return { status: "failed" };
     return { status: "pending" };
@@ -154,5 +166,46 @@ export async function generatePlanProposal(
     sources: outcome.sources,
   });
 
-  return { status: "proposal", proposalId };
+  return {
+    status: "proposal",
+    proposalId,
+    memoryCandidateCount: await recordMemoryCandidates(
+      proposals,
+      claim.completionToken,
+      input.startDate,
+      outcome.memoryCandidates,
+    ),
+  };
+}
+
+/**
+ * The candidate batch, in its own transaction after the proposal has committed.
+ *
+ * Its failure is swallowed on purpose: one memory conflict must not roll back a
+ * valid plan proposal, which is the boundary ADR-015 draws and the alternative
+ * it explicitly rejected. Zero here means "none were created", not "none were
+ * proposed", and the memory surface is where a candidate is actually decided
+ * either way.
+ */
+async function recordMemoryCandidates(
+  proposals: PlanProposalRepository,
+  completionToken: string,
+  today: string,
+  candidates: readonly { memoryType: string; sourceExcerpt: string }[],
+): Promise<number> {
+  if (candidates.length === 0) return 0;
+
+  try {
+    const memory = await (await createMemoryRepository()).list(today);
+    const receipt = await proposals.recordMemoryCandidates({
+      completionToken,
+      expectedMemoryRevision: memory.revision,
+      candidates: candidates as Parameters<
+        PlanProposalRepository["recordMemoryCandidates"]
+      >[0]["candidates"],
+    });
+    return receipt.itemIds.length;
+  } catch {
+    return 0;
+  }
 }

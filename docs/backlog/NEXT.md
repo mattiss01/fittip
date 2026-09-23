@@ -13,12 +13,7 @@ before any code is written.
 
 ## Now
 
-1. `[ ]` **Plan proposal memory candidates** — M3-16A deliberately did not rebuild
-   `record_plan_memory_candidates`, so a planning note that states a durable constraint
-   proposes nothing on the memory surface. The roadmap path already does this; the plan
-   path should too. Careful lane: a new privileged function.
-
-2. `[ ]` **A paid proposal must not be lost when the settle fails** — the second M3-16A
+1. `[ ]` **A paid proposal must not be lost when the settle fails** — the second M3-16A
    spend gap, harmless while the coach is fixture-only. `finish_*` refuses a live result
    whose reservation is unsettled, but `coach-ai-service.ts` fires `ledger.settle` and
    swallows its rejection by design, so the provider is paid and the proposal is then
@@ -34,6 +29,16 @@ Not worth their own slot; do them when work lands nearby.
   "outside the active dates of its ended series", but the predicate also withholds it when
   the rule date has fallen behind today. M3-20 rewrote the Delete panel's version; Edit's
   remains. ([M3-21](M3/M3-21-RECURRING-SCOPE-FALLBACK-COPY.md))
+- A swallowed memory batch hides why it failed. Both generation paths catch the candidate
+  batch's error and return zero, so a coach that invented an excerpt (`22023`) is
+  indistinguishable from a genuine conflict (`PT409`), and neither is logged. Logging the
+  error *code* — never the content, ADR-010 decision 15 — would cost nothing and would be the
+  only signal if the TypeScript and SQL owner-text normalizers ever skew, which
+  `src/server/ai/owner-text.ts` warns they must not. Do both paths together; one alone makes
+  them differ for no reason.
+- The roadmap's memory copy says "1 item ... are waiting". `roadmap-records.ts` pluralizes the
+  noun but not the verb. The plan panel's own copy was written correctly, so the two now
+  differ; fix the roadmap's when work lands near it.
 - Network tripwire coverage: the coaching tripwire claims a complete root list but does not
   watch `src/server/completions` or `src/server/rolling-plan`. Neither holds a network
   primitive today, so this is a control overstating its coverage.
@@ -75,6 +80,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 23 Sep 2026 | `dd7b68d` | [35910418730](https://github.com/mattiss01/fittip/actions/runs/35910418730) | A planning note that states a durable constraint now proposes it: `record_plan_memory_candidates` is back with M3-03's signature, `generatePlanProposal` records the batch after the proposal commits and swallows its failure, and the proposal page says how many are waiting. ADR-010 gained decision 16 first, on its own branch (`4826786`), naming every route allowed to create `inferred_proposed` memory and the two limits none may skip. M3-11's suite asserted this function stays dropped, so those two assertions now assert the reach instead — the precedent that file already set for `plan_content_is_valid`. Migration `20260923191214` applied to the founder project — 27 migrations, advisors 20 definer + 1 auth, the one new definer being this route. Review found nothing blocking; the panel itself has not been seen at 390px |
 | 23 Sep 2026 | `80cf78f` | [35894277478](https://github.com/mattiss01/fittip/actions/runs/35894277478) | One settled spend reservation now pays for exactly one proposal: both `plan_proposals_spend_idx` and `roadmap_proposals_spend_idx` are unique, the roadmap one exempting `owner_edit` rows, which copy their source's reservation deliberately and would otherwise have made a paid roadmap uneditable. Migration `20260923165201` applied to the founder project — 26 migrations, advisors unchanged at 19 definer + 1 auth. The index built without conflict, which is the evidence that no existing row held a duplicate; review found nothing blocking |
 | 22 Sep 2026 | `49386f9` | [35712107521](https://github.com/mattiss01/fittip/actions/runs/35712107521) | Reactivate a cancelled session (M3-20), and a deleted series occurrence stays deleted, closing M3-19 limitation 1; from the owner's review, a logged cancelled session reads as logged, occurrence Delete offers only-this or all-future (moved from Cancel, so the accepted m3-14b and m3-15b flows were rewritten), and only an edit marks "Changed" (ADR-017 amended; flags recomputed, so older change-entry states may still say `hasDiverged: true`). Migration `20260921214230` applied to the founder project — 25 migrations, advisors unchanged at 19 definer + 1 auth |
 | 20 Sep 2026 | `5971b48` | [35507313220](https://github.com/mattiss01/fittip/actions/runs/35507313220) | Review against the real plan (16B): the coach reads the accepted roadmap as a fixed reduced shape, a planned session is editable inside review, and the surface names what moved. Migration `20260920102905` applied to the founder project — 24 migrations, advisors unchanged. Review found one blocking defect: the reduction ladder confused UTF-8 bytes with the UTF-16 units the validator bounds, which would have refused every plan generation |
