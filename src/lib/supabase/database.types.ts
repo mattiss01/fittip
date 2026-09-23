@@ -2486,6 +2486,20 @@ export type Database = {
         Args: { p_content: Json; p_end_date: string; p_start_date: string };
         Returns: boolean;
       };
+      record_plan_memory_candidates: {
+        Args: {
+          p_candidates: Json;
+          p_completion_token: string;
+          p_expected_memory_revision: number;
+        };
+        Returns: Database["public"]["CompositeTypes"]["plan_memory_candidate_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "plan_memory_candidate_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       record_roadmap_memory_candidates: {
         Args: {
           p_candidates: Json;
@@ -2664,6 +2678,10 @@ export type Database = {
       plan_generation_result: {
         state: string | null;
         proposal_id: string | null;
+      };
+      plan_memory_candidate_receipt: {
+        collection_revision: number | null;
+        item_ids: string[] | null;
       };
       plan_review_receipt: {
         proposal_id: string | null;
