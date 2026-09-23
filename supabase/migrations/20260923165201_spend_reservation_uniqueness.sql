@@ -10,10 +10,22 @@
 -- it did not cover.
 --
 -- The fix is a uniqueness the database holds rather than a check a caller could
--- skip. Both indexes already exist as plain partial indexes, so each is dropped
--- and recreated unique under its own name: the lookup they serve is unchanged,
--- and corrections here are forward-only, so altering the applied files was never
--- an option.
+-- skip. Both indexes already exist as plain partial indexes -- plain btree, no
+-- INCLUDE, opclass, ordering or fillfactor to lose -- so each is dropped and
+-- recreated unique under its own name. Corrections here are forward-only, so
+-- altering the applied files was never an option.
+--
+-- The plan index serves exactly what it served before. The roadmap one is
+-- *narrower*: its new predicate stops indexing `owner_edit` rows that hold a
+-- reservation. Its only reader is the referencing-side scan for
+-- `roadmap_proposals_spend_fkey ... on delete set null`, and nothing deletes
+-- from `ai_spend_reservations`, so those rows fall back to a sequential scan
+-- that nothing performs. Said plainly rather than left as "unchanged", because
+-- it is not.
+--
+-- Neither is built `concurrently`: that cannot run inside this migration's
+-- transaction, and both tables are single-owner and small, so the brief
+-- `access exclusive` each build takes costs nothing here.
 --
 -- ## Why the two predicates differ
 --
@@ -52,6 +64,11 @@
 
 drop index public.plan_proposals_spend_idx;
 
+-- No origin term here, deliberately: every row of this table is a purchase
+-- today. If `plan_proposals_origin_check` is ever widened to admit a derivative
+-- origin the way the roadmap's was -- M3-16A:147 anticipates that -- this
+-- predicate will reject the first one loudly, and the fix is to exempt it here
+-- exactly as the roadmap index below does.
 create unique index plan_proposals_spend_idx
   on public.plan_proposals (spend_reservation_id)
   where spend_reservation_id is not null;
