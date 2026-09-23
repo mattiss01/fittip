@@ -11,7 +11,10 @@ import {
   createServerUserClient,
   type ServerUserClient,
 } from "@/lib/supabase/server-user-client";
-import type { SevenDayPlanProposal } from "@/server/ai/contracts";
+import type {
+  CoachAIMemoryCandidate,
+  SevenDayPlanProposal,
+} from "@/server/ai/contracts";
 import type { CoachAISourceReference } from "@/server/ai/context-source";
 import type {
   PlanProposalDecision,
@@ -332,6 +335,52 @@ export class PlanProposalRepository {
     return parseReviewReceipt(data);
   }
 
+  /**
+   * Create the inferred memory candidates, in their own transaction.
+   *
+   * Called only after the plan proposal has committed. A conflict here rolls
+   * back the candidate batch and leaves the plan proposal valid, which is
+   * ADR-015's independent-decision boundary rather than an accident of
+   * ordering, and the same shape the roadmap path uses.
+   */
+  async recordMemoryCandidates(input: {
+    completionToken: string;
+    expectedMemoryRevision: number;
+    candidates: CoachAIMemoryCandidate[];
+  }): Promise<{ collectionRevision: number; itemIds: string[] }> {
+    const data = await this.call("record_plan_memory_candidates", {
+      p_completion_token: input.completionToken,
+      p_expected_memory_revision: input.expectedMemoryRevision,
+      p_candidates: input.candidates as unknown as Json,
+    });
+
+    const itemIds = Array.isArray(data.item_ids) ? data.item_ids : [];
+    return {
+      collectionRevision: Number(data.collection_revision ?? 0),
+      itemIds: itemIds.map(String),
+    };
+  }
+
+  /**
+   * How many candidates from a plan proposal are still waiting on the owner.
+   *
+   * Counted rather than listed, for the reason the roadmap's equivalent is:
+   * the proposal surface shows a link, and the candidates themselves are
+   * reviewed on the M2-02 memory surface, which owns their content. The
+   * `plan-proposal:` prefix is what keeps this from counting the roadmap's.
+   */
+  async countOpenMemoryCandidates(): Promise<number> {
+    const userId = await this.getVerifiedUserId();
+    const { count, error } = await this.client
+      .from("memory_items")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "proposed")
+      .like("source_reference", "plan-proposal:%");
+    if (error) throw new PlanProposalPersistenceError();
+    return count ?? 0;
+  }
+
   private async call<Name extends PlanProposalFunctionName>(
     name: Name,
     args: PlanProposalFunctionArgs<Name>,
@@ -360,7 +409,8 @@ type PlanProposalFunctionName =
   | "finish_plan_generation"
   | "decide_plan_proposal_item"
   | "finish_plan_proposal_review"
-  | "discard_plan_proposal";
+  | "discard_plan_proposal"
+  | "record_plan_memory_candidates";
 
 type PlanProposalFunctionArgs<Name extends PlanProposalFunctionName> =
   Database["public"]["Functions"][Name]["Args"];

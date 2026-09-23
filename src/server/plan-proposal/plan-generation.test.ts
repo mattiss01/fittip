@@ -83,6 +83,7 @@ const proposals = {
   beginGeneration: vi.fn(),
   finishGenerationWithProposal: vi.fn(),
   finishGenerationAsFailed: vi.fn(),
+  recordMemoryCandidates: vi.fn(),
 };
 
 describe("generatePlanProposal", () => {
@@ -125,6 +126,10 @@ describe("generatePlanProposal", () => {
       proposalId: null,
     });
     proposals.finishGenerationWithProposal.mockResolvedValue(PROPOSAL_ID);
+    proposals.recordMemoryCandidates.mockResolvedValue({
+      collectionRevision: 8,
+      itemIds: [],
+    });
   });
 
   it("answers from the fixture coach and spends nothing when live is absent", async () => {
@@ -138,7 +143,11 @@ describe("generatePlanProposal", () => {
       proposals: proposals as unknown as PlanProposalRepository,
     });
 
-    expect(result).toEqual({ status: "proposal", proposalId: PROPOSAL_ID });
+    expect(result).toEqual({
+      status: "proposal",
+      proposalId: PROPOSAL_ID,
+      memoryCandidateCount: 0,
+    });
     expect(fetchSpy).not.toHaveBeenCalled();
 
     const persisted = proposals.finishGenerationWithProposal.mock.calls[0][0];
@@ -176,6 +185,71 @@ describe("generatePlanProposal", () => {
     expect(createGoalMock).not.toHaveBeenCalled();
   });
 
+  it("proposes memory candidates from the planning note, after the proposal", async () => {
+    proposals.recordMemoryCandidates.mockResolvedValue({
+      collectionRevision: 8,
+      itemIds: ["item-1"],
+    });
+
+    const result = await generatePlanProposal(
+      { ...input(), planningNote: "I only have 45 minutes on weekdays." },
+      { proposals: proposals as unknown as PlanProposalRepository },
+    );
+
+    expect(result).toEqual({
+      status: "proposal",
+      proposalId: PROPOSAL_ID,
+      memoryCandidateCount: 1,
+    });
+
+    // The revision read from the memory collection, not one this module
+    // invented: the route refuses a stale one, which is what makes the owner's
+    // own concurrent memory edit win rather than being silently overwritten.
+    const batch = proposals.recordMemoryCandidates.mock.calls[0][0];
+    expect(batch.expectedMemoryRevision).toBe(7);
+    expect(batch.completionToken).toBe("t1");
+    expect(batch.candidates).toHaveLength(1);
+    // Every candidate quotes the note the owner wrote. ADR-010 decision 16
+    // makes that non-optional, and the database enforces it too.
+    expect("I only have 45 minutes on weekdays.").toContain(
+      batch.candidates[0].sourceExcerpt,
+    );
+
+    // Order matters: the proposal is committed before any memory is touched.
+    expect(
+      proposals.finishGenerationWithProposal.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      proposals.recordMemoryCandidates.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("keeps a valid proposal when the memory batch fails", async () => {
+    proposals.recordMemoryCandidates.mockRejectedValue(
+      new Error("memory changed"),
+    );
+
+    // ADR-015's boundary: one memory conflict must not turn a plan proposal
+    // the owner can act on into a failed generation.
+    await expect(
+      generatePlanProposal(
+        { ...input(), planningNote: "I only have 45 minutes on weekdays." },
+        { proposals: proposals as unknown as PlanProposalRepository },
+      ),
+    ).resolves.toEqual({
+      status: "proposal",
+      proposalId: PROPOSAL_ID,
+      memoryCandidateCount: 0,
+    });
+  });
+
+  it("asks for no memory batch when the note proposes nothing", async () => {
+    await generatePlanProposal(input(), {
+      proposals: proposals as unknown as PlanProposalRepository,
+    });
+
+    expect(proposals.recordMemoryCandidates).not.toHaveBeenCalled();
+  });
+
   it("returns the existing proposal when the key already completed", async () => {
     proposals.beginGeneration.mockResolvedValue({
       generationId: "g1",
@@ -188,7 +262,13 @@ describe("generatePlanProposal", () => {
       generatePlanProposal(input(), {
         proposals: proposals as unknown as PlanProposalRepository,
       }),
-    ).resolves.toEqual({ status: "proposal", proposalId: PROPOSAL_ID });
+    ).resolves.toEqual({
+      status: "proposal",
+      proposalId: PROPOSAL_ID,
+      // A replay created nothing, so it counts nothing. What is actually
+      // waiting is read from the memory surface, not inferred from here.
+      memoryCandidateCount: 0,
+    });
     expect(proposals.finishGenerationWithProposal).not.toHaveBeenCalled();
   });
 

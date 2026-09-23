@@ -112,6 +112,20 @@ export default async function PlanProposalPage() {
               isExample={isExampleProposal(state.proposal.providerCode)}
             />
           )}
+          {state.openMemoryCandidateCount > 0 ? (
+            <section className={styles.emptyState}>
+              <h2>{COPY.memoryPanelTitle}</h2>
+              <p className={styles.support}>
+                {COPY.memoryCandidatesWaiting(state.openMemoryCandidateCount)}
+              </p>
+              <Link
+                className={homeStyles.secondaryAction}
+                href="/home/you/memory"
+              >
+                {COPY.memoryReviewLink}
+              </Link>
+            </section>
+          ) : null}
         </>
       )}
     </main>
@@ -140,6 +154,7 @@ async function loadProposalState() {
       planRevision: 0,
       finishKey: "",
       days: [],
+      openMemoryCandidateCount: 0,
     };
   }
 
@@ -150,10 +165,15 @@ async function loadProposalState() {
     createGoalRepository(),
   ]);
 
-  const [proposal, goalCollection] = await Promise.all([
-    proposals.getLatestProposal(),
-    goals.list(),
-  ]);
+  // Counted beside the proposal because it is independent of it: a candidate
+  // from an earlier planning note is still waiting whether or not this
+  // proposal is open, and the memory surface is where it is decided.
+  const [proposal, goalCollection, openMemoryCandidateCount] =
+    await Promise.all([
+      proposals.getLatestProposal(),
+      goals.list(),
+      proposals.countOpenMemoryCandidates(),
+    ]);
   const targetable = selectActiveGoalContext(goalCollection.goals).targetable;
   const hasGoals = targetable.length > 0;
   // The goals a roadmap may still be pointed at. Same set the context source
@@ -173,6 +193,7 @@ async function loadProposalState() {
       planRevision: 0,
       finishKey: "",
       days: [],
+      openMemoryCandidateCount,
     };
   }
 
@@ -225,6 +246,7 @@ async function loadProposalState() {
       plannedByDate: groupPlannedByDate(planned),
       recoveryDates: slice.recoveryDates,
     }),
+    openMemoryCandidateCount,
   };
 }
 

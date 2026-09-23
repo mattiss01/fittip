@@ -193,6 +193,16 @@ export const PLAN_PROPOSAL_COPY = {
     error: "Something went wrong. Nothing was added to your plan.",
   },
 
+  /* ---- Memory candidates -------------------------------------------------- */
+  //
+  // The plan route's own wording, deliberately close to the roadmap's: the same
+  // thing is waiting in the same place, and two phrasings for one idea would
+  // read as two different things. What differs is only where it came from.
+  memoryPanelTitle: "From your planning note",
+  memoryCandidatesWaiting: (count: number) =>
+    `${count} item${count === 1 ? "" : "s"} from a planning note are waiting for you. They are not used for coaching until you accept them.`,
+  memoryReviewLink: "Review them in memory",
+
   /* ---- Empty states ------------------------------------------------------ */
   noProposalTitle: "No proposal open",
   noProposalSupport:
