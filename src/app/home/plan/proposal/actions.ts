@@ -241,7 +241,12 @@ export async function regeneratePlanProposalAction(
       text(formData, "regenerationFeedback"),
     );
     const idempotencyKey = text(formData, "idempotencyKey");
-    if (feedback === null || !/^[A-Za-z0-9_-]{16,128}$/.test(idempotencyKey)) {
+    // The same UUID pattern `finishPlanReviewAction` requires, because this key
+    // reaches the same RPC and its parameter is a `uuid`. The looser generation
+    // pattern would let a crafted 16-character key through the item rejections
+    // below and die on the cast afterwards — writes made on the way to a
+    // failure that says nothing was written.
+    if (feedback === null || !UUID_PATTERN.test(idempotencyKey)) {
       return invalid(OUTCOMES.validation, submission);
     }
 
