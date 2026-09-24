@@ -13,7 +13,60 @@ before any code is written.
 
 ## Now
 
-_Nothing open. The next thing is the owner's to name._
+**Activities in training.** The owner named this on 24 Sep 2026. The domain stack is built
+and nothing reaches it: `RollingPlanActivityInput` carries name, sport, instructions,
+measurement mode, target and lock, `apply_rolling_plan_change_set` takes it, `completion-log`
+accepts an actual measurement per activity — and `actions.ts` passes `activities: []` on
+every add, so `rolling_plan_activities` is empty in practice. The coach cannot fill it
+either: the plan schema is session-level by design (`contracts.ts`, "carries no
+activities"). F-002 step 6 and its "activity results" step are accepted requirements that
+were never built. The live tables are `rolling_plan_activities` and `completion_activities`;
+M3-11 dropped M1's `planned_activities` and `completed_activities`, and `personal_activities`
+survived that reset untouched.
+
+Decided by the owner on 24 Sep 2026, before A2 is written:
+
+- **Reordering is drag.** Not up/down controls.
+- **The surface designs for ten activities a session.** The contract's fifty stays the hard
+  bound; no second limit is added to diverge from it.
+- **No per-activity lock in the surface.** A2 writes `isLocked: false` on every activity.
+  Replanning cannot reach an existing session to begin with: a finished review builds only
+  `add` and `set_recovery_day`, and F-005 retired Coach-driven replacement without
+  replacement. The column stays in the change-set contract, unused, and whichever ticket
+  ever approves Coach-driven replacement owns its UI.
+
+Ordered by dependency. A lane is named where it is not the build lane.
+
+- [ ] **A1 — Measurement input and display.** One mode selector and per-mode fields for the
+      five modes in `training-measurements.ts`, plus a formatter that renders a target or an
+      actual as words. A2, A3 and A4 all need it; building it inside the first of them and
+      extracting later would mean writing it twice at 390px.
+- [ ] **A2 — Add and edit activities in a planned session.** `session-fields.tsx` grows a
+      drag-ordered activity list: name, sport, instructions, mode, target. No lock control.
+      Fills the list `actions.ts` currently carries through untouched. F-002 step 6.
+- [ ] **A3 — See the activities.** Today and the Plan day render the list instead of the
+      `activityCount` string. `completion-record.tsx` already renders one; follow it.
+- [ ] **A4 — Log what you actually did.** The log form offers each planned activity beside
+      its target and takes the actual. The server already accepts it; only the surface is
+      missing. F-002 "Record actual training" step 3.
+- [ ] **A5 — Personal activity library.** Create, list, edit and archive reusable
+      definitions, and a picker in A2 that sets `personal_activity_id` — the only thing that
+      ever will. Carries F-002's rule that an edit changes future reuse and never a
+      historical snapshot. Needs a route under `/home/you` or `/home/plan`; owner's call.
+- [ ] **A6 — Series templates and saved sessions carry activities.** `series-actions.ts`
+      passes `[]` as `actions.ts` does, and the saved library prints `name · sport` with no
+      target. Mostly falls out of A1 and A2; listed so it is not forgotten.
+- [ ] **A7 — The coach fills in a session's activities.** Careful lane: a new AI operation
+      with its own schema, spend, and context cost — the M3-03D detail operation that
+      `contracts.ts` defers to. Blocked on the plan context having no headroom left, which
+      `Known limitations` records. Needs the owner's decision before any code.
+- [ ] **A8 — Do targets and actuals reach the coach?** Careful lane: today only
+      `activityNames` crosses the boundary. Extending that is an ADR-013 eligibility
+      decision and costs context bytes there are none of. Decide after A4 has produced real
+      data; it may be that names remain enough.
+- [ ] **A9 — Progress over measurements.** Load, distance and pace across completions, once
+      A4 has been used for long enough to have any. The comfort layer; last on purpose.
+
 
 ## Fix in passing
 
