@@ -218,6 +218,13 @@ export class PlanProposalRepository {
     dayCount: number;
     expectedPlanRevision: number;
     planningNote: string | null;
+    /**
+     * Both or neither. The function refuses one without the other, and it
+     * refuses a proposal that is still open — closing it is the caller's act,
+     * which is what keeps whatever the owner already accepted.
+     */
+    previousProposalId?: string | null;
+    regenerationFeedback?: string | null;
   }): Promise<PlanGenerationClaim> {
     const data = await this.call("begin_plan_generation", {
       p_idempotency_key: input.idempotencyKey,
@@ -228,6 +235,12 @@ export class PlanProposalRepository {
       ...(input.planningNote === null
         ? {}
         : { p_planning_note: input.planningNote }),
+      ...(input.previousProposalId
+        ? { p_previous_proposal_id: input.previousProposalId }
+        : {}),
+      ...(input.regenerationFeedback
+        ? { p_regeneration_feedback: input.regenerationFeedback }
+        : {}),
     });
 
     return {
@@ -248,6 +261,8 @@ export class PlanProposalRepository {
     rateCardVersion: string;
     spendReservationId: string | null;
     planningNote: string | null;
+    /** Travels again so the function can prove it against the claim's hash. */
+    regenerationFeedback?: string | null;
     content: SevenDayPlanProposal;
     sources: readonly CoachAISourceReference[] | undefined;
   }): Promise<string> {
@@ -265,6 +280,9 @@ export class PlanProposalRepository {
       ...(input.planningNote === null
         ? {}
         : { p_planning_note: input.planningNote }),
+      ...(input.regenerationFeedback
+        ? { p_regeneration_feedback: input.regenerationFeedback }
+        : {}),
       p_content: input.content as unknown as Json,
       ...(input.sources === undefined
         ? {}

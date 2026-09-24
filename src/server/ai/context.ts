@@ -15,6 +15,7 @@ import type {
   CoachAIGoalReference,
   CoachAIMemoryReference,
   CoachAIOperation,
+  CoachAIPreviousPlanReference,
   CoachAIPreviousProposalReference,
   CoachAISourceReference,
 } from "@/server/ai/contracts";
@@ -368,7 +369,10 @@ export type CoachAIComposeInput = {
   horizonEndDate: string;
   planningNote: string | null;
   regenerationFeedback: string | null;
-  previousProposal: CoachAIPreviousProposalReference | null;
+  previousProposal:
+    | CoachAIPreviousProposalReference
+    | CoachAIPreviousPlanReference
+    | null;
 };
 
 export type CoachAIAssembledContext = {

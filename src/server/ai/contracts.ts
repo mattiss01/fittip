@@ -131,6 +131,27 @@ export type CoachAIPreviousProposalReference = {
 };
 
 /**
+ * A plan proposal the owner turned down, reduced for the coach that must
+ * replace it.
+ *
+ * Its own shape rather than a reuse of the roadmap's: a roadmap is phases over
+ * months and a plan is days with sessions, and describing one in the other's
+ * fields would mean the coach reading `phases` that are really Tuesdays. Only
+ * what the coach needs to avoid repeating itself is carried — the date, what it
+ * proposed, and how long — not the rationale it wrote to justify it, which is
+ * both the bulkiest part and the part least worth defending a second time.
+ */
+export type CoachAIPreviousPlanReference = {
+  weekDescription: string;
+  days: {
+    date: string;
+    title: string;
+    sport: string;
+    durationMinutes: number;
+  }[];
+};
+
+/**
  * Targetable and historical goals stay separate fields all the way to the
  * adapter, so a prompt cannot quietly treat an achieved goal as an objective.
  *
@@ -160,7 +181,15 @@ export type CoachAIContext = {
   hasSafetySignal: boolean;
   planningNote: string | null;
   regenerationFeedback: string | null;
-  previousProposal: CoachAIPreviousProposalReference | null;
+  /**
+   * Whichever shape the operation regenerates: a roadmap is described by
+   * phases, a plan by days. The context carries it through untouched under one
+   * byte allocation, because what bounds it is its size and not its fields.
+   */
+  previousProposal:
+    | CoachAIPreviousProposalReference
+    | CoachAIPreviousPlanReference
+    | null;
   /**
    * The accepted roadmap covering this horizon, reduced by
    * `roadmap-plan-context.ts` — never the stored roadmap. `null` when no
