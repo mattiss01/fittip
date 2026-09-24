@@ -16,8 +16,10 @@
 --   3. The four things the finish always checked still refuse: wrong owner,
 --      wrong operation, wrong rate card, and a fixture result claiming a
 --      reservation at all.
---   4. Nothing is settled when the finish refuses. A rejected result must not
---      leave a closed reservation behind.
+--   4. Nothing is settled when the finish refuses -- including when the refusal
+--      comes *after* the settle has already run. A bad source list is validated
+--      downstream of it, and that case is what proves the function really is one
+--      transaction rather than a settle followed by some other work.
 
 begin;
 
@@ -102,7 +104,7 @@ as $$
   )
 $$;
 
-select plan(16);
+select plan(18);
 
 -- Owners ---------------------------------------------------------------------
 
@@ -279,6 +281,46 @@ select throws_ok(
   ),
   '22023', 'That coaching model is not approved.',
   'a fixture result claiming a reservation is still refused'
+);
+
+-- A refusal that happens AFTER the settle ---------------------------------
+--
+-- The sharper half of decision 3. The checks above refuse before the settle is
+-- reached, so they prove little about it. A bad source list is validated after
+-- the reservation has already been closed, which is the case that says whether
+-- the whole function really is one transaction: it must roll the settle back
+-- with everything else, leaving the reservation open and reusable.
+
+insert into pg_temp_spend
+select 'post-settle', * from public.reserve_ai_spend(
+  'create_seven_day_plan', 5000, 'openai-gpt-5.6-luna-2026-08-10', 'USD');
+
+insert into pg_temp_claim
+select 'post-settle', * from public.begin_plan_generation(
+  'settle-plan-key-0000000004', 'settle-plan-fingerprint-0004',
+  pg_temp.day(12), 3, 0);
+
+select throws_ok(
+  format(
+    $q$select * from public.finish_plan_generation(
+      %L::uuid, 'proposal', 'fittip.seven-day-plan.v2',
+      'seven-day-plan-v2-2026-08-12', 'openai', 'gpt-5.6-luna',
+      'openai-gpt-5.6-luna-2026-08-10', %L::uuid, null, %L::jsonb,
+      '[{"kind":"not-a-source-kind","recordId":"7d000000-0000-4000-8000-0000000000aa"}]'::jsonb,
+      null)$q$,
+    (select completion_token from pg_temp_claim where label = 'post-settle'),
+    (select reservation_id from pg_temp_spend where label = 'post-settle'),
+    pg_temp.plan_body(pg_temp.day(12), pg_temp.day(14))
+  ),
+  '22023', 'Invalid plan result.',
+  'a source list the finish rejects still refuses the whole result'
+);
+
+select is(
+  (select settled_at from public.ai_spend_reservations
+   where id = (select reservation_id from pg_temp_spend where label = 'post-settle')),
+  null,
+  'and the settle it had already done was rolled back with it'
 );
 
 -- 4. The roadmap finish, which is a separate function ----------------------
