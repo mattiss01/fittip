@@ -72,6 +72,16 @@ Not worth their own slot; do them when work lands nearby.
 
 ## Known limitations
 
+- **An unsettled reservation holds its budget for good, and nothing reports one.** ADR-019
+  stopped expiry forgiving a charge we failed to record, which is the right direction for a
+  ceiling but removes the release the 15-minute TTL was introduced to guarantee. Three paths
+  strand a reservation nobody can settle: a settle RPC that fails, a `reserve_ai_spend` the
+  client retried after the insert committed (the orphan's token never reaches the
+  application), and a receipt `toHandle` refuses as malformed. Each costs 8,000 micro-USD
+  against a 2,000,000 daily and 20,000,000 lifetime ceiling — 0.4% of a day, 0.04% of the
+  project's life — so it takes 250 in a day or 2,500 ever to lock coaching out entirely.
+  Far outside single-athlete traffic, but it accumulates permanently and no surface shows it.
+
 - **Correcting an unplanned log's title replaces its activity list wholesale.** Today that
   list is always exactly one bare activity, so nothing is lost. If a completion ever holds
   more than one, or one carrying a personal-activity link or a measurement, a rename would

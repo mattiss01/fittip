@@ -15,7 +15,9 @@
 --      real charge is not overwritten with the ceiling.
 --   3. The four things the finish always checked still refuse: wrong owner,
 --      wrong operation, wrong rate card, and a fixture result claiming a
---      reservation at all.
+--      reservation at all. The roadmap finish carries its own hand-written copy
+--      of that predicate, so it is exercised rather than inferred from the
+--      plan side passing.
 --   4. Nothing is settled when the finish refuses -- including when the refusal
 --      comes *after* the settle has already run. A bad source list is validated
 --      downstream of it, and that case is what proves the function really is one
@@ -104,7 +106,7 @@ as $$
   )
 $$;
 
-select plan(18);
+select plan(21);
 
 -- Owners ---------------------------------------------------------------------
 
@@ -394,6 +396,60 @@ select is(
   'and its real charge survives the finish'
 );
 
+-- The roadmap refusals, which are a second copy of the same predicate --------
+--
+-- `finish_roadmap_generation` carries its own hand-written version of the
+-- five-part WHERE clause. Proving the plan side says nothing about it, and a
+-- dropped predicate there is precisely the mistake that would survive review.
+
+insert into pg_temp_roadmap_claim
+select 'roadmap-refused', * from public.begin_roadmap_generation(
+  'settle-roadmap-key-000000003', 'settle-roadmap-fingerprint-0003',
+  pg_temp.day(0), pg_temp.day(84), 0);
+
+select throws_ok(
+  format(
+    $q$select * from public.finish_roadmap_generation(
+      %L::uuid, 'proposal', 'fittip.roadmap.v2', 'roadmap-2026-08-10',
+      'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10', %L::uuid,
+      p_content => %L::jsonb, p_sources => '[]'::jsonb)$q$,
+    (select completion_token from pg_temp_roadmap_claim where label = 'roadmap-refused'),
+    (select reservation_id from pg_temp_spend where label = 'plan-settled'),
+    pg_temp.roadmap_body(pg_temp.day(0), pg_temp.day(84), 'Wrong operation')
+  ),
+  '22023', 'Invalid roadmap result.',
+  'a roadmap result pointing at a plan reservation is refused'
+);
+
+insert into pg_temp_spend
+select 'roadmap-post-settle', * from public.reserve_ai_spend(
+  'create_roadmap', 5000, 'openai-gpt-5.6-luna-2026-08-10', 'USD');
+
+-- The roadmap function's post-settle refusals are bare raises with no
+-- enclosing handler, unlike the plan side's. Same outcome, different mechanism,
+-- so it is worth exercising rather than inferring.
+select throws_ok(
+  format(
+    $q$select * from public.finish_roadmap_generation(
+      %L::uuid, 'proposal', 'fittip.roadmap.v2', 'roadmap-2026-08-10',
+      'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10', %L::uuid,
+      p_content => %L::jsonb,
+      p_sources => '[{"kind":"not-a-source-kind","recordId":"7d000000-0000-4000-8000-0000000000bb"}]'::jsonb)$q$,
+    (select completion_token from pg_temp_roadmap_claim where label = 'roadmap-refused'),
+    (select reservation_id from pg_temp_spend where label = 'roadmap-post-settle'),
+    pg_temp.roadmap_body(pg_temp.day(0), pg_temp.day(84), 'Bad sources')
+  ),
+  '22023', 'Invalid roadmap result.',
+  'a roadmap source list the finish rejects still refuses the whole result'
+);
+
+select is(
+  (select settled_at from public.ai_spend_reservations
+   where id = (select reservation_id from pg_temp_spend where label = 'roadmap-post-settle')),
+  null,
+  'and the roadmap settle it had already done was rolled back with it'
+);
+
 -- 5. Another owner's reservation is neither usable nor settled -------------
 
 select set_config(
@@ -422,13 +478,23 @@ select throws_ok(
   'a result pointing at another owner''s reservation is still refused'
 );
 
+-- Read as a role RLS does not filter. As `authenticated` acting for owner 1
+-- this row is invisible, so `settled_at` comes back null whether the finish
+-- left it open or closed it -- and `is(null, null)` passes either way. The
+-- count is asserted alongside the state for the same reason: a check that
+-- cannot see the row proves nothing about it.
+reset role;
+
 select is(
-  (select settled_at from public.ai_spend_reservations
-   where id = (select reservation_id from pg_temp_spend where label = 'outsider')),
-  null,
-  'and the finish did not close a reservation belonging to someone else'
+  (select count(*)::bigint from public.ai_spend_reservations
+   where id = (select reservation_id from pg_temp_spend where label = 'outsider')
+     and user_id = '7d000000-0000-4000-8000-000000000002'
+     and settled_at is null),
+  1::bigint,
+  'and the outsider''s reservation is still there, still open, still theirs'
 );
 
+set local role authenticated;
 select set_config('request.jwt.claims', null, true);
 
 select * from finish();

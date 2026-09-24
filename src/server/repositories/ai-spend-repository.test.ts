@@ -80,8 +80,9 @@ describe("reserving durable spend", () => {
 
   it("refuses a receipt it cannot settle later", async () => {
     // A composite arrives nullable whatever the function guarantees. A handle
-    // without a token could never be settled, so the hold would sit until it
-    // expired while the caller believed it had reserved.
+    // without a token could never be settled, so the hold would sit for good --
+    // since ADR-019 an unsettled reservation keeps holding what it reserved --
+    // while the caller believed it had reserved.
     const rpc = vi.fn().mockResolvedValue({
       data: { ...RECEIPT, settlement_token: null },
       error: null,
@@ -119,9 +120,11 @@ describe("reserving durable spend", () => {
 
     await repository.reserve(RESERVATION);
 
-    // A retried reserve over-holds budget and releases it at expiry; it can
-    // never under-charge. That is the safe direction, and it is cheaper than
-    // widening the architecture invariant.
+    // A retried reserve over-holds budget and can never under-charge, which is
+    // the safe direction and cheaper than widening the architecture invariant.
+    // Since ADR-019 the over-hold is permanent rather than released at expiry,
+    // so the orphan costs its ceiling for good. Known limitation, not a
+    // surprise.
     expect(rpc.mock.results[0].value).toBeInstanceOf(Promise);
   });
 });

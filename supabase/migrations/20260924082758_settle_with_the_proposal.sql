@@ -52,7 +52,7 @@
 -- difference between an ACL that is stated and one that is inherited.
 
 CREATE OR REPLACE FUNCTION public.reserve_ai_spend(p_operation text, p_reserved_micro_usd bigint, p_rate_card_version text, p_currency text)
- RETURNS ai_spend_reservation_receipt
+ RETURNS public.ai_spend_reservation_receipt
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
@@ -66,9 +66,14 @@ declare
   c_total_ceiling constant bigint := 20000000;
   -- Longer than the 30s deadlineMs by 30x, which leaves room for the
   -- settlement round trip, clock skew, and a frozen serverless instance
-  -- between the provider response and the settle call. Far shorter than a day,
-  -- so a crashed call cannot hold budget until midnight and lock the owner out
-  -- with no visible cause.
+  -- between the provider response and the settle call.
+  --
+  -- It no longer bounds how long a hold counts. Until ADR-019 the second half
+  -- of this comment read that a crashed call cannot hold budget past midnight
+  -- and lock the owner out with no visible cause -- which is exactly what this
+  -- change gives up, deliberately, because forgiving a charge we failed to
+  -- record is the worse failure. `expires_at` is still written and still
+  -- readable; nothing in the ceiling arithmetic consults it any more.
   c_reservation_ttl constant interval := interval '15 minutes';
   v_user_id uuid;
   v_now timestamptz := pg_catalog.now();
@@ -142,9 +147,11 @@ begin
   end;
 
   -- One statement: the ceilings are evaluated in the WHERE clause of the
-  -- insert itself, so there is no window between deciding and writing. An
-  -- unsettled reservation holds its reserved amount until it expires and then
-  -- holds nothing; a settled one holds exactly what it was charged.
+  -- insert itself, so there is no window between deciding and writing. A
+  -- settled reservation holds exactly what it was charged; an unsettled one
+  -- holds what it reserved, for good. It used to stop holding anything once it
+  -- expired, and ADR-019 removed that: a reservation nobody settled is one
+  -- where money may well have been spent and we failed to record it.
   insert into public.ai_spend_reservations (
     user_id,
     operation,
@@ -214,7 +221,7 @@ end;
 $function$;
 
 CREATE OR REPLACE FUNCTION public.finish_plan_generation(p_completion_token uuid, p_outcome text, p_schema_version text DEFAULT NULL::text, p_prompt_version text DEFAULT NULL::text, p_provider_code text DEFAULT NULL::text, p_model_code text DEFAULT NULL::text, p_rate_card_version text DEFAULT NULL::text, p_spend_reservation_id uuid DEFAULT NULL::uuid, p_planning_note text DEFAULT NULL::text, p_content jsonb DEFAULT NULL::jsonb, p_sources jsonb DEFAULT NULL::jsonb, p_safe_failure_code text DEFAULT NULL::text)
- RETURNS plan_generation_result
+ RETURNS public.plan_generation_result
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
@@ -524,7 +531,7 @@ end;
 $function$;
 
 CREATE OR REPLACE FUNCTION public.finish_roadmap_generation(p_completion_token uuid, p_outcome text, p_schema_version text DEFAULT NULL::text, p_prompt_version text DEFAULT NULL::text, p_provider_code text DEFAULT NULL::text, p_model_code text DEFAULT NULL::text, p_rate_card_version text DEFAULT NULL::text, p_spend_reservation_id uuid DEFAULT NULL::uuid, p_planning_note text DEFAULT NULL::text, p_regeneration_feedback text DEFAULT NULL::text, p_content jsonb DEFAULT NULL::jsonb, p_sources jsonb DEFAULT NULL::jsonb, p_safe_failure_code text DEFAULT NULL::text)
- RETURNS roadmap_generation_result
+ RETURNS public.roadmap_generation_result
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
