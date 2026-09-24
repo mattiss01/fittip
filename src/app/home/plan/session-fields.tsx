@@ -1,12 +1,20 @@
 import type { PlanActionDraft } from "./action-state";
 import styles from "./plan.module.css";
 
+import {
+  ActivityEditor,
+  type ActivityValue,
+} from "@/components/training/activity-editor";
+
 export function SessionFields({
   idPrefix,
   draft,
+  activities,
 }: {
   idPrefix: string;
   draft?: PlanActionDraft;
+  /** What the session already holds, on an edit. Absent when creating one. */
+  activities?: ActivityValue[];
 }) {
   return (
     <>
@@ -62,6 +70,7 @@ export function SessionFields({
           defaultValue={draft?.note ?? ""}
         />
       </div>
+      <ActivityEditor idPrefix={idPrefix} initial={activities} />
     </>
   );
 }

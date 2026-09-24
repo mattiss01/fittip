@@ -32,6 +32,8 @@ import {
 import { changeSeriesAction } from "./series-actions";
 import { SeriesMaterializer } from "./series-materializer";
 import { SessionFields } from "./session-fields";
+
+import type { ActivityValue } from "@/components/training/activity-editor";
 import {
   seriesStallNotice,
   useSeriesMutationStall,
@@ -58,6 +60,8 @@ export type PlanSessionView = {
   isLocked: boolean;
   status: "active" | "cancelled";
   activityCount: number;
+  /** The rows the edit form binds. The count above is what the card prints. */
+  activities: ActivityValue[];
   seriesId: string | null;
   occurrenceDate: string | null;
   hasDiverged: boolean;
@@ -527,6 +531,7 @@ function PlanSessionCard({
                   draft={
                     draftFor(state, "edit", session.id) ?? draftOf(session)
                   }
+                  activities={session.activities}
                 />
                 <button
                   className={styles.primary}

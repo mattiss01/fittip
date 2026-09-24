@@ -600,6 +600,36 @@ function parseSession(value: unknown, withPlacement: boolean) {
   };
 }
 
+/**
+ * The activity list a session form submitted, from a value that has been
+ * through `JSON.parse` and is trusted for nothing else.
+ *
+ * Two fields a caller may not name, for the same reason the series template
+ * refuses `isLocked`: a value the surface does not set is a value a payload
+ * has no business carrying, and quietly normalizing it away would make a
+ * crafted submission indistinguishable from an honest one.
+ *
+ * `position` is the array's order. The editor reorders by moving rows, so the
+ * order *is* the intent, and a submitted position could only agree with it or
+ * lie. `isLocked` is always false — the owner's 24 Sep 2026 decision, resting
+ * on replanning being unable to reach an existing session at all, so a
+ * per-activity lock guards nothing and no surface offers one.
+ */
+export function parseSubmittedActivities(
+  value: unknown,
+): RollingPlanActivityInput[] {
+  if (!Array.isArray(value) || value.length > 50) {
+    throw new RollingPlanValidationError();
+  }
+  return value.map((entry, index) => {
+    const record = readRecord(entry);
+    if ("position" in record || "isLocked" in record) {
+      throw new RollingPlanValidationError();
+    }
+    return parseActivity({ ...record, position: index, isLocked: false });
+  });
+}
+
 function parseActivity(value: unknown): RollingPlanActivityInput {
   const record = readRecord(value);
   assertOnlyKeys(record, [
