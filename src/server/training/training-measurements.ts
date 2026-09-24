@@ -1,37 +1,28 @@
 import "server-only";
 
-export const TRAINING_MEASUREMENT_MODES = [
-  "sets_reps_load",
-  "time_distance_pace",
-  "duration_intensity",
-  "skill_repetitions",
-  "custom",
-] as const;
+import {
+  DISTANCE_UNITS,
+  INTENSITIES,
+  LOAD_UNITS,
+  PACE_UNITS,
+  TRAINING_MEASUREMENT_MODES,
+  type TrainingMeasurement,
+  type TrainingMeasurementMode,
+} from "@/lib/training/measurement";
 
-export type TrainingMeasurementMode =
-  (typeof TRAINING_MEASUREMENT_MODES)[number];
-
-export type TrainingMeasurement =
-  | {
-      sets: number;
-      reps: number;
-      load?: number;
-      load_unit?: "kg" | "lb";
-    }
-  | {
-      duration_seconds?: number;
-      distance?: number;
-      distance_unit?: "m" | "km" | "mi" | "yd";
-      pace_seconds_per_unit?: number;
-      pace_unit?: "sec/km" | "sec/mi" | "sec/100m" | "sec/100yd";
-    }
-  | {
-      duration_minutes: number;
-      intensity?: "easy" | "moderate" | "hard" | "very_hard";
-      perceived_effort?: number;
-    }
-  | { repetitions: number; unit: string }
-  | { label: string; value: string | number | boolean; unit: string };
+/**
+ * The shapes and the choice lists moved to `@/lib/training/measurement` so the
+ * activity editor, which is a Client Component, could import them: the client
+ * boundary refuses `@/server/**` even for a type-only import. They are
+ * re-exported here so every existing caller of this module is unchanged, and
+ * so that the validator below and the editor cannot drift onto two different
+ * lists of units.
+ */
+export {
+  TRAINING_MEASUREMENT_MODES,
+  type TrainingMeasurement,
+  type TrainingMeasurementMode,
+};
 
 export class TrainingMeasurementValidationError extends Error {
   constructor() {
@@ -57,7 +48,7 @@ export function parseTrainingMeasurement(
       const loadUnit =
         record.load_unit === undefined
           ? undefined
-          : readChoice(record.load_unit, ["kg", "lb"] as const);
+          : readChoice(record.load_unit, LOAD_UNITS);
       if ((load === undefined) !== (loadUnit === undefined)) invalid();
       return {
         sets: readInteger(record.sets, 1, 100),
@@ -86,7 +77,7 @@ export function parseTrainingMeasurement(
       const distanceUnit =
         record.distance_unit === undefined
           ? undefined
-          : readChoice(record.distance_unit, ["m", "km", "mi", "yd"] as const);
+          : readChoice(record.distance_unit, DISTANCE_UNITS);
       const pace = optionalNumber(
         record.pace_seconds_per_unit,
         Number.MIN_VALUE,
@@ -95,12 +86,7 @@ export function parseTrainingMeasurement(
       const paceUnit =
         record.pace_unit === undefined
           ? undefined
-          : readChoice(record.pace_unit, [
-              "sec/km",
-              "sec/mi",
-              "sec/100m",
-              "sec/100yd",
-            ] as const);
+          : readChoice(record.pace_unit, PACE_UNITS);
       if (
         (durationSeconds === undefined &&
           distance === undefined &&
@@ -130,12 +116,7 @@ export function parseTrainingMeasurement(
       const intensity =
         record.intensity === undefined
           ? undefined
-          : readChoice(record.intensity, [
-              "easy",
-              "moderate",
-              "hard",
-              "very_hard",
-            ] as const);
+          : readChoice(record.intensity, INTENSITIES);
       const effort =
         record.perceived_effort === undefined
           ? undefined
