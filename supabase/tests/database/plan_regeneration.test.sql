@@ -61,7 +61,7 @@ as $$
   )
 $$;
 
-select plan(24);
+select plan(28);
 
 -- 1. The boundary ------------------------------------------------------------
 
@@ -121,12 +121,14 @@ select ok(
 insert into auth.users (id, email, raw_app_meta_data, raw_user_meta_data)
 values
   ('7e000000-0000-4000-8000-000000000001', 'regen-owner@example.test', '{}', '{}'),
-  ('7e000000-0000-4000-8000-000000000002', 'regen-outsider@example.test', '{}', '{}');
+  ('7e000000-0000-4000-8000-000000000002', 'regen-outsider@example.test', '{}', '{}'),
+  ('7e000000-0000-4000-8000-000000000003', 'regen-keeper@example.test', '{}', '{}');
 insert into public.profiles (user_id, timezone_name)
 select id, 'UTC' from auth.users
 where id in (
   '7e000000-0000-4000-8000-000000000001',
-  '7e000000-0000-4000-8000-000000000002'
+  '7e000000-0000-4000-8000-000000000002',
+  '7e000000-0000-4000-8000-000000000003'
 );
 
 set local role authenticated;
@@ -302,6 +304,28 @@ select is(
   'and naming the proposal it replaced, which is still a permanent record'
 );
 
+-- 5b. One proposal, one replacement -------------------------------------------
+--
+-- Without this the chain cap is not a cap. It reads the count from whichever
+-- predecessor the caller names, and a closed proposal stays closed, so an owner
+-- pointing repeatedly at the first proposal of a lineage would get number 1
+-- every time and never reach the ceiling. Measured against a local database
+-- before the check existed: two regenerations from one source, both numbered 1.
+
+select throws_ok(
+  format(
+    $q$select * from public.begin_plan_generation(
+      'regen-key-00000000000013', 'regen-fingerprint-000013',
+      %L::date, 3, 0, null, %L::uuid, 'Asking the same one twice.')$q$,
+    pg_temp.day(0),
+    (select id from public.plan_proposals
+     where user_id = '7e000000-0000-4000-8000-000000000001'
+       and origin = 'ai_initial')
+  ),
+  'PT409', 'That proposal has already been replaced.',
+  'a proposal that has already been replaced cannot be replaced again'
+);
+
 -- 6. Across owners -------------------------------------------------------------
 --
 -- The target id is captured here, while the owner can still see it. Read from
@@ -336,6 +360,79 @@ select is(
    where user_id = '7e000000-0000-4000-8000-000000000002'),
   0,
   'and the refusal claimed nothing on their behalf'
+);
+
+-- 6b. What the owner accepted survives the regeneration ----------------------
+--
+-- The owner's third decision, and the one with the most moving parts: staged
+-- items are applied into the plan before the coach is asked anything, so a
+-- regeneration cannot cost the owner the days they chose to keep. Nothing
+-- proved it until now, which made it the least covered of the four.
+
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"7e000000-0000-4000-8000-000000000003","role":"authenticated"}', true);
+
+insert into pg_temp_claim
+select 'keep', * from public.begin_plan_generation(
+  'keep-key-000000000000001', 'keep-fingerprint-0000001',
+  pg_temp.day(0), 3, 0, 'note');
+
+select public.finish_plan_generation(
+  (select completion_token from pg_temp_claim where label = 'keep'),
+  'proposal', 'fittip.seven-day-plan.v2', 'seven-day-plan-v2-2026-08-12',
+  'fixture', 'fixture-corpus-v1', 'fixture-no-spend', null, 'note',
+  pg_temp.plan_body(pg_temp.day(0), pg_temp.day(2)), null, null, null);
+
+-- Keep the first session and reject the rest, which is what the surface does
+-- when the owner asks for a different plan with something already added.
+select public.decide_plan_proposal_item(
+  (select id from public.plan_proposals
+   where user_id = '7e000000-0000-4000-8000-000000000003'),
+  (select min(ordinal) from public.plan_proposal_items
+   where user_id = '7e000000-0000-4000-8000-000000000003' and kind = 'session'),
+  'staged');
+
+select public.decide_plan_proposal_item(
+  (select id from public.plan_proposals
+   where user_id = '7e000000-0000-4000-8000-000000000003'),
+  item.ordinal, 'rejected')
+from public.plan_proposal_items item
+where item.user_id = '7e000000-0000-4000-8000-000000000003'
+  and item.ordinal <> (
+    select min(ordinal) from public.plan_proposal_items
+    where user_id = '7e000000-0000-4000-8000-000000000003' and kind = 'session');
+
+select lives_ok(
+  format(
+    $q$select * from public.finish_plan_proposal_review(%L::uuid, 0, %L::uuid)$q$,
+    (select id from public.plan_proposals
+     where user_id = '7e000000-0000-4000-8000-000000000003'),
+    '7e000000-0000-4000-8000-0000000000aa'
+  ),
+  'the review is finished, which is what applies the day the owner kept'
+);
+
+select is(
+  (select count(*)::integer from public.rolling_plan_sessions
+   where user_id = '7e000000-0000-4000-8000-000000000003'),
+  1,
+  'and the accepted session is in the plan before the coach is asked anything'
+);
+
+insert into pg_temp_claim
+select 'keep-regen', * from public.begin_plan_generation(
+  'keep-key-000000000000002', 'keep-fingerprint-0000002',
+  pg_temp.day(0), 3, 0, 'note',
+  (select id from public.plan_proposals
+   where user_id = '7e000000-0000-4000-8000-000000000003'),
+  'Too much running.');
+
+select is(
+  (select count(*)::integer from public.rolling_plan_sessions
+   where user_id = '7e000000-0000-4000-8000-000000000003'),
+  1,
+  'and asking again leaves it exactly where it is'
 );
 
 select set_config('request.jwt.claims', null, true);

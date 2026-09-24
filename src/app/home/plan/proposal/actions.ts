@@ -11,6 +11,7 @@ import type {
 } from "./action-state";
 
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
+import { REGENERATION_FEEDBACK_MAX_LENGTH } from "@/server/ai/owner-text";
 import { PLAN_PROPOSAL_COPY } from "@/lib/plan/plan-proposal-copy";
 import { createServerUserClient } from "@/lib/supabase/server-user-client";
 import {
@@ -248,6 +249,8 @@ export async function regeneratePlanProposalAction(
     if (rejected === null || rejected.decision !== null) {
       return invalid(OUTCOMES.validation, submission);
     }
+    // Bound to a const so the narrowing survives into `askAgain` below.
+    const source = rejected;
 
     for (const item of rejected.items) {
       if (item.decision === "proposed") {
@@ -263,44 +266,75 @@ export async function regeneratePlanProposalAction(
       idempotencyKey,
     });
 
-    const today = await ownerToday(profiles);
-    const dayCount = planDayCount(rejected.startDate, rejected.endDate);
-    const endDate = shiftIsoDate(today, dayCount - 1);
-    const slice = await plan.getPlanSlice(today, endDate);
-
-    const result = await generatePlanProposal(
-      {
-        owner,
-        startDate: today,
-        endDate,
-        dayCount,
-        expectedPlanRevision: slice.revision,
-        planningNote: rejected.planningNote,
-        idempotencyKey: `${idempotencyKey}-regen`,
-        previousProposalId: proposalId,
-        regenerationFeedback: feedback,
-      },
-      { proposals },
-    );
-
+    // From here the owner's plan has already changed and the proposal is
+    // permanently closed. Everything below can still fail — the provider, the
+    // spend ceiling, the regeneration limit — and none of those failures may
+    // be reported as "nothing was written", which is what the generic copy
+    // says. Revalidating here rather than after the coach answers means the
+    // screens are right about the plan even when the answer never comes.
     revalidatePath("/home/plan/proposal");
     revalidatePath("/home/plan");
 
-    if (result.status === "proposal") {
+    try {
+      return await askAgain();
+    } catch (error) {
+      // The cause is worth keeping for the codes the repository maps, but the
+      // message has to be the one that is true: their choices were applied and
+      // the proposal is gone.
+      const mapped = toActionState(error, submission);
       return {
-        status: "proposal",
-        message: OUTCOMES.regenerated,
+        status: "error",
+        message:
+          mapped.status === "conflict" || mapped.status === "rule"
+            ? `${mapped.message} ${OUTCOMES.regenerationKept}`
+            : OUTCOMES.regenerationLost,
         submission,
       };
     }
-    if (result.status === "pending") {
+
+    async function askAgain(): Promise<PlanProposalActionState> {
+      const today = await ownerToday(profiles);
+      const dayCount = planDayCount(source.startDate, source.endDate);
+      const endDate = shiftIsoDate(today, dayCount - 1);
+      const slice = await plan.getPlanSlice(today, endDate);
+
+      const result = await generatePlanProposal(
+        {
+          owner,
+          startDate: today,
+          endDate,
+          dayCount,
+          expectedPlanRevision: slice.revision,
+          planningNote: source.planningNote,
+          idempotencyKey: `${idempotencyKey}-regen`,
+          previousProposalId: proposalId,
+          regenerationFeedback: feedback,
+        },
+        { proposals },
+      );
+
+      revalidatePath("/home/plan/proposal");
+
+      if (result.status === "proposal") {
+        return {
+          status: "proposal",
+          message: OUTCOMES.regenerated,
+          submission,
+        };
+      }
+      if (result.status === "pending") {
+        return {
+          status: "pending",
+          message: OUTCOMES.generationPending,
+          submission,
+        };
+      }
       return {
-        status: "pending",
-        message: OUTCOMES.generationPending,
+        status: "error",
+        message: OUTCOMES.regenerationLost,
         submission,
       };
     }
-    return { status: "error", message: OUTCOMES.generationFailed, submission };
   } catch (error) {
     return toActionState(error, submission);
   }
@@ -316,11 +350,18 @@ function planDayCount(startDate: string, endDate: string): number {
 
 /**
  * Bounded here as well as in the database, so an over-long complaint is
- * refused before a reservation is taken rather than after.
+ * refused before anything is closed rather than after.
+ *
+ * `REGENERATION_FEEDBACK_MAX_LENGTH` is the binding one: the context assembly
+ * has refused over 500 characters since M3-02, and it runs *after* the review
+ * has been applied. A looser bound here would let an owner type 600 characters
+ * and lose their proposal to a refusal they could not have predicted.
  */
 function parseRegenerationFeedback(value: string): string | null {
   const trimmed = value.trim();
-  if (trimmed.length < 1 || trimmed.length > 1000) return null;
+  if (trimmed.length < 1 || trimmed.length > REGENERATION_FEEDBACK_MAX_LENGTH) {
+    return null;
+  }
   return trimmed;
 }
 
@@ -424,7 +465,9 @@ function toActionState(
           ? OUTCOMES.pastDate
           : error.reason === "daily-session-limit"
             ? OUTCOMES.dailyLimit
-            : OUTCOMES.timezoneRequired,
+            : error.reason === "regeneration-cap"
+              ? OUTCOMES.regenerationCap
+              : OUTCOMES.timezoneRequired,
       submission,
     };
   }

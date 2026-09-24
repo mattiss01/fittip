@@ -100,7 +100,9 @@ export class PlanProposalConflictError extends Error {
 export type PlanProposalRuleReason =
   | "past-date"
   | "daily-session-limit"
-  | "timezone-required";
+  | "timezone-required"
+  /** The regeneration ceiling, which the roadmap reports the same way. */
+  | "regeneration-cap";
 
 export class PlanProposalRuleError extends Error {
   constructor(readonly reason: PlanProposalRuleReason) {
@@ -453,12 +455,19 @@ function toDomainError(error: { code?: string; message?: string }): Error {
   if (error.code === "PT428") {
     return new PlanProposalRuleError("timezone-required");
   }
+  // Mapped rather than falling through to the opaque failure, because this one
+  // is reached only on the path where the owner's proposal has already been
+  // closed — "Something went wrong" is the least useful thing to say there.
+  if (error.code === "PT429") {
+    return new PlanProposalRuleError("regeneration-cap");
+  }
   if (error.code === "PT409") {
     const message = error.message ?? "";
     if (
       message.startsWith("That proposal is no longer available") ||
       message.startsWith("That proposed item is no longer available") ||
-      message.startsWith("That coaching request")
+      message.startsWith("That coaching request") ||
+      message.startsWith("That proposal has already been replaced")
     ) {
       return new PlanProposalConflictError("not-available");
     }

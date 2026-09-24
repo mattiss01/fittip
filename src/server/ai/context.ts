@@ -288,7 +288,19 @@ export const COACH_AI_CONTEXT_LIMITS = {
       planCommitments: 1_400,
       planningNote: 1_200,
       regenerationFeedback: 600,
-      previousProposal: 2_200,
+      // 2,200 until 24 September 2026, which was the roadmap's number adopted
+      // before anything filled it. A rejected *plan* is days, not phases, and
+      // `plan_content_is_valid` permits up to three sessions a day across seven
+      // days at 120-character titles and 60-character sports: a legal worst case
+      // reduces to about 5,800 bytes, so the old ceiling refused proposals the
+      // database was happy to store.
+      //
+      // Raised rather than solved by truncating the reduction, because the
+      // truncation would be silent and this costs nothing: a measured plan
+      // context is 8,589 bytes of the pool below, so 6,400 here still leaves
+      // room many times over. `context.test.ts` measures the legal worst case
+      // against this number rather than trusting the arithmetic.
+      previousProposal: 6_400,
       roadmap: 4_000,
       total: 32_500,
     },

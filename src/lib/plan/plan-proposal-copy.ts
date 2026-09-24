@@ -156,6 +156,17 @@ export const PLAN_PROPOSAL_COPY = {
   outcomes: {
     regenerated:
       "Asked again. What you added to your plan stayed; the rest was dropped.",
+    /**
+     * Reached only after the review has been applied and the proposal closed,
+     * so it must not say nothing was written. Both of those are true and
+     * permanent by the time the coach fails to answer.
+     */
+    regenerationLost:
+      "What you added is in your plan and the old proposal is closed, but the coach could not answer. Ask for a new plan above.",
+    /** Appended to a conflict or rule message on that same path. */
+    regenerationKept: "What you added is in your plan.",
+    regenerationCap:
+      "This plan has been asked again as many times as it can be. Ask for a fresh plan above.",
     proposalReady: "Your proposal is ready. Decide each day below.",
     generationPending:
       "A proposal is already being built. This did not ask for a second one.",
@@ -222,7 +233,7 @@ export const PLAN_PROPOSAL_COPY = {
   regenerateSupport:
     "Say what is wrong and the coach will plan the week again. Anything you already added to your plan stays; the rest is dropped.",
   regenerateLabel: "What should be different?",
-  regenerateHelper: "Up to 1000 characters.",
+  regenerateHelper: "Up to 500 characters.",
   regenerateSubmit: "Ask for a different plan",
   regenerateOpen: "Ask for a different plan",
   regenerateCancel: "Never mind",

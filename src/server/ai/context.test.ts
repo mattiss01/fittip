@@ -872,6 +872,36 @@ describe("what a plan regeneration would cost", () => {
     );
   }
 
+  // The gate that actually fires on a regeneration is the per-source ceiling,
+  // not the pool: `refuseOver(usage.previous_proposal, ...)` runs before the
+  // whole-context check. Measuring pool headroom therefore proves the wrong
+  // thing, which is what the first version of this file did.
+  it("admits the largest rejected plan the database would store", () => {
+    // `plan_content_is_valid` permits three sessions a day across seven days,
+    // titles to 120 characters and sports to 60. This is that, reduced.
+    const previousProposal = {
+      weekDescription: "w".repeat(600),
+      days: Array.from({ length: 21 }, (_, index) => ({
+        date: shiftDate(TODAY, index % 7),
+        title: "t".repeat(120),
+        sport: "s".repeat(60),
+        durationMinutes: 180,
+      })),
+    };
+
+    const assembled = realisticPlanContext({
+      regenerationFeedback: "f".repeat(500),
+      previousProposal,
+    });
+
+    expect(assembled.usage.previous_proposal).toBeLessThanOrEqual(
+      PLAN_LIMITS.bytes.previousProposal,
+    );
+    expect(assembled.serializedBytes).toBeLessThanOrEqual(
+      PLAN_LIMITS.bytes.total,
+    );
+  });
+
   it("leaves room in the pool for the feedback and the rejected proposal", () => {
     const assembled = realisticPlanContext();
     const headroom = PLAN_LIMITS.bytes.total - assembled.serializedBytes;

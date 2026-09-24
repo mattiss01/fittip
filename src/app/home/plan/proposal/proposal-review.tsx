@@ -269,7 +269,7 @@ export function ProposalReview({
             <textarea
               id="regenerationFeedback"
               name="regenerationFeedback"
-              maxLength={1000}
+              maxLength={500}
               rows={3}
               required
             />

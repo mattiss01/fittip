@@ -110,7 +110,7 @@ alter table public.plan_proposals
   add constraint plan_proposals_feedback_check
     check (
       regeneration_feedback is null
-      or char_length(regeneration_feedback) between 1 and 1000
+      or char_length(regeneration_feedback) between 1 and 500
     );
 
 -- The origin widens. Both values are AI purchases carrying their own
@@ -219,8 +219,12 @@ begin
       errcode = '22023',
       message = 'Invalid plan request.';
   end if;
+  -- 500, not 1000: `REGENERATION_FEEDBACK_MAX_LENGTH` in the context assembly
+  -- has been 500 since M3-02, and that check runs after the owner's review has
+  -- already been applied. Accepting more here only means destroying a proposal
+  -- over text the coach would never have been shown.
   if v_feedback is not null
-    and pg_catalog.char_length(v_feedback) not between 1 and 1000
+    and pg_catalog.char_length(v_feedback) not between 1 and 500
   then
     raise exception using
       errcode = '22023',
@@ -253,6 +257,29 @@ begin
         message = 'Finish or discard that proposal before asking again.';
     end if;
 
+    -- One proposal, one replacement.
+    --
+    -- Without this the count below is not a chain at all. It reads the number
+    -- from whichever predecessor the caller *names*, and a closed proposal
+    -- stays closed forever, so pointing at the first proposal of a lineage
+    -- yields 1 every time and the ceiling never arrives. Measured against a
+    -- local database before adding this: two regenerations from one source,
+    -- both numbered 1.
+    --
+    -- It is also what the owner's decision already implies. Regenerating
+    -- discards the proposal being rejected; asking a second time from that
+    -- same rejected proposal is a second bite at something already replaced.
+    if exists (
+      select 1
+      from public.plan_proposals
+      where source_proposal_id = p_previous_proposal_id
+        and user_id = v_user_id
+    ) then
+      raise exception using
+        errcode = 'PT409',
+        message = 'That proposal has already been replaced.';
+    end if;
+
     select * into v_previous_request
     from public.plan_generation_requests
     where id = v_previous.generation_request_id and user_id = v_user_id;
@@ -260,12 +287,14 @@ begin
     v_regeneration_number :=
       (coalesce(v_previous_request.regeneration_number, 0) + 1)::smallint;
 
-    -- The chain is bounded for the same reason every other ceiling here is: a
-    -- loop that never ends is a bill that never stops.
+    -- Now that the lineage is a line, this ceiling means what it says. `PT429`
+    -- rather than `22023`, matching the roadmap: the generic invalid-request
+    -- code maps to "Something went wrong", which is the least useful thing to
+    -- say to an owner who has just been told their proposal was closed.
     if v_regeneration_number > 20 then
       raise exception using
-        errcode = '22023',
-        message = 'Invalid plan request.';
+        errcode = 'PT429',
+        message = 'This plan has reached its regeneration limit.';
     end if;
   end if;
 
