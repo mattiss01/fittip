@@ -49,7 +49,7 @@ import type { PlanProposalView } from "@/server/plan-proposal/plan-proposal-reco
 type PlanProposalClient = SupabaseClient<Database> | ServerUserClient;
 
 const PROPOSAL_COLUMNS = `
-  id, provider_code, planning_note, content, created_at,
+  id, provider_code, planning_note, regeneration_feedback, content, created_at,
   plan_generation_requests!plan_proposals_request_fkey (
     requested_start_date, requested_end_date, expected_plan_revision
   ),
@@ -494,6 +494,7 @@ type ProposalRow = {
   id: string;
   provider_code: string;
   planning_note: string | null;
+  regeneration_feedback: string | null;
   content: unknown;
   created_at: string;
   plan_generation_requests: {
@@ -547,6 +548,7 @@ function parseProposal(row: ProposalRow): PlanProposalView {
     id: row.id,
     providerCode: row.provider_code,
     planningNote: row.planning_note,
+    regenerationFeedback: row.regeneration_feedback,
     content: row.content as SevenDayPlanProposal,
     startDate: request?.requested_start_date ?? "",
     endDate: request?.requested_end_date ?? "",

@@ -7,12 +7,14 @@ const {
   decideItemActionMock,
   discardActionMock,
   finishActionMock,
+  regenerateActionMock,
 } = vi.hoisted(() => ({
   useActionStateMock: vi.fn(),
   changePlanActionMock: vi.fn(),
   decideItemActionMock: vi.fn(),
   discardActionMock: vi.fn(),
   finishActionMock: vi.fn(),
+  regenerateActionMock: vi.fn(),
 }));
 
 vi.mock("react", async (importOriginal) => {
@@ -25,6 +27,7 @@ vi.mock("./actions", () => ({
   decidePlanProposalItemAction: decideItemActionMock,
   discardPlanProposalAction: discardActionMock,
   finishPlanReviewAction: finishActionMock,
+  regeneratePlanProposalAction: regenerateActionMock,
 }));
 
 import { ProposalReview } from "./proposal-review";
@@ -90,6 +93,7 @@ function renderReview(
 ) {
   return render(
     <ProposalReview
+      regenerationFeedback={null}
       proposalId={PROPOSAL_ID}
       expectedPlanRevision={12}
       finishKey="9c000000-0000-4000-8000-0000000000ff"

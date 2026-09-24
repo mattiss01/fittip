@@ -203,6 +203,127 @@ export async function finishPlanReviewAction(
   }
 }
 
+/**
+ * Keep what was accepted, then ask again with what was wrong.
+ *
+ * Three steps in one action, because the database will not let them be fewer.
+ * A regeneration refuses a proposal that is still open, so the review has to
+ * end first — and ending it through `finishReview` is exactly what keeps the
+ * owner's accepted days, applying the staged items into the plan before the
+ * coach is asked anything.
+ *
+ * Undecided items are rejected on the way. An owner who asks for a different
+ * plan has said what they wanted from this one; leaving the rest pending would
+ * block the finish on a choice they have already made by not making it.
+ *
+ * The steps are not atomic and cannot be: the coach call sits between two
+ * database writes and holds no lock. What that costs is bounded — if the
+ * generation fails after the review has been applied, the owner keeps the days
+ * they accepted and is told the coach could not be reached, which is the same
+ * place a failed first generation leaves them.
+ */
+export async function regeneratePlanProposalAction(
+  previous: PlanProposalActionState,
+  formData: FormData,
+): Promise<PlanProposalActionState> {
+  const submission = previous.submission + 1;
+  try {
+    const [owner, proposals, profiles, plan] = await Promise.all([
+      createServerUserClient().then(verifyCoachAIOwner),
+      createPlanProposalRepository(),
+      createProfileRepository(),
+      createRollingPlan(),
+    ]);
+
+    const proposalId = parsePlanProposalId(formData.get("proposalId"));
+    const feedback = parseRegenerationFeedback(
+      text(formData, "regenerationFeedback"),
+    );
+    const idempotencyKey = text(formData, "idempotencyKey");
+    if (feedback === null || !/^[A-Za-z0-9_-]{16,128}$/.test(idempotencyKey)) {
+      return invalid(OUTCOMES.validation, submission);
+    }
+
+    const rejected = await proposals.getProposal(proposalId);
+    if (rejected === null || rejected.decision !== null) {
+      return invalid(OUTCOMES.validation, submission);
+    }
+
+    for (const item of rejected.items) {
+      if (item.decision === "proposed") {
+        await proposals.decideItem(proposalId, item.ordinal, "rejected");
+      }
+    }
+
+    await proposals.finishReview({
+      proposalId,
+      expectedPlanRevision: parseExpectedPlanRevision(
+        formData.get("expectedPlanRevision"),
+      ),
+      idempotencyKey,
+    });
+
+    const today = await ownerToday(profiles);
+    const dayCount = planDayCount(rejected.startDate, rejected.endDate);
+    const endDate = shiftIsoDate(today, dayCount - 1);
+    const slice = await plan.getPlanSlice(today, endDate);
+
+    const result = await generatePlanProposal(
+      {
+        owner,
+        startDate: today,
+        endDate,
+        dayCount,
+        expectedPlanRevision: slice.revision,
+        planningNote: rejected.planningNote,
+        idempotencyKey: `${idempotencyKey}-regen`,
+        previousProposalId: proposalId,
+        regenerationFeedback: feedback,
+      },
+      { proposals },
+    );
+
+    revalidatePath("/home/plan/proposal");
+    revalidatePath("/home/plan");
+
+    if (result.status === "proposal") {
+      return {
+        status: "proposal",
+        message: OUTCOMES.regenerated,
+        submission,
+      };
+    }
+    if (result.status === "pending") {
+      return {
+        status: "pending",
+        message: OUTCOMES.generationPending,
+        submission,
+      };
+    }
+    return { status: "error", message: OUTCOMES.generationFailed, submission };
+  } catch (error) {
+    return toActionState(error, submission);
+  }
+}
+
+/** Inclusive, and the same span the rejected proposal covered. */
+function planDayCount(startDate: string, endDate: string): number {
+  const start = Date.parse(`${startDate}T00:00:00.000Z`);
+  const end = Date.parse(`${endDate}T00:00:00.000Z`);
+  const days = Math.round((end - start) / 86_400_000) + 1;
+  return Math.min(Math.max(days, 1), 7);
+}
+
+/**
+ * Bounded here as well as in the database, so an over-long complaint is
+ * refused before a reservation is taken rather than after.
+ */
+function parseRegenerationFeedback(value: string): string | null {
+  const trimmed = value.trim();
+  if (trimmed.length < 1 || trimmed.length > 1000) return null;
+  return trimmed;
+}
+
 export async function discardPlanProposalAction(
   previous: PlanProposalActionState,
   formData: FormData,

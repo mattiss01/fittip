@@ -42,6 +42,12 @@ export type PlanProposalView = {
    */
   providerCode: string;
   planningNote: string | null;
+  /**
+   * What the owner said was wrong with the proposal this one replaces, shown
+   * back above it so they can judge whether the coach listened. Null on a
+   * first proposal, which replaces nothing.
+   */
+  regenerationFeedback: string | null;
   content: SevenDayPlanProposal;
   startDate: string;
   endDate: string;

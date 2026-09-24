@@ -117,6 +117,7 @@ export default async function PlanProposalPage() {
           ) : (
             <ProposalReview
               proposalId={state.proposal.id}
+              regenerationFeedback={state.proposal.regenerationFeedback}
               expectedPlanRevision={state.planRevision}
               finishKey={state.finishKey}
               days={state.days}

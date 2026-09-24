@@ -154,6 +154,8 @@ export const PLAN_PROPOSAL_COPY = {
 
   /* ---- Outcomes ---------------------------------------------------------- */
   outcomes: {
+    regenerated:
+      "Asked again. What you added to your plan stayed; the rest was dropped.",
     proposalReady: "Your proposal is ready. Decide each day below.",
     generationPending:
       "A proposal is already being built. This did not ask for a second one.",
@@ -214,6 +216,18 @@ export const PLAN_PROPOSAL_COPY = {
       ? "1 item from your planning note is waiting below."
       : `${count} items from your planning note are waiting below.`,
   memoryJumpLink: "Jump to it",
+
+  /* ---- Regeneration -------------------------------------------------------- */
+  regenerateHeading: "Not what you wanted?",
+  regenerateSupport:
+    "Say what is wrong and the coach will plan the week again. Anything you already added to your plan stays; the rest is dropped.",
+  regenerateLabel: "What should be different?",
+  regenerateHelper: "Up to 1000 characters.",
+  regenerateSubmit: "Ask for a different plan",
+  regenerateOpen: "Ask for a different plan",
+  regenerateCancel: "Never mind",
+  /** Shown above a regenerated proposal, so the owner can judge the answer. */
+  regeneratedFrom: (feedback: string) => `You asked for: ${feedback}`,
 
   /* ---- Empty states ------------------------------------------------------ */
   noProposalTitle: "No proposal open",
