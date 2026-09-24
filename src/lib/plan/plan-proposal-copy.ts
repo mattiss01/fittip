@@ -204,6 +204,16 @@ export const PLAN_PROPOSAL_COPY = {
       ? "1 item from a planning note is waiting for you. It is not used for coaching until you accept it."
       : `${count} items from a planning note are waiting for you. They are not used for coaching until you accept them.`,
   memoryReviewLink: "Review them in memory",
+  /**
+   * The pointer shown above the timeline. Deliberately not the panel's own
+   * sentence: repeating it word for word would read as the same message twice
+   * rather than as a signpost to one further down.
+   */
+  memoryCandidatesJump: (count: number) =>
+    count === 1
+      ? "1 item from your planning note is waiting below."
+      : `${count} items from your planning note are waiting below.`,
+  memoryJumpLink: "Jump to it",
 
   /* ---- Empty states ------------------------------------------------------ */
   noProposalTitle: "No proposal open",

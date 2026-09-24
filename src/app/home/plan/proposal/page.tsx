@@ -91,7 +91,22 @@ export default async function PlanProposalPage() {
         </p>
       ) : (
         <>
-          <ComposeProposal hasGoals={state.hasGoals} />
+          {state.openMemoryCandidateCount > 0 ? (
+            <p className={styles.memoryJump}>
+              {COPY.memoryCandidatesJump(state.openMemoryCandidateCount)}{" "}
+              <a href="#memory-candidates">{COPY.memoryJumpLink}</a>
+            </p>
+          ) : null}
+          {/*
+            Asking is hidden while a proposal is open. The two are not things to
+            do at once: everything below is a decision about the proposal that
+            already exists, and a compose form above it invites starting over
+            rather than finishing. It returns once the proposal is decided or
+            discarded, which are the two ways an open one ends.
+          */}
+          {state.proposal === null || state.proposal.decision !== null ? (
+            <ComposeProposal hasGoals={state.hasGoals} />
+          ) : null}
           {state.proposal === null ? (
             <section className={styles.emptyState}>
               <h2>{COPY.noProposalTitle}</h2>
@@ -113,14 +128,14 @@ export default async function PlanProposalPage() {
             />
           )}
           {state.openMemoryCandidateCount > 0 ? (
-            <section className={styles.emptyState}>
+            <section className={styles.memoryPanel} id="memory-candidates">
               <h2>{COPY.memoryPanelTitle}</h2>
               <p className={styles.support}>
                 {COPY.memoryCandidatesWaiting(state.openMemoryCandidateCount)}
               </p>
               <Link
                 className={homeStyles.secondaryAction}
-                href="/home/you/memory"
+                href="/home/you/memory?from=plan-proposal"
               >
                 {COPY.memoryReviewLink}
               </Link>
