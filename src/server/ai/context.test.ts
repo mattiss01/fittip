@@ -808,3 +808,119 @@ describe("the accepted roadmap as plan context", () => {
     expect(assembled.references.roadmapVersion).toBeNull();
   });
 });
+
+describe("what a plan regeneration would cost", () => {
+  // Measured rather than assumed, because the answer decides whether plan
+  // regeneration needs `maxInputTokens` raised — and a raised ceiling is a
+  // standing spend increase, charged on every call whether the room is used or
+  // not. The figure that matters is the headroom left in the 32,500-byte pool
+  // once every plan source is at its worst case: a regeneration adds the
+  // feedback and a reduction of the proposal being rejected on top of that.
+  const PLAN_LIMITS = COACH_AI_CONTEXT_LIMITS.create_seven_day_plan;
+
+  // Not every source at its maximum: the allowances sum to 37,400 against a
+  // 32,500 pool, so an all-maxed context refuses by construction and measuring
+  // it would say nothing about a real owner. This is a heavy but real athlete —
+  // four goals, a dozen memory items of ordinary length, a full twenty-session
+  // training window, and a planning note a person would actually type.
+  function realisticPlanContext(compose: Partial<CoachAIComposeInput> = {}) {
+    const goals = Array.from({ length: 4 }, (_, index) =>
+      goal({
+        id: `a1000000-0000-4000-8000-0000000000${index + 10}`,
+        title: "Run a hilly half marathon in the spring",
+        category: "performance_event",
+      }),
+    );
+    const memory = Array.from({ length: 12 }, (_, index) =>
+      memoryItem({
+        id: `c3000000-0000-4000-8000-0000000000${index + 10}`,
+        content:
+          "Trains before work on weekdays and cannot run on consecutive hard days.",
+      }),
+    );
+    const completions = Array.from({ length: 20 }, (_, index) => ({
+      localDate: shiftDate(TODAY, -index),
+      status: "completed",
+      title: "Easy aerobic session",
+      sport: "Running",
+      durationMinutes: 50,
+      perceivedEffort: 5,
+      feeling: "as_expected",
+      painReported: false,
+      illnessReported: false,
+      injuryReported: false,
+      severeFatigueReported: false,
+      note: "Felt comfortable the whole way, finished with something left.",
+      replacementDescription: null,
+      activityNames: ["Steady run"],
+    }));
+
+    return buildCoachAIContext(
+      "create_seven_day_plan",
+      records({
+        goals,
+        memory,
+        timezoneName: "Europe/Berlin",
+        training: { ...EMPTY_TRAINING, completions },
+      }),
+      {
+        ...COMPOSE,
+        planningNote:
+          "I only have 45 minutes on weekdays and my left knee complains on hills.",
+        ...compose,
+      },
+    );
+  }
+
+  // The gate that actually fires on a regeneration is the per-source ceiling,
+  // not the pool: `refuseOver(usage.previous_proposal, ...)` runs before the
+  // whole-context check. Measuring pool headroom therefore proves the wrong
+  // thing, which is what the first version of this file did.
+  it("admits the largest rejected plan the database would store", () => {
+    // `plan_content_is_valid` permits three sessions a day across seven days,
+    // titles to 120 characters and sports to 60. This is that, reduced.
+    const previousProposal = {
+      weekDescription: "w".repeat(600),
+      days: Array.from({ length: 21 }, (_, index) => ({
+        date: shiftDate(TODAY, index % 7),
+        title: "t".repeat(120),
+        sport: "s".repeat(60),
+        durationMinutes: 180,
+      })),
+    };
+
+    const assembled = realisticPlanContext({
+      regenerationFeedback: "f".repeat(500),
+      previousProposal,
+    });
+
+    expect(assembled.usage.previous_proposal).toBeLessThanOrEqual(
+      PLAN_LIMITS.bytes.previousProposal,
+    );
+    expect(assembled.serializedBytes).toBeLessThanOrEqual(
+      PLAN_LIMITS.bytes.total,
+    );
+  });
+
+  it("leaves room in the pool for the feedback and the rejected proposal", () => {
+    const assembled = realisticPlanContext();
+    const headroom = PLAN_LIMITS.bytes.total - assembled.serializedBytes;
+    const needed =
+      PLAN_LIMITS.bytes.regenerationFeedback +
+      PLAN_LIMITS.bytes.previousProposal;
+
+    // Measured on 24 September 2026: 8,589 bytes of a 32,500 pool, leaving
+    // 23,911 against the 2,800 a regeneration can add. The 9,991-token estimate
+    // that made regeneration look blocked is computed from the *allowances*,
+    // which sum to the pool; a real context serializes to about a quarter of
+    // it. So plan regeneration needs no ceiling raise, and no source trimmed.
+    //
+    // This is an assertion rather than a note because the thing worth catching
+    // is the day it stops being true — a source added later that quietly eats
+    // the room regeneration was going to use.
+    expect(headroom).toBeGreaterThan(needed);
+    expect(assembled.serializedBytes).toBeLessThanOrEqual(
+      PLAN_LIMITS.bytes.total,
+    );
+  });
+});

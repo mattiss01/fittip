@@ -49,7 +49,7 @@ import type { PlanProposalView } from "@/server/plan-proposal/plan-proposal-reco
 type PlanProposalClient = SupabaseClient<Database> | ServerUserClient;
 
 const PROPOSAL_COLUMNS = `
-  id, provider_code, planning_note, content, created_at,
+  id, provider_code, planning_note, regeneration_feedback, content, created_at,
   plan_generation_requests!plan_proposals_request_fkey (
     requested_start_date, requested_end_date, expected_plan_revision
   ),
@@ -100,7 +100,9 @@ export class PlanProposalConflictError extends Error {
 export type PlanProposalRuleReason =
   | "past-date"
   | "daily-session-limit"
-  | "timezone-required";
+  | "timezone-required"
+  /** The regeneration ceiling, which the roadmap reports the same way. */
+  | "regeneration-cap";
 
 export class PlanProposalRuleError extends Error {
   constructor(readonly reason: PlanProposalRuleReason) {
@@ -218,6 +220,13 @@ export class PlanProposalRepository {
     dayCount: number;
     expectedPlanRevision: number;
     planningNote: string | null;
+    /**
+     * Both or neither. The function refuses one without the other, and it
+     * refuses a proposal that is still open — closing it is the caller's act,
+     * which is what keeps whatever the owner already accepted.
+     */
+    previousProposalId?: string | null;
+    regenerationFeedback?: string | null;
   }): Promise<PlanGenerationClaim> {
     const data = await this.call("begin_plan_generation", {
       p_idempotency_key: input.idempotencyKey,
@@ -228,6 +237,12 @@ export class PlanProposalRepository {
       ...(input.planningNote === null
         ? {}
         : { p_planning_note: input.planningNote }),
+      ...(input.previousProposalId
+        ? { p_previous_proposal_id: input.previousProposalId }
+        : {}),
+      ...(input.regenerationFeedback
+        ? { p_regeneration_feedback: input.regenerationFeedback }
+        : {}),
     });
 
     return {
@@ -248,6 +263,8 @@ export class PlanProposalRepository {
     rateCardVersion: string;
     spendReservationId: string | null;
     planningNote: string | null;
+    /** Travels again so the function can prove it against the claim's hash. */
+    regenerationFeedback?: string | null;
     content: SevenDayPlanProposal;
     sources: readonly CoachAISourceReference[] | undefined;
   }): Promise<string> {
@@ -265,6 +282,9 @@ export class PlanProposalRepository {
       ...(input.planningNote === null
         ? {}
         : { p_planning_note: input.planningNote }),
+      ...(input.regenerationFeedback
+        ? { p_regeneration_feedback: input.regenerationFeedback }
+        : {}),
       p_content: input.content as unknown as Json,
       ...(input.sources === undefined
         ? {}
@@ -435,12 +455,19 @@ function toDomainError(error: { code?: string; message?: string }): Error {
   if (error.code === "PT428") {
     return new PlanProposalRuleError("timezone-required");
   }
+  // Mapped rather than falling through to the opaque failure, because this one
+  // is reached only on the path where the owner's proposal has already been
+  // closed — "Something went wrong" is the least useful thing to say there.
+  if (error.code === "PT429") {
+    return new PlanProposalRuleError("regeneration-cap");
+  }
   if (error.code === "PT409") {
     const message = error.message ?? "";
     if (
       message.startsWith("That proposal is no longer available") ||
       message.startsWith("That proposed item is no longer available") ||
-      message.startsWith("That coaching request")
+      message.startsWith("That coaching request") ||
+      message.startsWith("That proposal has already been replaced")
     ) {
       return new PlanProposalConflictError("not-available");
     }
@@ -476,6 +503,7 @@ type ProposalRow = {
   id: string;
   provider_code: string;
   planning_note: string | null;
+  regeneration_feedback: string | null;
   content: unknown;
   created_at: string;
   plan_generation_requests: {
@@ -529,6 +557,7 @@ function parseProposal(row: ProposalRow): PlanProposalView {
     id: row.id,
     providerCode: row.provider_code,
     planningNote: row.planning_note,
+    regenerationFeedback: row.regeneration_feedback,
     content: row.content as SevenDayPlanProposal,
     startDate: request?.requested_start_date ?? "",
     endDate: request?.requested_end_date ?? "",

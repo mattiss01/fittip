@@ -962,7 +962,10 @@ export type Database = {
           id: string;
           idempotency_key: string;
           planning_note_hash: string | null;
+          previous_proposal_id: string | null;
           proposal_id: string | null;
+          regeneration_feedback_hash: string | null;
+          regeneration_number: number;
           request_fingerprint: string;
           requested_end_date: string;
           requested_start_date: string;
@@ -979,7 +982,10 @@ export type Database = {
           id?: string;
           idempotency_key: string;
           planning_note_hash?: string | null;
+          previous_proposal_id?: string | null;
           proposal_id?: string | null;
+          regeneration_feedback_hash?: string | null;
+          regeneration_number?: number;
           request_fingerprint: string;
           requested_end_date: string;
           requested_start_date: string;
@@ -996,7 +1002,10 @@ export type Database = {
           id?: string;
           idempotency_key?: string;
           planning_note_hash?: string | null;
+          previous_proposal_id?: string | null;
           proposal_id?: string | null;
+          regeneration_feedback_hash?: string | null;
+          regeneration_number?: number;
           request_fingerprint?: string;
           requested_end_date?: string;
           requested_start_date?: string;
@@ -1011,6 +1020,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "plan_generation_requests_previous_fkey";
+            columns: ["previous_proposal_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "plan_proposals";
+            referencedColumns: ["id", "user_id"];
           },
         ];
       };
@@ -1229,7 +1245,9 @@ export type Database = {
           prompt_version: string;
           provider_code: string;
           rate_card_version: string;
+          regeneration_feedback: string | null;
           schema_version: string;
+          source_proposal_id: string | null;
           spend_reservation_id: string | null;
           user_id: string;
         };
@@ -1244,7 +1262,9 @@ export type Database = {
           prompt_version: string;
           provider_code: string;
           rate_card_version: string;
+          regeneration_feedback?: string | null;
           schema_version: string;
+          source_proposal_id?: string | null;
           spend_reservation_id?: string | null;
           user_id: string;
         };
@@ -1259,7 +1279,9 @@ export type Database = {
           prompt_version?: string;
           provider_code?: string;
           rate_card_version?: string;
+          regeneration_feedback?: string | null;
           schema_version?: string;
+          source_proposal_id?: string | null;
           spend_reservation_id?: string | null;
           user_id?: string;
         };
@@ -1276,6 +1298,13 @@ export type Database = {
             columns: ["generation_request_id", "user_id"];
             isOneToOne: false;
             referencedRelation: "plan_generation_requests";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "plan_proposals_source_fkey";
+            columns: ["source_proposal_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "plan_proposals";
             referencedColumns: ["id", "user_id"];
           },
           {
@@ -2344,6 +2373,8 @@ export type Database = {
           p_expected_plan_revision: number;
           p_idempotency_key: string;
           p_planning_note?: string;
+          p_previous_proposal_id?: string;
+          p_regeneration_feedback?: string;
           p_request_fingerprint: string;
           p_start_date: string;
         };
@@ -2406,6 +2437,7 @@ export type Database = {
           p_prompt_version?: string;
           p_provider_code?: string;
           p_rate_card_version?: string;
+          p_regeneration_feedback?: string;
           p_safe_failure_code?: string;
           p_schema_version?: string;
           p_sources?: Json;

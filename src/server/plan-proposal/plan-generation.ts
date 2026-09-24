@@ -4,6 +4,7 @@ import { createPlanCoachAIService } from "@/server/ai/composition";
 import {
   COACH_AI_PROMPT_VERSIONS,
   COACH_AI_SCHEMA_VERSIONS,
+  type CoachAIPreviousPlanReference,
   type SevenDayPlanProposal,
 } from "@/server/ai/contracts";
 import { CoachAIError } from "@/server/ai/errors";
@@ -61,6 +62,19 @@ export type PlanGenerationInput = {
   planningNote: string | null;
   /** Stable across an uncertain retry of the same compose submission. */
   idempotencyKey: string;
+  /**
+   * The proposal this one replaces, and what was wrong with it. Both or
+   * neither: the database refuses one without the other, because feedback with
+   * nothing to attach it to is a complaint about nothing and a proposal without
+   * feedback is a question already paid for.
+   *
+   * The proposal must already be closed. Closing it is what keeps whatever the
+   * owner accepted — `finish_plan_proposal_review` applies the staged items
+   * into the plan first, so by the time this runs those days are plan sessions
+   * the coach will see as commitments and plan around.
+   */
+  previousProposalId?: string | null;
+  regenerationFeedback?: string | null;
 };
 
 export type PlanGenerationResult =
@@ -82,12 +96,29 @@ export async function generatePlanProposal(
   // rather than a silent replay of somebody else's question. It carries the
   // horizon, the plan revision, and the *length* of the owner text — a length
   // rather than the content, because a content hash leaks by comparison.
+  // The previous proposal is read before the claim, so a regeneration naming
+  // something unreadable fails before anything is reserved or paid for.
+  let previousPlan: CoachAIPreviousPlanReference | null = null;
+  if (input.previousProposalId) {
+    const previous = await proposals.getProposal(input.previousProposalId);
+    if (previous === null) {
+      throw new CoachAIError("context_invalid");
+    }
+    previousPlan = reducePreviousPlan(previous.content);
+  }
+
   const requestFingerprint = [
     "seven-day-plan.v2",
     input.startDate,
     input.endDate,
     String(input.expectedPlanRevision),
     String(input.planningNote?.length ?? 0),
+    // The same key with different feedback is a different question, so the
+    // fingerprint carries its length for the reason it carries the note's: a
+    // reused key must not silently replay somebody else's complaint, and a
+    // content hash would leak by comparison.
+    String(input.regenerationFeedback?.length ?? 0),
+    input.previousProposalId ?? "none",
   ].join(":");
 
   const claim: PlanGenerationClaim = await proposals.beginGeneration({
@@ -97,6 +128,8 @@ export async function generatePlanProposal(
     dayCount: input.dayCount,
     expectedPlanRevision: input.expectedPlanRevision,
     planningNote: input.planningNote,
+    previousProposalId: input.previousProposalId ?? null,
+    regenerationFeedback: input.regenerationFeedback ?? null,
   });
 
   // An uncertain same-key retry stops here. Only `claimed` — the state the
@@ -135,8 +168,8 @@ export async function generatePlanProposal(
         horizonStartDate: input.startDate,
         horizonEndDate: input.endDate,
         planningNote: input.planningNote,
-        regenerationFeedback: null,
-        previousProposal: null,
+        regenerationFeedback: input.regenerationFeedback ?? null,
+        previousProposal: previousPlan,
       },
     });
   } catch (error) {
@@ -162,6 +195,7 @@ export async function generatePlanProposal(
     rateCardVersion: binding.rateCard.version,
     spendReservationId: outcome.spendReservationId,
     planningNote: input.planningNote,
+    regenerationFeedback: input.regenerationFeedback ?? null,
     content: outcome.proposal as SevenDayPlanProposal,
     sources: outcome.sources,
   });
@@ -208,4 +242,31 @@ async function recordMemoryCandidates(
   } catch {
     return 0;
   }
+}
+
+/**
+ * What the coach is shown of the plan it is replacing.
+ *
+ * The date, the title, the sport and the duration — enough to see what it
+ * proposed and not repeat it — and nothing else. The per-session rationale is
+ * left out deliberately: it is the bulkiest part of a proposal and the part
+ * least worth defending a second time, since the owner has just said the
+ * proposal was wrong.
+ *
+ * Bounded by the context's own `previous_proposal` allocation rather than here.
+ * A seven-day plan reduces to well under it; the ceiling exists for the day
+ * that stops being true, and it refuses rather than silently truncates.
+ */
+function reducePreviousPlan(
+  content: SevenDayPlanProposal,
+): CoachAIPreviousPlanReference {
+  return {
+    weekDescription: content.weekDescription,
+    days: content.sessions.map((session) => ({
+      date: session.date,
+      title: session.title,
+      sport: session.sport,
+      durationMinutes: session.durationMinutes,
+    })),
+  };
 }

@@ -70,6 +70,7 @@ const OWNER_ID = "7c160000-0000-4000-8000-000000000001";
 const OWNER = { id: OWNER_ID } as unknown as CoachAIOwner;
 const GOAL_ID = "7c160000-0000-4000-8000-000000000020";
 const PROPOSAL_ID = "7c160000-0000-4000-8000-000000000030";
+const PREVIOUS_ID = "7c160000-0000-4000-8000-000000000031";
 const TIMEZONE = "Europe/Berlin";
 
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -248,6 +249,74 @@ describe("generatePlanProposal", () => {
     });
 
     expect(proposals.recordMemoryCandidates).not.toHaveBeenCalled();
+  });
+
+  it("carries the rejected proposal and the feedback into the claim", async () => {
+    proposals.getProposal.mockResolvedValue({
+      id: PREVIOUS_ID,
+      content: {
+        schemaVersion: "fittip.seven-day-plan.v2",
+        weekDescription: "Three easy days and a longer weekend run.",
+        startDate: TODAY,
+        endDate: END_DATE,
+        sessions: [
+          {
+            date: TODAY,
+            title: "Easy aerobic session",
+            sport: "Running",
+            focus: "f",
+            intent: "i",
+            durationMinutes: 45,
+            primaryGoalId: GOAL_ID,
+            rationale: "r",
+          },
+        ],
+      },
+    });
+
+    await generatePlanProposal(
+      {
+        ...input(),
+        previousProposalId: PREVIOUS_ID,
+        regenerationFeedback: "Too much running, not enough rest.",
+      },
+      { proposals: proposals as unknown as PlanProposalRepository },
+    );
+
+    const claim = proposals.beginGeneration.mock.calls[0][0];
+    expect(claim.previousProposalId).toBe(PREVIOUS_ID);
+    expect(claim.regenerationFeedback).toBe(
+      "Too much running, not enough rest.",
+    );
+    // The same key with different feedback is a different question, so the
+    // fingerprint has to distinguish them — by length, never by content.
+    expect(claim.requestFingerprint).toContain(PREVIOUS_ID);
+
+    // It travels again on finish, where the database proves it against the
+    // hash the claim stored.
+    const finish = proposals.finishGenerationWithProposal.mock.calls[0][0];
+    expect(finish.regenerationFeedback).toBe(
+      "Too much running, not enough rest.",
+    );
+  });
+
+  it("claims nothing when the proposal being replaced cannot be read", async () => {
+    proposals.getProposal.mockResolvedValue(null);
+
+    await expect(
+      generatePlanProposal(
+        {
+          ...input(),
+          previousProposalId: PREVIOUS_ID,
+          regenerationFeedback: "Too much running.",
+        },
+        { proposals: proposals as unknown as PlanProposalRepository },
+      ),
+    ).rejects.toThrow();
+
+    // Before the claim, so nothing is reserved and no provider is called for a
+    // regeneration of something that is not there.
+    expect(proposals.beginGeneration).not.toHaveBeenCalled();
   });
 
   it("returns the existing proposal when the key already completed", async () => {

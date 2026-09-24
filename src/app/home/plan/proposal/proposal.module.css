@@ -543,3 +543,60 @@
   font-size: 0.85rem;
   line-height: 1.45;
 }
+
+/* The third ending of a review: say what was wrong and ask again. Opened on
+ * demand rather than always present, so the two ordinary endings are not
+ * pushed down the dock by a field most reviews never use. */
+.regenerate {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--ledger-rule);
+}
+
+/*
+ * Colours stated rather than inherited. The dock also carries the global
+ * `save-dock` class, whose text colours assume the dark dock that class was
+ * written for — inside this one, which is paper, the heading and the support
+ * line came out near-invisible against the background.
+ */
+.regenerate > h3 {
+  margin: 0;
+  color: var(--ledger-ink);
+  font-size: 0.95rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.regenerate > p {
+  color: var(--ledger-muted);
+  font: 400 0.8rem/1.45 inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.regenerate label {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ledger-muted);
+}
+
+.regenerate textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  font: inherit;
+}
+
+/* What the owner asked for, shown above the answer to it. */
+.regeneratedFrom {
+  margin: 1rem 0 0;
+  padding: 0.7rem 0.85rem;
+  border-left: 3px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}

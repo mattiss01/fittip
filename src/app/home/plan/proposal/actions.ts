@@ -11,6 +11,7 @@ import type {
 } from "./action-state";
 
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
+import { REGENERATION_FEEDBACK_MAX_LENGTH } from "@/server/ai/owner-text";
 import { PLAN_PROPOSAL_COPY } from "@/lib/plan/plan-proposal-copy";
 import { createServerUserClient } from "@/lib/supabase/server-user-client";
 import {
@@ -203,6 +204,172 @@ export async function finishPlanReviewAction(
   }
 }
 
+/**
+ * Keep what was accepted, then ask again with what was wrong.
+ *
+ * Three steps in one action, because the database will not let them be fewer.
+ * A regeneration refuses a proposal that is still open, so the review has to
+ * end first — and ending it through `finishReview` is exactly what keeps the
+ * owner's accepted days, applying the staged items into the plan before the
+ * coach is asked anything.
+ *
+ * Undecided items are rejected on the way. An owner who asks for a different
+ * plan has said what they wanted from this one; leaving the rest pending would
+ * block the finish on a choice they have already made by not making it.
+ *
+ * The steps are not atomic and cannot be: the coach call sits between two
+ * database writes and holds no lock. What that costs is bounded — if the
+ * generation fails after the review has been applied, the owner keeps the days
+ * they accepted and is told the coach could not be reached, which is the same
+ * place a failed first generation leaves them.
+ */
+export async function regeneratePlanProposalAction(
+  previous: PlanProposalActionState,
+  formData: FormData,
+): Promise<PlanProposalActionState> {
+  const submission = previous.submission + 1;
+  try {
+    const [owner, proposals, profiles, plan] = await Promise.all([
+      createServerUserClient().then(verifyCoachAIOwner),
+      createPlanProposalRepository(),
+      createProfileRepository(),
+      createRollingPlan(),
+    ]);
+
+    const proposalId = parsePlanProposalId(formData.get("proposalId"));
+    const feedback = parseRegenerationFeedback(
+      text(formData, "regenerationFeedback"),
+    );
+    const idempotencyKey = text(formData, "idempotencyKey");
+    // The same UUID pattern `finishPlanReviewAction` requires, because this key
+    // reaches the same RPC and its parameter is a `uuid`. The looser generation
+    // pattern would let a crafted 16-character key through the item rejections
+    // below and die on the cast afterwards — writes made on the way to a
+    // failure that says nothing was written.
+    if (feedback === null || !UUID_PATTERN.test(idempotencyKey)) {
+      return invalid(OUTCOMES.validation, submission);
+    }
+
+    const rejected = await proposals.getProposal(proposalId);
+    if (rejected === null || rejected.decision !== null) {
+      return invalid(OUTCOMES.validation, submission);
+    }
+    // Bound to a const so the narrowing survives into `askAgain` below.
+    const source = rejected;
+
+    for (const item of rejected.items) {
+      if (item.decision === "proposed") {
+        await proposals.decideItem(proposalId, item.ordinal, "rejected");
+      }
+    }
+
+    await proposals.finishReview({
+      proposalId,
+      expectedPlanRevision: parseExpectedPlanRevision(
+        formData.get("expectedPlanRevision"),
+      ),
+      idempotencyKey,
+    });
+
+    // From here the owner's plan has already changed and the proposal is
+    // permanently closed. Everything below can still fail — the provider, the
+    // spend ceiling, the regeneration limit — and none of those failures may
+    // be reported as "nothing was written", which is what the generic copy
+    // says. Revalidating here rather than after the coach answers means the
+    // screens are right about the plan even when the answer never comes.
+    revalidatePath("/home/plan/proposal");
+    revalidatePath("/home/plan");
+
+    try {
+      return await askAgain();
+    } catch (error) {
+      // The cause is worth keeping for the codes the repository maps, but the
+      // message has to be the one that is true: their choices were applied and
+      // the proposal is gone.
+      const mapped = toActionState(error, submission);
+      return {
+        status: "error",
+        message:
+          mapped.status === "conflict" || mapped.status === "rule"
+            ? `${mapped.message} ${OUTCOMES.regenerationKept}`
+            : OUTCOMES.regenerationLost,
+        submission,
+      };
+    }
+
+    async function askAgain(): Promise<PlanProposalActionState> {
+      const today = await ownerToday(profiles);
+      const dayCount = planDayCount(source.startDate, source.endDate);
+      const endDate = shiftIsoDate(today, dayCount - 1);
+      const slice = await plan.getPlanSlice(today, endDate);
+
+      const result = await generatePlanProposal(
+        {
+          owner,
+          startDate: today,
+          endDate,
+          dayCount,
+          expectedPlanRevision: slice.revision,
+          planningNote: source.planningNote,
+          idempotencyKey: `${idempotencyKey}-regen`,
+          previousProposalId: proposalId,
+          regenerationFeedback: feedback,
+        },
+        { proposals },
+      );
+
+      revalidatePath("/home/plan/proposal");
+
+      if (result.status === "proposal") {
+        return {
+          status: "proposal",
+          message: OUTCOMES.regenerated,
+          submission,
+        };
+      }
+      if (result.status === "pending") {
+        return {
+          status: "pending",
+          message: OUTCOMES.generationPending,
+          submission,
+        };
+      }
+      return {
+        status: "error",
+        message: OUTCOMES.regenerationLost,
+        submission,
+      };
+    }
+  } catch (error) {
+    return toActionState(error, submission);
+  }
+}
+
+/** Inclusive, and the same span the rejected proposal covered. */
+function planDayCount(startDate: string, endDate: string): number {
+  const start = Date.parse(`${startDate}T00:00:00.000Z`);
+  const end = Date.parse(`${endDate}T00:00:00.000Z`);
+  const days = Math.round((end - start) / 86_400_000) + 1;
+  return Math.min(Math.max(days, 1), 7);
+}
+
+/**
+ * Bounded here as well as in the database, so an over-long complaint is
+ * refused before anything is closed rather than after.
+ *
+ * `REGENERATION_FEEDBACK_MAX_LENGTH` is the binding one: the context assembly
+ * has refused over 500 characters since M3-02, and it runs *after* the review
+ * has been applied. A looser bound here would let an owner type 600 characters
+ * and lose their proposal to a refusal they could not have predicted.
+ */
+function parseRegenerationFeedback(value: string): string | null {
+  const trimmed = value.trim();
+  if (trimmed.length < 1 || trimmed.length > REGENERATION_FEEDBACK_MAX_LENGTH) {
+    return null;
+  }
+  return trimmed;
+}
+
 export async function discardPlanProposalAction(
   previous: PlanProposalActionState,
   formData: FormData,
@@ -303,7 +470,9 @@ function toActionState(
           ? OUTCOMES.pastDate
           : error.reason === "daily-session-limit"
             ? OUTCOMES.dailyLimit
-            : OUTCOMES.timezoneRequired,
+            : error.reason === "regeneration-cap"
+              ? OUTCOMES.regenerationCap
+              : OUTCOMES.timezoneRequired,
       submission,
     };
   }

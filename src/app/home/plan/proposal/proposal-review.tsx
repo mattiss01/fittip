@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import {
   INITIAL_PLAN_PROPOSAL_ACTION_STATE,
@@ -10,6 +10,7 @@ import {
   decidePlanProposalItemAction,
   discardPlanProposalAction,
   finishPlanReviewAction,
+  regeneratePlanProposalAction,
 } from "./actions";
 import styles from "./proposal.module.css";
 import type {
@@ -45,6 +46,7 @@ const COPY = PLAN_PROPOSAL_COPY;
  */
 export function ProposalReview({
   proposalId,
+  regenerationFeedback,
   expectedPlanRevision,
   finishKey,
   days,
@@ -55,6 +57,8 @@ export function ProposalReview({
   isExample,
 }: {
   proposalId: string;
+  /** Present only on a proposal that replaced another one. */
+  regenerationFeedback: string | null;
   expectedPlanRevision: number;
   /** Stable per render of the open proposal, so a retried finish replays. */
   finishKey: string;
@@ -73,8 +77,16 @@ export function ProposalReview({
     discardPlanProposalAction,
     INITIAL_PLAN_PROPOSAL_ACTION_STATE,
   );
+  const [regenerateState, regenerateAction, regenerating] = useActionState(
+    regeneratePlanProposalAction,
+    INITIAL_PLAN_PROPOSAL_ACTION_STATE,
+  );
+  // Closed until asked for. The box is the third ending of a review, not a
+  // field the owner has to scroll past on the way to the other two.
+  const [askingAgain, setAskingAgain] = useState(false);
 
-  const notice = latest(state, discardState);
+  const notice = latest(state, discardState, regenerateState);
+  const busy = pending || discarding || regenerating;
 
   return (
     <section className={styles.review} aria-label={COPY.reviewTitle}>
@@ -83,6 +95,17 @@ export function ProposalReview({
           <strong>{COPY.exampleBadge}</strong> {COPY.exampleSupport}
         </p>
       ) : null}
+
+      {/*
+        Above the week rather than below it: the owner is about to judge
+        whether the coach did what they asked, and the question has to be on
+        screen before the answer is.
+      */}
+      {regenerationFeedback === null ? null : (
+        <p className={styles.regeneratedFrom}>
+          {COPY.regeneratedFrom(regenerationFeedback)}
+        </p>
+      )}
 
       {/*
         Both notices are statements, not warnings with an action. The timeline
@@ -173,8 +196,68 @@ export function ProposalReview({
             ? COPY.unresolvedSupport(unresolved)
             : COPY.finishSupport(staged)}
         </p>
-        <div className={styles.dockActions}>
-          <form action={action} key={`finish-${state.submission}`}>
+        {askingAgain ? null : (
+          <div className={styles.dockActions}>
+            <form action={action} key={`finish-${state.submission}`}>
+              <input type="hidden" name="proposalId" value={proposalId} />
+              <input
+                type="hidden"
+                name="expectedPlanRevision"
+                value={expectedPlanRevision}
+              />
+              <input type="hidden" name="idempotencyKey" value={finishKey} />
+              <button
+                className={styles.primary}
+                type="submit"
+                disabled={busy || unresolved > 0}
+              >
+                {COPY.finishAction}
+              </button>
+            </form>
+            <form
+              action={discardAction}
+              key={`discard-${discardState.submission}`}
+            >
+              <input type="hidden" name="proposalId" value={proposalId} />
+              <button
+                className={styles.dangerAction}
+                type="submit"
+                disabled={busy}
+                // A confirmation only when something would actually be lost, and
+                // it says exactly how much.
+                onClick={(event) => {
+                  if (staged > 0 && !confirm(COPY.discardConfirm(staged))) {
+                    event.preventDefault();
+                  }
+                }}
+              >
+                {COPY.discardAction}
+              </button>
+            </form>
+            <button
+              className="text-button"
+              type="button"
+              disabled={busy}
+              onClick={() => setAskingAgain(true)}
+            >
+              {COPY.regenerateOpen}
+            </button>
+          </div>
+        )}
+
+        {/*
+          The third way a review ends. It says plainly what happens to the two
+          halves of the proposal, because "ask again" on its own does not tell
+          the owner that what they added is safe and the rest is not.
+        */}
+        {askingAgain ? (
+          <form
+            className={styles.regenerate}
+            action={regenerateAction}
+            key={`regenerate-${regenerateState.submission}`}
+          >
+            <h3>{COPY.regenerateHeading}</h3>
+            <p className={styles.support}>{COPY.regenerateSupport}</p>
             <input type="hidden" name="proposalId" value={proposalId} />
             <input
               type="hidden"
@@ -182,38 +265,33 @@ export function ProposalReview({
               value={expectedPlanRevision}
             />
             <input type="hidden" name="idempotencyKey" value={finishKey} />
-            <button
-              className={styles.primary}
-              type="submit"
-              disabled={pending || discarding || unresolved > 0}
-            >
-              {COPY.finishAction}
-            </button>
+            <label htmlFor="regenerationFeedback">{COPY.regenerateLabel}</label>
+            <textarea
+              id="regenerationFeedback"
+              name="regenerationFeedback"
+              maxLength={500}
+              rows={3}
+              required
+            />
+            <p className={styles.helper}>{COPY.regenerateHelper}</p>
+            <div className={styles.dockActions}>
+              <button className={styles.primary} type="submit" disabled={busy}>
+                {COPY.regenerateSubmit}
+              </button>
+              <button
+                className="text-button"
+                type="button"
+                disabled={busy}
+                onClick={() => setAskingAgain(false)}
+              >
+                {COPY.regenerateCancel}
+              </button>
+            </div>
           </form>
-          <form
-            action={discardAction}
-            key={`discard-${discardState.submission}`}
-          >
-            <input type="hidden" name="proposalId" value={proposalId} />
-            <button
-              className={styles.dangerAction}
-              type="submit"
-              disabled={pending || discarding}
-              // A confirmation only when something would actually be lost, and
-              // it says exactly how much.
-              onClick={(event) => {
-                if (staged > 0 && !confirm(COPY.discardConfirm(staged))) {
-                  event.preventDefault();
-                }
-              }}
-            >
-              {COPY.discardAction}
-            </button>
-          </form>
-        </div>
+        ) : null}
         <p
           className={notice.status === "idle" ? styles.srOnly : styles.notice}
-          data-state={pending || discarding ? "pending" : notice.status}
+          data-state={busy ? "pending" : notice.status}
           role="status"
           aria-live="polite"
         >
@@ -531,13 +609,17 @@ function ChoiceButton({
 }
 
 /** Whichever of the two dock actions replied most recently. */
-function latest(
-  finish: PlanProposalActionState,
-  discard: PlanProposalActionState,
-): PlanProposalActionState {
-  if (discard.submission === 0) return finish;
-  if (finish.submission === 0) return discard;
-  return discard.submission > finish.submission ? discard : finish;
+/**
+ * The newest of however many endings have been attempted.
+ *
+ * Generalised from a pair when regeneration became the third: a fixed two-way
+ * comparison would have silently kept showing the finish's notice while the
+ * owner was looking at the result of asking again.
+ */
+function latest(...states: PlanProposalActionState[]): PlanProposalActionState {
+  return states.reduce((newest, candidate) =>
+    candidate.submission > newest.submission ? candidate : newest,
+  );
 }
 
 const DAY_FORMAT = new Intl.DateTimeFormat("en-GB", {
