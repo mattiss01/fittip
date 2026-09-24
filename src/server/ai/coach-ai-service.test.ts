@@ -967,8 +967,10 @@ describe("durable spend", () => {
 
     // The provider has already rejected and the settle call has already been
     // made, but the write has not landed. Returning here would let a serverless
-    // instance freeze before the RPC leaves the process, after which the hold
-    // expires and the ledger records a call the provider billed as zero.
+    // instance freeze before the RPC leaves the process. This is the failed
+    // path, so there is no proposal and no finish to settle the reservation
+    // instead -- since ADR-019 it would then hold its full ceiling for good
+    // rather than recording what the provider actually billed.
     await vi.waitFor(() => expect(ledger.settled).toEqual([60_000]));
     expect(seen).toEqual([]);
 

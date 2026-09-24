@@ -53,9 +53,12 @@ export class AISpendRepository implements CoachAISpendLedger {
     // `src/architecture/server-boundary.test.ts` pins the exact set of five
     // atomic RPCs permitted to disable them, and widening that set is an
     // architectural change this ticket was not given. The failure it leaves
-    // open is safe in the one direction that matters: a retried reservation
-    // creates a second row, which over-holds budget and releases it at the
-    // 15-minute expiry, and can never under-charge.
+    // open still cannot under-charge -- a retried reservation creates a second
+    // row and over-holds -- but since ADR-019 the orphan is never released:
+    // nothing settles a row whose token the application never saw, and expiry
+    // no longer forgives it. So a retried reserve now costs its ceiling against
+    // the daily and lifetime budgets permanently. That is on the list as a
+    // known limitation rather than swallowed here.
     const { data, error } = await this.client.rpc("reserve_ai_spend", {
       p_operation: input.operation,
       p_reserved_micro_usd: input.reservedMicroUsd,
@@ -109,7 +112,9 @@ export async function createAISpendRepository(): Promise<AISpendRepository> {
  * Postgres composite fields arrive nullable whatever the function guarantees,
  * so the receipt is checked rather than trusted. A reservation whose token or
  * amount did not come back cannot be settled later, and treating it as usable
- * would strand the hold until it expired.
+ * would strand the hold for good -- since ADR-019 an unsettled reservation
+ * holds what it reserved rather than releasing it at expiry. Refusing loudly
+ * here is what keeps that stranding rare.
  */
 function toHandle(receipt: ReservationReceipt | null): CoachAISpendHandle {
   if (

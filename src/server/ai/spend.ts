@@ -54,8 +54,10 @@ export interface CoachAISpendLedger {
   /**
    * Reconciles against provider-reported usage. Settling a reservation that is
    * already settled is not an error — the reservation is closed either way, and
-   * a settlement racing an expiry must not turn a completed proposal into a
-   * failed one.
+   * a settlement that loses the race must not turn a completed proposal into a
+   * failed one. Since ADR-019 the race it can lose is against the finish
+   * function, which settles an open reservation itself at the amount reserved;
+   * expiry no longer closes anything.
    */
   settle(handle: CoachAISpendHandle, chargedMicroUsd: number): Promise<void>;
 }
