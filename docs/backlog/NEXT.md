@@ -13,7 +13,25 @@ before any code is written.
 
 ## Now
 
-_Nothing open. The next thing is the owner's to name._
+1. `[~]` **Plan regeneration with feedback** — revived from `Dropped`, where it sat as the
+   pre-F-005 draft M3-03B. The roadmap has regeneration; the plan has none:
+   `begin_plan_generation` takes no previous proposal or feedback, and
+   `plan_proposals_origin_check` admits only `'ai_initial'`. Outcome: when a proposal is not
+   what the owner wanted, they say what is wrong and get another one. Owner's decisions (24
+   Sep 2026): the coach receives both the feedback and the proposal being rejected;
+   regenerating discards that proposal; and what the owner already accepted is kept first, so
+   the new proposal covers only what they did not take. Measured rather than assumed: a
+   realistic plan context is 8,589 bytes of the 32,500 pool, leaving 23,911 against the 2,800
+   a regeneration adds, so no ceiling raise and no source trimmed — the 9,991-token figure
+   that made this look blocked is computed from the allowances, not from a real context.
+   Constraints: `CoachAIPreviousProposalReference` is roadmap-shaped (title, summary, phases)
+   and a previous plan is days with sessions, so the contract needs its own shape rather than
+   a reuse; the accepted days are applied through `finish_plan_proposal_review`, which
+   already exists, so regeneration is a new generation after it rather than a second write
+   path into the plan; and the horizon stays the original span, with kept sessions reaching
+   the coach as plan commitments — `begin_plan_generation` validates a start plus a day
+   count and cannot express a non-contiguous set of gaps. Careful lane: schema, the AI
+   prompt-data boundary, and spend.
 
 ## Fix in passing
 
