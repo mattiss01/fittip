@@ -503,3 +503,43 @@
   display: grid;
   gap: 0.35rem;
 }
+
+/* The memory candidates panel.
+ *
+ * Its own class rather than the empty-state box it first borrowed: "1 item is
+ * waiting for you" and "No proposal open" are not the same kind of message, and
+ * rendering them in the same container made the first read as an absence. The
+ * dashed rule is the roadmap panel's, so the two surfaces that propose memory
+ * look like each other rather than like their neighbours. */
+.memoryPanel {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding: 1.1rem;
+  border: 1px dashed var(--ledger-ink);
+  border-radius: 0.6rem;
+  background: var(--ledger-paper);
+}
+
+.memoryPanel > h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.memoryPanel a {
+  justify-self: start;
+  margin-top: 0.4rem;
+}
+
+/* The line that says the panel exists, shown above the timeline because the
+ * panel itself sits below seven day cards and is otherwise found only by
+ * scrolling past every decision. It is a pointer, not a second copy: the count
+ * and the link live here, the explanation stays in the panel. */
+.memoryJump {
+  margin: 1.5rem 0 0;
+  padding: 0.7rem 0.85rem;
+  border-left: 3px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
