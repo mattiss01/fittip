@@ -13,13 +13,26 @@ before any code is written.
 
 ## Now
 
-1. `[ ]` **A paid proposal must not be lost when the settle fails** — the second M3-16A
-   spend gap, harmless while the coach is fixture-only. `finish_*` refuses a live result
-   whose reservation is unsettled, but `coach-ai-service.ts` fires `ledger.settle` and
-   swallows its rejection by design, so the provider is paid and the proposal is then
-   refused. Awaiting the settle harder does not fix it: the honest shape is for `finish_*`
-   to settle the reservation in the same transaction that inserts the proposal, which
-   touches both finish functions. Settle before any live-provider ticket. Careful lane.
+1. `[~]` **A paid proposal must not be lost when the settle fails** — the second M3-16A
+   spend gap. `finish_*` refused a live result whose reservation was unsettled, but
+   `coach-ai-service.ts` settles best-effort and swallows the rejection, so a failed settle
+   meant the provider was paid and the proposal was thrown away — unrecoverably, since the
+   claim stays pending under that key and a retry never calls the coach again. Beside it,
+   `reserve_ai_spend` counted an expired unsettled reservation as zero, so the spend
+   vanished from the ceiling fifteen minutes later. Outcome: both finishes settle an open
+   reservation themselves, in the transaction that inserts the proposal, and an unsettled
+   reservation holds its budget for good. Owner's decisions (24 Sep 2026): settle at the
+   amount held rather than passing the charged amount and the settlement token down into the
+   finish, because that would spread a credential the database withholds from the owner's
+   own `select` grant, to buy exactness on a path that only runs when something already
+   failed; and fix the ceiling arithmetic in the same ticket, because decision 1 cannot
+   reach the failed-call path. Constraints: replacements rather than new functions, so the
+   spend rules cannot drift into two copies; `create or replace` restores `execute` to
+   `public`, so every grant is restated after a full revoke; the update is constrained by
+   owner, operation, rate card and `settled_at is null`, so a finish can close only a
+   reservation it already proved it may use; and `settle_ai_spend` stays, because a failed
+   provider call has no proposal for its settlement to live in. Recorded as ADR-019.
+   Careful lane.
 
 ## Fix in passing
 

@@ -185,9 +185,15 @@ values
   );
 
 -- Owner D holds the same 1,995,000 plus an expired, never-settled reservation
--- of a further 1,000,000. If expiry did not release the hold, owner D would be
--- 995,000 over the ceiling and permanently locked out — the exact failure the
--- expiry exists to prevent.
+-- of a further 1,000,000, which puts them 995,000 over the daily ceiling.
+--
+-- That used to be the case expiry existed to release: an abandoned reservation
+-- counted as zero once it expired, so a crashed call could not lock the owner
+-- out for the rest of the day. Since 24 September 2026 it holds its budget
+-- instead. An unsettled reservation is one where money may well have been
+-- spent and we failed to record it, and forgiving it is the one direction a
+-- spend ceiling must never fail in. ADR-019 records the trade and what it
+-- costs: a genuinely abandoned reservation now holds its ceiling for the day.
 insert into public.ai_spend_reservations (
   user_id, operation, spend_day, reserved_micro_usd, charged_micro_usd,
   rate_card_version, currency, expires_at, settled_at, created_at
@@ -470,22 +476,27 @@ select throws_ok(
   'nothing more is admitted once the daily ceiling is reached'
 );
 
--- Owner D: an expired reservation releases its hold, so a crashed call does
--- not consume the ceiling for the rest of the day.
+-- Owner D: an unsettled reservation holds its budget whether or not it has
+-- expired.
 select set_config(
   'request.jwt.claims',
   '{"sub":"60000000-0000-4000-8000-000000000004","role":"authenticated"}',
   true
 );
-select lives_ok(
+-- 5,000 is the exact figure the old rule admitted: without the expired hold
+-- owner D sits at 1,995,000 of 2,000,000. Refusing it is precisely the
+-- behaviour change, stated as the one assertion that flips.
+select throws_ok(
   $$select public.reserve_ai_spend('create_roadmap', 5000, 'luna-v1', 'USD')$$,
-  'an expired reservation no longer holds budget'
+  'PT402',
+  'Coaching spend ceiling reached.',
+  'an expired but unsettled reservation still holds the budget it reserved'
 );
 select throws_ok(
   $$select public.reserve_ai_spend('create_roadmap', 1, 'luna-v1', 'USD')$$,
   'PT402',
   'Coaching spend ceiling reached.',
-  'live and settled rows still hold budget alongside the expired one'
+  'and nothing at all is admitted while the owner is over the ceiling'
 );
 
 -- Owner E: the lifetime ceiling, with every charge on an earlier day.

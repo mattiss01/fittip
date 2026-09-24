@@ -397,9 +397,14 @@ export class CoachAIService {
         state.durableSettlement = ledger
           .settle(durable, settled.chargedMicroUsd)
           .catch(() => {
-            // Best effort by design. The reservation expires on its own, so a
-            // failed settlement releases the hold rather than stranding it, and
-            // it must not turn a completed proposal into a failed one.
+            // Still best effort, and now safe to be. Since ADR-019 the finish
+            // settles an open reservation itself, in the transaction that
+            // records the proposal, so a failure here costs only the exact
+            // charge -- the finish closes it at the ceiling instead. It can no
+            // longer lose a proposal the provider was paid for, and expiry no
+            // longer forgives the spend. What it must still not do is turn a
+            // completed proposal into a failed one, which is why it is
+            // swallowed rather than thrown.
           });
       }
       return settled;
@@ -432,7 +437,10 @@ export class CoachAIService {
       // On a deadline the call is still running, so the real charge is not yet
       // known and the slot stays held until it ends. The reservation is what is
       // owed meanwhile: a failed call is not a free call. If this runtime never
-      // sees the call end, the durable reservation's expiry releases it.
+      // sees the call end, the reservation stays open and keeps holding what it
+      // reserved -- ADR-019 made an unsettled reservation count against the
+      // ceiling forever rather than falling to zero on expiry, because a call
+      // we lost track of is exactly the one that may have been billed.
       draft.chargedCostMicroUsd =
         state.settlement?.chargedMicroUsd ?? reservation.reservedMicroUsd;
       draft.costReconciled = state.settlement?.reconciled ?? false;
@@ -441,7 +449,9 @@ export class CoachAIService {
       // failures happen — and a call that failed after the provider generated a
       // response has still been billed. Returning without awaiting lets the
       // instance freeze before the settle RPC leaves the process, after which
-      // the hold expires and the ledger records that spend as zero.
+      // nothing records the real charge and the reservation holds its ceiling
+      // instead. That is the conservative failure ADR-019 chose, not a free
+      // pass, and awaiting here is what usually avoids paying it.
       //
       // A settlement failure must not replace the provider's error: the caller
       // needs the real cause. `settleOnce` already swallows it, and this guard
