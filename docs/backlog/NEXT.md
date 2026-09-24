@@ -13,26 +13,7 @@ before any code is written.
 
 ## Now
 
-1. `[~]` **A paid proposal must not be lost when the settle fails** — the second M3-16A
-   spend gap. `finish_*` refused a live result whose reservation was unsettled, but
-   `coach-ai-service.ts` settles best-effort and swallows the rejection, so a failed settle
-   meant the provider was paid and the proposal was thrown away — unrecoverably, since the
-   claim stays pending under that key and a retry never calls the coach again. Beside it,
-   `reserve_ai_spend` counted an expired unsettled reservation as zero, so the spend
-   vanished from the ceiling fifteen minutes later. Outcome: both finishes settle an open
-   reservation themselves, in the transaction that inserts the proposal, and an unsettled
-   reservation holds its budget for good. Owner's decisions (24 Sep 2026): settle at the
-   amount held rather than passing the charged amount and the settlement token down into the
-   finish, because that would spread a credential the database withholds from the owner's
-   own `select` grant, to buy exactness on a path that only runs when something already
-   failed; and fix the ceiling arithmetic in the same ticket, because decision 1 cannot
-   reach the failed-call path. Constraints: replacements rather than new functions, so the
-   spend rules cannot drift into two copies; `create or replace` restores `execute` to
-   `public`, so every grant is restated after a full revoke; the update is constrained by
-   owner, operation, rate card and `settled_at is null`, so a finish can close only a
-   reservation it already proved it may use; and `settle_ai_spend` stays, because a failed
-   provider call has no proposal for its settlement to live in. Recorded as ADR-019.
-   Careful lane.
+_Nothing open. The next thing is the owner's to name._
 
 ## Fix in passing
 
@@ -103,6 +84,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 24 Sep 2026 | `11139d5` | [35978290689](https://github.com/mattiss01/fittip/actions/runs/35978290689) | Both finishes now settle an open spend reservation themselves, in the transaction that inserts the proposal, at the amount it was holding — so a settle that failed can no longer throw away a result the provider was paid for, which was unrecoverable because the claim stays pending under that key. Beside it, an unsettled reservation counts against the ceilings for good instead of falling to zero on expiry, which covers the failed-call path the first half cannot reach. ADR-019 records both and what was rejected; `reserve_ai_spend` and the two finishes were replaced from their live definitions, so every grant is restated after a full revoke. m3_01b's “an expired reservation no longer holds budget” is inverted on purpose, at the same 5,000 figure that flips. Migration `20260924082758` applied to the founder project — 28 migrations, advisors unchanged at 20 definer + 1 auth. Review found no defect but two of my assertions proved less than they claimed; fixed in the same branch, and the standing cost is now a known limitation |
 | 23 Sep 2026 | `dd7b68d` | [35910418730](https://github.com/mattiss01/fittip/actions/runs/35910418730) | A planning note that states a durable constraint now proposes it: `record_plan_memory_candidates` is back with M3-03's signature, `generatePlanProposal` records the batch after the proposal commits and swallows its failure, and the proposal page says how many are waiting. ADR-010 gained decision 16 first, on its own branch (`4826786`), naming every route allowed to create `inferred_proposed` memory and the two limits none may skip. M3-11's suite asserted this function stays dropped, so those two assertions now assert the reach instead — the precedent that file already set for `plan_content_is_valid`. Migration `20260923191214` applied to the founder project — 27 migrations, advisors 20 definer + 1 auth, the one new definer being this route. Review found nothing blocking; the panel itself has not been seen at 390px |
 | 23 Sep 2026 | `80cf78f` | [35894277478](https://github.com/mattiss01/fittip/actions/runs/35894277478) | One settled spend reservation now pays for exactly one proposal: both `plan_proposals_spend_idx` and `roadmap_proposals_spend_idx` are unique, the roadmap one exempting `owner_edit` rows, which copy their source's reservation deliberately and would otherwise have made a paid roadmap uneditable. Migration `20260923165201` applied to the founder project — 26 migrations, advisors unchanged at 19 definer + 1 auth. The index built without conflict, which is the evidence that no existing row held a duplicate; review found nothing blocking |
 | 22 Sep 2026 | `49386f9` | [35712107521](https://github.com/mattiss01/fittip/actions/runs/35712107521) | Reactivate a cancelled session (M3-20), and a deleted series occurrence stays deleted, closing M3-19 limitation 1; from the owner's review, a logged cancelled session reads as logged, occurrence Delete offers only-this or all-future (moved from Cancel, so the accepted m3-14b and m3-15b flows were rewritten), and only an edit marks "Changed" (ADR-017 amended; flags recomputed, so older change-entry states may still say `hasDiverged: true`). Migration `20260921214230` applied to the founder project — 25 migrations, advisors unchanged at 19 definer + 1 auth |
