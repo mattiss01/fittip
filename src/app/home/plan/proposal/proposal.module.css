@@ -555,9 +555,25 @@
   border-top: 1px dashed var(--ledger-rule);
 }
 
+/*
+ * Colours stated rather than inherited. The dock also carries the global
+ * `save-dock` class, whose text colours assume the dark dock that class was
+ * written for — inside this one, which is paper, the heading and the support
+ * line came out near-invisible against the background.
+ */
 .regenerate > h3 {
   margin: 0;
+  color: var(--ledger-ink);
   font-size: 0.95rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.regenerate > p {
+  color: var(--ledger-muted);
+  font: 400 0.8rem/1.45 inherit;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .regenerate label {

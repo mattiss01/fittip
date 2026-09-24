@@ -61,7 +61,7 @@ as $$
   )
 $$;
 
-select plan(22);
+select plan(24);
 
 -- 1. The boundary ------------------------------------------------------------
 
@@ -339,6 +339,33 @@ select is(
 );
 
 select set_config('request.jwt.claims', null, true);
+
+-- 7. Deleting a source proposal ----------------------------------------------
+--
+-- Pinned because the first version of this migration got it wrong. The self
+-- reference is a *composite* key, and `on delete set null` on one of those
+-- nulls every referencing column — `user_id` among them, which is `not null`.
+-- Deleting any proposal then failed on a row nobody had touched. Cascade is
+-- both correct and what the roadmap's identical reference already used.
+--
+-- Run as a role that may delete: `authenticated` holds no delete on either
+-- table, so the owner could not reach this even if it were broken. What can
+-- reach it is a profile being deleted, which cascades this far.
+reset role;
+
+select lives_ok(
+  $q$delete from public.plan_proposals
+     where user_id = '7e000000-0000-4000-8000-000000000001'
+       and origin = 'ai_initial'$q$,
+  'deleting a proposal a regeneration descends from cascades rather than failing'
+);
+
+select is(
+  (select count(*)::integer from public.plan_proposals
+   where user_id = '7e000000-0000-4000-8000-000000000001'),
+  0,
+  'and takes the proposal derived from it with it'
+);
 
 select * from finish();
 rollback;

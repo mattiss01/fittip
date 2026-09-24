@@ -196,54 +196,54 @@ export function ProposalReview({
             ? COPY.unresolvedSupport(unresolved)
             : COPY.finishSupport(staged)}
         </p>
-        <div className={styles.dockActions}>
-          <form action={action} key={`finish-${state.submission}`}>
-            <input type="hidden" name="proposalId" value={proposalId} />
-            <input
-              type="hidden"
-              name="expectedPlanRevision"
-              value={expectedPlanRevision}
-            />
-            <input type="hidden" name="idempotencyKey" value={finishKey} />
-            <button
-              className={styles.primary}
-              type="submit"
-              disabled={busy || unresolved > 0}
+        {askingAgain ? null : (
+          <div className={styles.dockActions}>
+            <form action={action} key={`finish-${state.submission}`}>
+              <input type="hidden" name="proposalId" value={proposalId} />
+              <input
+                type="hidden"
+                name="expectedPlanRevision"
+                value={expectedPlanRevision}
+              />
+              <input type="hidden" name="idempotencyKey" value={finishKey} />
+              <button
+                className={styles.primary}
+                type="submit"
+                disabled={busy || unresolved > 0}
+              >
+                {COPY.finishAction}
+              </button>
+            </form>
+            <form
+              action={discardAction}
+              key={`discard-${discardState.submission}`}
             >
-              {COPY.finishAction}
-            </button>
-          </form>
-          <form
-            action={discardAction}
-            key={`discard-${discardState.submission}`}
-          >
-            <input type="hidden" name="proposalId" value={proposalId} />
+              <input type="hidden" name="proposalId" value={proposalId} />
+              <button
+                className={styles.dangerAction}
+                type="submit"
+                disabled={busy}
+                // A confirmation only when something would actually be lost, and
+                // it says exactly how much.
+                onClick={(event) => {
+                  if (staged > 0 && !confirm(COPY.discardConfirm(staged))) {
+                    event.preventDefault();
+                  }
+                }}
+              >
+                {COPY.discardAction}
+              </button>
+            </form>
             <button
-              className={styles.dangerAction}
-              type="submit"
-              disabled={busy}
-              // A confirmation only when something would actually be lost, and
-              // it says exactly how much.
-              onClick={(event) => {
-                if (staged > 0 && !confirm(COPY.discardConfirm(staged))) {
-                  event.preventDefault();
-                }
-              }}
-            >
-              {COPY.discardAction}
-            </button>
-          </form>
-          {askingAgain ? null : (
-            <button
-              className={styles.secondaryAction}
+              className="text-button"
               type="button"
               disabled={busy}
               onClick={() => setAskingAgain(true)}
             >
               {COPY.regenerateOpen}
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/*
           The third way a review ends. It says plainly what happens to the two
@@ -279,7 +279,7 @@ export function ProposalReview({
                 {COPY.regenerateSubmit}
               </button>
               <button
-                className={styles.secondaryAction}
+                className="text-button"
                 type="button"
                 disabled={busy}
                 onClick={() => setAskingAgain(false)}

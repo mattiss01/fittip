@@ -65,10 +65,20 @@ alter table public.plan_generation_requests
   add column regeneration_number smallint not null default 0,
   add column regeneration_feedback_hash text;
 
+-- `on delete cascade`, matching the roadmap's identical self-reference, and not
+-- `set null`. On a *composite* foreign key `set null` nulls every referencing
+-- column, `user_id` among them -- which is `not null`, so deleting a proposal
+-- would fail with a constraint violation on a row nobody was touching. Found
+-- by trying to clear a local database and watching it refuse.
+--
+-- Cascade is also the honest behaviour: nothing in normal operation deletes a
+-- proposal, because proposals are permanent records. The one thing that does is
+-- a profile being deleted, and there the request that asked for the regeneration
+-- should go with it.
 alter table public.plan_generation_requests
   add constraint plan_generation_requests_previous_fkey
     foreign key (previous_proposal_id, user_id)
-    references public.plan_proposals (id, user_id) on delete set null;
+    references public.plan_proposals (id, user_id) on delete cascade;
 
 alter table public.plan_generation_requests
   add constraint plan_generation_requests_regeneration_check
@@ -89,10 +99,12 @@ alter table public.plan_proposals
   add column source_proposal_id uuid,
   add column regeneration_feedback text;
 
+-- Cascade for the reason above, and the same shape `roadmap_proposals` uses for
+-- its own `source_proposal_id`.
 alter table public.plan_proposals
   add constraint plan_proposals_source_fkey
     foreign key (source_proposal_id, user_id)
-    references public.plan_proposals (id, user_id) on delete set null;
+    references public.plan_proposals (id, user_id) on delete cascade;
 
 alter table public.plan_proposals
   add constraint plan_proposals_feedback_check
