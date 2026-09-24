@@ -53,9 +53,15 @@ Ordered by dependency. A lane is named where it is not the build lane.
       definitions, and a picker in A2 that sets `personal_activity_id` — the only thing that
       ever will. Carries F-002's rule that an edit changes future reuse and never a
       historical snapshot. Needs a route under `/home/you` or `/home/plan`; owner's call.
-- [ ] **A6 — Series templates and saved sessions carry activities.** `series-actions.ts`
-      passes `[]` as `actions.ts` does, and the saved library prints `name · sport` with no
-      target. Mostly falls out of A1 and A2; listed so it is not forgotten.
+- [ ] **A6 — Series templates and saved sessions carry activities.** Careful lane, and a
+      direct consequence of A2 rather than a tidy-up. `saved_sessions`' write function takes
+      `p_activities` on create and has no such parameter on edit — it *refuses* one, which
+      `saved-session-repository.ts` documents as "nothing can edit a saved session's
+      activities yet". Harmless while every saved session is empty; the moment A2 makes
+      Save to library carry real activities, the library becomes the one surface that shows
+      activities and cannot change them, enforced in SQL. Needs a forward migration for the
+      edit path, plus the surface. `series-actions.ts` passes `[]` as `actions.ts` does, and
+      the library prints `name · sport` with no target.
 - [ ] **A7 — The coach fills in a session's activities.** Careful lane: a new AI operation
       with its own schema, spend, and context cost — the M3-03D detail operation that
       `contracts.ts` defers to. Blocked on the plan context having no headroom left, which
