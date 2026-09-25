@@ -114,10 +114,16 @@ export function LogForm({
   // part. Skipped and replaced both say the planned activities did not, so
   // the list is not asked and a create sends none. A session planned with no
   // activities is still offered the list, because one can be added.
-  const offerActivities =
+  const activitiesHappened =
+    outcome === "completed" || outcome === "partially_completed";
+  // An edit cannot restate a planned log's activities (A4c), so a log changed
+  // to skipped or replaced keeps the actuals it was written with. Said, rather
+  // than left for the owner to find.
+  const keptActivities =
+    existing !== null &&
     planned !== null &&
-    existing === null &&
-    (outcome === "completed" || outcome === "partially_completed");
+    existing.activities.length > 0 &&
+    !activitiesHappened;
   // Everything the chosen outcome would discard from a record that already
   // exists. A field this form stops rendering submits nothing, and the write
   // function assigns every one of these from the payload, so an absent key
@@ -348,6 +354,14 @@ export function LogForm({
         </p>
       )}
 
+      {keptActivities ? (
+        <p className={styles.warning} data-log-keeps-activities role="status">
+          The activities recorded with this log stay on it as{" "}
+          {COMPLETION_OUTCOME_LABELS[outcome].toLowerCase()}. They cannot be
+          corrected here yet.
+        </p>
+      ) : null}
+
       {skipped ? null : (
         <>
           <div className={styles.fieldPair}>
@@ -403,10 +417,11 @@ export function LogForm({
         </>
       )}
 
-      {offerActivities ? (
+      {planned !== null && existing === null ? (
         <ActualActivities
           activities={planned.activities}
           sessionSport={planned.sport}
+          inactive={!activitiesHappened}
         />
       ) : null}
 

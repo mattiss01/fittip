@@ -129,6 +129,32 @@ describe("ActualActivities", () => {
     ).toBeTruthy();
   });
 
+  it("sends nothing while inactive, and keeps every change for when it is not", () => {
+    const view = (inactive: boolean) => (
+      <form>
+        <ActualActivities
+          activities={[SQUAT, SERVES]}
+          sessionSport="Strength"
+          inactive={inactive}
+        />
+      </form>
+    );
+    const { rerender } = render(view(false));
+    fireEvent.click(within(row("Back squat")).getByLabelText("Didn't do this"));
+    const entries = () => new FormData(document.querySelector("form")!);
+
+    rerender(view(true));
+    // Inside a disabled fieldset the field is not submitted, so the action
+    // reads no list at all.
+    expect(entries().get("activities")).toBeNull();
+
+    rerender(view(false));
+    expect(submitted()).toEqual([
+      expect.objectContaining({ name: "Serve practice" }),
+    ]);
+    expect(entries().get("activities")).not.toBeNull();
+  });
+
   it("records the order the activities were done in", () => {
     render(
       <ActualActivities activities={[SQUAT, SERVES]} sessionSport="Strength" />,

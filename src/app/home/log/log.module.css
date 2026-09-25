@@ -201,6 +201,10 @@
   min-width: 0;
 }
 
+.activities[hidden] {
+  display: none;
+}
+
 .activities > legend {
   margin-left: 0.4rem;
   padding: 0 0.35rem;

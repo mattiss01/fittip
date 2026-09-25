@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import styles from "./log.module.css";
 
@@ -72,11 +72,23 @@ let nextKey = 0;
 export function ActualActivities({
   activities,
   sessionSport,
+  inactive = false,
 }: {
   activities: LogPlannedActivityView[];
   /** What an added activity starts as; most are the session's own sport. */
   sessionSport: string;
+  /**
+   * True while the chosen outcome says the planned activities did not happen.
+   * The list stays mounted, so choosing Skipped by mistake and then Completed
+   * again keeps every adjustment; a disabled fieldset submits nothing and
+   * blocks no submit, so an inactive list sends no activities at all.
+   */
+  inactive?: boolean;
 }) {
+  // Ids from `useId`, never from `nextKey`: that counter lives as long as the
+  // server process, so ids built from it differ between the server render and
+  // hydration. `nextKey` is only ever a React key.
+  const prefix = useId();
   const [rows, setRows] = useState<Row[]>(() =>
     activities.map((planned) => ({
       key: `planned-${nextKey++}`,
@@ -134,7 +146,12 @@ export function ActualActivities({
   }
 
   return (
-    <fieldset className={styles.activities} data-log-activities>
+    <fieldset
+      className={styles.activities}
+      data-log-activities
+      disabled={inactive}
+      hidden={inactive}
+    >
       <legend>What you did</legend>
       <p className={styles.fieldHint}>
         Each planned activity starts as planned. Change what differed, mark what
@@ -146,7 +163,7 @@ export function ActualActivities({
           {built.map(({ row, build }, index) => (
             <ActualRow
               key={row.key}
-              idPrefix={`log-activity-${row.key}`}
+              idPrefix={`${prefix}-activity-${index}`}
               row={row}
               index={index}
               total={rows.length}
@@ -227,7 +244,8 @@ function ActualRow({
   // reason the plan's editor gives: the browser is about to point at a
   // control inside this body, and it cannot focus one that is hidden.
   const unnamed = row.name.trim() === "" || row.sport.trim() === "";
-  const open = row.done && (expanded || problem !== null || unnamed);
+  const forced = problem !== null || unnamed;
+  const open = row.done && (expanded || forced);
   const planned =
     row.planned === null ? null : describeMeasurement(row.planned.target);
   const label = row.name.trim() === "" ? "New activity" : row.name;
@@ -287,6 +305,9 @@ function ActualRow({
             type="button"
             aria-expanded={open}
             aria-controls={`${idPrefix}-body`}
+            // A row held open by a problem cannot be folded, so the button
+            // says nothing it cannot do.
+            disabled={forced}
             onClick={() => setExpanded((current) => !current)}
           >
             {open ? "Done adjusting" : "Adjust"}
