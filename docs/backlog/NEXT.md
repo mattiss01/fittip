@@ -121,6 +121,14 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 Not worth their own slot; do them when work lands nearby.
 
+- Sign-in offers a dead link. `auth-form.tsx` links to `/signup`, and `proxy.ts` redirects
+  `/signup` back to `/` whenever the runtime policy is `founder-staging` — so on the founder
+  environment the link always bounces to where it started. The redirect is right: production
+  is owner-only, not a public launch (ADR-005, ADR-007). The link is what is wrong, and it
+  should be hidden under the same condition rather than the redirect being softened. Reported
+  by the owner on 25 Sep 2026; which environment they saw it in is not yet confirmed, and
+  locally the policy is `local`, so the page should render there.
+
 - Recurring scope fallback copy: the Edit panel explains a missing whole-series scope as
   "outside the active dates of its ended series", but the predicate also withholds it when
   the rule date has fallen behind today. M3-20 rewrote the Delete panel's version; Edit's
