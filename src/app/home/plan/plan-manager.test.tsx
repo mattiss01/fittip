@@ -80,7 +80,6 @@ function session(overrides: Partial<PlanSessionView> = {}): PlanSessionView {
     note: null,
     isLocked: false,
     status: "active",
-    activityCount: 0,
     activities: [],
     seriesId: null,
     occurrenceDate: null,

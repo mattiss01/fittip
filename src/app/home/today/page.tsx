@@ -10,8 +10,10 @@ import styles from "./today.module.css";
 
 import homeStyles from "../home.module.css";
 import { planWindowFor } from "../plan/plan-window";
+import { describeMeasurement } from "@/lib/training/describe-measurement";
 import {
   replacedByLabel,
+  replacesLabels,
   type Completion,
 } from "@/server/completions/completion-log";
 import { readPlanWindowToppedUp } from "@/server/completions/plan-window-top-up";
@@ -170,7 +172,13 @@ function toSessionView(
     isLocked: session.isLocked,
     status: session.status,
     isRecurring: session.seriesId !== null,
-    activityCount: session.activities.length,
+    activities: session.activities
+      .toSorted((left, right) => left.position - right.position)
+      .map((activity) => ({
+        key: activity.id,
+        name: activity.name,
+        detail: describeMeasurement(activity.target ?? null),
+      })),
     completion: completion === null ? null : toCompletionView(completion),
   };
 }
@@ -192,6 +200,12 @@ function toCompletionView(completion: Completion): TodayCompletionView {
     note: completion.note ?? null,
     replacementDescription: completion.replacementDescription ?? null,
     replacedBy: replacedByLabel(completion),
+    replaces: replacesLabels(completion),
+    activities: completion.activities.map((activity) => ({
+      key: String(activity.position),
+      name: activity.name,
+      detail: describeMeasurement(activity.actualMeasurement ?? null),
+    })),
     pain: completion.painReported,
     illness: completion.illnessReported,
     injury: completion.injuryReported,

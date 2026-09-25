@@ -1,0 +1,55 @@
+/*
+ * A card's activities as a ruled list: one line per activity at 390px, the
+ * name in the card's serif and the target or actual beside it in the
+ * ledger's Courier, wrapping under the name when the pair does not fit.
+ */
+
+.list {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.2rem 0 0;
+  min-width: 0;
+}
+
+.label {
+  margin: 0;
+  color: var(--ledger-muted);
+  font:
+    700 0.62rem "Courier New",
+    monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.items {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ledger-rule);
+}
+
+.item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.1rem 0.75rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--ledger-rule);
+  min-width: 0;
+}
+
+.name {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
+.detail {
+  color: var(--ledger-muted);
+  font:
+    0.74rem "Courier New",
+    monospace;
+  overflow-wrap: anywhere;
+}

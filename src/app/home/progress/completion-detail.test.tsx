@@ -87,6 +87,32 @@ describe("one completion", () => {
     expect(within(planned).getByText("Monday, 3 August 2026")).toBeTruthy();
   });
 
+  it("lists what was actually done on the recorded sheet", async () => {
+    getCompletion.mockResolvedValue({
+      ...completion(),
+      activities: [
+        {
+          position: 0,
+          plannedPosition: 0,
+          name: "Serve practice",
+          sport: "Tennis",
+          measurementMode: "duration_intensity" as const,
+          actualMeasurement: { duration_minutes: 20 },
+        },
+      ],
+    });
+
+    render(
+      await CompletionPage({ params: Promise.resolve({ id: COMPLETION_ID }) }),
+    );
+
+    const done = document.querySelector(
+      "[data-progress-recorded-activities]",
+    ) as HTMLElement;
+    expect(within(done).getByText("Serve practice")).toBeTruthy();
+    expect(within(done).getByText("20 min")).toBeTruthy();
+  });
+
   it("says plainly that unplanned training had no plan beside it", async () => {
     getCompletion.mockResolvedValue({
       ...completion(),
@@ -193,6 +219,8 @@ function completion() {
       ],
     },
     revision: 1,
+    replacedBy: null,
+    replaces: [],
     activities: [],
     updatedAt: "2026-08-31T10:00:00.000Z",
   };

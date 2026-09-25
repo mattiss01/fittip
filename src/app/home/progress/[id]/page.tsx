@@ -13,6 +13,7 @@ import styles from "../progress.module.css";
 import homeStyles from "../../home.module.css";
 import {
   replacedByLabel,
+  replacesLabels,
   type Completion,
 } from "@/server/completions/completion-log";
 import {
@@ -118,6 +119,12 @@ function toCompletionView(completion: Completion): ProgressCompletionView {
     note: completion.note ?? null,
     replacementDescription: completion.replacementDescription ?? null,
     replacedBy: replacedByLabel(completion),
+    replaces: replacesLabels(completion),
+    activities: completion.activities.map((activity) => ({
+      position: activity.position,
+      name: activity.name,
+      detail: describeTarget(activity.actualMeasurement ?? null),
+    })),
     pain: completion.painReported,
     illness: completion.illnessReported,
     injury: completion.injuryReported,

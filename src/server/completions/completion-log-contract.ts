@@ -607,6 +607,17 @@ export function registerCompletionLogContract(
         (await completions.get(second.completionId))?.replacedBy?.completionId,
       ).toBe(ride!.completionId);
 
+      // The ride knows what it stood in for. Both were logged on one day, so
+      // their order falls to the ids and is not asserted.
+      const replaces = (await completions.get(ride!.completionId))?.replaces;
+      expect(replaces).toHaveLength(2);
+      expect(replaces).toEqual(
+        expect.arrayContaining([
+          { completionId: first.completionId, title: "Tempo run" },
+          { completionId: second.completionId, title: "Easy run" },
+        ]),
+      );
+
       // Corrected away from replaced, a log points nowhere; the ride stays.
       await completions.applyChange({
         operation: "edit",

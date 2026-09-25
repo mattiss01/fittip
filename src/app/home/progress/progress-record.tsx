@@ -40,6 +40,13 @@ export type ProgressCompletionView = {
    * shows its text instead.
    */
   replacedBy: { id: string; label: string } | null;
+  /** The planned sessions this unplanned training stood in for, by name. */
+  replaces: { id: string; label: string }[];
+  /**
+   * What was actually done, in the order it was done, already in words. Only
+   * the detail page draws it, so only that page builds it.
+   */
+  activities?: { position: number; name: string; detail: string | null }[];
   pain: boolean;
   illness: boolean;
   injury: boolean;
@@ -87,6 +94,19 @@ export function RecordedFacts({
             </div>
           ))}
         </dl>
+      )}
+      {completion.replaces.length === 0 ? null : (
+        <p className={styles.body} data-replaces>
+          Instead of:{" "}
+          {completion.replaces.map((replaced, index) => (
+            <span key={replaced.id}>
+              {index === 0 ? null : ", "}
+              <Link href={`/home/progress/${replaced.id}`}>
+                {replaced.label}
+              </Link>
+            </span>
+          ))}
+        </p>
       )}
       {completion.replacedBy !== null ? (
         <p className={styles.body} data-replaced-by>

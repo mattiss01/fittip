@@ -31,7 +31,7 @@ export type InMemoryCompletionLogOptions = {
 export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
   private readonly completions = new Map<
     string,
-    Omit<Completion, "replacedBy">
+    Omit<Completion, "replacedBy" | "replaces">
   >();
   /**
    * Replaced log id to the unplanned log it points at. Kept apart and read
@@ -148,7 +148,7 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
     }
     // Judged in the zone the completion carries, not the current one.
     this.requireNotFuture(facts.actualLocalDate, existing.timezoneName);
-    const updated: Omit<Completion, "replacedBy"> = {
+    const updated: Omit<Completion, "replacedBy" | "replaces"> = {
       ...facts,
       // A name the edit does not state is left as it is.
       title: title ?? existing.title,
@@ -215,7 +215,7 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
           : first !== undefined
             ? { title: first.name, sport: first.sport }
             : { title: null, sport: null };
-    const completion: Omit<Completion, "replacedBy"> = {
+    const completion: Omit<Completion, "replacedBy" | "replaces"> = {
       ...facts,
       ...name,
       id: randomUUID(),
@@ -265,12 +265,28 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
     else this.links.set(completionId, target);
   }
 
-  private view(completion: Omit<Completion, "replacedBy">): Completion {
+  private view(
+    completion: Omit<Completion, "replacedBy" | "replaces">,
+  ): Completion {
     const target = this.links.get(completion.id);
     const linked =
       target === undefined ? undefined : this.completions.get(target);
+    const replaces = [...this.links]
+      .filter(([, target]) => target === completion.id)
+      .map(([id]) => this.completions.get(id))
+      .filter((row) => row !== undefined)
+      .toSorted(
+        (left, right) =>
+          left.actualLocalDate.localeCompare(right.actualLocalDate) ||
+          left.id.localeCompare(right.id),
+      )
+      .map((row) => ({
+        completionId: row.id,
+        title: row.title ?? row.plannedSnapshot?.title ?? null,
+      }));
     return {
       ...copy(completion),
+      replaces,
       replacedBy:
         linked === undefined
           ? null

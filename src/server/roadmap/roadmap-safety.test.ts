@@ -86,6 +86,7 @@ function completion(overrides: Partial<Completion>): Completion {
     title: null,
     sport: null,
     replacedBy: null,
+    replaces: [],
     revision: 1,
     activities: [],
     updatedAt: "2026-09-14T09:00:00.000Z",

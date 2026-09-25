@@ -434,6 +434,7 @@ function completion(overrides: Partial<Completion> = {}): Completion {
     title: null,
     sport: null,
     replacedBy: null,
+    replaces: [],
     durationMinutes: 58,
     perceivedEffort: 6,
     feeling: "good",

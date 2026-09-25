@@ -173,6 +173,12 @@ export type Completion = CompletionFacts & {
     sport: string | null;
   } | null;
   /**
+   * The replaced logs pointing at this one, which is how unplanned training
+   * knows what it stood in for. Empty on every planned log: only unplanned
+   * training can be pointed at.
+   */
+  replaces: { completionId: string; title: string | null }[];
+  /**
    * The optimistic token the surface reads and sends back. It is not a revision
    * chain: no prior version is retained and none can be browsed.
    */
@@ -308,6 +314,19 @@ export function replacedByLabel(
     id: linked.completionId,
     label: linked.sport === null ? name : `${name} (${linked.sport})`,
   };
+}
+
+/**
+ * The planned sessions an unplanned log stood in for, as a surface names
+ * them: each by its log's own name, else its snapshot's.
+ */
+export function replacesLabels(
+  completion: Completion,
+): { id: string; label: string }[] {
+  return (completion.replaces ?? []).map((replaced) => ({
+    id: replaced.completionId,
+    label: replaced.title ?? "A planned session",
+  }));
 }
 
 /** The most activities one completion may carry, as for a planned session. */

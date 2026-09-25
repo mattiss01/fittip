@@ -125,6 +125,43 @@ export class PostgresCompletionLogAdapter implements CompletionLogAdapter {
       ),
     ];
     const linked = new Map<string, unknown>();
+    // The reverse: which replaced logs point at each unplanned row read here.
+    const unplanned = rows
+      .map((row) => readRecord(row))
+      .filter((row) => row.plan_session_id === null)
+      .map((row) => row.id)
+      .filter((id): id is string => typeof id === "string");
+    const replacing = new Map<string, Completion["replaces"]>();
+    if (unplanned.length > 0) {
+      const { data, error } = await this.client
+        .from("completions")
+        .select("id, replaced_by_completion_id, title, planned_snapshot")
+        .eq("user_id", userId)
+        .in("replaced_by_completion_id", unplanned)
+        .order("actual_local_date", { ascending: true })
+        .order("id", { ascending: true });
+      if (error) throw new CompletionPersistenceError();
+      for (const row of data ?? []) {
+        const target = row.replaced_by_completion_id;
+        if (typeof target !== "string") throw new CompletionPersistenceError();
+        // A replaced log is always planned, so it always has a snapshot; it is
+        // read without assuming that, so one odd row is named "A planned
+        // session" rather than refusing the whole read.
+        const snapshot = row.planned_snapshot;
+        const snapshotTitle =
+          typeof snapshot === "object" &&
+          snapshot !== null &&
+          !Array.isArray(snapshot) &&
+          typeof snapshot.title === "string"
+            ? snapshot.title
+            : null;
+        const title = row.title ?? snapshotTitle;
+        replacing.set(target, [
+          ...(replacing.get(target) ?? []),
+          { completionId: row.id, title },
+        ]);
+      }
+    }
     if (targets.length > 0) {
       const { data, error } = await this.client
         .from("completions")
@@ -134,9 +171,10 @@ export class PostgresCompletionLogAdapter implements CompletionLogAdapter {
       if (error) throw new CompletionPersistenceError();
       for (const row of data ?? []) linked.set(row.id, row);
     }
-    return rows.map((row) =>
-      parseCompletion(row, (id) => linked.get(id) ?? null),
-    );
+    return rows.map((row) => ({
+      ...parseCompletion(row, (id) => linked.get(id) ?? null),
+      replaces: replacing.get(readRecord(row).id as string) ?? [],
+    }));
   }
 
   /**
@@ -303,6 +341,7 @@ function parseCompletion(
         : parsePlannedSnapshot(completion.planned_snapshot),
     title: completion.title as string | null,
     sport: completion.sport as string | null,
+    replaces: [],
     replacedBy: parseReplacedBy(
       completion.replaced_by_completion_id,
       typeof completion.replaced_by_completion_id === "string"
