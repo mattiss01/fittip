@@ -277,11 +277,13 @@ function toTrainingHistoryCompletion(
   return {
     localDate: completion.actualLocalDate,
     status: completion.status,
-    // An unplanned completion has no planned session, so it has no planned
-    // title or sport. Reporting null is honest; deriving one from the logged
-    // activities would invent a session the owner never planned.
-    title: completion.plannedSnapshot?.title ?? null,
-    sport: completion.plannedSnapshot?.sport ?? null,
+    // The log's own name, as ADR-013 decision 4 was clarified on 25 Sep
+    // 2026: what the owner called the training, bounded as a plan title is.
+    // A log written before logs carried one falls back to its snapshot's, and
+    // an unplanned one that never had a name reports null rather than one
+    // derived from its activities.
+    title: completion.title ?? completion.plannedSnapshot?.title ?? null,
+    sport: completion.sport ?? completion.plannedSnapshot?.sport ?? null,
     durationMinutes: completion.durationMinutes ?? null,
     perceivedEffort: completion.perceivedEffort ?? null,
     feeling: completion.feeling ?? null,

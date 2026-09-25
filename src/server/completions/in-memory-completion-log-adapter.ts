@@ -7,6 +7,7 @@ import {
   CompletionTimezoneRequiredError,
   CompletionValidationError,
   type Completion,
+  type CompletionActivity,
   type CompletionChange,
   type CompletionDraft,
   type CompletionLogAdapter,
@@ -101,16 +102,19 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
     ) {
       throw new CompletionValidationError();
     }
-    const { activities, ...facts } = change.completion;
-    // Only unplanned training may have its activities corrected: a planned
-    // completion is measured against its snapshot.
-    if (activities !== undefined && existing.planSessionId !== null) {
-      throw new CompletionValidationError();
+    const { activities, title, sport, ...facts } = change.completion;
+    // A planned log's actuals are corrected like any other's; its snapshot is
+    // read to check what they answer and is never written.
+    if (activities !== undefined) {
+      requireAnswersSnapshot(activities, existing.plannedSnapshot);
     }
     // Judged in the zone the completion carries, not the current one.
     this.requireNotFuture(facts.actualLocalDate, existing.timezoneName);
     const updated: Completion = {
       ...facts,
+      // A name the edit does not state is left as it is.
+      title: title ?? existing.title,
+      sport: sport ?? existing.sport,
       id: existing.id,
       planSessionId: existing.planSessionId,
       timezoneName: existing.timezoneName,
@@ -129,7 +133,7 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
 
   private create(draft: CompletionDraft): CompletionReceipt {
     if (this.timezoneName === null) throw new CompletionTimezoneRequiredError();
-    const { planSessionId, activities, ...facts } = draft;
+    const { planSessionId, activities, title, sport, ...facts } = draft;
     this.requireNotFuture(facts.actualLocalDate, this.timezoneName);
     let plannedSnapshot: CompletionPlannedSnapshot | null = null;
     if (planSessionId !== undefined) {
@@ -145,8 +149,21 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
       // Copied here and never consulted again, which is the whole point.
       plannedSnapshot = copy(session);
     }
+    requireAnswersSnapshot(activities, plannedSnapshot);
+    // As the write function: a stated name, else the planned session's, else
+    // the first activity's, which is where unplanned training kept it before.
+    const first = activities.toSorted((l, r) => l.position - r.position)[0];
+    const name =
+      title !== undefined && sport !== undefined
+        ? { title, sport }
+        : plannedSnapshot !== null
+          ? { title: plannedSnapshot.title, sport: plannedSnapshot.sport }
+          : first !== undefined
+            ? { title: first.name, sport: first.sport }
+            : { title: null, sport: null };
     const completion: Completion = {
       ...facts,
+      ...name,
       id: randomUUID(),
       planSessionId: planSessionId ?? null,
       timezoneName: this.timezoneName,
@@ -178,4 +195,26 @@ function localDateIn(timezoneName: string, instant: Date): string {
 
 function copy<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
+}
+
+/**
+ * Every `plannedPosition` names an activity of the log's own snapshot, as the
+ * write function checks. Unplanned training has no snapshot, so it answers
+ * nothing.
+ */
+function requireAnswersSnapshot(
+  activities: CompletionActivity[],
+  snapshot: CompletionPlannedSnapshot | null,
+): void {
+  const planned = new Set(
+    (snapshot?.activities ?? []).map((activity) => activity.position),
+  );
+  for (const activity of activities) {
+    if (
+      activity.plannedPosition !== undefined &&
+      !planned.has(activity.plannedPosition)
+    ) {
+      throw new CompletionValidationError();
+    }
+  }
 }

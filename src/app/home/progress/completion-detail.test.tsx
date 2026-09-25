@@ -93,14 +93,9 @@ describe("one completion", () => {
       planSessionId: null,
       status: "unplanned" as const,
       plannedSnapshot: null,
-      activities: [
-        {
-          position: 0,
-          name: "Sunrise swim",
-          sport: "Swimming",
-          measurementMode: "custom" as const,
-        },
-      ],
+      title: "Sunrise swim",
+      sport: "Swimming",
+      activities: [],
     });
 
     render(

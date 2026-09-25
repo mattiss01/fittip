@@ -6,7 +6,7 @@ import styles from "./log.module.css";
 
 import homeStyles from "../home.module.css";
 import { isoDateInTimezone } from "@/lib/date/local-date";
-import { describeMeasurement } from "@/lib/training/describe-measurement";
+import type { LogPlannedActivityView } from "./actual-activities";
 import type { Completion } from "@/server/completions/completion-log";
 import {
   CompletionAuthenticationError,
@@ -121,17 +121,14 @@ async function renderForm(
         );
       }
       const snapshot = completion.plannedSnapshot;
-      // A planned log is named by the snapshot; an unplanned one by the single
-      // activity it was written with. A log written before this surface
-      // collected that activity has neither, and keeps the old fallback.
-      const written = completion.activities[0] ?? null;
+      const existing = toExistingView(completion);
       return (
         <>
           <SourceCard
             label="Editing a log"
-            title={snapshot?.title ?? written?.name ?? "Unplanned training"}
+            title={existing.title ?? "Unplanned training"}
             meta={[
-              snapshot?.sport ?? written?.sport ?? null,
+              existing.sport,
               snapshot === null
                 ? null
                 : `Planned for ${longDay(snapshot.localDate)}`,
@@ -148,12 +145,12 @@ async function renderForm(
                     sport: snapshot.sport,
                     expectedDurationMinutes:
                       snapshot.expectedDurationMinutes ?? null,
-                    // An edit is never offered the planned list: what was
-                    // recorded is read back instead, below the numbers.
-                    activities: [],
+                    // What the log was measured against, so each recorded
+                    // actual is shown beside its target again.
+                    activities: snapshot.activities.map(toPlannedActivityView),
                   }
             }
-            existing={toExistingView(completion)}
+            existing={existing}
             defaultDate={completion.actualLocalDate}
             today={today}
             returnDate={completion.actualLocalDate}
@@ -198,16 +195,9 @@ async function renderForm(
         title: session.title,
         sport: session.sport,
         expectedDurationMinutes: session.expectedDurationMinutes ?? null,
-        activities: [...session.activities]
-          .sort((left, right) => left.position - right.position)
-          .map((activity) => ({
-            position: activity.position,
-            personalActivityId: activity.personalActivityId ?? null,
-            name: activity.name,
-            sport: activity.sport,
-            measurementMode: activity.measurementMode,
-            target: activity.target ?? null,
-          })),
+        activities: session.activities
+          .toSorted((left, right) => left.position - right.position)
+          .map(toPlannedActivityView),
       };
       return (
         <>
@@ -325,17 +315,43 @@ function toExistingView(completion: Completion): LogExistingView {
     feeling: completion.feeling ?? null,
     note: completion.note ?? null,
     replacementDescription: completion.replacementDescription ?? null,
-    activityName: completion.activities[0]?.name ?? null,
-    activitySport: completion.activities[0]?.sport ?? null,
+    title: completion.title ?? completion.plannedSnapshot?.title ?? null,
+    sport: completion.sport ?? completion.plannedSnapshot?.sport ?? null,
     activities: completion.activities.map((activity) => ({
-      position: activity.position,
+      plannedPosition: activity.plannedPosition ?? null,
+      personalActivityId: activity.personalActivityId ?? null,
       name: activity.name,
-      actual: describeMeasurement(activity.actualMeasurement ?? null),
+      sport: activity.sport,
+      measurementMode: activity.measurementMode,
+      actual: activity.actualMeasurement ?? null,
     })),
     pain: completion.painReported,
     illness: completion.illnessReported,
     injury: completion.injuryReported,
     severeFatigue: completion.severeFatigueReported,
+  };
+}
+
+/**
+ * A planned activity as the form offers it to be answered: one of the live
+ * plan's on a create, one of the snapshot's on an edit. The two carry the
+ * same fields, and `position` is the one an actual's `plannedPosition` names.
+ */
+function toPlannedActivityView(activity: {
+  position: number;
+  personalActivityId?: string;
+  name: string;
+  sport: string;
+  measurementMode: LogPlannedActivityView["measurementMode"];
+  target?: LogPlannedActivityView["target"] | null;
+}): LogPlannedActivityView {
+  return {
+    position: activity.position,
+    personalActivityId: activity.personalActivityId ?? null,
+    name: activity.name,
+    sport: activity.sport,
+    measurementMode: activity.measurementMode,
+    target: activity.target ?? null,
   };
 }
 

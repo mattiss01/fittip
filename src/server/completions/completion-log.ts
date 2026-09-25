@@ -36,7 +36,14 @@ export type CompletionFeeling = (typeof COMPLETION_FEELINGS)[number];
 /** What one activity of a session actually was. */
 export type CompletionActivity = {
   personalActivityId?: string;
+  /** The order it was done in, which need not be the plan's. */
   position: number;
+  /**
+   * Which activity of this completion's own planned snapshot it answers, by
+   * that activity's position. Absent for one added while logging, for every
+   * activity of unplanned training, and for actuals written before A4bc.
+   */
+  plannedPosition?: number;
   name: string;
   sport: string;
   instructions?: string;
@@ -98,11 +105,19 @@ export type CompletionFacts = {
   severeFatigueReported: boolean;
 };
 
-export type CompletionDraft = CompletionFacts & {
-  /** Absent exactly when the status is `unplanned`. */
-  planSessionId?: string;
-  activities: CompletionActivity[];
-};
+/**
+ * What the owner called the training when logging it, both halves or neither.
+ * It is the log's own: a planned log is prefilled from the plan, and renaming
+ * it never reaches the plan or the snapshot.
+ */
+export type CompletionName = { title: string; sport: string };
+
+export type CompletionDraft = CompletionFacts &
+  Partial<CompletionName> & {
+    /** Absent exactly when the status is `unplanned`. */
+    planSessionId?: string;
+    activities: CompletionActivity[];
+  };
 
 export type Completion = CompletionFacts & {
   id: string;
@@ -115,6 +130,12 @@ export type Completion = CompletionFacts & {
   timezoneName: string;
   plannedSnapshot: CompletionPlannedSnapshot | null;
   /**
+   * The log's own name. Null only on a log written before logs carried one
+   * and never renamed since; a reader falls back to the snapshot's.
+   */
+  title: string | null;
+  sport: string | null;
+  /**
    * The optimistic token the surface reads and sends back. It is not a revision
    * chain: no prior version is retained and none can be browsed.
    */
@@ -124,14 +145,15 @@ export type Completion = CompletionFacts & {
 };
 
 /**
- * A correction. `activities` restates the list in full and is admitted only for
- * a completion with no planned link — a planned one is measured against its
- * snapshot, and rewriting that would rewrite history. Leaving the key out
- * leaves the activities alone.
+ * A correction. `activities` restates the list in full, for planned and
+ * unplanned logs alike: what a planned log was measured against is its
+ * snapshot, which no edit writes. Leaving `activities`, or the name, out
+ * leaves it as it is.
  */
-export type CompletionEdit = CompletionFacts & {
-  activities?: CompletionActivity[];
-};
+export type CompletionEdit = CompletionFacts &
+  Partial<CompletionName> & {
+    activities?: CompletionActivity[];
+  };
 
 export type CompletionChange =
   | { operation: "create"; completion: CompletionDraft }
@@ -272,7 +294,7 @@ export function parseCompletionChange(value: unknown): CompletionChange {
 
 function parseDraft(value: unknown): CompletionDraft {
   const record = readRecord(value);
-  const { planSessionId, activities, ...rest } = record;
+  const { planSessionId, activities, title, sport, ...rest } = record;
   if (
     !Array.isArray(activities) ||
     activities.length > COMPLETION_ACTIVITY_LIMIT
@@ -287,17 +309,34 @@ function parseDraft(value: unknown): CompletionDraft {
   if (named !== (facts.status === "unplanned")) {
     throw new CompletionValidationError();
   }
+  const parsedActivities = parseActivityList(activities);
+  // Unplanned training has no snapshot, so none of its actuals can answer a
+  // planned activity. Whether a planned one names a real activity of the
+  // snapshot is the write function's to judge: only it reads the plan row.
+  if (named && parsedActivities.some((a) => a.plannedPosition !== undefined)) {
+    throw new CompletionValidationError();
+  }
   return {
     ...facts,
+    ...parseName(title, sport),
     ...(named ? {} : { planSessionId: readUuid(planSessionId) }),
-    activities: parseActivityList(activities),
+    activities: parsedActivities,
+  };
+}
+
+/** Both halves or neither, trimmed, bounded as a plan session's are. */
+function parseName(title: unknown, sport: unknown): Partial<CompletionName> {
+  if (title === undefined && sport === undefined) return {};
+  return {
+    title: readRequiredString(title, 120),
+    sport: readRequiredString(sport, 80),
   };
 }
 
 function parseEdit(value: unknown): CompletionEdit {
   const record = readRecord(value);
-  const { activities, ...rest } = record;
-  const facts = parseFacts(rest);
+  const { activities, title, sport, ...rest } = record;
+  const facts = { ...parseFacts(rest), ...parseName(title, sport) };
   // Absent means "leave them alone"; an explicit list replaces the whole set.
   if (activities === undefined) return facts;
   return { ...facts, activities: parseActivityList(activities) };
@@ -308,10 +347,18 @@ function parseActivityList(value: unknown): CompletionActivity[] {
     throw new CompletionValidationError();
   }
   const positions = new Set<number>();
+  const answered = new Set<number>();
   return value.map((activity) => {
     const parsed = parseActivity(activity);
     if (positions.has(parsed.position)) throw new CompletionValidationError();
     positions.add(parsed.position);
+    // One actual per planned activity, as `completion_activities_planned_key`.
+    if (parsed.plannedPosition !== undefined) {
+      if (answered.has(parsed.plannedPosition)) {
+        throw new CompletionValidationError();
+      }
+      answered.add(parsed.plannedPosition);
+    }
     return parsed;
   });
 }
@@ -369,6 +416,7 @@ function parseActivity(value: unknown): CompletionActivity {
   assertOnlyKeys(record, [
     "personalActivityId",
     "position",
+    "plannedPosition",
     "name",
     "sport",
     "instructions",
@@ -385,6 +433,9 @@ function parseActivity(value: unknown): CompletionActivity {
       ? {}
       : { personalActivityId: readUuid(record.personalActivityId) }),
     position: readInteger(record.position, 0, 99),
+    ...(record.plannedPosition === undefined || record.plannedPosition === null
+      ? {}
+      : { plannedPosition: readInteger(record.plannedPosition, 0, 99) }),
     name: readRequiredString(record.name, 120),
     sport: readRequiredString(record.sport, 80),
     ...optionalString("instructions", record.instructions, 2000),

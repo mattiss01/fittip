@@ -7,6 +7,7 @@ import { logCompletionAction } from "./actions";
 import {
   ActualActivities,
   type LogPlannedActivityView,
+  type LogRecordedActivityView,
 } from "./actual-activities";
 import {
   COMPLETION_FEELING_CHOICES,
@@ -30,7 +31,10 @@ export type LogPlannedView = {
   title: string;
   sport: string;
   expectedDurationMinutes: number | null;
-  /** In plan order. Offered only when the log is first written. */
+  /**
+   * In plan order: the live plan's on a create, the snapshot's on an edit,
+   * which is what the log was measured against.
+   */
   activities: LogPlannedActivityView[];
 };
 
@@ -46,19 +50,13 @@ export type LogExistingView = {
   note: string | null;
   replacementDescription: string | null;
   /**
-   * The first completion activity, which is where an unplanned log's title and
-   * sport live. Null on a planned log, whose name comes from the planned
-   * snapshot, and on an unplanned log written before this surface collected
-   * them.
+   * The log's own name, or the snapshot's for a log written before logs
+   * carried one. Null only on unplanned training that never had a name.
    */
-  activityName: string | null;
-  activitySport: string | null;
-  /**
-   * What a planned log recorded per activity, already in words. Read back
-   * rather than offered: the write function refuses to restate a planned
-   * log's activities, so an input here would take a correction and drop it.
-   */
-  activities: { position: number; name: string; actual: string | null }[];
+  title: string | null;
+  sport: string | null;
+  /** What the log records per activity, in the order it was done. */
+  activities: LogRecordedActivityView[];
   pain: boolean;
   illness: boolean;
   injury: boolean;
@@ -110,20 +108,13 @@ export function LogForm({
   // felt, so those three are not asked. Derived during render rather than
   // mirrored into state, so there is one source of truth for the outcome.
   const skipped = outcome === "skipped";
-  // Per-activity actuals belong to a session that happened, in whole or in
-  // part. Skipped and replaced both say the planned activities did not, so
-  // the list is not asked and a create sends none. A session planned with no
-  // activities is still offered the list, because one can be added.
+  // Per-activity actuals belong to training that happened, in whole or in
+  // part, planned or not. Skipped and replaced both say the planned
+  // activities did not, so the list is not asked and nothing is sent for it.
   const activitiesHappened =
-    outcome === "completed" || outcome === "partially_completed";
-  // An edit cannot restate a planned log's activities (A4c), so a log changed
-  // to skipped or replaced keeps the actuals it was written with. Said, rather
-  // than left for the owner to find.
-  const keptActivities =
-    existing !== null &&
-    planned !== null &&
-    existing.activities.length > 0 &&
-    !activitiesHappened;
+    outcome === "completed" ||
+    outcome === "partially_completed" ||
+    outcome === "unplanned";
   // Everything the chosen outcome would discard from a record that already
   // exists. A field this form stops rendering submits nothing, and the write
   // function assigns every one of these from the payload, so an absent key
@@ -143,6 +134,9 @@ export function LogForm({
           ...(skipped && existing.feeling !== null ? ["how it felt"] : []),
           ...(outcome !== "replaced" && existing.replacementDescription !== null
             ? ["what you did instead"]
+            : []),
+          ...(!activitiesHappened && existing.activities.length > 0
+            ? ["the activities"]
             : []),
         ];
 
@@ -233,6 +227,42 @@ export function LogForm({
         {state.message}
       </p>
 
+      {/* Every log carries its own name. A planned one starts as the plan's,
+          and changing it here renames the log alone: the plan, and the
+          snapshot the log was measured against, keep theirs. */}
+      <div className={styles.field}>
+        <label htmlFor="log-title">Title</label>
+        <input
+          id="log-title"
+          name="title"
+          type="text"
+          required
+          maxLength={120}
+          autoComplete="off"
+          defaultValue={existing?.title ?? planned?.title ?? ""}
+        />
+        <span className={styles.fieldHint}>
+          {planned === null
+            ? "What you did, in your own words."
+            : "Taken from the plan. Change it if you did something else; the plan keeps its own."}
+        </span>
+      </div>
+      <div className={styles.field}>
+        <label htmlFor="log-sport">Sport</label>
+        <input
+          id="log-sport"
+          name="sport"
+          type="text"
+          required
+          maxLength={80}
+          autoComplete="off"
+          defaultValue={existing?.sport ?? planned?.sport ?? ""}
+        />
+        <span className={styles.fieldHint}>
+          Whatever you call it. FitTip keeps your own words.
+        </span>
+      </div>
+
       {choices.length === 1 ? (
         <>
           <input type="hidden" name="status" value={choices[0].value} />
@@ -240,55 +270,6 @@ export function LogForm({
             {choices[0].hint} It is recorded as {choices[0].label.toLowerCase()}{" "}
             training, with no planned session attached.
           </p>
-          {/* Unplanned training carries its name as its one activity, so this
-              is the only place that name lives - and correcting it is an
-              ordinary edit, not a rewrite of anything a plan promised. */}
-          <div className={styles.field}>
-            <label htmlFor="log-title">Title</label>
-            <input
-              id="log-title"
-              name="title"
-              type="text"
-              required
-              maxLength={120}
-              autoComplete="off"
-              defaultValue={existing?.activityName ?? ""}
-            />
-            <span className={styles.fieldHint}>
-              What you did, in your own words.
-            </span>
-          </div>
-          <div className={styles.field}>
-            <label htmlFor="log-sport">Sport</label>
-            <input
-              id="log-sport"
-              name="sport"
-              type="text"
-              required
-              maxLength={80}
-              autoComplete="off"
-              defaultValue={existing?.activitySport ?? ""}
-            />
-            <span className={styles.fieldHint}>
-              Whatever you call it. FitTip keeps your own words.
-            </span>
-          </div>
-          {existing === null ? null : (
-            // What the naming was, so an edit that changes neither sends no
-            // activity list and leaves whatever else the record carries alone.
-            <>
-              <input
-                type="hidden"
-                name="originalTitle"
-                value={existing.activityName ?? ""}
-              />
-              <input
-                type="hidden"
-                name="originalSport"
-                value={existing.activitySport ?? ""}
-              />
-            </>
-          )}
         </>
       ) : (
         // A select, like "How it felt", rather than four full-width rules: the
@@ -354,14 +335,6 @@ export function LogForm({
         </p>
       )}
 
-      {keptActivities ? (
-        <p className={styles.warning} data-log-keeps-activities role="status">
-          The activities recorded with this log stay on it as{" "}
-          {COMPLETION_OUTCOME_LABELS[outcome].toLowerCase()}. They cannot be
-          corrected here yet.
-        </p>
-      ) : null}
-
       {skipped ? null : (
         <>
           <div className={styles.fieldPair}>
@@ -417,35 +390,12 @@ export function LogForm({
         </>
       )}
 
-      {planned !== null && existing === null ? (
-        <ActualActivities
-          activities={planned.activities}
-          sessionSport={planned.sport}
-          inactive={!activitiesHappened}
-        />
-      ) : null}
-
-      {existing === null ||
-      planned === null ||
-      existing.activities.length === 0 ? null : (
-        <section className={styles.activities} data-log-recorded-activities>
-          <p className={styles.sectionLabel}>What you did</p>
-          <ol className={styles.activityRows}>
-            {existing.activities.map((activity) => (
-              <li className={styles.activityRow} key={activity.position}>
-                <p className={styles.activityName}>{activity.name}</p>
-                <p className={styles.activityLine}>
-                  Did: {activity.actual ?? "not measured"}
-                </p>
-              </li>
-            ))}
-          </ol>
-          <p className={styles.fieldHint}>
-            These were recorded when the log was written and cannot be corrected
-            here yet.
-          </p>
-        </section>
-      )}
+      <ActualActivities
+        activities={planned?.activities ?? []}
+        recorded={existing?.activities}
+        sessionSport={planned?.sport ?? existing?.sport ?? ""}
+        inactive={!activitiesHappened}
+      />
 
       <div className={styles.field}>
         <label htmlFor="log-note">Note</label>

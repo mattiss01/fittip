@@ -53,6 +53,15 @@ test.describe("M3-15B today and logging", () => {
       await addSession(page, today, "Core circuit", "Strength");
       await addSession(page, today, "Rest swap", "Yoga");
       await addSession(page, tomorrow, "Long ride", "Cycling");
+      // Before the series: the create form keeps "Repeat" switched on after
+      // one, and its activity rows reset with the form after every create.
+      await addSessionWithActivity(
+        page,
+        today,
+        "Serve and volley",
+        "Tennis",
+        "Serve practice",
+      );
       await addSeries(page, today, tomorrow, "Aerobic base", "Running");
 
       await planCard(page, today, "Core circuit")
@@ -196,6 +205,52 @@ test.describe("M3-15B today and logging", () => {
       await expect(
         logged.getByRole("link", { name: "Log this session" }),
       ).toHaveCount(0);
+
+      // ---- A4bc: per-activity actuals, the log's own name, a correction. ----
+      // The row is unmeasured, which every activity validator refused until
+      // A4bc: nothing in this flow logged a session carrying one before.
+      await todayCard(page, "Serve and volley")
+        .getByRole("link", { name: "Log this session" })
+        .click();
+      const serves = () =>
+        page
+          .locator("[data-log-activity]")
+          .filter({ hasText: "Serve practice" });
+      await expect(serves().getByText("Planned: no target")).toBeVisible();
+      await expect(serves().getByText("Did: not measured")).toBeVisible();
+      await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+        "Serve and volley",
+      );
+      await page.getByLabel("Title", { exact: true }).fill("Serve and return");
+      await page.getByRole("button", { name: "Save log" }).click();
+      await expect(
+        page.getByRole("heading", { name: "Log saved." }),
+      ).toBeVisible();
+      await page.getByRole("link", { name: "Back to that day" }).click();
+
+      // The plan keeps its own name: the card is still found by it.
+      await todayCard(page, "Serve and volley")
+        .getByRole("link", { name: "Edit log" })
+        .click();
+      await expect(page.locator("[data-log-source]")).toContainText(
+        "Serve and return",
+      );
+      await serves().getByRole("button", { name: "Adjust" }).click();
+      await serves()
+        .getByLabel("Measured as")
+        .selectOption("duration_intensity");
+      await serves().getByLabel("Minutes").fill("20");
+      await page.getByRole("button", { name: "Save log" }).click();
+      await expect(
+        page.getByRole("heading", { name: "Log updated." }),
+      ).toBeVisible();
+      await page.getByRole("link", { name: "Back to that day" }).click();
+      await todayCard(page, "Serve and volley")
+        .getByRole("link", { name: "Edit log" })
+        .click();
+      await expect(serves().getByText("Did: 20 min")).toBeVisible();
+      await expect(serves().getByText("Planned: no target")).toBeVisible();
+      await page.goto("/home/today");
 
       // ---- Skip is a completion status, written the same way. ----
       await todayCard(page, "Easy spin")
@@ -440,6 +495,33 @@ async function addSession(
   await details.getByLabel("Date").fill(date);
   await details.getByLabel("Title").fill(title);
   await details.getByLabel("Sport").fill(sport);
+  await details.getByRole("button", { name: "Create session" }).click();
+  await expect(
+    planDay(page, date).getByRole("heading", { name: title, exact: true }),
+  ).toBeVisible();
+}
+
+/** A one-off session holding one activity, left unmeasured as it is added. */
+async function addSessionWithActivity(
+  page: Page,
+  date: string,
+  title: string,
+  sport: string,
+  activity: string,
+) {
+  const details = disclosure(page.locator("body"), "Create session");
+  if ((await details.getAttribute("open")) === null) {
+    await details.locator(":scope > summary").click();
+  }
+  await details.getByLabel("Date", { exact: true }).fill(date);
+  await details.getByLabel("Title", { exact: true }).fill(title);
+  // The session's own, filled before a row exists to carry a second "Sport".
+  await details.getByLabel("Sport", { exact: true }).fill(sport);
+  await details.getByRole("button", { name: "Add activity" }).click();
+  await details
+    .locator('[data-activity-row="0"]')
+    .getByLabel("Name")
+    .fill(activity);
   await details.getByRole("button", { name: "Create session" }).click();
   await expect(
     planDay(page, date).getByRole("heading", { name: title, exact: true }),

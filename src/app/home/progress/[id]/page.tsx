@@ -102,13 +102,12 @@ export default async function CompletionPage({ params }: Props) {
 
 /** Only what the surface renders crosses out of the server module. */
 function toCompletionView(completion: Completion): ProgressCompletionView {
-  const written = completion.activities[0] ?? null;
   return {
     id: completion.id,
     outcome: completion.status,
     actualLocalDate: completion.actualLocalDate,
-    title: completion.plannedSnapshot?.title ?? written?.name ?? null,
-    sport: completion.plannedSnapshot?.sport ?? written?.sport ?? null,
+    title: completion.title ?? completion.plannedSnapshot?.title ?? null,
+    sport: completion.sport ?? completion.plannedSnapshot?.sport ?? null,
     plannedLocalDate: completion.plannedSnapshot?.localDate ?? null,
     durationMinutes: completion.durationMinutes ?? null,
     perceivedEffort: completion.perceivedEffort ?? null,

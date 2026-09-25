@@ -431,6 +431,8 @@ function completion(overrides: Partial<Completion> = {}): Completion {
     status: "completed",
     actualLocalDate: "2026-08-03",
     timezoneName: TIMEZONE,
+    title: null,
+    sport: null,
     durationMinutes: 58,
     perceivedEffort: 6,
     feeling: "good",

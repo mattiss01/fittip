@@ -61,14 +61,20 @@ export async function logCompletionAction(
     const returnDate = facts.actualLocalDate as string;
     const log = await createCompletionLog();
 
+    // Every log carries its own name and restates its whole activity list,
+    // planned or not. What a planned log was measured against is captured by
+    // the write function from the plan row, and no edit ever writes it.
+    const content = {
+      ...readName(formData, editing),
+      activities: readActualActivities(formData),
+    };
+
     if (editing) {
-      const renamed = readRenamedActivity(formData);
       const receipt = await log.applyChange({
         operation: "edit",
         completionId: formData.get("completionId"),
         expectedRevision: readInteger(formData.get("expectedRevision")),
-        completion:
-          renamed === null ? facts : { ...facts, activities: [renamed] },
+        completion: { ...facts, ...content },
       });
       // Today only. Revalidating this route would re-render the page the owner
       // is standing on, and the write they just made would turn it into the
@@ -93,14 +99,7 @@ export async function logCompletionAction(
       completion: {
         ...facts,
         ...(unplanned ? {} : { planSessionId: plannedSessionId }),
-        // Unplanned training has no planned side at all, so the title and
-        // sport the owner typed are written as its one activity, which is the
-        // only place a name for it can live. A planned log carries what was
-        // actually done per activity; the snapshot of what was planned is
-        // captured by the write function from the plan row, not from here.
-        activities: unplanned
-          ? [readUnplannedActivity(formData)]
-          : readActualActivities(formData),
+        ...content,
       },
     });
     revalidatePath("/home/today");
@@ -169,63 +168,33 @@ export async function logCompletionAction(
 }
 
 /**
- * The one activity an edit may restate, or null when it must not.
- *
- * Unplanned training carries its name as its one activity, so correcting the
- * title or the sport means restating that list - and the write function
- * replaces it wholesale. A planned log is named by its snapshot, which is not
- * the owner's to rewrite, so its form sends no naming at all. Restating an
- * unchanged list would be a write that discards anything else the activity
- * carries, which is why an unrelated correction sends none.
+ * The name the owner gave the training, which is the log's own. A planned log
+ * arrives prefilled with the plan's; changing it never reaches the plan.
  */
-function readRenamedActivity(formData: FormData) {
-  if (formData.get("title") === null) return null;
-  const activity = readUnplannedActivity(formData);
-  const unchanged =
-    activity.name === trimmedField(formData, "originalTitle") &&
-    activity.sport === trimmedField(formData, "originalSport");
-  return unchanged ? null : activity;
-}
-
-function trimmedField(formData: FormData, field: string) {
-  const value = formData.get(field);
-  return typeof value === "string" ? value.trim() : "";
-}
-
-/**
- * The one activity an unplanned log carries. It is not the start of an
- * activity editor: there is exactly one, at position 0, with no personal
- * activity linked and no measurement captured, so nothing here creates or
- * implies an exercise library. `custom` is the measurement mode that records
- * no measured value, which is what an untimed free-text entry is.
- */
-function readUnplannedActivity(formData: FormData) {
+function readName(formData: FormData, editing: boolean) {
+  const nothing = editing ? "Nothing was changed." : "Nothing was logged.";
   return {
-    position: 0,
-    name: readActivityText(formData, "title", 120, {
-      missing:
-        "Give this training a title, then save again. Nothing was logged.",
-      tooLong:
-        "Shorten the title to 120 characters or fewer, then save again. Nothing was logged.",
+    title: readActivityText(formData, "title", 120, {
+      missing: `Give this training a title, then save again. ${nothing}`,
+      tooLong: `Shorten the title to 120 characters or fewer, then save again. ${nothing}`,
     }),
     sport: readActivityText(formData, "sport", 80, {
-      missing: "Name the sport, then save again. Nothing was logged.",
-      tooLong:
-        "Shorten the sport to 80 characters or fewer, then save again. Nothing was logged.",
+      missing: `Name the sport, then save again. ${nothing}`,
+      tooLong: `Shorten the sport to 80 characters or fewer, then save again. ${nothing}`,
     }),
-    measurementMode: "custom" as const,
   };
 }
 
 /**
- * The actual activities of a planned log, decoded and nothing more. The shape,
+ * The actual activities of a log, decoded and nothing more. The shape,
  * the measurement against its mode, and the position rules are the domain's
  * to judge - `parseCompletionChange` runs on this list before anything is
  * written - so this file does not repeat them.
  *
  * An absent field is an empty list rather than a refusal. Skipped and replaced
- * logs send none, and a session with no activities has nothing to answer; a
- * planned log that recorded nothing per activity is still a true record.
+ * logs send none - the form disables the list - so a correction to either
+ * clears the actuals, which the form says before saving. A log that recorded
+ * nothing per activity is still a true record.
  */
 function readActualActivities(formData: FormData): unknown {
   const raw = formData.get("activities");

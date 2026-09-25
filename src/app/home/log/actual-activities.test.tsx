@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   ActualActivities,
   type LogPlannedActivityView,
+  type LogRecordedActivityView,
 } from "./actual-activities";
 
 const SQUAT: LogPlannedActivityView = {
@@ -52,6 +53,7 @@ describe("ActualActivities", () => {
     expect(submitted()).toEqual([
       {
         position: 0,
+        plannedPosition: 0,
         name: "Back squat",
         sport: "Strength",
         measurementMode: "sets_reps_load",
@@ -60,6 +62,7 @@ describe("ActualActivities", () => {
       // An unmeasured activity with nothing typed is still something done.
       {
         position: 1,
+        plannedPosition: 1,
         name: "Serve practice",
         sport: "Tennis",
         measurementMode: "unmeasured",
@@ -169,5 +172,120 @@ describe("ActualActivities", () => {
       [0, "Serve practice"],
       [1, "Back squat"],
     ]);
+  });
+
+  describe("editing a saved log", () => {
+    const recorded = (
+      overrides: Partial<LogRecordedActivityView>,
+    ): LogRecordedActivityView => ({
+      plannedPosition: null,
+      personalActivityId: null,
+      name: "Back squat",
+      sport: "Strength",
+      measurementMode: "sets_reps_load",
+      actual: { groups: [{ sets: 4, reps: 5, load: 80 }], load_unit: "kg" },
+      ...overrides,
+    });
+
+    it("puts each actual back beside its target, and what was not done after", () => {
+      render(
+        <ActualActivities
+          activities={[SQUAT, SERVES]}
+          recorded={[recorded({ plannedPosition: 0 })]}
+          sessionSport="Strength"
+        />,
+      );
+
+      const squat = row("Back squat");
+      expect(within(squat).getByText(/^Planned:/).textContent).toBe(
+        "Planned: 5 × 5 · 82.5 kg",
+      );
+      expect(within(squat).getByText(/^Did:/).textContent).toBe(
+        "Did: 4 × 5 · 80 kg",
+      );
+      // Nothing answered serve practice, so it comes back as not done and
+      // stays out of the list until it is ticked back in.
+      const serves = row("Serve practice");
+      expect(
+        (within(serves).getByLabelText("Didn't do this") as HTMLInputElement)
+          .checked,
+      ).toBe(true);
+      expect(submitted()).toEqual([
+        expect.objectContaining({ plannedPosition: 0, name: "Back squat" }),
+      ]);
+
+      fireEvent.click(within(serves).getByLabelText("Didn't do this"));
+      expect(submitted()).toEqual([
+        expect.objectContaining({ position: 0, plannedPosition: 0 }),
+        expect.objectContaining({ position: 1, plannedPosition: 1 }),
+      ]);
+    });
+
+    it("pairs by name only a log written before actuals carried a link", () => {
+      render(
+        <ActualActivities
+          activities={[SQUAT, SERVES]}
+          recorded={[
+            recorded({
+              name: "Serve practice",
+              sport: "Tennis",
+              measurementMode: "unmeasured",
+              actual: null,
+            }),
+          ]}
+          sessionSport="Strength"
+        />,
+      );
+
+      expect(submitted()).toEqual([
+        expect.objectContaining({ name: "Serve practice", plannedPosition: 1 }),
+      ]);
+    });
+
+    it("leaves an added actual unpaired once the log carries links", () => {
+      render(
+        <ActualActivities
+          activities={[SQUAT]}
+          recorded={[
+            recorded({
+              name: "Farmer carry",
+              measurementMode: "unmeasured",
+              actual: null,
+            }),
+            recorded({ plannedPosition: 0 }),
+          ]}
+          sessionSport="Strength"
+        />,
+      );
+
+      const carry = submitted().find(({ name }) => name === "Farmer carry");
+      expect(carry).not.toHaveProperty("plannedPosition");
+      expect(
+        within(row("Farmer carry")).getByText("Not on the plan"),
+      ).toBeTruthy();
+    });
+
+    it("offers unplanned training its own list, with nothing to be 'not on'", () => {
+      render(
+        <ActualActivities
+          activities={[]}
+          recorded={[
+            recorded({
+              name: "400 m warm-up",
+              sport: "Swimming",
+              measurementMode: "unmeasured",
+              actual: null,
+            }),
+          ]}
+          sessionSport="Swimming"
+        />,
+      );
+
+      expect(screen.queryByText("Not on the plan")).toBe(null);
+      expect(submitted()).toEqual([
+        expect.objectContaining({ position: 0, name: "400 m warm-up" }),
+      ]);
+      expect(submitted()[0]).not.toHaveProperty("plannedPosition");
+    });
   });
 });

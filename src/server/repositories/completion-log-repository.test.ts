@@ -64,9 +64,22 @@ function storedRow(overrides: Record<string, unknown> = {}) {
     injury_reported: false,
     severe_fatigue_reported: false,
     planned_snapshot: PLANNED_SNAPSHOT,
+    title: "Aerobic run in the rain",
+    sport: "Running",
     revision: 1,
     updated_at: "2026-08-20T07:00:00.000Z",
-    completion_activities: [],
+    completion_activities: [
+      {
+        personal_activity_id: null,
+        position: 0,
+        planned_position: 0,
+        name: "Easy running",
+        sport: "Running",
+        instructions: null,
+        measurement_mode: "duration_intensity",
+        actual_measurement: { duration_minutes: 45 },
+      },
+    ],
     ...overrides,
   };
 }
@@ -216,9 +229,20 @@ describe("PostgresCompletionLogAdapter", () => {
         illnessReported: false,
         injuryReported: false,
         severeFatigueReported: false,
+        title: "Aerobic run in the rain",
+        sport: "Running",
         revision: 1,
         updatedAt: "2026-08-20T07:00:00.000Z",
-        activities: [],
+        activities: [
+          {
+            position: 0,
+            plannedPosition: 0,
+            name: "Easy running",
+            sport: "Running",
+            measurementMode: "duration_intensity",
+            actualMeasurement: { duration_minutes: 45 },
+          },
+        ],
         plannedSnapshot: {
           localDate: "2026-08-20",
           position: 0,
@@ -249,6 +273,29 @@ describe("PostgresCompletionLogAdapter", () => {
       eq: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({
         data: storedRow({ plan_session_id: null }),
+        error: null,
+      }),
+    };
+    const completions = new CompletionLog(
+      new PostgresCompletionLogAdapter(
+        client({ from: vi.fn().mockReturnValue(builder) }),
+      ),
+    );
+
+    await expect(completions.get(COMPLETION_ID)).rejects.toThrow(
+      CompletionPersistenceError,
+    );
+  });
+
+  it.each([
+    [{ title: "Half a name", sport: null }],
+    [{ title: null, sport: "Running" }],
+  ])("refuses a row whose name is only half there (%#)", async (name) => {
+    const builder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: storedRow(name),
         error: null,
       }),
     };

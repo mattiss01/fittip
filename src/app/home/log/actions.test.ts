@@ -90,6 +90,8 @@ describe("logCompletionAction", () => {
         illnessReported: false,
         injuryReported: false,
         severeFatigueReported: false,
+        title: "Aerobic run",
+        sport: "Running",
         activities: [],
       },
     });
@@ -160,23 +162,19 @@ describe("logCompletionAction", () => {
     expect(change.completion.status).toBe("unplanned");
   });
 
-  it("names unplanned training as its one activity, and nothing more", async () => {
+  it("names unplanned training on the log itself, not as an activity", async () => {
     await logCompletionAction(
       INITIAL_LOG_ACTION_STATE,
       form({ ...unplanned(), title: "  Sunrise swim  ", sport: " Swimming " }),
     );
 
     const [change] = applyChange.mock.calls[0];
-    // Trimmed exactly as the database constraint measures it, one activity at
-    // position 0, no personal activity linked and no measurement captured.
-    expect(change.completion.activities).toEqual([
-      {
-        position: 0,
-        name: "Sunrise swim",
-        sport: "Swimming",
-        measurementMode: "custom",
-      },
-    ]);
+    // Trimmed exactly as the database constraint measures it.
+    expect(change.completion).toMatchObject({
+      title: "Sunrise swim",
+      sport: "Swimming",
+      activities: [],
+    });
   });
 
   it("hands a planned create's actual activities to the seam as decoded", async () => {
@@ -317,6 +315,11 @@ describe("logCompletionAction", () => {
         illnessReported: false,
         injuryReported: false,
         severeFatigueReported: false,
+        title: "Aerobic run",
+        sport: "Running",
+        // Skipped disables the list, so none is sent and the actuals clear;
+        // the form names "the activities" among what saving removes.
+        activities: [],
       },
     });
     expect(result).toMatchObject({
@@ -326,50 +329,62 @@ describe("logCompletionAction", () => {
     });
   });
 
-  it("restates the activity list only when the naming actually changed", async () => {
+  it("restates a log's name and its whole activity list on every edit", async () => {
     applyChange.mockResolvedValue({
       completionId: COMPLETION_ID,
       revision: 2,
       result: "updated",
     });
-    const naming = {
-      operation: "edit",
-      completionId: COMPLETION_ID,
-      expectedRevision: "1",
-      status: "unplanned",
-      actualLocalDate: DAY,
-      originalTitle: "Tepmo run",
-      originalSport: "Running",
-    };
-
-    await logCompletionAction(
-      INITIAL_LOG_ACTION_STATE,
-      form({ ...naming, title: "Tempo run", sport: "Running" }),
-    );
-
-    expect(applyChange.mock.calls[0][0].completion.activities).toEqual([
+    const activities = [
       {
         position: 0,
-        name: "Tempo run",
-        sport: "Running",
-        measurementMode: "custom",
+        plannedPosition: 0,
+        name: "Back squat",
+        sport: "Strength",
+        measurementMode: "unmeasured",
       },
-    ]);
+    ];
 
-    // An unrelated correction sends none: restating an unchanged list would
-    // discard anything else that activity carries.
     await logCompletionAction(
       INITIAL_LOG_ACTION_STATE,
       form({
-        ...naming,
-        title: "Tepmo run",
-        sport: "Running",
-        durationMinutes: "40",
+        operation: "edit",
+        completionId: COMPLETION_ID,
+        expectedRevision: "1",
+        status: "completed",
+        actualLocalDate: DAY,
+        title: "Legs and tennis",
+        sport: "Mixed",
+        activities: JSON.stringify(activities),
       }),
     );
 
-    expect(Object.keys(applyChange.mock.calls[1][0].completion)).not.toContain(
-      "activities",
+    // A planned log's actuals are corrected like any other's; its snapshot is
+    // never sent, and the write function never writes it on an edit.
+    expect(applyChange.mock.calls[0][0].completion).toMatchObject({
+      title: "Legs and tennis",
+      sport: "Mixed",
+      activities,
+    });
+  });
+
+  it("says nothing was changed when an edit is missing its title", async () => {
+    const result = await logCompletionAction(
+      INITIAL_LOG_ACTION_STATE,
+      form({
+        operation: "edit",
+        completionId: COMPLETION_ID,
+        expectedRevision: "1",
+        status: "completed",
+        actualLocalDate: DAY,
+        title: " ",
+        sport: "Running",
+      }),
+    );
+
+    expect(applyChange).not.toHaveBeenCalled();
+    expect(result.message).toBe(
+      "Give this training a title, then save again. Nothing was changed.",
     );
   });
 
@@ -395,7 +410,7 @@ describe("logCompletionAction", () => {
     expect(result).toMatchObject({ status: "saved", returnDate: "2026-09-18" });
   });
 
-  it("never sends a planned snapshot or an activity list on an edit", async () => {
+  it("never sends a planned snapshot on an edit", async () => {
     await logCompletionAction(
       INITIAL_LOG_ACTION_STATE,
       form({
@@ -409,7 +424,6 @@ describe("logCompletionAction", () => {
 
     const [change] = applyChange.mock.calls[0];
     expect(Object.keys(change.completion)).not.toContain("plannedSnapshot");
-    expect(Object.keys(change.completion)).not.toContain("activities");
   });
 
   it.each([
@@ -456,9 +470,17 @@ function unplanned() {
   };
 }
 
+/**
+ * Every log form carries a title and a sport, so a test names one only when
+ * the name is what it is about.
+ */
 function form(values: Record<string, string>): FormData {
   const formData = new FormData();
-  for (const [key, value] of Object.entries(values)) {
+  const named =
+    "title" in values || "sport" in values
+      ? values
+      : { title: "Aerobic run", sport: "Running", ...values };
+  for (const [key, value] of Object.entries(named)) {
     formData.set(key, value);
   }
   return formData;

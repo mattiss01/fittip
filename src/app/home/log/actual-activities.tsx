@@ -31,11 +31,24 @@ export type LogPlannedActivityView = {
   target: TrainingMeasurement | null;
 };
 
+/** One activity a saved log already records, as an edit starts from it. */
+export type LogRecordedActivityView = {
+  plannedPosition: number | null;
+  personalActivityId: string | null;
+  name: string;
+  sport: string;
+  measurementMode: TrainingMeasurementMode;
+  actual: TrainingMeasurement | null;
+};
+
 type Row = {
   /** Stable across reorders, which is what keeps inputs from swapping. */
   key: string;
-  /** Null for an activity the owner added while logging. */
+  /** The planned activity it answers; null for one added while logging. */
   planned: LogPlannedActivityView | null;
+  personalActivityId: string | null;
+  /** Added in this sitting, so it opens ready to be named. */
+  fresh: boolean;
   name: string;
   sport: string;
   done: boolean;
@@ -64,17 +77,22 @@ let nextKey = 0;
  *
  * The owner can also add what the plan did not name and put the list in the
  * order it was done, both asked for on 25 September 2026. So `position` is the
- * order of the log, not of the plan: an actual answers its planned activity by
- * name, and the snapshot keeps the plan's order beside it.
+ * order of the log, not of the plan, and `plannedPosition` says which planned
+ * activity a row answers — which is how an edit puts each actual back beside
+ * its target.
  *
  * Like the plan's editor it writes one hidden JSON field.
  */
 export function ActualActivities({
   activities,
+  recorded,
   sessionSport,
   inactive = false,
 }: {
+  /** The plan's activities on a create, the snapshot's on an edit. */
   activities: LogPlannedActivityView[];
+  /** What a saved log records; absent on a create. */
+  recorded?: LogRecordedActivityView[];
   /** What an added activity starts as; most are the session's own sport. */
   sessionSport: string;
   /**
@@ -90,16 +108,14 @@ export function ActualActivities({
   // hydration. `nextKey` is only ever a React key.
   const prefix = useId();
   const [rows, setRows] = useState<Row[]>(() =>
-    activities.map((planned) => ({
-      key: `planned-${nextKey++}`,
-      planned,
-      name: planned.name,
-      sport: planned.sport,
-      done: true,
-      measurementMode: planned.measurementMode,
-      draft: draftFromMeasurement(planned.measurementMode, planned.target),
-    })),
+    recorded === undefined
+      ? activities.map((planned) => plannedRow(planned, true))
+      : rowsFromRecord(activities, recorded),
   );
+
+  // Unplanned training, or a session planned with no activities, has nothing
+  // for a row to be "not on", so the line that says so is left out.
+  const hasPlan = activities.length > 0;
 
   const built = useMemo(
     () =>
@@ -114,10 +130,13 @@ export function ActualActivities({
     built
       .filter(({ row }) => row.done)
       .map(({ row, build }, position) => ({
-        ...(row.planned?.personalActivityId == null
+        ...(row.personalActivityId === null
           ? {}
-          : { personalActivityId: row.planned.personalActivityId }),
+          : { personalActivityId: row.personalActivityId }),
         position,
+        ...(row.planned === null
+          ? {}
+          : { plannedPosition: row.planned.position }),
         name: row.name.trim(),
         sport: row.sport.trim(),
         measurementMode: row.measurementMode,
@@ -154,8 +173,9 @@ export function ActualActivities({
     >
       <legend>What you did</legend>
       <p className={styles.fieldHint}>
-        Each planned activity starts as planned. Change what differed, mark what
-        you did not do, and add anything else.
+        {hasPlan
+          ? "Each planned activity starts as planned. Change what differed, mark what you did not do, and add anything else."
+          : "Add what you did, one activity at a time, in the order you did it."}
       </p>
       <input type="hidden" name="activities" value={serialized} />
       {rows.length === 0 ? null : (
@@ -165,6 +185,7 @@ export function ActualActivities({
               key={row.key}
               idPrefix={`${prefix}-activity-${index}`}
               row={row}
+              hasPlan={hasPlan}
               index={index}
               total={rows.length}
               problem={row.done && !build.ok ? build.message : null}
@@ -195,6 +216,8 @@ export function ActualActivities({
             {
               key: `added-${nextKey++}`,
               planned: null,
+              personalActivityId: null,
+              fresh: true,
               name: "",
               sport: sessionSport.trim(),
               done: true,
@@ -213,6 +236,7 @@ export function ActualActivities({
 function ActualRow({
   idPrefix,
   row,
+  hasPlan,
   index,
   total,
   problem,
@@ -226,6 +250,7 @@ function ActualRow({
 }: {
   idPrefix: string;
   row: Row;
+  hasPlan: boolean;
   index: number;
   total: number;
   problem: string | null;
@@ -238,7 +263,7 @@ function ActualRow({
   onRemove: () => void;
 }) {
   const added = row.planned === null;
-  const [expanded, setExpanded] = useState(added);
+  const [expanded, setExpanded] = useState(row.fresh);
   const validityRef = useRef<HTMLInputElement | null>(null);
   // Forced open while it cannot be built or is missing its name, for the
   // reason the plan's editor gives: the browser is about to point at a
@@ -272,9 +297,11 @@ function ActualRow({
         />
         <div className={styles.activityHead}>
           <p className={styles.activityName}>{label}</p>
-          <p className={styles.activityLine}>
-            {added ? "Not on the plan" : `Planned: ${planned ?? "no target"}`}
-          </p>
+          {added && !hasPlan ? null : (
+            <p className={styles.activityLine}>
+              {added ? "Not on the plan" : `Planned: ${planned ?? "no target"}`}
+            </p>
+          )}
           {row.done ? (
             <p className={styles.activityLine} data-log-actual>
               Did: {problem ?? actual ?? "not measured"}
@@ -382,4 +409,67 @@ function ActualRow({
       </div>
     </li>
   );
+}
+
+function plannedRow(planned: LogPlannedActivityView, done: boolean): Row {
+  return {
+    key: `planned-${nextKey++}`,
+    planned,
+    personalActivityId: planned.personalActivityId,
+    fresh: false,
+    name: planned.name,
+    sport: planned.sport,
+    done,
+    measurementMode: planned.measurementMode,
+    draft: draftFromMeasurement(planned.measurementMode, planned.target),
+  };
+}
+
+/**
+ * An edit starts from what the log records, in the order it was done, each
+ * row beside the planned activity it answers. The planned activities nothing
+ * answers follow as not done, so un-marking one is the same tick it was.
+ *
+ * A log written before actuals carried `plannedPosition` has no link at all;
+ * only then is a row paired by name, with the first unanswered planned
+ * activity of that name. A log that has any link is read by its links alone,
+ * because a row without one there was added, and pairing it by name would
+ * claim it answered something the owner said they did not do.
+ */
+function rowsFromRecord(
+  planned: LogPlannedActivityView[],
+  recorded: LogRecordedActivityView[],
+): Row[] {
+  const legacy = recorded.every(
+    (activity) => activity.plannedPosition === null,
+  );
+  const answered = new Set<number>();
+  const rows = recorded.map((activity): Row => {
+    const match =
+      activity.plannedPosition !== null
+        ? planned.find((p) => p.position === activity.plannedPosition)
+        : legacy
+          ? planned.find(
+              (p) => p.name === activity.name && !answered.has(p.position),
+            )
+          : undefined;
+    if (match !== undefined) answered.add(match.position);
+    return {
+      key: `recorded-${nextKey++}`,
+      planned: match ?? null,
+      personalActivityId: activity.personalActivityId,
+      fresh: false,
+      name: activity.name,
+      sport: activity.sport,
+      done: true,
+      measurementMode: activity.measurementMode,
+      draft: draftFromMeasurement(activity.measurementMode, activity.actual),
+    };
+  });
+  return [
+    ...rows,
+    ...planned
+      .filter((p) => !answered.has(p.position))
+      .map((p) => plannedRow(p, false)),
+  ];
 }

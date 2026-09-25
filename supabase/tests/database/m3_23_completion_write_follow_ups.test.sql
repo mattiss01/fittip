@@ -6,9 +6,10 @@
 -- M3-15A raised `22023` for it, which the repository collapses into the generic
 -- validation error, so the owner was told to check numbers that were correct.
 --
--- Second, that an unplanned completion's activities can be corrected and a
--- planned one's cannot. The planned snapshot is what a completion was measured
--- against, and rewriting it would rewrite history.
+-- Second, that an unplanned completion's activities can be corrected. M3-23
+-- also refused a planned one's; A4bc inverted that on purpose, because the
+-- actual list is not the snapshot, and its own suite proves the snapshot
+-- still cannot move.
 --
 -- Third, that no completion may be dated after the owner's today, on either
 -- operation. The edit is judged against the zone the completion carries rather
@@ -277,7 +278,9 @@ select is(
   'and the session still carries exactly one completion'
 );
 
-select throws_ok(
+-- Inverted by A4bc: a planned completion's actuals may be restated. What it
+-- was measured against is the snapshot, which a4bc's suite proves unmoved.
+select lives_ok(
   format($$select * from public.apply_completion_change('edit', %L, 0,
     jsonb_build_object('status', 'completed', 'actualLocalDate', %L,
       'activities', jsonb_build_array(jsonb_build_object(
@@ -285,8 +288,7 @@ select throws_ok(
         'measurementMode', 'duration_intensity'))))$$,
     (select completion_id from logged where label = 'planned'),
     pg_temp.owner_day(0)),
-  '22023', 'Invalid completion change.',
-  'what a planned completion was measured against cannot be restated'
+  'a planned completion''s actuals may be restated'
 );
 
 -- The edit is judged in the completion's own zone -----------------------------

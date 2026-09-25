@@ -97,6 +97,7 @@ export type Database = {
           measurement_mode: string;
           name: string;
           personal_activity_id: string | null;
+          planned_position: number | null;
           position: number;
           sport: string;
           updated_at: string;
@@ -111,6 +112,7 @@ export type Database = {
           measurement_mode: string;
           name: string;
           personal_activity_id?: string | null;
+          planned_position?: number | null;
           position: number;
           sport: string;
           updated_at?: string;
@@ -125,6 +127,7 @@ export type Database = {
           measurement_mode?: string;
           name?: string;
           personal_activity_id?: string | null;
+          planned_position?: number | null;
           position?: number;
           sport?: string;
           updated_at?: string;
@@ -165,8 +168,10 @@ export type Database = {
           replacement_description: string | null;
           revision: number;
           severe_fatigue_reported: boolean;
+          sport: string | null;
           status: string;
           timezone_name: string;
+          title: string | null;
           updated_at: string;
           user_id: string;
         };
@@ -187,8 +192,10 @@ export type Database = {
           replacement_description?: string | null;
           revision?: number;
           severe_fatigue_reported?: boolean;
+          sport?: string | null;
           status: string;
           timezone_name: string;
+          title?: string | null;
           updated_at?: string;
           user_id: string;
         };
@@ -209,8 +216,10 @@ export type Database = {
           replacement_description?: string | null;
           revision?: number;
           severe_fatigue_reported?: boolean;
+          sport?: string | null;
           status?: string;
           timezone_name?: string;
+          title?: string | null;
           updated_at?: string;
           user_id?: string;
         };
