@@ -287,8 +287,10 @@ function buildSetGroups(draft: MeasurementDraft): MeasurementBuild {
     if (!filled) continue;
 
     const sets = row.sets.trim() === "" ? null : readInteger(row.sets, 1, 100);
-    const reps = row.reps.trim() === "" ? null : readInteger(row.reps, 1, 10000);
-    const load = row.load.trim() === "" ? null : readNumber(row.load, 0, 100000);
+    const reps =
+      row.reps.trim() === "" ? null : readInteger(row.reps, 1, 10000);
+    const load =
+      row.load.trim() === "" ? null : readNumber(row.load, 0, 100000);
 
     if (row.sets.trim() !== "" && sets === null) {
       return { ok: false, message: "Sets is a whole number from 1 to 100." };
