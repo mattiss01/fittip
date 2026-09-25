@@ -225,6 +225,18 @@ describe("Today", () => {
     expect(within(card).queryByText("Planned")).toBe(null);
     const done = within(card).getByText("What you did").parentElement!;
     expect(within(done).getByText("4 × 5 · 80 kg")).toBeTruthy();
+    cleanup();
+
+    // Skipped records no actuals, so the card still says what was planned.
+    listCompletions.mockResolvedValue([
+      { ...completion(), status: "skipped" as const, activities: [] },
+    ]);
+    render(await TodayPage({ searchParams: Promise.resolve({}) }));
+    card = document.querySelector(
+      `[data-today-session="${SESSION_ID}"]`,
+    ) as HTMLElement;
+    expect(within(card).getByText("Planned")).toBeTruthy();
+    expect(within(card).getByText("Back squat")).toBeTruthy();
   });
 
   it("says what unplanned training stood in for", async () => {

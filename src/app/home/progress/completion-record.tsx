@@ -75,9 +75,9 @@ export function CompletionRecord({ completion, timezoneName, planned }: Props) {
           </div>
         </dl>
         <RecordedFacts completion={completion} />
-        {completion.activities.length === 0 ? null : (
+        {(completion.activities ?? []).length === 0 ? null : (
           <ol className={styles.activities} data-progress-recorded-activities>
-            {completion.activities.map((activity) => (
+            {(completion.activities ?? []).map((activity) => (
               <li className={styles.activity} key={activity.position}>
                 <p className={styles.activityName}>{activity.name}</p>
                 {activity.detail === null ? null : (

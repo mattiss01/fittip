@@ -8,9 +8,9 @@ import styles from "./progress.module.css";
 
 import homeStyles from "../home.module.css";
 import { isoDateInTimezone } from "@/lib/date/local-date";
-import { describeMeasurement } from "@/lib/training/describe-measurement";
 import {
   replacedByLabel,
+  replacesLabels,
   type Completion,
 } from "@/server/completions/completion-log";
 import {
@@ -171,15 +171,7 @@ function toCompletionView(completion: Completion): ProgressCompletionView {
     note: completion.note ?? null,
     replacementDescription: completion.replacementDescription ?? null,
     replacedBy: replacedByLabel(completion),
-    replaces: completion.replaces.map((replaced) => ({
-      id: replaced.completionId,
-      label: replaced.title ?? "A planned session",
-    })),
-    activities: completion.activities.map((activity) => ({
-      position: activity.position,
-      name: activity.name,
-      detail: describeMeasurement(activity.actualMeasurement ?? null),
-    })),
+    replaces: replacesLabels(completion),
     pain: completion.painReported,
     illness: completion.illnessReported,
     injury: completion.injuryReported,

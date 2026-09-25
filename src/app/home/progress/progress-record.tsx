@@ -42,8 +42,11 @@ export type ProgressCompletionView = {
   replacedBy: { id: string; label: string } | null;
   /** The planned sessions this unplanned training stood in for, by name. */
   replaces: { id: string; label: string }[];
-  /** What was actually done, in the order it was done, already in words. */
-  activities: { position: number; name: string; detail: string | null }[];
+  /**
+   * What was actually done, in the order it was done, already in words. Only
+   * the detail page draws it, so only that page builds it.
+   */
+  activities?: { position: number; name: string; detail: string | null }[];
   pain: boolean;
   illness: boolean;
   injury: boolean;

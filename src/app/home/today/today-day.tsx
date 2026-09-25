@@ -295,9 +295,11 @@ function SessionCard({
       {session.note === null ? null : (
         <p className={styles.body}>{session.note}</p>
       )}
-      {/* The plan's list until the session is logged; after that the log's,
-          which says what was done and is the one worth reading. */}
-      {session.completion === null ? (
+      {/* The plan's list until the log has actuals of its own, which then say
+          what was done and are the ones worth reading. A skipped or replaced
+          log records none, and still shows what the plan asked for. */}
+      {session.completion === null ||
+      session.completion.activities.length === 0 ? (
         <ActivityList label="Planned" items={session.activities} />
       ) : null}
       {session.completion === null ? (

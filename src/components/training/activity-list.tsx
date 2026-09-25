@@ -15,8 +15,9 @@ export type ActivityListItem = {
  * because `describeMeasurement` already words a target and an actual the same
  * way.
  *
- * Server-renderable on purpose. Today and the Plan day draw it inside cards
- * that are not interactive, so it adds nothing to the client bundle.
+ * No client state of its own, so Today renders it on the server. The Plan day
+ * draws it inside a client component, where it ships in that bundle like any
+ * other child; it holds nothing that would make that worth avoiding.
  */
 export function ActivityList({
   label,

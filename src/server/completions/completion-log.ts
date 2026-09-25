@@ -316,6 +316,19 @@ export function replacedByLabel(
   };
 }
 
+/**
+ * The planned sessions an unplanned log stood in for, as a surface names
+ * them: each by its log's own name, else its snapshot's.
+ */
+export function replacesLabels(
+  completion: Completion,
+): { id: string; label: string }[] {
+  return (completion.replaces ?? []).map((replaced) => ({
+    id: replaced.completionId,
+    label: replaced.title ?? "A planned session",
+  }));
+}
+
 /** The most activities one completion may carry, as for a planned session. */
 export const COMPLETION_ACTIVITY_LIMIT = 50;
 

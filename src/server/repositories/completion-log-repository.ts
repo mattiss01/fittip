@@ -144,10 +144,18 @@ export class PostgresCompletionLogAdapter implements CompletionLogAdapter {
       for (const row of data ?? []) {
         const target = row.replaced_by_completion_id;
         if (typeof target !== "string") throw new CompletionPersistenceError();
-        const snapshot = readRecord(row.planned_snapshot);
-        const title =
-          row.title ??
-          (typeof snapshot.title === "string" ? snapshot.title : null);
+        // A replaced log is always planned, so it always has a snapshot; it is
+        // read without assuming that, so one odd row is named "A planned
+        // session" rather than refusing the whole read.
+        const snapshot = row.planned_snapshot;
+        const snapshotTitle =
+          typeof snapshot === "object" &&
+          snapshot !== null &&
+          !Array.isArray(snapshot) &&
+          typeof snapshot.title === "string"
+            ? snapshot.title
+            : null;
+        const title = row.title ?? snapshotTitle;
         replacing.set(target, [
           ...(replacing.get(target) ?? []),
           { completionId: row.id, title },

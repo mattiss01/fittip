@@ -13,6 +13,7 @@ import { planWindowFor } from "../plan/plan-window";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
 import {
   replacedByLabel,
+  replacesLabels,
   type Completion,
 } from "@/server/completions/completion-log";
 import { readPlanWindowToppedUp } from "@/server/completions/plan-window-top-up";
@@ -199,10 +200,7 @@ function toCompletionView(completion: Completion): TodayCompletionView {
     note: completion.note ?? null,
     replacementDescription: completion.replacementDescription ?? null,
     replacedBy: replacedByLabel(completion),
-    replaces: completion.replaces.map((replaced) => ({
-      id: replaced.completionId,
-      label: replaced.title ?? "A planned session",
-    })),
+    replaces: replacesLabels(completion),
     activities: completion.activities.map((activity) => ({
       key: String(activity.position),
       name: activity.name,
