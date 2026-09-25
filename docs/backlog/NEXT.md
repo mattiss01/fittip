@@ -21,31 +21,6 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [ ] **A2d — An activity has a category, not a sport.** Careful lane; migration. Outcome:
-      what an activity currently calls `sport` becomes `category` and answers a different
-      question — what kind of work this is (skill training, strength, conditioning,
-      mobility, recovery) rather than which sport it belongs to, which the session above it
-      already says. The control offers preset values and takes one the owner types, and a
-      typed one joins the list they are offered next time. Decided by the owner on
-      25 Sep 2026.
-      Constraints: `sport` is `not null` on five activity tables and appears in the saved
-      library, completions and Progress, so the rename is not local to the editor. The
-      remembered list should be the distinct categories the owner has already used, unioned
-      with the presets — no new table, nothing to maintain, and nothing to clean up when a
-      category stops being used. The presets are a small shared vocabulary, which is worth
-      naming against the "no global exercise library" invariant: a handful of category
-      suggestions is not an exercise library, but the owner should agree the preset list
-      before it ships, and it belongs in `CONTEXT.md` as project vocabulary.
-      This supersedes A2b's prefill of an activity's sport from its session — a session's
-      sport is not a category and must stop being copied into one. A4's "Add activity" on
-      the log copies it too (`actual-activities.tsx`), so both sites change together.
-- [ ] **A4e — An unplanned log shows what it replaced.** Build lane. Its detail page and
-      Today card say "Instead of: Tempo run, Easy jog" beside a ride that replaced sessions.
-      The reverse read is already there: PostgREST's bare self-embed
-      `replaced_by:completions(id, title)` on `completions` returns exactly the logs pointing
-      at a row, which is why A4d's forward read had to be a second query.
-- [ ] **A3 — See the activities.** Today and the Plan day render the list instead of the
-      `activityCount` string. `completion-record.tsx` already renders one; follow it.
 - [ ] **A5 — Personal activity library.** Create, list, edit and archive reusable
       definitions, and a picker in A2 that sets `personal_activity_id` — the only thing that
       ever will. Carries F-002's rule that an edit changes future reuse and never a
@@ -119,6 +94,19 @@ Not worth their own slot; do them when work lands nearby.
 
 ## Later
 
+- **Sport or category — undecided.** Moved here by the owner on 25 Sep 2026, who could not
+  decide yet; this replaces A2d, which planned to rename an activity's `sport` to `category`.
+  Where the discussion stood: the owner leans to **one field, the same on sessions and
+  activities**, whose values may be a sport (Tennis, Running) or a kind of work (Strength,
+  Mobility, Recovery). "Category" reads right for both kinds of value, where "Sport:
+  Mobility" does not. That field already exists — it is today's `sport` — so the cheap
+  version is a relabel plus presets and the owner's own past values offered back, with no
+  migration. The expensive version also renames the column across about seven tables and
+  functions, the AI contract, and reads of stored snapshots, which keep `sport` forever.
+  Open: which of the two, the preset list (it is shared vocabulary, so it wants the owner's
+  agreement and a line in `CONTEXT.md`), and whether an activity keeps starting from its
+  session's value, which is right under the one-field reading. A5 builds on whatever this
+  becomes.
 - **Plan change history** — plan history organized by understandable changes, each opening to
   show affected sessions and their before/after values. Real, but a comfort feature; the
   tables are already granted and RLS-confined. ([M3-24](M3/M3-24-PLAN-CHANGE-HISTORY.md))
@@ -159,6 +147,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 25 Sep 2026 | `3430435` | [36184425816](https://github.com/mattiss01/fittip/actions/runs/36184425816) | The Plan day and Today list a session's activities with their targets instead of counting them, a logged card lists what was done (or still the plan's, when a skip or a replacement records none), Progress's recorded sheet lists the actuals, and a ride that replaced sessions says "Instead of: …" (A3, A4e). No migration. m3-13's accepted flow was rewritten where it read "N activities" on a plan card; the library card still prints its count |
 | 25 Sep 2026 | `c41beb3` | [36172504470](https://github.com/mattiss01/fittip/actions/runs/36172504470) | A replaced session now points at the unplanned log of what was done instead — written in the same save through a recursive `apply_completion_change`, so both or neither, or picked from the week's logs — and one ride may replace several sessions; the coach reads "Replaced by …" in the existing description slot. Migration `20260925174607` applied to the founder project — 32 migrations, advisors unchanged at 20 definer + 1 auth; it redefines `completions_replacement_check` under the same name, admitting a link in place of text, and a replaced create from the previous app with only text is refused until the deploy |
 | 25 Sep 2026 | `0ab1c3f` | [36164580894](https://github.com/mattiss01/fittip/actions/runs/36164580894) | Every log owns its `title`/`sport` (unplanned ones backfilled from their first activity) and a planned log's actuals, each linked to the planned activity it answers by `planned_position`, are corrected with the create editor; it also fixes A2c's four activity validators refusing `unmeasured`, which had broken both the plan editor and logging. Migration `20260925162039` applied to the founder project — 31 migrations, advisors unchanged at 20 definer + 1 auth; the m3_23 pgTAP and contract assertions refusing a planned log's actual edit were inverted on purpose, and renaming no longer rewrites an unplanned log's activity list, so that limitation is gone |
 | 25 Sep 2026 | `6b7b7ef` | [36121793569](https://github.com/mattiss01/fittip/actions/runs/36121793569) | A planned log now records each activity's actual: prefilled from its target, measured in its own mode, with activities addable and drag-ordered, so `position` is the log's order rather than the plan's. No migration; correcting those actuals after saving is A4c, because `apply_completion_change` refuses it. m3-15b and m3-15c pick the outcome from a select now, not radios |
