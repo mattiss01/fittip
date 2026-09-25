@@ -173,6 +173,12 @@ export type Completion = CompletionFacts & {
     sport: string | null;
   } | null;
   /**
+   * The replaced logs pointing at this one, which is how unplanned training
+   * knows what it stood in for. Empty on every planned log: only unplanned
+   * training can be pointed at.
+   */
+  replaces: { completionId: string; title: string | null }[];
+  /**
    * The optimistic token the surface reads and sends back. It is not a revision
    * chain: no prior version is retained and none can be browsed.
    */

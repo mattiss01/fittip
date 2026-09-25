@@ -18,6 +18,8 @@ import {
 } from "./action-state";
 import { changePlanAction } from "./actions";
 import { CreateSession } from "./create-session";
+import { ActivityList } from "@/components/training/activity-list";
+import { describeMeasurement } from "@/lib/training/describe-measurement";
 import styles from "./plan.module.css";
 import {
   RecurringDeleteControls,
@@ -59,8 +61,7 @@ export type PlanSessionView = {
   note: string | null;
   isLocked: boolean;
   status: "active" | "cancelled";
-  activityCount: number;
-  /** The rows the edit form binds. The count above is what the card prints. */
+  /** The rows the edit form binds, and the list the card prints. */
   activities: ActivityValue[];
   seriesId: string | null;
   occurrenceDate: string | null;
@@ -496,9 +497,6 @@ function PlanSessionCard({
           session.expectedDurationMinutes === null
             ? null
             : `${session.expectedDurationMinutes} min`,
-          session.activityCount > 0
-            ? `${session.activityCount} ${session.activityCount === 1 ? "activity" : "activities"}`
-            : null,
         ]
           .filter(Boolean)
           .join(" · ")}
@@ -509,6 +507,14 @@ function PlanSessionCard({
       {session.note === null ? null : (
         <p className={styles.body}>{session.note}</p>
       )}
+      <ActivityList
+        label="Activities"
+        items={session.activities.map((activity, index) => ({
+          key: String(index),
+          name: activity.name,
+          detail: describeMeasurement(activity.target),
+        }))}
+      />
 
       <div className={styles.cardActions} data-session-actions>
         <details

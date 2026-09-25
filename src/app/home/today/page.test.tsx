@@ -167,6 +167,96 @@ describe("Today", () => {
     ).toContain("Pain");
   });
 
+  it("lists a session's activities, then what was done once it is logged", async () => {
+    const planned: RollingPlanSession = {
+      ...session(),
+      activities: [
+        {
+          id: "7e150000-0000-4000-8000-0000000000c1",
+          position: 0,
+          name: "Back squat",
+          sport: "Strength",
+          measurementMode: "sets_reps_load",
+          target: {
+            groups: [{ sets: 5, reps: 5, load: 82.5 }],
+            load_unit: "kg",
+          },
+          isLocked: false,
+        },
+      ],
+    };
+    readPlanWindowToppedUpMock.mockResolvedValue(planWindow([planned]));
+    listCompletions.mockResolvedValue([]);
+
+    const { unmount } = render(
+      await TodayPage({ searchParams: Promise.resolve({}) }),
+    );
+    let card = document.querySelector(
+      `[data-today-session="${SESSION_ID}"]`,
+    ) as HTMLElement;
+    const plannedList = within(card).getByText("Planned").parentElement!;
+    expect(within(plannedList).getByText("Back squat")).toBeTruthy();
+    expect(within(plannedList).getByText("5 × 5 · 82.5 kg")).toBeTruthy();
+    unmount();
+
+    listCompletions.mockResolvedValue([
+      {
+        ...completion(),
+        activities: [
+          {
+            position: 0,
+            plannedPosition: 0,
+            name: "Back squat",
+            sport: "Strength",
+            measurementMode: "sets_reps_load" as const,
+            actualMeasurement: {
+              groups: [{ sets: 4, reps: 5, load: 80 }],
+              load_unit: "kg" as const,
+            },
+          },
+        ],
+      },
+    ]);
+    render(await TodayPage({ searchParams: Promise.resolve({}) }));
+    card = document.querySelector(
+      `[data-today-session="${SESSION_ID}"]`,
+    ) as HTMLElement;
+    // Logged, the card lists what was done, not what was asked for.
+    expect(within(card).queryByText("Planned")).toBe(null);
+    const done = within(card).getByText("What you did").parentElement!;
+    expect(within(done).getByText("4 × 5 · 80 kg")).toBeTruthy();
+  });
+
+  it("says what unplanned training stood in for", async () => {
+    readPlanWindowToppedUpMock.mockResolvedValue(planWindow([]));
+    listCompletions.mockResolvedValue([
+      {
+        ...completion(),
+        planSessionId: null,
+        status: "unplanned" as const,
+        plannedSnapshot: null,
+        title: "Hill ride",
+        sport: "Cycling",
+        replaces: [
+          {
+            completionId: "7e150000-0000-4000-8000-0000000000d1",
+            title: "Tempo run",
+          },
+        ],
+      },
+    ]);
+
+    render(await TodayPage({ searchParams: Promise.resolve({}) }));
+
+    const line = document.querySelector("[data-replaces]") as HTMLElement;
+    expect(line.textContent).toBe("Instead of: Tempo run");
+    expect(
+      within(line)
+        .getByRole("link", { name: "Tempo run" })
+        .getAttribute("href"),
+    ).toBe("/home/progress/7e150000-0000-4000-8000-0000000000d1");
+  });
+
   it("reads a cancelled session trained anyway as logged, not cancelled", async () => {
     const cancelled: RollingPlanSession = {
       ...session(),
@@ -310,6 +400,8 @@ function completion() {
     severeFatigueReported: false,
     plannedSnapshot: null,
     revision: 0,
+    replacedBy: null,
+    replaces: [],
     activities: [],
     updatedAt: "2026-08-30T10:00:00.000Z",
   };

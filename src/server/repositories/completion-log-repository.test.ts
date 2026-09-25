@@ -233,6 +233,7 @@ describe("PostgresCompletionLogAdapter", () => {
         title: "Aerobic run in the rain",
         sport: "Running",
         replacedBy: null,
+        replaces: [],
         revision: 1,
         updatedAt: "2026-08-20T07:00:00.000Z",
         activities: [
@@ -277,6 +278,11 @@ describe("PostgresCompletionLogAdapter", () => {
         data: storedRow({ plan_session_id: null }),
         error: null,
       }),
+      // An unplanned row is also asked what it replaced; nothing, here.
+      in: vi.fn().mockReturnThis(),
+      order: vi.fn(() => ({
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      })),
     };
     const completions = new CompletionLog(
       new PostgresCompletionLogAdapter(

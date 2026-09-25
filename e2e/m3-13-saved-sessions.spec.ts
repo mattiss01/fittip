@@ -126,7 +126,9 @@ test.describe("M3-13 private saved-session library", () => {
 
       await page.goto("/home/plan");
       const copy = sessionCard(page, reuseDate, "Longer threshold intervals");
-      await expect(copy.getByText("2 activities")).toBeVisible();
+      // A3: the plan card lists the copied activities rather than counting
+      // them, so the copy is proved to carry both by its rows.
+      await expect(copy.locator("[data-activity-list] li")).toHaveCount(2);
       await expect(copy.getByText("Locked", { exact: true })).toBeHidden();
       await page.screenshot({
         fullPage: true,

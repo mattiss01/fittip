@@ -9,6 +9,10 @@ import {
   type CompletionFeelingValue,
   type CompletionOutcome,
 } from "../log/log-action-state";
+import {
+  ActivityList,
+  type ActivityListItem,
+} from "@/components/training/activity-list";
 import { shiftIsoDate } from "@/lib/date/local-date";
 
 /** What the owner recorded, reduced to what this day actually draws. */
@@ -33,6 +37,10 @@ export type TodayCompletionView = {
    * shows its text instead.
    */
   replacedBy: { id: string; label: string } | null;
+  /** The planned sessions this unplanned training stood in for, by name. */
+  replaces: { id: string; label: string }[];
+  /** What was actually done, in the order it was done. */
+  activities: ActivityListItem[];
   pain: boolean;
   illness: boolean;
   injury: boolean;
@@ -50,7 +58,8 @@ export type TodaySessionView = {
   isLocked: boolean;
   status: "active" | "cancelled";
   isRecurring: boolean;
-  activityCount: number;
+  /** In plan order, each with its target in words. */
+  activities: ActivityListItem[];
   /** The owner's record of what happened to this planned session, if any. */
   completion: TodayCompletionView | null;
 };
@@ -247,9 +256,6 @@ function SessionCard({
     session.expectedDurationMinutes === null
       ? null
       : `${session.expectedDurationMinutes} min planned`,
-    session.activityCount > 0
-      ? `${session.activityCount} ${session.activityCount === 1 ? "activity" : "activities"}`
-      : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -289,6 +295,11 @@ function SessionCard({
       {session.note === null ? null : (
         <p className={styles.body}>{session.note}</p>
       )}
+      {/* The plan's list until the session is logged; after that the log's,
+          which says what was done and is the one worth reading. */}
+      {session.completion === null ? (
+        <ActivityList label="Planned" items={session.activities} />
+      ) : null}
       {session.completion === null ? (
         <Link
           className={styles.primaryAction}
@@ -342,6 +353,20 @@ function CompletionFacts({ completion }: { completion: TodayCompletionView }) {
           </div>
         )}
       </dl>
+      <ActivityList label="What you did" items={completion.activities} />
+      {completion.replaces.length === 0 ? null : (
+        <p className={styles.body} data-replaces>
+          Instead of:{" "}
+          {completion.replaces.map((replaced, index) => (
+            <span key={replaced.id}>
+              {index === 0 ? null : ", "}
+              <Link href={`/home/progress/${replaced.id}`}>
+                {replaced.label}
+              </Link>
+            </span>
+          ))}
+        </p>
+      )}
       {completion.replacedBy !== null ? (
         <p className={styles.body} data-replaced-by>
           Instead:{" "}

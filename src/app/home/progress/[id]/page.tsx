@@ -118,6 +118,15 @@ function toCompletionView(completion: Completion): ProgressCompletionView {
     note: completion.note ?? null,
     replacementDescription: completion.replacementDescription ?? null,
     replacedBy: replacedByLabel(completion),
+    replaces: completion.replaces.map((replaced) => ({
+      id: replaced.completionId,
+      label: replaced.title ?? "A planned session",
+    })),
+    activities: completion.activities.map((activity) => ({
+      position: activity.position,
+      name: activity.name,
+      detail: describeTarget(activity.actualMeasurement ?? null),
+    })),
     pain: completion.painReported,
     illness: completion.illnessReported,
     injury: completion.injuryReported,

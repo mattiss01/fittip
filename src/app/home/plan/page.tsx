@@ -151,7 +151,6 @@ function toSessionView(session: RollingPlanSession): PlanSessionView {
     note: session.note ?? null,
     isLocked: session.isLocked,
     status: session.status,
-    activityCount: session.activities.length,
     activities: session.activities.map((activity) => ({
       name: activity.name,
       sport: activity.sport,

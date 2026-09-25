@@ -275,6 +275,8 @@ function completion() {
       activities: [],
     },
     revision: 0,
+    replacedBy: null,
+    replaces: [],
     activities: [],
     updatedAt: "2026-08-31T10:00:00.000Z",
   };
