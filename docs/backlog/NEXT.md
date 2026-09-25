@@ -57,6 +57,10 @@ Ordered by dependency. A lane is named where it is not the build lane.
       `1×3 · 100 kg` — rather than three rows repeating the name. Every field in a group
       is optional with at least one present, which is the rule `time_distance_pace`
       already follows in the same function, and is what makes "3 sets" with no reps legal.
+      `duration_intensity` relaxes the same way: it requires only its minutes, because the
+      owner said on 25 Sep 2026 that intensity is not mandatory either — today the
+      function refuses a duration carrying neither an intensity nor an effort, so
+      "40 minutes" alone cannot be stored.
       Constraints: `is_valid_training_measurement` guards five columns and is mirrored by
       `parseTrainingMeasurement`; the two must move together. It does *not* guard
       `completions.planned_snapshot` or `rolling_plan_change_entries.before_state`, which
