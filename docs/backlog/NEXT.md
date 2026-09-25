@@ -13,63 +13,14 @@ before any code is written.
 
 ## Now
 
-**Activities in training.** The owner named this on 24 Sep 2026. The domain stack is built
-and nothing reaches it: `RollingPlanActivityInput` carries name, sport, instructions,
-measurement mode, target and lock, `apply_rolling_plan_change_set` takes it, `completion-log`
-accepts an actual measurement per activity — and `actions.ts` passes `activities: []` on
-every add, so `rolling_plan_activities` is empty in practice. The coach cannot fill it
-either: the plan schema is session-level by design (`contracts.ts`, "carries no
-activities"). F-002 step 6 and its "activity results" step are accepted requirements that
-were never built. The live tables are `rolling_plan_activities` and `completion_activities`;
-M3-11 dropped M1's `planned_activities` and `completed_activities`, and `personal_activities`
-survived that reset untouched.
-
-Decided by the owner on 24 Sep 2026, before A2 is written:
-
-- **Reordering is drag.** Not up/down controls.
-- **The surface designs for ten activities a session.** The contract's fifty stays the hard
-  bound; no second limit is added to diverge from it.
-- **No per-activity lock in the surface.** A2 writes `isLocked: false` on every activity.
-  Replanning cannot reach an existing session to begin with: a finished review builds only
-  `add` and `set_recovery_day`, and F-005 retired Coach-driven replacement without
-  replacement. The column stays in the change-set contract, unused, and whichever ticket
-  ever approves Coach-driven replacement owns its UI.
+**Activities in training.** The owner named this on 24 Sep 2026. A session can now hold
+activities and the editor writes them; what is left is everywhere else they should appear.
+The live tables are `rolling_plan_activities` and `completion_activities`; M3-11 dropped
+M1's `planned_activities` and `completed_activities`, and `personal_activities` survived
+that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [ ] **A1 — Measurement input and display.** One mode selector and per-mode fields for the
-      five modes in `training-measurements.ts`, plus a formatter that renders a target or an
-      actual as words. A2, A3 and A4 all need it; building it inside the first of them and
-      extracting later would mean writing it twice at 390px.
-- [ ] **A2 — Add and edit activities in a planned session.** `session-fields.tsx` grows a
-      drag-ordered activity list: name, sport, instructions, mode, target. No lock control.
-      Fills the list `actions.ts` currently carries through untouched. F-002 step 6.
-- [ ] **A2b — What the owner asked for after seeing A2.** Build lane, one branch: the
-      effort field goes from Duration and intensity, leaving intensity as the thing you
-      pick; Sport prefills from the session and stops being something you must type;
-      pace is computed from time and distance rather than asked for; the session's date
-      moves into Edit and the standing "Move session" section goes; Duplicate goes behind
-      a disclosure with its date inside, like Edit and Cancel already are; and a card
-      collapses after a save instead of staying open.
-- [ ] **A2c — A set group, not one uniform prescription.** Careful lane; migration.
-      Outcome: a `sets_reps_load` target holds a list of groups, each carrying its own
-      sets, reps and load, so a squat that ramps is one activity — `3×5 · 60 kg` then
-      `1×3 · 100 kg` — rather than three rows repeating the name. Every field in a group
-      is optional with at least one present, which is the rule `time_distance_pace`
-      already follows in the same function, and is what makes "3 sets" with no reps legal.
-      `duration_intensity` relaxes the same way: it requires only its minutes, because the
-      owner said on 25 Sep 2026 that intensity is not mandatory either — today the
-      function refuses a duration carrying neither an intensity nor an effort, so
-      "40 minutes" alone cannot be stored.
-      Constraints: `is_valid_training_measurement` guards five columns and is mirrored by
-      `parseTrainingMeasurement`; the two must move together. It does *not* guard
-      `completions.planned_snapshot` or `rolling_plan_change_entries.before_state`, which
-      are permanent history and must never be rewritten — so the validator and
-      `describeMeasurement` accept the flat legacy shape as well as the grouped one, and
-      only the editor's writes are cut over. No backfill, and nothing depends on what the
-      founder project currently holds. Decided by the owner on 25 Sep 2026, who also asked
-      that one line be able to carry several identical sets, which is what makes the
-      uniform case the one-group case and removes the need for a mode toggle.
 - [ ] **A2d — An activity has a category, not a sport.** Careful lane; migration. Outcome:
       what an activity currently calls `sport` becomes `category` and answers a different
       question — what kind of work this is (skill training, strength, conditioning,
@@ -87,11 +38,11 @@ Ordered by dependency. A lane is named where it is not the build lane.
       before it ships, and it belongs in `CONTEXT.md` as project vocabulary.
       This supersedes A2b's prefill of an activity's sport from its session — a session's
       sport is not a category and must stop being copied into one.
-- [ ] **A3 — See the activities.** Today and the Plan day render the list instead of the
-      `activityCount` string. `completion-record.tsx` already renders one; follow it.
 - [ ] **A4 — Log what you actually did.** The log form offers each planned activity beside
       its target and takes the actual. The server already accepts it; only the surface is
       missing. F-002 "Record actual training" step 3.
+- [ ] **A3 — See the activities.** Today and the Plan day render the list instead of the
+      `activityCount` string. `completion-record.tsx` already renders one; follow it.
 - [ ] **A5 — Personal activity library.** Create, list, edit and archive reusable
       definitions, and a picker in A2 that sets `personal_activity_id` — the only thing that
       ever will. Carries F-002's rule that an edit changes future reuse and never a
@@ -202,6 +153,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 25 Sep 2026 | `cf53091` | [36114024850](https://github.com/mattiss01/fittip/actions/runs/36114024850) | Activities in a session, which nothing in FitTip could hold before: the rolling plan has taken the list since M3-10 and every caller passed `[]`. A drag-ordered editor writes them, an edit replaces the whole list, and the payload names no `position` or `isLocked` — the array's order is the position, and a lock guards nothing while replanning cannot reach a session at all. Migration `20260925074117` applied to the founder project — 30 migrations, advisors unchanged at 20 definer + 1 auth. It widens only: `sets_reps_load` gained a grouped form so a squat that ramps is one activity, `duration_intensity` requires only its minutes, and a sixth mode `unmeasured` lets a tennis drill stop claiming to be counted in sets. The flat shape stays valid because `is_valid_training_measurement` does not guard `completions.planned_snapshot`, so a measurement sealed into history must stay readable. pgTAP caught a NULL-returning branch that a check constraint would have read as passing; CI caught a move that sent an edit changing nothing beside it, which the database refused as a pair |
 | 24 Sep 2026 | `9a79a0d` | [36006993308](https://github.com/mattiss01/fittip/actions/runs/36006993308) | Plan regeneration, revived from Dropped: a proposal that is not what the owner wanted goes back with a note saying why, the coach sees both the note and the proposal it replaces, and whatever the owner already accepted is applied first so the new plan covers only what they did not take. No context ceiling was raised — a real plan context is 8,589 bytes of the 32,500 pool — but the plan's `previousProposal` allocation went 2,200 to 6,400, because it held the roadmap's number and a legal worst-case plan reduces to about 5,800. Migration `20260924102713` applied to the founder project — 29 migrations, advisors unchanged at 20 definer + 1 auth. Review found three blocking faults on one seam: the action closes the proposal before anything that can fail, and every later failure claimed nothing was written. Fixed, along with a feedback bound that accepted 1,000 characters the context refuses over 500, and a chain cap that counted from whichever proposal the caller named and so never bound |
 | 24 Sep 2026 | `11139d5` | [35978290689](https://github.com/mattiss01/fittip/actions/runs/35978290689) | Both finishes now settle an open spend reservation themselves, in the transaction that inserts the proposal, at the amount it was holding — so a settle that failed can no longer throw away a result the provider was paid for, which was unrecoverable because the claim stays pending under that key. Beside it, an unsettled reservation counts against the ceilings for good instead of falling to zero on expiry, which covers the failed-call path the first half cannot reach. ADR-019 records both and what was rejected; `reserve_ai_spend` and the two finishes were replaced from their live definitions, so every grant is restated after a full revoke. m3_01b's “an expired reservation no longer holds budget” is inverted on purpose, at the same 5,000 figure that flips. Migration `20260924082758` applied to the founder project — 28 migrations, advisors unchanged at 20 definer + 1 auth. Review found no defect but two of my assertions proved less than they claimed; fixed in the same branch, and the standing cost is now a known limitation |
 | 23 Sep 2026 | `dd7b68d` | [35910418730](https://github.com/mattiss01/fittip/actions/runs/35910418730) | A planning note that states a durable constraint now proposes it: `record_plan_memory_candidates` is back with M3-03's signature, `generatePlanProposal` records the batch after the proposal commits and swallows its failure, and the proposal page says how many are waiting. ADR-010 gained decision 16 first, on its own branch (`4826786`), naming every route allowed to create `inferred_proposed` memory and the two limits none may skip. M3-11's suite asserted this function stays dropped, so those two assertions now assert the reach instead — the precedent that file already set for `plan_content_is_valid`. Migration `20260923191214` applied to the founder project — 27 migrations, advisors 20 definer + 1 auth, the one new definer being this route. Review found nothing blocking; the panel itself has not been seen at 390px |
