@@ -23,9 +23,13 @@ export const MEASUREMENT_MODE_COPY: Record<
   TrainingMeasurementMode,
   { label: string; hint: string }
 > = {
+  unmeasured: {
+    label: "Nothing to count",
+    hint: "A drill you just want on the list, with no numbers.",
+  },
   sets_reps_load: {
     label: "Sets, reps and load",
-    hint: "Lifting and anything counted in sets.",
+    hint: "One line per block. Three of the same, then a heavier single.",
   },
   time_distance_pace: {
     label: "Time, distance and pace",
@@ -88,4 +92,7 @@ export const ACTIVITY_COPY = {
   noTarget: "No target",
   sportHint: "Taken from the session. Change it if this one differs.",
   derivedPace: "Worked out from the time and the distance.",
+  addGroup: "Add set group",
+  removeGroup: "Remove set group",
+  groupLimit: "Twenty set groups is the limit.",
 } as const;

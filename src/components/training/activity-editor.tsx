@@ -27,8 +27,10 @@ import {
   derivePace,
   draftFromMeasurement,
   emptyDraft,
+  emptySetGroup,
   writeClock,
   type MeasurementDraft,
+  type SetGroupDraft,
 } from "@/lib/training/measurement-draft";
 
 /** One activity as the surrounding surface already holds it. */
@@ -205,9 +207,9 @@ export function ActivityEditor({
               name: "",
               sport: (sessionSport ?? "").trim(),
               instructions: null,
-              measurementMode: "sets_reps_load",
+              measurementMode: "unmeasured",
               target: null,
-              draft: emptyDraft("sets_reps_load"),
+              draft: emptyDraft("unmeasured"),
             },
           ])
         }
@@ -401,7 +403,15 @@ function ActivityRow({
           draft={row.draft}
           validityRef={validityRef}
           onDraftChange={(field, value) =>
-            onChange({ draft: { ...row.draft, [field]: value } })
+            onChange({
+              draft: {
+                ...row.draft,
+                fields: { ...row.draft.fields, [field]: value },
+              },
+            })
+          }
+          onGroupsChange={(groups) =>
+            onChange({ draft: { ...row.draft, groups } })
           }
         />
 
@@ -421,16 +431,18 @@ function TargetFields({
   draft,
   validityRef,
   onDraftChange,
+  onGroupsChange,
 }: {
   idPrefix: string;
   mode: TrainingMeasurementMode;
   draft: MeasurementDraft;
   validityRef: React.RefObject<HTMLInputElement | null>;
   onDraftChange: (field: string, value: string) => void;
+  onGroupsChange: (groups: SetGroupDraft[]) => void;
 }) {
   const bind = (field: string) => ({
     id: `${idPrefix}-${field}`,
-    value: draft[field] ?? "",
+    value: draft.fields[field] ?? "",
     onChange: (
       event: React.ChangeEvent<
         HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -438,35 +450,103 @@ function TargetFields({
     ) => onDraftChange(field, event.target.value),
   });
 
-  if (mode === "sets_reps_load") {
+  // An activity with nothing to count has nothing to fill in. Saying so in a
+  // line is better than an empty box, which reads as something failing to
+  // render.
+  if (mode === "unmeasured") {
     return (
-      <div className={styles.targetGrid}>
-        <div className={styles.field}>
-          <label htmlFor={`${idPrefix}-sets`}>Sets</label>
-          <input
-            {...bind("sets")}
-            ref={validityRef}
-            inputMode="numeric"
-            placeholder="5"
-          />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor={`${idPrefix}-reps`}>Reps</label>
-          <input {...bind("reps")} inputMode="numeric" placeholder="5" />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor={`${idPrefix}-load`}>Load</label>
-          <input {...bind("load")} inputMode="decimal" placeholder="82.5" />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor={`${idPrefix}-load_unit`}>Unit</label>
-          <select {...bind("load_unit")}>
-            {LOAD_UNITS.map((unit) => (
-              <option key={unit} value={unit}>
-                {LOAD_UNIT_COPY[unit]}
-              </option>
-            ))}
-          </select>
+      <p className={styles.unmeasured}>
+        {MEASUREMENT_MODE_COPY.unmeasured.hint}
+      </p>
+    );
+  }
+
+  if (mode === "sets_reps_load") {
+    const groups = draft.groups;
+    const setGroup = (index: number, change: Partial<SetGroupDraft>) =>
+      onGroupsChange(
+        groups.map((group, position) =>
+          position === index ? { ...group, ...change } : group,
+        ),
+      );
+    return (
+      <div className={styles.groupBox}>
+        <ol className={styles.groupRows}>
+          <li className={styles.groupHeadings} aria-hidden="true">
+            <span>Sets</span>
+            <span>Reps</span>
+            <span>Load</span>
+            <span />
+          </li>
+          {groups.map((group, index) => (
+            <li className={styles.groupRow} key={index}>
+              <input
+                aria-label={`Sets, group ${index + 1}`}
+                id={`${idPrefix}-group-${index}-sets`}
+                ref={index === 0 ? validityRef : undefined}
+                value={group.sets}
+                inputMode="numeric"
+                placeholder="3"
+                onChange={(event) =>
+                  setGroup(index, { sets: event.target.value })
+                }
+              />
+              <input
+                aria-label={`Reps, group ${index + 1}`}
+                id={`${idPrefix}-group-${index}-reps`}
+                value={group.reps}
+                inputMode="numeric"
+                placeholder="5"
+                onChange={(event) =>
+                  setGroup(index, { reps: event.target.value })
+                }
+              />
+              <input
+                aria-label={`Load, group ${index + 1}`}
+                id={`${idPrefix}-group-${index}-load`}
+                value={group.load}
+                inputMode="decimal"
+                placeholder="60"
+                onChange={(event) =>
+                  setGroup(index, { load: event.target.value })
+                }
+              />
+              <button
+                className={styles.groupRemove}
+                type="button"
+                aria-label={`${ACTIVITY_COPY.removeGroup} ${index + 1}`}
+                // The last row is never removable: the editor always shows one,
+                // and an empty one means no target, so there is nothing a
+                // removal could express that clearing the fields does not.
+                disabled={groups.length === 1}
+                onClick={() =>
+                  onGroupsChange(groups.filter((_, at) => at !== index))
+                }
+              >
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </li>
+          ))}
+        </ol>
+        <div className={styles.groupFoot}>
+          <button
+            className={styles.groupAdd}
+            type="button"
+            disabled={groups.length >= 20}
+            onClick={() => onGroupsChange([...groups, emptySetGroup()])}
+          >
+            {ACTIVITY_COPY.addGroup}
+          </button>
+          <div className={styles.field}>
+            <label htmlFor={`${idPrefix}-load_unit`}>Unit</label>
+            <select {...bind("load_unit")}>
+              {LOAD_UNITS.map((unit) => (
+                <option key={unit} value={unit}>
+                  {LOAD_UNIT_COPY[unit]}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
     );
@@ -518,7 +598,7 @@ function TargetFields({
             inputMode="text"
             placeholder="4:45"
             readOnly={derivedPaceText !== null}
-            value={derivedPaceText ?? draft.pace ?? ""}
+            value={derivedPaceText ?? draft.fields.pace ?? ""}
           />
         </div>
         {derivedPaceText === null ? (

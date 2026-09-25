@@ -39,7 +39,13 @@ export function parseTrainingMeasurement(
   if (JSON.stringify(record).length > 4096) invalid();
 
   switch (mode) {
+    // An unmeasured activity carries nothing. The caller reaches this only
+    // with a non-null value, since a null target never gets here, so any
+    // object at all is a contradiction — the same answer the SQL gives.
+    case "unmeasured":
+      invalid();
     case "sets_reps_load": {
+      if ("groups" in record) return parseSetGroups(record);
       assertOnlyKeys(record, ["sets", "reps", "load", "load_unit"]);
       const load =
         record.load === undefined
@@ -121,7 +127,10 @@ export function parseTrainingMeasurement(
         record.perceived_effort === undefined
           ? undefined
           : readInteger(record.perceived_effort, 1, 10);
-      if (intensity === undefined && effort === undefined) invalid();
+      // Minutes alone is a prescription since A2c. `is_valid_training_measurement`
+      // dropped the same requirement in the same migration; this mirrors it,
+      // and the agreement test in `measurement-draft.test.ts` is what holds
+      // the two together.
       return {
         duration_minutes: readNumber(
           record.duration_minutes,
@@ -154,6 +163,53 @@ export function parseTrainingMeasurement(
       };
     }
   }
+}
+
+/**
+ * The grouped `sets_reps_load` form. Mirrors the grouped branch of
+ * `is_valid_training_measurement`, which is the authority — a value this
+ * accepts and the database refuses is a bug here, and the pgTAP suite beside
+ * that function is where the two are held together.
+ *
+ * Recognised by the key rather than by trying the flat form and falling
+ * through, so a value carrying both shapes is refused instead of being read as
+ * whichever branch happens to come first.
+ */
+function parseSetGroups(record: Record<string, unknown>): TrainingMeasurement {
+  assertOnlyKeys(record, ["groups", "load_unit"]);
+  const raw = record.groups;
+  if (!Array.isArray(raw) || raw.length < 1 || raw.length > 20) invalid();
+
+  let loaded = false;
+  const groups = raw.map((entry) => {
+    const group = readRecord(entry);
+    assertOnlyKeys(group, ["sets", "reps", "load"]);
+    const sets =
+      group.sets === undefined ? undefined : readInteger(group.sets, 1, 100);
+    const reps =
+      group.reps === undefined ? undefined : readInteger(group.reps, 1, 10000);
+    const load =
+      group.load === undefined ? undefined : readNumber(group.load, 0, 100000);
+    // At least one of the three, the rule `time_distance_pace` already
+    // follows. A group carrying no numbers says nothing.
+    if (sets === undefined && reps === undefined && load === undefined) {
+      invalid();
+    }
+    if (load !== undefined) loaded = true;
+    return {
+      ...(sets === undefined ? {} : { sets }),
+      ...(reps === undefined ? {} : { reps }),
+      ...(load === undefined ? {} : { load }),
+    };
+  });
+
+  // The unit is required exactly when some group carries a load, which is the
+  // same paired rule the flat form applies to `load`/`load_unit`.
+  if (loaded) {
+    return { groups, load_unit: readChoice(record.load_unit, LOAD_UNITS) };
+  }
+  if (record.load_unit !== undefined) invalid();
+  return { groups };
 }
 
 function readRecord(value: unknown): Record<string, unknown> {

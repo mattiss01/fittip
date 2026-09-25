@@ -17,6 +17,14 @@
  */
 
 export const TRAINING_MEASUREMENT_MODES = [
+  /**
+   * An activity with nothing to count — a tennis drill listed by name and no
+   * more. It exists so such a row stops claiming a mode nobody chose: before
+   * it, the only way to record one was to say it was measured in sets and reps
+   * while measuring nothing, which a later Progress surface would read as
+   * chartable. A value in this mode has no target at all.
+   */
+  "unmeasured",
   "sets_reps_load",
   "time_distance_pace",
   "duration_intensity",
@@ -27,7 +35,37 @@ export const TRAINING_MEASUREMENT_MODES = [
 export type TrainingMeasurementMode =
   (typeof TRAINING_MEASUREMENT_MODES)[number];
 
+/**
+ * One block of a `sets_reps_load` prescription: some number of sets of the
+ * same thing. Every field is optional with at least one present, which is the
+ * rule `time_distance_pace` has followed since M1-01, and is what makes
+ * "3 sets" with no reps sayable.
+ */
+export type SetGroup = {
+  sets?: number;
+  reps?: number;
+  load?: number;
+};
+
 export type TrainingMeasurement =
+  /**
+   * The grouped `sets_reps_load` form: a squat that ramps is 3×5 at 60 kg then
+   * 1×3 at 100 kg, one activity rather than three rows repeating a name. The
+   * uniform case is simply the one-group case, so no toggle distinguishes
+   * them. The unit sits once at the top because a prescription does not switch
+   * between kilograms and pounds partway down.
+   */
+  | {
+      groups: SetGroup[];
+      load_unit?: LoadUnit;
+    }
+  /**
+   * The flat `sets_reps_load` form, which nothing writes any more and
+   * everything must still read. It is not kept out of politeness towards old
+   * rows: measurements sealed into `completions.planned_snapshot` and
+   * `rolling_plan_change_entries.before_state` are permanent history that is
+   * never rewritten, so this shape has to stay readable for good.
+   */
   | {
       sets: number;
       reps: number;

@@ -28,7 +28,10 @@ describe("preserved training measurement validation", () => {
   it.each<[TrainingMeasurementMode, unknown]>([
     ["sets_reps_load", { sets: 4, reps: 6, load: 60 }],
     ["time_distance_pace", { distance: 5 }],
-    ["duration_intensity", { duration_minutes: 45 }],
+    // `{ duration_minutes: 45 }` moved out of this list in A2c: minutes alone
+    // is a prescription now, because the owner asked that intensity not be
+    // mandatory. An intensity outside the four is still malformed.
+    ["duration_intensity", { duration_minutes: 45, intensity: "brutal" }],
     ["skill_repetitions", { repetitions: 0, unit: "serves" }],
     ["custom", { label: "Grade", value: "6A" }],
   ])("rejects a malformed %s measurement", (mode, value) => {

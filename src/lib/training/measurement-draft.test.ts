@@ -1,19 +1,30 @@
 import { describe, expect, it } from "vitest";
 
+import { TRAINING_MEASUREMENT_MODES } from "@/lib/training/measurement";
 import {
   buildMeasurement,
   draftFromMeasurement,
   emptyDraft,
-  type MeasurementDraft,
+  type SetGroupDraft,
 } from "@/lib/training/measurement-draft";
-import { TRAINING_MEASUREMENT_MODES } from "@/lib/training/measurement";
 import { parseTrainingMeasurement } from "@/server/training/training-measurements";
 
+type Mode = Parameters<typeof buildMeasurement>[0];
+
+/** A draft as the editor would hold it, with only the named fields touched. */
 function build(
-  mode: Parameters<typeof buildMeasurement>[0],
-  fields: MeasurementDraft,
+  mode: Mode,
+  fields: Record<string, string> = {},
+  groups?: Partial<SetGroupDraft>[],
 ) {
-  return buildMeasurement(mode, { ...emptyDraft(mode), ...fields });
+  const draft = emptyDraft(mode);
+  return buildMeasurement(mode, {
+    fields: { ...draft.fields, ...fields },
+    groups:
+      groups === undefined
+        ? draft.groups
+        : groups.map((group) => ({ sets: "", reps: "", load: "", ...group })),
+  });
 }
 
 describe("an untouched row", () => {
@@ -29,28 +40,114 @@ describe("an untouched row", () => {
   it("stays no target when only a defaulted unit is present", () => {
     // `emptyDraft` puts kg and km in the selects. A default nobody acted on
     // must not become a measurement of nothing.
-    expect(build("sets_reps_load", {}).ok).toBe(true);
-    expect(build("time_distance_pace", {})).toEqual({
+    expect(build("sets_reps_load")).toEqual({ ok: true, measurement: null });
+    expect(build("time_distance_pace")).toEqual({
       ok: true,
       measurement: null,
     });
   });
 });
 
-describe("what the server would refuse, said in words first", () => {
-  it("names the missing half of sets and reps", () => {
-    expect(build("sets_reps_load", { sets: "4" })).toEqual({
-      ok: false,
-      message: "Sets and reps are both needed.",
+describe("an activity with nothing to count", () => {
+  it("has no target whatever was left lying in the draft", () => {
+    // The owner can pick a mode, type into it, and change their mind. What the
+    // unmeasured mode means is "no target", not "whatever you typed first".
+    expect(
+      buildMeasurement("unmeasured", {
+        fields: { duration_minutes: "40" },
+        groups: [{ sets: "5", reps: "5", load: "80" }],
+      }),
+    ).toEqual({ ok: true, measurement: null });
+  });
+
+  it("is refused by the server if a target is somehow attached", () => {
+    expect(() => parseTrainingMeasurement("unmeasured", {})).toThrow();
+    expect(() =>
+      parseTrainingMeasurement("unmeasured", { sets: 5, reps: 5 }),
+    ).toThrow();
+  });
+});
+
+describe("set groups", () => {
+  it("makes the uniform case the one-group case", () => {
+    expect(
+      build("sets_reps_load", { load_unit: "kg" }, [
+        { sets: "5", reps: "5", load: "82.5" },
+      ]),
+    ).toEqual({
+      ok: true,
+      measurement: {
+        groups: [{ sets: 5, reps: 5, load: 82.5 }],
+        load_unit: "kg",
+      },
     });
   });
 
-  it("refuses minutes with no intensity", () => {
-    // The owner dropped the effort field on 25 Sep 2026, so intensity is the
-    // one thing that makes a duration into a prescription.
-    expect(build("duration_intensity", { duration_minutes: "40" })).toEqual({
+  it("holds a squat that ramps as one measurement", () => {
+    expect(
+      build("sets_reps_load", { load_unit: "kg" }, [
+        { sets: "3", reps: "5", load: "60" },
+        { sets: "1", reps: "3", load: "100" },
+      ]),
+    ).toEqual({
+      ok: true,
+      measurement: {
+        groups: [
+          { sets: 3, reps: 5, load: 60 },
+          { sets: 1, reps: 3, load: 100 },
+        ],
+        load_unit: "kg",
+      },
+    });
+  });
+
+  it("takes sets with no reps, which the flat shape could not say", () => {
+    expect(build("sets_reps_load", {}, [{ sets: "3" }])).toEqual({
+      ok: true,
+      measurement: { groups: [{ sets: 3 }] },
+    });
+  });
+
+  it("leaves the unit off when no group carries a load", () => {
+    const built = build("sets_reps_load", { load_unit: "kg" }, [
+      { sets: "3", reps: "8" },
+    ]);
+    if (!built.ok || built.measurement === null) throw new Error("unreachable");
+    expect(built.measurement).not.toHaveProperty("load_unit");
+  });
+
+  it("drops a blank row rather than refusing it", () => {
+    // The editor always shows one row, so "no target" and "one blank row" are
+    // the same intention.
+    expect(build("sets_reps_load", {}, [{ sets: "3", reps: "5" }, {}])).toEqual(
+      {
+        ok: true,
+        measurement: { groups: [{ sets: 3, reps: 5 }] },
+      },
+    );
+  });
+
+  it("names the field that is not a number", () => {
+    expect(build("sets_reps_load", {}, [{ sets: "many" }])).toEqual({
       ok: false,
-      message: "Choose an intensity, not minutes alone.",
+      message: "Sets is a whole number from 1 to 100.",
+    });
+  });
+});
+
+describe("what the server would refuse, said in words first", () => {
+  it("refuses minutes that are not a number", () => {
+    expect(build("duration_intensity", { duration_minutes: "ages" })).toEqual({
+      ok: false,
+      message: "Minutes are needed for this mode.",
+    });
+  });
+
+  it("takes minutes with no intensity", () => {
+    // The owner asked on 25 Sep 2026 that intensity not be mandatory.
+    expect(build("duration_intensity", { duration_minutes: "40" })).toEqual({
+      ok: true,
+      measurement: { duration_minutes: 40 },
     });
   });
 
@@ -80,7 +177,9 @@ describe("clock readings", () => {
   it("refuses more than 59 in a minutes or seconds place", () => {
     expect(build("time_distance_pace", { duration: "7:61" }).ok).toBe(false);
   });
+});
 
+describe("pace is arithmetic", () => {
   it("works pace out from time and distance", () => {
     expect(
       build("time_distance_pace", {
@@ -119,38 +218,83 @@ describe("clock readings", () => {
       measurement: { pace_seconds_per_unit: 285, pace_unit: "sec/km" },
     });
   });
+});
 
-  it("survives a round trip through the draft", () => {
+describe("round trips", () => {
+  it("brings a clock reading back as it was typed", () => {
     const built = build("time_distance_pace", { pace: "4:45" });
-    expect(built.ok).toBe(true);
     if (!built.ok || built.measurement === null) throw new Error("unreachable");
-    const back = draftFromMeasurement("time_distance_pace", built.measurement);
-    expect(back.pace).toBe("4:45");
+    expect(
+      draftFromMeasurement("time_distance_pace", built.measurement).fields.pace,
+    ).toBe("4:45");
+  });
+
+  it("brings set groups back as rows", () => {
+    const built = build("sets_reps_load", { load_unit: "kg" }, [
+      { sets: "3", reps: "5", load: "60" },
+      { sets: "1", reps: "3", load: "100" },
+    ]);
+    if (!built.ok || built.measurement === null) throw new Error("unreachable");
+    expect(
+      draftFromMeasurement("sets_reps_load", built.measurement).groups,
+    ).toEqual([
+      { sets: "3", reps: "5", load: "60" },
+      { sets: "1", reps: "3", load: "100" },
+    ]);
+  });
+
+  it("brings the flat shape back as a single row", () => {
+    // Nothing writes the flat shape any more, but a measurement sealed into
+    // history can still be read into a form.
+    expect(
+      draftFromMeasurement("sets_reps_load", {
+        sets: 5,
+        reps: 5,
+        load: 82.5,
+        load_unit: "kg",
+      }).groups,
+    ).toEqual([{ sets: "5", reps: "5", load: "82.5" }]);
   });
 });
 
 describe("the editor and the server agree", () => {
   // The claim `measurement-draft.ts` makes about itself: anything it calls
-  // buildable, `parseTrainingMeasurement` accepts. Where these skew, the owner
-  // gets a generic "invalid measurement" from a form that said it was fine.
-  const cases: [Parameters<typeof buildMeasurement>[0], MeasurementDraft][] = [
-    ["sets_reps_load", { sets: "4", reps: "8" }],
-    ["sets_reps_load", { sets: "5", reps: "5", load: "82.5", load_unit: "kg" }],
-    ["sets_reps_load", { sets: "3", reps: "10", load: "135", load_unit: "lb" }],
+  // buildable, `parseTrainingMeasurement` accepts — and that function mirrors
+  // `is_valid_training_measurement`, which is the authority. Where these skew,
+  // the owner gets a generic "invalid measurement" from a form that said it
+  // was fine.
+  const cases: [Mode, Record<string, string>, Partial<SetGroupDraft>[]?][] = [
+    ["sets_reps_load", {}, [{ sets: "4", reps: "8" }]],
+    [
+      "sets_reps_load",
+      { load_unit: "kg" },
+      [{ sets: "5", reps: "5", load: "82.5" }],
+    ],
+    [
+      "sets_reps_load",
+      { load_unit: "lb" },
+      [{ sets: "3", reps: "10", load: "135" }],
+    ],
+    [
+      "sets_reps_load",
+      { load_unit: "kg" },
+      [
+        { sets: "3", reps: "5", load: "60" },
+        { sets: "1", reps: "3", load: "100" },
+      ],
+    ],
+    ["sets_reps_load", {}, [{ sets: "3" }]],
+    ["sets_reps_load", {}, [{ reps: "8" }]],
+    ["sets_reps_load", { load_unit: "kg" }, [{ load: "100" }]],
     ["time_distance_pace", { duration: "45:00" }],
     ["time_distance_pace", { distance: "10", distance_unit: "km" }],
     ["time_distance_pace", { pace: "4:45", pace_unit: "sec/km" }],
     [
       "time_distance_pace",
-      {
-        duration: "1:30:00",
-        distance: "21.1",
-        distance_unit: "km",
-        pace: "4:16",
-        pace_unit: "sec/km",
-      },
+      { duration: "1:30:00", distance: "21.1", distance_unit: "km" },
     ],
     ["time_distance_pace", { distance: "400", distance_unit: "m" }],
+    ["duration_intensity", { duration_minutes: "40" }],
     ["duration_intensity", { duration_minutes: "40", intensity: "easy" }],
     ["duration_intensity", { duration_minutes: "60", intensity: "very_hard" }],
     ["skill_repetitions", { repetitions: "20", unit: "throws" }],
@@ -158,9 +302,9 @@ describe("the editor and the server agree", () => {
     ["custom", { label: "Depth", value: "12", unit: "m" }],
   ];
 
-  for (const [mode, fields] of cases) {
-    it(`${mode}: ${JSON.stringify(fields)}`, () => {
-      const built = build(mode, fields);
+  for (const [mode, fields, groups] of cases) {
+    it(`${mode}: ${JSON.stringify({ ...fields, ...(groups ? { groups } : {}) })}`, () => {
+      const built = build(mode, fields, groups);
       expect(built.ok).toBe(true);
       if (!built.ok || built.measurement === null) {
         throw new Error("expected a measurement");

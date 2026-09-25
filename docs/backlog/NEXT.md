@@ -70,6 +70,23 @@ Ordered by dependency. A lane is named where it is not the build lane.
       founder project currently holds. Decided by the owner on 25 Sep 2026, who also asked
       that one line be able to carry several identical sets, which is what makes the
       uniform case the one-group case and removes the need for a mode toggle.
+- [ ] **A2d — An activity has a category, not a sport.** Careful lane; migration. Outcome:
+      what an activity currently calls `sport` becomes `category` and answers a different
+      question — what kind of work this is (skill training, strength, conditioning,
+      mobility, recovery) rather than which sport it belongs to, which the session above it
+      already says. The control offers preset values and takes one the owner types, and a
+      typed one joins the list they are offered next time. Decided by the owner on
+      25 Sep 2026.
+      Constraints: `sport` is `not null` on five activity tables and appears in the saved
+      library, completions and Progress, so the rename is not local to the editor. The
+      remembered list should be the distinct categories the owner has already used, unioned
+      with the presets — no new table, nothing to maintain, and nothing to clean up when a
+      category stops being used. The presets are a small shared vocabulary, which is worth
+      naming against the "no global exercise library" invariant: a handful of category
+      suggestions is not an exercise library, but the owner should agree the preset list
+      before it ships, and it belongs in `CONTEXT.md` as project vocabulary.
+      This supersedes A2b's prefill of an activity's sport from its session — a session's
+      sport is not a category and must stop being copied into one.
 - [ ] **A3 — See the activities.** Today and the Plan day render the list instead of the
       `activityCount` string. `completion-record.tsx` already renders one; follow it.
 - [ ] **A4 — Log what you actually did.** The log form offers each planned activity beside

@@ -11,7 +11,11 @@
  * what the plan asked for and what the owner did are only distinguished by
  * which column they were read from.
  */
-import type { TrainingMeasurement } from "@/lib/training/measurement";
+import type {
+  LoadUnit,
+  SetGroup,
+  TrainingMeasurement,
+} from "@/lib/training/measurement";
 
 const INTENSITY_LABELS = {
   easy: "Easy",
@@ -36,13 +40,26 @@ export function describeMeasurement(
 ): string | null {
   if (target === null) return null;
 
+  // Both `sets_reps_load` shapes go through one renderer, so the same
+  // prescription never reads two ways depending on which shape it was stored
+  // in. A single group renders exactly as the flat form always has — `5 × 5 ·
+  // 82.5 kg` — which is why the flat branch is a one-group call rather than a
+  // second piece of formatting to keep in step.
+  if ("groups" in target) {
+    return describeGroups(target.groups, target.load_unit);
+  }
+
   if ("sets" in target) {
-    return join([
-      `${target.sets} × ${target.reps}`,
-      target.load === undefined
-        ? null
-        : `${formatNumber(target.load)} ${target.load_unit}`,
-    ]);
+    return describeGroups(
+      [
+        {
+          sets: target.sets,
+          reps: target.reps,
+          ...(target.load === undefined ? {} : { load: target.load }),
+        },
+      ],
+      target.load_unit,
+    );
   }
 
   if ("duration_minutes" in target) {
@@ -76,6 +93,34 @@ export function describeMeasurement(
       ? null
       : `${formatSeconds(target.pace_seconds_per_unit)}${PACE_LABELS[target.pace_unit]}`,
   ]);
+}
+
+/**
+ * Set groups, in the words a training log uses. Groups are joined with `+`
+ * rather than the `·` that separates a group's own parts, so `3 × 5 · 60 kg +
+ * 1 × 3 · 100 kg` reads as two blocks and not as one list of four things.
+ */
+function describeGroups(
+  groups: SetGroup[],
+  loadUnit: LoadUnit | undefined,
+): string | null {
+  const described = groups
+    .map((group) =>
+      join([
+        group.sets !== undefined && group.reps !== undefined
+          ? `${group.sets} × ${group.reps}`
+          : group.sets !== undefined
+            ? `${group.sets} ${group.sets === 1 ? "set" : "sets"}`
+            : group.reps !== undefined
+              ? `${group.reps} ${group.reps === 1 ? "rep" : "reps"}`
+              : null,
+        group.load === undefined
+          ? null
+          : `${formatNumber(group.load)}${loadUnit === undefined ? "" : ` ${loadUnit}`}`,
+      ]),
+    )
+    .filter((part): part is string => part !== null);
+  return described.length === 0 ? null : described.join(" + ");
 }
 
 function join(parts: (string | null)[]): string | null {
