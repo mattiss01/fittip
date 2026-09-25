@@ -53,6 +53,7 @@ test.describe("M3-15B today and logging", () => {
       await addSession(page, today, "Core circuit", "Strength");
       await addSession(page, today, "Rest swap", "Yoga");
       await addSession(page, tomorrow, "Long ride", "Cycling");
+      await addSession(page, today, "Easy jog", "Running");
       // Before the series: the create form keeps "Repeat" switched on after
       // one, and its activity rows reset with the form after every create.
       await addSessionWithActivity(
@@ -252,6 +253,43 @@ test.describe("M3-15B today and logging", () => {
       await expect(serves().getByText("Planned: no target")).toBeVisible();
       await page.goto("/home/today");
 
+      // ---- A4d: replaced points at what replaced it. ----
+      // Logged inline: one save writes the replaced log and the ride.
+      await todayCard(page, "Core circuit")
+        .getByRole("link", { name: "Log this session" })
+        .click();
+      await page.getByLabel("What happened").selectOption("replaced");
+      await expect(page.getByLabel("Log it now")).toBeChecked();
+      await page.getByLabel("Title of what you did").fill("Hill ride");
+      await page.getByLabel("Sport of what you did").fill("Cycling");
+      await page.getByLabel("Duration (minutes)").fill("70");
+      await page.getByRole("button", { name: "Save log" }).click();
+      await expect(
+        page.getByRole("heading", { name: "Log saved." }),
+      ).toBeVisible();
+      await page.getByRole("link", { name: "Back to that day" }).click();
+      await expect(
+        todayCard(page, "Core circuit").locator("[data-replaced-by]"),
+      ).toContainText("Instead: Hill ride (Cycling)");
+
+      // Picked: the same ride stands for a second session.
+      await todayCard(page, "Easy jog")
+        .getByRole("link", { name: "Log this session" })
+        .click();
+      await page.getByLabel("What happened").selectOption("replaced");
+      await page.getByLabel("I already logged it").check();
+      await expect(page.getByLabel("Which training")).toContainText(
+        "Hill ride · Cycling",
+      );
+      await page.getByRole("button", { name: "Save log" }).click();
+      await expect(
+        page.getByRole("heading", { name: "Log saved." }),
+      ).toBeVisible();
+      await page.getByRole("link", { name: "Back to that day" }).click();
+      await expect(
+        todayCard(page, "Easy jog").locator("[data-replaced-by]"),
+      ).toContainText("Instead: Hill ride (Cycling)");
+
       // ---- Skip is a completion status, written the same way. ----
       await todayCard(page, "Easy spin")
         .getByRole("link", { name: "Log this session" })
@@ -308,7 +346,11 @@ test.describe("M3-15B today and logging", () => {
       await page.getByRole("button", { name: "Save log" }).click();
       await page.getByRole("link", { name: "Back to that day" }).click();
 
-      const unplanned = page.locator("[data-today-completion]");
+      // The ride that replaced two sessions is unplanned training too; this
+      // one is the swim.
+      const unplanned = page
+        .locator("[data-today-completion]")
+        .filter({ hasNotText: "Hill ride" });
       await expect(unplanned).toHaveCount(1);
       await expect(
         unplanned.getByRole("heading", { name: "Sunrise swim", exact: true }),

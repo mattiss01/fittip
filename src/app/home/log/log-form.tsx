@@ -57,6 +57,8 @@ export type LogExistingView = {
   sport: string | null;
   /** What the log records per activity, in the order it was done. */
   activities: LogRecordedActivityView[];
+  /** The unplanned log a replaced one points at, if it points anywhere. */
+  replacedById: string | null;
   pain: boolean;
   illness: boolean;
   injury: boolean;
@@ -84,7 +86,15 @@ type Props = {
   alreadyLogged?: { id: string; dayLabel: string } | null;
   /** The day on Today the owner returns to once the write lands. */
   returnDate: string;
+  /**
+   * Unplanned training a replaced log may point at: this owner's, from a
+   * week before the planned day to today, most recent first.
+   */
+  unplannedOptions?: LogUnplannedOption[];
 };
+
+/** One unplanned log a replaced one may point at, already in words. */
+export type LogUnplannedOption = { id: string; label: string };
 
 export function LogForm({
   planned,
@@ -93,6 +103,7 @@ export function LogForm({
   defaultDate,
   today,
   returnDate,
+  unplannedOptions = [],
 }: Props) {
   const [state, action, pending] = useActionState<LogActionState, FormData>(
     logCompletionAction,
@@ -298,17 +309,12 @@ export function LogForm({
       )}
 
       {outcome === "replaced" ? (
-        <div className={styles.field}>
-          <label htmlFor="log-replacement">What you did instead</label>
-          <textarea
-            id="log-replacement"
-            name="replacementDescription"
-            rows={2}
-            maxLength={500}
-            required
-            defaultValue={existing?.replacementDescription ?? ""}
-          />
-        </div>
+        <ReplacedBy
+          options={unplannedOptions}
+          linkedId={existing?.replacedById ?? null}
+          legacyText={existing?.replacementDescription ?? null}
+          sessionSport={planned?.sport ?? ""}
+        />
       ) : null}
 
       <div className={styles.field}>
@@ -335,7 +341,7 @@ export function LogForm({
         </p>
       )}
 
-      {skipped ? null : (
+      {skipped || outcome === "replaced" ? null : (
         <>
           <div className={styles.fieldPair}>
             <div className={styles.field}>
@@ -455,4 +461,169 @@ function defaultSignal(existing: LogExistingView | null, name: string) {
   if (name === "illnessReported") return existing.illness;
   if (name === "injuryReported") return existing.injury;
   return existing.severeFatigue;
+}
+
+/**
+ * What a replaced session was replaced by: training logged now, in this same
+ * save, or training already logged. The owner decided on 25 September 2026
+ * that a replaced session must point at one or the other, since without it a
+ * replaced session is only a skipped one.
+ *
+ * The numbers belong here rather than on the planned log, because they
+ * describe what was actually done. The planned log keeps its date, note and
+ * anything reported. A log written before the link keeps the text it was
+ * written with, shown and sent back unchanged beside whatever it now points
+ * at.
+ */
+function ReplacedBy({
+  options,
+  linkedId,
+  legacyText,
+  sessionSport,
+}: {
+  options: LogUnplannedOption[];
+  linkedId: string | null;
+  legacyText: string | null;
+  sessionSport: string;
+}) {
+  const [mode, setMode] = useState<"new" | "existing">(
+    linkedId !== null && options.some((option) => option.id === linkedId)
+      ? "existing"
+      : "new",
+  );
+  return (
+    <fieldset className={styles.activities} data-log-replaced-by>
+      <legend>What you did instead</legend>
+      {legacyText === null ? null : (
+        <>
+          <p className={styles.fieldHint}>
+            You wrote: &ldquo;{legacyText}&rdquo;. That stays; point it at the
+            training it describes.
+          </p>
+          <input
+            type="hidden"
+            name="replacementDescription"
+            value={legacyText}
+          />
+        </>
+      )}
+      <label className={styles.checkField}>
+        <input
+          type="radio"
+          name="replacementMode"
+          value="new"
+          checked={mode === "new"}
+          onChange={() => setMode("new")}
+        />
+        <span>Log it now</span>
+      </label>
+      <label className={styles.checkField}>
+        <input
+          type="radio"
+          name="replacementMode"
+          value="existing"
+          checked={mode === "existing"}
+          disabled={options.length === 0}
+          onChange={() => setMode("existing")}
+        />
+        <span>I already logged it</span>
+      </label>
+      {options.length === 0 ? (
+        <p className={styles.fieldHint}>
+          Nothing unplanned is logged from the week before this session to
+          today, so log it now.
+        </p>
+      ) : null}
+
+      {mode === "existing" && options.length > 0 ? (
+        <div className={styles.field}>
+          <label htmlFor="log-replaced-by">Which training</label>
+          <select
+            id="log-replaced-by"
+            name="replacedByCompletionId"
+            defaultValue={linkedId ?? options[0].id}
+          >
+            {options.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : (
+        <>
+          <div className={styles.field}>
+            <label htmlFor="log-replacement-title">Title of what you did</label>
+            <input
+              id="log-replacement-title"
+              name="replacement.title"
+              type="text"
+              required
+              maxLength={120}
+              autoComplete="off"
+            />
+          </div>
+          <div className={styles.field}>
+            <label htmlFor="log-replacement-sport">Sport of what you did</label>
+            <input
+              id="log-replacement-sport"
+              name="replacement.sport"
+              type="text"
+              required
+              maxLength={80}
+              autoComplete="off"
+            />
+          </div>
+          <div className={styles.fieldPair}>
+            <div className={styles.field}>
+              <label htmlFor="log-replacement-duration">
+                Duration (minutes)
+              </label>
+              <input
+                id="log-replacement-duration"
+                name="replacement.durationMinutes"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={10080}
+                step={1}
+              />
+            </div>
+            <div className={styles.field}>
+              <label htmlFor="log-replacement-effort">Effort (1-10)</label>
+              <input
+                id="log-replacement-effort"
+                name="replacement.perceivedEffort"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={10}
+                step={1}
+              />
+            </div>
+          </div>
+          <div className={styles.field}>
+            <label htmlFor="log-replacement-feeling">How it felt</label>
+            <select
+              id="log-replacement-feeling"
+              name="replacement.feeling"
+              defaultValue=""
+            >
+              <option value="">Not recorded</option>
+              {COMPLETION_FEELING_CHOICES.map((choice) => (
+                <option key={choice.value} value={choice.value}>
+                  {choice.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <ActualActivities
+            name="replacement.activities"
+            activities={[]}
+            sessionSport={sessionSport}
+          />
+        </>
+      )}
+    </fieldset>
+  );
 }

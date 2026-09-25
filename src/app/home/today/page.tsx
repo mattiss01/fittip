@@ -10,7 +10,10 @@ import styles from "./today.module.css";
 
 import homeStyles from "../home.module.css";
 import { planWindowFor } from "../plan/plan-window";
-import type { Completion } from "@/server/completions/completion-log";
+import {
+  replacedByLabel,
+  type Completion,
+} from "@/server/completions/completion-log";
 import { readPlanWindowToppedUp } from "@/server/completions/plan-window-top-up";
 import {
   CompletionAuthenticationError,
@@ -188,6 +191,7 @@ function toCompletionView(completion: Completion): TodayCompletionView {
     feeling: completion.feeling ?? null,
     note: completion.note ?? null,
     replacementDescription: completion.replacementDescription ?? null,
+    replacedBy: replacedByLabel(completion),
     pain: completion.painReported,
     illness: completion.illnessReported,
     injury: completion.injuryReported,

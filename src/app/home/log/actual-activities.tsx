@@ -88,7 +88,13 @@ export function ActualActivities({
   recorded,
   sessionSport,
   inactive = false,
+  name = "activities",
 }: {
+  /**
+   * The form field it writes. The replaced outcome writes a second list, for
+   * the unplanned training logged inline, under its own name.
+   */
+  name?: string;
   /** The plan's activities on a create, the snapshot's on an edit. */
   activities: LogPlannedActivityView[];
   /** What a saved log records; absent on a create. */
@@ -177,7 +183,7 @@ export function ActualActivities({
           ? "Each planned activity starts as planned. Change what differed, mark what you did not do, and add anything else."
           : "Add what you did, one activity at a time, in the order you did it."}
       </p>
-      <input type="hidden" name="activities" value={serialized} />
+      <input type="hidden" name={name} value={serialized} />
       {rows.length === 0 ? null : (
         <ol className={styles.activityRows}>
           {built.map(({ row, build }, index) => (

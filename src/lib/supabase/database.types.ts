@@ -165,6 +165,7 @@ export type Database = {
           perceived_effort: number | null;
           plan_session_id: string | null;
           planned_snapshot: Json | null;
+          replaced_by_completion_id: string | null;
           replacement_description: string | null;
           revision: number;
           severe_fatigue_reported: boolean;
@@ -189,6 +190,7 @@ export type Database = {
           perceived_effort?: number | null;
           plan_session_id?: string | null;
           planned_snapshot?: Json | null;
+          replaced_by_completion_id?: string | null;
           replacement_description?: string | null;
           revision?: number;
           severe_fatigue_reported?: boolean;
@@ -213,6 +215,7 @@ export type Database = {
           perceived_effort?: number | null;
           plan_session_id?: string | null;
           planned_snapshot?: Json | null;
+          replaced_by_completion_id?: string | null;
           replacement_description?: string | null;
           revision?: number;
           severe_fatigue_reported?: boolean;
@@ -236,6 +239,13 @@ export type Database = {
             columns: ["plan_session_id", "user_id"];
             isOneToOne: false;
             referencedRelation: "rolling_plan_sessions";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "completions_replaced_by_fkey";
+            columns: ["replaced_by_completion_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "completions";
             referencedColumns: ["id", "user_id"];
           },
         ];

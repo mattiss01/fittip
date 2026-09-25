@@ -8,7 +8,10 @@ import styles from "./progress.module.css";
 
 import homeStyles from "../home.module.css";
 import { isoDateInTimezone } from "@/lib/date/local-date";
-import type { Completion } from "@/server/completions/completion-log";
+import {
+  replacedByLabel,
+  type Completion,
+} from "@/server/completions/completion-log";
 import {
   CompletionAuthenticationError,
   createCompletionLog,
@@ -166,6 +169,7 @@ function toCompletionView(completion: Completion): ProgressCompletionView {
     feeling: completion.feeling ?? null,
     note: completion.note ?? null,
     replacementDescription: completion.replacementDescription ?? null,
+    replacedBy: replacedByLabel(completion),
     pain: completion.painReported,
     illness: completion.illnessReported,
     injury: completion.injuryReported,

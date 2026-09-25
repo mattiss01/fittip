@@ -85,6 +85,7 @@ function completion(overrides: Partial<Completion>): Completion {
     plannedSnapshot: null,
     title: null,
     sport: null,
+    replacedBy: null,
     revision: 1,
     activities: [],
     updatedAt: "2026-09-14T09:00:00.000Z",

@@ -39,14 +39,11 @@ Ordered by dependency. A lane is named where it is not the build lane.
       This supersedes A2b's prefill of an activity's sport from its session — a session's
       sport is not a category and must stop being copied into one. A4's "Add activity" on
       the log copies it too (`actual-activities.tsx`), so both sites change together.
-- [ ] **A4d — Replaced points at what replaced it.** Careful lane; migration. The owner's
-      view on 25 Sep 2026: a planned session marked `replaced` should link to an unplanned log,
-      either an existing one or one created on the spot. Without a link, a replaced session
-      is really a skipped one. Open before any code: where the link lives
-      (`replaced_by_completion_id` on the replaced log is the likely shape), whether one
-      unplanned log may replace several sessions, what happens to `replacement_description`
-      and to `replaced` logs written without a link, and whether deleting the unplanned log
-      is refused or unlinks it.
+- [ ] **A4e — An unplanned log shows what it replaced.** Build lane. Its detail page and
+      Today card say "Instead of: Tempo run, Easy jog" beside a ride that replaced sessions.
+      The reverse read is already there: PostgREST's bare self-embed
+      `replaced_by:completions(id, title)` on `completions` returns exactly the logs pointing
+      at a row, which is why A4d's forward read had to be a second query.
 - [ ] **A3 — See the activities.** Today and the Plan day render the list instead of the
       `activityCount` string. `completion-record.tsx` already renders one; follow it.
 - [ ] **A5 — Personal activity library.** Create, list, edit and archive reusable
@@ -162,6 +159,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 25 Sep 2026 | `c41beb3` | [36172504470](https://github.com/mattiss01/fittip/actions/runs/36172504470) | A replaced session now points at the unplanned log of what was done instead — written in the same save through a recursive `apply_completion_change`, so both or neither, or picked from the week's logs — and one ride may replace several sessions; the coach reads "Replaced by …" in the existing description slot. Migration `20260925174607` applied to the founder project — 32 migrations, advisors unchanged at 20 definer + 1 auth; it redefines `completions_replacement_check` under the same name, admitting a link in place of text, and a replaced create from the previous app with only text is refused until the deploy |
 | 25 Sep 2026 | `0ab1c3f` | [36164580894](https://github.com/mattiss01/fittip/actions/runs/36164580894) | Every log owns its `title`/`sport` (unplanned ones backfilled from their first activity) and a planned log's actuals, each linked to the planned activity it answers by `planned_position`, are corrected with the create editor; it also fixes A2c's four activity validators refusing `unmeasured`, which had broken both the plan editor and logging. Migration `20260925162039` applied to the founder project — 31 migrations, advisors unchanged at 20 definer + 1 auth; the m3_23 pgTAP and contract assertions refusing a planned log's actual edit were inverted on purpose, and renaming no longer rewrites an unplanned log's activity list, so that limitation is gone |
 | 25 Sep 2026 | `6b7b7ef` | [36121793569](https://github.com/mattiss01/fittip/actions/runs/36121793569) | A planned log now records each activity's actual: prefilled from its target, measured in its own mode, with activities addable and drag-ordered, so `position` is the log's order rather than the plan's. No migration; correcting those actuals after saving is A4c, because `apply_completion_change` refuses it. m3-15b and m3-15c pick the outcome from a select now, not radios |
 | 25 Sep 2026 | `cf53091` | [36114024850](https://github.com/mattiss01/fittip/actions/runs/36114024850) | Activities in a session, which nothing in FitTip could hold before: the rolling plan has taken the list since M3-10 and every caller passed `[]`. A drag-ordered editor writes them, an edit replaces the whole list, and the payload names no `position` or `isLocked` — the array's order is the position, and a lock guards nothing while replanning cannot reach a session at all. Migration `20260925074117` applied to the founder project — 30 migrations, advisors unchanged at 20 definer + 1 auth. It widens only: `sets_reps_load` gained a grouped form so a squat that ramps is one activity, `duration_intensity` requires only its minutes, and a sixth mode `unmeasured` lets a tennis drill stop claiming to be counted in sets. The flat shape stays valid because `is_valid_training_measurement` does not guard `completions.planned_snapshot`, so a measurement sealed into history must stay readable. pgTAP caught a NULL-returning branch that a check constraint would have read as passing; CI caught a move that sent an edit changing nothing beside it, which the database refused as a pair |

@@ -52,6 +52,7 @@ const today = () => isoDateInTimezone(new Date(), TIMEZONE);
 const getPlanSlice = vi.fn();
 const getCompletion = vi.fn();
 const findByPlanSession = vi.fn();
+const listCompletions = vi.fn();
 
 describe("Log", () => {
   beforeEach(() => {
@@ -77,9 +78,11 @@ describe("Log", () => {
     createPlanMock.mockResolvedValue({ getPlanSlice });
     getCompletion.mockResolvedValue(null);
     findByPlanSession.mockResolvedValue(null);
+    listCompletions.mockResolvedValue([]);
     createCompletionLogMock.mockResolvedValue({
       get: getCompletion,
       findByPlanSession,
+      list: listCompletions,
     });
   });
 
@@ -488,11 +491,58 @@ describe("Log", () => {
       }),
     );
 
-    expect(document.querySelector("#log-replacement")).toBe(null);
+    expect(document.querySelector("[data-log-replaced-by]")).toBe(null);
     fireEvent.change(screen.getByLabelText("What happened"), {
       target: { value: "replaced" },
     });
-    expect(document.querySelector("#log-replacement")).toBeTruthy();
+    // With nothing unplanned logged, the only way is to log it now, and the
+    // numbers move to what was actually done.
+    expect(document.querySelector("[data-log-replaced-by]")).toBeTruthy();
+    expect(
+      (screen.getByLabelText("Log it now") as HTMLInputElement).checked,
+    ).toBe(true);
+    expect(
+      (screen.getByLabelText("I already logged it") as HTMLInputElement)
+        .disabled,
+    ).toBe(true);
+    expect(screen.getByLabelText("Title of what you did")).toBeTruthy();
+    expect(screen.getAllByLabelText("Duration (minutes)")).toHaveLength(1);
+    expect(document.querySelector("#log-duration")).toBe(null);
+  });
+
+  it("offers the week's unplanned training for a replaced session to point at", async () => {
+    listCompletions.mockResolvedValue([
+      {
+        ...completion(),
+        id: "7e150000-0000-4000-8000-0000000000aa",
+        title: "Hill ride",
+        sport: "Cycling",
+      },
+    ]);
+    render(
+      await LogPage({
+        searchParams: Promise.resolve({
+          plannedSession: SESSION_ID,
+          date: today(),
+        }),
+      }),
+    );
+
+    fireEvent.change(screen.getByLabelText("What happened"), {
+      target: { value: "replaced" },
+    });
+    fireEvent.click(screen.getByLabelText("I already logged it"));
+
+    const select = screen.getByLabelText("Which training") as HTMLSelectElement;
+    expect(select.value).toBe("7e150000-0000-4000-8000-0000000000aa");
+    expect(select.selectedOptions[0].textContent).toMatch(
+      /Hill ride · Cycling$/,
+    );
+    // The read is this owner's history from a week before the session.
+    expect(listCompletions).toHaveBeenCalledWith(
+      expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      today(),
+    );
   });
 
   it("replaces the form with a receipt that leads back to the day", async () => {

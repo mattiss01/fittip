@@ -5,7 +5,9 @@ import { isoDateInTimezone } from "@/lib/date/local-date";
 import {
   CompletionLog,
   CompletionValidationError,
+  describeReplacement,
   parseCompletionChange,
+  type Completion,
   type CompletionPlannedSnapshot,
 } from "./completion-log";
 import {
@@ -196,5 +198,39 @@ describe("completion log interface validation", () => {
     expect((await completions.get(completionId))?.actualStartedAt).toBe(
       "2026-08-20T04:30:00.000Z",
     );
+  });
+});
+
+describe("describeReplacement", () => {
+  const replaced = (overrides: Partial<Completion>) =>
+    ({
+      status: "replaced",
+      replacedBy: null,
+      ...overrides,
+    }) as Completion;
+
+  it("names the linked log by its date, name and sport", () => {
+    expect(
+      describeReplacement(
+        replaced({
+          replacedBy: {
+            completionId: "75000000-0000-4000-8000-000000000001",
+            localDate: "2026-09-26",
+            title: "Hill ride",
+            sport: "Cycling",
+          },
+        }),
+      ),
+    ).toBe("Replaced by Hill ride (Cycling) on 2026-09-26");
+  });
+
+  it("keeps what the owner typed on a log written before the link", () => {
+    expect(
+      describeReplacement(replaced({ replacementDescription: "Swam instead" })),
+    ).toBe("Swam instead");
+  });
+
+  it("says nothing for a log that replaced nothing", () => {
+    expect(describeReplacement(replaced({ status: "completed" }))).toBe(null);
   });
 });

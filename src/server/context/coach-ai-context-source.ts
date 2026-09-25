@@ -13,7 +13,10 @@ import type {
 } from "@/server/ai/contracts";
 import { CoachAIError } from "@/server/ai/errors";
 import type { CoachAIOwner } from "@/server/ai/owner";
-import type { Completion } from "@/server/completions/completion-log";
+import {
+  describeReplacement,
+  type Completion,
+} from "@/server/completions/completion-log";
 import { readPlanWindowToppedUp } from "@/server/completions/plan-window-top-up";
 import { createCompletionLog } from "@/server/repositories/completion-log-repository";
 import { createGoalRepository } from "@/server/repositories/goal-repository";
@@ -292,7 +295,7 @@ function toTrainingHistoryCompletion(
     injuryReported: completion.injuryReported,
     severeFatigueReported: completion.severeFatigueReported,
     note: completion.note ?? null,
-    replacementDescription: completion.replacementDescription ?? null,
+    replacementDescription: describeReplacement(completion),
     activityNames: completion.activities.map((activity) => activity.name),
   };
 }

@@ -105,6 +105,16 @@ to the planned snapshot's for a log written before logs carried a name. It is
 the same field under the same bound (120 and 80 characters) that this decision
 already sends, not a new category, so eligibility does not change.
 
+*Clarified 25 Sep 2026 (A4d):* a replaced session now links to the unplanned
+log of what was done instead. For such a log, `replacement_description` carries
+the linked log's date, title and sport ("Replaced by Hill ride (Cycling) on
+2026-09-26"), under the same 500-character truncation. Those are the same
+kinds of fact this decision already sends for every log - a date, a title, a
+sport - so eligibility does not change. They are not always facts the coach
+already has: the linked log may predate the history window, in which case the
+line is the only place its title appears. A replaced log written before
+the link keeps sending the text the owner typed.
+
 **Each free-text field is truncated to a fixed maximum** before it leaves the
 boundary. `note` allows 2000 characters and `replacement_description` and
 `correction_reason` 500 each; sending them at full length against a
