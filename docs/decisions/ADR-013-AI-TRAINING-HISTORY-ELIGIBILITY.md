@@ -99,6 +99,12 @@ which is a real constraint on how history may be precomputed.
 personal activity names. And all three free-text fields on the current
 revision: `note`, `replacement_description`, and `correction_reason`.
 
+*Clarified 25 Sep 2026 (A4bc):* a completion's `title` and `sport` are the
+log's own — what the owner called the training when logging it — falling back
+to the planned snapshot's for a log written before logs carried a name. It is
+the same field under the same bound (120 and 80 characters) that this decision
+already sends, not a new category, so eligibility does not change.
+
 **Each free-text field is truncated to a fixed maximum** before it leaves the
 boundary. `note` allows 2000 characters and `replacement_description` and
 `correction_reason` 500 each; sending them at full length against a
