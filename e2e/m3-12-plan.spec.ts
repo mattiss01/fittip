@@ -101,8 +101,16 @@ test.describe("M3-12 manual continuous planning", () => {
       ).toBeHidden();
 
       // Duplicate to tomorrow, then move the copy on a day.
+      //
+      // Both halves were rewritten on 25 September 2026 when the owner
+      // reshaped this card. Duplicate sits behind a disclosure of its own
+      // inside the Edit panel rather than standing permanently open, and the
+      // Move section is gone outright: a session's date is a field on the edit
+      // form, asked once, so moving one is now saving an edit with a different
+      // date. This flow is the same journey through a surface that changed.
       const source = sessionCard(page, today, "Long aerobic run");
       await openDisclosure(source, "Edit");
+      await openDisclosure(source, "Duplicate");
       await source
         .locator("form")
         .filter({
@@ -117,12 +125,11 @@ test.describe("M3-12 manual continuous planning", () => {
 
       const copy = sessionCard(page, tomorrow, "Long aerobic run");
       await openDisclosure(copy, "Edit");
-      await copy
+      const copyEdit = copy
         .locator("form")
-        .filter({ has: page.getByRole("button", { name: "Move session" }) })
-        .getByLabel("Move to")
-        .selectOption(dayAfter);
-      await copy.getByRole("button", { name: "Move session" }).click();
+        .filter({ has: page.getByRole("button", { name: "Save session" }) });
+      await copyEdit.getByLabel("Date").selectOption(dayAfter);
+      await copyEdit.getByRole("button", { name: "Save session" }).click();
       await expect(
         sessionCard(page, dayAfter, "Long aerobic run"),
       ).toBeVisible();
