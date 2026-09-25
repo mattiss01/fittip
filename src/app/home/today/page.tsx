@@ -173,17 +173,15 @@ function toSessionView(
 }
 
 function toCompletionView(completion: Completion): TodayCompletionView {
-  // A planned log is named by the snapshot taken when it was written; an
-  // unplanned one by the single activity the owner typed, which is the only
-  // place its name exists. A log written before that activity was collected
-  // has neither, and the card names it "Unplanned training" as it always did.
-  const written = completion.activities[0] ?? null;
+  // A log carries its own name. One written before logs did falls back to
+  // the snapshot it was measured against; an unplanned one that never had a
+  // name has neither, and is named "Unplanned training" as it always was.
   return {
     id: completion.id,
     outcome: completion.status,
     actualLocalDate: completion.actualLocalDate,
-    title: completion.plannedSnapshot?.title ?? written?.name ?? null,
-    sport: completion.plannedSnapshot?.sport ?? written?.sport ?? null,
+    title: completion.title ?? completion.plannedSnapshot?.title ?? null,
+    sport: completion.sport ?? completion.plannedSnapshot?.sport ?? null,
     plannedLocalDate: completion.plannedSnapshot?.localDate ?? null,
     durationMinutes: completion.durationMinutes ?? null,
     perceivedEffort: completion.perceivedEffort ?? null,

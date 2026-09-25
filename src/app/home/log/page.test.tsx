@@ -174,7 +174,7 @@ describe("Log", () => {
     expect(screen.getByLabelText("Sport")).toBe(sport);
   });
 
-  it("never offers a title or a sport on a planned session", async () => {
+  it("offers a planned session's title and sport, starting as the plan's", async () => {
     render(
       await LogPage({
         searchParams: Promise.resolve({
@@ -184,21 +184,20 @@ describe("Log", () => {
       }),
     );
 
-    expect(document.querySelector("#log-title")).toBe(null);
-    expect(document.querySelector("#log-sport")).toBe(null);
+    // The log's own name. Changing it renames the log and never the plan.
+    expect(
+      (document.querySelector("#log-title") as HTMLInputElement).value,
+    ).toBe("Threshold intervals");
+    expect(
+      (document.querySelector("#log-sport") as HTMLInputElement).value,
+    ).toBe("Running");
   });
 
   it("offers an unplanned log's title and sport for correction", async () => {
     getCompletion.mockResolvedValue({
       ...completion(),
-      activities: [
-        {
-          position: 0,
-          name: "Sunrise swim",
-          sport: "Swimming",
-          measurementMode: "custom" as const,
-        },
-      ],
+      title: "Sunrise swim",
+      sport: "Swimming",
     });
 
     render(
@@ -207,8 +206,7 @@ describe("Log", () => {
       }),
     );
 
-    // Unplanned training carries its name as its one activity, so a typo in it
-    // used to be permanent.
+    // The name lives on the log, so a typo in it is an ordinary correction.
     expect(
       (document.querySelector("#log-title") as HTMLInputElement).value,
     ).toBe("Sunrise swim");
@@ -226,8 +224,8 @@ describe("Log", () => {
       }),
     );
 
-    // It has no activity to read a name from, so the owner gives it one rather
-    // than being shown a name FitTip invented.
+    // It has no name of its own, so the owner gives it one rather than being
+    // shown a name FitTip invented.
     expect(
       (document.querySelector("#log-title") as HTMLInputElement).value,
     ).toBe("");

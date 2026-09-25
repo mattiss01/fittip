@@ -41,10 +41,11 @@ const COMPLETION_COLUMNS = `
   id, plan_session_id, status, actual_local_date, timezone_name,
   actual_started_at, duration_minutes, perceived_effort, feeling, note,
   replacement_description, pain_reported, illness_reported, injury_reported,
-  severe_fatigue_reported, planned_snapshot, revision, updated_at,
+  severe_fatigue_reported, planned_snapshot, title, sport, revision,
+  updated_at,
   completion_activities (
-    personal_activity_id, position, name, sport, instructions,
-    measurement_mode, actual_measurement
+    personal_activity_id, position, planned_position, name, sport,
+    instructions, measurement_mode, actual_measurement
   )
 ` as const;
 
@@ -158,8 +159,8 @@ export async function createCompletionLog(): Promise<CompletionLog> {
 /**
  * Both writes reach the same owner-derived function. A create carries the
  * planned link and the activity list; an edit never carries the link, which is
- * immutable, and carries a list only for unplanned training — the function
- * refuses to restate a planned log's activities. The planned
+ * immutable, and restates the list for planned and unplanned logs alike. The
+ * planned
  * snapshot is never sent: the function captures it from the plan row itself,
  * so no caller can compose or forge one.
  */
@@ -221,6 +222,12 @@ function parseCompletion(value: unknown): Completion {
     // than refusing to read it.
     (completion.plan_session_id === null) !==
       (completion.planned_snapshot === null) ||
+    // The name is one fact in two columns, as the table's check says.
+    !(
+      (completion.title === null && completion.sport === null) ||
+      (typeof completion.title === "string" &&
+        typeof completion.sport === "string")
+    ) ||
     !Array.isArray(activities)
   ) {
     throw new CompletionPersistenceError();
@@ -255,6 +262,8 @@ function parseCompletion(value: unknown): Completion {
       completion.planned_snapshot === null
         ? null
         : parsePlannedSnapshot(completion.planned_snapshot),
+    title: completion.title as string | null,
+    sport: completion.sport as string | null,
     revision: completion.revision,
     updatedAt: completion.updated_at,
     activities: activities
@@ -323,8 +332,13 @@ function parsePlannedActivity(value: unknown): CompletionPlannedActivity {
 
 function parseCompletionActivity(value: unknown): CompletionActivity {
   const activity = readMeasuredActivity(value, "actual_measurement");
+  const planned = readRecord(value).planned_position;
+  if (!(planned === null || isInteger(planned, 0))) {
+    throw new CompletionPersistenceError();
+  }
   return {
     ...activity.identity,
+    ...(planned === null ? {} : { plannedPosition: planned }),
     ...(activity.measurement === undefined
       ? {}
       : { actualMeasurement: activity.measurement }),

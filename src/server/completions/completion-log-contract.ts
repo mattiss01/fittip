@@ -332,8 +332,8 @@ export function registerCompletionLogContract(
       );
     });
 
-    it("corrects the activities of unplanned training and no others", async () => {
-      const { completions, addPlanSession, day } = requireSubject(subject);
+    it("corrects the activities of unplanned training", async () => {
+      const { completions, day } = requireSubject(subject);
       const { completionId } = await completions.applyChange({
         operation: "create",
         completion: {
@@ -387,28 +387,179 @@ export function registerCompletionLogContract(
           measurementMode: "duration_intensity",
         },
       ]);
+    });
 
-      // A planned completion is measured against its snapshot, so restating
-      // what it contained would rewrite what it was measured against.
-      const planSessionId = await addPlanSession(day(2), "Aerobic run");
+    // Inverted by A4bc. M3-23 refused this, reading the actual list as though
+    // it were the snapshot; what a planned log was measured against is the
+    // snapshot, and correcting what was done must leave it exactly as it was.
+    it("corrects a planned log's actuals and never what it was measured against", async () => {
+      const { completions, addPlanSession, day } = requireSubject(subject);
+      const planSessionId = await addPlanSession(day(0), "Aerobic run");
+      const { completionId } = await completions.applyChange(
+        create(planSessionId, day(0)),
+      );
+      const before = (await completions.get(completionId))?.plannedSnapshot;
+
+      await completions.applyChange({
+        operation: "edit",
+        completionId,
+        expectedRevision: 0,
+        completion: {
+          status: "completed",
+          actualLocalDate: day(0),
+          activities: [
+            {
+              position: 0,
+              name: "Strides",
+              sport: "Running",
+              measurementMode: "unmeasured",
+            },
+            {
+              position: 1,
+              plannedPosition: 0,
+              name: "Easy running",
+              sport: "Running",
+              measurementMode: "duration_intensity",
+              actualMeasurement: { duration_minutes: 50 },
+            },
+          ],
+        },
+      });
+
+      const after = await completions.get(completionId);
+      expect(after?.plannedSnapshot).toEqual(before);
+      expect(after?.activities).toEqual([
+        {
+          position: 0,
+          name: "Strides",
+          sport: "Running",
+          measurementMode: "unmeasured",
+        },
+        {
+          position: 1,
+          plannedPosition: 0,
+          name: "Easy running",
+          sport: "Running",
+          measurementMode: "duration_intensity",
+          actualMeasurement: { duration_minutes: 50 },
+        },
+      ]);
+    });
+
+    it("lets an actual answer only a planned activity of its own snapshot", async () => {
+      const { completions, addPlanSession, day } = requireSubject(subject);
+      const planSessionId = await addPlanSession(day(0), "Aerobic run");
+      const draft = create(planSessionId, day(0));
+      const answering = (plannedPosition: number) => ({
+        position: 0,
+        plannedPosition,
+        name: "Easy running",
+        sport: "Running",
+        measurementMode: "unmeasured",
+      });
+
+      // The snapshot holds one activity, at position 0.
+      await expect(
+        completions.applyChange({
+          ...draft,
+          completion: { ...draft.completion, activities: [answering(3)] },
+        }),
+      ).rejects.toThrow(CompletionValidationError);
+      await expect(
+        completions.applyChange({
+          operation: "create",
+          completion: {
+            status: "unplanned",
+            actualLocalDate: day(0),
+            title: "Easy running",
+            sport: "Running",
+            activities: [answering(0)],
+          },
+        }),
+      ).rejects.toThrow(CompletionValidationError);
+
+      await completions.applyChange({
+        ...draft,
+        completion: { ...draft.completion, activities: [answering(0)] },
+      });
+      expect(
+        (await completions.findByPlanSession(planSessionId))?.activities[0]
+          ?.plannedPosition,
+      ).toBe(0);
+    });
+
+    it("gives every log a name of its own, and keeps it until it is changed", async () => {
+      const { completions, addPlanSession, day } = requireSubject(subject);
+      const planSessionId = await addPlanSession(day(0), "Aerobic run");
+
+      // A create that states no name is named from its planned session.
       const planned = await completions.applyChange(
         create(planSessionId, day(0)),
       );
+      expect(await completions.get(planned.completionId)).toMatchObject({
+        title: "Aerobic run",
+        sport: "Running",
+      });
+
+      await completions.applyChange({
+        operation: "edit",
+        completionId: planned.completionId,
+        expectedRevision: 0,
+        completion: {
+          status: "completed",
+          actualLocalDate: day(0),
+          title: "  Hill reps instead ",
+          sport: "Trail running",
+        },
+      });
+      // An edit that states no name leaves it alone.
+      await completions.applyChange({
+        operation: "edit",
+        completionId: planned.completionId,
+        expectedRevision: 1,
+        completion: {
+          status: "completed",
+          actualLocalDate: day(0),
+          durationMinutes: 50,
+        },
+      });
+      const renamed = await completions.get(planned.completionId);
+      expect(renamed).toMatchObject({
+        title: "Hill reps instead",
+        sport: "Trail running",
+      });
+      // The plan it answers to is untouched by the rename.
+      expect(renamed?.plannedSnapshot?.title).toBe("Aerobic run");
+
+      // Unplanned training states its own, and has no activities to hold it.
+      const unplanned = await completions.applyChange({
+        operation: "create",
+        completion: {
+          status: "unplanned",
+          actualLocalDate: day(0),
+          title: "Sunrise swim",
+          sport: "Swimming",
+          activities: [],
+        },
+      });
+      expect(await completions.get(unplanned.completionId)).toMatchObject({
+        title: "Sunrise swim",
+        sport: "Swimming",
+        activities: [],
+      });
+
+      // Half a name is not a name.
       await expect(
         completions.applyChange({
-          operation: "edit",
-          completionId: planned.completionId,
-          expectedRevision: 0,
+          operation: "create",
           completion: {
-            status: "completed",
+            status: "unplanned",
             actualLocalDate: day(0),
+            title: "Rowing",
             activities: [],
           },
         }),
       ).rejects.toThrow(CompletionValidationError);
-      expect(
-        (await completions.get(planned.completionId))?.activities,
-      ).toHaveLength(1);
     });
 
     it("finds what a planned session already carries, whatever day it was logged on", async () => {

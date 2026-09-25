@@ -131,21 +131,16 @@ describe("Progress", () => {
     ).toContain("Pain");
   });
 
-  it("names unplanned training by the activity the owner wrote it with", async () => {
+  it("names unplanned training by the name it was logged under", async () => {
     listCompletions.mockResolvedValue([
       {
         ...completion(),
         planSessionId: null,
         status: "unplanned" as const,
         plannedSnapshot: null,
-        activities: [
-          {
-            position: 0,
-            name: "Sunrise swim",
-            sport: "Swimming",
-            measurementMode: "custom" as const,
-          },
-        ],
+        title: "Sunrise swim",
+        sport: "Swimming",
+        activities: [],
       },
     ]);
 
@@ -159,6 +154,22 @@ describe("Progress", () => {
     ).toBeTruthy();
     expect(within(entry).getByText("Swimming")).toBeTruthy();
     expect(within(entry).queryByText("Unplanned training")).toBe(null);
+  });
+
+  it("names a renamed planned log by its own name, not the plan's", async () => {
+    listCompletions.mockResolvedValue([
+      { ...completion(), title: "Hill reps instead", sport: "Trail running" },
+    ]);
+
+    render(await ProgressPage({ searchParams: Promise.resolve({}) }));
+
+    const entry = document.querySelector(
+      `[data-progress-entry="${COMPLETION_ID}"]`,
+    ) as HTMLElement;
+    expect(
+      within(entry).getByRole("link", { name: /Hill reps instead/ }),
+    ).toBeTruthy();
+    expect(within(entry).queryByText(/Threshold intervals/)).toBe(null);
   });
 
   it("keeps two logs from one day under that day, in the order read", async () => {

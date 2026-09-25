@@ -81,8 +81,8 @@ function toWindowEntry(completion: Completion): TrainingHistoryCompletion {
   return {
     localDate: completion.actualLocalDate,
     status: completion.status,
-    title: completion.plannedSnapshot?.title ?? null,
-    sport: completion.plannedSnapshot?.sport ?? null,
+    title: completion.title ?? completion.plannedSnapshot?.title ?? null,
+    sport: completion.sport ?? completion.plannedSnapshot?.sport ?? null,
     durationMinutes: completion.durationMinutes ?? null,
     perceivedEffort: completion.perceivedEffort ?? null,
     feeling: completion.feeling ?? null,

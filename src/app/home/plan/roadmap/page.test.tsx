@@ -540,6 +540,8 @@ function completion(overrides: Partial<Completion>): Completion {
     actualLocalDate: new Date().toISOString().slice(0, 10),
     timezoneName: "Europe/Berlin",
     plannedSnapshot: null,
+    title: null,
+    sport: null,
     revision: 1,
     activities: [],
     updatedAt: "2026-09-14T09:00:00.000Z",

@@ -225,21 +225,16 @@ describe("Today", () => {
     expect(within(card).getByText("Unplanned training")).toBeTruthy();
   });
 
-  it("names unplanned training by the activity the owner wrote it with", async () => {
+  it("names unplanned training by the name it was logged under", async () => {
     listCompletions.mockResolvedValue([
       {
         ...completion(),
         planSessionId: null,
         status: "unplanned" as const,
         plannedSnapshot: null,
-        activities: [
-          {
-            position: 0,
-            name: "Sunrise swim",
-            sport: "Swimming",
-            measurementMode: "custom" as const,
-          },
-        ],
+        title: "Sunrise swim",
+        sport: "Swimming",
+        activities: [],
       },
     ]);
 

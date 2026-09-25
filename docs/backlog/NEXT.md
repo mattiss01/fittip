@@ -39,19 +39,19 @@ Ordered by dependency. A lane is named where it is not the build lane.
       This supersedes A2b's prefill of an activity's sport from its session — a session's
       sport is not a category and must stop being copied into one. A4's "Add activity" on
       the log copies it too (`actual-activities.tsx`), so both sites change together.
-- [ ] **A4b — A log has its own title and sport.** Careful lane; migration. Outcome: logging
-      a planned session can rename it for the log alone, since the plan and its snapshot keep
-      the planned name. Decided by the owner on 25 Sep 2026: two nullable columns on
-      `completions`, always written on a new planned log and prefilled from the plan. Older
-      logs stay null and fall back to the snapshot. Constraints: `save_training_completion`
-      admits them on create and edit, the log never writes the plan, and Today and Progress
-      read the log's name before the snapshot's. Whether the coach's history does is an
-      ADR-013 question, open, like A8.
-- [ ] **A4c — Correct a planned log's actual activities.** Careful lane; migration.
-      `save_training_completion` refuses `activities` on an edit of a planned log (m3_23),
-      treating the actual list as though it were the snapshot. Admit a wholesale replace of
-      the actual list and never touch `planned_snapshot`. The log's read-only "What you did"
-      then becomes the same editor as on create.
+- [~] **A4bc — Every log owns its name, and its actuals can be corrected.** Careful lane;
+      migration. Outcome: every log, planned or unplanned, carries its own `title` and `sport`
+      (a planned one prefilled from the plan, which is never written); a planned log's actuals
+      are edited after saving with the same editor as on create; unplanned logs get that
+      activity list too, starting empty. Also fixes a live A4 bug:
+      `completion_activity_input_is_valid` never admitted `unmeasured`, so any log with an
+      unmeasured row is refused. Decided by the owner on 25 Sep 2026: each actual stores the
+      `planned_position` it answers (null when added); existing unplanned logs have their name
+      copied from their position-0 activity (a filtered update), and planned ones stay null and
+      fall back to the snapshot; the coach and roadmap safety read the log's name. Constraints:
+      additive DDL only; `apply_completion_change` never writes `planned_snapshot` on an edit;
+      create falls back to the snapshot or first activity for a name, and an edit leaves a
+      name it was not sent, so the app still deployed during the apply keeps working.
 - [ ] **A4d — Replaced points at what replaced it.** Careful lane; migration. The owner's
       view on 25 Sep 2026: a planned session marked `replaced` should link to an unplanned log,
       either an existing one or one created on the spot. Without a link, a replaced session
@@ -172,7 +172,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
-| 25 Sep 2026 | `6b7b7ef` | [36121793569](https://github.com/mattiss01/fittip/actions/runs/36121793569) | A planned log now records each activity's actual: prefilled from its target, measured in its own mode, with activities addable and drag-ordered, so `position` is the log's order rather than the plan's. No migration; correcting those actuals after saving is A4c, because `save_training_completion` refuses it. m3-15b and m3-15c pick the outcome from a select now, not radios |
+| 25 Sep 2026 | `6b7b7ef` | [36121793569](https://github.com/mattiss01/fittip/actions/runs/36121793569) | A planned log now records each activity's actual: prefilled from its target, measured in its own mode, with activities addable and drag-ordered, so `position` is the log's order rather than the plan's. No migration; correcting those actuals after saving is A4c, because `apply_completion_change` refuses it. m3-15b and m3-15c pick the outcome from a select now, not radios |
 | 25 Sep 2026 | `cf53091` | [36114024850](https://github.com/mattiss01/fittip/actions/runs/36114024850) | Activities in a session, which nothing in FitTip could hold before: the rolling plan has taken the list since M3-10 and every caller passed `[]`. A drag-ordered editor writes them, an edit replaces the whole list, and the payload names no `position` or `isLocked` — the array's order is the position, and a lock guards nothing while replanning cannot reach a session at all. Migration `20260925074117` applied to the founder project — 30 migrations, advisors unchanged at 20 definer + 1 auth. It widens only: `sets_reps_load` gained a grouped form so a squat that ramps is one activity, `duration_intensity` requires only its minutes, and a sixth mode `unmeasured` lets a tennis drill stop claiming to be counted in sets. The flat shape stays valid because `is_valid_training_measurement` does not guard `completions.planned_snapshot`, so a measurement sealed into history must stay readable. pgTAP caught a NULL-returning branch that a check constraint would have read as passing; CI caught a move that sent an edit changing nothing beside it, which the database refused as a pair |
 | 24 Sep 2026 | `9a79a0d` | [36006993308](https://github.com/mattiss01/fittip/actions/runs/36006993308) | Plan regeneration, revived from Dropped: a proposal that is not what the owner wanted goes back with a note saying why, the coach sees both the note and the proposal it replaces, and whatever the owner already accepted is applied first so the new plan covers only what they did not take. No context ceiling was raised — a real plan context is 8,589 bytes of the 32,500 pool — but the plan's `previousProposal` allocation went 2,200 to 6,400, because it held the roadmap's number and a legal worst-case plan reduces to about 5,800. Migration `20260924102713` applied to the founder project — 29 migrations, advisors unchanged at 20 definer + 1 auth. Review found three blocking faults on one seam: the action closes the proposal before anything that can fail, and every later failure claimed nothing was written. Fixed, along with a feedback bound that accepted 1,000 characters the context refuses over 500, and a chain cap that counted from whichever proposal the caller named and so never bound |
 | 24 Sep 2026 | `11139d5` | [35978290689](https://github.com/mattiss01/fittip/actions/runs/35978290689) | Both finishes now settle an open spend reservation themselves, in the transaction that inserts the proposal, at the amount it was holding — so a settle that failed can no longer throw away a result the provider was paid for, which was unrecoverable because the claim stays pending under that key. Beside it, an unsettled reservation counts against the ceilings for good instead of falling to zero on expiry, which covers the failed-call path the first half cannot reach. ADR-019 records both and what was rejected; `reserve_ai_spend` and the two finishes were replaced from their live definitions, so every grant is restated after a full revoke. m3_01b's “an expired reservation no longer holds budget” is inverted on purpose, at the same 5,000 figure that flips. Migration `20260924082758` applied to the founder project — 28 migrations, advisors unchanged at 20 definer + 1 auth. Review found no defect but two of my assertions proved less than they claimed; fixed in the same branch, and the standing cost is now a known limitation |
