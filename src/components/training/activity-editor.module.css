@@ -199,8 +199,17 @@
   min-width: 0;
 }
 
-.fieldWide {
+.fieldWide,
+.hintWide {
   grid-column: 1 / -1;
+}
+
+.hintWide {
+  margin: 0;
+  color: var(--ledger-muted);
+  font:
+    0.72rem/1.4 "Courier New",
+    monospace;
 }
 
 .problem {

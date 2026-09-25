@@ -44,6 +44,28 @@ Ordered by dependency. A lane is named where it is not the build lane.
 - [ ] **A2 — Add and edit activities in a planned session.** `session-fields.tsx` grows a
       drag-ordered activity list: name, sport, instructions, mode, target. No lock control.
       Fills the list `actions.ts` currently carries through untouched. F-002 step 6.
+- [ ] **A2b — What the owner asked for after seeing A2.** Build lane, one branch: the
+      effort field goes from Duration and intensity, leaving intensity as the thing you
+      pick; Sport prefills from the session and stops being something you must type;
+      pace is computed from time and distance rather than asked for; the session's date
+      moves into Edit and the standing "Move session" section goes; Duplicate goes behind
+      a disclosure with its date inside, like Edit and Cancel already are; and a card
+      collapses after a save instead of staying open.
+- [ ] **A2c — A set group, not one uniform prescription.** Careful lane; migration.
+      Outcome: a `sets_reps_load` target holds a list of groups, each carrying its own
+      sets, reps and load, so a squat that ramps is one activity — `3×5 · 60 kg` then
+      `1×3 · 100 kg` — rather than three rows repeating the name. Every field in a group
+      is optional with at least one present, which is the rule `time_distance_pace`
+      already follows in the same function, and is what makes "3 sets" with no reps legal.
+      Constraints: `is_valid_training_measurement` guards five columns and is mirrored by
+      `parseTrainingMeasurement`; the two must move together. It does *not* guard
+      `completions.planned_snapshot` or `rolling_plan_change_entries.before_state`, which
+      are permanent history and must never be rewritten — so the validator and
+      `describeMeasurement` accept the flat legacy shape as well as the grouped one, and
+      only the editor's writes are cut over. No backfill, and nothing depends on what the
+      founder project currently holds. Decided by the owner on 25 Sep 2026, who also asked
+      that one line be able to carry several identical sets, which is what makes the
+      uniform case the one-group case and removes the need for a mode toggle.
 - [ ] **A3 — See the activities.** Today and the Plan day render the list instead of the
       `activityCount` string. `completion-record.tsx` already renders one; follow it.
 - [ ] **A4 — Log what you actually did.** The log form offers each planned activity beside

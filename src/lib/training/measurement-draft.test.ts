@@ -45,10 +45,12 @@ describe("what the server would refuse, said in words first", () => {
     });
   });
 
-  it("refuses minutes with neither intensity nor effort", () => {
+  it("refuses minutes with no intensity", () => {
+    // The owner dropped the effort field on 25 Sep 2026, so intensity is the
+    // one thing that makes a duration into a prescription.
     expect(build("duration_intensity", { duration_minutes: "40" })).toEqual({
       ok: false,
-      message: "Add an intensity or an effort, not minutes alone.",
+      message: "Choose an intensity, not minutes alone.",
     });
   });
 
@@ -77,6 +79,45 @@ describe("clock readings", () => {
 
   it("refuses more than 59 in a minutes or seconds place", () => {
     expect(build("time_distance_pace", { duration: "7:61" }).ok).toBe(false);
+  });
+
+  it("works pace out from time and distance", () => {
+    expect(
+      build("time_distance_pace", {
+        duration: "20:00",
+        distance: "5",
+        distance_unit: "km",
+      }),
+    ).toEqual({
+      ok: true,
+      measurement: {
+        duration_seconds: 1200,
+        distance: 5,
+        distance_unit: "km",
+        pace_seconds_per_unit: 240,
+        pace_unit: "sec/km",
+      },
+    });
+  });
+
+  it("paces per hundred for metres, which is how swimming reads", () => {
+    const built = build("time_distance_pace", {
+      duration: "30:00",
+      distance: "1500",
+      distance_unit: "m",
+    });
+    if (!built.ok || built.measurement === null) throw new Error("unreachable");
+    expect(built.measurement).toMatchObject({
+      pace_seconds_per_unit: 120,
+      pace_unit: "sec/100m",
+    });
+  });
+
+  it("keeps a typed pace when there is no distance to work it out from", () => {
+    expect(build("time_distance_pace", { pace: "4:45" })).toEqual({
+      ok: true,
+      measurement: { pace_seconds_per_unit: 285, pace_unit: "sec/km" },
+    });
   });
 
   it("survives a round trip through the draft", () => {
@@ -111,11 +152,7 @@ describe("the editor and the server agree", () => {
     ],
     ["time_distance_pace", { distance: "400", distance_unit: "m" }],
     ["duration_intensity", { duration_minutes: "40", intensity: "easy" }],
-    ["duration_intensity", { duration_minutes: "40", perceived_effort: "7" }],
-    [
-      "duration_intensity",
-      { duration_minutes: "60", intensity: "very_hard", perceived_effort: "9" },
-    ],
+    ["duration_intensity", { duration_minutes: "60", intensity: "very_hard" }],
     ["skill_repetitions", { repetitions: "20", unit: "throws" }],
     ["custom", { label: "Grip", value: "closed", unit: "hold" }],
     ["custom", { label: "Depth", value: "12", unit: "m" }],

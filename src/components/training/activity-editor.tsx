@@ -24,8 +24,10 @@ import {
 } from "@/lib/training/measurement-copy";
 import {
   buildMeasurement,
+  derivePace,
   draftFromMeasurement,
   emptyDraft,
+  writeClock,
   type MeasurementDraft,
 } from "@/lib/training/measurement-draft";
 
@@ -65,10 +67,19 @@ export function ActivityEditor({
   idPrefix,
   name = "activities",
   initial,
+  sessionSport,
 }: {
   idPrefix: string;
   name?: string;
   initial?: ActivityValue[];
+  /**
+   * What the session itself is, live from the form above. A new row takes it
+   * rather than asking again — most activities are the sport of the session
+   * that holds them. The field stays, because some are not: a bike spin-down
+   * inside a strength session is the case that would be lost if the column
+   * were simply filled in for you.
+   */
+  sessionSport?: string;
 }) {
   const generatedId = useId();
   const prefix = idPrefix || generatedId;
@@ -192,7 +203,7 @@ export function ActivityEditor({
             {
               key: `added-${nextKey++}`,
               name: "",
-              sport: "",
+              sport: (sessionSport ?? "").trim(),
               instructions: null,
               measurementMode: "sets_reps_load",
               target: null,
@@ -348,6 +359,7 @@ function ActivityRow({
             required
             onChange={(event) => onChange({ sport: event.target.value })}
           />
+          <p className={styles.hint}>{ACTIVITY_COPY.sportHint}</p>
         </div>
         <div className={styles.field}>
           <label htmlFor={`${idPrefix}-instructions`}>Instructions</label>
@@ -461,6 +473,19 @@ function TargetFields({
   }
 
   if (mode === "time_distance_pace") {
+    const built = buildMeasurement(mode, draft);
+    const derived =
+      built.ok && built.measurement !== null && "distance" in built.measurement
+        ? derivePace(
+            built.measurement.duration_seconds,
+            built.measurement.distance,
+            built.measurement.distance_unit,
+          )
+        : null;
+    const derivedPaceText =
+      derived === null
+        ? null
+        : `${writeClock(derived.seconds)} ${PACE_UNIT_COPY[derived.unit]}`;
     return (
       <div className={styles.targetGrid}>
         <div className={styles.field}>
@@ -488,18 +513,28 @@ function TargetFields({
         </div>
         <div className={styles.field}>
           <label htmlFor={`${idPrefix}-pace`}>Pace</label>
-          <input {...bind("pace")} inputMode="text" placeholder="4:45" />
+          <input
+            {...bind("pace")}
+            inputMode="text"
+            placeholder="4:45"
+            readOnly={derivedPaceText !== null}
+            value={derivedPaceText ?? draft.pace ?? ""}
+          />
         </div>
-        <div className={styles.fieldWide}>
-          <label htmlFor={`${idPrefix}-pace_unit`}>Pace unit</label>
-          <select {...bind("pace_unit")}>
-            {PACE_UNITS.map((unit) => (
-              <option key={unit} value={unit}>
-                {PACE_UNIT_COPY[unit]}
-              </option>
-            ))}
-          </select>
-        </div>
+        {derivedPaceText === null ? (
+          <div className={styles.fieldWide}>
+            <label htmlFor={`${idPrefix}-pace_unit`}>Pace unit</label>
+            <select {...bind("pace_unit")}>
+              {PACE_UNITS.map((unit) => (
+                <option key={unit} value={unit}>
+                  {PACE_UNIT_COPY[unit]}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <p className={styles.hintWide}>{ACTIVITY_COPY.derivedPace}</p>
+        )}
       </div>
     );
   }
@@ -526,16 +561,6 @@ function TargetFields({
               </option>
             ))}
           </select>
-        </div>
-        <div className={styles.fieldWide}>
-          <label htmlFor={`${idPrefix}-perceived_effort`}>
-            Effort, 1 to 10
-          </label>
-          <input
-            {...bind("perceived_effort")}
-            inputMode="numeric"
-            placeholder="7"
-          />
         </div>
       </div>
     );

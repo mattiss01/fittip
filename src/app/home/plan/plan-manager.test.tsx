@@ -398,8 +398,25 @@ describe("PlanManager", () => {
     // "Remove" is retired as a label: it could not tell the two verbs apart.
     expect(screen.queryByText("Remove", { selector: "summary" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Repeat" })).toBeNull();
-    expect(screen.queryByText("Move", { selector: "summary" })).toBeNull();
-    expect(screen.queryByText("Duplicate", { selector: "summary" })).toBeNull();
+    // The card's own actions are still these four. Duplicate is a disclosure
+    // inside the Edit panel rather than a standing section, and Move is gone
+    // outright: the date is a field on the edit form now, asked once.
+    expect(screen.queryByText("Move session")).toBeNull();
+    expect(screen.queryByText("Move to")).toBeNull();
+    // Present but nested inside the collapsed Edit panel, which is why this
+    // asks whether it exists rather than whether it is visible.
+    expect(screen.getByText("Duplicate", { selector: "summary" })).toBeTruthy();
+  });
+
+  it("asks for the date on the edit form and not in a section of its own", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [session()]);
+    const date = screen.getByLabelText("Date", {
+      selector: "#edit-date-7f000000-0000-4000-8000-000000000001",
+    });
+    expect(date).toHaveValue(TODAY);
+    expect(
+      date.closest("form")?.querySelector("input[name='operation']"),
+    ).toHaveValue("edit");
   });
 
   it("says what each removal verb keeps, and submits the matching operation", () => {

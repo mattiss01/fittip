@@ -22,6 +22,8 @@
  */
 
 import {
+  type DistanceUnit,
+  type PaceUnit,
   type TrainingMeasurement,
   type TrainingMeasurementMode,
 } from "@/lib/training/measurement";
@@ -42,7 +44,7 @@ export const MEASUREMENT_FIELDS: Record<TrainingMeasurementMode, string[]> = {
     "pace",
     "pace_unit",
   ],
-  duration_intensity: ["duration_minutes", "intensity", "perceived_effort"],
+  duration_intensity: ["duration_minutes", "intensity"],
   skill_repetitions: ["repetitions", "unit"],
   custom: ["label", "value", "unit"],
 };
@@ -79,10 +81,6 @@ export function draftFromMeasurement(
   } else if ("duration_minutes" in measurement) {
     draft.duration_minutes = String(measurement.duration_minutes);
     draft.intensity = measurement.intensity ?? "";
-    draft.perceived_effort =
-      measurement.perceived_effort === undefined
-        ? ""
-        : String(measurement.perceived_effort);
   } else if ("repetitions" in measurement) {
     draft.repetitions = String(measurement.repetitions);
     draft.unit = measurement.unit;
@@ -157,7 +155,20 @@ export function buildMeasurement(
         measurement.distance = distance;
         measurement.distance_unit = readDistanceUnit(draft.distance_unit);
       }
-      if ((draft.pace ?? "").trim() !== "") {
+      // Pace is arithmetic, not a third thing to be asked for: 20:00 over
+      // 5 km is 4:00/km and nobody should type it twice. It is computed
+      // whenever time and distance are both given, in the unit that matches
+      // the distance, and only typed when one of the two is missing — a
+      // tempo target of 4:45/km with no set distance is a real prescription.
+      const derived = derivePace(
+        measurement.duration_seconds,
+        measurement.distance,
+        measurement.distance_unit,
+      );
+      if (derived !== null) {
+        measurement.pace_seconds_per_unit = derived.seconds;
+        measurement.pace_unit = derived.unit;
+      } else if ((draft.pace ?? "").trim() !== "") {
         const pace = readClock(draft.pace, 86400);
         if (pace === null) return { ok: false, message: "Pace reads as 4:45." };
         measurement.pace_seconds_per_unit = pace;
@@ -175,29 +186,21 @@ export function buildMeasurement(
       if (minutes === null) {
         return { ok: false, message: "Minutes are needed for this mode." };
       }
+      // The owner dropped the effort field on 25 Sep 2026: intensity says
+      // enough on a plan, and effort is something you report afterwards rather
+      // than prescribe. The stored shape still permits `perceived_effort`, so
+      // a measurement carrying one is still read and still described — this
+      // surface just never writes one.
       const intensity = readIntensity(draft.intensity);
-      const effort =
-        (draft.perceived_effort ?? "").trim() === ""
-          ? null
-          : readInteger(draft.perceived_effort, 1, 10);
-      if ((draft.perceived_effort ?? "").trim() !== "" && effort === null) {
-        return { ok: false, message: "Effort is a whole number from 1 to 10." };
-      }
-      // The server refuses a duration with neither, so say which two will do
-      // rather than letting it come back as "invalid measurement".
-      if (intensity === null && effort === null) {
+      if (intensity === null) {
         return {
           ok: false,
-          message: "Add an intensity or an effort, not minutes alone.",
+          message: "Choose an intensity, not minutes alone.",
         };
       }
       return {
         ok: true,
-        measurement: {
-          duration_minutes: minutes,
-          ...(intensity === null ? {} : { intensity }),
-          ...(effort === null ? {} : { perceived_effort: effort }),
-        },
+        measurement: { duration_minutes: minutes, intensity },
       };
     }
 
@@ -233,6 +236,43 @@ export function buildMeasurement(
   }
 }
 
+/**
+ * Seconds per distance unit, in the pace unit that matches the distance the
+ * owner gave. Metres and yards pace per hundred, which is how swimming reads;
+ * kilometres and miles pace per one, which is how running does.
+ *
+ * `null` when either side is missing or the distance is zero, which is the
+ * caller's signal to use a typed pace instead.
+ */
+export function derivePace(
+  durationSeconds: number | undefined,
+  distance: number | undefined,
+  distanceUnit: DistanceUnit | undefined,
+): { seconds: number; unit: PaceUnit } | null {
+  if (
+    durationSeconds === undefined ||
+    distance === undefined ||
+    distanceUnit === undefined ||
+    distance <= 0
+  ) {
+    return null;
+  }
+  const per100 = distanceUnit === "m" || distanceUnit === "yd";
+  const seconds = Math.round(
+    per100 ? (durationSeconds / distance) * 100 : durationSeconds / distance,
+  );
+  if (seconds < 1 || seconds > 86400) return null;
+  const unit: PaceUnit =
+    distanceUnit === "m"
+      ? "sec/100m"
+      : distanceUnit === "yd"
+        ? "sec/100yd"
+        : distanceUnit === "mi"
+          ? "sec/mi"
+          : "sec/km";
+  return { seconds, unit };
+}
+
 /** `7:30` and `1:05:00` and a bare `450`, all to seconds. */
 function readClock(value: string | undefined, max: number): number | null {
   const text = (value ?? "").trim();
@@ -255,7 +295,7 @@ function readClock(value: string | undefined, max: number): number | null {
   return total > 0 && total <= max ? total : null;
 }
 
-function writeClock(seconds: number): string {
+export function writeClock(seconds: number): string {
   const whole = Math.round(seconds);
   const hours = Math.floor(whole / 3600);
   const minutes = Math.floor((whole % 3600) / 60);

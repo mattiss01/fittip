@@ -279,6 +279,18 @@ function buildChanges(
     operation === "delete" || operation === "reactivate",
   );
   if (operation === "edit") {
+    // The edit form owns the date now, so a date change arrives as part of an
+    // edit rather than through a section of its own. The contract keeps them
+    // apart — `edit` carries content, `move` carries a date and a position —
+    // so this composes both into one change set, which succeeds or fails as
+    // one action. The move is appended only when the date actually changed: a
+    // move to where the session already is would be refused as a change that
+    // changes nothing, and would take the edit down with it.
+    const requestedDate = formData.get("localDate");
+    const moved =
+      typeof requestedDate === "string" && requestedDate !== session.localDate
+        ? readPlannableDate(requestedDate, window)
+        : null;
     return [
       {
         operation,
@@ -294,6 +306,16 @@ function buildChanges(
           activities: readActivities(formData),
         },
       },
+      ...(moved === null
+        ? []
+        : [
+            {
+              operation: "move" as const,
+              sessionId: session.id,
+              localDate: moved,
+              position: nextPlanPosition(slice, moved),
+            },
+          ]),
     ];
   }
   if (operation === "move") {
