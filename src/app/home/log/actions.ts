@@ -93,13 +93,14 @@ export async function logCompletionAction(
       completion: {
         ...facts,
         ...(unplanned ? {} : { planSessionId: plannedSessionId }),
-        // A planned log is already named by the snapshot the write function
-        // captures from the plan row, so its list stays empty: no activity
-        // editor and no actual-measurement capture exists. Unplanned training
-        // has no planned side at all, so the title and sport the owner typed
-        // are written as its one activity, which is the only place a name for
-        // it can live.
-        activities: unplanned ? [readUnplannedActivity(formData)] : [],
+        // Unplanned training has no planned side at all, so the title and
+        // sport the owner typed are written as its one activity, which is the
+        // only place a name for it can live. A planned log carries what was
+        // actually done per activity; the snapshot of what was planned is
+        // captured by the write function from the plan row, not from here.
+        activities: unplanned
+          ? [readUnplannedActivity(formData)]
+          : readActualActivities(formData),
       },
     });
     revalidatePath("/home/today");
@@ -214,6 +215,27 @@ function readUnplannedActivity(formData: FormData) {
     }),
     measurementMode: "custom" as const,
   };
+}
+
+/**
+ * The actual activities of a planned log, decoded and nothing more. The shape,
+ * the measurement against its mode, and the position rules are the domain's
+ * to judge - `parseCompletionChange` runs on this list before anything is
+ * written - so this file does not repeat them.
+ *
+ * An absent field is an empty list rather than a refusal. Skipped and replaced
+ * logs send none, and a session with no activities has nothing to answer; a
+ * planned log that recorded nothing per activity is still a true record.
+ */
+function readActualActivities(formData: FormData): unknown {
+  const raw = formData.get("activities");
+  if (raw === null) return [];
+  if (typeof raw !== "string") throw new CompletionValidationError();
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch {
+    throw new CompletionValidationError();
+  }
 }
 
 /**

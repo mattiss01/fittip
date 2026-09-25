@@ -167,7 +167,7 @@ test.describe("M3-15B today and logging", () => {
       await expect(
         page.getByText(/stop training and speak to a qualified/),
       ).toBeVisible();
-      await page.getByRole("radio", { name: /^Completed/ }).check();
+      await page.getByLabel("What happened").selectOption("completed");
       await page.getByLabel("Duration (minutes)").fill("42");
       await page.getByLabel("Effort (1-10)").fill("7");
       await page.getByLabel("How it felt").selectOption("good");
@@ -202,7 +202,7 @@ test.describe("M3-15B today and logging", () => {
         .getByRole("link", { name: "Log this session" })
         .click();
       await expect(page.getByLabel("Duration (minutes)")).toBeVisible();
-      await page.getByRole("radio", { name: /^Skipped/ }).check();
+      await page.getByLabel("What happened").selectOption("skipped");
       // Training that did not happen has no duration, no effort and no way it
       // felt, so it is not asked for them.
       await expect(page.getByLabel("Duration (minutes)")).toHaveCount(0);
@@ -306,7 +306,7 @@ test.describe("M3-15B today and logging", () => {
       );
       await expect(page.getByLabel("Duration (minutes)")).toHaveValue("42");
       await expect(page.locator("[data-log-clears]")).toHaveCount(0);
-      await page.getByRole("radio", { name: /^Skipped/ }).check();
+      await page.getByLabel("What happened").selectOption("skipped");
       await expect(page.getByLabel("Duration (minutes)")).toHaveCount(0);
       await expect(page.locator("[data-log-clears]")).toContainText(
         "removes the duration, the effort and how it felt",
@@ -339,7 +339,7 @@ test.describe("M3-15B today and logging", () => {
       await todayCard(page, "Aerobic base")
         .getByRole("link", { name: "Log this session" })
         .click();
-      await page.getByRole("radio", { name: /^Completed/ }).check();
+      await page.getByLabel("What happened").selectOption("completed");
       await page.getByRole("button", { name: "Save log" }).click();
       await expect(
         page.getByRole("heading", { name: "Log saved." }),

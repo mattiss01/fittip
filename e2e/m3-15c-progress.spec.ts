@@ -90,7 +90,7 @@ test.describe("M3-15C progress", () => {
       await todayCard(page, "Tempo run")
         .getByRole("link", { name: "Log this session" })
         .click();
-      await page.getByRole("radio", { name: /^Completed/ }).check();
+      await page.getByLabel("What happened").selectOption("completed");
       await page.getByLabel("Duration (minutes)").fill("42");
       await page.getByLabel("Effort (1-10)").fill("7");
       await page.getByLabel("How it felt").selectOption("good");

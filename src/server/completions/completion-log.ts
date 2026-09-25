@@ -41,7 +41,11 @@ export type CompletionActivity = {
   sport: string;
   instructions?: string;
   measurementMode: TrainingMeasurementMode;
-  /** No capture path exists yet; the schema carries it from M3-15A onward. */
+  /**
+   * What was done, in this activity's own mode, which need not be the planned
+   * one: an unmeasured planned activity may be recorded as twenty minutes.
+   * Written by the log form when a planned log is created.
+   */
   actualMeasurement?: TrainingMeasurement;
 };
 

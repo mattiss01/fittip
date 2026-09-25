@@ -5,6 +5,7 @@ import { isoDateInTimezone } from "@/lib/date/local-date";
 import {
   CompletionLog,
   CompletionValidationError,
+  parseCompletionChange,
   type CompletionPlannedSnapshot,
 } from "./completion-log";
 import {
@@ -129,6 +130,52 @@ describe("completion log interface validation", () => {
         },
       }),
     ).rejects.toThrow(CompletionValidationError);
+  });
+
+  // The log form's own shape. An actual is judged against its own mode, never
+  // the planned one: serve practice planned unmeasured is recorded as minutes.
+  it("reads an actual in the mode it was recorded in, and only that mode", () => {
+    const planned = (actual: Record<string, unknown>) => ({
+      operation: "create",
+      completion: {
+        status: "completed",
+        actualLocalDate: "2026-08-20",
+        planSessionId: "75000000-0000-4000-8000-000000000002",
+        painReported: false,
+        illnessReported: false,
+        injuryReported: false,
+        severeFatigueReported: false,
+        activities: [
+          { position: 0, name: "Serve practice", sport: "Tennis", ...actual },
+        ],
+      },
+    });
+
+    const change = parseCompletionChange(
+      planned({
+        measurementMode: "duration_intensity",
+        actualMeasurement: { duration_minutes: 20 },
+      }),
+    );
+    expect(
+      change.operation === "create" && change.completion.activities,
+    ).toEqual([
+      {
+        position: 0,
+        name: "Serve practice",
+        sport: "Tennis",
+        measurementMode: "duration_intensity",
+        actualMeasurement: { duration_minutes: 20 },
+      },
+    ]);
+    expect(() =>
+      parseCompletionChange(
+        planned({
+          measurementMode: "sets_reps_load",
+          actualMeasurement: { duration_minutes: 20 },
+        }),
+      ),
+    ).toThrow(CompletionValidationError);
   });
 
   it("normalizes an instant so two adapters cannot spell it differently", async () => {

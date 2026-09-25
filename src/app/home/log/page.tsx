@@ -6,6 +6,7 @@ import styles from "./log.module.css";
 
 import homeStyles from "../home.module.css";
 import { isoDateInTimezone } from "@/lib/date/local-date";
+import { describeMeasurement } from "@/lib/training/describe-measurement";
 import type { Completion } from "@/server/completions/completion-log";
 import {
   CompletionAuthenticationError,
@@ -147,6 +148,9 @@ async function renderForm(
                     sport: snapshot.sport,
                     expectedDurationMinutes:
                       snapshot.expectedDurationMinutes ?? null,
+                    // An edit is never offered the planned list: what was
+                    // recorded is read back instead, below the numbers.
+                    activities: [],
                   }
             }
             existing={toExistingView(completion)}
@@ -194,6 +198,16 @@ async function renderForm(
         title: session.title,
         sport: session.sport,
         expectedDurationMinutes: session.expectedDurationMinutes ?? null,
+        activities: [...session.activities]
+          .sort((left, right) => left.position - right.position)
+          .map((activity) => ({
+            position: activity.position,
+            personalActivityId: activity.personalActivityId ?? null,
+            name: activity.name,
+            sport: activity.sport,
+            measurementMode: activity.measurementMode,
+            target: activity.target ?? null,
+          })),
       };
       return (
         <>
@@ -313,6 +327,11 @@ function toExistingView(completion: Completion): LogExistingView {
     replacementDescription: completion.replacementDescription ?? null,
     activityName: completion.activities[0]?.name ?? null,
     activitySport: completion.activities[0]?.sport ?? null,
+    activities: completion.activities.map((activity) => ({
+      position: activity.position,
+      name: activity.name,
+      actual: describeMeasurement(activity.actualMeasurement ?? null),
+    })),
     pain: completion.painReported,
     illness: completion.illnessReported,
     injury: completion.injuryReported,
