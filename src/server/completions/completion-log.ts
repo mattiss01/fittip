@@ -97,7 +97,10 @@ export type CompletionFacts = {
   perceivedEffort?: number;
   feeling?: CompletionFeeling;
   note?: string;
-  /** Present exactly when the status is `replaced`. */
+  /**
+   * What the owner typed as the instead, on a replaced log written before
+   * A4d gave it a link. Admitted only beside `replaced`, and never required.
+   */
   replacementDescription?: string;
   painReported: boolean;
   illnessReported: boolean;
@@ -112,8 +115,32 @@ export type CompletionFacts = {
  */
 export type CompletionName = { title: string; sport: string };
 
+/**
+ * Unplanned training written in the same save as the planned log it replaces.
+ * It carries what was done - the numbers belong to it, not to the planned
+ * log - and takes the planned log's date. Note and signals stay on the
+ * planned log, where the owner wrote them.
+ */
+export type ReplacementDraft = CompletionName & {
+  durationMinutes?: number;
+  perceivedEffort?: number;
+  feeling?: CompletionFeeling;
+  activities: CompletionActivity[];
+};
+
+/**
+ * What a replaced log points at: an unplanned log already written, or one to
+ * write with it. Exactly one of the two on `replaced`, neither on anything
+ * else.
+ */
+export type CompletionReplacement =
+  | { replacedByCompletionId: string; replacement?: never }
+  | { replacement: ReplacementDraft; replacedByCompletionId?: never }
+  | { replacedByCompletionId?: never; replacement?: never };
+
 export type CompletionDraft = CompletionFacts &
-  Partial<CompletionName> & {
+  Partial<CompletionName> &
+  CompletionReplacement & {
     /** Absent exactly when the status is `unplanned`. */
     planSessionId?: string;
     activities: CompletionActivity[];
@@ -136,6 +163,16 @@ export type Completion = CompletionFacts & {
   title: string | null;
   sport: string | null;
   /**
+   * The unplanned log a replaced one points at, as it reads now. Null on
+   * every other outcome, and on a replaced log written before A4d.
+   */
+  replacedBy: {
+    completionId: string;
+    localDate: string;
+    title: string | null;
+    sport: string | null;
+  } | null;
+  /**
    * The optimistic token the surface reads and sends back. It is not a revision
    * chain: no prior version is retained and none can be browsed.
    */
@@ -151,7 +188,8 @@ export type Completion = CompletionFacts & {
  * leaves it as it is.
  */
 export type CompletionEdit = CompletionFacts &
-  Partial<CompletionName> & {
+  Partial<CompletionName> &
+  CompletionReplacement & {
     activities?: CompletionActivity[];
   };
 
@@ -235,6 +273,43 @@ export class CompletionPersistenceError extends Error {
   }
 }
 
+/**
+ * What a replaced log says it was replaced by, in one line: the text a log
+ * written before A4d carries, or for a linked one the linked log's date, name
+ * and sport. Null on every other outcome.
+ *
+ * ADR-013 decision 4, as clarified on 25 Sep 2026: every fact in the line is
+ * already sent for the linked log itself, so the line says only which log
+ * replaced which. Callers truncate it as they truncate the text.
+ */
+export function describeReplacement(completion: Completion): string | null {
+  if (completion.replacementDescription !== undefined) {
+    return completion.replacementDescription;
+  }
+  const linked = completion.replacedBy;
+  if (linked === null || linked === undefined) return null;
+  const name = linked.title ?? "unplanned training";
+  const sport = linked.sport === null ? "" : ` (${linked.sport})`;
+  return `Replaced by ${name}${sport} on ${linked.localDate}`;
+}
+
+/**
+ * The log a replaced one points at, as a surface names it: "Hill ride
+ * (Cycling)". Null when it points nowhere, which includes a log written before
+ * the link; that one shows its own text instead.
+ */
+export function replacedByLabel(
+  completion: Completion,
+): { id: string; label: string } | null {
+  const linked = completion.replacedBy;
+  if (linked === null || linked === undefined) return null;
+  const name = linked.title ?? "Unplanned training";
+  return {
+    id: linked.completionId,
+    label: linked.sport === null ? name : `${name} (${linked.sport})`,
+  };
+}
+
 /** The most activities one completion may carry, as for a planned session. */
 export const COMPLETION_ACTIVITY_LIMIT = 50;
 
@@ -294,7 +369,15 @@ export function parseCompletionChange(value: unknown): CompletionChange {
 
 function parseDraft(value: unknown): CompletionDraft {
   const record = readRecord(value);
-  const { planSessionId, activities, title, sport, ...rest } = record;
+  const {
+    planSessionId,
+    activities,
+    title,
+    sport,
+    replacedByCompletionId,
+    replacement,
+    ...rest
+  } = record;
   if (
     !Array.isArray(activities) ||
     activities.length > COMPLETION_ACTIVITY_LIMIT
@@ -319,8 +402,55 @@ function parseDraft(value: unknown): CompletionDraft {
   return {
     ...facts,
     ...parseName(title, sport),
+    ...parseReplacement(facts.status, replacedByCompletionId, replacement),
     ...(named ? {} : { planSessionId: readUuid(planSessionId) }),
     activities: parsedActivities,
+  };
+}
+
+/**
+ * `replaced` means exactly "this points at what was done instead", in both
+ * directions: exactly one of a link and a replacement to write, and neither on
+ * any other outcome. Whether the link names this owner's unplanned training is
+ * the write function's to judge; only it can read the row.
+ */
+function parseReplacement(
+  status: CompletionStatus,
+  link: unknown,
+  replacement: unknown,
+): CompletionReplacement {
+  const linked = link !== undefined && link !== null;
+  const inline = replacement !== undefined && replacement !== null;
+  if ((status === "replaced") !== (linked || inline) || (linked && inline)) {
+    throw new CompletionValidationError();
+  }
+  if (linked) return { replacedByCompletionId: readUuid(link) };
+  if (!inline) return {};
+  const record = readRecord(replacement);
+  assertOnlyKeys(record, [
+    "title",
+    "sport",
+    "durationMinutes",
+    "perceivedEffort",
+    "feeling",
+    "activities",
+  ]);
+  const activities = parseActivityList(record.activities);
+  // Unplanned training, so it answers no planned activity.
+  if (activities.some((activity) => activity.plannedPosition !== undefined)) {
+    throw new CompletionValidationError();
+  }
+  return {
+    replacement: {
+      title: readRequiredString(record.title, 120),
+      sport: readRequiredString(record.sport, 80),
+      ...optionalInteger("durationMinutes", record.durationMinutes, 0, 10080),
+      ...optionalInteger("perceivedEffort", record.perceivedEffort, 1, 10),
+      ...(record.feeling === undefined || record.feeling === null
+        ? {}
+        : { feeling: readChoice(record.feeling, COMPLETION_FEELINGS) }),
+      activities,
+    },
   };
 }
 
@@ -335,8 +465,20 @@ function parseName(title: unknown, sport: unknown): Partial<CompletionName> {
 
 function parseEdit(value: unknown): CompletionEdit {
   const record = readRecord(value);
-  const { activities, title, sport, ...rest } = record;
-  const facts = { ...parseFacts(rest), ...parseName(title, sport) };
+  const {
+    activities,
+    title,
+    sport,
+    replacedByCompletionId,
+    replacement,
+    ...rest
+  } = record;
+  const parsed = parseFacts(rest);
+  const facts = {
+    ...parsed,
+    ...parseName(title, sport),
+    ...parseReplacement(parsed.status, replacedByCompletionId, replacement),
+  };
   // Absent means "leave them alone"; an explicit list replaces the whole set.
   if (activities === undefined) return facts;
   return { ...facts, activities: parseActivityList(activities) };
@@ -386,9 +528,9 @@ function parseFacts(value: unknown): CompletionFacts {
     record.replacementDescription === ""
       ? undefined
       : readRequiredString(record.replacementDescription, 500);
-  // `replaced` means exactly "there is a description of what was done
-  // instead", in both directions.
-  if ((status === "replaced") !== (replacementDescription !== undefined)) {
+  // The text a replaced log carried before A4d gave it a link: kept when it
+  // is there, never asked for, and never on any other outcome.
+  if (replacementDescription !== undefined && status !== "replaced") {
     throw new CompletionValidationError();
   }
   return {

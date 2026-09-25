@@ -1,6 +1,9 @@
 import "server-only";
 
-import type { Completion } from "@/server/completions/completion-log";
+import {
+  describeReplacement,
+  type Completion,
+} from "@/server/completions/completion-log";
 import {
   selectTrainingHistoryContext,
   type TrainingHistoryCompletion,
@@ -91,7 +94,7 @@ function toWindowEntry(completion: Completion): TrainingHistoryCompletion {
     injuryReported: completion.injuryReported,
     severeFatigueReported: completion.severeFatigueReported,
     note: completion.note ?? null,
-    replacementDescription: completion.replacementDescription ?? null,
+    replacementDescription: describeReplacement(completion),
     activityNames: completion.activities.map((activity) => activity.name),
   };
 }

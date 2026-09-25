@@ -27,6 +27,12 @@ export type TodayCompletionView = {
   feeling: CompletionFeelingValue | null;
   note: string | null;
   replacementDescription: string | null;
+  /**
+   * The unplanned log a replaced one points at, already in words. Null on
+   * every other outcome and on a replaced log written before the link, which
+   * shows its text instead.
+   */
+  replacedBy: { id: string; label: string } | null;
   pain: boolean;
   illness: boolean;
   injury: boolean;
@@ -336,7 +342,14 @@ function CompletionFacts({ completion }: { completion: TodayCompletionView }) {
           </div>
         )}
       </dl>
-      {completion.replacementDescription === null ? null : (
+      {completion.replacedBy !== null ? (
+        <p className={styles.body} data-replaced-by>
+          Instead:{" "}
+          <Link href={`/home/progress/${completion.replacedBy.id}`}>
+            {completion.replacedBy.label}
+          </Link>
+        </p>
+      ) : completion.replacementDescription === null ? null : (
         <p className={styles.body}>
           Instead: {completion.replacementDescription}
         </p>

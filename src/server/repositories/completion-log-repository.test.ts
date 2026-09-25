@@ -68,6 +68,7 @@ function storedRow(overrides: Record<string, unknown> = {}) {
     sport: "Running",
     revision: 1,
     updated_at: "2026-08-20T07:00:00.000Z",
+    replaced_by_completion_id: null,
     completion_activities: [
       {
         personal_activity_id: null,
@@ -231,6 +232,7 @@ describe("PostgresCompletionLogAdapter", () => {
         severeFatigueReported: false,
         title: "Aerobic run in the rain",
         sport: "Running",
+        replacedBy: null,
         revision: 1,
         updatedAt: "2026-08-20T07:00:00.000Z",
         activities: [
@@ -285,6 +287,52 @@ describe("PostgresCompletionLogAdapter", () => {
     await expect(completions.get(COMPLETION_ID)).rejects.toThrow(
       CompletionPersistenceError,
     );
+  });
+
+  it("reads what a replaced log points at, and refuses a pointer to nothing", async () => {
+    const RIDE_ID = "7e150000-0000-4000-8000-0000000000aa";
+    const read = async (linked: unknown[]) => {
+      const builder = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: storedRow({
+            status: "replaced",
+            replaced_by_completion_id: RIDE_ID,
+          }),
+          error: null,
+        }),
+        in: vi.fn().mockResolvedValue({ data: linked, error: null }),
+      };
+      const completion = await new CompletionLog(
+        new PostgresCompletionLogAdapter(
+          client({ from: vi.fn().mockReturnValue(builder) }),
+        ),
+      ).get(COMPLETION_ID);
+      // The target is read by id under the same owner predicate.
+      expect(builder.in).toHaveBeenCalledWith("id", [RIDE_ID]);
+      expect(builder.eq).toHaveBeenCalledWith("user_id", USER_ID);
+      return completion;
+    };
+
+    expect(
+      (
+        await read([
+          {
+            id: RIDE_ID,
+            actual_local_date: "2026-08-21",
+            title: "Hill ride",
+            sport: "Cycling",
+          },
+        ])
+      )?.replacedBy,
+    ).toEqual({
+      completionId: RIDE_ID,
+      localDate: "2026-08-21",
+      title: "Hill ride",
+      sport: "Cycling",
+    });
+    await expect(read([])).rejects.toThrow(CompletionPersistenceError);
   });
 
   it.each([

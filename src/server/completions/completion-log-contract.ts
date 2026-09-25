@@ -562,6 +562,122 @@ export function registerCompletionLogContract(
       ).rejects.toThrow(CompletionValidationError);
     });
 
+    it("replaces a planned session with training written in the same save", async () => {
+      const { completions, addPlanSession, day } = requireSubject(subject);
+      const tempo = await addPlanSession(day(0), "Tempo run");
+      // Tomorrow: the Postgres harness adds every session at position 0.
+      const easy = await addPlanSession(day(1), "Easy run");
+      const replaced = (planSessionId: string, pointer: object) => ({
+        operation: "create",
+        completion: {
+          planSessionId,
+          status: "replaced",
+          actualLocalDate: day(0),
+          activities: [],
+          ...pointer,
+        },
+      });
+
+      const first = await completions.applyChange(
+        replaced(tempo, {
+          replacement: {
+            title: "Hill ride",
+            sport: "Cycling",
+            durationMinutes: 70,
+            activities: [],
+          },
+        }),
+      );
+      const logged = await completions.get(first.completionId);
+      const ride = logged?.replacedBy;
+      expect(ride).toMatchObject({ title: "Hill ride", sport: "Cycling" });
+      expect(logged?.durationMinutes).toBeUndefined();
+      expect(await completions.get(ride!.completionId)).toMatchObject({
+        status: "unplanned",
+        planSessionId: null,
+        title: "Hill ride",
+        durationMinutes: 70,
+      });
+
+      // The same ride may stand for a second session too.
+      const second = await completions.applyChange(
+        replaced(easy, { replacedByCompletionId: ride!.completionId }),
+      );
+      expect(
+        (await completions.get(second.completionId))?.replacedBy?.completionId,
+      ).toBe(ride!.completionId);
+
+      // Corrected away from replaced, a log points nowhere; the ride stays.
+      await completions.applyChange({
+        operation: "edit",
+        completionId: first.completionId,
+        expectedRevision: 0,
+        completion: { status: "completed", actualLocalDate: day(0) },
+      });
+      expect((await completions.get(first.completionId))?.replacedBy).toBe(
+        null,
+      );
+      expect(await completions.get(ride!.completionId)).not.toBe(null);
+    });
+
+    it("points only at unplanned training, and writes both logs or neither", async () => {
+      const { completions, addPlanSession, day } = requireSubject(subject);
+      const tempo = await addPlanSession(day(0), "Tempo run");
+      // Tomorrow: the Postgres harness adds every session at position 0.
+      const easy = await addPlanSession(day(1), "Easy run");
+      const planned = await completions.applyChange(create(tempo, day(0)));
+
+      // A planned log cannot stand for what was done instead, and a missing
+      // one is refused the same way.
+      for (const pointer of [
+        planned.completionId,
+        "75000000-0000-4000-8000-00000000dead",
+      ]) {
+        await expect(
+          completions.applyChange({
+            operation: "create",
+            completion: {
+              planSessionId: easy,
+              status: "replaced",
+              actualLocalDate: day(0),
+              activities: [],
+              replacedByCompletionId: pointer,
+            },
+          }),
+        ).rejects.toThrow(CompletionValidationError);
+      }
+
+      // Replacing a session that already has a log is refused, and the ride
+      // written for it is taken back with it.
+      const before = (await completions.list(day(-1), day(0))).length;
+      await expect(
+        completions.applyChange({
+          operation: "create",
+          completion: {
+            planSessionId: tempo,
+            status: "replaced",
+            actualLocalDate: day(0),
+            activities: [],
+            replacement: { title: "Swim", sport: "Swimming", activities: [] },
+          },
+        }),
+      ).rejects.toThrow(CompletionDuplicateError);
+      expect((await completions.list(day(-1), day(0))).length).toBe(before);
+
+      // Replaced must point somewhere, and nothing else may.
+      await expect(
+        completions.applyChange({
+          operation: "create",
+          completion: {
+            planSessionId: easy,
+            status: "replaced",
+            actualLocalDate: day(0),
+            activities: [],
+          },
+        }),
+      ).rejects.toThrow(CompletionValidationError);
+    });
+
     it("finds what a planned session already carries, whatever day it was logged on", async () => {
       const { completions, addPlanSession, day } = requireSubject(subject);
       const planSessionId = await addPlanSession(day(3), "Aerobic run");

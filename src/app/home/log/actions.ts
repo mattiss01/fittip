@@ -66,7 +66,8 @@ export async function logCompletionAction(
     // the write function from the plan row, and no edit ever writes it.
     const content = {
       ...readName(formData, editing),
-      activities: readActualActivities(formData),
+      activities: readActualActivities(formData, "activities"),
+      ...(facts.status === "replaced" ? readReplacedBy(formData, editing) : {}),
     };
 
     if (editing) {
@@ -196,8 +197,8 @@ function readName(formData: FormData, editing: boolean) {
  * clears the actuals, which the form says before saving. A log that recorded
  * nothing per activity is still a true record.
  */
-function readActualActivities(formData: FormData): unknown {
-  const raw = formData.get("activities");
+function readActualActivities(formData: FormData, key: string): unknown {
+  const raw = formData.get(key);
   if (raw === null) return [];
   if (typeof raw !== "string") throw new CompletionValidationError();
   try {
@@ -205,6 +206,50 @@ function readActualActivities(formData: FormData): unknown {
   } catch {
     throw new CompletionValidationError();
   }
+}
+
+/**
+ * What a replaced log points at: training the owner already logged, or the
+ * training logged in this same save. Which one is the form's `replacementMode`;
+ * the rest is decoded and handed on, and the domain decides whether it is a
+ * valid pointer or valid unplanned training.
+ */
+function readReplacedBy(formData: FormData, editing: boolean) {
+  if (formData.get("replacementMode") === "existing") {
+    return {
+      replacedByCompletionId: readText(formData.get("replacedByCompletionId")),
+    };
+  }
+  const nothing = editing ? "Nothing was changed." : "Nothing was logged.";
+  const feeling = optionalText(formData, "replacement.feeling");
+  return {
+    replacement: {
+      title: readActivityText(formData, "replacement.title", 120, {
+        missing: `Name what you did instead, then save again. ${nothing}`,
+        tooLong: `Shorten what you did instead to 120 characters or fewer, then save again. ${nothing}`,
+      }),
+      sport: readActivityText(formData, "replacement.sport", 80, {
+        missing: `Name the sport of what you did instead, then save again. ${nothing}`,
+        tooLong: `Shorten its sport to 80 characters or fewer, then save again. ${nothing}`,
+      }),
+      ...renamed(
+        optionalNumber(formData, "replacement.durationMinutes"),
+        "durationMinutes",
+      ),
+      ...renamed(
+        optionalNumber(formData, "replacement.perceivedEffort"),
+        "perceivedEffort",
+      ),
+      ...(feeling === undefined ? {} : { feeling }),
+      activities: readActualActivities(formData, "replacement.activities"),
+    },
+  };
+}
+
+/** `optionalNumber` keys its result by the field; the payload wants its own. */
+function renamed(value: Record<string, number>, key: string) {
+  const [number] = Object.values(value);
+  return number === undefined ? {} : { [key]: number };
 }
 
 /**

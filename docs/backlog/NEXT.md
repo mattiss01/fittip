@@ -39,14 +39,16 @@ Ordered by dependency. A lane is named where it is not the build lane.
       This supersedes A2b's prefill of an activity's sport from its session — a session's
       sport is not a category and must stop being copied into one. A4's "Add activity" on
       the log copies it too (`actual-activities.tsx`), so both sites change together.
-- [ ] **A4d — Replaced points at what replaced it.** Careful lane; migration. The owner's
-      view on 25 Sep 2026: a planned session marked `replaced` should link to an unplanned log,
-      either an existing one or one created on the spot. Without a link, a replaced session
-      is really a skipped one. Open before any code: where the link lives
-      (`replaced_by_completion_id` on the replaced log is the likely shape), whether one
-      unplanned log may replace several sessions, what happens to `replacement_description`
-      and to `replaced` logs written without a link, and whether deleting the unplanned log
-      is refused or unlinks it.
+- [~] **A4d — Replaced points at what replaced it.** Careful lane; migration. Outcome: a
+      replaced planned log links to the unplanned log of what was done instead, either one
+      written in the same save or one already logged. Decided by the owner on 25 Sep 2026:
+      the link lives on the planned side, and one unplanned log may replace several
+      sessions. New replaced logs need a link and no text; old ones keep their text. The
+      coach reads "Replaced by {title} ({sport}) on {date}" in the existing
+      `replacementDescription` slot. Constraints: additive; the inline create reuses
+      `apply_completion_change` recursively, so both logs are written or neither; the FK is
+      `NO ACTION` so a lone delete of a linked log is refused but the account cascade still
+      works; only an unplanned log of the same owner can be linked.
 - [ ] **A3 — See the activities.** Today and the Plan day render the list instead of the
       `activityCount` string. `completion-record.tsx` already renders one; follow it.
 - [ ] **A5 — Personal activity library.** Create, list, edit and archive reusable

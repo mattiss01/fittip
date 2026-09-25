@@ -368,6 +368,80 @@ describe("logCompletionAction", () => {
     });
   });
 
+  it("writes a replaced session with what was done instead, in one call", async () => {
+    await logCompletionAction(
+      INITIAL_LOG_ACTION_STATE,
+      form({
+        operation: "create",
+        status: "replaced",
+        actualLocalDate: DAY,
+        plannedSessionId: SESSION_ID,
+        plannedDate: DAY,
+        replacementMode: "new",
+        "replacement.title": " Hill ride ",
+        "replacement.sport": "Cycling",
+        "replacement.durationMinutes": "70",
+        "replacement.feeling": "good",
+        "replacement.activities": "[]",
+      }),
+    );
+
+    expect(applyChange.mock.calls[0][0].completion).toMatchObject({
+      status: "replaced",
+      planSessionId: SESSION_ID,
+      replacement: {
+        title: "Hill ride",
+        sport: "Cycling",
+        durationMinutes: 70,
+        feeling: "good",
+        activities: [],
+      },
+    });
+    expect(applyChange.mock.calls[0][0].completion).not.toHaveProperty(
+      "replacedByCompletionId",
+    );
+  });
+
+  it("points a replaced session at training already logged", async () => {
+    await logCompletionAction(
+      INITIAL_LOG_ACTION_STATE,
+      form({
+        operation: "create",
+        status: "replaced",
+        actualLocalDate: DAY,
+        plannedSessionId: SESSION_ID,
+        plannedDate: DAY,
+        replacementMode: "existing",
+        replacedByCompletionId: COMPLETION_ID,
+      }),
+    );
+
+    const { completion } = applyChange.mock.calls[0][0];
+    expect(completion.replacedByCompletionId).toBe(COMPLETION_ID);
+    expect(completion).not.toHaveProperty("replacement");
+  });
+
+  it("names the field when what was done instead has no title", async () => {
+    const result = await logCompletionAction(
+      INITIAL_LOG_ACTION_STATE,
+      form({
+        operation: "create",
+        status: "replaced",
+        actualLocalDate: DAY,
+        plannedSessionId: SESSION_ID,
+        plannedDate: DAY,
+        replacementMode: "new",
+        "replacement.title": "",
+        "replacement.sport": "Cycling",
+      }),
+    );
+
+    expect(applyChange).not.toHaveBeenCalled();
+    expect(result.message).toBe(
+      "Name what you did instead, then save again. Nothing was logged.",
+    );
+  });
+
   it("says nothing was changed when an edit is missing its title", async () => {
     const result = await logCompletionAction(
       INITIAL_LOG_ACTION_STATE,

@@ -42,7 +42,7 @@ const COMPLETION_COLUMNS = `
   actual_started_at, duration_minutes, perceived_effort, feeling, note,
   replacement_description, pain_reported, illness_reported, injury_reported,
   severe_fatigue_reported, planned_snapshot, title, sport, revision,
-  updated_at,
+  updated_at, replaced_by_completion_id,
   completion_activities (
     personal_activity_id, position, planned_position, name, sport,
     instructions, measurement_mode, actual_measurement
@@ -76,7 +76,7 @@ export class PostgresCompletionLogAdapter implements CompletionLogAdapter {
       .order("actual_local_date", { ascending: false })
       .order("id", { ascending: true });
     if (error) throw new CompletionPersistenceError();
-    return (data ?? []).map(parseCompletion);
+    return await this.withReplacements(userId, data ?? []);
   }
 
   async get(completionId: string): Promise<Completion | null> {
@@ -88,7 +88,7 @@ export class PostgresCompletionLogAdapter implements CompletionLogAdapter {
       .eq("id", completionId)
       .maybeSingle();
     if (error) throw new CompletionPersistenceError();
-    return data ? parseCompletion(data) : null;
+    return data ? (await this.withReplacements(userId, [data]))[0] : null;
   }
 
   async findByPlanSession(planSessionId: string): Promise<Completion | null> {
@@ -100,7 +100,43 @@ export class PostgresCompletionLogAdapter implements CompletionLogAdapter {
       .eq("plan_session_id", planSessionId)
       .maybeSingle();
     if (error) throw new CompletionPersistenceError();
-    return data ? parseCompletion(data) : null;
+    return data ? (await this.withReplacements(userId, [data]))[0] : null;
+  }
+
+  /**
+   * Reads what each replaced row points at, in one further owner-scoped
+   * query, and parses the rows with it.
+   *
+   * Not an embedded select: PostgREST resolves the bare self-embed to the
+   * other direction - the logs pointing at a row - and does not match a hint
+   * for a composite self-referencing key, so the pointer's target is fetched
+   * by id instead. The owner predicate is repeated here as everywhere; the
+   * composite foreign key already makes a cross-owner pointer impossible.
+   */
+  private async withReplacements(
+    userId: string,
+    rows: readonly unknown[],
+  ): Promise<Completion[]> {
+    const targets = [
+      ...new Set(
+        rows
+          .map((row) => readRecord(row).replaced_by_completion_id)
+          .filter((id): id is string => typeof id === "string"),
+      ),
+    ];
+    const linked = new Map<string, unknown>();
+    if (targets.length > 0) {
+      const { data, error } = await this.client
+        .from("completions")
+        .select("id, actual_local_date, title, sport")
+        .eq("user_id", userId)
+        .in("id", targets);
+      if (error) throw new CompletionPersistenceError();
+      for (const row of data ?? []) linked.set(row.id, row);
+    }
+    return rows.map((row) =>
+      parseCompletion(row, (id) => linked.get(id) ?? null),
+    );
   }
 
   /**
@@ -179,7 +215,10 @@ function toArguments(change: CompletionChange) {
   };
 }
 
-function parseCompletion(value: unknown): Completion {
+function parseCompletion(
+  value: unknown,
+  replacementOf: (completionId: string) => unknown = () => null,
+): Completion {
   const completion = readRecord(value);
   const activities = completion.completion_activities;
   if (
@@ -264,11 +303,46 @@ function parseCompletion(value: unknown): Completion {
         : parsePlannedSnapshot(completion.planned_snapshot),
     title: completion.title as string | null,
     sport: completion.sport as string | null,
+    replacedBy: parseReplacedBy(
+      completion.replaced_by_completion_id,
+      typeof completion.replaced_by_completion_id === "string"
+        ? replacementOf(completion.replaced_by_completion_id)
+        : null,
+    ),
     revision: completion.revision,
     updatedAt: completion.updated_at,
     activities: activities
       .map(parseCompletionActivity)
       .toSorted((left, right) => left.position - right.position),
+  };
+}
+
+/**
+ * The unplanned log a replaced one points at. The foreign key names the same
+ * owner, so its row is always readable when the pointer is set; a pointer with
+ * no row beside it means the read lost something, and is refused rather than
+ * shown as a replacement that went nowhere.
+ */
+function parseReplacedBy(
+  pointer: unknown,
+  target: unknown,
+): Completion["replacedBy"] {
+  if (pointer === null) return null;
+  const row = readRecord(target);
+  if (
+    !isUuid(pointer) ||
+    row.id !== pointer ||
+    !isIsoDate(row.actual_local_date) ||
+    !(row.title === null || typeof row.title === "string") ||
+    !(row.sport === null || typeof row.sport === "string")
+  ) {
+    throw new CompletionPersistenceError();
+  }
+  return {
+    completionId: pointer,
+    localDate: row.actual_local_date,
+    title: row.title,
+    sport: row.sport,
   };
 }
 

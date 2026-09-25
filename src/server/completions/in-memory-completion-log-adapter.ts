@@ -13,6 +13,7 @@ import {
   type CompletionLogAdapter,
   type CompletionPlannedSnapshot,
   type CompletionReceipt,
+  type ReplacementDraft,
   type ParsedCompletionWindow,
 } from "./completion-log";
 
@@ -28,7 +29,16 @@ export type InMemoryCompletionLogOptions = {
  * planned snapshot is copied at write time and never read through afterwards.
  */
 export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
-  private readonly completions = new Map<string, Completion>();
+  private readonly completions = new Map<
+    string,
+    Omit<Completion, "replacedBy">
+  >();
+  /**
+   * Replaced log id to the unplanned log it points at. Kept apart and read
+   * through on every read, as the database's join is, so a renamed ride reads
+   * the same through both adapters.
+   */
+  private readonly links = new Map<string, string>();
   private readonly planSessions = new Map<string, CompletionPlannedSnapshot>();
   private readonly clock: () => Date;
   private timezoneName: string | null;
@@ -71,22 +81,38 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
           right.actualLocalDate.localeCompare(left.actualLocalDate) ||
           left.id.localeCompare(right.id),
       )
-      .map(copy);
+      .map((completion) => this.view(completion));
   }
 
   async get(completionId: string): Promise<Completion | null> {
     const completion = this.completions.get(completionId);
-    return completion ? copy(completion) : null;
+    return completion ? this.view(completion) : null;
   }
 
   async findByPlanSession(planSessionId: string): Promise<Completion | null> {
     const completion = [...this.completions.values()].find(
       (candidate) => candidate.planSessionId === planSessionId,
     );
-    return completion ? copy(completion) : null;
+    return completion ? this.view(completion) : null;
   }
 
+  /**
+   * One call, one outcome, as the write function's transaction: an inline
+   * replacement written before a refusal of the planned half is taken back.
+   */
   async applyChange(change: CompletionChange): Promise<CompletionReceipt> {
+    const completions = new Map(this.completions);
+    const links = new Map(this.links);
+    try {
+      return this.write(change);
+    } catch (error) {
+      restore(this.completions, completions);
+      restore(this.links, links);
+      throw error;
+    }
+  }
+
+  private write(change: CompletionChange): CompletionReceipt {
     if (change.operation === "create") return this.create(change.completion);
     const existing = this.completions.get(change.completionId);
     // A record that is not this owner's, or one already removed, is reported
@@ -102,7 +128,19 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
     ) {
       throw new CompletionValidationError();
     }
-    const { activities, title, sport, ...facts } = change.completion;
+    const {
+      activities,
+      title,
+      sport,
+      replacedByCompletionId,
+      replacement,
+      ...facts
+    } = change.completion;
+    const replacedBy = this.resolveReplacement(
+      facts.actualLocalDate,
+      replacedByCompletionId,
+      replacement,
+    );
     // A planned log's actuals are corrected like any other's; its snapshot is
     // read to check what they answer and is never written.
     if (activities !== undefined) {
@@ -110,7 +148,7 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
     }
     // Judged in the zone the completion carries, not the current one.
     this.requireNotFuture(facts.actualLocalDate, existing.timezoneName);
-    const updated: Completion = {
+    const updated: Omit<Completion, "replacedBy"> = {
       ...facts,
       // A name the edit does not state is left as it is.
       title: title ?? existing.title,
@@ -124,6 +162,9 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
       updatedAt: this.clock().toISOString(),
     };
     this.completions.set(updated.id, updated);
+    // Set on every edit, so a log corrected away from `replaced` points
+    // nowhere; the parser admits a pointer only beside it.
+    this.setLink(updated.id, replacedBy);
     return {
       completionId: updated.id,
       revision: updated.revision,
@@ -133,8 +174,21 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
 
   private create(draft: CompletionDraft): CompletionReceipt {
     if (this.timezoneName === null) throw new CompletionTimezoneRequiredError();
-    const { planSessionId, activities, title, sport, ...facts } = draft;
+    const {
+      planSessionId,
+      activities,
+      title,
+      sport,
+      replacedByCompletionId,
+      replacement,
+      ...facts
+    } = draft;
     this.requireNotFuture(facts.actualLocalDate, this.timezoneName);
+    const replacedBy = this.resolveReplacement(
+      facts.actualLocalDate,
+      replacedByCompletionId,
+      replacement,
+    );
     let plannedSnapshot: CompletionPlannedSnapshot | null = null;
     if (planSessionId !== undefined) {
       const session = this.planSessions.get(planSessionId);
@@ -161,7 +215,7 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
           : first !== undefined
             ? { title: first.name, sport: first.sport }
             : { title: null, sport: null };
-    const completion: Completion = {
+    const completion: Omit<Completion, "replacedBy"> = {
       ...facts,
       ...name,
       id: randomUUID(),
@@ -173,7 +227,60 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
       updatedAt: this.clock().toISOString(),
     };
     this.completions.set(completion.id, completion);
+    this.setLink(completion.id, replacedBy);
     return { completionId: completion.id, revision: 0, result: "created" };
+  }
+
+  /**
+   * What a replaced log points at, written first when it is new, as the
+   * write function does: unplanned training on the same day, through the same
+   * create, so every rule it answers to applies unchanged.
+   */
+  private resolveReplacement(
+    actualLocalDate: string,
+    link: string | undefined,
+    replacement: ReplacementDraft | undefined,
+  ): string | null {
+    if (replacement !== undefined) {
+      return this.create({
+        ...replacement,
+        status: "unplanned",
+        actualLocalDate,
+        painReported: false,
+        illnessReported: false,
+        injuryReported: false,
+        severeFatigueReported: false,
+      }).completionId;
+    }
+    if (link === undefined) return null;
+    // This owner's unplanned training, and nothing else.
+    if (this.completions.get(link)?.planSessionId !== null) {
+      throw new CompletionValidationError();
+    }
+    return link;
+  }
+
+  private setLink(completionId: string, target: string | null) {
+    if (target === null) this.links.delete(completionId);
+    else this.links.set(completionId, target);
+  }
+
+  private view(completion: Omit<Completion, "replacedBy">): Completion {
+    const target = this.links.get(completion.id);
+    const linked =
+      target === undefined ? undefined : this.completions.get(target);
+    return {
+      ...copy(completion),
+      replacedBy:
+        linked === undefined
+          ? null
+          : {
+              completionId: linked.id,
+              localDate: linked.actualLocalDate,
+              title: linked.title,
+              sport: linked.sport,
+            },
+    };
   }
 
   /** Nothing is completed before it happens, in the zone that anchors it. */
@@ -217,4 +324,9 @@ function requireAnswersSnapshot(
       throw new CompletionValidationError();
     }
   }
+}
+
+function restore<K, V>(target: Map<K, V>, saved: Map<K, V>) {
+  target.clear();
+  for (const [key, value] of saved) target.set(key, value);
 }

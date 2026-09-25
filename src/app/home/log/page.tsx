@@ -1,11 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { LogForm, type LogExistingView, type LogPlannedView } from "./log-form";
+import {
+  LogForm,
+  type LogExistingView,
+  type LogPlannedView,
+  type LogUnplannedOption,
+} from "./log-form";
 import styles from "./log.module.css";
 
 import homeStyles from "../home.module.css";
-import { isoDateInTimezone } from "@/lib/date/local-date";
+import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import type { LogPlannedActivityView } from "./actual-activities";
 import type { Completion } from "@/server/completions/completion-log";
 import {
@@ -33,6 +38,13 @@ type Props = {
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const SHORT_DAY = new Intl.DateTimeFormat("en-GB", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  timeZone: "UTC",
+});
 
 const LONG_DAY = new Intl.DateTimeFormat("en-GB", {
   weekday: "long",
@@ -151,6 +163,15 @@ async function renderForm(
                   }
             }
             existing={existing}
+            unplannedOptions={
+              snapshot === null
+                ? []
+                : await unplannedOptions(
+                    snapshot.localDate,
+                    today,
+                    completion.replacedBy,
+                  )
+            }
             defaultDate={completion.actualLocalDate}
             today={today}
             returnDate={completion.actualLocalDate}
@@ -219,6 +240,7 @@ async function renderForm(
           <LogForm
             planned={planned}
             existing={null}
+            unplannedOptions={await unplannedOptions(planned.localDate, today)}
             alreadyLogged={
               logged === null
                 ? null
@@ -315,6 +337,7 @@ function toExistingView(completion: Completion): LogExistingView {
     feeling: completion.feeling ?? null,
     note: completion.note ?? null,
     replacementDescription: completion.replacementDescription ?? null,
+    replacedById: completion.replacedBy?.completionId ?? null,
     title: completion.title ?? completion.plannedSnapshot?.title ?? null,
     sport: completion.sport ?? completion.plannedSnapshot?.sport ?? null,
     activities: completion.activities.map((activity) => ({
@@ -352,6 +375,58 @@ function toPlannedActivityView(activity: {
     sport: activity.sport,
     measurementMode: activity.measurementMode,
     target: activity.target ?? null,
+  };
+}
+
+/**
+ * The unplanned training a replaced log may point at: from a week before the
+ * planned day to today, most recent first. A default, not a rule - the write
+ * function accepts any unplanned log of this owner's - chosen because what
+ * replaces a session is almost always logged within days of it.
+ */
+async function unplannedOptions(
+  plannedDate: string,
+  today: string,
+  current: Completion["replacedBy"] = null,
+): Promise<LogUnplannedOption[]> {
+  const from = shiftIsoDate(plannedDate > today ? today : plannedDate, -7);
+  const logs = await (await createCompletionLog()).list(from, today);
+  const options = logs
+    .filter((log) => log.planSessionId === null)
+    .map((log) =>
+      option(log.id, log.actualLocalDate, log.title, log.sport ?? null),
+    );
+  // What a log already points at is always offered, wherever it falls: left
+  // out, the form would default to logging a new one and quietly write a
+  // second record of the same training.
+  if (current !== null && !options.some((o) => o.id === current.completionId)) {
+    options.unshift(
+      option(
+        current.completionId,
+        current.localDate,
+        current.title,
+        current.sport,
+      ),
+    );
+  }
+  return options;
+}
+
+function option(
+  id: string,
+  localDate: string,
+  title: string | null,
+  sport: string | null,
+): LogUnplannedOption {
+  return {
+    id,
+    label: [
+      SHORT_DAY.format(new Date(`${localDate}T00:00:00.000Z`)),
+      title ?? "Unplanned training",
+      sport,
+    ]
+      .filter(Boolean)
+      .join(" · "),
   };
 }
 

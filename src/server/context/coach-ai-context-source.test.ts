@@ -433,6 +433,7 @@ function completion(overrides: Partial<Completion> = {}): Completion {
     timezoneName: TIMEZONE,
     title: null,
     sport: null,
+    replacedBy: null,
     durationMinutes: 58,
     perceivedEffort: 6,
     feeling: "good",
