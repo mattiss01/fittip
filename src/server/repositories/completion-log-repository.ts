@@ -157,8 +157,9 @@ export async function createCompletionLog(): Promise<CompletionLog> {
 
 /**
  * Both writes reach the same owner-derived function. A create carries the
- * planned link and the activity list; an edit carries neither, because the
- * planned link is immutable and no activity editor exists yet. The planned
+ * planned link and the activity list; an edit never carries the link, which is
+ * immutable, and carries a list only for unplanned training — the function
+ * refuses to restate a planned log's activities. The planned
  * snapshot is never sent: the function captures it from the plan row itself,
  * so no caller can compose or forge one.
  */

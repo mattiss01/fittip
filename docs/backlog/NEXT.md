@@ -37,10 +37,32 @@ Ordered by dependency. A lane is named where it is not the build lane.
       suggestions is not an exercise library, but the owner should agree the preset list
       before it ships, and it belongs in `CONTEXT.md` as project vocabulary.
       This supersedes A2b's prefill of an activity's sport from its session — a session's
-      sport is not a category and must stop being copied into one.
-- [ ] **A4 — Log what you actually did.** The log form offers each planned activity beside
+      sport is not a category and must stop being copied into one. A4's "Add activity" on
+      the log copies it too (`actual-activities.tsx`), so both sites change together.
+- [~] **A4 — Log what you actually did.** The log form offers each planned activity beside
       its target and takes the actual. The server already accepts it; only the surface is
       missing. F-002 "Record actual training" step 3.
+- [ ] **A4b — A log has its own title and sport.** Careful lane; migration. Outcome: logging
+      a planned session can rename it for the log alone, since the plan and its snapshot keep
+      the planned name. Decided by the owner on 25 Sep 2026: two nullable columns on
+      `completions`, always written on a new planned log and prefilled from the plan. Older
+      logs stay null and fall back to the snapshot. Constraints: `save_training_completion`
+      admits them on create and edit, the log never writes the plan, and Today and Progress
+      read the log's name before the snapshot's. Whether the coach's history does is an
+      ADR-013 question, open, like A8.
+- [ ] **A4c — Correct a planned log's actual activities.** Careful lane; migration.
+      `save_training_completion` refuses `activities` on an edit of a planned log (m3_23),
+      treating the actual list as though it were the snapshot. Admit a wholesale replace of
+      the actual list and never touch `planned_snapshot`. The log's read-only "What you did"
+      then becomes the same editor as on create.
+- [ ] **A4d — Replaced points at what replaced it.** Careful lane; migration. The owner's
+      view on 25 Sep 2026: a planned session marked `replaced` should link to an unplanned log,
+      either an existing one or one created on the spot. Without a link, a replaced session
+      is really a skipped one. Open before any code: where the link lives
+      (`replaced_by_completion_id` on the replaced log is the likely shape), whether one
+      unplanned log may replace several sessions, what happens to `replacement_description`
+      and to `replaced` logs written without a link, and whether deleting the unplanned log
+      is refused or unlinks it.
 - [ ] **A3 — See the activities.** Today and the Plan day render the list instead of the
       `activityCount` string. `completion-record.tsx` already renders one; follow it.
 - [ ] **A5 — Personal activity library.** Create, list, edit and archive reusable

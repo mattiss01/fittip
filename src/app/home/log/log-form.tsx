@@ -5,6 +5,10 @@ import { useActionState, useEffect, useRef, useState } from "react";
 
 import { logCompletionAction } from "./actions";
 import {
+  ActualActivities,
+  type LogPlannedActivityView,
+} from "./actual-activities";
+import {
   COMPLETION_FEELING_CHOICES,
   COMPLETION_OUTCOME_LABELS,
   COMPLETION_SAFETY_NOTICE,
@@ -26,6 +30,8 @@ export type LogPlannedView = {
   title: string;
   sport: string;
   expectedDurationMinutes: number | null;
+  /** In plan order. Offered only when the log is first written. */
+  activities: LogPlannedActivityView[];
 };
 
 /** The record being edited, as the owner last read it. */
@@ -47,6 +53,12 @@ export type LogExistingView = {
    */
   activityName: string | null;
   activitySport: string | null;
+  /**
+   * What a planned log recorded per activity, already in words. Read back
+   * rather than offered: the write function refuses to restate a planned
+   * log's activities, so an input here would take a correction and drop it.
+   */
+  activities: { position: number; name: string; actual: string | null }[];
   pain: boolean;
   illness: boolean;
   injury: boolean;
@@ -98,6 +110,14 @@ export function LogForm({
   // felt, so those three are not asked. Derived during render rather than
   // mirrored into state, so there is one source of truth for the outcome.
   const skipped = outcome === "skipped";
+  // Per-activity actuals belong to a session that happened, in whole or in
+  // part. Skipped and replaced both say the planned activities did not, so
+  // the list is not asked and a create sends none. A session planned with no
+  // activities is still offered the list, because one can be added.
+  const offerActivities =
+    planned !== null &&
+    existing === null &&
+    (outcome === "completed" || outcome === "partially_completed");
   // Everything the chosen outcome would discard from a record that already
   // exists. A field this form stops rendering submits nothing, and the write
   // function assigns every one of these from the payload, so an absent key
@@ -265,24 +285,29 @@ export function LogForm({
           )}
         </>
       ) : (
-        <fieldset className={styles.choices}>
-          <legend>What happened</legend>
-          {choices.map((choice) => (
-            <label key={choice.value} className={styles.choice}>
-              <input
-                type="radio"
-                name="status"
-                value={choice.value}
-                checked={outcome === choice.value}
-                onChange={() => setOutcome(choice.value)}
-              />
-              <span>
-                <strong>{choice.label}</strong>
-                <span className={styles.fieldHint}>{choice.hint}</span>
-              </span>
-            </label>
-          ))}
-        </fieldset>
+        // A select, like "How it felt", rather than four full-width rules: the
+        // owner asked for it on 25 September 2026. The chosen outcome's hint
+        // stays beneath it, so what each one means is still said.
+        <div className={styles.field}>
+          <label htmlFor="log-status">What happened</label>
+          <select
+            id="log-status"
+            name="status"
+            value={outcome}
+            onChange={(event) =>
+              setOutcome(event.target.value as CompletionOutcome)
+            }
+          >
+            {choices.map((choice) => (
+              <option key={choice.value} value={choice.value}>
+                {choice.label}
+              </option>
+            ))}
+          </select>
+          <span className={styles.fieldHint}>
+            {choices.find((choice) => choice.value === outcome)?.hint}
+          </span>
+        </div>
       )}
 
       {outcome === "replaced" ? (
@@ -336,7 +361,13 @@ export function LogForm({
                 min={0}
                 max={10080}
                 step={1}
-                defaultValue={existing?.durationMinutes ?? ""}
+                // A new log starts at what the plan expected, like its
+                // activities do; an edit starts at what was recorded.
+                defaultValue={
+                  existing === null
+                    ? (planned?.expectedDurationMinutes ?? "")
+                    : (existing.durationMinutes ?? "")
+                }
               />
             </div>
             <div className={styles.field}>
@@ -370,6 +401,35 @@ export function LogForm({
             </select>
           </div>
         </>
+      )}
+
+      {offerActivities ? (
+        <ActualActivities
+          activities={planned.activities}
+          sessionSport={planned.sport}
+        />
+      ) : null}
+
+      {existing === null ||
+      planned === null ||
+      existing.activities.length === 0 ? null : (
+        <section className={styles.activities} data-log-recorded-activities>
+          <p className={styles.sectionLabel}>What you did</p>
+          <ol className={styles.activityRows}>
+            {existing.activities.map((activity) => (
+              <li className={styles.activityRow} key={activity.position}>
+                <p className={styles.activityName}>{activity.name}</p>
+                <p className={styles.activityLine}>
+                  Did: {activity.actual ?? "not measured"}
+                </p>
+              </li>
+            ))}
+          </ol>
+          <p className={styles.fieldHint}>
+            These were recorded when the log was written and cannot be corrected
+            here yet.
+          </p>
+        </section>
       )}
 
       <div className={styles.field}>

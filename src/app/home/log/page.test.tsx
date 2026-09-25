@@ -113,10 +113,10 @@ describe("Log", () => {
     );
 
     const outcomes = [
-      ...document.querySelectorAll<HTMLInputElement>(
-        "input[type='radio'][name='status']",
+      ...document.querySelectorAll<HTMLOptionElement>(
+        "select[name='status'] option",
       ),
-    ].map((input) => input.value);
+    ].map((option) => option.value);
     expect(outcomes).toEqual([
       "completed",
       "partially_completed",
@@ -269,9 +269,9 @@ describe("Log", () => {
     );
 
     expect(document.querySelector("#log-duration")).toBeTruthy();
-    fireEvent.click(
-      document.querySelector("input[type='radio'][value='skipped']")!,
-    );
+    fireEvent.change(screen.getByLabelText("What happened"), {
+      target: { value: "skipped" },
+    });
     expect(document.querySelector("#log-duration")).toBe(null);
     expect(document.querySelector("#log-effort")).toBe(null);
     expect(document.querySelector("#log-feeling")).toBe(null);
@@ -304,9 +304,9 @@ describe("Log", () => {
     );
 
     expect(document.querySelector("[data-log-clears]")).toBe(null);
-    fireEvent.click(
-      document.querySelector("input[type='radio'][value='skipped']")!,
-    );
+    fireEvent.change(screen.getByLabelText("What happened"), {
+      target: { value: "skipped" },
+    });
     expect(document.querySelector("[data-log-clears]")?.textContent).toContain(
       "removes the duration, the effort and how it felt",
     );
@@ -331,9 +331,9 @@ describe("Log", () => {
     );
 
     expect(document.querySelector("[data-log-clears]")).toBe(null);
-    fireEvent.click(
-      document.querySelector("input[type='radio'][value='skipped']")!,
-    );
+    fireEvent.change(screen.getByLabelText("What happened"), {
+      target: { value: "skipped" },
+    });
     const warning = document.querySelector("[data-log-clears]") as HTMLElement;
     expect(warning.textContent).toContain("removes what you did instead");
     expect(warning.textContent).not.toContain("the duration");
@@ -357,9 +357,9 @@ describe("Log", () => {
       }),
     );
 
-    fireEvent.click(
-      document.querySelector("input[type='radio'][value='completed']")!,
-    );
+    fireEvent.change(screen.getByLabelText("What happened"), {
+      target: { value: "completed" },
+    });
     expect(document.querySelector("[data-log-clears]")?.textContent).toContain(
       "removes what you did instead",
     );
@@ -381,9 +381,9 @@ describe("Log", () => {
       }),
     );
 
-    fireEvent.click(
-      document.querySelector("input[type='radio'][value='skipped']")!,
-    );
+    fireEvent.change(screen.getByLabelText("What happened"), {
+      target: { value: "skipped" },
+    });
     const warning = document.querySelector("[data-log-clears]") as HTMLElement;
     expect(warning.textContent).toContain(
       "removes the duration, the effort and what you did instead",
@@ -491,9 +491,9 @@ describe("Log", () => {
     );
 
     expect(document.querySelector("#log-replacement")).toBe(null);
-    fireEvent.click(
-      document.querySelector("input[type='radio'][value='replaced']")!,
-    );
+    fireEvent.change(screen.getByLabelText("What happened"), {
+      target: { value: "replaced" },
+    });
     expect(document.querySelector("#log-replacement")).toBeTruthy();
   });
 

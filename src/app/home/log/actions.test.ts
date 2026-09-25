@@ -179,7 +179,52 @@ describe("logCompletionAction", () => {
     ]);
   });
 
-  it("leaves a planned create's activity list empty and unnamed", async () => {
+  it("hands a planned create's actual activities to the seam as decoded", async () => {
+    const activities = [
+      {
+        position: 0,
+        name: "Serve practice",
+        sport: "Tennis",
+        measurementMode: "duration_intensity",
+        actualMeasurement: { duration_minutes: 20 },
+      },
+    ];
+    await logCompletionAction(
+      INITIAL_LOG_ACTION_STATE,
+      form({
+        operation: "create",
+        status: "completed",
+        actualLocalDate: DAY,
+        plannedSessionId: SESSION_ID,
+        plannedDate: DAY,
+        activities: JSON.stringify(activities),
+      }),
+    );
+
+    // Passed through unjudged: `parseCompletionChange` behind the seam is what
+    // decides whether the list is valid, and it runs on every write.
+    const [change] = applyChange.mock.calls[0];
+    expect(change.completion.activities).toEqual(activities);
+  });
+
+  it("refuses a planned create whose activity list is not JSON", async () => {
+    const result = await logCompletionAction(
+      INITIAL_LOG_ACTION_STATE,
+      form({
+        operation: "create",
+        status: "completed",
+        actualLocalDate: DAY,
+        plannedSessionId: SESSION_ID,
+        plannedDate: DAY,
+        activities: "[{",
+      }),
+    );
+
+    expect(applyChange).not.toHaveBeenCalled();
+    expect(result.status).toBe("validation");
+  });
+
+  it("sends an empty list when a planned create carries no activity field", async () => {
     await logCompletionAction(
       INITIAL_LOG_ACTION_STATE,
       form({
