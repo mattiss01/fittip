@@ -1,15 +1,38 @@
+"use client";
+
+import { useState } from "react";
+
 import type { PlanActionDraft } from "./action-state";
 import styles from "./plan.module.css";
+
+import {
+  ActivityEditor,
+  type ActivityValue,
+} from "@/components/training/activity-editor";
 
 export function SessionFields({
   idPrefix,
   draft,
+  activities,
+  dateField,
 }: {
   idPrefix: string;
   draft?: PlanActionDraft;
+  /** What the session already holds, on an edit. Absent when creating one. */
+  activities?: ActivityValue[];
+  /**
+   * The date control, when this form owns the session's date. The edit form
+   * does; the create form renders its own above, because it drives a
+   * recurrence preview that lives beside it.
+   */
+  dateField?: React.ReactNode;
 }) {
+  // Held rather than left to `defaultValue` so a new activity row can inherit
+  // it as it is now, not as the session was when the form first rendered.
+  const [sport, setSport] = useState(draft?.sport ?? "");
   return (
     <>
+      {dateField}
       <div className={styles.field}>
         <label htmlFor={`${idPrefix}-title`}>Title</label>
         <input
@@ -28,7 +51,8 @@ export function SessionFields({
             name="sport"
             maxLength={80}
             required
-            defaultValue={draft?.sport ?? ""}
+            value={sport}
+            onChange={(event) => setSport(event.target.value)}
           />
         </div>
         <div className={styles.field}>
@@ -62,6 +86,11 @@ export function SessionFields({
           defaultValue={draft?.note ?? ""}
         />
       </div>
+      <ActivityEditor
+        idPrefix={idPrefix}
+        initial={activities}
+        sessionSport={sport}
+      />
     </>
   );
 }

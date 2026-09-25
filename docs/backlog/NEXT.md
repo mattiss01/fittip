@@ -13,11 +13,72 @@ before any code is written.
 
 ## Now
 
-_Nothing open. The next thing is the owner's to name._
+**Activities in training.** The owner named this on 24 Sep 2026. A session can now hold
+activities and the editor writes them; what is left is everywhere else they should appear.
+The live tables are `rolling_plan_activities` and `completion_activities`; M3-11 dropped
+M1's `planned_activities` and `completed_activities`, and `personal_activities` survived
+that reset untouched.
+
+Ordered by dependency. A lane is named where it is not the build lane.
+
+- [ ] **A2d — An activity has a category, not a sport.** Careful lane; migration. Outcome:
+      what an activity currently calls `sport` becomes `category` and answers a different
+      question — what kind of work this is (skill training, strength, conditioning,
+      mobility, recovery) rather than which sport it belongs to, which the session above it
+      already says. The control offers preset values and takes one the owner types, and a
+      typed one joins the list they are offered next time. Decided by the owner on
+      25 Sep 2026.
+      Constraints: `sport` is `not null` on five activity tables and appears in the saved
+      library, completions and Progress, so the rename is not local to the editor. The
+      remembered list should be the distinct categories the owner has already used, unioned
+      with the presets — no new table, nothing to maintain, and nothing to clean up when a
+      category stops being used. The presets are a small shared vocabulary, which is worth
+      naming against the "no global exercise library" invariant: a handful of category
+      suggestions is not an exercise library, but the owner should agree the preset list
+      before it ships, and it belongs in `CONTEXT.md` as project vocabulary.
+      This supersedes A2b's prefill of an activity's sport from its session — a session's
+      sport is not a category and must stop being copied into one.
+- [ ] **A4 — Log what you actually did.** The log form offers each planned activity beside
+      its target and takes the actual. The server already accepts it; only the surface is
+      missing. F-002 "Record actual training" step 3.
+- [ ] **A3 — See the activities.** Today and the Plan day render the list instead of the
+      `activityCount` string. `completion-record.tsx` already renders one; follow it.
+- [ ] **A5 — Personal activity library.** Create, list, edit and archive reusable
+      definitions, and a picker in A2 that sets `personal_activity_id` — the only thing that
+      ever will. Carries F-002's rule that an edit changes future reuse and never a
+      historical snapshot. Needs a route under `/home/you` or `/home/plan`; owner's call.
+- [ ] **A6 — Series templates and saved sessions carry activities.** Careful lane, and a
+      direct consequence of A2 rather than a tidy-up. `saved_sessions`' write function takes
+      `p_activities` on create and has no such parameter on edit — it *refuses* one, which
+      `saved-session-repository.ts` documents as "nothing can edit a saved session's
+      activities yet". Harmless while every saved session is empty; the moment A2 makes
+      Save to library carry real activities, the library becomes the one surface that shows
+      activities and cannot change them, enforced in SQL. Needs a forward migration for the
+      edit path, plus the surface. `series-actions.ts` passes `[]` as `actions.ts` does, and
+      the library prints `name · sport` with no target.
+- [ ] **A7 — The coach fills in a session's activities.** Careful lane: a new AI operation
+      with its own schema, spend, and context cost — the M3-03D detail operation that
+      `contracts.ts` defers to. Blocked on the plan context having no headroom left, which
+      `Known limitations` records. Needs the owner's decision before any code.
+- [ ] **A8 — Do targets and actuals reach the coach?** Careful lane: today only
+      `activityNames` crosses the boundary. Extending that is an ADR-013 eligibility
+      decision and costs context bytes there are none of. Decide after A4 has produced real
+      data; it may be that names remain enough.
+- [ ] **A9 — Progress over measurements.** Load, distance and pace across completions, once
+      A4 has been used for long enough to have any. The comfort layer; last on purpose.
+
 
 ## Fix in passing
 
 Not worth their own slot; do them when work lands nearby.
+
+- Sign-in offers a dead link. `auth-form.tsx` links to `/signup`, and `proxy.ts` redirects
+  `/signup` back to `/` whenever the runtime policy is `founder-staging` — so on the founder
+  environment the link always bounces to where it started. The redirect is right: production
+  is owner-only, not a public launch (ADR-005, ADR-007). The link is what is wrong, and it
+  should be hidden under the same condition rather than the redirect being softened. Reported
+  by the owner on 25 Sep 2026; which environment they saw it in is not yet confirmed, and
+  locally the policy is `local`, so the page should render there.
 
 - Recurring scope fallback copy: the Edit panel explains a missing whole-series scope as
   "outside the active dates of its ended series", but the predicate also withholds it when
@@ -92,6 +153,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 25 Sep 2026 | `cf53091` | [36114024850](https://github.com/mattiss01/fittip/actions/runs/36114024850) | Activities in a session, which nothing in FitTip could hold before: the rolling plan has taken the list since M3-10 and every caller passed `[]`. A drag-ordered editor writes them, an edit replaces the whole list, and the payload names no `position` or `isLocked` — the array's order is the position, and a lock guards nothing while replanning cannot reach a session at all. Migration `20260925074117` applied to the founder project — 30 migrations, advisors unchanged at 20 definer + 1 auth. It widens only: `sets_reps_load` gained a grouped form so a squat that ramps is one activity, `duration_intensity` requires only its minutes, and a sixth mode `unmeasured` lets a tennis drill stop claiming to be counted in sets. The flat shape stays valid because `is_valid_training_measurement` does not guard `completions.planned_snapshot`, so a measurement sealed into history must stay readable. pgTAP caught a NULL-returning branch that a check constraint would have read as passing; CI caught a move that sent an edit changing nothing beside it, which the database refused as a pair |
 | 24 Sep 2026 | `9a79a0d` | [36006993308](https://github.com/mattiss01/fittip/actions/runs/36006993308) | Plan regeneration, revived from Dropped: a proposal that is not what the owner wanted goes back with a note saying why, the coach sees both the note and the proposal it replaces, and whatever the owner already accepted is applied first so the new plan covers only what they did not take. No context ceiling was raised — a real plan context is 8,589 bytes of the 32,500 pool — but the plan's `previousProposal` allocation went 2,200 to 6,400, because it held the roadmap's number and a legal worst-case plan reduces to about 5,800. Migration `20260924102713` applied to the founder project — 29 migrations, advisors unchanged at 20 definer + 1 auth. Review found three blocking faults on one seam: the action closes the proposal before anything that can fail, and every later failure claimed nothing was written. Fixed, along with a feedback bound that accepted 1,000 characters the context refuses over 500, and a chain cap that counted from whichever proposal the caller named and so never bound |
 | 24 Sep 2026 | `11139d5` | [35978290689](https://github.com/mattiss01/fittip/actions/runs/35978290689) | Both finishes now settle an open spend reservation themselves, in the transaction that inserts the proposal, at the amount it was holding — so a settle that failed can no longer throw away a result the provider was paid for, which was unrecoverable because the claim stays pending under that key. Beside it, an unsettled reservation counts against the ceilings for good instead of falling to zero on expiry, which covers the failed-call path the first half cannot reach. ADR-019 records both and what was rejected; `reserve_ai_spend` and the two finishes were replaced from their live definitions, so every grant is restated after a full revoke. m3_01b's “an expired reservation no longer holds budget” is inverted on purpose, at the same 5,000 figure that flips. Migration `20260924082758` applied to the founder project — 28 migrations, advisors unchanged at 20 definer + 1 auth. Review found no defect but two of my assertions proved less than they claimed; fixed in the same branch, and the standing cost is now a known limitation |
 | 23 Sep 2026 | `dd7b68d` | [35910418730](https://github.com/mattiss01/fittip/actions/runs/35910418730) | A planning note that states a durable constraint now proposes it: `record_plan_memory_candidates` is back with M3-03's signature, `generatePlanProposal` records the batch after the proposal commits and swallows its failure, and the proposal page says how many are waiting. ADR-010 gained decision 16 first, on its own branch (`4826786`), naming every route allowed to create `inferred_proposed` memory and the two limits none may skip. M3-11's suite asserted this function stays dropped, so those two assertions now assert the reach instead — the precedent that file already set for `plan_content_is_valid`. Migration `20260923191214` applied to the founder project — 27 migrations, advisors 20 definer + 1 auth, the one new definer being this route. Review found nothing blocking; the panel itself has not been seen at 390px |

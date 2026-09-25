@@ -152,6 +152,13 @@ function toSessionView(session: RollingPlanSession): PlanSessionView {
     isLocked: session.isLocked,
     status: session.status,
     activityCount: session.activities.length,
+    activities: session.activities.map((activity) => ({
+      name: activity.name,
+      sport: activity.sport,
+      instructions: activity.instructions ?? null,
+      measurementMode: activity.measurementMode,
+      target: activity.target ?? null,
+    })),
     seriesId: session.seriesId,
     occurrenceDate: session.occurrenceDate,
     hasDiverged: session.hasDiverged,

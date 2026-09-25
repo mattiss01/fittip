@@ -1,0 +1,353 @@
+/*
+ * Designed at 390px first. Every row is a full-width card rather than a table:
+ * five measurement modes have between two and five fields, and a grid that
+ * holds all of them on a phone holds none of them legibly.
+ */
+
+.editor {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--ledger-rule);
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.head h3 {
+  margin: 0;
+  font:
+    700 0.72rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ledger-ink);
+}
+
+.count,
+.empty,
+.hint,
+.limit {
+  margin: 0;
+  color: var(--ledger-muted);
+  font:
+    0.72rem/1.4 "Courier New",
+    monospace;
+}
+
+.empty {
+  padding: 0.6rem;
+  border: 1px dashed var(--ledger-rule);
+  background: var(--ledger-wash);
+}
+
+.rows {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  border: 1px solid var(--ledger-rule);
+  background: var(--ledger-paper);
+  min-width: 0;
+}
+
+.rowDragging {
+  border-color: var(--ledger-ink);
+  box-shadow: 0 0 0 2px var(--ledger-wash);
+}
+
+.rowHead {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  min-width: 0;
+}
+
+/*
+ * 44px of touch target on a phone. The handle is a button rather than a bare
+ * icon so it takes focus and answers the arrow keys — a drag nobody can do
+ * without a pointer is a reorder some people cannot do at all.
+ */
+.handle {
+  flex: 0 0 auto;
+  width: 2.75rem;
+  min-height: 2.75rem;
+  border: none;
+  border-right: 1px solid var(--ledger-rule);
+  background: var(--ledger-wash);
+  color: var(--ledger-muted);
+  font-size: 1rem;
+  cursor: grab;
+  touch-action: none;
+}
+
+.handle:active {
+  cursor: grabbing;
+}
+
+.summary {
+  flex: 1 1 auto;
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.5rem 0.6rem;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.summaryName {
+  color: var(--ledger-ink);
+  font:
+    700 0.82rem "Courier New",
+    monospace;
+  overflow-wrap: anywhere;
+}
+
+.summaryTarget {
+  color: var(--ledger-muted);
+  font:
+    0.72rem/1.3 "Courier New",
+    monospace;
+  overflow-wrap: anywhere;
+}
+
+.remove {
+  flex: 0 0 auto;
+  padding: 0 0.7rem;
+  min-height: 2.75rem;
+  border: none;
+  border-left: 1px solid var(--ledger-rule);
+  background: none;
+  color: var(--ledger-signal);
+  font:
+    700 0.66rem "Courier New",
+    monospace;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.rowBody {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.7rem 0.6rem;
+  border-top: 1px solid var(--ledger-rule);
+}
+
+.field,
+.fieldWide {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.editor label {
+  display: block;
+  color: var(--ledger-muted);
+  font:
+    700 0.62rem "Courier New",
+    monospace;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.editor input,
+.editor select,
+.editor textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 0.5rem;
+  border: 1px solid var(--ledger-rule);
+  background: var(--ledger-paper);
+  color: var(--ledger-ink);
+  font:
+    0.85rem "Courier New",
+    monospace;
+}
+
+.editor input:focus-visible,
+.editor select:focus-visible,
+.editor textarea:focus-visible,
+.handle:focus-visible,
+.summary:focus-visible,
+.remove:focus-visible,
+.add:focus-visible {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 1px;
+}
+
+/* Two columns at 390px; the wide field spans both when a mode has an odd one. */
+.targetGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  border: 1px solid var(--ledger-rule);
+  background: var(--ledger-wash);
+  min-width: 0;
+}
+
+.fieldWide,
+.hintWide {
+  grid-column: 1 / -1;
+}
+
+.hintWide {
+  margin: 0;
+  color: var(--ledger-muted);
+  font:
+    0.72rem/1.4 "Courier New",
+    monospace;
+}
+
+.problem {
+  margin: 0;
+  color: var(--ledger-signal);
+  font:
+    700 0.72rem/1.4 "Courier New",
+    monospace;
+}
+
+.add {
+  justify-self: start;
+  padding: 0.55rem 0.9rem;
+  min-height: 2.75rem;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  color: var(--ledger-ink);
+  font:
+    700 0.7rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.add:disabled {
+  border-color: var(--ledger-rule);
+  color: var(--ledger-muted);
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row {
+    transition: none;
+  }
+}
+
+/*
+ * Set groups. A four-column grid rather than stacked fields: a group is three
+ * short numbers, and at 390px three numbers across with one heading row reads
+ * far better than nine labelled boxes down.
+ */
+.groupBox {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  border: 1px solid var(--ledger-rule);
+  background: var(--ledger-wash);
+  min-width: 0;
+}
+
+.groupRows {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.groupHeadings,
+.groupRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 2rem;
+  gap: 0.35rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.groupHeadings span {
+  color: var(--ledger-muted);
+  font:
+    700 0.6rem "Courier New",
+    monospace;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.groupRemove {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--ledger-rule);
+  background: var(--ledger-paper);
+  color: var(--ledger-signal);
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.groupRemove:disabled {
+  color: var(--ledger-rule);
+  cursor: not-allowed;
+}
+
+.groupFoot {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.groupAdd {
+  padding: 0.45rem 0.7rem;
+  min-height: 2.4rem;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  color: var(--ledger-ink);
+  font:
+    700 0.64rem "Courier New",
+    monospace;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.groupAdd:disabled {
+  border-color: var(--ledger-rule);
+  color: var(--ledger-muted);
+  cursor: not-allowed;
+}
+
+.groupFoot .field {
+  flex: 0 0 auto;
+  width: 7rem;
+}
+
+.groupRemove:focus-visible,
+.groupAdd:focus-visible {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 1px;
+}
+
+.unmeasured {
+  margin: 0;
+  padding: 0.6rem;
+  border: 1px dashed var(--ledger-rule);
+  background: var(--ledger-wash);
+  color: var(--ledger-muted);
+  font:
+    0.72rem/1.4 "Courier New",
+    monospace;
+}

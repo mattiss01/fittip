@@ -135,13 +135,16 @@ describe("plan actions", () => {
     expect(change.sessionId).not.toBe(SESSION_ID);
   });
 
-  it("carries the existing activities through an edit rather than erasing them", async () => {
+  it("replaces the activity list on an edit with the one submitted", async () => {
     const applyChangeSet = vi.fn().mockResolvedValue({ result: "applied" });
     createPlanMock.mockResolvedValue({
       getPlanSlice: vi.fn().mockResolvedValue(slice()),
       applyChangeSet,
     });
 
+    // The session in the slice holds one `duration_intensity` activity. The
+    // editor submits the whole list every time, so what arrives here wins —
+    // that is how a row the owner removed stops existing.
     await changePlanAction(
       INITIAL_PLAN_ACTION_STATE,
       form({
@@ -149,6 +152,15 @@ describe("plan actions", () => {
         sessionId: SESSION_ID,
         title: "Long aerobic run",
         sport: "Running",
+        activities: JSON.stringify([
+          {
+            name: "Back squat",
+            sport: "Strength",
+            instructions: null,
+            measurementMode: "sets_reps_load",
+            target: { sets: 5, reps: 5, load: 82.5, load_unit: "kg" },
+          },
+        ]),
       }),
     );
 
@@ -160,12 +172,155 @@ describe("plan actions", () => {
         activities: [
           {
             position: 0,
-            name: "Easy running",
-            measurementMode: "duration_intensity",
+            name: "Back squat",
+            sport: "Strength",
+            measurementMode: "sets_reps_load",
+            target: { sets: 5, reps: 5, load: 82.5, load_unit: "kg" },
+            isLocked: false,
           },
         ],
       },
     });
+  });
+
+  it("refuses a missing activities field instead of reading it as empty", async () => {
+    const applyChangeSet = vi.fn().mockResolvedValue({ result: "applied" });
+    createPlanMock.mockResolvedValue({
+      getPlanSlice: vi.fn().mockResolvedValue(slice()),
+      applyChangeSet,
+    });
+
+    // On an edit the list submitted is the list kept, so "no field" and "no
+    // activities" must not be the same answer: the first is a broken form and
+    // the second is a session the owner emptied on purpose.
+    const formData = form({
+      operation: "edit",
+      sessionId: SESSION_ID,
+      title: "Long aerobic run",
+      sport: "Running",
+    });
+    formData.delete("activities");
+
+    const result = await changePlanAction(INITIAL_PLAN_ACTION_STATE, formData);
+
+    expect(result.status).toBe("validation");
+    expect(applyChangeSet).not.toHaveBeenCalled();
+  });
+
+  it("numbers positions by the order submitted", async () => {
+    const applyChangeSet = vi.fn().mockResolvedValue({ result: "applied" });
+    createPlanMock.mockResolvedValue({
+      getPlanSlice: vi.fn().mockResolvedValue(slice()),
+      applyChangeSet,
+    });
+
+    await changePlanAction(
+      INITIAL_PLAN_ACTION_STATE,
+      form({
+        operation: "add",
+        localDate: today(),
+        title: "Strength",
+        sport: "Strength",
+        activities: JSON.stringify([
+          { name: "A", sport: "S", measurementMode: "custom", target: null },
+          { name: "B", sport: "S", measurementMode: "custom", target: null },
+        ]),
+      }),
+    );
+
+    const [changeSet] = applyChangeSet.mock.calls[0] as [RollingPlanChangeSet];
+    const [change] = changeSet.changes;
+    if (change.operation !== "add") throw new Error("unreachable");
+    expect(
+      change.session.activities.map((activity) => activity.position),
+    ).toEqual([0, 1]);
+  });
+
+  it.each([
+    ["a lock", { isLocked: true }],
+    ["a position", { position: 9 }],
+  ])(
+    "refuses a payload that names %s",
+    async (_label, extra: Record<string, unknown>) => {
+      const applyChangeSet = vi.fn().mockResolvedValue({ result: "applied" });
+      createPlanMock.mockResolvedValue({
+        getPlanSlice: vi.fn().mockResolvedValue(slice()),
+        applyChangeSet,
+      });
+
+      // Neither is a field any surface sets, so a submission carrying one is
+      // not an honest form. It is refused rather than normalized away, which
+      // is the rule the series template already follows for `isLocked`.
+      const result = await changePlanAction(
+        INITIAL_PLAN_ACTION_STATE,
+        form({
+          operation: "add",
+          localDate: today(),
+          title: "Strength",
+          sport: "Strength",
+          activities: JSON.stringify([
+            {
+              name: "A",
+              sport: "S",
+              measurementMode: "custom",
+              target: null,
+              ...extra,
+            },
+          ]),
+        }),
+      );
+
+      expect(result.status).toBe("validation");
+      expect(applyChangeSet).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["not JSON at all", "{"],
+    ["not an array", JSON.stringify({ name: "A" })],
+    [
+      "an unknown measurement mode",
+      JSON.stringify([
+        { name: "A", sport: "S", measurementMode: "vibes", target: null },
+      ]),
+    ],
+    [
+      "a target the server refuses",
+      JSON.stringify([
+        {
+          name: "A",
+          sport: "S",
+          measurementMode: "sets_reps_load",
+          target: { sets: 5 },
+        },
+      ]),
+    ],
+    [
+      "a blank name",
+      JSON.stringify([
+        { name: "  ", sport: "S", measurementMode: "custom", target: null },
+      ]),
+    ],
+  ])("refuses %s", async (_label, activities) => {
+    const applyChangeSet = vi.fn().mockResolvedValue({ result: "applied" });
+    createPlanMock.mockResolvedValue({
+      getPlanSlice: vi.fn().mockResolvedValue(slice()),
+      applyChangeSet,
+    });
+
+    const result = await changePlanAction(
+      INITIAL_PLAN_ACTION_STATE,
+      form({
+        operation: "add",
+        localDate: today(),
+        title: "Strength",
+        sport: "Strength",
+        activities,
+      }),
+    );
+
+    expect(result.status).toBe("validation");
+    expect(applyChangeSet).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -457,6 +612,9 @@ function slice() {
 function form(values: Record<string, string>) {
   const formData = new FormData();
   formData.set("expectedRevision", "0");
+  // `ActivityEditor` always renders this, so a form without it is not one the
+  // surface can produce. Tests that care about the list override it.
+  formData.set("activities", "[]");
   for (const [key, value] of Object.entries(values)) formData.set(key, value);
   return formData;
 }

@@ -28,11 +28,13 @@ import {
   RollingPlanAuthenticationError,
 } from "@/server/repositories/rolling-plan-repository";
 import {
+  parseSubmittedActivities,
   RollingPlanConflictError,
   RollingPlanPersistenceError,
   RollingPlanRuleError,
   RollingPlanTimezoneRequiredError,
   RollingPlanValidationError,
+  type RollingPlanActivityInput,
   type RollingPlanChange,
   type RollingPlanSession,
   type RollingPlanSlice,
@@ -135,6 +137,14 @@ export async function changePlanAction(
     }
 
     const changes = buildChanges(operation, formData, slice, window);
+    // Only an edit can compose nothing: both its halves are conditional, so a
+    // save on a form the owner opened and left alone has no change to send.
+    // The change function refuses an empty set, and being told the plan is
+    // invalid for pressing Save on an unchanged form would be a lie about
+    // what happened.
+    if (changes.length === 0) {
+      return result("saved", "Nothing had changed, so nothing was saved.");
+    }
     await assertOccurrencePlacements(plan, slice, changes);
     const receipt = await plan.applyChangeSet(
       {
@@ -263,7 +273,7 @@ function buildChanges(
           localDate,
           position: nextPlanPosition(slice, localDate),
           isLocked: false,
-          activities: [],
+          activities: readActivities(formData),
         },
       },
     ];
@@ -277,21 +287,49 @@ function buildChanges(
     operation === "delete" || operation === "reactivate",
   );
   if (operation === "edit") {
+    // The edit form owns the date now, so a date change arrives as part of an
+    // edit rather than through a section of its own. The contract keeps them
+    // apart — `edit` carries content, `move` carries a date and a position —
+    // so this composes both into one change set, which succeeds or fails as
+    // one action. The move is appended only when the date actually changed: a
+    // move to where the session already is would be refused as a change that
+    // changes nothing, and would take the edit down with it.
+    const requestedDate = formData.get("localDate");
+    const moved =
+      typeof requestedDate === "string" && requestedDate !== session.localDate
+        ? readPlannableDate(requestedDate, window)
+        : null;
+    const content = {
+      ...readContent(formData),
+      // The change function replaces the whole list on an edit, and the editor
+      // submits the whole list, so this is a replacement by design: a row the
+      // owner removed is gone because it is absent here. A form that somehow
+      // sent no field at all would therefore erase the list, which is why
+      // `readActivities` refuses a missing field rather than reading it as an
+      // empty one.
+      activities: readActivities(formData),
+    };
+    // Each half is sent only when it has something to do, because the change
+    // function refuses any single change that would leave the state as it
+    // found it — and one refusal takes the whole set with it. Moving a session
+    // without touching its content is the ordinary case now that the date is a
+    // field on this form, and it was sending an edit that changed nothing
+    // alongside it, so nothing moved at all.
+    const edited = sessionFingerprint(content) !== sessionFingerprint(session);
     return [
-      {
-        operation,
-        sessionId: session.id,
-        session: {
-          ...readContent(formData),
-          // This surface plans sessions, not their activities. The change
-          // function replaces the whole activity list on an edit, so the
-          // current one is carried through unchanged rather than erased.
-          activities: session.activities.map(({ id, ...activity }) => {
-            void id;
-            return activity;
-          }),
-        },
-      },
+      ...(edited
+        ? [{ operation, sessionId: session.id, session: content }]
+        : []),
+      ...(moved === null
+        ? []
+        : [
+            {
+              operation: "move" as const,
+              sessionId: session.id,
+              localDate: moved,
+              position: nextPlanPosition(slice, moved),
+            },
+          ]),
     ];
   }
   if (operation === "move") {
@@ -381,6 +419,77 @@ function readContent(formData: FormData) {
       ? {}
       : { note: text(formData, "note").trim() }),
   };
+}
+
+/**
+ * The session's activities, as the editor serialized them.
+ *
+ * One JSON field rather than indexed names, because the list is reorderable —
+ * `ActivityEditor` explains that end of it. This function owns only what is
+ * true of a *form value*: that it is a string, and that it is JSON. What the
+ * decoded value has to be is the rolling plan's question, and
+ * `parseSubmittedActivities` answers it behind the same seam that owns the
+ * contract — which is also why no route file reaches the measurement
+ * validator directly.
+ *
+ * A missing field throws rather than reading as an empty list. On an edit the
+ * list submitted is the list kept, so "no field" and "no activities" must not
+ * be the same answer: the first is a broken form and the second is a session
+ * the owner emptied on purpose.
+ */
+/**
+ * One comparable string for a session's content, so "did the owner change
+ * anything?" is a question this file can answer before the database is asked.
+ *
+ * It exists because `apply_rolling_plan_change_set` refuses a change that
+ * leaves the state as it found it, and refuses the whole set with it. Since
+ * the date moved onto the edit form, saving a session on a new date without
+ * retyping its title composes an edit that changes nothing beside a move that
+ * does — and the pair was refused, so the session stayed where it was.
+ *
+ * Both sides go through the same normalizer because they arrive differently:
+ * a form omits a key it has no value for, and a record carries an explicit
+ * null. Comparing them raw would call every save a change.
+ */
+type FingerprintableSession = Pick<
+  RollingPlanSession,
+  "title" | "sport" | "intent" | "expectedDurationMinutes" | "note"
+> & {
+  /** The stored side carries an `id` the submitted side has no reason to. */
+  activities: readonly (RollingPlanActivityInput & { id?: string })[];
+};
+
+function sessionFingerprint(content: FingerprintableSession): string {
+  return JSON.stringify({
+    title: content.title,
+    sport: content.sport,
+    intent: content.intent ?? null,
+    expectedDurationMinutes: content.expectedDurationMinutes ?? null,
+    note: content.note ?? null,
+    activities: content.activities.map((activity) => ({
+      personalActivityId: activity.personalActivityId ?? null,
+      position: activity.position,
+      name: activity.name,
+      sport: activity.sport,
+      instructions: activity.instructions ?? null,
+      measurementMode: activity.measurementMode,
+      target: activity.target ?? null,
+      isLocked: activity.isLocked,
+    })),
+  });
+}
+
+function readActivities(formData: FormData): RollingPlanActivityInput[] {
+  const raw = formData.get("activities");
+  if (typeof raw !== "string") throw new RollingPlanValidationError();
+
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(raw);
+  } catch {
+    throw new RollingPlanValidationError();
+  }
+  return parseSubmittedActivities(decoded);
 }
 
 function readOperation(value: FormDataEntryValue | null) {

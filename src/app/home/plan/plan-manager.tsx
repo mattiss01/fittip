@@ -32,6 +32,8 @@ import {
 import { changeSeriesAction } from "./series-actions";
 import { SeriesMaterializer } from "./series-materializer";
 import { SessionFields } from "./session-fields";
+
+import type { ActivityValue } from "@/components/training/activity-editor";
 import {
   seriesStallNotice,
   useSeriesMutationStall,
@@ -58,6 +60,8 @@ export type PlanSessionView = {
   isLocked: boolean;
   status: "active" | "cancelled";
   activityCount: number;
+  /** The rows the edit form binds. The count above is what the card prints. */
+  activities: ActivityValue[];
   seriesId: string | null;
   occurrenceDate: string | null;
   hasDiverged: boolean;
@@ -468,6 +472,7 @@ function PlanSessionCard({
     state.submission,
     state.operation === "edit" && state.sessionId === session.id,
   );
+  const [editOpen, setEditOpen] = useEditDisclosure(state, session.id);
 
   return (
     <li className={styles.session} data-locked={session.isLocked}>
@@ -506,7 +511,11 @@ function PlanSessionCard({
       )}
 
       <div className={styles.cardActions} data-session-actions>
-        <details className={styles.disclosure}>
+        <details
+          className={styles.disclosure}
+          open={editOpen}
+          onToggle={(event) => setEditOpen(event.currentTarget.open)}
+        >
           <summary>Edit</summary>
           <div className={styles.editorPanel}>
             {recurring === null ? (
@@ -526,6 +535,31 @@ function PlanSessionCard({
                   idPrefix={`edit-${session.id}`}
                   draft={
                     draftFor(state, "edit", session.id) ?? draftOf(session)
+                  }
+                  activities={session.activities}
+                  dateField={
+                    <div className={styles.field}>
+                      <label htmlFor={`edit-date-${session.id}`}>Date</label>
+                      <select
+                        id={`edit-date-${session.id}`}
+                        name="localDate"
+                        defaultValue={session.localDate}
+                      >
+                        {[session.localDate, ...moveDates]
+                          .sort()
+                          .map((date) => (
+                            <option key={date} value={date}>
+                              {stampDate(date)}
+                            </option>
+                          ))}
+                      </select>
+                      {recurring === null ? null : (
+                        <p className={styles.consequenceStandalone}>
+                          Only this session moves. It becomes changed, and the
+                          new date must stay inside this series segment.
+                        </p>
+                      )}
+                    </div>
                   }
                 />
                 <button
@@ -559,50 +593,8 @@ function PlanSessionCard({
               />
             )}
 
-            {moveDates.length > 0 ? (
-              <section className={styles.scope}>
-                <h4>Move session</h4>
-                <form className={styles.form} action={action}>
-                  <input type="hidden" name="operation" value="move" />
-                  <input type="hidden" name="sessionId" value={session.id} />
-                  <input
-                    type="hidden"
-                    name="expectedRevision"
-                    value={expectedRevision}
-                  />
-                  <div className={styles.field}>
-                    <label htmlFor={`move-${session.id}`}>Move to</label>
-                    <select
-                      id={`move-${session.id}`}
-                      name="localDate"
-                      defaultValue={moveDates[0]}
-                    >
-                      {moveDates.map((date) => (
-                        <option key={date} value={date}>
-                          {stampDate(date)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {recurring === null ? null : (
-                    <p className={styles.consequenceStandalone}>
-                      Only this session moves. It becomes changed, and the new
-                      date must stay inside this series segment.
-                    </p>
-                  )}
-                  <button
-                    className={styles.primary}
-                    type="submit"
-                    disabled={pending}
-                  >
-                    Move session
-                  </button>
-                </form>
-              </section>
-            ) : null}
-
-            <section className={styles.scope}>
-              <h4>Duplicate session</h4>
+            <details className={styles.disclosure}>
+              <summary>Duplicate</summary>
               <form className={styles.form} action={action}>
                 <input type="hidden" name="operation" value="duplicate" />
                 <input type="hidden" name="sessionId" value={session.id} />
@@ -637,7 +629,7 @@ function PlanSessionCard({
                   Duplicate session
                 </button>
               </form>
-            </section>
+            </details>
 
             <SaveToLibrary sessionId={session.id} defaultName={session.title} />
           </div>
@@ -840,6 +832,38 @@ const ONE_OFF_WARNING =
  * The value is adjusted during render rather than in an effect, so the remount
  * happens in the same commit as the result that caused it.
  */
+/**
+ * Whether this session's Edit panel is open, closing it once the save it was
+ * holding has landed.
+ *
+ * A `<details>` left to itself stays open across a Server Action: the action
+ * revalidates the route, React reconciles the same element, and the owner is
+ * returned to the form they have just finished with rather than to the card
+ * showing what they saved. So it is controlled.
+ *
+ * The close happens during render against a submission number, which is the
+ * pattern `useTargetedResetKey` and the create form's reset key already use
+ * here. An effect would work too and would cost a second render to do the same
+ * thing — and would reopen the panel for anyone who had already reopened it
+ * themselves before the effect ran.
+ */
+function useEditDisclosure(
+  state: PlanActionState,
+  sessionId: string,
+): [boolean, (open: boolean) => void] {
+  const [open, setOpen] = useState(false);
+  const [settled, setSettled] = useState(0);
+  const savedHere =
+    state.status === "saved" &&
+    state.operation === "edit" &&
+    state.sessionId === sessionId;
+  if (savedHere && state.submission !== settled) {
+    setSettled(state.submission);
+    if (open) setOpen(false);
+  }
+  return [open, setOpen];
+}
+
 function useTargetedResetKey(submission: number, targeted: boolean): number {
   const [seen, setSeen] = useState(0);
   if (targeted && submission !== seen) setSeen(submission);

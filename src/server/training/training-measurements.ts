@@ -1,37 +1,28 @@
 import "server-only";
 
-export const TRAINING_MEASUREMENT_MODES = [
-  "sets_reps_load",
-  "time_distance_pace",
-  "duration_intensity",
-  "skill_repetitions",
-  "custom",
-] as const;
+import {
+  DISTANCE_UNITS,
+  INTENSITIES,
+  LOAD_UNITS,
+  PACE_UNITS,
+  TRAINING_MEASUREMENT_MODES,
+  type TrainingMeasurement,
+  type TrainingMeasurementMode,
+} from "@/lib/training/measurement";
 
-export type TrainingMeasurementMode =
-  (typeof TRAINING_MEASUREMENT_MODES)[number];
-
-export type TrainingMeasurement =
-  | {
-      sets: number;
-      reps: number;
-      load?: number;
-      load_unit?: "kg" | "lb";
-    }
-  | {
-      duration_seconds?: number;
-      distance?: number;
-      distance_unit?: "m" | "km" | "mi" | "yd";
-      pace_seconds_per_unit?: number;
-      pace_unit?: "sec/km" | "sec/mi" | "sec/100m" | "sec/100yd";
-    }
-  | {
-      duration_minutes: number;
-      intensity?: "easy" | "moderate" | "hard" | "very_hard";
-      perceived_effort?: number;
-    }
-  | { repetitions: number; unit: string }
-  | { label: string; value: string | number | boolean; unit: string };
+/**
+ * The shapes and the choice lists moved to `@/lib/training/measurement` so the
+ * activity editor, which is a Client Component, could import them: the client
+ * boundary refuses `@/server/**` even for a type-only import. They are
+ * re-exported here so every existing caller of this module is unchanged, and
+ * so that the validator below and the editor cannot drift onto two different
+ * lists of units.
+ */
+export {
+  TRAINING_MEASUREMENT_MODES,
+  type TrainingMeasurement,
+  type TrainingMeasurementMode,
+};
 
 export class TrainingMeasurementValidationError extends Error {
   constructor() {
@@ -48,7 +39,13 @@ export function parseTrainingMeasurement(
   if (JSON.stringify(record).length > 4096) invalid();
 
   switch (mode) {
+    // An unmeasured activity carries nothing. The caller reaches this only
+    // with a non-null value, since a null target never gets here, so any
+    // object at all is a contradiction — the same answer the SQL gives.
+    case "unmeasured":
+      invalid();
     case "sets_reps_load": {
+      if ("groups" in record) return parseSetGroups(record);
       assertOnlyKeys(record, ["sets", "reps", "load", "load_unit"]);
       const load =
         record.load === undefined
@@ -57,7 +54,7 @@ export function parseTrainingMeasurement(
       const loadUnit =
         record.load_unit === undefined
           ? undefined
-          : readChoice(record.load_unit, ["kg", "lb"] as const);
+          : readChoice(record.load_unit, LOAD_UNITS);
       if ((load === undefined) !== (loadUnit === undefined)) invalid();
       return {
         sets: readInteger(record.sets, 1, 100),
@@ -86,7 +83,7 @@ export function parseTrainingMeasurement(
       const distanceUnit =
         record.distance_unit === undefined
           ? undefined
-          : readChoice(record.distance_unit, ["m", "km", "mi", "yd"] as const);
+          : readChoice(record.distance_unit, DISTANCE_UNITS);
       const pace = optionalNumber(
         record.pace_seconds_per_unit,
         Number.MIN_VALUE,
@@ -95,12 +92,7 @@ export function parseTrainingMeasurement(
       const paceUnit =
         record.pace_unit === undefined
           ? undefined
-          : readChoice(record.pace_unit, [
-              "sec/km",
-              "sec/mi",
-              "sec/100m",
-              "sec/100yd",
-            ] as const);
+          : readChoice(record.pace_unit, PACE_UNITS);
       if (
         (durationSeconds === undefined &&
           distance === undefined &&
@@ -130,17 +122,15 @@ export function parseTrainingMeasurement(
       const intensity =
         record.intensity === undefined
           ? undefined
-          : readChoice(record.intensity, [
-              "easy",
-              "moderate",
-              "hard",
-              "very_hard",
-            ] as const);
+          : readChoice(record.intensity, INTENSITIES);
       const effort =
         record.perceived_effort === undefined
           ? undefined
           : readInteger(record.perceived_effort, 1, 10);
-      if (intensity === undefined && effort === undefined) invalid();
+      // Minutes alone is a prescription since A2c. `is_valid_training_measurement`
+      // dropped the same requirement in the same migration; this mirrors it,
+      // and the agreement test in `measurement-draft.test.ts` is what holds
+      // the two together.
       return {
         duration_minutes: readNumber(
           record.duration_minutes,
@@ -173,6 +163,53 @@ export function parseTrainingMeasurement(
       };
     }
   }
+}
+
+/**
+ * The grouped `sets_reps_load` form. Mirrors the grouped branch of
+ * `is_valid_training_measurement`, which is the authority — a value this
+ * accepts and the database refuses is a bug here, and the pgTAP suite beside
+ * that function is where the two are held together.
+ *
+ * Recognised by the key rather than by trying the flat form and falling
+ * through, so a value carrying both shapes is refused instead of being read as
+ * whichever branch happens to come first.
+ */
+function parseSetGroups(record: Record<string, unknown>): TrainingMeasurement {
+  assertOnlyKeys(record, ["groups", "load_unit"]);
+  const raw = record.groups;
+  if (!Array.isArray(raw) || raw.length < 1 || raw.length > 20) invalid();
+
+  let loaded = false;
+  const groups = raw.map((entry) => {
+    const group = readRecord(entry);
+    assertOnlyKeys(group, ["sets", "reps", "load"]);
+    const sets =
+      group.sets === undefined ? undefined : readInteger(group.sets, 1, 100);
+    const reps =
+      group.reps === undefined ? undefined : readInteger(group.reps, 1, 10000);
+    const load =
+      group.load === undefined ? undefined : readNumber(group.load, 0, 100000);
+    // At least one of the three, the rule `time_distance_pace` already
+    // follows. A group carrying no numbers says nothing.
+    if (sets === undefined && reps === undefined && load === undefined) {
+      invalid();
+    }
+    if (load !== undefined) loaded = true;
+    return {
+      ...(sets === undefined ? {} : { sets }),
+      ...(reps === undefined ? {} : { reps }),
+      ...(load === undefined ? {} : { load }),
+    };
+  });
+
+  // The unit is required exactly when some group carries a load, which is the
+  // same paired rule the flat form applies to `load`/`load_unit`.
+  if (loaded) {
+    return { groups, load_unit: readChoice(record.load_unit, LOAD_UNITS) };
+  }
+  if (record.load_unit !== undefined) invalid();
+  return { groups };
 }
 
 function readRecord(value: unknown): Record<string, unknown> {
