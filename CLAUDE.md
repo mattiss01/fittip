@@ -174,11 +174,17 @@ Three jobs, about four minutes: `static` (Prettier, ESLint, TypeScript, `test:ru
   `branches`. `supabase/config.toml` is local-only development configuration.
 - Docker-backed local runs are slow; run them in the background rather than blocking.
 - **To show the owner a change**, the local stack needs an account with data. `npx.cmd supabase
-  status -o env` gives the URL and keys; pass them to `dev`/`start` explicitly. Create a
-  confirmed user through `/auth/v1/admin/users` with the service-role key, then insert its
-  `profiles` row with `docker exec supabase_db_fittip psql` — nothing but the app creates one,
-  and service_role has no privileges on that table. Plan sessions need distinct `position`
-  values per day, and every plan activity needs `isLocked`.
+  status -o env` gives the URL and keys; pass them to `dev`/`start` explicitly. Take
+  `PUBLISHABLE_KEY`, **not `ANON_KEY`** — both are in that output, and `src/lib/supabase/env.ts`
+  refuses the legacy JWT form on purpose, so `ANON_KEY` gets a 500 on sign-in that names the
+  variable rather than the key. Create a confirmed user through `/auth/v1/admin/users` with the
+  service-role key, then insert its `profiles` row with `docker exec supabase_db_fittip psql` —
+  nothing but the app creates one, and service_role has no privileges on that table. `psql`
+  needs `docker exec -i` to read a heredoc; without `-i` it silently does nothing. Plan sessions
+  need distinct `position` values per day, and every plan activity needs `isLocked`.
+- **A `db reset --local` takes that account with it.** The reset is the first half of the
+  schema-change gate, so a session that runs one has no signed-in owner afterwards and has to
+  create the user and seed the plan again before it can show anything.
 - `npm.cmd run test:e2e` needs the app serving on port 3000 plus
   `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Some specs also need
   `SUPABASE_SERVICE_ROLE_KEY` and **skip silently without it** — read the skipped count before
