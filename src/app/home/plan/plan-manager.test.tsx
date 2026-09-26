@@ -621,16 +621,61 @@ describe("PlanManager", () => {
     ).toBeVisible();
   });
 
+  it("reads a session logged on another day as done there, with no plan controls", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [
+      session({
+        localDate: DATES[3],
+        log: {
+          completionId: "7f000000-0000-4000-8000-0000000000c2",
+          outcome: "completed",
+          actualLocalDate: TODAY,
+        },
+      }),
+    ]);
+    const day = document.querySelector(`[data-plan-date="${DATES[3]}"]`)!;
+
+    // Logged early, it is not still ahead on the day it was planned for.
+    expect(day.querySelector("[data-logged]")?.textContent).toMatch(
+      /Running · Completed on \w{3} \d{1,2} \w{3}/,
+    );
+    expect(day.querySelector("[data-logged] a")?.getAttribute("href")).toBe(
+      "/home/log?completion=7f000000-0000-4000-8000-0000000000c2",
+    );
+    expect(day.querySelector("summary")).toBeNull();
+  });
+
+  it("keeps the card and its controls for a session logged on its own day", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [
+      session({
+        log: {
+          completionId: "7f000000-0000-4000-8000-0000000000c3",
+          outcome: "completed",
+          actualLocalDate: TODAY,
+        },
+      }),
+    ]);
+
+    // Ending a series from today's logged occurrence starts here.
+    expect(document.querySelector("[data-logged]")).toBeNull();
+    expect(screen.getByText("Delete", { selector: "summary" })).toBeVisible();
+  });
+
   it("reads a cancelled session trained anyway as logged, with no plan controls", () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [
       session({
         status: "cancelled",
-        completionId: "7f000000-0000-4000-8000-0000000000c1",
+        log: {
+          completionId: "7f000000-0000-4000-8000-0000000000c1",
+          outcome: "completed",
+          actualLocalDate: TODAY,
+        },
       }),
     ]);
     const day = document.querySelector(`[data-plan-date="${TODAY}"]`)!;
 
-    expect(day.textContent).toContain("Running · Logged");
+    // Logged on its own day, so no date is added.
+    expect(day.textContent).toContain("Running · Completed");
+    expect(day.textContent).not.toMatch(/Completed on/);
     expect(day.textContent).not.toContain("Cancelled");
     expect(day.textContent).not.toContain("Nothing planned.");
     expect(

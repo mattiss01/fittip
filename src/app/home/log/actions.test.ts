@@ -104,6 +104,91 @@ describe("logCompletionAction", () => {
     expect(revalidatePathMock).toHaveBeenCalledWith("/home/today");
   });
 
+  it("writes extra training on another day as unplanned, leaving the planned session open", async () => {
+    const result = await logCompletionAction(
+      INITIAL_LOG_ACTION_STATE,
+      form({
+        operation: "create",
+        status: "partially_completed",
+        actualLocalDate: "2026-08-28",
+        plannedSessionId: SESSION_ID,
+        plannedDate: DAY,
+        dayChoice: "extra",
+        activities: JSON.stringify([
+          {
+            position: 0,
+            plannedPosition: 0,
+            name: "Easy running",
+            sport: "Running",
+            measurementMode: "unmeasured",
+          },
+        ]),
+      }),
+    );
+
+    expect(result.status).toBe("saved");
+    const [change] = applyChange.mock.calls[0] as [
+      { completion: Record<string, unknown> },
+    ];
+    expect(change.completion).toMatchObject({
+      status: "unplanned",
+      actualLocalDate: "2026-08-28",
+      activities: [
+        {
+          position: 0,
+          name: "Easy running",
+          sport: "Running",
+          measurementMode: "unmeasured",
+        },
+      ],
+    });
+    expect(change.completion).not.toHaveProperty("planSessionId");
+    expect(change.completion.activities).not.toContainEqual(
+      expect.objectContaining({ plannedPosition: 0 }),
+    );
+    // Nothing about the planned session is read or touched.
+    expect(getPlanSlice).not.toHaveBeenCalled();
+    expect(applyChangeSet).not.toHaveBeenCalled();
+  });
+
+  it("links the log to the planned session when it was done instead of it", async () => {
+    await logCompletionAction(
+      INITIAL_LOG_ACTION_STATE,
+      form({
+        operation: "create",
+        status: "completed",
+        actualLocalDate: "2026-08-28",
+        plannedSessionId: SESSION_ID,
+        plannedDate: DAY,
+        dayChoice: "instead",
+      }),
+    );
+
+    expect(applyChange.mock.calls[0][0]).toMatchObject({
+      completion: { status: "completed", planSessionId: SESSION_ID },
+    });
+  });
+
+  it.each(["skipped", "replaced"])(
+    "refuses a %s log marked as extra training",
+    async (status) => {
+      const result = await logCompletionAction(
+        INITIAL_LOG_ACTION_STATE,
+        form({
+          operation: "create",
+          status,
+          actualLocalDate: "2026-08-28",
+          plannedSessionId: SESSION_ID,
+          plannedDate: DAY,
+          dayChoice: "extra",
+        }),
+      );
+
+      expect(result.status).toBe("validation");
+      expect(applyChange).not.toHaveBeenCalled();
+    },
+  );
+
   it("writes skip as a completion status and never as a plan change", async () => {
     await logCompletionAction(
       INITIAL_LOG_ACTION_STATE,

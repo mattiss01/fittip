@@ -2,7 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { PLAN_WINDOW_DAYS } from "./action-state";
-import { PlanManager, type PlanSessionView } from "./plan-manager";
+import {
+  PlanManager,
+  type PlanSessionLog,
+  type PlanSessionView,
+} from "./plan-manager";
 import styles from "./plan.module.css";
 import type { PlanSeriesView } from "./recurring-session-controls";
 import { findUncoveredSeriesDates } from "./series-recurrence";
@@ -81,7 +85,7 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
 
   let slice;
   let series;
-  const loggedCancelled = new Map<string, string>();
+  const logged = new Map<string, PlanSessionLog>();
   try {
     const [plan, log] = await Promise.all([
       createRollingPlan(),
@@ -91,18 +95,20 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
       plan.getPlanSlice(today, dates[dates.length - 1]),
       plan.listSeries(),
     ]);
-    // Only a cancelled session needs this: one trained anyway reads as logged
-    // rather than cancelled. A log's own date can be any day before its
-    // session's, so it is looked up by session rather than by window. There
-    // are rarely more than a few cancelled sessions in fourteen days.
-    const found = await Promise.all(
-      slice.sessions
-        .filter((session) => session.status === "cancelled")
-        .map((session) => log.findByPlanSession(session.id)),
+    // A logged session reads as logged where it was planned, whatever day
+    // the log carries: a Thursday run done on Tuesday is not still ahead on
+    // Thursday. A log's own date can be any day before its session's, so the
+    // logs are found by session rather than by window, in one read.
+    const found = await log.findByPlanSessions(
+      slice.sessions.map((session) => session.id),
     );
     for (const completion of found) {
-      if (completion?.planSessionId) {
-        loggedCancelled.set(completion.planSessionId, completion.id);
+      if (completion.planSessionId) {
+        logged.set(completion.planSessionId, {
+          completionId: completion.id,
+          outcome: completion.status,
+          actualLocalDate: completion.actualLocalDate,
+        });
       }
     }
   } catch (error) {
@@ -120,10 +126,10 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
         dates={dates}
         expectedRevision={slice.revision}
         sessions={slice.sessions.map((session) => {
-          const completionId = loggedCancelled.get(session.id);
-          return completionId === undefined
+          const log = logged.get(session.id);
+          return log === undefined
             ? toSessionView(session)
-            : { ...toSessionView(session), completionId };
+            : { ...toSessionView(session), log };
         })}
         recoveryDates={slice.recoveryDates}
         series={series.map(toSeriesView)}

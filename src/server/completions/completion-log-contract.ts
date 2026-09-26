@@ -711,6 +711,24 @@ export function registerCompletionLogContract(
       ).toBeNull();
     });
 
+    it("finds what many planned sessions carry in one read, and omits the rest", async () => {
+      const { completions, addPlanSession, day } = requireSubject(subject);
+      const early = await addPlanSession(day(3), "Aerobic run");
+      const open = await addPlanSession(day(4), "Strides");
+      const { completionId } = await completions.applyChange(
+        create(early, day(-1)),
+      );
+
+      const found = await completions.findByPlanSessions([early, open]);
+      expect(found).toHaveLength(1);
+      expect(found[0]).toMatchObject({
+        id: completionId,
+        planSessionId: early,
+        actualLocalDate: day(-1),
+      });
+      expect(await completions.findByPlanSessions([])).toEqual([]);
+    });
+
     it("refuses to anchor a local date with no stored zone", async () => {
       const { completions, clearTimezone, day } = requireSubject(subject);
       await clearTimezone();

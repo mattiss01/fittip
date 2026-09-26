@@ -88,19 +88,35 @@ export async function logCompletionAction(
     }
 
     const plannedSessionId = optionalText(formData, "plannedSessionId");
-    if (plannedSessionId !== undefined) {
+    // Training done on another day than planned is either the planned session
+    // done early or late, or extra training with the planned one still ahead.
+    // The owner decided on 26 Sep 2026 that the form asks. "Extra" is written
+    // as unplanned training: no link to the plan, so the planned session stays
+    // open, and no activity claims to answer one of its activities.
+    const extra =
+      plannedSessionId !== undefined && formData.get("dayChoice") === "extra";
+    if (
+      extra &&
+      facts.status !== "completed" &&
+      facts.status !== "partially_completed"
+    ) {
+      throw new CompletionValidationError();
+    }
+    if (plannedSessionId !== undefined && !extra) {
       await assertSessionOnDay(
         plannedSessionId,
         requiredDate(formData.get("plannedDate")),
       );
     }
-    const unplanned = plannedSessionId === undefined;
+    const unplanned = plannedSessionId === undefined || extra;
     const receipt = await log.applyChange({
       operation: "create",
       completion: {
         ...facts,
+        ...(extra ? { status: "unplanned" } : {}),
         ...(unplanned ? {} : { planSessionId: plannedSessionId }),
         ...content,
+        ...(extra ? { activities: unlinkFromPlan(content.activities) } : {}),
       },
     });
     revalidatePath("/home/today");
@@ -206,6 +222,21 @@ function readActualActivities(formData: FormData, key: string): unknown {
   } catch {
     throw new CompletionValidationError();
   }
+}
+
+/**
+ * Actual activities with their link to the planned activity they answered
+ * removed, for training recorded as unplanned. Anything that is not a list of
+ * records is handed on untouched for the domain to refuse.
+ */
+function unlinkFromPlan(activities: unknown): unknown {
+  if (!Array.isArray(activities)) return activities;
+  return activities.map((activity: unknown) => {
+    if (typeof activity !== "object" || activity === null) return activity;
+    const { plannedPosition, ...rest } = activity as Record<string, unknown>;
+    void plannedPosition;
+    return rest;
+  });
 }
 
 /**

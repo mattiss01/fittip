@@ -17,6 +17,10 @@ import {
   type PlanActionState,
 } from "./action-state";
 import { changePlanAction } from "./actions";
+import {
+  COMPLETION_OUTCOME_LABELS,
+  type CompletionOutcome,
+} from "../log/log-action-state";
 import { CreateSession } from "./create-session";
 import { ActivityList } from "@/components/training/activity-list";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
@@ -67,11 +71,18 @@ export type PlanSessionView = {
   occurrenceDate: string | null;
   hasDiverged: boolean;
   /**
-   * The log attached to a cancelled session, when the owner trained anyway.
-   * Such a session reads as logged here rather than as cancelled; the plan row
-   * and the log's snapshot both still record the cancellation.
+   * The log attached to this session, on whatever day it was written. A logged
+   * session reads as logged here, with no plan controls: one trained on
+   * another day is not still ahead, and a cancelled one trained anyway is not
+   * cancelled. The plan row and the log's snapshot keep what the plan said.
    */
-  completionId?: string;
+  log?: PlanSessionLog;
+};
+
+export type PlanSessionLog = {
+  completionId: string;
+  outcome: CompletionOutcome;
+  actualLocalDate: string;
 };
 
 type Props = {
@@ -266,18 +277,22 @@ function PlanDay({
   seriesState,
   seriesPending,
 }: DayProps) {
+  // A session reads as logged when the log settles what the plan still
+  // shows: trained on another day, so it is not still ahead here, or trained
+  // after it was cancelled. Logged on its own day, it keeps its card and its
+  // controls, which is where a series is ended from.
+  const readsAsLogged = (session: PlanSessionView) =>
+    session.log !== undefined &&
+    (session.status === "cancelled" ||
+      session.log.actualLocalDate !== session.localDate);
   const active = sessions
-    .filter((session) => session.status === "active")
+    .filter((session) => session.status === "active" && !readsAsLogged(session))
     .toSorted((left, right) => left.position - right.position);
   const cancelled = sessions.filter(
-    (session) =>
-      session.status === "cancelled" && session.completionId === undefined,
+    (session) => session.status === "cancelled" && !session.log,
   );
-  const loggedAnyway = sessions
-    .filter(
-      (session) =>
-        session.status === "cancelled" && session.completionId !== undefined,
-    )
+  const logged = sessions
+    .filter(readsAsLogged)
     .toSorted((left, right) => left.position - right.position);
   const headingId = `plan-day-${date}`;
   const cancelledOccurrenceDelete = (session: PlanSessionView) => {
@@ -340,7 +355,7 @@ function PlanDay({
               />
             ))}
           </ol>
-        ) : loggedAnyway.length ? null : (
+        ) : logged.length ? null : (
           <p className={styles.empty}>
             {isRecoveryDay
               ? "Recovery day. Nothing is planned here."
@@ -348,18 +363,23 @@ function PlanDay({
           </p>
         )}
 
-        {loggedAnyway.length ? (
+        {logged.length ? (
           <ol className={styles.sessionList}>
-            {loggedAnyway.map((session) => (
+            {logged.map(({ log, ...session }) => (
               <li key={session.id} className={styles.session} data-logged>
                 <div className={styles.sessionHeader}>
                   <h3>{session.title}</h3>
                 </div>
-                <p className={styles.meta}>{session.sport} · Logged</p>
+                <p className={styles.meta}>
+                  {session.sport} · {COMPLETION_OUTCOME_LABELS[log!.outcome]}
+                  {log!.actualLocalDate === session.localDate
+                    ? null
+                    : ` on ${stampDate(log!.actualLocalDate)}`}
+                </p>
                 <div className={styles.cardActions} data-session-actions>
                   <Link
                     className={styles.action}
-                    href={`/home/log?completion=${session.completionId}`}
+                    href={`/home/log?completion=${log!.completionId}`}
                   >
                     Edit log
                   </Link>

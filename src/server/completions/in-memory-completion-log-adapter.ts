@@ -89,6 +89,17 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
     return completion ? this.view(completion) : null;
   }
 
+  async findByPlanSessions(planSessionIds: string[]): Promise<Completion[]> {
+    const wanted = new Set(planSessionIds);
+    return [...this.completions.values()]
+      .filter(
+        (candidate) =>
+          candidate.planSessionId !== null &&
+          wanted.has(candidate.planSessionId),
+      )
+      .map((completion) => this.view(completion));
+  }
+
   async findByPlanSession(planSessionId: string): Promise<Completion | null> {
     const completion = [...this.completions.values()].find(
       (candidate) => candidate.planSessionId === planSessionId,

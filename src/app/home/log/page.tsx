@@ -153,6 +153,7 @@ async function renderForm(
                 : {
                     id: completion.planSessionId,
                     localDate: snapshot.localDate,
+                    dayLabel: shortDay(snapshot.localDate),
                     title: snapshot.title,
                     sport: snapshot.sport,
                     expectedDurationMinutes:
@@ -213,6 +214,7 @@ async function renderForm(
       const planned: LogPlannedView = {
         id: session.id,
         localDate: session.localDate,
+        dayLabel: shortDay(session.localDate),
         title: session.title,
         sport: session.sport,
         expectedDurationMinutes: session.expectedDurationMinutes ?? null,
@@ -428,6 +430,10 @@ function option(
       .filter(Boolean)
       .join(" · "),
   };
+}
+
+function shortDay(date: string) {
+  return SHORT_DAY.format(new Date(`${date}T00:00:00.000Z`));
 }
 
 function longDay(date: string) {
