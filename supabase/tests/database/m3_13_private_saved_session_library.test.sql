@@ -87,7 +87,7 @@ as $$
   where saved.id = p_saved_session_id;
 $$;
 
-select plan(85);
+select plan(86);
 
 select is(
   (select count(*)::bigint from library_zone), 1::bigint,
@@ -594,9 +594,15 @@ select throws_ok(
 );
 select ok(
   (select s.name = 'Tuesday tempo (v2)' and s.revision = 2
-     and (select count(*) from public.saved_session_activities) = 2
    from public.saved_sessions s),
-  'the three refused edits changed neither the record nor its list'
+  'the three refused edits left the record as it was'
+);
+select is(
+  (select jsonb_agg(jsonb_build_array(position, name, personal_activity_id)
+     order by position)
+   from public.saved_session_activities),
+  '[[0,"Strides",null],[1,"Easy running","7e000000-0000-4000-8000-0000000000a1"]]'::jsonb,
+  'and left its list row for row as it was'
 );
 select throws_ok(
   $$select public.apply_saved_session_change(

@@ -26,6 +26,9 @@ Ordered by dependency. A lane is named where it is not the build lane.
       ever will. Carries F-002's rule that an edit changes future reuse and never a
       historical snapshot. Lives under `/home/plan`, beside the session library (owner, 26 Sep
       2026). Sport-or-category stays deferred, so it keeps today's `sport`.
+      The editors' `ActivityValue` and the Plan and library page views carry no
+      `personalActivityId`, so once A5 sets it, any edit would write it back as null — carry
+      it through all three editors in the same change.
 - [ ] **A6 — Saved sessions' activities can be edited.** Careful lane. `saved_sessions`'
       write function takes `p_activities` on create and *refuses* one on edit, so since A2
       made Save to library carry real activities, the library shows activities it cannot
