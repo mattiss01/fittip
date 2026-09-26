@@ -69,7 +69,15 @@ describe("the saved session library surface", () => {
     renderLibrary(INITIAL_LIBRARY_ACTION_STATE, [
       entry({
         intent: "Threshold work",
-        activities: [{ position: 0, name: "Tempo blocks", sport: "Running" }],
+        activities: [
+          {
+            name: "Tempo blocks",
+            sport: "Running",
+            instructions: null,
+            measurementMode: "duration_intensity",
+            target: { duration_minutes: 20 },
+          },
+        ],
       }),
     ]);
 
@@ -81,7 +89,22 @@ describe("the saved session library surface", () => {
       screen.getByText("Running · 60 min · 1 activity"),
     ).toBeInTheDocument();
     expect(screen.getByText("Threshold work")).toBeInTheDocument();
-    expect(screen.getByText("Tempo blocks · Running")).toBeInTheDocument();
+    // The card words each activity's target as the Plan card does.
+    expect(document.querySelector("[data-activity-list]")?.textContent).toMatch(
+      /Tempo blocks.*20 min/,
+    );
+    // A6: the edit form opens with the entry's list and submits it whole.
+    const editForm = document
+      .querySelector("input[name='operation'][value='edit']")!
+      .closest("form")!;
+    expect(
+      JSON.parse(
+        editForm.querySelector<HTMLInputElement>("input[name='activities']")!
+          .value,
+      ),
+    ).toMatchObject([
+      { name: "Tempo blocks", target: { duration_minutes: 20 } },
+    ]);
 
     for (const input of document.querySelectorAll<HTMLInputElement>(
       "input[name='expectedRevision']",

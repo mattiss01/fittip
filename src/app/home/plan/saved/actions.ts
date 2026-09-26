@@ -11,6 +11,7 @@ import {
   type LibrarySaveActionState,
 } from "./action-state";
 
+import { readSubmittedTemplateActivities } from "../activity-form";
 import {
   nextPlanPosition,
   readPlannableDate,
@@ -137,7 +138,11 @@ export async function changeLibraryAction(
             operation: "edit",
             savedSessionId,
             expectedRevision: readInteger(formData.get("expectedRevision")),
-            session: readContent(formData),
+            // The editor submits the whole list, so the edit replaces it.
+            session: {
+              ...readContent(formData),
+              activities: readSubmittedTemplateActivities(formData),
+            },
           },
     );
     revalidatePath("/home/plan/saved");

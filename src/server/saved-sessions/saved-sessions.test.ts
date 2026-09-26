@@ -118,14 +118,22 @@ describe("the saved session library", () => {
           name: "Tuesday tempo (v2)",
           title: "Longer tempo run",
           sport: "Running",
+          activities: [
+            {
+              position: 0,
+              name: "Strides",
+              sport: "Running",
+              measurementMode: "unmeasured",
+            },
+          ],
         },
       }),
     ).resolves.toMatchObject({ revision: 1, result: "updated" });
 
-    // An edit carries no activities, so the copied ones stay exactly as saved.
+    // An edit carries the whole list, so it replaces the copied one.
     expect(await library.get(ID)).toMatchObject({
       name: "Tuesday tempo (v2)",
-      activities: [{ name: "Tempo blocks" }],
+      activities: [{ name: "Strides" }],
     });
 
     await expect(
@@ -147,7 +155,12 @@ describe("the saved session library", () => {
       operation: "edit",
       savedSessionId: ID,
       expectedRevision: 0,
-      session: { name: "First writer", title: "Tempo run", sport: "Running" },
+      session: {
+        name: "First writer",
+        title: "Tempo run",
+        sport: "Running",
+        activities: [],
+      },
     });
 
     await expect(
@@ -159,6 +172,7 @@ describe("the saved session library", () => {
           name: "Second writer",
           title: "Tempo run",
           sport: "Running",
+          activities: [],
         },
       }),
     ).rejects.toThrow(SavedSessionConflictError);
@@ -240,12 +254,9 @@ describe("the saved session library", () => {
         operation: "edit",
         savedSessionId: ID,
         expectedRevision: 0,
-        session: {
-          name: "With activities",
-          title: "T",
-          sport: "Running",
-          activities: [],
-        },
+        // An edit without its list would read as "no activities" to the
+        // replacement, so it is refused rather than guessed at.
+        session: { name: "No list", title: "T", sport: "Running" },
       },
     ]) {
       await expect(library.applyChange(invalid)).rejects.toThrow(

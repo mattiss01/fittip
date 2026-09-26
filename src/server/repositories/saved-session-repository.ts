@@ -120,9 +120,8 @@ export async function createSavedSessionLibrary(): Promise<SavedSessionLibrary> 
 }
 
 /**
- * Every write reaches the same owner-derived function. An edit carries no
- * activity list, because nothing can edit a saved session's activities yet;
- * sending one is refused by the function rather than silently dropped.
+ * Every write reaches the same owner-derived function. An edit sends the whole
+ * activity list, which the function puts in place of the stored one (A6).
  */
 function toArguments(change: SavedSessionChange) {
   if (change.operation === "delete") {
@@ -147,6 +146,7 @@ function toArguments(change: SavedSessionChange) {
       p_saved_session_id: change.savedSessionId,
       p_expected_revision: change.expectedRevision,
       ...content,
+      p_activities: change.session.activities as unknown as Json,
     };
   }
   return {

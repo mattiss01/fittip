@@ -10,11 +10,15 @@ import {
 import { changeLibraryAction } from "./actions";
 import styles from "./saved.module.css";
 
-export type SavedSessionActivityView = {
-  position: number;
-  name: string;
-  sport: string;
-};
+import {
+  ActivityEditor,
+  type ActivityValue,
+} from "@/components/training/activity-editor";
+import { ActivityList } from "@/components/training/activity-list";
+import { describeMeasurement } from "@/lib/training/describe-measurement";
+
+/** In the entry's order; the array index is the position. */
+export type SavedSessionActivityView = ActivityValue;
 
 export type SavedSessionView = {
   id: string;
@@ -137,15 +141,14 @@ function SavedSessionCard({
         {session.note === null ? null : (
           <p className={styles.body}>{session.note}</p>
         )}
-        {session.activities.length > 0 ? (
-          <ol className={styles.activities}>
-            {session.activities.map((activity) => (
-              <li key={activity.position}>
-                {activity.name} · {activity.sport}
-              </li>
-            ))}
-          </ol>
-        ) : null}
+        <ActivityList
+          label="Activities"
+          items={session.activities.map((activity, index) => ({
+            key: String(index),
+            name: activity.name,
+            detail: describeMeasurement(activity.target),
+          }))}
+        />
 
         <details className={styles.disclosure}>
           <summary>Use in plan</summary>
@@ -209,6 +212,12 @@ function SavedSessionCard({
             <SavedSessionFields
               idPrefix={`edit-${session.id}`}
               draft={draftFor(state, session.id) ?? draftOf(session)}
+            />
+            {/* The whole list is submitted, so saving replaces it (A6). */}
+            <ActivityEditor
+              idPrefix={`edit-${session.id}`}
+              initial={session.activities}
+              sessionSport={session.sport}
             />
             <p className={styles.consequence}>
               Editing changes this entry only. Sessions already added to your

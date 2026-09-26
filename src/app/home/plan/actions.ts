@@ -10,6 +10,7 @@ import {
   type PlanOperation,
   type TimezoneActionState,
 } from "./action-state";
+import { readSubmittedActivities } from "./activity-form";
 import {
   nextPlanPosition,
   readPlannableDate,
@@ -28,7 +29,6 @@ import {
   RollingPlanAuthenticationError,
 } from "@/server/repositories/rolling-plan-repository";
 import {
-  parseSubmittedActivities,
   RollingPlanConflictError,
   RollingPlanPersistenceError,
   RollingPlanRuleError,
@@ -273,7 +273,7 @@ function buildChanges(
           localDate,
           position: nextPlanPosition(slice, localDate),
           isLocked: false,
-          activities: readActivities(formData),
+          activities: readSubmittedActivities(formData),
         },
       },
     ];
@@ -305,9 +305,9 @@ function buildChanges(
       // submits the whole list, so this is a replacement by design: a row the
       // owner removed is gone because it is absent here. A form that somehow
       // sent no field at all would therefore erase the list, which is why
-      // `readActivities` refuses a missing field rather than reading it as an
+      // `readSubmittedActivities` refuses a missing field rather than reading it as an
       // empty one.
-      activities: readActivities(formData),
+      activities: readSubmittedActivities(formData),
     };
     // Each half is sent only when it has something to do, because the change
     // function refuses any single change that would leave the state as it
@@ -422,22 +422,6 @@ function readContent(formData: FormData) {
 }
 
 /**
- * The session's activities, as the editor serialized them.
- *
- * One JSON field rather than indexed names, because the list is reorderable —
- * `ActivityEditor` explains that end of it. This function owns only what is
- * true of a *form value*: that it is a string, and that it is JSON. What the
- * decoded value has to be is the rolling plan's question, and
- * `parseSubmittedActivities` answers it behind the same seam that owns the
- * contract — which is also why no route file reaches the measurement
- * validator directly.
- *
- * A missing field throws rather than reading as an empty list. On an edit the
- * list submitted is the list kept, so "no field" and "no activities" must not
- * be the same answer: the first is a broken form and the second is a session
- * the owner emptied on purpose.
- */
-/**
  * One comparable string for a session's content, so "did the owner change
  * anything?" is a question this file can answer before the database is asked.
  *
@@ -477,19 +461,6 @@ function sessionFingerprint(content: FingerprintableSession): string {
       isLocked: activity.isLocked,
     })),
   });
-}
-
-function readActivities(formData: FormData): RollingPlanActivityInput[] {
-  const raw = formData.get("activities");
-  if (typeof raw !== "string") throw new RollingPlanValidationError();
-
-  let decoded: unknown;
-  try {
-    decoded = JSON.parse(raw);
-  } catch {
-    throw new RollingPlanValidationError();
-  }
-  return parseSubmittedActivities(decoded);
 }
 
 function readOperation(value: FormDataEntryValue | null) {
