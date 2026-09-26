@@ -16,6 +16,7 @@ import {
   COMPLETION_SIGNALS,
   INITIAL_LOG_ACTION_STATE,
   PLANNED_OUTCOMES,
+  TRAINED_OUTCOMES,
   UNPLANNED_OUTCOME,
   type CompletionOutcome,
   type LogActionState,
@@ -139,7 +140,7 @@ export function LogForm({
     planned !== null &&
     existing === null &&
     actualDate !== planned.localDate &&
-    (outcome === "completed" || outcome === "partially_completed");
+    TRAINED_OUTCOMES.has(outcome);
   // Everything the chosen outcome would discard from a record that already
   // exists. A field this form stops rendering submits nothing, and the write
   // function assigns every one of these from the payload, so an absent key
@@ -356,7 +357,7 @@ export function LogForm({
             <span>
               <strong>Instead of {planned.dayLabel}&rsquo;s session</strong>
               <span className={styles.fieldHint}>
-                {planned.dayLabel} shows it as done on this date.
+                {planned.dayLabel} shows it as logged on this date.
               </span>
             </span>
           </label>

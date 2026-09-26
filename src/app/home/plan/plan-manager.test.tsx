@@ -644,6 +644,23 @@ describe("PlanManager", () => {
     expect(day.querySelector("summary")).toBeNull();
   });
 
+  it("keeps the card for a skip written ahead, which is about the planned day", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [
+      session({
+        localDate: DATES[3],
+        log: {
+          completionId: "7f000000-0000-4000-8000-0000000000c4",
+          outcome: "skipped",
+          actualLocalDate: TODAY,
+        },
+      }),
+    ]);
+    const day = document.querySelector(`[data-plan-date="${DATES[3]}"]`)!;
+
+    expect(day.querySelector("[data-logged]")).toBeNull();
+    expect(day.querySelector("summary")).not.toBeNull();
+  });
+
   it("keeps the card and its controls for a session logged on its own day", () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [
       session({

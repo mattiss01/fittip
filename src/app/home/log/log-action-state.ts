@@ -54,6 +54,17 @@ export const UNPLANNED_OUTCOME: CompletionOutcomeChoice = {
   hint: "Training that was not on the plan.",
 };
 
+/**
+ * The planned outcomes that record training which happened. Done on another
+ * day than planned, only these ask "instead of it, or extra?", and only these
+ * make the planned day read as done: a skip or a replacement is about the
+ * planned session whatever day it is written on.
+ */
+export const TRAINED_OUTCOMES: ReadonlySet<CompletionOutcome> = new Set([
+  "completed",
+  "partially_completed",
+]);
+
 export const COMPLETION_OUTCOME_LABELS: Record<CompletionOutcome, string> = {
   completed: "Completed",
   partially_completed: "Partly completed",

@@ -46,6 +46,7 @@ const COMPLETION_ID = "7e150000-0000-4000-8000-000000000002";
 const today = () => isoDateInTimezone(new Date(), TIMEZONE);
 
 const listCompletions = vi.fn();
+const findByPlanSessions = vi.fn();
 
 describe("Today", () => {
   beforeEach(() => {
@@ -59,7 +60,11 @@ describe("Today", () => {
     });
     createPlanMock.mockResolvedValue({});
     listCompletions.mockResolvedValue([]);
-    createCompletionLogMock.mockResolvedValue({ list: listCompletions });
+    findByPlanSessions.mockResolvedValue([]);
+    createCompletionLogMock.mockResolvedValue({
+      list: listCompletions,
+      findByPlanSessions,
+    });
     readPlanWindowToppedUpMock.mockResolvedValue(planWindow());
   });
 
@@ -165,6 +170,27 @@ describe("Today", () => {
     expect(
       document.querySelector("[data-today-signals]")?.textContent,
     ).toContain("Pain");
+  });
+
+  it("carries a log written on another day, so the planned day does not offer a second", async () => {
+    readPlanWindowToppedUpMock.mockResolvedValue(planWindow([session()]));
+    // Logged yesterday against today's session: `list` for today cannot see
+    // it, the read by session can.
+    listCompletions.mockResolvedValue([]);
+    findByPlanSessions.mockResolvedValue([
+      { ...completion(), actualLocalDate: shiftIsoDate(today(), -1) },
+    ]);
+
+    render(await TodayPage({ searchParams: Promise.resolve({}) }));
+
+    expect(findByPlanSessions).toHaveBeenCalledWith([SESSION_ID]);
+    const card = document.querySelector(
+      `[data-today-session="${SESSION_ID}"]`,
+    ) as HTMLElement;
+    expect(within(card).getByRole("link", { name: "Edit log" })).toBeTruthy();
+    expect(within(card).queryByRole("link", { name: "Log this session" })).toBe(
+      null,
+    );
   });
 
   it("lists a session's activities, then what was done once it is logged", async () => {

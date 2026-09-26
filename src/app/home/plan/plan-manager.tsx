@@ -19,6 +19,7 @@ import {
 import { changePlanAction } from "./actions";
 import {
   COMPLETION_OUTCOME_LABELS,
+  TRAINED_OUTCOMES,
   type CompletionOutcome,
 } from "../log/log-action-state";
 import { CreateSession } from "./create-session";
@@ -279,12 +280,16 @@ function PlanDay({
 }: DayProps) {
   // A session reads as logged when the log settles what the plan still
   // shows: trained on another day, so it is not still ahead here, or trained
-  // after it was cancelled. Logged on its own day, it keeps its card and its
-  // controls, which is where a series is ended from.
-  const readsAsLogged = (session: PlanSessionView) =>
+  // after it was cancelled. Logged on its own day, or skipped or replaced
+  // ahead of time, it keeps its card and its controls, which is where a
+  // series is ended from.
+  const readsAsLogged = (
+    session: PlanSessionView,
+  ): session is PlanSessionView & { log: PlanSessionLog } =>
     session.log !== undefined &&
     (session.status === "cancelled" ||
-      session.log.actualLocalDate !== session.localDate);
+      (session.log.actualLocalDate !== session.localDate &&
+        TRAINED_OUTCOMES.has(session.log.outcome)));
   const active = sessions
     .filter((session) => session.status === "active" && !readsAsLogged(session))
     .toSorted((left, right) => left.position - right.position);
@@ -371,15 +376,15 @@ function PlanDay({
                   <h3>{session.title}</h3>
                 </div>
                 <p className={styles.meta}>
-                  {session.sport} · {COMPLETION_OUTCOME_LABELS[log!.outcome]}
-                  {log!.actualLocalDate === session.localDate
+                  {session.sport} · {COMPLETION_OUTCOME_LABELS[log.outcome]}
+                  {log.actualLocalDate === session.localDate
                     ? null
-                    : ` on ${stampDate(log!.actualLocalDate)}`}
+                    : ` on ${stampDate(log.actualLocalDate)}`}
                 </p>
                 <div className={styles.cardActions} data-session-actions>
                   <Link
                     className={styles.action}
-                    href={`/home/log?completion=${log!.completionId}`}
+                    href={`/home/log?completion=${log.completionId}`}
                   >
                     Edit log
                   </Link>

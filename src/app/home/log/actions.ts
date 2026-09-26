@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 
-import { type LogActionState } from "./log-action-state";
+import {
+  TRAINED_OUTCOMES,
+  type CompletionOutcome,
+  type LogActionState,
+} from "./log-action-state";
 
 import {
   CompletionConflictError,
@@ -95,11 +99,7 @@ export async function logCompletionAction(
     // open, and no activity claims to answer one of its activities.
     const extra =
       plannedSessionId !== undefined && formData.get("dayChoice") === "extra";
-    if (
-      extra &&
-      facts.status !== "completed" &&
-      facts.status !== "partially_completed"
-    ) {
+    if (extra && !TRAINED_OUTCOMES.has(facts.status as CompletionOutcome)) {
       throw new CompletionValidationError();
     }
     if (plannedSessionId !== undefined && !extra) {

@@ -118,14 +118,30 @@ async function renderDay(timezoneName: string, requested: string | null) {
     throw error;
   }
 
+  const planned = window.slice.sessions.filter(
+    (session) => session.localDate === date,
+  );
+  // `list` is bounded by the actual date, so a session done on another day
+  // than planned would read as still open here. Its log is found by session
+  // instead, as the Plan finds it, so Thursday does not offer to log a run
+  // already logged on Tuesday.
+  let loggedElsewhere: Completion[];
+  try {
+    loggedElsewhere = await (
+      await createCompletionLog()
+    ).findByPlanSessions(planned.map((session) => session.id));
+  } catch (error) {
+    redirectOnAuthError(error);
+    throw error;
+  }
+
   const byPlanSession = new Map<string, Completion>();
-  for (const completion of completions) {
+  for (const completion of [...loggedElsewhere, ...completions]) {
     if (completion.planSessionId !== null) {
       byPlanSession.set(completion.planSessionId, completion);
     }
   }
-  const sessions = window.slice.sessions
-    .filter((session) => session.localDate === date)
+  const sessions = planned
     .toSorted((left, right) => left.position - right.position)
     .map((session) =>
       toSessionView(session, byPlanSession.get(session.id) ?? null),
