@@ -1,6 +1,10 @@
 "use client";
 
+import { useRef } from "react";
+import { flushSync } from "react-dom";
+
 import styles from "./activity-editor.module.css";
+import { ReorderHandle } from "./reorder-handle";
 
 import {
   DISTANCE_UNITS,
@@ -82,6 +86,7 @@ export function MeasurementFields({
   onDraftChange: (field: string, value: string) => void;
   onGroupsChange: (groups: SetGroupDraft[]) => void;
 }) {
+  const groupListRef = useRef<HTMLOListElement>(null);
   const bind = (field: string) => ({
     id: `${idPrefix}-${field}`,
     value: draft.fields[field] ?? "",
@@ -111,17 +116,47 @@ export function MeasurementFields({
           position === index ? { ...group, ...change } : group,
         ),
       );
+    // A ramp is read top to bottom, so its order is the owner's to set. The
+    // inputs are controlled, so moving a draft moves its values with it.
+    const moveGroup = (from: number, to: number) => {
+      if (to < 0 || to >= groups.length || from === to) return;
+      const next = [...groups];
+      const [held] = next.splice(from, 1);
+      next.splice(to, 0, held);
+      onGroupsChange(next);
+    };
+    // Rows are keyed by position, so after a keyboard move the focused handle
+    // would belong to the other group and the next arrow would swap them back.
+    // Focus follows the group instead, as it does for an activity.
+    const moveGroupByKey = (from: number, delta: number) => {
+      const to = from + delta;
+      if (to < 0 || to >= groups.length) return;
+      flushSync(() => moveGroup(from, to));
+      groupListRef.current
+        ?.querySelectorAll<HTMLButtonElement>(
+          ":scope > li > button:first-child",
+        )
+        [to]?.focus();
+    };
     return (
       <div className={styles.groupBox}>
-        <ol className={styles.groupRows}>
-          <li className={styles.groupHeadings} aria-hidden="true">
-            <span>Sets</span>
-            <span>Reps</span>
-            <span>Load</span>
-            <span />
-          </li>
+        {/* Outside the list: `ReorderHandle` counts the list's items as rows. */}
+        <div className={styles.groupHeadings} aria-hidden="true">
+          <span />
+          <span>Sets</span>
+          <span>Reps</span>
+          <span>Load</span>
+          <span />
+        </div>
+        <ol className={styles.groupRows} ref={groupListRef}>
           {groups.map((group, index) => (
             <li className={styles.groupRow} key={index}>
+              <ReorderHandle
+                className={styles.groupHandle}
+                label={`${ACTIVITY_COPY.reorderHint} Set group ${index + 1} of ${groups.length}.`}
+                onMove={(delta) => moveGroupByKey(index, delta)}
+                onMoveTo={(to) => moveGroup(index, to)}
+              />
               <input
                 aria-label={`Sets, group ${index + 1}`}
                 id={`${idPrefix}-group-${index}-sets`}

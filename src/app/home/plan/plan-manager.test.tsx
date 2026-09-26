@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
@@ -341,6 +347,101 @@ describe("PlanManager", () => {
     expect(
       screen.getByRole("link", { name: "Reload the current plan" }),
     ).toHaveAttribute("href", "/home/plan");
+  });
+
+  it("closes the create panel on a save that created a session, not on a refusal", () => {
+    const { rerender } = renderManager();
+    const panel = screen
+      .getByText("Create session", { selector: "summary" })
+      .closest("details")!;
+    fireEvent.click(
+      screen.getByText("Create session", { selector: "summary" }),
+    );
+    // jsdom opens the element but, unlike a browser, never fires `toggle`.
+    fireEvent(panel, new Event("toggle"));
+    expect(panel.open).toBe(true);
+
+    const rerenderWith = (state: PlanActionState) => {
+      useActionStateMock.mockReturnValue([state, action, false]);
+      rerender(
+        <PlanManager
+          today={TODAY}
+          dates={DATES}
+          expectedRevision={4}
+          sessions={[]}
+          recoveryDates={[]}
+        />,
+      );
+    };
+    rerenderWith({
+      status: "validation",
+      message: "Check the session.",
+      submission: 1,
+      operation: "add",
+    });
+    expect(panel.open).toBe(true);
+
+    rerenderWith({
+      status: "saved",
+      message: "Session added.",
+      submission: 2,
+      operation: "add",
+    });
+    expect(panel.open).toBe(false);
+  });
+
+  it("edits a recurring session in one form whose two buttons choose the scope", async () => {
+    renderManager(
+      INITIAL_PLAN_ACTION_STATE,
+      [
+        session({
+          seriesId: "7f000000-0000-4000-8000-000000000099",
+          occurrenceDate: TODAY,
+          hasDiverged: true,
+          activities: [
+            {
+              name: "Strides",
+              sport: "Running",
+              instructions: null,
+              measurementMode: "unmeasured",
+              target: null,
+            },
+          ],
+        }),
+      ],
+      [series()],
+    );
+    fireEvent.click(screen.getByText("Edit", { selector: "summary" }));
+
+    const only = screen.getByRole("button", {
+      name: "Change only this session",
+    });
+    const future = screen.getByRole("button", {
+      name: "Change this and future sessions",
+    });
+    const form = only.closest("form")!;
+    expect(future.closest("form")).toBe(form);
+    // Each button carries its own operation, so the scope is chosen last.
+    // Asserted on what is submitted: React drops a submitter's name and value
+    // when it has a `formAction`, which an attribute check cannot see.
+    const submittedOperation = async (button: HTMLElement) => {
+      action.mockClear();
+      await act(async () => fireEvent.click(button));
+      const [formData] = action.mock.calls.at(-1) as [FormData];
+      return formData.get("operation");
+    };
+    await expect(submittedOperation(only)).resolves.toBe("edit");
+    await expect(submittedOperation(future)).resolves.toBe("edit_series");
+    // The form submits the whole list, so an editor that opened empty would
+    // erase what the occurrence already holds.
+    const activities = form.querySelector<HTMLInputElement>(
+      'input[name="activities"]',
+    )!;
+    expect(
+      (JSON.parse(activities.value) as { name: string }[]).map(
+        ({ name }) => name,
+      ),
+    ).toEqual(["Strides"]);
   });
 
   it("identifies recurring and changed occurrences and states both scopes", () => {

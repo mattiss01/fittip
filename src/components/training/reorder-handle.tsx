@@ -22,7 +22,8 @@ export function ReorderHandle({
   /** Read by a screen reader in place of the handle's picture. */
   label: string;
   className?: string;
-  onDragStateChange: (dragging: boolean) => void;
+  /** Absent where a list draws nothing different while a row is held. */
+  onDragStateChange?: (dragging: boolean) => void;
   onMove: (delta: number) => void;
   onMoveTo: (index: number) => void;
 }) {
@@ -30,7 +31,7 @@ export function ReorderHandle({
     event.preventDefault();
     const handle = event.currentTarget;
     handle.setPointerCapture(event.pointerId);
-    onDragStateChange(true);
+    onDragStateChange?.(true);
 
     function moveTo(clientY: number) {
       const list = handle.closest("li")?.parentElement;
@@ -50,7 +51,7 @@ export function ReorderHandle({
       moveTo(moveEvent.clientY);
     }
     function onPointerUp() {
-      onDragStateChange(false);
+      onDragStateChange?.(false);
       handle.removeEventListener("pointermove", onPointerMove);
       handle.removeEventListener("pointerup", onPointerUp);
       handle.removeEventListener("pointercancel", onPointerUp);

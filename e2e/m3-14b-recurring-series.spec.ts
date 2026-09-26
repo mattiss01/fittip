@@ -128,7 +128,8 @@ test.describe("M3-14B recurring series surface", () => {
 
       // Only this session changes one occurrence and marks it as diverged.
       await openDisclosure(first, "Edit");
-      const onlyThis = scope(first, "Only this session").first();
+      // One form for both scopes; the button chosen at the end is the scope.
+      const onlyThis = recurringEditForm(first);
       await onlyThis.getByLabel("Title").fill("Diverged aerobic");
       await onlyThis
         .getByRole("button", { name: "Change only this session" })
@@ -142,7 +143,7 @@ test.describe("M3-14B recurring series surface", () => {
       // This-and-future starts a successor and leaves the earlier divergence.
       let second = sessionCard(page, secondDaily, "Aerobic base");
       await openDisclosure(second, "Edit");
-      const future = scope(second, "This and all future sessions").first();
+      const future = recurringEditForm(second);
       await future.getByLabel("Title").fill("Future steady");
       await future.getByLabel("Repeat", { exact: true }).selectOption("daily");
       await future.getByLabel("Every").fill("1");
@@ -296,6 +297,12 @@ function savedCard(page: Page, title: string) {
     .locator("li")
     .filter({ has: page.getByRole("heading", { name: title, exact: true }) })
     .first();
+}
+
+function recurringEditForm(card: Locator) {
+  return card.locator("form").filter({
+    has: card.page().getByRole("button", { name: "Change only this session" }),
+  });
 }
 
 function scope(container: Locator, heading: string) {
