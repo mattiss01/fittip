@@ -177,13 +177,6 @@ function toSeriesView(series: RollingPlanSeries): PlanSeriesView {
     intent: series.intent ?? null,
     expectedDurationMinutes: series.expectedDurationMinutes ?? null,
     note: series.note ?? null,
-    activities: series.activities.map((activity) => ({
-      name: activity.name,
-      sport: activity.sport,
-      instructions: activity.instructions ?? null,
-      measurementMode: activity.measurementMode,
-      target: activity.target ?? null,
-    })),
   };
 }
 

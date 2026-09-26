@@ -384,7 +384,7 @@ describe("PlanManager", () => {
     expect(panel.open).toBe(false);
   });
 
-  it("opens each recurring edit scope with the activities it would replace", () => {
+  it("edits a recurring session in one form whose two buttons choose the scope", () => {
     renderManager(
       INITIAL_PLAN_ACTION_STATE,
       [
@@ -407,23 +407,28 @@ describe("PlanManager", () => {
     );
     fireEvent.click(screen.getByText("Edit", { selector: "summary" }));
 
-    // Both forms submit the whole list, so an editor that opened empty would
-    // erase what the occurrence or the template already holds.
-    const submitted = (button: string) =>
-      JSON.parse(
-        (
-          screen
-            .getByRole("button", { name: button })
-            .closest("form")
-            ?.querySelector('input[name="activities"]') as HTMLInputElement
-        ).value,
-      ) as { name: string }[];
+    const only = screen.getByRole("button", {
+      name: "Change only this session",
+    });
+    const future = screen.getByRole("button", {
+      name: "Change this and future sessions",
+    });
+    const form = only.closest("form")!;
+    expect(future.closest("form")).toBe(form);
+    // Each button carries its own operation, so the scope is chosen last.
+    expect(only).toHaveAttribute("name", "operation");
+    expect(only).toHaveValue("edit");
+    expect(future).toHaveValue("edit_series");
+    // The form submits the whole list, so an editor that opened empty would
+    // erase what the occurrence already holds.
+    const activities = form.querySelector<HTMLInputElement>(
+      'input[name="activities"]',
+    )!;
     expect(
-      submitted("Change only this session").map(({ name }) => name),
+      (JSON.parse(activities.value) as { name: string }[]).map(
+        ({ name }) => name,
+      ),
     ).toEqual(["Strides"]);
-    expect(
-      submitted("Change this and future sessions").map(({ name }) => name),
-    ).toEqual(["Easy running"]);
   });
 
   it("identifies recurring and changed occurrences and states both scopes", () => {
@@ -757,14 +762,5 @@ function series(): PlanSeriesView {
     intent: null,
     expectedDurationMinutes: 60,
     note: null,
-    activities: [
-      {
-        name: "Easy running",
-        sport: "Running",
-        instructions: null,
-        measurementMode: "unmeasured",
-        target: null,
-      },
-    ],
   };
 }

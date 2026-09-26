@@ -21,7 +21,6 @@ export type PlanSeriesView = {
   intent: string | null;
   expectedDurationMinutes: number | null;
   note: string | null;
-  activities: ActivityValue[];
 };
 
 export type RecurringSessionView = {
@@ -120,35 +119,43 @@ export function RecurringSessionControls({
   };
 
   if (mode === "edit") {
+    // One form, two submits. Each button names its own operation and its own
+    // action, so the fields are filled in once and the scope is chosen last.
+    // The form opens with this occurrence's content, which is what its card
+    // shows; the future scope makes that the template from here on.
     return (
-      <>
+      <form className={styles.form} action={planAction}>
+        <input type="hidden" name="sessionId" value={session.id} />
+        <input type="hidden" name="expectedRevision" value={expectedRevision} />
+        <SessionFields
+          idPrefix={"series-edit-" + session.id}
+          draft={draftOf(session)}
+          activities={session.activities}
+        />
+        {canChangeFuture ? (
+          <RecurrenceFields
+            idPrefix={"series-edit-" + session.id}
+            startDate={canEditWhole ? series.startDate : session.occurrenceDate}
+            initial={defaultRule}
+          />
+        ) : null}
+
         <section className={styles.scope}>
           <h4>Only this session</h4>
           <p className={styles.consequenceStandalone}>
             Changes this occurrence only. It becomes visibly changed and the
             recurring rule never overwrites it.
+            {canChangeFuture ? " The repeat settings are not used." : ""}
           </p>
-          <form className={styles.form} action={planAction}>
-            <input type="hidden" name="operation" value="edit" />
-            <input type="hidden" name="sessionId" value={session.id} />
-            <input
-              type="hidden"
-              name="expectedRevision"
-              value={expectedRevision}
-            />
-            <SessionFields
-              idPrefix={"series-only-" + session.id}
-              draft={draftOf(session)}
-              activities={session.activities}
-            />
-            <button
-              className={styles.primary}
-              type="submit"
-              disabled={planPending}
-            >
-              Change only this session
-            </button>
-          </form>
+          <button
+            className={styles.primary}
+            type="submit"
+            name="operation"
+            value="edit"
+            disabled={planPending || seriesPending}
+          >
+            Change only this session
+          </button>
         </section>
 
         {canChangeFuture ? (
@@ -161,42 +168,27 @@ export function RecurringSessionControls({
               Earlier occurrences, changed occurrences before this date, and
               completed training stay exactly as they are.
             </p>
-            <form className={styles.form} action={seriesAction}>
-              <input type="hidden" name="operation" value="edit_series" />
-              <input type="hidden" name="sessionId" value={session.id} />
-              <input
-                type="hidden"
-                name="expectedRevision"
-                value={expectedRevision}
-              />
-              <SessionFields
-                idPrefix={"series-future-" + session.id}
-                draft={draftOf(series)}
-                activities={series.activities}
-              />
-              <RecurrenceFields
-                idPrefix={"series-future-" + session.id}
-                startDate={
-                  canEditWhole ? series.startDate : session.occurrenceDate
-                }
-                initial={defaultRule}
-              />
-              <button
-                className={styles.primary}
-                type="submit"
-                disabled={seriesPending}
-              >
-                Change this and future sessions
-              </button>
-            </form>
+            <button
+              className={styles.primary}
+              type="submit"
+              name="operation"
+              value="edit_series"
+              formAction={seriesAction}
+              disabled={planPending || seriesPending}
+            >
+              Change this and future sessions
+            </button>
           </section>
         ) : (
+          // The predicate withholds the future scope both when the occurrence
+          // lies outside its segment's dates and when its rule date has fallen
+          // behind today, so the copy names neither cause alone.
           <p className={styles.consequence}>
-            This occurrence is outside the active dates of its ended series.
-            Only this session can be changed.
+            This occurrence is no longer on a date its series repeats from, so
+            only this session can be changed.
           </p>
         )}
-      </>
+      </form>
     );
   }
 
