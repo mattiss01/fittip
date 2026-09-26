@@ -29,17 +29,11 @@ Ordered by dependency. A lane is named where it is not the build lane.
       The editors' `ActivityValue` and the Plan and library page views carry no
       `personalActivityId`, so once A5 sets it, any edit would write it back as null — carry
       it through all three editors in the same change.
-- [ ] **A6 — Saved sessions' activities can be edited.** Careful lane. `saved_sessions`'
-      write function takes `p_activities` on create and *refuses* one on edit, so since A2
-      made Save to library carry real activities, the library shows activities it cannot
-      change, enforced in SQL. Needs a forward migration for the edit path, the editor on the
-      library's edit form, and targets on its card, which prints `name · sport`. The series
-      half shipped on 26 Sep 2026 with no migration.
 - [ ] **Log from the library.** Asked by the owner on 26 Sep 2026: an unplanned log starts
       from a saved session — its name, sport and activities prefilled, then changed — and an
       activity row starts from a library activity (A5), for training that is routinely the
-      same but never planned. Copies by value, as the Plan's reuse does. After A6, so the
-      library's activities are editable first.
+      same but never planned. Copies by value, as the Plan's reuse does. The saved-session
+      half can start now that A6 made library activities editable.
 - [ ] **A session logged on another day still looks open on its planned day.** Reported by
       the owner on 26 Sep 2026. A Thursday session logged on Tuesday links to Thursday's
       entry, but the Plan reads logs only for cancelled sessions, so Thursday shows an ordinary
@@ -154,6 +148,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 26 Sep 2026 | `2bfb490` | [36234950571](https://github.com/mattiss01/fittip/actions/runs/36234950571) | A library entry's activities can be edited: the Edit form carries the Plan's editor and replaces the list whole, and the card lists targets (A6). Migration `20260926093859` applied to the founder project — 33 migrations, advisors unchanged at 20 definer + 1 auth; it replaces `apply_saved_session_change` in place, where a null list keeps the stored one, so the previous app's edits still work. m3_13's pgTAP "an edit carries no activity list" was inverted on purpose, and m3-13's accepted flow was rewritten to read the card's activity list and find the entry's Name by its form name |
 | 26 Sep 2026 | `b4b0ca3` | [36232864562](https://github.com/mattiss01/fittip/actions/runs/36232864562) | A recurring series keeps the activities its editor shows — creating one had sent `[]`, and both edit scopes opened empty, so "only this" erased an occurrence's list (A6, series half; no migration). Recurring edit is one form ending in two buttons, filled from the occurrence (owner's call), with Enter disabled so a scope is never chosen by a keystroke; set groups drag and arrow-key into order; Create session closes after a save. m3-14b's accepted flow was rewritten to find the fields through the shared form, and the Edit panel's withheld-scope copy (M3-21) was fixed on the way |
 | 26 Sep 2026 | `55137f0` | [36229324811](https://github.com/mattiss01/fittip/actions/runs/36229324811) | The `.retry(false)` rule names the six `apply_*_change` RPCs instead of two that M3-11 dropped, and `CLAUDE.md`'s pitfall stops saying "two". No code change |
 | 25 Sep 2026 | `3430435` | [36184425816](https://github.com/mattiss01/fittip/actions/runs/36184425816) | The Plan day and Today list a session's activities with their targets instead of counting them, a logged card lists what was done (or still the plan's, when a skip or a replacement records none), Progress's recorded sheet lists the actuals, and a ride that replaced sessions says "Instead of: …" (A3, A4e). No migration. m3-13's accepted flow was rewritten where it read "N activities" on a plan card; the library card still prints its count |
