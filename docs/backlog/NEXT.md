@@ -26,15 +26,12 @@ Ordered by dependency. A lane is named where it is not the build lane.
       ever will. Carries F-002's rule that an edit changes future reuse and never a
       historical snapshot. Lives under `/home/plan`, beside the session library (owner, 26 Sep
       2026). Sport-or-category stays deferred, so it keeps today's `sport`.
-- [ ] **A6 — Series templates and saved sessions carry activities.** Careful lane, and a
-      direct consequence of A2 rather than a tidy-up. `saved_sessions`' write function takes
-      `p_activities` on create and has no such parameter on edit — it *refuses* one, which
-      `saved-session-repository.ts` documents as "nothing can edit a saved session's
-      activities yet". Harmless while every saved session is empty; the moment A2 makes
-      Save to library carry real activities, the library becomes the one surface that shows
-      activities and cannot change them, enforced in SQL. Needs a forward migration for the
-      edit path, plus the surface. `series-actions.ts` passes `[]` as `actions.ts` does, and
-      the library prints `name · sport` with no target.
+- [ ] **A6 — Saved sessions' activities can be edited.** Careful lane. `saved_sessions`'
+      write function takes `p_activities` on create and *refuses* one on edit, so since A2
+      made Save to library carry real activities, the library shows activities it cannot
+      change, enforced in SQL. Needs a forward migration for the edit path, the editor on the
+      library's edit form, and targets on its card, which prints `name · sport`. The series
+      half shipped on 26 Sep 2026 with no migration.
 - [ ] **Log from the library.** Asked by the owner on 26 Sep 2026: an unplanned log starts
       from a saved session — its name, sport and activities prefilled, then changed — and an
       activity row starts from a library activity (A5), for training that is routinely the
@@ -76,10 +73,6 @@ Not worth their own slot; do them when work lands nearby.
   `allowSignUp={policy.mode === "local"}` since `21e6841`, with a test — so what the owner saw
   is still to be established before anything changes.
 
-- Recurring scope fallback copy: the Edit panel explains a missing whole-series scope as
-  "outside the active dates of its ended series", but the predicate also withholds it when
-  the rule date has fallen behind today. M3-20 rewrote the Delete panel's version; Edit's
-  remains. ([M3-21](M3/M3-21-RECURRING-SCOPE-FALLBACK-COPY.md))
 - `regeneratePlanProposalAction` has no test of its own, and it is the orchestration that
   implements two of the owner's decisions: closing the review before asking again, and
   keeping what was accepted. The pgTAP proves the database half; nothing exercises the
@@ -158,6 +151,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 26 Sep 2026 | `b4b0ca3` | [36232864562](https://github.com/mattiss01/fittip/actions/runs/36232864562) | A recurring series keeps the activities its editor shows — creating one had sent `[]`, and both edit scopes opened empty, so "only this" erased an occurrence's list (A6, series half; no migration). Recurring edit is one form ending in two buttons, filled from the occurrence (owner's call), with Enter disabled so a scope is never chosen by a keystroke; set groups drag and arrow-key into order; Create session closes after a save. m3-14b's accepted flow was rewritten to find the fields through the shared form, and the Edit panel's withheld-scope copy (M3-21) was fixed on the way |
 | 26 Sep 2026 | `55137f0` | [36229324811](https://github.com/mattiss01/fittip/actions/runs/36229324811) | The `.retry(false)` rule names the six `apply_*_change` RPCs instead of two that M3-11 dropped, and `CLAUDE.md`'s pitfall stops saying "two". No code change |
 | 25 Sep 2026 | `3430435` | [36184425816](https://github.com/mattiss01/fittip/actions/runs/36184425816) | The Plan day and Today list a session's activities with their targets instead of counting them, a logged card lists what was done (or still the plan's, when a skip or a replacement records none), Progress's recorded sheet lists the actuals, and a ride that replaced sessions says "Instead of: …" (A3, A4e). No migration. m3-13's accepted flow was rewritten where it read "N activities" on a plan card; the library card still prints its count |
 | 25 Sep 2026 | `c41beb3` | [36172504470](https://github.com/mattiss01/fittip/actions/runs/36172504470) | A replaced session now points at the unplanned log of what was done instead — written in the same save through a recursive `apply_completion_change`, so both or neither, or picked from the week's logs — and one ride may replace several sessions; the coach reads "Replaced by …" in the existing description slot. Migration `20260925174607` applied to the founder project — 32 migrations, advisors unchanged at 20 definer + 1 auth; it redefines `completions_replacement_check` under the same name, admitting a link in place of text, and a replaced create from the previous app with only text is refused until the deploy |
