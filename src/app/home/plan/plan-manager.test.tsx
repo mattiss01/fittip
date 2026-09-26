@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
@@ -384,7 +390,7 @@ describe("PlanManager", () => {
     expect(panel.open).toBe(false);
   });
 
-  it("edits a recurring session in one form whose two buttons choose the scope", () => {
+  it("edits a recurring session in one form whose two buttons choose the scope", async () => {
     renderManager(
       INITIAL_PLAN_ACTION_STATE,
       [
@@ -416,9 +422,16 @@ describe("PlanManager", () => {
     const form = only.closest("form")!;
     expect(future.closest("form")).toBe(form);
     // Each button carries its own operation, so the scope is chosen last.
-    expect(only).toHaveAttribute("name", "operation");
-    expect(only).toHaveValue("edit");
-    expect(future).toHaveValue("edit_series");
+    // Asserted on what is submitted: React drops a submitter's name and value
+    // when it has a `formAction`, which an attribute check cannot see.
+    const submittedOperation = async (button: HTMLElement) => {
+      action.mockClear();
+      await act(async () => fireEvent.click(button));
+      const [formData] = action.mock.calls.at(-1) as [FormData];
+      return formData.get("operation");
+    };
+    await expect(submittedOperation(only)).resolves.toBe("edit");
+    await expect(submittedOperation(future)).resolves.toBe("edit_series");
     // The form submits the whole list, so an editor that opened empty would
     // erase what the occurrence already holds.
     const activities = form.querySelector<HTMLInputElement>(

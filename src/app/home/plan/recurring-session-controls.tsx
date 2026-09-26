@@ -171,9 +171,13 @@ export function RecurringSessionControls({
             <button
               className={styles.primary}
               type="submit"
-              name="operation"
-              value="edit_series"
-              formAction={seriesAction}
+              // React drops a submitter's own name and value when the
+              // submitter carries a \`formAction\`, so this button names its
+              // operation itself rather than through \`name\`/\`value\`.
+              formAction={(formData: FormData) => {
+                formData.set("operation", "edit_series");
+                seriesAction(formData);
+              }}
               disabled={planPending || seriesPending}
             >
               Change this and future sessions

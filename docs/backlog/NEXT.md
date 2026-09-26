@@ -43,7 +43,10 @@ Ordered by dependency. A lane is named where it is not the build lane.
 - [ ] **A session logged on another day still looks open on its planned day.** Reported by
       the owner on 26 Sep 2026. A Thursday session logged on Tuesday links to Thursday's
       entry, but the Plan reads logs only for cancelled sessions, so Thursday shows an ordinary
-      open card with Edit, Cancel and Delete. Awaiting the owner's choice of behavior.
+      open card with Edit, Cancel and Delete. Owner's decision (26 Sep 2026): when the log's
+      date differs from the planned date, the form asks. "Instead of Thursday's session" links
+      it, and Thursday then reads as done on Tuesday with Edit log in place of its actions;
+      "Extra — still do Thursday" saves an unplanned log and leaves Thursday open.
 - [ ] **A7 — The coach fills in a session's activities.** Careful lane: a new AI operation
       with its own schema, spend, and context cost — the M3-03D detail operation that
       `contracts.ts` defers to. Blocked on the plan context having no headroom left, which
