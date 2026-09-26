@@ -33,6 +33,8 @@ type Props = {
     completion?: string | string[];
     plannedSession?: string | string[];
     date?: string | string[];
+    /** Where the editor was opened from, from a fixed list: never a URL. */
+    from?: string | string[];
   }>;
 };
 
@@ -112,7 +114,7 @@ async function renderForm(
   timezoneName: string,
   completionId: string | null,
   plannedSessionId: string | null,
-  params: { date?: string | string[] },
+  params: { date?: string | string[]; from?: string | string[] },
 ) {
   const today = isoDateInTimezone(new Date(), timezoneName);
   const date = readDate(params.date) ?? today;
@@ -176,6 +178,14 @@ async function renderForm(
             defaultDate={completion.actualLocalDate}
             today={today}
             returnDate={completion.actualLocalDate}
+            returnTo={
+              params.from === "progress"
+                ? {
+                    href: `/home/progress/${completion.id}`,
+                    label: "Back to the record",
+                  }
+                : undefined
+            }
           />
         </>
       );

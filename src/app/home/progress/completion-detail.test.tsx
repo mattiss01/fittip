@@ -137,6 +137,18 @@ describe("one completion", () => {
     );
   });
 
+  it("opens the log editor from the record, to come back here", async () => {
+    getCompletion.mockResolvedValue(completion());
+
+    render(
+      await CompletionPage({ params: Promise.resolve({ id: COMPLETION_ID }) }),
+    );
+
+    expect(
+      screen.getByRole("link", { name: "Edit log" }).getAttribute("href"),
+    ).toBe(`/home/log?completion=${COMPLETION_ID}&from=progress`);
+  });
+
   it("links back to the month the record belongs to", async () => {
     getCompletion.mockResolvedValue(completion());
 

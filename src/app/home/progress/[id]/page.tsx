@@ -92,6 +92,16 @@ export default async function CompletionPage({ params }: Props) {
             timezoneName={completion.timezoneName}
             planned={toPlannedView(completion)}
           />
+          {/* The one log editor, opened from here and returning here, so a
+              correction does not go by way of Today. */}
+          <div className={homeStyles.actions}>
+            <Link
+              className={homeStyles.primaryAction}
+              href={`/home/log?completion=${completion.id}&from=progress`}
+            >
+              Edit log
+            </Link>
+          </div>
           <Link
             className={styles.backLink}
             href={`/home/progress?month=${monthOf(completion.actualLocalDate)}`}

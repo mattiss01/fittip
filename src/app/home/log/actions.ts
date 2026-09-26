@@ -85,6 +85,8 @@ export async function logCompletionAction(
       // is standing on, and the write they just made would turn it into the
       // "already logged" notice in place of their receipt.
       revalidatePath("/home/today");
+      // A correction can be made from Progress, which lists this record.
+      revalidatePath("/home/progress", "layout");
       return result("saved", "Log updated.", {
         result: receipt.result,
         returnDate,
