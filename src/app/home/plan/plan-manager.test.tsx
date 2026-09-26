@@ -343,6 +343,48 @@ describe("PlanManager", () => {
     ).toHaveAttribute("href", "/home/plan");
   });
 
+  it("opens each recurring edit scope with the activities it would replace", () => {
+    renderManager(
+      INITIAL_PLAN_ACTION_STATE,
+      [
+        session({
+          seriesId: "7f000000-0000-4000-8000-000000000099",
+          occurrenceDate: TODAY,
+          hasDiverged: true,
+          activities: [
+            {
+              name: "Strides",
+              sport: "Running",
+              instructions: null,
+              measurementMode: "unmeasured",
+              target: null,
+            },
+          ],
+        }),
+      ],
+      [series()],
+    );
+    fireEvent.click(screen.getByText("Edit", { selector: "summary" }));
+
+    // Both forms submit the whole list, so an editor that opened empty would
+    // erase what the occurrence or the template already holds.
+    const submitted = (button: string) =>
+      JSON.parse(
+        (
+          screen
+            .getByRole("button", { name: button })
+            .closest("form")
+            ?.querySelector('input[name="activities"]') as HTMLInputElement
+        ).value,
+      ) as { name: string }[];
+    expect(
+      submitted("Change only this session").map(({ name }) => name),
+    ).toEqual(["Strides"]);
+    expect(
+      submitted("Change this and future sessions").map(({ name }) => name),
+    ).toEqual(["Easy running"]);
+  });
+
   it("identifies recurring and changed occurrences and states both scopes", () => {
     renderManager(
       INITIAL_PLAN_ACTION_STATE,
@@ -674,5 +716,14 @@ function series(): PlanSeriesView {
     intent: null,
     expectedDurationMinutes: 60,
     note: null,
+    activities: [
+      {
+        name: "Easy running",
+        sport: "Running",
+        instructions: null,
+        measurementMode: "unmeasured",
+        target: null,
+      },
+    ],
   };
 }

@@ -25,8 +25,10 @@ import {
   RollingPlanRuleError,
   RollingPlanTimezoneRequiredError,
   RollingPlanValidationError,
+  parseSubmittedActivities,
   type RollingPlanChange,
   type RollingPlanSeries,
+  type RollingPlanSeriesActivityInput,
   type RollingPlanSeriesInput,
   type RollingPlanSession,
   type RollingPlanSlice,
@@ -256,7 +258,7 @@ async function buildSeriesChange(
     const input: RollingPlanSeriesInput = {
       ...rule,
       ...readContent(formData),
-      activities: [],
+      activities: readActivities(formData),
     };
     return { operation, seriesId: randomUUID(), series: input };
   }
@@ -291,10 +293,12 @@ async function buildSeriesChange(
   const startDate = wholeSeries ? segment.startDate : session.occurrenceDate;
   const rule = readRule(formData, startDate);
   assertRuleHasOccurrence(rule);
+  // The form opens with the template's activities and submits the whole list,
+  // so the edit replaces it, as a plan edit replaces a session's.
   const input: RollingPlanSeriesInput = {
     ...rule,
     ...readContent(formData),
-    activities: segment.activities.map((activity) => ({ ...activity })),
+    activities: readActivities(formData),
   };
   return wholeSeries
     ? { operation, seriesId: segment.id, series: input }
@@ -440,6 +444,28 @@ function readContent(formData: FormData) {
       ? {}
       : { note: requiredText(formData, "note") }),
   };
+}
+
+/**
+ * The template's activities, as `ActivityEditor` serialized them. A missing
+ * field throws rather than reading as an empty list, for the reason
+ * `readActivities` in `actions.ts` gives: an edit keeps only what it submits.
+ * A template carries no Plan lock, so the one the parser assigns is dropped.
+ */
+function readActivities(formData: FormData): RollingPlanSeriesActivityInput[] {
+  const raw = formData.get("activities");
+  if (typeof raw !== "string") throw new RollingPlanValidationError();
+
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(raw);
+  } catch {
+    throw new RollingPlanValidationError();
+  }
+  return parseSubmittedActivities(decoded).map(({ isLocked, ...activity }) => {
+    void isLocked;
+    return activity;
+  });
 }
 
 function readOperation(value: FormDataEntryValue | null) {

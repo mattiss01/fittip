@@ -6,6 +6,7 @@ import { seriesOccurrenceDates } from "./series-recurrence";
 import { SessionFields } from "./session-fields";
 import styles from "./plan.module.css";
 
+import type { ActivityValue } from "@/components/training/activity-editor";
 import { shiftIsoDate } from "@/lib/date/local-date";
 
 export type PlanSeriesView = {
@@ -20,6 +21,7 @@ export type PlanSeriesView = {
   intent: string | null;
   expectedDurationMinutes: number | null;
   note: string | null;
+  activities: ActivityValue[];
 };
 
 export type RecurringSessionView = {
@@ -31,6 +33,7 @@ export type RecurringSessionView = {
   intent: string | null;
   expectedDurationMinutes: number | null;
   note: string | null;
+  activities: ActivityValue[];
 };
 
 type PlanFormAction = (formData: FormData) => void;
@@ -136,6 +139,7 @@ export function RecurringSessionControls({
             <SessionFields
               idPrefix={"series-only-" + session.id}
               draft={draftOf(session)}
+              activities={session.activities}
             />
             <button
               className={styles.primary}
@@ -168,6 +172,7 @@ export function RecurringSessionControls({
               <SessionFields
                 idPrefix={"series-future-" + session.id}
                 draft={draftOf(series)}
+                activities={series.activities}
               />
               <RecurrenceFields
                 idPrefix={"series-future-" + session.id}

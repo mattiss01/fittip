@@ -52,7 +52,7 @@ describe("recurring-session actions", () => {
     });
   });
 
-  it("creates a series from new owner-entered session fields without activities", async () => {
+  it("creates a series from new owner-entered session fields and their activities", async () => {
     const applyChangeSet = vi.fn().mockResolvedValue({
       planRevision: 4,
       seriesEffects: [],
@@ -88,6 +88,13 @@ describe("recurring-session actions", () => {
         expectedDurationMinutes: "45",
         intent: "Controlled work",
         note: "Leave two reps in reserve",
+        activities: JSON.stringify([
+          {
+            name: "Goblet squat",
+            sport: "Strength",
+            measurementMode: "unmeasured",
+          },
+        ]),
       }),
     );
 
@@ -112,7 +119,16 @@ describe("recurring-session actions", () => {
         expectedDurationMinutes: 45,
         intent: "Controlled work",
         note: "Leave two reps in reserve",
-        activities: [],
+        // A template's activity carries no Plan lock, and the array's order
+        // is its position.
+        activities: [
+          {
+            position: 0,
+            name: "Goblet squat",
+            sport: "Strength",
+            measurementMode: "unmeasured",
+          },
+        ],
       },
     });
   });
@@ -274,7 +290,32 @@ describe("recurring-session actions", () => {
     expect(applyChangeSet).not.toHaveBeenCalled();
   });
 
-  it("splits this-and-future from the occurrence and preserves the template activities", async () => {
+  it("refuses a new series whose form carries no activities field", async () => {
+    const applyChangeSet = vi.fn();
+    createPlanMock.mockResolvedValue({
+      getPlanSlice: vi.fn().mockResolvedValue(slice()),
+      listSeries: vi.fn().mockResolvedValue([]),
+      applyChangeSet,
+    });
+
+    const result = await changeSeriesAction(
+      INITIAL_SERIES_ACTION_STATE,
+      form({
+        operation: "add_series",
+        startDate: today(),
+        frequency: "daily",
+        intervalCount: "1",
+        noEnd: "true",
+        title: "Aerobic run",
+        sport: "Running",
+      }),
+    );
+
+    expect(result.status).toBe("validation");
+    expect(applyChangeSet).not.toHaveBeenCalled();
+  });
+
+  it("splits this-and-future from the occurrence with the activities the owner submitted", async () => {
     const effectiveDate = shiftIsoDate(today(), 2);
     const applyChangeSet = vi.fn().mockResolvedValue({
       planRevision: 9,
@@ -307,6 +348,10 @@ describe("recurring-session actions", () => {
         intervalCount: "1",
         weekdays: ["1", "4"],
         noEnd: "true",
+        // The template holds "Easy running"; an edit replaces the whole list.
+        activities: JSON.stringify([
+          { name: "Strides", sport: "Running", measurementMode: "unmeasured" },
+        ]),
       }),
     );
 
@@ -320,10 +365,12 @@ describe("recurring-session actions", () => {
         startDate: effectiveDate,
         title: "Long aerobic run",
         activities: [
-          expect.objectContaining({
-            name: "Easy running",
-            measurementMode: "duration_intensity",
-          }),
+          {
+            position: 0,
+            name: "Strides",
+            sport: "Running",
+            measurementMode: "unmeasured",
+          },
         ],
       },
     });

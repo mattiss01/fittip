@@ -589,6 +589,7 @@ function PlanSessionCard({
                   intent: session.intent,
                   expectedDurationMinutes: session.expectedDurationMinutes,
                   note: session.note,
+                  activities: session.activities,
                 }}
                 series={recurring.series}
                 expectedRevision={expectedRevision}
@@ -681,6 +682,7 @@ function PlanSessionCard({
                   intent: session.intent,
                   expectedDurationMinutes: session.expectedDurationMinutes,
                   note: session.note,
+                  activities: session.activities,
                 }}
                 series={recurring.series}
                 expectedRevision={expectedRevision}
