@@ -103,9 +103,20 @@ export default async function LogPage({ searchParams }: Props) {
       ) : (
         await renderForm(timezoneName, completionId, plannedSessionId, params)
       )}
-      <Link className={styles.backLink} href="/home/today">
-        Back to Today
-      </Link>
+      {/* Opened from a Progress record, the page's own way back leads there
+          too, so it and the form's Cancel do not disagree. */}
+      {params.from === "progress" && completionId !== null ? (
+        <Link
+          className={styles.backLink}
+          href={`/home/progress/${completionId}`}
+        >
+          Back to the record
+        </Link>
+      ) : (
+        <Link className={styles.backLink} href="/home/today">
+          Back to Today
+        </Link>
+      )}
     </main>
   );
 }

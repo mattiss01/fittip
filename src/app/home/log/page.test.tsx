@@ -122,6 +122,12 @@ describe("Log", () => {
       );
 
       const cancel = screen.getByRole("link", { name: "Cancel" });
+      // The page's own way back agrees with the form's Cancel.
+      expect(
+        screen.queryByRole("link", {
+          name: expected === null ? "Back to the record" : "Back to Today",
+        }),
+      ).toBeNull();
       if (expected === null) {
         expect(
           cancel.getAttribute("href")?.startsWith("/home/today?date="),
