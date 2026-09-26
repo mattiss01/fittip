@@ -121,9 +121,11 @@ test.describe("M3-19 delete a planned session", () => {
       // A session with training logged against it is refused, in the owner's
       // own words rather than as a foreign-key violation. The completion is
       // written through M3-15A's own owner-derived function, because the
-      // logging surface itself is M3-15B.
+      // logging surface itself is M3-15B. It is a skip written ahead: since
+      // 26 Sep 2026 a completed log dated before its session reads as done on
+      // the Plan and offers no Delete, while a skip keeps its card.
       const sessionId = await sessionIdOf(page, tomorrow, "Logged run");
-      await logCompletion(request, account, sessionId, today);
+      await logCompletion(request, account, sessionId, today, "skipped");
       await page.reload();
 
       const logged = sessionCard(page, tomorrow, "Logged run");
@@ -243,6 +245,7 @@ async function logCompletion(
   account: LocalAccount,
   sessionId: string,
   actualLocalDate: string,
+  status: "completed" | "skipped" = "completed",
 ) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
@@ -273,7 +276,7 @@ async function logCompletion(
         p_operation: "create",
         p_completion: {
           planSessionId: sessionId,
-          status: "completed",
+          status,
           actualLocalDate,
           activities: [],
         },

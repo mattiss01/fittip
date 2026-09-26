@@ -16,6 +16,7 @@ import {
   COMPLETION_SIGNALS,
   INITIAL_LOG_ACTION_STATE,
   PLANNED_OUTCOMES,
+  TRAINED_OUTCOMES,
   UNPLANNED_OUTCOME,
   type CompletionOutcome,
   type LogActionState,
@@ -28,6 +29,8 @@ import homeStyles from "../home.module.css";
 export type LogPlannedView = {
   id: string;
   localDate: string;
+  /** The planned day in words, e.g. "Thu 1 Oct", formatted by the page. */
+  dayLabel: string;
   title: string;
   sport: string;
   expectedDurationMinutes: number | null;
@@ -113,6 +116,9 @@ export function LogForm({
   const [outcome, setOutcome] = useState<CompletionOutcome>(
     existing?.outcome ?? choices[0].value,
   );
+  const [actualDate, setActualDate] = useState(
+    existing?.actualLocalDate ?? defaultDate,
+  );
   const receiptHeading = useRef<HTMLHeadingElement>(null);
   const saved = state.status === "saved";
   // Training that did not happen has no duration, no effort and no way it
@@ -126,6 +132,15 @@ export function LogForm({
     outcome === "completed" ||
     outcome === "partially_completed" ||
     outcome === "unplanned";
+  // Done on another day than planned: the planned session done early or late,
+  // or extra training with the planned one still ahead. Only a new log asks,
+  // and only for training that happened; a skip or a replacement is about the
+  // planned session whatever day it is written on.
+  const askWhichDay =
+    planned !== null &&
+    existing === null &&
+    actualDate !== planned.localDate &&
+    TRAINED_OUTCOMES.has(outcome);
   // Everything the chosen outcome would discard from a record that already
   // exists. A field this form stops rendering submits nothing, and the write
   // function assigns every one of these from the payload, so an absent key
@@ -325,13 +340,41 @@ export function LogForm({
           type="date"
           required
           max={today}
-          defaultValue={existing?.actualLocalDate ?? defaultDate}
+          value={actualDate}
+          onChange={(event) => setActualDate(event.target.value)}
         />
         <span className={styles.fieldHint}>
           The day the training happened, on your own calendar. Training cannot
           be logged before it happens, so this stops at today.
         </span>
       </div>
+
+      {askWhichDay && planned !== null ? (
+        <fieldset className={styles.dayChoice} data-log-day-choice>
+          <legend>This session is planned for {planned.dayLabel}</legend>
+          <label>
+            <input type="radio" name="dayChoice" value="instead" required />
+            <span>
+              <strong>Instead of {planned.dayLabel}&rsquo;s session</strong>
+              <span className={styles.fieldHint}>
+                {planned.dayLabel} shows it as logged on this date.
+              </span>
+            </span>
+          </label>
+          <label>
+            <input type="radio" name="dayChoice" value="extra" required />
+            <span>
+              <strong>
+                Extra &mdash; I&rsquo;ll still do {planned.dayLabel}
+              </strong>
+              <span className={styles.fieldHint}>
+                Saved as its own unplanned log. {planned.dayLabel} stays
+                planned.
+              </span>
+            </span>
+          </label>
+        </fieldset>
+      ) : null}
 
       {discarded.length === 0 ? null : (
         <p className={styles.warning} data-log-clears role="status">

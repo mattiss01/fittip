@@ -226,6 +226,8 @@ export interface CompletionLogAdapter {
    * day than the one being looked at is invisible to it.
    */
   findByPlanSession(planSessionId: string): Promise<Completion | null>;
+  /** The same, for many planned sessions in one read; absent ones are omitted. */
+  findByPlanSessions(planSessionIds: string[]): Promise<Completion[]>;
   applyChange(change: CompletionChange): Promise<CompletionReceipt>;
 }
 
@@ -351,6 +353,19 @@ export class CompletionLog {
   /** What was already logged against one planned session, on any date. */
   async findByPlanSession(planSessionId: unknown): Promise<Completion | null> {
     return await this.adapter.findByPlanSession(readUuid(planSessionId));
+  }
+
+  /**
+   * What each of these planned sessions already carries, on any date: the Plan
+   * reads its whole window this way, so a session logged on another day reads
+   * as logged where it was planned.
+   */
+  async findByPlanSessions(planSessionIds: unknown): Promise<Completion[]> {
+    if (!Array.isArray(planSessionIds) || planSessionIds.length > 500) {
+      throw new CompletionValidationError();
+    }
+    if (planSessionIds.length === 0) return [];
+    return await this.adapter.findByPlanSessions(planSessionIds.map(readUuid));
   }
 
   async applyChange(change: unknown): Promise<CompletionReceipt> {

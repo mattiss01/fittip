@@ -42,7 +42,7 @@ vi.mock("@/server/repositories/completion-log-repository", async (original) => {
 
 import LogPage from "./page";
 import { INITIAL_LOG_ACTION_STATE } from "./log-action-state";
-import { isoDateInTimezone } from "@/lib/date/local-date";
+import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 
 const TIMEZONE = "Europe/Berlin";
 const SESSION_ID = "7e15b000-0000-4000-8000-000000000001";
@@ -103,6 +103,40 @@ describe("Log", () => {
     expect(hiddenValue("plannedSessionId")).toBe(SESSION_ID);
     expect(hiddenValue("plannedDate")).toBe(today());
     expect(hiddenValue("operation")).toBe("create");
+  });
+
+  it("asks whether training on another day replaced the planned session or was extra", async () => {
+    render(
+      await LogPage({
+        searchParams: Promise.resolve({
+          plannedSession: SESSION_ID,
+          date: today(),
+        }),
+      }),
+    );
+    const choice = () => document.querySelector("[data-log-day-choice]");
+
+    // On the planned day there is nothing to ask.
+    expect(choice()).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Date"), {
+      target: { value: shiftIsoDate(today(), -1) },
+    });
+    expect(choice()?.textContent).toMatch(/Instead of .+ session/);
+    expect(choice()?.textContent).toMatch(/Extra .+ still do/);
+    const values = [
+      ...document.querySelectorAll<HTMLInputElement>("input[name='dayChoice']"),
+    ].map((input) => [input.value, input.required]);
+    expect(values).toEqual([
+      ["instead", true],
+      ["extra", true],
+    ]);
+
+    // A skip is about the planned session whatever day it is written on.
+    fireEvent.change(screen.getByLabelText("What happened"), {
+      target: { value: "skipped" },
+    });
+    expect(choice()).toBeNull();
   });
 
   it("offers skip as one outcome among the four a planned session may have", async () => {

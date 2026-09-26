@@ -91,6 +91,17 @@ export class PostgresCompletionLogAdapter implements CompletionLogAdapter {
     return data ? (await this.withReplacements(userId, [data]))[0] : null;
   }
 
+  async findByPlanSessions(planSessionIds: string[]): Promise<Completion[]> {
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("completions")
+      .select(COMPLETION_COLUMNS)
+      .eq("user_id", userId)
+      .in("plan_session_id", planSessionIds);
+    if (error) throw new CompletionPersistenceError();
+    return await this.withReplacements(userId, data ?? []);
+  }
+
   async findByPlanSession(planSessionId: string): Promise<Completion | null> {
     const userId = await this.getVerifiedUserId();
     const { data, error } = await this.client
