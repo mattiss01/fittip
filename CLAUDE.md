@@ -206,7 +206,7 @@ Three jobs, about four minutes: `static` (Prettier, ESLint, TypeScript, `test:ru
 
 - `src/architecture/*.test.ts` are repo-wide invariants, not unit tests. They fail if a
   `"use client"` file imports from `@/server/**` or a repository, or if `.retry(false)` appears
-  outside the two atomic RPC calls. Changing a pattern there is a deliberate decision.
+  outside the atomic `apply_*_change` RPC calls. Changing a pattern there is a deliberate decision.
 - `next build` may warn about workspace root inference when more than one lockfile is visible.
   The build still succeeds.
 - Next.js 16: middleware is `src/proxy.ts`, route params are async, and private response

@@ -19,9 +19,11 @@ paths:
   missing import is not caught by tests — only by review.
 - Multi-row invariants (plan versions, completion heads, goal ranks) go through the approved
   atomic RPC for that ticket, not a sequence of client-side statements.
-- `.retry(false)` is allowed **only** on the `save_manual_plan_version` and
-  `save_training_completion` RPC calls. `src/architecture/server-boundary.test.ts` asserts the
-  exact set and count; adding it elsewhere is a deliberate architectural change.
+- `.retry(false)` is allowed **only** on the atomic `apply_*_change` RPC calls — today
+  `apply_completion_change`, `apply_goal_change`, `apply_memory_change`,
+  `apply_onboarding_change`, `apply_rolling_plan_change_set` and `apply_saved_session_change`.
+  `src/architecture/server-boundary.test.ts` asserts the exact set; adding it elsewhere is a
+  deliberate architectural change.
 - Map constraint and conflict errors to stable domain results (e.g. the `PT409` conflict path)
   instead of letting a Postgres error surface to the UI.
 - Plans, proposals, and completions are separate permanent records. A read or write for one
