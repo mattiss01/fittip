@@ -35,6 +35,11 @@ describe("MeasurementFields", () => {
       { sets: "3", reps: "3", load: "80" },
       { sets: "1", reps: "5", load: "60" },
     ]);
+    // Focus follows the group to its new row, so a second ArrowDown keeps
+    // moving it instead of swapping the pair back.
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: /Set group 2 of 2/ }),
+    );
 
     // The first group has nowhere further up to go.
     onGroupsChange.mockClear();

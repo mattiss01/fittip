@@ -119,12 +119,24 @@ export function RecurringSessionControls({
   };
 
   if (mode === "edit") {
-    // One form, two submits. Each button names its own operation and its own
-    // action, so the fields are filled in once and the scope is chosen last.
+    // One form, two submits, so the fields are filled in once and the scope is
+    // chosen last. Each button sets its own operation inside its own
+    // `formAction`: React drops a submitter's name and value whenever the
+    // submitter carries one, so `name`/`value` would never arrive.
     // The form opens with this occurrence's content, which is what its card
     // shows; the future scope makes that the template from here on.
     return (
-      <form className={styles.form} action={planAction}>
+      <form className={styles.form}>
+        {/* Enter in a field submits with the form's first button. A disabled
+            first button makes Enter do nothing, so neither scope is ever
+            chosen by a keystroke meant for a field. */}
+        <button
+          type="submit"
+          disabled
+          hidden
+          aria-hidden="true"
+          tabIndex={-1}
+        />
         <input type="hidden" name="sessionId" value={session.id} />
         <input type="hidden" name="expectedRevision" value={expectedRevision} />
         <SessionFields
@@ -150,8 +162,10 @@ export function RecurringSessionControls({
           <button
             className={styles.primary}
             type="submit"
-            name="operation"
-            value="edit"
+            formAction={(formData: FormData) => {
+              formData.set("operation", "edit");
+              planAction(formData);
+            }}
             disabled={planPending || seriesPending}
           >
             Change only this session
@@ -171,9 +185,6 @@ export function RecurringSessionControls({
             <button
               className={styles.primary}
               type="submit"
-              // React drops a submitter's own name and value when the
-              // submitter carries a \`formAction\`, so this button names its
-              // operation itself rather than through \`name\`/\`value\`.
               formAction={(formData: FormData) => {
                 formData.set("operation", "edit_series");
                 seriesAction(formData);

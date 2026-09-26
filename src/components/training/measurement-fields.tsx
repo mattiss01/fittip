@@ -1,5 +1,8 @@
 "use client";
 
+import { useRef } from "react";
+import { flushSync } from "react-dom";
+
 import styles from "./activity-editor.module.css";
 import { ReorderHandle } from "./reorder-handle";
 
@@ -83,6 +86,7 @@ export function MeasurementFields({
   onDraftChange: (field: string, value: string) => void;
   onGroupsChange: (groups: SetGroupDraft[]) => void;
 }) {
+  const groupListRef = useRef<HTMLOListElement>(null);
   const bind = (field: string) => ({
     id: `${idPrefix}-${field}`,
     value: draft.fields[field] ?? "",
@@ -121,6 +125,19 @@ export function MeasurementFields({
       next.splice(to, 0, held);
       onGroupsChange(next);
     };
+    // Rows are keyed by position, so after a keyboard move the focused handle
+    // would belong to the other group and the next arrow would swap them back.
+    // Focus follows the group instead, as it does for an activity.
+    const moveGroupByKey = (from: number, delta: number) => {
+      const to = from + delta;
+      if (to < 0 || to >= groups.length) return;
+      flushSync(() => moveGroup(from, to));
+      groupListRef.current
+        ?.querySelectorAll<HTMLButtonElement>(
+          ":scope > li > button:first-child",
+        )
+        [to]?.focus();
+    };
     return (
       <div className={styles.groupBox}>
         {/* Outside the list: `ReorderHandle` counts the list's items as rows. */}
@@ -131,14 +148,13 @@ export function MeasurementFields({
           <span>Load</span>
           <span />
         </div>
-        <ol className={styles.groupRows}>
+        <ol className={styles.groupRows} ref={groupListRef}>
           {groups.map((group, index) => (
             <li className={styles.groupRow} key={index}>
               <ReorderHandle
                 className={styles.groupHandle}
                 label={`${ACTIVITY_COPY.reorderHint} Set group ${index + 1} of ${groups.length}.`}
-                onDragStateChange={() => {}}
-                onMove={(delta) => moveGroup(index, index + delta)}
+                onMove={(delta) => moveGroupByKey(index, delta)}
                 onMoveTo={(to) => moveGroup(index, to)}
               />
               <input
