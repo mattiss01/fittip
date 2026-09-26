@@ -24,7 +24,8 @@ Ordered by dependency. A lane is named where it is not the build lane.
 - [ ] **A5 — Personal activity library.** Create, list, edit and archive reusable
       definitions, and a picker in A2 that sets `personal_activity_id` — the only thing that
       ever will. Carries F-002's rule that an edit changes future reuse and never a
-      historical snapshot. Needs a route under `/home/you` or `/home/plan`; owner's call.
+      historical snapshot. Lives under `/home/plan`, beside the session library (owner, 26 Sep
+      2026). Sport-or-category stays deferred, so it keeps today's `sport`.
 - [ ] **A6 — Series templates and saved sessions carry activities.** Careful lane, and a
       direct consequence of A2 rather than a tidy-up. `saved_sessions`' write function takes
       `p_activities` on create and has no such parameter on edit — it *refuses* one, which
@@ -34,6 +35,15 @@ Ordered by dependency. A lane is named where it is not the build lane.
       activities and cannot change them, enforced in SQL. Needs a forward migration for the
       edit path, plus the surface. `series-actions.ts` passes `[]` as `actions.ts` does, and
       the library prints `name · sport` with no target.
+- [ ] **Log from the library.** Asked by the owner on 26 Sep 2026: an unplanned log starts
+      from a saved session — its name, sport and activities prefilled, then changed — and an
+      activity row starts from a library activity (A5), for training that is routinely the
+      same but never planned. Copies by value, as the Plan's reuse does. After A6, so the
+      library's activities are editable first.
+- [ ] **A session logged on another day still looks open on its planned day.** Reported by
+      the owner on 26 Sep 2026. A Thursday session logged on Tuesday links to Thursday's
+      entry, but the Plan reads logs only for cancelled sessions, so Thursday shows an ordinary
+      open card with Edit, Cancel and Delete. Awaiting the owner's choice of behavior.
 - [ ] **A7 — The coach fills in a session's activities.** Careful lane: a new AI operation
       with its own schema, spend, and context cost — the M3-03D detail operation that
       `contracts.ts` defers to. Blocked on the plan context having no headroom left, which
@@ -54,16 +64,14 @@ Not worth their own slot; do them when work lands nearby.
   `apply_completion_change` as a raw `22P02` rather than `22023`: the validators compare with
   `trunc`, the inserts cast the text. Unreachable from the app, whose parser emits integers.
   Map `invalid_text_representation` in the handler next time the function is replaced.
-- `.claude/rules/server-data-access.md` names `save_training_completion` as one of the two
-  `.retry(false)` RPCs; M3-11 dropped it and the call is now `apply_completion_change`. A rule
-  file, so its own commit.
 - Sign-in offers a dead link. `auth-form.tsx` links to `/signup`, and `proxy.ts` redirects
   `/signup` back to `/` whenever the runtime policy is `founder-staging` — so on the founder
   environment the link always bounces to where it started. The redirect is right: production
   is owner-only, not a public launch (ADR-005, ADR-007). The link is what is wrong, and it
   should be hidden under the same condition rather than the redirect being softened. Reported
-  by the owner on 25 Sep 2026; which environment they saw it in is not yet confirmed, and
-  locally the policy is `local`, so the page should render there.
+  by the owner on 25 Sep 2026. Found on 26 Sep that it already is — `page.tsx` has passed
+  `allowSignUp={policy.mode === "local"}` since `21e6841`, with a test — so what the owner saw
+  is still to be established before anything changes.
 
 - Recurring scope fallback copy: the Edit panel explains a missing whole-series scope as
   "outside the active dates of its ended series", but the predicate also withholds it when
@@ -147,6 +155,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 26 Sep 2026 | `55137f0` | [36229324811](https://github.com/mattiss01/fittip/actions/runs/36229324811) | The `.retry(false)` rule names the six `apply_*_change` RPCs instead of two that M3-11 dropped, and `CLAUDE.md`'s pitfall stops saying "two". No code change |
 | 25 Sep 2026 | `3430435` | [36184425816](https://github.com/mattiss01/fittip/actions/runs/36184425816) | The Plan day and Today list a session's activities with their targets instead of counting them, a logged card lists what was done (or still the plan's, when a skip or a replacement records none), Progress's recorded sheet lists the actuals, and a ride that replaced sessions says "Instead of: …" (A3, A4e). No migration. m3-13's accepted flow was rewritten where it read "N activities" on a plan card; the library card still prints its count |
 | 25 Sep 2026 | `c41beb3` | [36172504470](https://github.com/mattiss01/fittip/actions/runs/36172504470) | A replaced session now points at the unplanned log of what was done instead — written in the same save through a recursive `apply_completion_change`, so both or neither, or picked from the week's logs — and one ride may replace several sessions; the coach reads "Replaced by …" in the existing description slot. Migration `20260925174607` applied to the founder project — 32 migrations, advisors unchanged at 20 definer + 1 auth; it redefines `completions_replacement_check` under the same name, admitting a link in place of text, and a replaced create from the previous app with only text is refused until the deploy |
 | 25 Sep 2026 | `0ab1c3f` | [36164580894](https://github.com/mattiss01/fittip/actions/runs/36164580894) | Every log owns its `title`/`sport` (unplanned ones backfilled from their first activity) and a planned log's actuals, each linked to the planned activity it answers by `planned_position`, are corrected with the create editor; it also fixes A2c's four activity validators refusing `unmeasured`, which had broken both the plan editor and logging. Migration `20260925162039` applied to the founder project — 31 migrations, advisors unchanged at 20 definer + 1 auth; the m3_23 pgTAP and contract assertions refusing a planned log's actual edit were inverted on purpose, and renaming no longer rewrites an unplanned log's activity list, so that limitation is gone |
