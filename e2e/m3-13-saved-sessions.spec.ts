@@ -88,8 +88,12 @@ test.describe("M3-13 private saved-session library", () => {
       await expect(
         card.getByText("Running · 45 min · 2 activities"),
       ).toBeVisible();
-      await expect(card.getByText("Threshold blocks · Running")).toBeVisible();
-      await expect(card.getByText("Cool down · Running")).toBeVisible();
+      // A6: the card lists each activity with its target, as the Plan does.
+      const listed = card.locator("[data-activity-list] li");
+      await expect(listed).toHaveCount(2);
+      await expect(listed.first()).toContainText("Threshold blocks");
+      await expect(listed.first()).toContainText("24 min");
+      await expect(listed.last()).toContainText("Cool down");
       await page.screenshot({
         fullPage: true,
         path: path.join(evidenceDirectory, "M3-13-library-390x844.png"),
@@ -97,7 +101,9 @@ test.describe("M3-13 private saved-session library", () => {
 
       // Edit the entry. The planned session it came from must not change.
       await openDisclosure(card, "Edit");
-      await card.getByLabel("Name").fill("Tuesday tempo (v2)");
+      // The Edit form now holds the activity editor too, whose rows are also
+      // labelled "Name", so the entry's own field is found by its form name.
+      await card.locator("input[name='name']").fill("Tuesday tempo (v2)");
       await card.getByLabel("Title").fill("Longer threshold intervals");
       await card.getByRole("button", { name: "Save entry" }).click();
       const edited = savedCard(page, "Longer threshold intervals");

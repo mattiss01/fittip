@@ -131,9 +131,11 @@ function toSavedSessionView(session: SavedSession): SavedSessionView {
     expectedDurationMinutes: session.expectedDurationMinutes ?? null,
     note: session.note ?? null,
     activities: session.activities.map((activity) => ({
-      position: activity.position,
       name: activity.name,
       sport: activity.sport,
+      instructions: activity.instructions ?? null,
+      measurementMode: activity.measurementMode,
+      target: activity.target ?? null,
     })),
   };
 }

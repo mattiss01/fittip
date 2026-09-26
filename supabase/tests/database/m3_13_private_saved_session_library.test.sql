@@ -87,7 +87,7 @@ as $$
   where saved.id = p_saved_session_id;
 $$;
 
-select plan(71);
+select plan(86);
 
 select is(
   (select count(*)::bigint from library_zone), 1::bigint,
@@ -249,6 +249,10 @@ values (
   '7e000000-0000-4000-8000-0000000000a1',
   '7e000000-0000-4000-8000-000000000001',
   'Easy running', 'Running', 'duration_intensity'
+), (
+  '7e000000-0000-4000-8000-0000000000a2',
+  '7e000000-0000-4000-8000-000000000002',
+  'Outsider drill', 'Tennis', 'unmeasured'
 );
 
 set local role authenticated;
@@ -522,17 +526,148 @@ select throws_ok(
   'PT409', 'That saved session changed. Reload and try again.',
   'a record that is not there is reported as changed, not as missing'
 );
+
+-- A6: an edit may carry the whole activity list ------------------------------
+
+-- The submitted `position` values are deliberately sparse and out of order:
+-- the array's order is the position, as it is in the Plan's editor.
+select is(
+  (select result from public.apply_saved_session_change(
+    'edit',
+    (select id from public.saved_sessions where name = 'Tuesday tempo (v2)'),
+    1, 'Tuesday tempo (v2)', 'Longer tempo run', 'Trail running', null, 80, null,
+    '[{"position":7,"name":"  Strides ","sport":"Running","measurementMode":"unmeasured"},
+      {"position":3,"personalActivityId":"7e000000-0000-4000-8000-0000000000a1",
+       "name":"Easy running","sport":"Running","measurementMode":"duration_intensity",
+       "target":{"duration_minutes":20}}]'::jsonb
+  )),
+  'updated',
+  'an edit with an activity list is accepted'
+);
+select is(
+  (select jsonb_agg(jsonb_build_array(position, name, measurement_mode, target)
+     order by position)
+   from public.saved_session_activities),
+  '[[0,"Strides","unmeasured",null],
+    [1,"Easy running","duration_intensity",{"duration_minutes":20}]]'::jsonb,
+  'the list is replaced whole, trimmed, and positioned by array order'
+);
+select is(
+  (select revision from public.saved_sessions where name = 'Tuesday tempo (v2)'),
+  2::bigint,
+  'an edit that replaces the list advances the token once'
+);
+
+-- An unmeasured activity must carry no target, so the second element is the
+-- only thing wrong with this list.
 select throws_ok(
   $$select public.apply_saved_session_change(
     'edit',
     (select id from public.saved_sessions where name = 'Tuesday tempo (v2)'),
-    1, 'With activities', 'With activities', 'Running', null, null, null, '[]'::jsonb
+    2, 'Renamed', 'Longer tempo run', 'Trail running', null, 80, null,
+    '[{"position":0,"name":"Strides","sport":"Running","measurementMode":"unmeasured"},
+      {"position":1,"name":"Squat","sport":"Strength","measurementMode":"unmeasured",
+       "target":{"sets":3}}]'::jsonb
+  )$$,
+  '22023', 'Invalid saved session activity.',
+  'one invalid activity refuses the whole edit'
+);
+select throws_ok(
+  $$select public.apply_saved_session_change(
+    'edit',
+    (select id from public.saved_sessions where name = 'Tuesday tempo (v2)'),
+    2, 'Renamed', 'Longer tempo run', 'Trail running', null, 80, null,
+    '[{"position":0,"personalActivityId":"7e000000-0000-4000-8000-0000000000a2",
+       "name":"Outsider drill","sport":"Tennis","measurementMode":"unmeasured"}]'::jsonb
+  )$$,
+  '22023', 'Invalid saved session activity.',
+  'an edit cannot attach another owner personal activity'
+);
+select throws_ok(
+  $$select public.apply_saved_session_change(
+    'edit',
+    (select id from public.saved_sessions where name = 'Tuesday tempo (v2)'),
+    1, 'Renamed', 'Longer tempo run', 'Trail running', null, 80, null, '[]'::jsonb
+  )$$,
+  'PT409', 'That saved session changed. Reload and try again.',
+  'a list edit at a stale revision is refused'
+);
+select ok(
+  (select s.name = 'Tuesday tempo (v2)' and s.revision = 2
+   from public.saved_sessions s),
+  'the three refused edits left the record as it was'
+);
+select is(
+  (select jsonb_agg(jsonb_build_array(position, name, personal_activity_id)
+     order by position)
+   from public.saved_session_activities),
+  '[[0,"Strides",null],[1,"Easy running","7e000000-0000-4000-8000-0000000000a1"]]'::jsonb,
+  'and left its list row for row as it was'
+);
+select throws_ok(
+  $$select public.apply_saved_session_change(
+    'edit',
+    (select id from public.saved_sessions where name = 'Tuesday tempo (v2)'),
+    2, 'Renamed', 'Longer tempo run', 'Trail running', null, 80, null,
+    '{"name":"Strides"}'::jsonb
   )$$,
   '22023', 'Invalid saved session change.',
-  'an edit carries no activity list, because nothing can edit activities yet'
+  'an activity list must be an array'
+);
+select throws_ok(
+  $$select public.apply_saved_session_change(
+    'delete',
+    (select id from public.saved_sessions where name = 'Tuesday tempo (v2)'),
+    2, null, null, null, null, null, null, '[]'::jsonb
+  )$$,
+  '22023', 'Invalid saved session change.',
+  'a delete still carries no content, activities included'
+);
+select lives_ok(
+  $$select public.apply_saved_session_change(
+    'edit',
+    (select id from public.saved_sessions where name = 'Tuesday tempo (v2)'),
+    2, 'Tuesday tempo (v2)', 'Longer tempo run', 'Trail running', null, 80, null,
+    null
+  )$$,
+  'an edit with no list is still accepted'
+);
+select is(
+  (select count(*)::bigint from public.saved_session_activities),
+  2::bigint,
+  'and keeps the list exactly as it was, which is what the previous app sends'
+);
+select lives_ok(
+  $$select public.apply_saved_session_change(
+    'edit',
+    (select id from public.saved_sessions where name = 'Tuesday tempo (v2)'),
+    3, 'Tuesday tempo (v2)', 'Longer tempo run', 'Trail running', null, 80, null,
+    '[]'::jsonb
+  )$$,
+  'an edit with an empty list is accepted'
+);
+select is(
+  (select count(*)::bigint from public.saved_session_activities),
+  0::bigint,
+  'and clears the list, because the owner removed every activity'
+);
+-- One activity back, so the owner-immutability and delete checks below still
+-- have a saved activity to act on.
+select lives_ok(
+  $$select public.apply_saved_session_change(
+    'edit',
+    (select id from public.saved_sessions where name = 'Tuesday tempo (v2)'),
+    4, 'Tuesday tempo (v2)', 'Longer tempo run', 'Trail running', null, 80, null,
+    '[{"position":0,"name":"Strides","sport":"Running","measurementMode":"unmeasured"}]'::jsonb
+  )$$,
+  'an emptied entry can be given activities again'
 );
 
 -- Another owner and anonymous callers ----------------------------------------
+
+create temporary table library_entry as
+select id from public.saved_sessions where name = 'Tuesday tempo (v2)';
+grant select on library_entry to public;
 
 select set_config(
   'request.jwt.claims',
@@ -554,6 +689,17 @@ select throws_ok(
   )$$,
   'PT409', 'That saved session changed. Reload and try again.',
   'another owner cannot reach into this library, and learns nothing about it'
+);
+-- RLS hides the entry from this owner, so the id is passed literally.
+select throws_ok(
+  format(
+    $$select public.apply_saved_session_change(
+      'edit', %L, 5, 'Taken', 'Taken', 'Running', null, null, null, '[]'::jsonb
+    )$$,
+    (select id from library_entry)
+  ),
+  'PT409', 'That saved session changed. Reload and try again.',
+  'another owner cannot replace this library entry activities either'
 );
 
 set local role anon;
@@ -600,7 +746,7 @@ select is(
   (select result from public.apply_saved_session_change(
     'delete',
     (select id from public.saved_sessions where name = 'Tuesday tempo (v2)'),
-    1, null, null, null, null, null, null, null
+    5, null, null, null, null, null, null, null
   )),
   'deleted',
   'the owner deletes the library entry'

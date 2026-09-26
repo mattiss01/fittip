@@ -56,7 +56,8 @@ export type SavedSessionChange =
       operation: "edit";
       savedSessionId: string;
       expectedRevision: number;
-      session: SavedSessionContent;
+      /** The whole entry, activities included: an edit replaces the list. */
+      session: SavedSessionDraft;
     }
   | {
       operation: "delete";
@@ -139,7 +140,7 @@ export function parseSavedSessionChange(value: unknown): SavedSessionChange {
           0,
           Number.MAX_SAFE_INTEGER,
         ),
-        session: parseContent(record.session),
+        session: parseDraft(record.session),
       };
     case "delete":
       assertOnlyKeys(record, [

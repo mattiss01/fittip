@@ -9,6 +9,7 @@ import {
   type SeriesActionState,
   type SeriesOperation,
 } from "./series-action-state";
+import { readSubmittedTemplateActivities } from "./activity-form";
 import { planChangeCopy, topUpAfterPlanChange } from "./series-materialization";
 import { seriesOccurrenceDates } from "./series-recurrence";
 import { readPlanWindow } from "./plan-window";
@@ -25,10 +26,8 @@ import {
   RollingPlanRuleError,
   RollingPlanTimezoneRequiredError,
   RollingPlanValidationError,
-  parseSubmittedActivities,
   type RollingPlanChange,
   type RollingPlanSeries,
-  type RollingPlanSeriesActivityInput,
   type RollingPlanSeriesInput,
   type RollingPlanSession,
   type RollingPlanSlice,
@@ -258,7 +257,7 @@ async function buildSeriesChange(
     const input: RollingPlanSeriesInput = {
       ...rule,
       ...readContent(formData),
-      activities: readActivities(formData),
+      activities: readSubmittedTemplateActivities(formData),
     };
     return { operation, seriesId: randomUUID(), series: input };
   }
@@ -298,7 +297,7 @@ async function buildSeriesChange(
   const input: RollingPlanSeriesInput = {
     ...rule,
     ...readContent(formData),
-    activities: readActivities(formData),
+    activities: readSubmittedTemplateActivities(formData),
   };
   return wholeSeries
     ? { operation, seriesId: segment.id, series: input }
@@ -444,28 +443,6 @@ function readContent(formData: FormData) {
       ? {}
       : { note: requiredText(formData, "note") }),
   };
-}
-
-/**
- * The template's activities, as `ActivityEditor` serialized them. A missing
- * field throws rather than reading as an empty list, for the reason
- * `readActivities` in `actions.ts` gives: an edit keeps only what it submits.
- * A template carries no Plan lock, so the one the parser assigns is dropped.
- */
-function readActivities(formData: FormData): RollingPlanSeriesActivityInput[] {
-  const raw = formData.get("activities");
-  if (typeof raw !== "string") throw new RollingPlanValidationError();
-
-  let decoded: unknown;
-  try {
-    decoded = JSON.parse(raw);
-  } catch {
-    throw new RollingPlanValidationError();
-  }
-  return parseSubmittedActivities(decoded).map(({ isLocked, ...activity }) => {
-    void isLocked;
-    return activity;
-  });
 }
 
 function readOperation(value: FormDataEntryValue | null) {

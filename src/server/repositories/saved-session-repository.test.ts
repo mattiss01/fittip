@@ -51,7 +51,7 @@ describe("PostgresSavedSessionAdapter", () => {
     expect(retry).toHaveBeenCalledWith(false);
   });
 
-  it("sends the revision back on an edit and carries no activity list", async () => {
+  it("sends the revision back on an edit with the whole activity list", async () => {
     const retry = vi.fn().mockResolvedValue({
       data: { saved_session_id: SAVED_ID, revision: 4, result: "updated" },
       error: null,
@@ -65,15 +65,29 @@ describe("PostgresSavedSessionAdapter", () => {
       operation: "edit",
       savedSessionId: SAVED_ID,
       expectedRevision: 3,
-      session: { name: "Renamed", title: "Tempo run", sport: "Running" },
+      session: {
+        name: "Renamed",
+        title: "Tempo run",
+        sport: "Running",
+        activities: [
+          {
+            position: 0,
+            name: "Strides",
+            sport: "Running",
+            measurementMode: "unmeasured",
+          },
+        ],
+      },
     });
 
+    // A6: the list is sent whole, and the function puts it in place of the
+    // stored one.
     expect(rpc.mock.calls[0][1]).toMatchObject({
       p_operation: "edit",
       p_saved_session_id: SAVED_ID,
       p_expected_revision: 3,
+      p_activities: [{ position: 0, name: "Strides" }],
     });
-    expect(rpc.mock.calls[0][1]).not.toHaveProperty("p_activities");
   });
 
   it.each([

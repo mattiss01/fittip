@@ -240,6 +240,9 @@ describe("saved session actions", () => {
         title: "Longer tempo run",
         sport: "Running",
         expectedDurationMinutes: "80",
+        activities: JSON.stringify([
+          { name: "Strides", sport: "Running", measurementMode: "unmeasured" },
+        ]),
       }),
     );
 
@@ -253,8 +256,38 @@ describe("saved session actions", () => {
         title: "Longer tempo run",
         sport: "Running",
         expectedDurationMinutes: 80,
+        // A library entry carries no Plan lock; the array's order is the
+        // position.
+        activities: [
+          {
+            position: 0,
+            name: "Strides",
+            sport: "Running",
+            measurementMode: "unmeasured",
+          },
+        ],
       },
     });
+  });
+
+  it("refuses an edit whose form carries no activities field", async () => {
+    const applyChange = vi.fn();
+    createLibraryMock.mockResolvedValue({ applyChange });
+
+    await expect(
+      changeLibraryAction(
+        INITIAL_LIBRARY_ACTION_STATE,
+        form({
+          operation: "edit",
+          savedSessionId: SAVED_ID,
+          expectedRevision: "3",
+          name: "Tuesday tempo",
+          title: "Tempo run",
+          sport: "Running",
+        }),
+      ),
+    ).resolves.toMatchObject({ status: "validation" });
+    expect(applyChange).not.toHaveBeenCalled();
   });
 
   it("returns the refused draft and says the record changed", async () => {
@@ -272,6 +305,7 @@ describe("saved session actions", () => {
           name: "Renamed",
           title: "Tempo run",
           sport: "Running",
+          activities: "[]",
         }),
       ),
     ).resolves.toMatchObject({
