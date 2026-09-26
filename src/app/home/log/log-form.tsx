@@ -90,6 +90,12 @@ type Props = {
   /** The day on Today the owner returns to once the write lands. */
   returnDate: string;
   /**
+   * Where Cancel and the receipt lead instead of the day on Today, when the
+   * editor was opened from somewhere else. Built by the page from a fixed
+   * list, never from a URL the request carried.
+   */
+  returnTo?: { href: string; label: string };
+  /**
    * Unplanned training a replaced log may point at: this owner's, from a
    * week before the planned day to today, most recent first.
    */
@@ -106,6 +112,7 @@ export function LogForm({
   defaultDate,
   today,
   returnDate,
+  returnTo,
   unplannedOptions = [],
 }: Props) {
   const [state, action, pending] = useActionState<LogActionState, FormData>(
@@ -216,9 +223,12 @@ export function LogForm({
         </p>
         <Link
           className={styles.primary}
-          href={`/home/today?date=${state.returnDate ?? returnDate}`}
+          href={
+            returnTo?.href ??
+            `/home/today?date=${state.returnDate ?? returnDate}`
+          }
         >
-          Back to that day
+          {returnTo?.label ?? "Back to that day"}
         </Link>
       </section>
     );
@@ -513,7 +523,7 @@ export function LogForm({
         </button>
         <Link
           className={styles.secondary}
-          href={`/home/today?date=${returnDate}`}
+          href={returnTo?.href ?? `/home/today?date=${returnDate}`}
         >
           Cancel
         </Link>

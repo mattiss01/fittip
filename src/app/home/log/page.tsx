@@ -33,6 +33,8 @@ type Props = {
     completion?: string | string[];
     plannedSession?: string | string[];
     date?: string | string[];
+    /** Where the editor was opened from, from a fixed list: never a URL. */
+    from?: string | string[];
   }>;
 };
 
@@ -101,9 +103,20 @@ export default async function LogPage({ searchParams }: Props) {
       ) : (
         await renderForm(timezoneName, completionId, plannedSessionId, params)
       )}
-      <Link className={styles.backLink} href="/home/today">
-        Back to Today
-      </Link>
+      {/* Opened from a Progress record, the page's own way back leads there
+          too, so it and the form's Cancel do not disagree. */}
+      {params.from === "progress" && completionId !== null ? (
+        <Link
+          className={styles.backLink}
+          href={`/home/progress/${completionId}`}
+        >
+          Back to the record
+        </Link>
+      ) : (
+        <Link className={styles.backLink} href="/home/today">
+          Back to Today
+        </Link>
+      )}
     </main>
   );
 }
@@ -112,7 +125,7 @@ async function renderForm(
   timezoneName: string,
   completionId: string | null,
   plannedSessionId: string | null,
-  params: { date?: string | string[] },
+  params: { date?: string | string[]; from?: string | string[] },
 ) {
   const today = isoDateInTimezone(new Date(), timezoneName);
   const date = readDate(params.date) ?? today;
@@ -176,6 +189,14 @@ async function renderForm(
             defaultDate={completion.actualLocalDate}
             today={today}
             returnDate={completion.actualLocalDate}
+            returnTo={
+              params.from === "progress"
+                ? {
+                    href: `/home/progress/${completion.id}`,
+                    label: "Back to the record",
+                  }
+                : undefined
+            }
           />
         </>
       );

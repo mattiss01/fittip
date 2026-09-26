@@ -105,6 +105,39 @@ describe("Log", () => {
     expect(hiddenValue("operation")).toBe("create");
   });
 
+  it.each([
+    ["progress", `/home/progress/${COMPLETION_ID}`],
+    // Anything else is ignored: the page never echoes a destination.
+    ["https://example.com", null],
+    [undefined, null],
+  ])(
+    "returns an edit opened from %s to where it came from",
+    async (from, expected) => {
+      getCompletion.mockResolvedValue(completion());
+
+      render(
+        await LogPage({
+          searchParams: Promise.resolve({ completion: COMPLETION_ID, from }),
+        }),
+      );
+
+      const cancel = screen.getByRole("link", { name: "Cancel" });
+      // The page's own way back agrees with the form's Cancel.
+      expect(
+        screen.queryByRole("link", {
+          name: expected === null ? "Back to the record" : "Back to Today",
+        }),
+      ).toBeNull();
+      if (expected === null) {
+        expect(
+          cancel.getAttribute("href")?.startsWith("/home/today?date="),
+        ).toBe(true);
+      } else {
+        expect(cancel.getAttribute("href")).toBe(expected);
+      }
+    },
+  );
+
   it("asks whether training on another day replaced the planned session or was extra", async () => {
     render(
       await LogPage({
