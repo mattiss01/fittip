@@ -343,6 +343,47 @@ describe("PlanManager", () => {
     ).toHaveAttribute("href", "/home/plan");
   });
 
+  it("closes the create panel on a save that created a session, not on a refusal", () => {
+    const { rerender } = renderManager();
+    const panel = screen
+      .getByText("Create session", { selector: "summary" })
+      .closest("details")!;
+    fireEvent.click(
+      screen.getByText("Create session", { selector: "summary" }),
+    );
+    // jsdom opens the element but, unlike a browser, never fires `toggle`.
+    fireEvent(panel, new Event("toggle"));
+    expect(panel.open).toBe(true);
+
+    const rerenderWith = (state: PlanActionState) => {
+      useActionStateMock.mockReturnValue([state, action, false]);
+      rerender(
+        <PlanManager
+          today={TODAY}
+          dates={DATES}
+          expectedRevision={4}
+          sessions={[]}
+          recoveryDates={[]}
+        />,
+      );
+    };
+    rerenderWith({
+      status: "validation",
+      message: "Check the session.",
+      submission: 1,
+      operation: "add",
+    });
+    expect(panel.open).toBe(true);
+
+    rerenderWith({
+      status: "saved",
+      message: "Session added.",
+      submission: 2,
+      operation: "add",
+    });
+    expect(panel.open).toBe(false);
+  });
+
   it("opens each recurring edit scope with the activities it would replace", () => {
     renderManager(
       INITIAL_PLAN_ACTION_STATE,
