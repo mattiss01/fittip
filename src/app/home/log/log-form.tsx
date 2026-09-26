@@ -119,6 +119,7 @@ export function LogForm({
   const [actualDate, setActualDate] = useState(
     existing?.actualLocalDate ?? defaultDate,
   );
+  const [dayChoice, setDayChoice] = useState<"instead" | "extra" | null>(null);
   const receiptHeading = useRef<HTMLHeadingElement>(null);
   const saved = state.status === "saved";
   // Training that did not happen has no duration, no effort and no way it
@@ -141,6 +142,9 @@ export function LogForm({
     existing === null &&
     actualDate !== planned.localDate &&
     TRAINED_OUTCOMES.has(outcome);
+  // Extra training has nothing to be measured against, so it can only have
+  // happened: the outcome is not asked, and it is written as unplanned.
+  const extraChosen = askWhichDay && dayChoice === "extra";
   // Everything the chosen outcome would discard from a record that already
   // exists. A field this form stops rendering submits nothing, and the write
   // function assigns every one of these from the payload, so an absent key
@@ -297,6 +301,14 @@ export function LogForm({
             training, with no planned session attached.
           </p>
         </>
+      ) : extraChosen ? (
+        <>
+          <input type="hidden" name="status" value="completed" />
+          <p className={styles.fieldHint} data-log-fixed-outcome>
+            Extra training is recorded as unplanned training you did, with no
+            planned session attached.
+          </p>
+        </>
       ) : (
         // A select, like "How it felt", rather than four full-width rules: the
         // owner asked for it on 25 September 2026. The chosen outcome's hint
@@ -353,7 +365,14 @@ export function LogForm({
         <fieldset className={styles.dayChoice} data-log-day-choice>
           <legend>This session is planned for {planned.dayLabel}</legend>
           <label>
-            <input type="radio" name="dayChoice" value="instead" required />
+            <input
+              type="radio"
+              name="dayChoice"
+              value="instead"
+              required
+              checked={dayChoice === "instead"}
+              onChange={() => setDayChoice("instead")}
+            />
             <span>
               <strong>Instead of {planned.dayLabel}&rsquo;s session</strong>
               <span className={styles.fieldHint}>
@@ -362,7 +381,18 @@ export function LogForm({
             </span>
           </label>
           <label>
-            <input type="radio" name="dayChoice" value="extra" required />
+            <input
+              type="radio"
+              name="dayChoice"
+              value="extra"
+              required
+              checked={dayChoice === "extra"}
+              onChange={() => {
+                setDayChoice("extra");
+                // "Partly completed" means something only against a plan.
+                setOutcome("completed");
+              }}
+            />
             <span>
               <strong>
                 Extra &mdash; I&rsquo;ll still do {planned.dayLabel}

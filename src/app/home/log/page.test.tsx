@@ -132,6 +132,19 @@ describe("Log", () => {
       ["extra", true],
     ]);
 
+    // Extra can only have happened, so the outcome is no longer asked.
+    fireEvent.change(screen.getByLabelText("What happened"), {
+      target: { value: "partially_completed" },
+    });
+    fireEvent.click(screen.getByRole("radio", { name: /Extra/ }));
+    expect(screen.queryByLabelText("What happened")).toBeNull();
+    expect(hiddenValue("status")).toBe("completed");
+    expect(choice()).not.toBeNull();
+
+    // Choosing "instead" gives the question back.
+    fireEvent.click(screen.getByRole("radio", { name: /Instead of/ }));
+    expect(screen.getByLabelText("What happened")).toBeTruthy();
+
     // A skip is about the planned session whatever day it is written on.
     fireEvent.change(screen.getByLabelText("What happened"), {
       target: { value: "skipped" },
