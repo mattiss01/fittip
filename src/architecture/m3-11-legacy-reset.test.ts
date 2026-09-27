@@ -194,11 +194,18 @@ const completionOnlySurface = [
  *
  * M3-15C added no entry: both Progress routes reach only modules that were
  * already on this list.
+ *
+ * A5 added `personal-activity-repository`: the Plan's session editors offer
+ * the owner's activity library, so the Plan page reads it. It is not a legacy
+ * module — `personal_activities` survived M3-11 untouched — and it writes one
+ * owned row of that table and nothing in the plan or the log. Being on this
+ * shared list lets Today and Progress import it too, which none of them does.
  */
 const allowedServerModules = [
   "@/server/completions/completion-log",
   "@/server/completions/plan-window-top-up",
   "@/server/repositories/completion-log-repository",
+  "@/server/repositories/personal-activity-repository",
   "@/server/repositories/profile-repository",
   "@/server/repositories/rolling-plan-repository",
   "@/server/rolling-plan/rolling-plan",
