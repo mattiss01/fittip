@@ -5,8 +5,15 @@ import { SavedLibrary, type SavedSessionView } from "./saved-library";
 import styles from "./saved.module.css";
 
 import { PLAN_WINDOW_DAYS } from "../action-state";
+import { saveActivityToLibraryAction } from "../activities/actions";
+import { readLibraryOptions } from "../activities/library-options";
 import homeStyles from "../../home.module.css";
+import {
+  ActivityLibraryProvider,
+  type LibraryActivityOption,
+} from "@/components/training/activity-editor";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
+import { PersonalActivityAuthenticationError } from "@/server/repositories/personal-activity-repository";
 import {
   createProfileRepository,
   ProfileAuthenticationError,
@@ -26,14 +33,17 @@ export const dynamic = "force-dynamic";
 export default async function SavedSessionsPage() {
   let timezoneName: string | null;
   let saved: SavedSession[];
+  let activities: LibraryActivityOption[];
   try {
-    // Both reads are independent, so neither waits on the other.
-    const [profile, library] = await Promise.all([
+    // The reads are independent, so none waits on another.
+    const [profile, library, options] = await Promise.all([
       (await createProfileRepository()).getCurrentProfile(),
       (await createSavedSessionLibrary()).list(),
+      readLibraryOptions(),
     ]);
     timezoneName = profile?.timezoneName ?? null;
     saved = library;
+    activities = options;
   } catch (error) {
     redirectOnAuthError(error);
     throw error;
@@ -55,11 +65,16 @@ export default async function SavedSessionsPage() {
       <Link className={styles.backLink} href="/home/plan">
         Back to the plan
       </Link>
-      {timezoneName === null ? (
-        <ReuseUnavailable sessions={saved} />
-      ) : (
-        <ReadyLibrary timezoneName={timezoneName} sessions={saved} />
-      )}
+      <ActivityLibraryProvider
+        activities={activities}
+        saveToLibrary={saveActivityToLibraryAction}
+      >
+        {timezoneName === null ? (
+          <ReuseUnavailable sessions={saved} />
+        ) : (
+          <ReadyLibrary timezoneName={timezoneName} sessions={saved} />
+        )}
+      </ActivityLibraryProvider>
     </main>
   );
 }
@@ -131,6 +146,7 @@ function toSavedSessionView(session: SavedSession): SavedSessionView {
     expectedDurationMinutes: session.expectedDurationMinutes ?? null,
     note: session.note ?? null,
     activities: session.activities.map((activity) => ({
+      personalActivityId: activity.personalActivityId ?? null,
       name: activity.name,
       sport: activity.sport,
       instructions: activity.instructions ?? null,
@@ -144,14 +160,16 @@ function redirectOnAuthError(error: unknown): void {
   const accessError =
     error instanceof ProfileAuthenticationError ||
     error instanceof RollingPlanAuthenticationError ||
-    error instanceof SavedSessionAuthenticationError
+    error instanceof SavedSessionAuthenticationError ||
+    error instanceof PersonalActivityAuthenticationError
       ? error.accessError
       : undefined;
   if (accessError?.reason === "not-owner") redirect("/auth/denied");
   if (
     error instanceof ProfileAuthenticationError ||
     error instanceof RollingPlanAuthenticationError ||
-    error instanceof SavedSessionAuthenticationError
+    error instanceof SavedSessionAuthenticationError ||
+    error instanceof PersonalActivityAuthenticationError
   ) {
     redirect("/");
   }

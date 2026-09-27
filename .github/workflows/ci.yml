@@ -92,6 +92,9 @@ jobs:
       - name: M3-10 real Postgres adapter contract
         run: npm run test:m3-10-adapter-contract
 
+      - name: A5 personal activities on the real adapter
+        run: npm run test:a5-adapter-contract
+
       - name: M2-01 concurrent goal mutations
         run: npm run test:m2-01-concurrency
 

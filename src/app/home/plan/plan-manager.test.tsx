@@ -400,6 +400,7 @@ describe("PlanManager", () => {
           hasDiverged: true,
           activities: [
             {
+              personalActivityId: null,
               name: "Strides",
               sport: "Running",
               instructions: null,

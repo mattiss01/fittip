@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { PLAN_WINDOW_DAYS } from "./action-state";
+import { saveActivityToLibraryAction } from "./activities/actions";
+import { readLibraryOptions } from "./activities/library-options";
 import {
   PlanManager,
   type PlanSessionLog,
@@ -13,11 +15,16 @@ import { findUncoveredSeriesDates } from "./series-recurrence";
 import { TimezoneConfirmation } from "./timezone-confirmation";
 
 import homeStyles from "../home.module.css";
+import {
+  ActivityLibraryProvider,
+  type LibraryActivityOption,
+} from "@/components/training/activity-editor";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import {
   CompletionAuthenticationError,
   createCompletionLog,
 } from "@/server/repositories/completion-log-repository";
+import { PersonalActivityAuthenticationError } from "@/server/repositories/personal-activity-repository";
 import {
   createProfileRepository,
   ProfileAuthenticationError,
@@ -61,6 +68,9 @@ export default async function PlanPage() {
         <Link className={styles.libraryLink} href="/home/plan/saved">
           Saved sessions
         </Link>
+        <Link className={styles.libraryLink} href="/home/plan/activities">
+          Activities
+        </Link>
         <Link className={styles.libraryLink} href="/home/plan/roadmap">
           Roadmap
         </Link>
@@ -85,15 +95,17 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
 
   let slice;
   let series;
+  let library: LibraryActivityOption[];
   const logged = new Map<string, PlanSessionLog>();
   try {
     const [plan, log] = await Promise.all([
       createRollingPlan(),
       createCompletionLog(),
     ]);
-    [slice, series] = await Promise.all([
+    [slice, series, library] = await Promise.all([
       plan.getPlanSlice(today, dates[dates.length - 1]),
       plan.listSeries(),
+      readLibraryOptions(),
     ]);
     // A logged session reads as logged where it was planned, whatever day
     // the log carries: a Thursday run done on Tuesday is not still ahead on
@@ -121,25 +133,30 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
       <p className={homeStyles.stamp}>
         {timezoneName} · Revision {slice.revision}
       </p>
-      <PlanManager
-        today={today}
-        dates={dates}
-        expectedRevision={slice.revision}
-        sessions={slice.sessions.map((session) => {
-          const log = logged.get(session.id);
-          return log === undefined
-            ? toSessionView(session)
-            : { ...toSessionView(session), log };
-        })}
-        recoveryDates={slice.recoveryDates}
-        series={series.map(toSeriesView)}
-        uncoveredSeriesDates={findUncoveredSeriesDates(
-          series,
-          slice.sessions,
-          today,
-          dates[dates.length - 1],
-        )}
-      />
+      <ActivityLibraryProvider
+        activities={library}
+        saveToLibrary={saveActivityToLibraryAction}
+      >
+        <PlanManager
+          today={today}
+          dates={dates}
+          expectedRevision={slice.revision}
+          sessions={slice.sessions.map((session) => {
+            const log = logged.get(session.id);
+            return log === undefined
+              ? toSessionView(session)
+              : { ...toSessionView(session), log };
+          })}
+          recoveryDates={slice.recoveryDates}
+          series={series.map(toSeriesView)}
+          uncoveredSeriesDates={findUncoveredSeriesDates(
+            series,
+            slice.sessions,
+            today,
+            dates[dates.length - 1],
+          )}
+        />
+      </ActivityLibraryProvider>
     </>
   );
 }
@@ -158,6 +175,7 @@ function toSessionView(session: RollingPlanSession): PlanSessionView {
     isLocked: session.isLocked,
     status: session.status,
     activities: session.activities.map((activity) => ({
+      personalActivityId: activity.personalActivityId ?? null,
       name: activity.name,
       sport: activity.sport,
       instructions: activity.instructions ?? null,
@@ -190,14 +208,16 @@ function redirectOnAuthError(error: unknown): void {
   const accessError =
     error instanceof ProfileAuthenticationError ||
     error instanceof RollingPlanAuthenticationError ||
-    error instanceof CompletionAuthenticationError
+    error instanceof CompletionAuthenticationError ||
+    error instanceof PersonalActivityAuthenticationError
       ? error.accessError
       : undefined;
   if (accessError?.reason === "not-owner") redirect("/auth/denied");
   if (
     error instanceof ProfileAuthenticationError ||
     error instanceof RollingPlanAuthenticationError ||
-    error instanceof CompletionAuthenticationError
+    error instanceof CompletionAuthenticationError ||
+    error instanceof PersonalActivityAuthenticationError
   ) {
     redirect("/");
   }

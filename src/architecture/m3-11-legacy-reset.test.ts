@@ -184,6 +184,14 @@ const completionOnlySurface = [
 ] as const;
 
 /**
+ * The routes on the reopened surface that may read or write the activity
+ * library (A5). Only the Plan's editors offer it; Today, the log and Progress
+ * do not, and the assertion below keeps them from reaching it through the
+ * shared list or through the route modules that wrap it.
+ */
+const activityLibrarySurface = ["src/app/home/plan/page.tsx"] as const;
+
+/**
  * Every `@/server/**` module the reopened surface may reach. This is an
  * allowlist rather than a pattern on purpose: the substring check below only
  * ever proved that *one* seam import was present, so any of these modules
@@ -194,11 +202,18 @@ const completionOnlySurface = [
  *
  * M3-15C added no entry: both Progress routes reach only modules that were
  * already on this list.
+ *
+ * A5 added `personal-activity-repository`: the Plan's session editors offer
+ * the owner's activity library, so the Plan page reads it. It is not a legacy
+ * module — `personal_activities` survived M3-11 untouched — and it writes one
+ * owned row of that table and nothing in the plan or the log. This list is
+ * shared, so `activityLibrarySurface` below keeps the reach to the Plan.
  */
 const allowedServerModules = [
   "@/server/completions/completion-log",
   "@/server/completions/plan-window-top-up",
   "@/server/repositories/completion-log-repository",
+  "@/server/repositories/personal-activity-repository",
   "@/server/repositories/profile-repository",
   "@/server/repositories/rolling-plan-repository",
   "@/server/rolling-plan/rolling-plan",
@@ -525,6 +540,17 @@ describe("M3-11 legacy runtime closure", () => {
           `${path} imports ${specifier}`,
         ).toContain(specifier);
       }
+    }
+  });
+
+  it("keeps the activity library to the Plan", () => {
+    for (const path of rollingPlanSurface) {
+      if ((activityLibrarySurface as readonly string[]).includes(path))
+        continue;
+      const source = readFileSync(join(root, path), "utf8");
+      expect(source, path).not.toMatch(
+        /personal-activity-repository|personal-activities|plan\/activities\//,
+      );
     }
   });
 

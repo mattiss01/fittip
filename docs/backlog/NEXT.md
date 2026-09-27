@@ -21,19 +21,18 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [ ] **A5 — Personal activity library.** Create, list, edit and archive reusable
-      definitions, and a picker in A2 that sets `personal_activity_id` — the only thing that
-      ever will. Carries F-002's rule that an edit changes future reuse and never a
-      historical snapshot. Lives under `/home/plan`, beside the session library (owner, 26 Sep
-      2026). Sport-or-category stays deferred, so it keeps today's `sport`.
-      The editors' `ActivityValue` and the Plan and library page views carry no
-      `personalActivityId`, so once A5 sets it, any edit would write it back as null — carry
-      it through all three editors in the same change.
+- [ ] **Editing a planned session in proposal review erases its activities.** Found by A5's
+      review on 27 Sep 2026. `proposal-review.tsx` renders `SessionFields` with no
+      `activities`, and it submits to `changePlanAction`, whose edit replaces the whole list —
+      so the empty editor sends `[]`. Present since A2 put the editor in the shared form.
+      The proposal page's session view carries no activities, so they have to be threaded
+      through it, `personalActivityId` included. Fix next, before anything else here.
 - [ ] **Log from the library.** Asked by the owner on 26 Sep 2026: an unplanned log starts
       from a saved session — its name, sport and activities prefilled, then changed — and an
       activity row starts from a library activity (A5), for training that is routinely the
-      same but never planned. Copies by value, as the Plan's reuse does. The saved-session
-      half can start now that A6 made library activities editable.
+      same but never planned. Copies by value, as the Plan's reuse does. Both halves can
+      start now: A5's picker lives in the shared `ActivityEditor`, which the log editor does
+      not use yet.
 - [ ] **A7 — The coach fills in a session's activities.** Careful lane: a new AI operation
       with its own schema, spend, and context cost — the M3-03D detail operation that
       `contracts.ts` defers to. Blocked on the plan context having no headroom left, which
@@ -44,6 +43,9 @@ Ordered by dependency. A lane is named where it is not the build lane.
       data; it may be that names remain enough.
 - [ ] **A9 — Progress over measurements.** Load, distance and pace across completions, once
       A4 has been used for long enough to have any. The comfort layer; last on purpose.
+      Open for the owner first: a row picked from the library and then changed keeps its
+      `personal_activity_id` until it is saved as a new definition, so grouping history by
+      definition would count "picked Latzug, renamed Stabwurf" as Latzug.
 
 
 ## Fix in passing
@@ -141,6 +143,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 27 Sep 2026 | `16118fb` | [36311864111](https://github.com/mattiss01/fittip/actions/runs/36311864111) | Plan → Activities is the personal activity library: create, edit, and "Remove from library" (archives; no restore — saving from a session makes a new one). Every session editor gets "Add from library" and "Save activity to library", and all of them now submit `personalActivityId` back. Names are unique among active definitions (owner's call): migration `20260927094109` applied to the founder project — 34 migrations, advisors unchanged at 20 definer + 1 auth. The M3-11 allowlist now admits the library module, kept to the Plan by a new assertion (A5) |
 | 26 Sep 2026 | `5bbc61b` | [36239355367](https://github.com/mattiss01/fittip/actions/runs/36239355367) | A Progress record has Edit log, which opens the one log editor and returns to that record rather than to Today; `from=progress` is matched against a fixed value and the destination is built from the record's id. No migration |
 | 26 Sep 2026 | `49a639e` | [36238154474](https://github.com/mattiss01/fittip/actions/runs/36238154474) | Choosing Extra on a planned log removes "What happened": extra training is written as unplanned and can only have happened. Picking "Instead of" brings it back. No migration |
 | 26 Sep 2026 | `6a0a81a` | [36237171196](https://github.com/mattiss01/fittip/actions/runs/36237171196) | A planned session logged as trained on another day asks "instead of it, or extra?" (owner, 26 Sep): instead links it, and its planned day then reads "Completed on Tue 29 Sep" on the Plan and as logged on Today; extra saves unplanned training and leaves it open (a partial becomes plain unplanned, owner's call). A skip or replacement written ahead, or a log on its own day, keeps its card. No migration; the Plan reads its window's logs in one query. m3-19's accepted refusal step now logs a skip written ahead, since a completed one no longer offers Delete |
