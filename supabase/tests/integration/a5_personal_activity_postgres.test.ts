@@ -32,13 +32,16 @@ if (serviceRoleKey && !isLocalUrl) {
 const enabled = Boolean(url && publishableKey && serviceRoleKey && isLocalUrl);
 
 describe.runIf(enabled)("personal activities on the real adapter", () => {
-  const admin = createClient<Database>(url!, serviceRoleKey!, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  // Built in `beforeAll`, not here: Vitest still collects this body when the
+  // suite is skipped, and a client with no key throws at construction.
+  let admin: ReturnType<typeof createClient<Database>>;
   let userId: string | undefined;
   let library: PersonalActivityLibrary;
 
   beforeAll(async () => {
+    admin = createClient<Database>(url!, serviceRoleKey!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
     const email = `a5-contract-${crypto.randomUUID()}@example.test`;
     const password = `Local-${crypto.randomUUID()}-9`;
     const { data: created, error } = await admin.auth.admin.createUser({
