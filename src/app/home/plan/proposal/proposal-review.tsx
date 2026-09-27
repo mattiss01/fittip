@@ -417,6 +417,7 @@ function PlannedSession({
                     intent: session.intent ?? "",
                     note: session.note ?? "",
                   }}
+                  activities={session.activities}
                 />
                 <button
                   className={styles.primary}

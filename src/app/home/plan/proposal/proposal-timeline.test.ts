@@ -179,6 +179,7 @@ function planned(
     status: "active",
     intent: null,
     note: null,
+    activities: [],
     seriesId: null,
     ...overrides,
   };

@@ -65,6 +65,7 @@ function planned(
     status: "active",
     intent: "Conversational throughout.",
     note: "Left knee was tight last week.",
+    activities: [],
     seriesId: null,
     ...overrides,
   };
@@ -162,6 +163,49 @@ describe("editing a planned session inside review", () => {
       form.querySelector<HTMLInputElement>('input[name="expectedRevision"]')
         ?.value,
     ).toBe("12");
+  });
+
+  it("submits the session's own activities, so saving an edit keeps them", () => {
+    // The plan's edit replaces the stored list with the one submitted. Before
+    // this, the editor here opened empty and every save sent `[]`.
+    const { container } = renderReview({
+      days: [
+        day({
+          planned: [
+            planned({
+              activities: [
+                {
+                  personalActivityId: "9c000000-0000-4000-8000-0000000000a1",
+                  name: "Strides",
+                  sport: "Running",
+                  instructions: null,
+                  measurementMode: "duration_intensity",
+                  target: { duration_minutes: 20 },
+                },
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
+    const form = container.querySelector(
+      'form:has(input[value="edit"])',
+    ) as HTMLFormElement;
+    const submitted = JSON.parse(
+      form.querySelector<HTMLInputElement>('input[name="activities"]')?.value ??
+        "null",
+    ) as unknown;
+
+    expect(submitted).toEqual([
+      {
+        personalActivityId: "9c000000-0000-4000-8000-0000000000a1",
+        name: "Strides",
+        sport: "Running",
+        instructions: null,
+        measurementMode: "duration_intensity",
+        target: { duration_minutes: 20 },
+      },
+    ]);
   });
 
   it("offers a lock toggle that sends the opposite of the current state", () => {
