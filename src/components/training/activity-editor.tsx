@@ -1,11 +1,20 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import styles from "./activity-editor.module.css";
 import { MeasurementFields, MeasurementModeField } from "./measurement-fields";
 import { ReorderHandle } from "./reorder-handle";
 
+import { activityNameKey } from "@/lib/training/activity-name";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
 import {
   type TrainingMeasurement,
@@ -21,6 +30,14 @@ import {
 
 /** One activity as the surrounding surface already holds it. */
 export type ActivityValue = {
+  /**
+   * The library definition this row was copied from, or null. Every editor
+   * submits it back unchanged, because an edit replaces the whole list and a
+   * row that dropped it would lose the link for good (A5). Changing the row's
+   * fields keeps it: the link says where the row came from, not that the two
+   * still agree.
+   */
+  personalActivityId: string | null;
   name: string;
   sport: string;
   instructions: string | null;
@@ -35,6 +52,59 @@ type Row = ActivityValue & {
 };
 
 let nextKey = 0;
+
+/** A library definition, as the picker offers it. */
+export type LibraryActivityOption = Omit<
+  ActivityValue,
+  "personalActivityId"
+> & {
+  id: string;
+};
+
+/** What saving a row as a new library definition answers. */
+export type SaveToLibraryResult =
+  | { status: "saved"; message: string; personalActivityId: string }
+  | { status: "refused"; message: string };
+
+/**
+ * A server action, handed down by the page. The shared editor does not import
+ * one itself, so it depends on no route.
+ */
+export type SaveToLibrary = (
+  activity: Omit<LibraryActivityOption, "id">,
+) => Promise<SaveToLibraryResult>;
+
+type ActivityLibrary = {
+  activities: readonly LibraryActivityOption[];
+  saveToLibrary?: SaveToLibrary;
+};
+
+const ActivityLibraryContext = createContext<ActivityLibrary>({
+  activities: [],
+});
+
+/**
+ * The owner's personal activities, for every `ActivityEditor` below it. A
+ * context rather than a prop, because the Plan's editors sit several
+ * components deep in create, edit and recurring forms that have no other use
+ * for the list.
+ */
+export function ActivityLibraryProvider({
+  activities,
+  saveToLibrary,
+  children,
+}: {
+  activities: readonly LibraryActivityOption[];
+  /** Absent where a surface offers no way to save a row into the library. */
+  saveToLibrary?: SaveToLibrary;
+  children: React.ReactNode;
+}) {
+  return (
+    <ActivityLibraryContext value={{ activities, saveToLibrary }}>
+      {children}
+    </ActivityLibraryContext>
+  );
+}
 
 /**
  * The ordered activities of one session.
@@ -79,6 +149,20 @@ export function ActivityEditor({
     })),
   );
   const [dragging, setDragging] = useState<string | null>(null);
+  const { activities: library, saveToLibrary } = useContext(
+    ActivityLibraryContext,
+  );
+  // Definitions this editor saved, until the page's refresh brings them in
+  // with the rest. Without them a row saved a moment ago would read as linked
+  // to nothing and offer the save again.
+  const [savedHere, setSavedHere] = useState<LibraryActivityOption[]>([]);
+  const known = new Map(
+    [...library, ...savedHere].map((option) => [option.id, option]),
+  );
+  const takenNames = new Set(
+    [...known.values()].map((option) => activityNameKey(option.name)),
+  );
+  const [picking, setPicking] = useState(false);
 
   const built = useMemo(
     () =>
@@ -97,6 +181,7 @@ export function ActivityEditor({
       // No `position` and no `isLocked`. The array's order is the position,
       // and `parseSubmittedActivities` refuses a payload that names either —
       // a field no surface sets is one no submission should carry.
+      personalActivityId: row.personalActivityId,
       name: row.name.trim(),
       sport: row.sport.trim(),
       instructions:
@@ -124,6 +209,48 @@ export function ActivityEditor({
       next.splice(to, 0, held);
       return next;
     });
+  }
+
+  /**
+   * Offered to any row the library does not already hold as it is: one typed
+   * by hand, one whose definition was removed, or one picked and then changed
+   * — a similar exercise is a new definition (owner, 27 Sep 2026). A row still
+   * equal to its definition would only be a twin, so it is offered nothing.
+   * One whose name is already taken is told to rename rather than offered a
+   * save the database would refuse; names are unique in the library.
+   */
+  function saveOffer(
+    row: Row,
+    measurement: TrainingMeasurement | null | undefined,
+  ): Pick<ActivityRowProps, "onSave" | "saveBlocked"> {
+    if (saveToLibrary === undefined || measurement === undefined) return {};
+    const definition = toDefinition(row, measurement);
+    if (
+      matchesDefinition(
+        row.personalActivityId === null
+          ? undefined
+          : known.get(row.personalActivityId),
+        definition,
+      )
+    ) {
+      return {};
+    }
+    if (takenNames.has(activityNameKey(definition.name))) {
+      return { saveBlocked: ACTIVITY_COPY.nameTaken(definition.name) };
+    }
+    return {
+      onSave: async () => {
+        const result = await saveToLibrary(definition);
+        if (result.status === "saved") {
+          setSavedHere((current) => [
+            ...current,
+            { id: result.personalActivityId, ...definition },
+          ]);
+          update(row.key, { personalActivityId: result.personalActivityId });
+        }
+        return result;
+      },
+    };
   }
 
   const atLimit = rows.length >= ACTIVITY_COPY.softLimit;
@@ -156,6 +283,7 @@ export function ActivityEditor({
               preview={build.ok ? describeMeasurement(build.measurement) : null}
               dragging={dragging === row.key}
               onDragStateChange={setDragging}
+              {...saveOffer(row, build.ok ? build.measurement : undefined)}
               onChange={(change) => update(row.key, change)}
               onMove={(delta) => move(row.key, delta)}
               onMoveTo={(to) =>
@@ -181,31 +309,108 @@ export function ActivityEditor({
         </ol>
       )}
 
-      <button
-        className={styles.add}
-        type="button"
-        disabled={atLimit}
-        onClick={() =>
-          setRows((current) => [
-            ...current,
-            {
-              key: `added-${nextKey++}`,
-              name: "",
-              sport: (sessionSport ?? "").trim(),
-              instructions: null,
-              measurementMode: "unmeasured",
-              target: null,
-              draft: emptyDraft("unmeasured"),
-            },
-          ])
-        }
-      >
-        {ACTIVITY_COPY.add}
-      </button>
+      <div className={styles.addRow}>
+        <button
+          className={styles.add}
+          type="button"
+          disabled={atLimit}
+          onClick={() =>
+            setRows((current) => [
+              ...current,
+              {
+                key: `added-${nextKey++}`,
+                personalActivityId: null,
+                name: "",
+                sport: (sessionSport ?? "").trim(),
+                instructions: null,
+                measurementMode: "unmeasured",
+                target: null,
+                draft: emptyDraft("unmeasured"),
+              },
+            ])
+          }
+        >
+          {ACTIVITY_COPY.add}
+        </button>
+        {library.length === 0 ? null : (
+          <button
+            className={styles.add}
+            type="button"
+            disabled={atLimit}
+            aria-expanded={picking}
+            aria-controls={`${prefix}-library`}
+            onClick={() => setPicking((current) => !current)}
+          >
+            {ACTIVITY_COPY.addFromLibrary}
+          </button>
+        )}
+      </div>
+      {picking && !atLimit ? (
+        <ul
+          className={styles.picker}
+          id={`${prefix}-library`}
+          aria-label={ACTIVITY_COPY.libraryLabel}
+        >
+          {library.map((option) => (
+            <li key={option.id}>
+              <button
+                className={styles.pick}
+                type="button"
+                onClick={() => {
+                  // A copy by value, as the Plan's reuse is: the row holds
+                  // these values from now on, and later edits to the
+                  // definition never reach it.
+                  setRows((current) => [
+                    ...current,
+                    {
+                      key: `picked-${nextKey++}`,
+                      personalActivityId: option.id,
+                      name: option.name,
+                      sport: option.sport,
+                      instructions: option.instructions,
+                      measurementMode: option.measurementMode,
+                      target: option.target,
+                      draft: draftFromMeasurement(
+                        option.measurementMode,
+                        option.target,
+                      ),
+                    },
+                  ]);
+                  setPicking(false);
+                }}
+              >
+                <span className={styles.summaryName}>{option.name}</span>
+                <span className={styles.summaryTarget}>
+                  {describeMeasurement(option.target) ?? option.sport}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {atLimit ? <p className={styles.limit}>{ACTIVITY_COPY.atLimit}</p> : null}
     </section>
   );
 }
+
+type ActivityRowProps = {
+  idPrefix: string;
+  row: Row;
+  index: number;
+  total: number;
+  problem: string | null;
+  preview: string | null;
+  dragging: boolean;
+  onDragStateChange: (key: string | null) => void;
+  /** Present only when this row can be saved into the library. */
+  onSave?: () => Promise<SaveToLibraryResult>;
+  /** Why a row that differs from the library still cannot be saved into it. */
+  saveBlocked?: string;
+  onChange: (change: Partial<Row>) => void;
+  onMove: (delta: number) => void;
+  onMoveTo: (index: number) => void;
+  onRemove: () => void;
+};
 
 function ActivityRow({
   idPrefix,
@@ -216,26 +421,14 @@ function ActivityRow({
   preview,
   dragging,
   onDragStateChange,
+  onSave,
+  saveBlocked,
   onChange,
   onMove,
   onMoveTo,
   onRemove,
-}: {
-  idPrefix: string;
-  row: Row;
-  index: number;
-  total: number;
-  problem: string | null;
-  preview: string | null;
-  dragging: boolean;
-  onDragStateChange: (key: string | null) => void;
-  onChange: (change: Partial<Row>) => void;
-  onMove: (delta: number) => void;
-  onMoveTo: (index: number) => void;
-  onRemove: () => void;
-}) {
+}: ActivityRowProps) {
   const [expanded, setExpanded] = useState(row.name === "");
-  const validityRef = useRef<HTMLInputElement | null>(null);
 
   // A row that cannot be built is open whatever the owner last chose, rather
   // than being forced open by an effect: the browser is about to refuse the
@@ -244,10 +437,14 @@ function ActivityRow({
   // collapsing a broken row simply does not take — which is the honest
   // behaviour, and costs no cascading render to express.
   const open = expanded || problem !== null;
-
-  useEffect(() => {
-    validityRef.current?.setCustomValidity(problem ?? "");
-  }, [problem]);
+  const [saving, setSaving] = useState(false);
+  // Held here rather than derived, because a save links the row, which takes
+  // the button away — and the answer has to outlive the button that asked.
+  const [saveNotice, setSaveNotice] = useState<SaveToLibraryResult | null>(
+    null,
+  );
+  const canSave =
+    onSave !== undefined && row.name.trim() !== "" && row.sport.trim() !== "";
 
   return (
     <li
@@ -282,72 +479,195 @@ function ActivityRow({
       </div>
 
       <div hidden={!open} className={styles.rowBody}>
-        <div className={styles.field}>
-          <label htmlFor={`${idPrefix}-name`}>Name</label>
-          <input
-            id={`${idPrefix}-name`}
-            value={row.name}
-            maxLength={120}
-            required
-            onChange={(event) => onChange({ name: event.target.value })}
-          />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor={`${idPrefix}-sport`}>Sport</label>
-          <input
-            id={`${idPrefix}-sport`}
-            value={row.sport}
-            maxLength={80}
-            required
-            onChange={(event) => onChange({ sport: event.target.value })}
-          />
-          <p className={styles.hint}>{ACTIVITY_COPY.sportHint}</p>
-        </div>
-        <div className={styles.field}>
-          <label htmlFor={`${idPrefix}-instructions`}>Instructions</label>
-          <textarea
-            id={`${idPrefix}-instructions`}
-            value={row.instructions ?? ""}
-            maxLength={2000}
-            rows={2}
-            onChange={(event) => onChange({ instructions: event.target.value })}
-          />
-        </div>
-        <MeasurementModeField
-          id={`${idPrefix}-mode`}
-          mode={row.measurementMode}
-          // The draft is replaced rather than carried across: the modes share
-          // no field, so keeping the old one would leave values nothing in the
-          // new mode reads.
-          onChange={(mode) =>
-            onChange({ measurementMode: mode, draft: emptyDraft(mode) })
-          }
-        />
-
-        <MeasurementFields
+        <ActivityFields
           idPrefix={idPrefix}
-          mode={row.measurementMode}
-          draft={row.draft}
-          validityRef={validityRef}
-          onDraftChange={(field, value) =>
-            onChange({
-              draft: {
-                ...row.draft,
-                fields: { ...row.draft.fields, [field]: value },
-              },
-            })
-          }
-          onGroupsChange={(groups) =>
-            onChange({ draft: { ...row.draft, groups } })
-          }
+          value={row}
+          problem={problem}
+          onChange={onChange}
         />
-
-        {problem === null ? null : (
-          <p className={styles.problem} role="alert">
-            {problem}
+        {canSave ? (
+          <button
+            className={styles.add}
+            type="button"
+            disabled={saving}
+            onClick={async () => {
+              setSaving(true);
+              try {
+                setSaveNotice(await onSave());
+              } catch {
+                setSaveNotice({
+                  status: "refused",
+                  message: ACTIVITY_COPY.saveToLibraryFailed,
+                });
+              } finally {
+                setSaving(false);
+              }
+            }}
+          >
+            {saving
+              ? ACTIVITY_COPY.savingToLibrary
+              : ACTIVITY_COPY.saveToLibrary}
+          </button>
+        ) : null}
+        {saveBlocked === undefined ? null : (
+          <p className={styles.hint}>{saveBlocked}</p>
+        )}
+        {saveNotice === null ? null : (
+          <p className={styles.hint} role="status">
+            {saveNotice.message}
           </p>
         )}
       </div>
     </li>
+  );
+}
+
+/** A row's values as a library definition would hold them. */
+function toDefinition(
+  row: Row,
+  measurement: TrainingMeasurement | null,
+): Omit<LibraryActivityOption, "id"> {
+  return {
+    name: row.name.trim(),
+    sport: row.sport.trim(),
+    instructions:
+      row.instructions === null || row.instructions.trim() === ""
+        ? null
+        : row.instructions.trim(),
+    measurementMode: row.measurementMode,
+    target: measurement,
+  };
+}
+
+/** Whether saving `value` would only repeat `definition`. */
+function matchesDefinition(
+  definition: LibraryActivityOption | undefined,
+  value: Omit<LibraryActivityOption, "id">,
+): boolean {
+  if (definition === undefined) return false;
+  return (
+    definition.name === value.name &&
+    definition.sport === value.sport &&
+    (definition.instructions ?? null) === value.instructions &&
+    definition.measurementMode === value.measurementMode &&
+    canonical(definition.target) === canonical(value.target)
+  );
+}
+
+/** JSON with sorted keys, so two equal measurements compare equal. */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, inner: unknown) =>
+    inner !== null && typeof inner === "object" && !Array.isArray(inner)
+      ? Object.fromEntries(
+          Object.entries(inner).toSorted(([left], [right]) =>
+            left.localeCompare(right),
+          ),
+        )
+      : inner,
+  );
+}
+
+/** The fields one activity is edited through, wherever it is held. */
+export type ActivityFieldsValue = {
+  name: string;
+  sport: string;
+  instructions: string | null;
+  measurementMode: TrainingMeasurementMode;
+  draft: MeasurementDraft;
+};
+
+/**
+ * One activity's inputs: a session's row here, and a library definition in
+ * `ActivityDefinitionEditor`, so the two can never offer different fields.
+ */
+export function ActivityFields({
+  idPrefix,
+  value,
+  problem,
+  sportHint = ACTIVITY_COPY.sportHint,
+  onChange,
+}: {
+  idPrefix: string;
+  value: ActivityFieldsValue;
+  /** A session's row takes its sport from the session; a definition does not. */
+  sportHint?: string | null;
+  /** Why the measurement cannot be built, or null when it can. */
+  problem: string | null;
+  onChange: (change: Partial<ActivityFieldsValue>) => void;
+}) {
+  const validityRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    validityRef.current?.setCustomValidity(problem ?? "");
+  }, [problem]);
+
+  return (
+    <>
+      <div className={styles.field}>
+        <label htmlFor={`${idPrefix}-name`}>Name</label>
+        <input
+          id={`${idPrefix}-name`}
+          value={value.name}
+          maxLength={120}
+          required
+          onChange={(event) => onChange({ name: event.target.value })}
+        />
+      </div>
+      <div className={styles.field}>
+        <label htmlFor={`${idPrefix}-sport`}>Sport</label>
+        <input
+          id={`${idPrefix}-sport`}
+          value={value.sport}
+          maxLength={80}
+          required
+          onChange={(event) => onChange({ sport: event.target.value })}
+        />
+        {sportHint === null ? null : <p className={styles.hint}>{sportHint}</p>}
+      </div>
+      <div className={styles.field}>
+        <label htmlFor={`${idPrefix}-instructions`}>Instructions</label>
+        <textarea
+          id={`${idPrefix}-instructions`}
+          value={value.instructions ?? ""}
+          maxLength={2000}
+          rows={2}
+          onChange={(event) => onChange({ instructions: event.target.value })}
+        />
+      </div>
+      <MeasurementModeField
+        id={`${idPrefix}-mode`}
+        mode={value.measurementMode}
+        // The draft is replaced rather than carried across: the modes share
+        // no field, so keeping the old one would leave values nothing in the
+        // new mode reads.
+        onChange={(mode) =>
+          onChange({ measurementMode: mode, draft: emptyDraft(mode) })
+        }
+      />
+
+      <MeasurementFields
+        idPrefix={idPrefix}
+        mode={value.measurementMode}
+        draft={value.draft}
+        validityRef={validityRef}
+        onDraftChange={(field, fieldValue) =>
+          onChange({
+            draft: {
+              ...value.draft,
+              fields: { ...value.draft.fields, [field]: fieldValue },
+            },
+          })
+        }
+        onGroupsChange={(groups) =>
+          onChange({ draft: { ...value.draft, groups } })
+        }
+      />
+
+      {problem === null ? null : (
+        <p className={styles.problem} role="alert">
+          {problem}
+        </p>
+      )}
+    </>
   );
 }

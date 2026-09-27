@@ -86,6 +86,13 @@ export const ACTIVITY_COPY = {
   atLimit: "Ten activities is as many as this form builds.",
   empty: "No activities yet. The session is just a heading until you add one.",
   add: "Add activity",
+  addFromLibrary: "Add from library",
+  libraryLabel: "Your activities",
+  saveToLibrary: "Save activity to library",
+  savingToLibrary: "Saving…",
+  saveToLibraryFailed: "It could not be saved. Try again.",
+  nameTaken: (name: string) =>
+    `${name} is already in your library. Rename this one to save it as a new activity.`,
   remove: "Remove",
   /** Read by a screen reader in place of the drag handle's picture. */
   reorderHint: "Drag to reorder, or use the arrow keys.",

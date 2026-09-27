@@ -71,6 +71,7 @@ describe("the saved session library surface", () => {
         intent: "Threshold work",
         activities: [
           {
+            personalActivityId: null,
             name: "Tempo blocks",
             sport: "Running",
             instructions: null,

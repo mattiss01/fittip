@@ -139,6 +139,13 @@
   cursor: pointer;
 }
 
+/* A library definition: one activity's fields, with no row around them. */
+.definition {
+  display: grid;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
 .rowBody {
   display: grid;
   gap: 0.55rem;
@@ -153,7 +160,8 @@
   min-width: 0;
 }
 
-.editor label {
+.editor label,
+.definition label {
   display: block;
   color: var(--ledger-muted);
   font:
@@ -165,7 +173,10 @@
 
 .editor input,
 .editor select,
-.editor textarea {
+.editor textarea,
+.definition input,
+.definition select,
+.definition textarea {
   width: 100%;
   min-width: 0;
   padding: 0.5rem;
@@ -180,10 +191,14 @@
 .editor input:focus-visible,
 .editor select:focus-visible,
 .editor textarea:focus-visible,
+.definition input:focus-visible,
+.definition select:focus-visible,
+.definition textarea:focus-visible,
 .handle:focus-visible,
 .summary:focus-visible,
 .remove:focus-visible,
-.add:focus-visible {
+.add:focus-visible,
+.pick:focus-visible {
   outline: 3px solid var(--ledger-ink);
   outline-offset: 1px;
 }
@@ -232,6 +247,39 @@
     monospace;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  cursor: pointer;
+}
+
+/* Add activity and Add from library, side by side, wrapping if they must. */
+.addRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* The library opens in place, under its button, never over the form. */
+.picker {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  list-style: none;
+}
+
+.picker li + li {
+  border-top: 1px solid var(--ledger-rule);
+}
+
+.pick {
+  width: 100%;
+  min-height: 2.75rem;
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.5rem 0.6rem;
+  border: none;
+  background: none;
+  text-align: left;
   cursor: pointer;
 }
 

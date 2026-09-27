@@ -1,0 +1,61 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+
+import { ActivityLibrary, type PersonalActivityView } from "./activity-library";
+
+import homeStyles from "../../home.module.css";
+import styles from "../saved/saved.module.css";
+import type { PersonalActivity } from "@/server/personal-activities/personal-activities";
+import {
+  createPersonalActivityLibrary,
+  PersonalActivityAuthenticationError,
+} from "@/server/repositories/personal-activity-repository";
+
+export const dynamic = "force-dynamic";
+
+export default async function PersonalActivitiesPage() {
+  let activities: PersonalActivity[];
+  try {
+    activities = await (await createPersonalActivityLibrary()).list();
+  } catch (error) {
+    if (error instanceof PersonalActivityAuthenticationError) {
+      if (error.accessError?.reason === "not-owner") redirect("/auth/denied");
+      redirect("/");
+    }
+    throw error;
+  }
+
+  return (
+    <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
+      <header className={homeStyles.masthead}>
+        <div>
+          <p className={homeStyles.kicker}>FitTip / plan / activities</p>
+          <h1>Your activities.</h1>
+          <p className={homeStyles.intro}>
+            Activities you do often, ready to add to a session. Adding one
+            copies it: changing it here later changes nothing already in your
+            plan, your saved sessions or your logs.
+          </p>
+        </div>
+      </header>
+      <Link className={styles.backLink} href="/home/plan">
+        Back to the plan
+      </Link>
+      <p className={homeStyles.stamp}>{activities.length} in your library</p>
+      <ActivityLibrary activities={activities.map(toView)} />
+    </main>
+  );
+}
+
+/** Only what the surface renders crosses to the client. */
+function toView(activity: PersonalActivity): PersonalActivityView {
+  return {
+    id: activity.id,
+    updatedAt: activity.updatedAt,
+    name: activity.name,
+    sport: activity.sport,
+    instructions: activity.instructions ?? null,
+    measurementMode: activity.measurementMode,
+    target: activity.target ?? null,
+  };
+}
