@@ -482,3 +482,77 @@
   display: grid;
   gap: 0.15rem;
 }
+
+/* Add activity and Add from library, stacked: each is a full-width button. */
+.addRow {
+  display: grid;
+  gap: 0.5rem;
+}
+
+/* The library opens in place, under its button, never over the form. */
+.picker {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  list-style: none;
+}
+
+.picker li + li {
+  border-top: 1px solid var(--ledger-rule);
+}
+
+.pick {
+  width: 100%;
+  min-height: 2.75rem;
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.5rem 0.6rem;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pickName {
+  color: var(--ledger-ink);
+  font:
+    700 0.82rem "Courier New",
+    monospace;
+  overflow-wrap: anywhere;
+}
+
+.pickTarget {
+  color: var(--ledger-muted);
+  font:
+    0.72rem/1.3 "Courier New",
+    monospace;
+  overflow-wrap: anywhere;
+}
+
+/* Save session to library, folded until asked for: most logs are not saved. */
+.saveSession {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--ledger-rule);
+  background: var(--ledger-paper);
+}
+
+.saveSession[open] {
+  padding-bottom: 0.75rem;
+}
+
+.saveSession > summary {
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  color: var(--ledger-ink);
+  font:
+    700 0.72rem "Courier New",
+    monospace;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+}

@@ -4,12 +4,24 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import styles from "./log.module.css";
 
+import type {
+  LibraryActivityOption,
+  SaveToLibrary,
+  UpdateInLibrary,
+} from "@/components/training/activity-editor";
+import {
+  LibraryRowActions,
+  useLibraryRowActions,
+  type LibraryRowActionProps,
+} from "@/components/training/library-row-actions";
 import {
   MeasurementFields,
   MeasurementModeField,
 } from "@/components/training/measurement-fields";
 import { ReorderHandle } from "@/components/training/reorder-handle";
+import type { ActivityValue } from "@/lib/training/activity-value";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
+import { ACTIVITY_COPY } from "@/lib/training/measurement-copy";
 import {
   type TrainingMeasurement,
   type TrainingMeasurementMode,
@@ -86,6 +98,10 @@ let nextKey = 0;
 export function ActualActivities({
   activities,
   recorded,
+  starting = [],
+  library = [],
+  saveToLibrary,
+  updateInLibrary,
   sessionSport,
   inactive = false,
   name = "activities",
@@ -99,6 +115,18 @@ export function ActualActivities({
   activities: LogPlannedActivityView[];
   /** What a saved log records; absent on a create. */
   recorded?: LogRecordedActivityView[];
+  /**
+   * Activities an unplanned create starts from — a saved session's, picked
+   * above the list. Copied by value into rows that answer nothing planned,
+   * each prefilled with its target as the actual, as a planned row is.
+   */
+  starting?: readonly ActivityValue[];
+  /** The owner's activity library; a row may start as a copy of one. */
+  library?: readonly LibraryActivityOption[];
+  /** Absent where a row may not be saved into the library. */
+  saveToLibrary?: SaveToLibrary;
+  /** Absent where a row may not update the definition it came from. */
+  updateInLibrary?: UpdateInLibrary;
   /** What an added activity starts as; most are the session's own sport. */
   sessionSport: string;
   /**
@@ -115,9 +143,48 @@ export function ActualActivities({
   const prefix = useId();
   const [rows, setRows] = useState<Row[]>(() =>
     recorded === undefined
-      ? activities.map((planned) => plannedRow(planned, true))
+      ? [
+          ...activities.map((planned) => plannedRow(planned, true)),
+          ...starting.map((activity) => copiedRow(activity, "starting")),
+        ]
       : rowsFromRecord(activities, recorded),
   );
+  const [picking, setPicking] = useState(false);
+  const atLimit = rows.length >= ROW_LIMIT;
+  const { known, actionsFor } = useLibraryRowActions({
+    library,
+    saveToLibrary,
+    updateInLibrary,
+  });
+
+  /**
+   * As on the Plan, by the same `libraryOffer` rule, with what was done as
+   * the definition's target (owner, 27 Sep 2026) — so the next log that picks
+   * it starts from this one. A log row has no instructions of its own, so it
+   * keeps its definition's.
+   */
+  function libraryActions(
+    row: Row,
+    measurement: TrainingMeasurement | null | undefined,
+  ): LibraryRowActionProps {
+    if (measurement === undefined) return {};
+    const linked =
+      row.personalActivityId === null
+        ? undefined
+        : known.get(row.personalActivityId);
+    const definition = {
+      name: row.name.trim(),
+      sport: row.sport.trim(),
+      instructions: linked?.instructions ?? null,
+      measurementMode: row.measurementMode,
+      target: measurement,
+    };
+    return actionsFor(
+      row.personalActivityId,
+      definition,
+      (personalActivityId) => update(row.key, { personalActivityId }),
+    );
+  }
 
   // Unplanned training, or a session planned with no activities, has nothing
   // for a row to be "not on", so the line that says so is left out.
@@ -196,6 +263,14 @@ export function ActualActivities({
               total={rows.length}
               problem={row.done && !build.ok ? build.message : null}
               actual={build.ok ? describeMeasurement(build.measurement) : null}
+              library={
+                row.done
+                  ? libraryActions(
+                      row,
+                      build.ok ? build.measurement : undefined,
+                    )
+                  : {}
+              }
               onChange={(change) => update(row.key, change)}
               dragging={dragging === row.key}
               onDragStateChange={(active) =>
@@ -212,29 +287,74 @@ export function ActualActivities({
           ))}
         </ol>
       )}
-      <button
-        className={styles.secondary}
-        type="button"
-        disabled={rows.length >= ROW_LIMIT}
-        onClick={() =>
-          setRows((current) => [
-            ...current,
-            {
-              key: `added-${nextKey++}`,
-              planned: null,
-              personalActivityId: null,
-              fresh: true,
-              name: "",
-              sport: sessionSport.trim(),
-              done: true,
-              measurementMode: "unmeasured",
-              draft: emptyDraft("unmeasured"),
-            },
-          ])
-        }
-      >
-        Add activity
-      </button>
+      <div className={styles.addRow}>
+        <button
+          className={styles.secondary}
+          type="button"
+          disabled={atLimit}
+          onClick={() =>
+            setRows((current) => [
+              ...current,
+              {
+                key: `added-${nextKey++}`,
+                planned: null,
+                personalActivityId: null,
+                fresh: true,
+                name: "",
+                sport: sessionSport.trim(),
+                done: true,
+                measurementMode: "unmeasured",
+                draft: emptyDraft("unmeasured"),
+              },
+            ])
+          }
+        >
+          Add activity
+        </button>
+        {library.length === 0 ? null : (
+          <button
+            className={styles.secondary}
+            type="button"
+            disabled={atLimit}
+            aria-expanded={picking}
+            aria-controls={`${prefix}-library`}
+            onClick={() => setPicking((current) => !current)}
+          >
+            {ACTIVITY_COPY.addFromLibrary}
+          </button>
+        )}
+      </div>
+      {picking && !atLimit ? (
+        <ul
+          className={styles.picker}
+          id={`${prefix}-library`}
+          aria-label={ACTIVITY_COPY.libraryLabel}
+        >
+          {library.map((option) => (
+            <li key={option.id}>
+              <button
+                className={styles.pick}
+                type="button"
+                onClick={() => {
+                  setRows((current) => [
+                    ...current,
+                    copiedRow(
+                      { ...option, personalActivityId: option.id },
+                      "picked",
+                    ),
+                  ]);
+                  setPicking(false);
+                }}
+              >
+                <span className={styles.pickName}>{option.name}</span>
+                <span className={styles.pickTarget}>
+                  {describeMeasurement(option.target) ?? option.sport}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </fieldset>
   );
 }
@@ -249,6 +369,7 @@ function ActualRow({
   actual,
   dragging,
   onDragStateChange,
+  library,
   onChange,
   onMove,
   onMoveTo,
@@ -257,6 +378,8 @@ function ActualRow({
   idPrefix: string;
   row: Row;
   hasPlan: boolean;
+  /** The row's library buttons; empty when it has none. */
+  library: LibraryRowActionProps;
   index: number;
   total: number;
   problem: string | null;
@@ -412,6 +535,13 @@ function ActualRow({
             onChange({ draft: { ...row.draft, groups } })
           }
         />
+        {unnamed ? null : (
+          <LibraryRowActions
+            {...library}
+            buttonClassName={styles.secondary}
+            hintClassName={styles.fieldHint}
+          />
+        )}
       </div>
     </li>
   );
@@ -428,6 +558,26 @@ function plannedRow(planned: LogPlannedActivityView, done: boolean): Row {
     done,
     measurementMode: planned.measurementMode,
     draft: draftFromMeasurement(planned.measurementMode, planned.target),
+  };
+}
+
+/**
+ * A row copied by value from a library definition or a saved session's
+ * activity: it answers nothing planned, keeps the library link it came with,
+ * and starts with its target as the actual, which the owner then adjusts.
+ * Later edits to the source never reach it.
+ */
+function copiedRow(activity: ActivityValue, origin: string): Row {
+  return {
+    key: `${origin}-${nextKey++}`,
+    planned: null,
+    personalActivityId: activity.personalActivityId,
+    fresh: false,
+    name: activity.name,
+    sport: activity.sport,
+    done: true,
+    measurementMode: activity.measurementMode,
+    draft: draftFromMeasurement(activity.measurementMode, activity.target),
   };
 }
 

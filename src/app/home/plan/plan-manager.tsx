@@ -41,6 +41,7 @@ import { SeriesMaterializer } from "./series-materializer";
 import { SessionFields } from "./session-fields";
 
 import type { ActivityValue } from "@/components/training/activity-editor";
+import type { SavedSessionOption } from "@/components/training/saved-session-picker";
 import {
   seriesStallNotice,
   useSeriesMutationStall,
@@ -93,6 +94,8 @@ type Props = {
   expectedRevision: number;
   sessions: PlanSessionView[];
   recoveryDates: string[];
+  /** What Create session may start from. */
+  savedSessions?: SavedSessionOption[];
   series?: PlanSeriesView[];
   uncoveredSeriesDates?: string[];
 };
@@ -133,6 +136,7 @@ export function PlanManager({
   expectedRevision,
   sessions,
   recoveryDates,
+  savedSessions = [],
   series = [],
   uncoveredSeriesDates = [],
 }: Props) {
@@ -230,6 +234,7 @@ export function PlanManager({
 
       <CreateSession
         dates={dates}
+        savedSessions={savedSessions}
         expectedRevision={expectedRevision}
         planAction={trackedPlanAction}
         planState={state}

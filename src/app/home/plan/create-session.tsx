@@ -12,6 +12,10 @@ import { seriesOccurrenceDates } from "./series-recurrence";
 import { SessionFields } from "./session-fields";
 import styles from "./plan.module.css";
 
+import {
+  SavedSessionPicker,
+  type SavedSessionOption,
+} from "@/components/training/saved-session-picker";
 import { shiftIsoDate } from "@/lib/date/local-date";
 
 type FormAction = (formData: FormData) => void;
@@ -24,6 +28,7 @@ type Preview = {
 
 export function CreateSession({
   dates,
+  savedSessions = [],
   expectedRevision,
   planAction,
   planState,
@@ -33,6 +38,8 @@ export function CreateSession({
   seriesPending,
 }: {
   dates: string[];
+  /** Saved sessions the new one may start from, copied by value. */
+  savedSessions?: SavedSessionOption[];
   expectedRevision: number;
   planAction: FormAction;
   planState: PlanActionState;
@@ -44,11 +51,20 @@ export function CreateSession({
   const [repeat, setRepeat] = useState(false);
   const [selectedDate, setSelectedDate] = useState(dates[0]);
   const [preview, setPreview] = useState<Preview | null>(null);
+  // The saved session this one starts from. Picking one remounts the fields
+  // with its values, replacing whatever they held; a save clears it with the
+  // rest of the form, because the reset key changes.
+  const [template, setTemplate] = useState<{
+    session: SavedSessionOption;
+    resetKey: string;
+  } | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const pending = repeat ? seriesPending : planPending;
   const resetKey = useCreateResetKey(planState, seriesState);
   const [open, setOpen] = useCollapseOnSave(planState, seriesState);
+  const startingFrom =
+    template?.resetKey === resetKey ? template.session : undefined;
   const reviewedPreview =
     preview?.seriesSubmission === seriesState.submission ? preview : null;
 
@@ -150,9 +166,29 @@ export function CreateSession({
               }}
             />
           </div>
+          <SavedSessionPicker
+            sessions={savedSessions}
+            picked={startingFrom}
+            onPick={(session) => setTemplate({ session, resetKey })}
+          />
           <SessionFields
+            key={startingFrom?.id ?? "empty"}
             idPrefix="create-session"
-            draft={planState.operation === "add" ? planState.draft : undefined}
+            draft={
+              startingFrom !== undefined
+                ? {
+                    title: startingFrom.title,
+                    sport: startingFrom.sport,
+                    intent: startingFrom.intent ?? "",
+                    expectedDurationMinutes:
+                      startingFrom.expectedDurationMinutes?.toString() ?? "",
+                    note: startingFrom.note ?? "",
+                  }
+                : planState.operation === "add"
+                  ? planState.draft
+                  : undefined
+            }
+            activities={startingFrom?.activities}
           />
 
           <label className={styles.checkField}>

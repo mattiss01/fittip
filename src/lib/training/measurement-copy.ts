@@ -86,9 +86,13 @@ export const ACTIVITY_COPY = {
   atLimit: "Ten activities is as many as this form builds.",
   empty: "No activities yet. The session is just a heading until you add one.",
   add: "Add activity",
-  addFromLibrary: "Add from library",
+  addFromLibrary: "Add activity from library",
   libraryLabel: "Your activities",
   saveToLibrary: "Save activity to library",
+  /** For a row that came from the library and was changed since. */
+  saveAsNewToLibrary: "Save as new library activity",
+  updateInLibrary: (name: string) => `Update ${name} in library`,
+  updatingInLibrary: "Updating…",
   savingToLibrary: "Saving…",
   saveToLibraryFailed: "It could not be saved. Try again.",
   nameTaken: (name: string) =>

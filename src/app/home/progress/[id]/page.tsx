@@ -11,6 +11,8 @@ import type { ProgressCompletionView } from "../progress-record";
 import styles from "../progress.module.css";
 
 import homeStyles from "../../home.module.css";
+import { recordsTraining } from "../../log/log-action-state";
+import { SaveToLibrary } from "../../plan/saved/save-to-library";
 import {
   replacedByLabel,
   replacesLabels,
@@ -102,6 +104,16 @@ export default async function CompletionPage({ params }: Props) {
               Edit log
             </Link>
           </div>
+          {/* Training that happened can become a saved session; a skip or a
+              replacement records none, so it offers nothing to save. */}
+          {!recordsTraining(completion.status) ? null : (
+            <SaveToLibrary
+              completionId={completion.id}
+              defaultName={
+                completion.title ?? completion.plannedSnapshot?.title ?? ""
+              }
+            />
+          )}
           <Link
             className={styles.backLink}
             href={`/home/progress?month=${monthOf(completion.actualLocalDate)}`}

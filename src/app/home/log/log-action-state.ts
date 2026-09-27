@@ -65,6 +65,15 @@ export const TRAINED_OUTCOMES: ReadonlySet<CompletionOutcome> = new Set([
   "partially_completed",
 ]);
 
+/**
+ * Whether a log records training that happened, which is what a saved
+ * session can be made from. A skip or a replacement records none: the
+ * replacement's own training is its own unplanned log.
+ */
+export function recordsTraining(outcome: CompletionOutcome): boolean {
+  return TRAINED_OUTCOMES.has(outcome) || outcome === "unplanned";
+}
+
 export const COMPLETION_OUTCOME_LABELS: Record<CompletionOutcome, string> = {
   completed: "Completed",
   partially_completed: "Partly completed",
@@ -153,6 +162,13 @@ export type LogActionState = {
   result?: "created" | "updated";
   /** The day the owner returns to on Today once the write landed. */
   returnDate?: string;
+  /** The log the write landed on, so its receipt can save it to the library. */
+  completionId?: string;
+  /**
+   * Whether the log records training that happened, which is what a saved
+   * session can be made from. A skip or a replacement records none.
+   */
+  reusable?: boolean;
   conflict?: "stale" | "timezone" | "duplicate";
 };
 

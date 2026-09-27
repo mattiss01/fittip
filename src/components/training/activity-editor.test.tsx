@@ -12,6 +12,7 @@ import {
   ActivityLibraryProvider,
   type LibraryActivityOption,
   type SaveToLibrary,
+  type UpdateInLibrary,
 } from "./activity-editor";
 
 afterEach(cleanup);
@@ -21,6 +22,7 @@ const NEW_ID = "77000000-0000-4000-8000-0000000000b2";
 
 const SQUAT: LibraryActivityOption = {
   id: LINKED_ID,
+  updatedAt: "2026-09-27T09:00:00.000Z",
   name: "Back squat",
   sport: "Strength",
   instructions: "Pause at the bottom",
@@ -61,7 +63,7 @@ describe("ActivityEditor and the activity library", () => {
   it("offers no picker when the library is empty", () => {
     render(<ActivityEditor idPrefix="t" />);
     expect(
-      screen.queryByRole("button", { name: "Add from library" }),
+      screen.queryByRole("button", { name: "Add activity from library" }),
     ).toBeNull();
   });
 
@@ -72,7 +74,9 @@ describe("ActivityEditor and the activity library", () => {
       </ActivityLibraryProvider>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Add from library" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add activity from library" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: /Back squat/ }));
 
     expect(submitted(container)).toEqual([
@@ -95,6 +99,7 @@ describe("ActivityEditor and the activity library", () => {
       status: "saved",
       message: "Saved to your library as Strides.",
       personalActivityId: NEW_ID,
+      updatedAt: "2026-09-27T10:00:00.000Z",
     });
     const { container } = render(
       <ActivityLibraryProvider activities={[]} saveToLibrary={saveToLibrary}>
@@ -200,6 +205,7 @@ describe("ActivityEditor and the activity library", () => {
       status: "saved",
       message: "Saved to your library as Front squat.",
       personalActivityId: NEW_ID,
+      updatedAt: "2026-09-27T10:00:00.000Z",
     });
     const { container } = render(
       <ActivityLibraryProvider
@@ -209,11 +215,13 @@ describe("ActivityEditor and the activity library", () => {
         <ActivityEditor idPrefix="t" />
       </ActivityLibraryProvider>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Add from library" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add activity from library" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: /Back squat/ }));
     fireEvent.click(screen.getByRole("button", { name: /Back squat/ }));
     expect(
-      screen.queryByRole("button", { name: "Save activity to library" }),
+      screen.queryByRole("button", { name: "Save as new library activity" }),
     ).toBeNull();
 
     fireEvent.change(screen.getByLabelText("Name"), {
@@ -221,7 +229,7 @@ describe("ActivityEditor and the activity library", () => {
     });
     await act(async () => {
       fireEvent.click(
-        screen.getByRole("button", { name: "Save activity to library" }),
+        screen.getByRole("button", { name: "Save as new library activity" }),
       );
     });
 
@@ -236,8 +244,60 @@ describe("ActivityEditor and the activity library", () => {
       }),
     ]);
     expect(
-      screen.queryByRole("button", { name: "Save activity to library" }),
+      screen.queryByRole("button", { name: "Save as new library activity" }),
     ).toBeNull();
+  });
+
+  it("updates the definition a changed row came from, and stays linked to it", async () => {
+    const updateInLibrary = vi.fn<UpdateInLibrary>().mockResolvedValue({
+      status: "saved",
+      message: "Back squat updated in your library.",
+      personalActivityId: LINKED_ID,
+      updatedAt: "2026-09-27T11:00:00.000Z",
+    });
+    const { container } = render(
+      <ActivityLibraryProvider
+        activities={[SQUAT]}
+        saveToLibrary={vi.fn<SaveToLibrary>()}
+        updateInLibrary={updateInLibrary}
+      >
+        <ActivityEditor idPrefix="t" />
+      </ActivityLibraryProvider>,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add activity from library" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Back squat/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Back squat/ }));
+    expect(
+      screen.queryByRole("button", { name: "Update Back squat in library" }),
+    ).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Instructions"), {
+      target: { value: "No pause" },
+    });
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Update Back squat in library" }),
+      );
+    });
+
+    // Sent with the timestamp it was read at, so an edit made elsewhere in
+    // the meantime is refused rather than overwritten.
+    expect(updateInLibrary).toHaveBeenCalledWith(
+      LINKED_ID,
+      "2026-09-27T09:00:00.000Z",
+      expect.objectContaining({ name: "Back squat", instructions: "No pause" }),
+    );
+    expect(submitted(container)).toEqual([
+      expect.objectContaining({ personalActivityId: LINKED_ID }),
+    ]);
+    expect(
+      screen.queryByRole("button", { name: "Update Back squat in library" }),
+    ).toBeNull();
+    expect(
+      screen.getByText("Back squat updated in your library."),
+    ).toBeInTheDocument();
   });
 
   it("asks for a new name when a changed row's name is already taken", () => {
@@ -250,7 +310,9 @@ describe("ActivityEditor and the activity library", () => {
         <ActivityEditor idPrefix="t" />
       </ActivityLibraryProvider>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Add from library" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add activity from library" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: /Back squat/ }));
     fireEvent.click(screen.getByRole("button", { name: /Back squat/ }));
 

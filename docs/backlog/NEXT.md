@@ -21,12 +21,6 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [ ] **Log from the library.** Asked by the owner on 26 Sep 2026: an unplanned log starts
-      from a saved session — its name, sport and activities prefilled, then changed — and an
-      activity row starts from a library activity (A5), for training that is routinely the
-      same but never planned. Copies by value, as the Plan's reuse does. Both halves can
-      start now: A5's picker lives in the shared `ActivityEditor`, which the log editor does
-      not use yet.
 - [ ] **A7 — The coach fills in a session's activities.** Careful lane: a new AI operation
       with its own schema, spend, and context cost — the M3-03D detail operation that
       `contracts.ts` defers to. Blocked on the plan context having no headroom left, which
@@ -46,23 +40,10 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 Not worth their own slot; do them when work lands nearby.
 
-- A session's activities are projected into `ActivityValue` by hand in six places — the Plan,
-  saved-session, proposal and log pages, `plan/actions.ts` and the log's editor — so a
-  field added to it has to be added six times, which is how the proposal page came to drop
-  the whole list. One `toActivityValue` beside the type would end that.
 - A hand-made RPC payload with `position` or `plannedPosition` of `1.0` reaches
   `apply_completion_change` as a raw `22P02` rather than `22023`: the validators compare with
   `trunc`, the inserts cast the text. Unreachable from the app, whose parser emits integers.
   Map `invalid_text_representation` in the handler next time the function is replaced.
-- Sign-in offers a dead link. `auth-form.tsx` links to `/signup`, and `proxy.ts` redirects
-  `/signup` back to `/` whenever the runtime policy is `founder-staging` — so on the founder
-  environment the link always bounces to where it started. The redirect is right: production
-  is owner-only, not a public launch (ADR-005, ADR-007). The link is what is wrong, and it
-  should be hidden under the same condition rather than the redirect being softened. Reported
-  by the owner on 25 Sep 2026. Found on 26 Sep that it already is — `page.tsx` has passed
-  `allowSignUp={policy.mode === "local"}` since `21e6841`, with a test — so what the owner saw
-  is still to be established before anything changes.
-
 - `regeneratePlanProposalAction` has no test of its own, and it is the orchestration that
   implements two of the owner's decisions: closing the review before asking again, and
   keeping what was accepted. The pgTAP proves the database half; nothing exercises the
@@ -99,8 +80,7 @@ Not worth their own slot; do them when work lands nearby.
   functions, the AI contract, and reads of stored snapshots, which keep `sport` forever.
   Open: which of the two, the preset list (it is shared vocabulary, so it wants the owner's
   agreement and a line in `CONTEXT.md`), and whether an activity keeps starting from its
-  session's value, which is right under the one-field reading. A5 builds on whatever this
-  becomes.
+  session's value, which is right under the one-field reading.
 - **Plan change history** — plan history organized by understandable changes, each opening to
   show affected sessions and their before/after values. Real, but a comfort feature; the
   tables are already granted and RLS-confined. ([M3-24](M3/M3-24-PLAN-CHANGE-HISTORY.md))
@@ -124,9 +104,6 @@ Not worth their own slot; do them when work lands nearby.
   project's life — so it takes 250 in a day or 2,500 ever to lock coaching out entirely.
   Far outside single-athlete traffic, but it accumulates permanently and no surface shows it.
 
-- **M3-15B's accepted browser flow was rewritten** on 18 Sep 2026 (`cf33bb6`): it asserted the
-  read-only title and sport that M3-23 replaced. Its validation record still describes the
-  surface as it shipped then, which is what a record is for.
 - **The plan context has no headroom left.** M3-16B spent it: prefix 7,400 + wrapper 64 +
   context 32,500 estimates 9,991 tokens against a 10,000 ceiling. The next source, or a longer
   prompt, takes bytes from an existing source or raises `maxInputTokens` — and the second is a
@@ -141,6 +118,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 27 Sep 2026 | `79ee27e` | [36337885803](https://github.com/mattiss01/fittip/actions/runs/36337885803) | Log from the library: "Use session from library" on an unplanned log and on Create session, "Add activity from library" on every log, and saving back from anywhere — an activity from a log row (or "Update <name> in library" for one that came from it, refused if the entry changed meanwhile) and a session from the log form, its receipt, Progress and Today, with what was done as its targets. No migration; the M3-11 architecture test now admits `saved-session-repository` and the log on the library surface. `toActivityValue` replaced three hand projections, not six: the other three are different shapes |
 | 27 Sep 2026 | `5e5b5e2` | [36312716667](https://github.com/mattiss01/fittip/actions/runs/36312716667) | Editing a planned session from proposal review no longer erases its activities: the review's session summary carries them, library links included, and seeds its edit form, which had opened empty and sent `[]` since A2. No migration; no picker on that screen |
 | 27 Sep 2026 | `16118fb` | [36311864111](https://github.com/mattiss01/fittip/actions/runs/36311864111) | Plan → Activities is the personal activity library: create, edit, and "Remove from library" (archives; no restore — saving from a session makes a new one). Every session editor gets "Add from library" and "Save activity to library", and all of them now submit `personalActivityId` back. Names are unique among active definitions (owner's call): migration `20260927094109` applied to the founder project — 34 migrations, advisors unchanged at 20 definer + 1 auth. The M3-11 allowlist now admits the library module, kept to the Plan by a new assertion (A5) |
 | 26 Sep 2026 | `5bbc61b` | [36239355367](https://github.com/mattiss01/fittip/actions/runs/36239355367) | A Progress record has Edit log, which opens the one log editor and returns to that record rather than to Today; `from=progress` is matched against a fixed value and the destination is built from the record's id. No migration |

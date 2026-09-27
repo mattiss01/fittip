@@ -2,8 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { PLAN_WINDOW_DAYS } from "./action-state";
-import { saveActivityToLibraryAction } from "./activities/actions";
+import {
+  saveActivityToLibraryAction,
+  updateActivityInLibraryAction,
+} from "./activities/actions";
 import { readLibraryOptions } from "./activities/library-options";
+import { readSavedSessionOptions } from "./saved/session-options";
 import {
   PlanManager,
   type PlanSessionLog,
@@ -19,7 +23,9 @@ import {
   ActivityLibraryProvider,
   type LibraryActivityOption,
 } from "@/components/training/activity-editor";
+import type { SavedSessionOption } from "@/components/training/saved-session-picker";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
+import { toActivityValue } from "@/lib/training/activity-value";
 import {
   CompletionAuthenticationError,
   createCompletionLog,
@@ -96,16 +102,18 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
   let slice;
   let series;
   let library: LibraryActivityOption[];
+  let savedSessions: SavedSessionOption[];
   const logged = new Map<string, PlanSessionLog>();
   try {
     const [plan, log] = await Promise.all([
       createRollingPlan(),
       createCompletionLog(),
     ]);
-    [slice, series, library] = await Promise.all([
+    [slice, series, library, savedSessions] = await Promise.all([
       plan.getPlanSlice(today, dates[dates.length - 1]),
       plan.listSeries(),
       readLibraryOptions(),
+      readSavedSessionOptions(),
     ]);
     // A logged session reads as logged where it was planned, whatever day
     // the log carries: a Thursday run done on Tuesday is not still ahead on
@@ -136,6 +144,7 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
       <ActivityLibraryProvider
         activities={library}
         saveToLibrary={saveActivityToLibraryAction}
+        updateInLibrary={updateActivityInLibraryAction}
       >
         <PlanManager
           today={today}
@@ -148,6 +157,7 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
               : { ...toSessionView(session), log };
           })}
           recoveryDates={slice.recoveryDates}
+          savedSessions={savedSessions}
           series={series.map(toSeriesView)}
           uncoveredSeriesDates={findUncoveredSeriesDates(
             series,
@@ -174,14 +184,7 @@ function toSessionView(session: RollingPlanSession): PlanSessionView {
     note: session.note ?? null,
     isLocked: session.isLocked,
     status: session.status,
-    activities: session.activities.map((activity) => ({
-      personalActivityId: activity.personalActivityId ?? null,
-      name: activity.name,
-      sport: activity.sport,
-      instructions: activity.instructions ?? null,
-      measurementMode: activity.measurementMode,
-      target: activity.target ?? null,
-    })),
+    activities: session.activities.map(toActivityValue),
     seriesId: session.seriesId,
     occurrenceDate: session.occurrenceDate,
     hasDiverged: session.hasDiverged,

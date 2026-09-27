@@ -132,6 +132,7 @@ export async function saveActivityToLibraryAction(
       status: "saved",
       message: `Saved to your library as ${saved.name}.`,
       personalActivityId: saved.id,
+      updatedAt: saved.updatedAt,
     };
   } catch (error) {
     if (error instanceof PersonalActivityNameTakenError) {
@@ -161,6 +162,71 @@ export async function saveActivityToLibraryAction(
     return {
       status: "refused",
       message: "It could not be saved. Try again.",
+    };
+  }
+}
+
+/**
+ * Update a library definition from a session editor's row that came from it
+ * (owner, 27 Sep 2026): "picked Latzug, changed it" can now change Latzug
+ * itself, where before it could only become a new definition. Only the
+ * definition is written. Sessions, saved entries and logs that copied it keep
+ * their own values, as they do after an edit on the Activities page.
+ */
+export async function updateActivityInLibraryAction(
+  personalActivityId: unknown,
+  expectedUpdatedAt: unknown,
+  activity: unknown,
+): Promise<SaveToLibraryResult> {
+  try {
+    const saved = await (
+      await createPersonalActivityLibrary()
+    ).applyChange({
+      operation: "edit",
+      personalActivityId,
+      expectedUpdatedAt,
+      activity,
+    });
+    revalidatePath("/home/plan/activities");
+    return {
+      status: "saved",
+      message: `${saved.name} updated in your library.`,
+      personalActivityId: saved.id,
+      updatedAt: saved.updatedAt,
+    };
+  } catch (error) {
+    if (error instanceof PersonalActivityNameTakenError) {
+      const name = submittedNameOf(activity);
+      return {
+        status: "refused",
+        message:
+          name === undefined
+            ? nameTakenMessage(undefined)
+            : ACTIVITY_COPY.nameTaken(name),
+      };
+    }
+    if (error instanceof PersonalActivityConflictError) {
+      return {
+        status: "refused",
+        message:
+          "That library activity changed somewhere else, or was removed. Reload before updating it.",
+      };
+    }
+    if (error instanceof PersonalActivityValidationError) {
+      return {
+        status: "refused",
+        message: "Give it a name and a sport before saving it.",
+      };
+    }
+    if (error instanceof PersonalActivityAuthenticationError) {
+      return {
+        status: "refused",
+        message: "Your session ended. Sign in again before saving.",
+      };
+    }
+    return {
+      status: "refused",
+      message: "It could not be updated. Try again.",
     };
   }
 }

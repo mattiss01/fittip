@@ -172,6 +172,28 @@ describe("Today", () => {
     ).toContain("Pain");
   });
 
+  it("offers a logged session to the session library, but not a skipped one", async () => {
+    readPlanWindowToppedUpMock.mockResolvedValue(planWindow([session()]));
+    listCompletions.mockResolvedValue([completion()]);
+
+    const { unmount } = render(
+      await TodayPage({ searchParams: Promise.resolve({}) }),
+    );
+
+    const card = document.querySelector(
+      `[data-today-session="${SESSION_ID}"]`,
+    ) as HTMLElement;
+    expect(within(card).getByText("Save session to library")).toBeTruthy();
+    expect(
+      within(card).getByDisplayValue(COMPLETION_ID).getAttribute("name"),
+    ).toBe("completionId");
+    unmount();
+
+    listCompletions.mockResolvedValue([{ ...completion(), status: "skipped" }]);
+    render(await TodayPage({ searchParams: Promise.resolve({}) }));
+    expect(screen.queryByText("Save session to library")).toBeNull();
+  });
+
   it("carries a log written on another day, so the planned day does not offer a second", async () => {
     readPlanWindowToppedUpMock.mockResolvedValue(planWindow([session()]));
     // Logged yesterday against today's session: `list` for today cannot see
