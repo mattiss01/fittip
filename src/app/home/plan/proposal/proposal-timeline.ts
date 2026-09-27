@@ -1,3 +1,4 @@
+import type { ActivityValue } from "@/components/training/activity-editor";
 import type { PlanProposalItemView } from "@/lib/plan/plan-proposal-view";
 
 /**
@@ -29,6 +30,13 @@ export type PlannedSessionSummary = {
    */
   intent: string | null;
   note: string | null;
+  /**
+   * The session's activities, library links included, in order. The edit form
+   * submits the whole list and the plan's edit replaces the stored one with
+   * it, so a form opened without them erased them — which is what it did from
+   * A2 until this field existed.
+   */
+  activities: ActivityValue[];
   /**
    * Non-null when this occurrence belongs to a recurring series. Review offers
    * no scope choice, so the surface uses it to say which scope it is taking.
