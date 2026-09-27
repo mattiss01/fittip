@@ -11,8 +11,8 @@
 -- whitespace trimmed and inner runs collapsed to one space, so "Rudern",
 -- "rudern " and "Rudern" typed with a double space are one name. The
 -- application's `activityNameKey` in `src/lib/training/activity-name.ts`
--- applies the same normalization so the editor can say a name is taken before
--- a save is tried, and must not drift from this expression.
+-- follows this expression for ordinary text so the editor can say a name is
+-- taken before a save is tried; this index, not that function, is the rule.
 --
 -- Partial on `archived_at is null`. A removed definition frees its name,
 -- because the only way back after "Remove from library" is to save the

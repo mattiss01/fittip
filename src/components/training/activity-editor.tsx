@@ -184,10 +184,7 @@ export function ActivityEditor({
       personalActivityId: row.personalActivityId,
       name: row.name.trim(),
       sport: row.sport.trim(),
-      instructions:
-        row.instructions === null || row.instructions.trim() === ""
-          ? null
-          : row.instructions.trim(),
+      instructions: trimmedInstructions(row.instructions),
       measurementMode: row.measurementMode,
       target: build.ok ? build.measurement : null,
     })),
@@ -530,13 +527,15 @@ function toDefinition(
   return {
     name: row.name.trim(),
     sport: row.sport.trim(),
-    instructions:
-      row.instructions === null || row.instructions.trim() === ""
-        ? null
-        : row.instructions.trim(),
+    instructions: trimmedInstructions(row.instructions),
     measurementMode: row.measurementMode,
     target: measurement,
   };
+}
+
+/** Instructions as they are stored: trimmed, and absent rather than blank. */
+function trimmedInstructions(value: string | null): string | null {
+  return value === null || value.trim() === "" ? null : value.trim();
 }
 
 /** Whether saving `value` would only repeat `definition`. */

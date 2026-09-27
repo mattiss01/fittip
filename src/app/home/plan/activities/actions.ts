@@ -8,6 +8,7 @@ import {
 } from "./action-state";
 
 import type { SaveToLibraryResult } from "@/components/training/activity-editor";
+import { ACTIVITY_COPY } from "@/lib/training/measurement-copy";
 import {
   PersonalActivityConflictError,
   PersonalActivityNameTakenError,
@@ -134,9 +135,15 @@ export async function saveActivityToLibraryAction(
     };
   } catch (error) {
     if (error instanceof PersonalActivityNameTakenError) {
+      // The row's own wording, so the owner reads the same sentence whether
+      // the editor caught the clash first or the database did.
+      const name = submittedNameOf(activity);
       return {
         status: "refused",
-        message: nameTakenMessage(submittedNameOf(activity)),
+        message:
+          name === undefined
+            ? nameTakenMessage(undefined)
+            : ACTIVITY_COPY.nameTaken(name),
       };
     }
     if (error instanceof PersonalActivityValidationError) {
