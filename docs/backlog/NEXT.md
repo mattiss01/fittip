@@ -21,12 +21,6 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [ ] **Editing a planned session in proposal review erases its activities.** Found by A5's
-      review on 27 Sep 2026. `proposal-review.tsx` renders `SessionFields` with no
-      `activities`, and it submits to `changePlanAction`, whose edit replaces the whole list —
-      so the empty editor sends `[]`. Present since A2 put the editor in the shared form.
-      The proposal page's session view carries no activities, so they have to be threaded
-      through it, `personalActivityId` included. Fix next, before anything else here.
 - [ ] **Log from the library.** Asked by the owner on 26 Sep 2026: an unplanned log starts
       from a saved session — its name, sport and activities prefilled, then changed — and an
       activity row starts from a library activity (A5), for training that is routinely the
@@ -52,6 +46,10 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 Not worth their own slot; do them when work lands nearby.
 
+- A session's activities are projected into `ActivityValue` by hand in six places — the Plan,
+  saved-session, proposal and log pages, `plan/actions.ts` and the log's editor — so a
+  field added to it has to be added six times, which is how the proposal page came to drop
+  the whole list. One `toActivityValue` beside the type would end that.
 - A hand-made RPC payload with `position` or `plannedPosition` of `1.0` reaches
   `apply_completion_change` as a raw `22P02` rather than `22023`: the validators compare with
   `trunc`, the inserts cast the text. Unreachable from the app, whose parser emits integers.
@@ -143,6 +141,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 27 Sep 2026 | `5e5b5e2` | [36312716667](https://github.com/mattiss01/fittip/actions/runs/36312716667) | Editing a planned session from proposal review no longer erases its activities: the review's session summary carries them, library links included, and seeds its edit form, which had opened empty and sent `[]` since A2. No migration; no picker on that screen |
 | 27 Sep 2026 | `16118fb` | [36311864111](https://github.com/mattiss01/fittip/actions/runs/36311864111) | Plan → Activities is the personal activity library: create, edit, and "Remove from library" (archives; no restore — saving from a session makes a new one). Every session editor gets "Add from library" and "Save activity to library", and all of them now submit `personalActivityId` back. Names are unique among active definitions (owner's call): migration `20260927094109` applied to the founder project — 34 migrations, advisors unchanged at 20 definer + 1 auth. The M3-11 allowlist now admits the library module, kept to the Plan by a new assertion (A5) |
 | 26 Sep 2026 | `5bbc61b` | [36239355367](https://github.com/mattiss01/fittip/actions/runs/36239355367) | A Progress record has Edit log, which opens the one log editor and returns to that record rather than to Today; `from=progress` is matched against a fixed value and the destination is built from the record's id. No migration |
 | 26 Sep 2026 | `49a639e` | [36238154474](https://github.com/mattiss01/fittip/actions/runs/36238154474) | Choosing Extra on a planned log removes "What happened": extra training is written as unplanned and can only have happened. Picking "Instead of" brings it back. No migration |
