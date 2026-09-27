@@ -6,6 +6,7 @@ import type {
   SavedSessionDraft,
 } from "./saved-sessions";
 
+import type { Completion } from "@/server/completions/completion-log";
 import type {
   RollingPlanSeriesInput,
   RollingPlanSession,
@@ -145,5 +146,49 @@ export function plannedSessionToRollingPlanSeriesInput(
         return activity;
       },
     ),
+  };
+}
+
+/**
+ * Save from a log: training that happened becomes a library draft. What was
+ * done becomes the entry's targets, and how long it took its expected
+ * minutes (owner, 27 Sep 2026), so starting from it next time starts from
+ * this time. The log's date, outcome, effort, feeling, note, signals and its
+ * link to a plan stop here: they are facts about that day.
+ */
+export function completionToSavedSessionDraft(
+  name: string,
+  completion: Completion,
+): SavedSessionDraft {
+  const title = completion.title ?? completion.plannedSnapshot?.title;
+  const sport = completion.sport ?? completion.plannedSnapshot?.sport;
+  return {
+    name,
+    // Unset only on a log from before logs had names; the parser refuses the
+    // blank, which is the honest answer for a log with nothing to call it.
+    title: title ?? "",
+    sport: sport ?? "",
+    ...(completion.durationMinutes === undefined
+      ? {}
+      : { expectedDurationMinutes: completion.durationMinutes }),
+    activities: completion.activities
+      .toSorted((left, right) => left.position - right.position)
+      .map(
+        (activity, position): SavedSessionActivity => ({
+          ...(activity.personalActivityId === undefined
+            ? {}
+            : { personalActivityId: activity.personalActivityId }),
+          position,
+          name: activity.name,
+          sport: activity.sport,
+          ...(activity.instructions === undefined
+            ? {}
+            : { instructions: activity.instructions }),
+          measurementMode: activity.measurementMode,
+          ...(activity.actualMeasurement === undefined
+            ? {}
+            : { target: activity.actualMeasurement }),
+        }),
+      ),
   };
 }

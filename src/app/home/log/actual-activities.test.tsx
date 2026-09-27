@@ -158,6 +158,56 @@ describe("ActualActivities", () => {
     expect(entries().get("activities")).not.toBeNull();
   });
 
+  it("adds a library activity as a copy, its target as the actual", () => {
+    render(
+      <ActualActivities
+        activities={[SQUAT]}
+        sessionSport="Strength"
+        library={[
+          {
+            id: "9e7a0000-0000-4000-8000-000000000001",
+            updatedAt: "2026-09-27T09:00:00.000Z",
+            name: "Latzug",
+            sport: "Strength",
+            instructions: null,
+            measurementMode: "sets_reps_load",
+            target: {
+              groups: [{ sets: 3, reps: 10, load: 50 }],
+              load_unit: "kg",
+            },
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add activity from library" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Latzug/ }));
+
+    expect(submitted()[1]).toEqual({
+      personalActivityId: "9e7a0000-0000-4000-8000-000000000001",
+      position: 1,
+      name: "Latzug",
+      sport: "Strength",
+      measurementMode: "sets_reps_load",
+      actualMeasurement: {
+        groups: [{ sets: 3, reps: 10, load: 50 }],
+        load_unit: "kg",
+      },
+    });
+    // The picker closes once a row is added.
+    expect(screen.queryByRole("list", { name: "Your activities" })).toBeNull();
+  });
+
+  it("offers no library button when the library is empty", () => {
+    render(<ActualActivities activities={[]} sessionSport="Strength" />);
+
+    expect(
+      screen.queryByRole("button", { name: "Add activity from library" }),
+    ).toBeNull();
+  });
+
   it("records the order the activities were done in", () => {
     render(
       <ActualActivities activities={[SQUAT, SERVES]} sessionSport="Strength" />,

@@ -7,7 +7,11 @@ const {
   createCompletionLogMock,
   useActionStateMock,
   logCompletionActionMock,
+  readLibraryOptionsMock,
+  createSavedSessionLibraryMock,
 } = vi.hoisted(() => ({
+  readLibraryOptionsMock: vi.fn(),
+  createSavedSessionLibraryMock: vi.fn(),
   createProfileMock: vi.fn(),
   createPlanMock: vi.fn(),
   createCompletionLogMock: vi.fn(),
@@ -40,6 +44,20 @@ vi.mock("@/server/repositories/completion-log-repository", async (original) => {
   return { ...actual, createCompletionLog: createCompletionLogMock };
 });
 
+vi.mock("../plan/activities/library-options", () => ({
+  readLibraryOptions: readLibraryOptionsMock,
+}));
+vi.mock("@/server/repositories/saved-session-repository", async (original) => {
+  const actual =
+    await original<
+      typeof import("@/server/repositories/saved-session-repository")
+    >();
+  return {
+    ...actual,
+    createSavedSessionLibrary: createSavedSessionLibraryMock,
+  };
+});
+
 import LogPage from "./page";
 import { INITIAL_LOG_ACTION_STATE } from "./log-action-state";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
@@ -53,6 +71,7 @@ const getPlanSlice = vi.fn();
 const getCompletion = vi.fn();
 const findByPlanSession = vi.fn();
 const listCompletions = vi.fn();
+const listSavedSessions = vi.fn();
 
 describe("Log", () => {
   beforeEach(() => {
@@ -83,6 +102,11 @@ describe("Log", () => {
       get: getCompletion,
       findByPlanSession,
       list: listCompletions,
+    });
+    readLibraryOptionsMock.mockResolvedValue([]);
+    listSavedSessions.mockResolvedValue([]);
+    createSavedSessionLibraryMock.mockResolvedValue({
+      list: listSavedSessions,
     });
   });
 
@@ -255,6 +279,96 @@ describe("Log", () => {
     expect(sport.maxLength).toBe(80);
     expect(screen.getByLabelText("Title")).toBe(title);
     expect(screen.getByLabelText("Sport")).toBe(sport);
+  });
+
+  it("starts an unplanned log from a saved session, copied to be changed", async () => {
+    listSavedSessions.mockResolvedValue([
+      {
+        id: "5a7ed000-0000-4000-8000-000000000001",
+        revision: 1,
+        name: "Tuesday gym",
+        title: "Upper body",
+        sport: "Strength",
+        updatedAt: "",
+        // Stored out of order: the log lists them by position.
+        activities: [
+          {
+            position: 1,
+            name: "Latzug",
+            sport: "Strength",
+            measurementMode: "unmeasured",
+          },
+          {
+            position: 0,
+            personalActivityId: "9e7a0000-0000-4000-8000-000000000001",
+            name: "Bench press",
+            sport: "Strength",
+            measurementMode: "sets_reps_load",
+            target: {
+              groups: [{ sets: 3, reps: 8, load: 60 }],
+              load_unit: "kg",
+            },
+          },
+        ],
+      },
+    ]);
+    render(await LogPage({ searchParams: Promise.resolve({}) }));
+
+    const title = () => document.querySelector<HTMLInputElement>("#log-title")!;
+    expect(title().value).toBe("");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Use session from library" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Tuesday gym/ }));
+
+    expect(title().value).toBe("Upper body");
+    expect(document.querySelector<HTMLInputElement>("#log-sport")!.value).toBe(
+      "Strength",
+    );
+    expect(JSON.parse(hiddenValue("activities") ?? "[]")).toEqual([
+      {
+        personalActivityId: "9e7a0000-0000-4000-8000-000000000001",
+        position: 0,
+        name: "Bench press",
+        sport: "Strength",
+        measurementMode: "sets_reps_load",
+        actualMeasurement: {
+          groups: [{ sets: 3, reps: 8, load: 60 }],
+          load_unit: "kg",
+        },
+      },
+      {
+        position: 1,
+        name: "Latzug",
+        sport: "Strength",
+        measurementMode: "unmeasured",
+        actualMeasurement: null,
+      },
+    ]);
+  });
+
+  it("offers saved sessions only to an unplanned log", async () => {
+    listSavedSessions.mockResolvedValue([
+      {
+        id: "5a7ed000-0000-4000-8000-000000000001",
+        revision: 1,
+        name: "Tuesday gym",
+        title: "Upper body",
+        sport: "Strength",
+        updatedAt: "",
+        activities: [],
+      },
+    ]);
+    render(
+      await LogPage({
+        searchParams: Promise.resolve({ plannedSession: SESSION_ID }),
+      }),
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Use session from library" }),
+    ).toBeNull();
+    expect(listSavedSessions).not.toHaveBeenCalled();
   });
 
   it("offers a planned session's title and sport, starting as the plan's", async () => {

@@ -12,9 +12,13 @@ import {
 
 import styles from "./activity-editor.module.css";
 import { MeasurementFields, MeasurementModeField } from "./measurement-fields";
+import { libraryOffer } from "./library-offer";
+import {
+  LibraryRowActions,
+  type LibraryRowActionProps,
+} from "./library-row-actions";
 import { ReorderHandle } from "./reorder-handle";
 
-import { activityNameKey } from "@/lib/training/activity-name";
 import type { ActivityValue } from "@/lib/training/activity-value";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
 import {
@@ -45,11 +49,21 @@ export type LibraryActivityOption = Omit<
   "personalActivityId"
 > & {
   id: string;
+  /**
+   * When the definition last changed, which an update sends back so an edit
+   * made elsewhere in the meantime is refused rather than overwritten.
+   */
+  updatedAt: string;
 };
 
 /** What saving a row as a new library definition answers. */
 export type SaveToLibraryResult =
-  | { status: "saved"; message: string; personalActivityId: string }
+  | {
+      status: "saved";
+      message: string;
+      personalActivityId: string;
+      updatedAt: string;
+    }
   | { status: "refused"; message: string };
 
 /**
@@ -57,12 +71,23 @@ export type SaveToLibraryResult =
  * one itself, so it depends on no route.
  */
 export type SaveToLibrary = (
-  activity: Omit<LibraryActivityOption, "id">,
+  activity: Omit<LibraryActivityOption, "id" | "updatedAt">,
+) => Promise<SaveToLibraryResult>;
+
+/**
+ * Overwrite a library definition with a row's values, the row having come
+ * from it. A server action, handed down by the page like `SaveToLibrary`.
+ */
+export type UpdateInLibrary = (
+  personalActivityId: string,
+  expectedUpdatedAt: string,
+  activity: Omit<LibraryActivityOption, "id" | "updatedAt">,
 ) => Promise<SaveToLibraryResult>;
 
 type ActivityLibrary = {
   activities: readonly LibraryActivityOption[];
   saveToLibrary?: SaveToLibrary;
+  updateInLibrary?: UpdateInLibrary;
 };
 
 const ActivityLibraryContext = createContext<ActivityLibrary>({
@@ -78,15 +103,20 @@ const ActivityLibraryContext = createContext<ActivityLibrary>({
 export function ActivityLibraryProvider({
   activities,
   saveToLibrary,
+  updateInLibrary,
   children,
 }: {
   activities: readonly LibraryActivityOption[];
   /** Absent where a surface offers no way to save a row into the library. */
   saveToLibrary?: SaveToLibrary;
+  /** Absent where a surface offers no way to update a library definition. */
+  updateInLibrary?: UpdateInLibrary;
   children: React.ReactNode;
 }) {
   return (
-    <ActivityLibraryContext value={{ activities, saveToLibrary }}>
+    <ActivityLibraryContext
+      value={{ activities, saveToLibrary, updateInLibrary }}
+    >
       {children}
     </ActivityLibraryContext>
   );
@@ -135,18 +165,17 @@ export function ActivityEditor({
     })),
   );
   const [dragging, setDragging] = useState<string | null>(null);
-  const { activities: library, saveToLibrary } = useContext(
-    ActivityLibraryContext,
-  );
+  const {
+    activities: library,
+    saveToLibrary,
+    updateInLibrary,
+  } = useContext(ActivityLibraryContext);
   // Definitions this editor saved, until the page's refresh brings them in
   // with the rest. Without them a row saved a moment ago would read as linked
   // to nothing and offer the save again.
   const [savedHere, setSavedHere] = useState<LibraryActivityOption[]>([]);
   const known = new Map(
     [...library, ...savedHere].map((option) => [option.id, option]),
-  );
-  const takenNames = new Set(
-    [...known.values()].map((option) => activityNameKey(option.name)),
   );
   const [picking, setPicking] = useState(false);
 
@@ -195,44 +224,60 @@ export function ActivityEditor({
   }
 
   /**
-   * Offered to any row the library does not already hold as it is: one typed
-   * by hand, one whose definition was removed, or one picked and then changed
-   * — a similar exercise is a new definition (owner, 27 Sep 2026). A row still
-   * equal to its definition would only be a twin, so it is offered nothing.
-   * One whose name is already taken is told to rename rather than offered a
-   * save the database would refuse; names are unique in the library.
+   * The row's library buttons, as `libraryOffer` decides them for every
+   * session editor. A definition this editor saved or updated is kept in
+   * `savedHere` until the page's refresh brings it in, so the row reads as
+   * matching it at once and the buttons go away.
    */
-  function saveOffer(
+  function libraryActions(
     row: Row,
     measurement: TrainingMeasurement | null | undefined,
-  ): Pick<ActivityRowProps, "onSave" | "saveBlocked"> {
-    if (saveToLibrary === undefined || measurement === undefined) return {};
+  ): LibraryRowActionProps {
+    if (measurement === undefined) return {};
     const definition = toDefinition(row, measurement);
-    if (
-      matchesDefinition(
-        row.personalActivityId === null
-          ? undefined
-          : known.get(row.personalActivityId),
-        definition,
-      )
-    ) {
-      return {};
-    }
-    if (takenNames.has(activityNameKey(definition.name))) {
-      return { saveBlocked: ACTIVITY_COPY.nameTaken(definition.name) };
-    }
+    const offer = libraryOffer(row.personalActivityId, definition, known);
+    const remember = (result: SaveToLibraryResult) => {
+      if (result.status === "saved") {
+        setSavedHere((current) => [
+          ...current,
+          {
+            id: result.personalActivityId,
+            updatedAt: result.updatedAt,
+            ...definition,
+          },
+        ]);
+        update(row.key, { personalActivityId: result.personalActivityId });
+      }
+      return result;
+    };
+    const offered = offer.update;
     return {
-      onSave: async () => {
-        const result = await saveToLibrary(definition);
-        if (result.status === "saved") {
-          setSavedHere((current) => [
-            ...current,
-            { id: result.personalActivityId, ...definition },
-          ]);
-          update(row.key, { personalActivityId: result.personalActivityId });
-        }
-        return result;
-      },
+      ...(saveToLibrary === undefined
+        ? {}
+        : {
+            saveLabel: offer.saveLabel,
+            saveBlocked: offer.saveBlocked,
+            ...(offer.saveLabel === undefined
+              ? {}
+              : {
+                  onSave: async () => remember(await saveToLibrary(definition)),
+                }),
+          }),
+      ...(updateInLibrary === undefined
+        ? {}
+        : offered === undefined
+          ? {}
+          : {
+              updateLabel: offered.label,
+              onUpdate: async () =>
+                remember(
+                  await updateInLibrary(
+                    offered.linked.id,
+                    offered.linked.updatedAt,
+                    definition,
+                  ),
+                ),
+            }),
     };
   }
 
@@ -266,7 +311,10 @@ export function ActivityEditor({
               preview={build.ok ? describeMeasurement(build.measurement) : null}
               dragging={dragging === row.key}
               onDragStateChange={setDragging}
-              {...saveOffer(row, build.ok ? build.measurement : undefined)}
+              library={libraryActions(
+                row,
+                build.ok ? build.measurement : undefined,
+              )}
               onChange={(change) => update(row.key, change)}
               onMove={(delta) => move(row.key, delta)}
               onMoveTo={(to) =>
@@ -385,10 +433,8 @@ type ActivityRowProps = {
   preview: string | null;
   dragging: boolean;
   onDragStateChange: (key: string | null) => void;
-  /** Present only when this row can be saved into the library. */
-  onSave?: () => Promise<SaveToLibraryResult>;
-  /** Why a row that differs from the library still cannot be saved into it. */
-  saveBlocked?: string;
+  /** The row's library buttons; empty when it has none. */
+  library: LibraryRowActionProps;
   onChange: (change: Partial<Row>) => void;
   onMove: (delta: number) => void;
   onMoveTo: (index: number) => void;
@@ -404,8 +450,7 @@ function ActivityRow({
   preview,
   dragging,
   onDragStateChange,
-  onSave,
-  saveBlocked,
+  library,
   onChange,
   onMove,
   onMoveTo,
@@ -420,14 +465,9 @@ function ActivityRow({
   // collapsing a broken row simply does not take — which is the honest
   // behaviour, and costs no cascading render to express.
   const open = expanded || problem !== null;
-  const [saving, setSaving] = useState(false);
-  // Held here rather than derived, because a save links the row, which takes
-  // the button away — and the answer has to outlive the button that asked.
-  const [saveNotice, setSaveNotice] = useState<SaveToLibraryResult | null>(
-    null,
-  );
-  const canSave =
-    onSave !== undefined && row.name.trim() !== "" && row.sport.trim() !== "";
+  // A row with no name or sport is one neither the library nor the session
+  // would accept, so it is offered no library button until it has both.
+  const named = row.name.trim() !== "" && row.sport.trim() !== "";
 
   return (
     <li
@@ -468,38 +508,13 @@ function ActivityRow({
           problem={problem}
           onChange={onChange}
         />
-        {canSave ? (
-          <button
-            className={styles.add}
-            type="button"
-            disabled={saving}
-            onClick={async () => {
-              setSaving(true);
-              try {
-                setSaveNotice(await onSave());
-              } catch {
-                setSaveNotice({
-                  status: "refused",
-                  message: ACTIVITY_COPY.saveToLibraryFailed,
-                });
-              } finally {
-                setSaving(false);
-              }
-            }}
-          >
-            {saving
-              ? ACTIVITY_COPY.savingToLibrary
-              : ACTIVITY_COPY.saveToLibrary}
-          </button>
+        {named ? (
+          <LibraryRowActions
+            {...library}
+            buttonClassName={styles.add}
+            hintClassName={styles.hint}
+          />
         ) : null}
-        {saveBlocked === undefined ? null : (
-          <p className={styles.hint}>{saveBlocked}</p>
-        )}
-        {saveNotice === null ? null : (
-          <p className={styles.hint} role="status">
-            {saveNotice.message}
-          </p>
-        )}
       </div>
     </li>
   );
@@ -509,7 +524,7 @@ function ActivityRow({
 function toDefinition(
   row: Row,
   measurement: TrainingMeasurement | null,
-): Omit<LibraryActivityOption, "id"> {
+): Omit<LibraryActivityOption, "id" | "updatedAt"> {
   return {
     name: row.name.trim(),
     sport: row.sport.trim(),
@@ -522,34 +537,6 @@ function toDefinition(
 /** Instructions as they are stored: trimmed, and absent rather than blank. */
 function trimmedInstructions(value: string | null): string | null {
   return value === null || value.trim() === "" ? null : value.trim();
-}
-
-/** Whether saving `value` would only repeat `definition`. */
-function matchesDefinition(
-  definition: LibraryActivityOption | undefined,
-  value: Omit<LibraryActivityOption, "id">,
-): boolean {
-  if (definition === undefined) return false;
-  return (
-    definition.name === value.name &&
-    definition.sport === value.sport &&
-    (definition.instructions ?? null) === value.instructions &&
-    definition.measurementMode === value.measurementMode &&
-    canonical(definition.target) === canonical(value.target)
-  );
-}
-
-/** JSON with sorted keys, so two equal measurements compare equal. */
-function canonical(value: unknown): string {
-  return JSON.stringify(value, (_key, inner: unknown) =>
-    inner !== null && typeof inner === "object" && !Array.isArray(inner)
-      ? Object.fromEntries(
-          Object.entries(inner).toSorted(([left], [right]) =>
-            left.localeCompare(right),
-          ),
-        )
-      : inner,
-  );
 }
 
 /** The fields one activity is edited through, wherever it is held. */

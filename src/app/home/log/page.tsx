@@ -10,6 +10,12 @@ import {
 import styles from "./log.module.css";
 
 import homeStyles from "../home.module.css";
+import {
+  saveActivityToLibraryAction,
+  updateActivityInLibraryAction,
+} from "../plan/activities/actions";
+import { readLibraryOptions } from "../plan/activities/library-options";
+import { readSavedSessionOptions } from "../plan/saved/session-options";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import type { LogPlannedActivityView } from "./actual-activities";
 import type { Completion } from "@/server/completions/completion-log";
@@ -17,6 +23,7 @@ import {
   CompletionAuthenticationError,
   createCompletionLog,
 } from "@/server/repositories/completion-log-repository";
+import { PersonalActivityAuthenticationError } from "@/server/repositories/personal-activity-repository";
 import {
   createProfileRepository,
   ProfileAuthenticationError,
@@ -25,6 +32,7 @@ import {
   createRollingPlan,
   RollingPlanAuthenticationError,
 } from "@/server/repositories/rolling-plan-repository";
+import { SavedSessionAuthenticationError } from "@/server/repositories/saved-session-repository";
 
 export const dynamic = "force-dynamic";
 
@@ -177,6 +185,9 @@ async function renderForm(
                   }
             }
             existing={existing}
+            library={await readLibraryOptions()}
+            saveActivityToLibrary={saveActivityToLibraryAction}
+            updateActivityInLibrary={updateActivityInLibraryAction}
             unplannedOptions={
               snapshot === null
                 ? []
@@ -263,6 +274,9 @@ async function renderForm(
           <LogForm
             planned={planned}
             existing={null}
+            library={await readLibraryOptions()}
+            saveActivityToLibrary={saveActivityToLibraryAction}
+            updateActivityInLibrary={updateActivityInLibraryAction}
             unplannedOptions={await unplannedOptions(planned.localDate, today)}
             alreadyLogged={
               logged === null
@@ -290,6 +304,10 @@ async function renderForm(
         <LogForm
           planned={null}
           existing={null}
+          savedSessions={await readSavedSessionOptions()}
+          library={await readLibraryOptions()}
+          saveActivityToLibrary={saveActivityToLibraryAction}
+          updateActivityInLibrary={updateActivityInLibraryAction}
           defaultDate={date > today ? today : date}
           today={today}
           returnDate={date}
@@ -485,14 +503,18 @@ function redirectOnAuthError(error: unknown): void {
   const accessError =
     error instanceof ProfileAuthenticationError ||
     error instanceof RollingPlanAuthenticationError ||
-    error instanceof CompletionAuthenticationError
+    error instanceof CompletionAuthenticationError ||
+    error instanceof SavedSessionAuthenticationError ||
+    error instanceof PersonalActivityAuthenticationError
       ? error.accessError
       : undefined;
   if (accessError?.reason === "not-owner") redirect("/auth/denied");
   if (
     error instanceof ProfileAuthenticationError ||
     error instanceof RollingPlanAuthenticationError ||
-    error instanceof CompletionAuthenticationError
+    error instanceof CompletionAuthenticationError ||
+    error instanceof SavedSessionAuthenticationError ||
+    error instanceof PersonalActivityAuthenticationError
   ) {
     redirect("/");
   }

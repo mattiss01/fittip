@@ -153,6 +153,13 @@ export type LogActionState = {
   result?: "created" | "updated";
   /** The day the owner returns to on Today once the write landed. */
   returnDate?: string;
+  /** The log the write landed on, so its receipt can save it to the library. */
+  completionId?: string;
+  /**
+   * Whether the log records training that happened, which is what a saved
+   * session can be made from. A skip or a replacement records none.
+   */
+  reusable?: boolean;
   conflict?: "stale" | "timezone" | "duplicate";
 };
 

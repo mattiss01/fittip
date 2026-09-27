@@ -21,6 +21,10 @@ import {
   planChangeCopy,
   topUpAfterPlanChange,
 } from "../series-materialization";
+import {
+  CompletionAuthenticationError,
+  createCompletionLog,
+} from "@/server/repositories/completion-log-repository";
 import { ProfileAuthenticationError } from "@/server/repositories/profile-repository";
 import {
   createRollingPlan,
@@ -43,6 +47,7 @@ import {
   SavedSessionValidationError,
 } from "@/server/saved-sessions/saved-sessions";
 import {
+  completionToSavedSessionDraft,
   toRollingPlanSessionInput,
   toSavedSessionDraft,
 } from "@/server/saved-sessions/session-copy";
@@ -89,6 +94,80 @@ export async function saveSessionToLibraryAction(
     return { status: "saved", message: "Saved to your library.", submission };
   } catch (error) {
     return failure(...saveFailure(error));
+  }
+}
+
+/** The outcomes that record training which happened, and so can be reused. */
+const REUSABLE_OUTCOMES = new Set([
+  "completed",
+  "partially_completed",
+  "unplanned",
+]);
+
+/**
+ * Save a written log into the library, from its receipt or its Progress
+ * record. As with the Plan's save, the content is read back on the server and
+ * the browser supplies only which log and what to call it. The log itself is
+ * not touched.
+ */
+export async function saveLogToLibraryAction(
+  previous: LibrarySaveActionState,
+  formData: FormData,
+): Promise<LibrarySaveActionState> {
+  const submission = previous.submission + 1;
+  const name = stringValue(formData.get("name"));
+  try {
+    const completion = await (
+      await createCompletionLog()
+    ).get(formData.get("completionId"));
+    if (completion === null || !REUSABLE_OUTCOMES.has(completion.status)) {
+      throw new SavedSessionValidationError();
+    }
+    await (
+      await createSavedSessionLibrary()
+    ).applyChange({
+      operation: "create",
+      session: completionToSavedSessionDraft(name.trim(), completion),
+    });
+    revalidatePath("/home/plan/saved");
+    return { status: "saved", message: "Saved to your library.", submission };
+  } catch (error) {
+    const [status, message] = saveFailure(error);
+    return { status, message, submission, name };
+  }
+}
+
+/** What saving the log form's current values answers. */
+export type SaveDraftToLibraryResult = {
+  status: "saved" | "refused";
+  message: string;
+};
+
+/**
+ * Save the log form as it stands, before or without writing the log. Called
+ * directly rather than through a form, because the button sits inside the
+ * log's own form and forms do not nest. The draft comes from the browser, so
+ * it is parsed by the library under the same suspicion as any other write;
+ * nothing but a new saved session is created.
+ */
+export async function saveSessionDraftToLibraryAction(
+  draft: unknown,
+): Promise<SaveDraftToLibraryResult> {
+  try {
+    await (
+      await createSavedSessionLibrary()
+    ).applyChange({ operation: "create", session: draft });
+    revalidatePath("/home/plan/saved");
+    return { status: "saved", message: "Saved to your library." };
+  } catch (error) {
+    if (error instanceof SavedSessionValidationError) {
+      return {
+        status: "refused",
+        message:
+          "Give it a name, and the log a title and a sport, before saving it. Every activity needs a name too.",
+      };
+    }
+    return { status: "refused", message: saveFailure(error)[1] };
   }
 }
 
@@ -290,7 +369,8 @@ function saveFailure(
   if (
     error instanceof SavedSessionAuthenticationError ||
     error instanceof RollingPlanAuthenticationError ||
-    error instanceof ProfileAuthenticationError
+    error instanceof ProfileAuthenticationError ||
+    error instanceof CompletionAuthenticationError
   ) {
     return ["session", "Your session ended. Sign in again before saving."];
   }

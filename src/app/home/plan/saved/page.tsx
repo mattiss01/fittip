@@ -5,7 +5,10 @@ import { SavedLibrary, type SavedSessionView } from "./saved-library";
 import styles from "./saved.module.css";
 
 import { PLAN_WINDOW_DAYS } from "../action-state";
-import { saveActivityToLibraryAction } from "../activities/actions";
+import {
+  saveActivityToLibraryAction,
+  updateActivityInLibraryAction,
+} from "../activities/actions";
 import { readLibraryOptions } from "../activities/library-options";
 import homeStyles from "../../home.module.css";
 import {
@@ -69,6 +72,7 @@ export default async function SavedSessionsPage() {
       <ActivityLibraryProvider
         activities={activities}
         saveToLibrary={saveActivityToLibraryAction}
+        updateInLibrary={updateActivityInLibraryAction}
       >
         {timezoneName === null ? (
           <ReuseUnavailable sessions={saved} />

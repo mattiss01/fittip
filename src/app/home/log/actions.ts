@@ -90,6 +90,10 @@ export async function logCompletionAction(
       return result("saved", "Log updated.", {
         result: receipt.result,
         returnDate,
+        completionId: receipt.completionId,
+        reusable:
+          TRAINED_OUTCOMES.has(facts.status as CompletionOutcome) ||
+          facts.status === "unplanned",
       });
     }
 
@@ -125,6 +129,10 @@ export async function logCompletionAction(
     return result("saved", "Log saved.", {
       result: receipt.result,
       returnDate,
+      completionId: receipt.completionId,
+      // Extra training is written as unplanned, which happened by definition.
+      reusable:
+        unplanned || TRAINED_OUTCOMES.has(facts.status as CompletionOutcome),
     });
   } catch (error) {
     if (error instanceof CompletionConflictError) {

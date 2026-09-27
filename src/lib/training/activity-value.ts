@@ -50,3 +50,31 @@ export function toActivityValue(activity: {
     target: activity.target ?? null,
   };
 }
+
+/** Whether saving `value` would only repeat `definition`. */
+export function matchesDefinition(
+  definition: Omit<ActivityValue, "personalActivityId"> | undefined,
+  value: Omit<ActivityValue, "personalActivityId">,
+): boolean {
+  if (definition === undefined) return false;
+  return (
+    definition.name === value.name &&
+    definition.sport === value.sport &&
+    (definition.instructions ?? null) === value.instructions &&
+    definition.measurementMode === value.measurementMode &&
+    canonical(definition.target) === canonical(value.target)
+  );
+}
+
+/** JSON with sorted keys, so two equal measurements compare equal. */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, inner: unknown) =>
+    inner !== null && typeof inner === "object" && !Array.isArray(inner)
+      ? Object.fromEntries(
+          Object.entries(inner).toSorted(([left], [right]) =>
+            left.localeCompare(right),
+          ),
+        )
+      : inner,
+  );
+}

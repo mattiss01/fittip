@@ -3,39 +3,51 @@
 import { useActionState } from "react";
 
 import { INITIAL_LIBRARY_SAVE_ACTION_STATE } from "./action-state";
-import { saveSessionToLibraryAction } from "./actions";
+import { saveLogToLibraryAction, saveSessionToLibraryAction } from "./actions";
 import styles from "./saved.module.css";
 
 /**
- * The save entry point, rendered inside a planned session on the Plan. It
- * holds its own action state so one card's result never disturbs another, and
- * so saving never touches the Plan's own change machinery.
+ * The save entry point, rendered inside a planned session on the Plan, and on
+ * a log's receipt and Progress record. It holds its own action state so one
+ * card's result never disturbs another, and so saving never touches the Plan's
+ * or the log's own change machinery.
  */
 export function SaveToLibrary({
   sessionId,
+  completionId,
   defaultName,
 }: {
-  sessionId: string;
   defaultName: string;
-}) {
+} & (
+  | { sessionId: string; completionId?: never }
+  | { completionId: string; sessionId?: never }
+)) {
+  const fromLog = completionId !== undefined;
   const [state, action, pending] = useActionState(
-    saveSessionToLibraryAction,
+    fromLog ? saveLogToLibraryAction : saveSessionToLibraryAction,
     INITIAL_LIBRARY_SAVE_ACTION_STATE,
   );
+  const id = completionId ?? sessionId;
 
   return (
     <details className={styles.planDisclosure}>
-      <summary>Save to library</summary>
+      <summary>
+        {fromLog ? "Save session to library" : "Save to library"}
+      </summary>
       <form
         className={styles.form}
         action={action}
-        key={`save-${sessionId}-${state.submission}`}
+        key={`save-${id}-${state.submission}`}
       >
-        <input type="hidden" name="sessionId" value={sessionId} />
+        {fromLog ? (
+          <input type="hidden" name="completionId" value={completionId} />
+        ) : (
+          <input type="hidden" name="sessionId" value={sessionId} />
+        )}
         <div className={styles.field}>
-          <label htmlFor={`save-${sessionId}-name`}>Name it</label>
+          <label htmlFor={`save-${id}-name`}>Name it</label>
           <input
-            id={`save-${sessionId}-name`}
+            id={`save-${id}-name`}
             name="name"
             maxLength={120}
             required
@@ -47,8 +59,9 @@ export function SaveToLibrary({
           />
         </div>
         <p className={styles.consequence}>
-          A copy goes to your saved sessions. This session stays on your plan,
-          unchanged, and the copy will not follow later edits.
+          {fromLog
+            ? "A copy goes to your saved sessions, with what you did as its targets. This log stays as it is, and the copy will not follow later edits."
+            : "A copy goes to your saved sessions. This session stays on your plan, unchanged, and the copy will not follow later edits."}
         </p>
         <button className={styles.primary} type="submit" disabled={pending}>
           Save to library

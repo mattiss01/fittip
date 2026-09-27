@@ -24,6 +24,7 @@ export async function readLibraryOptions(): Promise<LibraryActivityOption[]> {
   }
   return activities.map((activity) => ({
     id: activity.id,
+    updatedAt: activity.updatedAt,
     name: activity.name,
     sport: activity.sport,
     instructions: activity.instructions ?? null,

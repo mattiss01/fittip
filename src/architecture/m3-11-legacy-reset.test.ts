@@ -185,11 +185,16 @@ const completionOnlySurface = [
 
 /**
  * The routes on the reopened surface that may read or write the activity
- * library (A5). Only the Plan's editors offer it; Today, the log and Progress
- * do not, and the assertion below keeps them from reaching it through the
- * shared list or through the route modules that wrap it.
+ * library (A5). The Plan's editors offer it, and since "log from the library"
+ * the log page reads it too, so a logged row can start from a definition.
+ * The log only reads: it offers no "Save activity to library". Today and
+ * Progress do not reach it, and the assertion below keeps them from reaching
+ * it through the shared list or through the route modules that wrap it.
  */
-const activityLibrarySurface = ["src/app/home/plan/page.tsx"] as const;
+const activityLibrarySurface = [
+  "src/app/home/plan/page.tsx",
+  "src/app/home/log/page.tsx",
+] as const;
 
 /**
  * Every `@/server/**` module the reopened surface may reach. This is an
@@ -208,6 +213,11 @@ const activityLibrarySurface = ["src/app/home/plan/page.tsx"] as const;
  * module — `personal_activities` survived M3-11 untouched — and it writes one
  * owned row of that table and nothing in the plan or the log. This list is
  * shared, so `activityLibrarySurface` below keeps the reach to the Plan.
+ *
+ * "Log from the library" added `saved-session-repository`: the Plan's
+ * Create session and an unplanned log may start from a saved session, so both
+ * pages list them, and redirect on its authentication error. Like the library,
+ * `saved_sessions` was not part of M3-11's reset.
  */
 const allowedServerModules = [
   "@/server/completions/completion-log",
@@ -216,6 +226,7 @@ const allowedServerModules = [
   "@/server/repositories/personal-activity-repository",
   "@/server/repositories/profile-repository",
   "@/server/repositories/rolling-plan-repository",
+  "@/server/repositories/saved-session-repository",
   "@/server/rolling-plan/rolling-plan",
 ] as const;
 
@@ -543,7 +554,7 @@ describe("M3-11 legacy runtime closure", () => {
     }
   });
 
-  it("keeps the activity library to the Plan", () => {
+  it("keeps the activity library to the Plan and the log", () => {
     for (const path of rollingPlanSurface) {
       if ((activityLibrarySurface as readonly string[]).includes(path))
         continue;

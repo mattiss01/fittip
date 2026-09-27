@@ -9,6 +9,7 @@ import {
   type CompletionFeelingValue,
   type CompletionOutcome,
 } from "../log/log-action-state";
+import { SaveToLibrary } from "../plan/saved/save-to-library";
 import {
   ActivityList,
   type ActivityListItem,
@@ -226,6 +227,7 @@ export function TodayDay({
                 >
                   Edit log
                 </Link>
+                <SaveLoggedSession completion={completion} />
               </li>
             ))}
           </ol>
@@ -318,6 +320,7 @@ function SessionCard({
           >
             Edit log
           </Link>
+          <SaveLoggedSession completion={session.completion} />
         </>
       )}
     </li>
@@ -403,4 +406,25 @@ function longDay(date: string) {
 
 function shortDay(date: string) {
   return SHORT_DAY.format(new Date(`${date}T00:00:00.000Z`));
+}
+
+/**
+ * "Save session to library" on a logged card (owner, 27 Sep 2026), so a
+ * session done the same way again can start from this one. Training that
+ * happened only: a skip or a replacement records none, so it offers nothing.
+ */
+function SaveLoggedSession({
+  completion,
+}: {
+  completion: TodayCompletionView;
+}) {
+  if (completion.outcome === "skipped" || completion.outcome === "replaced") {
+    return null;
+  }
+  return (
+    <SaveToLibrary
+      completionId={completion.id}
+      defaultName={completion.title ?? ""}
+    />
+  );
 }
