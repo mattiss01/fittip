@@ -13,6 +13,7 @@ import {
 
 import homeStyles from "../../home.module.css";
 import { isoDateInTimezone } from "@/lib/date/local-date";
+import { toActivityValue } from "@/lib/training/activity-value";
 import { PLAN_PROPOSAL_COPY } from "@/lib/plan/plan-proposal-copy";
 import { selectActiveGoalContext } from "@/server/goals/goal-records";
 import {
@@ -230,14 +231,7 @@ async function loadProposalState() {
     status: session.status,
     intent: session.intent ?? null,
     note: session.note ?? null,
-    activities: session.activities.map((activity) => ({
-      personalActivityId: activity.personalActivityId ?? null,
-      name: activity.name,
-      sport: activity.sport,
-      instructions: activity.instructions ?? null,
-      measurementMode: activity.measurementMode,
-      target: activity.target ?? null,
-    })),
+    activities: session.activities.map(toActivityValue),
     seriesId: session.seriesId ?? null,
   })) satisfies (PlannedSessionSummary & { localDate: string })[];
 

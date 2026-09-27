@@ -13,6 +13,7 @@ import {
   type LibraryActivityOption,
 } from "@/components/training/activity-editor";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
+import { toActivityValue } from "@/lib/training/activity-value";
 import { PersonalActivityAuthenticationError } from "@/server/repositories/personal-activity-repository";
 import {
   createProfileRepository,
@@ -145,14 +146,7 @@ function toSavedSessionView(session: SavedSession): SavedSessionView {
     intent: session.intent ?? null,
     expectedDurationMinutes: session.expectedDurationMinutes ?? null,
     note: session.note ?? null,
-    activities: session.activities.map((activity) => ({
-      personalActivityId: activity.personalActivityId ?? null,
-      name: activity.name,
-      sport: activity.sport,
-      instructions: activity.instructions ?? null,
-      measurementMode: activity.measurementMode,
-      target: activity.target ?? null,
-    })),
+    activities: session.activities.map(toActivityValue),
   };
 }
 

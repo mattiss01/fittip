@@ -15,6 +15,7 @@ import { MeasurementFields, MeasurementModeField } from "./measurement-fields";
 import { ReorderHandle } from "./reorder-handle";
 
 import { activityNameKey } from "@/lib/training/activity-name";
+import type { ActivityValue } from "@/lib/training/activity-value";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
 import {
   type TrainingMeasurement,
@@ -28,22 +29,7 @@ import {
   type MeasurementDraft,
 } from "@/lib/training/measurement-draft";
 
-/** One activity as the surrounding surface already holds it. */
-export type ActivityValue = {
-  /**
-   * The library definition this row was copied from, or null. Every editor
-   * submits it back unchanged, because an edit replaces the whole list and a
-   * row that dropped it would lose the link for good (A5). Changing the row's
-   * fields keeps it: the link says where the row came from, not that the two
-   * still agree.
-   */
-  personalActivityId: string | null;
-  name: string;
-  sport: string;
-  instructions: string | null;
-  measurementMode: TrainingMeasurementMode;
-  target: TrainingMeasurement | null;
-};
+export type { ActivityValue };
 
 type Row = ActivityValue & {
   /** Stable across reorders, which is what keeps inputs from swapping. */

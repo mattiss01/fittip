@@ -20,6 +20,7 @@ import {
   type LibraryActivityOption,
 } from "@/components/training/activity-editor";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
+import { toActivityValue } from "@/lib/training/activity-value";
 import {
   CompletionAuthenticationError,
   createCompletionLog,
@@ -174,14 +175,7 @@ function toSessionView(session: RollingPlanSession): PlanSessionView {
     note: session.note ?? null,
     isLocked: session.isLocked,
     status: session.status,
-    activities: session.activities.map((activity) => ({
-      personalActivityId: activity.personalActivityId ?? null,
-      name: activity.name,
-      sport: activity.sport,
-      instructions: activity.instructions ?? null,
-      measurementMode: activity.measurementMode,
-      target: activity.target ?? null,
-    })),
+    activities: session.activities.map(toActivityValue),
     seriesId: session.seriesId,
     occurrenceDate: session.occurrenceDate,
     hasDiverged: session.hasDiverged,
