@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import {
   TRAINED_OUTCOMES,
+  recordsTraining,
   type CompletionOutcome,
   type LogActionState,
 } from "./log-action-state";
@@ -91,9 +92,7 @@ export async function logCompletionAction(
         result: receipt.result,
         returnDate,
         completionId: receipt.completionId,
-        reusable:
-          TRAINED_OUTCOMES.has(facts.status as CompletionOutcome) ||
-          facts.status === "unplanned",
+        reusable: recordsTraining(facts.status as CompletionOutcome),
       });
     }
 
@@ -131,8 +130,7 @@ export async function logCompletionAction(
       returnDate,
       completionId: receipt.completionId,
       // Extra training is written as unplanned, which happened by definition.
-      reusable:
-        unplanned || TRAINED_OUTCOMES.has(facts.status as CompletionOutcome),
+      reusable: unplanned || recordsTraining(facts.status as CompletionOutcome),
     });
   } catch (error) {
     if (error instanceof CompletionConflictError) {

@@ -7,12 +7,11 @@ import styles from "./log.module.css";
 import type {
   LibraryActivityOption,
   SaveToLibrary,
-  SaveToLibraryResult,
   UpdateInLibrary,
 } from "@/components/training/activity-editor";
-import { libraryOffer } from "@/components/training/library-offer";
 import {
   LibraryRowActions,
+  useLibraryRowActions,
   type LibraryRowActionProps,
 } from "@/components/training/library-row-actions";
 import {
@@ -152,12 +151,11 @@ export function ActualActivities({
   );
   const [picking, setPicking] = useState(false);
   const atLimit = rows.length >= ROW_LIMIT;
-  // Definitions saved from this list, until a reload brings them in with the
-  // rest: without them a row saved a moment ago would offer the save again.
-  const [savedHere, setSavedHere] = useState<LibraryActivityOption[]>([]);
-  const known = new Map(
-    [...library, ...savedHere].map((option) => [option.id, option]),
-  );
+  const { known, actionsFor } = useLibraryRowActions({
+    library,
+    saveToLibrary,
+    updateInLibrary,
+  });
 
   /**
    * As on the Plan, by the same `libraryOffer` rule, with what was done as
@@ -181,50 +179,11 @@ export function ActualActivities({
       measurementMode: row.measurementMode,
       target: measurement,
     };
-    const offer = libraryOffer(row.personalActivityId, definition, known);
-    const remember = (result: SaveToLibraryResult) => {
-      if (result.status === "saved") {
-        setSavedHere((current) => [
-          ...current,
-          {
-            id: result.personalActivityId,
-            updatedAt: result.updatedAt,
-            ...definition,
-          },
-        ]);
-        update(row.key, { personalActivityId: result.personalActivityId });
-      }
-      return result;
-    };
-    const offered = offer.update;
-    return {
-      ...(saveToLibrary === undefined
-        ? {}
-        : {
-            saveLabel: offer.saveLabel,
-            saveBlocked: offer.saveBlocked,
-            ...(offer.saveLabel === undefined
-              ? {}
-              : {
-                  onSave: async () => remember(await saveToLibrary(definition)),
-                }),
-          }),
-      ...(updateInLibrary === undefined
-        ? {}
-        : offered === undefined
-          ? {}
-          : {
-              updateLabel: offered.label,
-              onUpdate: async () =>
-                remember(
-                  await updateInLibrary(
-                    offered.linked.id,
-                    offered.linked.updatedAt,
-                    definition,
-                  ),
-                ),
-            }),
-    };
+    return actionsFor(
+      row.personalActivityId,
+      definition,
+      (personalActivityId) => update(row.key, { personalActivityId }),
+    );
   }
 
   // Unplanned training, or a session planned with no activities, has nothing

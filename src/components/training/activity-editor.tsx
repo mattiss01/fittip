@@ -12,9 +12,9 @@ import {
 
 import styles from "./activity-editor.module.css";
 import { MeasurementFields, MeasurementModeField } from "./measurement-fields";
-import { libraryOffer } from "./library-offer";
 import {
   LibraryRowActions,
+  useLibraryRowActions,
   type LibraryRowActionProps,
 } from "./library-row-actions";
 import { ReorderHandle } from "./reorder-handle";
@@ -170,13 +170,11 @@ export function ActivityEditor({
     saveToLibrary,
     updateInLibrary,
   } = useContext(ActivityLibraryContext);
-  // Definitions this editor saved, until the page's refresh brings them in
-  // with the rest. Without them a row saved a moment ago would read as linked
-  // to nothing and offer the save again.
-  const [savedHere, setSavedHere] = useState<LibraryActivityOption[]>([]);
-  const known = new Map(
-    [...library, ...savedHere].map((option) => [option.id, option]),
-  );
+  const { actionsFor } = useLibraryRowActions({
+    library,
+    saveToLibrary,
+    updateInLibrary,
+  });
   const [picking, setPicking] = useState(false);
 
   const built = useMemo(
@@ -223,62 +221,17 @@ export function ActivityEditor({
     });
   }
 
-  /**
-   * The row's library buttons, as `libraryOffer` decides them for every
-   * session editor. A definition this editor saved or updated is kept in
-   * `savedHere` until the page's refresh brings it in, so the row reads as
-   * matching it at once and the buttons go away.
-   */
+  /** The row's library buttons, by the rule every session editor shares. */
   function libraryActions(
     row: Row,
     measurement: TrainingMeasurement | null | undefined,
   ): LibraryRowActionProps {
     if (measurement === undefined) return {};
-    const definition = toDefinition(row, measurement);
-    const offer = libraryOffer(row.personalActivityId, definition, known);
-    const remember = (result: SaveToLibraryResult) => {
-      if (result.status === "saved") {
-        setSavedHere((current) => [
-          ...current,
-          {
-            id: result.personalActivityId,
-            updatedAt: result.updatedAt,
-            ...definition,
-          },
-        ]);
-        update(row.key, { personalActivityId: result.personalActivityId });
-      }
-      return result;
-    };
-    const offered = offer.update;
-    return {
-      ...(saveToLibrary === undefined
-        ? {}
-        : {
-            saveLabel: offer.saveLabel,
-            saveBlocked: offer.saveBlocked,
-            ...(offer.saveLabel === undefined
-              ? {}
-              : {
-                  onSave: async () => remember(await saveToLibrary(definition)),
-                }),
-          }),
-      ...(updateInLibrary === undefined
-        ? {}
-        : offered === undefined
-          ? {}
-          : {
-              updateLabel: offered.label,
-              onUpdate: async () =>
-                remember(
-                  await updateInLibrary(
-                    offered.linked.id,
-                    offered.linked.updatedAt,
-                    definition,
-                  ),
-                ),
-            }),
-    };
+    return actionsFor(
+      row.personalActivityId,
+      toDefinition(row, measurement),
+      (personalActivityId) => update(row.key, { personalActivityId }),
+    );
   }
 
   const atLimit = rows.length >= ACTIVITY_COPY.softLimit;

@@ -294,6 +294,10 @@ async function renderForm(
       );
     }
 
+    const [savedSessions, library] = await Promise.all([
+      readSavedSessionOptions(),
+      readLibraryOptions(),
+    ]);
     return (
       <>
         <SourceCard
@@ -304,8 +308,8 @@ async function renderForm(
         <LogForm
           planned={null}
           existing={null}
-          savedSessions={await readSavedSessionOptions()}
-          library={await readLibraryOptions()}
+          savedSessions={savedSessions}
+          library={library}
           saveActivityToLibrary={saveActivityToLibraryAction}
           updateActivityInLibrary={updateActivityInLibraryAction}
           defaultDate={date > today ? today : date}

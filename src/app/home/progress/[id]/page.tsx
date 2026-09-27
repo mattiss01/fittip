@@ -11,6 +11,7 @@ import type { ProgressCompletionView } from "../progress-record";
 import styles from "../progress.module.css";
 
 import homeStyles from "../../home.module.css";
+import { recordsTraining } from "../../log/log-action-state";
 import { SaveToLibrary } from "../../plan/saved/save-to-library";
 import {
   replacedByLabel,
@@ -105,8 +106,7 @@ export default async function CompletionPage({ params }: Props) {
           </div>
           {/* Training that happened can become a saved session; a skip or a
               replacement records none, so it offers nothing to save. */}
-          {completion.status === "skipped" ||
-          completion.status === "replaced" ? null : (
+          {!recordsTraining(completion.status) ? null : (
             <SaveToLibrary
               completionId={completion.id}
               defaultName={

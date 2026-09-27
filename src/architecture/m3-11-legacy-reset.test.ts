@@ -186,8 +186,9 @@ const completionOnlySurface = [
 /**
  * The routes on the reopened surface that may read or write the activity
  * library (A5). The Plan's editors offer it, and since "log from the library"
- * the log page reads it too, so a logged row can start from a definition.
- * The log only reads: it offers no "Save activity to library". Today and
+ * the log's do too: a logged row can start from a definition, be saved as a
+ * new one, or update the one it came from — each a write of one owned
+ * `personal_activities` row and nothing in the plan or the log. Today and
  * Progress do not reach it, and the assertion below keeps them from reaching
  * it through the shared list or through the route modules that wrap it.
  */
@@ -212,7 +213,8 @@ const activityLibrarySurface = [
  * the owner's activity library, so the Plan page reads it. It is not a legacy
  * module — `personal_activities` survived M3-11 untouched — and it writes one
  * owned row of that table and nothing in the plan or the log. This list is
- * shared, so `activityLibrarySurface` below keeps the reach to the Plan.
+ * shared, so `activityLibrarySurface` below keeps the reach to the Plan and
+ * the log.
  *
  * "Log from the library" added `saved-session-repository`: the Plan's
  * Create session and an unplanned log may start from a saved session, so both

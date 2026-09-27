@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 
-import type { SaveToLibraryResult } from "./activity-editor";
+import type {
+  LibraryActivityOption,
+  SaveToLibrary,
+  SaveToLibraryResult,
+  UpdateInLibrary,
+} from "./activity-editor";
+import { libraryOffer } from "./library-offer";
 
 import { ACTIVITY_COPY } from "@/lib/training/measurement-copy";
 
@@ -89,4 +95,84 @@ export function LibraryRowActions({
       )}
     </>
   );
+}
+
+type Definition = Omit<LibraryActivityOption, "id" | "updatedAt">;
+
+/**
+ * The library half of a session editor, shared by the Plan's and the log's.
+ *
+ * `known` is the library as the page read it plus every definition this
+ * editor saved or updated since, until the page's refresh brings them in:
+ * without them a row saved a moment ago would read as linked to nothing, or
+ * as differing from what it just wrote, and offer the same button again.
+ *
+ * `actionsFor` gives one row its buttons by the `libraryOffer` rule; a save
+ * or an update that lands calls `onLinked` with the definition the row now
+ * answers to.
+ */
+export function useLibraryRowActions({
+  library,
+  saveToLibrary,
+  updateInLibrary,
+}: {
+  library: readonly LibraryActivityOption[];
+  saveToLibrary?: SaveToLibrary;
+  updateInLibrary?: UpdateInLibrary;
+}) {
+  const [savedHere, setSavedHere] = useState<LibraryActivityOption[]>([]);
+  const known = new Map(
+    [...library, ...savedHere].map((option) => [option.id, option]),
+  );
+
+  function actionsFor(
+    personalActivityId: string | null,
+    definition: Definition,
+    onLinked: (personalActivityId: string) => void,
+  ): LibraryRowActionProps {
+    const offer = libraryOffer(personalActivityId, definition, known);
+    const remember = (result: SaveToLibraryResult) => {
+      if (result.status === "saved") {
+        setSavedHere((current) => [
+          ...current,
+          {
+            id: result.personalActivityId,
+            updatedAt: result.updatedAt,
+            ...definition,
+          },
+        ]);
+        onLinked(result.personalActivityId);
+      }
+      return result;
+    };
+    const offered = offer.update;
+    return {
+      ...(saveToLibrary === undefined
+        ? {}
+        : {
+            saveLabel: offer.saveLabel,
+            saveBlocked: offer.saveBlocked,
+            ...(offer.saveLabel === undefined
+              ? {}
+              : {
+                  onSave: async () => remember(await saveToLibrary(definition)),
+                }),
+          }),
+      ...(updateInLibrary === undefined || offered === undefined
+        ? {}
+        : {
+            updateLabel: offered.label,
+            onUpdate: async () =>
+              remember(
+                await updateInLibrary(
+                  offered.linked.id,
+                  offered.linked.updatedAt,
+                  definition,
+                ),
+              ),
+          }),
+    };
+  }
+
+  return { known, actionsFor };
 }

@@ -8,6 +8,7 @@ import {
   COMPLETION_SIGNAL_STAMPS,
   type CompletionFeelingValue,
   type CompletionOutcome,
+  recordsTraining,
 } from "../log/log-action-state";
 import { SaveToLibrary } from "../plan/saved/save-to-library";
 import {
@@ -418,9 +419,7 @@ function SaveLoggedSession({
 }: {
   completion: TodayCompletionView;
 }) {
-  if (completion.outcome === "skipped" || completion.outcome === "replaced") {
-    return null;
-  }
+  if (!recordsTraining(completion.outcome)) return null;
   return (
     <SaveToLibrary
       completionId={completion.id}

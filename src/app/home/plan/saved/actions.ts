@@ -12,6 +12,7 @@ import {
 } from "./action-state";
 
 import { readSubmittedTemplateActivities } from "../activity-form";
+import { recordsTraining } from "../../log/log-action-state";
 import {
   nextPlanPosition,
   readPlannableDate,
@@ -97,13 +98,6 @@ export async function saveSessionToLibraryAction(
   }
 }
 
-/** The outcomes that record training which happened, and so can be reused. */
-const REUSABLE_OUTCOMES = new Set([
-  "completed",
-  "partially_completed",
-  "unplanned",
-]);
-
 /**
  * Save a written log into the library, from its receipt or its Progress
  * record. As with the Plan's save, the content is read back on the server and
@@ -120,7 +114,7 @@ export async function saveLogToLibraryAction(
     const completion = await (
       await createCompletionLog()
     ).get(formData.get("completionId"));
-    if (completion === null || !REUSABLE_OUTCOMES.has(completion.status)) {
+    if (completion === null || !recordsTraining(completion.status)) {
       throw new SavedSessionValidationError();
     }
     await (
