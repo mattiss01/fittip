@@ -88,6 +88,8 @@ export type CoachAICompositionInput = {
   environment?: Record<string, string | undefined>;
   clock?: () => Date;
   requestIds?: () => string;
+  /** `fill_session_activities` only: the planned session the source reads. */
+  sessionId?: string;
 };
 
 export type CoachAIComposition = {
@@ -146,6 +148,21 @@ export function createPlanCoachAIService(
   return createCoachAIService("create_seven_day_plan", input);
 }
 
+/**
+ * The session-detail coaching service (A7-2, ADR-020).
+ *
+ * The same wiring again, asked about `fill_session_activities`, plus the one
+ * input only this operation has: the planned session to fill. The context
+ * source is built with it, so what it reads is decided here and not by
+ * whatever the request later claims; assembly refuses a request whose
+ * `compose.sessionId` names a different session.
+ */
+export function createSessionActivitiesCoachAIService(
+  input: CoachAICompositionInput & { sessionId: string },
+): CoachAIComposition {
+  return createCoachAIService("fill_session_activities", input);
+}
+
 function createCoachAIService(
   operation: CoachAIOperation,
   input: CoachAICompositionInput,
@@ -161,7 +178,11 @@ function createCoachAIService(
   // sources.
   const contextSource =
     input.contextSource ??
-    new OwnedRecordsCoachAIContextSource({ operation, clock });
+    new OwnedRecordsCoachAIContextSource({
+      operation,
+      clock,
+      sessionId: input.sessionId ?? null,
+    });
 
   if (mode === "fixture") {
     const binding = FIXTURE_COACH_AI_BINDING;

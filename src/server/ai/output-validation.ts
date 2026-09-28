@@ -15,6 +15,8 @@ import {
   type RoadmapProposal,
   type RoadmapResponse,
   type RoadmapReviewPoint,
+  type ProposedSessionActivity,
+  type SessionActivitiesProposal,
   type SevenDayPlanAlternative,
   type SevenDayPlanProposal,
   type SevenDayPlanResponse,
@@ -30,6 +32,12 @@ import {
   PLAN_MIN_DAY_COUNT,
 } from "@/server/ai/plan-horizon";
 import { MEMORY_TYPES, type MemoryType } from "@/server/memory/memory-records";
+import {
+  parseTrainingMeasurement,
+  TRAINING_MEASUREMENT_MODES,
+  type TrainingMeasurement,
+  type TrainingMeasurementMode,
+} from "@/server/training/training-measurements";
 
 /**
  * Output validation. Provider output is untrusted text: it is size-bounded
@@ -93,6 +101,11 @@ export type PlanValidationResult =
       /** Present when a valid plan arrived with an unusable memory section. */
       memoryRejectionReason: CoachAIRejectionReason | null;
     }
+  | { outcome: "rejected"; reason: CoachAIRejectionReason };
+
+/** The fill operation has one section: there is no note to extract memory from. */
+export type SessionActivitiesValidationResult =
+  | { outcome: "accepted"; proposal: SessionActivitiesProposal }
   | { outcome: "rejected"; reason: CoachAIRejectionReason };
 
 export const COACH_AI_MAX_OUTPUT_BYTES = 16_000;
@@ -179,17 +192,309 @@ export function validateCoachAICandidate(input: {
   context: CoachAIContext;
   maxBytes?: number;
 }): CoachAIValidationResult {
-  if (input.operation === "create_roadmap") {
-    const result = validateRoadmapCandidate(input);
-    return result.outcome === "accepted"
-      ? { outcome: "accepted", proposal: result.response.roadmap }
-      : result;
+  switch (input.operation) {
+    case "create_roadmap": {
+      const result = validateRoadmapCandidate(input);
+      return result.outcome === "accepted"
+        ? { outcome: "accepted", proposal: result.response.roadmap }
+        : result;
+    }
+    case "create_seven_day_plan": {
+      const result = validatePlanCandidate(input);
+      return result.outcome === "accepted"
+        ? { outcome: "accepted", proposal: result.response.plan }
+        : result;
+    }
+    case "fill_session_activities":
+      return validateSessionActivitiesCandidate(input);
+    default: {
+      // A fourth operation must choose its validator; it cannot fall into one.
+      const unreachable: never = input.operation;
+      return unreachable;
+    }
+  }
+}
+
+/** A7-2's bounds. Structural output limits, not training rules. */
+export const SESSION_ACTIVITIES_MAX = 12;
+const SESSION_ACTIVITY_NAME_MAX = 120;
+const SESSION_ACTIVITY_SPORT_MAX = 80;
+const SESSION_ACTIVITY_INSTRUCTIONS_MAX = 500;
+const SESSION_ACTIVITY_RATIONALE_MAX = 300;
+const SESSION_ACTIVITIES_SUMMARY_MAX = 400;
+const SESSION_ACTIVITIES_SAFETY_MAX = 3;
+/** The cap on the stored proposal, separate from one response's body. */
+export const SESSION_ACTIVITIES_CONTENT_MAX_BYTES = 16_000;
+
+/**
+ * The fill entry point: size, parse, structure, then content safety last.
+ *
+ * Two properties are the server's and never the model's. A library link must
+ * name an entry that was *sent*, which is the owner's own active library; the
+ * entry's name, sport and mode are then copied from the context rather than
+ * taken from the response, so a misspelt name cannot drift from the definition
+ * it links. And every target is parsed by `parseTrainingMeasurement`, the same
+ * function the plan editor's save runs, so a proposal the owner saves unchanged
+ * is one `apply_rolling_plan_change_set` accepts.
+ */
+export function validateSessionActivitiesCandidate(input: {
+  body: string;
+  context: CoachAIContext;
+  maxBytes?: number;
+}): SessionActivitiesValidationResult {
+  const maxBytes = input.maxBytes ?? COACH_AI_MAX_OUTPUT_BYTES;
+  if (byteLength(input.body) > maxBytes) return rejected("too_large");
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(input.body);
+  } catch {
+    return rejected("unparsable");
+  }
+  if (!isRecord(parsed)) return rejected("schema");
+  if (
+    findUnknownField(parsed, [
+      "schemaVersion",
+      "summary",
+      "activities",
+      "safetyConsiderations",
+    ])
+  ) {
+    return rejected("unknown_field");
   }
 
-  const result = validatePlanCandidate(input);
-  return result.outcome === "accepted"
-    ? { outcome: "accepted", proposal: result.response.plan }
-    : result;
+  const detail = input.context.sessionDetail;
+  if (
+    detail === null ||
+    parsed.schemaVersion !== COACH_AI_SCHEMA_VERSIONS.fill_session_activities ||
+    !isText(parsed.summary, SESSION_ACTIVITIES_SUMMARY_MAX) ||
+    !Array.isArray(parsed.activities)
+  ) {
+    return rejected("schema");
+  }
+  if (
+    parsed.activities.length < 1 ||
+    parsed.activities.length > SESSION_ACTIVITIES_MAX
+  ) {
+    return rejected("business_rule");
+  }
+
+  const library = new Map(detail.library.map((entry) => [entry.id, entry]));
+  // Ids the coach was shown on an activity without being sent the definition:
+  // one trimmed from the library to fit, or archived since the session was
+  // written. Told to keep what fits, a coach will keep those ids, and refusing
+  // a paid answer for doing what it was asked is a refusal nobody can act on.
+  // Such a row keeps its own name and becomes session-only instead.
+  const mentioned = new Set(
+    [
+      ...detail.session.activities,
+      ...detail.savedSessions.flatMap((saved) => saved.activities),
+      ...detail.recentActuals,
+    ]
+      .map((activity) => activity.personalActivityId)
+      .filter((id): id is string => id !== null && !library.has(id)),
+  );
+  const activities: ProposedSessionActivity[] = [];
+  for (const entry of parsed.activities) {
+    const activity = validateProposedActivity(entry, library, mentioned);
+    if (activity.outcome === "rejected") return activity;
+    activities.push(activity.activity);
+  }
+
+  const safetyConsiderations = validateStringArray(
+    parsed.safetyConsiderations,
+    SESSION_ACTIVITIES_SAFETY_MAX,
+    240,
+  );
+  if (safetyConsiderations === null) return rejected("business_rule");
+
+  const proposal: SessionActivitiesProposal = {
+    schemaVersion: COACH_AI_SCHEMA_VERSIONS.fill_session_activities,
+    summary: parsed.summary,
+    activities,
+    ...(safetyConsiderations.length > 0 ? { safetyConsiderations } : {}),
+  };
+
+  if (
+    containsUnsafeContent([
+      proposal.summary,
+      ...safetyConsiderations,
+      ...activities.flatMap((activity) => [
+        activity.name,
+        activity.sport,
+        activity.rationale,
+        ...(activity.instructions === null ? [] : [activity.instructions]),
+        // A custom target's label, value and unit are free text too.
+        ...targetStrings(activity.target),
+      ]),
+    ])
+  ) {
+    return rejected("unsafe_content");
+  }
+
+  // As for plans and roadmaps: a present flag never blocks generation, but a
+  // list that does not acknowledge it has not acknowledged what was reported.
+  if (input.context.hasSafetySignal && safetyConsiderations.length === 0) {
+    return rejected("safety_requirement");
+  }
+
+  if (
+    byteLength(JSON.stringify(proposal)) > SESSION_ACTIVITIES_CONTENT_MAX_BYTES
+  ) {
+    return rejected("too_large");
+  }
+
+  return { outcome: "accepted", proposal };
+}
+
+type ProposedActivityResult =
+  | { outcome: "accepted"; activity: ProposedSessionActivity }
+  | { outcome: "rejected"; reason: CoachAIRejectionReason };
+
+function validateProposedActivity(
+  entry: unknown,
+  library: ReadonlyMap<
+    string,
+    { name: string; sport: string; measurementMode: TrainingMeasurementMode }
+  >,
+  mentioned: ReadonlySet<string>,
+): ProposedActivityResult {
+  if (!isRecord(entry)) return rejected("schema");
+  if (
+    findUnknownField(entry, [
+      "personalActivityId",
+      "name",
+      "sport",
+      "instructions",
+      "measurementMode",
+      "target",
+      "rationale",
+    ])
+  ) {
+    return rejected("unknown_field");
+  }
+  if (
+    !isMeasurementMode(entry.measurementMode) ||
+    !isText(entry.rationale, SESSION_ACTIVITY_RATIONALE_MAX) ||
+    !(
+      entry.instructions === null ||
+      entry.instructions === undefined ||
+      isText(entry.instructions, SESSION_ACTIVITY_INSTRUCTIONS_MAX)
+    ) ||
+    !(
+      entry.personalActivityId === null ||
+      entry.personalActivityId === undefined ||
+      typeof entry.personalActivityId === "string"
+    )
+  ) {
+    return rejected("schema");
+  }
+
+  let name: string;
+  let sport: string;
+  let personalActivityId: string | null = null;
+  // A mentioned-but-unsent id falls through to a session-only row below.
+  const linkedId =
+    typeof entry.personalActivityId === "string" &&
+    !mentioned.has(entry.personalActivityId)
+      ? entry.personalActivityId
+      : null;
+  if (linkedId !== null) {
+    const linked = library.get(linkedId);
+    // An id that was never shown is not the owner's to link, whatever it is.
+    if (!linked) return rejected("business_rule");
+    if (linked.measurementMode !== entry.measurementMode) {
+      return rejected("business_rule");
+    }
+    personalActivityId = linkedId;
+    name = linked.name;
+    sport = linked.sport;
+  } else {
+    if (
+      !isText(entry.name, SESSION_ACTIVITY_NAME_MAX) ||
+      !isText(entry.sport, SESSION_ACTIVITY_SPORT_MAX)
+    ) {
+      return rejected("schema");
+    }
+    name = entry.name.trim();
+    sport = entry.sport.trim();
+  }
+
+  const target = readTarget(entry.measurementMode, entry.target);
+  if (target === undefined) return rejected("schema");
+
+  return {
+    outcome: "accepted",
+    activity: {
+      personalActivityId,
+      name,
+      sport,
+      instructions:
+        typeof entry.instructions === "string" ? entry.instructions : null,
+      measurementMode: entry.measurementMode,
+      target,
+      rationale: entry.rationale,
+    },
+  };
+}
+
+/**
+ * The grammar's all-fields-nullable target, reduced to the mode's own shape.
+ * Nulls are dropped, including inside set groups; nothing left means no target.
+ * `undefined` means refused.
+ */
+function readTarget(
+  mode: TrainingMeasurementMode,
+  value: unknown,
+): TrainingMeasurement | null | undefined {
+  if (value === null || value === undefined) return null;
+  if (!isRecord(value)) return undefined;
+
+  const present: Record<string, unknown> = {};
+  for (const [key, field] of Object.entries(value)) {
+    if (field === null) continue;
+    if (key === "groups" && Array.isArray(field)) {
+      present.groups = field.map((group) =>
+        isRecord(group)
+          ? Object.fromEntries(
+              Object.entries(group).filter(([, part]) => part !== null),
+            )
+          : group,
+      );
+      continue;
+    }
+    present[key] = field;
+  }
+  if (Object.keys(present).length === 0) return null;
+  // The flat form is readable history, not something to write; the grammar
+  // cannot produce it, so a body carrying it did not come through the grammar.
+  if (mode === "sets_reps_load" && !("groups" in present)) return undefined;
+
+  try {
+    return parseTrainingMeasurement(mode, present);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Bounded, and more than whitespace: a blank rationale explains nothing. */
+function isText(value: unknown, max: number): value is string {
+  return isBounded(value, 1, max) && value.trim().length > 0;
+}
+
+/** The free text a target can carry, for the content check. */
+function targetStrings(target: TrainingMeasurement | null): string[] {
+  if (target === null) return [];
+  return Object.values(target).filter(
+    (value): value is string => typeof value === "string",
+  );
+}
+
+function isMeasurementMode(value: unknown): value is TrainingMeasurementMode {
+  return (
+    typeof value === "string" &&
+    (TRAINING_MEASUREMENT_MODES as readonly string[]).includes(value)
+  );
 }
 
 /**

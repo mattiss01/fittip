@@ -26,6 +26,10 @@ import {
 } from "@/server/ai/owner-text";
 import { buildRoadmapPlanContext } from "@/server/roadmap/roadmap-plan-context";
 import {
+  buildSessionDetailContext,
+  type SessionDetailRecords,
+} from "@/server/session-detail/session-detail-context";
+import {
   selectTrainingHistoryContext,
   type TrainingHistoryRecords,
 } from "@/server/training/training-history-context";
@@ -73,6 +77,7 @@ export type CoachAIContextSourceName =
   | "regeneration_feedback"
   | "previous_proposal"
   | "roadmap"
+  | "session_detail"
   | "whole_context";
 
 /**
@@ -155,6 +160,12 @@ export type CoachAIContextLimits = {
      * this number disagree. Zero for `create_roadmap`, which never carries one.
      */
     roadmap: number;
+    /**
+     * A7-2. Trims rather than denies, like the roadmap: every list inside it is
+     * reduced to its share of `SESSION_DETAIL_BYTES` with the loss counted.
+     * Zero for every operation except `fill_session_activities`.
+     */
+    sessionDetail: number;
     /** The sum of the parts plus the envelope. Never smaller than the sum. */
     total: number;
   };
@@ -242,6 +253,7 @@ export const COACH_AI_CONTEXT_LIMITS = {
       previousProposal: 2_200,
       // A roadmap is not planned against itself.
       roadmap: 0,
+      sessionDetail: 0,
       total: 33_700,
     },
   },
@@ -302,10 +314,79 @@ export const COACH_AI_CONTEXT_LIMITS = {
       // against this number rather than trusting the arithmetic.
       previousProposal: 6_400,
       roadmap: 4_000,
+      sessionDetail: 0,
       total: 32_500,
     },
   },
+  // A7-2, within ADR-020. One session rather than a horizon, so the plan's
+  // long-range sources are absent: no historical goals, no roadmap, no
+  // previous proposal, no plan commitments, and training history is the last
+  // seven days only (`trainingSelectionFor`), kept so a pain, illness,
+  // injury or fatigue flag still steers the coach conservatively. What it adds
+  // is `sessionDetail`, whose parts are sized in `session-detail-context.ts`.
+  //
+  // The owner's request note is bounded at 500 characters by the action, and
+  // 1,600 bytes is what 500 characters can need at three bytes each (CJK) plus
+  // the quotes: refusing a note the action accepted would be a refusal the
+  // owner could not predict.
+  //
+  //   prefix 7,000 + wrapper 64 + context 32,400 = 39,464 characters
+  //   ceil(39,464 / 4) = 9,866  against  maxInputTokens 10,000
+  //
+  // It stays under the shared ceiling, so this operation needs none of the
+  // plan's missing headroom. A ceiling of its own, which would reserve less per
+  // call, is a separate change: `maxInputTokens` is one number today.
+  fill_session_activities: {
+    maxTargetableGoals: 12,
+    maxHistoricalGoals: 0,
+    maxMemoryItems: 20,
+    maxTrainingSessions: 10,
+    maxPlanCommitments: 0,
+    bytes: {
+      targetableGoals: 4_000,
+      // Always empty here, and an empty list is its two brackets.
+      historicalGoals: 2,
+      memory: 5_600,
+      trainingHistory: 4_400,
+      trainingHistoryCompletions: 4_000,
+      planCommitments: 0,
+      planningNote: 1_600,
+      regenerationFeedback: 0,
+      previousProposal: 0,
+      roadmap: 0,
+      sessionDetail: 16_000,
+      total: 32_400,
+    },
+  },
 } as const satisfies Record<CoachAIOperation, CoachAIContextLimits>;
+
+/** The days of training history `fill_session_activities` reads: this week. */
+export const SESSION_DETAIL_HISTORY_DAYS = 7;
+
+/**
+ * The training history an operation actually reads.
+ *
+ * The plan and the roadmap read ADR-013's whole window. Filling one session
+ * reads the last seven days of it (the owner's choice of 28 September 2026)
+ * and no planned sessions at all — its week is `sessionDetail.week` — so eight
+ * weeks do not crowd out the library and the actuals the operation exists to
+ * use. The narrowing goes through `windowDays` rather than by filtering first,
+ * so the window dates and counts the coach is told describe the seven days it
+ * was actually sent. Shared by assembly and by the context source's
+ * source-recording, which must agree on what was sent.
+ */
+export function trainingSelectionFor(
+  operation: CoachAIOperation,
+  training: TrainingHistoryRecords,
+): { records: TrainingHistoryRecords; windowDays: number | undefined } {
+  if (operation !== "fill_session_activities") {
+    return { records: training, windowDays: undefined };
+  }
+  return {
+    records: { ...training, plannedSessions: [] },
+    windowDays: SESSION_DETAIL_HISTORY_DAYS,
+  };
+}
 
 const CANONICAL_UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -367,6 +448,12 @@ export type CoachAIOwnedRecords = {
    * requirement.
    */
   roadmapVersion?: CoachAIRoadmapVersionRecord | null;
+  /**
+   * A7-2. The session being filled and what the source selected around it,
+   * field-copied but not yet sized. Read for `fill_session_activities` only;
+   * assembly sizes it with `buildSessionDetailContext`.
+   */
+  sessionDetail?: SessionDetailRecords | null;
 };
 
 /** An accepted roadmap version, as the repository returns it. */
@@ -385,6 +472,12 @@ export type CoachAIComposeInput = {
     | CoachAIPreviousProposalReference
     | CoachAIPreviousPlanReference
     | null;
+  /**
+   * The planned session `fill_session_activities` fills. The context source is
+   * built with the same id and reads that session; assembly refuses when the
+   * two disagree.
+   */
+  sessionId?: string | null;
 };
 
 export type CoachAIAssembledContext = {
@@ -430,8 +523,19 @@ export function buildCoachAIContext(
     throw new CoachAIError("context_invalid");
   }
 
-  const goals = selectActiveGoalContext(records.goals);
+  const selectedGoals = selectActiveGoalContext(records.goals);
+  // Filling one session serves the goals the athlete holds now; an achieved
+  // goal is background for a roadmap and nothing to a session's exercises.
+  const goals =
+    operation === "fill_session_activities"
+      ? { ...selectedGoals, historical: [] }
+      : selectedGoals;
   const memoryItems = selectActiveMemoryContext(records.memory, records.today);
+  const sessionDetailRecords = requireSessionDetail(
+    operation,
+    records,
+    compose,
+  );
 
   // Decision 5: the threshold, checked before anything is claimed or reserved.
   // It names every missing requirement at once rather than the first one, so an
@@ -492,9 +596,14 @@ export function buildCoachAIContext(
     )
     .map((goal) => goal.id);
 
+  const trainingSelection = trainingSelectionFor(operation, records.training);
   const training = selectTrainingHistoryContext(
-    { ...records.training, horizonEndDate: compose.horizonEndDate },
     {
+      ...trainingSelection.records,
+      horizonEndDate: compose.horizonEndDate,
+    },
+    {
+      windowDays: trainingSelection.windowDays,
       maxSessions: limits.maxTrainingSessions,
       // The completion sub-budget, not the whole-source ceiling: the miss list
       // and the envelope share that ceiling and neither trims by bytes.
@@ -530,6 +639,11 @@ export function buildCoachAIContext(
     // roadmap is not planned against itself, and a source that supplied one
     // would otherwise quietly widen what a roadmap request sends.
     roadmap: roadmapContext,
+    // Only the operation that fills a session carries one, for the same reason.
+    sessionDetail:
+      sessionDetailRecords === null
+        ? null
+        : buildSessionDetailContext(sessionDetailRecords),
   };
 
   const usage = {
@@ -542,6 +656,7 @@ export function buildCoachAIContext(
     regeneration_feedback: jsonBytes(context.regenerationFeedback),
     previous_proposal: jsonBytes(context.previousProposal),
     roadmap: jsonBytes(context.roadmap),
+    session_detail: jsonBytes(context.sessionDetail),
   };
 
   // Ordered deliberately: the sources that deny are checked before the total,
@@ -596,6 +711,12 @@ export function buildCoachAIContext(
   // ladder and the budget disagree. A configuration defect, not something the
   // owner did, and it should fail loudly rather than send more than the budget.
   refuseOver(usage.roadmap, limits.bytes.roadmap, "roadmap");
+  // The same class again: every list inside was already fitted to its share.
+  refuseOver(
+    usage.session_detail,
+    limits.bytes.sessionDetail,
+    "session_detail",
+  );
 
   const serialized = JSON.stringify(context);
   const serializedBytes = byteLength(serialized);
@@ -624,6 +745,42 @@ export function buildCoachAIContext(
             },
     },
   };
+}
+
+/**
+ * The session a fill request is about, or `null` for every other operation.
+ *
+ * Refused rather than defaulted: a fill with no session, a session other than
+ * the one composed for, one that was cancelled or is already in the past, or a
+ * horizon that is not that session's day is a caller defect, and answering it
+ * would propose activities for training nobody can still do. The past-date
+ * rule is the one `apply_rolling_plan_change_set` enforces on an edit, so a
+ * proposal is never made for a session its own save would refuse.
+ */
+function requireSessionDetail(
+  operation: CoachAIOperation,
+  records: CoachAIOwnedRecords,
+  compose: CoachAIComposeInput,
+): SessionDetailRecords | null {
+  if (operation !== "fill_session_activities") {
+    if (compose.sessionId) throw new CoachAIError("context_invalid");
+    return null;
+  }
+  const detail = records.sessionDetail ?? null;
+  if (
+    detail === null ||
+    !compose.sessionId ||
+    detail.session.id !== compose.sessionId ||
+    detail.session.status !== "active" ||
+    detail.session.localDate < records.today ||
+    compose.horizonStartDate !== detail.session.localDate ||
+    compose.horizonEndDate !== detail.session.localDate ||
+    compose.regenerationFeedback !== null ||
+    compose.previousProposal !== null
+  ) {
+    throw new CoachAIError("context_invalid");
+  }
+  return detail;
 }
 
 export function byteLength(value: string): number {

@@ -119,6 +119,10 @@ export class OpenAICoachAI implements CoachAI {
     return this.#call("create_seven_day_plan", request);
   }
 
+  fillSessionActivities(request: CoachAIRequest): Promise<CoachAICandidate> {
+    return this.#call("fill_session_activities", request);
+  }
+
   async #call(
     operation: CoachAIOperation,
     request: CoachAIRequest,

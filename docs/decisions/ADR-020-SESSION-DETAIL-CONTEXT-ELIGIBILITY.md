@@ -87,6 +87,23 @@ ticket. What revisiting would involve: a proposal able to reference a saved
 session (a schema change), bytes the plan context does not have, and whether a
 names-only index would be enough.
 
+### 5. The planned session's own text, a week of history, and locks
+
+Recorded on 28 September 2026, after review of the first implementation
+raised three questions this ADR had not answered. The product owner decided
+all three:
+
+- **The planned session's `note` and `intent` are eligible** for the session
+  being filled, truncated to 300 and 200 characters. They are the owner's own
+  words about that session and often exactly what matters ("gym opens at 7").
+- **Training history for a fill is the last seven days only**, not ADR-013's
+  eight weeks, so the library and the actuals have room. The window the coach
+  is told about is those seven days, and it is told missed sessions are not
+  listed. The accepted consequence: a pain, illness, injury or severe-fatigue
+  flag older than seven days does not reach a fill unless it is in memory.
+- **A lock does not block a fill.** Locks keep replanning away from a session;
+  a fill is something the owner asks for and reviews before anything is saved.
+
 ## Consequences
 
 - A7 is unblocked for design. It remains careful-lane work: a new operation with

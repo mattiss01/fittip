@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { COACH_AI_LIVE_LIMITS } from "@/server/ai/budget";
 import { COACH_AI_CONTEXT_LIMITS } from "@/server/ai/context";
+import { TRAINING_MEASUREMENT_MODES } from "@/lib/training/measurement";
 import {
   COACH_AI_FIXTURE_CONTEXT,
   COACH_AI_FIXTURE_PLANNING_NOTE,
@@ -149,7 +150,11 @@ describe("the roadmap response grammar", () => {
         if (banned in record) problems.push(`${path}.${banned}`);
       }
 
-      if (record.type === "object") {
+      // A nullable object is still an object to the grammar compiler.
+      const isObject =
+        record.type === "object" ||
+        (Array.isArray(record.type) && record.type.includes("object"));
+      if (isObject) {
         if (record.additionalProperties !== false) {
           problems.push(`${path}: additionalProperties`);
         }
@@ -168,6 +173,10 @@ describe("the roadmap response grammar", () => {
 
     walk(COACH_AI_RESPONSE_SCHEMAS.create_roadmap.schema, "roadmap");
     walk(COACH_AI_RESPONSE_SCHEMAS.create_seven_day_plan.schema, "plan");
+    walk(
+      COACH_AI_RESPONSE_SCHEMAS.fill_session_activities.schema,
+      "sessionActivities",
+    );
     expect(problems).toEqual([]);
   });
 
@@ -279,5 +288,54 @@ describe("the plan response grammar", () => {
     expect(schema.properties.plan.properties.weekDescription.type).toBe(
       "string",
     );
+  });
+});
+
+/**
+ * A7-2. One session rather than a horizon, so the allocation is smaller than
+ * the plan's and the prefix budget is the figure `context.ts` derived it from:
+ *
+ *   7,000 + 64 + 32,400 = 39,464   ceil(39,464 / 4) = 9,866  vs  10,000
+ */
+const SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET = 7_000;
+
+describe("the session activities prompt", () => {
+  it("stays inside the prefix budget the context allocation was derived against", () => {
+    const prefix = coachAIStaticPrefix("fill_session_activities");
+
+    expect(prefix.length).toBeLessThanOrEqual(
+      SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET,
+    );
+    const worstCase =
+      SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET +
+      64 +
+      COACH_AI_CONTEXT_LIMITS.fill_session_activities.bytes.total;
+    expect(Math.ceil(worstCase / 4)).toBeLessThanOrEqual(
+      COACH_AI_LIVE_LIMITS.maxInputTokens,
+    );
+  });
+
+  it("names every measurement mode the validator accepts", () => {
+    const prefix = coachAIStaticPrefix("fill_session_activities");
+
+    for (const mode of TRAINING_MEASUREMENT_MODES) {
+      expect(prefix).toContain(`"${mode}"`);
+    }
+  });
+
+  it("pins the schema version the validator accepts", () => {
+    const schema = COACH_AI_RESPONSE_SCHEMAS.fill_session_activities
+      .schema as Record<
+      string,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      any
+    >;
+
+    expect(schema.properties.schemaVersion.enum).toEqual([
+      "fittip.session-activities.v1",
+    ]);
+    expect(
+      schema.properties.activities.items.properties.measurementMode.enum,
+    ).toEqual([...TRAINING_MEASUREMENT_MODES]);
   });
 });
