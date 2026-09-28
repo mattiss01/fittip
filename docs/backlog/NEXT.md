@@ -21,12 +21,6 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [~] **A7-2 — The fill operation, no persistence or UI.** Careful lane (AI boundary).
-      `fill_session_activities`, schema `fittip.session-activities.v1`, within ADR-020: the
-      session, its week in brief, the library, up to 3 matching saved sessions, the last 3
-      actuals per relevant activity, goals, memory, the last 7 days' safety flags, and an
-      optional note ≤500 (owner, 28 Sep). Targets validated by `parseTrainingMeasurement`; a
-      library link must be one that was sent. Two-way operation branches become exhaustive.
 - [ ] **A7-3 — Persistence.** Careful lane (migration, spend). `session_activity_proposals`,
       begin/finish RPCs settling the reservation with the proposal (ADR-019), a decision that
       is final, the operation widened in the spend ledger; pgTAP; founder apply per ADR-018.
@@ -129,6 +123,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 28 Sep 2026 | `d55ec67` | [36403298890](https://github.com/mattiss01/fittip/actions/runs/36403298890) | A7-2: `fill_session_activities` (schema `fittip.session-activities.v1`) through contract, context, prompt, validator and example coach, with no persistence or surface yet; the operation branches are exhaustive switches now. ADR-020 gained decision 5 (`9ded908`): the session's note and intent are sent, a fill reads seven days of training, and a lock does not block it. No migration |
 | 28 Sep 2026 | `d467981` | [36396712497](https://github.com/mattiss01/fittip/actions/runs/36396712497) | A7-1: both generation paths pass the durable spend ledger again, which M3-11's reset (`e370dbe`) dropped, so live coaching has refused since 14 Aug; the coach is now also composed inside the claim's failure handling, so a live refusal no longer strands a pending claim. No migration; no API key exists yet, so nothing visible changes. The browser job's first run failed to start Docker (rate limit, port in use) and passed on rerun |
 | 28 Sep 2026 | `ccc1d9e` | [36391949069](https://github.com/mattiss01/fittip/actions/runs/36391949069) | ADR-020 (owner, 28 Sep): activity targets and actuals and the personal library may reach a coach, session detail runs on demand only, and the plan operation stays without the library for now. A7 and A8 rewritten; saved sessions in the plan, an athlete profile, and automatic detail added under Later. No code |
 | 28 Sep 2026 | `b21c5fa` | [36390770873](https://github.com/mattiss01/fittip/actions/runs/36390770873) | Fix-in-passing sweep: a failed memory candidate batch now logs its SQLSTATE and nothing else on both generation paths (owner's call; the first console line in `src`, pinned as the only one by `src/architecture/console-use.test.ts`), `regeneratePlanProposalAction` has its own suite, the roadmap's waiting-candidates copy agrees its verb, and the network tripwire states its rule and pins every root, adding completions, rolling-plan (M3-25), roadmap, plan-proposal and repositories. No migration |
