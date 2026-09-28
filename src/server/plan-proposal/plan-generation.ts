@@ -9,6 +9,7 @@ import {
 } from "@/server/ai/contracts";
 import { CoachAIError } from "@/server/ai/errors";
 import type { CoachAIOwner } from "@/server/ai/owner";
+import { logMemoryCandidateFailure } from "@/server/proposal-logging/memory-candidate-batch";
 import { createMemoryRepository } from "@/server/repositories/memory-repository";
 import type {
   PlanGenerationClaim,
@@ -220,6 +221,9 @@ export async function generatePlanProposal(
  * it explicitly rejected. Zero here means "none were created", not "none were
  * proposed", and the memory surface is where a candidate is actually decided
  * either way.
+ *
+ * Swallowed, not silent: the refusal's code — never its content — is logged,
+ * so a coach that invented an excerpt can be told apart from a conflict.
  */
 async function recordMemoryCandidates(
   proposals: PlanProposalRepository,
@@ -239,7 +243,8 @@ async function recordMemoryCandidates(
       >[0]["candidates"],
     });
     return receipt.itemIds.length;
-  } catch {
+  } catch (error) {
+    logMemoryCandidateFailure("plan", error);
     return 0;
   }
 }

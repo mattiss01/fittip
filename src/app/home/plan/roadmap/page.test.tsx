@@ -428,6 +428,21 @@ describe("Roadmap", () => {
     ).toBe("/home/you/memory");
   });
 
+  it("agrees the verb with a single waiting candidate", async () => {
+    countOpenMemoryCandidates.mockResolvedValue(1);
+
+    render(await RoadmapPage());
+
+    const panel = document.querySelector(
+      "[data-roadmap-memory]",
+    ) as HTMLElement;
+    expect(
+      within(panel).getByText(
+        "1 item from a planning note is waiting for you. It is not used for coaching until you accept it.",
+      ),
+    ).toBeTruthy();
+  });
+
   it("redirects an expired session and a denied one before reading anything", async () => {
     listVersions.mockRejectedValueOnce(new RoadmapAuthenticationError());
     await expect(RoadmapPage()).rejects.toThrow("redirect:/");

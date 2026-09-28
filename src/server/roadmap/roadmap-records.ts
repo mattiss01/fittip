@@ -389,9 +389,11 @@ export const ROADMAP_COPY = {
   openProposalHeading: "A proposal is waiting",
   openProposalSupport:
     "Read it, change it, or turn it down. Your current roadmap stays exactly as it is until you accept.",
-  /** M3-02's wording, restored unchanged; it was inlined before M3-11. */
+  /** M3-02's wording, with the verb agreeing now as the plan panel's does. */
   memoryCandidatesWaiting: (count: number) =>
-    `${count} item${count === 1 ? "" : "s"} from a planning note are waiting for you. They are not used for coaching until you accept them.`,
+    count === 1
+      ? "1 item from a planning note is waiting for you. It is not used for coaching until you accept it."
+      : `${count} items from a planning note are waiting for you. They are not used for coaching until you accept them.`,
   /**
    * "Version 3": the M3-02 masthead stamp's wording, which M3-15E also uses on
    * the current roadmap's horizon line and on each superseded version.

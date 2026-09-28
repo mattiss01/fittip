@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from "node:fs";
-import { extname, join } from "node:path";
+import { basename, dirname, extname, join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -29,9 +29,16 @@ import { NETWORK_FREE_COACH_AI_ADAPTERS } from "@/server/ai/network-free-adapter
  * about is the data, not the directory: a socket opened anywhere that selects,
  * reduces, or assembles owner data bound for a coach is either an ungated
  * provider call or an exfiltration of exactly the records the boundary exists
- * to bound. So the scan names every root that holds such a module, and the two
- * eligibility gates that decide what is even eligible are in it for the same
- * reason as the source that reads them.
+ * to bound.
+ *
+ * So the rule for a root is: it belongs here if any module in it reads,
+ * selects, reduces, or assembles owner data on its way to a coach — the
+ * repositories that read it, the gates that decide what is eligible, and the
+ * modules that shape it. M3-25 found the list had fallen behind that rule once
+ * already (`completions`, `rolling-plan`); a module that newly feeds the coach
+ * from another root owes a line here, and each root is pinned below by a file
+ * that must be read, so a root that moves or is misspelled fails instead of
+ * scanning nothing.
  *
  * Being a superset is the intended direction. `training-measurements.ts` and
  * the goal and memory record modules also serve surfaces that have nothing to
@@ -43,7 +50,7 @@ import { NETWORK_FREE_COACH_AI_ADAPTERS } from "@/server/ai/network-free-adapter
 const AI_ROOT = join(process.cwd(), "src", "server", "ai");
 const SERVICE = join(AI_ROOT, "coach-ai-service.ts");
 
-/** Every root holding a module that shapes provider-bound owner data. */
+/** The roots that hold provider-bound owner data, by the rule above. */
 const PROVIDER_BOUND_ROOTS = [
   // The boundary itself: contracts, context assembly, prompts, validation,
   // the service, and the one adapter permitted to call out.
@@ -56,6 +63,43 @@ const PROVIDER_BOUND_ROOTS = [
   join(process.cwd(), "src", "server", "goals"),
   // M2-02's memory eligibility gate.
   join(process.cwd(), "src", "server", "memory"),
+  // M3-25: `plan-window-top-up.ts` selects the plan window the context source
+  // sends, and `completion-log.ts` defines the record it reduces.
+  join(process.cwd(), "src", "server", "completions"),
+  // `RollingPlanSession`, whose fields are copied into the payload verbatim.
+  join(process.cwd(), "src", "server", "rolling-plan"),
+  // `roadmap-plan-context.ts`, which reduces the accepted roadmap for a plan.
+  join(process.cwd(), "src", "server", "roadmap"),
+  // `plan-generation.ts`, which reduces the previous proposal for a regeneration.
+  join(process.cwd(), "src", "server", "plan-proposal"),
+  // Every read of those records, the previous proposal and roadmap included.
+  join(process.cwd(), "src", "server", "repositories"),
+];
+
+/** One file per root, in the same order, that the scan must have read. */
+const ROOT_PINS = [
+  join(AI_ROOT, "context.ts"),
+  join(process.cwd(), "src", "server", "context", "coach-ai-context-source.ts"),
+  join(
+    process.cwd(),
+    "src",
+    "server",
+    "training",
+    "training-history-context.ts",
+  ),
+  join(process.cwd(), "src", "server", "goals", "goal-records.ts"),
+  join(process.cwd(), "src", "server", "memory", "memory-records.ts"),
+  join(process.cwd(), "src", "server", "completions", "plan-window-top-up.ts"),
+  join(process.cwd(), "src", "server", "rolling-plan", "rolling-plan.ts"),
+  join(process.cwd(), "src", "server", "roadmap", "roadmap-plan-context.ts"),
+  join(process.cwd(), "src", "server", "plan-proposal", "plan-generation.ts"),
+  join(
+    process.cwd(),
+    "src",
+    "server",
+    "repositories",
+    "plan-proposal-repository.ts",
+  ),
 ];
 
 /**
@@ -80,25 +124,13 @@ describe("the coaching network gate cannot be bypassed", () => {
     // fails because a new adapter arrived, the ticket that added it owes an
     // approved decision and an update here — not a wider pattern.
     expect(reaching).toEqual([join(AI_ROOT, "openai-adapter.ts")]);
-    // The scan is only worth its assertion if it is actually reading the
-    // modules outside `src/server/ai`, so it says so rather than assuming it.
-    expect(RUNTIME_FILES).toContain(
-      join(
-        process.cwd(),
-        "src",
-        "server",
-        "context",
-        "coach-ai-context-source.ts",
-      ),
-    );
-    expect(RUNTIME_FILES).toContain(
-      join(
-        process.cwd(),
-        "src",
-        "server",
-        "training",
-        "training-history-context.ts",
-      ),
+    // The scan is only worth its assertion if it is actually reading every
+    // root, so each one names a file that must have been read.
+    for (const pin of ROOT_PINS) {
+      expect(RUNTIME_FILES).toContain(pin);
+    }
+    expect(ROOT_PINS.map((pin) => basename(dirname(pin)))).toEqual(
+      PROVIDER_BOUND_ROOTS.map((root) => basename(root)),
     );
   });
 

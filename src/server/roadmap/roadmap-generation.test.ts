@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   createProfileMock,
@@ -45,6 +45,7 @@ vi.mock("@/server/repositories/rolling-plan-repository", async (original) => {
 });
 
 import type { CoachAIOwner } from "@/server/ai/owner";
+import { MemoryCandidateBatchError } from "@/server/proposal-logging/memory-candidate-batch";
 import type { RoadmapRepository } from "@/server/repositories/roadmap-repository";
 import { RoadmapConflictError } from "@/server/repositories/roadmap-repository";
 import { generateRoadmapProposal } from "@/server/roadmap/roadmap-generation";
@@ -81,6 +82,11 @@ const roadmaps = {
 };
 
 describe("generateRoadmapProposal", () => {
+  // The batch-failure tests spy on the console; never leak one past its test.
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
@@ -234,7 +240,10 @@ describe("generateRoadmapProposal", () => {
   // A memory conflict must not roll back a valid roadmap. ADR-015 draws that
   // boundary deliberately and names the alternative it rejected.
   it("keeps the roadmap when the memory batch fails", async () => {
-    roadmaps.recordMemoryCandidates.mockRejectedValue(new Error("conflict"));
+    roadmaps.recordMemoryCandidates.mockRejectedValue(
+      new MemoryCandidateBatchError("PT409"),
+    );
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     await expect(
       generateRoadmapProposal(
@@ -242,6 +251,10 @@ describe("generateRoadmapProposal", () => {
         { roadmaps: roadmaps as unknown as RoadmapRepository },
       ),
     ).resolves.toMatchObject({ status: "proposal", proposalId: PROPOSAL_ID });
+    // The code, and never the note it was drawn from (ADR-010 decision 15).
+    expect(warn).toHaveBeenCalledExactlyOnceWith(
+      "[fittip] roadmap memory candidates not recorded: PT409",
+    );
   });
 });
 
