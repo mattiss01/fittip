@@ -22,13 +22,16 @@ that reset untouched.
 Ordered by dependency. A lane is named where it is not the build lane.
 
 - [ ] **A7 — The coach fills in a session's activities.** Careful lane: a new AI operation
-      with its own schema, spend, and context cost — the M3-03D detail operation that
-      `contracts.ts` defers to. Blocked on the plan context having no headroom left, which
-      `Known limitations` records. Needs the owner's decision before any code.
-- [ ] **A8 — Do targets and actuals reach the coach?** Careful lane: today only
-      `activityNames` crosses the boundary. Extending that is an ADR-013 eligibility
-      decision and costs context bytes there are none of. Decide after A4 has produced real
-      data; it may be that names remain enough.
+      with its own schema, context, and spend. Eligibility is decided by ADR-020: on demand
+      only, one session per request; it may read the session, the owner's personal
+      activities and matching saved sessions, recent actuals for those activities, memory,
+      and the rest of that week in brief. Returns a proposal linking each activity to an
+      existing definition or marking it new. Estimated 5,000–6,500 tokens, so it fits under
+      the shared 10,000 ceiling without the plan's headroom; whether it gets a smaller
+      per-operation ceiling is open. Next: plan it with the owner before code.
+- [ ] **A8 — Targets and actuals in the plan context.** Careful lane. ADR-020 made them
+      eligible, so this is only a sizing question now: the plan context has no headroom
+      (`Known limitations`). Decide after A7, which may make it unnecessary.
 - [ ] **A9 — Progress over measurements.** Load, distance and pace across completions, once
       A4 has been used for long enough to have any. The comfort layer; last on purpose.
       Open for the owner first: a row picked from the library and then changed keeps its
@@ -67,6 +70,18 @@ Not worth their own slot; do them when work lands nearby.
   Open: which of the two, the preset list (it is shared vocabulary, so it wants the owner's
   agreement and a line in `CONTEXT.md`), and whether an activity keeps starting from its
   session's value, which is right under the one-field reading.
+- **Saved sessions in the plan proposal.** Kept out of the plan operation by the owner on
+  28 Sep 2026 (ADR-020 decision 4), to be revisited. It would need a proposal able to
+  reference a saved session (schema), plan-context bytes there are none of, and a view on
+  whether a names-only index is enough.
+- **Athlete profile for the coach.** The owner wants the coach to know age, gender, weight
+  and similar, collected in onboarding. Not decided: which fields, whether each is
+  optional, how weight changes over time, and eligibility — this is a new class of personal
+  data, weight is health-adjacent, and it needs its own ADR before it crosses. ADR-020's
+  "nothing identifies the person" reasoning should be rechecked against it.
+- **Automatic session detail.** Filling sessions without a request, perhaps per
+  subscription tier. ADR-020 decision 3 rules it out for now; it would be a new spend and
+  autonomy decision.
 - **Plan change history** — plan history organized by understandable changes, each opening to
   show affected sessions and their before/after values. Real, but a comfort feature; the
   tables are already granted and RLS-confined. ([M3-24](M3/M3-24-PLAN-CHANGE-HISTORY.md))
