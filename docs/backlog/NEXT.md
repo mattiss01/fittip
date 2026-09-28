@@ -21,11 +21,6 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [~] **A7-1 — Restore the spend ledger.** Careful lane (spend). M3-11's reset (`e370dbe`)
-      dropped `createAISpendRepository()` from both generation paths, so a live composition
-      refuses with `budget_unavailable` and only the example coach has run since 14 Aug.
-      Pass it again in both; a test fails if either path stops. Going live on founder stays
-      the owner's env change, and any real call needs their per-run spend approval.
 - [ ] **A7-2 — The fill operation, no persistence or UI.** Careful lane (AI boundary).
       `fill_session_activities`, schema `fittip.session-activities.v1`, within ADR-020: the
       session, its week in brief, the library, up to 3 matching saved sessions, the last 3
@@ -128,6 +123,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 28 Sep 2026 | `d467981` | [36396712497](https://github.com/mattiss01/fittip/actions/runs/36396712497) | A7-1: both generation paths pass the durable spend ledger again, which M3-11's reset (`e370dbe`) dropped, so live coaching has refused since 14 Aug; the coach is now also composed inside the claim's failure handling, so a live refusal no longer strands a pending claim. No migration; no API key exists yet, so nothing visible changes. The browser job's first run failed to start Docker (rate limit, port in use) and passed on rerun |
 | 28 Sep 2026 | `ccc1d9e` | [36391949069](https://github.com/mattiss01/fittip/actions/runs/36391949069) | ADR-020 (owner, 28 Sep): activity targets and actuals and the personal library may reach a coach, session detail runs on demand only, and the plan operation stays without the library for now. A7 and A8 rewritten; saved sessions in the plan, an athlete profile, and automatic detail added under Later. No code |
 | 28 Sep 2026 | `b21c5fa` | [36390770873](https://github.com/mattiss01/fittip/actions/runs/36390770873) | Fix-in-passing sweep: a failed memory candidate batch now logs its SQLSTATE and nothing else on both generation paths (owner's call; the first console line in `src`, pinned as the only one by `src/architecture/console-use.test.ts`), `regeneratePlanProposalAction` has its own suite, the roadmap's waiting-candidates copy agrees its verb, and the network tripwire states its rule and pins every root, adding completions, rolling-plan (M3-25), roadmap, plan-proposal and repositories. No migration |
 | 27 Sep 2026 | `79ee27e` | [36337885803](https://github.com/mattiss01/fittip/actions/runs/36337885803) | Log from the library: "Use session from library" on an unplanned log and on Create session, "Add activity from library" on every log, and saving back from anywhere — an activity from a log row (or "Update <name> in library" for one that came from it, refused if the entry changed meanwhile) and a session from the log form, its receipt, Progress and Today, with what was done as its targets. No migration; the M3-11 architecture test now admits `saved-session-repository` and the log on the library surface. `toActivityValue` replaced three hand projections, not six: the other three are different shapes |
