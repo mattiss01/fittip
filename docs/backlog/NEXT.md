@@ -44,28 +44,14 @@ Not worth their own slot; do them when work lands nearby.
   `apply_completion_change` as a raw `22P02` rather than `22023`: the validators compare with
   `trunc`, the inserts cast the text. Unreachable from the app, whose parser emits integers.
   Map `invalid_text_representation` in the handler next time the function is replaced.
-- `regeneratePlanProposalAction` has no test of its own, and it is the orchestration that
-  implements two of the owner's decisions: closing the review before asking again, and
-  keeping what was accepted. The pgTAP proves the database half; nothing exercises the
-  action's ordering or its failure messages.
 - "Only what you did not take" is a prompt-level expectation, not an enforced one. Accepted
   days reach the coach as plan commitments, but nothing stops it proposing on a day the
   owner already took — they would simply see it and decide again. Worth either enforcing or
   softening the copy, which currently states it as fact.
-- A swallowed memory batch hides why it failed. Both generation paths catch the candidate
-  batch's error and return zero, so a coach that invented an excerpt (`22023`) is
-  indistinguishable from a genuine conflict (`PT409`), and neither is logged. Logging the
-  error *code* — never the content, ADR-010 decision 15 — would cost nothing and would be the
-  only signal if the TypeScript and SQL owner-text normalizers ever skew, which
-  `src/server/ai/owner-text.ts` warns they must not. Do both paths together; one alone makes
-  them differ for no reason.
-- The roadmap's memory copy says "1 item ... are waiting". `roadmap-records.ts` pluralizes the
-  noun but not the verb. The plan panel's own copy was written correctly, so the two now
-  differ; fix the roadmap's when work lands near it.
-- Network tripwire coverage: the coaching tripwire claims a complete root list but does not
-  watch `src/server/completions` or `src/server/rolling-plan`. Neither holds a network
-  primitive today, so this is a control overstating its coverage.
-  ([M3-25](M3/M3-25-NETWORK-TRIPWIRE-COVERAGE.md))
+- A conflict after a regeneration has closed the review contradicts itself: the action
+  appends "What you added is in your plan." to the generic conflict copy, which ends
+  "nothing was added". Reached when the plan moves between the finish and the new
+  generation. Needs one wording for that path; `actions.test.ts` pins the rule-error half.
 
 ## Later
 
@@ -118,6 +104,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 28 Sep 2026 | `b21c5fa` | [36390770873](https://github.com/mattiss01/fittip/actions/runs/36390770873) | Fix-in-passing sweep: a failed memory candidate batch now logs its SQLSTATE and nothing else on both generation paths (owner's call; the first console line in `src`, pinned as the only one by `src/architecture/console-use.test.ts`), `regeneratePlanProposalAction` has its own suite, the roadmap's waiting-candidates copy agrees its verb, and the network tripwire states its rule and pins every root, adding completions, rolling-plan (M3-25), roadmap, plan-proposal and repositories. No migration |
 | 27 Sep 2026 | `79ee27e` | [36337885803](https://github.com/mattiss01/fittip/actions/runs/36337885803) | Log from the library: "Use session from library" on an unplanned log and on Create session, "Add activity from library" on every log, and saving back from anywhere — an activity from a log row (or "Update <name> in library" for one that came from it, refused if the entry changed meanwhile) and a session from the log form, its receipt, Progress and Today, with what was done as its targets. No migration; the M3-11 architecture test now admits `saved-session-repository` and the log on the library surface. `toActivityValue` replaced three hand projections, not six: the other three are different shapes |
 | 27 Sep 2026 | `5e5b5e2` | [36312716667](https://github.com/mattiss01/fittip/actions/runs/36312716667) | Editing a planned session from proposal review no longer erases its activities: the review's session summary carries them, library links included, and seeds its edit form, which had opened empty and sent `[]` since A2. No migration; no picker on that screen |
 | 27 Sep 2026 | `16118fb` | [36311864111](https://github.com/mattiss01/fittip/actions/runs/36311864111) | Plan → Activities is the personal activity library: create, edit, and "Remove from library" (archives; no restore — saving from a session makes a new one). Every session editor gets "Add from library" and "Save activity to library", and all of them now submit `personalActivityId` back. Names are unique among active definitions (owner's call): migration `20260927094109` applied to the founder project — 34 migrations, advisors unchanged at 20 definer + 1 auth. The M3-11 allowlist now admits the library module, kept to the Plan by a new assertion (A5) |
