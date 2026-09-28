@@ -56,6 +56,15 @@ const PROVIDER_BOUND_ROOTS = [
   join(process.cwd(), "src", "server", "goals"),
   // M2-02's memory eligibility gate.
   join(process.cwd(), "src", "server", "memory"),
+  // M3-25: `plan-window-top-up.ts` selects the plan window the context source
+  // sends, and `completion-log.ts` defines the record it reduces.
+  join(process.cwd(), "src", "server", "completions"),
+  // `RollingPlanSession`, whose fields are copied into the payload verbatim.
+  join(process.cwd(), "src", "server", "rolling-plan"),
+  // `roadmap-plan-context.ts`, which reduces the accepted roadmap for a plan.
+  join(process.cwd(), "src", "server", "roadmap"),
+  // `plan-generation.ts`, which reduces the previous proposal for a regeneration.
+  join(process.cwd(), "src", "server", "plan-proposal"),
 ];
 
 /**
@@ -98,6 +107,24 @@ describe("the coaching network gate cannot be bypassed", () => {
         "server",
         "training",
         "training-history-context.ts",
+      ),
+    );
+    expect(RUNTIME_FILES).toContain(
+      join(
+        process.cwd(),
+        "src",
+        "server",
+        "completions",
+        "plan-window-top-up.ts",
+      ),
+    );
+    expect(RUNTIME_FILES).toContain(
+      join(
+        process.cwd(),
+        "src",
+        "server",
+        "roadmap",
+        "roadmap-plan-context.ts",
       ),
     );
   });

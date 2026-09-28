@@ -52,6 +52,7 @@ vi.mock("@/server/repositories/roadmap-repository", async (original) => {
 });
 
 import type { CoachAIOwner } from "@/server/ai/owner";
+import { MemoryCandidateBatchError } from "@/server/proposal-logging/memory-candidate-batch";
 import { generatePlanProposal } from "@/server/plan-proposal/plan-generation";
 import type { PlanProposalRepository } from "@/server/repositories/plan-proposal-repository";
 
@@ -226,8 +227,9 @@ describe("generatePlanProposal", () => {
 
   it("keeps a valid proposal when the memory batch fails", async () => {
     proposals.recordMemoryCandidates.mockRejectedValue(
-      new Error("memory changed"),
+      new MemoryCandidateBatchError("22023"),
     );
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     // ADR-015's boundary: one memory conflict must not turn a plan proposal
     // the owner can act on into a failed generation.
@@ -241,6 +243,11 @@ describe("generatePlanProposal", () => {
       proposalId: PROPOSAL_ID,
       memoryCandidateCount: 0,
     });
+    // The code, and never the note it was drawn from (ADR-010 decision 15).
+    expect(warn).toHaveBeenCalledExactlyOnceWith(
+      "[fittip] plan memory candidates not recorded: 22023",
+    );
+    warn.mockRestore();
   });
 
   it("asks for no memory batch when the note proposes nothing", async () => {

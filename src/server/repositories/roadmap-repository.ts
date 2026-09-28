@@ -16,6 +16,7 @@ import type {
   RoadmapProposal,
 } from "@/server/ai/contracts";
 import type { CoachAISourceReference } from "@/server/ai/context-source";
+import { MemoryCandidateBatchError } from "@/server/proposal-logging/memory-candidate-batch";
 import {
   UNKNOWN_PROVIDER_CODE,
   type RoadmapDecision,
@@ -400,11 +401,20 @@ export class RoadmapRepository {
     expectedMemoryRevision: number;
     candidates: RoadmapMemoryCandidate[];
   }): Promise<{ collectionRevision: number; itemIds: string[] }> {
-    const data = await this.call("record_roadmap_memory_candidates", {
-      p_completion_token: input.completionToken,
-      p_expected_memory_revision: input.expectedMemoryRevision,
-      p_candidates: input.candidates as unknown as Json,
-    });
+    // Not through `call`: the generation path logs this refusal's SQLSTATE,
+    // which the domain errors deliberately discard.
+    await this.getVerifiedUserId();
+    const { data: raw, error } = await this.client.rpc(
+      "record_roadmap_memory_candidates",
+      {
+        p_completion_token: input.completionToken,
+        p_expected_memory_revision: input.expectedMemoryRevision,
+        p_candidates: input.candidates as unknown as Json,
+      },
+    );
+    if (error) throw new MemoryCandidateBatchError(error.code);
+    if (!raw) throw new RoadmapPersistenceError();
+    const data = raw as unknown as Record<string, unknown>;
 
     const itemIds = Array.isArray(data.item_ids) ? data.item_ids : [];
     return {
