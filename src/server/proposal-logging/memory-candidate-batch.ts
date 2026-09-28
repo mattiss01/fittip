@@ -17,8 +17,9 @@ import "server-only";
  * It lives in its own directory on purpose. `src/server/memory` and
  * `src/server/ai` forbid the console outright (`memory-privacy.test.ts`,
  * `ai-privacy.test.ts`), and they should keep doing so: this is the one log
- * line the owner approved on 28 September 2026, and the test beside it pins
- * this file as the only one in `src` that may write to the console.
+ * line the owner approved on 28 September 2026, and
+ * `src/architecture/console-use.test.ts` pins this file as the only one in
+ * `src` that may write to the console.
  */
 
 const SQLSTATE = /^[0-9A-Z]{5}$/;

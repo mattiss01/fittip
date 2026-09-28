@@ -401,20 +401,17 @@ export class RoadmapRepository {
     expectedMemoryRevision: number;
     candidates: RoadmapMemoryCandidate[];
   }): Promise<{ collectionRevision: number; itemIds: string[] }> {
-    // Not through `call`: the generation path logs this refusal's SQLSTATE,
-    // which the domain errors deliberately discard.
-    await this.getVerifiedUserId();
-    const { data: raw, error } = await this.client.rpc(
+    // Its own error mapping: the generation path swallows this refusal and
+    // logs its SQLSTATE, which the domain errors deliberately discard.
+    const data = await this.call(
       "record_roadmap_memory_candidates",
       {
         p_completion_token: input.completionToken,
         p_expected_memory_revision: input.expectedMemoryRevision,
         p_candidates: input.candidates as unknown as Json,
       },
+      (error) => new MemoryCandidateBatchError(error.code),
     );
-    if (error) throw new MemoryCandidateBatchError(error.code);
-    if (!raw) throw new RoadmapPersistenceError();
-    const data = raw as unknown as Record<string, unknown>;
 
     const itemIds = Array.isArray(data.item_ids) ? data.item_ids : [];
     return {
@@ -489,11 +486,13 @@ export class RoadmapRepository {
   private async call<Name extends RoadmapFunctionName>(
     name: Name,
     args: RoadmapFunctionArgs<Name>,
+    mapError?: (error: { code?: string; message?: string }) => Error,
   ): Promise<Record<string, unknown>> {
     await this.getVerifiedUserId();
     const { data, error } = await this.client.rpc(name, args as never);
 
     if (error) {
+      if (mapError) throw mapError(error);
       if (error.code === "PT429") {
         throw new RoadmapConflictError("regeneration-cap");
       }

@@ -239,6 +239,46 @@ describe("regeneratePlanProposalAction", () => {
     });
   });
 
+  it("says the accepted days were kept when the plan moves before the coach answers", async () => {
+    generateMock.mockRejectedValue(new PlanProposalConflictError("stale"));
+
+    const state = await regenerate();
+
+    // The conflict copy's own "nothing was added" then contradicts this suffix;
+    // NEXT.md carries that wording as a follow-up. What is pinned is the half
+    // that must hold: the owner is told their accepted days stayed.
+    expect(state.status).toBe("error");
+    expect(state.message).toContain(OUTCOMES.regenerationKept);
+    expect(state.message).not.toBe(OUTCOMES.generationFailed);
+  });
+
+  it("reports a generation already under way without claiming a new one", async () => {
+    generateMock.mockResolvedValue({ status: "pending" });
+
+    const state = await regenerate();
+
+    expect(state).toMatchObject({
+      status: "pending",
+      message: OUTCOMES.generationPending,
+    });
+  });
+
+  it("stops before the finish when rejecting an undecided item fails", async () => {
+    decideItem
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new PlanProposalConflictError("already-finished"));
+
+    const state = await regenerate();
+
+    expect(state).toMatchObject({
+      status: "conflict",
+      message: OUTCOMES.alreadyFinished,
+    });
+    expect(finishReview).not.toHaveBeenCalled();
+    expect(generateMock).not.toHaveBeenCalled();
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+
   it("reports a refused finish as its own conflict, and never asks again", async () => {
     finishReview.mockRejectedValue(new PlanProposalConflictError("stale"));
 

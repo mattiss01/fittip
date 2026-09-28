@@ -1,6 +1,3 @@
-import { readFileSync, readdirSync } from "node:fs";
-import { extname, join } from "node:path";
-
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -50,33 +47,4 @@ describe("memory candidate batch failures", () => {
       "[fittip] roadmap memory candidates not recorded: 22023",
     );
   });
-
-  // The owner approved one log line, not logging. A second call site is a new
-  // decision about what leaves the process, so it has to fail here first.
-  it("is the only module in src that writes to the console", () => {
-    const writing = sourceFiles(join(process.cwd(), "src")).filter((path) =>
-      /\bconsole\s*\./.test(readFileSync(path, "utf8")),
-    );
-
-    expect(writing).toEqual([
-      join(
-        process.cwd(),
-        "src",
-        "server",
-        "proposal-logging",
-        "memory-candidate-batch.ts",
-      ),
-    ]);
-  });
 });
-
-function sourceFiles(directory: string): string[] {
-  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(directory, entry.name);
-    if (entry.isDirectory()) return sourceFiles(path);
-    return [".ts", ".tsx"].includes(extname(entry.name)) &&
-      !/\.test\.tsx?$/.test(entry.name)
-      ? [path]
-      : [];
-  });
-}

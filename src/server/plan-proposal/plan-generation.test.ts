@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   createProfileMock,
@@ -89,6 +89,11 @@ const proposals = {
 };
 
 describe("generatePlanProposal", () => {
+  // The batch-failure tests spy on the console; never leak one past its test.
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
@@ -247,7 +252,6 @@ describe("generatePlanProposal", () => {
     expect(warn).toHaveBeenCalledExactlyOnceWith(
       "[fittip] plan memory candidates not recorded: 22023",
     );
-    warn.mockRestore();
   });
 
   it("asks for no memory batch when the note proposes nothing", async () => {

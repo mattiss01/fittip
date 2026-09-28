@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   createProfileMock,
@@ -82,6 +82,11 @@ const roadmaps = {
 };
 
 describe("generateRoadmapProposal", () => {
+  // The batch-failure tests spy on the console; never leak one past its test.
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
@@ -250,7 +255,6 @@ describe("generateRoadmapProposal", () => {
     expect(warn).toHaveBeenCalledExactlyOnceWith(
       "[fittip] roadmap memory candidates not recorded: PT409",
     );
-    warn.mockRestore();
   });
 });
 
