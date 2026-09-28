@@ -264,6 +264,7 @@ describe("a successful proposal", () => {
       ],
       memoryIds: ["c3000000-0000-4000-8000-000000000001"],
       roadmapVersion: null,
+      sessionDetailSources: [],
     });
     expect(telemetry.records.at(-1)).toMatchObject({
       outcome: "accepted",

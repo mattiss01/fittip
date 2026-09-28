@@ -21,7 +21,7 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [ ] **A7-3 — Persistence.** Careful lane (migration, spend). `session_activity_proposals`,
+- [~] **A7-3 — Persistence.** Careful lane (migration, spend). `session_activity_proposals`,
       begin/finish RPCs settling the reservation with the proposal (ADR-019), a decision that
       is final, the operation widened in the spend ledger; pgTAP; founder apply per ADR-018.
       Record every source that reached the coach — the completions behind `recentActuals`,

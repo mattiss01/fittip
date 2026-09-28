@@ -9,6 +9,7 @@ import type {
 import type {
   CoachAIActivityReference,
   CoachAISessionDetailContext,
+  CoachAISourceReference,
 } from "@/server/ai/contracts";
 import type { Completion } from "@/server/completions/completion-log";
 import type { PersonalActivity } from "@/server/personal-activities/personal-activities";
@@ -99,6 +100,8 @@ export type SessionDetailRecords = {
     measurementMode: TrainingMeasurementMode;
   }[];
   savedSessions: {
+    /** Provenance only; never sent. */
+    id: string;
     title: string;
     sport: string;
     intent: string | null;
@@ -109,11 +112,19 @@ export type SessionDetailRecords = {
     name: string;
     personalActivityId: string | null;
     entries: {
+      /** Provenance only; never sent. */
+      completionId: string;
       localDate: string;
       measurementMode: TrainingMeasurementMode;
       actual: TrainingMeasurement | null;
     }[];
   }[];
+};
+
+/** What the sizing kept, and the records that reached the coach because of it. */
+export type SessionDetailAssembly = {
+  context: CoachAISessionDetailContext;
+  sources: CoachAISourceReference[];
 };
 
 /**
@@ -189,6 +200,7 @@ export function selectSessionDetailRecords(input: {
 
   const sessionActivities = session.activities.map(toActivityRecord);
   const savedRecords = savedSessions.map((saved) => ({
+    id: saved.id,
     title: saved.title,
     sport: saved.sport,
     intent: saved.intent ?? null,
@@ -285,7 +297,7 @@ export function selectSessionDetailRecords(input: {
 export function buildSessionDetailContext(
   records: SessionDetailRecords,
   bytes: typeof SESSION_DETAIL_BYTES = SESSION_DETAIL_BYTES,
-): CoachAISessionDetailContext {
+): SessionDetailAssembly {
   let intent = truncate(
     records.session.intent,
     SESSION_DETAIL_INTENT_MAX_LENGTH,
@@ -317,16 +329,58 @@ export function buildSessionDetailContext(
     records.library.slice(0, SESSION_DETAIL_MAX_LIBRARY),
     bytes.library,
   );
+  // Sized as they will be sent, without the ids that are kept for provenance;
+  // the kept prefix then names which records reached the coach.
   const savedSessions = fit(
-    records.savedSessions.slice(0, SESSION_DETAIL_MAX_SAVED_SESSIONS),
+    records.savedSessions
+      .slice(0, SESSION_DETAIL_MAX_SAVED_SESSIONS)
+      .map((saved) => ({
+        title: saved.title,
+        sport: saved.sport,
+        intent: saved.intent,
+        durationMinutes: saved.durationMinutes,
+        activities: saved.activities,
+      })),
     bytes.savedSessions,
   );
   const recentActuals = fit(
-    records.recentActuals.slice(0, SESSION_DETAIL_MAX_ACTUAL_ACTIVITIES),
+    records.recentActuals
+      .slice(0, SESSION_DETAIL_MAX_ACTUAL_ACTIVITIES)
+      .map((activity) => ({
+        name: activity.name,
+        personalActivityId: activity.personalActivityId,
+        entries: activity.entries.map((entry) => ({
+          localDate: entry.localDate,
+          measurementMode: entry.measurementMode,
+          actual: entry.actual,
+        })),
+      })),
     bytes.recentActuals,
   );
 
-  return {
+  const completionIds = new Set(
+    records.recentActuals
+      .slice(0, recentActuals.length)
+      .flatMap((activity) =>
+        activity.entries.map((entry) => entry.completionId),
+      ),
+  );
+  const sources: CoachAISourceReference[] = [
+    { kind: "plan_session", recordId: records.session.id },
+    ...library.map((entry) => ({
+      kind: "personal_activity" as const,
+      recordId: entry.id,
+    })),
+    ...records.savedSessions
+      .slice(0, savedSessions.length)
+      .map((saved) => ({ kind: "saved_session" as const, recordId: saved.id })),
+    ...[...completionIds].map((id) => ({
+      kind: "completion" as const,
+      recordId: id,
+    })),
+  ];
+
+  const context: CoachAISessionDetailContext = {
     session: {
       localDate: records.session.localDate,
       title: records.session.title,
@@ -346,6 +400,7 @@ export function buildSessionDetailContext(
     recentActuals,
     recentActualsWithheld: records.recentActuals.length - recentActuals.length,
   };
+  return { context, sources };
 }
 
 function toActivityRecord(activity: {
@@ -384,6 +439,7 @@ function actualsFor(
     );
     if (!match || match.actualMeasurement === undefined) continue;
     entries.push({
+      completionId: completion.id,
       localDate: completion.actualLocalDate,
       measurementMode: match.measurementMode,
       actual: match.actualMeasurement,

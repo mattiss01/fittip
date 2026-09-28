@@ -294,6 +294,16 @@ export class CoachAIService {
         sources: [
           ...(records.sources ?? []),
           ...roadmapVersionSources(assembled.references.roadmapVersion),
+          // A fill's completions are named twice when a log is both in the
+          // week's history and behind an actual; recorded once.
+          ...assembled.references.sessionDetailSources.filter(
+            (source) =>
+              !(records.sources ?? []).some(
+                (recorded) =>
+                  recorded.kind === source.kind &&
+                  recorded.recordId === source.recordId,
+              ),
+          ),
         ],
         draft,
       });

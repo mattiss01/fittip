@@ -501,6 +501,12 @@ export type CoachAIAssembledContext = {
      * knows whether there is lineage to record.
      */
     roadmapVersion: { id: string; versionNumber: number } | null;
+    /**
+     * A7-3. The session a fill was for, and the library entries, saved
+     * sessions and logs whose content survived sizing. Assembly decided what
+     * was sent, so assembly names it; empty for every other operation.
+     */
+    sessionDetailSources: CoachAISourceReference[];
   };
 };
 
@@ -536,6 +542,10 @@ export function buildCoachAIContext(
     records,
     compose,
   );
+  const sessionDetailAssembly =
+    sessionDetailRecords === null
+      ? null
+      : buildSessionDetailContext(sessionDetailRecords);
 
   // Decision 5: the threshold, checked before anything is claimed or reserved.
   // It names every missing requirement at once rather than the first one, so an
@@ -640,10 +650,7 @@ export function buildCoachAIContext(
     // would otherwise quietly widen what a roadmap request sends.
     roadmap: roadmapContext,
     // Only the operation that fills a session carries one, for the same reason.
-    sessionDetail:
-      sessionDetailRecords === null
-        ? null
-        : buildSessionDetailContext(sessionDetailRecords),
+    sessionDetail: sessionDetailAssembly?.context ?? null,
   };
 
   const usage = {
@@ -743,6 +750,7 @@ export function buildCoachAIContext(
               id: roadmapVersion.id,
               versionNumber: roadmapVersion.versionNumber,
             },
+      sessionDetailSources: sessionDetailAssembly?.sources ?? [],
     },
   };
 }
