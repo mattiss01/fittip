@@ -183,30 +183,41 @@ export class SessionActivityRepository {
     const userId = await this.getVerifiedUserId();
     const { data, error } = await this.client
       .from("session_activity_proposals")
-      .select(
-        "id, session_id, local_date, provider_code, note, content, created_at, session_activity_decisions ( decision )",
-      )
+      .select(PROPOSAL_COLUMNS)
       .eq("user_id", userId)
       .eq("id", proposalId)
       .maybeSingle();
     if (error) throw new SessionActivityPersistenceError();
     if (!data) return null;
 
-    const decisionRow = Array.isArray(data.session_activity_decisions)
-      ? data.session_activity_decisions[0]
-      : data.session_activity_decisions;
-    const decision = decisionRow?.decision ?? null;
-    return {
-      id: data.id,
-      sessionId: data.session_id,
-      localDate: data.local_date,
-      providerCode: data.provider_code,
-      note: data.note,
-      content: data.content as unknown as SessionActivitiesProposal,
-      decision:
-        decision === "accepted" || decision === "dismissed" ? decision : null,
-      createdAt: data.created_at,
-    };
+    return toProposalView(data);
+  }
+
+  /**
+   * The newest undecided proposal for each of these sessions, so a suggestion
+   * the owner neither accepted nor dismissed is still there when they open the
+   * session again (A7-4, owner's choice of 28 Sep 2026).
+   */
+  async listOpenProposals(
+    sessionIds: readonly string[],
+  ): Promise<SessionActivityProposalView[]> {
+    if (sessionIds.length === 0) return [];
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("session_activity_proposals")
+      .select(PROPOSAL_COLUMNS)
+      .eq("user_id", userId)
+      .in("session_id", [...sessionIds])
+      .order("created_at", { ascending: false });
+    if (error) throw new SessionActivityPersistenceError();
+
+    const newest = new Map<string, SessionActivityProposalView>();
+    for (const row of data ?? []) {
+      const view = toProposalView(row);
+      if (view.decision !== null || view.sessionId === null) continue;
+      if (!newest.has(view.sessionId)) newest.set(view.sessionId, view);
+    }
+    return [...newest.values()];
   }
 
   private async call(
@@ -232,6 +243,41 @@ export class SessionActivityRepository {
       throw new SessionActivityAuthenticationError();
     }
   }
+}
+
+const PROPOSAL_COLUMNS =
+  "id, session_id, local_date, provider_code, note, content, created_at, session_activity_decisions ( decision )" as const;
+
+type ProposalRow = {
+  id: string;
+  session_id: string | null;
+  local_date: string;
+  provider_code: string;
+  note: string | null;
+  content: Json;
+  created_at: string;
+  session_activity_decisions:
+    | { decision: string }
+    | { decision: string }[]
+    | null;
+};
+
+function toProposalView(data: ProposalRow): SessionActivityProposalView {
+  const decisionRow = Array.isArray(data.session_activity_decisions)
+    ? data.session_activity_decisions[0]
+    : data.session_activity_decisions;
+  const decision = decisionRow?.decision ?? null;
+  return {
+    id: data.id,
+    sessionId: data.session_id,
+    localDate: data.local_date,
+    providerCode: data.provider_code,
+    note: data.note,
+    content: data.content as unknown as SessionActivitiesProposal,
+    decision:
+      decision === "accepted" || decision === "dismissed" ? decision : null,
+    createdAt: data.created_at,
+  };
 }
 
 /**

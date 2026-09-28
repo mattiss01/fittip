@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useId,
+  useImperativeHandle,
   useMemo,
   useRef,
   useState,
@@ -123,6 +124,18 @@ export function ActivityLibraryProvider({
 }
 
 /**
+ * What Fill with coach may do to the list beside it (A7-4): load the list the
+ * owner accepted from a suggestion. Reading goes through `onRowsChange`, so
+ * the list itself stays the editor's own state.
+ */
+export type ActivityEditorHandle = {
+  replace: (activities: readonly ActivityValue[]) => void;
+};
+
+/** One row as the editor reports it, its target as its fields build it. */
+export type EditorRow = { key: string; value: ActivityValue };
+
+/**
  * The ordered activities of one session.
  *
  * It writes a single hidden field — JSON, not indexed input names — because
@@ -142,10 +155,15 @@ export function ActivityEditor({
   name = "activities",
   initial,
   sessionSport,
+  ref,
+  onRowsChange,
 }: {
   idPrefix: string;
   name?: string;
   initial?: ActivityValue[];
+  ref?: React.Ref<ActivityEditorHandle>;
+  /** Every row, in order, whenever the list changes. */
+  onRowsChange?: (rows: readonly EditorRow[]) => void;
   /**
    * What the session itself is, live from the form above. A new row takes it
    * rather than asking again — most activities are the sport of the session
@@ -158,11 +176,7 @@ export function ActivityEditor({
   const generatedId = useId();
   const prefix = idPrefix || generatedId;
   const [rows, setRows] = useState<Row[]>(() =>
-    (initial ?? []).map((activity) => ({
-      ...activity,
-      key: `initial-${nextKey++}`,
-      draft: draftFromMeasurement(activity.measurementMode, activity.target),
-    })),
+    (initial ?? []).map((activity) => toRow(activity, "initial")),
   );
   const [dragging, setDragging] = useState<string | null>(null);
   const {
@@ -202,6 +216,31 @@ export function ActivityEditor({
       target: build.ok ? build.measurement : null,
     })),
   );
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      replace: (activities) =>
+        setRows(activities.map((activity) => toRow(activity, "accepted"))),
+    }),
+    [],
+  );
+
+  useEffect(() => {
+    onRowsChange?.(
+      built.map(({ row, build }) => ({
+        key: row.key,
+        value: {
+          personalActivityId: row.personalActivityId,
+          name: row.name,
+          sport: row.sport,
+          instructions: row.instructions,
+          measurementMode: row.measurementMode,
+          target: build.ok ? build.measurement : row.target,
+        },
+      })),
+    );
+  }, [built, onRowsChange]);
 
   function update(key: string, change: Partial<Row>) {
     setRows((current) =>
@@ -471,6 +510,14 @@ function ActivityRow({
       </div>
     </li>
   );
+}
+
+function toRow(activity: ActivityValue, origin: string): Row {
+  return {
+    ...activity,
+    key: `${origin}-${nextKey++}`,
+    draft: draftFromMeasurement(activity.measurementMode, activity.target),
+  };
 }
 
 /** A row's values as a library definition would hold them. */

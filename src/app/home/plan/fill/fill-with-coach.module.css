@@ -1,0 +1,204 @@
+/* Designed at 390px first, in the Plan's ledger style. */
+
+.ask,
+.suggestion,
+.held {
+  display: grid;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.7rem;
+  border: 1px solid var(--ledger-rule);
+  background: var(--ledger-wash);
+}
+
+.suggestion {
+  border: 2px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+}
+
+.held {
+  border: 2px solid var(--ledger-ink);
+  background: #fff6db;
+}
+
+.held p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.field {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.field label,
+.eyebrow,
+.plannedLabel {
+  margin: 0;
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ledger-ink);
+}
+
+.plannedLabel {
+  margin-top: 0.3rem;
+}
+
+.field textarea {
+  width: 100%;
+  min-width: 0;
+  font-size: 1rem;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.example {
+  padding: 0.1rem 0.35rem;
+  border: 1px solid var(--ledger-ink);
+  background: #fff6db;
+}
+
+.exampleSupport,
+.hint,
+.message {
+  margin: 0;
+  color: var(--ledger-muted);
+  font:
+    0.72rem/1.4 "Courier New",
+    monospace;
+}
+
+.message:empty {
+  display: none;
+}
+
+.summary {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.safety {
+  margin: 0;
+  padding: 0.5rem 0.6rem 0.5rem 1.6rem;
+  border-left: 3px solid var(--ledger-ink);
+  background: #fff6db;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.draft,
+.planned {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.draft li,
+.planned li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  border: 1px solid var(--ledger-rule);
+  background: var(--ledger-paper);
+}
+
+.planned li {
+  background: var(--ledger-wash);
+}
+
+.draft li[data-removed="true"] {
+  border-style: dashed;
+  background: var(--ledger-wash);
+}
+
+.draft li[data-removed="true"] .itemName {
+  color: var(--ledger-muted);
+  text-decoration: line-through;
+}
+
+.itemText {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  padding: 0.5rem 0.6rem;
+}
+
+.itemName {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.itemDetail,
+.itemWhy {
+  overflow-wrap: anywhere;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.itemDetail {
+  color: var(--ledger-muted);
+  font-family: "Courier New", monospace;
+}
+
+.decide {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.askButton,
+.accept,
+.dismiss,
+.itemButton {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--ledger-ink);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ledger-ink);
+  font:
+    700 0.68rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.askButton,
+.accept {
+  background: var(--ledger-ink);
+  color: var(--ledger-paper);
+}
+
+.itemButton {
+  min-width: 4.5rem;
+  border-width: 0 0 0 1px;
+  border-color: var(--ledger-rule);
+}
+
+.askButton:disabled,
+.accept:disabled,
+.dismiss:disabled,
+.itemButton:disabled {
+  opacity: 0.45;
+}
+
+.askButton:focus-visible,
+.accept:focus-visible,
+.dismiss:focus-visible,
+.itemButton:focus-visible {
+  outline: 2px solid var(--ledger-ink);
+  outline-offset: 2px;
+}

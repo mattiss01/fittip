@@ -25,6 +25,12 @@ export const PLANNING_NOTE_MAX_LENGTH = 1000;
 /** ADR-014 decision 6: mandatory on a regeneration, empty on every round. */
 export const REGENERATION_FEEDBACK_MAX_LENGTH = 500;
 
+/**
+ * A fill request's note (A7-4). The session-detail context allocates 1,600
+ * bytes to it on the assumption that the action bounds it here.
+ */
+export const SESSION_FILL_NOTE_MAX_LENGTH = 500;
+
 /** Decision 4b: a candidate cites at most this much of the note. */
 export const MEMORY_EXCERPT_MAX_LENGTH = 200;
 
@@ -38,7 +44,12 @@ export function normalizeOwnerText(value: string): string {
 }
 
 export class OwnerTextValidationError extends Error {
-  constructor(readonly field: "planning_note" | "regeneration_feedback") {
+  constructor(
+    readonly field:
+      | "planning_note"
+      | "regeneration_feedback"
+      | "session_fill_note",
+  ) {
     // Never echoes the submitted text. Owner free text must not travel in an
     // error message any more than it travels in telemetry.
     super("That text is too long for this field.");
@@ -83,6 +94,20 @@ export function parseRegenerationFeedback(value: unknown): string | null {
   if (clean.length === 0) return null;
   if (clean.length > REGENERATION_FEEDBACK_MAX_LENGTH) {
     throw new OwnerTextValidationError("regeneration_feedback");
+  }
+  return clean;
+}
+
+/** Optional, like the planning note, and half its length. */
+export function parseSessionFillNote(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "string") {
+    throw new OwnerTextValidationError("session_fill_note");
+  }
+  const clean = normalizeOwnerText(value);
+  if (clean.length === 0) return null;
+  if (clean.length > SESSION_FILL_NOTE_MAX_LENGTH) {
+    throw new OwnerTextValidationError("session_fill_note");
   }
   return clean;
 }

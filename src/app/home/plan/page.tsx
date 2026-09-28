@@ -7,6 +7,8 @@ import {
   updateActivityInLibraryAction,
 } from "./activities/actions";
 import { readLibraryOptions } from "./activities/library-options";
+import type { FillProposal } from "./fill/fill-state";
+import { toFillProposal } from "./fill/open-proposals";
 import { readSavedSessionOptions } from "./saved/session-options";
 import {
   PlanManager,
@@ -43,6 +45,10 @@ import type {
   RollingPlanSeries,
   RollingPlanSession,
 } from "@/server/rolling-plan/rolling-plan";
+import {
+  readOpenSessionActivityProposals,
+  SessionActivityAuthenticationError,
+} from "@/server/session-detail/open-session-activity-proposals";
 
 export const dynamic = "force-dynamic";
 
@@ -104,6 +110,7 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
   let library: LibraryActivityOption[];
   let savedSessions: SavedSessionOption[];
   const logged = new Map<string, PlanSessionLog>();
+  const openFills = new Map<string, FillProposal>();
   try {
     const [plan, log] = await Promise.all([
       createRollingPlan(),
@@ -119,9 +126,16 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
     // the log carries: a Thursday run done on Tuesday is not still ahead on
     // Thursday. A log's own date can be any day before its session's, so the
     // logs are found by session rather than by window, in one read.
-    const found = await log.findByPlanSessions(
-      slice.sessions.map((session) => session.id),
-    );
+    const sessionIds = slice.sessions.map((session) => session.id);
+    const [found, open] = await Promise.all([
+      log.findByPlanSessions(sessionIds),
+      readOpenSessionActivityProposals(sessionIds),
+    ]);
+    for (const proposal of open) {
+      if (proposal.sessionId) {
+        openFills.set(proposal.sessionId, toFillProposal(proposal));
+      }
+    }
     for (const completion of found) {
       if (completion.planSessionId) {
         logged.set(completion.planSessionId, {
@@ -152,9 +166,12 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
           expectedRevision={slice.revision}
           sessions={slice.sessions.map((session) => {
             const log = logged.get(session.id);
-            return log === undefined
-              ? toSessionView(session)
-              : { ...toSessionView(session), log };
+            const openFill = openFills.get(session.id);
+            return {
+              ...toSessionView(session),
+              ...(log === undefined ? {} : { log }),
+              ...(openFill === undefined ? {} : { openFill }),
+            };
           })}
           recoveryDates={slice.recoveryDates}
           savedSessions={savedSessions}
@@ -212,7 +229,8 @@ function redirectOnAuthError(error: unknown): void {
     error instanceof ProfileAuthenticationError ||
     error instanceof RollingPlanAuthenticationError ||
     error instanceof CompletionAuthenticationError ||
-    error instanceof PersonalActivityAuthenticationError
+    error instanceof PersonalActivityAuthenticationError ||
+    error instanceof SessionActivityAuthenticationError
       ? error.accessError
       : undefined;
   if (accessError?.reason === "not-owner") redirect("/auth/denied");
@@ -220,7 +238,8 @@ function redirectOnAuthError(error: unknown): void {
     error instanceof ProfileAuthenticationError ||
     error instanceof RollingPlanAuthenticationError ||
     error instanceof CompletionAuthenticationError ||
-    error instanceof PersonalActivityAuthenticationError
+    error instanceof PersonalActivityAuthenticationError ||
+    error instanceof SessionActivityAuthenticationError
   ) {
     redirect("/");
   }

@@ -33,6 +33,10 @@ import {
   type RollingPlanSlice,
 } from "@/server/rolling-plan/rolling-plan";
 import { type RollingPlanRecurrenceRule } from "@/server/saved-sessions/session-copy";
+import {
+  ACCEPTANCE_NOT_RECORDED,
+  recordAcceptedSessionActivities,
+} from "@/server/session-detail/session-activity-acceptance";
 
 const OPERATIONS: readonly SeriesOperation[] = [
   "add_series",
@@ -113,6 +117,12 @@ export async function changeSeriesAction(
     }
 
     const topUpReceipt = topUp.ok ? topUp.receipt : undefined;
+    // A coach's list saved to this and future sessions is accepted like one
+    // saved to this session only (owner, 28 Sep 2026). The proposal still
+    // names the one session it was asked for.
+    const accepted =
+      operation !== "edit_series" ||
+      (await recordAcceptedSessionActivities(formData));
     return result(
       "saved",
       planChangeCopy(
@@ -120,7 +130,7 @@ export async function changeSeriesAction(
           ? "Recurring series created. The Plan now shows every occurrence that fit in the current window."
           : "This and future sessions changed. Earlier occurrences and completed training are unchanged.",
         topUp,
-      ),
+      ) + (accepted ? "" : ACCEPTANCE_NOT_RECORDED),
       {
         skipped: topUpReceipt?.skipped,
       },

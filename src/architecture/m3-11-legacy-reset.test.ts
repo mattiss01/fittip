@@ -230,6 +230,13 @@ const allowedServerModules = [
   "@/server/repositories/rolling-plan-repository",
   "@/server/repositories/saved-session-repository",
   "@/server/rolling-plan/rolling-plan",
+  // A7-4, both narrow on purpose. An edit that saved a coach's activity list
+  // records "accepted" after the plan write — that one decision and nothing
+  // else — and the Plan reads the suggestions still open. Neither reaches the
+  // repository's other writes or the paid request, which only the fill action
+  // module (off this surface) calls.
+  "@/server/session-detail/open-session-activity-proposals",
+  "@/server/session-detail/session-activity-acceptance",
 ] as const;
 
 /**

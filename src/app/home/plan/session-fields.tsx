@@ -1,13 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import type { PlanActionDraft } from "./action-state";
+import type { FillProposal } from "./fill/fill-state";
+import { FillWithCoach } from "./fill/fill-with-coach";
 import styles from "./plan.module.css";
 
 import {
   ActivityEditor,
+  type ActivityEditorHandle,
   type ActivityValue,
+  type EditorRow,
 } from "@/components/training/activity-editor";
 
 export function SessionFields({
@@ -15,6 +19,7 @@ export function SessionFields({
   draft,
   activities,
   dateField,
+  fill,
 }: {
   idPrefix: string;
   draft?: PlanActionDraft;
@@ -26,10 +31,18 @@ export function SessionFields({
    * recurrence preview that lives beside it.
    */
   dateField?: React.ReactNode;
+  /**
+   * The saved session this form edits, when it offers Fill with coach, and
+   * its suggestion still waiting for an answer. Absent when creating one:
+   * there is nothing yet for the coach to fill.
+   */
+  fill?: { sessionId: string; open?: FillProposal };
 }) {
   // Held rather than left to `defaultValue` so a new activity row can inherit
   // it as it is now, not as the session was when the form first rendered.
   const [sport, setSport] = useState(draft?.sport ?? "");
+  const editor = useRef<ActivityEditorHandle>(null);
+  const [rows, setRows] = useState<readonly EditorRow[]>([]);
   return (
     <>
       {dateField}
@@ -86,11 +99,28 @@ export function SessionFields({
           defaultValue={draft?.note ?? ""}
         />
       </div>
-      <ActivityEditor
-        idPrefix={idPrefix}
-        initial={activities}
-        sessionSport={sport}
-      />
+      {fill === undefined ? (
+        <ActivityEditor
+          idPrefix={idPrefix}
+          initial={activities}
+          sessionSport={sport}
+        />
+      ) : (
+        <FillWithCoach
+          sessionId={fill.sessionId}
+          open={fill.open}
+          editor={editor}
+          rows={rows}
+        >
+          <ActivityEditor
+            idPrefix={idPrefix}
+            initial={activities}
+            sessionSport={sport}
+            ref={editor}
+            onRowsChange={setRows}
+          />
+        </FillWithCoach>
+      )}
     </>
   );
 }
