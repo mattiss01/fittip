@@ -21,12 +21,6 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [~] **A7-3 — Persistence.** Careful lane (migration, spend). `session_activity_proposals`,
-      begin/finish RPCs settling the reservation with the proposal (ADR-019), a decision that
-      is final, the operation widened in the spend ledger; pgTAP; founder apply per ADR-018.
-      Record every source that reached the coach — the completions behind `recentActuals`,
-      the library and saved-session entries — not only the seven-day history, which is all
-      `sources` names today (A7-2 review).
 - [ ] **A7-4 — Fill with coach in the Edit panel.** Owner's choices of 28 Sep: the proposal
       lands pre-filled in the session editor; Save accepts, Dismiss rejects; the previous
       activities stay listed under it with Add back; new activities are session-only rows.
@@ -126,6 +120,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 28 Sep 2026 | `c8c56c4` | [36406975911](https://github.com/mattiss01/fittip/actions/runs/36406975911) | A7-3: the fill coach's proposals are permanent records — request, immutable proposal, the sources that survived sizing, and one final accepted/dismissed decision — with ADR-019's settle-with-the-proposal and `reserve_ai_spend` widened to the operation. Migration `20260928093803` applied to the founder project — 35 migrations, advisors 23 definer + 1 auth, the three new being this operation's RPCs. Review found one paid-result-losing mismatch (blank safety text), fixed with a pgTAP pin |
 | 28 Sep 2026 | `d55ec67` | [36403298890](https://github.com/mattiss01/fittip/actions/runs/36403298890) | A7-2: `fill_session_activities` (schema `fittip.session-activities.v1`) through contract, context, prompt, validator and example coach, with no persistence or surface yet; the operation branches are exhaustive switches now. ADR-020 gained decision 5 (`9ded908`): the session's note and intent are sent, a fill reads seven days of training, and a lock does not block it. No migration |
 | 28 Sep 2026 | `d467981` | [36396712497](https://github.com/mattiss01/fittip/actions/runs/36396712497) | A7-1: both generation paths pass the durable spend ledger again, which M3-11's reset (`e370dbe`) dropped, so live coaching has refused since 14 Aug; the coach is now also composed inside the claim's failure handling, so a live refusal no longer strands a pending claim. No migration; no API key exists yet, so nothing visible changes. The browser job's first run failed to start Docker (rate limit, port in use) and passed on rerun |
 | 28 Sep 2026 | `ccc1d9e` | [36391949069](https://github.com/mattiss01/fittip/actions/runs/36391949069) | ADR-020 (owner, 28 Sep): activity targets and actuals and the personal library may reach a coach, session detail runs on demand only, and the plan operation stays without the library for now. A7 and A8 rewritten; saved sessions in the plan, an athlete profile, and automatic detail added under Later. No code |
