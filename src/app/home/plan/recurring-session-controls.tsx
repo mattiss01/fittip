@@ -1,5 +1,6 @@
 "use client";
 
+import type { FillProposal } from "./fill/fill-state";
 import { RecurrenceFields } from "./recurrence-fields";
 import type { SeriesActionState } from "./series-action-state";
 import { seriesOccurrenceDates } from "./series-recurrence";
@@ -33,6 +34,8 @@ export type RecurringSessionView = {
   expectedDurationMinutes: number | null;
   note: string | null;
   activities: ActivityValue[];
+  /** A coach's suggestion for this occurrence still waiting for an answer. */
+  openFill?: FillProposal;
 };
 
 type PlanFormAction = (formData: FormData) => void;
@@ -143,6 +146,7 @@ export function RecurringSessionControls({
           idPrefix={"series-edit-" + session.id}
           draft={draftOf(session)}
           activities={session.activities}
+          fill={{ sessionId: session.id, open: session.openFill }}
         />
         {canChangeFuture ? (
           <RecurrenceFields

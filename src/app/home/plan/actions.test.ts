@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createPlanMock, createProfileMock, revalidatePathMock } = vi.hoisted(
-  () => ({
-    createPlanMock: vi.fn(),
-    createProfileMock: vi.fn(),
-    revalidatePathMock: vi.fn(),
-  }),
-);
+const {
+  createPlanMock,
+  createProfileMock,
+  recordAcceptedMock,
+  revalidatePathMock,
+} = vi.hoisted(() => ({
+  createPlanMock: vi.fn(),
+  createProfileMock: vi.fn(),
+  recordAcceptedMock: vi.fn(),
+  revalidatePathMock: vi.fn(),
+}));
 
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 vi.mock("@/server/repositories/rolling-plan-repository", async (original) => {
@@ -16,6 +20,19 @@ vi.mock("@/server/repositories/rolling-plan-repository", async (original) => {
     >();
   return { ...actual, createRollingPlan: createPlanMock };
 });
+vi.mock(
+  "@/server/session-detail/session-activity-acceptance",
+  async (original) => {
+    const actual =
+      await original<
+        typeof import("@/server/session-detail/session-activity-acceptance")
+      >();
+    return {
+      ...actual,
+      recordAcceptedSessionActivities: recordAcceptedMock,
+    };
+  },
+);
 vi.mock("@/server/repositories/profile-repository", async (original) => {
   const actual =
     await original<typeof import("@/server/repositories/profile-repository")>();
@@ -41,6 +58,7 @@ const today = () => isoDateInTimezone(new Date(), TIMEZONE);
 describe("plan actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    recordAcceptedMock.mockResolvedValue(true);
     createProfileMock.mockResolvedValue({
       getCurrentProfile: vi.fn().mockResolvedValue({
         userId: "u",
@@ -576,6 +594,142 @@ describe("plan actions", () => {
         form({ timezoneName: "Nowhere/Imaginary" }),
       ),
     ).resolves.toMatchObject({ status: "validation" });
+  });
+
+  describe("a coach's suggestion saved from the Edit panel (A7-4)", () => {
+    const PROPOSAL_ID = "5a000000-0000-4000-8000-000000000001";
+    const UNCHANGED_ACTIVITIES = JSON.stringify([
+      {
+        personalActivityId: null,
+        name: "Easy running",
+        sport: "Running",
+        instructions: null,
+        measurementMode: "duration_intensity",
+        target: null,
+      },
+    ]);
+
+    it("records the acceptance only after the plan write has landed", async () => {
+      const order: string[] = [];
+      const applyChangeSet = vi.fn(async () => {
+        order.push("plan");
+        return { result: "applied", planRevision: 1 };
+      });
+      recordAcceptedMock.mockImplementation(async () => {
+        order.push("decision");
+        return true;
+      });
+      createPlanMock.mockResolvedValue({
+        getPlanSlice: vi.fn().mockResolvedValue(slice()),
+        applyChangeSet,
+        materializeSeries: vi.fn().mockResolvedValue({
+          planRevision: 1,
+          createdCount: 0,
+          skipped: [],
+        }),
+      });
+      const formData = form({
+        operation: "edit",
+        sessionId: SESSION_ID,
+        title: "Aerobic run",
+        sport: "Running",
+        activities: "[]",
+      });
+      formData.append("activityProposalId", PROPOSAL_ID);
+
+      const result = await changePlanAction(
+        INITIAL_PLAN_ACTION_STATE,
+        formData,
+      );
+
+      expect(result.status).toBe("saved");
+      expect(order).toEqual(["plan", "decision"]);
+      expect(recordAcceptedMock).toHaveBeenCalledWith(formData);
+    });
+
+    it("does not record anything when the plan write is refused", async () => {
+      createPlanMock.mockResolvedValue({
+        getPlanSlice: vi.fn().mockResolvedValue(slice()),
+        applyChangeSet: vi
+          .fn()
+          .mockRejectedValue(new RollingPlanConflictError()),
+      });
+      const formData = form({
+        operation: "edit",
+        sessionId: SESSION_ID,
+        title: "Aerobic run",
+        sport: "Running",
+        activities: "[]",
+      });
+      formData.append("activityProposalId", PROPOSAL_ID);
+
+      const result = await changePlanAction(
+        INITIAL_PLAN_ACTION_STATE,
+        formData,
+      );
+
+      expect(result.status).toBe("conflict");
+      expect(recordAcceptedMock).not.toHaveBeenCalled();
+    });
+
+    it("says so when the save landed but the acceptance could not be written", async () => {
+      recordAcceptedMock.mockResolvedValue(false);
+      createPlanMock.mockResolvedValue({
+        getPlanSlice: vi.fn().mockResolvedValue(slice()),
+        applyChangeSet: vi
+          .fn()
+          .mockResolvedValue({ result: "applied", planRevision: 1 }),
+        materializeSeries: vi.fn().mockResolvedValue({
+          planRevision: 1,
+          createdCount: 0,
+          skipped: [],
+        }),
+      });
+
+      const result = await changePlanAction(
+        INITIAL_PLAN_ACTION_STATE,
+        form({
+          operation: "edit",
+          sessionId: SESSION_ID,
+          title: "Aerobic run",
+          sport: "Running",
+          activities: "[]",
+        }),
+      );
+
+      expect(result.status).toBe("saved");
+      expect(result.message).toContain(
+        "could not be marked as used, but your session is saved",
+      );
+    });
+
+    it("refreshes the Plan on an unchanged save, so a suggestion saved past comes back", async () => {
+      const applyChangeSet = vi.fn();
+      createPlanMock.mockResolvedValue({
+        getPlanSlice: vi.fn().mockResolvedValue(slice()),
+        applyChangeSet,
+      });
+
+      const result = await changePlanAction(
+        INITIAL_PLAN_ACTION_STATE,
+        form({
+          operation: "edit",
+          sessionId: SESSION_ID,
+          localDate: today(),
+          title: "Aerobic run",
+          sport: "Running",
+          activities: UNCHANGED_ACTIVITIES,
+        }),
+      );
+
+      expect(result).toMatchObject({
+        status: "saved",
+        message: "Nothing had changed, so nothing was saved.",
+      });
+      expect(applyChangeSet).not.toHaveBeenCalled();
+      expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan");
+      expect(recordAcceptedMock).toHaveBeenCalledOnce();
+    });
   });
 });
 

@@ -230,6 +230,10 @@ const allowedServerModules = [
   "@/server/repositories/rolling-plan-repository",
   "@/server/repositories/saved-session-repository",
   "@/server/rolling-plan/rolling-plan",
+  // A7-4: an edit that saved a coach's activity list records "accepted" after
+  // the plan write. The module can write that one decision and nothing else;
+  // the fill itself is requested from its own action module, not this surface.
+  "@/server/session-detail/session-activity-acceptance",
 ] as const;
 
 /**

@@ -39,6 +39,10 @@ import {
   type RollingPlanSession,
   type RollingPlanSlice,
 } from "@/server/rolling-plan/rolling-plan";
+import {
+  ACCEPTANCE_NOT_RECORDED,
+  recordAcceptedSessionActivities,
+} from "@/server/session-detail/session-activity-acceptance";
 
 const OPERATIONS: readonly PlanOperation[] = [
   "add",
@@ -143,7 +147,17 @@ export async function changePlanAction(
     // invalid for pressing Save on an unchanged form would be a lie about
     // what happened.
     if (changes.length === 0) {
-      return result("saved", "Nothing had changed, so nothing was saved.");
+      // Nothing in the plan changed, but a coach's suggestion may have: saved
+      // past while still open, it has to be back on the Plan's next read, and
+      // one accepted is no longer open (A7-4).
+      revalidatePath("/home/plan");
+      // A coach's list identical to the one already saved is still a list the
+      // owner looked at and kept.
+      return result(
+        "saved",
+        "Nothing had changed, so nothing was saved." +
+          (await acceptanceNote(operation, formData)),
+      );
     }
     await assertOccurrencePlacements(plan, slice, changes);
     const receipt = await plan.applyChangeSet(
@@ -164,7 +178,8 @@ export async function changePlanAction(
     revalidatePath("/home/plan/proposal");
     return result(
       "saved",
-      planChangeCopy(savedCopy(operation, formData), topUp),
+      planChangeCopy(savedCopy(operation, formData), topUp) +
+        (await acceptanceNote(operation, formData)),
     );
   } catch (error) {
     if (error instanceof RollingPlanRuleError) {
@@ -461,6 +476,19 @@ function sessionFingerprint(content: FingerprintableSession): string {
       isLocked: activity.isLocked,
     })),
   });
+}
+
+/**
+ * An edit that saved a coach's list records "accepted" once the plan holds it
+ * (A7-4). Only an edit carries the field; any other operation ignores it.
+ */
+async function acceptanceNote(
+  operation: PlanOperation,
+  formData: FormData,
+): Promise<string> {
+  if (operation !== "edit") return "";
+  const recorded = await recordAcceptedSessionActivities(formData);
+  return recorded ? "" : ACCEPTANCE_NOT_RECORDED;
 }
 
 function readOperation(value: FormDataEntryValue | null) {

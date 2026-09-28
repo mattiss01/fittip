@@ -23,6 +23,7 @@ import {
   type CompletionOutcome,
 } from "../log/log-action-state";
 import { CreateSession } from "./create-session";
+import type { FillProposal } from "./fill/fill-state";
 import { ActivityList } from "@/components/training/activity-list";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
 import styles from "./plan.module.css";
@@ -79,6 +80,8 @@ export type PlanSessionView = {
    * cancelled. The plan row and the log's snapshot keep what the plan said.
    */
   log?: PlanSessionLog;
+  /** A coach's suggestion for this session nobody has accepted or dismissed. */
+  openFill?: FillProposal;
 };
 
 export type PlanSessionLog = {
@@ -573,6 +576,7 @@ function PlanSessionCard({
                     draftFor(state, "edit", session.id) ?? draftOf(session)
                   }
                   activities={session.activities}
+                  fill={{ sessionId: session.id, open: session.openFill }}
                   dateField={
                     <div className={styles.field}>
                       <label htmlFor={`edit-date-${session.id}`}>Date</label>
@@ -620,6 +624,7 @@ function PlanSessionCard({
                   expectedDurationMinutes: session.expectedDurationMinutes,
                   note: session.note,
                   activities: session.activities,
+                  openFill: session.openFill,
                 }}
                 series={recurring.series}
                 expectedRevision={expectedRevision}

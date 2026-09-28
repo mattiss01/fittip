@@ -38,6 +38,16 @@ Ordered by dependency. A lane is named where it is not the build lane.
       Open for the owner first: a row picked from the library and then changed keeps its
       `personal_activity_id` until it is saved as a new definition, so grouping history by
       definition would count "picked Latzug, renamed Stabwurf" as Latzug.
+- [ ] **Edit a session on its own page.** Owner, 28 Sep 2026: Edit on a planned session
+      opens a screen holding only that session's editor, instead of a panel inside the
+      whole Plan. Open: whether Duplicate, Save to library and the recurring scopes move
+      with it, and where Save returns to (the Plan at that day is the obvious answer).
+      Needs its own loading, missing-session and expired-sign-in states.
+- [ ] **Why a session was cancelled.** Owner, 28 Sep 2026: the Cancel confirmation offers
+      an optional field for the reason. Likely careful lane — a stored reason is a new
+      column, and free text that may name pain or illness raises whether and how a coach
+      reads it (ADR-013). Open for the owner: whether recurring "cancel only this" gets it
+      too, and whether the reason is shown on the cancelled card.
 
 
 ## Fix in passing
