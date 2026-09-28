@@ -140,6 +140,8 @@ Measurement modes and the "target" fields each uses (every other target field is
 
 "instructions" are how to perform it, briefly, or null. "summary" tells the athlete what the list is built to do and the main choice you made, in at most 400 characters.
 
+"trainingHistory" here covers only the last seven days and lists what was logged; it does not list missed sessions, and a quiet week in it is not evidence of a break.
+
 "planningNote", if present, is the athlete's note about this one request.
 
 Where "hasSafetySignal" is true, you must return at least one "safetyConsiderations" entry describing the conservative choice you made. Describe load, not the symptom.`,

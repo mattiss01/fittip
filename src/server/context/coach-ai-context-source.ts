@@ -4,7 +4,7 @@ import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import {
   CoachAIContextBelowMinimumError,
   COACH_AI_CONTEXT_LIMITS,
-  trainingRecordsForOperation,
+  trainingSelectionFor,
   type CoachAIOwnedRecords,
 } from "@/server/ai/context";
 import type { CoachAIContextSource } from "@/server/ai/context-source";
@@ -295,13 +295,12 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
     const limits = COACH_AI_CONTEXT_LIMITS[this.#operation];
     // The same narrowing assembly applies, or the recorded sources would name
     // completions from weeks a fill request never sent.
-    const selection = selectTrainingHistoryContext(
-      trainingRecordsForOperation(this.#operation, training),
-      {
-        maxSessions: limits.maxTrainingSessions,
-        maxBytes: limits.bytes.trainingHistoryCompletions,
-      },
-    );
+    const narrowed = trainingSelectionFor(this.#operation, training);
+    const selection = selectTrainingHistoryContext(narrowed.records, {
+      windowDays: narrowed.windowDays,
+      maxSessions: limits.maxTrainingSessions,
+      maxBytes: limits.bytes.trainingHistoryCompletions,
+    });
 
     return selection.includedCompletions.map((entry) => {
       const completion = byRecord.get(entry);

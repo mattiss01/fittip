@@ -569,3 +569,90 @@ describe("accepted session activities", () => {
     ).toEqual({ outcome: "rejected", reason: "schema" });
   });
 });
+
+describe("session activities review follow-ups", () => {
+  const TRIMMED_ID = "5d000000-0000-4000-8000-0000000000c9";
+
+  function bodyWith(
+    edit: (
+      body: { activities: Record<string, unknown>[] } & Record<string, unknown>,
+    ) => void,
+  ) {
+    const body = JSON.parse(
+      findCoachAIFixtureCase("valid_session_activities").body,
+    );
+    edit(body);
+    return JSON.stringify(body);
+  }
+
+  const contextMentioning: CoachAIContext = {
+    ...COACH_AI_FIXTURE_SESSION_CONTEXT,
+    sessionDetail: {
+      ...(COACH_AI_FIXTURE_SESSION_CONTEXT.sessionDetail as NonNullable<
+        CoachAIContext["sessionDetail"]
+      >),
+      session: {
+        ...(
+          COACH_AI_FIXTURE_SESSION_CONTEXT.sessionDetail as NonNullable<
+            CoachAIContext["sessionDetail"]
+          >
+        ).session,
+        activities: [
+          {
+            personalActivityId: TRIMMED_ID,
+            name: "Zercher squat",
+            sport: "Strength",
+            measurementMode: "sets_reps_load",
+            target: null,
+          },
+        ],
+      },
+    },
+  };
+
+  it("keeps a row whose link was shown but not sent, as a session-only row", () => {
+    const result = validateSessionActivitiesCandidate({
+      body: bodyWith((body) => {
+        body.activities[0].personalActivityId = TRIMMED_ID;
+        body.activities[0].name = "Zercher squat";
+      }),
+      context: contextMentioning,
+    });
+    if (result.outcome !== "accepted") throw new Error(result.reason);
+
+    expect(result.proposal.activities[0]).toMatchObject({
+      personalActivityId: null,
+      name: "Zercher squat",
+    });
+  });
+
+  it("refuses whitespace where an explanation is required", () => {
+    expect(
+      validateSessionActivitiesCandidate({
+        body: bodyWith((body) => {
+          body.activities[1].rationale = "   ";
+        }),
+        context: COACH_AI_FIXTURE_SESSION_CONTEXT,
+      }),
+    ).toEqual({ outcome: "rejected", reason: "schema" });
+  });
+
+  it("checks a custom target's free text like every other string", () => {
+    expect(
+      validateSessionActivitiesCandidate({
+        body: bodyWith((body) => {
+          body.activities[1].measurementMode = "custom";
+          body.activities[1].target = {
+            ...(body.activities[1].target as Record<string, unknown>),
+            duration_minutes: null,
+            intensity: null,
+            label: "Note",
+            value: "Push through the pain",
+            unit: "cue",
+          };
+        }),
+        context: COACH_AI_FIXTURE_SESSION_CONTEXT,
+      }),
+    ).toEqual({ outcome: "rejected", reason: "unsafe_content" });
+  });
+});

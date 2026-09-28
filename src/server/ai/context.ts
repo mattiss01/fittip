@@ -1,6 +1,5 @@
 import "server-only";
 
-import { shiftIsoDate } from "@/lib/date/local-date";
 import {
   selectActiveGoalContext,
   type GoalContextCandidate,
@@ -322,17 +321,17 @@ export const COACH_AI_CONTEXT_LIMITS = {
   // A7-2, within ADR-020. One session rather than a horizon, so the plan's
   // long-range sources are absent: no historical goals, no roadmap, no
   // previous proposal, no plan commitments, and training history is the last
-  // seven days only (`trainingRecordsForOperation`), kept so a pain, illness,
+  // seven days only (`trainingSelectionFor`), kept so a pain, illness,
   // injury or fatigue flag still steers the coach conservatively. What it adds
   // is `sessionDetail`, whose parts are sized in `session-detail-context.ts`.
   //
-  // The note is the planning note's allocation although the owner's request
-  // note is bounded at 500 characters by the action: 1,200 bytes is what 500
-  // characters of accented text can need, and refusing a note the action
-  // accepted would be a refusal the owner could not predict.
+  // The owner's request note is bounded at 500 characters by the action, and
+  // 1,600 bytes is what 500 characters can need at three bytes each (CJK) plus
+  // the quotes: refusing a note the action accepted would be a refusal the
+  // owner could not predict.
   //
-  //   prefix 7,000 + wrapper 64 + context 32,000 = 39,064 characters
-  //   ceil(39,064 / 4) = 9,766  against  maxInputTokens 10,000
+  //   prefix 7,000 + wrapper 64 + context 32,400 = 39,464 characters
+  //   ceil(39,464 / 4) = 9,866  against  maxInputTokens 10,000
   //
   // It stays under the shared ceiling, so this operation needs none of the
   // plan's missing headroom. A ceiling of its own, which would reserve less per
@@ -351,12 +350,12 @@ export const COACH_AI_CONTEXT_LIMITS = {
       trainingHistory: 4_400,
       trainingHistoryCompletions: 4_000,
       planCommitments: 0,
-      planningNote: 1_200,
+      planningNote: 1_600,
       regenerationFeedback: 0,
       previousProposal: 0,
       roadmap: 0,
       sessionDetail: 16_000,
-      total: 32_000,
+      total: 32_400,
     },
   },
 } as const satisfies Record<CoachAIOperation, CoachAIContextLimits>;
@@ -368,26 +367,24 @@ export const SESSION_DETAIL_HISTORY_DAYS = 7;
  * The training history an operation actually reads.
  *
  * The plan and the roadmap read ADR-013's whole window. Filling one session
- * reads the last seven days of it and no planned sessions at all — its week is
- * `sessionDetail.week` — so an owner's eight weeks do not crowd out the library
- * and the actuals the operation exists to use. Shared by assembly and by the
- * context source's source-recording, which must agree on what was sent.
+ * reads the last seven days of it (the owner's choice of 28 September 2026)
+ * and no planned sessions at all — its week is `sessionDetail.week` — so eight
+ * weeks do not crowd out the library and the actuals the operation exists to
+ * use. The narrowing goes through `windowDays` rather than by filtering first,
+ * so the window dates and counts the coach is told describe the seven days it
+ * was actually sent. Shared by assembly and by the context source's
+ * source-recording, which must agree on what was sent.
  */
-export function trainingRecordsForOperation(
+export function trainingSelectionFor(
   operation: CoachAIOperation,
   training: TrainingHistoryRecords,
-): TrainingHistoryRecords {
-  if (operation !== "fill_session_activities") return training;
-  const since = shiftIsoDate(
-    training.today,
-    -(SESSION_DETAIL_HISTORY_DAYS - 1),
-  );
+): { records: TrainingHistoryRecords; windowDays: number | undefined } {
+  if (operation !== "fill_session_activities") {
+    return { records: training, windowDays: undefined };
+  }
   return {
-    ...training,
-    completions: training.completions.filter(
-      (completion) => completion.localDate >= since,
-    ),
-    plannedSessions: [],
+    records: { ...training, plannedSessions: [] },
+    windowDays: SESSION_DETAIL_HISTORY_DAYS,
   };
 }
 
@@ -599,12 +596,14 @@ export function buildCoachAIContext(
     )
     .map((goal) => goal.id);
 
+  const trainingSelection = trainingSelectionFor(operation, records.training);
   const training = selectTrainingHistoryContext(
     {
-      ...trainingRecordsForOperation(operation, records.training),
+      ...trainingSelection.records,
       horizonEndDate: compose.horizonEndDate,
     },
     {
+      windowDays: trainingSelection.windowDays,
       maxSessions: limits.maxTrainingSessions,
       // The completion sub-budget, not the whole-source ceiling: the miss list
       // and the envelope share that ceiling and neither trims by bytes.

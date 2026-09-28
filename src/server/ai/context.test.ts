@@ -1030,6 +1030,16 @@ describe("fill_session_activities assembly", () => {
       ),
     ).toEqual(["2026-08-09", "2026-08-04"]);
     expect(assembled.context.hasSafetySignal).toBe(false);
+    // The window the coach is told about is the one it was sent: seven days
+    // holding two sessions, not fifty-six days holding two, which would read
+    // as a detraining gap nobody had.
+    expect(assembled.context.trainingHistory).toMatchObject({
+      windowStartDate: "2026-08-04",
+      windowEndDate: TODAY,
+      sessionsInWindow: 2,
+      sessionsIncluded: 2,
+      missedPlannedSessions: [],
+    });
   });
 
   it.each([

@@ -393,3 +393,56 @@ describe("buildSessionDetailContext", () => {
     );
   });
 });
+
+describe("session detail review follow-ups", () => {
+  it("orders the library so entries the session links survive a trim", () => {
+    const linked = "5d000000-0000-4000-8000-0000000000c9";
+    const records = select({
+      planSessions: [
+        planSession({
+          activities: [
+            {
+              personalActivityId: linked,
+              position: 0,
+              name: "Zercher squat",
+              sport: "Strength",
+              measurementMode: "sets_reps_load",
+              isLocked: false,
+            },
+          ] as RollingPlanSession["activities"],
+        }),
+      ],
+      library: [
+        libraryEntry({ id: ROW_ID, name: "Rowing", sport: "Rowing" }),
+        libraryEntry(),
+        libraryEntry({ id: linked, name: "Zercher squat", sport: "Other" }),
+      ],
+    }) as SessionDetailRecords;
+
+    expect(records.library.map((entry) => entry.name)).toEqual([
+      "Zercher squat",
+      "Back squat",
+      "Rowing",
+    ]);
+  });
+
+  it("drops the session's free text before letting its part outgrow the share", () => {
+    const control = String.fromCharCode(1);
+    const records = select({
+      planSessions: [
+        planSession({
+          title: control.repeat(120),
+          sport: control.repeat(80),
+          intent: control.repeat(500),
+          note: control.repeat(2_000),
+        }),
+      ],
+    }) as SessionDetailRecords;
+
+    const context = buildSessionDetailContext(records);
+    expect(context.session.note).toBeNull();
+    expect(
+      new TextEncoder().encode(JSON.stringify(context.session)).length,
+    ).toBeLessThanOrEqual(SESSION_DETAIL_BYTES.session);
+  });
+});

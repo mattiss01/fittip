@@ -196,12 +196,30 @@ export function selectSessionDetailRecords(input: {
     activities: saved.activities.map(toActivityRecord),
   }));
 
-  const library = input.library.map((entry) => ({
-    id: entry.id,
-    name: entry.name,
-    sport: entry.sport,
-    measurementMode: entry.measurementMode,
-  }));
+  // Ordered so the trim in `buildSessionDetailContext` loses the least useful
+  // entries: those the session or its saved sessions already link come first,
+  // because a coach told to keep them needs their definitions to link them;
+  // then the session's sport; then the rest in the repository's order.
+  const referenced = new Set(
+    [...sessionActivities, ...savedRecords.flatMap((saved) => saved.activities)]
+      .map((activity) => activity.personalActivityId)
+      .filter((id): id is string => id !== null),
+  );
+  const rank = (entry: PersonalActivity) =>
+    referenced.has(entry.id)
+      ? 0
+      : activityNameKey(entry.sport) === sportKey
+        ? 1
+        : 2;
+  const library = input.library
+    .map((entry, index) => ({ entry, index }))
+    .sort((a, b) => rank(a.entry) - rank(b.entry) || a.index - b.index)
+    .map(({ entry }) => ({
+      id: entry.id,
+      name: entry.name,
+      sport: entry.sport,
+      measurementMode: entry.measurementMode,
+    }));
 
   // The activities worth showing history for, in priority order and once each.
   const relevant: { name: string; personalActivityId: string | null }[] = [];
@@ -268,12 +286,12 @@ export function buildSessionDetailContext(
   records: SessionDetailRecords,
   bytes: typeof SESSION_DETAIL_BYTES = SESSION_DETAIL_BYTES,
 ): CoachAISessionDetailContext {
-  const intent = truncate(
+  let intent = truncate(
     records.session.intent,
     SESSION_DETAIL_INTENT_MAX_LENGTH,
   );
-  const note = truncate(records.session.note, SESSION_DETAIL_NOTE_MAX_LENGTH);
-  const envelope = {
+  let note = truncate(records.session.note, SESSION_DETAIL_NOTE_MAX_LENGTH);
+  const envelopeOf = () => ({
     localDate: records.session.localDate,
     title: records.session.title,
     sport: records.session.sport,
@@ -282,7 +300,14 @@ export function buildSessionDetailContext(
     note,
     activities: [],
     activitiesWithheld: records.session.activities.length,
-  };
+  });
+  // Truncation bounds characters; escaping can still make a pathological
+  // string six bytes a character. Rather than let the part outgrow its share
+  // and refuse, the free text goes first — note, then intent — and the title,
+  // sport and date, which the owner can see and which bound the request, stay.
+  if (jsonBytes(envelopeOf()) > bytes.session) note = null;
+  if (jsonBytes(envelopeOf()) > bytes.session) intent = null;
+  const envelope = envelopeOf();
   const activities = fit(
     records.session.activities.slice(0, SESSION_DETAIL_MAX_SESSION_ACTIVITIES),
     bytes.session - jsonBytes(envelope),

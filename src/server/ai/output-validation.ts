@@ -267,7 +267,7 @@ export function validateSessionActivitiesCandidate(input: {
   if (
     detail === null ||
     parsed.schemaVersion !== COACH_AI_SCHEMA_VERSIONS.fill_session_activities ||
-    !isBounded(parsed.summary, 1, SESSION_ACTIVITIES_SUMMARY_MAX) ||
+    !isText(parsed.summary, SESSION_ACTIVITIES_SUMMARY_MAX) ||
     !Array.isArray(parsed.activities)
   ) {
     return rejected("schema");
@@ -280,9 +280,23 @@ export function validateSessionActivitiesCandidate(input: {
   }
 
   const library = new Map(detail.library.map((entry) => [entry.id, entry]));
+  // Ids the coach was shown on an activity without being sent the definition:
+  // one trimmed from the library to fit, or archived since the session was
+  // written. Told to keep what fits, a coach will keep those ids, and refusing
+  // a paid answer for doing what it was asked is a refusal nobody can act on.
+  // Such a row keeps its own name and becomes session-only instead.
+  const mentioned = new Set(
+    [
+      ...detail.session.activities,
+      ...detail.savedSessions.flatMap((saved) => saved.activities),
+      ...detail.recentActuals,
+    ]
+      .map((activity) => activity.personalActivityId)
+      .filter((id): id is string => id !== null && !library.has(id)),
+  );
   const activities: ProposedSessionActivity[] = [];
   for (const entry of parsed.activities) {
-    const activity = validateProposedActivity(entry, library);
+    const activity = validateProposedActivity(entry, library, mentioned);
     if (activity.outcome === "rejected") return activity;
     activities.push(activity.activity);
   }
@@ -307,8 +321,11 @@ export function validateSessionActivitiesCandidate(input: {
       ...safetyConsiderations,
       ...activities.flatMap((activity) => [
         activity.name,
+        activity.sport,
         activity.rationale,
         ...(activity.instructions === null ? [] : [activity.instructions]),
+        // A custom target's label, value and unit are free text too.
+        ...targetStrings(activity.target),
       ]),
     ])
   ) {
@@ -340,6 +357,7 @@ function validateProposedActivity(
     string,
     { name: string; sport: string; measurementMode: TrainingMeasurementMode }
   >,
+  mentioned: ReadonlySet<string>,
 ): ProposedActivityResult {
   if (!isRecord(entry)) return rejected("schema");
   if (
@@ -357,11 +375,11 @@ function validateProposedActivity(
   }
   if (
     !isMeasurementMode(entry.measurementMode) ||
-    !isBounded(entry.rationale, 1, SESSION_ACTIVITY_RATIONALE_MAX) ||
+    !isText(entry.rationale, SESSION_ACTIVITY_RATIONALE_MAX) ||
     !(
       entry.instructions === null ||
       entry.instructions === undefined ||
-      isBounded(entry.instructions, 1, SESSION_ACTIVITY_INSTRUCTIONS_MAX)
+      isText(entry.instructions, SESSION_ACTIVITY_INSTRUCTIONS_MAX)
     ) ||
     !(
       entry.personalActivityId === null ||
@@ -375,22 +393,26 @@ function validateProposedActivity(
   let name: string;
   let sport: string;
   let personalActivityId: string | null = null;
-  if (typeof entry.personalActivityId === "string") {
-    const linked = library.get(entry.personalActivityId);
-    // An id that was not sent is not the owner's to link, whatever it is.
+  // A mentioned-but-unsent id falls through to a session-only row below.
+  const linkedId =
+    typeof entry.personalActivityId === "string" &&
+    !mentioned.has(entry.personalActivityId)
+      ? entry.personalActivityId
+      : null;
+  if (linkedId !== null) {
+    const linked = library.get(linkedId);
+    // An id that was never shown is not the owner's to link, whatever it is.
     if (!linked) return rejected("business_rule");
     if (linked.measurementMode !== entry.measurementMode) {
       return rejected("business_rule");
     }
-    personalActivityId = entry.personalActivityId;
+    personalActivityId = linkedId;
     name = linked.name;
     sport = linked.sport;
   } else {
     if (
-      !isBounded(entry.name, 1, SESSION_ACTIVITY_NAME_MAX) ||
-      entry.name.trim().length === 0 ||
-      !isBounded(entry.sport, 1, SESSION_ACTIVITY_SPORT_MAX) ||
-      entry.sport.trim().length === 0
+      !isText(entry.name, SESSION_ACTIVITY_NAME_MAX) ||
+      !isText(entry.sport, SESSION_ACTIVITY_SPORT_MAX)
     ) {
       return rejected("schema");
     }
@@ -453,6 +475,19 @@ function readTarget(
   } catch {
     return undefined;
   }
+}
+
+/** Bounded, and more than whitespace: a blank rationale explains nothing. */
+function isText(value: unknown, max: number): value is string {
+  return isBounded(value, 1, max) && value.trim().length > 0;
+}
+
+/** The free text a target can carry, for the content check. */
+function targetStrings(target: TrainingMeasurement | null): string[] {
+  if (target === null) return [];
+  return Object.values(target).filter(
+    (value): value is string => typeof value === "string",
+  );
 }
 
 function isMeasurementMode(value: unknown): value is TrainingMeasurementMode {

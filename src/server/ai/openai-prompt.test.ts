@@ -295,7 +295,7 @@ describe("the plan response grammar", () => {
  * A7-2. One session rather than a horizon, so the allocation is smaller than
  * the plan's and the prefix budget is the figure `context.ts` derived it from:
  *
- *   7,000 + 64 + 32,000 = 39,064   ceil(39,064 / 4) = 9,766  vs  10,000
+ *   7,000 + 64 + 32,400 = 39,464   ceil(39,464 / 4) = 9,866  vs  10,000
  */
 const SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET = 7_000;
 
