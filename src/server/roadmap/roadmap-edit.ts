@@ -61,5 +61,6 @@ export async function buildEditValidationContext(
     // Edit validation re-checks an owner-edited roadmap against the same
     // validator; it plans nothing, so it carries no roadmap context.
     roadmap: null,
+    sessionDetail: null,
   };
 }

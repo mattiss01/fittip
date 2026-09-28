@@ -123,6 +123,10 @@ class SpyProviderCoachAI implements CoachAI {
   createSevenDayPlan(request: CoachAIRequest): Promise<CoachAICandidate> {
     return this.createRoadmap(request);
   }
+
+  fillSessionActivities(request: CoachAIRequest): Promise<CoachAICandidate> {
+    return this.createRoadmap(request);
+  }
 }
 
 /**
@@ -146,6 +150,10 @@ class ImpostorCoachAI implements CoachAI {
   }
 
   createSevenDayPlan(request: CoachAIRequest): Promise<CoachAICandidate> {
+    return this.createRoadmap(request);
+  }
+
+  fillSessionActivities(request: CoachAIRequest): Promise<CoachAICandidate> {
     return this.createRoadmap(request);
   }
 }

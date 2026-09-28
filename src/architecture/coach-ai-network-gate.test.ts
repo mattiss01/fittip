@@ -74,6 +74,8 @@ const PROVIDER_BOUND_ROOTS = [
   join(process.cwd(), "src", "server", "plan-proposal"),
   // Every read of those records, the previous proposal and roadmap included.
   join(process.cwd(), "src", "server", "repositories"),
+  // A7-2: selects and sizes a session, the library and recent actuals.
+  join(process.cwd(), "src", "server", "session-detail"),
 ];
 
 /** One file per root, in the same order, that the scan must have read. */
@@ -99,6 +101,13 @@ const ROOT_PINS = [
     "server",
     "repositories",
     "plan-proposal-repository.ts",
+  ),
+  join(
+    process.cwd(),
+    "src",
+    "server",
+    "session-detail",
+    "session-detail-context.ts",
   ),
 ];
 

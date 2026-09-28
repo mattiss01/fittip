@@ -13,7 +13,11 @@ import {
 import { COACH_AI_LIVE_LIMITS } from "@/server/ai/budget";
 import { CoachAIError } from "@/server/ai/errors";
 import type { MemoryItemView } from "@/server/memory/memory-records";
-import type { TrainingHistoryRecords } from "@/server/training/training-history-context";
+import type { SessionDetailRecords } from "@/server/session-detail/session-detail-context";
+import type {
+  TrainingHistoryCompletion,
+  TrainingHistoryRecords,
+} from "@/server/training/training-history-context";
 
 const TODAY = "2026-08-10";
 const HORIZON_END = "2026-11-01";
@@ -922,5 +926,162 @@ describe("what a plan regeneration would cost", () => {
     expect(assembled.serializedBytes).toBeLessThanOrEqual(
       PLAN_LIMITS.bytes.total,
     );
+  });
+});
+
+describe("fill_session_activities assembly", () => {
+  const SESSION_ID = "5d000000-0000-4000-8000-000000000001";
+  const SESSION_DATE = "2026-08-12";
+
+  function sessionDetail(
+    overrides: Partial<SessionDetailRecords["session"]> = {},
+  ): SessionDetailRecords {
+    return {
+      session: {
+        id: SESSION_ID,
+        localDate: SESSION_DATE,
+        status: "active",
+        title: "Lower body",
+        sport: "Strength",
+        intent: null,
+        durationMinutes: 60,
+        note: null,
+        activities: [],
+        ...overrides,
+      },
+      week: [],
+      library: [],
+      savedSessions: [],
+      recentActuals: [],
+    };
+  }
+
+  const FILL_COMPOSE: CoachAIComposeInput = {
+    horizonStartDate: SESSION_DATE,
+    horizonEndDate: SESSION_DATE,
+    planningNote: null,
+    regenerationFeedback: null,
+    previousProposal: null,
+    sessionId: SESSION_ID,
+  };
+
+  function fill(
+    recordOverrides: Partial<CoachAIOwnedRecords> = {},
+    composeOverrides: Partial<CoachAIComposeInput> = {},
+  ) {
+    return buildCoachAIContext(
+      "fill_session_activities",
+      records({ sessionDetail: sessionDetail(), ...recordOverrides }),
+      { ...FILL_COMPOSE, ...composeOverrides },
+    );
+  }
+
+  function logged(localDate: string): TrainingHistoryCompletion {
+    return {
+      localDate,
+      status: "completed",
+      title: "Run",
+      sport: "Running",
+      durationMinutes: 30,
+      perceivedEffort: null,
+      feeling: null,
+      painReported: localDate === "2026-08-01",
+      illnessReported: false,
+      injuryReported: false,
+      severeFatigueReported: false,
+      note: null,
+      replacementDescription: null,
+      activityNames: [],
+    };
+  }
+
+  it("carries the session and none of the long-range sources", () => {
+    const assembled = fill({
+      goals: [
+        goal(),
+        goal({
+          id: "a1000000-0000-4000-8000-000000000002",
+          status: "achieved",
+        }),
+      ],
+    });
+
+    expect(assembled.context.sessionDetail?.session.title).toBe("Lower body");
+    expect(assembled.context.historicalGoals).toEqual([]);
+    expect(assembled.context.roadmap).toBeNull();
+    expect(assembled.context.planCommitments).toEqual([]);
+  });
+
+  it("reads the last seven days of training only, so an old flag does not steer it", () => {
+    const assembled = fill({
+      training: {
+        ...EMPTY_TRAINING,
+        completions: [
+          logged("2026-08-09"),
+          logged("2026-08-04"),
+          logged("2026-08-01"),
+        ],
+      },
+    });
+
+    expect(
+      assembled.context.trainingHistory.completions.map(
+        (entry) => entry.localDate,
+      ),
+    ).toEqual(["2026-08-09", "2026-08-04"]);
+    expect(assembled.context.hasSafetySignal).toBe(false);
+  });
+
+  it.each([
+    ["no session was read", { sessionDetail: null }, {}],
+    [
+      "the source read a different session",
+      {},
+      { sessionId: "5d000000-0000-4000-8000-000000000999" },
+    ],
+    [
+      "the session was called off",
+      { sessionDetail: sessionDetail({ status: "cancelled" }) },
+      {},
+    ],
+    [
+      "the session is already past",
+      { sessionDetail: sessionDetail({ localDate: "2026-08-09" }) },
+      { horizonStartDate: "2026-08-09", horizonEndDate: "2026-08-09" },
+    ],
+    [
+      "the horizon is not the session's day",
+      {},
+      { horizonEndDate: "2026-08-13" },
+    ],
+    ["a regeneration is asked for", {}, { regenerationFeedback: "Different" }],
+  ] as const)(
+    "refuses when %s",
+    (_label, recordOverrides, composeOverrides) => {
+      expect(() =>
+        fill(
+          recordOverrides as Partial<CoachAIOwnedRecords>,
+          composeOverrides as Partial<CoachAIComposeInput>,
+        ),
+      ).toThrow(CoachAIError);
+    },
+  );
+
+  it("refuses a session id on any other operation", () => {
+    expect(() => build({}, { sessionId: SESSION_ID })).toThrow(CoachAIError);
+  });
+
+  it("keeps a whole worst-case context inside the operation's total", () => {
+    const limits = COACH_AI_CONTEXT_LIMITS.fill_session_activities;
+    // Every part at its allocation: the sum of the parts plus the envelope is
+    // what `total` must hold, or the whole-context refusal becomes reachable.
+    const sumOfParts =
+      limits.bytes.targetableGoals +
+      limits.bytes.memory +
+      limits.bytes.trainingHistory +
+      limits.bytes.planningNote +
+      limits.bytes.sessionDetail;
+    expect(sumOfParts).toBeLessThan(limits.bytes.total);
+    expect(byteLength("")).toBe(0);
   });
 });

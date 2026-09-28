@@ -7,7 +7,11 @@ const {
   createCompletionLogMock,
   createRollingPlanMock,
   createRoadmapMock,
+  createLibraryMock,
+  createSavedSessionsMock,
 } = vi.hoisted(() => ({
+  createLibraryMock: vi.fn(),
+  createSavedSessionsMock: vi.fn(),
   createProfileMock: vi.fn(),
   createGoalMock: vi.fn(),
   createMemoryMock: vi.fn(),
@@ -51,6 +55,24 @@ vi.mock("@/server/repositories/roadmap-repository", async (original) => {
   return { ...actual, createRoadmapRepository: createRoadmapMock };
 });
 
+vi.mock(
+  "@/server/repositories/personal-activity-repository",
+  async (original) => {
+    const actual =
+      await original<
+        typeof import("@/server/repositories/personal-activity-repository")
+      >();
+    return { ...actual, createPersonalActivityLibrary: createLibraryMock };
+  },
+);
+vi.mock("@/server/repositories/saved-session-repository", async (original) => {
+  const actual =
+    await original<
+      typeof import("@/server/repositories/saved-session-repository")
+    >();
+  return { ...actual, createSavedSessionLibrary: createSavedSessionsMock };
+});
+
 import {
   buildCoachAIContext,
   CoachAIContextBelowMinimumError,
@@ -79,6 +101,8 @@ const listCompletions = vi.fn();
 const getPlanSlice = vi.fn();
 const getCurrentVersion = vi.fn();
 const materializeSeries = vi.fn();
+const listLibrary = vi.fn();
+const listSavedSessions = vi.fn();
 
 const COMPOSE = {
   horizonStartDate: TODAY,
@@ -115,6 +139,88 @@ describe("the production coaching context source", () => {
     });
     getCurrentVersion.mockResolvedValue(null);
     createRoadmapMock.mockResolvedValue({ getCurrentVersion });
+    listLibrary.mockResolvedValue([]);
+    listSavedSessions.mockResolvedValue([]);
+    createLibraryMock.mockResolvedValue({ list: listLibrary });
+    createSavedSessionsMock.mockResolvedValue({ list: listSavedSessions });
+  });
+
+  describe("for fill_session_activities (A7-2)", () => {
+    const SESSION_ID = "66000000-0000-4000-8000-0000000000f1";
+
+    function fillSource(sessionId: string | null = SESSION_ID) {
+      return new OwnedRecordsCoachAIContextSource({
+        operation: "fill_session_activities",
+        clock: () => NOW,
+        sessionId,
+      });
+    }
+
+    it("is built with a session and only this operation is", () => {
+      expect(() => fillSource(null)).toThrow();
+      expect(
+        () =>
+          new OwnedRecordsCoachAIContextSource({
+            operation: "create_seven_day_plan",
+            sessionId: SESSION_ID,
+          }),
+      ).toThrow();
+    });
+
+    it("reads the library and saved sessions, and selects the session from the plan window", async () => {
+      getPlanSlice.mockResolvedValue({
+        planId: "44000000-0000-4000-8000-000000000001",
+        revision: 12,
+        sessions: [
+          planSession({
+            id: SESSION_ID,
+            localDate: "2026-08-06",
+            title: "Lower body",
+            sport: "Strength",
+          }),
+        ],
+        recoveryDates: [],
+      });
+      listLibrary.mockResolvedValue([
+        {
+          id: "5d000000-0000-4000-8000-0000000000a1",
+          name: "Back squat",
+          sport: "Strength",
+          measurementMode: "sets_reps_load",
+          instructions: "Owner-written cue that stays behind",
+          updatedAt: "2026-08-01T00:00:00.000Z",
+        },
+      ]);
+
+      const records = await fillSource().load(OWNER);
+
+      expect(listLibrary).toHaveBeenCalledOnce();
+      expect(listSavedSessions).toHaveBeenCalledOnce();
+      expect(getCurrentVersion).not.toHaveBeenCalled();
+      expect(records.sessionDetail?.session.title).toBe("Lower body");
+      expect(records.sessionDetail?.library).toEqual([
+        {
+          id: "5d000000-0000-4000-8000-0000000000a1",
+          name: "Back squat",
+          sport: "Strength",
+          measurementMode: "sets_reps_load",
+        },
+      ]);
+    });
+
+    it("hands assembly no session when the id is not in the owner's window", async () => {
+      const records = await fillSource().load(OWNER);
+
+      expect(records.sessionDetail).toBeNull();
+    });
+  });
+
+  it("reads no library and no saved sessions for the plan or the roadmap", async () => {
+    await source("create_seven_day_plan").load(OWNER);
+    await source("create_roadmap").load(OWNER);
+
+    expect(listLibrary).not.toHaveBeenCalled();
+    expect(listSavedSessions).not.toHaveBeenCalled();
   });
 
   it("refuses an owner with no confirmed zone rather than defaulting to the server's", async () => {

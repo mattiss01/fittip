@@ -1,6 +1,10 @@
 import "server-only";
 
 import type { RoadmapPlanStaleReason } from "@/lib/roadmap/roadmap-stale-reasons";
+import type {
+  TrainingMeasurement,
+  TrainingMeasurementMode,
+} from "@/lib/training/measurement";
 import type { GoalTier } from "@/server/goals/goal-records";
 import type { MemoryType } from "@/server/memory/memory-records";
 
@@ -17,6 +21,7 @@ import type { MemoryType } from "@/server/memory/memory-records";
 export const COACH_AI_OPERATIONS = [
   "create_roadmap",
   "create_seven_day_plan",
+  "fill_session_activities",
 ] as const;
 
 export type CoachAIOperation = (typeof COACH_AI_OPERATIONS)[number];
@@ -25,12 +30,14 @@ export type CoachAIOperation = (typeof COACH_AI_OPERATIONS)[number];
 export const COACH_AI_SCHEMA_VERSIONS = {
   create_roadmap: "fittip.roadmap.v2",
   create_seven_day_plan: "fittip.seven-day-plan.v2",
+  fill_session_activities: "fittip.session-activities.v1",
 } as const satisfies Record<CoachAIOperation, string>;
 
-/** Prompt identifiers. Both operations now carry a real, iterated prompt. */
+/** Prompt identifiers. Every operation carries a real, iterated prompt. */
 export const COACH_AI_PROMPT_VERSIONS = {
   create_roadmap: "roadmap-v2-2026-08-10",
   create_seven_day_plan: "seven-day-plan-v2-2026-08-12",
+  fill_session_activities: "session-activities-v1-2026-09-28",
 } as const satisfies Record<CoachAIOperation, string>;
 
 /** The two runtimes ADR-006 and M0-06A permit. Nothing else may ever call out. */
@@ -152,6 +159,76 @@ export type CoachAIPreviousPlanReference = {
 };
 
 /**
+ * One activity as the coach is shown it: in a session, a saved session, or
+ * both. ADR-020 decisions 1 and 2 admit the target; `instructions` stay behind,
+ * because they run to 2,000 characters and the coach writes its own.
+ */
+export type CoachAIActivityReference = {
+  /** Set only when the activity comes from the owner's library. */
+  personalActivityId: string | null;
+  name: string;
+  sport: string;
+  measurementMode: TrainingMeasurementMode;
+  target: TrainingMeasurement | null;
+};
+
+/**
+ * What `fill_session_activities` reads about the one session it fills, within
+ * ADR-020. Every list that can outgrow its allocation is trimmed from the end
+ * and says how much it withheld, for ADR-013's reason: a coach that silently
+ * receives a subset reasons as though it saw everything.
+ */
+export type CoachAISessionDetailContext = {
+  session: {
+    localDate: string;
+    title: string;
+    sport: string;
+    intent: string | null;
+    durationMinutes: number | null;
+    note: string | null;
+    /** What the session holds now; the coach proposes a revised whole list. */
+    activities: CoachAIActivityReference[];
+    activitiesWithheld: number;
+  };
+  /** The other active sessions within three days either side, in brief. */
+  week: {
+    localDate: string;
+    title: string;
+    sport: string;
+    durationMinutes: number | null;
+  }[];
+  weekWithheld: number;
+  /** Active personal activities. An id the coach links must be one of these. */
+  library: {
+    id: string;
+    name: string;
+    sport: string;
+    measurementMode: TrainingMeasurementMode;
+  }[];
+  libraryWithheld: number;
+  /** Saved sessions matching this one, as templates the owner wrote. */
+  savedSessions: {
+    title: string;
+    sport: string;
+    intent: string | null;
+    durationMinutes: number | null;
+    activities: CoachAIActivityReference[];
+  }[];
+  savedSessionsWithheld: number;
+  /** What was actually done lately in the activities that matter here. */
+  recentActuals: {
+    name: string;
+    personalActivityId: string | null;
+    entries: {
+      localDate: string;
+      measurementMode: TrainingMeasurementMode;
+      actual: TrainingMeasurement | null;
+    }[];
+  }[];
+  recentActualsWithheld: number;
+};
+
+/**
  * Targetable and historical goals stay separate fields all the way to the
  * adapter, so a prompt cannot quietly treat an achieved goal as an objective.
  *
@@ -198,6 +275,11 @@ export type CoachAIContext = {
    * is not planned against itself.
    */
   roadmap: CoachAIRoadmapContext | null;
+  /**
+   * The session being filled and what surrounds it. Present for
+   * `fill_session_activities` only, and `null` for every other operation.
+   */
+  sessionDetail: CoachAISessionDetailContext | null;
 };
 
 /**
@@ -298,6 +380,7 @@ export interface CoachAI {
   readonly modelCode: string;
   createRoadmap(request: CoachAIRequest): Promise<CoachAICandidate>;
   createSevenDayPlan(request: CoachAIRequest): Promise<CoachAICandidate>;
+  fillSessionActivities(request: CoachAIRequest): Promise<CoachAICandidate>;
 }
 
 /**
@@ -505,8 +588,39 @@ export type SevenDayPlanResponse = {
 };
 
 /**
+ * `fittip.session-activities.v1`: the activities for one planned session, as
+ * a whole revised list the owner edits and saves or dismisses (ADR-020).
+ *
+ * `personalActivityId` links a library entry; the server then copies that
+ * entry's name, sport and mode rather than trusting the model's spelling. An
+ * activity without one is a session-only row, which is the owner's choice of
+ * 28 September 2026: nothing the coach proposes enters the library by itself.
+ */
+export type ProposedSessionActivity = {
+  personalActivityId: string | null;
+  name: string;
+  sport: string;
+  instructions: string | null;
+  measurementMode: TrainingMeasurementMode;
+  target: TrainingMeasurement | null;
+  rationale: string;
+};
+
+export type SessionActivitiesProposal = {
+  schemaVersion: typeof COACH_AI_SCHEMA_VERSIONS.fill_session_activities;
+  /** What the list is for and the main choice made, to the athlete. */
+  summary: string;
+  activities: ProposedSessionActivity[];
+  /** As for plans: conservative direction, never diagnosis or a safety claim. */
+  safetyConsiderations?: string[];
+};
+
+/**
  * A validated candidate. It is still a proposal: no adapter and nothing in this
  * module may persist a goal, memory item, roadmap, plan, activity, or
  * completion.
  */
-export type CoachAIProposal = RoadmapProposal | SevenDayPlanProposal;
+export type CoachAIProposal =
+  | RoadmapProposal
+  | SevenDayPlanProposal
+  | SessionActivitiesProposal;

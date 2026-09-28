@@ -39,6 +39,7 @@ import type { CoachAIOwner } from "@/server/ai/owner";
 import {
   validatePlanCandidate,
   validateRoadmapCandidate,
+  validateSessionActivitiesCandidate,
   type CoachAIRejectionReason,
 } from "@/server/ai/output-validation";
 import {
@@ -253,6 +254,8 @@ export class CoachAIService {
         String(input.compose.planningNote?.length ?? 0),
         String(input.compose.regenerationFeedback?.length ?? 0),
         input.compose.previousProposal ? "regeneration" : "initial",
+        // Filling two sessions with the same revisions is two questions.
+        input.compose.sessionId ?? "",
       ].join(":"),
     });
     const key = input.idempotencyKey ?? fingerprint;
@@ -415,10 +418,7 @@ export class CoachAIService {
     // that fails after the provider generated a response has already been
     // charged.
     draft.attemptCount = 1;
-    const call =
-      operation === "create_roadmap"
-        ? this.deps.adapter.createRoadmap(request)
-        : this.deps.adapter.createSevenDayPlan(request);
+    const call = dispatch(this.deps.adapter, operation, request);
 
     // Settlement is attached to the provider call, not to the deadline race.
     // `maxConcurrentRequests` counts reservations, so releasing the slot when
@@ -484,32 +484,56 @@ export class CoachAIService {
     let memoryCandidates: CoachAIMemoryCandidate[] = [];
     let memoryRejectionReason: CoachAIRejectionReason | null = null;
 
-    if (operation === "create_roadmap") {
-      const validation = validateRoadmapCandidate({
-        body: candidate.body,
-        context: assembled.context,
-      });
-      if (validation.outcome === "rejected") {
-        draft.outcome = "rejected";
-        draft.rejectionReason = validation.reason;
-        throw new CoachAIError("output_invalid");
+    switch (operation) {
+      case "create_roadmap": {
+        const validation = validateRoadmapCandidate({
+          body: candidate.body,
+          context: assembled.context,
+        });
+        if (validation.outcome === "rejected") {
+          draft.outcome = "rejected";
+          draft.rejectionReason = validation.reason;
+          throw new CoachAIError("output_invalid");
+        }
+        proposal = validation.response.roadmap;
+        memoryCandidates = validation.response.memoryCandidates;
+        memoryRejectionReason = validation.memoryRejectionReason;
+        break;
       }
-      proposal = validation.response.roadmap;
-      memoryCandidates = validation.response.memoryCandidates;
-      memoryRejectionReason = validation.memoryRejectionReason;
-    } else {
-      const validation = validatePlanCandidate({
-        body: candidate.body,
-        context: assembled.context,
-      });
-      if (validation.outcome === "rejected") {
-        draft.outcome = "rejected";
-        draft.rejectionReason = validation.reason;
-        throw new CoachAIError("output_invalid");
+      case "create_seven_day_plan": {
+        const validation = validatePlanCandidate({
+          body: candidate.body,
+          context: assembled.context,
+        });
+        if (validation.outcome === "rejected") {
+          draft.outcome = "rejected";
+          draft.rejectionReason = validation.reason;
+          throw new CoachAIError("output_invalid");
+        }
+        proposal = validation.response.plan;
+        memoryCandidates = validation.response.memoryCandidates;
+        memoryRejectionReason = validation.memoryRejectionReason;
+        break;
       }
-      proposal = validation.response.plan;
-      memoryCandidates = validation.response.memoryCandidates;
-      memoryRejectionReason = validation.memoryRejectionReason;
+      case "fill_session_activities": {
+        // One section. The request note is about this session, not a source
+        // of durable memory, so nothing here proposes a memory item.
+        const validation = validateSessionActivitiesCandidate({
+          body: candidate.body,
+          context: assembled.context,
+        });
+        if (validation.outcome === "rejected") {
+          draft.outcome = "rejected";
+          draft.rejectionReason = validation.reason;
+          throw new CoachAIError("output_invalid");
+        }
+        proposal = validation.proposal;
+        break;
+      }
+      default: {
+        const unreachable: never = operation;
+        throw new CoachAIError(unreachable);
+      }
     }
 
     draft.outcome = "accepted";
@@ -542,6 +566,30 @@ export class CoachAIService {
     // The timer is always cleared, so a resolved call leaves nothing pending.
     expiry.catch(() => {});
     return Promise.race([promise, expiry]).finally(() => clearTimeout(timer));
+  }
+}
+
+/**
+ * The adapter method for an operation. Exhaustive, so a fourth operation that
+ * is not wired here fails to compile rather than calling the plan method —
+ * which is what the two-way branch this replaced would have done.
+ */
+function dispatch(
+  adapter: CoachAI,
+  operation: CoachAIOperation,
+  request: CoachAIRequest,
+): Promise<CoachAICandidate> {
+  switch (operation) {
+    case "create_roadmap":
+      return adapter.createRoadmap(request);
+    case "create_seven_day_plan":
+      return adapter.createSevenDayPlan(request);
+    case "fill_session_activities":
+      return adapter.fillSessionActivities(request);
+    default: {
+      const unreachable: never = operation;
+      throw new CoachAIError(unreachable);
+    }
   }
 }
 

@@ -4,6 +4,7 @@ import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import {
   CoachAIContextBelowMinimumError,
   COACH_AI_CONTEXT_LIMITS,
+  trainingRecordsForOperation,
   type CoachAIOwnedRecords,
 } from "@/server/ai/context";
 import type { CoachAIContextSource } from "@/server/ai/context-source";
@@ -21,10 +22,13 @@ import { readPlanWindowToppedUp } from "@/server/completions/plan-window-top-up"
 import { createCompletionLog } from "@/server/repositories/completion-log-repository";
 import { createGoalRepository } from "@/server/repositories/goal-repository";
 import { createMemoryRepository } from "@/server/repositories/memory-repository";
+import { createPersonalActivityLibrary } from "@/server/repositories/personal-activity-repository";
 import { createProfileRepository } from "@/server/repositories/profile-repository";
 import { createRoadmapRepository } from "@/server/repositories/roadmap-repository";
 import { createRollingPlan } from "@/server/repositories/rolling-plan-repository";
+import { createSavedSessionLibrary } from "@/server/repositories/saved-session-repository";
 import type { RollingPlanSession } from "@/server/rolling-plan/rolling-plan";
+import { selectSessionDetailRecords } from "@/server/session-detail/session-detail-context";
 import {
   ROADMAP_FORWARD_LOCKED_WINDOW_DAYS,
   selectTrainingHistoryContext,
@@ -92,15 +96,30 @@ export type OwnedRecordsContextSourceOptions = {
   operation: CoachAIOperation;
   /** Injected only so a test can pin owner-local today. */
   clock?: () => Date;
+  /**
+   * `fill_session_activities` only: the planned session to read. Set by the
+   * composition root, never by the request, and required for that operation.
+   */
+  sessionId?: string | null;
 };
 
 export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
   readonly #operation: CoachAIOperation;
   readonly #clock: () => Date;
+  readonly #sessionId: string | null;
 
   constructor(options: OwnedRecordsContextSourceOptions) {
     this.#operation = options.operation;
     this.#clock = options.clock ?? (() => new Date());
+    this.#sessionId = options.sessionId ?? null;
+    // One operation reads a session and the others read none, so a session id
+    // on any other operation is a wiring mistake rather than extra context.
+    if (
+      (this.#operation === "fill_session_activities") !==
+      (this.#sessionId !== null)
+    ) {
+      throw new CoachAIError("context_invalid");
+    }
   }
 
   async load(owner: CoachAIOwner): Promise<CoachAIOwnedRecords> {
@@ -144,37 +163,49 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
     // Five independent owner-scoped reads, issued together rather than as a
     // waterfall. The plan read is the only one with a write side effect, and
     // the roadmap read is the only one an operation can skip.
-    const [goals, memory, completions, planWindow, roadmapVersion] =
-      await Promise.all([
-        (await createGoalRepository()).list(),
-        (await createMemoryRepository()).list(today),
-        (await createCompletionLog()).list(windowStartDate, today),
-        // ADR-017 consequence 3: an owner who has not opened the Plan has no
-        // materialized occurrences past their last visit, so a coach reading the
-        // window untopped plans around sessions the owner does have. M3-15D
-        // accepts that write side effect; M3-15C deliberately does not, because
-        // viewing history must not materialize future training.
-        readPlanWindowToppedUp(
-          await createRollingPlan(),
-          windowStartDate,
-          forwardEndDate,
-        ),
-        // M3-16B. Only the plan operation: a roadmap is not planned against
-        // itself, and reading one for `create_roadmap` would put owner records
-        // in hand that that operation has no business holding.
-        //
-        // This hands over the stored content unreduced, which is the one place
-        // this module differs from how it treats completions. Reducing needs
-        // the composed horizon to know which phase the week falls in, and
-        // `load` is deliberately not given the compose input. Assembly has it,
-        // and assembly is a real gate here rather than a pass-through:
-        // `buildCoachAIContext` calls `buildRoadmapPlanContext` exactly as it
-        // calls `selectTrainingHistoryContext`. Nothing is serialized before
-        // that call.
-        this.#operation === "create_seven_day_plan"
-          ? (await createRoadmapRepository()).getCurrentVersion()
-          : null,
-      ]);
+    const fillsSession = this.#operation === "fill_session_activities";
+    const [
+      goals,
+      memory,
+      completions,
+      planWindow,
+      roadmapVersion,
+      library,
+      savedSessions,
+    ] = await Promise.all([
+      (await createGoalRepository()).list(),
+      (await createMemoryRepository()).list(today),
+      (await createCompletionLog()).list(windowStartDate, today),
+      // ADR-017 consequence 3: an owner who has not opened the Plan has no
+      // materialized occurrences past their last visit, so a coach reading the
+      // window untopped plans around sessions the owner does have. M3-15D
+      // accepts that write side effect; M3-15C deliberately does not, because
+      // viewing history must not materialize future training.
+      readPlanWindowToppedUp(
+        await createRollingPlan(),
+        windowStartDate,
+        forwardEndDate,
+      ),
+      // M3-16B. Only the plan operation: a roadmap is not planned against
+      // itself, and reading one for `create_roadmap` would put owner records
+      // in hand that that operation has no business holding.
+      //
+      // This hands over the stored content unreduced, which is the one place
+      // this module differs from how it treats completions. Reducing needs
+      // the composed horizon to know which phase the week falls in, and
+      // `load` is deliberately not given the compose input. Assembly has it,
+      // and assembly is a real gate here rather than a pass-through:
+      // `buildCoachAIContext` calls `buildRoadmapPlanContext` exactly as it
+      // calls `selectTrainingHistoryContext`. Nothing is serialized before
+      // that call.
+      this.#operation === "create_seven_day_plan"
+        ? (await createRoadmapRepository()).getCurrentVersion()
+        : null,
+      // ADR-020 decision 2, and for the one operation that fills a session:
+      // the plan and the roadmap stay without the library (decision 4).
+      fillsSession ? (await createPersonalActivityLibrary()).list() : [],
+      fillsSession ? (await createSavedSessionLibrary()).list() : [],
+    ]);
 
     const completedPlanSessionIds = new Set(
       completions
@@ -208,6 +239,20 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
         ),
     };
 
+    // The session is found in the plan window already read, which reaches
+    // ADR-013's forward limit; a session beyond it, cancelled, or not this
+    // owner's is simply absent, and assembly refuses a fill without one.
+    const sessionDetail =
+      this.#sessionId === null
+        ? null
+        : selectSessionDetailRecords({
+            sessionId: this.#sessionId,
+            planSessions: planWindow.slice.sessions,
+            library,
+            savedSessions,
+            completions,
+          });
+
     return {
       // The id the profile read returned, not the one the caller handed in, so
       // the service's ownership guard compares two independently derived values.
@@ -222,6 +267,7 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       // Unreduced on purpose; see the read above. Assembly reduces it against
       // the composed horizon and records which version it used.
       roadmapVersion,
+      sessionDetail,
       sources: this.#completionSources(training, byRecord),
     };
   }
@@ -247,10 +293,15 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
     byRecord: Map<TrainingHistoryCompletion, Completion>,
   ): CoachAISourceReference[] {
     const limits = COACH_AI_CONTEXT_LIMITS[this.#operation];
-    const selection = selectTrainingHistoryContext(training, {
-      maxSessions: limits.maxTrainingSessions,
-      maxBytes: limits.bytes.trainingHistoryCompletions,
-    });
+    // The same narrowing assembly applies, or the recorded sources would name
+    // completions from weeks a fill request never sent.
+    const selection = selectTrainingHistoryContext(
+      trainingRecordsForOperation(this.#operation, training),
+      {
+        maxSessions: limits.maxTrainingSessions,
+        maxBytes: limits.bytes.trainingHistoryCompletions,
+      },
+    );
 
     return selection.includedCompletions.map((entry) => {
       const completion = byRecord.get(entry);

@@ -3,6 +3,7 @@ import "server-only";
 import type {
   CoachAI,
   CoachAICandidate,
+  CoachAIContext,
   CoachAIOperation,
   CoachAIRequest,
 } from "@/server/ai/contracts";
@@ -13,6 +14,7 @@ import {
 } from "@/server/ai/fixtures/fixture-corpus";
 import { synthesizePlanBody } from "@/server/ai/fixtures/synthetic-plan";
 import { synthesizeRoadmapBody } from "@/server/ai/fixtures/synthetic-roadmap";
+import { synthesizeSessionActivitiesBody } from "@/server/ai/fixtures/synthetic-session-activities";
 
 /**
  * A deterministic adapter over the authored corpus.
@@ -61,6 +63,10 @@ export class FixtureCoachAI implements CoachAI {
     return this.#respond("create_seven_day_plan", request);
   }
 
+  fillSessionActivities(request: CoachAIRequest): Promise<CoachAICandidate> {
+    return this.#respond("fill_session_activities", request);
+  }
+
   async #respond(
     operation: CoachAIOperation,
     request: CoachAIRequest,
@@ -78,10 +84,7 @@ export class FixtureCoachAI implements CoachAI {
 
     if (script.synthesizeFromContext) {
       return {
-        body:
-          operation === "create_roadmap"
-            ? synthesizeRoadmapBody(request.context)
-            : synthesizePlanBody(request.context),
+        body: synthesize(operation, request.context),
         reportedInputTokens: script.reportedInputTokens ?? null,
         reportedOutputTokens: script.reportedOutputTokens ?? null,
       };
@@ -99,5 +102,27 @@ export class FixtureCoachAI implements CoachAI {
       reportedInputTokens: script.reportedInputTokens ?? null,
       reportedOutputTokens: script.reportedOutputTokens ?? null,
     };
+  }
+}
+
+/**
+ * Exhaustive by construction: a fourth operation that forgets its synthesizer
+ * fails to compile here instead of answering with another operation's body.
+ */
+function synthesize(
+  operation: CoachAIOperation,
+  context: CoachAIContext,
+): string {
+  switch (operation) {
+    case "create_roadmap":
+      return synthesizeRoadmapBody(context);
+    case "create_seven_day_plan":
+      return synthesizePlanBody(context);
+    case "fill_session_activities":
+      return synthesizeSessionActivitiesBody(context);
+    default: {
+      const unreachable: never = operation;
+      throw new CoachAIError(unreachable);
+    }
   }
 }

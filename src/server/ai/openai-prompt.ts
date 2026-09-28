@@ -120,6 +120,29 @@ For each session:
 Where "hasSafetySignal" is true, you must return at least one "safetyConsiderations" entry describing the conservative choice you made. Describe load, not the symptom.
 
 Finally, "memoryCandidates": zero to four durable facts, constraints, preferences or observed patterns worth remembering beyond this request, each quoted as an exact substring of "planningNote". Copy the substring character for character; do not paraphrase it. Return an empty list when the note holds nothing durable, which is the common case.`,
+
+  fill_session_activities: `Fill in the activities for one planned session: "sessionDetail.session", on "horizonStartDate". The session's title, sport, length and intent are the athlete's; do not change them. Your job is what happens inside it.
+
+Return the whole list the session should hold, in order, one to twelve activities. If the session already has activities, they are the athlete's starting point: keep what fits, change what should change, add what is missing, and say why in each "rationale". The athlete sees your list beside theirs and chooses.
+
+Prefer the athlete's own activities. Where one in "library" fits, copy its "id" into "personalActivityId" and use its measurement mode; do not invent a near-duplicate under another name. "savedSessions" are sessions the athlete wrote themselves and are the best evidence of how they like this kind of session built. Use a new activity, with "personalActivityId" null, only where nothing in the library fits.
+
+Set targets from "recentActuals" where they exist: the numbers the athlete actually did, newest first. Progress in small steps from those, never from nothing. Where there is no history for an activity, choose a conservative target and say so. Fit the whole list inside the session's duration and respect the rest of "week": do not load the same thing hard on consecutive days.
+
+Measurement modes and the "target" fields each uses (every other target field is null):
+- "sets_reps_load": "groups", each with any of "sets", "reps", "load"; "load_unit" ("kg" or "lb") exactly when a group has a load. A ramp is several groups.
+- "duration_intensity": "duration_minutes", optionally "intensity" and "perceived_effort" (1 to 10).
+- "time_distance_pace": any of "duration_seconds"; "distance" with "distance_unit"; "pace_seconds_per_unit" with "pace_unit".
+- "skill_repetitions": "repetitions" and "unit".
+- "custom": "label", "value" and "unit".
+- "unmeasured": "target" is null.
+"target" may also be null in any mode when a number would be a guess.
+
+"instructions" are how to perform it, briefly, or null. "summary" tells the athlete what the list is built to do and the main choice you made, in at most 400 characters.
+
+"planningNote", if present, is the athlete's note about this one request.
+
+Where "hasSafetySignal" is true, you must return at least one "safetyConsiderations" entry describing the conservative choice you made. Describe load, not the symptom.`,
 };
 
 const ROADMAP_SCHEMA = {
@@ -516,6 +539,147 @@ const PLAN_SCHEMA = {
   },
 };
 
+const NULLABLE_NUMBER = { type: ["number", "null"] };
+const NULLABLE_INTEGER = { type: ["integer", "null"] };
+const NULLABLE_STRING = { type: ["string", "null"] };
+
+/**
+ * One grammar for every measurement mode. Strict mode requires every property
+ * present, so the target carries every field any mode uses, each nullable, and
+ * `output-validation.ts` drops the nulls and parses what is left with the same
+ * `parseTrainingMeasurement` the plan editor's save runs. A combination the
+ * mode does not allow is refused there, not guessed at here.
+ */
+const MEASUREMENT_TARGET_SCHEMA = {
+  type: ["object", "null"],
+  additionalProperties: false,
+  required: [
+    "groups",
+    "load_unit",
+    "duration_minutes",
+    "intensity",
+    "perceived_effort",
+    "duration_seconds",
+    "distance",
+    "distance_unit",
+    "pace_seconds_per_unit",
+    "pace_unit",
+    "repetitions",
+    "unit",
+    "label",
+    "value",
+  ],
+  properties: {
+    groups: {
+      type: ["array", "null"],
+      description: "One to twenty set groups, in order.",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["sets", "reps", "load"],
+        properties: {
+          sets: NULLABLE_INTEGER,
+          reps: NULLABLE_INTEGER,
+          load: NULLABLE_NUMBER,
+        },
+      },
+    },
+    load_unit: { type: ["string", "null"], enum: ["kg", "lb", null] },
+    duration_minutes: NULLABLE_NUMBER,
+    intensity: {
+      type: ["string", "null"],
+      enum: ["easy", "moderate", "hard", "very_hard", null],
+    },
+    perceived_effort: NULLABLE_INTEGER,
+    duration_seconds: NULLABLE_NUMBER,
+    distance: NULLABLE_NUMBER,
+    distance_unit: {
+      type: ["string", "null"],
+      enum: ["m", "km", "mi", "yd", null],
+    },
+    pace_seconds_per_unit: NULLABLE_NUMBER,
+    pace_unit: {
+      type: ["string", "null"],
+      enum: ["sec/km", "sec/mi", "sec/100m", "sec/100yd", null],
+    },
+    repetitions: NULLABLE_INTEGER,
+    unit: NULLABLE_STRING,
+    label: NULLABLE_STRING,
+    value: { type: ["string", "number", "boolean", "null"] },
+  },
+};
+
+/** `fittip.session-activities.v1`, as a strict grammar. */
+const SESSION_ACTIVITIES_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["schemaVersion", "summary", "activities", "safetyConsiderations"],
+  properties: {
+    schemaVersion: {
+      type: "string",
+      enum: [COACH_AI_SCHEMA_VERSIONS.fill_session_activities],
+    },
+    summary: {
+      type: "string",
+      description:
+        "What the list is built to do and the main choice made. At most 400 characters.",
+    },
+    activities: {
+      type: "array",
+      description: "The whole list the session should hold, one to twelve.",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: [
+          "personalActivityId",
+          "name",
+          "sport",
+          "instructions",
+          "measurementMode",
+          "target",
+          "rationale",
+        ],
+        properties: {
+          personalActivityId: {
+            type: ["string", "null"],
+            description:
+              "An id copied exactly from library, or null for a new activity.",
+          },
+          name: { type: "string", description: "At most 120 characters." },
+          sport: { type: "string", description: "At most 80 characters." },
+          instructions: {
+            type: ["string", "null"],
+            description: "How to perform it, briefly. At most 500 characters.",
+          },
+          measurementMode: {
+            type: "string",
+            enum: [
+              "unmeasured",
+              "sets_reps_load",
+              "time_distance_pace",
+              "duration_intensity",
+              "skill_repetitions",
+              "custom",
+            ],
+          },
+          target: MEASUREMENT_TARGET_SCHEMA,
+          rationale: {
+            type: "string",
+            description:
+              "Why this activity and this target. At most 300 characters.",
+          },
+        },
+      },
+    },
+    safetyConsiderations: {
+      type: ["array", "null"],
+      description:
+        "Zero to three, each at most 240 characters. Describe conservative training direction. Never diagnose, prescribe, or claim safety.",
+      items: { type: "string" },
+    },
+  },
+};
+
 /**
  * OpenAI strict-mode constraints applied throughout: every object carries
  * `additionalProperties: false`, every property appears in `required`, and no
@@ -539,6 +703,11 @@ export const COACH_AI_RESPONSE_SCHEMAS: Record<
     name: "fittip_seven_day_plan",
     strict: true,
     schema: PLAN_SCHEMA,
+  },
+  fill_session_activities: {
+    name: "fittip_session_activities",
+    strict: true,
+    schema: SESSION_ACTIVITIES_SCHEMA,
   },
 };
 

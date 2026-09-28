@@ -109,6 +109,7 @@ export const COACH_AI_FIXTURE_CONTEXT: CoachAIContext = {
   // A roadmap is not planned against itself; the plan fixtures that exercise
   // roadmap context build it explicitly.
   roadmap: null,
+  sessionDetail: null,
 };
 
 /**
@@ -162,6 +163,73 @@ export const COACH_AI_FIXTURE_PLAN_SAFETY_CONTEXT: CoachAIContext = {
   ...COACH_AI_FIXTURE_SAFETY_CONTEXT,
   horizonStartDate: COACH_AI_FIXTURE_PLAN_HORIZON_START,
   horizonEndDate: COACH_AI_FIXTURE_PLAN_HORIZON_END,
+};
+
+/** A library entry the fill corpus links, and one it must not. */
+export const COACH_AI_FIXTURE_LIBRARY_SQUAT_ID =
+  "5d000000-0000-4000-8000-0000000000a1";
+export const COACH_AI_FIXTURE_UNOWNED_ACTIVITY_ID =
+  "5d000000-0000-4000-8000-0000000000ff";
+
+/**
+ * A7-2: one planned strength session on the fixture's today, with one library
+ * entry and one recent actual for it. The plan fixture's goals and memory are
+ * kept; the long-range sources are absent, as assembly makes them.
+ */
+export const COACH_AI_FIXTURE_SESSION_CONTEXT: CoachAIContext = {
+  ...COACH_AI_FIXTURE_CONTEXT,
+  horizonStartDate: COACH_AI_FIXTURE_TODAY,
+  horizonEndDate: COACH_AI_FIXTURE_TODAY,
+  historicalGoals: [],
+  planningNote: null,
+  sessionDetail: {
+    session: {
+      localDate: COACH_AI_FIXTURE_TODAY,
+      title: "Lower body",
+      sport: "Strength",
+      intent: "Heavy, low reps",
+      durationMinutes: 60,
+      note: null,
+      activities: [],
+      activitiesWithheld: 0,
+    },
+    week: [],
+    weekWithheld: 0,
+    library: [
+      {
+        id: COACH_AI_FIXTURE_LIBRARY_SQUAT_ID,
+        name: "Back squat",
+        sport: "Strength",
+        measurementMode: "sets_reps_load",
+      },
+    ],
+    libraryWithheld: 0,
+    savedSessions: [],
+    savedSessionsWithheld: 0,
+    recentActuals: [
+      {
+        name: "Back squat",
+        personalActivityId: COACH_AI_FIXTURE_LIBRARY_SQUAT_ID,
+        entries: [
+          {
+            localDate: "2026-08-01",
+            measurementMode: "sets_reps_load",
+            actual: {
+              groups: [{ sets: 3, reps: 5, load: 80 }],
+              load_unit: "kg",
+            },
+          },
+        ],
+      },
+    ],
+    recentActualsWithheld: 0,
+  },
+};
+
+export const COACH_AI_FIXTURE_SESSION_SAFETY_CONTEXT: CoachAIContext = {
+  ...COACH_AI_FIXTURE_SESSION_CONTEXT,
+  trainingHistory: COACH_AI_FIXTURE_SAFETY_CONTEXT.trainingHistory,
+  hasSafetySignal: true,
 };
 
 export type CoachAIFixtureExpectation =
@@ -1056,7 +1124,181 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
     expected: { outcome: "rejected", reason: "unknown_field" },
     note: "Nothing in a response may claim that anything was accepted or saved.",
   },
+  {
+    name: "valid_session_activities",
+    operation: "fill_session_activities",
+    body: sessionActivitiesBody(),
+    context: COACH_AI_FIXTURE_SESSION_CONTEXT,
+    expected: { outcome: "accepted" },
+    note: "The A7-2 baseline: a library link, a new activity, grammar-shaped targets.",
+  },
+  {
+    name: "session_activity_unowned_library_id",
+    operation: "fill_session_activities",
+    body: sessionActivitiesBody((body) => {
+      body.activities[0].personalActivityId =
+        COACH_AI_FIXTURE_UNOWNED_ACTIVITY_ID;
+    }),
+    context: COACH_AI_FIXTURE_SESSION_CONTEXT,
+    expected: { outcome: "rejected", reason: "business_rule" },
+    note: "Only an entry that was sent is the owner's to link.",
+  },
+  {
+    name: "session_activity_linked_mode_mismatch",
+    operation: "fill_session_activities",
+    body: sessionActivitiesBody((body) => {
+      body.activities[0].measurementMode = "duration_intensity";
+      body.activities[0].target = grammarTarget({ duration_minutes: 10 });
+    }),
+    context: COACH_AI_FIXTURE_SESSION_CONTEXT,
+    expected: { outcome: "rejected", reason: "business_rule" },
+    note: "A linked activity is measured the way its definition is.",
+  },
+  {
+    name: "session_activity_target_invalid_for_mode",
+    operation: "fill_session_activities",
+    body: sessionActivitiesBody((body) => {
+      body.activities[0].target = grammarTarget({
+        groups: [{ sets: 3, reps: 5, load: 90 }],
+      });
+    }),
+    context: COACH_AI_FIXTURE_SESSION_CONTEXT,
+    expected: { outcome: "rejected", reason: "schema" },
+    note: "A load without its unit is what the database refuses; so does this.",
+  },
+  {
+    name: "session_activity_unmeasured_with_target",
+    operation: "fill_session_activities",
+    body: sessionActivitiesBody((body) => {
+      body.activities[1].measurementMode = "unmeasured";
+    }),
+    context: COACH_AI_FIXTURE_SESSION_CONTEXT,
+    expected: { outcome: "rejected", reason: "schema" },
+    note: "An unmeasured activity carries nothing to count.",
+  },
+  {
+    name: "session_activities_empty",
+    operation: "fill_session_activities",
+    body: sessionActivitiesBody((body) => {
+      body.activities = [];
+    }),
+    context: COACH_AI_FIXTURE_SESSION_CONTEXT,
+    expected: { outcome: "rejected", reason: "business_rule" },
+    note: "Asked to fill a session, an empty list is a refusal dressed as one.",
+  },
+  {
+    name: "session_activities_ignores_safety_signal",
+    operation: "fill_session_activities",
+    body: sessionActivitiesBody(),
+    context: COACH_AI_FIXTURE_SESSION_SAFETY_CONTEXT,
+    expected: { outcome: "rejected", reason: "safety_requirement" },
+    note: "A reported signal must be acknowledged, as for plans and roadmaps.",
+  },
+  {
+    name: "session_activities_acknowledges_safety_signal",
+    operation: "fill_session_activities",
+    body: sessionActivitiesBody((body) => {
+      body.safetyConsiderations = [
+        "Your knee was sore on Sunday, so squats stay at last week's load.",
+      ];
+    }),
+    context: COACH_AI_FIXTURE_SESSION_SAFETY_CONTEXT,
+    expected: { outcome: "accepted" },
+    note: "The same list, with the conservative choice stated.",
+  },
+  {
+    name: "session_activities_unsafe_instructions",
+    operation: "fill_session_activities",
+    body: sessionActivitiesBody((body) => {
+      body.activities[1].instructions =
+        "Push through the pain on the last set.";
+    }),
+    context: COACH_AI_FIXTURE_SESSION_CONTEXT,
+    expected: { outcome: "rejected", reason: "unsafe_content" },
+    note: "Instructions are checked like every other string the coach writes.",
+  },
 ];
+
+/** The strict grammar's target: every field present, the unused ones null. */
+function grammarTarget(
+  present: Record<string, unknown>,
+): Record<string, unknown> {
+  const fields = [
+    "groups",
+    "load_unit",
+    "duration_minutes",
+    "intensity",
+    "perceived_effort",
+    "duration_seconds",
+    "distance",
+    "distance_unit",
+    "pace_seconds_per_unit",
+    "pace_unit",
+    "repetitions",
+    "unit",
+    "label",
+    "value",
+  ];
+  return Object.fromEntries(
+    fields.map((field) => [
+      field,
+      field === "groups" && Array.isArray(present.groups)
+        ? (present.groups as Record<string, unknown>[]).map((group) => ({
+            sets: group.sets ?? null,
+            reps: group.reps ?? null,
+            load: group.load ?? null,
+          }))
+        : (present[field] ?? null),
+    ]),
+  );
+}
+
+type SessionActivitiesBody = {
+  schemaVersion: string;
+  summary: string;
+  activities: Record<string, unknown>[];
+  safetyConsiderations: string[] | null;
+};
+
+function sessionActivitiesBody(
+  edit: (body: SessionActivitiesBody) => void = () => {},
+): string {
+  const body: SessionActivitiesBody = {
+    schemaVersion: "fittip.session-activities.v1",
+    summary:
+      "Squats build from last week's 3x5 at 80 kg, then a short finisher that fits the hour.",
+    activities: [
+      {
+        personalActivityId: COACH_AI_FIXTURE_LIBRARY_SQUAT_ID,
+        // The server copies the library's name; a misspelling does not survive.
+        name: "Back squats",
+        sport: "Strength",
+        instructions: "Two warm-up sets before the working sets.",
+        measurementMode: "sets_reps_load",
+        target: grammarTarget({
+          groups: [
+            { sets: 2, reps: 5, load: 60 },
+            { sets: 3, reps: 5, load: 82.5 },
+          ],
+          load_unit: "kg",
+        }),
+        rationale: "Two and a half kilos over last week's working sets.",
+      },
+      {
+        personalActivityId: null,
+        name: "Walking lunges",
+        sport: "Strength",
+        instructions: null,
+        measurementMode: "duration_intensity",
+        target: grammarTarget({ duration_minutes: 8, intensity: "moderate" }),
+        rationale: "Single-leg work to finish without adding spinal load.",
+      },
+    ],
+    safetyConsiderations: null,
+  };
+  edit(body);
+  return JSON.stringify(body);
+}
 
 export function findCoachAIFixtureCase(name: string): CoachAIFixtureCase {
   const found = COACH_AI_FIXTURE_CASES.find((entry) => entry.name === name);

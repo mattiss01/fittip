@@ -21,7 +21,7 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [ ] **A7-2 — The fill operation, no persistence or UI.** Careful lane (AI boundary).
+- [~] **A7-2 — The fill operation, no persistence or UI.** Careful lane (AI boundary).
       `fill_session_activities`, schema `fittip.session-activities.v1`, within ADR-020: the
       session, its week in brief, the library, up to 3 matching saved sessions, the last 3
       actuals per relevant activity, goals, memory, the last 7 days' safety flags, and an
