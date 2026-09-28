@@ -21,14 +21,23 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [ ] **A7 — The coach fills in a session's activities.** Careful lane: a new AI operation
-      with its own schema, context, and spend. Eligibility is decided by ADR-020: on demand
-      only, one session per request; it may read the session, the owner's personal
-      activities and matching saved sessions, recent actuals for those activities, memory,
-      and the rest of that week in brief. Returns a proposal linking each activity to an
-      existing definition or marking it new. Estimated 5,000–6,500 tokens, so it fits under
-      the shared 10,000 ceiling without the plan's headroom; whether it gets a smaller
-      per-operation ceiling is open. Next: plan it with the owner before code.
+- [~] **A7-1 — Restore the spend ledger.** Careful lane (spend). M3-11's reset (`e370dbe`)
+      dropped `createAISpendRepository()` from both generation paths, so a live composition
+      refuses with `budget_unavailable` and only the example coach has run since 14 Aug.
+      Pass it again in both; a test fails if either path stops. Going live on founder stays
+      the owner's env change, and any real call needs their per-run spend approval.
+- [ ] **A7-2 — The fill operation, no persistence or UI.** Careful lane (AI boundary).
+      `fill_session_activities`, schema `fittip.session-activities.v1`, within ADR-020: the
+      session, its week in brief, the library, up to 3 matching saved sessions, the last 3
+      actuals per relevant activity, goals, memory, the last 7 days' safety flags, and an
+      optional note ≤500 (owner, 28 Sep). Targets validated by `parseTrainingMeasurement`; a
+      library link must be one that was sent. Two-way operation branches become exhaustive.
+- [ ] **A7-3 — Persistence.** Careful lane (migration, spend). `session_activity_proposals`,
+      begin/finish RPCs settling the reservation with the proposal (ADR-019), a decision that
+      is final, the operation widened in the spend ledger; pgTAP; founder apply per ADR-018.
+- [ ] **A7-4 — Fill with coach in the Edit panel.** Owner's choices of 28 Sep: the proposal
+      lands pre-filled in the session editor; Save accepts, Dismiss rejects; the previous
+      activities stay listed under it with Add back; new activities are session-only rows.
 - [ ] **A8 — Targets and actuals in the plan context.** Careful lane. ADR-020 made them
       eligible, so this is only a sizing question now: the plan context has no headroom
       (`Known limitations`). Decide after A7, which may make it unnecessary.

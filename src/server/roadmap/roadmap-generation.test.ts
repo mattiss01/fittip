@@ -1,12 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
+  createSpendLedgerMock,
+  compositionInputSpy,
   createProfileMock,
   createGoalMock,
   createMemoryMock,
   createCompletionLogMock,
   createRollingPlanMock,
 } = vi.hoisted(() => ({
+  createSpendLedgerMock: vi.fn(),
+  compositionInputSpy: vi.fn(),
   createProfileMock: vi.fn(),
   createGoalMock: vi.fn(),
   createMemoryMock: vi.fn(),
@@ -44,6 +48,25 @@ vi.mock("@/server/repositories/rolling-plan-repository", async (original) => {
   return { ...actual, createRollingPlan: createRollingPlanMock };
 });
 
+vi.mock("@/server/repositories/ai-spend-repository", () => ({
+  createAISpendRepository: createSpendLedgerMock,
+}));
+// Passed through to the real composition root; the spy only records what it
+// was handed, so every assertion below still runs against what production
+// resolves.
+vi.mock("@/server/ai/composition", async (original) => {
+  const actual = await original<typeof import("@/server/ai/composition")>();
+  return {
+    ...actual,
+    createRoadmapCoachAIService: (
+      input: Parameters<typeof actual.createRoadmapCoachAIService>[0],
+    ) => {
+      compositionInputSpy(input);
+      return actual.createRoadmapCoachAIService(input);
+    },
+  };
+});
+
 import type { CoachAIOwner } from "@/server/ai/owner";
 import { MemoryCandidateBatchError } from "@/server/proposal-logging/memory-candidate-batch";
 import type { RoadmapRepository } from "@/server/repositories/roadmap-repository";
@@ -66,6 +89,8 @@ import { addDays } from "@/server/roadmap/roadmap-records";
 
 const OWNER_ID = "9f150000-0000-4000-8000-000000000001";
 const OWNER = { id: OWNER_ID } as unknown as CoachAIOwner;
+/** A sentinel: the fixture coach never reads it, so identity is what is checked. */
+const SPEND_LEDGER = { reserve: vi.fn(), settle: vi.fn() };
 const GOAL_ID = "9f150000-0000-4000-8000-000000000020";
 const PROPOSAL_ID = "9f150000-0000-4000-8000-000000000030";
 const TIMEZONE = "Europe/Berlin";
@@ -91,6 +116,7 @@ describe("generateRoadmapProposal", () => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
 
+    createSpendLedgerMock.mockResolvedValue(SPEND_LEDGER);
     createProfileMock.mockResolvedValue({
       getCurrentProfile: vi
         .fn()
@@ -235,6 +261,38 @@ describe("generateRoadmapProposal", () => {
       `roadmap.v2:${TODAY}:${END_DATE}:0:initial:24:0`,
     );
     expect(requestFingerprint).not.toContain("Tuesdays");
+  });
+
+  // M3-11's reset dropped this argument and live coaching was unreachable for
+  // six weeks without a single failing test. A live composition refuses
+  // without a ledger, so this is the line that keeps the real coach reachable.
+  it("hands the durable spend ledger to the composition", async () => {
+    await generateRoadmapProposal(input(), {
+      roadmaps: roadmaps as unknown as RoadmapRepository,
+    });
+
+    expect(createSpendLedgerMock).toHaveBeenCalledOnce();
+    expect(compositionInputSpy).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ spendLedger: SPEND_LEDGER }),
+    );
+  });
+
+  // A refusal while composing is a failed generation like any other. Before
+  // composition moved inside the try, it stranded the claim as pending.
+  it("closes the claim when the coach cannot be composed", async () => {
+    createSpendLedgerMock.mockRejectedValue(new Error("no request scope"));
+    roadmaps.finishGenerationAsFailed.mockResolvedValue(undefined);
+
+    await expect(
+      generateRoadmapProposal(input(), {
+        roadmaps: roadmaps as unknown as RoadmapRepository,
+      }),
+    ).rejects.toThrow("no request scope");
+    expect(roadmaps.finishGenerationAsFailed).toHaveBeenCalledExactlyOnceWith(
+      "t1",
+      "provider_unavailable",
+    );
+    expect(roadmaps.finishGenerationWithProposal).not.toHaveBeenCalled();
   });
 
   // A memory conflict must not roll back a valid roadmap. ADR-015 draws that

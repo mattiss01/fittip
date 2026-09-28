@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
+  createSpendLedgerMock,
+  compositionInputSpy,
   createProfileMock,
   createGoalMock,
   createMemoryMock,
@@ -8,6 +10,8 @@ const {
   createRollingPlanMock,
   createRoadmapMock,
 } = vi.hoisted(() => ({
+  createSpendLedgerMock: vi.fn(),
+  compositionInputSpy: vi.fn(),
   createProfileMock: vi.fn(),
   createGoalMock: vi.fn(),
   createMemoryMock: vi.fn(),
@@ -51,6 +55,25 @@ vi.mock("@/server/repositories/roadmap-repository", async (original) => {
   return { ...actual, createRoadmapRepository: createRoadmapMock };
 });
 
+vi.mock("@/server/repositories/ai-spend-repository", () => ({
+  createAISpendRepository: createSpendLedgerMock,
+}));
+// Passed through to the real composition root; the spy only records what it
+// was handed, so every assertion below still runs against what production
+// resolves.
+vi.mock("@/server/ai/composition", async (original) => {
+  const actual = await original<typeof import("@/server/ai/composition")>();
+  return {
+    ...actual,
+    createPlanCoachAIService: (
+      input: Parameters<typeof actual.createPlanCoachAIService>[0],
+    ) => {
+      compositionInputSpy(input);
+      return actual.createPlanCoachAIService(input);
+    },
+  };
+});
+
 import type { CoachAIOwner } from "@/server/ai/owner";
 import { MemoryCandidateBatchError } from "@/server/proposal-logging/memory-candidate-batch";
 import { generatePlanProposal } from "@/server/plan-proposal/plan-generation";
@@ -69,6 +92,8 @@ import type { PlanProposalRepository } from "@/server/repositories/plan-proposal
 
 const OWNER_ID = "7c160000-0000-4000-8000-000000000001";
 const OWNER = { id: OWNER_ID } as unknown as CoachAIOwner;
+/** A sentinel: the fixture coach never reads it, so identity is what is checked. */
+const SPEND_LEDGER = { reserve: vi.fn(), settle: vi.fn() };
 const GOAL_ID = "7c160000-0000-4000-8000-000000000020";
 const PROPOSAL_ID = "7c160000-0000-4000-8000-000000000030";
 const PREVIOUS_ID = "7c160000-0000-4000-8000-000000000031";
@@ -98,6 +123,7 @@ describe("generatePlanProposal", () => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
 
+    createSpendLedgerMock.mockResolvedValue(SPEND_LEDGER);
     createProfileMock.mockResolvedValue({
       getCurrentProfile: vi
         .fn()
@@ -228,6 +254,38 @@ describe("generatePlanProposal", () => {
     ).toBeLessThan(
       proposals.recordMemoryCandidates.mock.invocationCallOrder[0],
     );
+  });
+
+  // M3-11's reset dropped this argument and live coaching was unreachable for
+  // six weeks without a single failing test. A live composition refuses
+  // without a ledger, so this is the line that keeps the real coach reachable.
+  it("hands the durable spend ledger to the composition", async () => {
+    await generatePlanProposal(input(), {
+      proposals: proposals as unknown as PlanProposalRepository,
+    });
+
+    expect(createSpendLedgerMock).toHaveBeenCalledOnce();
+    expect(compositionInputSpy).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ spendLedger: SPEND_LEDGER }),
+    );
+  });
+
+  // A refusal while composing is a failed generation like any other. Before
+  // composition moved inside the try, it stranded the claim as pending.
+  it("closes the claim when the coach cannot be composed", async () => {
+    createSpendLedgerMock.mockRejectedValue(new Error("no request scope"));
+    proposals.finishGenerationAsFailed.mockResolvedValue(undefined);
+
+    await expect(
+      generatePlanProposal(input(), {
+        proposals: proposals as unknown as PlanProposalRepository,
+      }),
+    ).rejects.toThrow("no request scope");
+    expect(proposals.finishGenerationAsFailed).toHaveBeenCalledExactlyOnceWith(
+      "t1",
+      "provider_unavailable",
+    );
+    expect(proposals.finishGenerationWithProposal).not.toHaveBeenCalled();
   });
 
   it("keeps a valid proposal when the memory batch fails", async () => {

@@ -10,6 +10,7 @@ import {
 import { CoachAIError } from "@/server/ai/errors";
 import type { CoachAIOwner } from "@/server/ai/owner";
 import { logMemoryCandidateFailure } from "@/server/proposal-logging/memory-candidate-batch";
+import { createAISpendRepository } from "@/server/repositories/ai-spend-repository";
 import { createMemoryRepository } from "@/server/repositories/memory-repository";
 import type {
   PlanGenerationClaim,
@@ -156,12 +157,23 @@ export async function generatePlanProposal(
 
   // No context source and no environment are passed. Production has exactly one
   // of each, and a parameter here would be a way for a caller to choose
-  // something else.
-  const { service, binding } = createPlanCoachAIService({ owner: input.owner });
-
+  // something else. The ledger is always passed: a live composition refuses
+  // without it, and M3-11's reset dropping this one argument left live coaching
+  // unreachable from 14 August to 28 September 2026. A fixture run never reads
+  // it.
+  //
+  // Composed inside the try: a live refusal here (owner, operation, model,
+  // credential, ledger) is a failed generation like any other, and closing the
+  // claim is what keeps it from standing pending for this key.
+  let binding;
   let outcome;
   try {
-    outcome = await service.propose({
+    const composition = createPlanCoachAIService({
+      owner: input.owner,
+      spendLedger: await createAISpendRepository(),
+    });
+    binding = composition.binding;
+    outcome = await composition.service.propose({
       operation: "create_seven_day_plan",
       owner: input.owner,
       idempotencyKey: input.idempotencyKey,
