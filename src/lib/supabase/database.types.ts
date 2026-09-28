@@ -2247,6 +2247,233 @@ export type Database = {
           },
         ];
       };
+      session_activity_decisions: {
+        Row: {
+          decided_at: string;
+          decision: string;
+          proposal_id: string;
+          user_id: string;
+        };
+        Insert: {
+          decided_at?: string;
+          decision: string;
+          proposal_id: string;
+          user_id: string;
+        };
+        Update: {
+          decided_at?: string;
+          decision?: string;
+          proposal_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "session_activity_decisions_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "session_activity_decisions_proposal_fkey";
+            columns: ["proposal_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "session_activity_proposals";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      session_activity_proposal_sources: {
+        Row: {
+          ordinal: number;
+          proposal_id: string;
+          record_id: string;
+          revision_id: string | null;
+          revision_number: number | null;
+          source_kind: string;
+          user_id: string;
+        };
+        Insert: {
+          ordinal: number;
+          proposal_id: string;
+          record_id: string;
+          revision_id?: string | null;
+          revision_number?: number | null;
+          source_kind: string;
+          user_id: string;
+        };
+        Update: {
+          ordinal?: number;
+          proposal_id?: string;
+          record_id?: string;
+          revision_id?: string | null;
+          revision_number?: number | null;
+          source_kind?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "session_activity_proposal_sources_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "session_activity_proposal_sources_proposal_fkey";
+            columns: ["proposal_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "session_activity_proposals";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      session_activity_proposals: {
+        Row: {
+          content: Json;
+          created_at: string;
+          id: string;
+          local_date: string;
+          model_code: string;
+          note: string | null;
+          prompt_version: string;
+          provider_code: string;
+          rate_card_version: string;
+          request_id: string;
+          schema_version: string;
+          session_id: string | null;
+          spend_reservation_id: string | null;
+          user_id: string;
+        };
+        Insert: {
+          content: Json;
+          created_at?: string;
+          id?: string;
+          local_date: string;
+          model_code: string;
+          note?: string | null;
+          prompt_version: string;
+          provider_code: string;
+          rate_card_version: string;
+          request_id: string;
+          schema_version: string;
+          session_id?: string | null;
+          spend_reservation_id?: string | null;
+          user_id: string;
+        };
+        Update: {
+          content?: Json;
+          created_at?: string;
+          id?: string;
+          local_date?: string;
+          model_code?: string;
+          note?: string | null;
+          prompt_version?: string;
+          provider_code?: string;
+          rate_card_version?: string;
+          request_id?: string;
+          schema_version?: string;
+          session_id?: string | null;
+          spend_reservation_id?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "session_activity_proposals_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "session_activity_proposals_request_fkey";
+            columns: ["request_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "session_activity_requests";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "session_activity_proposals_session_fkey";
+            columns: ["session_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "rolling_plan_sessions";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "session_activity_proposals_spend_fkey";
+            columns: ["spend_reservation_id"];
+            isOneToOne: false;
+            referencedRelation: "ai_spend_reservations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      session_activity_requests: {
+        Row: {
+          completion_token: string;
+          created_at: string;
+          expected_plan_revision: number;
+          failure_code: string | null;
+          id: string;
+          idempotency_key: string;
+          local_date: string;
+          note_hash: string | null;
+          proposal_id: string | null;
+          request_fingerprint: string;
+          session_id: string | null;
+          status: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          completion_token?: string;
+          created_at?: string;
+          expected_plan_revision: number;
+          failure_code?: string | null;
+          id?: string;
+          idempotency_key: string;
+          local_date: string;
+          note_hash?: string | null;
+          proposal_id?: string | null;
+          request_fingerprint: string;
+          session_id?: string | null;
+          status?: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          completion_token?: string;
+          created_at?: string;
+          expected_plan_revision?: number;
+          failure_code?: string | null;
+          id?: string;
+          idempotency_key?: string;
+          local_date?: string;
+          note_hash?: string | null;
+          proposal_id?: string | null;
+          request_fingerprint?: string;
+          session_id?: string | null;
+          status?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "session_activity_requests_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "session_activity_requests_session_fkey";
+            columns: ["session_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "rolling_plan_sessions";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -2424,6 +2651,22 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      begin_session_activity_generation: {
+        Args: {
+          p_expected_plan_revision: number;
+          p_idempotency_key: string;
+          p_note?: string;
+          p_request_fingerprint: string;
+          p_session_id: string;
+        };
+        Returns: Database["public"]["CompositeTypes"]["plan_generation_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "plan_generation_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       completion_activity_input_is_valid: {
         Args: { p_value: Json };
         Returns: boolean;
@@ -2435,6 +2678,10 @@ export type Database = {
       decide_plan_proposal_item: {
         Args: { p_decision: string; p_ordinal: number; p_proposal_id: string };
         Returns: undefined;
+      };
+      decide_session_activity_proposal: {
+        Args: { p_decision: string; p_proposal_id: string };
+        Returns: string;
       };
       discard_plan_proposal: {
         Args: { p_proposal_id: string };
@@ -2504,6 +2751,29 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "roadmap_generation_result";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      finish_session_activity_generation: {
+        Args: {
+          p_completion_token: string;
+          p_content?: Json;
+          p_model_code?: string;
+          p_note?: string;
+          p_outcome: string;
+          p_prompt_version?: string;
+          p_provider_code?: string;
+          p_rate_card_version?: string;
+          p_safe_failure_code?: string;
+          p_schema_version?: string;
+          p_sources?: Json;
+          p_spend_reservation_id?: string;
+        };
+        Returns: Database["public"]["CompositeTypes"]["plan_generation_result"];
+        SetofOptions: {
+          from: "*";
+          to: "plan_generation_result";
           isOneToOne: true;
           isSetofReturn: false;
         };
@@ -2667,6 +2937,10 @@ export type Database = {
       };
       saved_session_activity_input_is_valid: {
         Args: { p_value: Json };
+        Returns: boolean;
+      };
+      session_activities_content_is_valid: {
+        Args: { p_content: Json; p_user_id: string };
         Returns: boolean;
       };
       settle_ai_spend: {

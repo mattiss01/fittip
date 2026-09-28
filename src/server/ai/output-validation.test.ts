@@ -656,3 +656,19 @@ describe("session activities review follow-ups", () => {
     ).toEqual({ outcome: "rejected", reason: "unsafe_content" });
   });
 });
+
+describe("session activities agree with the database on blank safety text", () => {
+  it("refuses a whitespace-only safety consideration", () => {
+    const body = JSON.parse(
+      findCoachAIFixtureCase("valid_session_activities").body,
+    );
+    body.safetyConsiderations = ["   "];
+
+    expect(
+      validateSessionActivitiesCandidate({
+        body: JSON.stringify(body),
+        context: COACH_AI_FIXTURE_SESSION_CONTEXT,
+      }),
+    ).toEqual({ outcome: "rejected", reason: "business_rule" });
+  });
+});

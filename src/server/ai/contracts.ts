@@ -492,7 +492,18 @@ export type RoadmapMemoryCandidate = CoachAIMemoryCandidate;
  * acceptance.
  */
 export type CoachAISourceReference = {
-  kind: "goal" | "memory" | "plan_version" | "completion" | "roadmap_version"; // M3-16B: which accepted roadmap a plan was proposed under.
+  kind:
+    | "goal"
+    | "memory"
+    | "plan_version"
+    | "completion"
+    // M3-16B: which accepted roadmap a plan was proposed under.
+    | "roadmap_version"
+    // A7-3: the session a fill was for, and the library and saved sessions
+    // that reached the coach with it.
+    | "plan_session"
+    | "personal_activity"
+    | "saved_session";
   recordId: string;
   revisionId?: string;
   revisionNumber?: number;

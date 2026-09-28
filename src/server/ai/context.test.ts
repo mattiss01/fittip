@@ -196,6 +196,7 @@ describe("coach AI context assembly", () => {
       memoryIds: ["c3000000-0000-4000-8000-000000000001"],
       // No roadmap was handed in, so none informed the request.
       roadmapVersion: null,
+      sessionDetailSources: [],
     });
   });
 });

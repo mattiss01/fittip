@@ -241,6 +241,7 @@ describe("selectSessionDetailRecords", () => {
     ).toEqual(["2026-10-05", "2026-09-30", "2026-09-28"]);
     expect(records.recentActuals[1].entries).toEqual([
       {
+        completionId: "c-2026-10-05",
         localDate: "2026-10-05",
         measurementMode: "duration_intensity",
         actual: { duration_minutes: 5 },
@@ -288,7 +289,7 @@ describe("buildSessionDetailContext", () => {
     const records = select({
       library: [libraryEntry()],
     }) as SessionDetailRecords;
-    const context = buildSessionDetailContext(records);
+    const context = buildSessionDetailContext(records).context;
 
     expect(context.library).toEqual([
       {
@@ -349,7 +350,8 @@ describe("buildSessionDetailContext", () => {
         sport: "S".repeat(80),
         measurementMode: "sets_reps_load" as const,
       })),
-      savedSessions: Array.from({ length: 10 }, () => ({
+      savedSessions: Array.from({ length: 10 }, (_, index) => ({
+        id: `saved-${index}`,
         title: "T".repeat(120),
         sport: "S".repeat(80),
         intent: "I".repeat(500),
@@ -359,7 +361,8 @@ describe("buildSessionDetailContext", () => {
       recentActuals: Array.from({ length: 30 }, (_, index) => ({
         name: "A".repeat(120),
         personalActivityId: activity(index).personalActivityId,
-        entries: Array.from({ length: 3 }, () => ({
+        entries: Array.from({ length: 3 }, (_, entry) => ({
+          completionId: `log-${index}-${entry}`,
           localDate: "2026-10-01",
           measurementMode: "sets_reps_load" as const,
           actual: ramp,
@@ -367,7 +370,7 @@ describe("buildSessionDetailContext", () => {
       })),
     };
 
-    const context = buildSessionDetailContext(worst);
+    const context = buildSessionDetailContext(worst).context;
     const bytes = (value: unknown) =>
       new TextEncoder().encode(JSON.stringify(value)).length;
 
@@ -439,10 +442,61 @@ describe("session detail review follow-ups", () => {
       ],
     }) as SessionDetailRecords;
 
-    const context = buildSessionDetailContext(records);
+    const context = buildSessionDetailContext(records).context;
     expect(context.session.note).toBeNull();
     expect(
       new TextEncoder().encode(JSON.stringify(context.session)).length,
     ).toBeLessThanOrEqual(SESSION_DETAIL_BYTES.session);
+  });
+});
+
+describe("session detail provenance", () => {
+  it("names what reached the coach, and sends none of the ids it keeps for that", () => {
+    const records = select({
+      library: [libraryEntry()],
+      savedSessions: [saved({ id: "5d000000-0000-4000-8000-0000000000b1" })],
+      planSessions: [
+        planSession({
+          activities: [
+            {
+              personalActivityId: SQUAT_ID,
+              position: 0,
+              name: "Back squat",
+              sport: "Strength",
+              measurementMode: "sets_reps_load",
+              isLocked: false,
+            },
+          ] as RollingPlanSession["activities"],
+        }),
+      ],
+      completions: [
+        completion("2026-10-05", [
+          {
+            personalActivityId: SQUAT_ID,
+            position: 0,
+            name: "Back squat",
+            sport: "Strength",
+            measurementMode: "sets_reps_load",
+            actualMeasurement: { groups: [{ sets: 3, reps: 5 }] },
+          },
+        ]),
+      ],
+    }) as SessionDetailRecords;
+
+    const { context, sources } = buildSessionDetailContext(records);
+
+    expect(sources).toEqual([
+      { kind: "plan_session", recordId: SESSION_ID },
+      { kind: "personal_activity", recordId: SQUAT_ID },
+      {
+        kind: "saved_session",
+        recordId: "5d000000-0000-4000-8000-0000000000b1",
+      },
+      { kind: "completion", recordId: "c-2026-10-05" },
+    ]);
+    const sent = JSON.stringify(context);
+    expect(sent).not.toContain("5d000000-0000-4000-8000-0000000000b1");
+    expect(sent).not.toContain("c-2026-10-05");
+    expect(sent).not.toContain(SESSION_ID);
   });
 });
