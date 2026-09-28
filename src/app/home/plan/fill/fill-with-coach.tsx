@@ -46,11 +46,16 @@ type Open = {
 };
 
 /**
- * Suggestions accepted or dismissed since this page loaded. Module state on
- * purpose: a save remounts the edit form, and the remounted form can be
- * handed the Plan as it was read before the answer, so what was answered has
- * to outlive the form. A reload starts empty, and by then the Plan read
- * itself no longer returns an answered suggestion.
+ * Suggestions dismissed since this page loaded. Module state on purpose: a
+ * save remounts the edit form, and the remounted form can be handed the Plan
+ * as it was read before the dismissal, so the answer has to outlive the form.
+ * A reload starts empty, and by then the Plan read itself no longer returns a
+ * dismissed suggestion.
+ *
+ * Accepting does not enter here. An accepted suggestion is only decided once
+ * its save lands; if the save is refused, the remounted form has lost the
+ * accepted list, and the suggestion coming back from the Plan read is what
+ * lets the owner accept it again.
  */
 const answeredOnThisPage = new Set<string>();
 
@@ -203,18 +208,16 @@ export function FillWithCoach({
 
   function accept() {
     if (!open) return;
-    const live = new Map(rows.map((row) => [row.key, row.value]));
     const list: ActivityValue[] = [
       ...open.proposal.activities.filter(
         (_activity, index) => !open.removed.has(index),
       ),
-      // A planned activity as it reads now, if the owner changed it after
-      // adding it here.
-      ...open.added.map((row) => live.get(row.key) ?? row.value),
+      ...addedNow.map((row) => row.value),
     ];
     editor.current?.replace(list);
-    setAccepted((ids) => [...ids, open.proposal.proposalId]);
-    answeredOnThisPage.add(open.proposal.proposalId);
+    // Only the list the editor now holds can be saved, so only its suggestion
+    // is recorded: one accepted earlier was replaced by this one.
+    setAccepted([open.proposal.proposalId]);
     setOpen(null);
     setHeldSave(null);
     setMessage(list.length === 0 ? COPY.acceptedEmpty : COPY.acceptedMessage);
@@ -222,16 +225,25 @@ export function FillWithCoach({
 
   function dismiss() {
     if (!open) return;
-    const { proposalId } = open.proposal;
+    const dismissed = open;
+    const { proposalId } = dismissed.proposal;
     answeredOnThisPage.add(proposalId);
     setOpen(null);
     setHeldSave(null);
+    // The box closes at once and comes back if the dismissal was not
+    // recorded, so what the owner sees matches what is stored.
+    const reopen = (message: string) => {
+      answeredOnThisPage.delete(proposalId);
+      setOpen(dismissed);
+      setMessage(message);
+    };
     startDismissing(async () => {
       try {
         const result = await dismissSessionActivitiesAction(proposalId);
-        setMessage(result.message);
+        if (result.status === "refused") reopen(result.message);
+        else setMessage(result.message);
       } catch {
-        setMessage(COPY.dismissLost);
+        reopen(COPY.dismissLost);
       }
     });
   }
@@ -245,11 +257,18 @@ export function FillWithCoach({
     else form?.requestSubmit();
   }
 
-  const addedKeys = new Set(open?.added.map((row) => row.key) ?? []);
+  // Planned activities added to the suggestion, as the list reads now: one
+  // changed since is taken as changed, and one deleted since is gone here too.
+  const live = new Map(rows.map((row) => [row.key, row.value]));
+  const addedNow: EditorRow[] = (open?.added ?? []).flatMap((row) => {
+    const value = live.get(row.key);
+    return value === undefined ? [] : [{ key: row.key, value }];
+  });
+  const addedKeys = new Set(addedNow.map((row) => row.key));
   const draftCount =
     open === null
       ? 0
-      : open.proposal.activities.length - open.removed.size + open.added.length;
+      : open.proposal.activities.length - open.removed.size + addedNow.length;
 
   return (
     <>
@@ -340,7 +359,7 @@ export function FillWithCoach({
                 </li>
               );
             })}
-            {open.added.map((row) => (
+            {addedNow.map((row) => (
               <li key={row.key} data-origin="planned">
                 <span className={styles.itemText}>
                   <span className={styles.itemName}>{row.value.name}</span>
@@ -462,7 +481,7 @@ const COPY = {
   asking: "Asking the coach…",
   lost: "The coach's answer did not arrive. Try again: the same request is not charged twice.",
   dismissLost:
-    "The suggestion is closed, but the dismissal may not have been recorded.",
+    "The dismissal did not go through, so the suggestion is still open. Try again.",
   suggestionLabel: "Coach's suggestion",
   example: "Example",
   exampleSupport:

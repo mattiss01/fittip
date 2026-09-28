@@ -1,5 +1,7 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+
 import type { DismissResult, FillResult } from "./fill-state";
 import { toFillProposal } from "./open-proposals";
 import { readPlanWindow } from "../plan-window";
@@ -32,9 +34,14 @@ import { generateSessionActivities } from "@/server/session-detail/session-activ
  * names only which of its own sessions, a note, and the key that makes a
  * retry of an uncertain request a replay instead of a second paid call.
  *
- * Nothing here writes to the plan. The answer is loaded into the editor, and
- * the owner's own Save is what changes the session — through the plan's write
+ * Nothing here writes to the plan. The answer opens as a suggestion beside the
+ * session's activity list; the owner's Accept loads it into that list, and
+ * their own Save is what changes the session — through the plan's write
  * rules, which then record the decision (ADR-020 decision 3).
+ *
+ * A new proposal revalidates the Plan, so its read of open suggestions knows
+ * this one: if the save it is accepted into is refused, the remounted form
+ * gets it back from there rather than losing it until a reload.
  */
 export async function fillSessionActivitiesAction(input: {
   sessionId: string;
@@ -83,6 +90,7 @@ export async function fillSessionActivitiesAction(input: {
     if (!proposal || proposal.sessionId !== session.id) {
       return refused(COPY.failed);
     }
+    revalidatePath("/home/plan");
     return { status: "proposal", proposal: toFillProposal(proposal) };
   } catch (error) {
     return refused(fillFailureCopy(error));
@@ -90,8 +98,8 @@ export async function fillSessionActivitiesAction(input: {
 }
 
 /**
- * Dismiss puts the owner's previous list back in the editor; this records
- * that they said no. Final, like accepting: the same answer again replays.
+ * Dismiss leaves the owner's activity list as it is; this records that they
+ * said no. Final, like accepting: the same answer again replays.
  */
 export async function dismissSessionActivitiesAction(
   proposalId: string,
@@ -134,11 +142,11 @@ const COPY = {
   noteTooLong: "The note for the coach can be at most 500 characters.",
   session: "Your session ended. Sign in again, then try again.",
   timezone: "Confirm your time zone on the Plan before asking the coach.",
-  dismissed: "Suggestion dismissed. Your previous activities are back.",
+  dismissed: "Suggestion dismissed. Your activity list is unchanged.",
   alreadyAccepted:
     "That suggestion was already saved, so it cannot be dismissed now.",
   dismissFailed:
-    "The dismissal could not be recorded. Your previous activities are back in the editor.",
+    "The dismissal could not be recorded, so the suggestion is still open. Try again.",
 } as const;
 
 function refused(message: string): FillResult {

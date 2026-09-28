@@ -12,6 +12,7 @@ const {
   readPlanWindowMock: vi.fn(),
 }));
 
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/supabase/server-user-client", () => ({
   createServerUserClient: vi.fn().mockResolvedValue({}),
 }));

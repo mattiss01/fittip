@@ -67,7 +67,7 @@ function setup(open?: FillProposal, onSubmit = vi.fn()) {
   const editor = {
     current: { replace } as ActivityEditorHandle,
   };
-  const ui = (next?: FillProposal) => (
+  const ui = (next?: FillProposal, rows: EditorRow[] = PLANNED) => (
     <form
       onSubmit={(event) => {
         event.preventDefault();
@@ -78,7 +78,7 @@ function setup(open?: FillProposal, onSubmit = vi.fn()) {
         sessionId={SESSION_ID}
         open={next}
         editor={editor}
-        rows={PLANNED}
+        rows={rows}
       >
         <p>editor</p>
       </FillWithCoach>
@@ -89,7 +89,8 @@ function setup(open?: FillProposal, onSubmit = vi.fn()) {
   return {
     replace,
     onSubmit,
-    rerender: (next?: FillProposal) => view.rerender(ui(next)),
+    rerender: (next?: FillProposal, rows?: EditorRow[]) =>
+      view.rerender(ui(next, rows)),
     container: view.container,
   };
 }
@@ -138,6 +139,32 @@ describe("FillWithCoach", () => {
     );
   });
 
+  it("leaves out a planned activity added to the suggestion and then deleted from the list", () => {
+    const open = proposal("Goblet squat");
+    const { replace, rerender } = setup(open);
+
+    fireEvent.click(
+      within(box()).getByRole("button", { name: "Add Walking lunge" }),
+    );
+    rerender(open, [PLANNED[0]]);
+    expect(within(box()).queryByText("Walking lunge")).toBe(null);
+    fireEvent.click(within(box()).getByRole("button", { name: "Accept" }));
+
+    expect(replace).toHaveBeenCalledWith([activity("Goblet squat")]);
+  });
+
+  it("records only the suggestion whose list was accepted last", () => {
+    const first = proposal("Goblet squat");
+    const { container, rerender } = setup(first);
+    fireEvent.click(within(box()).getByRole("button", { name: "Accept" }));
+
+    const second = proposal("Step-up");
+    rerender(second);
+    fireEvent.click(within(box()).getByRole("button", { name: "Accept" }));
+
+    expect(acceptedIds(container)).toEqual([second.proposalId]);
+  });
+
   it("brings a removed activity back with Undo", () => {
     const { replace } = setup(proposal("Goblet squat"));
 
@@ -178,6 +205,23 @@ describe("FillWithCoach", () => {
     expect(replace).not.toHaveBeenCalled();
     expect(dismissMock).toHaveBeenCalledWith(open.proposalId);
     expect(acceptedIds(container)).toEqual([]);
+  });
+
+  it("keeps the suggestion open when the dismissal is refused", async () => {
+    dismissMock.mockResolvedValueOnce({
+      status: "refused",
+      message: "The dismissal could not be recorded.",
+    });
+    setup(proposal("Goblet squat"));
+
+    await act(async () => {
+      fireEvent.click(within(box()).getByRole("button", { name: "Dismiss" }));
+    });
+
+    expect(within(box()).getByText("Goblet squat")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain(
+      "could not be recorded",
+    );
   });
 
   it("holds a save while a suggestion is open, then saves on the owner's word", () => {

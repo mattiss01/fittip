@@ -14,18 +14,31 @@ import {
 
 const FIRST = "5a000000-0000-4000-8000-000000000001";
 const SECOND = "5a000000-0000-4000-8000-000000000002";
+const SESSION_ID = "7e000000-0000-4000-8000-000000000001";
+const OTHER_SESSION = "7e000000-0000-4000-8000-000000000002";
 
 function form(...ids: string[]) {
   const formData = new FormData();
+  formData.set("sessionId", SESSION_ID);
   for (const id of ids) formData.append(ACTIVITY_PROPOSAL_FIELD, id);
   return formData;
 }
 
-function repository(decide: SessionActivityRepository["decide"]) {
+function repository(
+  decide: SessionActivityRepository["decide"],
+  proposalSessionId: string | null = SESSION_ID,
+) {
   const decideMock = vi.fn(decide);
+  const getProposal = vi.fn(async (id: string) => ({
+    id,
+    sessionId: proposalSessionId,
+  }));
   const create = vi.fn(
     async () =>
-      ({ decide: decideMock }) as unknown as SessionActivityRepository,
+      ({
+        decide: decideMock,
+        getProposal,
+      }) as unknown as SessionActivityRepository,
   );
   return { decide: decideMock, create };
 }
@@ -92,6 +105,27 @@ describe("recordAcceptedSessionActivities", () => {
       );
       expect(decide).toHaveBeenCalledTimes(1);
     }
+  });
+
+  it("refuses another session's suggestion, which the database alone would allow", async () => {
+    const { decide, create } = repository(
+      async () => "accepted",
+      OTHER_SESSION,
+    );
+
+    expect(await recordAcceptedSessionActivities(form(FIRST), create)).toBe(
+      false,
+    );
+    expect(decide).not.toHaveBeenCalled();
+  });
+
+  it("records a suggestion whose session has since been deleted", async () => {
+    const { decide, create } = repository(async () => "accepted", null);
+
+    expect(await recordAcceptedSessionActivities(form(FIRST), create)).toBe(
+      true,
+    );
+    expect(decide).toHaveBeenCalledOnce();
   });
 
   it("refuses an id the form made up without asking the database", async () => {
