@@ -306,7 +306,15 @@ export function validateSessionActivitiesCandidate(input: {
     SESSION_ACTIVITIES_SAFETY_MAX,
     240,
   );
-  if (safetyConsiderations === null) return rejected("business_rule");
+  // Blank entries are refused here as `finish_session_activity_generation`
+  // refuses them: a list this accepts and the database refuses is a paid
+  // result thrown away after the fact (A7-3 review).
+  if (
+    safetyConsiderations === null ||
+    safetyConsiderations.some((entry) => entry.trim().length === 0)
+  ) {
+    return rejected("business_rule");
+  }
 
   const proposal: SessionActivitiesProposal = {
     schemaVersion: COACH_AI_SCHEMA_VERSIONS.fill_session_activities,

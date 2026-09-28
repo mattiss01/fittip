@@ -968,7 +968,10 @@ begin
 
   return ('completed', v_proposal_id)::public.plan_generation_result;
 exception
-  when check_violation or invalid_datetime_format or invalid_text_representation then
+  -- `numeric_value_out_of_range` beyond the plan's list: a source revision
+  -- number too large for bigint is invalid input, not a server error.
+  when check_violation or invalid_datetime_format or invalid_text_representation
+    or numeric_value_out_of_range then
     raise exception using
       errcode = '22023',
       message = 'Invalid session activity result.';

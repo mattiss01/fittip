@@ -30,7 +30,10 @@ Ordered by dependency. A lane is named where it is not the build lane.
 - [ ] **A7-4 — Fill with coach in the Edit panel.** Owner's choices of 28 Sep: the proposal
       lands pre-filled in the session editor; Save accepts, Dismiss rejects; the previous
       activities stay listed under it with Add back; new activities are session-only rows.
-      A lock does not hide the button (ADR-020 decision 5). Before any live run, measure
+      A lock does not hide the button (ADR-020 decision 5). Save the plan edit first and
+      record `accepted` after it, retrying a failed decision: the decision is final and not
+      atomic with the plan write, so deciding first could leave an unsaved list "accepted"
+      for good (A7-3 review). Before any live run, measure
       output tokens on a twelve-activity answer: the grammar pads each target with fourteen
       nullable keys against a 3,000-token ceiling.
 - [ ] **A8 — Targets and actuals in the plan context.** Careful lane. ADR-020 made them

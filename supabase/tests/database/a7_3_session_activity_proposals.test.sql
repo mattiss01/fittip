@@ -18,7 +18,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(43);
+select plan(49);
 
 -- Owners, a plan, three sessions and a library entry ------------------------
 
@@ -69,6 +69,16 @@ insert into public.personal_activities (
   ('a7300000-0000-4000-8000-0000000000a9',
     'a7300000-0000-4000-8000-000000000002', 'Their squat', 'Strength',
     'sets_reps_load');
+
+insert into public.ai_spend_reservations (
+  id, user_id, operation, spend_day, reserved_micro_usd, rate_card_version,
+  expires_at
+) values (
+  'a7300000-0000-4000-8000-0000000000c9',
+  'a7300000-0000-4000-8000-000000000002', 'fill_session_activities',
+  (now() at time zone 'utc')::date, 5600, 'openai-gpt-5.6-luna-2026-08-10',
+  now() + interval '15 minutes'
+);
 
 create function pg_temp.body(p_link text default null, p_target jsonb default null)
 returns jsonb
@@ -133,6 +143,26 @@ select ok(
   and not has_function_privilege('authenticated',
     'public.session_activities_content_is_valid(jsonb, uuid)', 'EXECUTE'),
   'the claim is callable by an owner only, and the content check by nobody'
+);
+
+select ok(
+  not has_function_privilege('anon',
+    'public.finish_session_activity_generation(uuid, text, text, text, text, text, text, uuid, text, jsonb, jsonb, text)',
+    'EXECUTE')
+  and not has_function_privilege('anon',
+    'public.decide_session_activity_proposal(uuid, text)', 'EXECUTE'),
+  'anonymous callers can neither finish nor decide'
+);
+
+select ok(
+  not has_function_privilege('service_role',
+    'public.begin_session_activity_generation(text, text, uuid, bigint, text)', 'EXECUTE')
+  and not has_function_privilege('service_role',
+    'public.finish_session_activity_generation(uuid, text, text, text, text, text, text, uuid, text, jsonb, jsonb, text)',
+    'EXECUTE')
+  and not has_function_privilege('service_role',
+    'public.decide_session_activity_proposal(uuid, text)', 'EXECUTE'),
+  'service_role is granted none of the three'
 );
 
 select ok(
@@ -278,6 +308,17 @@ select throws_ok(
   $$ select * from public.finish_session_activity_generation(
     (select completion_token from claim where label = 'fixture'), 'proposal',
     'fittip.session-activities.v1', 'session-activities-v1-2026-09-28',
+    'fixture', 'fixture-corpus-v1', 'fixture-no-spend', null,
+    'Only 45 minutes.',
+    pg_temp.body() || '{"safetyConsiderations":["   "]}'::jsonb, null, null) $$,
+  '22023', null,
+  'a blank safety consideration is refused, as the application refuses it'
+);
+
+select throws_ok(
+  $$ select * from public.finish_session_activity_generation(
+    (select completion_token from claim where label = 'fixture'), 'proposal',
+    'fittip.session-activities.v1', 'session-activities-v1-2026-09-28',
     'fixture', 'fixture-corpus-v1', 'fixture-no-spend',
     '00000000-0000-4000-8000-000000000000',
     'Only 45 minutes.', pg_temp.body(), null, null) $$,
@@ -377,6 +418,36 @@ select is(
    where id = (select reservation_id from spend where label = 'plan')),
   true,
   'and the refusal settled nothing'
+);
+
+select throws_ok(
+  $$ select * from public.finish_session_activity_generation(
+    (select completion_token from claim where label = 'live'), 'proposal',
+    'fittip.session-activities.v1', 'session-activities-v1-2026-09-28',
+    'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10',
+    'a7300000-0000-4000-8000-0000000000c9',
+    null, pg_temp.body(), null, null) $$,
+  '22023', null,
+  'another owner''s reservation for this operation is refused'
+);
+
+select throws_ok(
+  $$ select * from public.finish_session_activity_generation(
+    (select completion_token from claim where label = 'live'), 'proposal',
+    'fittip.session-activities.v1', 'session-activities-v1-2026-09-28',
+    'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10',
+    (select reservation_id from spend where label = 'fill'),
+    null, pg_temp.body(), '[{"kind":"x","recordId":"a7300000-0000-4000-8000-0000000000f1"}]',
+    null) $$,
+  '22023', null,
+  'a bad source list is refused after the settle has already run'
+);
+
+select is(
+  (select settled_at is null from public.ai_spend_reservations
+   where id = (select reservation_id from spend where label = 'fill')),
+  true,
+  'and that settle rolled back with the refusal: one transaction, not two'
 );
 
 select is(
