@@ -270,6 +270,24 @@ describe("generatePlanProposal", () => {
     );
   });
 
+  // A refusal while composing is a failed generation like any other. Before
+  // composition moved inside the try, it stranded the claim as pending.
+  it("closes the claim when the coach cannot be composed", async () => {
+    createSpendLedgerMock.mockRejectedValue(new Error("no request scope"));
+    proposals.finishGenerationAsFailed.mockResolvedValue(undefined);
+
+    await expect(
+      generatePlanProposal(input(), {
+        proposals: proposals as unknown as PlanProposalRepository,
+      }),
+    ).rejects.toThrow("no request scope");
+    expect(proposals.finishGenerationAsFailed).toHaveBeenCalledExactlyOnceWith(
+      "t1",
+      "provider_unavailable",
+    );
+    expect(proposals.finishGenerationWithProposal).not.toHaveBeenCalled();
+  });
+
   it("keeps a valid proposal when the memory batch fails", async () => {
     proposals.recordMemoryCandidates.mockRejectedValue(
       new MemoryCandidateBatchError("22023"),

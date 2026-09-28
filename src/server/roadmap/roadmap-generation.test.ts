@@ -277,6 +277,24 @@ describe("generateRoadmapProposal", () => {
     );
   });
 
+  // A refusal while composing is a failed generation like any other. Before
+  // composition moved inside the try, it stranded the claim as pending.
+  it("closes the claim when the coach cannot be composed", async () => {
+    createSpendLedgerMock.mockRejectedValue(new Error("no request scope"));
+    roadmaps.finishGenerationAsFailed.mockResolvedValue(undefined);
+
+    await expect(
+      generateRoadmapProposal(input(), {
+        roadmaps: roadmaps as unknown as RoadmapRepository,
+      }),
+    ).rejects.toThrow("no request scope");
+    expect(roadmaps.finishGenerationAsFailed).toHaveBeenCalledExactlyOnceWith(
+      "t1",
+      "provider_unavailable",
+    );
+    expect(roadmaps.finishGenerationWithProposal).not.toHaveBeenCalled();
+  });
+
   // A memory conflict must not roll back a valid roadmap. ADR-015 draws that
   // boundary deliberately and names the alternative it rejected.
   it("keeps the roadmap when the memory batch fails", async () => {

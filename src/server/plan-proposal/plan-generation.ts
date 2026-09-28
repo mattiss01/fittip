@@ -161,14 +161,19 @@ export async function generatePlanProposal(
   // without it, and M3-11's reset dropping this one argument left live coaching
   // unreachable from 14 August to 28 September 2026. A fixture run never reads
   // it.
-  const { service, binding } = createPlanCoachAIService({
-    owner: input.owner,
-    spendLedger: await createAISpendRepository(),
-  });
-
+  //
+  // Composed inside the try: a live refusal here (owner, operation, model,
+  // credential, ledger) is a failed generation like any other, and closing the
+  // claim is what keeps it from standing pending for this key.
+  let binding;
   let outcome;
   try {
-    outcome = await service.propose({
+    const composition = createPlanCoachAIService({
+      owner: input.owner,
+      spendLedger: await createAISpendRepository(),
+    });
+    binding = composition.binding;
+    outcome = await composition.service.propose({
       operation: "create_seven_day_plan",
       owner: input.owner,
       idempotencyKey: input.idempotencyKey,
