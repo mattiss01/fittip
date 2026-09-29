@@ -67,5 +67,6 @@ and an unused port so runs stay isolated.
 - No browser console or page errors.
 - Every synthetic account the run created was deleted — including after a timeout. Check for
   leftovers from failed attempts and remove them, or reset the local database.
-- Capture the 390px screenshot into `docs/validation/<MILESTONE>/evidence/` and record the real
-  command, duration, and result in the validation record.
+- The specs write their 390px screenshots under `test-results/<MILESTONE>/evidence/`, which is
+  ignored. Report the real command, duration, and result to the owner; there is no validation
+  record any more.

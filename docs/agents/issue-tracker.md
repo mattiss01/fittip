@@ -12,7 +12,7 @@ and Vercel deployments only — do not use its issue tracker.
   decisions the owner already made. It is not a document; if a line needs more than about
   eight lines, the work is probably two items.
 - Specs, where one exists, are feature briefs at `docs/product/F-00N-<SLUG>.md`.
-- `docs/backlog/M0`–`M3` and `docs/validation/` are the history of the earlier protocol.
-  Read them for context; do not add to them.
+- `docs/backlog/M0`–`M3` are the history of the earlier protocol. Read them for context; do
+  not add to them. The old validation records are at the tag `archive/validation-docs`.
 - Adding a line is free. Committing the owner to a product, privacy, or spend decision is
   not: propose it and stop.

@@ -9,7 +9,7 @@
 [M1-03](../backlog/M1/M1-03-QUICK-TRAINING-LOGGING.md),
 [M1-04](../backlog/M1/M1-04-TODAY-PROGRESS-NAVIGATION.md), plus the retired
 [M1-05 proposal](../backlog/M1/M1-05-M1-VALIDATION-SLICE.md) and its targeted
-[M1 milestone closeout](../validation/M1/M1-MILESTONE-CLOSEOUT.md)
+[M1 milestone closeout](https://github.com/mattiss01/fittip/blob/archive/validation-docs/docs/validation/M1/M1-MILESTONE-CLOSEOUT.md)
 
 ## User problem
 

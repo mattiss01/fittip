@@ -3,8 +3,7 @@ import path from "node:path";
 
 const m2EvidenceDirectory = path.join(
   process.cwd(),
-  "docs",
-  "validation",
+  "test-results",
   "M2",
   "evidence",
 );
