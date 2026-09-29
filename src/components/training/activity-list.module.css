@@ -1,7 +1,7 @@
 /*
  * A card's activities as a ruled list: one line per activity at 390px, the
- * name in the card's serif and the target or actual beside it in the
- * ledger's Courier, wrapping under the name when the pair does not fit.
+ * name in the body face and the target or actual beside it in the mono
+ * face, wrapping under the name when the pair does not fit.
  */
 
 .list {
@@ -14,9 +14,7 @@
 .label {
   margin: 0;
   color: var(--ledger-muted);
-  font:
-    700 0.62rem "Courier New",
-    monospace;
+  font: 500 0.62rem var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -41,15 +39,13 @@
 }
 
 .name {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
   font-size: 0.95rem;
   overflow-wrap: anywhere;
 }
 
 .detail {
   color: var(--ledger-muted);
-  font:
-    0.74rem "Courier New",
-    monospace;
+  font: 0.74rem var(--font-mono);
   overflow-wrap: anywhere;
 }

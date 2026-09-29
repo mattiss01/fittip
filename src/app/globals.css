@@ -2,13 +2,42 @@
 
 :root {
   color-scheme: light;
-  --background: #edf0e8;
-  --foreground: #17332e;
-  --muted: #62726c;
-  --surface: #fffef9;
-  --border: #ced7ca;
-  --accent: #d95d39;
-  --accent-dark: #a93f25;
+
+  /* FitTip's palette (R1). One value per colour: every surface names these, or
+     the role aliases below, rather than a hex of its own. Colours that encode a
+     state (a memory's status, a goal's tier) stay local to their module. */
+  --pine: #17332e;
+  --pine-soft: #2f5d50;
+  --moss: #62726c;
+  --ember: #d95d39;
+  --ember-dark: #a93f25;
+  --paper: #fffef9;
+  --sage: #edf0e8;
+  --fern: #d5ddd0;
+  --rule: #aab7a7;
+  --recovery: #557667;
+
+  --background: var(--sage);
+  --foreground: var(--pine);
+  --muted: var(--moss);
+  --surface: var(--paper);
+  --border: var(--fern);
+  --accent: var(--ember);
+  --accent-dark: var(--ember-dark);
+
+  /* Design foundations (R1). Every surface reads these rather than its own values:
+     the typefaces come from next/font in the root layout. */
+  --font-sans:
+    var(--font-schibsted), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-dm-mono), ui-monospace, "SFMono-Regular", monospace;
+  --radius-card: 1.25rem;
+  --radius-control: 0.9rem;
+  --radius-pill: 999px;
+  --shadow-card:
+    0 1px 0 rgb(23 51 46 / 0.06), 0 12px 28px -14px rgb(23 51 46 / 0.22);
+  --shadow-raised: 0 18px 40px -16px rgb(23 51 46 / 0.35);
+  --line: var(--fern);
+  --ease-out: cubic-bezier(0.2, 0.9, 0.3, 1);
 }
 
 * {
@@ -24,7 +53,9 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
 }
 
 main {
@@ -39,17 +70,17 @@ main {
   width: min(100%, 29rem);
   padding: clamp(1.5rem, 7vw, 2.8rem);
   border: 1px solid var(--border);
-  border-radius: 1.5rem 1.5rem 1.5rem 0.25rem;
   background: var(--surface);
-  box-shadow: 10px 10px 0 #c9d8c5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .eyebrow {
   margin: 0 0 0.75rem;
   color: var(--accent-dark);
-  font-family: "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -57,8 +88,9 @@ main {
 h1 {
   margin: 0;
   font-size: clamp(2.45rem, 12vw, 4rem);
-  letter-spacing: -0.065em;
-  line-height: 0.92;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 0.95;
 }
 
 .auth-intro,
@@ -75,9 +107,9 @@ h1 {
   margin-top: 1.75rem;
 }
 label {
-  font-family: "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -86,7 +118,7 @@ input {
   min-height: 3.1rem;
   padding: 0.7rem 0.8rem;
   border: 1px solid var(--border);
-  border-radius: 0.35rem;
+  border-radius: var(--radius-control);
   background: #fff;
   color: var(--foreground);
   font: inherit;
@@ -100,14 +132,18 @@ button {
   min-height: 3.2rem;
   margin-top: 0.65rem;
   border: 0;
-  border-radius: 0.35rem;
+  border-radius: var(--radius-control);
   background: var(--accent);
-  color: #fffef9;
+  color: var(--paper);
   cursor: pointer;
-  font:
-    700 0.85rem "Courier New",
-    monospace;
-  letter-spacing: 0.03em;
+  font: 700 0.95rem var(--font-sans);
+  letter-spacing: -0.005em;
+  transition:
+    background-color 150ms ease,
+    transform 150ms var(--ease-out);
+}
+button:active:not(:disabled) {
+  transform: scale(0.98);
 }
 button:hover {
   background: var(--accent-dark);
@@ -151,13 +187,11 @@ button:disabled {
   min-height: 3.2rem;
   place-items: center;
   margin-top: 1.75rem;
-  border-radius: 0.35rem;
+  border-radius: var(--radius-control);
   background: var(--foreground);
   color: var(--surface);
-  font:
-    700 0.85rem "Courier New",
-    monospace;
-  letter-spacing: 0.03em;
+  font: 700 0.95rem var(--font-sans);
+  letter-spacing: -0.005em;
   text-decoration: none;
 }
 
@@ -193,8 +227,8 @@ button:disabled {
   min-height: 3rem;
   padding: 0.7rem 0.75rem;
   border: 1px solid #aebbb0;
-  border-radius: 0.4rem;
-  background: #fffef9;
+  border-radius: var(--radius-control);
+  background: var(--paper);
   color: var(--foreground);
 }
 
@@ -209,7 +243,7 @@ button:disabled {
   justify-content: space-between;
   gap: 1rem;
   padding: 0.75rem 0 1.8rem;
-  border-bottom: 3px solid var(--foreground);
+  border-bottom: 1px solid var(--line);
 }
 
 .plan-header h1 {
@@ -223,9 +257,7 @@ button:disabled {
 
 .back-link {
   color: var(--foreground);
-  font:
-    700 0.75rem "Courier New",
-    monospace;
+  font: 500 0.75rem var(--font-mono);
   text-underline-offset: 0.25rem;
 }
 
@@ -243,13 +275,12 @@ button:disabled {
   border: 1px solid var(--foreground);
   background: #dbe4d5;
   text-align: right;
-  transform: rotate(1deg);
 }
 
 .version-stamp span,
 .version-stamp strong {
   display: block;
-  font-family: "Courier New", monospace;
+  font-family: var(--font-mono);
 }
 
 .version-stamp span {
@@ -265,7 +296,7 @@ button:disabled {
 
 .horizon-panel {
   padding: 1.5rem 0;
-  border-bottom: 1px solid #9bab9e;
+  border-bottom: 1px solid var(--rule);
 }
 
 .section-heading,
@@ -287,9 +318,7 @@ button:disabled {
 .section-heading > p {
   margin: 0;
   color: var(--muted);
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   text-align: right;
   text-transform: uppercase;
 }
@@ -297,9 +326,7 @@ button:disabled {
 .step-mark {
   margin: 0;
   color: var(--accent-dark);
-  font:
-    700 0.65rem "Courier New",
-    monospace;
+  font: 500 0.65rem var(--font-mono);
   letter-spacing: 0.09em;
 }
 
@@ -315,12 +342,10 @@ button:disabled {
 .day-count-button {
   min-width: 0;
   padding: 0;
-  border: 1px solid #9bab9e;
+  border: 1px solid var(--rule);
   background: transparent;
   color: var(--foreground);
-  font:
-    700 0.9rem "Courier New",
-    monospace !important;
+  font: 500 0.9rem var(--font-mono) !important;
 }
 
 .day-count-button:hover,
@@ -345,9 +370,7 @@ button:disabled {
   gap: 1rem;
   margin: 0.8rem 0 0;
   color: var(--foreground);
-  font:
-    700 0.78rem "Courier New",
-    monospace;
+  font: 500 0.78rem var(--font-mono);
 }
 
 .range-summary span {
@@ -372,7 +395,7 @@ button:disabled {
 
 .plan-day {
   margin-top: 1.2rem;
-  border: 1px solid #9bab9e;
+  border: 1px solid var(--rule);
   background: rgba(255, 254, 249, 0.64);
 }
 
@@ -393,9 +416,7 @@ button:disabled {
   place-items: center;
   border-radius: 50%;
   background: #dbe4d5;
-  font:
-    700 0.75rem "Courier New",
-    monospace;
+  font: 500 0.75rem var(--font-mono);
 }
 
 .plan-day-header p,
@@ -405,9 +426,7 @@ button:disabled {
 
 .plan-day-header p {
   color: var(--accent-dark);
-  font:
-    700 0.65rem "Courier New",
-    monospace;
+  font: 500 0.65rem var(--font-mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -476,9 +495,7 @@ button:disabled {
 
 .session-meta {
   color: var(--accent-dark);
-  font:
-    700 0.65rem "Courier New",
-    monospace;
+  font: 500 0.65rem var(--font-mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -488,9 +505,7 @@ button:disabled {
   margin-top: 0.6rem;
   padding: 0.25rem 0.4rem;
   border: 1px solid #8d9e90;
-  font:
-    700 0.58rem "Courier New",
-    monospace;
+  font: 500 0.58rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -498,9 +513,7 @@ button:disabled {
 .past-session-note {
   margin: 0.8rem 0 0;
   color: var(--muted);
-  font:
-    700 0.65rem "Courier New",
-    monospace;
+  font: 500 0.65rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -519,12 +532,10 @@ button:disabled {
   width: auto;
   min-height: 2.55rem;
   padding: 0.45rem 0.65rem;
-  border: 1px solid #9bab9e;
+  border: 1px solid var(--rule);
   background: transparent;
   color: var(--foreground);
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
 }
 
 .session-actions label {
@@ -552,8 +563,8 @@ button:disabled {
 
 .activity-library {
   margin-top: 1.5rem;
-  border: 1px solid #9bab9e;
-  background: #fffef9;
+  border: 1px solid var(--rule);
+  background: var(--paper);
 }
 
 .activity-library summary {
@@ -582,9 +593,7 @@ button:disabled {
 
 .activity-library summary > span:last-child {
   color: var(--muted);
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   text-transform: uppercase;
 }
 
@@ -635,7 +644,7 @@ button:disabled {
 .library-empty,
 .library-message {
   padding: 0.8rem;
-  background: #edf0e8;
+  background: var(--sage);
 }
 
 .activity-definition-form {
@@ -644,7 +653,7 @@ button:disabled {
   margin-top: 1rem;
   padding: 1rem;
   border: 1px solid #bdc8be;
-  background: #edf0e8;
+  background: var(--sage);
 }
 
 .activity-definition-form label,
@@ -697,9 +706,7 @@ button:disabled {
 
 .save-dock p {
   color: #bbcabd;
-  font:
-    700 0.62rem "Courier New",
-    monospace;
+  font: 500 0.62rem var(--font-mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -723,8 +730,8 @@ button:disabled {
 .save-message {
   margin-top: 1rem;
   padding: 1rem;
-  border: 1px solid #9bab9e;
-  background: #fffef9;
+  border: 1px solid var(--rule);
+  background: var(--paper);
 }
 
 .save-message p {
@@ -763,7 +770,7 @@ button:disabled {
   padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
   overflow-y: auto;
   border-radius: 1.2rem 1.2rem 0 0;
-  background: #fffef9;
+  background: var(--paper);
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.18);
 }
 
@@ -773,7 +780,7 @@ button:disabled {
   justify-content: space-between;
   gap: 1rem;
   padding-bottom: 1rem;
-  border-bottom: 2px solid var(--foreground);
+  border-bottom: 1px solid var(--line);
 }
 
 .composer-header h2 {
@@ -785,7 +792,7 @@ button:disabled {
 .close-button {
   width: 2.75rem;
   padding: 0;
-  border: 1px solid #9bab9e;
+  border: 1px solid var(--rule);
   background: transparent;
   color: var(--foreground);
   font-size: 1.5rem !important;
@@ -818,7 +825,7 @@ button:disabled {
   gap: 0.65rem !important;
   padding: 0.8rem;
   border: 1px solid #bdc8be;
-  background: #edf0e8;
+  background: var(--sage);
 }
 
 .lock-control input {
@@ -828,7 +835,7 @@ button:disabled {
 }
 
 .lock-control span {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
   font-size: 0.9rem;
   font-weight: 400;
   letter-spacing: 0;
@@ -848,7 +855,7 @@ button:disabled {
 .activity-builder {
   margin-top: 1.2rem;
   padding-top: 1.2rem;
-  border-top: 2px solid var(--foreground);
+  border-top: 1px solid var(--line);
 }
 
 .activity-builder-heading button {
@@ -865,7 +872,7 @@ button:disabled {
 .composer-empty {
   margin: 1rem 0 0;
   padding: 0.8rem;
-  background: #edf0e8;
+  background: var(--sage);
   color: var(--muted);
   line-height: 1.45;
 }
@@ -877,7 +884,7 @@ button:disabled {
 .activity-editor {
   margin-top: 0.8rem;
   padding: 0.9rem;
-  border: 1px solid #9bab9e;
+  border: 1px solid var(--rule);
   background: #f7f6ef;
 }
 
@@ -921,8 +928,8 @@ button:disabled {
   bottom: -1rem;
   margin: 1rem -1rem -1rem;
   padding: 0.8rem 1rem calc(0.8rem + env(safe-area-inset-bottom));
-  border-top: 1px solid #9bab9e;
-  background: #fffef9;
+  border-top: 1px solid var(--rule);
+  background: var(--paper);
 }
 
 .composer-footer button {
@@ -934,8 +941,8 @@ button:disabled {
   width: min(100%, 34rem);
   margin: 15vh auto 0;
   padding: 1.5rem;
-  border: 1px solid #9bab9e;
-  background: #fffef9;
+  border: 1px solid var(--rule);
+  background: var(--paper);
 }
 
 .plan-loading h1,
@@ -1022,5 +1029,13 @@ button:disabled {
 @media (prefers-reduced-motion: reduce) {
   .loading-rule {
     animation: none;
+  }
+
+  button {
+    transition: none;
+  }
+
+  button:active:not(:disabled) {
+    transform: none;
   }
 }

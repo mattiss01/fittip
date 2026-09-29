@@ -1,10 +1,12 @@
 .appShell {
-  --ledger-ink: #142f2a;
-  --ledger-paper: #fffdf4;
-  --ledger-muted: #596b65;
-  --ledger-rule: #aab7a7;
-  --ledger-signal: #d95835;
-  --ledger-wash: #e8ede3;
+  /* Older names for the palette in globals.css, kept so the screens need not
+     all change at once. */
+  --ledger-ink: var(--pine);
+  --ledger-paper: var(--paper);
+  --ledger-muted: var(--moss);
+  --ledger-rule: var(--rule);
+  --ledger-signal: var(--ember);
+  --ledger-wash: var(--sage);
   min-height: 100vh;
 }
 
@@ -12,13 +14,14 @@
   padding-bottom: calc(7rem + env(safe-area-inset-bottom));
 }
 
-/* The plan editor adds a second fixed layer above the fixed navigation. Its top
-   edge sits 10.6rem above the viewport bottom (5.4rem offset plus its 5.2rem
-   min-height), which is more than the navigation-only reserve above. Without
-   this, the last of the page content can never be scrolled clear of the dock
-   and stays untappable. */
+/* A save dock is a second fixed layer above the fixed navigation, and the page
+   must reserve room for both, or the last of its content can never be scrolled
+   clear of the dock and stays untappable. The dock sits 5.4rem up; the tallest
+   one, proposal review's with its support line, two actions and "Ask for a
+   different plan", measured about 14.8rem to its top edge at 390px in the R1
+   type (CI run 36600705825). */
 .appShell > main:has(:global(.save-dock)) {
-  padding-bottom: calc(11.5rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(16rem + env(safe-area-inset-bottom));
 }
 
 .appShell :global(.save-dock) {
@@ -50,9 +53,9 @@
   padding: 0.45rem max(0.55rem, env(safe-area-inset-right))
     max(0.45rem, env(safe-area-inset-bottom))
     max(0.55rem, env(safe-area-inset-left));
-  border-top: 1px solid var(--ledger-ink);
-  background: color-mix(in srgb, var(--ledger-paper) 96%, transparent);
-  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--ledger-paper) 88%, transparent);
+  backdrop-filter: blur(16px) saturate(1.2);
 }
 
 .navigation ul {
@@ -65,33 +68,48 @@
 }
 
 .navigation a {
-  min-height: 3.7rem;
+  min-height: 3.5rem;
   display: grid;
   place-content: center;
-  gap: 0.18rem;
+  justify-items: center;
+  gap: 0.2rem;
+  border-radius: var(--radius-control);
   color: var(--ledger-muted);
   text-align: center;
   text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.navigation a > span {
-  font:
-    700 0.58rem "Courier New",
-    monospace;
-  letter-spacing: 0.08em;
+.navigationIcon {
+  display: grid;
+  width: 3.4rem;
+  height: 1.9rem;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  transition:
+    background-color 220ms ease,
+    transform 220ms var(--ease-out);
 }
 
 .navigation a > strong {
-  font:
-    700 0.72rem "Courier New",
-    monospace;
-  letter-spacing: 0.02em;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.navigation a:active .navigationIcon {
+  transform: scale(0.9);
 }
 
 .navigation a[aria-current="page"] {
-  background: var(--ledger-ink);
-  color: var(--ledger-paper);
-  box-shadow: inset 0 4px 0 var(--ledger-signal);
+  color: var(--ledger-ink);
+}
+
+.navigation a[aria-current="page"] .navigationIcon {
+  background: var(--line);
+}
+
+.navigation a[aria-current="page"] > strong {
+  font-weight: 800;
 }
 
 .navigation a:focus-visible,
@@ -116,7 +134,8 @@
   color: #67311e;
   font-size: 0.85rem;
   line-height: 1.4;
-  box-shadow: 5px 5px 0 #cba88f;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .shell {
@@ -135,7 +154,7 @@
   align-items: end;
   gap: 1rem;
   padding: 1rem 0 1.4rem;
-  border-bottom: 3px solid var(--ledger-ink);
+  border-bottom: 1px solid var(--line);
 }
 
 .masthead h1 {
@@ -147,8 +166,8 @@
 .stamp,
 .status,
 .sectionLabel {
-  font-family: "Courier New", monospace;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-weight: 500;
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
@@ -165,7 +184,6 @@
   background: #d7e2d3;
   font-size: 0.67rem;
   text-align: right;
-  transform: rotate(1deg);
 }
 
 .intro {
@@ -212,9 +230,10 @@
 .card,
 .empty,
 .stateCard {
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   background: var(--ledger-paper);
-  box-shadow: 7px 7px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .card {
@@ -265,14 +284,12 @@
 .facts > div {
   min-width: 0;
   padding: 0.65rem;
-  background: #edf0e7;
+  background: var(--sage);
 }
 
 .facts dt {
   color: var(--ledger-muted);
-  font:
-    700 0.6rem "Courier New",
-    monospace;
+  font: 500 0.6rem var(--font-mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -293,9 +310,7 @@
   display: flex;
   align-items: center;
   cursor: pointer;
-  font:
-    700 0.72rem "Courier New",
-    monospace;
+  font: 500 0.72rem var(--font-mono);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -329,7 +344,7 @@
 
 .actions button.secondaryAction {
   margin: 0;
-  border-radius: 0;
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--ledger-ink);
 }
@@ -340,11 +355,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.65rem 0.9rem;
-  font:
-    700 0.74rem "Courier New",
-    monospace;
-  letter-spacing: 0.03em;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-control);
+  font: 700 0.9rem var(--font-sans);
   text-decoration: none;
 }
 
@@ -390,9 +403,7 @@
 .timelineMeta {
   margin: 0 0 0.45rem;
   color: var(--ledger-muted);
-  font:
-    700 0.65rem "Courier New",
-    monospace;
+  font: 500 0.65rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -434,9 +445,7 @@
   align-items: center;
   margin-bottom: 1rem;
   color: var(--ledger-ink);
-  font:
-    700 0.74rem "Courier New",
-    monospace;
+  font: 500 0.74rem var(--font-mono);
   text-underline-offset: 0.2rem;
 }
 
@@ -464,8 +473,19 @@
     bottom: 1.25rem;
     left: auto;
     width: 34rem;
-    border: 1px solid var(--ledger-ink);
-    box-shadow: 7px 7px 0 #a7b7a5;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-raised);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navigationIcon {
+    transition: none;
+  }
+
+  .navigation a:active .navigationIcon {
+    transform: none;
   }
 }
 

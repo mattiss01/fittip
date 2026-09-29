@@ -3,7 +3,7 @@
    whether coaching may use it. The stamp is the one loud element; everything
    around it stays quiet. */
 .page {
-  --memory-stated: #2f5d50;
+  --memory-stated: var(--pine-soft);
   --memory-proposed: #8a6a1f;
   --memory-review: #a8481f;
   --memory-disabled: #6c7a74;
@@ -23,9 +23,10 @@
   top: 0.75rem;
   margin: 0;
   padding: 0.8rem 1rem;
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   background: #e7f0dc;
-  box-shadow: 5px 5px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
   line-height: 1.4;
 }
 
@@ -47,9 +48,7 @@
   padding: 0.55rem 0.75rem;
   border: 1px solid var(--ledger-ink);
   color: var(--ledger-ink);
-  font:
-    700 0.7rem "Courier New",
-    monospace;
+  font: 500 0.7rem var(--font-mono);
   text-decoration: none;
 }
 
@@ -71,9 +70,7 @@
   border: 1px solid var(--ledger-ink);
   background: transparent;
   color: var(--ledger-ink);
-  font:
-    700 0.64rem "Courier New",
-    monospace;
+  font: 500 0.64rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -106,9 +103,7 @@
 .groupCount {
   margin: 0;
   color: var(--ledger-muted);
-  font:
-    700 0.62rem "Courier New",
-    monospace;
+  font: 500 0.62rem var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -122,10 +117,11 @@
 }
 
 .card {
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   border-left: 7px solid var(--memory-stated);
   background: var(--ledger-paper);
-  box-shadow: 6px 6px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .card[data-state="proposed"] {
@@ -163,9 +159,7 @@
   padding: 0.35rem 0.5rem;
   border: 2px solid currentColor;
   color: var(--memory-stated);
-  font:
-    700 0.58rem "Courier New",
-    monospace;
+  font: 500 0.58rem var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   transform: rotate(-1.5deg);
@@ -190,8 +184,8 @@
 .className,
 .origin,
 .revision {
-  font-family: "Courier New", monospace;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-weight: 500;
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
@@ -239,9 +233,7 @@
   border: 1px solid var(--ledger-ink);
   background: transparent;
   color: var(--ledger-ink);
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
 }
 
 .itemActions button:disabled,
@@ -261,9 +253,7 @@
   align-items: center;
   padding: 0.55rem 0.7rem;
   cursor: pointer;
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
 }
 
 .confirmation > p {
@@ -291,9 +281,10 @@
 
 .addPanel {
   margin-top: 0;
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   background: var(--ledger-paper);
-  box-shadow: 6px 6px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .editor > summary,
@@ -303,9 +294,7 @@
   display: flex;
   align-items: center;
   cursor: pointer;
-  font:
-    700 0.7rem "Courier New",
-    monospace;
+  font: 500 0.7rem var(--font-mono);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -328,9 +317,7 @@
   display: grid;
   gap: 0.35rem;
   color: var(--ledger-muted);
-  font:
-    700 0.64rem "Courier New",
-    monospace;
+  font: 500 0.64rem var(--font-mono);
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
@@ -345,10 +332,7 @@
   border-radius: 0;
   background: white;
   color: var(--ledger-ink);
-  font:
-    400 1rem/1.4 Georgia,
-    "Times New Roman",
-    serif;
+  font: 400 1rem/1.4 var(--font-sans);
   text-transform: none;
 }
 
@@ -391,9 +375,7 @@
 .historyMeta {
   margin: 0 0 0.35rem;
   color: var(--ledger-muted);
-  font:
-    700 0.58rem "Courier New",
-    monospace;
+  font: 500 0.58rem var(--font-mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
