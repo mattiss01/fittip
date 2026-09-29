@@ -1,6 +1,6 @@
 /*
- * Today extends the FitTip ledger the Plan established: cream stock, deep
- * green ink, hard edges, offset shadow, Courier stamps. It deliberately does
+ * Today uses the same stock, deep green ink and shared design tokens
+ * (globals.css) as the Plan. It deliberately does
  * not invent a second visual language for the same app.
  *
  * Its one signature is the outcome stamp - the tilted, outlined word struck
@@ -51,15 +51,11 @@
 .stepMark {
   grid-row: span 2;
   align-self: center;
-  font:
-    700 1.1rem "Courier New",
-    monospace;
+  font: 500 1.1rem var(--font-mono);
 }
 
 .stepLabel {
-  font:
-    700 0.62rem "Courier New",
-    monospace;
+  font: 500 0.62rem var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -78,18 +74,17 @@
 .slip {
   position: relative;
   padding: 1.1rem 1rem;
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   border-left: 7px solid var(--today-mark);
   background: var(--ledger-paper);
-  box-shadow: 7px 7px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .slipMark {
   margin: 0 0 0.35rem;
   color: var(--ledger-muted);
-  font:
-    700 0.64rem "Courier New",
-    monospace;
+  font: 500 0.64rem var(--font-mono);
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -107,9 +102,7 @@
   padding: 0.2rem 0.5rem;
   border: 1px solid var(--today-recovery);
   color: var(--today-recovery);
-  font:
-    700 0.62rem "Courier New",
-    monospace;
+  font: 500 0.62rem var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -120,9 +113,7 @@
   align-items: center;
   margin-top: 0.6rem;
   color: var(--ledger-ink);
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -156,9 +147,10 @@
   display: grid;
   gap: 0.55rem;
   padding: 1rem;
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   background: var(--ledger-paper);
-  box-shadow: 5px 5px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .session[data-cancelled="true"] {
@@ -221,9 +213,7 @@
   padding: 0.28rem 0.5rem;
   border: 2px solid var(--today-mark);
   color: var(--today-mark);
-  font:
-    700 0.62rem "Courier New",
-    monospace;
+  font: 500 0.62rem var(--font-mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   rotate: -4deg;
@@ -249,9 +239,7 @@
   padding: 0.15rem 0.4rem;
   border: 1px solid var(--ledger-rule);
   color: var(--ledger-muted);
-  font:
-    700 0.6rem "Courier New",
-    monospace;
+  font: 500 0.6rem var(--font-mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -259,9 +247,7 @@
 .meta {
   margin: 0;
   color: var(--ledger-muted);
-  font:
-    0.72rem "Courier New",
-    monospace;
+  font: 0.72rem var(--font-mono);
   letter-spacing: 0.03em;
 }
 
@@ -287,9 +273,7 @@
 
 .facts dt {
   color: var(--ledger-muted);
-  font:
-    700 0.6rem "Courier New",
-    monospace;
+  font: 500 0.6rem var(--font-mono);
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
@@ -316,9 +300,7 @@
 .sectionLabel {
   margin: 0;
   color: var(--ledger-muted);
-  font:
-    700 0.64rem "Courier New",
-    monospace;
+  font: 500 0.64rem var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -337,9 +319,7 @@
   justify-content: center;
   padding: 0.6rem 0.9rem;
   border: 1px solid var(--ledger-ink);
-  font:
-    700 0.72rem "Courier New",
-    monospace;
+  font: 500 0.72rem var(--font-mono);
   letter-spacing: 0.05em;
   text-decoration: none;
   text-transform: uppercase;

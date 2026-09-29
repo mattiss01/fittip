@@ -13,9 +13,10 @@
 .supporting,
 .addPanel,
 .history {
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   background: var(--ledger-paper);
-  box-shadow: 7px 7px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .attention {
@@ -46,8 +47,8 @@
 .tier,
 .areas,
 .rank {
-  font-family: "Courier New", monospace;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -160,9 +161,7 @@
   border: 1px solid var(--ledger-ink);
   background: transparent;
   color: var(--ledger-ink);
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
 }
 
 .controls button:disabled,
@@ -188,9 +187,7 @@
   align-items: center;
   padding: 0.55rem 0.7rem;
   cursor: pointer;
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
 }
 
 .confirmation > p {
@@ -216,9 +213,7 @@
   display: flex;
   align-items: center;
   cursor: pointer;
-  font:
-    700 0.72rem "Courier New",
-    monospace;
+  font: 500 0.72rem var(--font-mono);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -242,9 +237,7 @@
   display: grid;
   gap: 0.35rem;
   color: var(--ledger-muted);
-  font:
-    700 0.66rem "Courier New",
-    monospace;
+  font: 500 0.66rem var(--font-mono);
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
@@ -286,9 +279,7 @@
   border: 1px solid var(--ledger-ink);
   background: var(--goal-core);
   color: white;
-  font:
-    700 0.75rem "Courier New",
-    monospace;
+  font: 500 0.75rem var(--font-mono);
 }
 
 .consequence,
@@ -328,9 +319,7 @@
 
 .history li span {
   color: var(--ledger-muted);
-  font:
-    700 0.62rem "Courier New",
-    monospace;
+  font: 500 0.62rem var(--font-mono);
   text-transform: uppercase;
 }
 
@@ -340,9 +329,10 @@
   top: 0.75rem;
   margin: 0;
   padding: 0.8rem 1rem;
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   background: #e7f0dc;
-  box-shadow: 5px 5px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
   line-height: 1.4;
 }
 
@@ -363,9 +353,7 @@
   padding: 0.55rem 0.75rem;
   border: 1px solid var(--ledger-ink);
   color: var(--ledger-ink);
-  font:
-    700 0.7rem "Courier New",
-    monospace;
+  font: 500 0.7rem var(--font-mono);
   text-decoration: none;
 }
 

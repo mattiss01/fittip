@@ -1,6 +1,6 @@
 /*
- * The Plan surface extends the FitTip ledger: cream stock, deep green ink,
- * hard edges, offset shadow, Courier stamps. Its one signature is the day
+ * The Plan surface uses FitTip's stock, deep green ink and the shared design
+ * tokens in globals.css (type, radius, shadow). Its one signature is the day
  * rail - a fixed left column carrying the date stamp, the today marker, and
  * the Recovery day band. The rail encodes the only structure that is actually
  * true here: dates are a sequence, and today is the boundary before which
@@ -36,9 +36,7 @@
   padding: 0.55rem 0.75rem;
   border: 1px solid var(--ledger-ink);
   color: var(--ledger-ink);
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.04em;
   text-decoration: none;
   text-transform: uppercase;
@@ -56,10 +54,11 @@
 }
 
 .createSession {
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   border-top: 7px solid var(--plan-today);
   background: var(--ledger-paper);
-  box-shadow: 7px 7px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .createSession > summary {
@@ -68,9 +67,7 @@
   align-items: center;
   padding: 0 1rem;
   cursor: pointer;
-  font:
-    700 0.74rem "Courier New",
-    monospace;
+  font: 500 0.74rem var(--font-mono);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -86,9 +83,10 @@
   top: 0.75rem;
   margin: 0;
   padding: 0.8rem 1rem;
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   background: #e7f0dc;
-  box-shadow: 5px 5px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
   line-height: 1.4;
 }
 
@@ -111,9 +109,7 @@
   padding: 0.55rem 0.75rem;
   border: 1px solid var(--ledger-ink);
   color: var(--ledger-ink);
-  font:
-    700 0.7rem "Courier New",
-    monospace;
+  font: 500 0.7rem var(--font-mono);
   text-decoration: none;
 }
 
@@ -128,9 +124,10 @@
 .day {
   display: grid;
   grid-template-columns: 5.4rem 1fr;
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   background: var(--ledger-paper);
-  box-shadow: 7px 7px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .day[data-today="true"] {
@@ -163,8 +160,8 @@
 .meta,
 .lockMark,
 .sectionLabel {
-  font-family: "Courier New", monospace;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-weight: 500;
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
@@ -351,9 +348,7 @@
   border-radius: 0;
   background: transparent;
   color: var(--ledger-ink);
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -380,9 +375,7 @@
   align-items: center;
   padding: 0 0.7rem;
   cursor: pointer;
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -402,9 +395,7 @@
 .form label {
   display: block;
   color: var(--ledger-muted);
-  font:
-    700 0.62rem "Courier New",
-    monospace;
+  font: 500 0.62rem var(--font-mono);
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
@@ -446,10 +437,11 @@
 
 .zoneCard {
   padding: 1.2rem;
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   border-top: 7px solid var(--plan-today);
   background: var(--ledger-paper);
-  box-shadow: 7px 7px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .zoneCard h2 {
@@ -470,9 +462,7 @@
   padding: 0.7rem;
   border: 1px solid var(--ledger-ink);
   background: #edf0e7;
-  font:
-    700 0.9rem "Courier New",
-    monospace;
+  font: 500 0.9rem var(--font-mono);
   overflow-wrap: anywhere;
 }
 
@@ -498,9 +488,7 @@
   padding: 0.24rem 0.34rem;
   border: 1px solid currentColor;
   color: var(--plan-recovery);
-  font:
-    700 0.55rem "Courier New",
-    monospace;
+  font: 500 0.55rem var(--font-mono);
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
@@ -549,9 +537,7 @@
 
 .scope h4 {
   margin: 0;
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -573,9 +559,7 @@
   border-radius: 0;
   background: var(--plan-locked);
   color: white;
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -589,9 +573,7 @@
   padding: 0.5rem 0.7rem;
   border: 1px solid var(--ledger-ink);
   color: var(--ledger-ink);
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.04em;
   text-decoration: none;
   text-transform: uppercase;
@@ -608,9 +590,10 @@
 .skippedCard,
 .extensionCard {
   padding: 1rem;
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   background: var(--ledger-paper);
-  box-shadow: 6px 6px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .sourceCard {
@@ -648,9 +631,7 @@
 .weekdays > legend {
   padding: 0 0.35rem;
   color: var(--ledger-muted);
-  font:
-    700 0.62rem "Courier New",
-    monospace;
+  font: 500 0.62rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -670,9 +651,7 @@
   padding: 0.45rem;
   border: 1px solid var(--ledger-rule);
   color: var(--ledger-ink);
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
 }
 
 .weekdays input,
@@ -703,9 +682,7 @@
 .seriesForm label {
   display: block;
   color: var(--ledger-muted);
-  font:
-    700 0.62rem "Courier New",
-    monospace;
+  font: 500 0.62rem var(--font-mono);
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
@@ -744,9 +721,7 @@
   gap: 0.35rem;
   margin: 0;
   padding-left: 1.4rem;
-  font:
-    700 0.78rem/1.4 "Courier New",
-    monospace;
+  font: 700 0.78rem/1.4 var(--font-mono);
 }
 
 .reviewActions {
@@ -862,9 +837,7 @@
   gap: 0.4rem;
   margin-top: 0.5rem;
   color: var(--ledger-ink);
-  font:
-    700 0.72rem "Courier New",
-    monospace;
+  font: 500 0.72rem var(--font-mono);
   letter-spacing: 0.05em;
   text-decoration: none;
   text-transform: uppercase;
@@ -875,9 +848,10 @@
 .actionPanel {
   margin-top: 1rem;
   padding: 1rem;
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   background: var(--ledger-paper);
-  box-shadow: 7px 7px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .sessionSheet {
@@ -896,9 +870,7 @@
 .sheetDate {
   margin: 0;
   color: var(--ledger-muted);
-  font:
-    700 0.66rem "Courier New",
-    monospace;
+  font: 500 0.66rem var(--font-mono);
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
@@ -985,9 +957,10 @@
   width: min(15rem, calc(100vw - 2rem));
   margin: 0;
   padding: 0.3rem 0;
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   background: var(--ledger-paper);
-  box-shadow: 5px 5px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
   list-style: none;
 }
 
@@ -1000,9 +973,7 @@
   border: 0;
   background: transparent;
   color: var(--ledger-ink);
-  font:
-    700 0.7rem "Courier New",
-    monospace;
+  font: 500 0.7rem var(--font-mono);
   letter-spacing: 0.04em;
   text-align: left;
   text-decoration: none;
@@ -1036,9 +1007,7 @@
 
 .actionPanelHeader h2 {
   margin: 0;
-  font:
-    700 0.8rem "Courier New",
-    monospace;
+  font: 500 0.8rem var(--font-mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -1079,9 +1048,7 @@
 
 .reasonLabel {
   color: var(--ledger-muted);
-  font:
-    700 0.6rem "Courier New",
-    monospace;
+  font: 500 0.6rem var(--font-mono);
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }

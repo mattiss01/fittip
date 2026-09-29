@@ -46,9 +46,10 @@
   display: grid;
   gap: 0.85rem;
   padding: 1rem;
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   background: var(--ledger-paper);
-  box-shadow: 7px 7px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .field {
@@ -60,9 +61,7 @@
 .form label {
   display: block;
   color: var(--ledger-muted);
-  font:
-    700 0.62rem "Courier New",
-    monospace;
+  font: 500 0.62rem var(--font-mono);
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
@@ -96,9 +95,10 @@
   display: grid;
   gap: 0.6rem;
   padding: 0.85rem;
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   background: var(--ledger-paper);
-  box-shadow: 7px 7px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .day[data-today="true"] {
@@ -112,9 +112,7 @@
   gap: 0.45rem;
   margin: 0;
   color: var(--ledger-muted);
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -187,9 +185,7 @@
 .badge {
   padding: 0.1rem 0.4rem;
   border: 1px solid var(--ledger-ink);
-  font:
-    700 0.6rem "Courier New",
-    monospace;
+  font: 500 0.6rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -210,9 +206,7 @@
 .meta {
   margin: 0;
   color: var(--ledger-muted);
-  font:
-    700 0.66rem "Courier New",
-    monospace;
+  font: 500 0.66rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -229,9 +223,7 @@
 }
 
 .sectionLabel {
-  font:
-    700 0.62rem "Courier New",
-    monospace;
+  font: 500 0.62rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -258,9 +250,7 @@
   border: 1px solid var(--ledger-ink);
   background: var(--ledger-paper);
   color: var(--ledger-ink);
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
@@ -288,9 +278,9 @@
   display: grid;
   gap: 0.5rem;
   padding: 0.8rem 1rem calc(0.8rem + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--ledger-ink);
+  border-top: 1px solid var(--line);
   background: var(--ledger-paper);
-  box-shadow: 0 -5px 0 #a7b7a5;
+  box-shadow: 0 -10px 30px -18px rgb(23 51 46 / 0.3);
 }
 
 .dockSupport {
@@ -316,9 +306,7 @@
   min-height: 2.75rem;
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--ledger-ink);
-  font:
-    700 0.72rem "Courier New",
-    monospace;
+  font: 500 0.72rem var(--font-mono);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   cursor: pointer;
@@ -352,9 +340,7 @@
   border: 1px solid var(--ledger-ink);
   background: var(--ledger-ink);
   color: var(--ledger-paper);
-  font:
-    700 0.72rem "Courier New",
-    monospace;
+  font: 500 0.72rem var(--font-mono);
   letter-spacing: 0.05em;
   text-decoration: none;
   text-transform: uppercase;
@@ -432,9 +418,7 @@
   align-items: center;
   padding: 0 0.7rem;
   cursor: pointer;
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -465,9 +449,7 @@
   border: 1px solid var(--ledger-ink);
   background: var(--ledger-paper);
   color: var(--ledger-ink);
-  font:
-    700 0.72rem "Courier New",
-    monospace;
+  font: 500 0.72rem var(--font-mono);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   cursor: pointer;
@@ -490,9 +472,7 @@
 
 .roadmapNotice > h2 {
   margin: 0 0 0.3rem;
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }

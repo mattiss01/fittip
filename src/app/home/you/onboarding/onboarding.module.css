@@ -86,9 +86,10 @@
   z-index: 20;
   top: 0.75rem;
   padding: 0.85rem 1rem;
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   background: #e7f0dc;
-  box-shadow: 5px 5px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
   line-height: 1.45;
 }
 
@@ -103,7 +104,7 @@
 
 .stepHeader {
   padding-bottom: 1rem;
-  border-bottom: 3px solid var(--ledger-ink);
+  border-bottom: 1px solid var(--line);
 }
 
 .stepHeader p,
@@ -112,9 +113,7 @@
 .errorCard > p {
   margin: 0;
   color: #9b3b24;
-  font:
-    700 0.67rem "Courier New",
-    monospace;
+  font: 500 0.67rem var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -160,9 +159,7 @@
 
 .stepForm small {
   color: var(--ledger-muted);
-  font:
-    400 0.78rem Georgia,
-    serif;
+  font: 400 0.78rem var(--font-sans);
   letter-spacing: 0;
   line-height: 1.4;
   text-transform: none;
@@ -193,9 +190,10 @@
 .constraintList fieldset {
   margin: 0;
   padding: 1rem;
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   background: var(--ledger-paper);
-  box-shadow: 6px 6px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .entryCard {
@@ -209,9 +207,7 @@
 .constraintList legend {
   padding: 0 0.35rem;
   color: #8a351f;
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -242,7 +238,7 @@
   padding: 0.55rem;
   border: 1px solid var(--ledger-rule);
   background: #f4f1e6;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
   font-size: 0.92rem;
   font-weight: 400;
   letter-spacing: 0;
@@ -315,9 +311,7 @@
   border-radius: 0;
   background: var(--ledger-signal);
   color: white;
-  font:
-    700 0.72rem "Courier New",
-    monospace;
+  font: 500 0.72rem var(--font-mono);
 }
 
 .secondaryButton {
@@ -347,9 +341,7 @@
 .contextMap > header p {
   margin: 0;
   color: #8a351f;
-  font:
-    700 0.67rem "Courier New",
-    monospace;
+  font: 500 0.67rem var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -370,9 +362,7 @@
 .mapLegend span {
   padding: 0.55rem;
   color: white;
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.08em;
   text-align: center;
   text-transform: uppercase;
@@ -393,9 +383,10 @@
   align-content: start;
   gap: 0.75rem;
   padding: 2.7rem 0.85rem 0.85rem;
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   background: var(--ledger-paper);
-  box-shadow: 5px 5px 0 #9da99d;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .reviewCard:has([data-destination="goals"]) {
@@ -412,12 +403,9 @@
   right: 0.7rem;
   padding: 0.3rem 0.45rem;
   color: white;
-  font:
-    700 0.6rem "Courier New",
-    monospace;
+  font: 500 0.6rem var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  transform: rotate(1deg);
 }
 
 .destinationStamp[data-destination="goals"] {
@@ -451,9 +439,7 @@
 .comparison p {
   margin: 0;
   color: #8a351f;
-  font:
-    700 0.63rem "Courier New",
-    monospace;
+  font: 500 0.63rem var(--font-mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -488,9 +474,7 @@
 
 .rankPreview li span {
   color: #8a351f;
-  font:
-    700 0.62rem "Courier New",
-    monospace;
+  font: 500 0.62rem var(--font-mono);
   text-transform: uppercase;
 }
 
@@ -516,9 +500,10 @@
 .errorCard {
   margin-top: 1.5rem;
   padding: clamp(1.2rem, 5vw, 2rem);
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   background: var(--ledger-paper);
-  box-shadow: 7px 7px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .startCard h2,
@@ -570,9 +555,7 @@
   padding: 0.65rem 0.9rem;
   border: 1px solid var(--ledger-ink);
   color: var(--ledger-ink);
-  font:
-    700 0.72rem "Courier New",
-    monospace;
+  font: 500 0.72rem var(--font-mono);
 }
 
 .loadingCard,

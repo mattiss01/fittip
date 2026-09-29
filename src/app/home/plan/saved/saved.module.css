@@ -21,9 +21,7 @@
   padding: 0.55rem 0.75rem;
   border: 1px solid var(--ledger-ink);
   color: var(--ledger-ink);
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.04em;
   text-decoration: none;
   text-transform: uppercase;
@@ -41,9 +39,10 @@
   top: 0.75rem;
   margin: 0;
   padding: 0.8rem 1rem;
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
   background: #e4ebf5;
-  box-shadow: 5px 5px 0 #a7b7a5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
   line-height: 1.4;
 }
 
@@ -70,9 +69,7 @@
   padding: 0.55rem 0.75rem;
   border: 1px solid var(--ledger-ink);
   color: var(--ledger-ink);
-  font:
-    700 0.7rem "Courier New",
-    monospace;
+  font: 500 0.7rem var(--font-mono);
   text-decoration: none;
 }
 
@@ -102,13 +99,12 @@
   list-style: none;
 }
 
-/* The signature: a catalog card, shadowed twice so it reads as a stack. */
+/* A saved session is a reusable card; it sits on the shared card token. */
 .card {
-  border: 1px solid var(--ledger-ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
   background: var(--library-stock);
-  box-shadow:
-    4px 4px 0 #cdd6c5,
-    8px 8px 0 #a7b7a5;
+  box-shadow: var(--shadow-card);
 }
 
 .tab {
@@ -116,9 +112,7 @@
   padding: 0.55rem 0.75rem;
   background: var(--library-ink);
   color: var(--ledger-paper);
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.07em;
   overflow-wrap: anywhere;
   text-transform: uppercase;
@@ -140,9 +134,9 @@
 .meta {
   margin: 0.4rem 0 0;
   color: var(--ledger-muted);
-  font-family: "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.6rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
@@ -171,9 +165,7 @@
   align-items: center;
   padding: 0 0.7rem;
   cursor: pointer;
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -193,9 +185,7 @@
 .form label {
   display: block;
   color: var(--ledger-muted);
-  font:
-    700 0.62rem "Courier New",
-    monospace;
+  font: 500 0.62rem var(--font-mono);
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
@@ -245,9 +235,7 @@
   border-radius: 0;
   background: transparent;
   color: var(--ledger-ink);
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -273,9 +261,7 @@
   padding: 0.5rem 0.7rem;
   border: 1px solid var(--ledger-ink);
   color: var(--ledger-ink);
-  font:
-    700 0.68rem "Courier New",
-    monospace;
+  font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.04em;
   text-decoration: none;
   text-transform: uppercase;

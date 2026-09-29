@@ -48,7 +48,8 @@
   border: 1px solid var(--border);
   border-radius: 1rem 1rem 1rem 0.25rem;
   background: var(--surface);
-  box-shadow: 7px 7px 0 #c9d8c5;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .cardHeading {
@@ -60,9 +61,9 @@
 
 .reviewHeader {
   margin: 0;
-  font-family: "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -82,7 +83,7 @@
 .horizon {
   margin: 0.4rem 0 0;
   color: var(--muted);
-  font-family: "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
 }
 
@@ -143,9 +144,9 @@
 .phaseIndex {
   margin: 0;
   color: var(--roadmap-node);
-  font-family: "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -160,7 +161,7 @@
 .phaseDates {
   margin: 0.2rem 0 0;
   color: var(--muted);
-  font-family: "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.74rem;
 }
 
@@ -185,9 +186,9 @@
   padding: 0.2rem 0.45rem;
   border: 1px solid currentColor;
   border-radius: 0.2rem;
-  font-family: "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -245,7 +246,7 @@
 .milestoneDate {
   margin: 0.1rem 0 0;
   color: var(--muted);
-  font-family: "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.72rem;
 }
 
@@ -278,9 +279,9 @@
 .checkpointKind {
   margin: 0;
   color: var(--roadmap-checkpoint);
-  font-family: "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -305,9 +306,9 @@
 
 .sectionHeading {
   margin: 0 0 0.5rem;
-  font-family: "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -365,9 +366,9 @@
   border: 1px solid currentColor;
   border-radius: 0.2rem;
   color: var(--attention-maintenance);
-  font-family: "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -455,9 +456,9 @@
 
 .label {
   color: var(--roadmap-spine);
-  font-family: "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -498,7 +499,7 @@
 
 .counter {
   color: var(--muted);
-  font-family: "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.72rem;
   letter-spacing: 0.04em;
 }
@@ -524,9 +525,9 @@
   padding: 0.6rem 0.9rem;
   border: 1px solid var(--roadmap-spine);
   border-radius: 0;
-  font-family: "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
@@ -603,9 +604,9 @@
   border: 1px solid currentColor;
   border-radius: 0.2rem;
   color: var(--roadmap-checkpoint);
-  font-family: "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -635,9 +636,9 @@
 .editLegend {
   padding: 0 0.35rem;
   color: var(--roadmap-node);
-  font-family: "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }

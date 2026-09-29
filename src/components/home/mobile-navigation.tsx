@@ -4,12 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import styles from "@/app/home/home.module.css";
+import {
+  PlanIcon,
+  ProgressIcon,
+  TodayIcon,
+  YouIcon,
+} from "@/components/home/navigation-icons";
 
 const DESTINATIONS = [
-  { href: "/home/today", label: "Today", mark: "01" },
-  { href: "/home/plan", label: "Plan", mark: "02" },
-  { href: "/home/progress", label: "Progress", mark: "03" },
-  { href: "/home/you", label: "You", mark: "04" },
+  { href: "/home/today", label: "Today", Icon: TodayIcon },
+  { href: "/home/plan", label: "Plan", Icon: PlanIcon },
+  { href: "/home/progress", label: "Progress", Icon: ProgressIcon },
+  { href: "/home/you", label: "You", Icon: YouIcon },
 ] as const;
 
 export function MobileNavigation() {
@@ -18,7 +24,7 @@ export function MobileNavigation() {
   return (
     <nav className={styles.navigation} aria-label="Primary">
       <ul>
-        {DESTINATIONS.map(({ href, label, mark }) => {
+        {DESTINATIONS.map(({ href, label, Icon }) => {
           const current =
             pathname === href ||
             (href === "/home/plan" && pathname.startsWith("/home/plan/")) ||
@@ -27,7 +33,9 @@ export function MobileNavigation() {
           return (
             <li key={href}>
               <Link aria-current={current ? "page" : undefined} href={href}>
-                <span aria-hidden="true">{mark}</span>
+                <span className={styles.navigationIcon}>
+                  <Icon />
+                </span>
                 <strong>{label}</strong>
               </Link>
             </li>
