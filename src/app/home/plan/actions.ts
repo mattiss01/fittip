@@ -395,7 +395,18 @@ function buildChanges(
     ];
   }
   if (operation === "cancel") {
-    return [{ operation, sessionId: session.id }];
+    // Why, if the owner said (29 Sep 2026). Both fields are optional; the
+    // change parser refuses anything outside the six picks or over the bound.
+    const reason = optionalText(formData, "cancelReason");
+    const note = optionalText(formData, "cancelNote");
+    return [
+      {
+        operation,
+        sessionId: session.id,
+        ...(reason === undefined ? {} : { reason }),
+        ...(note === undefined ? {} : { note }),
+      } as RollingPlanChange,
+    ];
   }
   if (operation === "reactivate") {
     if (session.status !== "cancelled") throw new RollingPlanValidationError();

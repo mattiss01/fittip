@@ -1066,6 +1066,88 @@
   outline-offset: 2px;
 }
 
+/* Why a session was cancelled: chips that are radios, then a note. */
+.reasonFields {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.reasonChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.reasonChips legend {
+  width: 100%;
+  margin-bottom: 0.4rem;
+  padding: 0;
+  color: var(--ledger-muted);
+  font:
+    700 0.62rem "Courier New",
+    monospace;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.reasonChip {
+  position: relative;
+}
+
+.reasonChip input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.form .reasonChip label {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.8rem;
+  border: 1px solid var(--ledger-ink);
+  background: white;
+  color: var(--ledger-ink);
+  font:
+    700 0.66rem "Courier New",
+    monospace;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.form .reasonChip input:checked + label {
+  background: var(--ledger-ink);
+  color: var(--ledger-paper);
+}
+
+.form .reasonChip input:focus-visible + label {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
+}
+
+.reasonLine {
+  margin: 0.8rem 0 0;
+  padding: 0.6rem 0.7rem;
+  border-left: 4px solid var(--ledger-muted);
+  background: #edf0e7;
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.reasonLabel {
+  color: var(--ledger-muted);
+  font:
+    700 0.6rem "Courier New",
+    monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
 @media (max-width: 400px) {
   .day {
     grid-template-columns: 4.6rem 1fr;

@@ -15,6 +15,9 @@ import {
 
 import { INITIAL_PLAN_ACTION_STATE } from "../../action-state";
 import { changePlanAction } from "../../actions";
+import { CancelReasonFields } from "../../cancel-reason-fields";
+import { INITIAL_CANCELLATION_ACTION_STATE } from "../../cancellation-action-state";
+import { setCancellationReasonAction } from "../../cancellation-actions";
 import styles from "../../plan.module.css";
 import {
   SESSION_RECOVERY_FLAG,
@@ -48,17 +51,22 @@ import {
 
 import { COMPLETION_OUTCOME_LABELS } from "../../../log/log-action-state";
 import { ActivityList } from "@/components/training/activity-list";
+import {
+  CANCELLATION_REASON_LABELS,
+  type CancellationReason,
+} from "@/lib/training/cancellation-reasons";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
 
 export type SessionPageOrigin = "plan" | "today";
 
-type Panel = "edit" | "duplicate" | "save" | "cancel" | "delete";
+type Panel = "edit" | "duplicate" | "save" | "cancel" | "delete" | "reason";
 type Channel = "plan" | "series";
 
 const PANEL_HEADINGS: Record<Panel, string> = {
   edit: "Edit session",
   duplicate: "Duplicate",
   save: "Save to library",
+  reason: "Why it was cancelled",
   cancel: "Cancel session",
   delete: "Delete session",
 };
@@ -83,6 +91,7 @@ export function SessionPage({
   expectedRevision,
   origin,
   originDate,
+  cancellation = null,
 }: {
   session: PlanSessionView | null;
   series?: PlanSeriesView;
@@ -91,6 +100,8 @@ export function SessionPage({
   expectedRevision: number;
   origin: SessionPageOrigin;
   originDate: string | null;
+  /** Why it was cancelled, read only for a cancelled session. */
+  cancellation?: SessionCancellationView | null;
 }) {
   const router = useRouter();
   const [state, action, pending] = useActionState(
@@ -134,6 +145,7 @@ export function SessionPage({
   );
 
   const [panel, setPanel] = useState<Panel | null>(null);
+  const closePanel = useCallback(() => setPanel(null), []);
   // A save closes the panel it came from, during render against the
   // submission it answered, as the Plan's edit disclosure did: an effect would
   // cost a render and could close a panel the owner has since reopened.
@@ -378,10 +390,24 @@ export function SessionPage({
             detail: describeMeasurement(activity.target),
           }))}
         />
-        {cancelled ? (
+        {cancelled && cancellation !== null ? (
+          <p className={styles.reasonLine} data-cancellation-reason>
+            <span className={styles.reasonLabel}>Why</span>{" "}
+            {[
+              cancellation.reason === null
+                ? null
+                : CANCELLATION_REASON_LABELS[cancellation.reason],
+              cancellation.note === null ? null : `“${cancellation.note}”`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        ) : null}
+        {cancelled && !past ? (
           <p className={styles.consequenceStandalone}>
             Cancelled, kept on the record. Reactivate puts it back after the
-            day&rsquo;s last session.
+            day&rsquo;s last session
+            {cancellation === null ? "." : " and clears the reason."}
           </p>
         ) : null}
         {past && !session.log ? (
@@ -472,18 +498,30 @@ export function SessionPage({
                 </>
               )}
             </MoreMenu>
-          ) : cancelled && !past ? (
+          ) : cancelled ? (
             <MoreMenu>
               {(close) => (
-                <MenuItem
-                  danger
-                  onSelect={() => {
-                    close();
-                    setPanel("delete");
-                  }}
-                >
-                  Delete
-                </MenuItem>
+                <>
+                  <MenuItem
+                    onSelect={() => {
+                      close();
+                      setPanel("reason");
+                    }}
+                  >
+                    {cancellation === null ? "Add reason" : "Edit reason"}
+                  </MenuItem>
+                  {past ? null : (
+                    <MenuItem
+                      danger
+                      onSelect={() => {
+                        close();
+                        setPanel("delete");
+                      }}
+                    >
+                      Delete
+                    </MenuItem>
+                  )}
+                </>
               )}
             </MoreMenu>
           ) : null}
@@ -596,6 +634,14 @@ export function SessionPage({
             </form>
           ) : null}
 
+          {panel === "reason" ? (
+            <ReasonForm
+              sessionId={session.id}
+              initial={cancellation}
+              onSaved={closePanel}
+            />
+          ) : null}
+
           {panel === "save" ? (
             <SaveToLibrary
               bare
@@ -619,6 +665,7 @@ export function SessionPage({
                   name="expectedRevision"
                   value={expectedRevision}
                 />
+                <CancelReasonFields idPrefix={`cancel-${session.id}`} />
                 <button className={styles.action} type="submit" disabled={busy}>
                   Cancel session
                 </button>
@@ -678,6 +725,77 @@ export function SessionPage({
         </ActionPanel>
       )}
     </>
+  );
+}
+
+export type SessionCancellationView = {
+  reason: CancellationReason | null;
+  note: string | null;
+};
+
+/**
+ * Adds, edits or clears why the session was cancelled. It has its own action
+ * because a reason annotates the plan without changing it: no revision is
+ * checked, and nothing else on the page is disturbed by saving one.
+ */
+function ReasonForm({
+  sessionId,
+  initial,
+  onSaved,
+}: {
+  sessionId: string;
+  initial: SessionCancellationView | null;
+  onSaved: () => void;
+}) {
+  const [state, action, pending] = useActionState(
+    setCancellationReasonAction,
+    INITIAL_CANCELLATION_ACTION_STATE,
+  );
+  // Closing the panel belongs to the page, so it happens after this form's
+  // render rather than during it.
+  useEffect(() => {
+    if (state.status === "saved") onSaved();
+  }, [state.status, state.submission, onSaved]);
+
+  return (
+    <form className={styles.form} action={action}>
+      <input type="hidden" name="sessionId" value={sessionId} />
+      <CancelReasonFields
+        idPrefix={`reason-${sessionId}`}
+        initial={initial ?? undefined}
+      />
+      <p className={styles.consequenceStandalone}>
+        Only you see this. It is kept with the session and is not sent to a
+        coach.
+      </p>
+      <button className={styles.primary} type="submit" disabled={pending}>
+        Save reason
+      </button>
+      {initial === null ? null : (
+        <button
+          className={styles.action}
+          type="submit"
+          disabled={pending}
+          formAction={(formData: FormData) => {
+            formData.set("cancelReason", "");
+            formData.set("cancelNote", "");
+            action(formData);
+          }}
+        >
+          Clear reason
+        </button>
+      )}
+      <p
+        className={
+          state.status === "idle" ? styles.srOnly : styles.noticeInline
+        }
+        data-state={pending ? "saving" : state.status}
+        role="status"
+        aria-live="polite"
+      >
+        {pending ? "Saving the reason…" : state.message}
+      </p>
+    </form>
   );
 }
 

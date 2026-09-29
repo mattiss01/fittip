@@ -484,6 +484,55 @@ describe("plan actions", () => {
     expect(thirdApply).not.toHaveBeenCalled();
   });
 
+  it("carries why a session was cancelled, and nothing when the owner said nothing", async () => {
+    const applyChangeSet = vi.fn().mockResolvedValue({ result: "applied" });
+    createPlanMock.mockResolvedValue({
+      getPlanSlice: vi.fn().mockResolvedValue(slice()),
+      applyChangeSet,
+      materializeSeries: vi.fn().mockResolvedValue({
+        planRevision: 1,
+        createdCount: 0,
+        skipped: [],
+      }),
+    });
+
+    await changePlanAction(
+      INITIAL_PLAN_ACTION_STATE,
+      form({
+        operation: "cancel",
+        sessionId: SESSION_ID,
+        cancelReason: "tired",
+        cancelNote: "  work ran late ",
+      }),
+    );
+    await changePlanAction(
+      INITIAL_PLAN_ACTION_STATE,
+      form({
+        operation: "cancel",
+        sessionId: SESSION_ID,
+        cancelReason: "",
+        cancelNote: "   ",
+      }),
+    );
+
+    const [withReason] = applyChangeSet.mock.calls[0] as [RollingPlanChangeSet];
+    const withoutReason = (
+      applyChangeSet.mock.calls[1] as [RollingPlanChangeSet]
+    )[0];
+    expect(withReason.changes).toEqual([
+      {
+        operation: "cancel",
+        sessionId: SESSION_ID,
+        reason: "tired",
+        note: "work ran late",
+      },
+    ]);
+    // "No reason" and a blank note are a plain cancel, as before.
+    expect(withoutReason.changes).toEqual([
+      { operation: "cancel", sessionId: SESSION_ID },
+    ]);
+  });
+
   it("composes a reactivate for a cancelled session and for nothing else", async () => {
     const cancelledSlice = {
       ...slice(),

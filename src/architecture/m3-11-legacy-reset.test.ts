@@ -220,6 +220,11 @@ const activityLibrarySurface = [
  * Create session and an unplanned log may start from a saved session, so both
  * pages list them, and redirect on its authentication error. Like the library,
  * `saved_sessions` was not part of M3-11's reset.
+ *
+ * "Why a session was cancelled" added `session-cancellation-repository` and
+ * its domain module: the session's own page reads the reason and its action
+ * edits it. The table is new, not a legacy one, and
+ * `session-cancellation-boundary.test.ts` keeps its reach to those two files.
  */
 const allowedServerModules = [
   "@/server/completions/completion-log",
@@ -229,7 +234,9 @@ const allowedServerModules = [
   "@/server/repositories/profile-repository",
   "@/server/repositories/rolling-plan-repository",
   "@/server/repositories/saved-session-repository",
+  "@/server/repositories/session-cancellation-repository",
   "@/server/rolling-plan/rolling-plan",
+  "@/server/rolling-plan/session-cancellation",
   // A7-4, both narrow on purpose. An edit that saved a coach's activity list
   // records "accepted" after the plan write — that one decision and nothing
   // else — and the Plan reads the suggestions still open. Neither reaches the

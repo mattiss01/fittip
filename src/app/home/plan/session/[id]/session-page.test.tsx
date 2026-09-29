@@ -29,6 +29,9 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("../../actions", () => ({ changePlanAction: changePlanActionMock }));
+vi.mock("../../cancellation-actions", () => ({
+  setCancellationReasonAction: vi.fn(),
+}));
 vi.mock("../../series-actions", () => ({
   changeSeriesAction: changeSeriesActionMock,
 }));
@@ -43,7 +46,7 @@ import {
   type SeriesActionState,
 } from "../../series-action-state";
 import type { PlanSessionView } from "../../session-view";
-import { SessionPage } from "./session-page";
+import { SessionPage, type SessionCancellationView } from "./session-page";
 
 const TODAY = "2026-08-17";
 const DATES = Array.from({ length: 14 }, (_, offset) => {
@@ -103,6 +106,7 @@ function page(
   value: PlanSessionView | null,
   segment?: PlanSeriesView,
   origin: "plan" | "today" = "plan",
+  cancellation: SessionCancellationView | null = null,
 ) {
   return (
     <SessionPage
@@ -113,6 +117,7 @@ function page(
       expectedRevision={3}
       origin={origin}
       originDate={null}
+      cancellation={cancellation}
     />
   );
 }
@@ -285,6 +290,76 @@ describe("SessionPage", () => {
     expect(form.querySelector("input[name='sessionId']")).toHaveValue(
       session().id,
     );
+  });
+
+  it("asks why on cancel, optionally, with no reason chosen until one is", () => {
+    render(page(session()));
+    choose("Cancel session");
+
+    const form = screen
+      .getByRole("button", { name: "Cancel session" })
+      .closest("form")!;
+    const picks = Array.from(
+      form.querySelectorAll<HTMLInputElement>("input[name='cancelReason']"),
+    );
+    expect(picks.map((pick) => pick.labels?.[0]?.textContent)).toEqual([
+      "No reason",
+      "Ill",
+      "Pain or injury",
+      "Tired",
+      "No time",
+      "Weather",
+      "Other",
+    ]);
+    expect(
+      picks.filter((pick) => pick.checked).map((pick) => pick.value),
+    ).toEqual([""]);
+    expect(form.querySelector("textarea[name='cancelNote']")).toHaveAttribute(
+      "maxLength",
+      "500",
+    );
+  });
+
+  it("asks why when cancelling only one occurrence too", () => {
+    render(page(occurrence(), series()));
+    choose("Cancel session");
+    const form = screen
+      .getByRole("button", { name: "Cancel only this session" })
+      .closest("form")!;
+    expect(form.querySelectorAll("input[name='cancelReason']")).toHaveLength(7);
+  });
+
+  it("shows why a session was cancelled, says Reactivate clears it, and edits it", () => {
+    render(
+      page(session({ status: "cancelled" }), undefined, "plan", {
+        reason: "tired",
+        note: "work ran late",
+      }),
+    );
+
+    expect(
+      document.querySelector("[data-cancellation-reason]")?.textContent,
+    ).toBe("Why Tired · “work ran late”");
+    expect(screen.getByText(/clears the reason/)).toBeVisible();
+
+    choose("Edit reason");
+    const form = screen
+      .getByRole("button", { name: "Save reason" })
+      .closest("form")!;
+    expect(
+      form.querySelector<HTMLInputElement>("input[value='tired']")?.checked,
+    ).toBe(true);
+    expect(form.querySelector("textarea")).toHaveValue("work ran late");
+    expect(screen.getByRole("button", { name: "Clear reason" })).toBeVisible();
+    expect(screen.getByText(/not sent to a coach/)).toBeVisible();
+  });
+
+  it("lets a reason be added to a cancelled session from a past day", () => {
+    render(page(session({ status: "cancelled", localDate: "2026-08-10" })));
+    expect(screen.queryByRole("button", { name: "Reactivate" })).toBeNull();
+    openMenu();
+    expect(screen.getByRole("button", { name: "Add reason" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
   });
 
   it("goes back to the Plan at that day once a delete has removed the session", () => {

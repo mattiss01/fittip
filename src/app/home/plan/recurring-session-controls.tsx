@@ -1,5 +1,6 @@
 "use client";
 
+import { CancelReasonFields } from "./cancel-reason-fields";
 import type { FillProposal } from "./fill/fill-state";
 import { RecurrenceFields } from "./recurrence-fields";
 import type { SeriesActionState } from "./series-action-state";
@@ -227,6 +228,7 @@ export function RecurringSessionControls({
             name="expectedRevision"
             value={expectedRevision}
           />
+          <CancelReasonFields idPrefix={`cancel-${session.id}`} />
           <button
             className={styles.action}
             type="submit"

@@ -69,13 +69,31 @@ test.describe("M3-19 delete a planned session", () => {
         fullPage: true,
         path: path.join(evidenceDirectory, "M3-19-card-verbs-390x844.png"),
       });
+      // Since 29 Sep 2026 it may say why: a quick pick and a note, both
+      // optional, shown on the session's page and nowhere else.
+      await cancel.getByText("Tired", { exact: true }).click();
+      await cancel.getByLabel("Note (optional)").fill("work ran late");
       await cancel.getByRole("button", { name: "Cancel session" }).click();
       await expect(
         page.locator("article").getByText("Cancelled", { exact: true }),
       ).toBeVisible();
+      await expect(page.locator("[data-cancellation-reason]")).toHaveText(
+        "Why Tired · “work ran late”",
+      );
+
+      // The reason is edited apart from the plan.
+      await chooseMore(page, "Edit reason");
+      const reason = sessionPanel(page, "Why it was cancelled");
+      await reason.getByText("Weather", { exact: true }).click();
+      await reason.getByRole("button", { name: "Save reason" }).click();
+      await expect(page.locator("[data-cancellation-reason]")).toHaveText(
+        "Why Weather · “work ran late”",
+      );
 
       // M3-20: a cancelled session can come back in one tap, and be cancelled
-      // again with the verbs it had all along.
+      // again with the verbs it had all along. Reactivating clears the reason,
+      // so a second cancel that gives none shows none.
+      await expect(page.getByText(/clears the reason/)).toBeVisible();
       await page
         .getByRole("button", { name: "Reactivate", exact: true })
         .click();
@@ -89,10 +107,12 @@ test.describe("M3-19 delete a planned session", () => {
       await expect(
         page.getByRole("button", { name: "Reactivate", exact: true }),
       ).toBeVisible();
+      await expect(page.locator("[data-cancellation-reason]")).toHaveCount(0);
       await backToPlan(page);
       await expect(
         day(page, today).getByText("Running · Cancelled, kept on the record"),
       ).toBeVisible();
+      await expect(day(page, today).getByText(/Tired|Weather/)).toHaveCount(0);
 
       // A lock defends a session from a sweep, never from the owner asking for
       // this one session by name.
