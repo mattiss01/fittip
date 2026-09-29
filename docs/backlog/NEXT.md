@@ -41,6 +41,28 @@ Ordered by dependency. A lane is named where it is not the build lane.
       rethink what it protects. Decide before the coach can replan live, which is when it
       starts to matter.
 
+**App redesign in the Coach's note direction.** The owner chose it on 29 Sep 2026 from three
+Today prototypes (`prototype/today-design`, `/prototype/today?variant=C`): FitTip's pine and
+ember with a modern sans (Schibsted Grotesk, DM Mono for small labels), icon nav, a scrollable
+day strip, the coach's one-line reason, session cards that fold into a receipt once logged, and
+bottom sheets instead of new pages. Less text: each screen is a heading, the content and one
+main action. No week ring. The owner flagged a possible bias toward the look they already know,
+so start with Today and adjust from there rather than committing every screen up front. Build
+lane, one screen per merge.
+
+- [ ] **R1 — Foundations.** Colour and type tokens, fonts, icons and the bottom nav, app-wide.
+      Nothing else changes, so every screen shifts at once and the owner can react early.
+- [ ] **R2 — Today in the new design.** From variant C, rewritten properly (the prototype has
+      no tests or error states). The goal bar and "done" marks must come from real records:
+      `.claude/rules/ui.md` forbids a streak, score or progress the data does not state.
+- [ ] **R3 — The other screens, one per merge.** Plan, session page, Log (as a sheet),
+      Progress, You. Cut each page's explanatory intro to one line or remove it; say where an
+      explanation must survive.
+- [ ] **R4 — Motion.** Day-change slide (View Transitions), sheet and press feedback,
+      instant log with background save; everything off under reduced motion.
+- Cost to expect: many unit and browser tests assert the current copy, so cutting text means
+      rewriting those assertions in the same merge.
+
 
 ## Fix in passing
 
