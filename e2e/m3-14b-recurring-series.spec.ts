@@ -11,8 +11,7 @@ import { watchConsoleErrors } from "./support/console-errors";
 
 const evidenceDirectory = path.join(
   process.cwd(),
-  "docs",
-  "validation",
+  "test-results",
   "M3",
   "evidence",
 );

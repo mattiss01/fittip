@@ -29,8 +29,7 @@ Single-context repo:
 ├── docs/
 │   ├── decisions/          ← ADRs (ADR-001 … ADR-009)
 │   ├── product/            ← feature briefs (F-001 … F-003)
-│   ├── backlog/M<n>/       ← tickets and wayfinder efforts
-│   └── validation/M<n>/    ← validation records + evidence
+│   └── backlog/M<n>/       ← tickets and wayfinder efforts
 └── src/
 ```
 

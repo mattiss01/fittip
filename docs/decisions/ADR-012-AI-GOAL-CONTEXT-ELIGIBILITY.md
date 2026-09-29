@@ -5,7 +5,7 @@
 **Date:** 3 August 2026
 
 **Ticket:** raised as finding F1 by the
-[M2 milestone closeout](../validation/M2/M2-MILESTONE-CLOSEOUT.md) under
+[M2 milestone closeout](https://github.com/mattiss01/fittip/blob/archive/validation-docs/docs/validation/M2/M2-MILESTONE-CLOSEOUT.md) under
 [M2-04](../backlog/M2/M2-04-M2-VALIDATION-SLICE.md); implemented by
 [M3-01](../backlog/M3/M3-01-LOCAL-AI-ADAPTER-CONTROLS.md)
 
