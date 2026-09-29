@@ -50,9 +50,6 @@ main action. No week ring. The owner flagged a possible bias toward the look the
 so start with Today and adjust from there rather than committing every screen up front. Build
 lane, one screen per merge.
 
-- [~] **R2 — Today in the new design.** From variant C, rewritten properly (the prototype has
-      no tests or error states). The goal bar and "done" marks must come from real records:
-      `.claude/rules/ui.md` forbids a streak, score or progress the data does not state.
 - [ ] **R3 — The other screens, one per merge.** Plan, session page, Log (as a sheet),
       Progress, You. Cut each page's explanatory intro to one line or remove it; say where an
       explanation must survive.
@@ -165,6 +162,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 29 Sep 2026 | `ef213cf` | [36603973582](https://github.com/mattiss01/fittip/actions/runs/36603973582) | R2: Today has a week strip, card-style sessions with one Log action, and logged sessions folded into receipts marked per outcome (never a tick for a skip); the intro, stamp and Open Plan are gone and Save session to library is a text action everywhere. No migration; `auth.spec.ts` and m3-15b's accepted flow now expect the heading "Today" rather than "Today." |
 | 29 Sep 2026 | `4cd14fa` | [36602052140](https://github.com/mattiss01/fittip/actions/runs/36602052140) | R1: Schibsted Grotesk and DM Mono, one palette with the old names as aliases, card radius and soft shadow, rounded buttons with a press scale (off under reduced motion), icon navigation. The save-dock reserve is 16rem, because proposal review's dock grew past 11.5rem in the new type and hid the last item's Reject (M3-16A, run 36600705825). No migration |
 | 29 Sep 2026 | `e5375ca` | [36596005515](https://github.com/mattiss01/fittip/actions/runs/36596005515) | `docs/validation/` deleted at the owner's request (85 files, 5.2 MB) and kept at the tag `archive/validation-docs`, which the three remaining links now point at; the browser specs write screenshots under the ignored `test-results/` instead. CLAUDE.md changed in its own commit (`a91567f`); `docs/backlog/M0`–`M3` stay |
 | 29 Sep 2026 | `68adaa3` | [36589523944](https://github.com/mattiss01/fittip/actions/runs/36589523944) | Cancel asks "Why? (optional)" in the owner's own words (quick picks tried and dropped); the session's page shows it, edits or clears it, and Reactivate clears it. Stored only, in its own owner-select-only table outside the plan read, snapshots and history, and no coach reads it (`session-cancellation-boundary.test.ts`). Migration `20260929143946` applied to the founder project — 36 migrations, advisors 24 definer + 1 auth, the new one being `set_session_cancellation_reason` |
