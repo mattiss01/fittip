@@ -366,8 +366,17 @@
   color: var(--today-recovery);
 }
 
-.receipt:has([data-outcome="skipped"]) .receiptCheck {
+.receiptCheck[data-outcome-mark="partially_completed"] {
+  background: color-mix(in srgb, var(--today-mark) 70%, var(--ledger-paper));
+}
+
+.receiptCheck[data-outcome-mark="skipped"] {
   background: var(--ledger-muted);
+}
+
+.receiptCheck[data-outcome-mark="replaced"],
+.receiptCheck[data-outcome-mark="unplanned"] {
+  background: var(--today-recovery);
 }
 
 .record {

@@ -146,7 +146,11 @@
   line-height: 1.45;
 }
 
-.disclosure,
+.disclosure {
+  margin-top: 0.55rem;
+  border: 1px solid var(--ledger-rule);
+}
+
 /* "Save session to library" reads as a text action beside Edit log; opened,
    its form takes the full row on a soft panel. */
 .planDisclosure {

@@ -232,9 +232,7 @@ export function TodayDay({
                 data-today-completion={completion.id}
               >
                 <div className={styles.receiptHead}>
-                  <span className={styles.receiptCheck} aria-hidden="true">
-                    <CheckIcon />
-                  </span>
+                  <OutcomeMark outcome={completion.outcome} />
                   <h4>{completion.title ?? "Unplanned training"}</h4>
                   <span
                     className={styles.stamp}
@@ -291,7 +289,7 @@ function SessionCard({
     session.sport,
     session.expectedDurationMinutes === null
       ? null
-      : `${session.expectedDurationMinutes} min`,
+      : `${session.expectedDurationMinutes} min planned`,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -313,11 +311,9 @@ function SessionCard({
         <p className={styles.kicker}>{kicker}</p>
       )}
       <div className={logged ? styles.receiptHead : styles.sessionHead}>
-        {logged ? (
-          <span className={styles.receiptCheck} aria-hidden="true">
-            <CheckIcon />
-          </span>
-        ) : null}
+        {session.completion === null ? null : (
+          <OutcomeMark outcome={session.completion.outcome} />
+        )}
         {/* The title opens the session's own page, where every plan verb
             lives now; its hit area covers the card, under the card's own
             links, so Log and Edit log stay one tap. */}
@@ -503,22 +499,41 @@ function ChevronIcon({ direction }: { direction: "left" | "right" }) {
   );
 }
 
-function CheckIcon() {
+/**
+ * The receipt's mark says what the record says, never more: a tick only for
+ * training that was done, a half for partly, a dash for a skip and a swap for
+ * a replacement. Decorative — the outcome stamp beside it is the fact.
+ */
+const OUTCOME_MARK_PATHS: Record<CompletionOutcome, string> = {
+  completed: "M5 12.5l4.5 4.5L19 7.5",
+  unplanned: "M5 12.5l4.5 4.5L19 7.5",
+  partially_completed: "M12 4a8 8 0 0 1 0 16z M12 4a8 8 0 0 0 0 16",
+  skipped: "M6 12h12",
+  replaced: "M5 9h12l-3-3 M19 15H7l3 3",
+};
+
+function OutcomeMark({ outcome }: { outcome: CompletionOutcome }) {
   return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+    <span
+      className={styles.receiptCheck}
+      data-outcome-mark={outcome}
       aria-hidden="true"
-      focusable="false"
     >
-      <path d="M5 12.5l4.5 4.5L19 7.5" />
-    </svg>
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d={OUTCOME_MARK_PATHS[outcome]} />
+      </svg>
+    </span>
   );
 }
 
