@@ -25,13 +25,14 @@ Background when you need it: `CONTEXT.md` for the domain, `docs/decisions/` for 
 
 ## How we work
 
-Work is tracked in `docs/backlog/NEXT.md`: a checklist of what is next, plus a one-line log
-per merge. Follow-ups found along the way become new checklist lines, not new documents.
+Work is tracked in `docs/backlog/NEXT.md`, a checklist of what is next, and each merge adds a
+row to the log in `docs/backlog/LOG-<year>.md`, newest first. Follow-ups found along the way
+become new checklist lines, not new documents.
 `docs/backlog/M0`–`M3` are history from the earlier protocol; read them for context, never
 extend them. The old validation records were removed on 29 September 2026 and survive at the
 tag `archive/validation-docs`.
 
-**Nothing accumulates in that file.** It describes what is open, not what has happened, and
+**Nothing accumulates in `NEXT.md`.** It describes what is open, not what has happened, and
 it stays near a hundred lines however long the project runs. Four rules keep it there:
 
 - **A merged item's block is deleted in the merge that ships it.** The log row becomes its
@@ -46,8 +47,9 @@ it stays near a hundred lines however long the project runs. Four rules keep it 
 - **A limitation is removed from `Known limitations` by the merge that stops it being true**,
   and that merge's log row says so. The section is a description of today, not a history of
   everything that was ever awkward.
-- **When the log passes roughly a hundred rows, the finished year moves to
-  `docs/backlog/LOG-<year>.md`** and `NEXT.md` keeps the current one.
+- **The log lives outside it, one file per year.** Rows go into `docs/backlog/LOG-<year>.md`
+  for the year of the merge; a new year starts a new file. The owner moved the log out on
+  29 September 2026, when its rows were 60% of `NEXT.md`.
 
 The cost of this is real and worth knowing: an owner decision from six weeks ago is
 recovered by reading a commit rather than by scrolling. That is the trade — the file is
@@ -66,7 +68,7 @@ For anything visible or behavioral that the careful lane does not cover:
 4. Commit to a `ticket/<slug>` branch so CI triggers, and push. CI must be green.
 5. For anything past a copy or styling tweak, run `/code-review` on the diff and fix or
    report what it finds.
-6. Merge to `master`, push, and add the log line.
+6. Merge to `master`, push, and add the log row to `docs/backlog/LOG-<year>.md`.
 
 No subagents, no ticket document, no validation record, no Preview wait. Add tests where the
 logic is non-trivial; do not add a per-ticket Playwright config or screenshot evidence.
