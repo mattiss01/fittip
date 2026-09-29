@@ -79,7 +79,7 @@ describe("Today", () => {
       today(),
     );
     expect(listCompletions).toHaveBeenCalledWith(today(), today());
-    expect(screen.getByRole("heading", { name: "Today." })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Today" })).toBeTruthy();
     expect(
       document.querySelector(`[data-today-date="${today()}"]`),
     ).toBeTruthy();
@@ -170,6 +170,30 @@ describe("Today", () => {
     expect(
       document.querySelector("[data-today-signals]")?.textContent,
     ).toContain("Pain");
+  });
+
+  it("marks a logged card by its outcome, never with a tick it did not earn", async () => {
+    readPlanWindowToppedUpMock.mockResolvedValue(planWindow([session()]));
+    for (const status of [
+      "completed",
+      "partially_completed",
+      "skipped",
+      "replaced",
+    ] as const) {
+      listCompletions.mockResolvedValue([{ ...completion(), status }]);
+      const { unmount } = render(
+        await TodayPage({ searchParams: Promise.resolve({}) }),
+      );
+      const card = document.querySelector(
+        `[data-today-session="${SESSION_ID}"]`,
+      ) as HTMLElement;
+      expect(
+        card
+          .querySelector("[data-outcome-mark]")
+          ?.getAttribute("data-outcome-mark"),
+      ).toBe(status);
+      unmount();
+    }
   });
 
   it("offers a logged session to the session library, but not a skipped one", async () => {

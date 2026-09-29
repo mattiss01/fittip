@@ -146,18 +146,29 @@
   line-height: 1.45;
 }
 
-.disclosure,
-.planDisclosure {
+.disclosure {
   margin-top: 0.55rem;
   border: 1px solid var(--ledger-rule);
+}
+
+/* "Save session to library" reads as a text action beside Edit log; opened,
+   its form takes the full row on a soft panel. */
+.planDisclosure {
+  margin-top: 0;
+  border-radius: var(--radius-control);
+}
+
+.planDisclosure[open] {
+  flex-basis: 100%;
+  padding-bottom: 0.2rem;
+  background: var(--ledger-wash);
 }
 
 .planPanel {
   padding-top: 0.2rem;
 }
 
-.disclosure > summary,
-.planDisclosure > summary {
+.disclosure > summary {
   min-height: 2.9rem;
   display: flex;
   align-items: center;
@@ -166,6 +177,25 @@
   font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.planDisclosure > summary {
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--ledger-ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+  list-style: none;
+}
+
+.planDisclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.planDisclosure[open] > summary {
+  padding: 0 0.7rem;
 }
 
 .form {

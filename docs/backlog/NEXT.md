@@ -87,6 +87,13 @@ Not worth their own slot; do them when work lands nearby.
 
 ## Later
 
+- **"Why today" — idea.** Owner, 29 Sep 2026. The Today prototype showed one line above the
+  sessions saying why the day looks as it does; R2 tried quoting the first open session's
+  intent there, and the owner put the intent back on its card. What a real line would need:
+  a source that is about the day rather than one session — most likely a coach-written
+  reason carried with the plan proposal — and a label that says who wrote it. Coach text
+  is careful lane (AI data boundary) and must stay a quote of an accepted plan, never
+  composed on the page.
 - **Logging in steps — undecided.** Owner, 29 Sep 2026, not sure yet: ask what happened one
   question at a time (how it went, effort, how it felt, anything off) instead of one form.
   To think through: whether it is faster or slower for a routine log, how a correction or
