@@ -43,6 +43,13 @@ Ordered by dependency. A lane is named where it is not the build lane.
       column, and free text that may name pain or illness raises whether and how a coach
       reads it (ADR-013). Open for the owner: whether recurring "cancel only this" gets it
       too, and whether the reason is shown on the cancelled card.
+- [ ] **Make Lock understandable.** Owner, 29 Sep 2026: nothing tells the owner what Lock
+      means or why they would use it. Today it means "later planning must not move or
+      replace this" (`CONTEXT.md`): the coach's replanning and a series' "delete this and
+      all future" keep a locked session, and the owner's own edits are never blocked. Open
+      for the owner: say it where Lock is chosen, rename it (e.g. "Keep as planned"), or
+      rethink what it protects. Decide before the coach can replan live, which is when it
+      starts to matter.
 
 
 ## Fix in passing
