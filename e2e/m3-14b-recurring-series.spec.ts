@@ -67,22 +67,32 @@ test.describe("M3-14B recurring series surface", () => {
       await create.getByRole("button", { name: "Create session" }).click();
       const source = sessionCard(page, today, "Ordinary base");
       await expect(source).toBeVisible();
-      const exposedActions = source.locator("[data-session-actions]");
-      await expect(
-        exposedActions.locator(":scope > details > summary"),
-      ).toHaveText(["Edit", "Cancel", "Delete"]);
-      await expect(exposedActions.locator(":scope > form button")).toHaveText(
-        "Lock",
-      );
+      // Since 29 Sep 2026 a card carries no verbs: it opens the session's own
+      // page, where Edit is in sight and the rest sit behind ⋯.
+      await expect(source.locator("button, summary, form")).toHaveCount(0);
       await expect(source.getByRole("link", { name: "Repeat" })).toHaveCount(0);
+      await openSession(page, today, "Ordinary base");
+      await expect(
+        page.getByRole("button", { name: "Edit", exact: true }),
+      ).toBeVisible();
+      await page.getByRole("button", { name: "More actions" }).click();
+      await expect(page.locator("[data-session-actions] li")).toHaveText([
+        "Log this session",
+        "Duplicate",
+        "Save to library",
+        "Lock",
+        "Cancel session",
+        "Delete",
+      ]);
+      await page.getByRole("button", { name: "More actions" }).click();
 
-      // Save remains available inside Edit, and saved-session reuse remains
-      // ordinary M3-13 behavior without a recurrence shortcut.
-      await openDisclosure(source, "Edit");
-      await openDisclosure(source, "Save to library");
-      await source.getByLabel("Name it").fill("Base template");
-      await source.getByRole("button", { name: "Save to library" }).click();
-      await expect(source.getByText("Saved to your library.")).toBeVisible();
+      // Saved-session reuse remains ordinary M3-13 behavior without a
+      // recurrence shortcut.
+      await chooseMore(page, "Save to library");
+      const save = sessionPanel(page, "Save to library");
+      await save.getByLabel("Name it").fill("Base template");
+      await save.getByRole("button", { name: "Save to library" }).click();
+      await expect(save.getByText("Saved to your library.")).toBeVisible();
       await page.goto("/home/plan/saved");
       const saved = savedCard(page, "Ordinary base");
       await expect(saved.getByRole("link", { name: "Repeat" })).toHaveCount(0);
@@ -123,27 +133,37 @@ test.describe("M3-14B recurring series surface", () => {
         page.getByRole("status").filter({ hasText: "created" }),
       ).toBeVisible();
 
-      let first = sessionCard(page, dailyStart, "Aerobic base");
+      const first = sessionCard(page, dailyStart, "Aerobic base");
       await expect(first.getByText("Recurring", { exact: true })).toBeVisible();
 
       // Only this session changes one occurrence and marks it as diverged.
-      await openDisclosure(first, "Edit");
+      await openSession(page, dailyStart, "Aerobic base");
+      await page.getByRole("button", { name: "Edit", exact: true }).click();
       // One form for both scopes; the button chosen at the end is the scope.
-      const onlyThis = recurringEditForm(first);
+      const onlyThis = recurringEditForm(sessionPanel(page, "Edit session"));
       await onlyThis.getByLabel("Title").fill("Diverged aerobic");
       await onlyThis
         .getByRole("button", { name: "Change only this session" })
         .click();
-      first = sessionCard(page, dailyStart, "Diverged aerobic");
-      await expect(first.getByText("Changed", { exact: true })).toBeVisible();
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Diverged aerobic" }),
+      ).toBeVisible();
+      await backToPlan(page);
+      await expect(
+        sessionCard(page, dailyStart, "Diverged aerobic").getByText("Changed", {
+          exact: true,
+        }),
+      ).toBeVisible();
       await expect(
         sessionCard(page, secondDaily, "Aerobic base"),
       ).toBeVisible();
 
       // This-and-future starts a successor and leaves the earlier divergence.
-      let second = sessionCard(page, secondDaily, "Aerobic base");
-      await openDisclosure(second, "Edit");
-      const future = recurringEditForm(second);
+      // The occurrence it was opened from is replaced by the successor's, so
+      // the page returns to the Plan.
+      await openSession(page, secondDaily, "Aerobic base");
+      await page.getByRole("button", { name: "Edit", exact: true }).click();
+      const future = recurringEditForm(sessionPanel(page, "Edit session"));
       await future.getByLabel("Title").fill("Future steady");
       await future.getByLabel("Repeat", { exact: true }).selectOption("daily");
       await future.getByLabel("Every").fill("1");
@@ -151,21 +171,22 @@ test.describe("M3-14B recurring series surface", () => {
         .getByRole("button", { name: "Change this and future sessions" })
         .click();
       await expect(
-        page.getByRole("status").filter({ hasText: "Earlier occurrences" }),
+        page.getByRole("heading", { name: "Plan ahead." }),
       ).toBeVisible();
       await expect(
         sessionCard(page, dailyStart, "Diverged aerobic"),
       ).toBeVisible();
-      second = sessionCard(page, secondDaily, "Future steady");
-      await expect(second).toBeVisible();
+      await expect(
+        sessionCard(page, secondDaily, "Future steady"),
+      ).toBeVisible();
 
       // Consequences appear before future removal and carry no forecast count.
       const endFrom = ownerDate(5);
-      const ending = sessionCard(page, endFrom, "Future steady");
       // M3-20: removing the future deletes, so it is a Delete scope.
-      await openDisclosure(ending, "Delete");
+      await openSession(page, endFrom, "Future steady");
+      await chooseMore(page, "Delete");
       const futureRemoval = scope(
-        ending,
+        sessionPanel(page, "Delete session"),
         "This and all future sessions",
       ).last();
       const permanent = futureRemoval.getByText(
@@ -180,12 +201,12 @@ test.describe("M3-14B recurring series surface", () => {
           name: "Delete this and all future sessions",
         })
         .click();
-      const authoritative = page
-        .getByRole("status")
-        .filter({ hasText: "Future recurring sessions removed permanently" });
-      await expect(authoritative).toContainText(/\d+ unchanged removed/);
-      await expect(authoritative).toContainText(/\d+ changed removed/);
-      await expect(authoritative).toContainText(/\d+ locked kept/);
+      // The session is gone, so the page returns to the Plan, which shows the
+      // result: the receipt's counts are the page's own, and are pinned by
+      // its unit suite.
+      await expect(
+        page.getByRole("heading", { name: "Plan ahead." }),
+      ).toBeVisible();
       await expect(
         sessionCard(page, dailyStart, "Diverged aerobic"),
       ).toBeVisible();
@@ -297,6 +318,37 @@ function savedCard(page: Page, title: string) {
     .locator("li")
     .filter({ has: page.getByRole("heading", { name: title, exact: true }) })
     .first();
+}
+
+/** Opens a session's own page from its card on the Plan. */
+async function openSession(page: Page, localDate: string, title: string) {
+  await sessionCard(page, localDate, title)
+    .getByRole("link", { name: title, exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: title, exact: true }),
+  ).toBeVisible();
+}
+
+/** The panel a verb opened below the session, by its heading. */
+function sessionPanel(page: Page, heading: string) {
+  return page.locator(`[data-session-panel="${heading}"]`);
+}
+
+/** Picks a verb from the session page's ⋯ menu. */
+async function chooseMore(page: Page, label: string) {
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page
+    .locator("[data-session-actions] li")
+    .getByText(label, { exact: true })
+    .click();
+}
+
+async function backToPlan(page: Page) {
+  await page.locator("[data-back-link]").click();
+  await expect(
+    page.getByRole("heading", { name: "Plan ahead." }),
+  ).toBeVisible();
 }
 
 function recurringEditForm(card: Locator) {

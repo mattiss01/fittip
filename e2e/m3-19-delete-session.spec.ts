@@ -49,70 +49,70 @@ test.describe("M3-19 delete a planned session", () => {
       await addSession(page, tomorrow, "Delete me", "Running");
       await addSession(page, tomorrow, "Logged run", "Running");
 
-      // The card carries four controls, and the retired label is gone.
+      // Since 29 Sep 2026 the card carries no controls: it opens the
+      // session's own page, where Cancel and Delete sit behind ⋯ and each
+      // opens a panel that says what it does. The retired label stays gone.
       const doomed = sessionCard(page, tomorrow, "Delete me");
-      const controls = doomed.locator("[data-session-actions]");
-      await expect(controls.locator(":scope > details > summary")).toHaveText([
-        "Edit",
-        "Cancel",
-        "Delete",
-      ]);
-      await expect(controls.locator(":scope > form button")).toHaveText("Lock");
+      await expect(doomed.locator("button, summary, form")).toHaveCount(0);
       await expect(page.locator("summary", { hasText: "Remove" })).toHaveCount(
         0,
       );
 
       // Cancel keeps the session, and says so before it is used.
-      const kept = sessionCard(page, today, "Cancel me");
-      await openDisclosure(kept, "Cancel");
+      await openSession(page, today, "Cancel me");
+      await chooseMore(page, "Cancel session");
+      const cancel = sessionPanel(page, "Cancel session");
       await expect(
-        kept.getByText(/keeps the session on the record as cancelled/i),
+        cancel.getByText(/keeps the session on the record as cancelled/i),
       ).toBeVisible();
       await page.screenshot({
         fullPage: true,
         path: path.join(evidenceDirectory, "M3-19-card-verbs-390x844.png"),
       });
-      await kept.getByRole("button", { name: "Cancel session" }).click();
+      await cancel.getByRole("button", { name: "Cancel session" }).click();
       await expect(
-        day(page, today).getByText("Cancelled", { exact: true }),
-      ).toBeVisible();
-      await expect(
-        day(page, today).getByText("Running · Cancelled, kept on the record"),
+        page.locator("article").getByText("Cancelled", { exact: true }),
       ).toBeVisible();
 
       // M3-20: a cancelled session can come back in one tap, and be cancelled
-      // again with the controls it had all along.
-      await day(page, today)
+      // again with the verbs it had all along.
+      await page
         .getByRole("button", { name: "Reactivate", exact: true })
         .click();
       await expect(
-        day(page, today).getByText("Cancelled", { exact: true }),
-      ).toHaveCount(0);
-      const returned = sessionCard(page, today, "Cancel me");
-      await expect(returned).toBeVisible();
-      await openDisclosure(returned, "Cancel");
-      await returned.getByRole("button", { name: "Cancel session" }).click();
+        page.getByRole("button", { name: "Edit", exact: true }),
+      ).toBeVisible();
+      await chooseMore(page, "Cancel session");
+      await sessionPanel(page, "Cancel session")
+        .getByRole("button", { name: "Cancel session" })
+        .click();
+      await expect(
+        page.getByRole("button", { name: "Reactivate", exact: true }),
+      ).toBeVisible();
+      await backToPlan(page);
       await expect(
         day(page, today).getByText("Running · Cancelled, kept on the record"),
       ).toBeVisible();
 
       // A lock defends a session from a sweep, never from the owner asking for
       // this one session by name.
-      const locked = sessionCard(page, tomorrow, "Delete me");
-      await locked.getByRole("button", { name: "Lock", exact: true }).click();
+      await openSession(page, tomorrow, "Delete me");
+      await chooseMore(page, "Lock");
       await expect(
-        sessionCard(page, tomorrow, "Delete me").getByText("Locked", {
-          exact: true,
-        }),
+        page.locator("article").getByText("Locked", { exact: true }),
       ).toBeVisible();
 
-      // Delete keeps nothing, and says the opposite of what cancel says.
-      const gone = sessionCard(page, tomorrow, "Delete me");
-      await openDisclosure(gone, "Delete");
-      const warning = gone.getByText(/does not keep it on the record/i);
+      // Delete keeps nothing, says the opposite of what cancel says, and
+      // returns to the Plan because the page's session is gone.
+      await chooseMore(page, "Delete");
+      const remove = sessionPanel(page, "Delete session");
+      const warning = remove.getByText(/does not keep it on the record/i);
       await expect(warning).toBeVisible();
       await expect(warning).toContainText("no undo");
-      await gone.getByRole("button", { name: "Delete session" }).click();
+      await remove.getByRole("button", { name: "Delete session" }).click();
+      await expect(
+        page.getByRole("heading", { name: "Plan ahead." }),
+      ).toBeVisible();
       await expect(sessionCard(page, tomorrow, "Delete me")).toHaveCount(0);
       await expect(
         day(page, tomorrow).getByText("Cancelled, kept on the record"),
@@ -126,25 +126,34 @@ test.describe("M3-19 delete a planned session", () => {
       // the Plan and offers no Delete, while a skip keeps its card.
       const sessionId = await sessionIdOf(page, tomorrow, "Logged run");
       await logCompletion(request, account, sessionId, today, "skipped");
-      await page.reload();
 
-      const logged = sessionCard(page, tomorrow, "Logged run");
-      await openDisclosure(logged, "Delete");
-      await logged.getByRole("button", { name: "Delete session" }).click();
+      await openSession(page, tomorrow, "Logged run");
+      await chooseMore(page, "Delete");
+      await sessionPanel(page, "Delete session")
+        .getByRole("button", { name: "Delete session" })
+        .click();
       const notice = page.locator("[role='status']").first();
       await expect(notice).toHaveAttribute("data-state", "rule");
       await expect(notice).toContainText(/cannot be deleted/i);
       await expect(notice).toContainText(/cancel it instead/i);
-      await expect(sessionCard(page, tomorrow, "Logged run")).toBeVisible();
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Logged run" }),
+      ).toBeVisible();
       await page.screenshot({
         fullPage: true,
         path: path.join(evidenceDirectory, "M3-19-logged-refusal-390x844.png"),
       });
+      await backToPlan(page);
 
       // A cancelled session is exactly what an owner may next want gone.
-      const cancelled = sessionCard(page, today, "Cancel me");
-      await openDisclosure(cancelled, "Delete");
-      await cancelled.getByRole("button", { name: "Delete session" }).click();
+      await openSession(page, today, "Cancel me");
+      await chooseMore(page, "Delete");
+      await sessionPanel(page, "Delete session")
+        .getByRole("button", { name: "Delete session" })
+        .click();
+      await expect(
+        page.getByRole("heading", { name: "Plan ahead." }),
+      ).toBeVisible();
       await expect(
         day(page, today).getByText("Cancelled", { exact: true }),
       ).toHaveCount(0);
@@ -190,14 +199,45 @@ function sessionCard(page: Page, date: string, title: string) {
     .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
 }
 
-/** The identity the surface already carries in every one of the card's forms. */
+/** The identity the card's link to the session's own page carries. */
 async function sessionIdOf(page: Page, date: string, title: string) {
-  const value = await sessionCard(page, date, title)
-    .locator("input[name='sessionId']")
-    .first()
-    .inputValue();
+  const href = await sessionCard(page, date, title)
+    .getByRole("link", { name: title, exact: true })
+    .getAttribute("href");
+  const value = href?.split("/").at(-1) ?? "";
   expect(value).toMatch(/^[0-9a-f-]{36}$/);
   return value;
+}
+
+/** Opens a session's own page from its card on the Plan. */
+async function openSession(page: Page, date: string, title: string) {
+  await sessionCard(page, date, title)
+    .getByRole("link", { name: title, exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: title, exact: true }),
+  ).toBeVisible();
+}
+
+/** The panel a verb opened below the session, by its heading. */
+function sessionPanel(page: Page, heading: string) {
+  return page.locator(`[data-session-panel="${heading}"]`);
+}
+
+/** Picks a verb from the session page's ⋯ menu. */
+async function chooseMore(page: Page, label: string) {
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page
+    .locator("[data-session-actions] li")
+    .getByText(label, { exact: true })
+    .click();
+}
+
+async function backToPlan(page: Page) {
+  await page.locator("[data-back-link]").click();
+  await expect(
+    page.getByRole("heading", { name: "Plan ahead." }),
+  ).toBeVisible();
 }
 
 /** The disclosure whose own summary carries this label. */
@@ -205,13 +245,6 @@ function disclosure(scope: Locator, label: string) {
   return scope.locator("details").filter({
     has: scope.page().locator(":scope > summary", { hasText: label }),
   });
-}
-
-async function openDisclosure(scope: Locator, label: string) {
-  const details = disclosure(scope, label);
-  if ((await details.getAttribute("open")) === null) {
-    await details.locator(":scope > summary").click();
-  }
 }
 
 async function addSession(

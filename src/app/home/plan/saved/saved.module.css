@@ -160,6 +160,10 @@
   border: 1px solid var(--ledger-rule);
 }
 
+.planPanel {
+  padding-top: 0.2rem;
+}
+
 .disclosure > summary,
 .planDisclosure > summary {
   min-height: 2.9rem;
@@ -299,6 +303,8 @@
 .backLink:focus-visible,
 .planDisclosure button:focus-visible,
 .planDisclosure input:focus-visible,
+.planPanel button:focus-visible,
+.planPanel input:focus-visible,
 .planDisclosure summary:focus-visible {
   outline: 3px solid var(--ledger-ink);
   outline-offset: 2px;

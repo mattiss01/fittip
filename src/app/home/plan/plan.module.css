@@ -810,6 +810,262 @@
   outline-offset: 2px;
 }
 
+/*
+ * A card opens its session (owner, 29 Sep 2026). The title is the one link,
+ * and its hit area is stretched over the card, so the whole card is the tap
+ * target without nesting anything interactive inside a link.
+ */
+.session {
+  position: relative;
+}
+
+.cardLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cardLink::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.cardLink:focus-visible {
+  outline: none;
+}
+
+.cardLink:focus-visible::after {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
+}
+
+.session:has(.cardLink):hover {
+  border-color: var(--ledger-ink);
+}
+
+/* The session page: one sheet, the verbs under it, a panel below that. */
+.sessionPage {
+  width: 100%;
+  display: grid;
+  align-content: start;
+}
+
+.sessionPage > * {
+  min-width: 0;
+}
+
+.backLink {
+  width: fit-content;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  color: var(--ledger-ink);
+  font:
+    700 0.72rem "Courier New",
+    monospace;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.sessionSheet,
+.missingCard,
+.actionPanel {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  box-shadow: 7px 7px 0 #a7b7a5;
+}
+
+.sessionSheet {
+  border-top: 7px solid var(--plan-today);
+}
+
+.sessionSheet[data-locked="true"] {
+  border-left: 5px solid var(--plan-locked);
+}
+
+.sessionSheet[data-cancelled="true"] {
+  border-top-color: var(--ledger-muted);
+  border-style: dashed;
+}
+
+.sheetDate {
+  margin: 0;
+  color: var(--ledger-muted);
+  font:
+    700 0.66rem "Courier New",
+    monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.sheetTitle {
+  margin: 0.35rem 0 0;
+  overflow-wrap: anywhere;
+  font-size: clamp(1.7rem, 8vw, 2.4rem);
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.sheetMarks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.6rem;
+}
+
+.sheetMarks:empty {
+  display: none;
+}
+
+.sessionSheet .consequenceStandalone {
+  margin-top: 0.8rem;
+}
+
+.sheetActions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--ledger-rule);
+}
+
+.sheetActions > .primary {
+  text-decoration: none;
+}
+
+.missingCard h1 {
+  margin: 0 0 0.6rem;
+  font-size: clamp(1.5rem, 7vw, 2.1rem);
+  letter-spacing: -0.04em;
+}
+
+.missingCard p {
+  margin: 0 0 1rem;
+  color: var(--ledger-muted);
+  line-height: 1.5;
+}
+
+.missingCard .primary {
+  width: fit-content;
+  text-decoration: none;
+}
+
+.moreMenu {
+  position: relative;
+}
+
+.moreButton {
+  width: 2.9rem;
+  height: 100%;
+  min-height: 2.9rem;
+  border: 1px solid var(--ledger-ink);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ledger-ink);
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.moreButton[aria-expanded="true"] {
+  background: var(--ledger-ink);
+  color: var(--ledger-paper);
+}
+
+.moreList {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  width: min(15rem, calc(100vw - 2rem));
+  margin: 0;
+  padding: 0.3rem 0;
+  border: 1px solid var(--ledger-ink);
+  background: var(--ledger-paper);
+  box-shadow: 5px 5px 0 #a7b7a5;
+  list-style: none;
+}
+
+.moreItem {
+  width: 100%;
+  min-height: 2.9rem;
+  display: flex;
+  align-items: center;
+  padding: 0 0.9rem;
+  border: 0;
+  background: transparent;
+  color: var(--ledger-ink);
+  font:
+    700 0.7rem "Courier New",
+    monospace;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.moreItem:hover {
+  background: #edf0e7;
+}
+
+.moreItem[data-danger] {
+  border-top: 1px solid var(--ledger-rule);
+  color: var(--plan-locked);
+}
+
+.moreItem:disabled {
+  opacity: 0.45;
+}
+
+.actionPanel {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.actionPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.actionPanelHeader h2 {
+  margin: 0;
+  font:
+    700 0.8rem "Courier New",
+    monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.actionPanel > .form,
+.actionPanel .scope > .form {
+  padding: 0;
+}
+
+.actionPanel .scope {
+  margin: 0;
+}
+
+.backLink:focus-visible,
+.sessionSheet a:focus-visible,
+.sessionSheet button:focus-visible,
+.missingCard a:focus-visible,
+.actionPanel button:focus-visible,
+.actionPanel input:focus-visible,
+.actionPanel textarea:focus-visible,
+.actionPanel select:focus-visible,
+.actionPanel h2:focus-visible,
+.moreItem:focus-visible {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
+}
+
 @media (max-width: 400px) {
   .day {
     grid-template-columns: 4.6rem 1fr;

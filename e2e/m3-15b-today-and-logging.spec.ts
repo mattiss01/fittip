@@ -65,18 +65,29 @@ test.describe("M3-15B today and logging", () => {
       );
       await addSeries(page, today, tomorrow, "Aerobic base", "Running");
 
-      await planCard(page, today, "Core circuit")
-        .getByRole("button", { name: "Lock", exact: true })
-        .click();
+      // Plan verbs live on the session's own page since 29 Sep 2026.
+      await openSession(page, today, "Core circuit");
+      await chooseMore(page, "Lock");
+      await expect(
+        page.locator("article").getByText("Locked", { exact: true }),
+      ).toBeVisible();
+      await backToPlan(page);
       await expect(
         planCard(page, today, "Core circuit").getByText("Locked", {
           exact: true,
         }),
       ).toBeVisible();
 
-      const doomed = planCard(page, today, "Rest swap");
-      await openDisclosure(doomed, "Cancel");
-      await doomed.getByRole("button", { name: "Cancel session" }).click();
+      await openSession(page, today, "Rest swap");
+      await chooseMore(page, "Cancel session");
+      await page
+        .locator('[data-session-panel="Cancel session"]')
+        .getByRole("button", { name: "Cancel session" })
+        .click();
+      await expect(
+        page.getByRole("button", { name: "Reactivate" }),
+      ).toBeVisible();
+      await backToPlan(page);
       await expect(
         planCard(page, today, "Rest swap").getByText(
           "Yoga · Cancelled, kept on the record",
@@ -442,10 +453,17 @@ test.describe("M3-15B today and logging", () => {
         page.getByRole("heading", { name: "Log saved." }),
       ).toBeVisible();
 
-      await page.goto("/home/plan");
-      const occurrence = planCard(page, today, "Aerobic base");
-      await openDisclosure(occurrence, "Delete");
-      await scope(occurrence, "This and all future sessions")
+      // Opened from Today, which is where the owner just logged it. A logged
+      // occurrence survives its series' end, so the page stays and reports.
+      await page.goto("/home/today");
+      await todayCard(page, "Aerobic base")
+        .getByRole("link", { name: "Aerobic base", exact: true })
+        .click();
+      await chooseMore(page, "Delete");
+      await scope(
+        page.locator('[data-session-panel="Delete session"]'),
+        "This and all future sessions",
+      )
         .last()
         .getByRole("button", { name: "Delete this and all future sessions" })
         .click();
@@ -500,6 +518,32 @@ function planCard(page: Page, date: string, title: string) {
     .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
 }
 
+/** Opens a session's own page from its card on the Plan. */
+async function openSession(page: Page, date: string, title: string) {
+  await planCard(page, date, title)
+    .getByRole("link", { name: title, exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: title, exact: true }),
+  ).toBeVisible();
+}
+
+/** Picks a verb from the session page's ⋯ menu. */
+async function chooseMore(page: Page, label: string) {
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page
+    .locator("[data-session-actions] li")
+    .getByText(label, { exact: true })
+    .click();
+}
+
+async function backToPlan(page: Page) {
+  await page.locator("[data-back-link]").click();
+  await expect(
+    page.getByRole("heading", { name: "Plan ahead." }),
+  ).toBeVisible();
+}
+
 /** One card on Today, found by the only thing the owner can see: its title. */
 function todayCard(page: Page, title: string) {
   return page
@@ -515,13 +559,6 @@ function disclosure(container: Locator, label: string) {
   return container.locator("details").filter({
     has: container.page().locator(":scope > summary", { hasText: label }),
   });
-}
-
-async function openDisclosure(container: Locator, label: string) {
-  const details = disclosure(container, label);
-  if ((await details.getAttribute("open")) === null) {
-    await details.locator(":scope > summary").click();
-  }
 }
 
 async function addSession(

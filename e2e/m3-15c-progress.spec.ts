@@ -188,14 +188,23 @@ test.describe("M3-15C progress", () => {
 
       // ---- Editing the plan afterwards does not touch the copy. ----
       await page.goto("/home/plan");
-      const card = planCard(page, today, "Tempo run");
-      await openDisclosure(card, "Edit");
-      await disclosure(card, "Edit")
+      // Plan verbs live on the session's own page since 29 Sep 2026.
+      await planCard(page, today, "Tempo run")
+        .getByRole("link", { name: "Tempo run", exact: true })
+        .click();
+      await page.getByRole("button", { name: "Edit", exact: true }).click();
+      const edit = page.locator('[data-session-panel="Edit session"]');
+      await edit
         .getByLabel("Title", { exact: true })
         .fill("Renamed after the fact");
-      await disclosure(card, "Edit")
-        .getByRole("button", { name: "Save session" })
-        .click();
+      await edit.getByRole("button", { name: "Save session" }).click();
+      await expect(
+        page.getByRole("heading", {
+          level: 1,
+          name: "Renamed after the fact",
+        }),
+      ).toBeVisible();
+      await page.locator("[data-back-link]").click();
       await expect(
         planDay(page, today).getByRole("heading", {
           name: "Renamed after the fact",
@@ -329,13 +338,6 @@ function disclosure(container: Locator, label: string) {
   return container.locator("details").filter({
     has: container.page().locator(":scope > summary", { hasText: label }),
   });
-}
-
-async function openDisclosure(container: Locator, label: string) {
-  const details = disclosure(container, label);
-  if ((await details.getAttribute("open")) === null) {
-    await details.locator(":scope > summary").click();
-  }
 }
 
 async function addSession(

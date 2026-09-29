@@ -71,65 +71,56 @@ test.describe("M3-12 manual continuous planning", () => {
         day(page, today).getByText("Running · 60 min"),
       ).toBeVisible();
 
-      // Edit
-      const card = sessionCard(page, today, "Aerobic run");
-      await openDisclosure(card, "Edit");
-      await card.getByLabel("Title").fill("Long aerobic run");
-      await card.getByLabel("Minutes").fill("95");
-      await card.getByRole("button", { name: "Save session" }).click();
+      // Every verb lives on the session's own page since 29 Sep 2026 (owner):
+      // the card opens it, Edit is in sight, and the rest sit behind ⋯. This
+      // flow is the same journey through a surface that was replaced.
+      await openSession(page, today, "Aerobic run");
+      await page.getByRole("button", { name: "Edit", exact: true }).click();
+      const edit = sessionPanel(page, "Edit session");
+      await edit.getByLabel("Title").fill("Long aerobic run");
+      await edit.getByLabel("Minutes").fill("95");
+      await edit.getByRole("button", { name: "Save session" }).click();
       await expect(
-        sessionCard(page, today, "Long aerobic run").getByText(
-          "Running · 95 min",
-        ),
+        page.getByRole("heading", { level: 1, name: "Long aerobic run" }),
       ).toBeVisible();
+      await expect(page.getByText("Running · 95 min")).toBeVisible();
 
-      // Lock, then unlock. A lock never blocks the owner's own edits.
-      const locked = sessionCard(page, today, "Long aerobic run");
-      await locked.getByRole("button", { name: "Lock", exact: true }).click();
+      // Lock, then unlock, in one tap each. A lock never blocks the owner's
+      // own edits.
+      await chooseMore(page, "Lock");
       await expect(
-        sessionCard(page, today, "Long aerobic run").getByText("Locked", {
-          exact: true,
-        }),
+        sessionSheet(page).getByText("Locked", { exact: true }),
       ).toBeVisible();
-      await sessionCard(page, today, "Long aerobic run")
-        .getByRole("button", { name: "Unlock", exact: true })
-        .click();
+      await chooseMore(page, "Unlock");
       await expect(
-        sessionCard(page, today, "Long aerobic run").getByText("Locked", {
-          exact: true,
-        }),
+        sessionSheet(page).getByText("Locked", { exact: true }),
       ).toBeHidden();
 
-      // Duplicate to tomorrow, then move the copy on a day.
-      //
-      // Both halves were rewritten on 25 September 2026 when the owner
-      // reshaped this card. Duplicate sits behind a disclosure of its own
-      // inside the Edit panel rather than standing permanently open, and the
-      // Move section is gone outright: a session's date is a field on the edit
-      // form, asked once, so moving one is now saving an edit with a different
-      // date. This flow is the same journey through a surface that changed.
-      const source = sessionCard(page, today, "Long aerobic run");
-      await openDisclosure(source, "Edit");
-      await openDisclosure(source, "Duplicate");
-      await source
-        .locator("form")
-        .filter({
-          has: page.getByRole("button", { name: "Duplicate session" }),
-        })
-        .getByLabel("Copy to")
-        .selectOption(tomorrow);
-      await source.getByRole("button", { name: "Duplicate session" }).click();
+      // Duplicate to tomorrow, then move the copy on a day. A session's date
+      // is a field on the edit form, so moving one is saving an edit.
+      await chooseMore(page, "Duplicate");
+      const duplicate = sessionPanel(page, "Duplicate");
+      await duplicate.getByLabel("Copy to").selectOption(tomorrow);
+      await duplicate
+        .getByRole("button", { name: "Duplicate session" })
+        .click();
+      await expect(page.locator("[role='status']").first()).toContainText(
+        "Session duplicated.",
+      );
+      await backToPlan(page);
       await expect(
         sessionCard(page, tomorrow, "Long aerobic run"),
       ).toBeVisible();
 
-      const copy = sessionCard(page, tomorrow, "Long aerobic run");
-      await openDisclosure(copy, "Edit");
-      const copyEdit = copy
-        .locator("form")
-        .filter({ has: page.getByRole("button", { name: "Save session" }) });
+      await openSession(page, tomorrow, "Long aerobic run");
+      await page.getByRole("button", { name: "Edit", exact: true }).click();
+      const copyEdit = sessionPanel(page, "Edit session");
       await copyEdit.getByLabel("Date").selectOption(dayAfter);
       await copyEdit.getByRole("button", { name: "Save session" }).click();
+      await expect(page.locator("[role='status']").first()).toContainText(
+        "Session updated.",
+      );
+      await backToPlan(page);
       await expect(
         sessionCard(page, dayAfter, "Long aerobic run"),
       ).toBeVisible();
@@ -156,13 +147,20 @@ test.describe("M3-12 manual continuous planning", () => {
       });
 
       // Cancel keeps the identity on the record rather than deleting it.
-      const doomed = sessionCard(page, today, "Long aerobic run");
-      await openDisclosure(doomed, "Cancel");
+      await openSession(page, today, "Long aerobic run");
+      await chooseMore(page, "Cancel session");
+      const cancel = sessionPanel(page, "Cancel session");
       await expect(
-        doomed.getByText(/keeps the session on the record/i),
+        cancel.getByText(/keeps the session on the record/i),
       ).toBeVisible();
-      await doomed.getByRole("button", { name: "Cancel session" }).click();
-      await expect(day(page, today).getByText("Cancelled")).toBeVisible();
+      await cancel.getByRole("button", { name: "Cancel session" }).click();
+      await expect(
+        page.getByRole("button", { name: "Reactivate" }),
+      ).toBeVisible();
+      await backToPlan(page);
+      await expect(
+        day(page, today).getByText("Cancelled", { exact: true }),
+      ).toBeVisible();
       await expect(
         day(page, today).getByText("Running · Cancelled, kept on the record"),
       ).toBeVisible();
@@ -292,6 +290,43 @@ function sessionCard(page: Page, date: string, title: string) {
     .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
 }
 
+/** Opens a session's own page from its card on the Plan. */
+async function openSession(page: Page, date: string, title: string) {
+  await sessionCard(page, date, title)
+    .getByRole("link", { name: title, exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: title, exact: true }),
+  ).toBeVisible();
+}
+
+function sessionSheet(page: Page) {
+  return page.locator("article").filter({
+    has: page.getByRole("heading", { level: 1 }),
+  });
+}
+
+/** The panel a verb opened below the session, by its heading. */
+function sessionPanel(page: Page, heading: string) {
+  return page.locator(`[data-session-panel="${heading}"]`);
+}
+
+/** Picks a verb from the session page's ⋯ menu. */
+async function chooseMore(page: Page, label: string) {
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page
+    .locator("[data-session-actions] li")
+    .getByText(label, { exact: true })
+    .click();
+}
+
+async function backToPlan(page: Page) {
+  await page.locator("[data-back-link]").click();
+  await expect(
+    page.getByRole("heading", { name: "Plan ahead." }),
+  ).toBeVisible();
+}
+
 /** The disclosure whose own summary carries this label. */
 function disclosure(scope: Locator, label: string) {
   // Anchored on the summary. Filtering the whole `details` subtree matched body
@@ -300,13 +335,6 @@ function disclosure(scope: Locator, label: string) {
   return scope.locator("details").filter({
     has: scope.page().locator(":scope > summary", { hasText: label }),
   });
-}
-
-async function openDisclosure(scope: Locator, label: string) {
-  const details = disclosure(scope, label);
-  if ((await details.getAttribute("open")) === null) {
-    await details.locator(":scope > summary").click();
-  }
 }
 
 async function addSession(
