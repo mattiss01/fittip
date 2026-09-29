@@ -14,13 +14,14 @@
   padding-bottom: calc(7rem + env(safe-area-inset-bottom));
 }
 
-/* The plan editor adds a second fixed layer above the fixed navigation. Its top
-   edge sits 10.6rem above the viewport bottom (5.4rem offset plus its 5.2rem
-   min-height), which is more than the navigation-only reserve above. Without
-   this, the last of the page content can never be scrolled clear of the dock
-   and stays untappable. */
+/* A save dock is a second fixed layer above the fixed navigation, and the page
+   must reserve room for both, or the last of its content can never be scrolled
+   clear of the dock and stays untappable. The dock sits 5.4rem up; the tallest
+   one, proposal review's with its support line, two actions and "Ask for a
+   different plan", measured about 14.8rem to its top edge at 390px in the R1
+   type (CI run 36600705825). */
 .appShell > main:has(:global(.save-dock)) {
-  padding-bottom: calc(11.5rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(16rem + env(safe-area-inset-bottom));
 }
 
 .appShell :global(.save-dock) {
