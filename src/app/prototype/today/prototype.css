@@ -1,0 +1,58 @@
+/* PROTOTYPE — day-change slide for the Today variants (View Transitions API). */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+}
+
+::view-transition-old(a-stage),
+::view-transition-old(b-day),
+::view-transition-old(c-day) {
+  animation: 260ms cubic-bezier(0.4, 0, 1, 1) both proto-out-left;
+}
+
+::view-transition-new(a-stage),
+::view-transition-new(b-day),
+::view-transition-new(c-day) {
+  animation: 380ms cubic-bezier(0.2, 0.9, 0.3, 1) both proto-in-right;
+}
+
+html[data-proto-dir="prev"]::view-transition-old(a-stage),
+html[data-proto-dir="prev"]::view-transition-old(b-day),
+html[data-proto-dir="prev"]::view-transition-old(c-day) {
+  animation-name: proto-out-right;
+}
+
+html[data-proto-dir="prev"]::view-transition-new(a-stage),
+html[data-proto-dir="prev"]::view-transition-new(b-day),
+html[data-proto-dir="prev"]::view-transition-new(c-day) {
+  animation-name: proto-in-left;
+}
+
+@keyframes proto-out-left {
+  to {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+}
+
+@keyframes proto-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+}
+
+@keyframes proto-out-right {
+  to {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+}
+
+@keyframes proto-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+}
