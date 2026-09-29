@@ -50,9 +50,7 @@ main action. No week ring. The owner flagged a possible bias toward the look the
 so start with Today and adjust from there rather than committing every screen up front. Build
 lane, one screen per merge.
 
-- [ ] **R1 — Foundations.** Colour and type tokens, fonts, icons and the bottom nav, app-wide.
-      Nothing else changes, so every screen shifts at once and the owner can react early.
-- [ ] **R2 — Today in the new design.** From variant C, rewritten properly (the prototype has
+- [~] **R2 — Today in the new design.** From variant C, rewritten properly (the prototype has
       no tests or error states). The goal bar and "done" marks must come from real records:
       `.claude/rules/ui.md` forbids a streak, score or progress the data does not state.
 - [ ] **R3 — The other screens, one per merge.** Plan, session page, Log (as a sheet),
@@ -150,6 +148,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 29 Sep 2026 | `4cd14fa` | [36602052140](https://github.com/mattiss01/fittip/actions/runs/36602052140) | R1: Schibsted Grotesk and DM Mono, one palette with the old names as aliases, card radius and soft shadow, rounded buttons with a press scale (off under reduced motion), icon navigation. The save-dock reserve is 16rem, because proposal review's dock grew past 11.5rem in the new type and hid the last item's Reject (M3-16A, run 36600705825). No migration |
 | 29 Sep 2026 | `e5375ca` | [36596005515](https://github.com/mattiss01/fittip/actions/runs/36596005515) | `docs/validation/` deleted at the owner's request (85 files, 5.2 MB) and kept at the tag `archive/validation-docs`, which the three remaining links now point at; the browser specs write screenshots under the ignored `test-results/` instead. CLAUDE.md changed in its own commit (`a91567f`); `docs/backlog/M0`–`M3` stay |
 | 29 Sep 2026 | `68adaa3` | [36589523944](https://github.com/mattiss01/fittip/actions/runs/36589523944) | Cancel asks "Why? (optional)" in the owner's own words (quick picks tried and dropped); the session's page shows it, edits or clears it, and Reactivate clears it. Stored only, in its own owner-select-only table outside the plan read, snapshots and history, and no coach reads it (`session-cancellation-boundary.test.ts`). Migration `20260929143946` applied to the founder project — 36 migrations, advisors 24 definer + 1 auth, the new one being `set_session_cancellation_reason` |
 | 29 Sep 2026 | `1433827` | [36556000474](https://github.com/mattiss01/fittip/actions/runs/36556000474) | A session opens on its own page from the Plan or Today: Edit in sight, ⋯ for Log, Duplicate, Save to library, Lock, Cancel and Delete; a cancelled one offers Reactivate, and Save stays on the page while a delete returns to where it was opened. No migration. Plan cards carry no verbs now, so the m3-12, m3-13, m3-14b, m3-15b, m3-15c and m3-19 accepted flows were rewritten to reach them through the page |
