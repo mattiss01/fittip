@@ -68,6 +68,12 @@ lane, one screen per merge.
 
 Not worth their own slot; do them when work lands nearby.
 
+- **The same session can be saved to the library twice.** Owner, 29 Sep 2026: saving a
+  session that is already in the library creates a second entry. Decide what "the same"
+  means (same name, or same name and activities) and whether a repeat save should update
+  the existing entry, be refused, or ask. A uniqueness rule in the database would be
+  careful lane; the activity library already requires unique names among active entries
+  (`16118fb`), which is the precedent.
 - A hand-made RPC payload with `position` or `plannedPosition` of `1.0` reaches
   `apply_completion_change` as a raw `22P02` rather than `22023`: the validators compare with
   `trunc`, the inserts cast the text. Unreachable from the app, whose parser emits integers.
