@@ -50,8 +50,23 @@ main action. No week ring. The owner flagged a possible bias toward the look the
 so start with Today and adjust from there rather than committing every screen up front. Build
 lane, one screen per merge.
 
-- [ ] **R3 — The other screens, one per merge.** Plan, session page, Log (as a sheet),
-      Progress, You. Cut each page's explanatory intro to one line or remove it; say where an
+- [ ] **R3a — Plan, week by week.** Owner chose variant B of the Plan prototype on
+      29 Sep 2026 (`prototype/plan-horizon`, `/prototype/plan?variant=pager`): one week at a
+      time with ‹ › arrows, the roadmap phase for that week above it, a row of week tiles
+      (busy-day bars, planned hours) to jump, empty days as one line with a "+", compact
+      session cards coloured by sport with ↻ for a series, and the header's links as chips.
+      Works on today's 14-day window first; "Mark recovery day" and Create session move into
+      the day's "+". Week totals say "planned", never done.
+- [ ] **R3b — A three-month horizon.** Careful lane. Owner, 29 Sep 2026: option A — series
+      keep being written ahead as real sessions, now ~13 weeks instead of 14 days — and
+      option 3 for the far end: past those weeks the Plan continues only with the accepted
+      roadmap's phases and week outlines, no sessions. Needs a forward migration replacing
+      the two materializers' `v_today + 13`, `PLAN_WINDOW_DAYS` and `ROLLING_PLAN_WINDOW_DAYS`
+      to match, an ADR-017 amendment (row growth ~6× per series, series edits rewrite more
+      rows), Today's beyond-window notice, and the tests that pin 14 days. Confirm first that
+      no coach context reads the whole window (it appears to read only its 1–7-day horizon).
+- [ ] **R3 — The other screens, one per merge.** Session page, Log (as a sheet), Progress,
+      You. Cut each page's explanatory intro to one line or remove it; say where an
       explanation must survive.
 - [ ] **R4 — Motion.** Day-change slide (View Transitions), sheet and press feedback,
       instant log with background save; everything off under reduced motion.
