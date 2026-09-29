@@ -501,8 +501,7 @@ describe("plan actions", () => {
       form({
         operation: "cancel",
         sessionId: SESSION_ID,
-        cancelReason: "tired",
-        cancelNote: "  work ran late ",
+        cancelReason: "  work ran late ",
       }),
     );
     await changePlanAction(
@@ -510,8 +509,7 @@ describe("plan actions", () => {
       form({
         operation: "cancel",
         sessionId: SESSION_ID,
-        cancelReason: "",
-        cancelNote: "   ",
+        cancelReason: "   ",
       }),
     );
 
@@ -523,11 +521,10 @@ describe("plan actions", () => {
       {
         operation: "cancel",
         sessionId: SESSION_ID,
-        reason: "tired",
-        note: "work ran late",
+        reason: "work ran late",
       },
     ]);
-    // "No reason" and a blank note are a plain cancel, as before.
+    // A blank reason is a plain cancel, as before.
     expect(withoutReason.changes).toEqual([
       { operation: "cancel", sessionId: SESSION_ID },
     ]);

@@ -2027,24 +2027,21 @@ export type Database = {
       rolling_plan_session_cancellations: {
         Row: {
           created_at: string;
-          note: string | null;
-          reason: string | null;
+          reason: string;
           session_id: string;
           updated_at: string;
           user_id: string;
         };
         Insert: {
           created_at?: string;
-          note?: string | null;
-          reason?: string | null;
+          reason: string;
           session_id: string;
           updated_at?: string;
           user_id: string;
         };
         Update: {
           created_at?: string;
-          note?: string | null;
-          reason?: string | null;
+          reason?: string;
           session_id?: string;
           updated_at?: string;
           user_id?: string;
@@ -2907,10 +2904,6 @@ export type Database = {
         Args: { p_value: Json };
         Returns: boolean;
       };
-      rolling_plan_cancellation_note_is_valid: {
-        Args: { p_value: Json };
-        Returns: boolean;
-      };
       rolling_plan_cancellation_reason_is_valid: {
         Args: { p_value: Json };
         Returns: boolean;
@@ -2987,7 +2980,7 @@ export type Database = {
         Returns: boolean;
       };
       set_session_cancellation_reason: {
-        Args: { p_note: string; p_reason: string; p_session_id: string };
+        Args: { p_reason: string; p_session_id: string };
         Returns: undefined;
       };
       settle_ai_spend: {

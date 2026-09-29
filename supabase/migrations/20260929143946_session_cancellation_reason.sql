@@ -1,7 +1,8 @@
 -- Why a session was cancelled (owner, 29 Sep 2026).
 --
--- Cancelling a session may record why: one of six quick picks, a short note,
--- or both. The owner decided:
+-- Cancelling a session may record why, in the owner's own words: one short
+-- optional text, no quick picks (the owner tried six and preferred none). The
+-- owner decided:
 --
 --   * It is stored only. No coach reads it; letting one would be its own
 --     ADR-013 step. So it lives in a table of its own rather than on
@@ -20,32 +21,25 @@
 -- "Cancellation reason". The new setter follows ADR-008/ADR-009's pattern:
 -- ownership from auth.uid() only, execute granted to `authenticated` alone.
 --
--- Owner-visible conditions: none new. A malformed reason or note, or a
--- setter call naming a session that is not the caller's cancelled one, is 22023.
+-- Owner-visible conditions: none new. A reason that is blank after trimming or
+-- over 500 characters, or a setter call naming a session that is not the
+-- caller's cancelled one, is 22023.
 
 -- 1. The table ---------------------------------------------------------------
 
 create table public.rolling_plan_session_cancellations (
   session_id uuid primary key,
   user_id uuid not null,
-  reason text,
-  note text,
+  reason text not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint rolling_plan_session_cancellations_session_fkey
     foreign key (session_id, user_id)
     references public.rolling_plan_sessions (id, user_id) on delete cascade,
+  -- A row says something, or it is not kept: clearing the reason deletes it.
   constraint rolling_plan_session_cancellations_reason_check check (
-    reason is null
-    or reason in ('ill', 'pain_or_injury', 'tired', 'no_time', 'weather', 'other')
-  ),
-  constraint rolling_plan_session_cancellations_note_check check (
-    note is null
-    or (note = pg_catalog.btrim(note) and char_length(note) between 1 and 500)
-  ),
-  -- A row says something, or it is not kept.
-  constraint rolling_plan_session_cancellations_content_check
-    check (reason is not null or note is not null)
+    reason = pg_catalog.btrim(reason) and char_length(reason) between 1 and 500
+  )
 );
 
 create index rolling_plan_session_cancellations_user_idx
@@ -61,23 +55,11 @@ create policy rolling_plan_session_cancellations_owner_select
   on public.rolling_plan_session_cancellations
   for select to authenticated using ((select auth.uid()) = user_id);
 
--- 2. Validators --------------------------------------------------------------
+-- 2. Validator ---------------------------------------------------------------
 
--- The same rules as the table's checks, asked of a request before anything is
--- written, so a bad value is refused as a bad request rather than surfacing as
--- whichever constraint happened to fire.
+-- The table's rule, asked of a request before anything is written, so a bad
+-- value is refused as a bad request rather than as whichever check fired.
 create or replace function public.rolling_plan_cancellation_reason_is_valid(p_value jsonb)
-returns boolean
-language sql
-immutable
-security invoker
-set search_path = ''
-as $$
-  select pg_catalog.jsonb_typeof(p_value) = 'string'
-    and (p_value #>> '{}') in ('ill', 'pain_or_injury', 'tired', 'no_time', 'weather', 'other');
-$$;
-
-create or replace function public.rolling_plan_cancellation_note_is_valid(p_value jsonb)
 returns boolean
 language sql
 immutable
@@ -89,8 +71,6 @@ as $$
 $$;
 
 revoke all privileges on function public.rolling_plan_cancellation_reason_is_valid(jsonb)
-  from public, anon, authenticated, service_role;
-revoke all privileges on function public.rolling_plan_cancellation_note_is_valid(jsonb)
   from public, anon, authenticated, service_role;
 
 -- 3. The change function -----------------------------------------------------
@@ -140,7 +120,6 @@ declare
   v_occurrence_date date;
   -- Cancellation reason: the owner's optional why, kept beside the session.
   v_cancel_reason text;
-  v_cancel_note text;
 begin
   if v_user_id is null then
     raise exception using errcode = '42501', message = 'An authenticated FitTip user is required.';
@@ -664,18 +643,13 @@ begin
             is_locked = (v_change->>'isLocked')::boolean, updated_at = v_now
           where id = v_session_id and user_id = v_user_id;
         elsif v_operation = 'cancel' then
-          -- Cancellation reason: `reason` and `note` are optional, and a
-          -- cancel naming neither is exactly the cancel it always was.
-          if v_change - array['operation', 'sessionId', 'reason', 'note'] <> '{}'::jsonb
+          -- Cancellation reason: `reason` is optional, and a cancel without
+          -- one is exactly the cancel it always was.
+          if v_change - array['operation', 'sessionId', 'reason'] <> '{}'::jsonb
             or (
               v_change ? 'reason'
               and pg_catalog.jsonb_typeof(v_change->'reason') <> 'null'
               and not public.rolling_plan_cancellation_reason_is_valid(v_change->'reason')
-            )
-            or (
-              v_change ? 'note'
-              and pg_catalog.jsonb_typeof(v_change->'note') <> 'null'
-              and not public.rolling_plan_cancellation_note_is_valid(v_change->'note')
             )
           then
             raise exception using errcode = '22023', message = 'Invalid rolling plan cancellation.';
@@ -683,14 +657,11 @@ begin
           update public.rolling_plan_sessions set
             status = 'cancelled', cancelled_at = v_now, updated_at = v_now
           where id = v_session_id and user_id = v_user_id;
-          v_cancel_reason := v_change->>'reason';
-          v_cancel_note := pg_catalog.btrim(v_change->>'note');
-          if v_cancel_reason is not null or v_cancel_note is not null then
+          v_cancel_reason := pg_catalog.btrim(v_change->>'reason');
+          if v_cancel_reason is not null then
             insert into public.rolling_plan_session_cancellations (
-              session_id, user_id, reason, note, created_at, updated_at
-            ) values (
-              v_session_id, v_user_id, v_cancel_reason, v_cancel_note, v_now, v_now
-            );
+              session_id, user_id, reason, created_at, updated_at
+            ) values (v_session_id, v_user_id, v_cancel_reason, v_now, v_now);
           end if;
         else
           -- M3-19: cancel used to be this chain's fallthrough. Now that one of
@@ -820,14 +791,12 @@ grant execute on function public.apply_rolling_plan_change_set(bigint, uuid, tex
 
 -- 4. Editing or clearing the reason afterwards -------------------------------
 
--- The owner's own cancelled session only, found by auth.uid(). Both values
--- null clears the reason; otherwise the row is written whole, so a reason
--- cleared while a note stays is exactly what the owner left. The plan
--- revision does not move: this annotates the plan and changes nothing in it.
+-- The owner's own cancelled session only, found by auth.uid(). A blank reason
+-- clears it. The plan revision does not move: this annotates the plan and
+-- changes nothing in it.
 create or replace function public.set_session_cancellation_reason(
   p_session_id uuid,
-  p_reason text,
-  p_note text
+  p_reason text
 )
 returns void
 language plpgsql
@@ -836,16 +805,14 @@ set search_path = ''
 as $$
 declare
   v_user_id uuid := auth.uid();
-  v_note text := nullif(pg_catalog.btrim(p_note), '');
+  v_reason text := nullif(pg_catalog.btrim(p_reason), '');
 begin
   if v_user_id is null then
     raise exception using errcode = '42501', message = 'An authenticated FitTip user is required.';
   end if;
   if p_session_id is null
-    or (p_reason is not null
-      and not public.rolling_plan_cancellation_reason_is_valid(pg_catalog.to_jsonb(p_reason)))
-    or (v_note is not null
-      and not public.rolling_plan_cancellation_note_is_valid(pg_catalog.to_jsonb(v_note)))
+    or (v_reason is not null
+      and not public.rolling_plan_cancellation_reason_is_valid(pg_catalog.to_jsonb(v_reason)))
   then
     raise exception using errcode = '22023', message = 'Invalid cancellation reason.';
   end if;
@@ -858,24 +825,22 @@ begin
     raise exception using errcode = '22023', message = 'Invalid cancellation reason.';
   end if;
 
-  if p_reason is null and v_note is null then
+  if v_reason is null then
     delete from public.rolling_plan_session_cancellations
     where session_id = p_session_id and user_id = v_user_id;
     return;
   end if;
 
-  insert into public.rolling_plan_session_cancellations (
-    session_id, user_id, reason, note
-  ) values (p_session_id, v_user_id, p_reason, v_note)
+  insert into public.rolling_plan_session_cancellations (session_id, user_id, reason)
+  values (p_session_id, v_user_id, v_reason)
   on conflict (session_id) do update set
     reason = excluded.reason,
-    note = excluded.note,
     updated_at = pg_catalog.now()
   where public.rolling_plan_session_cancellations.user_id = v_user_id;
 end;
 $$;
 
-revoke all privileges on function public.set_session_cancellation_reason(uuid, text, text)
+revoke all privileges on function public.set_session_cancellation_reason(uuid, text)
   from public, anon, authenticated, service_role;
-grant execute on function public.set_session_cancellation_reason(uuid, text, text)
+grant execute on function public.set_session_cancellation_reason(uuid, text)
   to authenticated;

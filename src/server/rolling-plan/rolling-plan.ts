@@ -7,10 +7,7 @@ import {
   type TrainingMeasurement,
   type TrainingMeasurementMode,
 } from "@/server/training/training-measurements";
-import {
-  parseSessionCancellation,
-  type CancellationReason,
-} from "./session-cancellation";
+import { parseCancellationReason } from "./session-cancellation";
 
 export type RollingPlanActivityInput = {
   personalActivityId?: string;
@@ -116,8 +113,7 @@ export type RollingPlanChange =
   | {
       operation: "cancel";
       sessionId: string;
-      reason?: CancellationReason;
-      note?: string;
+      reason?: string;
     }
   /**
    * The hard delete beside the cancel. It keeps nothing: the row goes and a
@@ -450,18 +446,17 @@ function parseChange(value: unknown): RollingPlanChange {
         throw new RollingPlanValidationError();
       return { operation, sessionId, isLocked: record.isLocked };
     case "cancel": {
-      assertOnlyKeys(record, ["operation", "sessionId", "reason", "note"]);
-      let why;
+      assertOnlyKeys(record, ["operation", "sessionId", "reason"]);
+      let reason;
       try {
-        why = parseSessionCancellation(record.reason, record.note);
+        reason = parseCancellationReason(record.reason);
       } catch {
         throw new RollingPlanValidationError();
       }
       return {
         operation,
         sessionId,
-        ...(why.reason === null ? {} : { reason: why.reason }),
-        ...(why.note === null ? {} : { note: why.note }),
+        ...(reason === null ? {} : { reason }),
       };
     }
     case "delete":

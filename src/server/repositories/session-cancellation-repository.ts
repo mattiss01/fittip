@@ -9,10 +9,8 @@ import {
   type ServerUserClient,
 } from "@/lib/supabase/server-user-client";
 import {
-  CANCELLATION_REASONS,
-  parseSessionCancellation,
+  parseCancellationReason,
   SessionCancellationValidationError,
-  type CancellationReason,
   type SessionCancellation,
 } from "@/server/rolling-plan/session-cancellation";
 
@@ -45,39 +43,27 @@ export class SessionCancellations {
     const userId = await this.getVerifiedUserId();
     const { data, error } = await this.client
       .from("rolling_plan_session_cancellations")
-      .select("reason, note")
+      .select("reason")
       .eq("user_id", userId)
       .eq("session_id", sessionId)
       .maybeSingle();
     if (error) throw new SessionCancellationPersistenceError();
-    if (data === null) return null;
-    const reason = data.reason;
-    if (
-      reason !== null &&
-      !(CANCELLATION_REASONS as readonly string[]).includes(reason)
-    ) {
-      throw new SessionCancellationPersistenceError();
-    }
-    return { reason: reason as CancellationReason | null, note: data.note };
+    return data === null ? null : { reason: data.reason };
   }
 
   /**
-   * Replaces the reason on the owner's own cancelled session; neither a pick
-   * nor a note clears it. The database refuses any other session.
+   * Replaces the reason on the owner's own cancelled session; a blank one
+   * clears it. The database refuses any other session. Returns what is now
+   * stored, or null when nothing is.
    */
-  async set(
-    sessionId: string,
-    reason: unknown,
-    note: unknown,
-  ): Promise<SessionCancellation> {
-    const parsed = parseSessionCancellation(reason, note);
+  async set(sessionId: string, reason: unknown): Promise<string | null> {
+    const parsed = parseCancellationReason(reason);
     await this.getVerifiedUserId();
     const { error } = await this.client.rpc("set_session_cancellation_reason", {
       p_session_id: sessionId,
-      // The generated signature types these as non-null text; null is what
+      // The generated signature types this as non-null text; null is what
       // the function reads as "cleared".
-      p_reason: parsed.reason as string,
-      p_note: parsed.note as string,
+      p_reason: parsed as string,
     });
     if (error) {
       if (error.code === "22023")

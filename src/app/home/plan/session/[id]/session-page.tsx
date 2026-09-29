@@ -51,10 +51,6 @@ import {
 
 import { COMPLETION_OUTCOME_LABELS } from "../../../log/log-action-state";
 import { ActivityList } from "@/components/training/activity-list";
-import {
-  CANCELLATION_REASON_LABELS,
-  type CancellationReason,
-} from "@/lib/training/cancellation-reasons";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
 
 export type SessionPageOrigin = "plan" | "today";
@@ -392,15 +388,8 @@ export function SessionPage({
         />
         {cancelled && cancellation !== null ? (
           <p className={styles.reasonLine} data-cancellation-reason>
-            <span className={styles.reasonLabel}>Why</span>{" "}
-            {[
-              cancellation.reason === null
-                ? null
-                : CANCELLATION_REASON_LABELS[cancellation.reason],
-              cancellation.note === null ? null : `“${cancellation.note}”`,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
+            <span className={styles.reasonLabel}>Why</span> “
+            {cancellation.reason}”
           </p>
         ) : null}
         {cancelled && !past ? (
@@ -728,10 +717,7 @@ export function SessionPage({
   );
 }
 
-export type SessionCancellationView = {
-  reason: CancellationReason | null;
-  note: string | null;
-};
+export type SessionCancellationView = { reason: string };
 
 /**
  * Adds, edits or clears why the session was cancelled. It has its own action
@@ -762,7 +748,7 @@ function ReasonForm({
       <input type="hidden" name="sessionId" value={sessionId} />
       <CancelReasonFields
         idPrefix={`reason-${sessionId}`}
-        initial={initial ?? undefined}
+        initial={initial?.reason ?? null}
       />
       <p className={styles.consequenceStandalone}>
         Only you see this. It is kept with the session and is not sent to a
@@ -778,7 +764,6 @@ function ReasonForm({
           disabled={pending}
           formAction={(formData: FormData) => {
             formData.set("cancelReason", "");
-            formData.set("cancelNote", "");
             action(formData);
           }}
         >

@@ -31,18 +31,11 @@ export async function setCancellationReasonAction(
     }
     const saved = await (
       await createSessionCancellations()
-    ).set(
-      sessionId.toLowerCase(),
-      formData.get("cancelReason"),
-      formData.get("cancelNote"),
-    );
+    ).set(sessionId.toLowerCase(), formData.get("cancelReason"));
     revalidatePath("/home/plan");
     return {
       status: "saved",
-      message:
-        saved.reason === null && saved.note === null
-          ? "Reason cleared."
-          : "Reason saved.",
+      message: saved === null ? "Reason cleared." : "Reason saved.",
       submission,
     };
   } catch (error) {
@@ -50,7 +43,7 @@ export async function setCancellationReasonAction(
       return {
         status: "validation",
         message:
-          "That reason could not be saved. Pick one of the options and keep the note under 500 characters.",
+          "That reason could not be saved. Keep it under 500 characters.",
         submission,
       };
     }

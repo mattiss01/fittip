@@ -292,32 +292,19 @@ describe("SessionPage", () => {
     );
   });
 
-  it("asks why on cancel, optionally, with no reason chosen until one is", () => {
+  it("asks why on cancel, optionally, in the owner's own words", () => {
     render(page(session()));
     choose("Cancel session");
 
     const form = screen
       .getByRole("button", { name: "Cancel session" })
       .closest("form")!;
-    const picks = Array.from(
-      form.querySelectorAll<HTMLInputElement>("input[name='cancelReason']"),
-    );
-    expect(picks.map((pick) => pick.labels?.[0]?.textContent)).toEqual([
-      "No reason",
-      "Ill",
-      "Pain or injury",
-      "Tired",
-      "No time",
-      "Weather",
-      "Other",
-    ]);
-    expect(
-      picks.filter((pick) => pick.checked).map((pick) => pick.value),
-    ).toEqual([""]);
-    expect(form.querySelector("textarea[name='cancelNote']")).toHaveAttribute(
-      "maxLength",
-      "500",
-    );
+    const why = screen.getByLabelText("Why? (optional)");
+    expect(form).toContainElement(why);
+    expect(why).toHaveAttribute("name", "cancelReason");
+    expect(why).toHaveAttribute("maxLength", "500");
+    expect(why).toHaveValue("");
+    expect(form.querySelector("input[type='radio']")).toBeNull();
   });
 
   it("asks why when cancelling only one occurrence too", () => {
@@ -326,30 +313,26 @@ describe("SessionPage", () => {
     const form = screen
       .getByRole("button", { name: "Cancel only this session" })
       .closest("form")!;
-    expect(form.querySelectorAll("input[name='cancelReason']")).toHaveLength(7);
+    expect(form.querySelector("textarea[name='cancelReason']")).not.toBeNull();
   });
 
   it("shows why a session was cancelled, says Reactivate clears it, and edits it", () => {
     render(
       page(session({ status: "cancelled" }), undefined, "plan", {
-        reason: "tired",
-        note: "work ran late",
+        reason: "work ran late",
       }),
     );
 
     expect(
       document.querySelector("[data-cancellation-reason]")?.textContent,
-    ).toBe("Why Tired · “work ran late”");
+    ).toBe("Why “work ran late”");
     expect(screen.getByText(/clears the reason/)).toBeVisible();
 
     choose("Edit reason");
-    const form = screen
-      .getByRole("button", { name: "Save reason" })
-      .closest("form")!;
-    expect(
-      form.querySelector<HTMLInputElement>("input[value='tired']")?.checked,
-    ).toBe(true);
-    expect(form.querySelector("textarea")).toHaveValue("work ran late");
+    expect(screen.getByLabelText("Why? (optional)")).toHaveValue(
+      "work ran late",
+    );
+    expect(screen.getByRole("button", { name: "Save reason" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Clear reason" })).toBeVisible();
     expect(screen.getByText(/not sent to a coach/)).toBeVisible();
   });

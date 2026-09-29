@@ -1,25 +1,14 @@
-import {
-  CANCELLATION_NOTE_MAX,
-  CANCELLATION_REASONS,
-  type CancellationReason,
-} from "@/lib/training/cancellation-reasons";
+import { CANCELLATION_REASON_MAX } from "@/lib/training/cancellation-reasons";
 
-export {
-  CANCELLATION_NOTE_MAX,
-  CANCELLATION_REASONS,
-  type CancellationReason,
-} from "@/lib/training/cancellation-reasons";
+export { CANCELLATION_REASON_MAX } from "@/lib/training/cancellation-reasons";
 
 /**
- * Why a session was cancelled (owner, 29 Sep 2026): one of six quick picks, a
- * short note, or both. Stored only — no coach reads it; letting one would be
- * its own ADR-013 step. It lives beside the session rather than on it, so no
- * read of a session, and nothing a snapshot copies, carries it.
+ * Why a session was cancelled (owner, 29 Sep 2026), in the owner's own words.
+ * Stored only — no coach reads it; letting one would be its own ADR-013 step.
+ * It lives beside the session rather than on it, so no read of a session, and
+ * nothing a snapshot copies, carries it.
  */
-export type SessionCancellation = {
-  reason: CancellationReason | null;
-  note: string | null;
-};
+export type SessionCancellation = { reason: string };
 
 export class SessionCancellationValidationError extends Error {
   constructor() {
@@ -29,30 +18,14 @@ export class SessionCancellationValidationError extends Error {
 }
 
 /**
- * A reason and a note as the owner submitted them: an empty pick or a blank
- * note is "none", anything outside the six or over the bound is refused.
+ * A reason as the owner submitted it: blank is "none" and reads as null;
+ * anything longer than the bound, or not text at all, is refused.
  */
-export function parseSessionCancellation(
-  reason: unknown,
-  note: unknown,
-): SessionCancellation {
-  const pickedReason =
-    reason === undefined || reason === null || reason === ""
-      ? null
-      : typeof reason === "string" &&
-          (CANCELLATION_REASONS as readonly string[]).includes(reason)
-        ? (reason as CancellationReason)
-        : invalid();
-  const trimmed =
-    note === undefined || note === null
-      ? ""
-      : typeof note === "string"
-        ? note.trim()
-        : invalid();
-  if (trimmed.length > CANCELLATION_NOTE_MAX) invalid();
-  return { reason: pickedReason, note: trimmed === "" ? null : trimmed };
-}
-
-function invalid(): never {
-  throw new SessionCancellationValidationError();
+export function parseCancellationReason(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "string") throw new SessionCancellationValidationError();
+  const trimmed = value.trim();
+  if (trimmed.length > CANCELLATION_REASON_MAX)
+    throw new SessionCancellationValidationError();
+  return trimmed === "" ? null : trimmed;
 }

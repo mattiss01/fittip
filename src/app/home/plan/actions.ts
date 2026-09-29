@@ -395,17 +395,15 @@ function buildChanges(
     ];
   }
   if (operation === "cancel") {
-    // Why, if the owner said (29 Sep 2026). Both fields are optional; the
-    // change parser refuses anything outside the six picks or over the bound.
+    // Why, if the owner said (29 Sep 2026): optional, in their own words,
+    // and refused by the change parser only when over the bound.
     const reason = optionalText(formData, "cancelReason");
-    const note = optionalText(formData, "cancelNote");
     return [
       {
         operation,
         sessionId: session.id,
         ...(reason === undefined ? {} : { reason }),
-        ...(note === undefined ? {} : { note }),
-      } as RollingPlanChange,
+      },
     ];
   }
   if (operation === "reactivate") {

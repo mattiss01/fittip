@@ -1,40 +1,29 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  parseSessionCancellation,
+  parseCancellationReason,
   SessionCancellationValidationError,
 } from "./session-cancellation";
 import { parseChangeSet, RollingPlanValidationError } from "./rolling-plan";
 
 const SESSION_ID = "7f000000-0000-4000-8000-000000000001";
 
-describe("parseSessionCancellation", () => {
-  it("reads an empty pick and a blank note as saying nothing", () => {
-    expect(parseSessionCancellation("", "   ")).toEqual({
-      reason: null,
-      note: null,
-    });
-    expect(parseSessionCancellation(null, undefined)).toEqual({
-      reason: null,
-      note: null,
-    });
+describe("parseCancellationReason", () => {
+  it("reads nothing or blank as no reason", () => {
+    expect(parseCancellationReason(undefined)).toBeNull();
+    expect(parseCancellationReason(null)).toBeNull();
+    expect(parseCancellationReason("   ")).toBeNull();
   });
 
-  it("keeps one of the six picks and a trimmed note", () => {
-    expect(parseSessionCancellation("pain_or_injury", " left knee ")).toEqual({
-      reason: "pain_or_injury",
-      note: "left knee",
-    });
+  it("keeps the owner's words, trimmed", () => {
+    expect(parseCancellationReason("  left knee sore ")).toBe("left knee sore");
   });
 
-  it("refuses a pick outside the six and a note over the bound", () => {
-    expect(() => parseSessionCancellation("bored", null)).toThrow(
+  it("refuses anything over the bound, or not text", () => {
+    expect(() => parseCancellationReason("x".repeat(501))).toThrow(
       SessionCancellationValidationError,
     );
-    expect(() => parseSessionCancellation(null, "x".repeat(501))).toThrow(
-      SessionCancellationValidationError,
-    );
-    expect(() => parseSessionCancellation(null, 42)).toThrow(
+    expect(() => parseCancellationReason(42)).toThrow(
       SessionCancellationValidationError,
     );
   });
@@ -47,33 +36,42 @@ describe("a cancel change", () => {
     changes: [change],
   });
 
-  it("may carry a reason and a note, and omits what was not given", () => {
+  it("may carry a reason, and omits a blank one", () => {
     expect(
       parseChangeSet(
         changeSet({
           operation: "cancel",
           sessionId: SESSION_ID,
-          reason: "weather",
+          reason: " storm ",
         }),
       ).changes,
     ).toEqual([
-      { operation: "cancel", sessionId: SESSION_ID, reason: "weather" },
+      { operation: "cancel", sessionId: SESSION_ID, reason: "storm" },
     ]);
+    expect(
+      parseChangeSet(
+        changeSet({ operation: "cancel", sessionId: SESSION_ID, reason: "" }),
+      ).changes,
+    ).toEqual([{ operation: "cancel", sessionId: SESSION_ID }]);
   });
 
-  it("refuses a reason outside the six and any key it does not know", () => {
+  it("refuses an over-long reason and any key it does not know", () => {
     expect(() =>
       parseChangeSet(
         changeSet({
           operation: "cancel",
           sessionId: SESSION_ID,
-          reason: "bored",
+          reason: "x".repeat(501),
         }),
       ),
     ).toThrow(RollingPlanValidationError);
     expect(() =>
       parseChangeSet(
-        changeSet({ operation: "cancel", sessionId: SESSION_ID, why: "tired" }),
+        changeSet({
+          operation: "cancel",
+          sessionId: SESSION_ID,
+          note: "tired",
+        }),
       ),
     ).toThrow(RollingPlanValidationError);
   });

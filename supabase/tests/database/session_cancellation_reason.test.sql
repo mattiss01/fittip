@@ -1,6 +1,7 @@
 -- Why a session was cancelled (owner, 29 Sep 2026).
 --
--- The reason is proved as stored-only data: its own owner-select-only table,
+-- The reason is the owner's own words, one optional text (no quick picks).
+-- It is proved as stored-only data: its own owner-select-only table,
 -- written by a cancel that names it and by one setter, cleared by reactivate
 -- and by deleting the session, and absent from `rolling_plan_session_state`,
 -- which is what completions' planned snapshots and change history copy.
@@ -73,13 +74,23 @@ $$;
 
 -- What the owner's own read of the table returns, under RLS.
 create function pg_temp.reason_of(p_session_id uuid)
-returns jsonb
+returns text
 language sql
 stable
 as $$
-  select jsonb_build_object('reason', reason, 'note', note)
-  from public.rolling_plan_session_cancellations
+  select reason from public.rolling_plan_session_cancellations
   where session_id = p_session_id
+$$;
+
+create function pg_temp.has_reason(p_session_id uuid)
+returns boolean
+language sql
+stable
+as $$
+  select exists (
+    select 1 from public.rolling_plan_session_cancellations
+    where session_id = p_session_id
+  )
 $$;
 
 create temporary table snapshot (label text primary key, value jsonb);
@@ -97,8 +108,8 @@ select is(
 select has_table('public', 'rolling_plan_session_cancellations', 'the reason has its own table');
 select columns_are(
   'public', 'rolling_plan_session_cancellations',
-  array['session_id', 'user_id', 'reason', 'note', 'created_at', 'updated_at'],
-  'it holds a reason, a note, and nothing about the session itself'
+  array['session_id', 'user_id', 'reason', 'created_at', 'updated_at'],
+  'it holds the owner''s words and nothing about the session itself'
 );
 select col_is_pk('public', 'rolling_plan_session_cancellations', 'session_id',
   'one reason per session');
@@ -130,17 +141,15 @@ select ok(
 );
 select ok(
   has_function_privilege('authenticated',
-    'public.set_session_cancellation_reason(uuid, text, text)', 'EXECUTE')
+    'public.set_session_cancellation_reason(uuid, text)', 'EXECUTE')
   and not has_function_privilege('anon',
-    'public.set_session_cancellation_reason(uuid, text, text)', 'EXECUTE'),
+    'public.set_session_cancellation_reason(uuid, text)', 'EXECUTE'),
   'the setter is granted to authenticated alone'
 );
 select ok(
   not has_function_privilege('authenticated',
-    'public.rolling_plan_cancellation_reason_is_valid(jsonb)', 'EXECUTE')
-  and not has_function_privilege('authenticated',
-    'public.rolling_plan_cancellation_note_is_valid(jsonb)', 'EXECUTE'),
-  'the validators are not callable on their own'
+    'public.rolling_plan_cancellation_reason_is_valid(jsonb)', 'EXECUTE'),
+  'the validator is not callable on its own'
 );
 
 -- Owners ----------------------------------------------------------------------
@@ -161,7 +170,7 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"role":"authenticated"}', true);
 select throws_ok(
   $$select public.set_session_cancellation_reason(
-    '7c500000-0000-4000-8000-0000000000a1', 'tired', null)$$,
+    '7c500000-0000-4000-8000-0000000000a1', 'tired')$$,
   '42501', 'An authenticated FitTip user is required.',
   'an anonymous caller cannot set a reason'
 );
@@ -186,44 +195,42 @@ select public.apply_rolling_plan_change_set(
   jsonb_build_array(
     jsonb_build_object('operation', 'cancel',
       'sessionId', '7c500000-0000-4000-8000-0000000000a1',
-      'reason', 'tired', 'note', '  work ran late  '),
+      'reason', '  work ran late  '),
     jsonb_build_object('operation', 'cancel',
       'sessionId', '7c500000-0000-4000-8000-0000000000a2')));
 
 select is(
   pg_temp.reason_of('7c500000-0000-4000-8000-0000000000a1'),
-  '{"reason": "tired", "note": "work ran late"}'::jsonb,
-  'a cancel that names a reason and a note stores both, the note trimmed'
+  'work ran late',
+  'a cancel that says why stores it, trimmed'
 );
-select is(
-  (select count(*)::bigint from public.rolling_plan_session_cancellations
-   where session_id = '7c500000-0000-4000-8000-0000000000a2'),
-  0::bigint,
-  'a cancel that names neither stores nothing'
+select ok(
+  not pg_temp.has_reason('7c500000-0000-4000-8000-0000000000a2'),
+  'a cancel that says nothing stores nothing'
 );
 
 select throws_ok(
   format($$select public.apply_rolling_plan_change_set(%s,
     '7c500000-0000-4000-8000-00000000e0f1', 'owner_manual',
-    '[{"operation":"cancel","sessionId":"7c500000-0000-4000-8000-0000000000a3","reason":"bored"}]'::jsonb)$$,
+    '[{"operation":"cancel","sessionId":"7c500000-0000-4000-8000-0000000000a3","reason":"   "}]'::jsonb)$$,
     pg_temp.rev('7c500000-0000-4000-8000-000000000001')),
   '22023', 'Invalid rolling plan cancellation.',
-  'a reason outside the six is refused'
+  'a blank reason is refused rather than stored'
 );
 select throws_ok(
   format($$select public.apply_rolling_plan_change_set(%s,
     '7c500000-0000-4000-8000-00000000e0f2', 'owner_manual',
     jsonb_build_array(jsonb_build_object('operation', 'cancel',
       'sessionId', '7c500000-0000-4000-8000-0000000000a3',
-      'note', repeat('x', 501))))$$,
+      'reason', repeat('x', 501))))$$,
     pg_temp.rev('7c500000-0000-4000-8000-000000000001')),
   '22023', 'Invalid rolling plan cancellation.',
-  'a note over 500 characters is refused'
+  'a reason over 500 characters is refused'
 );
 select throws_ok(
   format($$select public.apply_rolling_plan_change_set(%s,
     '7c500000-0000-4000-8000-00000000e0f3', 'owner_manual',
-    '[{"operation":"cancel","sessionId":"7c500000-0000-4000-8000-0000000000a3","why":"tired"}]'::jsonb)$$,
+    '[{"operation":"cancel","sessionId":"7c500000-0000-4000-8000-0000000000a3","note":"tired"}]'::jsonb)$$,
     pg_temp.rev('7c500000-0000-4000-8000-000000000001')),
   '22023', 'Invalid rolling plan cancellation.',
   'a cancel still refuses any key it does not know'
@@ -235,28 +242,26 @@ insert into snapshot
 select 'revision-before', to_jsonb(pg_temp.rev('7c500000-0000-4000-8000-000000000001'));
 
 select public.set_session_cancellation_reason(
-  '7c500000-0000-4000-8000-0000000000a2', 'ill', null);
+  '7c500000-0000-4000-8000-0000000000a2', 'felt ill');
 select is(
   pg_temp.reason_of('7c500000-0000-4000-8000-0000000000a2'),
-  '{"reason": "ill", "note": null}'::jsonb,
+  'felt ill',
   'a reason can be added to a session cancelled without one'
 );
 
 select public.set_session_cancellation_reason(
-  '7c500000-0000-4000-8000-0000000000a1', null, 'work ran late');
+  '7c500000-0000-4000-8000-0000000000a1', 'meeting ran over');
 select is(
   pg_temp.reason_of('7c500000-0000-4000-8000-0000000000a1'),
-  '{"reason": null, "note": "work ran late"}'::jsonb,
-  'the pick can be cleared while the note stays'
+  'meeting ran over',
+  'a reason can be replaced'
 );
 
 select public.set_session_cancellation_reason(
-  '7c500000-0000-4000-8000-0000000000a1', null, '   ');
-select is(
-  (select count(*)::bigint from public.rolling_plan_session_cancellations
-   where session_id = '7c500000-0000-4000-8000-0000000000a1'),
-  0::bigint,
-  'clearing both removes the row rather than keeping an empty one'
+  '7c500000-0000-4000-8000-0000000000a1', '   ');
+select ok(
+  not pg_temp.has_reason('7c500000-0000-4000-8000-0000000000a1'),
+  'a blank reason clears it rather than keeping an empty row'
 );
 
 select is(
@@ -267,15 +272,15 @@ select is(
 
 select throws_ok(
   $$select public.set_session_cancellation_reason(
-    '7c500000-0000-4000-8000-0000000000a3', 'tired', null)$$,
+    '7c500000-0000-4000-8000-0000000000a3', 'tired')$$,
   '22023', 'Invalid cancellation reason.',
   'an active session cannot be given a reason'
 );
 select throws_ok(
   $$select public.set_session_cancellation_reason(
-    '7c500000-0000-4000-8000-0000000000a2', 'bored', null)$$,
+    '7c500000-0000-4000-8000-0000000000a2', repeat('x', 501))$$,
   '22023', 'Invalid cancellation reason.',
-  'the setter refuses a reason outside the six'
+  'the setter refuses a reason over 500 characters'
 );
 select throws_ok(
   $$insert into public.rolling_plan_session_cancellations (session_id, user_id, reason)
@@ -298,7 +303,7 @@ select is(
 );
 select throws_ok(
   $$select public.set_session_cancellation_reason(
-    '7c500000-0000-4000-8000-0000000000a2', 'tired', null)$$,
+    '7c500000-0000-4000-8000-0000000000a2', 'tired')$$,
   '22023', 'Invalid cancellation reason.',
   'another owner cannot set a reason on this owner''s session'
 );
@@ -308,7 +313,7 @@ select set_config(
   '{"sub":"7c500000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 select is(
   pg_temp.reason_of('7c500000-0000-4000-8000-0000000000a2'),
-  '{"reason": "ill", "note": null}'::jsonb,
+  'felt ill',
   'the outsider''s attempt changed nothing'
 );
 
@@ -318,25 +323,21 @@ select public.apply_rolling_plan_change_set(
   pg_temp.rev('7c500000-0000-4000-8000-000000000001'),
   '7c500000-0000-4000-8000-00000000e003', 'owner_manual',
   '[{"operation":"reactivate","sessionId":"7c500000-0000-4000-8000-0000000000a2"}]'::jsonb);
-select is(
-  (select count(*)::bigint from public.rolling_plan_session_cancellations
-   where session_id = '7c500000-0000-4000-8000-0000000000a2'),
-  0::bigint,
+select ok(
+  not pg_temp.has_reason('7c500000-0000-4000-8000-0000000000a2'),
   'a reactivated session keeps no reason'
 );
 
 select public.apply_rolling_plan_change_set(
   pg_temp.rev('7c500000-0000-4000-8000-000000000001'),
   '7c500000-0000-4000-8000-00000000e004', 'owner_manual',
-  '[{"operation":"cancel","sessionId":"7c500000-0000-4000-8000-0000000000a3","reason":"weather"}]'::jsonb);
+  '[{"operation":"cancel","sessionId":"7c500000-0000-4000-8000-0000000000a3","reason":"storm"}]'::jsonb);
 select public.apply_rolling_plan_change_set(
   pg_temp.rev('7c500000-0000-4000-8000-000000000001'),
   '7c500000-0000-4000-8000-00000000e005', 'owner_manual',
   '[{"operation":"delete","sessionId":"7c500000-0000-4000-8000-0000000000a3"}]'::jsonb);
-select is(
-  (select count(*)::bigint from public.rolling_plan_session_cancellations
-   where session_id = '7c500000-0000-4000-8000-0000000000a3'),
-  0::bigint,
+select ok(
+  not pg_temp.has_reason('7c500000-0000-4000-8000-0000000000a3'),
   'deleting a cancelled session deletes its reason with it'
 );
 
@@ -345,14 +346,14 @@ select is(
 select public.apply_rolling_plan_change_set(
   pg_temp.rev('7c500000-0000-4000-8000-000000000001'),
   '7c500000-0000-4000-8000-00000000e006', 'owner_manual',
-  '[{"operation":"cancel","sessionId":"7c500000-0000-4000-8000-0000000000a2","reason":"pain_or_injury","note":"left knee"}]'::jsonb);
+  '[{"operation":"cancel","sessionId":"7c500000-0000-4000-8000-0000000000a2","reason":"left knee sore"}]'::jsonb);
 
 reset role;
 
 select ok(
   not (public.rolling_plan_session_state(
     '7c500000-0000-4000-8000-000000000001',
-    '7c500000-0000-4000-8000-0000000000a2')::text ~ '(pain_or_injury|left knee)'),
+    '7c500000-0000-4000-8000-0000000000a2')::text ~ 'left knee'),
   'the session state that snapshots copy carries no reason'
 );
 select ok(
@@ -360,9 +361,9 @@ select ok(
     select 1 from public.rolling_plan_change_entries entry
     where entry.user_id = '7c500000-0000-4000-8000-000000000001'
       and (coalesce(entry.before_state::text, '') || coalesce(entry.after_state::text, ''))
-        ~ '(pain_or_injury|left knee|work ran late)'
+        ~ '(left knee|work ran late|meeting ran over|felt ill|storm)'
   ),
-  'no change history entry carries a reason or a note'
+  'no change history entry carries a reason'
 );
 select * from finish();
 
