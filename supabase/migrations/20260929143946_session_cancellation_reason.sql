@@ -37,8 +37,11 @@ create table public.rolling_plan_session_cancellations (
     foreign key (session_id, user_id)
     references public.rolling_plan_sessions (id, user_id) on delete cascade,
   -- A row says something, or it is not kept: clearing the reason deletes it.
+  -- Trimmed of spaces, tabs and line breaks alike, so whitespace alone is
+  -- never a reason.
   constraint rolling_plan_session_cancellations_reason_check check (
-    reason = pg_catalog.btrim(reason) and char_length(reason) between 1 and 500
+    reason = pg_catalog.btrim(reason, E' \t\r\n')
+    and char_length(reason) between 1 and 500
   )
 );
 
@@ -67,7 +70,8 @@ security invoker
 set search_path = ''
 as $$
   select pg_catalog.jsonb_typeof(p_value) = 'string'
-    and pg_catalog.char_length(pg_catalog.btrim(p_value #>> '{}')) between 1 and 500;
+    and pg_catalog.char_length(pg_catalog.btrim(p_value #>> '{}', E' \t\r\n'))
+      between 1 and 500;
 $$;
 
 revoke all privileges on function public.rolling_plan_cancellation_reason_is_valid(jsonb)
@@ -657,7 +661,7 @@ begin
           update public.rolling_plan_sessions set
             status = 'cancelled', cancelled_at = v_now, updated_at = v_now
           where id = v_session_id and user_id = v_user_id;
-          v_cancel_reason := pg_catalog.btrim(v_change->>'reason');
+          v_cancel_reason := pg_catalog.btrim(v_change->>'reason', E' \t\r\n');
           if v_cancel_reason is not null then
             insert into public.rolling_plan_session_cancellations (
               session_id, user_id, reason, created_at, updated_at
@@ -805,7 +809,7 @@ set search_path = ''
 as $$
 declare
   v_user_id uuid := auth.uid();
-  v_reason text := nullif(pg_catalog.btrim(p_reason), '');
+  v_reason text := nullif(pg_catalog.btrim(p_reason, E' \t\r\n'), '');
 begin
   if v_user_id is null then
     raise exception using errcode = '42501', message = 'An authenticated FitTip user is required.';

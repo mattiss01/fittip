@@ -96,7 +96,7 @@ $$;
 create temporary table snapshot (label text primary key, value jsonb);
 grant all on snapshot to public;
 
-select plan(31);
+select plan(33);
 
 select is(
   (select count(*)::bigint from reason_zone), 1::bigint,
@@ -219,6 +219,16 @@ select throws_ok(
 );
 select throws_ok(
   format($$select public.apply_rolling_plan_change_set(%s,
+    '7c500000-0000-4000-8000-00000000e0f4', 'owner_manual',
+    jsonb_build_array(jsonb_build_object('operation', 'cancel',
+      'sessionId', '7c500000-0000-4000-8000-0000000000a3',
+      'reason', E'\t\n')))$$,
+    pg_temp.rev('7c500000-0000-4000-8000-000000000001')),
+  '22023', 'Invalid rolling plan cancellation.',
+  'tabs and line breaks alone are blank too'
+);
+select throws_ok(
+  format($$select public.apply_rolling_plan_change_set(%s,
     '7c500000-0000-4000-8000-00000000e0f2', 'owner_manual',
     jsonb_build_array(jsonb_build_object('operation', 'cancel',
       'sessionId', '7c500000-0000-4000-8000-0000000000a3',
@@ -263,6 +273,16 @@ select ok(
   not pg_temp.has_reason('7c500000-0000-4000-8000-0000000000a1'),
   'a blank reason clears it rather than keeping an empty row'
 );
+
+select public.set_session_cancellation_reason(
+  '7c500000-0000-4000-8000-0000000000a2', E'\t');
+select is(
+  pg_temp.reason_of('7c500000-0000-4000-8000-0000000000a2'),
+  null,
+  'a tab alone clears it as well, rather than being stored'
+);
+select public.set_session_cancellation_reason(
+  '7c500000-0000-4000-8000-0000000000a2', 'felt ill');
 
 select is(
   pg_temp.rev('7c500000-0000-4000-8000-000000000001'),
