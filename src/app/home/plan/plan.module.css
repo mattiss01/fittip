@@ -1066,6 +1066,26 @@
   outline-offset: 2px;
 }
 
+/* Why a session was cancelled, on its page. */
+.reasonLine {
+  margin: 0.8rem 0 0;
+  padding: 0.6rem 0.7rem;
+  border-left: 4px solid var(--ledger-muted);
+  background: #edf0e7;
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.reasonLabel {
+  color: var(--ledger-muted);
+  font:
+    700 0.6rem "Courier New",
+    monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
 @media (max-width: 400px) {
   .day {
     grid-template-columns: 4.6rem 1fr;

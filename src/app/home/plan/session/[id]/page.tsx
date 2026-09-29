@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { PLAN_WINDOW_DAYS } from "../../action-state";
 import {
@@ -14,7 +15,11 @@ import {
   toSessionView,
 } from "../../plan-read";
 import type { PlanSessionView } from "../../session-view";
-import { SessionPage, type SessionPageOrigin } from "./session-page";
+import {
+  SessionPage,
+  type SessionCancellationView,
+  type SessionPageOrigin,
+} from "./session-page";
 
 import homeStyles from "../../../home.module.css";
 import {
@@ -25,6 +30,10 @@ import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import { createCompletionLog } from "@/server/repositories/completion-log-repository";
 import { createProfileRepository } from "@/server/repositories/profile-repository";
 import { createRollingPlan } from "@/server/repositories/rolling-plan-repository";
+import {
+  createSessionCancellations,
+  SessionCancellationAuthenticationError,
+} from "@/server/repositories/session-cancellation-repository";
 import type { RollingPlanSeries } from "@/server/rolling-plan/rolling-plan";
 import { readOpenSessionActivityProposals } from "@/server/session-detail/open-session-activity-proposals";
 
@@ -114,6 +123,7 @@ async function SessionRead({
   let revision = 0;
   let series: RollingPlanSeries[] = [];
   let library: LibraryActivityOption[] = [];
+  let cancellation: SessionCancellationView | null = null;
   try {
     const plan = await createRollingPlan();
     const [slice, allSeries, options] = await Promise.all([
@@ -156,9 +166,19 @@ async function SessionRead({
             }),
         ...(fill === undefined ? {} : { openFill: toFillProposal(fill) }),
       };
+      // Why it was cancelled is read here and nowhere else, and only for a
+      // session that is cancelled (owner, 29 Sep 2026).
+      if (found.status === "cancelled") {
+        cancellation = await (await createSessionCancellations()).get(found.id);
+      }
     }
   } catch (error) {
     redirectOnAuthError(error);
+    if (error instanceof SessionCancellationAuthenticationError) {
+      redirect(
+        error.accessError?.reason === "not-owner" ? "/auth/denied" : "/",
+      );
+    }
     throw error;
   }
 
@@ -181,6 +201,7 @@ async function SessionRead({
         expectedRevision={revision}
         origin={origin}
         originDate={requestedDate}
+        cancellation={cancellation}
       />
     </ActivityLibraryProvider>
   );

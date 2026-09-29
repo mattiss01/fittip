@@ -2024,6 +2024,38 @@ export type Database = {
           },
         ];
       };
+      rolling_plan_session_cancellations: {
+        Row: {
+          created_at: string;
+          reason: string;
+          session_id: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          reason: string;
+          session_id: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          reason?: string;
+          session_id?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "rolling_plan_session_cancellations_session_fkey";
+            columns: ["session_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "rolling_plan_sessions";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
       rolling_plan_sessions: {
         Row: {
           active_position: number | null;
@@ -2872,6 +2904,10 @@ export type Database = {
         Args: { p_value: Json };
         Returns: boolean;
       };
+      rolling_plan_cancellation_reason_is_valid: {
+        Args: { p_value: Json };
+        Returns: boolean;
+      };
       rolling_plan_occurrence_id: {
         Args: { p_occurrence_date: string; p_series_id: string };
         Returns: string;
@@ -2942,6 +2978,10 @@ export type Database = {
       session_activities_content_is_valid: {
         Args: { p_content: Json; p_user_id: string };
         Returns: boolean;
+      };
+      set_session_cancellation_reason: {
+        Args: { p_reason: string; p_session_id: string };
+        Returns: undefined;
       };
       settle_ai_spend: {
         Args: { p_charged_micro_usd: number; p_settlement_token: string };

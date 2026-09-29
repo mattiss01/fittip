@@ -7,6 +7,7 @@ import {
   type TrainingMeasurement,
   type TrainingMeasurementMode,
 } from "@/server/training/training-measurements";
+import { parseCancellationReason } from "./session-cancellation";
 
 export type RollingPlanActivityInput = {
   personalActivityId?: string;
@@ -105,7 +106,15 @@ export type RollingPlanChange =
       position: number;
     }
   | { operation: "set_lock"; sessionId: string; isLocked: boolean }
-  | { operation: "cancel"; sessionId: string }
+  /**
+   * Keeps the session on the record as cancelled. It may say why; the reason
+   * is written beside the session, never into it (see `session-cancellation`).
+   */
+  | {
+      operation: "cancel";
+      sessionId: string;
+      reason?: string;
+    }
   /**
    * The hard delete beside the cancel. It keeps nothing: the row goes and a
    * dated change entry naming no session is what remains. An already cancelled
@@ -436,7 +445,20 @@ function parseChange(value: unknown): RollingPlanChange {
       if (typeof record.isLocked !== "boolean")
         throw new RollingPlanValidationError();
       return { operation, sessionId, isLocked: record.isLocked };
-    case "cancel":
+    case "cancel": {
+      assertOnlyKeys(record, ["operation", "sessionId", "reason"]);
+      let reason;
+      try {
+        reason = parseCancellationReason(record.reason);
+      } catch {
+        throw new RollingPlanValidationError();
+      }
+      return {
+        operation,
+        sessionId,
+        ...(reason === null ? {} : { reason }),
+      };
+    }
     case "delete":
     case "reactivate":
       assertOnlyKeys(record, ["operation", "sessionId"]);
