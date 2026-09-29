@@ -33,16 +33,13 @@ Ordered by dependency. A lane is named where it is not the build lane.
       Open for the owner first: a row picked from the library and then changed keeps its
       `personal_activity_id` until it is saved as a new definition, so grouping history by
       definition would count "picked Latzug, renamed Stabwurf" as Latzug.
-- [ ] **Edit a session on its own page.** Owner, 28 Sep 2026: Edit on a planned session
-      opens a screen holding only that session's editor, instead of a panel inside the
-      whole Plan. Open: whether Duplicate, Save to library and the recurring scopes move
-      with it, and where Save returns to (the Plan at that day is the obvious answer).
-      Needs its own loading, missing-session and expired-sign-in states.
-- [ ] **Why a session was cancelled.** Owner, 28 Sep 2026: the Cancel confirmation offers
-      an optional field for the reason. Likely careful lane — a stored reason is a new
-      column, and free text that may name pain or illness raises whether and how a coach
-      reads it (ADR-013). Open for the owner: whether recurring "cancel only this" gets it
-      too, and whether the reason is shown on the cancelled card.
+- [~] **Why a session was cancelled.** Careful lane (new stored data). Owner, 29 Sep 2026:
+      Cancel offers optional quick picks (Ill, Pain or injury, Tired, No time, Weather,
+      Other — factual, non-diagnostic; list open to the owner's reaction) plus an optional
+      note. Stored only: no coach reads it, and letting one would be its own ADR-013
+      step. Shown on the session's own page, not the Plan card, and editable or clearable
+      afterwards. A recurring "cancel only this" carries it too; Reactivate clears it.
+      Owner-only by RLS like the session it belongs to; the note is bounded in length.
 - [ ] **Make Lock understandable.** Owner, 29 Sep 2026: nothing tells the owner what Lock
       means or why they would use it. Today it means "later planning must not move or
       replace this" (`CONTEXT.md`): the coach's replanning and a series' "delete this and
@@ -132,6 +129,7 @@ Not worth their own slot; do them when work lands nearby.
 
 | Date | Commit | CI | What |
 | --- | --- | --- | --- |
+| 29 Sep 2026 | `1433827` | [36556000474](https://github.com/mattiss01/fittip/actions/runs/36556000474) | A session opens on its own page from the Plan or Today: Edit in sight, ⋯ for Log, Duplicate, Save to library, Lock, Cancel and Delete; a cancelled one offers Reactivate, and Save stays on the page while a delete returns to where it was opened. No migration. Plan cards carry no verbs now, so the m3-12, m3-13, m3-14b, m3-15b, m3-15c and m3-19 accepted flows were rewritten to reach them through the page |
 | 28 Sep 2026 | `f44ce22` | [36441865686](https://github.com/mattiss01/fittip/actions/runs/36441865686) | A7-4: Fill with coach in a session's Edit panel opens the suggestion in its own box — remove, add from the plan, Accept or Dismiss — and the list changes only on Accept; "accepted" is recorded after the save lands, and a suggestion saved past stays open and comes back. No migration; the M3-11 allowlist admits two narrow session-detail modules (one decision write, one read). Review found an allowlist bypass and five state faults, fixed in `f44ce22` |
 | 28 Sep 2026 | `c8c56c4` | [36406975911](https://github.com/mattiss01/fittip/actions/runs/36406975911) | A7-3: the fill coach's proposals are permanent records — request, immutable proposal, the sources that survived sizing, and one final accepted/dismissed decision — with ADR-019's settle-with-the-proposal and `reserve_ai_spend` widened to the operation. Migration `20260928093803` applied to the founder project — 35 migrations, advisors 23 definer + 1 auth, the three new being this operation's RPCs. Review found one paid-result-losing mismatch (blank safety text), fixed with a pgTAP pin |
 | 28 Sep 2026 | `d55ec67` | [36403298890](https://github.com/mattiss01/fittip/actions/runs/36403298890) | A7-2: `fill_session_activities` (schema `fittip.session-activities.v1`) through contract, context, prompt, validator and example coach, with no persistence or surface yet; the operation branches are exhaustive switches now. ADR-020 gained decision 5 (`9ded908`): the session's note and intent are sent, a fill reads seven days of training, and a lock does not block it. No migration |
