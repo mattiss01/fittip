@@ -158,7 +158,9 @@ test.describe("M3-12 manual continuous planning", () => {
         page.getByRole("button", { name: "Reactivate" }),
       ).toBeVisible();
       await backToPlan(page);
-      await expect(day(page, today).getByText("Cancelled")).toBeVisible();
+      await expect(
+        day(page, today).getByText("Cancelled", { exact: true }),
+      ).toBeVisible();
       await expect(
         day(page, today).getByText("Running · Cancelled, kept on the record"),
       ).toBeVisible();

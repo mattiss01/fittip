@@ -41,6 +41,7 @@ import {
   draftOf,
   planDayHref,
   readsAsLogged,
+  sessionHref,
   stampDate,
   type PlanSessionView,
 } from "../../session-view";
@@ -138,14 +139,17 @@ export function SessionPage({
   // cost a render and could close a panel the owner has since reopened.
   const [settled, setSettled] = useState({ plan: 0, series: 0 });
   if (state.status === "saved" && state.submission !== settled.plan) {
-    setSettled({ ...settled, plan: state.submission });
+    setSettled((current) => ({ ...current, plan: state.submission }));
     setPanel(null);
   }
   if (
     seriesState.status === "saved" &&
     seriesState.submission !== settled.series
   ) {
-    setSettled({ ...settled, series: seriesState.submission });
+    setSettled((current) => ({
+      ...current,
+      series: seriesState.submission,
+    }));
     setPanel(null);
   }
 
@@ -170,6 +174,11 @@ export function SessionPage({
         ? "/home/plan"
         : planDayHref(lastDate);
   const gone = session === null && removedHere;
+  // "This and future" can replace the occurrence this page was showing with
+  // the successor series' own, so the page leaves after a save, not a removal.
+  const replacedBySeriesEdit =
+    channel === "series" && seriesState.operation === "edit_series";
+  const returnLabel = origin === "today" ? "Today" : "the Plan";
   useEffect(() => {
     if (gone) router.replace(returnHref);
   }, [gone, returnHref, router]);
@@ -223,8 +232,10 @@ export function SessionPage({
         >
           {gone ? (
             <>
-              <h1>Session removed.</h1>
-              <p>Taking you back to the Plan.</p>
+              <h1>
+                {replacedBySeriesEdit ? "Change saved." : "Session removed."}
+              </h1>
+              <p>Taking you back to {returnLabel}.</p>
             </>
           ) : (
             <>
@@ -233,8 +244,8 @@ export function SessionPage({
                 It may have been deleted, or it is not one of yours. Nothing was
                 changed.
               </p>
-              <Link className={styles.primary} href="/home/plan">
-                Open Plan
+              <Link className={styles.primary} href={returnHref}>
+                Back to {returnLabel}
               </Link>
             </>
           )}
@@ -255,6 +266,18 @@ export function SessionPage({
     ? `/home/log?completion=${session.log.completionId}`
     : `/home/log?plannedSession=${session.id}&date=${session.localDate}`;
   const busy = pending || seriesPending;
+  const recurringView = {
+    id: session.id,
+    occurrenceDate: recurring?.occurrenceDate ?? "",
+    isLocked: session.isLocked,
+    title: session.title,
+    sport: session.sport,
+    intent: session.intent,
+    expectedDurationMinutes: session.expectedDurationMinutes,
+    note: session.note,
+    activities: session.activities,
+    openFill: session.openFill,
+  };
 
   const submit = (fields: Record<string, string>) => {
     const formData = new FormData();
@@ -278,9 +301,22 @@ export function SessionPage({
         {notice}
       </p>
       {showReload ? (
-        <a className={styles.reload} href={`/home/plan/session/${session.id}`}>
+        <a
+          className={styles.reload}
+          href={sessionHref(
+            session.id,
+            origin === "today"
+              ? { from: "today", date: originDate ?? session.localDate }
+              : null,
+          )}
+        >
           Reload this session
         </a>
+      ) : null}
+      {state.status === "session" && !showSeries ? (
+        <Link className={styles.reload} href="/">
+          Sign in again
+        </Link>
       ) : null}
 
       <article
@@ -516,18 +552,7 @@ export function SessionPage({
               <RecurringSessionControls
                 mode="edit"
                 today={today}
-                session={{
-                  id: session.id,
-                  occurrenceDate: recurring.occurrenceDate,
-                  isLocked: session.isLocked,
-                  title: session.title,
-                  sport: session.sport,
-                  intent: session.intent,
-                  expectedDurationMinutes: session.expectedDurationMinutes,
-                  note: session.note,
-                  activities: session.activities,
-                  openFill: session.openFill,
-                }}
+                session={recurringView}
                 series={recurring.series}
                 expectedRevision={expectedRevision}
                 planAction={planAction}
@@ -602,17 +627,7 @@ export function SessionPage({
               <RecurringSessionControls
                 mode="remove"
                 today={today}
-                session={{
-                  id: session.id,
-                  occurrenceDate: recurring.occurrenceDate,
-                  isLocked: session.isLocked,
-                  title: session.title,
-                  sport: session.sport,
-                  intent: session.intent,
-                  expectedDurationMinutes: session.expectedDurationMinutes,
-                  note: session.note,
-                  activities: session.activities,
-                }}
+                session={recurringView}
                 series={recurring.series}
                 expectedRevision={expectedRevision}
                 planAction={planAction}
@@ -719,7 +734,14 @@ function MoreMenu({
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const listId = useId();
-  const close = useCallback(() => setOpen(false), []);
+  const buttonId = useId();
+  // Choosing an item unmounts the list under the focus, so it goes back to
+  // the button that opened it rather than falling to the page. Found by id
+  // because this runs from an item's handler, handed down during render.
+  const close = useCallback(() => {
+    setOpen(false);
+    document.getElementById(buttonId)?.focus();
+  }, [buttonId]);
 
   useEffect(() => {
     if (!open) return;
@@ -744,6 +766,7 @@ function MoreMenu({
     <div className={styles.moreMenu} ref={root}>
       <button
         ref={button}
+        id={buttonId}
         className={styles.moreButton}
         type="button"
         aria-label="More actions"

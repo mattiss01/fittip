@@ -308,6 +308,63 @@ describe("SessionPage", () => {
     expect(replaceMock).toHaveBeenCalledWith(`/home/plan#plan-day-${TODAY}`);
   });
 
+  it("offers a way back in when the sign-in has expired", () => {
+    planState = {
+      status: "session",
+      message: "Your session ended. Sign in again before changing your plan.",
+      submission: 1,
+      operation: "set_lock",
+      sessionId: session().id,
+    };
+    render(page(session()));
+    expect(screen.getByRole("status")).toHaveTextContent(/Sign in again/);
+    expect(screen.getByRole("link", { name: "Sign in again" })).toHaveAttribute(
+      "href",
+      "/",
+    );
+  });
+
+  it("returns to Today, and says so, when a delete was made from there", () => {
+    const { rerender } = render(page(session(), undefined, "today"));
+    choose("Delete");
+    fireEvent.submit(
+      screen.getByRole("button", { name: "Delete session" }).closest("form")!,
+    );
+    planState = {
+      status: "saved",
+      message: "Session deleted.",
+      submission: 1,
+      operation: "delete",
+      sessionId: session().id,
+    };
+    rerender(page(null, undefined, "today"));
+
+    expect(screen.getByText("Taking you back to Today.")).toBeVisible();
+    expect(replaceMock).toHaveBeenCalledWith(`/home/today?date=${TODAY}`);
+  });
+
+  it("calls a this-and-future edit that replaced the occurrence a save", () => {
+    const { rerender } = render(page(occurrence(), series()));
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    act(() => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Change this and future sessions" }),
+      );
+    });
+    seriesState = {
+      status: "saved",
+      message: "This and future sessions changed.",
+      submission: 1,
+      operation: "edit_series",
+      sessionId: session().id,
+    };
+    rerender(page(null));
+
+    expect(screen.getByText("Change saved.")).toBeVisible();
+    expect(screen.queryByText("Session removed.")).toBeNull();
+    expect(replaceMock).toHaveBeenCalledWith(`/home/plan#plan-day-${TODAY}`);
+  });
+
   it("says a session is not there, without guessing why, when nothing removed it here", () => {
     render(page(null));
     expect(

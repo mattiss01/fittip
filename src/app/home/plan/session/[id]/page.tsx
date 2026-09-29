@@ -139,7 +139,9 @@ async function SessionRead({
         (await createCompletionLog()).findByPlanSessions([found.id]),
         readOpenSessionActivityProposals([found.id]),
       ]);
-      const log = logs.find((completion) => completion.planSessionId);
+      const log = logs.find(
+        (completion) => completion.planSessionId === found.id,
+      );
       const fill = open.find((proposal) => proposal.sessionId === found.id);
       session = {
         ...toSessionView(found),
