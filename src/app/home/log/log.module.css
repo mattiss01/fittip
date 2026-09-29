@@ -5,8 +5,8 @@
  */
 
 .page {
-  --log-mark: #d95835;
-  --log-quiet: #557667;
+  --log-mark: var(--ember);
+  --log-quiet: var(--recovery);
 }
 
 .sourceCard {

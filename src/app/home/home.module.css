@@ -1,10 +1,12 @@
 .appShell {
-  --ledger-ink: #142f2a;
-  --ledger-paper: #fffdf4;
-  --ledger-muted: #596b65;
-  --ledger-rule: #aab7a7;
-  --ledger-signal: #d95835;
-  --ledger-wash: #e8ede3;
+  /* Older names for the palette in globals.css, kept so the screens need not
+     all change at once. */
+  --ledger-ink: var(--pine);
+  --ledger-paper: var(--paper);
+  --ledger-muted: var(--moss);
+  --ledger-rule: var(--rule);
+  --ledger-signal: var(--ember);
+  --ledger-wash: var(--sage);
   min-height: 100vh;
 }
 
@@ -281,7 +283,7 @@
 .facts > div {
   min-width: 0;
   padding: 0.65rem;
-  background: #edf0e7;
+  background: var(--sage);
 }
 
 .facts dt {
@@ -473,6 +475,16 @@
     border: 1px solid var(--line);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-raised);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navigationIcon {
+    transition: none;
+  }
+
+  .navigation a:active .navigationIcon {
+    transform: none;
   }
 }
 

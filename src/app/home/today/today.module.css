@@ -11,8 +11,8 @@
  */
 
 .page {
-  --today-mark: #d95835;
-  --today-recovery: #557667;
+  --today-mark: var(--ember);
+  --today-recovery: var(--recovery);
 }
 
 .day {

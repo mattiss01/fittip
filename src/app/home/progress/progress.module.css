@@ -20,7 +20,7 @@
  */
 
 .page {
-  --progress-mark: #d95835;
+  --progress-mark: var(--ember);
   --progress-carbon: #3f4f68;
   --progress-carbon-wash: #eceef3;
 }
@@ -237,8 +237,8 @@
 }
 
 .stamp[data-outcome="unplanned"] {
-  border-color: #557667;
-  color: #557667;
+  border-color: var(--recovery);
+  color: var(--recovery);
 }
 
 .marks {
@@ -404,7 +404,7 @@
 .activity {
   padding: 0.65rem 0.7rem;
   border-left: 3px solid currentColor;
-  background: #fffdf4;
+  background: var(--paper);
   line-height: 1.4;
 }
 

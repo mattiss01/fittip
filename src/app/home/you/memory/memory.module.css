@@ -3,7 +3,7 @@
    whether coaching may use it. The stamp is the one loud element; everything
    around it stays quiet. */
 .page {
-  --memory-stated: #2f5d50;
+  --memory-stated: var(--pine-soft);
   --memory-proposed: #8a6a1f;
   --memory-review: #a8481f;
   --memory-disabled: #6c7a74;

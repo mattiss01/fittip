@@ -11,15 +11,15 @@
    styled a control: the compose form, the action dock, the confirmation dialog
    and the pending state are all M3-15F, and nothing here can dress one up. */
 .page {
-  --roadmap-spine: #17332e;
+  --roadmap-spine: var(--pine);
   --roadmap-band: #e3ebdb;
-  --roadmap-node: #2f5d50;
+  --roadmap-node: var(--pine-soft);
   --roadmap-checkpoint: #a8481f;
   --roadmap-rule: 3px;
   --roadmap-gutter: 1.35rem;
-  --attention-primary: #17332e;
-  --attention-secondary: #2f5d50;
-  --attention-maintenance: #62726c;
+  --attention-primary: var(--pine);
+  --attention-secondary: var(--pine-soft);
+  --attention-maintenance: var(--moss);
   --attention-deferred: #8a8f88;
 }
 
@@ -46,7 +46,6 @@
 .card {
   padding: 1.25rem;
   border: 1px solid var(--border);
-  border-radius: 1rem 1rem 1rem 0.25rem;
   background: var(--surface);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);

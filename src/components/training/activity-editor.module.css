@@ -214,7 +214,7 @@
 .problem {
   margin: 0;
   color: var(--ledger-signal);
-  font: 700 0.72rem/1.4 var(--font-mono);
+  font: 500 0.72rem/1.4 var(--font-mono);
 }
 
 .add {

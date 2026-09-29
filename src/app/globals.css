@@ -2,13 +2,28 @@
 
 :root {
   color-scheme: light;
-  --background: #edf0e8;
-  --foreground: #17332e;
-  --muted: #62726c;
-  --surface: #fffef9;
-  --border: #ced7ca;
-  --accent: #d95d39;
-  --accent-dark: #a93f25;
+
+  /* FitTip's palette (R1). One value per colour: every surface names these, or
+     the role aliases below, rather than a hex of its own. Colours that encode a
+     state (a memory's status, a goal's tier) stay local to their module. */
+  --pine: #17332e;
+  --pine-soft: #2f5d50;
+  --moss: #62726c;
+  --ember: #d95d39;
+  --ember-dark: #a93f25;
+  --paper: #fffef9;
+  --sage: #edf0e8;
+  --fern: #d5ddd0;
+  --rule: #aab7a7;
+  --recovery: #557667;
+
+  --background: var(--sage);
+  --foreground: var(--pine);
+  --muted: var(--moss);
+  --surface: var(--paper);
+  --border: var(--fern);
+  --accent: var(--ember);
+  --accent-dark: var(--ember-dark);
 
   /* Design foundations (R1). Every surface reads these rather than its own values:
      the typefaces come from next/font in the root layout. */
@@ -21,7 +36,7 @@
   --shadow-card:
     0 1px 0 rgb(23 51 46 / 0.06), 0 12px 28px -14px rgb(23 51 46 / 0.22);
   --shadow-raised: 0 18px 40px -16px rgb(23 51 46 / 0.35);
-  --line: #d5ddd0;
+  --line: var(--fern);
   --ease-out: cubic-bezier(0.2, 0.9, 0.3, 1);
 }
 
@@ -55,7 +70,6 @@ main {
   width: min(100%, 29rem);
   padding: clamp(1.5rem, 7vw, 2.8rem);
   border: 1px solid var(--border);
-  border-radius: 1.5rem 1.5rem 1.5rem 0.25rem;
   background: var(--surface);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
@@ -120,7 +134,7 @@ button {
   border: 0;
   border-radius: var(--radius-control);
   background: var(--accent);
-  color: #fffef9;
+  color: var(--paper);
   cursor: pointer;
   font: 700 0.95rem var(--font-sans);
   letter-spacing: -0.005em;
@@ -214,7 +228,7 @@ button:disabled {
   padding: 0.7rem 0.75rem;
   border: 1px solid #aebbb0;
   border-radius: var(--radius-control);
-  background: #fffef9;
+  background: var(--paper);
   color: var(--foreground);
 }
 
@@ -282,7 +296,7 @@ button:disabled {
 
 .horizon-panel {
   padding: 1.5rem 0;
-  border-bottom: 1px solid #9bab9e;
+  border-bottom: 1px solid var(--rule);
 }
 
 .section-heading,
@@ -328,7 +342,7 @@ button:disabled {
 .day-count-button {
   min-width: 0;
   padding: 0;
-  border: 1px solid #9bab9e;
+  border: 1px solid var(--rule);
   background: transparent;
   color: var(--foreground);
   font: 500 0.9rem var(--font-mono) !important;
@@ -381,7 +395,7 @@ button:disabled {
 
 .plan-day {
   margin-top: 1.2rem;
-  border: 1px solid #9bab9e;
+  border: 1px solid var(--rule);
   background: rgba(255, 254, 249, 0.64);
 }
 
@@ -518,7 +532,7 @@ button:disabled {
   width: auto;
   min-height: 2.55rem;
   padding: 0.45rem 0.65rem;
-  border: 1px solid #9bab9e;
+  border: 1px solid var(--rule);
   background: transparent;
   color: var(--foreground);
   font: 500 0.68rem var(--font-mono);
@@ -549,8 +563,8 @@ button:disabled {
 
 .activity-library {
   margin-top: 1.5rem;
-  border: 1px solid #9bab9e;
-  background: #fffef9;
+  border: 1px solid var(--rule);
+  background: var(--paper);
 }
 
 .activity-library summary {
@@ -630,7 +644,7 @@ button:disabled {
 .library-empty,
 .library-message {
   padding: 0.8rem;
-  background: #edf0e8;
+  background: var(--sage);
 }
 
 .activity-definition-form {
@@ -639,7 +653,7 @@ button:disabled {
   margin-top: 1rem;
   padding: 1rem;
   border: 1px solid #bdc8be;
-  background: #edf0e8;
+  background: var(--sage);
 }
 
 .activity-definition-form label,
@@ -716,8 +730,8 @@ button:disabled {
 .save-message {
   margin-top: 1rem;
   padding: 1rem;
-  border: 1px solid #9bab9e;
-  background: #fffef9;
+  border: 1px solid var(--rule);
+  background: var(--paper);
 }
 
 .save-message p {
@@ -756,7 +770,7 @@ button:disabled {
   padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
   overflow-y: auto;
   border-radius: 1.2rem 1.2rem 0 0;
-  background: #fffef9;
+  background: var(--paper);
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.18);
 }
 
@@ -778,7 +792,7 @@ button:disabled {
 .close-button {
   width: 2.75rem;
   padding: 0;
-  border: 1px solid #9bab9e;
+  border: 1px solid var(--rule);
   background: transparent;
   color: var(--foreground);
   font-size: 1.5rem !important;
@@ -811,7 +825,7 @@ button:disabled {
   gap: 0.65rem !important;
   padding: 0.8rem;
   border: 1px solid #bdc8be;
-  background: #edf0e8;
+  background: var(--sage);
 }
 
 .lock-control input {
@@ -858,7 +872,7 @@ button:disabled {
 .composer-empty {
   margin: 1rem 0 0;
   padding: 0.8rem;
-  background: #edf0e8;
+  background: var(--sage);
   color: var(--muted);
   line-height: 1.45;
 }
@@ -870,7 +884,7 @@ button:disabled {
 .activity-editor {
   margin-top: 0.8rem;
   padding: 0.9rem;
-  border: 1px solid #9bab9e;
+  border: 1px solid var(--rule);
   background: #f7f6ef;
 }
 
@@ -914,8 +928,8 @@ button:disabled {
   bottom: -1rem;
   margin: 1rem -1rem -1rem;
   padding: 0.8rem 1rem calc(0.8rem + env(safe-area-inset-bottom));
-  border-top: 1px solid #9bab9e;
-  background: #fffef9;
+  border-top: 1px solid var(--rule);
+  background: var(--paper);
 }
 
 .composer-footer button {
@@ -927,8 +941,8 @@ button:disabled {
   width: min(100%, 34rem);
   margin: 15vh auto 0;
   padding: 1.5rem;
-  border: 1px solid #9bab9e;
-  background: #fffef9;
+  border: 1px solid var(--rule);
+  background: var(--paper);
 }
 
 .plan-loading h1,
@@ -1015,5 +1029,13 @@ button:disabled {
 @media (prefers-reduced-motion: reduce) {
   .loading-rule {
     animation: none;
+  }
+
+  button {
+    transition: none;
+  }
+
+  button:active:not(:disabled) {
+    transform: none;
   }
 }

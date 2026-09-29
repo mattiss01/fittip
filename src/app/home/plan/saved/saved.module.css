@@ -1,10 +1,8 @@
 /*
  * The library extends the FitTip ledger, but it is reference material rather
  * than the working sheet, so it is set in archival blue-black instead of the
- * Plan's action orange. Its one signature is the catalog card: a solid name
- * tab across the top edge, and a doubled offset shadow so every entry reads as
- * a card that can be dealt again without leaving the stack. Nothing here
- * scores, ranks, or counts a streak.
+ * Plan's action orange. Its one signature is the catalog card's solid name
+ * tab across the top edge. Nothing here scores, ranks, or counts a streak.
  */
 
 .page {

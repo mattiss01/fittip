@@ -1,6 +1,6 @@
 .page {
-  --goal-core: #d95835;
-  --goal-support: #557667;
+  --goal-core: var(--ember);
+  --goal-support: var(--recovery);
 }
 
 .manager {

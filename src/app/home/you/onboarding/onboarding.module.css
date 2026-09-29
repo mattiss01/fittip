@@ -66,7 +66,7 @@
 }
 
 .progress li[data-saved="true"] button {
-  background: #edf0e7;
+  background: var(--sage);
   color: var(--ledger-ink);
 }
 
@@ -148,7 +148,7 @@
   padding: 0.7rem 0.75rem;
   border: 1px solid var(--ledger-rule);
   border-radius: 0;
-  background: #fffef9;
+  background: var(--paper);
   color: var(--ledger-ink);
   font: inherit;
 }
