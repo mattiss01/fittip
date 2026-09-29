@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
 import { PLAN_WINDOW_DAYS } from "./action-state";
 import {
@@ -10,13 +9,9 @@ import { readLibraryOptions } from "./activities/library-options";
 import type { FillProposal } from "./fill/fill-state";
 import { toFillProposal } from "./fill/open-proposals";
 import { readSavedSessionOptions } from "./saved/session-options";
-import {
-  PlanManager,
-  type PlanSessionLog,
-  type PlanSessionView,
-} from "./plan-manager";
+import { PlanManager, type PlanSessionLog } from "./plan-manager";
+import { redirectOnAuthError, toSessionView } from "./plan-read";
 import styles from "./plan.module.css";
-import type { PlanSeriesView } from "./recurring-session-controls";
 import { findUncoveredSeriesDates } from "./series-recurrence";
 import { TimezoneConfirmation } from "./timezone-confirmation";
 
@@ -27,28 +22,10 @@ import {
 } from "@/components/training/activity-editor";
 import type { SavedSessionOption } from "@/components/training/saved-session-picker";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
-import { toActivityValue } from "@/lib/training/activity-value";
-import {
-  CompletionAuthenticationError,
-  createCompletionLog,
-} from "@/server/repositories/completion-log-repository";
-import { PersonalActivityAuthenticationError } from "@/server/repositories/personal-activity-repository";
-import {
-  createProfileRepository,
-  ProfileAuthenticationError,
-} from "@/server/repositories/profile-repository";
-import {
-  createRollingPlan,
-  RollingPlanAuthenticationError,
-} from "@/server/repositories/rolling-plan-repository";
-import type {
-  RollingPlanSeries,
-  RollingPlanSession,
-} from "@/server/rolling-plan/rolling-plan";
-import {
-  readOpenSessionActivityProposals,
-  SessionActivityAuthenticationError,
-} from "@/server/session-detail/open-session-activity-proposals";
+import { createCompletionLog } from "@/server/repositories/completion-log-repository";
+import { createProfileRepository } from "@/server/repositories/profile-repository";
+import { createRollingPlan } from "@/server/repositories/rolling-plan-repository";
+import { readOpenSessionActivityProposals } from "@/server/session-detail/open-session-activity-proposals";
 
 export const dynamic = "force-dynamic";
 
@@ -175,7 +152,6 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
           })}
           recoveryDates={slice.recoveryDates}
           savedSessions={savedSessions}
-          series={series.map(toSeriesView)}
           uncoveredSeriesDates={findUncoveredSeriesDates(
             series,
             slice.sessions,
@@ -186,61 +162,4 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
       </ActivityLibraryProvider>
     </>
   );
-}
-
-/** Only what the surface renders crosses to the client. */
-function toSessionView(session: RollingPlanSession): PlanSessionView {
-  return {
-    id: session.id,
-    localDate: session.localDate,
-    position: session.position,
-    title: session.title,
-    sport: session.sport,
-    intent: session.intent ?? null,
-    expectedDurationMinutes: session.expectedDurationMinutes ?? null,
-    note: session.note ?? null,
-    isLocked: session.isLocked,
-    status: session.status,
-    activities: session.activities.map(toActivityValue),
-    seriesId: session.seriesId,
-    occurrenceDate: session.occurrenceDate,
-    hasDiverged: session.hasDiverged,
-  };
-}
-
-function toSeriesView(series: RollingPlanSeries): PlanSeriesView {
-  return {
-    id: series.id,
-    frequency: series.frequency,
-    intervalCount: series.intervalCount,
-    weekdays: series.weekdays ?? [],
-    startDate: series.startDate,
-    endDate: series.endDate ?? null,
-    title: series.title,
-    sport: series.sport,
-    intent: series.intent ?? null,
-    expectedDurationMinutes: series.expectedDurationMinutes ?? null,
-    note: series.note ?? null,
-  };
-}
-
-function redirectOnAuthError(error: unknown): void {
-  const accessError =
-    error instanceof ProfileAuthenticationError ||
-    error instanceof RollingPlanAuthenticationError ||
-    error instanceof CompletionAuthenticationError ||
-    error instanceof PersonalActivityAuthenticationError ||
-    error instanceof SessionActivityAuthenticationError
-      ? error.accessError
-      : undefined;
-  if (accessError?.reason === "not-owner") redirect("/auth/denied");
-  if (
-    error instanceof ProfileAuthenticationError ||
-    error instanceof RollingPlanAuthenticationError ||
-    error instanceof CompletionAuthenticationError ||
-    error instanceof PersonalActivityAuthenticationError ||
-    error instanceof SessionActivityAuthenticationError
-  ) {
-    redirect("/");
-  }
 }

@@ -11,6 +11,7 @@ import {
   recordsTraining,
 } from "../log/log-action-state";
 import { SaveToLibrary } from "../plan/saved/save-to-library";
+import { sessionHref } from "../plan/session-view";
 import {
   ActivityList,
   type ActivityListItem,
@@ -276,7 +277,17 @@ function SessionCard({
       data-locked={session.isLocked}
     >
       <div className={styles.sessionHeader}>
-        <h4>{session.title}</h4>
+        {/* The title opens the session's own page, where every plan verb
+            lives now; its hit area covers the card, under the card's own
+            links, so Log and Edit log stay one tap. */}
+        <h4>
+          <Link
+            className={styles.cardLink}
+            href={sessionHref(session.id, { from: "today", date })}
+          >
+            {session.title}
+          </Link>
+        </h4>
         {session.completion === null ? null : (
           <span
             className={styles.stamp}

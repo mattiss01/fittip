@@ -54,7 +54,7 @@ type PlanFormAction = (formData: FormData) => void;
  *     moved occurrence's rule date falls behind today, deleting it keeps it
  *     deleted.
  *
- * The Delete warning in `plan-manager.tsx` is the second caller. It matters
+ * The Delete warning on the session page is the second caller. It matters
  * that the two agree: the warning quotes the removal control by name, and must
  * not name a control the same predicate has withheld.
  *

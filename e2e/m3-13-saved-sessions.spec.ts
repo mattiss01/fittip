@@ -60,22 +60,31 @@ test.describe("M3-13 private saved-session library", () => {
       await expect(seeded.getByText("Running · 45 min")).toBeVisible();
       await expect(seeded.locator("[data-activity-list] li")).toHaveCount(2);
 
-      // Save it into the library. The plan is not changed by saving.
-      await openDisclosure(seeded, "Edit");
-      await openDisclosure(seeded, "Save to library");
+      // Save it into the library. The plan is not changed by saving. Since
+      // 29 Sep 2026 the verb is on the session's own page, behind ⋯.
+      await seeded
+        .getByRole("link", { name: "Threshold intervals", exact: true })
+        .click();
+      await page.getByRole("button", { name: "More actions" }).click();
+      await page
+        .locator("[data-session-actions] li")
+        .getByText("Save to library", { exact: true })
+        .click();
+      const save = page.locator('[data-session-panel="Save to library"]');
       await expect(
-        seeded.getByText(/This session stays on your plan/i),
+        save.getByText(/This session stays on your plan/i),
       ).toBeVisible();
-      await seeded.getByLabel("Name it").fill("Tuesday tempo");
-      await seeded.getByRole("button", { name: "Save to library" }).click();
-      await expect(seeded.getByText("Saved to your library.")).toBeVisible();
-      await expect(
-        sessionCard(page, today, "Threshold intervals"),
-      ).toBeVisible();
+      await save.getByLabel("Name it").fill("Tuesday tempo");
+      await save.getByRole("button", { name: "Save to library" }).click();
+      await expect(save.getByText("Saved to your library.")).toBeVisible();
       await page.screenshot({
         fullPage: true,
         path: path.join(evidenceDirectory, "M3-13-save-to-library-390x844.png"),
       });
+      await page.locator("[data-back-link]").click();
+      await expect(
+        sessionCard(page, today, "Threshold intervals"),
+      ).toBeVisible();
 
       // List and inspect.
       await page.getByRole("link", { name: "Saved sessions" }).click();
