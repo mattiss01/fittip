@@ -104,6 +104,12 @@ Not worth their own slot; do them when work lands nearby.
 
 ## Later
 
+- **Make an existing session repeat — idea.** Owner, 29 Sep 2026. "Repeat this session" is
+  offered only while creating a session; a one-off already in the plan cannot become a
+  series later, so today it means creating a new series and deleting the single one. The
+  idea: offer the switch when editing a one-off, turning it into the first occurrence of a
+  new series from its date. Careful lane (how a series and its occurrences are stored,
+  ADR-017), and it has to say what happens to the session's lock and any log already on it.
 - **"Why today" — idea.** Owner, 29 Sep 2026. The Today prototype showed one line above the
   sessions saying why the day looks as it does; R2 tried quoting the first open session's
   intent there, and the owner put the intent back on its card. What a real line would need:
