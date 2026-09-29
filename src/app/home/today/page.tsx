@@ -61,24 +61,15 @@ export default async function TodayPage({ searchParams }: Props) {
 
   return (
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
-      <header className={homeStyles.masthead}>
-        <div>
-          <p className={homeStyles.kicker}>FitTip / today</p>
-          <h1>Today.</h1>
-          <p className={homeStyles.intro}>
-            One day of your plan at a time. Log what you actually did, and page
-            back or forward to any other day.
-          </p>
-        </div>
+      <header className={styles.header}>
+        <h1>Today</h1>
       </header>
       {timezoneName === null ? (
         <section className={homeStyles.stateCard} data-today-state="no-zone">
-          <p className={homeStyles.sectionLabel}>Time zone needed</p>
           <h2>Confirm your time zone first.</h2>
           <p>
-            Your day starts and ends on your own calendar, and FitTip does not
-            guess which one that is. Confirm your zone on the Plan and this day
-            appears.
+            FitTip does not guess which calendar your day follows. Confirm your
+            zone on the Plan and this day appears.
           </p>
           <div className={homeStyles.actions}>
             <Link className={homeStyles.primaryAction} href="/home/plan">
@@ -153,22 +144,17 @@ async function renderDay(timezoneName: string, requested: string | null) {
   );
 
   return (
-    <>
-      <p className={homeStyles.stamp}>
-        {timezoneName} · Revision {window.slice.revision}
-      </p>
-      <TodayDay
-        date={date}
-        today={today}
-        lastPlannedDate={lastDate}
-        isRecoveryDay={window.slice.recoveryDates.includes(date)}
-        toppedUp={window.toppedUp}
-        sessions={sessions}
-        unattached={completions
-          .filter((completion) => !carried.has(completion.id))
-          .map(toCompletionView)}
-      />
-    </>
+    <TodayDay
+      date={date}
+      today={today}
+      lastPlannedDate={lastDate}
+      isRecoveryDay={window.slice.recoveryDates.includes(date)}
+      toppedUp={window.toppedUp}
+      sessions={sessions}
+      unattached={completions
+        .filter((completion) => !carried.has(completion.id))
+        .map(toCompletionView)}
+    />
   );
 }
 

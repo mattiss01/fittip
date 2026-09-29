@@ -51,7 +51,9 @@ test.describe("public account authentication", () => {
     await expect(page).toHaveURL(/\/home\/today$/);
     // M3-15B reopened this route, so the landing assertion is Today's own
     // heading rather than the retired maintenance stub's.
-    await expect(page.getByRole("heading", { name: "Today." })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Today", exact: true }),
+    ).toBeVisible();
 
     await page.getByRole("link", { name: "You", exact: true }).click();
     await page.getByRole("button", { name: "Sign out" }).click();

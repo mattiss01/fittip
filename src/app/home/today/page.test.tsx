@@ -79,7 +79,7 @@ describe("Today", () => {
       today(),
     );
     expect(listCompletions).toHaveBeenCalledWith(today(), today());
-    expect(screen.getByRole("heading", { name: "Today." })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Today" })).toBeTruthy();
     expect(
       document.querySelector(`[data-today-date="${today()}"]`),
     ).toBeTruthy();

@@ -107,7 +107,9 @@ test.describe("M3-15B today and logging", () => {
       expect(response?.status()).toBe(200);
       expect(response?.headers()["cache-control"]).toContain("private");
       expect(response?.headers()["cache-control"]).toContain("no-store");
-      await expect(page.getByRole("heading", { name: "Today." })).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "Today", exact: true }),
+      ).toBeVisible();
       await expect(page.locator(`[data-today-date="${today}"]`)).toBeVisible();
 
       for (const title of [

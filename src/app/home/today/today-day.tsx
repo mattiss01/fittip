@@ -94,6 +94,18 @@ const LONG_DAY = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
+const HEADING_DAY = new Intl.DateTimeFormat("en-GB", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  timeZone: "UTC",
+});
+
+const WEEKDAY = new Intl.DateTimeFormat("en-GB", {
+  weekday: "short",
+  timeZone: "UTC",
+});
+
 const SHORT_DAY = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
   day: "numeric",
@@ -122,37 +134,56 @@ export function TodayDay({
       data-recovery={isRecoveryDay}
       aria-labelledby="today-day-heading"
     >
-      <nav className={styles.dayNav} aria-label="Day">
-        <Link className={styles.step} href={dayHref(previousDate)} rel="prev">
-          <span className={styles.stepMark} aria-hidden="true">
-            &larr;
-          </span>
-          <span className={styles.stepLabel}>Previous day</span>
-          <span className={styles.stepDate}>{shortDay(previousDate)}</span>
-        </Link>
-        <Link className={styles.step} href={dayHref(nextDate)} rel="next">
-          <span className={styles.stepMark} aria-hidden="true">
-            &rarr;
-          </span>
-          <span className={styles.stepLabel}>Next day</span>
-          <span className={styles.stepDate}>{shortDay(nextDate)}</span>
-        </Link>
+      <nav className={styles.strip} aria-label="Week">
+        {stripDates(date).map((stripDate) => (
+          <Link
+            key={stripDate}
+            className={styles.stripDay}
+            href={dayHref(stripDate)}
+            aria-current={stripDate === date ? "date" : undefined}
+            aria-label={shortDay(stripDate)}
+            data-today={stripDate === today}
+          >
+            <span className={styles.stripWeekday} aria-hidden="true">
+              {WEEKDAY.format(asDate(stripDate))}
+            </span>
+            <span className={styles.stripNumber} aria-hidden="true">
+              {Number(stripDate.slice(8, 10))}
+            </span>
+            <span className={styles.stripDot} aria-hidden="true" />
+          </Link>
+        ))}
       </nav>
 
-      <header className={styles.slip}>
-        <p className={styles.slipMark}>
-          {date === today ? "Today" : past ? "Earlier" : "Ahead"}
-        </p>
-        <h2 id="today-day-heading">{longDay(date)}</h2>
-        {isRecoveryDay ? (
-          <p className={styles.recoveryStamp}>Recovery day</p>
-        ) : null}
-        {date === today ? null : (
-          <Link className={styles.returnLink} href="/home/today">
-            Back to today
-          </Link>
-        )}
+      <header className={styles.dayHead}>
+        <Link
+          className={styles.step}
+          href={dayHref(previousDate)}
+          rel="prev"
+          aria-label={`Previous day, ${shortDay(previousDate)}`}
+        >
+          <ChevronIcon direction="left" />
+        </Link>
+        <div className={styles.dayTitle}>
+          <h2 id="today-day-heading">{HEADING_DAY.format(asDate(date))}</h2>
+          {isRecoveryDay ? (
+            <p className={styles.recoveryStamp}>Recovery day</p>
+          ) : null}
+        </div>
+        <Link
+          className={styles.step}
+          href={dayHref(nextDate)}
+          rel="next"
+          aria-label={`Next day, ${shortDay(nextDate)}`}
+        >
+          <ChevronIcon direction="right" />
+        </Link>
       </header>
+      {date === today ? null : (
+        <Link className={styles.returnLink} href="/home/today">
+          Back to today
+        </Link>
+      )}
 
       {toppedUp ? null : (
         <p className={styles.notice} data-today-notice="top-up">
@@ -197,10 +228,13 @@ export function TodayDay({
             {unattached.map((completion) => (
               <li
                 key={completion.id}
-                className={styles.session}
+                className={styles.receipt}
                 data-today-completion={completion.id}
               >
-                <div className={styles.sessionHeader}>
+                <div className={styles.receiptHead}>
+                  <span className={styles.receiptCheck} aria-hidden="true">
+                    <CheckIcon />
+                  </span>
                   <h4>{completion.title ?? "Unplanned training"}</h4>
                   <span
                     className={styles.stamp}
@@ -222,28 +256,26 @@ export function TodayDay({
                     )}
                   </div>
                 )}
-                <CompletionFacts completion={completion} />
-                <Link
-                  className={styles.action}
-                  href={`/home/log?completion=${completion.id}`}
-                >
-                  Edit log
-                </Link>
-                <SaveLoggedSession completion={completion} />
+                <CompletionFacts completion={completion} date={date} />
+                <div className={styles.receiptActions}>
+                  <Link
+                    className={styles.textAction}
+                    href={`/home/log?completion=${completion.id}`}
+                  >
+                    Edit log
+                  </Link>
+                  <SaveLoggedSession completion={completion} />
+                </div>
               </li>
             ))}
           </ol>
         </section>
       )}
 
-      <div className={styles.dayActions}>
-        <Link className={styles.primaryAction} href={`/home/log?date=${date}`}>
-          Log unplanned training
-        </Link>
-        <Link className={styles.action} href="/home/plan">
-          Open Plan
-        </Link>
-      </div>
+      <Link className={styles.addAction} href={`/home/log?date=${date}`}>
+        <span aria-hidden="true">+</span>
+        Log unplanned training
+      </Link>
     </section>
   );
 }
@@ -255,11 +287,11 @@ function SessionCard({
   date: string;
   session: TodaySessionView;
 }) {
-  const meta = [
+  const kicker = [
     session.sport,
     session.expectedDurationMinutes === null
       ? null
-      : `${session.expectedDurationMinutes} min planned`,
+      : `${session.expectedDurationMinutes} min`,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -268,15 +300,24 @@ function SessionCard({
   // cancellation stays in the plan row and in the log's own snapshot.
   const showsCancelled =
     session.status === "cancelled" && session.completion === null;
+  const logged = session.completion !== null;
 
   return (
     <li
-      className={styles.session}
+      className={logged ? styles.receipt : styles.session}
       data-today-session={session.id}
       data-cancelled={showsCancelled}
       data-locked={session.isLocked}
     >
-      <div className={styles.sessionHeader}>
+      {logged || kicker === "" ? null : (
+        <p className={styles.kicker}>{kicker}</p>
+      )}
+      <div className={logged ? styles.receiptHead : styles.sessionHead}>
+        {logged ? (
+          <span className={styles.receiptCheck} aria-hidden="true">
+            <CheckIcon />
+          </span>
+        ) : null}
         {/* The title opens the session's own page, where every plan verb
             lives now; its hit area covers the card, under the card's own
             links, so Log and Edit log stay one tap. */}
@@ -297,13 +338,14 @@ function SessionCard({
           </span>
         )}
       </div>
-      <div className={styles.marks}>
-        {session.isRecurring ? <span>Recurring</span> : null}
-        {session.isLocked ? <span>Locked</span> : null}
-        {showsCancelled ? <span>Cancelled, kept on the record</span> : null}
-      </div>
-      <p className={styles.meta}>{meta}</p>
-      {session.intent === null ? null : (
+      {session.isRecurring || session.isLocked || showsCancelled ? (
+        <div className={styles.marks}>
+          {session.isRecurring ? <span>Recurring</span> : null}
+          {session.isLocked ? <span>Locked</span> : null}
+          {showsCancelled ? <span>Cancelled, kept on the record</span> : null}
+        </div>
+      ) : null}
+      {session.intent === null || logged ? null : (
         <p className={styles.body}>{session.intent}</p>
       )}
       {session.note === null ? null : (
@@ -318,28 +360,37 @@ function SessionCard({
       ) : null}
       {session.completion === null ? (
         <Link
-          className={styles.primaryAction}
+          className={styles.logAction}
           href={`/home/log?plannedSession=${session.id}&date=${date}`}
         >
           Log this session
+          <span aria-hidden="true">→</span>
         </Link>
       ) : (
         <>
-          <CompletionFacts completion={session.completion} />
-          <Link
-            className={styles.action}
-            href={`/home/log?completion=${session.completion.id}`}
-          >
-            Edit log
-          </Link>
-          <SaveLoggedSession completion={session.completion} />
+          <CompletionFacts completion={session.completion} date={date} />
+          <div className={styles.receiptActions}>
+            <Link
+              className={styles.textAction}
+              href={`/home/log?completion=${session.completion.id}`}
+            >
+              Edit log
+            </Link>
+            <SaveLoggedSession completion={session.completion} />
+          </div>
         </>
       )}
     </li>
   );
 }
 
-function CompletionFacts({ completion }: { completion: TodayCompletionView }) {
+function CompletionFacts({
+  completion,
+  date,
+}: {
+  completion: TodayCompletionView;
+  date: string;
+}) {
   const signals = COMPLETION_SIGNAL_STAMPS.filter(
     ({ key }) => completion[key],
   ).map(({ label }) => label);
@@ -347,10 +398,14 @@ function CompletionFacts({ completion }: { completion: TodayCompletionView }) {
   return (
     <div className={styles.record}>
       <dl className={styles.facts}>
-        <div>
-          <dt>Logged for</dt>
-          <dd>{longDay(completion.actualLocalDate)}</dd>
-        </div>
+        {/* The day it was logged for only says something when it is not the
+            day on screen: a planned session done on another day. */}
+        {completion.actualLocalDate === date ? null : (
+          <div>
+            <dt>Logged for</dt>
+            <dd>{longDay(completion.actualLocalDate)}</dd>
+          </div>
+        )}
         {completion.durationMinutes === null ? null : (
           <div>
             <dt>Duration</dt>
@@ -408,16 +463,63 @@ function CompletionFacts({ completion }: { completion: TodayCompletionView }) {
   );
 }
 
+/** A week around the day on screen, which sits in the middle of it. */
+function stripDates(date: string) {
+  return [-3, -2, -1, 0, 1, 2, 3].map((offset) => shiftIsoDate(date, offset));
+}
+
 function dayHref(date: string) {
   return `/home/today?date=${date}`;
 }
 
+function asDate(date: string) {
+  return new Date(`${date}T00:00:00.000Z`);
+}
+
 function longDay(date: string) {
-  return LONG_DAY.format(new Date(`${date}T00:00:00.000Z`));
+  return LONG_DAY.format(asDate(date));
 }
 
 function shortDay(date: string) {
-  return SHORT_DAY.format(new Date(`${date}T00:00:00.000Z`));
+  return SHORT_DAY.format(asDate(date));
+}
+
+function ChevronIcon({ direction }: { direction: "left" | "right" }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d={direction === "left" ? "M15 5l-7 7 7 7" : "M9 5l7 7-7 7"} />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
+    </svg>
+  );
 }
 
 /**
