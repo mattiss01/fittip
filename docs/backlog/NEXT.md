@@ -87,6 +87,16 @@ Not worth their own slot; do them when work lands nearby.
 
 ## Later
 
+- **Logging in steps — undecided.** Owner, 29 Sep 2026, not sure yet: ask what happened one
+  question at a time (how it went, effort, how it felt, anything off) instead of one form.
+  To think through: whether it is faster or slower for a routine log, how a correction or
+  a skip fits, and where the pain, illness and fatigue question sits so it is never skipped
+  by accident. Would land with R3's "Log as a sheet" if wanted.
+- **A goal bar on Today — undecided.** Owner, 29 Sep 2026: decide whether Today should show
+  one at all. The prototype showed "3 weeks to 10k under 48 min" and "this week 40 min of
+  4 h". Both would have to come from real records (`.claude/rules/ui.md`): which goal (the
+  first core one?), a target date only if the goal has one, and logged minutes against
+  planned minutes this week. Left out of R2 until decided.
 - **Sport or category — undecided.** Moved here by the owner on 25 Sep 2026, who could not
   decide yet; this replaces A2d, which planned to rename an activity's `sport` to `category`.
   Where the discussion stood: the owner leans to **one field, the same on sessions and
