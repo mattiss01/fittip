@@ -2,10 +2,11 @@ import {
   expect,
   test,
   type APIRequestContext,
-  type Locator,
   type Page,
 } from "@playwright/test";
 import path from "node:path";
+
+import { openNewSession, planDay } from "./support/plan-week";
 
 const evidenceDirectory = path.join(
   process.cwd(),
@@ -43,7 +44,7 @@ test.describe("M3-15C progress", () => {
       // ---- The plan needs the owner's zone before any date exists. ----
       await page.goto("/home/plan");
       await page.getByRole("button", { name: `Use ${TIMEZONE}` }).click();
-      // `Plan ahead.` is rendered above the zone fork, so it is already on
+      // The Plan's heading is rendered above the zone fork, so it is already on
       // screen when the click is dispatched and waiting on it would resolve
       // instantly - leaving the next navigation to abort the in-flight
       // action. The plan window cannot exist until the zone is stored, so
@@ -188,7 +189,7 @@ test.describe("M3-15C progress", () => {
       // ---- Editing the plan afterwards does not touch the copy. ----
       await page.goto("/home/plan");
       // Plan verbs live on the session's own page since 29 Sep 2026.
-      await planCard(page, today, "Tempo run")
+      await (await planCard(page, today, "Tempo run"))
         .getByRole("link", { name: "Tempo run", exact: true })
         .click();
       await page.getByRole("button", { name: "Edit", exact: true }).click();
@@ -205,7 +206,7 @@ test.describe("M3-15C progress", () => {
       ).toBeVisible();
       await page.locator("[data-back-link]").click();
       await expect(
-        planDay(page, today).getByRole("heading", {
+        (await planDay(page, today)).getByRole("heading", {
           name: "Renamed after the fact",
           exact: true,
         }),
@@ -316,12 +317,8 @@ function progressEntry(page: Page, title: string) {
     .filter({ has: page.getByRole("link", { name: title }) });
 }
 
-function planDay(page: Page, date: string) {
-  return page.locator(`[data-plan-date="${date}"]`);
-}
-
-function planCard(page: Page, date: string, title: string) {
-  return planDay(page, date)
+async function planCard(page: Page, date: string, title: string) {
+  return (await planDay(page, date))
     .locator("li")
     .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
 }
@@ -333,12 +330,6 @@ function todayCard(page: Page, title: string) {
     .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
 }
 
-function disclosure(container: Locator, label: string) {
-  return container.locator("details").filter({
-    has: container.page().locator(":scope > summary", { hasText: label }),
-  });
-}
-
 async function addSession(
   page: Page,
   date: string,
@@ -347,18 +338,17 @@ async function addSession(
   minutes: string,
   intent: string,
 ) {
-  const details = disclosure(page.locator("body"), "Create session");
-  if ((await details.getAttribute("open")) === null) {
-    await details.locator(":scope > summary").click();
-  }
-  await details.getByLabel("Date").fill(date);
+  const details = await openNewSession(page, date);
   await details.getByLabel("Title", { exact: true }).fill(title);
   await details.getByLabel("Sport", { exact: true }).fill(sport);
   await details.getByLabel("Minutes", { exact: true }).fill(minutes);
   await details.getByLabel("Intent", { exact: true }).fill(intent);
   await details.getByRole("button", { name: "Create session" }).click();
   await expect(
-    planDay(page, date).getByRole("heading", { name: title, exact: true }),
+    (await planDay(page, date)).getByRole("heading", {
+      name: title,
+      exact: true,
+    }),
   ).toBeVisible();
 }
 

@@ -155,7 +155,7 @@ describe("SessionPage", () => {
     expect(screen.getByText("Easy, conversational.")).toBeVisible();
     expect(screen.getByRole("link", { name: /Plan/ })).toHaveAttribute(
       "href",
-      `/home/plan#plan-day-${TODAY}`,
+      `/home/plan?day=${TODAY}#plan-day-${TODAY}`,
     );
     // Nothing edits until Edit is chosen.
     expect(document.querySelector("form")).toBeNull();
@@ -363,7 +363,9 @@ describe("SessionPage", () => {
     rerender(page(null));
 
     expect(screen.getByText("Session removed.")).toBeVisible();
-    expect(replaceMock).toHaveBeenCalledWith(`/home/plan#plan-day-${TODAY}`);
+    expect(replaceMock).toHaveBeenCalledWith(
+      `/home/plan?day=${TODAY}#plan-day-${TODAY}`,
+    );
   });
 
   it("offers a way back in when the sign-in has expired", () => {
@@ -420,7 +422,9 @@ describe("SessionPage", () => {
 
     expect(screen.getByText("Change saved.")).toBeVisible();
     expect(screen.queryByText("Session removed.")).toBeNull();
-    expect(replaceMock).toHaveBeenCalledWith(`/home/plan#plan-day-${TODAY}`);
+    expect(replaceMock).toHaveBeenCalledWith(
+      `/home/plan?day=${TODAY}#plan-day-${TODAY}`,
+    );
   });
 
   it("says a session is not there, without guessing why, when nothing removed it here", () => {

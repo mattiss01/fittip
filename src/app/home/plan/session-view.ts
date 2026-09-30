@@ -80,9 +80,12 @@ export function stampDate(isoDate: string) {
   }).format(new Date(`${isoDate}T12:00:00.000Z`));
 }
 
-/** The anchor a day carries on the Plan, so a page can return to it. */
+/**
+ * A day on the Plan, so a page can return to it: `day` opens the week that
+ * holds it, and the anchor scrolls to the day.
+ */
 export function planDayHref(date: string) {
-  return `/home/plan#plan-day-${date}`;
+  return `/home/plan?day=${date}#plan-day-${date}`;
 }
 
 /**

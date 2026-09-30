@@ -50,18 +50,6 @@ main action. No week ring. The owner flagged a possible bias toward the look the
 so start with Today and adjust from there rather than committing every screen up front. Build
 lane, one screen per merge.
 
-- [ ] **R3a — Plan, week by week.** Owner chose variant B of the Plan prototype on
-      29 Sep 2026 (`prototype/plan-horizon`, `/prototype/plan?variant=pager`): one week at a
-      time with ‹ › arrows, the roadmap phase for that week above it, a row of week tiles
-      (busy-day bars, planned hours) to jump, empty days as one line with a "+", compact
-      session cards coloured by sport with ↻ for a series, and the header's links as chips.
-      Works on today's 14-day window first. Every day from today on has a "+" in the same
-      place, empty or not, opening a sheet for that date: "New session" (the one editor, with
-      its existing "Repeat this session" switch — no second entry for series), "Use Session
-      from Library", and "Mark as recovery day" / "Remove recovery day". A recovery day is a
-      ☾ label beside the date and still shows its sessions (`CONTEXT.md`). The top-level
-      Create session and the per-day Mark recovery day buttons go. Week totals say
-      "planned", never done.
 - [ ] **R3b — A three-month horizon.** Careful lane. Owner, 29 Sep 2026: option A — series
       keep being written ahead as real sessions, now ~13 weeks instead of 14 days — and
       option 3 for the far end: past those weeks the Plan continues only with the accepted

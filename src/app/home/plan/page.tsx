@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { PLAN_WINDOW_DAYS } from "./action-state";
 import {
   saveActivityToLibraryAction,
   updateActivityInLibraryAction,
@@ -10,8 +9,11 @@ import type { FillProposal } from "./fill/fill-state";
 import { toFillProposal } from "./fill/open-proposals";
 import { readSavedSessionOptions } from "./saved/session-options";
 import { PlanManager, type PlanSessionLog } from "./plan-manager";
+import { mondayOf, type PlanPhase } from "./plan-weeks";
+import { planWindowFor } from "./plan-window";
 import { redirectOnAuthError, toSessionView } from "./plan-read";
 import styles from "./plan.module.css";
+import w from "./plan-week.module.css";
 import { findUncoveredSeriesDates } from "./series-recurrence";
 import { TimezoneConfirmation } from "./timezone-confirmation";
 
@@ -21,15 +23,24 @@ import {
   type LibraryActivityOption,
 } from "@/components/training/activity-editor";
 import type { SavedSessionOption } from "@/components/training/saved-session-picker";
-import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import { createCompletionLog } from "@/server/repositories/completion-log-repository";
 import { createProfileRepository } from "@/server/repositories/profile-repository";
 import { createRollingPlan } from "@/server/repositories/rolling-plan-repository";
+import { readCurrentRoadmapPhases } from "@/server/roadmap/roadmap-phases";
 import { readOpenSessionActivityProposals } from "@/server/session-detail/open-session-activity-proposals";
 
 export const dynamic = "force-dynamic";
 
-export default async function PlanPage() {
+type Props = {
+  searchParams: Promise<{ day?: string | string[] }>;
+};
+
+export default async function PlanPage({ searchParams }: Props) {
+  const requested = (await searchParams).day;
+  const initialDate =
+    typeof requested === "string" && /^\d{4}-\d{2}-\d{2}$/.test(requested)
+      ? requested
+      : null;
   let timezoneName: string | null;
   try {
     timezoneName =
@@ -42,50 +53,41 @@ export default async function PlanPage() {
 
   return (
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
-      <header className={homeStyles.masthead}>
-        <div>
-          <p className={homeStyles.kicker}>FitTip / plan</p>
-          <h1>Plan ahead.</h1>
-          <p className={homeStyles.intro}>
-            One continuous plan. Add what you intend to do on today or a later
-            date, move it when the week changes, and mark a recovery day when
-            you mean to take one.
-          </p>
-        </div>
+      <header className={w.header}>
+        <h1>Plan</h1>
+        <nav className={w.chips} aria-label="Plan surfaces">
+          <Link href="/home/plan/proposal">Coach</Link>
+          <Link href="/home/plan/roadmap">Roadmap</Link>
+          <Link href="/home/plan/saved">Saved sessions</Link>
+          <Link href="/home/plan/activities">Activities</Link>
+        </nav>
       </header>
-      <nav className={styles.planLinks} aria-label="Plan surfaces">
-        <Link className={styles.libraryLink} href="/home/plan/saved">
-          Saved sessions
-        </Link>
-        <Link className={styles.libraryLink} href="/home/plan/activities">
-          Activities
-        </Link>
-        <Link className={styles.libraryLink} href="/home/plan/roadmap">
-          Roadmap
-        </Link>
-        <Link className={styles.libraryLink} href="/home/plan/proposal">
-          Coach proposal
-        </Link>
-      </nav>
       {timezoneName === null ? (
         <TimezoneConfirmation />
       ) : (
-        <PlanWindow timezoneName={timezoneName} />
+        <PlanWindow timezoneName={timezoneName} initialDate={initialDate} />
       )}
     </main>
   );
 }
 
-async function PlanWindow({ timezoneName }: { timezoneName: string }) {
-  const today = isoDateInTimezone(new Date(), timezoneName);
-  const dates = Array.from({ length: PLAN_WINDOW_DAYS }, (_, offset) =>
-    shiftIsoDate(today, offset),
-  );
+async function PlanWindow({
+  timezoneName,
+  initialDate,
+}: {
+  timezoneName: string;
+  initialDate: string | null;
+}) {
+  const { today, lastDate } = planWindowFor(timezoneName);
+  // The first week starts on the Monday on or before today, and its days
+  // before today show what was planned there, read-only.
+  const firstDate = mondayOf(today);
 
   let slice;
   let series;
   let library: LibraryActivityOption[];
   let savedSessions: SavedSessionOption[];
+  let phases: PlanPhase[];
   const logged = new Map<string, PlanSessionLog>();
   const openFills = new Map<string, FillProposal>();
   try {
@@ -93,11 +95,12 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
       createRollingPlan(),
       createCompletionLog(),
     ]);
-    [slice, series, library, savedSessions] = await Promise.all([
-      plan.getPlanSlice(today, dates[dates.length - 1]),
+    [slice, series, library, savedSessions, phases] = await Promise.all([
+      plan.getPlanSlice(firstDate, lastDate),
       plan.listSeries(),
       readLibraryOptions(),
       readSavedSessionOptions(),
+      readCurrentRoadmapPhases(),
     ]);
     // A logged session reads as logged where it was planned, whatever day
     // the log carries: a Thursday run done on Tuesday is not still ahead on
@@ -129,9 +132,6 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
 
   return (
     <>
-      <p className={homeStyles.stamp}>
-        {timezoneName} · Revision {slice.revision}
-      </p>
       <ActivityLibraryProvider
         activities={library}
         saveToLibrary={saveActivityToLibraryAction}
@@ -139,7 +139,9 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
       >
         <PlanManager
           today={today}
-          dates={dates}
+          lastDate={lastDate}
+          initialDate={initialDate}
+          phases={phases}
           expectedRevision={slice.revision}
           sessions={slice.sessions.map((session) => {
             const log = logged.get(session.id);
@@ -156,7 +158,7 @@ async function PlanWindow({ timezoneName }: { timezoneName: string }) {
             series,
             slice.sessions,
             today,
-            dates[dates.length - 1],
+            lastDate,
           )}
         />
       </ActivityLibraryProvider>

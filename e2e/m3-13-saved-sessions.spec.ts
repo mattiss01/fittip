@@ -7,6 +7,8 @@ import {
 } from "@playwright/test";
 import path from "node:path";
 
+import { planDay } from "./support/plan-week";
+
 const evidenceDirectory = path.join(
   process.cwd(),
   "test-results",
@@ -40,9 +42,8 @@ test.describe("M3-13 private saved-session library", () => {
       await signIn(page, account.email, account.password);
       await page.goto("/home/plan");
       await page.getByRole("button", { name: `Use ${TIMEZONE}` }).click();
-      // The masthead renders before the zone is confirmed, so the stamp is
-      // what proves the profile now holds one.
-      await expect(page.getByText(`${TIMEZONE} · Revision 0`)).toBeVisible();
+      // The week renders only once the profile holds a zone.
+      await expect(page.locator("[data-plan-week]")).toBeVisible();
 
       // Nothing in the product can create an activity yet, so the one planned
       // session that has any is seeded through the owner's own change
@@ -54,16 +55,16 @@ test.describe("M3-13 private saved-session library", () => {
       );
       await seedPlannedSessionWithActivities(request, token, today);
       await page.reload();
-      const seeded = sessionCard(page, today, "Threshold intervals");
-      // A3: a plan card lists its activities instead of counting them.
-      await expect(seeded.getByText("Running · 45 min")).toBeVisible();
-      await expect(seeded.locator("[data-activity-list] li")).toHaveCount(2);
+      const seeded = await sessionCard(page, today, "Threshold intervals");
+      // R3a: a plan card is compact; its activities are on its own page.
+      await expect(seeded.getByText("45 min")).toBeVisible();
 
       // Save it into the library. The plan is not changed by saving. Since
       // 29 Sep 2026 the verb is on the session's own page, behind ⋯.
       await seeded
         .getByRole("link", { name: "Threshold intervals", exact: true })
         .click();
+      await expect(page.locator("[data-activity-list] li")).toHaveCount(2);
       await page.getByRole("button", { name: "More actions" }).click();
       await page
         .locator("[data-session-actions] li")
@@ -82,7 +83,7 @@ test.describe("M3-13 private saved-session library", () => {
       });
       await page.locator("[data-back-link]").click();
       await expect(
-        sessionCard(page, today, "Threshold intervals"),
+        await sessionCard(page, today, "Threshold intervals"),
       ).toBeVisible();
 
       // List and inspect.
@@ -120,7 +121,7 @@ test.describe("M3-13 private saved-session library", () => {
 
       await page.goto("/home/plan");
       await expect(
-        sessionCard(page, today, "Threshold intervals"),
+        await sessionCard(page, today, "Threshold intervals"),
       ).toBeVisible();
 
       // Reuse onto a date the owner picks. The plan gets a copy; the entry is
@@ -139,11 +140,18 @@ test.describe("M3-13 private saved-session library", () => {
       );
 
       await page.goto("/home/plan");
-      const copy = sessionCard(page, reuseDate, "Longer threshold intervals");
-      // A3: the plan card lists the copied activities rather than counting
-      // them, so the copy is proved to carry both by its rows.
-      await expect(copy.locator("[data-activity-list] li")).toHaveCount(2);
-      await expect(copy.getByText("Locked", { exact: true })).toBeHidden();
+      const copy = await sessionCard(
+        page,
+        reuseDate,
+        "Longer threshold intervals",
+      );
+      await expect(copy.getByText("Locked")).toBeHidden();
+      // The copy carries both activities, listed on its own page.
+      await copy
+        .getByRole("link", { name: "Longer threshold intervals", exact: true })
+        .click();
+      await expect(page.locator("[data-activity-list] li")).toHaveCount(2);
+      await page.locator("[data-back-link]").click();
       await page.screenshot({
         fullPage: true,
         path: path.join(evidenceDirectory, "M3-13-reused-390x844.png"),
@@ -163,10 +171,10 @@ test.describe("M3-13 private saved-session library", () => {
 
       await page.goto("/home/plan");
       await expect(
-        sessionCard(page, today, "Threshold intervals"),
+        await sessionCard(page, today, "Threshold intervals"),
       ).toBeVisible();
       await expect(
-        sessionCard(page, reuseDate, "Longer threshold intervals"),
+        await sessionCard(page, reuseDate, "Longer threshold intervals"),
       ).toBeVisible();
 
       // Keyboard reach on the library, and the authenticated response headers.
@@ -215,12 +223,8 @@ function ownerDate(offset: number) {
   return shifted.toISOString().slice(0, 10);
 }
 
-function day(page: Page, date: string) {
-  return page.locator(`[data-plan-date="${date}"]`);
-}
-
-function sessionCard(page: Page, date: string, title: string) {
-  return day(page, date)
+async function sessionCard(page: Page, date: string, title: string) {
+  return (await planDay(page, date))
     .locator("li")
     .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
 }

@@ -7,6 +7,12 @@ import {
 } from "@playwright/test";
 import path from "node:path";
 
+import {
+  openNewSession,
+  planDay,
+  toggleRecoveryDay,
+} from "./support/plan-week";
+
 const evidenceDirectory = path.join(
   process.cwd(),
   "test-results",
@@ -44,7 +50,7 @@ test.describe("M3-15B today and logging", () => {
       await page.goto("/home/plan");
       await page.getByRole("button", { name: `Use ${TIMEZONE}` }).click();
       await expect(
-        page.getByRole("heading", { name: "Plan ahead." }),
+        page.getByRole("heading", { level: 1, name: "Plan", exact: true }),
       ).toBeVisible();
 
       await addSession(page, today, "Tempo run", "Running");
@@ -72,7 +78,7 @@ test.describe("M3-15B today and logging", () => {
       ).toBeVisible();
       await backToPlan(page);
       await expect(
-        planCard(page, today, "Core circuit").getByText("Locked", {
+        (await planCard(page, today, "Core circuit")).getByText("Locked", {
           exact: true,
         }),
       ).toBeVisible();
@@ -88,19 +94,16 @@ test.describe("M3-15B today and logging", () => {
       ).toBeVisible();
       await backToPlan(page);
       await expect(
-        planCard(page, today, "Rest swap").getByText(
-          "Yoga · Cancelled, kept on the record",
-        ),
-      ).toBeVisible();
-
-      await planDay(page, dayAfter)
-        .getByRole("button", { name: "Mark recovery day" })
-        .click();
-      await expect(
-        planDay(page, dayAfter).getByRole("button", {
-          name: "Clear recovery day",
+        (await planCard(page, today, "Rest swap")).getByText("Cancelled", {
+          exact: true,
         }),
       ).toBeVisible();
+
+      await toggleRecoveryDay(page, dayAfter);
+      await expect(await planDay(page, dayAfter)).toHaveAttribute(
+        "data-recovery",
+        "true",
+      );
 
       // ---- Today shows exactly that day, and says which day it is. ----
       const response = await page.goto("/home/today");
@@ -509,19 +512,15 @@ function ownerDate(offset: number) {
   return shifted.toISOString().slice(0, 10);
 }
 
-function planDay(page: Page, date: string) {
-  return page.locator(`[data-plan-date="${date}"]`);
-}
-
-function planCard(page: Page, date: string, title: string) {
-  return planDay(page, date)
+async function planCard(page: Page, date: string, title: string) {
+  return (await planDay(page, date))
     .locator("li")
     .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
 }
 
 /** Opens a session's own page from its card on the Plan. */
 async function openSession(page: Page, date: string, title: string) {
-  await planCard(page, date, title)
+  await (await planCard(page, date, title))
     .getByRole("link", { name: title, exact: true })
     .click();
   await expect(
@@ -541,7 +540,7 @@ async function chooseMore(page: Page, label: string) {
 async function backToPlan(page: Page) {
   await page.locator("[data-back-link]").click();
   await expect(
-    page.getByRole("heading", { name: "Plan ahead." }),
+    page.getByRole("heading", { level: 1, name: "Plan", exact: true }),
   ).toBeVisible();
 }
 
@@ -556,28 +555,21 @@ function scope(container: Locator, heading: string) {
   return container.locator("section").filter({ hasText: heading });
 }
 
-function disclosure(container: Locator, label: string) {
-  return container.locator("details").filter({
-    has: container.page().locator(":scope > summary", { hasText: label }),
-  });
-}
-
 async function addSession(
   page: Page,
   date: string,
   title: string,
   sport: string,
 ) {
-  const details = disclosure(page.locator("body"), "Create session");
-  if ((await details.getAttribute("open")) === null) {
-    await details.locator(":scope > summary").click();
-  }
-  await details.getByLabel("Date").fill(date);
+  const details = await openNewSession(page, date);
   await details.getByLabel("Title").fill(title);
   await details.getByLabel("Sport").fill(sport);
   await details.getByRole("button", { name: "Create session" }).click();
   await expect(
-    planDay(page, date).getByRole("heading", { name: title, exact: true }),
+    (await planDay(page, date)).getByRole("heading", {
+      name: title,
+      exact: true,
+    }),
   ).toBeVisible();
 }
 
@@ -589,11 +581,7 @@ async function addSessionWithActivity(
   sport: string,
   activity: string,
 ) {
-  const details = disclosure(page.locator("body"), "Create session");
-  if ((await details.getAttribute("open")) === null) {
-    await details.locator(":scope > summary").click();
-  }
-  await details.getByLabel("Date", { exact: true }).fill(date);
+  const details = await openNewSession(page, date);
   await details.getByLabel("Title", { exact: true }).fill(title);
   // The session's own, filled before a row exists to carry a second "Sport".
   await details.getByLabel("Sport", { exact: true }).fill(sport);
@@ -604,7 +592,10 @@ async function addSessionWithActivity(
     .fill(activity);
   await details.getByRole("button", { name: "Create session" }).click();
   await expect(
-    planDay(page, date).getByRole("heading", { name: title, exact: true }),
+    (await planDay(page, date)).getByRole("heading", {
+      name: title,
+      exact: true,
+    }),
   ).toBeVisible();
 }
 
@@ -616,11 +607,7 @@ async function addSeries(
   title: string,
   sport: string,
 ) {
-  const details = disclosure(page.locator("body"), "Create session");
-  if ((await details.getAttribute("open")) === null) {
-    await details.locator(":scope > summary").click();
-  }
-  await details.getByLabel("Date").fill(startDate);
+  const details = await openNewSession(page, startDate);
   await details.getByLabel("Title").fill(title);
   await details.getByLabel("Sport").fill(sport);
   await details.getByLabel("Repeat this session").check();
@@ -638,7 +625,10 @@ async function addSeries(
     .getByRole("button", { name: "Create recurring sessions" })
     .click();
   await expect(
-    planDay(page, startDate).getByRole("heading", { name: title, exact: true }),
+    (await planDay(page, startDate)).getByRole("heading", {
+      name: title,
+      exact: true,
+    }),
   ).toBeVisible();
 }
 

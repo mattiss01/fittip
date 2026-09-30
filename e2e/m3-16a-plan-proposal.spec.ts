@@ -1,6 +1,7 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { watchConsoleErrors } from "./support/console-errors";
+import { openNewSession } from "./support/plan-week";
 
 /**
  * M3-16A: asking for a coach proposal and applying part of it.
@@ -68,7 +69,7 @@ test.describe("M3-16A plan proposal review", () => {
           // Already confirmed; nothing to do.
         });
       await expect(
-        page.getByRole("heading", { name: "Plan ahead." }),
+        page.getByRole("heading", { level: 1, name: "Plan", exact: true }),
       ).toBeVisible();
 
       // A goal, because the plan operation refuses below its context minimum
@@ -194,7 +195,10 @@ test.describe("M3-16A plan proposal review", () => {
       // Renamed from inside the review, and the rename reached the plan.
       await expect(page.getByText("Club track night (short)")).toHaveCount(1);
 
-      const primaryAction = page.getByRole("link", { name: "Coach proposal" });
+      const primaryAction = page.getByRole("link", {
+        name: "Coach",
+        exact: true,
+      });
       const resting = await primaryAction.evaluate(readFocusTreatment);
       expect({
         outlineStyle: resting.outlineStyle,
@@ -239,11 +243,7 @@ async function addGoal(page: Page, title: string) {
 
 /** The same steps `m3-12-plan.spec.ts` uses. */
 async function addSession(page: Page, date: string, title: string) {
-  const details = disclosure(page.locator("body"), "Create session");
-  if ((await details.getAttribute("open")) === null) {
-    await details.locator(":scope > summary").click();
-  }
-  await details.getByLabel("Date").fill(date);
+  const details = await openNewSession(page, date);
   await details.getByLabel("Title").fill(title);
   await details.getByLabel("Sport").fill("Running");
   await details.getByLabel("Minutes").fill("75");
@@ -253,13 +253,6 @@ async function addSession(page: Page, date: string, title: string) {
       .locator(`[data-plan-date="${date}"]`)
       .getByRole("heading", { name: title, exact: true }),
   ).toBeVisible();
-}
-
-/** The disclosure whose own summary carries this label. */
-function disclosure(scope: Locator, label: string) {
-  return scope.locator("details").filter({
-    has: scope.page().locator(":scope > summary", { hasText: label }),
-  });
 }
 
 /** Owner-local today, in the zone the run pins. */
