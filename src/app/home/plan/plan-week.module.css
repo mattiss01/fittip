@@ -527,9 +527,24 @@ span.arrow {
   background: var(--fern);
 }
 
+.sheetError {
+  margin: 0 0 0.5rem;
+  color: var(--ember-dark);
+  font-size: 0.9rem;
+}
+
 .sheetChoiceDetail {
   color: var(--moss);
   font: 400 0.72rem var(--font-mono);
+}
+
+/*
+ * The sheet is portalled out of the Plan's `.manager`, which is where M3-18's
+ * ledger-ink focus ring is scoped, so it carries the same ring itself.
+ */
+.sheet :is(a, button, input, select, summary, textarea):focus-visible {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
 }
 
 /* The sheet is the editor's surface, so the form drops its own box. */

@@ -246,6 +246,37 @@ describe("PlanManager", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("keeps the sheet over a refused recovery label and closes it on a saved one", () => {
+    const { rerender } = renderManager();
+    fireEvent.click(
+      within(day(DATES[1])).getByRole("button", { name: /^Add to / }),
+    );
+    const rerenderWith = (state: PlanActionState) => {
+      useActionStateMock.mockReturnValue([state, action, false]);
+      rerender(manager());
+    };
+
+    rerenderWith({
+      status: "conflict",
+      message: "Your plan changed somewhere else.",
+      submission: 1,
+      operation: "set_recovery_day",
+      conflict: "stale",
+    });
+    expect(
+      within(screen.getByRole("dialog")).getByRole("alert"),
+    ).toHaveTextContent("Your plan changed somewhere else.");
+
+    rerenderWith({
+      status: "saved",
+      message: "Recovery day set.",
+      submission: 2,
+      operation: "set_recovery_day",
+      localDate: DATES[1],
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("uses one editor for a single session or reviewed recurrence", () => {
     renderManager();
     openNewSession(DATES[2]);

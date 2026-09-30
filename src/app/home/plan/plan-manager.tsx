@@ -171,6 +171,16 @@ export function PlanManager({
   );
   const week = weeks[Math.min(weekIndex, weeks.length - 1)];
   const [sheet, setSheet] = useSheetClosedOnSave(state, seriesState);
+  // The plan submission the open sheet started after, so a refusal shown in
+  // it is one of its own and not one from before it opened.
+  const [sheetSince, setSheetSince] = useState(state.submission);
+  const recoveryRefusal =
+    state.operation === "set_recovery_day" &&
+    state.status !== "saved" &&
+    state.status !== "idle" &&
+    state.submission > sheetSince
+      ? state.message
+      : null;
   const labelled = new Set(recoveryDates);
   const tones = sportTones(sessions.map((session) => session.sport));
   const onDate = (date: string) =>
@@ -242,7 +252,10 @@ export function PlanManager({
               isRecoveryDay={labelled.has(day.date)}
               sessions={onDate(day.date)}
               tones={tones}
-              onAdd={() => setSheet({ date: day.date, view: "menu" })}
+              onAdd={() => {
+                setSheetSince(state.submission);
+                setSheet({ date: day.date, view: "menu" });
+              }}
             />
           ))}
         </ol>
@@ -255,7 +268,9 @@ export function PlanManager({
             type="button"
             className={w.tile}
             aria-current={index === weekIndex ? "true" : undefined}
-            aria-label={`Week of ${dayLabel(candidate.start)}`}
+            aria-label={`Week of ${dayLabel(candidate.start)}, ${formatPlannedTime(
+              plannedMinutes(candidate, sessions),
+            )} planned`}
             data-week-start={candidate.start}
             onClick={() => setWeekIndex(index)}
           >
@@ -303,12 +318,12 @@ export function PlanManager({
               seriesPending={seriesPending}
             />
           ) : sheet.view === "menu" ? (
-            <form
-              action={(formData) => {
-                trackedPlanAction(formData);
-                setSheet(null);
-              }}
-            >
+            <form action={trackedPlanAction}>
+              {recoveryRefusal === null ? null : (
+                <p className={w.sheetError} role="alert">
+                  {recoveryRefusal}
+                </p>
+              )}
               <input type="hidden" name="operation" value="set_recovery_day" />
               <input type="hidden" name="localDate" value={sheet.date} />
               <input
@@ -339,9 +354,9 @@ export function PlanManager({
 }
 
 /**
- * The sheet closes on a save that created something, so the owner lands on
- * the week with the new session in it; a refused save leaves it open over
- * the draft that needs fixing.
+ * The sheet closes on a save that created something or set the recovery
+ * label, so the owner lands on the week showing it; a refused save leaves
+ * it open over what needs fixing.
  */
 function useSheetClosedOnSave(
   planState: PlanActionState,
@@ -357,10 +372,21 @@ function useSheetClosedOnSave(
       ? seriesState.submission
       : ""
   }`;
+  // A recovery label is set from the sheet's menu, so only a menu closes on
+  // it: a label landing late never takes a half-typed session with it.
+  const labelSaved =
+    planState.operation === "set_recovery_day" && planState.status === "saved"
+      ? planState.submission
+      : null;
   const [seenSave, setSeenSave] = useState(saved);
+  const [seenLabel, setSeenLabel] = useState(labelSaved);
   if (saved !== seenSave) {
     setSeenSave(saved);
     if (saved !== "/") setSheet(null);
+  }
+  if (labelSaved !== seenLabel) {
+    setSeenLabel(labelSaved);
+    if (labelSaved !== null && sheet?.view === "menu") setSheet(null);
   }
   return [sheet, setSheet] as const;
 }
@@ -446,15 +472,9 @@ function PlanDay({
         ) : null}
       </p>
       <div className={w.dayBody}>
-        {empty ? (
+        {empty && day.past ? null : empty ? (
           <p className={w.empty}>
-            {day.beyond
-              ? "Not open yet"
-              : isRecoveryDay
-                ? "Recovery day"
-                : day.past
-                  ? ""
-                  : "—"}
+            {day.beyond ? "Not open yet" : isRecoveryDay ? "Recovery day" : "—"}
           </p>
         ) : (
           <ol className={w.sessionList} aria-label={dayLabel(day.date)}>
@@ -575,14 +595,27 @@ function DaySheet({
   useEffect(() => {
     close.current = onClose;
   });
-  // Escape closes; focus goes back to the "+" that opened the sheet.
+  const layerRef = useRef<HTMLDivElement>(null);
+  // Modal while open: everything else on the page is inert, so Tab stays in
+  // the sheet, and the page behind does not scroll. Escape closes; focus
+  // goes back to the "+" that opened the sheet.
   useEffect(() => {
+    const layer = layerRef.current;
+    const background = Array.from(document.body.children).filter(
+      (element): element is HTMLElement =>
+        element instanceof HTMLElement && element !== layer && !element.inert,
+    );
+    for (const element of background) element.inert = true;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") close.current();
     }
     document.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("keydown", onKey);
+      for (const element of background) element.inert = false;
+      document.body.style.overflow = overflow;
       if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
     };
   }, [opener]);
@@ -590,7 +623,7 @@ function DaySheet({
   // Portalled to the body so it sits above the bottom navigation, whatever
   // stacking context the page's main element makes.
   return createPortal(
-    <div className={w.sheetLayer}>
+    <div className={w.sheetLayer} ref={layerRef}>
       <button
         type="button"
         className={w.scrim}
