@@ -195,7 +195,10 @@ test.describe("M3-16A plan proposal review", () => {
       // Renamed from inside the review, and the rename reached the plan.
       await expect(page.getByText("Club track night (short)")).toHaveCount(1);
 
-      const primaryAction = page.getByRole("link", { name: "Coach proposal" });
+      const primaryAction = page.getByRole("link", {
+        name: "Coach",
+        exact: true,
+      });
       const resting = await primaryAction.evaluate(readFocusTreatment);
       expect({
         outlineStyle: resting.outlineStyle,
