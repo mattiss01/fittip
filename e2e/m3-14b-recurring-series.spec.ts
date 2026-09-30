@@ -7,6 +7,8 @@ import {
 } from "@playwright/test";
 import path from "node:path";
 
+import { openNewSession, planDay } from "./support/plan-week";
+
 import { watchConsoleErrors } from "./support/console-errors";
 
 const evidenceDirectory = path.join(
@@ -45,26 +47,19 @@ test.describe("M3-14B recurring series surface", () => {
       await signIn(page, account.email, account.password);
       await page.goto("/home/plan");
       await page.getByRole("button", { name: "Use " + TIMEZONE }).click();
-      await expect(page.getByText(new RegExp(TIMEZONE))).toBeVisible();
+      await expect(page.locator("[data-plan-week]")).toBeVisible();
 
-      // There is one Plan-level create action, including while every date is
-      // empty. A non-recurring submission keeps M3-12's ordinary add path.
+      // R3a: sessions are added from a day's +, which opens the one editor
+      // for that date. A non-recurring submission keeps M3-12's add path.
       await expect(
         page.locator("summary", { hasText: "Create session" }),
-      ).toHaveCount(1);
-      await expect(
-        page.getByText("Add a session", { exact: true }),
       ).toHaveCount(0);
-      const create = page.locator("details").filter({
-        has: page.locator("summary", { hasText: "Create session" }),
-      });
-      await openDisclosure(page.locator("body"), "Create session");
-      await create.getByLabel("Date").fill(today);
+      let create = await openNewSession(page, today);
       await create.getByLabel("Title").fill("Ordinary base");
       await create.getByLabel("Sport").fill("Running");
       await create.getByLabel("Minutes").fill("45");
       await create.getByRole("button", { name: "Create session" }).click();
-      const source = sessionCard(page, today, "Ordinary base");
+      const source = await sessionCard(page, today, "Ordinary base");
       await expect(source).toBeVisible();
       // Since 29 Sep 2026 a card carries no verbs: it opens the session's own
       // page, where Edit is in sight and the rest sit behind ⋯.
@@ -105,8 +100,7 @@ test.describe("M3-14B recurring series surface", () => {
 
       // The same create flow reveals recurrence only when requested, with an
       // explicit occurrence review before the bounded series write.
-      await openDisclosure(page.locator("body"), "Create session");
-      await create.getByLabel("Date").fill(dailyStart);
+      create = await openNewSession(page, dailyStart);
       await create.getByLabel("Title").fill("Aerobic base");
       await create.getByLabel("Sport").fill("Running");
       await create.getByLabel("Minutes").fill("45");
@@ -132,7 +126,7 @@ test.describe("M3-14B recurring series surface", () => {
         page.getByRole("status").filter({ hasText: "created" }),
       ).toBeVisible();
 
-      const first = sessionCard(page, dailyStart, "Aerobic base");
+      const first = await sessionCard(page, dailyStart, "Aerobic base");
       await expect(first.getByText("Recurring", { exact: true })).toBeVisible();
 
       // Only this session changes one occurrence and marks it as diverged.
@@ -147,14 +141,17 @@ test.describe("M3-14B recurring series surface", () => {
       await expect(
         page.getByRole("heading", { level: 1, name: "Diverged aerobic" }),
       ).toBeVisible();
+      // The session's own page says it differs from its series; the Plan's
+      // compact card does not (R3a).
+      await expect(
+        page.locator("article").getByText("Changed", { exact: true }),
+      ).toBeVisible();
       await backToPlan(page);
       await expect(
-        sessionCard(page, dailyStart, "Diverged aerobic").getByText("Changed", {
-          exact: true,
-        }),
+        await sessionCard(page, dailyStart, "Diverged aerobic"),
       ).toBeVisible();
       await expect(
-        sessionCard(page, secondDaily, "Aerobic base"),
+        await sessionCard(page, secondDaily, "Aerobic base"),
       ).toBeVisible();
 
       // This-and-future starts a successor and leaves the earlier divergence.
@@ -170,13 +167,13 @@ test.describe("M3-14B recurring series surface", () => {
         .getByRole("button", { name: "Change this and future sessions" })
         .click();
       await expect(
-        page.getByRole("heading", { name: "Plan ahead." }),
+        page.getByRole("heading", { level: 1, name: "Plan", exact: true }),
       ).toBeVisible();
       await expect(
-        sessionCard(page, dailyStart, "Diverged aerobic"),
+        await sessionCard(page, dailyStart, "Diverged aerobic"),
       ).toBeVisible();
       await expect(
-        sessionCard(page, secondDaily, "Future steady"),
+        await sessionCard(page, secondDaily, "Future steady"),
       ).toBeVisible();
 
       // Consequences appear before future removal and carry no forecast count.
@@ -204,12 +201,14 @@ test.describe("M3-14B recurring series surface", () => {
       // result: the receipt's counts are the page's own, and are pinned by
       // its unit suite.
       await expect(
-        page.getByRole("heading", { name: "Plan ahead." }),
+        page.getByRole("heading", { level: 1, name: "Plan", exact: true }),
       ).toBeVisible();
       await expect(
-        sessionCard(page, dailyStart, "Diverged aerobic"),
+        await sessionCard(page, dailyStart, "Diverged aerobic"),
       ).toBeVisible();
-      await expect(sessionCard(page, endFrom, "Future steady")).toHaveCount(0);
+      await expect(
+        await sessionCard(page, endFrom, "Future steady"),
+      ).toHaveCount(0);
 
       // Fill one later date to the cap through the owner's accepted change
       // function, then use the same Plan create flow for an open weekly rule.
@@ -220,11 +219,7 @@ test.describe("M3-14B recurring series surface", () => {
       );
       await seedFullDate(request, token, capDate, today, ownerDate(13));
       await page.goto("/home/plan");
-      const weeklyCreate = page.locator("details").filter({
-        has: page.locator("summary", { hasText: "Create session" }),
-      });
-      await openDisclosure(page.locator("body"), "Create session");
-      await weeklyCreate.getByLabel("Date").fill(capDate);
+      const weeklyCreate = await openNewSession(page, capDate);
       await weeklyCreate.getByLabel("Title").fill("Weekly strength");
       await weeklyCreate.getByLabel("Sport").fill("Strength");
       await weeklyCreate.getByLabel("Repeat this session").check();
@@ -256,10 +251,9 @@ test.describe("M3-14B recurring series surface", () => {
       await expect(skippedCard).toContainText(longDate(capDate));
       await expect(skippedCard).toContainText("already has ten sessions");
       await expect(
-        sessionCard(page, weeklyVisibleDate, "Weekly strength").getByText(
-          "Recurring",
-          { exact: true },
-        ),
+        (
+          await sessionCard(page, weeklyVisibleDate, "Weekly strength")
+        ).getByText("Recurring", { exact: true }),
       ).toBeVisible();
 
       // Existing honest recovery surfaces remain reachable.
@@ -272,10 +266,10 @@ test.describe("M3-14B recurring series surface", () => {
       const privateResponse = await page.goto("/home/plan");
       expect(privateResponse).not.toBeNull();
       await expect(
-        page.getByRole("heading", { name: "Plan ahead." }),
+        page.getByRole("heading", { level: 1, name: "Plan", exact: true }),
       ).toBeVisible();
       await expect(
-        sessionCard(page, weeklyVisibleDate, "Weekly strength"),
+        await sessionCard(page, weeklyVisibleDate, "Weekly strength"),
       ).toBeVisible();
       const headers = lowerCaseHeaders(privateResponse!.headers());
       expect(headers["cache-control"]).toBe(
@@ -301,12 +295,8 @@ test.describe("M3-14B recurring series surface", () => {
   });
 });
 
-function planDay(page: Page, localDate: string) {
-  return page.locator('[data-plan-date="' + localDate + '"]');
-}
-
-function sessionCard(page: Page, localDate: string, title: string) {
-  return planDay(page, localDate)
+async function sessionCard(page: Page, localDate: string, title: string) {
+  return (await planDay(page, localDate))
     .locator("li")
     .filter({ has: page.getByRole("heading", { name: title, exact: true }) })
     .first();
@@ -321,7 +311,7 @@ function savedCard(page: Page, title: string) {
 
 /** Opens a session's own page from its card on the Plan. */
 async function openSession(page: Page, localDate: string, title: string) {
-  await sessionCard(page, localDate, title)
+  await (await sessionCard(page, localDate, title))
     .getByRole("link", { name: title, exact: true })
     .click();
   await expect(
@@ -346,7 +336,7 @@ async function chooseMore(page: Page, label: string) {
 async function backToPlan(page: Page) {
   await page.locator("[data-back-link]").click();
   await expect(
-    page.getByRole("heading", { name: "Plan ahead." }),
+    page.getByRole("heading", { level: 1, name: "Plan", exact: true }),
   ).toBeVisible();
 }
 

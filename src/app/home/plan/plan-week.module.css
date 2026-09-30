@@ -1,0 +1,541 @@
+/*
+ * The Plan, week by week (R3a, owner's choice of variant B on 29 Sep 2026):
+ * one week at a time with arrows, the roadmap phase above it, a row of week
+ * tiles to jump, compact session cards striped by sport, and a "+" on every
+ * day from today on, in the same place whether the day is empty or not. The
+ * "+" opens a bottom sheet for that date. Totals say "planned", never done;
+ * nothing here scores, ranks, or streaks.
+ */
+
+.header {
+  display: grid;
+  gap: 0.75rem;
+  padding-top: 1rem;
+}
+
+.header h1 {
+  font-size: 2.3rem;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.chips {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0 -1rem;
+  padding: 0 1rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.chips a {
+  flex: none;
+  min-height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  color: var(--pine);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.chips a:focus-visible,
+.phase:focus-visible,
+.cardLink:focus-visible,
+.tile:focus-visible,
+.arrow:focus-visible,
+.add:focus-visible,
+.sheetChoice:focus-visible {
+  outline: 3px solid var(--pine);
+  outline-offset: 2px;
+}
+
+/* ---- Phase ---- */
+
+.phase {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.85rem 1.1rem;
+  border-radius: 1.2rem 1.2rem 1.2rem 0.35rem;
+  background: var(--pine);
+  color: var(--paper);
+  text-decoration: none;
+}
+
+.phaseName {
+  color: #ff9b77;
+  font: 500 0.66rem var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.phaseFocus {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* ---- The week ---- */
+
+.week {
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+.weekHead {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr 2.75rem;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.7rem 0.5rem;
+}
+
+.weekTitle {
+  display: grid;
+  justify-items: center;
+  gap: 0.15rem;
+  text-align: center;
+}
+
+.weekTitle h2 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.weekSum {
+  color: var(--moss);
+  font: 400 0.72rem var(--font-mono);
+}
+
+.arrow {
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  background: var(--sage);
+  color: var(--pine);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.arrow:hover {
+  background: var(--fern);
+}
+
+span.arrow {
+  background: none;
+}
+
+.days {
+  margin: 0;
+  padding: 0 0.6rem 0.6rem;
+  list-style: none;
+}
+
+.day {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) 2.75rem;
+  gap: 0.5rem;
+  padding: 0.35rem 0.2rem 0.35rem 0.4rem;
+  border-top: 1px solid color-mix(in srgb, var(--fern) 60%, transparent);
+  scroll-margin-top: 1rem;
+}
+
+.day[data-past="true"],
+.day[data-beyond="true"] {
+  opacity: 0.5;
+}
+
+.date {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  padding-top: 0.35rem;
+}
+
+.dow {
+  color: var(--moss);
+  font: 400 0.62rem var(--font-mono);
+  text-transform: uppercase;
+}
+
+.num {
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.day[data-today="true"] .date {
+  margin: 0.2rem 0;
+  padding: 0.3rem 0;
+  border-radius: 0.9rem;
+  background: var(--pine);
+  color: var(--paper);
+}
+
+.day[data-today="true"] .dow {
+  color: #b8cbc3;
+}
+
+.recoveryMark {
+  color: var(--recovery);
+  font-size: 0.85rem;
+  line-height: 1.2;
+}
+
+.day[data-today="true"] .recoveryMark {
+  color: #b8cbc3;
+}
+
+.dayBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+  min-height: 2.9rem;
+}
+
+.empty {
+  color: var(--moss);
+  font-size: 0.85rem;
+}
+
+.sessionList {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.2rem 0;
+  list-style: none;
+}
+
+/* ---- Session cards ---- */
+
+.card {
+  --tone: var(--ember);
+  position: relative;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  min-height: 2.9rem;
+  padding: 0.5rem 0.75rem 0.5rem 0.9rem;
+  border-radius: 0.85rem;
+  background: var(--sage);
+  box-shadow: inset 4px 0 0 var(--tone);
+  color: var(--pine);
+}
+
+.card[data-tone="1"] {
+  --tone: var(--pine-soft);
+}
+
+.card[data-tone="2"] {
+  --tone: var(--recovery);
+}
+
+.card[data-tone="3"] {
+  --tone: #c2923a;
+}
+
+.card[data-tone="4"] {
+  --tone: #5a6fa0;
+}
+
+.card[data-tone="5"] {
+  --tone: #9a5b8a;
+}
+
+.card[data-cancelled="true"] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--fern);
+  color: var(--moss);
+}
+
+.card[data-cancelled="true"] .cardLink {
+  text-decoration: line-through;
+}
+
+.card[data-logged="true"] {
+  background: transparent;
+  box-shadow: inset 4px 0 0 var(--fern);
+  color: var(--moss);
+}
+
+.cardTitle {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The title's hit area covers the card, so a tap anywhere opens it. */
+.cardLink::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  content: "";
+}
+
+.cardMeta {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.35rem;
+  font: 400 0.72rem var(--font-mono);
+  white-space: nowrap;
+}
+
+.loop {
+  font-size: 0.9rem;
+}
+
+.add {
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  align-self: start;
+  margin: 0.1rem 0 0;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--moss);
+  font-size: 1.4rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.add:hover,
+.add:active {
+  background: var(--fern);
+}
+
+/* ---- Week tiles ---- */
+
+.tiles {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0 -1rem;
+  padding: 0 1rem 0.5rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.tile {
+  flex: none;
+  width: 5.2rem;
+  min-height: 0;
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.6rem 0.55rem;
+  border: 1px solid var(--fern);
+  border-radius: 1rem;
+  background: var(--paper);
+  color: var(--pine);
+  scroll-snap-align: start;
+  text-align: left;
+}
+
+.tile:hover {
+  background: var(--sage);
+}
+
+.tile[aria-current="true"] {
+  border-color: var(--pine);
+  background: var(--pine);
+  color: var(--paper);
+}
+
+.tileLabel {
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.tileSum {
+  font: 400 0.64rem var(--font-mono);
+  opacity: 0.8;
+}
+
+.tileBars {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  align-items: end;
+  height: 1.1rem;
+}
+
+.tileBars span {
+  height: 0.2rem;
+  border-radius: var(--radius-pill);
+  background: var(--fern);
+}
+
+.tileBars span[data-load="1"] {
+  height: 0.45rem;
+  background: color-mix(in srgb, var(--ember) 45%, var(--fern));
+}
+
+.tileBars span[data-load="2"] {
+  height: 0.75rem;
+  background: color-mix(in srgb, var(--ember) 75%, var(--fern));
+}
+
+.tileBars span[data-load="3"] {
+  height: 1.1rem;
+  background: var(--ember);
+}
+
+/* ---- The day's sheet ---- */
+
+/* Above the save dock (40) and navigation (30), below the offline notice. */
+.sheetLayer {
+  position: fixed;
+  z-index: 55;
+  inset: 0;
+  display: grid;
+  align-items: end;
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  margin: 0;
+  border-radius: 0;
+  background: rgb(23 51 46 / 0.4);
+}
+
+.scrim:hover {
+  background: rgb(23 51 46 / 0.4);
+}
+
+.sheet {
+  position: relative;
+  width: 100%;
+  max-width: 36rem;
+  max-height: 88dvh;
+  margin: 0 auto;
+  padding: 0.75rem 1rem calc(1.5rem + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  background: var(--paper);
+  box-shadow: var(--shadow-raised);
+  animation: sheet-in 220ms var(--ease-out);
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(1.5rem);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet {
+    animation: none;
+  }
+}
+
+.sheetHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 2.75rem;
+}
+
+.sheetBack,
+.sheetClose {
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0 0.5rem;
+  background: transparent;
+  color: var(--pine);
+  font-size: 0.9rem;
+}
+
+.sheetBack:hover,
+.sheetClose:hover {
+  background: var(--sage);
+}
+
+.sheet h2 {
+  font-size: 1.5rem;
+  letter-spacing: -0.03em;
+}
+
+.sheet h2:focus {
+  outline: none;
+}
+
+.sheetDate {
+  margin-top: 0.2rem;
+  color: var(--moss);
+  font: 400 0.75rem var(--font-mono);
+}
+
+.sheetChoices,
+.sheetList {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sheetChoice {
+  width: 100%;
+  min-height: 3.25rem;
+  display: grid;
+  justify-items: start;
+  gap: 0.1rem;
+  margin: 0;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--fern);
+  background: var(--sage);
+  color: var(--pine);
+  text-align: left;
+}
+
+.sheetChoice:hover {
+  background: var(--fern);
+}
+
+.sheetChoiceDetail {
+  color: var(--moss);
+  font: 400 0.72rem var(--font-mono);
+}
+
+/* The sheet is the editor's surface, so the form drops its own box. */
+.sheet form[data-create-session] {
+  margin-top: 1rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}

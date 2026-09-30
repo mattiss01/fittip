@@ -1,5 +1,12 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import path from "node:path";
+
+import {
+  mondayOf,
+  openNewSession,
+  planDay,
+  toggleRecoveryDay,
+} from "./support/plan-week";
 
 const evidenceDirectory = path.join(
   process.cwd(),
@@ -52,22 +59,25 @@ test.describe("M3-12 manual continuous planning", () => {
       await page.getByRole("button", { name: `Use ${TIMEZONE}` }).click();
 
       await expect(
-        page.getByRole("heading", { name: "Plan ahead." }),
+        page.getByRole("heading", { level: 1, name: "Plan", exact: true }),
       ).toBeVisible();
-      await expect(page.getByText(`${TIMEZONE} · Revision 0`)).toBeVisible();
-      // The window starts at owner-local today: no past date is offered at all.
-      await expect(page.locator("[data-plan-date]")).toHaveCount(14);
+      // One week at a time, from Monday (R3a). Nothing before owner-local
+      // today can be added to.
+      await expect(page.locator("[data-plan-date]")).toHaveCount(7);
       await expect(page.locator("[data-plan-date]").first()).toHaveAttribute(
         "data-plan-date",
-        today,
+        mondayOf(today),
       );
       await expect(
-        day(page, today).getByText("Nothing planned."),
+        (await planDay(page, today)).getByText("—", { exact: true }),
       ).toBeVisible();
+      await expect(
+        page.locator('[data-past="true"] button[aria-label^="Add to"]'),
+      ).toHaveCount(0);
 
       await addSession(page, today, "Aerobic run", "Running", "60");
       await expect(
-        day(page, today).getByText("Running · 60 min"),
+        (await sessionCard(page, today, "Aerobic run")).getByText("60 min"),
       ).toBeVisible();
 
       // Every verb lives on the session's own page since 29 Sep 2026 (owner):
@@ -108,7 +118,7 @@ test.describe("M3-12 manual continuous planning", () => {
       );
       await backToPlan(page);
       await expect(
-        sessionCard(page, tomorrow, "Long aerobic run"),
+        await sessionCard(page, tomorrow, "Long aerobic run"),
       ).toBeVisible();
 
       await openSession(page, tomorrow, "Long aerobic run");
@@ -121,24 +131,23 @@ test.describe("M3-12 manual continuous planning", () => {
       );
       await backToPlan(page);
       await expect(
-        sessionCard(page, dayAfter, "Long aerobic run"),
+        await sessionCard(page, dayAfter, "Long aerobic run"),
       ).toBeVisible();
       await expect(
-        day(page, tomorrow).getByText("Nothing planned."),
+        (await planDay(page, tomorrow)).getByText("—", { exact: true }),
       ).toBeVisible();
 
-      // Recovery day: set, then clear. An unlabelled empty date stays unplanned.
-      await day(page, recoveryDate)
-        .getByRole("button", { name: "Mark recovery day" })
-        .click();
-      await expect(day(page, recoveryDate)).toHaveAttribute(
+      // Recovery day: set from the day's +, then clear. An unlabelled empty
+      // date stays unplanned.
+      await toggleRecoveryDay(page, recoveryDate);
+      await expect(await planDay(page, recoveryDate)).toHaveAttribute(
         "data-recovery",
         "true",
       );
       await expect(
-        day(page, recoveryDate).getByText(
-          "Recovery day. Nothing is planned here.",
-        ),
+        (await planDay(page, recoveryDate)).getByText("Recovery day", {
+          exact: true,
+        }),
       ).toBeVisible();
       await page.screenshot({
         fullPage: true,
@@ -157,38 +166,34 @@ test.describe("M3-12 manual continuous planning", () => {
         page.getByRole("button", { name: "Reactivate" }),
       ).toBeVisible();
       await backToPlan(page);
+      // Cancelled stays on the record, on its day.
       await expect(
-        day(page, today).getByText("Cancelled", { exact: true }),
-      ).toBeVisible();
-      await expect(
-        day(page, today).getByText("Running · Cancelled, kept on the record"),
-      ).toBeVisible();
-      await expect(
-        day(page, today).getByText("Nothing planned."),
+        (await planDay(page, today))
+          .locator("[data-cancelled]")
+          .getByText("Cancelled", { exact: true }),
       ).toBeVisible();
 
-      await day(page, recoveryDate)
-        .getByRole("button", { name: "Clear recovery day" })
-        .click();
-      await expect(day(page, recoveryDate)).toHaveAttribute(
+      await toggleRecoveryDay(page, recoveryDate);
+      await expect(await planDay(page, recoveryDate)).toHaveAttribute(
         "data-recovery",
         "false",
       );
 
-      // Keyboard reach: the single Plan create flow opens and starts on date.
-      const createDisclosure = disclosure(
-        page.locator("body"),
-        "Create session",
-      );
-      const createSummary = createDisclosure.locator(":scope > summary");
-      if ((await createDisclosure.getAttribute("open")) !== null) {
-        await createSummary.click();
-      }
-      await createSummary.focus();
+      // Keyboard reach: a day's + opens its sheet, and Escape closes it.
+      const add = (await planDay(page, today)).getByRole("button", {
+        name: /^Add to /,
+      });
+      await add.focus();
       await page.keyboard.press("Enter");
-      await expect(createDisclosure).toHaveAttribute("open", "");
+      const sheet = page.getByRole("dialog");
+      await expect(sheet).toBeVisible();
       await page.keyboard.press("Tab");
-      await expect(createDisclosure.getByLabel("Date")).toBeFocused();
+      await expect(
+        sheet.getByRole("button", { name: "New session" }),
+      ).toBeFocused();
+      await page.keyboard.press("Escape");
+      await expect(sheet).toBeHidden();
+      await expect(add).toBeFocused();
 
       expect(
         await page.evaluate(
@@ -217,24 +222,19 @@ test.describe("M3-12 manual continuous planning", () => {
       await page.goto("/home/plan");
       await page.getByRole("button", { name: `Use ${TIMEZONE}` }).click();
       await expect(
-        page.getByRole("heading", { name: "Plan ahead." }),
+        page.getByRole("heading", { level: 1, name: "Plan", exact: true }),
       ).toBeVisible();
 
       for (let index = 0; index < 10; index += 1) {
         await addSession(page, today, `Session ${index}`, "Running");
       }
       await expect(
-        day(page, today).getByRole("heading", { name: "Session 9" }),
+        (await planDay(page, today)).getByRole("heading", {
+          name: "Session 9",
+        }),
       ).toBeVisible();
 
-      const createDisclosure = disclosure(
-        page.locator("body"),
-        "Create session",
-      );
-      if ((await createDisclosure.getAttribute("open")) === null) {
-        await createDisclosure.locator(":scope > summary").click();
-      }
-      await createDisclosure.getByLabel("Date").fill(today);
+      const createDisclosure = await openNewSession(page, today);
       await createDisclosure.getByLabel("Title").fill("Eleventh");
       await createDisclosure.getByLabel("Sport").fill("Running");
       await createDisclosure
@@ -249,7 +249,9 @@ test.describe("M3-12 manual continuous planning", () => {
         "Eleventh",
       );
       await expect(
-        day(page, today).getByRole("heading", { name: "Eleventh" }),
+        page
+          .locator(`[data-plan-date="${today}"]`)
+          .getByRole("heading", { name: "Eleventh" }),
       ).toBeHidden();
       await page.screenshot({
         fullPage: true,
@@ -279,19 +281,15 @@ function ownerDate(offset: number) {
   return shifted.toISOString().slice(0, 10);
 }
 
-function day(page: Page, date: string) {
-  return page.locator(`[data-plan-date="${date}"]`);
-}
-
-function sessionCard(page: Page, date: string, title: string) {
-  return day(page, date)
+async function sessionCard(page: Page, date: string, title: string) {
+  return (await planDay(page, date))
     .locator("li")
     .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
 }
 
 /** Opens a session's own page from its card on the Plan. */
 async function openSession(page: Page, date: string, title: string) {
-  await sessionCard(page, date, title)
+  await (await sessionCard(page, date, title))
     .getByRole("link", { name: title, exact: true })
     .click();
   await expect(
@@ -322,18 +320,8 @@ async function chooseMore(page: Page, label: string) {
 async function backToPlan(page: Page) {
   await page.locator("[data-back-link]").click();
   await expect(
-    page.getByRole("heading", { name: "Plan ahead." }),
+    page.getByRole("heading", { level: 1, name: "Plan", exact: true }),
   ).toBeVisible();
-}
-
-/** The disclosure whose own summary carries this label. */
-function disclosure(scope: Locator, label: string) {
-  // Anchored on the summary. Filtering the whole `details` subtree matched body
-  // copy as well as the label, so a disclosure whose consequence text happened
-  // to contain another disclosure's label matched both at once.
-  return scope.locator("details").filter({
-    has: scope.page().locator(":scope > summary", { hasText: label }),
-  });
 }
 
 async function addSession(
@@ -343,17 +331,16 @@ async function addSession(
   sport: string,
   minutes?: string,
 ) {
-  const details = disclosure(page.locator("body"), "Create session");
-  if ((await details.getAttribute("open")) === null) {
-    await details.locator(":scope > summary").click();
-  }
-  await details.getByLabel("Date").fill(date);
-  await details.getByLabel("Title").fill(title);
-  await details.getByLabel("Sport").fill(sport);
-  if (minutes) await details.getByLabel("Minutes").fill(minutes);
-  await details.getByRole("button", { name: "Create session" }).click();
+  const form = await openNewSession(page, date);
+  await form.getByLabel("Title").fill(title);
+  await form.getByLabel("Sport").fill(sport);
+  if (minutes) await form.getByLabel("Minutes").fill(minutes);
+  await form.getByRole("button", { name: "Create session" }).click();
   await expect(
-    day(page, date).getByRole("heading", { name: title, exact: true }),
+    (await planDay(page, date)).getByRole("heading", {
+      name: title,
+      exact: true,
+    }),
   ).toBeVisible();
 }
 

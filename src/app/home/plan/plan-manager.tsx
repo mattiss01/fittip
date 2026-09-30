@@ -1,15 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useCallback, useState, type ReactNode } from "react";
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 
-import { INITIAL_PLAN_ACTION_STATE } from "./action-state";
+import {
+  INITIAL_PLAN_ACTION_STATE,
+  type PlanActionState,
+} from "./action-state";
 import { changePlanAction } from "./actions";
 import { COMPLETION_OUTCOME_LABELS } from "../log/log-action-state";
-import { CreateSession } from "./create-session";
-import { ActivityList } from "@/components/training/activity-list";
-import { describeMeasurement } from "@/lib/training/describe-measurement";
+import { CreateSession, SkippedDates } from "./create-session";
 import styles from "./plan.module.css";
+import w from "./plan-week.module.css";
 import {
   RECOVERED_NOTICE,
   SERIES_RECOVERY_FLAG,
@@ -17,13 +27,30 @@ import {
   useMutationStall,
   useRecoveredReload,
 } from "./plan-mutation-watch";
-import { INITIAL_SERIES_ACTION_STATE } from "./series-action-state";
+import {
+  INITIAL_SERIES_ACTION_STATE,
+  type SeriesActionState,
+} from "./series-action-state";
 import { changeSeriesAction } from "./series-actions";
 import { SeriesMaterializer } from "./series-materializer";
 import {
+  dayLabel,
+  dayLoad,
+  formatPlannedTime,
+  phaseOfWeek,
+  planWeeks,
+  shortDateLabel,
+  sportKey,
+  sportTones,
+  weekdayLabel,
+  weekIndexOf,
+  type PlanPhase,
+  type PlanWeek,
+  type PlanWeekDay,
+} from "./plan-weeks";
+import {
   readsAsLogged,
   sessionHref,
-  stampDate,
   type PlanSessionView,
 } from "./session-view";
 
@@ -38,37 +65,36 @@ export type { PlanSessionLog, PlanSessionView } from "./session-view";
 
 type Props = {
   today: string;
-  /** Owner-local dates this surface reads and writes, ascending. */
-  dates: string[];
+  /** The plan window's last date; nothing past it is read or written. */
+  lastDate: string;
+  /** The day to open on, e.g. the one a session page returns to. */
+  initialDate?: string | null;
   expectedRevision: number;
   sessions: PlanSessionView[];
   recoveryDates: string[];
-  /** What Create session may start from. */
+  /** What a day's sheet may start a session from. */
   savedSessions?: SavedSessionOption[];
   uncoveredSeriesDates?: string[];
+  /** The accepted roadmap's phases, if there is one. */
+  phases?: PlanPhase[];
 };
 
-type FormAction = (formData: FormData) => void;
 type ActionChannel = "plan" | "series";
 
-type DayProps = {
-  date: string;
-  today: string;
-  isRecoveryDay: boolean;
-  sessions: PlanSessionView[];
-  expectedRevision: number;
-  action: FormAction;
-  pending: boolean;
-};
+type Sheet =
+  | { date: string; view: "menu" | "library" }
+  | { date: string; view: "new"; startFrom?: SavedSessionOption };
 
 export function PlanManager({
   today,
-  dates,
+  lastDate,
+  initialDate = null,
   expectedRevision,
   sessions,
   recoveryDates,
   savedSessions = [],
   uncoveredSeriesDates = [],
+  phases = [],
 }: Props) {
   const [state, action, pending] = useActionState(
     changePlanAction,
@@ -138,7 +164,17 @@ export function PlanManager({
     : state.conflict === "stale" ||
       state.conflict === "timezone" ||
       stall === "unconfirmed";
+
+  const weeks = planWeeks(today, lastDate);
+  const [weekIndex, setWeekIndex] = useState(() =>
+    weekIndexOf(weeks, initialDate),
+  );
+  const week = weeks[Math.min(weekIndex, weeks.length - 1)];
+  const [sheet, setSheet] = useSheetClosedOnSave(state, seriesState);
   const labelled = new Set(recoveryDates);
+  const tones = sportTones(sessions.map((session) => session.sport));
+  const onDate = (date: string) =>
+    sessions.filter((session) => session.localDate === date);
 
   return (
     <div className={styles.manager}>
@@ -161,143 +197,294 @@ export function PlanManager({
         uncoveredDates={uncoveredSeriesDates}
       />
 
-      <CreateSession
-        dates={dates}
-        savedSessions={savedSessions}
-        expectedRevision={expectedRevision}
-        planAction={trackedPlanAction}
-        planState={state}
-        planPending={pending}
-        seriesAction={trackedSeriesAction}
-        seriesState={seriesState}
-        seriesPending={seriesPending}
+      <SkippedDates
+        skipped={
+          seriesState.operation === "add_series"
+            ? (seriesState.skipped ?? [])
+            : []
+        }
       />
 
-      <ol className={styles.days}>
-        {dates.map((date) => (
-          <PlanDay
-            key={date}
-            date={date}
-            today={today}
-            isRecoveryDay={labelled.has(date)}
-            sessions={sessions.filter((session) => session.localDate === date)}
-            expectedRevision={expectedRevision}
-            action={trackedPlanAction}
-            pending={pending}
+      <PhaseBand phase={phaseOfWeek(phases, week)} />
+
+      <section
+        className={w.week}
+        aria-labelledby="plan-week-title"
+        data-plan-week={week.start}
+      >
+        <header className={w.weekHead}>
+          <WeekArrow
+            label="Previous week"
+            glyph="‹"
+            target={weekIndex > 0 ? weekIndex - 1 : null}
+            onGo={setWeekIndex}
           />
+          <div className={w.weekTitle}>
+            <h2 id="plan-week-title">{weekLabel(week, weekIndex)}</h2>
+            {weekIndex < 2 ? (
+              <p className={w.weekSum}>{weekRange(week)}</p>
+            ) : null}
+            <p className={w.weekSum}>{weekTotals(week, sessions)}</p>
+          </div>
+          <WeekArrow
+            label="Next week"
+            glyph="›"
+            target={weekIndex < weeks.length - 1 ? weekIndex + 1 : null}
+            onGo={setWeekIndex}
+          />
+        </header>
+        <ol className={w.days}>
+          {week.days.map((day) => (
+            <PlanDay
+              key={day.date}
+              day={day}
+              today={today}
+              isRecoveryDay={labelled.has(day.date)}
+              sessions={onDate(day.date)}
+              tones={tones}
+              onAdd={() => setSheet({ date: day.date, view: "menu" })}
+            />
+          ))}
+        </ol>
+      </section>
+
+      <nav className={w.tiles} aria-label="Weeks">
+        {weeks.map((candidate, index) => (
+          <button
+            key={candidate.start}
+            type="button"
+            className={w.tile}
+            aria-current={index === weekIndex ? "true" : undefined}
+            aria-label={`Week of ${dayLabel(candidate.start)}`}
+            data-week-start={candidate.start}
+            onClick={() => setWeekIndex(index)}
+          >
+            <span className={w.tileLabel}>
+              {index === 0 ? "This wk" : shortDateLabel(candidate.start)}
+            </span>
+            <span className={w.tileBars} aria-hidden="true">
+              {candidate.days.map((day) => (
+                <span
+                  key={day.date}
+                  data-load={dayLoad(
+                    activeOn(onDate(day.date)).map(
+                      (session) => session.expectedDurationMinutes,
+                    ),
+                  )}
+                />
+              ))}
+            </span>
+            <span className={w.tileSum}>
+              {formatPlannedTime(plannedMinutes(candidate, sessions))}
+            </span>
+          </button>
         ))}
-      </ol>
+      </nav>
+
+      {sheet === null ? null : (
+        <DaySheet
+          sheet={sheet}
+          isRecoveryDay={labelled.has(sheet.date)}
+          savedSessions={savedSessions}
+          onChange={setSheet}
+          onClose={() => setSheet(null)}
+        >
+          {sheet.view === "new" ? (
+            <CreateSession
+              key={`${sheet.date}-${sheet.startFrom?.id ?? "empty"}`}
+              date={sheet.date}
+              startFrom={sheet.startFrom}
+              expectedRevision={expectedRevision}
+              planAction={trackedPlanAction}
+              planState={state}
+              planPending={pending}
+              seriesAction={trackedSeriesAction}
+              seriesState={seriesState}
+              seriesPending={seriesPending}
+            />
+          ) : sheet.view === "menu" ? (
+            <form
+              action={(formData) => {
+                trackedPlanAction(formData);
+                setSheet(null);
+              }}
+            >
+              <input type="hidden" name="operation" value="set_recovery_day" />
+              <input type="hidden" name="localDate" value={sheet.date} />
+              <input
+                type="hidden"
+                name="isRecoveryDay"
+                value={labelled.has(sheet.date) ? "false" : "true"}
+              />
+              <input
+                type="hidden"
+                name="expectedRevision"
+                value={expectedRevision}
+              />
+              <button
+                className={w.sheetChoice}
+                type="submit"
+                disabled={pending}
+              >
+                {labelled.has(sheet.date)
+                  ? "Remove recovery day"
+                  : "Mark as recovery day"}
+              </button>
+            </form>
+          ) : null}
+        </DaySheet>
+      )}
     </div>
   );
 }
 
+/**
+ * The sheet closes on a save that created something, so the owner lands on
+ * the week with the new session in it; a refused save leaves it open over
+ * the draft that needs fixing.
+ */
+function useSheetClosedOnSave(
+  planState: PlanActionState,
+  seriesState: SeriesActionState,
+) {
+  const [sheet, setSheet] = useState<Sheet | null>(null);
+  const saved = `${
+    planState.operation === "add" && planState.status === "saved"
+      ? planState.submission
+      : ""
+  }/${
+    seriesState.operation === "add_series" && seriesState.status === "saved"
+      ? seriesState.submission
+      : ""
+  }`;
+  const [seenSave, setSeenSave] = useState(saved);
+  if (saved !== seenSave) {
+    setSeenSave(saved);
+    if (saved !== "/") setSheet(null);
+  }
+  return [sheet, setSheet] as const;
+}
+
+function WeekArrow({
+  label,
+  glyph,
+  target,
+  onGo,
+}: {
+  label: string;
+  glyph: string;
+  target: number | null;
+  onGo: (index: number) => void;
+}) {
+  if (target === null) return <span className={w.arrow} aria-hidden="true" />;
+  return (
+    <button
+      type="button"
+      className={w.arrow}
+      aria-label={label}
+      onClick={() => onGo(target)}
+    >
+      {glyph}
+    </button>
+  );
+}
+
+function PhaseBand({ phase }: { phase: PlanPhase | null }) {
+  if (phase === null) return null;
+  return (
+    <Link className={w.phase} href="/home/plan/roadmap" data-plan-phase>
+      <span className={w.phaseName}>{phase.title}</span>
+      <span className={w.phaseFocus}>{phase.focus}</span>
+    </Link>
+  );
+}
+
 function PlanDay({
-  date,
+  day,
   today,
   isRecoveryDay,
   sessions,
-  expectedRevision,
-  action,
-  pending,
-}: DayProps) {
-  const active = sessions
-    .filter((session) => session.status === "active" && !readsAsLogged(session))
+  tones,
+  onAdd,
+}: {
+  day: PlanWeekDay;
+  today: string;
+  isRecoveryDay: boolean;
+  sessions: PlanSessionView[];
+  tones: Map<string, number>;
+  onAdd: () => void;
+}) {
+  const shown = sessions
+    .filter((session) => session.status === "active" || session.log)
     .toSorted((left, right) => left.position - right.position);
   const cancelled = sessions.filter(
     (session) => session.status === "cancelled" && !session.log,
   );
-  const logged = sessions
-    .filter(readsAsLogged)
-    .toSorted((left, right) => left.position - right.position);
-  const headingId = `plan-day-${date}`;
+  const headingId = `plan-day-${day.date}`;
+  const empty = shown.length === 0 && cancelled.length === 0;
 
   return (
     <li
-      className={styles.day}
-      data-plan-date={date}
-      data-today={date === today}
+      className={w.day}
+      id={headingId}
+      data-plan-date={day.date}
+      data-today={day.date === today}
+      data-past={day.past}
+      data-beyond={day.beyond}
       data-recovery={isRecoveryDay}
     >
-      <div className={styles.rail}>
-        <p className={styles.dayStamp} id={headingId}>
-          {stampDate(date)}
-        </p>
-        {date === today ? <p className={styles.dayMark}>Today</p> : null}
+      <p className={w.date}>
+        <span className={w.dow}>{weekdayLabel(day.date)}</span>
+        <span className={w.num}>{Number(day.date.slice(8))}</span>
+        <span className={styles.srOnly}>{dayLabel(day.date)}</span>
         {isRecoveryDay ? (
-          <p className={styles.recoveryStamp}>Recovery</p>
+          <span className={w.recoveryMark} title="Recovery day">
+            <span aria-hidden="true">☾</span>
+            {/* An empty recovery day already says so in its body. */}
+            {empty ? null : <span className={styles.srOnly}>Recovery day</span>}
+          </span>
         ) : null}
-      </div>
-      <div className={styles.dayBody}>
-        {active.length ? (
-          <ol className={styles.sessionList} aria-labelledby={headingId}>
-            {active.map((session) => (
-              <PlanSessionCard key={session.id} session={session} />
-            ))}
-          </ol>
-        ) : logged.length ? null : (
-          <p className={styles.empty}>
-            {isRecoveryDay
-              ? "Recovery day. Nothing is planned here."
-              : "Nothing planned."}
+      </p>
+      <div className={w.dayBody}>
+        {empty ? (
+          <p className={w.empty}>
+            {day.beyond
+              ? "Not open yet"
+              : isRecoveryDay
+                ? "Recovery day"
+                : day.past
+                  ? ""
+                  : "—"}
           </p>
-        )}
-
-        {logged.length ? (
-          <ol className={styles.sessionList}>
-            {logged.map(({ log, ...session }) => (
-              <li key={session.id} className={styles.session} data-logged>
-                <SessionLink session={session} />
-                <p className={styles.meta}>
-                  {session.sport} · {COMPLETION_OUTCOME_LABELS[log.outcome]}
-                  {log.actualLocalDate === session.localDate
-                    ? null
-                    : ` on ${stampDate(log.actualLocalDate)}`}
-                </p>
-              </li>
+        ) : (
+          <ol className={w.sessionList} aria-label={dayLabel(day.date)}>
+            {shown.map((session) => (
+              <PlanSessionCard
+                key={session.id}
+                session={session}
+                tone={tones.get(sportKey(session.sport)) ?? 0}
+              />
+            ))}
+            {cancelled.map((session) => (
+              <PlanSessionCard
+                key={session.id}
+                session={session}
+                tone={tones.get(sportKey(session.sport)) ?? 0}
+              />
             ))}
           </ol>
-        ) : null}
-
-        {cancelled.length ? (
-          <>
-            <p className={styles.sectionLabel}>Cancelled</p>
-            <ol className={styles.sessionList}>
-              {cancelled.map((session) => (
-                <li
-                  key={session.id}
-                  className={styles.session}
-                  data-cancelled="true"
-                >
-                  <SessionLink session={session} />
-                  <p className={styles.meta}>
-                    {session.sport} · Cancelled, kept on the record
-                  </p>
-                </li>
-              ))}
-            </ol>
-          </>
-        ) : null}
-
-        <div className={styles.dayControls}>
-          <form action={action}>
-            <input type="hidden" name="operation" value="set_recovery_day" />
-            <input type="hidden" name="localDate" value={date} />
-            <input
-              type="hidden"
-              name="isRecoveryDay"
-              value={isRecoveryDay ? "false" : "true"}
-            />
-            <input
-              type="hidden"
-              name="expectedRevision"
-              value={expectedRevision}
-            />
-            <button className={styles.action} type="submit" disabled={pending}>
-              {isRecoveryDay ? "Clear recovery day" : "Mark recovery day"}
-            </button>
-          </form>
-        </div>
+        )}
       </div>
+      {day.past || day.beyond ? null : (
+        <button
+          type="button"
+          className={w.add}
+          aria-label={`Add to ${dayLabel(day.date)}`}
+          onClick={onAdd}
+        >
+          +
+        </button>
+      )}
     </li>
   );
 }
@@ -305,73 +492,240 @@ function PlanDay({
 /**
  * A card reads the session and opens it (owner, 29 Sep 2026): every verb —
  * Edit, Cancel, Delete, Lock, Duplicate, Save to library — lives on the
- * session's own page, so the Plan is a list you read rather than a wall of
- * controls. The title is the link, and its hit area is stretched over the
- * whole card, so a tap anywhere on the card opens it.
+ * session's own page. R3a made it compact: title, a ↻ for a series, the
+ * planned minutes, and a stripe in the sport's tone. The title is the link,
+ * stretched over the whole card.
  */
-function PlanSessionCard({ session }: { session: PlanSessionView }) {
+function PlanSessionCard({
+  session,
+  tone,
+}: {
+  session: PlanSessionView;
+  tone: number;
+}) {
+  const loggedElsewhere = readsAsLogged(session);
+  const cancelled = session.status === "cancelled" && !session.log;
   return (
     <li
-      className={styles.session}
+      className={w.card}
+      data-tone={tone}
       data-locked={session.isLocked}
-      data-session-card
+      data-cancelled={cancelled || undefined}
+      data-logged={loggedElsewhere || undefined}
+      data-session-card={cancelled || loggedElsewhere ? undefined : true}
     >
-      <SessionLink session={session}>
-        <div className={styles.sessionMarks}>
-          {session.seriesId === null ? null : (
-            <span className={styles.seriesMark}>Recurring</span>
-          )}
-          {session.hasDiverged ? (
-            <span className={styles.changedMark}>Changed</span>
-          ) : null}
-          {session.isLocked ? (
-            <span className={styles.lockMark}>Locked</span>
-          ) : null}
-        </div>
-      </SessionLink>
-      <p className={styles.meta}>
-        {[
-          session.sport,
-          session.expectedDurationMinutes === null
-            ? null
-            : `${session.expectedDurationMinutes} min`,
-        ]
-          .filter(Boolean)
-          .join(" · ")}
-      </p>
-      {session.intent === null ? null : (
-        <p className={styles.body}>{session.intent}</p>
-      )}
-      {session.note === null ? null : (
-        <p className={styles.body}>{session.note}</p>
-      )}
-      <ActivityList
-        label="Activities"
-        items={session.activities.map((activity, index) => ({
-          key: String(index),
-          name: activity.name,
-          detail: describeMeasurement(activity.target),
-        }))}
-      />
+      <h3 className={w.cardTitle}>
+        <Link className={w.cardLink} href={sessionHref(session.id)}>
+          {session.title}
+        </Link>
+      </h3>
+      <span className={w.cardMeta}>
+        {session.seriesId === null ? null : (
+          <span className={w.loop} title="Repeats">
+            <span aria-hidden="true">↻</span>
+            <span className={styles.srOnly}>Recurring</span>
+          </span>
+        )}
+        {cardDetail(session, cancelled)}
+      </span>
     </li>
   );
 }
 
-function SessionLink({
-  session,
+function cardDetail(session: PlanSessionView, cancelled: boolean): string {
+  if (cancelled) return "Cancelled";
+  if (session.log) {
+    const outcome = COMPLETION_OUTCOME_LABELS[session.log.outcome];
+    return session.log.actualLocalDate === session.localDate
+      ? outcome
+      : `${outcome} on ${dayLabel(session.log.actualLocalDate)}`;
+  }
+  return [
+    session.expectedDurationMinutes === null
+      ? null
+      : `${session.expectedDurationMinutes} min`,
+    session.isLocked ? "Locked" : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function DaySheet({
+  sheet,
+  isRecoveryDay,
+  savedSessions,
+  onChange,
+  onClose,
   children,
 }: {
-  session: Pick<PlanSessionView, "id" | "title">;
-  children?: ReactNode;
+  sheet: Sheet;
+  isRecoveryDay: boolean;
+  savedSessions: SavedSessionOption[];
+  onChange: (sheet: Sheet) => void;
+  onClose: () => void;
+  children: ReactNode;
 }) {
-  return (
-    <div className={styles.sessionHeader}>
-      <h3>
-        <Link className={styles.cardLink} href={sessionHref(session.id)}>
-          {session.title}
-        </Link>
-      </h3>
-      {children}
-    </div>
+  // Read while rendering, before the title below takes focus.
+  const [opener] = useState(() => document.activeElement);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    titleRef.current?.focus();
+  }, [sheet.view]);
+  const close = useRef(onClose);
+  useEffect(() => {
+    close.current = onClose;
+  });
+  // Escape closes; focus goes back to the "+" that opened the sheet.
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") close.current();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
+    };
+  }, [opener]);
+
+  // Portalled to the body so it sits above the bottom navigation, whatever
+  // stacking context the page's main element makes.
+  return createPortal(
+    <div className={w.sheetLayer}>
+      <button
+        type="button"
+        className={w.scrim}
+        aria-label="Close"
+        tabIndex={-1}
+        onClick={onClose}
+      />
+      <div
+        className={w.sheet}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="plan-sheet-title"
+        data-plan-sheet={sheet.view}
+      >
+        <header className={w.sheetHead}>
+          {sheet.view === "menu" ? (
+            <span />
+          ) : (
+            <button
+              type="button"
+              className={w.sheetBack}
+              onClick={() => onChange({ date: sheet.date, view: "menu" })}
+            >
+              ‹ Back
+            </button>
+          )}
+          <button type="button" className={w.sheetClose} onClick={onClose}>
+            Close
+          </button>
+        </header>
+        <h2 id="plan-sheet-title" ref={titleRef} tabIndex={-1}>
+          {sheet.view === "library"
+            ? "Use session from library"
+            : sheet.view === "new"
+              ? "New session"
+              : dayLabel(sheet.date)}
+        </h2>
+        {sheet.view === "menu" ? null : (
+          <p className={w.sheetDate}>
+            {dayLabel(sheet.date)}
+            {isRecoveryDay ? " · Recovery day" : null}
+          </p>
+        )}
+        {sheet.view === "menu" ? (
+          <div className={w.sheetChoices}>
+            <button
+              type="button"
+              className={w.sheetChoice}
+              onClick={() => onChange({ date: sheet.date, view: "new" })}
+            >
+              New session
+            </button>
+            {savedSessions.length === 0 ? null : (
+              <button
+                type="button"
+                className={w.sheetChoice}
+                onClick={() => onChange({ date: sheet.date, view: "library" })}
+              >
+                Use session from library
+              </button>
+            )}
+            {children}
+          </div>
+        ) : sheet.view === "library" ? (
+          <ul className={w.sheetList} aria-label="Saved sessions">
+            {savedSessions.map((saved) => (
+              <li key={saved.id}>
+                <button
+                  type="button"
+                  className={w.sheetChoice}
+                  onClick={() =>
+                    onChange({
+                      date: sheet.date,
+                      view: "new",
+                      startFrom: saved,
+                    })
+                  }
+                >
+                  <span>{saved.name}</span>
+                  <span className={w.sheetChoiceDetail}>
+                    {[
+                      saved.sport,
+                      saved.expectedDurationMinutes === null
+                        ? null
+                        : `${saved.expectedDurationMinutes} min`,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          children
+        )}
+      </div>
+    </div>,
+    document.body,
   );
+}
+
+function activeOn(sessions: PlanSessionView[]) {
+  return sessions.filter((session) => session.status === "active");
+}
+
+function plannedMinutes(week: PlanWeek, sessions: PlanSessionView[]) {
+  return activeOn(
+    sessions.filter(
+      (session) =>
+        session.localDate >= week.start && session.localDate <= week.end,
+    ),
+  ).reduce((sum, session) => sum + (session.expectedDurationMinutes ?? 0), 0);
+}
+
+/** Week totals say "planned", never done. */
+function weekTotals(week: PlanWeek, sessions: PlanSessionView[]) {
+  const count = activeOn(
+    sessions.filter(
+      (session) =>
+        session.localDate >= week.start && session.localDate <= week.end,
+    ),
+  ).length;
+  if (count === 0) return "Nothing planned";
+  return `${count} ${count === 1 ? "session" : "sessions"} · ${formatPlannedTime(
+    plannedMinutes(week, sessions),
+  )} planned`;
+}
+
+function weekLabel(week: PlanWeek, index: number) {
+  if (index === 0) return "This week";
+  if (index === 1) return "Next week";
+  return weekRange(week);
+}
+
+function weekRange(week: PlanWeek) {
+  return `${shortDateLabel(week.start)} – ${shortDateLabel(week.end)}`;
 }

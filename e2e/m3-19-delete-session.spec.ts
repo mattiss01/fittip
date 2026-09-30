@@ -2,10 +2,11 @@ import {
   expect,
   test,
   type APIRequestContext,
-  type Locator,
   type Page,
 } from "@playwright/test";
 import path from "node:path";
+
+import { openNewSession, planDay } from "./support/plan-week";
 
 const evidenceDirectory = path.join(
   process.cwd(),
@@ -41,7 +42,7 @@ test.describe("M3-19 delete a planned session", () => {
       await page.goto("/home/plan");
       await page.getByRole("button", { name: `Use ${TIMEZONE}` }).click();
       await expect(
-        page.getByRole("heading", { name: "Plan ahead." }),
+        page.getByRole("heading", { level: 1, name: "Plan", exact: true }),
       ).toBeVisible();
 
       await addSession(page, today, "Cancel me", "Running");
@@ -51,7 +52,7 @@ test.describe("M3-19 delete a planned session", () => {
       // Since 29 Sep 2026 the card carries no controls: it opens the
       // session's own page, where Cancel and Delete sit behind ⋯ and each
       // opens a panel that says what it does. The retired label stays gone.
-      const doomed = sessionCard(page, tomorrow, "Delete me");
+      const doomed = await sessionCard(page, tomorrow, "Delete me");
       await expect(doomed.locator("button, summary, form")).toHaveCount(0);
       await expect(page.locator("summary", { hasText: "Remove" })).toHaveCount(
         0,
@@ -108,10 +109,12 @@ test.describe("M3-19 delete a planned session", () => {
       await expect(page.locator("[data-cancellation-reason]")).toHaveCount(0);
       await backToPlan(page);
       await expect(
-        day(page, today).getByText("Running · Cancelled, kept on the record"),
+        (await planDay(page, today))
+          .locator("[data-cancelled]")
+          .getByText("Cancelled", { exact: true }),
       ).toBeVisible();
       await expect(
-        day(page, today).getByText(/work ran late|storm warning/),
+        (await planDay(page, today)).getByText(/work ran late|storm warning/),
       ).toHaveCount(0);
 
       // A lock defends a session from a sweep, never from the owner asking for
@@ -131,11 +134,13 @@ test.describe("M3-19 delete a planned session", () => {
       await expect(warning).toContainText("no undo");
       await remove.getByRole("button", { name: "Delete session" }).click();
       await expect(
-        page.getByRole("heading", { name: "Plan ahead." }),
+        page.getByRole("heading", { level: 1, name: "Plan", exact: true }),
       ).toBeVisible();
-      await expect(sessionCard(page, tomorrow, "Delete me")).toHaveCount(0);
+      await expect(await sessionCard(page, tomorrow, "Delete me")).toHaveCount(
+        0,
+      );
       await expect(
-        day(page, tomorrow).getByText("Cancelled, kept on the record"),
+        (await planDay(page, tomorrow)).locator("[data-cancelled]"),
       ).toHaveCount(0);
 
       // A session with training logged against it is refused, in the owner's
@@ -172,13 +177,13 @@ test.describe("M3-19 delete a planned session", () => {
         .getByRole("button", { name: "Delete session" })
         .click();
       await expect(
-        page.getByRole("heading", { name: "Plan ahead." }),
+        page.getByRole("heading", { level: 1, name: "Plan", exact: true }),
       ).toBeVisible();
       await expect(
-        day(page, today).getByText("Cancelled", { exact: true }),
+        (await planDay(page, today)).getByText("Cancelled", { exact: true }),
       ).toHaveCount(0);
       await expect(
-        day(page, today).getByText("Nothing planned."),
+        (await planDay(page, today)).getByText("—", { exact: true }),
       ).toBeVisible();
 
       expect(
@@ -209,19 +214,15 @@ function ownerDate(offset: number) {
   return shifted.toISOString().slice(0, 10);
 }
 
-function day(page: Page, date: string) {
-  return page.locator(`[data-plan-date="${date}"]`);
-}
-
-function sessionCard(page: Page, date: string, title: string) {
-  return day(page, date)
+async function sessionCard(page: Page, date: string, title: string) {
+  return (await planDay(page, date))
     .locator("li")
     .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
 }
 
 /** The identity the card's link to the session's own page carries. */
 async function sessionIdOf(page: Page, date: string, title: string) {
-  const href = await sessionCard(page, date, title)
+  const href = await (await sessionCard(page, date, title))
     .getByRole("link", { name: title, exact: true })
     .getAttribute("href");
   const value = href?.split("/").at(-1) ?? "";
@@ -231,7 +232,7 @@ async function sessionIdOf(page: Page, date: string, title: string) {
 
 /** Opens a session's own page from its card on the Plan. */
 async function openSession(page: Page, date: string, title: string) {
-  await sessionCard(page, date, title)
+  await (await sessionCard(page, date, title))
     .getByRole("link", { name: title, exact: true })
     .click();
   await expect(
@@ -256,15 +257,8 @@ async function chooseMore(page: Page, label: string) {
 async function backToPlan(page: Page) {
   await page.locator("[data-back-link]").click();
   await expect(
-    page.getByRole("heading", { name: "Plan ahead." }),
+    page.getByRole("heading", { level: 1, name: "Plan", exact: true }),
   ).toBeVisible();
-}
-
-/** The disclosure whose own summary carries this label. */
-function disclosure(scope: Locator, label: string) {
-  return scope.locator("details").filter({
-    has: scope.page().locator(":scope > summary", { hasText: label }),
-  });
 }
 
 async function addSession(
@@ -273,16 +267,15 @@ async function addSession(
   title: string,
   sport: string,
 ) {
-  const details = disclosure(page.locator("body"), "Create session");
-  if ((await details.getAttribute("open")) === null) {
-    await details.locator(":scope > summary").click();
-  }
-  await details.getByLabel("Date").fill(date);
+  const details = await openNewSession(page, date);
   await details.getByLabel("Title").fill(title);
   await details.getByLabel("Sport").fill(sport);
   await details.getByRole("button", { name: "Create session" }).click();
   await expect(
-    day(page, date).getByRole("heading", { name: title, exact: true }),
+    (await planDay(page, date)).getByRole("heading", {
+      name: title,
+      exact: true,
+    }),
   ).toBeVisible();
 }
 

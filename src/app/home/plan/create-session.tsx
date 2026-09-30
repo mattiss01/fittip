@@ -12,10 +12,7 @@ import { seriesOccurrenceDates } from "./series-recurrence";
 import { SessionFields } from "./session-fields";
 import styles from "./plan.module.css";
 
-import {
-  SavedSessionPicker,
-  type SavedSessionOption,
-} from "@/components/training/saved-session-picker";
+import type { SavedSessionOption } from "@/components/training/saved-session-picker";
 import { shiftIsoDate } from "@/lib/date/local-date";
 
 type FormAction = (formData: FormData) => void;
@@ -26,9 +23,15 @@ type Preview = {
   seriesSubmission: number;
 };
 
+/**
+ * The one session editor, for one date (R3a): a day's "+" opens it in a
+ * sheet, so the date is the day's and not a field. "Repeat this session"
+ * turns the same form into a series starting there. `startFrom` is a saved
+ * session picked in the sheet; its values are copied, nothing links back.
+ */
 export function CreateSession({
-  dates,
-  savedSessions = [],
+  date,
+  startFrom,
   expectedRevision,
   planAction,
   planState,
@@ -37,9 +40,8 @@ export function CreateSession({
   seriesState,
   seriesPending,
 }: {
-  dates: string[];
-  /** Saved sessions the new one may start from, copied by value. */
-  savedSessions?: SavedSessionOption[];
+  date: string;
+  startFrom?: SavedSessionOption;
   expectedRevision: number;
   planAction: FormAction;
   planState: PlanActionState;
@@ -49,22 +51,19 @@ export function CreateSession({
   seriesPending: boolean;
 }) {
   const [repeat, setRepeat] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(dates[0]);
   const [preview, setPreview] = useState<Preview | null>(null);
-  // The saved session this one starts from. Picking one remounts the fields
-  // with its values, replacing whatever they held; a save clears it with the
-  // rest of the form, because the reset key changes.
-  const [template, setTemplate] = useState<{
-    session: SavedSessionOption;
-    resetKey: string;
-  } | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  // A refused save re-seeds the fields from what was sent; a refusal from an
+  // earlier opening of the sheet does not.
+  const [openedAt] = useState(planState.submission);
+  const refusedDraft =
+    planState.operation === "add" &&
+    planState.status !== "saved" &&
+    planState.submission > openedAt
+      ? planState.draft
+      : undefined;
   const formRef = useRef<HTMLFormElement>(null);
   const pending = repeat ? seriesPending : planPending;
-  const resetKey = useCreateResetKey(planState, seriesState);
-  const [open, setOpen] = useCollapseOnSave(planState, seriesState);
-  const startingFrom =
-    template?.resetKey === resetKey ? template.session : undefined;
   const reviewedPreview =
     preview?.seriesSubmission === seriesState.submission ? preview : null;
 
@@ -98,16 +97,16 @@ export function CreateSession({
       );
       return;
     }
-    const searchEnd = selectedEnd ?? shiftIsoDate(selectedDate, 3700);
+    const searchEnd = selectedEnd ?? shiftIsoDate(date, 3700);
     const occurrenceDates = seriesOccurrenceDates(
       {
         frequency,
         intervalCount,
         ...(frequency === "weekly" ? { weekdays } : {}),
-        startDate: selectedDate,
+        startDate: date,
         ...(selectedEnd === undefined ? {} : { endDate: selectedEnd }),
       },
-      selectedDate,
+      date,
       searchEnd,
       5,
     );
@@ -126,207 +125,121 @@ export function CreateSession({
   }
 
   return (
-    <>
-      <details
-        className={styles.createSession}
-        open={open}
-        onToggle={(event) => setOpen(event.currentTarget.open)}
-      >
-        <summary>Create session</summary>
-        <form
-          ref={formRef}
-          key={resetKey}
-          className={styles.seriesForm}
-          action={repeat ? seriesAction : planAction}
+    <form
+      ref={formRef}
+      className={styles.seriesForm}
+      action={repeat ? seriesAction : planAction}
+      data-create-session
+    >
+      <input
+        type="hidden"
+        name="operation"
+        value={repeat ? "add_series" : "add"}
+      />
+      <input type="hidden" name="localDate" value={date} />
+      <input type="hidden" name="startDate" value={date} />
+      <input type="hidden" name="expectedRevision" value={expectedRevision} />
+      {startFrom === undefined ? null : (
+        <p className={styles.fieldHint} role="status">
+          Started from {startFrom.name}. Change anything that was different; the
+          saved session keeps its own.
+        </p>
+      )}
+      <SessionFields
+        idPrefix="create-session"
+        draft={
+          startFrom !== undefined
+            ? {
+                title: startFrom.title,
+                sport: startFrom.sport,
+                intent: startFrom.intent ?? "",
+                expectedDurationMinutes:
+                  startFrom.expectedDurationMinutes?.toString() ?? "",
+                note: startFrom.note ?? "",
+              }
+            : refusedDraft
+        }
+        activities={startFrom?.activities}
+      />
+
+      <label className={styles.checkField}>
+        <input
+          type="checkbox"
+          checked={repeat}
+          onChange={(event) => {
+            setRepeat(event.target.checked);
+            invalidatePreview();
+          }}
+        />
+        <span>Repeat this session</span>
+      </label>
+
+      {repeat ? (
+        <RecurrenceFields
+          idPrefix="create-session-recurrence"
+          startDate={date}
+          onRuleChange={invalidatePreview}
+        />
+      ) : null}
+
+      {previewError === null ? null : (
+        <p className={styles.inlineError} role="alert">
+          {previewError}
+        </p>
+      )}
+
+      {!repeat ? (
+        <button className={styles.primary} type="submit" disabled={pending}>
+          Create session
+        </button>
+      ) : reviewedPreview === null ? (
+        <button
+          className={styles.primary}
+          type="button"
+          onClick={reviewOccurrences}
+          disabled={pending}
         >
-          <input
-            type="hidden"
-            name="operation"
-            value={repeat ? "add_series" : "add"}
-          />
-          <input type="hidden" name="startDate" value={selectedDate} />
-          <input
-            type="hidden"
-            name="expectedRevision"
-            value={expectedRevision}
-          />
-          <div className={styles.field}>
-            <label htmlFor="create-session-date">Date</label>
-            <input
-              id="create-session-date"
-              name="localDate"
-              type="date"
-              min={dates[0]}
-              max={dates[dates.length - 1]}
-              required
-              value={selectedDate}
-              onChange={(event) => {
-                setSelectedDate(event.target.value);
-                invalidatePreview();
-              }}
-            />
-          </div>
-          <SavedSessionPicker
-            sessions={savedSessions}
-            picked={startingFrom}
-            onPick={(session) => setTemplate({ session, resetKey })}
-          />
-          <SessionFields
-            key={startingFrom?.id ?? "empty"}
-            idPrefix="create-session"
-            draft={
-              startingFrom !== undefined
-                ? {
-                    title: startingFrom.title,
-                    sport: startingFrom.sport,
-                    intent: startingFrom.intent ?? "",
-                    expectedDurationMinutes:
-                      startingFrom.expectedDurationMinutes?.toString() ?? "",
-                    note: startingFrom.note ?? "",
-                  }
-                : planState.operation === "add"
-                  ? planState.draft
-                  : undefined
-            }
-            activities={startingFrom?.activities}
-          />
-
-          <label className={styles.checkField}>
-            <input
-              type="checkbox"
-              checked={repeat}
-              onChange={(event) => {
-                setRepeat(event.target.checked);
-                invalidatePreview();
-              }}
-            />
-            <span>Repeat this session</span>
-          </label>
-
-          {repeat ? (
-            <RecurrenceFields
-              idPrefix="create-session-recurrence"
-              startDate={selectedDate}
-              onRuleChange={invalidatePreview}
-            />
-          ) : null}
-
-          {previewError === null ? null : (
-            <p className={styles.inlineError} role="alert">
-              {previewError}
-            </p>
-          )}
-
-          {!repeat ? (
-            <button className={styles.primary} type="submit" disabled={pending}>
-              Create session
-            </button>
-          ) : reviewedPreview === null ? (
+          Review recurring sessions
+        </button>
+      ) : (
+        <section
+          className={styles.reviewCard}
+          aria-labelledby="create-review-title"
+        >
+          <p className={styles.sectionLabel}>Review before saving</p>
+          <h2 id="create-review-title">First occurrences</h2>
+          <ol className={styles.previewDates}>
+            {reviewedPreview.dates.map((occurrence) => (
+              <li key={occurrence}>{stampDate(occurrence)}</li>
+            ))}
+          </ol>
+          <p className={styles.consequenceStandalone}>
+            {reviewedPreview.openEnded
+              ? "This series has no end date. FitTip creates only the current fourteen-day window and extends it on later Plan visits."
+              : "The series stops on the end date you chose."}{" "}
+            If a date already has ten sessions, that date is skipped and named
+            after the save.
+          </p>
+          <div className={styles.reviewActions}>
             <button
-              className={styles.primary}
+              className={styles.action}
               type="button"
-              onClick={reviewOccurrences}
+              onClick={invalidatePreview}
               disabled={pending}
             >
-              Review recurring sessions
+              Change recurrence
             </button>
-          ) : (
-            <section
-              className={styles.reviewCard}
-              aria-labelledby="create-review-title"
-            >
-              <p className={styles.sectionLabel}>Review before saving</p>
-              <h2 id="create-review-title">First occurrences</h2>
-              <ol className={styles.previewDates}>
-                {reviewedPreview.dates.map((date) => (
-                  <li key={date}>{stampDate(date)}</li>
-                ))}
-              </ol>
-              <p className={styles.consequenceStandalone}>
-                {reviewedPreview.openEnded
-                  ? "This series has no end date. FitTip creates only the current fourteen-day window and extends it on later Plan visits."
-                  : "The series stops on the end date you chose."}{" "}
-                If a date already has ten sessions, that date is skipped and
-                named after the save.
-              </p>
-              <div className={styles.reviewActions}>
-                <button
-                  className={styles.action}
-                  type="button"
-                  onClick={invalidatePreview}
-                  disabled={pending}
-                >
-                  Change recurrence
-                </button>
-                <button
-                  className={styles.primary}
-                  type="submit"
-                  disabled={pending}
-                >
-                  Create recurring sessions
-                </button>
-              </div>
-            </section>
-          )}
-        </form>
-      </details>
-
-      {/* Outside the panel, which closes on the save that produced them. */}
-      <SkippedDates
-        skipped={
-          seriesState.operation === "add_series"
-            ? (seriesState.skipped ?? [])
-            : []
-        }
-      />
-    </>
+            <button className={styles.primary} type="submit" disabled={pending}>
+              Create recurring sessions
+            </button>
+          </div>
+        </section>
+      )}
+    </form>
   );
 }
 
-/**
- * Whether the panel is open. A save that created something closes it, so the
- * owner lands on the Plan with the new session in it; a refused one leaves it
- * open over the draft that needs fixing.
- */
-function useCollapseOnSave(
-  planState: PlanActionState,
-  seriesState: SeriesActionState,
-) {
-  const [open, setOpen] = useState(false);
-  const saved = `${
-    planState.operation === "add" && planState.status === "saved"
-      ? planState.submission
-      : ""
-  }/${
-    seriesState.operation === "add_series" && seriesState.status === "saved"
-      ? seriesState.submission
-      : ""
-  }`;
-  const [seenSave, setSeenSave] = useState(saved);
-  if (saved !== seenSave) {
-    setSeenSave(saved);
-    if (saved !== "/") setOpen(false);
-  }
-  return [open, setOpen] as const;
-}
-
-function useCreateResetKey(
-  planState: PlanActionState,
-  seriesState: SeriesActionState,
-) {
-  const targetedPlan = planState.operation === "add";
-  const targetedSeries =
-    seriesState.operation === "add_series" && seriesState.status === "saved";
-  const [seen, setSeen] = useState({ plan: 0, series: 0 });
-  const next = {
-    plan: targetedPlan ? planState.submission : seen.plan,
-    series: targetedSeries ? seriesState.submission : seen.series,
-  };
-  if (next.plan !== seen.plan || next.series !== seen.series) setSeen(next);
-  return `plan-${next.plan}-series-${next.series}`;
-}
-
-function SkippedDates({ skipped }: { skipped: SeriesSkippedDate[] }) {
+export function SkippedDates({ skipped }: { skipped: SeriesSkippedDate[] }) {
   if (skipped.length === 0) return null;
   return (
     <section
@@ -337,7 +250,7 @@ function SkippedDates({ skipped }: { skipped: SeriesSkippedDate[] }) {
       <ul>
         {skipped.map((item) => (
           <li key={item.occurrenceDate + "-" + item.reason}>
-            {stampDate(item.occurrenceDate)} â€”{" "}
+            {stampDate(item.occurrenceDate)} —{" "}
             {item.reason === "daily-session-limit"
               ? "already has ten sessions"
               : "will be tried on the next Plan visit"}

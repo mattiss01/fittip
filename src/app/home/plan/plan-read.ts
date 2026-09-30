@@ -14,6 +14,7 @@ import type {
   RollingPlanSeries,
   RollingPlanSession,
 } from "@/server/rolling-plan/rolling-plan";
+import { RoadmapAuthenticationError } from "@/server/roadmap/roadmap-phases";
 import { SessionActivityAuthenticationError } from "@/server/session-detail/open-session-activity-proposals";
 
 /** Only what the surface renders crosses to the client. */
@@ -58,7 +59,8 @@ export function redirectOnAuthError(error: unknown): void {
     error instanceof RollingPlanAuthenticationError ||
     error instanceof CompletionAuthenticationError ||
     error instanceof PersonalActivityAuthenticationError ||
-    error instanceof SessionActivityAuthenticationError
+    error instanceof SessionActivityAuthenticationError ||
+    error instanceof RoadmapAuthenticationError
       ? error.accessError
       : undefined;
   if (accessError?.reason === "not-owner") redirect("/auth/denied");
@@ -67,7 +69,8 @@ export function redirectOnAuthError(error: unknown): void {
     error instanceof RollingPlanAuthenticationError ||
     error instanceof CompletionAuthenticationError ||
     error instanceof PersonalActivityAuthenticationError ||
-    error instanceof SessionActivityAuthenticationError
+    error instanceof SessionActivityAuthenticationError ||
+    error instanceof RoadmapAuthenticationError
   ) {
     redirect("/");
   }

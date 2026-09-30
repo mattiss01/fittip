@@ -235,6 +235,11 @@ const allowedServerModules = [
   "@/server/repositories/rolling-plan-repository",
   "@/server/repositories/saved-session-repository",
   "@/server/repositories/session-cancellation-repository",
+  // R3a: the Plan names each week's roadmap phase. The one module it may
+  // reach reads the current version's phase titles, focus and dates and
+  // nothing else — not the roadmap repository, whose writes stay with the
+  // roadmap route.
+  "@/server/roadmap/roadmap-phases",
   "@/server/rolling-plan/rolling-plan",
   "@/server/rolling-plan/session-cancellation",
   // A7-4, both narrow on purpose. An edit that saved a coach's activity list

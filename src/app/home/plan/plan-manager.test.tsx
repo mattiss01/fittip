@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
@@ -30,30 +36,49 @@ import {
 } from "./action-state";
 import { PlanManager, type PlanSessionView } from "./plan-manager";
 
-const TODAY = "2026-08-17";
+// A Wednesday, so the first week has two days before today.
+const TODAY = "2026-08-19";
 const DATES = Array.from({ length: 14 }, (_, offset) => {
   const date = new Date(`${TODAY}T00:00:00.000Z`);
   date.setUTCDate(date.getUTCDate() + offset);
   return date.toISOString().slice(0, 10);
 });
-const LATER = DATES[12];
+const LAST = DATES[13];
 
 const action = vi.fn();
+
+function manager(
+  sessions: PlanSessionView[] = [],
+  extra: Partial<Parameters<typeof PlanManager>[0]> = {},
+) {
+  return (
+    <PlanManager
+      today={TODAY}
+      lastDate={LAST}
+      expectedRevision={3}
+      sessions={sessions}
+      recoveryDates={[DATES[3]]}
+      {...extra}
+    />
+  );
+}
 
 function renderManager(
   state: PlanActionState = INITIAL_PLAN_ACTION_STATE,
   sessions: PlanSessionView[] = [],
+  extra: Partial<Parameters<typeof PlanManager>[0]> = {},
 ) {
   useActionStateMock.mockReturnValue([state, action, false]);
-  return render(
-    <PlanManager
-      today={TODAY}
-      dates={DATES}
-      expectedRevision={3}
-      sessions={sessions}
-      recoveryDates={[DATES[3]]}
-    />,
-  );
+  return render(manager(sessions, extra));
+}
+
+function day(date: string) {
+  return document.querySelector<HTMLElement>(`[data-plan-date="${date}"]`)!;
+}
+
+function openNewSession(date: string) {
+  fireEvent.click(within(day(date)).getByRole("button", { name: /^Add to / }));
+  fireEvent.click(screen.getByRole("button", { name: "New session" }));
 }
 
 function createTitleInput() {
@@ -88,72 +113,171 @@ describe("PlanManager", () => {
 
   afterEach(cleanup);
 
-  it("shows the window from owner-local today and never a past date", () => {
+  it("shows one week from Monday, with a + only from today on", () => {
     renderManager();
     const days = document.querySelectorAll("[data-plan-date]");
 
-    expect(days).toHaveLength(14);
-    expect(days[0].getAttribute("data-plan-date")).toBe(TODAY);
-    expect(days[0].getAttribute("data-today")).toBe("true");
-    expect(days[1].getAttribute("data-today")).toBe("false");
+    expect(days).toHaveLength(7);
+    expect(days[0].getAttribute("data-plan-date")).toBe("2026-08-17");
+    expect(day(TODAY).getAttribute("data-today")).toBe("true");
+    expect(day("2026-08-18").getAttribute("data-past")).toBe("true");
     expect(
-      screen.getAllByText("Create session", { selector: "summary" }),
-    ).toHaveLength(1);
-    expect(screen.queryByText("Add a session")).toBeNull();
+      within(day("2026-08-18")).queryByRole("button", { name: /^Add to / }),
+    ).toBeNull();
+    expect(
+      within(day(TODAY)).getByRole("button", { name: /^Add to / }),
+    ).toBeVisible();
+    expect(screen.getByRole("heading", { name: "This week" })).toBeVisible();
+    expect(screen.queryByText("Create session")).toBeNull();
   });
 
-  it("reads an unlabelled empty date as unplanned and a labelled one as recovery", () => {
+  it("pages between weeks with the arrows and the tiles", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [
+      session({ localDate: DATES[13], expectedDurationMinutes: 90 }),
+    ]);
+    expect(screen.queryByRole("button", { name: "Previous week" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Next week" }));
+    expect(screen.getByRole("heading", { name: "Next week" })).toBeVisible();
+    expect(day("2026-08-24")).not.toBeNull();
+
+    // The last week ends past the window: its days are not open yet.
+    fireEvent.click(screen.getByRole("button", { name: /Week of Mon 31 Aug/ }));
+    expect(day(LAST).getAttribute("data-beyond")).toBe("false");
+    expect(day("2026-09-02").getAttribute("data-beyond")).toBe("true");
+    expect(day("2026-09-02").textContent).toContain("Not open yet");
+    expect(
+      within(day("2026-09-02")).queryByRole("button", { name: /^Add to / }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Next week" })).toBeNull();
+    // Totals say planned, never done.
+    expect(screen.getByText(/1 session · 1 h 30 planned/)).toBeVisible();
+  });
+
+  it("opens on the week of the day it was sent back to", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [], { initialDate: DATES[8] });
+    expect(day(DATES[8])).not.toBeNull();
+    expect(day(TODAY)).toBeNull();
+  });
+
+  it("shows the roadmap phase the week sits in", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [], {
+      phases: [
+        {
+          title: "Base",
+          focus: "Easy volume",
+          startDate: "2026-08-01",
+          endDate: "2026-08-23",
+        },
+        {
+          title: "Sharpen",
+          focus: "10k under 48 min",
+          startDate: "2026-08-24",
+          endDate: "2026-09-30",
+        },
+      ],
+    });
+    expect(screen.getByText("Base")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Next week" }));
+    expect(screen.getByText("Sharpen")).toBeVisible();
+    expect(screen.queryByText("Base")).toBeNull();
+  });
+
+  it("reads an empty date as a dash and a labelled one as recovery", () => {
     renderManager();
-    const plain = document.querySelector(`[data-plan-date="${DATES[1]}"]`)!;
-    const labelled = document.querySelector(`[data-plan-date="${DATES[3]}"]`)!;
+    const plain = day(DATES[1]);
+    const labelled = day(DATES[3]);
 
     expect(plain.getAttribute("data-recovery")).toBe("false");
-    expect(plain.textContent).toContain("Nothing planned.");
+    expect(plain.textContent).toContain("—");
     expect(labelled.getAttribute("data-recovery")).toBe("true");
-    expect(labelled.textContent).toContain(
-      "Recovery day. Nothing is planned here.",
-    );
+    expect(labelled.textContent).toContain("Recovery day");
     // Nothing on an empty date may imply completion, a streak, or a judgment.
     expect(plain.textContent).not.toMatch(/rest|complete|done|streak|missed/i);
   });
 
-  it("uses one create flow for a single session or reviewed recurrence", () => {
+  it("keeps a recovery day's sessions and its + in the same place", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [
+      session({ localDate: DATES[3] }),
+    ]);
+    expect(day(DATES[3]).textContent).toContain("Aerobic run");
+    expect(day(DATES[3]).textContent).toContain("Recovery day");
+    expect(
+      within(day(DATES[3])).getByRole("button", { name: /^Add to / }),
+    ).toBeVisible();
+  });
+
+  it("offers a new session, the library, and the recovery label from a day's +", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [], {
+      savedSessions: [
+        {
+          id: "7f000000-0000-4000-8000-0000000000a1",
+          name: "Hill reps",
+          title: "Hills",
+          sport: "Running",
+          expectedDurationMinutes: 50,
+          intent: null,
+          note: null,
+          activities: [],
+        },
+      ],
+    });
+    fireEvent.click(
+      within(day(DATES[3])).getByRole("button", { name: /^Add to / }),
+    );
+    const sheet = screen.getByRole("dialog");
+    expect(
+      within(sheet).getByRole("button", { name: "New session" }),
+    ).toBeVisible();
+    expect(
+      within(sheet).getByRole("button", { name: "Remove recovery day" }),
+    ).toBeVisible();
+
+    fireEvent.click(
+      within(sheet).getByRole("button", { name: "Use session from library" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Hill reps/ }));
+    expect(createTitleInput()).toHaveValue("Hills");
+    expect(
+      document.querySelector<HTMLInputElement>("input[name='localDate']"),
+    ).toHaveValue(DATES[3]);
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("uses one editor for a single session or reviewed recurrence", () => {
     renderManager();
-    const create = screen
-      .getByText("Create session", { selector: "summary" })
-      .closest("details")!;
-    fireEvent.click(create.querySelector("summary")!);
-    const operation = create.querySelector<HTMLInputElement>(
+    openNewSession(DATES[2]);
+    const form = document.querySelector<HTMLFormElement>(
+      "[data-create-session]",
+    )!;
+    const operation = form.querySelector<HTMLInputElement>(
       "input[name='operation']",
     )!;
 
     expect(operation).toHaveValue("add");
     expect(
+      form.querySelector<HTMLInputElement>("input[name='localDate']"),
+    ).toHaveValue(DATES[2]);
+    expect(
       screen.getByRole("button", { name: "Create session" }),
     ).toBeVisible();
     expect(screen.queryByText("Recurrence", { selector: "legend" })).toBeNull();
 
-    fireEvent.change(screen.getByLabelText("Date"), {
-      target: { value: DATES[2] },
-    });
     fireEvent.click(screen.getByLabelText("Repeat this session"));
     expect(operation).toHaveValue("add_series");
     expect(
       screen.getByText("Recurrence", { selector: "legend" }),
     ).toBeVisible();
-    expect(screen.getByLabelText("Wed")).toBeChecked();
+    // DATES[2] is a Friday.
+    expect(screen.getByLabelText("Fri")).toBeChecked();
     expect(screen.getByLabelText("Mon")).not.toBeChecked();
 
-    fireEvent.change(screen.getByLabelText("Date"), {
-      target: { value: DATES[3] },
+    fireEvent.change(createTitleInput(), {
+      target: { value: "Friday tempo" },
     });
-    expect(screen.getByLabelText("Thu")).toBeChecked();
-    expect(screen.getByLabelText("Wed")).not.toBeChecked();
-
-    fireEvent.change(create.querySelector("#create-session-title")!, {
-      target: { value: "Thursday tempo" },
-    });
-    fireEvent.change(create.querySelector("#create-session-sport")!, {
+    fireEvent.change(form.querySelector("#create-session-sport")!, {
       target: { value: "Running" },
     });
     fireEvent.change(screen.getByLabelText("Repeat"), {
@@ -175,10 +299,10 @@ describe("PlanManager", () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [
       session({ status: "cancelled" }),
     ]);
-    const day = document.querySelector(`[data-plan-date="${TODAY}"]`)!;
 
-    expect(day.textContent).toContain("Cancelled, kept on the record");
-    expect(day.textContent).toContain("Nothing planned.");
+    expect(day(TODAY).querySelector("[data-cancelled]")?.textContent).toContain(
+      "Cancelled",
+    );
     // Reactivate and Delete are on the session's page, one tap away.
     expect(
       screen.getByRole("link", { name: "Aerobic run" }).getAttribute("href"),
@@ -186,21 +310,13 @@ describe("PlanManager", () => {
     expect(screen.queryByRole("button", { name: "Reactivate" })).toBeNull();
   });
 
-  it("does not discard a create draft when a date control is submitted", () => {
+  it("keeps a draft open when a recovery label resolves meanwhile", () => {
     const { rerender } = renderManager();
-    const details = screen
-      .getByText("Create session", { selector: "summary" })
-      .closest("details")!;
-    details.open = true;
+    openNewSession(DATES[2]);
     fireEvent.change(createTitleInput(), {
       target: { value: "Half in progress" },
     });
-    fireEvent.change(screen.getByLabelText("Date"), {
-      target: { value: LATER },
-    });
-    expect(createTitleInput()).toHaveValue("Half in progress");
 
-    // A recovery-day toggle on the first date now resolves.
     useActionStateMock.mockReturnValue([
       {
         status: "saved",
@@ -212,81 +328,53 @@ describe("PlanManager", () => {
       action,
       false,
     ]);
-    rerender(
-      <PlanManager
-        today={TODAY}
-        dates={DATES}
-        expectedRevision={4}
-        sessions={[]}
-        recoveryDates={[DATES[3], TODAY]}
-      />,
-    );
+    rerender(manager([], { recoveryDates: [DATES[3], TODAY] }));
 
     expect(createTitleInput()).toHaveValue("Half in progress");
-    expect(details.open).toBe(true);
+    expect(screen.getByRole("dialog")).toBeVisible();
   });
 
-  it("clears the form that saved and re-seeds the form that was refused", () => {
+  it("closes the sheet on a save that created a session and re-seeds a refused one", () => {
     const { rerender } = renderManager();
-    fireEvent.change(createTitleInput(), {
-      target: { value: "Aerobic run" },
+    const rerenderWith = (state: PlanActionState) => {
+      useActionStateMock.mockReturnValue([state, action, false]);
+      rerender(manager([session()]));
+    };
+    openNewSession(TODAY);
+
+    rerenderWith({
+      status: "rule",
+      message: "A date holds at most ten sessions. Cancel or move one first.",
+      submission: 1,
+      operation: "add",
+      localDate: TODAY,
+      conflict: "daily-session-limit",
+      draft: {
+        title: "Eleventh",
+        sport: "Running",
+        intent: "",
+        expectedDurationMinutes: "",
+        note: "",
+      },
     });
-
-    useActionStateMock.mockReturnValue([
-      {
-        status: "saved",
-        message: "Session added.",
-        submission: 1,
-        operation: "add",
-        localDate: TODAY,
-      } satisfies PlanActionState,
-      action,
-      false,
-    ]);
-    rerender(
-      <PlanManager
-        today={TODAY}
-        dates={DATES}
-        expectedRevision={4}
-        sessions={[session()]}
-        recoveryDates={[DATES[3]]}
-      />,
-    );
-    expect(createTitleInput()).toHaveValue("");
-
-    useActionStateMock.mockReturnValue([
-      {
-        status: "rule",
-        message: "A date holds at most ten sessions. Cancel or move one first.",
-        submission: 2,
-        operation: "add",
-        localDate: TODAY,
-        conflict: "daily-session-limit",
-        draft: {
-          title: "Eleventh",
-          sport: "Running",
-          intent: "",
-          expectedDurationMinutes: "",
-          note: "",
-        },
-      } satisfies PlanActionState,
-      action,
-      false,
-    ]);
-    rerender(
-      <PlanManager
-        today={TODAY}
-        dates={DATES}
-        expectedRevision={4}
-        sessions={[session()]}
-        recoveryDates={[DATES[3]]}
-      />,
-    );
-
+    expect(screen.getByRole("dialog")).toBeVisible();
     expect(createTitleInput()).toHaveValue("Eleventh");
     expect(screen.getAllByRole("status")[0]).toHaveTextContent(
       /at most ten sessions/i,
     );
+
+    rerenderWith({
+      status: "saved",
+      message: "Session added.",
+      submission: 2,
+      operation: "add",
+      localDate: TODAY,
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    // A new sheet starts empty rather than from the refusal before.
+    openNewSession(TODAY);
+    expect(createTitleInput()).toHaveValue("");
   });
 
   it("offers a reload only when the surface knows it is out of date", () => {
@@ -304,65 +392,19 @@ describe("PlanManager", () => {
       action,
       false,
     ]);
-    rerender(
-      <PlanManager
-        today={TODAY}
-        dates={DATES}
-        expectedRevision={3}
-        sessions={[]}
-        recoveryDates={[]}
-      />,
-    );
+    rerender(manager([], { recoveryDates: [] }));
 
     expect(
       screen.getByRole("link", { name: "Reload the current plan" }),
     ).toHaveAttribute("href", "/home/plan");
   });
 
-  it("closes the create panel on a save that created a session, not on a refusal", () => {
-    const { rerender } = renderManager();
-    const panel = screen
-      .getByText("Create session", { selector: "summary" })
-      .closest("details")!;
-    fireEvent.click(
-      screen.getByText("Create session", { selector: "summary" }),
-    );
-    // jsdom opens the element but, unlike a browser, never fires `toggle`.
-    fireEvent(panel, new Event("toggle"));
-    expect(panel.open).toBe(true);
-
-    const rerenderWith = (state: PlanActionState) => {
-      useActionStateMock.mockReturnValue([state, action, false]);
-      rerender(
-        <PlanManager
-          today={TODAY}
-          dates={DATES}
-          expectedRevision={4}
-          sessions={[]}
-          recoveryDates={[]}
-        />,
-      );
-    };
-    rerenderWith({
-      status: "validation",
-      message: "Check the session.",
-      submission: 1,
-      operation: "add",
-    });
-    expect(panel.open).toBe(true);
-
-    rerenderWith({
-      status: "saved",
-      message: "Session added.",
-      submission: 2,
-      operation: "add",
-    });
-    expect(panel.open).toBe(false);
-  });
-
-  it("opens a session from its card, which carries no verbs of its own", () => {
+  it("opens a session from a compact card that carries no verbs", () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [
-      session({ intent: "Easy, conversational." }),
+      session({
+        intent: "Easy, conversational.",
+        seriesId: "7f000000-0000-4000-8000-0000000000b1",
+      }),
     ]);
     const card = document.querySelector<HTMLElement>("[data-session-card]")!;
 
@@ -371,7 +413,24 @@ describe("PlanManager", () => {
       screen.getByRole("link", { name: "Aerobic run" }).getAttribute("href"),
     ).toBe(`/home/plan/session/${session().id}`);
     expect(card.querySelector("button, summary, form")).toBeNull();
-    expect(card.textContent).toContain("Easy, conversational.");
+    expect(card.textContent).toContain("60 min");
+    expect(card.textContent).toContain("Recurring");
+    expect(card.textContent).not.toContain("Easy, conversational.");
+  });
+
+  it("gives the same sport the same tone whatever its case", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [
+      session(),
+      session({
+        id: "7f000000-0000-4000-8000-000000000002",
+        position: 1,
+        sport: " running ",
+      }),
+    ]);
+    const [first, second] = document.querySelectorAll("[data-session-card]");
+    expect(first.getAttribute("data-tone")).toBe(
+      second.getAttribute("data-tone"),
+    );
   });
 
   it("reads a session logged on another day as done there, and opens it", () => {
@@ -385,16 +444,16 @@ describe("PlanManager", () => {
         },
       }),
     ]);
-    const day = document.querySelector(`[data-plan-date="${DATES[3]}"]`)!;
+    const planned = day(DATES[3]);
 
     // Logged early, it is not still ahead on the day it was planned for.
-    expect(day.querySelector("[data-logged]")?.textContent).toMatch(
-      /Running · Completed on \w{3} \d{1,2} \w{3}/,
+    expect(planned.querySelector("[data-logged]")?.textContent).toMatch(
+      /Completed on \w{3} \d{1,2} \w{3}/,
     );
-    expect(day.querySelector("[data-logged] a")?.getAttribute("href")).toBe(
+    expect(planned.querySelector("[data-logged] a")?.getAttribute("href")).toBe(
       `/home/plan/session/${session().id}`,
     );
-    expect(day.querySelector("[data-session-card]")).toBeNull();
+    expect(planned.querySelector("[data-session-card]")).toBeNull();
   });
 
   it("keeps the card for a skip written ahead, which is about the planned day", () => {
@@ -408,10 +467,12 @@ describe("PlanManager", () => {
         },
       }),
     ]);
-    const day = document.querySelector(`[data-plan-date="${DATES[3]}"]`)!;
+    const planned = day(DATES[3]);
 
-    expect(day.querySelector("[data-logged]")).toBeNull();
-    expect(day.querySelector("[data-session-card]")).not.toBeNull();
+    expect(planned.querySelector("[data-logged]")).toBeNull();
+    expect(planned.querySelector("[data-session-card]")?.textContent).toContain(
+      "Skipped",
+    );
   });
 
   it("keeps the card for a session logged on its own day", () => {
@@ -441,12 +502,13 @@ describe("PlanManager", () => {
         },
       }),
     ]);
-    const day = document.querySelector(`[data-plan-date="${TODAY}"]`)!;
+    const today = day(TODAY);
 
     // Logged on its own day, so no date is added.
-    expect(day.textContent).toContain("Running · Completed");
-    expect(day.textContent).not.toMatch(/Completed on/);
-    expect(day.textContent).not.toContain("Cancelled");
-    expect(day.textContent).not.toContain("Nothing planned.");
+    expect(today.querySelector("[data-logged]")?.textContent).toContain(
+      "Completed",
+    );
+    expect(today.textContent).not.toMatch(/Completed on/);
+    expect(today.textContent).not.toContain("Cancelled");
   });
 });
