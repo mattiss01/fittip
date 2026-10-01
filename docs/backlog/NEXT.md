@@ -58,7 +58,7 @@ lane, one screen per merge.
       to match, an ADR-017 amendment (row growth ~6× per series, series edits rewrite more
       rows), Today's beyond-window notice, and the tests that pin 14 days. Confirm first that
       no coach context reads the whole window (it appears to read only its 1–7-day horizon).
-- [ ] **R3 — The other screens, one per merge.** Log (as a sheet), Progress, You. Cut each
+- [ ] **R3 — The other screens, one per merge.** Log (as a sheet) and You. Cut each
       page's explanatory intro to one line or remove it; say where an explanation must
       survive.
 - [ ] **Session page panels as bottom sheets.** Edit, Duplicate, Cancel and Delete open
@@ -77,7 +77,7 @@ Not worth their own slot; do them when work lands nearby.
 
 - **White text on the orange buttons is short of AA contrast.** Paper on `--ember` is
   3.7:1 against the 4.5:1 that m3-16a asserts for "Plan with Coach", which is why that one
-  button uses `--ember-dark` (6:1). Log this session, Edit and Save session still use
+  button uses `--ember-dark` (6:1). Log this session, Edit, Edit log and Save session still use
   `--ember`. Owner's call: darken the orange everywhere, or keep it and accept it.
 - **The same session can be saved to the library twice.** Owner, 29 Sep 2026: saving a
   session that is already in the library creates a second entry. Decide what "the same"
