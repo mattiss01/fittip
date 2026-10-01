@@ -188,6 +188,10 @@
   gap: 0.45rem;
 }
 
+.eyebrow svg {
+  color: var(--ledger-signal);
+}
+
 .askButton svg {
   color: #ff9b77;
 }

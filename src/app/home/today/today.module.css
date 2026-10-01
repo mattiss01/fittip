@@ -213,6 +213,7 @@
 
 .summary {
   margin: 0;
+  overflow-wrap: anywhere;
   color: var(--ledger-muted);
   font-size: 0.95rem;
   font-weight: 600;

@@ -325,7 +325,7 @@ export function SessionPage({
       </p>
       {showReload ? (
         <a
-          className={page.reload}
+          className={styles.reload}
           href={sessionHref(
             session.id,
             origin === "today"
@@ -339,7 +339,7 @@ export function SessionPage({
         </a>
       ) : null}
       {state.status === "session" && !showSeries ? (
-        <Link className={page.reload} href="/">
+        <Link className={styles.reload} href="/">
           Sign in again
         </Link>
       ) : null}

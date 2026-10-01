@@ -316,6 +316,7 @@ export function FillWithCoach({
           aria-label={COPY.suggestionLabel}
         >
           <p className={styles.eyebrow}>
+            <CoachSpark size={14} />
             {COPY.suggestionLabel}
             {open.proposal.isExample ? (
               <span className={styles.example}>{COPY.example}</span>
@@ -491,7 +492,7 @@ const COPY = {
     "No coaching provider is configured, so the built-in example coach wrote this. It is not real coaching.",
   safetyLabel: "Safety",
   draftLabel: "Suggested activities",
-  draftHint: "Your activity list below does not change until you press Accept.",
+  draftHint: "Your activity list above does not change until you press Accept.",
   remove: "Remove",
   undo: "Undo",
   removedDetail: "Removed",
@@ -505,7 +506,7 @@ const COPY = {
   decideHint: (count: number) =>
     count === 0
       ? "Accept empties your activity list. Dismiss closes this and leaves your list as it is."
-      : `Accept replaces your activity list with the ${count} ${count === 1 ? "activity" : "activities"} above. Dismiss closes this and leaves your list as it is.`,
+      : `Accept replaces your activity list with the ${count} ${count === 1 ? "activity" : "activities"} in this suggestion. Dismiss closes this and leaves your list as it is.`,
   acceptedEmpty:
     "Your activity list is now empty. Save session to keep it that way.",
   acceptedMessage:

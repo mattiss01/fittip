@@ -37,20 +37,6 @@
   background: var(--line);
 }
 
-.reload {
-  width: fit-content;
-  min-height: 2.75rem;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 1rem;
-  border-radius: var(--radius-pill);
-  background: var(--line);
-  color: var(--ledger-ink);
-  font-size: 0.85rem;
-  font-weight: 700;
-  text-decoration: none;
-}
-
 /* ---- The session ---- */
 
 .card,
@@ -89,6 +75,7 @@
 
 .when {
   margin: 0;
+  overflow-wrap: anywhere;
   color: var(--ledger-muted);
   font-size: 0.95rem;
   font-weight: 600;
@@ -302,10 +289,6 @@
   letter-spacing: -0.03em;
 }
 
-.panelHead h2:focus {
-  outline: none;
-}
-
 .close {
   min-height: 2.75rem;
   margin: 0 -0.5rem 0 0;
@@ -321,9 +304,13 @@
   background: var(--ledger-wash);
 }
 
-/* The panel is the form's box, so the form drops its own padding. */
+/* The panel is the box, so a form and a recurring scope drop their insets. */
 .panel form {
   padding: 0;
+}
+
+.panel .scope {
+  margin: 0;
 }
 
 /* ---- Not there, or just removed ---- */
@@ -353,7 +340,8 @@
 
 /* M3-18's ink ring, on everything this page puts focus on. */
 .back:focus-visible,
-.reload:focus-visible,
+.page > a:focus-visible,
+.panel h2:focus-visible,
 .card a:focus-visible,
 .card button:focus-visible,
 .missing a:focus-visible,
