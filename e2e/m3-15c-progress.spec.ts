@@ -225,7 +225,8 @@ test.describe("M3-15C progress", () => {
       });
 
       // ---- Paging months, and a month with nothing logged in it. ----
-      await page.getByRole("link", { name: /Back to/ }).click();
+      // The record's way back is its month's name, at the top of the page.
+      await page.locator("[data-back-link]").click();
       await expect(
         page.locator(`[data-progress-month="${thisMonth}"]`),
       ).toBeVisible();

@@ -63,6 +63,7 @@ export default async function CompletionPage({ params }: Props) {
           the session's own name is the page's heading. */}
       <Link
         className={styles.backLink}
+        data-back-link
         href={
           completion === null
             ? "/home/progress"
