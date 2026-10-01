@@ -449,6 +449,18 @@ describe("PlanManager", () => {
     expect(card.textContent).not.toContain("Easy, conversational.");
   });
 
+  it("opens a session from before today by its day", () => {
+    // The session's page reads the window from today on, so a card on one of
+    // the week's past days has to say which day it is on to be found.
+    renderManager(INITIAL_PLAN_ACTION_STATE, [
+      session({ localDate: "2026-08-18" }),
+    ]);
+
+    expect(
+      screen.getByRole("link", { name: "Aerobic run" }).getAttribute("href"),
+    ).toBe(`/home/plan/session/${session().id}?date=2026-08-18`);
+  });
+
   it("gives the same sport the same tone whatever its case", () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [
       session(),

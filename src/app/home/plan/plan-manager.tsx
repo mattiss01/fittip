@@ -482,6 +482,7 @@ function PlanDay({
               <PlanSessionCard
                 key={session.id}
                 session={session}
+                past={day.past}
                 tone={tones.get(sportKey(session.sport)) ?? 0}
               />
             ))}
@@ -489,6 +490,7 @@ function PlanDay({
               <PlanSessionCard
                 key={session.id}
                 session={session}
+                past={day.past}
                 tone={tones.get(sportKey(session.sport)) ?? 0}
               />
             ))}
@@ -518,9 +520,12 @@ function PlanDay({
  */
 function PlanSessionCard({
   session,
+  past,
   tone,
 }: {
   session: PlanSessionView;
+  /** Before today: the session's page finds it by its day, not the window. */
+  past: boolean;
   tone: number;
 }) {
   const loggedElsewhere = readsAsLogged(session);
@@ -535,7 +540,13 @@ function PlanSessionCard({
       data-session-card={cancelled || loggedElsewhere ? undefined : true}
     >
       <h3 className={w.cardTitle}>
-        <Link className={w.cardLink} href={sessionHref(session.id)}>
+        <Link
+          className={w.cardLink}
+          href={sessionHref(
+            session.id,
+            past ? { date: session.localDate } : null,
+          )}
+        >
           {session.title}
         </Link>
       </h3>
