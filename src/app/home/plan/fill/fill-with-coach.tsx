@@ -15,6 +15,7 @@ import {
 import styles from "./fill-with-coach.module.css";
 import type { FillProposal } from "./fill-state";
 
+import { CoachSpark } from "@/components/home/coach-spark";
 import type {
   ActivityEditorHandle,
   ActivityValue,
@@ -71,7 +72,8 @@ function fromPlan(proposal: FillProposal | undefined): Open | null {
  * Fill with coach, inside a session's Edit panel (A7-4, owner's design of
  * 28 Sep 2026).
  *
- * The suggestion is a draft of its own, in a box above the activity list, and
+ * The suggestion is a draft of its own, in a box under the activity list and
+ * its Add activity (owner, 1 Oct 2026; it sat above the list before), and
  * the list does not change until the owner decides. In the box they remove
  * coach activities (with Undo) and add any of the currently planned ones.
  * Accept replaces the list with what the box holds; Dismiss closes the box and
@@ -277,6 +279,8 @@ export function FillWithCoach({
         <input key={id} type="hidden" name={PROPOSAL_FIELD} value={id} />
       ))}
 
+      {children}
+
       {open === null ? (
         <section className={styles.ask} aria-label={COPY.askLabel}>
           <div className={styles.field}>
@@ -301,6 +305,7 @@ export function FillWithCoach({
             disabled={asking || dismissing}
             onClick={ask}
           >
+            <CoachSpark size={16} />
             {asking ? COPY.asking : COPY.ask}
           </button>
         </section>
@@ -443,8 +448,6 @@ export function FillWithCoach({
         {message ?? ""}
       </p>
 
-      {children}
-
       {heldSave === null || open === null ? null : (
         <section className={styles.held} role="alert">
           <p>{COPY.heldText}</p>
@@ -474,10 +477,10 @@ export function FillWithCoach({
 }
 
 const COPY = {
-  askLabel: "Fill with coach",
+  askLabel: "Fill with Coach",
   noteLabel: "Note for the coach (optional)",
   notePlaceholder: "Anything for this session only, e.g. keep it short",
-  ask: "Fill with coach",
+  ask: "Fill with Coach",
   asking: "Asking the coach…",
   lost: "The coach's answer did not arrive. Try again: the same request is not charged twice.",
   dismissLost:

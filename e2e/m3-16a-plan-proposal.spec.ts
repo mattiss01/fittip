@@ -196,7 +196,7 @@ test.describe("M3-16A plan proposal review", () => {
       await expect(page.getByText("Club track night (short)")).toHaveCount(1);
 
       const primaryAction = page.getByRole("link", {
-        name: "Coach",
+        name: "Plan with Coach",
         exact: true,
       });
       const resting = await primaryAction.evaluate(readFocusTreatment);

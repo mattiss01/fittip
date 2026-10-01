@@ -49,6 +49,8 @@ import {
   type PlanSessionView,
 } from "../../session-view";
 
+import page from "./session-page.module.css";
+
 import { COMPLETION_OUTCOME_LABELS } from "../../../log/log-action-state";
 import { ActivityList } from "@/components/training/activity-list";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
@@ -223,8 +225,21 @@ export function SessionPage({
   const quiet = noticeState === "idle" || notice === "";
 
   const back = (
-    <Link className={styles.backLink} href={returnHref} data-back-link>
-      <span aria-hidden="true">&larr;</span>{" "}
+    <Link className={page.back} href={returnHref} data-back-link>
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d="M15 5l-7 7 7 7" />
+      </svg>
       {origin === "today" ? "Today" : "Plan"}
     </Link>
   );
@@ -234,7 +249,7 @@ export function SessionPage({
       <>
         {back}
         <section
-          className={styles.missingCard}
+          className={page.missing}
           data-session-state={gone ? "removed" : "missing"}
           aria-live="polite"
         >
@@ -252,7 +267,7 @@ export function SessionPage({
                 It may have been deleted, or it is not one of yours. Nothing was
                 changed.
               </p>
-              <Link className={styles.primary} href={returnHref}>
+              <Link className={page.main} href={returnHref}>
                 Back to {returnLabel}
               </Link>
             </>
@@ -310,60 +325,40 @@ export function SessionPage({
       </p>
       {showReload ? (
         <a
-          className={styles.reload}
+          className={page.reload}
           href={sessionHref(
             session.id,
             origin === "today"
               ? { from: "today", date: originDate ?? session.localDate }
-              : null,
+              : past
+                ? { date: session.localDate }
+                : null,
           )}
         >
           Reload this session
         </a>
       ) : null}
       {state.status === "session" && !showSeries ? (
-        <Link className={styles.reload} href="/">
+        <Link className={page.reload} href="/">
           Sign in again
         </Link>
       ) : null}
 
       <article
-        className={styles.sessionSheet}
+        className={page.card}
         data-locked={session.isLocked}
         data-cancelled={cancelled}
         aria-labelledby="session-title"
       >
-        <p className={styles.sheetDate}>
-          {stampDate(session.localDate)}
-          {session.localDate === today ? " · Today" : ""}
-        </p>
-        <h1 id="session-title" className={styles.sheetTitle}>
+        <h1 id="session-title" className={page.title}>
           {session.title}
         </h1>
-        <div className={styles.sheetMarks}>
-          {session.seriesId === null ? null : (
-            <span className={styles.seriesMark}>Recurring</span>
-          )}
-          {session.hasDiverged ? (
-            <span className={styles.changedMark}>Changed</span>
-          ) : null}
-          {session.isLocked ? (
-            <span className={styles.lockMark}>Locked</span>
-          ) : null}
-          {cancelled ? (
-            <span className={styles.changedMark}>Cancelled</span>
-          ) : null}
-          {session.log ? (
-            <span className={styles.seriesMark}>
-              {COMPLETION_OUTCOME_LABELS[session.log.outcome]}
-              {session.log.actualLocalDate === session.localDate
-                ? ""
-                : ` on ${stampDate(session.log.actualLocalDate)}`}
-            </span>
-          ) : null}
-        </div>
-        <p className={styles.meta}>
+        {/* When, what and how long as one quiet line under the title (owner,
+            1 Oct 2026), rather than a coloured line above it. */}
+        <p className={page.when}>
           {[
+            stampDate(session.localDate),
+            session.localDate === today ? "Today" : null,
             session.sport,
             session.expectedDurationMinutes === null
               ? null
@@ -372,11 +367,27 @@ export function SessionPage({
             .filter(Boolean)
             .join(" · ")}
         </p>
+        <div className={page.marks}>
+          {session.seriesId === null ? null : <span>Recurring</span>}
+          {session.hasDiverged ? (
+            <span data-mark="changed">Changed</span>
+          ) : null}
+          {session.isLocked ? <span data-mark="locked">Locked</span> : null}
+          {cancelled ? <span>Cancelled</span> : null}
+          {session.log ? (
+            <span data-mark="logged">
+              {COMPLETION_OUTCOME_LABELS[session.log.outcome]}
+              {session.log.actualLocalDate === session.localDate
+                ? ""
+                : ` on ${stampDate(session.log.actualLocalDate)}`}
+            </span>
+          ) : null}
+        </div>
         {session.intent === null ? null : (
-          <p className={styles.body}>{session.intent}</p>
+          <p className={page.text}>{session.intent}</p>
         )}
         {session.note === null ? null : (
-          <p className={styles.body}>{session.note}</p>
+          <p className={page.text}>{session.note}</p>
         )}
         <ActivityList
           label="Activities"
@@ -387,29 +398,29 @@ export function SessionPage({
           }))}
         />
         {cancelled && cancellation !== null ? (
-          <p className={styles.reasonLine} data-cancellation-reason>
-            <span className={styles.reasonLabel}>Why</span> “
-            {cancellation.reason}”
+          <p className={page.reason} data-cancellation-reason>
+            <span className={page.reasonLabel}>Why</span> “{cancellation.reason}
+            ”
           </p>
         ) : null}
         {cancelled && !past ? (
-          <p className={styles.consequenceStandalone}>
+          <p className={page.aside}>
             Cancelled, kept on the record. Reactivate puts it back after the
             day&rsquo;s last session
             {cancellation === null ? "." : " and clears the reason."}
           </p>
         ) : null}
         {past && !session.log ? (
-          <p className={styles.consequenceStandalone}>
+          <p className={page.aside}>
             This day has passed, so the plan can no longer change it. You can
             still log what happened.
           </p>
         ) : null}
 
-        <div className={styles.sheetActions} data-session-actions>
+        <div className={page.actions} data-session-actions>
           {plannable ? (
             <button
-              className={styles.primary}
+              className={page.main}
               type="button"
               aria-expanded={panel === "edit"}
               onClick={() => setPanel(panel === "edit" ? null : "edit")}
@@ -419,7 +430,7 @@ export function SessionPage({
             </button>
           ) : cancelled && !past ? (
             <button
-              className={styles.primary}
+              className={page.main}
               type="button"
               onClick={() => submit({ operation: "reactivate" })}
               disabled={busy}
@@ -427,7 +438,7 @@ export function SessionPage({
               Reactivate
             </button>
           ) : (
-            <Link className={styles.primary} href={logHref}>
+            <Link className={page.main} href={logHref}>
               {session.log ? "Edit log" : "Log this session"}
             </Link>
           )}
@@ -805,15 +816,15 @@ function ActionPanel({
 
   return (
     <section
-      className={styles.actionPanel}
+      className={page.panel}
       aria-labelledby={headingId}
       data-session-panel={heading}
     >
-      <div className={styles.actionPanelHeader}>
+      <div className={page.panelHead}>
         <h2 id={headingId} ref={headingRef} tabIndex={-1}>
           {heading}
         </h2>
-        <button className={styles.action} type="button" onClick={onClose}>
+        <button className={page.close} type="button" onClick={onClose}>
           Close
         </button>
       </div>
@@ -866,21 +877,32 @@ function MoreMenu({
   }, [open]);
 
   return (
-    <div className={styles.moreMenu} ref={root}>
+    <div className={page.menu} ref={root}>
       <button
         ref={button}
         id={buttonId}
-        className={styles.moreButton}
+        className={page.more}
         type="button"
         aria-label="More actions"
         aria-expanded={open}
         aria-controls={listId}
         onClick={() => setOpen(!open)}
       >
-        <span aria-hidden="true">&#x22EF;</span>
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <circle cx="5" cy="12" r="1.9" />
+          <circle cx="12" cy="12" r="1.9" />
+          <circle cx="19" cy="12" r="1.9" />
+        </svg>
       </button>
       {open ? (
-        <ul className={styles.moreList} id={listId}>
+        <ul className={page.menuList} id={listId}>
           {children(close)}
         </ul>
       ) : null}
@@ -902,7 +924,7 @@ function MenuItem({
   return (
     <li>
       <button
-        className={styles.moreItem}
+        className={page.menuItem}
         data-danger={danger || undefined}
         type="button"
         onClick={onSelect}
@@ -917,7 +939,7 @@ function MenuItem({
 function MenuLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <li>
-      <Link className={styles.moreItem} href={href}>
+      <Link className={page.menuItem} href={href}>
         {children}
       </Link>
     </li>

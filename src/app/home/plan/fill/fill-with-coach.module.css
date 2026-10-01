@@ -1,23 +1,25 @@
-/* Designed at 390px first, in the Plan's ledger style. */
+/* Designed at 390px first; rounded with the Plan's forms since R3. */
 
 .ask,
 .suggestion,
 .held {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.6rem;
   min-width: 0;
-  padding: 0.7rem;
-  border: 1px solid var(--ledger-rule);
+  padding: 0.85rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
   background: var(--ledger-wash);
 }
 
+/* The coach's draft is a box of its own beside the real list. */
 .suggestion {
-  border: 2px solid var(--ledger-ink);
+  border: 1.5px solid var(--ledger-ink);
   background: var(--ledger-paper);
 }
 
 .held {
-  border: 2px solid var(--ledger-ink);
+  border: 1.5px solid var(--ledger-ink);
   background: #fff6db;
 }
 
@@ -59,8 +61,8 @@
 }
 
 .example {
-  padding: 0.1rem 0.35rem;
-  border: 1px solid var(--ledger-ink);
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--radius-pill);
   background: #fff6db;
 }
 
@@ -83,8 +85,8 @@
 
 .safety {
   margin: 0;
-  padding: 0.5rem 0.6rem 0.5rem 1.6rem;
-  border-left: 3px solid var(--ledger-ink);
+  padding: 0.6rem 0.8rem 0.6rem 1.7rem;
+  border-radius: var(--radius-control);
   background: #fff6db;
   font-size: 0.85rem;
   line-height: 1.4;
@@ -104,7 +106,9 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: stretch;
-  border: 1px solid var(--ledger-rule);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
   background: var(--ledger-paper);
 }
 
@@ -156,18 +160,22 @@
 .accept,
 .dismiss,
 .itemButton {
-  min-height: 2.75rem;
+  min-height: 3rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem 0.7rem;
-  border: 1px solid var(--ledger-ink);
-  border-radius: 0;
-  background: transparent;
+  margin: 0;
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--line);
   color: var(--ledger-ink);
-  font: 500 0.68rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font: 700 0.95rem var(--font-sans);
+}
+
+.dismiss:hover,
+.itemButton:hover {
+  background: var(--ledger-rule);
 }
 
 .askButton,
@@ -176,10 +184,26 @@
   color: var(--ledger-paper);
 }
 
+.askButton {
+  gap: 0.45rem;
+}
+
+.askButton svg {
+  color: #ff9b77;
+}
+
+.askButton:hover,
+.accept:hover {
+  background: var(--pine-soft);
+}
+
 .itemButton {
   min-width: 4.5rem;
-  border-width: 0 0 0 1px;
-  border-color: var(--ledger-rule);
+  min-height: 2.75rem;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.85rem;
 }
 
 .askButton:disabled,

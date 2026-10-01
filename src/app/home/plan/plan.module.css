@@ -1,8 +1,10 @@
 /*
- * The Plan's forms, notices and the session page, in FitTip's deep green ink
- * and the shared design tokens in globals.css (type, radius, shadow). The week
- * itself - days, cards, tiles and the day's sheet - is in plan-week.module.css
- * since R3a. Nothing on this surface scores, ranks, or streaks.
+ * The Plan's forms and notices, in FitTip's deep green ink and the shared
+ * design tokens in globals.css (type, radius, shadow). Controls are rounded
+ * and in the sans face since R3 (owner, 1 Oct 2026); the mono face is kept
+ * for small labels. The week itself is in plan-week.module.css since R3a, and
+ * the session's own page in session/[id]/session-page.module.css. Nothing on
+ * this surface scores, ranks, or streaks.
  */
 
 .page {
@@ -46,10 +48,12 @@
   min-height: 2.75rem;
   display: inline-flex;
   align-items: center;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid var(--ledger-ink);
+  padding: 0 1rem;
+  border-radius: var(--radius-pill);
+  background: var(--line);
   color: var(--ledger-ink);
-  font: 500 0.7rem var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 700;
   text-decoration: none;
 }
 
@@ -57,20 +61,11 @@
 .dayMark,
 .recoveryStamp,
 .meta,
-.lockMark,
 .sectionLabel {
   font-family: var(--font-mono);
   font-weight: 500;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-}
-
-.lockMark {
-  flex: 0 0 auto;
-  padding: 0.24rem 0.34rem;
-  border: 1px solid currentColor;
-  color: var(--plan-locked);
-  font-size: 0.55rem;
 }
 
 .meta {
@@ -153,24 +148,31 @@
 
 .action,
 .primary {
-  min-height: 2.9rem;
+  min-height: 3rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem 0.7rem;
-  border: 1px solid var(--ledger-ink);
-  border-radius: 0;
-  background: transparent;
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--line);
   color: var(--ledger-ink);
-  font: 500 0.68rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font: 700 0.95rem var(--font-sans);
+  text-decoration: none;
+}
+
+.action:hover {
+  background: var(--ledger-rule);
 }
 
 .primary {
+  min-height: 3.2rem;
   background: var(--plan-today);
-  border-color: var(--ledger-ink);
-  color: white;
+  color: var(--ledger-paper);
+}
+
+.primary:hover {
+  background: var(--ember-dark);
 }
 
 .action:disabled,
@@ -180,18 +182,19 @@
 
 .disclosure {
   margin-top: 0.5rem;
-  border: 1px solid var(--ledger-rule);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
 }
 
 .disclosure > summary {
-  min-height: 2.9rem;
+  min-height: 3rem;
   display: flex;
   align-items: center;
-  padding: 0 0.7rem;
+  padding: 0 0.9rem;
+  border-radius: var(--radius-control);
   cursor: pointer;
-  font: 500 0.68rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.95rem;
+  font-weight: 700;
 }
 
 .form {
@@ -218,15 +221,13 @@
 .form textarea,
 .form select {
   width: 100%;
-  min-height: 2.9rem;
-  padding: 0.6rem;
-  border: 1px solid var(--ledger-ink);
-  border-radius: 0;
+  min-height: 3rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--ledger-rule);
+  border-radius: var(--radius-control);
   background: white;
   color: var(--ledger-ink);
-  font:
-    400 1rem/1.35 Arial,
-    sans-serif;
+  font: 400 1rem/1.35 var(--font-sans);
   text-transform: none;
 }
 
@@ -273,8 +274,8 @@
 .zoneValue {
   display: block;
   margin: 0 0 1rem;
-  padding: 0.7rem;
-  border: 1px solid var(--ledger-ink);
+  padding: 0.7rem 0.8rem;
+  border-radius: var(--radius-control);
   background: var(--sage);
   font: 500 0.9rem var(--font-mono);
   overflow-wrap: anywhere;
@@ -289,24 +290,10 @@
   white-space: nowrap;
 }
 
-.seriesMark,
-.changedMark {
-  padding: 0.24rem 0.34rem;
-  border: 1px solid currentColor;
-  color: var(--plan-recovery);
-  font: 500 0.55rem var(--font-mono);
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
-.changedMark {
-  color: var(--plan-today);
-}
-
 .noticeInline {
   margin: 0.7rem 0 0;
-  padding: 0.65rem 0.7rem;
-  border: 1px solid var(--ledger-rule);
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-control);
   background: #e7f0dc;
   font-size: 0.84rem;
   line-height: 1.4;
@@ -343,46 +330,47 @@
 
 .scope h4 {
   margin: 0;
-  font: 500 0.68rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 .permanentConsequence {
   margin: 0;
-  padding: 0.7rem;
-  border-left: 5px solid var(--plan-locked);
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-control);
   background: #fff0e1;
-  color: var(--ledger-ink);
-  font-size: 0.84rem;
+  color: #67311e;
+  font-size: 0.88rem;
   line-height: 1.5;
 }
 
 .dangerAction {
-  min-height: 2.9rem;
-  padding: 0.5rem 0.7rem;
-  border: 1px solid var(--ledger-ink);
-  border-radius: 0;
+  min-height: 3rem;
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: var(--radius-control);
   background: var(--plan-locked);
   color: white;
-  font: 500 0.68rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font: 700 0.95rem var(--font-sans);
+}
+
+.dangerAction:hover {
+  background: #6f2817;
 }
 
 .repeatLink {
   width: fit-content;
-  min-height: 2.9rem;
+  min-height: 3rem;
   display: inline-flex;
   align-items: center;
   margin-top: 0.5rem;
-  padding: 0.5rem 0.7rem;
-  border: 1px solid var(--ledger-ink);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-control);
+  background: var(--line);
   color: var(--ledger-ink);
-  font: 500 0.68rem var(--font-mono);
-  letter-spacing: 0.04em;
+  font-size: 0.95rem;
+  font-weight: 700;
   text-decoration: none;
-  text-transform: uppercase;
 }
 
 .seriesBuilder {
@@ -419,8 +407,9 @@
   display: grid;
   gap: 0.9rem;
   padding: 1rem;
-  border: 1px solid var(--ledger-ink);
-  background: #f7f5ea;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--ledger-paper);
 }
 
 .ruleFields,
@@ -430,7 +419,8 @@
   gap: 0.75rem;
   margin: 0;
   padding: 0.8rem;
-  border: 1px solid var(--ledger-rule);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
 }
 
 .ruleFields > legend,
@@ -453,11 +443,14 @@
   min-height: 2.75rem;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.45rem;
-  border: 1px solid var(--ledger-rule);
+  gap: 0.45rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
   color: var(--ledger-ink);
-  font: 500 0.68rem var(--font-mono);
+  font: 600 0.88rem var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .weekdays input,
@@ -497,22 +490,31 @@
 .seriesForm textarea,
 .seriesForm select {
   width: 100%;
-  min-height: 2.9rem;
-  padding: 0.6rem;
-  border: 1px solid var(--ledger-ink);
-  border-radius: 0;
+  min-height: 3rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--ledger-rule);
+  border-radius: var(--radius-control);
   background: white;
   color: var(--ledger-ink);
-  font:
-    400 1rem/1.35 Arial,
-    sans-serif;
+  font: 400 1rem/1.35 var(--font-sans);
   text-transform: none;
 }
 
 .seriesForm .weekdays input,
 .seriesForm .checkField input {
   width: 1.1rem;
+  min-height: 1.1rem;
   padding: 0;
+}
+
+/* A checkbox and its words on one line, over the form's own label rule. */
+.seriesForm .weekdays label,
+.seriesForm .checkField {
+  display: flex;
+  color: var(--ledger-ink);
+  font: 600 0.88rem var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .reviewCard {
@@ -538,9 +540,10 @@
 
 .inlineError {
   margin: 0;
-  padding: 0.65rem;
-  border-left: 5px solid var(--plan-locked);
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-control);
   background: #fff0e1;
+  color: #67311e;
   line-height: 1.4;
 }
 
@@ -589,241 +592,6 @@
 .zoneCard select:focus-visible {
   outline: 3px solid var(--ledger-ink);
   outline-offset: 2px;
-}
-
-/* The session page: one sheet, the verbs under it, a panel below that. */
-.sessionPage {
-  width: 100%;
-  display: grid;
-  align-content: start;
-}
-
-.sessionPage > * {
-  min-width: 0;
-}
-
-.backLink {
-  width: fit-content;
-  min-height: 2.75rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 0.5rem;
-  color: var(--ledger-ink);
-  font: 500 0.72rem var(--font-mono);
-  letter-spacing: 0.05em;
-  text-decoration: none;
-  text-transform: uppercase;
-}
-
-.sessionSheet,
-.missingCard,
-.actionPanel {
-  margin-top: 1rem;
-  padding: 1rem;
-  border: 1px solid var(--line);
-  background: var(--ledger-paper);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-}
-
-.sessionSheet {
-  border-top: 7px solid var(--plan-today);
-}
-
-.sessionSheet[data-locked="true"] {
-  border-left: 5px solid var(--plan-locked);
-}
-
-.sessionSheet[data-cancelled="true"] {
-  border-top-color: var(--ledger-muted);
-  border-style: dashed;
-}
-
-.sheetDate {
-  margin: 0;
-  color: var(--ledger-muted);
-  font: 500 0.66rem var(--font-mono);
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
-.sheetTitle {
-  margin: 0.35rem 0 0;
-  overflow-wrap: anywhere;
-  font-size: clamp(1.7rem, 8vw, 2.4rem);
-  letter-spacing: -0.04em;
-  line-height: 1.05;
-}
-
-.sheetMarks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  margin-top: 0.6rem;
-}
-
-.sheetMarks:empty {
-  display: none;
-}
-
-.sessionSheet .consequenceStandalone {
-  margin-top: 0.8rem;
-}
-
-.sheetActions {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  padding-top: 0.9rem;
-  border-top: 1px solid var(--ledger-rule);
-}
-
-.sheetActions > .primary {
-  text-decoration: none;
-}
-
-.missingCard h1 {
-  margin: 0 0 0.6rem;
-  font-size: clamp(1.5rem, 7vw, 2.1rem);
-  letter-spacing: -0.04em;
-}
-
-.missingCard p {
-  margin: 0 0 1rem;
-  color: var(--ledger-muted);
-  line-height: 1.5;
-}
-
-.missingCard .primary {
-  width: fit-content;
-  text-decoration: none;
-}
-
-.moreMenu {
-  position: relative;
-}
-
-.moreButton {
-  width: 2.9rem;
-  height: 100%;
-  min-height: 2.9rem;
-  border: 1px solid var(--ledger-ink);
-  border-radius: 0;
-  background: transparent;
-  color: var(--ledger-ink);
-  font-size: 1.4rem;
-  line-height: 1;
-}
-
-.moreButton[aria-expanded="true"] {
-  background: var(--ledger-ink);
-  color: var(--ledger-paper);
-}
-
-.moreList {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 0.35rem);
-  right: 0;
-  width: min(15rem, calc(100vw - 2rem));
-  margin: 0;
-  padding: 0.3rem 0;
-  border: 1px solid var(--line);
-  background: var(--ledger-paper);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-  list-style: none;
-}
-
-.moreItem {
-  width: 100%;
-  min-height: 2.9rem;
-  display: flex;
-  align-items: center;
-  padding: 0 0.9rem;
-  border: 0;
-  background: transparent;
-  color: var(--ledger-ink);
-  font: 500 0.7rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-align: left;
-  text-decoration: none;
-  text-transform: uppercase;
-}
-
-.moreItem:hover {
-  background: var(--sage);
-}
-
-.moreItem[data-danger] {
-  border-top: 1px solid var(--ledger-rule);
-  color: var(--plan-locked);
-}
-
-.moreItem:disabled {
-  opacity: 0.45;
-}
-
-.actionPanel {
-  display: grid;
-  gap: 0.8rem;
-}
-
-.actionPanelHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-}
-
-.actionPanelHeader h2 {
-  margin: 0;
-  font: 500 0.8rem var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.actionPanel > .form,
-.actionPanel .scope > .form {
-  padding: 0;
-}
-
-.actionPanel .scope {
-  margin: 0;
-}
-
-.backLink:focus-visible,
-.sessionSheet a:focus-visible,
-.sessionSheet button:focus-visible,
-.missingCard a:focus-visible,
-.actionPanel button:focus-visible,
-.actionPanel input:focus-visible,
-.actionPanel textarea:focus-visible,
-.actionPanel select:focus-visible,
-.actionPanel h2:focus-visible,
-.moreItem:focus-visible {
-  outline: 3px solid var(--ledger-ink);
-  outline-offset: 2px;
-}
-
-/* Why a session was cancelled, on its page. */
-.reasonLine {
-  margin: 0.8rem 0 0;
-  padding: 0.6rem 0.7rem;
-  border-left: 4px solid var(--ledger-muted);
-  background: var(--sage);
-  overflow-wrap: anywhere;
-  font-size: 0.92rem;
-  line-height: 1.45;
-}
-
-.reasonLabel {
-  color: var(--ledger-muted);
-  font: 500 0.6rem var(--font-mono);
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
 }
 
 @media (max-width: 400px) {

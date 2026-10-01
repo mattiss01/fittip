@@ -20,6 +20,7 @@ import {
   type SessionCancellationView,
   type SessionPageOrigin,
 } from "./session-page";
+import sessionStyles from "./session-page.module.css";
 
 import homeStyles from "../../../home.module.css";
 import {
@@ -80,7 +81,7 @@ export default async function PlanSessionPage({ params, searchParams }: Props) {
       {/* The global stylesheet centres a main's children and lets each
           shrink to its content; one full-width column keeps the sheet, its
           notice and its panels the same width, as the Plan's manager does. */}
-      <div className={styles.sessionPage}>
+      <div className={sessionStyles.page}>
         {timezoneName === null ? (
           <section className={homeStyles.stateCard}>
             <p className={homeStyles.kicker}>Plan</p>
