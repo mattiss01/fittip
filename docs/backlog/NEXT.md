@@ -58,13 +58,32 @@ lane, one screen per merge.
       to match, an ADR-017 amendment (row growth ~6× per series, series edits rewrite more
       rows), Today's beyond-window notice, and the tests that pin 14 days. Confirm first that
       no coach context reads the whole window (it appears to read only its 1–7-day horizon).
-- [ ] **R3 — The other screens, one per merge.** Log (as a sheet) and You. Cut each
-      page's explanatory intro to one line or remove it; say where an explanation must
-      survive.
-- [ ] **Session page panels as bottom sheets.** Edit, Duplicate, Cancel and Delete open
-      below the card, not as a sheet like the Plan's "+". Owner to say whether they should.
-- [ ] **The library pages take their chips' names.** The chips say "Session Library" and
-      "Activity Library"; the pages still say "Saved sessions." and "Your activities.".
+- [ ] **R3 — The other screens, one per merge.** Today, the Plan, the session page and
+      Progress are done. For each one left: cut the explanatory intro to one line or remove
+      it, and say where an explanation must survive. In the order they can be started:
+  - [ ] **You.** Not started; nothing blocks it. Goals, memory and onboarding sit under it.
+  - [ ] **The Plan's sub-pages.** Session Library, Activity Library, Plan with Coach
+        (proposal and review) and Roadmap got rounded controls with the forms and nothing
+        else: each still has its old masthead, kicker and intro, and the two libraries
+        still say "Saved sessions." and "Your activities." under chips that now say
+        "Session Library" and "Activity Library".
+  - [ ] **Log, as a sheet.** Blocked on the owner: one form as today, or "Logging in steps"
+        (`Later`). The form's activity editor is already rounded.
+  - [ ] **The shared state cards.** Loading, error and "confirm your time zone" on every
+        route still use the old masthead card.
+- [ ] **Small things the owner has not answered**, each a yes or no:
+  - Session page: should Edit, Duplicate, Cancel and Delete open as bottom sheets like the
+    Plan's "+", rather than below the card?
+  - Activity editor: its input fields and the measurement line under a name are still in
+    the mono face; the count and hints moved to sans.
+  - Outcomes: completed and unplanned are green; "Partly completed" and "Replaced" are
+    still ember. Change either?
+  - The spark mark is on Plan with Coach, Fill with Coach and the suggestion box only, not
+    on the proposal or roadmap pages.
+  - A record's "Logged for" date is long, so at 390px the duration wraps under it; a short
+    date ("Tue 29 Sep") would keep them on one line.
+  - `next dev` appends a "This is NOT the Next.js you know" block to `CLAUDE.md` on every
+    start. It is uncommitted; if wanted it goes in its own commit.
 - [ ] **R4 — Motion.** Day-change slide (View Transitions), sheet and press feedback,
       instant log with background save; everything off under reduced motion.
 - Cost to expect: many unit and browser tests assert the current copy, so cutting text means
