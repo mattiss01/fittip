@@ -60,10 +60,11 @@ lane, one screen per merge.
       no coach context reads the whole window (it appears to read only its 1–7-day horizon).
 - [ ] **R3 — The other screens, one per merge.** Log (as a sheet), Progress, You. Cut each
       page's explanatory intro to one line or remove it; say where an explanation must
-      survive. Open for the owner from the Session page: its Edit, Duplicate, Cancel and
-      Delete panels still open below the card rather than as bottom sheets like the Plan's
-      "+"; and the Session Library and Activity Library pages still carry their old
-      headings ("Saved sessions.", "Your activities.") under the renamed chips.
+      survive.
+- [ ] **Session page panels as bottom sheets.** Edit, Duplicate, Cancel and Delete open
+      below the card, not as a sheet like the Plan's "+". Owner to say whether they should.
+- [ ] **The library pages take their chips' names.** The chips say "Session Library" and
+      "Activity Library"; the pages still say "Saved sessions." and "Your activities.".
 - [ ] **R4 — Motion.** Day-change slide (View Transitions), sheet and press feedback,
       instant log with background save; everything off under reduced motion.
 - Cost to expect: many unit and browser tests assert the current copy, so cutting text means
@@ -74,12 +75,10 @@ lane, one screen per merge.
 
 Not worth their own slot; do them when work lands nearby.
 
-- **White text on the orange buttons is below the contrast the app asserts elsewhere.**
-  Paper on `--ember` is 3.7:1; WCAG AA wants 4.5:1 for text this size. Found on 1 Oct 2026
-  when "Plan with Coach" turned orange and m3-16a's check would have failed, so that one
-  button uses `--ember-dark` (6:1). Every other ember button (Log this session, Edit, Save
-  session) still has it. Owner's call: darken the orange everywhere, or keep it and accept
-  the shortfall.
+- **White text on the orange buttons is short of AA contrast.** Paper on `--ember` is
+  3.7:1 against the 4.5:1 that m3-16a asserts for "Plan with Coach", which is why that one
+  button uses `--ember-dark` (6:1). Log this session, Edit and Save session still use
+  `--ember`. Owner's call: darken the orange everywhere, or keep it and accept it.
 - **The same session can be saved to the library twice.** Owner, 29 Sep 2026: saving a
   session that is already in the library creates a second entry. Decide what "the same"
   means (same name, or same name and activities) and whether a repeat save should update
@@ -101,6 +100,13 @@ Not worth their own slot; do them when work lands nearby.
 
 ## Later
 
+- **Log a session live — idea.** Owner, 1 Oct 2026. Track a session while doing it, set by
+  set and activity by activity, instead of filling the log in afterwards. To think
+  through: what is saved if it is abandoned halfway (a partial log, or nothing), whether
+  a phone that sleeps or goes offline mid-session loses anything, how it sits beside the
+  after-the-fact form and "Logging in steps" below, and where the pain, illness and
+  fatigue question goes so it is never skipped. The log's records stay separate from the
+  plan either way.
 - **Create and fill with Coach — idea.** Owner, 1 Oct 2026. Fill with Coach is offered only
   when editing, because the coach reads a saved session and its suggestion is stored
   against one. The idea: a second button on the create form that saves the session, then
