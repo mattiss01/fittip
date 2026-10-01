@@ -22,10 +22,10 @@
 
 .head h3 {
   margin: 0;
-  font: 500 0.72rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--ledger-ink);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 .count,
@@ -34,12 +34,13 @@
 .limit {
   margin: 0;
   color: var(--ledger-muted);
-  font: 0.72rem/1.4 var(--font-mono);
+  font: 0.85rem/1.4 var(--font-sans);
 }
 
 .empty {
-  padding: 0.6rem;
+  padding: 0.7rem 0.8rem;
   border: 1px dashed var(--ledger-rule);
+  border-radius: var(--radius-control);
   background: var(--ledger-wash);
 }
 
@@ -52,7 +53,9 @@
 }
 
 .row {
-  border: 1px solid var(--ledger-rule);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
   background: var(--ledger-paper);
   min-width: 0;
 }
@@ -78,13 +81,19 @@
   flex: 0 0 auto;
   width: 2.75rem;
   min-height: 2.75rem;
+  margin: 0;
   border: none;
-  border-right: 1px solid var(--ledger-rule);
+  border-right: 1px solid var(--line);
+  border-radius: 0;
   background: var(--ledger-wash);
   color: var(--ledger-muted);
   font-size: 1rem;
   cursor: grab;
   touch-action: none;
+}
+
+.handle:hover {
+  background: var(--line);
 }
 
 .handle:active {
@@ -95,17 +104,23 @@
   flex: 1 1 auto;
   display: grid;
   gap: 0.15rem;
-  padding: 0.5rem 0.6rem;
+  margin: 0;
+  padding: 0.55rem 0.7rem;
   border: none;
+  border-radius: 0;
   background: none;
   text-align: left;
   cursor: pointer;
   min-width: 0;
 }
 
+.summary:hover {
+  background: var(--ledger-wash);
+}
+
 .summaryName {
   color: var(--ledger-ink);
-  font: 500 0.82rem var(--font-mono);
+  font: 600 0.95rem var(--font-sans);
   overflow-wrap: anywhere;
 }
 
@@ -117,16 +132,20 @@
 
 .remove {
   flex: 0 0 auto;
-  padding: 0 0.7rem;
+  margin: 0;
+  padding: 0 0.8rem;
   min-height: 2.75rem;
   border: none;
-  border-left: 1px solid var(--ledger-rule);
+  border-left: 1px solid var(--line);
+  border-radius: 0;
   background: none;
   color: var(--ledger-signal);
-  font: 500 0.66rem var(--font-mono);
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font: 700 0.85rem var(--font-sans);
   cursor: pointer;
+}
+
+.remove:hover {
+  background: var(--ledger-wash);
 }
 
 /* A library definition: one activity's fields, with no row around them. */
@@ -139,8 +158,8 @@
 .rowBody {
   display: grid;
   gap: 0.55rem;
-  padding: 0.7rem 0.6rem;
-  border-top: 1px solid var(--ledger-rule);
+  padding: 0.8rem 0.7rem;
+  border-top: 1px solid var(--line);
 }
 
 .field,
@@ -167,9 +186,11 @@
 .definition textarea {
   width: 100%;
   min-width: 0;
-  padding: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.6rem;
   border: 1px solid var(--ledger-rule);
-  background: var(--ledger-paper);
+  border-radius: 0.65rem;
+  background: white;
   color: var(--ledger-ink);
   font: 0.85rem var(--font-mono);
 }
@@ -194,8 +215,8 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
-  padding: 0.6rem;
-  border: 1px solid var(--ledger-rule);
+  padding: 0.7rem;
+  border-radius: var(--radius-control);
   background: var(--ledger-wash);
   min-width: 0;
 }
@@ -208,26 +229,30 @@
 .hintWide {
   margin: 0;
   color: var(--ledger-muted);
-  font: 0.72rem/1.4 var(--font-mono);
+  font: 0.85rem/1.4 var(--font-sans);
 }
 
 .problem {
   margin: 0;
   color: var(--ledger-signal);
-  font: 500 0.72rem/1.4 var(--font-mono);
+  font: 600 0.85rem/1.4 var(--font-sans);
 }
 
 .add {
   justify-self: start;
-  padding: 0.55rem 0.9rem;
+  margin: 0;
+  padding: 0.5rem 1rem;
   min-height: 2.75rem;
-  border: 1px solid var(--ledger-ink);
-  background: var(--ledger-paper);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--line);
   color: var(--ledger-ink);
-  font: 500 0.7rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font: 700 0.9rem var(--font-sans);
   cursor: pointer;
+}
+
+.add:hover {
+  background: var(--ledger-rule);
 }
 
 /* Add activity and Add from library, side by side, wrapping if they must. */
@@ -242,13 +267,15 @@
   display: grid;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--ledger-ink);
+  overflow: hidden;
+  border: 1px solid var(--ledger-rule);
+  border-radius: var(--radius-control);
   background: var(--ledger-paper);
   list-style: none;
 }
 
 .picker li + li {
-  border-top: 1px solid var(--ledger-rule);
+  border-top: 1px solid var(--line);
 }
 
 .pick {
@@ -256,15 +283,20 @@
   min-height: 2.75rem;
   display: grid;
   gap: 0.15rem;
-  padding: 0.5rem 0.6rem;
+  margin: 0;
+  padding: 0.55rem 0.7rem;
   border: none;
+  border-radius: 0;
   background: none;
   text-align: left;
   cursor: pointer;
 }
 
+.pick:hover {
+  background: var(--ledger-wash);
+}
+
 .add:disabled {
-  border-color: var(--ledger-rule);
   color: var(--ledger-muted);
   cursor: not-allowed;
 }
@@ -283,8 +315,8 @@
 .groupBox {
   display: grid;
   gap: 0.5rem;
-  padding: 0.6rem;
-  border: 1px solid var(--ledger-rule);
+  padding: 0.7rem;
+  border-radius: var(--radius-control);
   background: var(--ledger-wash);
   min-width: 0;
 }
@@ -316,7 +348,10 @@
 .groupHandle {
   width: 2.75rem;
   height: 2.75rem;
+  min-height: 0;
+  margin: 0;
   border: 1px solid var(--ledger-rule);
+  border-radius: 0.65rem;
   background: var(--ledger-wash);
   color: var(--ledger-muted);
   font-size: 0.9rem;
@@ -332,7 +367,10 @@
 .groupRemove {
   width: 2.75rem;
   height: 2.75rem;
+  min-height: 0;
+  margin: 0;
   border: 1px solid var(--ledger-rule);
+  border-radius: 0.65rem;
   background: var(--ledger-paper);
   color: var(--ledger-signal);
   font-size: 0.9rem;
@@ -353,19 +391,24 @@
 }
 
 .groupAdd {
-  padding: 0.45rem 0.7rem;
-  min-height: 2.4rem;
-  border: 1px solid var(--ledger-ink);
-  background: var(--ledger-paper);
+  margin: 0;
+  padding: 0.45rem 0.9rem;
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--line);
   color: var(--ledger-ink);
-  font: 500 0.64rem var(--font-mono);
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font: 700 0.85rem var(--font-sans);
   cursor: pointer;
 }
 
+.groupAdd:hover,
+.groupHandle:hover,
+.groupRemove:hover {
+  background: var(--ledger-rule);
+}
+
 .groupAdd:disabled {
-  border-color: var(--ledger-rule);
   color: var(--ledger-muted);
   cursor: not-allowed;
 }
@@ -384,9 +427,10 @@
 
 .unmeasured {
   margin: 0;
-  padding: 0.6rem;
+  padding: 0.7rem 0.8rem;
   border: 1px dashed var(--ledger-rule);
+  border-radius: var(--radius-control);
   background: var(--ledger-wash);
   color: var(--ledger-muted);
-  font: 0.72rem/1.4 var(--font-mono);
+  font: 0.85rem/1.4 var(--font-sans);
 }

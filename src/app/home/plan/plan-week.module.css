@@ -19,6 +19,48 @@
   line-height: 1;
 }
 
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.coach {
+  flex: none;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 1rem 0 0.85rem;
+  border-radius: var(--radius-pill);
+  /* The darker ember: paper text on --ember is 3.7:1, short of the 4.5:1
+     m3-16a asserts for this link; on --ember-dark it is 6:1. */
+  background: var(--ember-dark);
+  color: var(--paper);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    background-color 150ms ease,
+    transform 150ms var(--ease-out);
+}
+
+.coach:active {
+  background: #8f3520;
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coach {
+    transition: none;
+  }
+
+  .coach:active {
+    transform: none;
+  }
+}
+
 .chips {
   display: flex;
   gap: 0.4rem;
@@ -44,6 +86,7 @@
 }
 
 .chips a:focus-visible,
+.coach:focus-visible,
 .phase:focus-visible,
 .cardLink:focus-visible,
 .tile:focus-visible,
@@ -414,8 +457,23 @@ span.arrow {
 
 /* ---- The day's sheet ---- */
 
-/* Above the save dock (40) and navigation (30), below the offline notice. */
+/*
+ * Above the save dock (40) and navigation (30), below the offline notice.
+ *
+ * The sheet is portalled to the body, outside the app shell and the Plan's
+ * page, which is where the colour names its forms use are defined. Without
+ * them here an input loses its border and the save button its background.
+ */
 .sheetLayer {
+  --ledger-ink: var(--pine);
+  --ledger-paper: var(--paper);
+  --ledger-muted: var(--moss);
+  --ledger-rule: var(--rule);
+  --ledger-signal: var(--ember);
+  --ledger-wash: var(--sage);
+  --plan-today: var(--ember);
+  --plan-recovery: var(--recovery);
+  --plan-locked: #8b341f;
   position: fixed;
   z-index: 55;
   inset: 0;
@@ -487,6 +545,7 @@ span.arrow {
 
 .sheet h2 {
   font-size: 1.5rem;
+  font-weight: 800;
   letter-spacing: -0.03em;
 }
 

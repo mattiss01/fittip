@@ -58,9 +58,13 @@ lane, one screen per merge.
       to match, an ADR-017 amendment (row growth ~6× per series, series edits rewrite more
       rows), Today's beyond-window notice, and the tests that pin 14 days. Confirm first that
       no coach context reads the whole window (it appears to read only its 1–7-day horizon).
-- [ ] **R3 — The other screens, one per merge.** Session page, Log (as a sheet), Progress,
-      You. Cut each page's explanatory intro to one line or remove it; say where an
-      explanation must survive.
+- [ ] **R3 — The other screens, one per merge.** Log (as a sheet), Progress, You. Cut each
+      page's explanatory intro to one line or remove it; say where an explanation must
+      survive.
+- [ ] **Session page panels as bottom sheets.** Edit, Duplicate, Cancel and Delete open
+      below the card, not as a sheet like the Plan's "+". Owner to say whether they should.
+- [ ] **The library pages take their chips' names.** The chips say "Session Library" and
+      "Activity Library"; the pages still say "Saved sessions." and "Your activities.".
 - [ ] **R4 — Motion.** Day-change slide (View Transitions), sheet and press feedback,
       instant log with background save; everything off under reduced motion.
 - Cost to expect: many unit and browser tests assert the current copy, so cutting text means
@@ -71,6 +75,10 @@ lane, one screen per merge.
 
 Not worth their own slot; do them when work lands nearby.
 
+- **White text on the orange buttons is short of AA contrast.** Paper on `--ember` is
+  3.7:1 against the 4.5:1 that m3-16a asserts for "Plan with Coach", which is why that one
+  button uses `--ember-dark` (6:1). Log this session, Edit and Save session still use
+  `--ember`. Owner's call: darken the orange everywhere, or keep it and accept it.
 - **The same session can be saved to the library twice.** Owner, 29 Sep 2026: saving a
   session that is already in the library creates a second entry. Decide what "the same"
   means (same name, or same name and activities) and whether a repeat save should update
@@ -92,6 +100,20 @@ Not worth their own slot; do them when work lands nearby.
 
 ## Later
 
+- **Log a session live — idea.** Owner, 1 Oct 2026. Track a session while doing it, set by
+  set and activity by activity, instead of filling the log in afterwards. To think
+  through: what is saved if it is abandoned halfway (a partial log, or nothing), whether
+  a phone that sleeps or goes offline mid-session loses anything, how it sits beside the
+  after-the-fact form and "Logging in steps" below, and where the pain, illness and
+  fatigue question goes so it is never skipped. The log's records stay separate from the
+  plan either way.
+- **Create and fill with Coach — idea.** Owner, 1 Oct 2026. Fill with Coach is offered only
+  when editing, because the coach reads a saved session and its suggestion is stored
+  against one. The idea: a second button on the create form that saves the session, then
+  opens it with the coach's suggestion already asked for. Single sessions only, not a
+  series. To decide: a dismissed suggestion leaves an empty session in the plan rather
+  than nothing. Filling an unsaved form instead would be careful lane (AI data boundary,
+  a proposal with no session behind it) for little more.
 - **Make an existing session repeat — idea.** Owner, 29 Sep 2026. "Repeat this session" is
   offered only while creating a session; a one-off already in the plan cannot become a
   series later, so today it means creating a new series and deleting the single one. The

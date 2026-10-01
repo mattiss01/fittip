@@ -285,7 +285,7 @@ function SessionCard({
   date: string;
   session: TodaySessionView;
 }) {
-  const kicker = [
+  const summary = [
     session.sport,
     session.expectedDurationMinutes === null
       ? null
@@ -307,9 +307,6 @@ function SessionCard({
       data-cancelled={showsCancelled}
       data-locked={session.isLocked}
     >
-      {logged || kicker === "" ? null : (
-        <p className={styles.kicker}>{kicker}</p>
-      )}
       <div className={logged ? styles.receiptHead : styles.sessionHead}>
         {session.completion === null ? null : (
           <OutcomeMark outcome={session.completion.outcome} />
@@ -334,6 +331,10 @@ function SessionCard({
           </span>
         )}
       </div>
+      {/* Under the title, as on the session's own page (owner, 1 Oct 2026). */}
+      {logged || summary === "" ? null : (
+        <p className={styles.summary}>{summary}</p>
+      )}
       {session.isRecurring || session.isLocked || showsCancelled ? (
         <div className={styles.marks}>
           {session.isRecurring ? <span>Recurring</span> : null}

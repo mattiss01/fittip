@@ -87,7 +87,7 @@ test.describe("M3-13 private saved-session library", () => {
       ).toBeVisible();
 
       // List and inspect.
-      await page.getByRole("link", { name: "Saved sessions" }).click();
+      await page.getByRole("link", { name: "Session Library" }).click();
       await expect(page).toHaveURL(/\/home\/plan\/saved$/);
       await expect(
         page.getByRole("heading", { name: "Saved sessions." }),
@@ -126,7 +126,7 @@ test.describe("M3-13 private saved-session library", () => {
 
       // Reuse onto a date the owner picks. The plan gets a copy; the entry is
       // untouched and is not referenced by it.
-      await page.getByRole("link", { name: "Saved sessions" }).click();
+      await page.getByRole("link", { name: "Session Library" }).click();
       const reusable = savedCard(page, "Longer threshold intervals");
       await openDisclosure(reusable, "Use in plan");
       await reusable
@@ -158,7 +158,7 @@ test.describe("M3-13 private saved-session library", () => {
       });
 
       // Delete permanently. The two planned sessions survive it.
-      await page.getByRole("link", { name: "Saved sessions" }).click();
+      await page.getByRole("link", { name: "Session Library" }).click();
       const doomed = savedCard(page, "Longer threshold intervals");
       await openDisclosure(doomed, "Delete");
       await expect(

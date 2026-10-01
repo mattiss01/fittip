@@ -18,6 +18,7 @@ import { findUncoveredSeriesDates } from "./series-recurrence";
 import { TimezoneConfirmation } from "./timezone-confirmation";
 
 import homeStyles from "../home.module.css";
+import { CoachSpark } from "@/components/home/coach-spark";
 import {
   ActivityLibraryProvider,
   type LibraryActivityOption,
@@ -54,12 +55,19 @@ export default async function PlanPage({ searchParams }: Props) {
   return (
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
       <header className={w.header}>
-        <h1>Plan</h1>
+        <div className={w.headerRow}>
+          <h1>Plan</h1>
+          {/* Planning with the coach is an action, not a place, so it stands
+              apart from the chips and says what it does (owner, 1 Oct 2026). */}
+          <Link className={w.coach} href="/home/plan/proposal">
+            <CoachSpark />
+            Plan with Coach
+          </Link>
+        </div>
         <nav className={w.chips} aria-label="Plan surfaces">
-          <Link href="/home/plan/proposal">Coach</Link>
           <Link href="/home/plan/roadmap">Roadmap</Link>
-          <Link href="/home/plan/saved">Saved sessions</Link>
-          <Link href="/home/plan/activities">Activities</Link>
+          <Link href="/home/plan/saved">Session Library</Link>
+          <Link href="/home/plan/activities">Activity Library</Link>
         </nav>
       </header>
       {timezoneName === null ? (

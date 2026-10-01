@@ -277,7 +277,7 @@ describe("FillWithCoach", () => {
     for (let round = 0; round < 2; round += 1) {
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("button", { name: "Fill with coach" }),
+          screen.getByRole("button", { name: "Fill with Coach" }),
         );
       });
     }

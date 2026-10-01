@@ -89,15 +89,17 @@ export function planDayHref(date: string) {
 }
 
 /**
- * Where a session's own page lives. Today passes its day, which is how a
- * session from before the Plan's window is found; `from` is a fixed value,
- * never a URL, and decides only where the page's back link goes.
+ * Where a session's own page lives. `date` is the session's day, which is how
+ * one from before today is found: Today always passes it, and the Plan does
+ * for the past days of its first week. `from` is a fixed value, never a URL,
+ * and decides only where the page's back link goes.
  */
 export function sessionHref(
   sessionId: string,
-  opened: { from: "today"; date: string } | null = null,
+  opened: { from?: "today"; date: string } | null = null,
 ) {
-  return opened === null
-    ? `/home/plan/session/${sessionId}`
-    : `/home/plan/session/${sessionId}?from=today&date=${opened.date}`;
+  if (opened === null) return `/home/plan/session/${sessionId}`;
+  return opened.from === "today"
+    ? `/home/plan/session/${sessionId}?from=today&date=${opened.date}`
+    : `/home/plan/session/${sessionId}?date=${opened.date}`;
 }

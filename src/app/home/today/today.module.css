@@ -211,11 +211,12 @@
     var(--shadow-card);
 }
 
-.kicker {
+.summary {
   margin: 0;
-  color: var(--today-mark);
-  font: 500 0.7rem var(--font-mono);
-  text-transform: uppercase;
+  overflow-wrap: anywhere;
+  color: var(--ledger-muted);
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .sessionHead h4 {

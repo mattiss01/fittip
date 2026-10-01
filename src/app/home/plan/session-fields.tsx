@@ -26,9 +26,9 @@ export function SessionFields({
   /** What the session already holds, on an edit. Absent when creating one. */
   activities?: ActivityValue[];
   /**
-   * The date control, when this form owns the session's date. The edit form
-   * does; the create form renders its own above, because it drives a
-   * recurrence preview that lives beside it.
+   * The date control, when this form owns the session's date, placed under
+   * the title (owner, 1 Oct 2026). The edit form has one; the create form
+   * does not, because the day's sheet it opens in already fixed the date.
    */
   dateField?: React.ReactNode;
   /**
@@ -45,7 +45,6 @@ export function SessionFields({
   const [rows, setRows] = useState<readonly EditorRow[]>([]);
   return (
     <>
-      {dateField}
       <div className={styles.field}>
         <label htmlFor={`${idPrefix}-title`}>Title</label>
         <input
@@ -56,6 +55,7 @@ export function SessionFields({
           defaultValue={draft?.title ?? ""}
         />
       </div>
+      {dateField}
       <div className={styles.fieldPair}>
         <div className={styles.field}>
           <label htmlFor={`${idPrefix}-sport`}>Sport</label>
