@@ -43,8 +43,9 @@
   overflow-wrap: anywhere;
 }
 
+/* --moss on the sage box is 4.4:1; --pine-soft clears AA for text this small. */
 .detail {
-  color: var(--ledger-muted);
+  color: var(--pine-soft);
   font: 0.74rem var(--font-mono);
   overflow-wrap: anywhere;
 }

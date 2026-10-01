@@ -205,6 +205,11 @@
   box-shadow: none;
 }
 
+/* An activity's box is the wash colour, so on a washed card it takes paper. */
+.session[data-cancelled="true"] [data-activity-list] li {
+  background: var(--ledger-paper);
+}
+
 .session[data-locked="true"] {
   box-shadow:
     inset 4px 0 0 #8b341f,

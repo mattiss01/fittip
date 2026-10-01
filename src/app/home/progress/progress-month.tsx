@@ -169,7 +169,9 @@ function EmptyMonth({
     return (
       <div className={styles.empty} data-progress-empty="never">
         <h3 className={styles.emptyHeading}>Your record starts here.</h3>
-        <p>Log training on Today and it appears here.</p>
+        <p>
+          Log training on Today and it appears in the month you logged it for.
+        </p>
       </div>
     );
   }

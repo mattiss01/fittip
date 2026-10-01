@@ -100,7 +100,8 @@
   text-transform: uppercase;
 }
 
-.card[data-cancelled="true"] .marks > span {
+.card[data-cancelled="true"] .marks > span,
+.card[data-cancelled="true"] [data-activity-list] li {
   background: var(--ledger-paper);
 }
 

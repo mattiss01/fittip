@@ -25,7 +25,3 @@
 .mark[data-outcome-mark="skipped"] {
   background: var(--moss);
 }
-
-.mark[data-outcome-mark="replaced"] {
-  background: var(--recovery);
-}

@@ -184,11 +184,13 @@
 .entryLink::after {
   position: absolute;
   inset: 0;
-  border-radius: inherit;
+  border-radius: var(--radius-card);
   content: "";
 }
 
-.entryLink:focus-visible {
+/* One ring, on the card: `.page a:focus-visible` below would add a second
+   around the title, so this names the link as specifically as that does. */
+.page a.entryLink:focus-visible {
   outline: none;
 }
 
@@ -484,9 +486,7 @@
     transition: none !important;
     animation: none !important;
   }
-}
 
-@media (prefers-reduced-motion: reduce) {
   .step:active,
   .mainAction:active {
     transform: none;
