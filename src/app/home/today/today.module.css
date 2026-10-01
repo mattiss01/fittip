@@ -205,6 +205,11 @@
   box-shadow: none;
 }
 
+/* An activity's box is the wash colour, so on a washed card it takes paper. */
+.session[data-cancelled="true"] [data-activity-list] li {
+  background: var(--ledger-paper);
+}
+
 .session[data-locked="true"] {
   box-shadow:
     inset 4px 0 0 #8b341f,
@@ -336,17 +341,6 @@
   line-height: 1.2;
 }
 
-.receiptCheck {
-  width: 2rem;
-  height: 2rem;
-  flex: none;
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius-pill);
-  background: var(--today-mark);
-  color: var(--ledger-paper);
-}
-
 .stamp {
   flex: none;
   padding: 0.2rem 0.55rem;
@@ -357,27 +351,17 @@
   text-transform: uppercase;
 }
 
+/* Training that was done reads green, not ember (owner, 1 Oct 2026: the
+   orange looked like something had gone wrong). */
+.stamp[data-outcome="completed"],
+.stamp[data-outcome="unplanned"] {
+  background: color-mix(in srgb, var(--pine-soft) 14%, transparent);
+  color: var(--pine-soft);
+}
+
 .stamp[data-outcome="skipped"] {
   background: var(--ledger-wash);
   color: var(--ledger-muted);
-}
-
-.stamp[data-outcome="unplanned"] {
-  background: color-mix(in srgb, var(--today-recovery) 14%, transparent);
-  color: var(--today-recovery);
-}
-
-.receiptCheck[data-outcome-mark="partially_completed"] {
-  background: color-mix(in srgb, var(--today-mark) 70%, var(--ledger-paper));
-}
-
-.receiptCheck[data-outcome-mark="skipped"] {
-  background: var(--ledger-muted);
-}
-
-.receiptCheck[data-outcome-mark="replaced"],
-.receiptCheck[data-outcome-mark="unplanned"] {
-  background: var(--today-recovery);
 }
 
 .record {

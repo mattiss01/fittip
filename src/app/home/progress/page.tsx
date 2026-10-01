@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { formatMonth, monthOf, monthWindow, readRequestedMonth } from "./month";
+import { monthOf, monthWindow, readRequestedMonth } from "./month";
 import { ProgressMonth } from "./progress-month";
 import type { ProgressCompletionView } from "./progress-record";
 import styles from "./progress.module.css";
@@ -62,18 +62,8 @@ export default async function ProgressPage({ searchParams }: Props) {
 
   return (
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
-      <header className={homeStyles.masthead}>
-        <div>
-          <p className={homeStyles.kicker}>FitTip / progress</p>
-          <h1>Progress.</h1>
-          <p className={homeStyles.intro}>
-            Everything you have logged, month by month. It is a record of what
-            happened, not a score.
-          </p>
-        </div>
-        {month === null ? null : (
-          <p className={homeStyles.stamp}>{formatMonth(month)}</p>
-        )}
+      <header className={styles.header}>
+        <h1>Progress</h1>
       </header>
       {timezoneName === null || month === null || currentMonth === null ? (
         <section className={homeStyles.stateCard} data-progress-state="no-zone">

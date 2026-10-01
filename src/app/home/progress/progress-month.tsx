@@ -9,6 +9,7 @@ import {
 } from "./progress-record";
 
 import { COMPLETION_OUTCOME_LABELS } from "../log/log-action-state";
+import { OutcomeMark } from "@/components/training/outcome-mark";
 
 type Props = {
   /** The owner-local calendar month this view is showing, as `YYYY-MM`. */
@@ -55,42 +56,32 @@ export function ProgressMonth({
       data-progress-month={month}
       aria-labelledby="progress-month-heading"
     >
-      <nav className={styles.monthNav} aria-label="Month">
+      {/* The month between its two arrows, as the Plan's week and Today's
+          day are (R3). The arrows say which month they open. */}
+      <header className={styles.monthHead}>
         <Link
           className={styles.step}
           href={monthHref(previousMonth)}
           rel="prev"
+          aria-label={`Previous month, ${formatMonth(previousMonth)}`}
         >
-          <span className={styles.stepMark} aria-hidden="true">
-            &larr;
-          </span>
-          <span className={styles.stepLabel}>Previous month</span>
-          <span className={styles.stepMonth}>{formatMonth(previousMonth)}</span>
+          <ChevronIcon direction="left" />
         </Link>
-        <Link className={styles.step} href={monthHref(nextMonth)} rel="next">
-          <span className={styles.stepMark} aria-hidden="true">
-            &rarr;
-          </span>
-          <span className={styles.stepLabel}>Next month</span>
-          <span className={styles.stepMonth}>{formatMonth(nextMonth)}</span>
-        </Link>
-      </nav>
-
-      <header className={styles.monthHead}>
-        <p className={styles.monthMark}>
-          {month === currentMonth
-            ? "This month"
-            : month < currentMonth
-              ? "Earlier"
-              : "Ahead"}
-        </p>
         <h2 id="progress-month-heading">{formatMonth(month)}</h2>
-        {month === currentMonth ? null : (
-          <Link className={styles.returnLink} href="/home/progress">
-            Back to this month
-          </Link>
-        )}
+        <Link
+          className={styles.step}
+          href={monthHref(nextMonth)}
+          rel="next"
+          aria-label={`Next month, ${formatMonth(nextMonth)}`}
+        >
+          <ChevronIcon direction="right" />
+        </Link>
       </header>
+      {month === currentMonth ? null : (
+        <Link className={styles.returnLink} href="/home/progress">
+          Back to this month
+        </Link>
+      )}
 
       {days.length > 0 ? (
         <ol className={styles.days}>
@@ -124,13 +115,15 @@ function Entry({ entry }: { entry: ProgressCompletionView }) {
   return (
     <li className={styles.entry} data-progress-entry={entry.id}>
       <div className={styles.entryHeader}>
+        <OutcomeMark outcome={entry.outcome} />
+        {/* The title opens the record; its hit area covers the card, under
+            the card's own links. */}
         <h4>
           <Link
             className={styles.entryLink}
             href={`/home/progress/${entry.id}`}
           >
             {entry.title ?? "Unplanned training"}
-            <span aria-hidden="true"> &rarr;</span>
           </Link>
         </h4>
         <span className={styles.stamp} data-outcome={entry.outcome}>
@@ -177,9 +170,7 @@ function EmptyMonth({
       <div className={styles.empty} data-progress-empty="never">
         <h3 className={styles.emptyHeading}>Your record starts here.</h3>
         <p>
-          You created your FitTip account this month, and nothing is logged in
-          it yet. Log training on Today and it appears here, in the month you
-          logged it for.
+          Log training on Today and it appears in the month you logged it for.
         </p>
       </div>
     );
@@ -192,10 +183,7 @@ function EmptyMonth({
           ? `Nothing was logged in ${formatMonth(month)}.`
           : `Nothing is logged in ${formatMonth(month)} yet.`}
       </h3>
-      <p>
-        Previous month steps further back. Anything you log on Today appears
-        here, in the month you logged it for.
-      </p>
+      <p>Anything you log appears in the month you logged it for.</p>
     </div>
   );
 }
@@ -217,6 +205,25 @@ function groupByDay(entries: ProgressCompletionView[]): Day[] {
     }
   }
   return days;
+}
+
+function ChevronIcon({ direction }: { direction: "left" | "right" }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d={direction === "left" ? "M15 5l-7 7 7 7" : "M9 5l7 7-7 7"} />
+    </svg>
+  );
 }
 
 function monthHref(month: string) {

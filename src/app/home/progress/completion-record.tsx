@@ -6,6 +6,8 @@ import {
 } from "./progress-record";
 
 import { COMPLETION_OUTCOME_LABELS } from "../log/log-action-state";
+import { ActivityList } from "@/components/training/activity-list";
+import { OutcomeMark } from "@/components/training/outcome-mark";
 
 /** One planned activity, already reduced to the words this page prints. */
 export type PlannedActivityView = {
@@ -37,8 +39,6 @@ export type PlannedSnapshotView = {
 
 type Props = {
   completion: ProgressCompletionView;
-  /** The zone the completion's date was anchored in when it was written. */
-  timezoneName: string;
   planned: PlannedSnapshotView | null;
 };
 
@@ -47,14 +47,18 @@ type Props = {
  * two different kinds of paper on purpose: what happened is a fact the owner
  * wrote, and what was planned is a copy taken at the time. Neither is scored
  * against the other, and nothing here is computed from the pair.
+ *
+ * The zone the log's date was anchored in stays stored with it and is not
+ * shown (owner, 1 Oct 2026): the date already says which day it was.
  */
-export function CompletionRecord({ completion, timezoneName, planned }: Props) {
+export function CompletionRecord({ completion, planned }: Props) {
   return (
     <div className={styles.sheets}>
       <section className={styles.sheet} data-progress-sheet="recorded">
         <p className={styles.sheetLabel}>What you recorded</p>
         <div className={styles.sheetHeader}>
-          <h2>{completion.title ?? "Unplanned training"}</h2>
+          <OutcomeMark outcome={completion.outcome} />
+          <h1>{completion.title ?? "Unplanned training"}</h1>
           <span className={styles.stamp} data-outcome={completion.outcome}>
             {COMPLETION_OUTCOME_LABELS[completion.outcome]}
           </span>
@@ -64,28 +68,18 @@ export function CompletionRecord({ completion, timezoneName, planned }: Props) {
             <span>{completion.sport}</span>
           </div>
         )}
-        <dl className={styles.facts}>
-          <div>
-            <dt>Logged for</dt>
-            <dd>{longDay(completion.actualLocalDate)}</dd>
-          </div>
-          <div>
-            <dt>Recorded in</dt>
-            <dd>{timezoneName}</dd>
-          </div>
-        </dl>
-        <RecordedFacts completion={completion} />
+        <RecordedFacts completion={completion} showDate />
         {(completion.activities ?? []).length === 0 ? null : (
-          <ol className={styles.activities} data-progress-recorded-activities>
-            {(completion.activities ?? []).map((activity) => (
-              <li className={styles.activity} key={activity.position}>
-                <p className={styles.activityName}>{activity.name}</p>
-                {activity.detail === null ? null : (
-                  <p className={styles.activityMeta}>{activity.detail}</p>
-                )}
-              </li>
-            ))}
-          </ol>
+          <div data-progress-recorded-activities>
+            <ActivityList
+              label="What you did"
+              items={(completion.activities ?? []).map((activity) => ({
+                key: String(activity.position),
+                name: activity.name,
+                detail: activity.detail,
+              }))}
+            />
+          </div>
         )}
       </section>
 
@@ -97,8 +91,8 @@ export function CompletionRecord({ completion, timezoneName, planned }: Props) {
           <p className={styles.sheetLabel}>What was planned</p>
           <h2>This training was not planned.</h2>
           <p className={styles.carbonNote}>
-            You logged it without a planned session, so there is no copy of a
-            plan to set it beside. The record above is the whole of it.
+            There is no plan to set it beside. The record above is the whole of
+            it.
           </p>
         </section>
       ) : (
@@ -106,7 +100,6 @@ export function CompletionRecord({ completion, timezoneName, planned }: Props) {
           className={`${styles.sheet} ${styles.carbon}`}
           data-progress-sheet="planned"
         >
-          <p className={styles.carbonMark}>Carbon copy</p>
           <p className={styles.sheetLabel}>What was planned</p>
           <h2>{planned.title}</h2>
           <div className={styles.marks}>

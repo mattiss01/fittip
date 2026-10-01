@@ -60,7 +60,7 @@ test.describe("M3-15C progress", () => {
       expect(first?.headers()["cache-control"]).toContain("private");
       expect(first?.headers()["cache-control"]).toContain("no-store");
       await expect(
-        page.getByRole("heading", { name: "Progress." }),
+        page.getByRole("heading", { name: "Progress" }),
       ).toBeVisible();
       await expect(page.locator('[data-progress-empty="never"]')).toContainText(
         "Your record starts here.",
@@ -157,11 +157,8 @@ test.describe("M3-15C progress", () => {
 
       // ---- One completion, beside the plan it was measured against. ----
       await planned.getByRole("link", { name: "Tempo run" }).click();
-      await expect(
-        page.getByRole("heading", { name: "One session." }),
-      ).toBeVisible();
+      await expect(page).toHaveURL(/\/home\/progress\/[0-9a-f-]{36}$/);
       const recordUrl = page.url();
-      expect(recordUrl).toMatch(/\/home\/progress\/[0-9a-f-]{36}$/);
 
       const recorded = page.locator('[data-progress-sheet="recorded"]');
       await expect(
@@ -171,11 +168,12 @@ test.describe("M3-15C progress", () => {
         recorded.getByText("Completed", { exact: true }),
       ).toBeVisible();
       await expect(recorded.getByText("42 min")).toBeVisible();
-      await expect(recorded.getByText(TIMEZONE)).toBeVisible();
+      // The zone is stored with the log and not shown (owner, 1 Oct 2026).
+      await expect(recorded.getByText(TIMEZONE)).toHaveCount(0);
       await expect(recorded.getByText(/You reported: Pain/)).toBeVisible();
 
       const carbon = page.locator('[data-progress-sheet="planned"]');
-      await expect(carbon.getByText("Carbon copy")).toBeVisible();
+      await expect(carbon.getByText("What was planned")).toBeVisible();
       await expect(
         carbon.getByRole("heading", { name: "Tempo run" }),
       ).toBeVisible();
@@ -228,7 +226,8 @@ test.describe("M3-15C progress", () => {
       });
 
       // ---- Paging months, and a month with nothing logged in it. ----
-      await page.getByRole("link", { name: /Back to/ }).click();
+      // The record's way back is its month's name, at the top of the page.
+      await page.locator("[data-back-link]").click();
       await expect(
         page.locator(`[data-progress-month="${thisMonth}"]`),
       ).toBeVisible();

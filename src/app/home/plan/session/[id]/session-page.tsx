@@ -375,7 +375,7 @@ export function SessionPage({
           {session.isLocked ? <span data-mark="locked">Locked</span> : null}
           {cancelled ? <span>Cancelled</span> : null}
           {session.log ? (
-            <span data-mark="logged">
+            <span data-mark="logged" data-outcome={session.log.outcome}>
               {COMPLETION_OUTCOME_LABELS[session.log.outcome]}
               {session.log.actualLocalDate === session.localDate
                 ? ""

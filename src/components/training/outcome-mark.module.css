@@ -1,0 +1,27 @@
+/* The round mark on a logged session; its colour follows the outcome. */
+
+.mark {
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--ember);
+  color: var(--paper);
+}
+
+/* Training that was done reads green, not ember (owner, 1 Oct 2026: the
+   orange looked like something had gone wrong). */
+.mark[data-outcome-mark="completed"],
+.mark[data-outcome-mark="unplanned"] {
+  background: var(--pine-soft);
+}
+
+.mark[data-outcome-mark="partially_completed"] {
+  background: color-mix(in srgb, var(--ember) 70%, var(--paper));
+}
+
+.mark[data-outcome-mark="skipped"] {
+  background: var(--moss);
+}

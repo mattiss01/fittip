@@ -100,7 +100,8 @@
   text-transform: uppercase;
 }
 
-.card[data-cancelled="true"] .marks > span {
+.card[data-cancelled="true"] .marks > span,
+.card[data-cancelled="true"] [data-activity-list] li {
   background: var(--ledger-paper);
 }
 
@@ -113,6 +114,17 @@
 .marks > span[data-mark="logged"] {
   background: color-mix(in srgb, var(--plan-today) 14%, transparent);
   color: var(--ember-dark);
+}
+
+.marks > span[data-outcome="completed"],
+.marks > span[data-outcome="unplanned"] {
+  background: color-mix(in srgb, var(--pine-soft) 14%, transparent);
+  color: var(--pine-soft);
+}
+
+.marks > span[data-outcome="skipped"] {
+  background: var(--ledger-wash);
+  color: var(--ledger-muted);
 }
 
 .text {

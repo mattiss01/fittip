@@ -16,6 +16,7 @@ import {
   ActivityList,
   type ActivityListItem,
 } from "@/components/training/activity-list";
+import { OutcomeMark } from "@/components/training/outcome-mark";
 import { shiftIsoDate } from "@/lib/date/local-date";
 
 /** What the owner recorded, reduced to what this day actually draws. */
@@ -497,44 +498,6 @@ function ChevronIcon({ direction }: { direction: "left" | "right" }) {
     >
       <path d={direction === "left" ? "M15 5l-7 7 7 7" : "M9 5l7 7-7 7"} />
     </svg>
-  );
-}
-
-/**
- * The receipt's mark says what the record says, never more: a tick only for
- * training that was done, a half for partly, a dash for a skip and a swap for
- * a replacement. Decorative — the outcome stamp beside it is the fact.
- */
-const OUTCOME_MARK_PATHS: Record<CompletionOutcome, string> = {
-  completed: "M5 12.5l4.5 4.5L19 7.5",
-  unplanned: "M5 12.5l4.5 4.5L19 7.5",
-  partially_completed: "M12 4a8 8 0 0 1 0 16z M12 4a8 8 0 0 0 0 16",
-  skipped: "M6 12h12",
-  replaced: "M5 9h12l-3-3 M19 15H7l3 3",
-};
-
-function OutcomeMark({ outcome }: { outcome: CompletionOutcome }) {
-  return (
-    <span
-      className={styles.receiptCheck}
-      data-outcome-mark={outcome}
-      aria-hidden="true"
-    >
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <path d={OUTCOME_MARK_PATHS[outcome]} />
-      </svg>
-    </span>
   );
 }
 
