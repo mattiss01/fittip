@@ -213,14 +213,17 @@
   text-transform: uppercase;
 }
 
+/* Training that was done reads green, not ember (owner, 1 Oct 2026: the
+   orange looked like something had gone wrong). */
+.stamp[data-outcome="completed"],
+.stamp[data-outcome="unplanned"] {
+  background: color-mix(in srgb, var(--pine-soft) 14%, transparent);
+  color: var(--pine-soft);
+}
+
 .stamp[data-outcome="skipped"] {
   background: var(--ledger-wash);
   color: var(--ledger-muted);
-}
-
-.stamp[data-outcome="unplanned"] {
-  background: color-mix(in srgb, var(--recovery) 14%, transparent);
-  color: var(--recovery);
 }
 
 .marks {
@@ -449,6 +452,7 @@
 }
 
 .mainAction {
+  width: 100%;
   min-height: 3.4rem;
   display: flex;
   align-items: center;

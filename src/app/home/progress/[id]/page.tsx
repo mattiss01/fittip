@@ -106,7 +106,6 @@ export default async function CompletionPage({ params }: Props) {
         <>
           <CompletionRecord
             completion={toCompletionView(completion)}
-            timezoneName={completion.timezoneName}
             planned={toPlannedView(completion)}
           />
           {/* The one log editor, opened from here and returning here, so a

@@ -64,14 +64,24 @@ const LONG_DAY = new Intl.DateTimeFormat("en-GB", {
 /** What the owner recorded, in the same words the log form wrote it with. */
 export function RecordedFacts({
   completion,
+  showDate = false,
 }: {
   completion: ProgressCompletionView;
+  /**
+   * Leads the facts with the day it was logged for, in the same row as the
+   * duration (owner, 1 Oct 2026). The record's own page asks for it; the
+   * month does not, because each entry already sits under its day.
+   */
+  showDate?: boolean;
 }) {
   const signals = COMPLETION_SIGNAL_STAMPS.filter(
     ({ key }) => completion[key],
   ).map(({ label }) => label);
 
   const facts = [
+    showDate
+      ? { term: "Logged for", value: longDay(completion.actualLocalDate) }
+      : null,
     completion.durationMinutes === null
       ? null
       : { term: "Duration", value: `${completion.durationMinutes} min` },

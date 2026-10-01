@@ -168,7 +168,8 @@ test.describe("M3-15C progress", () => {
         recorded.getByText("Completed", { exact: true }),
       ).toBeVisible();
       await expect(recorded.getByText("42 min")).toBeVisible();
-      await expect(recorded.getByText(TIMEZONE)).toBeVisible();
+      // The zone is stored with the log and not shown (owner, 1 Oct 2026).
+      await expect(recorded.getByText(TIMEZONE)).toHaveCount(0);
       await expect(recorded.getByText(/You reported: Pain/)).toBeVisible();
 
       const carbon = page.locator('[data-progress-sheet="planned"]');

@@ -47,7 +47,8 @@ describe("one completion", () => {
     ).toBeTruthy();
     expect(within(recorded).getByText("Partly completed")).toBeTruthy();
     expect(within(recorded).getByText("42 min")).toBeTruthy();
-    expect(within(recorded).getByText(TIMEZONE)).toBeTruthy();
+    // The zone is stored with the log and not shown (owner, 1 Oct 2026).
+    expect(within(recorded).queryByText(TIMEZONE)).toBeNull();
     expect(within(recorded).getByText(/You reported: Pain/)).toBeTruthy();
 
     const planned = document.querySelector(

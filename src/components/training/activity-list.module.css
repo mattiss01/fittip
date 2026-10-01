@@ -1,12 +1,13 @@
 /*
- * A card's activities as a ruled list: one line per activity at 390px, the
- * name in the body face and the target or actual beside it in the mono
- * face, wrapping under the name when the pair does not fit.
+ * A session's activities, read rather than edited: one rounded box per
+ * activity, the name over its target or actual in the mono face. The owner
+ * chose this over a ruled list on 1 Oct 2026, from the record page's
+ * "What was planned", so a planned and a logged activity look alike.
  */
 
 .list {
   display: grid;
-  gap: 0.3rem;
+  gap: 0.4rem;
   margin: 0.2rem 0 0;
   min-width: 0;
 }
@@ -15,32 +16,30 @@
   margin: 0;
   color: var(--ledger-muted);
   font: 500 0.62rem var(--font-mono);
-  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .items {
   display: grid;
+  gap: 0.4rem;
   margin: 0;
   padding: 0;
   list-style: none;
-  border-top: 1px solid var(--ledger-rule);
 }
 
 .item {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.1rem 0.75rem;
-  padding: 0.4rem 0;
-  border-bottom: 1px solid var(--ledger-rule);
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-control);
+  background: var(--sage);
   min-width: 0;
 }
 
 .name {
   font-family: var(--font-sans);
   font-size: 0.95rem;
+  font-weight: 700;
   overflow-wrap: anywhere;
 }
 

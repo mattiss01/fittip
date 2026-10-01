@@ -39,8 +39,6 @@ export type PlannedSnapshotView = {
 
 type Props = {
   completion: ProgressCompletionView;
-  /** The zone the completion's date was anchored in when it was written. */
-  timezoneName: string;
   planned: PlannedSnapshotView | null;
 };
 
@@ -49,8 +47,11 @@ type Props = {
  * two different kinds of paper on purpose: what happened is a fact the owner
  * wrote, and what was planned is a copy taken at the time. Neither is scored
  * against the other, and nothing here is computed from the pair.
+ *
+ * The zone the log's date was anchored in stays stored with it and is not
+ * shown (owner, 1 Oct 2026): the date already says which day it was.
  */
-export function CompletionRecord({ completion, timezoneName, planned }: Props) {
+export function CompletionRecord({ completion, planned }: Props) {
   return (
     <div className={styles.sheets}>
       <section className={styles.sheet} data-progress-sheet="recorded">
@@ -67,17 +68,7 @@ export function CompletionRecord({ completion, timezoneName, planned }: Props) {
             <span>{completion.sport}</span>
           </div>
         )}
-        <dl className={styles.facts}>
-          <div>
-            <dt>Logged for</dt>
-            <dd>{longDay(completion.actualLocalDate)}</dd>
-          </div>
-          <div>
-            <dt>Recorded in</dt>
-            <dd>{timezoneName}</dd>
-          </div>
-        </dl>
-        <RecordedFacts completion={completion} />
+        <RecordedFacts completion={completion} showDate />
         {(completion.activities ?? []).length === 0 ? null : (
           <div data-progress-recorded-activities>
             <ActivityList

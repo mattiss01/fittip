@@ -115,6 +115,17 @@
   color: var(--ember-dark);
 }
 
+.marks > span[data-outcome="completed"],
+.marks > span[data-outcome="unplanned"] {
+  background: color-mix(in srgb, var(--pine-soft) 14%, transparent);
+  color: var(--pine-soft);
+}
+
+.marks > span[data-outcome="skipped"] {
+  background: var(--ledger-wash);
+  color: var(--ledger-muted);
+}
+
 .text {
   margin: 0;
   overflow-wrap: anywhere;
