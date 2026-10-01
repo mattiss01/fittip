@@ -205,9 +205,19 @@ test.describe("M3-16A plan proposal review", () => {
         outlineWidth: resting.outlineWidth,
       }).toEqual({ outlineStyle: "none", outlineWidth: "0px" });
 
+      // A key press first, so the focus that follows is keyboard focus: after
+      // the clicks above, a scripted focus alone does not match
+      // :focus-visible in Chromium and no ring is drawn. Until 1 Oct 2026 this
+      // measured the un-ringed link, whose outline colour is its text colour,
+      // and passed only because that text was dark.
+      await page.keyboard.press("Shift");
       await primaryAction.focus();
       await expect(primaryAction).toBeFocused();
       const focused = await primaryAction.evaluate(readFocusTreatment);
+      expect({
+        outlineStyle: focused.outlineStyle,
+        outlineWidth: focused.outlineWidth,
+      }).toEqual({ outlineStyle: "solid", outlineWidth: "3px" });
       // WCAG 1.4.3 for the label, 1.4.11 for the indicator against the paper
       // the focus offset exposes on both sides of the outline.
       expect(focused.labelContrast).toBeGreaterThanOrEqual(4.5);
