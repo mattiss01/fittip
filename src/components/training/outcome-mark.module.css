@@ -1,0 +1,25 @@
+/* The round mark on a logged session; its colour follows the outcome. */
+
+.mark {
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--ember);
+  color: var(--paper);
+}
+
+.mark[data-outcome-mark="partially_completed"] {
+  background: color-mix(in srgb, var(--ember) 70%, var(--paper));
+}
+
+.mark[data-outcome-mark="skipped"] {
+  background: var(--moss);
+}
+
+.mark[data-outcome-mark="replaced"],
+.mark[data-outcome-mark="unplanned"] {
+  background: var(--recovery);
+}

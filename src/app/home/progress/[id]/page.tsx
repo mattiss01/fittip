@@ -59,28 +59,42 @@ export default async function CompletionPage({ params }: Props) {
 
   return (
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
-      <header className={homeStyles.masthead}>
-        <div>
-          <p className={homeStyles.kicker}>FitTip / progress</p>
-          <h1>One session.</h1>
-          <p className={homeStyles.intro}>
-            What you recorded, and the plan it was measured against as that plan
-            stood at the time.
-          </p>
-        </div>
-      </header>
+      {/* The way back is at the top, as on a planned session's page (R3);
+          the session's own name is the page's heading. */}
+      <Link
+        className={styles.backLink}
+        href={
+          completion === null
+            ? "/home/progress"
+            : `/home/progress?month=${monthOf(completion.actualLocalDate)}`
+        }
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path d="M15 5l-7 7 7 7" />
+        </svg>
+        {completion === null
+          ? "Progress"
+          : formatMonth(monthOf(completion.actualLocalDate))}
+      </Link>
 
       {completion === null ? (
         <section
           className={homeStyles.stateCard}
           data-progress-state="no-completion"
         >
-          <p className={homeStyles.sectionLabel}>Not found</p>
-          <h2>That record is not there.</h2>
-          <p>
-            It was removed, or the link is not yours. Nothing was changed. Open
-            your record and pick a session from the month it belongs to.
-          </p>
+          <h1>That record is not there.</h1>
+          <p>It was removed, or the link is not yours. Nothing was changed.</p>
           <div className={homeStyles.actions}>
             <Link className={homeStyles.primaryAction} href="/home/progress">
               Open Progress
@@ -96,14 +110,12 @@ export default async function CompletionPage({ params }: Props) {
           />
           {/* The one log editor, opened from here and returning here, so a
               correction does not go by way of Today. */}
-          <div className={homeStyles.actions}>
-            <Link
-              className={homeStyles.primaryAction}
-              href={`/home/log?completion=${completion.id}&from=progress`}
-            >
-              Edit log
-            </Link>
-          </div>
+          <Link
+            className={styles.mainAction}
+            href={`/home/log?completion=${completion.id}&from=progress`}
+          >
+            Edit log
+          </Link>
           {/* Training that happened can become a saved session; a skip or a
               replacement records none, so it offers nothing to save. */}
           {!recordsTraining(completion.status) ? null : (
@@ -114,12 +126,6 @@ export default async function CompletionPage({ params }: Props) {
               }
             />
           )}
-          <Link
-            className={styles.backLink}
-            href={`/home/progress?month=${monthOf(completion.actualLocalDate)}`}
-          >
-            Back to {formatMonth(monthOf(completion.actualLocalDate))}
-          </Link>
         </>
       )}
     </main>

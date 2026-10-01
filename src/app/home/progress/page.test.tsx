@@ -50,7 +50,7 @@ describe("Progress", () => {
       `${currentMonth()}-01`,
       expect.stringMatching(new RegExp(`^${currentMonth()}-\\d{2}$`)),
     );
-    expect(screen.getByRole("heading", { name: "Progress." })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Progress" })).toBeTruthy();
     expect(
       document.querySelector(`[data-progress-month="${currentMonth()}"]`),
     ).toBeTruthy();

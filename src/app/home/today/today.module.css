@@ -336,17 +336,6 @@
   line-height: 1.2;
 }
 
-.receiptCheck {
-  width: 2rem;
-  height: 2rem;
-  flex: none;
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius-pill);
-  background: var(--today-mark);
-  color: var(--ledger-paper);
-}
-
 .stamp {
   flex: none;
   padding: 0.2rem 0.55rem;
@@ -365,19 +354,6 @@
 .stamp[data-outcome="unplanned"] {
   background: color-mix(in srgb, var(--today-recovery) 14%, transparent);
   color: var(--today-recovery);
-}
-
-.receiptCheck[data-outcome-mark="partially_completed"] {
-  background: color-mix(in srgb, var(--today-mark) 70%, var(--ledger-paper));
-}
-
-.receiptCheck[data-outcome-mark="skipped"] {
-  background: var(--ledger-muted);
-}
-
-.receiptCheck[data-outcome-mark="replaced"],
-.receiptCheck[data-outcome-mark="unplanned"] {
-  background: var(--today-recovery);
 }
 
 .record {

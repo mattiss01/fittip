@@ -53,7 +53,7 @@ describe("one completion", () => {
     const planned = document.querySelector(
       '[data-progress-sheet="planned"]',
     ) as HTMLElement;
-    expect(within(planned).getByText("Carbon copy")).toBeTruthy();
+    expect(within(planned).getByText("What was planned")).toBeTruthy();
     expect(within(planned).getByText("Locked")).toBeTruthy();
     expect(within(planned).getByText("Recurring")).toBeTruthy();
     expect(within(planned).getByText("55 min")).toBeTruthy();
@@ -157,9 +157,7 @@ describe("one completion", () => {
     );
 
     expect(
-      screen
-        .getByRole("link", { name: /Back to August 2026/ })
-        .getAttribute("href"),
+      screen.getByRole("link", { name: "August 2026" }).getAttribute("href"),
     ).toBe("/home/progress?month=2026-08");
   });
 
