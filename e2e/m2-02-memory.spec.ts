@@ -32,7 +32,7 @@ test.describe("M2-02 memory management", () => {
     try {
       await signIn(page, account.email, account.password);
       await page.getByRole("link", { name: "You", exact: true }).click();
-      await page.getByRole("link", { name: "Manage memory" }).click();
+      await page.getByRole("link", { name: /^Memory/ }).click();
       await expect(page).toHaveURL(/\/home\/you\/memory$/);
       await expect(
         page.getByRole("heading", { name: "What FitTip knows." }),

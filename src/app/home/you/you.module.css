@@ -1,0 +1,87 @@
+/*
+ * You in the Coach's note direction (R3): a heading, the three places that sit
+ * under it as rows of one card, and Sign out. Each row keeps one line saying
+ * what the place is for; the longer explanations live on the pages themselves.
+ */
+
+.header {
+  width: 100%;
+  padding: 1rem 0 0;
+}
+
+.header h1 {
+  font-size: 2.3rem;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.places {
+  width: 100%;
+  margin: 1rem 0 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  list-style: none;
+}
+
+.places li + li {
+  border-top: 1px solid var(--line);
+}
+
+.place {
+  min-height: 4.25rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  color: var(--pine);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.place:active {
+  background: var(--sage);
+}
+
+.place:focus-visible {
+  outline-offset: -3px;
+}
+
+.place strong {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.place span {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--moss);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.place svg {
+  color: var(--moss);
+}
+
+.signOut {
+  width: 100%;
+  margin-top: 1.5rem;
+}
+
+.signOut button {
+  width: 100%;
+  margin: 0;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--pine);
+}
+
+.signOut button:hover {
+  background: var(--sage);
+}

@@ -81,14 +81,12 @@ async function completeGuidedSetup(
   // Training routes are in maintenance during M3-11. The preserved You surface
   // keeps onboarding's permanent entry, and the screenshot contains no answers.
   await page.getByRole("link", { name: "You", exact: true }).click();
-  await expect(
-    page.getByRole("link", { name: "Open guided setup" }),
-  ).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Guided setup/ })).toBeVisible();
   await page.screenshot({
     fullPage: true,
     path: path.join(m2EvidenceDirectory, "M2-03-start-390x844.png"),
   });
-  await page.getByRole("link", { name: "Open guided setup" }).click();
+  await page.getByRole("link", { name: /^Guided setup/ }).click();
   await expect(page).toHaveURL(/\/home\/you\/onboarding$/);
   await expect(page.getByText(/not sent to an AI provider/)).toBeVisible();
   await page.getByRole("button", { name: "Start setup" }).click();
@@ -125,11 +123,11 @@ async function completeGuidedSetup(
 
   // Resume restores the saved candidate; cancel deletes it. The permanent You
   // entry then starts a genuinely fresh draft.
-  await page.getByRole("link", { name: "Open guided setup" }).click();
+  await page.getByRole("link", { name: /^Guided setup/ }).click();
   await expect(page.getByLabel("Goal title")).toHaveValue(goalTitle);
   await page.getByRole("button", { name: "Cancel and delete draft" }).click();
   await expect(page).toHaveURL(/\/home\/you$/);
-  await page.getByRole("link", { name: "Open guided setup" }).click();
+  await page.getByRole("link", { name: /^Guided setup/ }).click();
   await page.getByRole("button", { name: "Start setup" }).click();
 
   await page.getByLabel("Goal title").fill(goalTitle);
