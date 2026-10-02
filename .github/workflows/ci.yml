@@ -71,6 +71,7 @@ jobs:
 
       - run: npm ci
 
+      # No job stops the stack again: the runner is thrown away with it.
       - name: Start local Supabase stack
         run: npx supabase start
 
@@ -128,14 +129,23 @@ jobs:
       - name: M3-11 seeded legacy reset
         run: npm run test:m3-11-seeded-reset
 
-      - name: Stop local Supabase stack
-        if: always()
-        run: npx supabase stop --no-backup
-
   browser:
-    name: 390px production browser flows
+    name: 390px production browser flows (${{ matrix.shard }})
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 30
+    strategy:
+      # Report every broken flow in one run, not just the first shard's.
+      fail-fast: false
+      # Every shard pays the same setup, so the flows are split by duration to
+      # finish together. A flow that no shard names does not run.
+      matrix:
+        include:
+          - shard: a
+            flows: m3-15b m2-02 m3-16a m3-15f
+          - shard: b
+            flows: m2-01 m3-12 m3-19
+          - shard: c
+            flows: auth m3-13 m3-14b m3-15c
     steps:
       - uses: actions/checkout@v7
 
@@ -149,154 +159,29 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
+      # A fresh stack applies every migration as it starts, so there is no
+      # reset here; the `database` job is the one that proves them from zero.
       - name: Start local Supabase stack
         run: npx supabase start
 
       - name: Derive local Supabase coordinates
         run: node .github/scripts/supabase-env.mjs
 
-      - name: Apply every migration from zero
-        run: npx supabase db reset --local
-
       # NEXT_PUBLIC_* values are inlined into the client bundle at build time,
       # so the build must happen after the real coordinates are derived.
       - name: Next production build
         run: npm run build
 
-      # Each step writes to its own artifact directories. Playwright clears its
-      # output directory when it starts, so a shared one would let a later step
-      # destroy the trace of an earlier failure - which is what happened once
-      # the later steps were allowed to run after a failure.
-      #
-      # Every browser step runs one worker at a time. A shared runner also hosts
-      # the Supabase stack and the application server, so parallel workers make
-      # these flows slower and less deterministic than the documented local run.
-      #
-      # The root config's 60s test timeout is raised here for the same reason.
-      # The per-ticket configs already set their own longer timeouts and are
-      # deliberately left alone.
-      #
-      - name: Authentication flow
-        env:
-          PLAYWRIGHT_HTML_REPORT: playwright-report/auth
-        run: |
-          .github/scripts/with-server.sh 3000 \
-            npx playwright test e2e/auth.spec.ts \
-              --workers=1 --timeout=180000 \
-              --trace=retain-on-failure \
-              --output=test-results/auth
-
-      - name: M2-01 goal management
-        # Report every broken flow in one run, not just the first.
-        if: ${{ !cancelled() }}
-        env:
-          PLAYWRIGHT_HTML_REPORT: playwright-report/m2-01
-        run: |
-          .github/scripts/with-server.sh 3015 \
-            npx playwright test --config=e2e/m2-01.playwright.config.ts \
-              --workers=1 --trace=retain-on-failure --output=test-results/m2-01
-
-      - name: M2-02 memory management
-        # Report every broken flow in one run, not just the first.
-        if: ${{ !cancelled() }}
-        env:
-          PLAYWRIGHT_HTML_REPORT: playwright-report/m2-02
-        run: |
-          .github/scripts/with-server.sh 3016 \
-            npx playwright test --config=e2e/m2-02.playwright.config.ts \
-              --workers=1 --trace=retain-on-failure --output=test-results/m2-02
-
-      - name: M3-16A plan proposal review
-        # Report every broken flow in one run, not just the first.
-        if: ${{ !cancelled() }}
-        env:
-          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-16a
-        run: |
-          .github/scripts/with-server.sh 3019 \
-            npx playwright test --config=e2e/m3-16a.playwright.config.ts \
-              --workers=1 --trace=retain-on-failure --output=test-results/m3-16a
-
-      - name: M3-12 manual continuous planning
-        # Report every broken flow in one run, not just the first.
-        if: ${{ !cancelled() }}
-        env:
-          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-12
-        run: |
-          .github/scripts/with-server.sh 3020 \
-            npx playwright test --config=e2e/m3-12.playwright.config.ts \
-              --workers=1 --trace=retain-on-failure --output=test-results/m3-12
-
-      - name: M3-13 private saved-session library
-        # Report every broken flow in one run, not just the first.
-        if: ${{ !cancelled() }}
-        env:
-          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-13
-        run: |
-          .github/scripts/with-server.sh 3021 \
-            npx playwright test --config=e2e/m3-13.playwright.config.ts \
-              --workers=1 --trace=retain-on-failure --output=test-results/m3-13
-
-      - name: M3-14B recurring series surface
-        # Report every broken flow in one run, not just the first.
-        if: ${{ !cancelled() }}
-        env:
-          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-14b
-        run: |
-          .github/scripts/with-server.sh 3022 \
-            npx playwright test --config=e2e/m3-14b.playwright.config.ts \
-              --workers=1 --trace=retain-on-failure --output=test-results/m3-14b
-
-      - name: M3-19 delete a planned session
-        # Report every broken flow in one run, not just the first.
-        if: ${{ !cancelled() }}
-        env:
-          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-19
-        run: |
-          .github/scripts/with-server.sh 3023 \
-            npx playwright test --config=e2e/m3-19.playwright.config.ts \
-              --workers=1 --trace=retain-on-failure --output=test-results/m3-19
-
-      - name: M3-15B today and logging
-        # Report every broken flow in one run, not just the first.
-        if: ${{ !cancelled() }}
-        env:
-          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-15b
-        run: |
-          .github/scripts/with-server.sh 3024 \
-            npx playwright test --config=e2e/m3-15b.playwright.config.ts \
-              --workers=1 --trace=retain-on-failure --output=test-results/m3-15b
-
-      - name: M3-15C progress
-        # Report every broken flow in one run, not just the first.
-        if: ${{ !cancelled() }}
-        env:
-          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-15c
-        run: |
-          .github/scripts/with-server.sh 3025 \
-            npx playwright test --config=e2e/m3-15c.playwright.config.ts \
-              --workers=1 --trace=retain-on-failure --output=test-results/m3-15c
-
-      - name: M3-15F roadmap generation
-        # Report every broken flow in one run, not just the first.
-        if: ${{ !cancelled() }}
-        env:
-          PLAYWRIGHT_HTML_REPORT: playwright-report/m3-15f
-        run: |
-          .github/scripts/with-server.sh 3026 \
-            npx playwright test --config=e2e/m3-15f.playwright.config.ts \
-              --workers=1 --trace=retain-on-failure --output=test-results/m3-15f
+      - name: Browser flows
+        run: .github/scripts/browser-flows.sh ${{ matrix.flows }}
 
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: |
             playwright-report/
             test-results/
           retention-days: 7
           if-no-files-found: ignore
-
-      - name: Stop local Supabase stack
-        if: always()
-        run: npx supabase stop --no-backup

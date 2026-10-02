@@ -101,6 +101,11 @@ lane, one screen per merge.
 
 Not worth their own slot; do them when work lands nearby.
 
+- **A plain new browser spec has no way into CI.** `.github/scripts/browser-flows.sh` runs
+  `auth` or a flow with its own `e2e/<flow>.playwright.config.ts`, and `.claude/rules/tests.md`
+  says not to add such configs. A new spec under the root config would pass review and
+  never run. Older than the shards (2 Oct 2026); the fix is one shard entry that runs the
+  root config over every spec no per-ticket config claims.
 - **A deleted occurrence makes the Plan re-run its top-up on every visit.** The page works
   out which rule dates have no session (`findUncoveredSeriesDates`) without knowing the
   dates a series was told to skip, so it fires the extension, which then writes nothing
