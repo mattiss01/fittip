@@ -92,7 +92,8 @@ test.describe("M3-12 manual continuous planning", () => {
       await expect(
         await sessionCard(page, raceDay, "Autumn race"),
       ).toBeVisible();
-      await expect(page.locator("[data-plan-repeats-through]")).toBeVisible();
+      // This owner has no series, so the week says nothing about repeats.
+      await expect(page.locator("[data-plan-repeats-through]")).toHaveCount(0);
       // Today, asked for that day, shows it and says why no repeat is there.
       await page.goto(`/home/today?date=${raceDay}`);
       await expect(
