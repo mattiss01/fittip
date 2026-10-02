@@ -279,7 +279,10 @@ export async function changeLibraryAction(
     ) {
       return result(
         "validation",
-        "Check the session details and the date. Nothing has been changed.",
+        // Only "Use in plan" has a date to get wrong.
+        operation === "reuse"
+          ? "Check the session details and the date. Nothing has been changed."
+          : "Check the session details. Nothing has been changed.",
       );
     }
     if (
@@ -369,7 +372,7 @@ function saveFailure(
   ) {
     return [
       "validation",
-      "This session cannot be saved as it is. It needs a title and a sport.",
+      "This could not be saved to your library. A saved session needs a title and a sport.",
     ];
   }
   if (

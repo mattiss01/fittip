@@ -144,7 +144,8 @@ Not worth their own slot; do them when work lands nearby.
   session that is already in the library creates a second entry. Decide what "the same"
   means (same title, or same title and activities) and whether a repeat save should update
   the existing entry, be refused, or ask. Since 2 Oct 2026 an entry has one title and no
-  name of its own, so two saves of one session now look identical in the library. A uniqueness rule in the database would be
+  name of its own, so two saves of one session, and two older entries once told apart
+  only by name, look identical in the library and in every picker. A uniqueness rule in the database would be
   careful lane; the activity library already requires unique names among active entries
   (`16118fb`), which is the precedent.
 - A hand-made RPC payload with `position` or `plannedPosition` of `1.0` reaches

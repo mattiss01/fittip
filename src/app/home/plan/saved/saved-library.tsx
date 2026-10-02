@@ -14,6 +14,7 @@ import styles from "./saved.module.css";
 import {
   ActivityEditor,
   type ActivityValue,
+  type EditorRow,
 } from "@/components/training/activity-editor";
 import { ActivityList } from "@/components/training/activity-list";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
@@ -83,21 +84,7 @@ export function SavedLibrary({
         open={createdKey === 0 && sessions.length === 0 ? true : undefined}
       >
         <summary>New session</summary>
-        <form
-          className={styles.form}
-          action={action}
-          key={`create-form-${created ? state.submission : 0}`}
-        >
-          <input type="hidden" name="operation" value="create" />
-          <SavedSessionFields
-            idPrefix="create"
-            draft={created ? state.draft : undefined}
-          />
-          <ActivityEditor idPrefix="create" initial={[]} />
-          <button className={styles.primary} type="submit" disabled={pending}>
-            Add to library
-          </button>
-        </form>
+        <NewSavedSession action={action} state={state} pending={pending} />
       </details>
 
       {sessions.length === 0 ? (
@@ -279,12 +266,66 @@ function SavedSessionCard({
   );
 }
 
+/**
+ * The "New session" form. A refusal remounts the form to seed it with what
+ * was typed, as an edit does, and three things must outlive that remount, so
+ * they are held here above it: the refused draft, which the next action on
+ * any card would otherwise replace; the activity rows, which the draft does
+ * not carry; and the sport, which a new row starts from.
+ */
+function NewSavedSession({
+  action,
+  state,
+  pending,
+}: {
+  action: FormAction;
+  state: LibraryActionState;
+  pending: boolean;
+}) {
+  const [refused, setRefused] = useState<{
+    submission: number;
+    draft?: LibraryDraft;
+  }>({ submission: 0 });
+  if (state.operation === "create" && state.submission !== refused.submission) {
+    setRefused({ submission: state.submission, draft: state.draft });
+  }
+  const [sport, setSport] = useState("");
+  const [rows, setRows] = useState<readonly EditorRow[]>([]);
+
+  return (
+    <form
+      className={styles.form}
+      action={action}
+      key={`create-form-${refused.submission}`}
+    >
+      <input type="hidden" name="operation" value="create" />
+      <SavedSessionFields
+        idPrefix="create"
+        draft={refused.draft}
+        onSportChange={setSport}
+      />
+      <ActivityEditor
+        idPrefix="create"
+        initial={rows.map((row) => row.value)}
+        sessionSport={sport}
+        onRowsChange={setRows}
+      />
+      <button className={styles.primary} type="submit" disabled={pending}>
+        Add to library
+      </button>
+    </form>
+  );
+}
+
 function SavedSessionFields({
   idPrefix,
   draft,
+  onSportChange,
 }: {
   idPrefix: string;
   draft?: LibraryDraft;
+  /** The sport as it is typed, for a form whose new activities start from it. */
+  onSportChange?: (sport: string) => void;
 }) {
   return (
     <>
@@ -307,6 +348,11 @@ function SavedSessionFields({
             maxLength={80}
             required
             defaultValue={draft?.sport ?? ""}
+            onChange={
+              onSportChange === undefined
+                ? undefined
+                : (event) => onSportChange(event.target.value)
+            }
           />
         </div>
         <div className={styles.field}>

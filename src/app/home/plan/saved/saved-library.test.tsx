@@ -1,4 +1,10 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { useActionStateMock } = vi.hoisted(() => ({
@@ -199,7 +205,7 @@ describe("the saved session library surface", () => {
     renderLibrary(
       {
         status: "validation",
-        message: "Check the session details and the date.",
+        message: "Check the session details. Nothing has been changed.",
         submission: 1,
         operation: "create",
         draft: {
@@ -219,6 +225,71 @@ describe("the saved session library surface", () => {
     expect(
       document.querySelector<HTMLInputElement>(`#edit-${SAVED_ID}-title`),
     ).toHaveValue("Tempo run");
+  });
+
+  it("keeps a refused new session whole, through another card's action too", () => {
+    const library = (state: LibraryActionState) => {
+      useActionStateMock.mockReturnValue([state, action, false]);
+      return (
+        <SavedLibrary dateRange={RANGE} planRevision={4} sessions={[entry()]} />
+      );
+    };
+    const createForm = () =>
+      document
+        .querySelector("input[name='operation'][value='create']")!
+        .closest("form")!;
+    const activities = () =>
+      JSON.parse(
+        createForm().querySelector<HTMLInputElement>(
+          "input[name='activities']",
+        )!.value,
+      );
+    const view = render(library(INITIAL_LIBRARY_ACTION_STATE));
+
+    // The sport typed above is what a new activity starts from.
+    fireEvent.change(within(createForm()).getByLabelText("Sport"), {
+      target: { value: "Running" },
+    });
+    fireEvent.click(
+      within(createForm()).getByRole("button", { name: "Add activity" }),
+    );
+    fireEvent.change(within(createForm()).getByLabelText("Name"), {
+      target: { value: "Strides" },
+    });
+    expect(activities()).toMatchObject([{ name: "Strides", sport: "Running" }]);
+
+    // Refused: the fields come back from the draft, and the activity, which
+    // the draft does not carry, is still there.
+    const refused: LibraryActionState = {
+      status: "validation",
+      message: "Check the session details. Nothing has been changed.",
+      submission: 1,
+      operation: "create",
+      draft: {
+        title: "   ",
+        sport: "Running",
+        intent: "",
+        expectedDurationMinutes: "",
+        note: "",
+      },
+    };
+    view.rerender(library(refused));
+    expect(document.querySelector("#create-sport")).toHaveValue("Running");
+    expect(activities()).toMatchObject([{ name: "Strides", sport: "Running" }]);
+
+    // Deleting another entry answers with its own state. The half-typed
+    // session is not that action's to clear.
+    view.rerender(
+      library({
+        status: "saved",
+        message: "Saved session deleted.",
+        submission: 2,
+        operation: "delete",
+        savedSessionId: SAVED_ID,
+      }),
+    );
+    expect(document.querySelector("#create-sport")).toHaveValue("Running");
+    expect(activities()).toMatchObject([{ name: "Strides", sport: "Running" }]);
   });
 
   it("offers no reload when the surface has no reason to think it is stale", () => {

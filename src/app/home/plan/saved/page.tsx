@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { SavedLibrary, type SavedSessionView } from "./saved-library";
+import { byTitle } from "./session-options";
 
 import { planWindowFor } from "../plan-window";
 import { SubPageHeader } from "../sub-page-header";
@@ -44,7 +45,7 @@ export default async function SavedSessionsPage() {
       readLibraryOptions(),
     ]);
     timezoneName = profile?.timezoneName ?? null;
-    saved = library;
+    saved = byTitle(library);
     activities = options;
   } catch (error) {
     redirectOnAuthError(error);

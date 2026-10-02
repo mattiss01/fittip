@@ -83,8 +83,8 @@ export function toRollingPlanSessionInput(
     localDate,
     position,
     isLocked: false,
-    // The owner's name for the library entry is how they find it again. It is
-    // not part of the planned session, which carries its own title.
+    // The entry's `name` stays in the library. It is the title again since
+    // 2 Oct 2026, and the planned session carries its own.
     activities: saved.activities.map((activity) => ({
       ...activity,
       isLocked: false,
