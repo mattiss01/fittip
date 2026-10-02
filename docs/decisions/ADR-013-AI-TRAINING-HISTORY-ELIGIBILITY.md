@@ -306,6 +306,47 @@ occasional meaningful reason did not cover that cost.
 cap, invisible deleted sessions, missed planned sessions, the forward
 locked-entry window, and the read-only bounded-reduction rule all stand.
 
+## Recorded amendment to decision 5
+
+This one also changes a decision, and is recorded the same way.
+
+On 2 October 2026, while the plan window was being lengthened from 14 days to 13
+weeks (ADR-017, amended the same week), the product owner decided that **for
+`create_roadmap` a running recurring series reaches the coach once, as a rule,
+rather than as one dated entry per occurrence.**
+
+Decision 5 says the coach reads "every planned entry" inside the horizon. That
+was written when a series existed as rows for 14 days only. A roadmap's horizon
+is months, the list is capped at 12 entries nearest first, and an occurrence
+carries nothing that says it is a repeat. With 13 weeks written ahead, a weekly
+session alone fills the list with identical lines and a locked race further out
+— the entry decision 5 exists to deliver — no longer reaches the coach.
+
+What a rule carries, and nothing else: `title`, `sport`, `frequency`,
+`intervalCount`, `weekdays`, `startDate`, `endDate`. That is the title and sport
+a dated entry already carries plus the recurrence the owner typed. The series'
+intent, note, expected duration and activities are **not** sent; they were not
+eligible on a dated entry and are not made eligible here.
+
+What stays a dated entry inside the horizon: a one-off session, and an
+occurrence the rule no longer describes — one that is locked, whose content the
+owner edited, or that was moved to another day. Beyond the horizon, locked
+entries only, as before.
+
+Limits, set here as tuning parameters: at most 6 rules, counted inside the
+existing 1,400-byte plan-commitment allocation, rules first. No byte ceiling and
+no token limit changes.
+
+What this gives up, stated rather than discovered: a rule is the series as it
+stands. A single occurrence the owner cancelled or deleted is not listed, so the
+coach may assume a session on a date the owner called off. For a roadmap, which
+plans phases rather than days, that was judged smaller than the loss it
+replaces.
+
+`create_seven_day_plan` is unchanged: its horizon is at most seven days, every
+entry inside it is still sent dated with its lock state, and it receives no
+rules. `fill_session_activities` sends no plan commitments, as before.
+
 ## Related decision made in the same session
 
 The compose step for a plan proposal introduces a **planning note** — owner
@@ -343,3 +384,8 @@ made a completion owner-editable rather than append-only, withdrawing
 and what survives. Decision 2's outcome is unchanged and is now structural
 rather than enforced by a head pointer; decision 4 loses one of its three
 free-text fields and keeps the other two.
+
+**Amended 2 October 2026.** Decision 5 changed for `create_roadmap`: a running
+recurring series is sent once as a rule, and its ordinary occurrences leave the
+dated list. The section above records what a rule carries, what stays dated,
+and what is given up. Decisions 1, 3, 6 and 7 are unchanged.
