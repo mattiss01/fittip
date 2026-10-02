@@ -17,6 +17,14 @@ export const PLAN_WINDOW_DAYS = 91;
  */
 export const PLAN_PLACEMENT_DAYS = 181;
 
+/**
+ * How many whole weeks before this one the Plan shows (owner, 2 Oct 2026: a
+ * full quarter, the span recurring sessions are written ahead). They are
+ * read-only, as every day before today is. The Plan reads every week it can
+ * show in one slice, so this is also what a longer history would cost.
+ */
+export const PLAN_HISTORY_WEEKS = 13;
+
 export type PlanOperation =
   | "add"
   | "edit"

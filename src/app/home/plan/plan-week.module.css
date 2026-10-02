@@ -449,6 +449,8 @@ span.arrow {
   padding: 0 1rem 0.5rem;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
+  /* A snapped tile keeps the strip's own inset instead of touching the edge. */
+  scroll-padding-inline: 1rem;
   scrollbar-width: none;
 }
 
@@ -694,6 +696,11 @@ span.arrow {
   display: grid;
 }
 
+/* As tall as a day, so a row of blanks holds its place. */
+.monthBlank {
+  min-height: 2.9rem;
+}
+
 .monthDay[data-out-of-plan] {
   min-height: 2.9rem;
   place-items: start center;
@@ -750,8 +757,9 @@ span.arrow {
   border-radius: var(--radius-pill);
 }
 
+/* Orange (owner, 2 Oct 2026): the one mark on the grid, so it should show. */
 .monthDot[data-filled] {
-  background: var(--pine);
+  background: var(--ember);
 }
 
 /*

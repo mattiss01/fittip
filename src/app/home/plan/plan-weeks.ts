@@ -1,11 +1,14 @@
+import { PLAN_HISTORY_WEEKS } from "./action-state";
+
 import { shiftIsoDate } from "@/lib/date/local-date";
 
 /**
  * The Plan reads one week at a time (R3a, owner, 29 Sep 2026). Weeks run
- * Monday to Sunday and cover every date a session may be placed on: the first
- * starts on the Monday on or before today, the last ends on the Sunday on or
- * after the last placeable date. Days before today are shown and never offer
- * a "+"; the few days past the last placeable date are shown as not open yet.
+ * Monday to Sunday and cover every date a session may be placed on, and a
+ * quarter of weeks before this one: the first starts on the Monday on or
+ * before `firstDate`, the last ends on the Sunday on or after the last
+ * placeable date. Days before today are shown and never offer a "+"; the few
+ * days past the last placeable date are shown as not open yet.
  *
  * R3b-3: recurring sessions are written through an earlier date than single
  * ones may be placed on, so a day can be open and still past the repeats.
@@ -34,14 +37,21 @@ export function mondayOf(isoDate: string): string {
   return shiftIsoDate(isoDate, -((weekday + 6) % 7));
 }
 
+/** The Monday the Plan's earliest week starts on. */
+export function planHistoryStart(today: string): string {
+  return shiftIsoDate(mondayOf(today), -7 * PLAN_HISTORY_WEEKS);
+}
+
 export function planWeeks(
   today: string,
   lastPlaceableDate: string,
   repeatsThrough: string,
+  /** A date in the earliest week to show; this week when there is no history. */
+  firstDate: string = today,
 ): PlanWeek[] {
   const weeks: PlanWeek[] = [];
   for (
-    let start = mondayOf(today);
+    let start = mondayOf(firstDate);
     start <= lastPlaceableDate;
     start = shiftIsoDate(start, 7)
   ) {
@@ -59,13 +69,17 @@ export function planWeeks(
   return weeks;
 }
 
-/** The week holding `date`, or the first week when it is in none. */
-export function weekIndexOf(weeks: PlanWeek[], date: string | null): number {
-  if (date === null) return 0;
+/** The week holding `date`, or `fallback` when it is in none. */
+export function weekIndexOf(
+  weeks: PlanWeek[],
+  date: string | null,
+  fallback = 0,
+): number {
+  if (date === null) return fallback;
   const index = weeks.findIndex(
     (week) => week.start <= date && date <= week.end,
   );
-  return index === -1 ? 0 : index;
+  return index === -1 ? fallback : index;
 }
 
 /** "45 min", "2 h", "2 h 30". */

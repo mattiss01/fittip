@@ -16,6 +16,8 @@ import {
 import { shiftIsoDate } from "@/lib/date/local-date";
 
 const WEEKDAY_INITIALS = ["M", "T", "W", "T", "F", "S", "S"];
+/** Six weeks: the most a month can touch. */
+const MONTH_CELLS = 42;
 
 /**
  * A month at a time, for reaching a week that is far away (owner, 2 Oct 2026):
@@ -80,6 +82,10 @@ export function MonthSheet({
     (_, offset) => shiftIsoDate(startDate, offset),
   );
   const shownWeekEnd = shiftIsoDate(shownWeekStart, 6);
+  // A month takes four, five or six rows, and the sheet stands on the bottom
+  // of the screen, so its arrows and Close moved with every step (owner,
+  // 2 Oct 2026). Every month is filled out to six rows.
+  const trailing = MONTH_CELLS - blanks - days.length;
 
   return (
     <SheetLayer view="month" labelledBy="plan-month-title" onClose={onClose}>
@@ -119,7 +125,7 @@ export function MonthSheet({
           </li>
         ))}
         {Array.from({ length: blanks }, (_, index) => (
-          <li key={`blank-${index}`} aria-hidden />
+          <li key={`blank-${index}`} className={w.monthBlank} aria-hidden />
         ))}
         {days.map((date) => {
           const count = sessionCounts.get(date) ?? 0;
@@ -159,6 +165,9 @@ export function MonthSheet({
             </li>
           );
         })}
+        {Array.from({ length: trailing }, (_, index) => (
+          <li key={`trailing-${index}`} className={w.monthBlank} aria-hidden />
+        ))}
       </ol>
     </SheetLayer>
   );

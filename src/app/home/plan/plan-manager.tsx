@@ -66,6 +66,8 @@ export type { PlanSessionLog, PlanSessionView } from "./session-view";
 
 type Props = {
   today: string;
+  /** A date in the earliest week to show; this week when there is none. */
+  firstDate?: string;
   /** The last date a session may be placed on; nothing past it is read. */
   lastPlaceableDate: string;
   /** The last date recurring sessions are written through. */
@@ -92,6 +94,7 @@ type Sheet =
 
 export function PlanManager({
   today,
+  firstDate = today,
   lastPlaceableDate,
   repeatsThrough,
   hasRepeats = false,
@@ -172,14 +175,24 @@ export function PlanManager({
       state.conflict === "timezone" ||
       stall === "unconfirmed";
 
-  const weeks = planWeeks(today, lastPlaceableDate, repeatsThrough);
+  const weeks = planWeeks(today, lastPlaceableDate, repeatsThrough, firstDate);
+  // The weeks before this one sit ahead of it in the list (owner, 2 Oct
+  // 2026), so "this week" is no longer the first: the Plan opens on it, and
+  // a week is named by how far it is from it.
+  const thisWeek = weekIndexOf(weeks, today);
   const [weekIndex, setWeekIndex] = useState(() =>
-    weekIndexOf(weeks, initialDate),
+    weekIndexOf(weeks, initialDate, thisWeek),
   );
   const week = weeks[Math.min(weekIndex, weeks.length - 1)];
-  // Twenty-six weeks of tiles scroll sideways, so the one being shown is
-  // brought into view: opening on a far week otherwise leaves the strip on
-  // "This wk" with nothing marked. Instant, so there is no motion to reduce.
+  const weekOffset = weekIndex - thisWeek;
+  // Some forty weeks of tiles scroll sideways, so the one being shown is
+  // brought into view: the strip otherwise opens on its oldest week with
+  // nothing marked. Instant, so there is no motion to reduce.
+  //
+  // Where it lands looks ahead (owner, 2 Oct 2026). A coming week goes to the
+  // middle, but never so far that a past week shows beside it: this week at
+  // the left edge is as far back as the strip goes on its own. This week and
+  // a past week go to the left edge themselves. The past is a scroll away.
   //
   // Only the strip moves. `scrollIntoView` also scrolls the page until the
   // tile is on screen, and the strip sits below the week, so a tap on a week
@@ -187,13 +200,28 @@ export function PlanManager({
   const tilesRef = useRef<HTMLElement>(null);
   useEffect(() => {
     const strip = tilesRef.current;
-    const current = strip?.querySelector('[aria-current="true"]');
-    if (!strip || !current) return;
+    const tiles = strip?.children;
+    const current = tiles?.[weekIndex];
+    const present = tiles?.[thisWeek];
+    if (!strip || !current || !present) return;
     const stripBox = strip.getBoundingClientRect();
-    const tileBox = current.getBoundingClientRect();
-    strip.scrollLeft +=
-      tileBox.left - stripBox.left - (stripBox.width - tileBox.width) / 2;
-  }, [weekIndex]);
+    const inset = Number.parseFloat(getComputedStyle(strip).paddingLeft) || 0;
+    // Where the strip would have to be scrolled to for a tile to sit at its
+    // left edge.
+    const atLeftEdge = (tile: Element) =>
+      strip.scrollLeft +
+      tile.getBoundingClientRect().left -
+      stripBox.left -
+      inset;
+    const centred =
+      atLeftEdge(current) +
+      inset -
+      (stripBox.width - current.getBoundingClientRect().width) / 2;
+    strip.scrollLeft =
+      weekIndex > thisWeek
+        ? Math.max(centred, atLeftEdge(present))
+        : atLeftEdge(current);
+  }, [weekIndex, thisWeek]);
   const [sheet, setSheet] = useSheetClosedOnSave(state, seriesState);
   const [monthOpen, setMonthOpen] = useState(false);
   // The plan submission the open sheet started after, so a refusal shown in
@@ -259,20 +287,20 @@ export function PlanManager({
                 area is stretched over the whole row, so the heading stays a
                 heading and a tap on it still opens the sheet. */}
             <div className={w.weekTitleRow}>
-              <h2 id="plan-week-title">{weekLabel(week, weekIndex)}</h2>
+              <h2 id="plan-week-title">{weekLabel(week, weekOffset)}</h2>
               <button
                 type="button"
                 className={w.calendar}
                 // The visible label is the week's title, so the name starts
                 // with it: someone asking for "This week" by voice gets this.
-                aria-label={`${weekLabel(week, weekIndex)}, open calendar`}
+                aria-label={`${weekLabel(week, weekOffset)}, open calendar`}
                 aria-haspopup="dialog"
                 onClick={() => setMonthOpen(true)}
               >
                 <CalendarIcon />
               </button>
             </div>
-            {weekIndex < 2 ? (
+            {Math.abs(weekOffset) < 2 ? (
               <p className={w.weekSum}>{weekRange(week)}</p>
             ) : null}
             <p className={w.weekSum}>{weekTotals(week, sessions)}</p>
@@ -324,7 +352,7 @@ export function PlanManager({
             onClick={() => setWeekIndex(index)}
           >
             <span className={w.tileLabel}>
-              {index === 0 ? "This wk" : shortDateLabel(candidate.start)}
+              {index === thisWeek ? "This wk" : shortDateLabel(candidate.start)}
             </span>
             <span className={w.tileBars} aria-hidden="true">
               {candidate.days.map((day) => (
@@ -353,7 +381,7 @@ export function PlanManager({
           shownWeekStart={week.start}
           sessionCounts={sessionCounts(sessions)}
           onPick={(date) => {
-            setWeekIndex(weekIndexOf(weeks, date));
+            setWeekIndex(weekIndexOf(weeks, date, thisWeek));
             setMonthOpen(false);
           }}
           onClose={() => setMonthOpen(false)}
@@ -630,18 +658,25 @@ function PlanSessionCard({
 
 function cardDetail(session: PlanSessionView, cancelled: boolean): string {
   if (cancelled) return "Cancelled";
-  if (session.log) {
-    const outcome = COMPLETION_OUTCOME_LABELS[session.log.outcome];
-    return session.log.actualLocalDate === session.localDate
-      ? outcome
-      : `${outcome} on ${dayLabel(session.log.actualLocalDate)}`;
-  }
-  return [
+  // The planned minutes stay on a logged card (owner, 2 Oct 2026). They are
+  // what the plan said, as everywhere on the Plan; what was done is on the
+  // log, which the Plan does not read.
+  const planned =
     session.expectedDurationMinutes === null
       ? null
-      : `${session.expectedDurationMinutes} min`,
-    session.isLocked ? "Locked" : null,
-  ]
+      : `${session.expectedDurationMinutes} min`;
+  if (session.log) {
+    const outcome = COMPLETION_OUTCOME_LABELS[session.log.outcome];
+    return [
+      planned,
+      session.log.actualLocalDate === session.localDate
+        ? outcome
+        : `${outcome} on ${dayLabel(session.log.actualLocalDate)}`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
+  return [planned, session.isLocked ? "Locked" : null]
     .filter(Boolean)
     .join(" · ");
 }
@@ -815,9 +850,11 @@ function weekTotals(week: PlanWeek, sessions: PlanSessionView[]) {
   )} planned`;
 }
 
-function weekLabel(week: PlanWeek, index: number) {
-  if (index === 0) return "This week";
-  if (index === 1) return "Next week";
+/** `offset` is how many weeks the week is from the one holding today. */
+function weekLabel(week: PlanWeek, offset: number) {
+  if (offset === 0) return "This week";
+  if (offset === 1) return "Next week";
+  if (offset === -1) return "Last week";
   return weekRange(week);
 }
 

@@ -91,7 +91,7 @@ export function planDayHref(date: string) {
 /**
  * Where a session's own page lives. `date` is the session's day, which is how
  * one from before today is found: Today always passes it, and the Plan does
- * for the past days of its first week. `from` is a fixed value, never a URL,
+ * for every day before today. `from` is a fixed value, never a URL,
  * and decides only where the page's back link goes.
  */
 export function sessionHref(

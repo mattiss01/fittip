@@ -5,6 +5,7 @@ import {
   formatPlannedTime,
   mondayOf,
   phaseOfWeek,
+  planHistoryStart,
   planWeeks,
   sportKey,
   sportTones,
@@ -70,6 +71,28 @@ describe("plan weeks", () => {
     expect(weekIndexOf(weeks, "2026-10-11")).toBe(1);
     expect(weekIndexOf(weeks, "2027-01-01")).toBe(0);
     expect(weekIndexOf(weeks, null)).toBe(0);
+  });
+
+  it("reaches back thirteen whole weeks before this one, all of them past", () => {
+    // 30 September 2026 is a Wednesday; its week began on the 28th.
+    const firstDate = planHistoryStart("2026-09-30");
+    expect(firstDate).toBe("2026-06-29");
+
+    const weeks = planWeeks(
+      "2026-09-30",
+      "2026-10-13",
+      "2026-10-13",
+      firstDate,
+    );
+    expect(weeks[0].start).toBe("2026-06-29");
+    expect(weeks).toHaveLength(13 + 3);
+    expect(weeks[12].days.every((day) => day.past && !day.beyond)).toBe(true);
+    // This week is no longer the first, so a date in no week falls back to it.
+    const thisWeek = weekIndexOf(weeks, "2026-09-30");
+    expect(thisWeek).toBe(13);
+    expect(weekIndexOf(weeks, "2026-06-28", thisWeek)).toBe(13);
+    expect(weekIndexOf(weeks, null, thisWeek)).toBe(13);
+    expect(weekIndexOf(weeks, "2026-06-30", thisWeek)).toBe(0);
   });
 
   it("formats planned time", () => {

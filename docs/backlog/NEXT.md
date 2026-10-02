@@ -53,13 +53,6 @@ main action. No week ring. The owner flagged a possible bias toward the look the
 so start with Today and adjust from there rather than committing every screen up front. Build
 lane, one screen per merge.
 
-- [ ] **Past weeks on the Plan.** Owner, 2 Oct 2026: be able to go back to earlier weeks.
-      Today the Plan starts at the Monday of this week; the week arrows, the strip and the
-      month calendar all stop there. A past week would be read-only, as the days before
-      today already are, showing what was planned and how each session was logged. Open
-      for the owner: how far back (four weeks, thirteen, or everything), since the Plan
-      loads every week it can show. Progress already shows what was logged, by month, so
-      this is the planned side of the same days. No migration.
 - [ ] **R3 — The other screens, one per merge.** Today, the Plan, the session page,
       Progress and You are done. For each one left: cut the explanatory intro to one line or
       remove it, and say where an explanation must survive. In the order they can be started:
@@ -111,9 +104,13 @@ Not worth their own slot; do them when work lands nearby.
   dates a series was told to skip, so it fires the extension, which then writes nothing
   and costs no revision. Since M3-20; a deleted occurrence now stays in the window for 13
   weeks rather than two. `listSeries` would have to read `skipped_occurrence_dates`.
-- **The Plan carries every week to the browser** — 13 of recurring sessions and 13 more of
-  single ones — and re-reads all of it for every change, though it shows one week. Fine
-  for one athlete's plan; a read per week is the fix if it ever is not.
+- **The Plan carries every week to the browser** — 13 behind today, 13 of recurring
+  sessions and 13 more of single ones — and re-reads all of it for every change, though
+  it shows one week. Fine for one athlete's plan; a read per week is the fix if it ever
+  is not, and is what a longer history than a quarter would need first.
+- **A logged card on the Plan shows the planned minutes, not the logged ones.** "40 min ·
+  Completed" is what the plan said (owner, 2 Oct 2026); the Plan reads a log's outcome and
+  date and not its duration. Progress shows what was done.
 - **A date picked outside the allowed range gets the generic refusal.** The date fields on
   "Copy to", Edit and "Add to" carry `min` and `max`, which iOS Safari's picker does not
   enforce, so a date past day 180 is refused with "Check the session details and the
