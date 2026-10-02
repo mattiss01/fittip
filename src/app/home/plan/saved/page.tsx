@@ -1,10 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { SavedLibrary, type SavedSessionView } from "./saved-library";
-import styles from "./saved.module.css";
 
 import { planWindowFor } from "../plan-window";
+import { SubPageHeader } from "../sub-page-header";
 import {
   saveActivityToLibraryAction,
   updateActivityInLibraryAction,
@@ -53,21 +52,19 @@ export default async function SavedSessionsPage() {
   }
 
   return (
-    <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
-      <header className={homeStyles.masthead}>
-        <div>
-          <p className={homeStyles.kicker}>FitTip / plan / saved</p>
-          <h1>Saved sessions.</h1>
-          <p className={homeStyles.intro}>
-            Sessions you kept to use again. Each one is a copy: changing an
-            entry here changes nothing already in your plan, and changing a
-            planned session changes nothing here.
-          </p>
-        </div>
-      </header>
-      <Link className={styles.backLink} href="/home/plan">
-        Back to the plan
-      </Link>
+    <main className={homeStyles.shell} id="main-content">
+      {/* The line that survives the old intro is the one a library can be
+          misread without: an entry is a copy, not the planned session. The
+          plan's revision was shown here and told the owner nothing. */}
+      <SubPageHeader
+        title="Session Library"
+        line="Each one is a copy. Changing it here changes nothing in your plan."
+        aside={
+          timezoneName === null
+            ? "Time zone not confirmed"
+            : `${saved.length} saved`
+        }
+      />
       <ActivityLibraryProvider
         activities={activities}
         saveToLibrary={saveActivityToLibraryAction}
@@ -89,14 +86,11 @@ export default async function SavedSessionsPage() {
  */
 function ReuseUnavailable({ sessions }: { sessions: SavedSession[] }) {
   return (
-    <>
-      <p className={homeStyles.stamp}>Time zone not confirmed</p>
-      <SavedLibrary
-        dateRange={null}
-        planRevision={0}
-        sessions={sessions.map(toSavedSessionView)}
-      />
-    </>
+    <SavedLibrary
+      dateRange={null}
+      planRevision={0}
+      sessions={sessions.map(toSavedSessionView)}
+    />
   );
 }
 
@@ -120,16 +114,11 @@ async function ReadyLibrary({
   }
 
   return (
-    <>
-      <p className={homeStyles.stamp}>
-        {sessions.length} saved · Plan revision {planRevision}
-      </p>
-      <SavedLibrary
-        dateRange={{ first: today, last: lastPlaceableDate }}
-        planRevision={planRevision}
-        sessions={sessions.map(toSavedSessionView)}
-      />
-    </>
+    <SavedLibrary
+      dateRange={{ first: today, last: lastPlaceableDate }}
+      planRevision={planRevision}
+      sessions={sessions.map(toSavedSessionView)}
+    />
   );
 }
 

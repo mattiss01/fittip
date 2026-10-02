@@ -333,15 +333,11 @@ export const ROADMAP_COPY = {
   reviewOnDate: (date: string) => `Review on ${date}`,
   reviewWhenCondition: (condition: string) => `Review when ${condition}`,
   /**
-   * The route's own frame, moved out of `page.tsx` for the same reason.
-   * "Where this is going." is M3-02's title; the back link and the kicker are
-   * the shell's shape, stated here so no roadmap string is written in a
-   * component.
+   * The route's own frame, moved out of `page.tsx` for the same reason. The
+   * title is the name the Plan's chip gives the page (R3); it was M3-02's
+   * "Where this is going.".
    */
-  backLink: "← Plan",
-  routeKicker: "FitTip / plan / roadmap",
-  routeTitle: "Where this is going.",
-  noRoadmapStamp: "No roadmap yet",
+  routeTitle: "Roadmap",
   supersededRoadmapsHeading: "Superseded roadmaps",
   /**
    * What an expired proposal says.
@@ -377,8 +373,7 @@ export const ROADMAP_COPY = {
     ai_regeneration: "Regenerated",
     owner_edit: "Your edit",
   } satisfies Record<RoadmapProposalOrigin, string>,
-  routeIntro:
-    "Months of direction, not a week of sessions. This is the roadmap you have now, every version before it, and what was proposed along the way.",
+  routeIntro: "Months of direction, not a week of sessions.",
   emptyRoadmapTitle: "No roadmap yet.",
   emptyRoadmapBody:
     "A roadmap is months of direction rather than a week of sessions. Once you have one it stays here, with every version before it.",

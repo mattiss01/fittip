@@ -335,9 +335,12 @@ span.arrow {
   position: relative;
   min-width: 0;
   display: flex;
+  /* A long detail goes under the title instead of squeezing it: beside
+     "40 min planned - Completed" a title was cut to its first letter. */
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.6rem;
+  gap: 0.15rem 0.6rem;
   min-height: 2.9rem;
   padding: 0.5rem 0.75rem 0.5rem 0.9rem;
   border-radius: 0.85rem;
@@ -383,6 +386,7 @@ span.arrow {
 }
 
 .cardTitle {
+  flex: 1 1 6rem;
   min-width: 0;
   overflow: hidden;
   font-size: 1rem;
@@ -570,6 +574,18 @@ span.arrow {
   background: var(--paper);
   box-shadow: var(--shadow-raised);
   animation: sheet-in 220ms var(--ease-out);
+}
+
+/* A question in the middle of the screen: a card, not a sheet. */
+.sheetLayer[data-placement="center"] {
+  align-items: center;
+  padding: 1rem;
+}
+
+.sheetLayer[data-placement="center"] .sheet {
+  max-width: 22rem;
+  padding: 1rem 1.2rem 1.2rem;
+  border-radius: var(--radius-card);
 }
 
 @keyframes sheet-in {

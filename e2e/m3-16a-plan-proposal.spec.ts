@@ -87,9 +87,11 @@ test.describe("M3-16A plan proposal review", () => {
       expect(headers["cache-control"]).toContain("private");
       expect(headers["cache-control"]).toContain("no-store");
       await expect(
-        page.getByRole("heading", { name: "Review a coach proposal." }),
+        page.getByRole("heading", { level: 1, name: "Plan with Coach" }),
       ).toBeVisible();
-      await expect(page.getByText("No proposal open")).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "Ask for a proposal" }),
+      ).toBeVisible();
 
       // Ask for three days: the example coach puts a session on the first and
       // third and leaves the middle one empty, which is what makes a

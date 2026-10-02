@@ -1,10 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { ActivityLibrary, type PersonalActivityView } from "./activity-library";
 
 import homeStyles from "../../home.module.css";
-import styles from "../saved/saved.module.css";
+import { SubPageHeader } from "../sub-page-header";
 import type { PersonalActivity } from "@/server/personal-activities/personal-activities";
 import {
   createPersonalActivityLibrary,
@@ -26,22 +25,14 @@ export default async function PersonalActivitiesPage() {
   }
 
   return (
-    <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
-      <header className={homeStyles.masthead}>
-        <div>
-          <p className={homeStyles.kicker}>FitTip / plan / activities</p>
-          <h1>Your activities.</h1>
-          <p className={homeStyles.intro}>
-            Activities you do often, ready to add to a session. Adding one
-            copies it: changing it here later changes nothing already in your
-            plan, your saved sessions or your logs.
-          </p>
-        </div>
-      </header>
-      <Link className={styles.backLink} href="/home/plan">
-        Back to the plan
-      </Link>
-      <p className={homeStyles.stamp}>{activities.length} in your library</p>
+    <main className={homeStyles.shell} id="main-content">
+      {/* As on the Session Library: what survives is that an activity added
+          to a session is a copy. */}
+      <SubPageHeader
+        title="Activity Library"
+        line="Adding one copies it. Changing it here changes nothing already planned, saved or logged."
+        aside={`${activities.length} saved`}
+      />
       <ActivityLibrary activities={activities.map(toView)} />
     </main>
   );

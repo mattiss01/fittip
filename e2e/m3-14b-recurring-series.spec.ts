@@ -96,7 +96,7 @@ test.describe("M3-14B recurring series surface", () => {
       await expect(page.locator("[role='status']").first()).toContainText(
         "Added to your plan.",
       );
-      await page.getByRole("link", { name: "Back to the plan" }).click();
+      await page.locator("[data-back-link]").click();
 
       // The same create flow reveals recurrence only when requested, with an
       // explicit occurrence review before the bounded series write.

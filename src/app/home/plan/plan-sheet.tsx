@@ -17,12 +17,18 @@ import w from "./plan-week.module.css";
  */
 export function SheetLayer({
   view,
+  placement = "bottom",
   labelledBy,
   onClose,
   children,
 }: {
   /** Which sheet this is, for tests and styles (`data-plan-sheet`). */
   view: string;
+  /**
+   * A sheet rises from the bottom. A short question with two answers stands
+   * in the middle of the screen instead (owner, 2 Oct 2026).
+   */
+  placement?: "bottom" | "center";
   /** The id of the heading inside that names the dialog. */
   labelledBy: string;
   onClose: () => void;
@@ -57,7 +63,7 @@ export function SheetLayer({
   }, [opener]);
 
   return createPortal(
-    <div className={w.sheetLayer} ref={layerRef}>
+    <div className={w.sheetLayer} ref={layerRef} data-placement={placement}>
       <button
         type="button"
         className={w.scrim}

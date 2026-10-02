@@ -1,10 +1,20 @@
 "use client";
 
-import { useActionState, useId, useMemo } from "react";
+import Link from "next/link";
+import {
+  useActionState,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { INITIAL_PLAN_PROPOSAL_ACTION_STATE } from "./action-state";
 import { generatePlanProposalAction } from "./actions";
 import styles from "./proposal.module.css";
+
+import { SheetLayer } from "../plan-sheet";
 
 import {
   PLAN_PROPOSAL_COPY,
@@ -30,6 +40,11 @@ export function ComposeProposal({ hasGoals }: { hasGoals: boolean }) {
     INITIAL_PLAN_PROPOSAL_ACTION_STATE,
   );
   const fieldId = useId();
+  const [goalPrompt, setGoalPrompt] = useState(false);
+  const promptTitle = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (goalPrompt) promptTitle.current?.focus();
+  }, [goalPrompt]);
   const idempotencyKey = useMemo(
     () => globalThis.crypto.randomUUID().replaceAll("-", ""),
     [],
@@ -38,8 +53,6 @@ export function ComposeProposal({ hasGoals }: { hasGoals: boolean }) {
   return (
     <section className={styles.compose} aria-label={COPY.composeTitle}>
       <h2>{COPY.composeTitle}</h2>
-      <p className={styles.support}>{COPY.composeSupport}</p>
-      {hasGoals ? null : <p className={styles.notice}>{COPY.noGoalsNotice}</p>}
 
       <form
         className={styles.form}
@@ -60,7 +73,6 @@ export function ComposeProposal({ hasGoals }: { hasGoals: boolean }) {
             required
             defaultValue={state.draft?.dayCount || PLAN_PROPOSAL_DEFAULT_DAYS}
           />
-          <p className={styles.helper}>{COPY.dayCountHelper}</p>
         </div>
 
         <div className={styles.field}>
@@ -72,13 +84,26 @@ export function ComposeProposal({ hasGoals }: { hasGoals: boolean }) {
             maxLength={PLAN_PROPOSAL_NOTE_MAX_LENGTH}
             defaultValue={state.draft?.planningNote ?? ""}
           />
-          <p className={styles.helper}>{COPY.planningNoteHelper}</p>
         </div>
 
         <p className={styles.consequence}>{COPY.generateSupport}</p>
-        <button className={styles.primary} type="submit" disabled={pending}>
-          {COPY.generateAction}
-        </button>
+        {hasGoals ? (
+          <button className={styles.primary} type="submit" disabled={pending}>
+            {COPY.generateAction}
+          </button>
+        ) : (
+          // The action refuses without an active goal, and its refusal used
+          // to land under the fold, so the button looked dead (owner, 2 Oct
+          // 2026). Without one it asks nothing and opens the way to Goals.
+          <button
+            className={styles.primary}
+            type="button"
+            aria-haspopup="dialog"
+            onClick={() => setGoalPrompt(true)}
+          >
+            {COPY.generateAction}
+          </button>
+        )}
         <p
           className={state.status === "idle" ? styles.srOnly : styles.notice}
           data-state={pending ? "pending" : state.status}
@@ -88,6 +113,32 @@ export function ComposeProposal({ hasGoals }: { hasGoals: boolean }) {
           {pending ? COPY.pending : state.message}
         </p>
       </form>
+
+      {goalPrompt ? (
+        <SheetLayer
+          view="goal-needed"
+          placement="center"
+          labelledBy={`${fieldId}-goal-needed`}
+          onClose={() => setGoalPrompt(false)}
+        >
+          <div className={styles.goalPrompt}>
+            <h2 id={`${fieldId}-goal-needed`} ref={promptTitle} tabIndex={-1}>
+              {COPY.noGoalsTitle}
+            </h2>
+            <p>{COPY.noGoalsNotice}</p>
+            <Link className={styles.planLink} href="/home/you/goals">
+              {COPY.noGoalsLink}
+            </Link>
+            <button
+              className={styles.dangerAction}
+              type="button"
+              onClick={() => setGoalPrompt(false)}
+            >
+              {COPY.noGoalsCancel}
+            </button>
+          </div>
+        </SheetLayer>
+      ) : null}
     </section>
   );
 }

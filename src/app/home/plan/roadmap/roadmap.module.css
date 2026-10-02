@@ -23,10 +23,12 @@
   --attention-deferred: #8a8f88;
 }
 
+/* The shell centres its children and lets each shrink, so this takes the row. */
 .screen {
+  width: 100%;
   display: grid;
-  gap: 1.6rem;
-  margin-top: 1.75rem;
+  gap: 1rem;
+  margin-top: 1.25rem;
 }
 
 /* The static non-diagnostic copy. Server-owned, never model-authored, and
@@ -35,8 +37,8 @@
 .safetyNotice {
   margin: 0;
   padding: 0.85rem 1rem;
-  border: 1px solid var(--roadmap-checkpoint);
-  border-left-width: var(--roadmap-rule);
+  border-radius: var(--radius-control);
+  box-shadow: inset var(--roadmap-rule) 0 0 var(--roadmap-checkpoint);
   background: #fff4ec;
   color: #6d2f13;
   font-size: 0.92rem;
@@ -44,8 +46,7 @@
 }
 
 .card {
-  padding: 1.25rem;
-  border: 1px solid var(--border);
+  padding: 1.25rem 1.2rem;
   background: var(--surface);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
@@ -54,6 +55,7 @@
 .cardHeading {
   margin: 0 0 0.5rem;
   font-size: 1.35rem;
+  font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.15;
 }
@@ -361,9 +363,9 @@
 .state {
   display: inline-block;
   margin: 0;
-  padding: 0.2rem 0.45rem;
+  padding: 0.2rem 0.55rem;
   border: 1px solid currentColor;
-  border-radius: 0.2rem;
+  border-radius: var(--radius-pill);
   color: var(--attention-maintenance);
   font-family: var(--font-mono);
   font-size: 0.68rem;
@@ -412,9 +414,9 @@
 
 .memoryPanel {
   padding: 1.1rem;
-  border: 1px dashed var(--border);
-  border-radius: 0.6rem;
-  background: #f7f4ea;
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius-card);
+  background: var(--surface);
 }
 
 .memoryPanel a {
@@ -433,14 +435,13 @@
   }
 }
 
-/* ---- Controls (M3-15F) --------------------------------------------------
-   The surface's one loud element stays the checkpoint notch on the spine, so
-   nothing here competes with it. A control reads as part of the survey rather
-   than as an app chrome button: hairline rules, the band colour, monospace
-   labels in the same register as the state chips, and a single square-cornered
-   primary. The only colour spent is the checkpoint terracotta, reused for the
-   example tag, because that tag is the one piece of metadata on this screen
-   that changes how the words under it should be read. */
+/* ---- Controls (M3-15F, restyled for R3 on 2 Oct 2026) ------------------
+   The controls are the app's own now: rounded fields, sans buttons, and the
+   darker ember for the one action that asks the coach, as on the Plan. They
+   were hairline rules, monospace labels and a square-cornered primary, which
+   read as a different app under the new heading. The checkpoint terracotta
+   still marks the example tag, because that tag is the one piece of metadata
+   on this screen that changes how the words under it should be read. */
 
 .form {
   display: grid;
@@ -454,24 +455,24 @@
 }
 
 .label {
-  color: var(--roadmap-spine);
+  color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 500;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
 .input,
 .textarea {
   width: 100%;
-  min-height: 2.75rem;
-  padding: 0.6rem 0.7rem;
-  border: 1px solid var(--roadmap-spine);
-  border-radius: 0;
+  min-height: 3rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
   background: #fff;
   color: inherit;
-  font: inherit;
+  font: 400 1rem/1.35 var(--font-sans);
 }
 
 .textarea {
@@ -517,33 +518,30 @@
 .secondaryAction,
 .quietAction {
   width: 100%;
-  min-height: 2.75rem;
+  min-height: 3rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.6rem 0.9rem;
-  border: 1px solid var(--roadmap-spine);
-  border-radius: 0;
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  padding: 0.6rem 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  font: 700 0.95rem var(--font-sans);
   cursor: pointer;
 }
 
 .primaryAction {
-  background: var(--roadmap-spine);
-  color: #f4f7ef;
+  min-height: 3.2rem;
+  background: var(--accent-dark);
+  color: var(--paper);
 }
 
 .secondaryAction {
-  background: var(--roadmap-band);
-  color: var(--roadmap-spine);
+  background: var(--line);
+  color: var(--pine);
 }
 
 .quietAction {
-  border-color: var(--border);
+  border-color: var(--rule);
   background: transparent;
   color: var(--muted);
 }
@@ -568,8 +566,9 @@
 .notice {
   margin: 1rem 0 0;
   padding: 0.75rem 0.9rem;
-  border: 1px solid var(--border);
-  border-left: var(--roadmap-rule) solid var(--roadmap-node);
+  border-radius: var(--radius-control);
+  box-shadow: inset var(--roadmap-rule) 0 0
+    var(--notice-rule, var(--roadmap-node));
   background: #f4f7ef;
   line-height: 1.5;
 }
@@ -582,7 +581,7 @@
 .notice[data-roadmap-notice="lost-render"],
 .notice[data-roadmap-notice="recovered"],
 .notice[data-roadmap-notice="error"] {
-  border-left-color: var(--roadmap-checkpoint);
+  --notice-rule: var(--roadmap-checkpoint);
   background: #fff4ec;
 }
 
@@ -599,9 +598,9 @@
 .exampleTag {
   display: inline-block;
   margin: 0.5rem 0 0;
-  padding: 0.2rem 0.45rem;
+  padding: 0.2rem 0.55rem;
   border: 1px solid currentColor;
-  border-radius: 0.2rem;
+  border-radius: var(--radius-pill);
   color: var(--roadmap-checkpoint);
   font-family: var(--font-mono);
   font-size: 0.68rem;
@@ -627,7 +626,8 @@
 .editGroup {
   margin: 0;
   padding: 0.9rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
   display: grid;
   gap: 1rem;
 }

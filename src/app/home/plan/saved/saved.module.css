@@ -1,34 +1,18 @@
 /*
- * The library extends the FitTip ledger, but it is reference material rather
- * than the working sheet, so it is set in archival blue-black instead of the
- * Plan's action orange. Its one signature is the catalog card's solid name
- * tab across the top edge. Nothing here scores, ranks, or counts a streak.
+ * The two libraries, in the Coach's note direction (R3, owner, 2 Oct 2026):
+ * paper cards on the shared card token, a bold sans title, rounded controls
+ * and the Plan's orange for the one main action. They were set in an archival
+ * blue-black with a solid name tab and square mono buttons, which read as a
+ * different app under the new heading. Nothing here scores, ranks, or counts
+ * a streak.
  */
 
-.page {
-  --library-ink: #2f4a7a;
-  --library-stock: #f9f7ec;
-}
-
-.backLink {
-  width: fit-content;
-  min-height: 2.75rem;
-  display: inline-flex;
-  align-items: center;
-  margin-top: 1.25rem;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid var(--ledger-ink);
-  color: var(--ledger-ink);
-  font: 500 0.68rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-decoration: none;
-  text-transform: uppercase;
-}
-
+/* The shell centres its children and lets each shrink, so this takes the row. */
 .library {
+  width: 100%;
   display: grid;
-  gap: 1.6rem;
-  margin-top: 1.5rem;
+  gap: 1rem;
+  margin-top: 1.25rem;
 }
 
 .notice {
@@ -37,9 +21,8 @@
   top: 0.75rem;
   margin: 0;
   padding: 0.8rem 1rem;
-  border: 1px solid var(--line);
-  background: #e4ebf5;
   border-radius: var(--radius-card);
+  background: var(--paper);
   box-shadow: var(--shadow-card);
   line-height: 1.4;
 }
@@ -54,7 +37,7 @@
 
 .inlineNotice {
   margin: 0.6rem 0 0;
-  color: var(--ledger-ink);
+  color: var(--pine);
   font-size: 0.86rem;
   line-height: 1.4;
 }
@@ -64,34 +47,36 @@
   min-height: 2.75rem;
   display: inline-flex;
   align-items: center;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid var(--ledger-ink);
-  color: var(--ledger-ink);
-  font: 500 0.7rem var(--font-mono);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-control);
+  background: var(--line);
+  color: var(--pine);
+  font: 700 0.95rem var(--font-sans);
   text-decoration: none;
 }
 
 .empty {
   padding: 1.2rem;
-  border: 1px dashed var(--ledger-ink);
-  background: var(--ledger-paper);
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius-card);
 }
 
 .empty h2 {
-  margin: 0 0 0.6rem;
-  font-size: clamp(1.5rem, 7vw, 2.1rem);
-  letter-spacing: -0.03em;
+  margin: 0 0 0.4rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .empty p {
   margin: 0;
-  color: var(--ledger-muted);
+  color: var(--moss);
   line-height: 1.5;
 }
 
 .cards {
   display: grid;
-  gap: 1.35rem;
+  gap: 1rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -99,56 +84,60 @@
 
 /* A saved session is a reusable card; it sits on the shared card token. */
 .card {
-  border: 1px solid var(--line);
+  min-width: 0;
+  padding: 1.1rem 1.1rem 1rem;
   border-radius: var(--radius-card);
-  background: var(--library-stock);
+  background: var(--paper);
   box-shadow: var(--shadow-card);
 }
 
+/* The name an entry was saved under, above the title it gives a session. */
 .tab {
-  margin: 0;
-  padding: 0.55rem 0.75rem;
-  background: var(--library-ink);
-  color: var(--ledger-paper);
-  font: 500 0.68rem var(--font-mono);
-  letter-spacing: 0.07em;
+  margin: 0 0 0.2rem;
   overflow-wrap: anywhere;
-  text-transform: uppercase;
+  color: var(--moss);
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
 .cardBody {
   min-width: 0;
-  padding: 0.9rem;
 }
 
 .cardBody h2 {
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: 1.25rem;
+  font-size: 1.35rem;
+  font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.15;
 }
 
 .meta {
-  margin: 0.4rem 0 0;
-  color: var(--ledger-muted);
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  font-weight: 500;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  margin: 0.3rem 0 0;
+  color: var(--moss);
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .body {
   margin: 0.55rem 0 0;
   overflow-wrap: anywhere;
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   line-height: 1.45;
 }
 
 .disclosure {
-  margin-top: 0.55rem;
-  border: 1px solid var(--ledger-rule);
+  margin-top: 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+}
+
+/* The first one follows the card's own text, so it stands a little apart. */
+.meta + .disclosure,
+.body + .disclosure,
+.cardBody > [data-activity-list] + .disclosure {
+  margin-top: 0.9rem;
 }
 
 /* "Save session to library" reads as a text action beside Edit log; opened,
@@ -168,15 +157,36 @@
   padding-top: 0.2rem;
 }
 
+/* "New activity" stands on the page, not in a card, so it is one itself. */
+.library > .disclosure {
+  margin-top: 0;
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+.library > .disclosure > summary {
+  padding: 0 1.1rem;
+}
+
+.library > .disclosure > .form {
+  padding: 0 1.1rem 1.1rem;
+}
+
 .disclosure > summary {
-  min-height: 2.9rem;
+  min-height: 3rem;
   display: flex;
   align-items: center;
-  padding: 0 0.7rem;
+  padding: 0 0.9rem;
+  border-radius: var(--radius-control);
   cursor: pointer;
-  font: 500 0.68rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.disclosure > .consequence {
+  padding: 0 0.9rem 0.7rem;
 }
 
 .planDisclosure > summary {
@@ -201,7 +211,7 @@
 .form {
   display: grid;
   gap: 0.7rem;
-  padding: 0 0.7rem 0.8rem;
+  padding: 0 0.9rem 0.9rem;
 }
 
 .field {
@@ -212,7 +222,7 @@
 
 .form label {
   display: block;
-  color: var(--ledger-muted);
+  color: var(--moss);
   font: 500 0.62rem var(--font-mono);
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -222,15 +232,13 @@
 .form textarea,
 .form select {
   width: 100%;
-  min-height: 2.9rem;
-  padding: 0.6rem;
-  border: 1px solid var(--ledger-ink);
-  border-radius: 0;
+  min-height: 3rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
   background: white;
-  color: var(--ledger-ink);
-  font:
-    400 1rem/1.35 Arial,
-    sans-serif;
+  color: var(--pine);
+  font: 400 1rem/1.35 var(--font-sans);
   text-transform: none;
 }
 
@@ -247,31 +255,38 @@
 
 .consequence {
   margin: 0;
-  color: var(--ledger-muted);
-  font-size: 0.84rem;
+  color: var(--moss);
+  font-size: 0.86rem;
   line-height: 1.45;
 }
 
 .action,
 .primary {
-  min-height: 2.9rem;
+  min-height: 3rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem 0.7rem;
-  border: 1px solid var(--ledger-ink);
-  border-radius: 0;
-  background: transparent;
-  color: var(--ledger-ink);
-  font: 500 0.68rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--line);
+  color: var(--pine);
+  font: 700 0.95rem var(--font-sans);
 }
 
+.action:hover {
+  background: var(--rule);
+}
+
+/* The Plan's orange, as on "Create session" and "Edit". */
 .primary {
-  background: var(--library-ink, #2f4a7a);
-  border-color: var(--ledger-ink);
-  color: white;
+  min-height: 3.2rem;
+  background: var(--ember);
+  color: var(--paper);
+}
+
+.primary:hover {
+  background: var(--ember-dark);
 }
 
 .action:disabled,
@@ -281,18 +296,17 @@
 
 .repeatLink {
   width: fit-content;
-  min-height: 2.9rem;
+  min-height: 3rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   margin: 0.7rem 0 0;
-  padding: 0.5rem 0.7rem;
-  border: 1px solid var(--ledger-ink);
-  color: var(--ledger-ink);
-  font: 500 0.68rem var(--font-mono);
-  letter-spacing: 0.04em;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-control);
+  background: var(--line);
+  color: var(--pine);
+  font: 700 0.95rem var(--font-sans);
   text-decoration: none;
-  text-transform: uppercase;
 }
 
 .srOnly {
@@ -314,7 +328,6 @@
 .library select:focus-visible,
 .library summary:focus-visible,
 .library a:focus-visible,
-.backLink:focus-visible,
 .planDisclosure button:focus-visible,
 .planDisclosure input:focus-visible,
 .planPanel button:focus-visible,

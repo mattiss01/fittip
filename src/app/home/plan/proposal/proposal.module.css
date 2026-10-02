@@ -15,9 +15,11 @@
   padding-bottom: 9rem;
 }
 
+/* The shell centres its children and lets each shrink, so these take the row. */
 .compose,
 .emptyState,
 .review {
+  width: 100%;
   display: grid;
   gap: 0.75rem;
   margin-top: 1.5rem;
@@ -26,7 +28,9 @@
 .compose > h2,
 .emptyState > h2 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .support,
@@ -45,11 +49,22 @@
 .form {
   display: grid;
   gap: 0.85rem;
-  padding: 1rem;
-  border: 1px solid var(--line);
+  padding: 1.1rem;
   background: var(--ledger-paper);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
+}
+
+/* The question that stands in for asking when there is no goal to plan toward. */
+.goalPrompt {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.goalPrompt p {
+  margin: 0 0 0.4rem;
+  color: var(--ledger-muted);
+  line-height: 1.5;
 }
 
 .field {
@@ -69,12 +84,13 @@
 .form input,
 .form textarea {
   width: 100%;
-  min-height: 2.75rem;
-  padding: 0.55rem 0.6rem;
-  border: 1px solid var(--ledger-ink);
-  background: var(--paper);
+  min-height: 3rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: white;
   color: var(--ledger-ink);
-  font: inherit;
+  font: 400 1rem/1.35 var(--font-sans);
 }
 
 .form textarea {
@@ -94,15 +110,16 @@
 .day {
   display: grid;
   gap: 0.6rem;
-  padding: 0.85rem;
-  border: 1px solid var(--line);
+  padding: 1rem;
   background: var(--ledger-paper);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
 }
 
 .day[data-today="true"] {
-  border-left: 7px solid var(--plan-today);
+  box-shadow:
+    inset 4px 0 0 var(--plan-today),
+    var(--shadow-card);
 }
 
 .dayStamp {
@@ -119,8 +136,9 @@
 
 .dayMark,
 .recoveryStamp {
-  padding: 0.1rem 0.35rem;
-  border: 1px solid var(--ledger-ink);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--sage);
   color: var(--ledger-ink);
   font-size: 0.6rem;
 }
@@ -140,9 +158,10 @@
 .proposed {
   display: grid;
   gap: 0.4rem;
-  padding: 0.7rem;
-  border: 1px solid var(--ledger-rule);
-  background: var(--paper);
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--sage);
 }
 
 /*
@@ -183,8 +202,9 @@
 }
 
 .badge {
-  padding: 0.1rem 0.4rem;
-  border: 1px solid var(--ledger-ink);
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-pill);
   font: 500 0.6rem var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -206,9 +226,8 @@
 .meta {
   margin: 0;
   color: var(--ledger-muted);
-  font: 500 0.66rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .body,
@@ -246,13 +265,12 @@
 
 .choice {
   min-height: 2.75rem;
-  padding: 0.5rem 0.7rem;
-  border: 1px solid var(--ledger-ink);
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
   background: var(--ledger-paper);
   color: var(--ledger-ink);
-  font: 500 0.68rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font: 700 0.9rem var(--font-sans);
   cursor: pointer;
 }
 
@@ -303,17 +321,18 @@
 .primary,
 .dangerAction {
   width: 100%;
-  min-height: 2.75rem;
-  padding: 0.6rem 0.8rem;
-  border: 1px solid var(--ledger-ink);
-  font: 500 0.72rem var(--font-mono);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  min-height: 3.2rem;
+  padding: 0.6rem 1rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  font: 700 0.95rem var(--font-sans);
   cursor: pointer;
 }
 
+/* The darker ember, as on the Plan's own "Plan with Coach": paper text on
+   --ember is short of the contrast m3-16a holds that link to. */
 .primary {
-  background: var(--ledger-ink);
+  background: var(--ember-dark);
   color: var(--ledger-paper);
 }
 
@@ -323,7 +342,7 @@
 }
 
 .dangerAction {
-  background: var(--ledger-paper);
+  background: var(--line);
   color: var(--ledger-ink);
 }
 
@@ -335,15 +354,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.75rem;
-  padding: 0.6rem 0.8rem;
-  border: 1px solid var(--ledger-ink);
-  background: var(--ledger-ink);
+  min-height: 3.2rem;
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-control);
+  background: var(--ember-dark);
   color: var(--ledger-paper);
-  font: 500 0.72rem var(--font-mono);
-  letter-spacing: 0.05em;
+  font: 700 0.95rem var(--font-sans);
   text-decoration: none;
-  text-transform: uppercase;
 }
 
 .planLink:focus-visible {
@@ -357,8 +374,8 @@
 .inlineNotice,
 .exampleNotice {
   margin: 0;
-  padding: 0.7rem 0.85rem;
-  border: 1px solid var(--ledger-ink);
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-control);
   background: #e7f0dc;
   font-size: 0.85rem;
   line-height: 1.4;
@@ -409,18 +426,19 @@
  */
 .disclosure {
   margin-top: 0.5rem;
-  border: 1px solid var(--ledger-rule);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
 }
 
 .disclosure > summary {
-  min-height: 2.9rem;
+  min-height: 3rem;
   display: flex;
   align-items: center;
-  padding: 0 0.7rem;
+  padding: 0 0.9rem;
+  border-radius: var(--radius-control);
   cursor: pointer;
-  font: 500 0.68rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.95rem;
+  font-weight: 700;
 }
 
 .editorPanel {
@@ -444,14 +462,13 @@
 
 .secondary {
   width: 100%;
-  min-height: 2.75rem;
-  padding: 0.6rem 0.8rem;
-  border: 1px solid var(--ledger-ink);
-  background: var(--ledger-paper);
+  min-height: 3rem;
+  padding: 0.6rem 1rem;
+  background: var(--line);
   color: var(--ledger-ink);
-  font: 500 0.72rem var(--font-mono);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  border: 0;
+  border-radius: var(--radius-control);
+  font: 700 0.95rem var(--font-sans);
   cursor: pointer;
 }
 
@@ -463,18 +480,18 @@
 .staleNotice,
 .roadmapNotice {
   margin: 0 0 0.9rem;
-  padding: 0.7rem 0.8rem;
-  border: 1px solid var(--ledger-rule);
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-control);
   background: var(--ledger-paper);
-  font-size: 0.82rem;
+  box-shadow: var(--shadow-card);
+  font-size: 0.85rem;
   line-height: 1.5;
 }
 
 .roadmapNotice > h2 {
   margin: 0 0 0.3rem;
-  font: 500 0.68rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.95rem;
+  font-weight: 800;
 }
 
 .staleReasons {
@@ -496,14 +513,15 @@
   gap: 0.5rem;
   margin-top: 1.5rem;
   padding: 1.1rem;
-  border: 1px dashed var(--ledger-ink);
-  border-radius: 0.6rem;
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius-card);
   background: var(--ledger-paper);
 }
 
 .memoryPanel > h2 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1.1rem;
+  font-weight: 800;
 }
 
 .memoryPanel a {
@@ -516,9 +534,11 @@
  * scrolling past every decision. It is a pointer, not a second copy: the count
  * and the link live here, the explanation stays in the panel. */
 .memoryJump {
+  width: 100%;
   margin: 1.5rem 0 0;
-  padding: 0.7rem 0.85rem;
-  border-left: 3px solid var(--ledger-ink);
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-control);
+  box-shadow: inset 3px 0 0 var(--ledger-ink);
   background: var(--ledger-paper);
   font-size: 0.85rem;
   line-height: 1.45;
@@ -565,17 +585,19 @@
 
 .regenerate textarea {
   width: 100%;
-  padding: 0.5rem;
-  border: 1px solid var(--ledger-ink);
-  background: var(--ledger-paper);
-  font: inherit;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: white;
+  font: 400 1rem/1.35 var(--font-sans);
 }
 
 /* What the owner asked for, shown above the answer to it. */
 .regeneratedFrom {
   margin: 1rem 0 0;
-  padding: 0.7rem 0.85rem;
-  border-left: 3px solid var(--ledger-ink);
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-control);
+  box-shadow: inset 3px 0 0 var(--ledger-ink);
   background: var(--ledger-paper);
   font-size: 0.85rem;
   line-height: 1.45;
