@@ -70,10 +70,10 @@ lane, one screen per merge.
     says so. The owner asked for everything accepted first; this is its sharpest edge.
 - [ ] **Goals: how they look and what they hold, again.** Owner, 2 Oct 2026. Which
       attributes a goal has (title, outcome, category, areas, dates, target measure,
-      rationale, constraints) and how a card shows them. With it: Pause, Abandoned and
-      Archive are "a lot of options for almost the same"; the owner suggested Abandon and
-      Archive could be one. Today Pause and Abandoned can be undone (Resume, Reopen) and
-      Archive cannot. And a goal's "Achieved on" day is its last-changed time, because
+      rationale, constraints) and how a card shows them. With it: Pause and Abandoned are
+      still two ways to set a goal aside, both undoable (Resume, Reopen). Archive, the
+      third and the only permanent one, left the card on 2 Oct 2026; the server still
+      has the operation and older archived goals still show in History. And a goal's "Achieved on" day is its last-changed time, because
       the lifecycle log records only reopening; logging every change is a migration.
       It is wrong in one case: setup filing a new answer over a finished goal of the
       same title moves the day to then.

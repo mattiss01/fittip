@@ -154,7 +154,7 @@ export async function changeGoalAction(
       if (error.reason === "archive-required") {
         return resultState(
           "conflict",
-          "This goal has retained history. Archive it instead of deleting it.",
+          "This goal has history, so it cannot be deleted. Mark it Abandoned instead.",
           true,
           "archive-required",
         );

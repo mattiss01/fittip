@@ -213,7 +213,7 @@ export function GoalManager({ initialGoals, expectedRevision }: Props) {
         pending={pending}
       />
       <HistorySection
-        title="History and archive"
+        title="History"
         goals={historical}
         expectedRevision={expectedRevision}
         action={action}
@@ -320,14 +320,10 @@ function GoalCard({
               action={action}
               pending={pending}
             />
-            <ConfirmedAction
-              operation="archive"
-              label="Archive"
-              goal={goal}
-              expectedRevision={expectedRevision}
-              action={action}
-              pending={pending}
-            />
+            {/* No Archive (owner, 2 Oct 2026): beside Pause and Abandoned it
+                was a third way to set a goal aside, and the only one that
+                could not be undone. Goals archived before still show in
+                History; the operation itself is untouched on the server. */}
             <ConfirmedAction
               operation="delete"
               label="Delete"
@@ -338,8 +334,8 @@ function GoalCard({
             />
           </div>
           <p className={styles.consequence}>
-            Archive keeps this record. Permanent delete succeeds only before the
-            goal has retained history or another record references it.
+            Delete works only before the goal has history or another record
+            refers to it. After that, Abandoned sets it aside and keeps it.
           </p>
         </details>
       </div>
@@ -595,15 +591,10 @@ const CONFIRMATION_COPY = {
     consequence:
       "This ends active attention and records the goal as abandoned. Reopening it later requires a separate action.",
   },
-  archive: {
-    confirm: "Confirm archive",
-    consequence:
-      "This keeps the goal as history and removes it from active use. It will remain in your archive.",
-  },
   delete: {
     confirm: "Confirm permanent delete",
     consequence:
-      "This permanently deletes an unused goal and cannot be undone. Goals with retained history must be archived instead.",
+      "This permanently deletes an unused goal and cannot be undone. A goal with history cannot be deleted; mark it Abandoned instead.",
   },
 } as const;
 

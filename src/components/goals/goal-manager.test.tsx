@@ -172,7 +172,7 @@ describe("GoalManager", () => {
       />,
     );
     expect(screen.getByText("Paused")).toBeVisible();
-    expect(screen.getByText("History and archive")).toBeVisible();
+    expect(screen.getByText("History")).toBeVisible();
     expect(screen.getByRole("button", { name: "Resume" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Reopen" })).toBeEnabled();
   });
@@ -200,7 +200,6 @@ describe("GoalManager", () => {
     for (const [action, consequence, confirmation] of [
       ["Achieved", /records the goal as achieved/i, "Confirm achieved"],
       ["Abandoned", /records the goal as abandoned/i, "Confirm abandoned"],
-      ["Archive", /remain in your archive/i, "Confirm archive"],
       [
         "Delete",
         /permanently deletes an unused goal/i,
