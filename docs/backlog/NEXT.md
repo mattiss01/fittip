@@ -53,6 +53,13 @@ main action. No week ring. The owner flagged a possible bias toward the look the
 so start with Today and adjust from there rather than committing every screen up front. Build
 lane, one screen per merge.
 
+- [ ] **Past weeks on the Plan.** Owner, 2 Oct 2026: be able to go back to earlier weeks.
+      Today the Plan starts at the Monday of this week; the week arrows, the strip and the
+      month calendar all stop there. A past week would be read-only, as the days before
+      today already are, showing what was planned and how each session was logged. Open
+      for the owner: how far back (four weeks, thirteen, or everything), since the Plan
+      loads every week it can show. Progress already shows what was logged, by month, so
+      this is the planned side of the same days. No migration.
 - [ ] **R3 — The other screens, one per merge.** Today, the Plan, the session page,
       Progress and You are done. For each one left: cut the explanatory intro to one line or
       remove it, and say where an explanation must survive. In the order they can be started:

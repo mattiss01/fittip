@@ -92,6 +92,42 @@ test.describe("M3-12 manual continuous planning", () => {
       await expect(
         await sessionCard(page, raceDay, "Autumn race"),
       ).toBeVisible();
+      // The month calendar is the way back from a far week: it marks the day
+      // that holds the race, and choosing today shows this week again.
+      await page.getByRole("button", { name: "Open calendar" }).click();
+      const calendar = page.getByRole("dialog");
+      // The sheet opens on the month most of the race's week is in, which is
+      // not always the race's own: step to it either way.
+      const shownMonth = await calendar
+        .locator("[data-plan-month]")
+        .getAttribute("data-plan-month");
+      if (shownMonth !== raceDay.slice(0, 7)) {
+        await calendar
+          .getByRole("button", {
+            name:
+              (shownMonth ?? "") < raceDay.slice(0, 7)
+                ? "Next month"
+                : "Previous month",
+          })
+          .click();
+      }
+      await expect(
+        calendar.locator(`[data-month-date="${raceDay}"]`),
+      ).toHaveAccessibleName(/, 1 session$/);
+      for (let step = 0; step < 8; step += 1) {
+        if (
+          (await calendar.locator(`[data-month-date="${today}"]`).count()) > 0
+        ) {
+          break;
+        }
+        await calendar.getByRole("button", { name: "Previous month" }).click();
+      }
+      await calendar.locator(`[data-month-date="${today}"]`).click();
+      await expect(calendar).toBeHidden();
+      await expect(
+        page.getByRole("heading", { name: "This week", exact: true }),
+      ).toBeVisible();
+      await planDay(page, raceDay);
       // This owner has no series, so the week says nothing about repeats.
       await expect(page.locator("[data-plan-repeats-through]")).toHaveCount(0);
       // Today, asked for that day, shows it and says why no repeat is there.
