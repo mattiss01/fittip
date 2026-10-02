@@ -1,12 +1,52 @@
 /*
- * You in the Coach's note direction (R3): a heading, the three places that sit
- * under it as rows of one card, and Sign out. Each row keeps one line saying
- * what the place is for; the longer explanations live on the pages themselves.
+ * You in the Coach's note direction (R3): a heading with Settings in its
+ * corner, and the three places that sit under it as rows of one card. Each row
+ * keeps one line saying what the place is for; the longer explanations live on
+ * the pages themselves. Sign out stays here; Settings is its own page.
  */
 
 .header {
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   padding: 1rem 0 0;
+}
+
+.settings {
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  margin-right: -0.5rem;
+  border-radius: var(--radius-pill);
+  color: var(--pine);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings:active {
+  background: var(--line);
+}
+
+.backLink {
+  width: fit-content;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0.25rem 0 0 -0.35rem;
+  padding: 0 0.7rem 0 0.35rem;
+  border-radius: var(--radius-pill);
+  color: var(--pine);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.backLink:active {
+  background: var(--line);
 }
 
 .header h1 {
@@ -72,6 +112,13 @@
 .signOut {
   width: 100%;
   margin-top: 1.5rem;
+}
+
+.nothingYet {
+  width: 100%;
+  margin: 1rem 0 0;
+  color: var(--moss);
+  line-height: 1.55;
 }
 
 .signOut button {
