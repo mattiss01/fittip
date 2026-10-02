@@ -263,7 +263,9 @@ export function PlanManager({
               <button
                 type="button"
                 className={w.calendar}
-                aria-label="Open calendar"
+                // The visible label is the week's title, so the name starts
+                // with it: someone asking for "This week" by voice gets this.
+                aria-label={`${weekLabel(week, weekIndex)}, open calendar`}
                 aria-haspopup="dialog"
                 onClick={() => setMonthOpen(true)}
               >
@@ -670,90 +672,88 @@ function DaySheet({
       labelledBy="plan-sheet-title"
       onClose={onClose}
     >
-      <>
-        <header className={w.sheetHead}>
-          {sheet.view === "menu" ? (
-            <span />
-          ) : (
-            <button
-              type="button"
-              className={w.sheetBack}
-              onClick={() => onChange({ date: sheet.date, view: "menu" })}
-            >
-              ‹ Back
-            </button>
-          )}
-          <button type="button" className={w.sheetClose} onClick={onClose}>
-            Close
-          </button>
-        </header>
-        <h2 id="plan-sheet-title" ref={titleRef} tabIndex={-1}>
-          {sheet.view === "library"
-            ? "Use session from library"
-            : sheet.view === "new"
-              ? "New session"
-              : dayLabel(sheet.date)}
-        </h2>
-        {sheet.view === "menu" ? null : (
-          <p className={w.sheetDate}>
-            {dayLabel(sheet.date)}
-            {isRecoveryDay ? " · Recovery day" : null}
-          </p>
-        )}
+      <header className={w.sheetHead}>
         {sheet.view === "menu" ? (
-          <div className={w.sheetChoices}>
+          <span />
+        ) : (
+          <button
+            type="button"
+            className={w.sheetBack}
+            onClick={() => onChange({ date: sheet.date, view: "menu" })}
+          >
+            ‹ Back
+          </button>
+        )}
+        <button type="button" className={w.sheetClose} onClick={onClose}>
+          Close
+        </button>
+      </header>
+      <h2 id="plan-sheet-title" ref={titleRef} tabIndex={-1}>
+        {sheet.view === "library"
+          ? "Use session from library"
+          : sheet.view === "new"
+            ? "New session"
+            : dayLabel(sheet.date)}
+      </h2>
+      {sheet.view === "menu" ? null : (
+        <p className={w.sheetDate}>
+          {dayLabel(sheet.date)}
+          {isRecoveryDay ? " · Recovery day" : null}
+        </p>
+      )}
+      {sheet.view === "menu" ? (
+        <div className={w.sheetChoices}>
+          <button
+            type="button"
+            className={w.sheetChoice}
+            onClick={() => onChange({ date: sheet.date, view: "new" })}
+          >
+            New session
+          </button>
+          {savedSessions.length === 0 ? null : (
             <button
               type="button"
               className={w.sheetChoice}
-              onClick={() => onChange({ date: sheet.date, view: "new" })}
+              onClick={() => onChange({ date: sheet.date, view: "library" })}
             >
-              New session
+              Use session from library
             </button>
-            {savedSessions.length === 0 ? null : (
+          )}
+          {children}
+        </div>
+      ) : sheet.view === "library" ? (
+        <ul className={w.sheetList} aria-label="Saved sessions">
+          {savedSessions.map((saved) => (
+            <li key={saved.id}>
               <button
                 type="button"
                 className={w.sheetChoice}
-                onClick={() => onChange({ date: sheet.date, view: "library" })}
+                onClick={() =>
+                  onChange({
+                    date: sheet.date,
+                    view: "new",
+                    startFrom: saved,
+                  })
+                }
               >
-                Use session from library
+                <span>{saved.name}</span>
+                <span className={w.sheetChoiceDetail}>
+                  {[
+                    saved.sport,
+                    saved.expectedDurationMinutes === null
+                      ? null
+                      : `${saved.expectedDurationMinutes} min`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
               </button>
-            )}
-            {children}
-          </div>
-        ) : sheet.view === "library" ? (
-          <ul className={w.sheetList} aria-label="Saved sessions">
-            {savedSessions.map((saved) => (
-              <li key={saved.id}>
-                <button
-                  type="button"
-                  className={w.sheetChoice}
-                  onClick={() =>
-                    onChange({
-                      date: sheet.date,
-                      view: "new",
-                      startFrom: saved,
-                    })
-                  }
-                >
-                  <span>{saved.name}</span>
-                  <span className={w.sheetChoiceDetail}>
-                    {[
-                      saved.sport,
-                      saved.expectedDurationMinutes === null
-                        ? null
-                        : `${saved.expectedDurationMinutes} min`,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          children
-        )}
-      </>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        children
+      )}
     </SheetLayer>
   );
 }

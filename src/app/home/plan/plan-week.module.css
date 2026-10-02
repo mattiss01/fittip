@@ -192,7 +192,7 @@
 .calendar::after {
   position: absolute;
   inset: 0;
-  border-radius: inherit;
+  border-radius: var(--radius-pill);
   content: "";
 }
 
@@ -207,13 +207,19 @@
   background: var(--sage);
 }
 
-.weekTitleRow:has(.calendar:focus-visible) {
-  outline: 3px solid var(--pine);
-  outline-offset: 2px;
-}
+/* One ring, round the row, since the row is what is pressed. Only where
+   `:has()` exists: without it the button keeps the Plan's own ring on the
+   icon, which is small but is a ring. The second selector has to outrank
+   `.manager button:focus-visible`. */
+@supports selector(:has(*)) {
+  .weekTitleRow:has(.calendar:focus-visible) {
+    outline: 3px solid var(--pine);
+    outline-offset: 2px;
+  }
 
-.calendar:focus-visible {
-  outline: none;
+  .weekTitleRow .calendar.calendar:focus-visible {
+    outline: none;
+  }
 }
 
 .arrow {

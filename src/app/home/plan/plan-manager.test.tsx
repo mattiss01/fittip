@@ -192,7 +192,10 @@ describe("PlanManager", () => {
   it("goes to a day's week from the month calendar without opening its sheet", () => {
     renderManager();
 
-    fireEvent.click(screen.getByRole("button", { name: "Open calendar" }));
+    // Named after the week title it sits on, so the visible words are in it.
+    fireEvent.click(
+      screen.getByRole("button", { name: "This week, open calendar" }),
+    );
     const calendar = screen.getByRole("dialog");
     expect(
       within(calendar).getByRole("heading", { name: "August 2026" }),

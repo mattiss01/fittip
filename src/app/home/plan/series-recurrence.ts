@@ -102,7 +102,8 @@ export function findUncoveredSeriesDates(
   return [...uncovered].toSorted();
 }
 
-function daysBetween(fromDate: string, toDate: string) {
+/** Whole days from one ISO date to a later one. Dates, so no clock is involved. */
+export function daysBetween(fromDate: string, toDate: string) {
   return Math.round(
     (Date.parse(`${toDate}T00:00:00.000Z`) -
       Date.parse(`${fromDate}T00:00:00.000Z`)) /

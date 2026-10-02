@@ -85,11 +85,18 @@ describe("MonthSheet", () => {
     renderSheet();
 
     // The first week reaches back into September, so September is a month.
-    fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
+    const previous = screen.getByRole("button", { name: "Previous month" });
+    previous.focus();
+    fireEvent.click(previous);
     expect(
       screen.getByRole("heading", { name: "September 2026" }),
     ).toBeVisible();
     expect(screen.queryByRole("button", { name: "Previous month" })).toBeNull();
+    // The arrow that was pressed is gone, and focus did not fall out of the
+    // sheet with it.
+    expect(
+      screen.getByRole("heading", { name: "September 2026" }),
+    ).toHaveFocus();
     // A day the Plan has no week for is a number, not something to tap.
     expect(pick("2026-09-27")).toBeNull();
     expect(pick("2026-09-28")).not.toBeNull();

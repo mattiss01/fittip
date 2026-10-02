@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { SheetLayer } from "./plan-sheet";
 import { dayLabel, mondayOf } from "./plan-weeks";
+import { daysBetween } from "./series-recurrence";
 import w from "./plan-week.module.css";
 import {
   formatMonth,
@@ -63,6 +64,13 @@ export function MonthSheet({
   useEffect(() => {
     titleRef.current?.focus();
   }, []);
+  // At the first and last month the arrow that was just pressed is gone, and
+  // focus would fall out of the dialog to the page behind it. It goes to the
+  // month's name instead; anywhere else it stays on the arrow, so the same
+  // key steps again.
+  useEffect(() => {
+    if (document.activeElement === document.body) titleRef.current?.focus();
+  }, [month]);
 
   const { startDate, endDate } = monthWindow(month);
   // Monday first, so the days before the 1st are blanks.
@@ -88,7 +96,13 @@ export function MonthSheet({
           target={month > firstMonth ? shiftMonth(month, -1) : null}
           onGo={setMonth}
         />
-        <h2 id="plan-month-title" ref={titleRef} tabIndex={-1}>
+        {/* Polite, so stepping a month says which one it now is. */}
+        <h2
+          id="plan-month-title"
+          ref={titleRef}
+          tabIndex={-1}
+          aria-live="polite"
+        >
           {formatMonth(month)}
         </h2>
         <MonthArrow
@@ -171,13 +185,5 @@ function MonthArrow({
     >
       {glyph}
     </button>
-  );
-}
-
-/** Whole days from one ISO date to a later one. Dates, so no clock is involved. */
-function daysBetween(from: string, to: string): number {
-  return Math.round(
-    (Date.parse(`${to}T12:00:00.000Z`) - Date.parse(`${from}T12:00:00.000Z`)) /
-      86_400_000,
   );
 }
