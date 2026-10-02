@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import {
@@ -6,6 +5,7 @@ import {
   ProfileAuthenticationError,
 } from "@/server/repositories/profile-repository";
 import homeStyles from "../../home.module.css";
+import { BackLink } from "../back-link";
 import styles from "../you.module.css";
 
 export const dynamic = "force-dynamic";
@@ -34,27 +34,11 @@ export default async function SettingsPage() {
 
   return (
     <main className={homeStyles.shell} id="main-content">
-      <Link className={styles.backLink} href="/home/you">
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path d="M15 5l-7 7 7 7" />
-        </svg>
-        You
-      </Link>
+      <BackLink href="/home/you" label="You" />
       <header className={styles.header}>
         <h1>Settings</h1>
       </header>
-      <p className={styles.nothingYet}>Nothing to set yet.</p>
+      <p className={styles.line}>Nothing to set yet.</p>
     </main>
   );
 }

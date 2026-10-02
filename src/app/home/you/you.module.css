@@ -2,7 +2,8 @@
  * You in the Coach's note direction (R3): a heading with Settings in its
  * corner, and the three places that sit under it as rows of one card. Each row
  * keeps one line saying what the place is for; the longer explanations live on
- * the pages themselves. Sign out stays here; Settings is its own page.
+ * the pages themselves. Sign out stays here; Settings is its own page. The
+ * pages under You share the back link, the heading and the one line.
  */
 
 .header {
@@ -114,11 +115,11 @@
   margin-top: 1.5rem;
 }
 
-.nothingYet {
+.line {
   width: 100%;
-  margin: 1rem 0 0;
+  margin: 0.6rem 0 0;
   color: var(--moss);
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
 .signOut button {

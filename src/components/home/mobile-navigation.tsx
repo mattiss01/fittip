@@ -25,11 +25,8 @@ export function MobileNavigation() {
     <nav className={styles.navigation} aria-label="Primary">
       <ul>
         {DESTINATIONS.map(({ href, label, Icon }) => {
-          const current =
-            pathname === href ||
-            (href === "/home/plan" && pathname.startsWith("/home/plan/")) ||
-            (href === "/home/progress" &&
-              pathname.startsWith("/home/progress/"));
+          // A page under a destination keeps that destination current.
+          const current = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <li key={href}>
               <Link aria-current={current ? "page" : undefined} href={href}>

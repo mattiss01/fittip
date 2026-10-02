@@ -35,7 +35,7 @@ test.describe("M2-02 memory management", () => {
       await page.getByRole("link", { name: /^Memory/ }).click();
       await expect(page).toHaveURL(/\/home\/you\/memory$/);
       await expect(
-        page.getByRole("heading", { name: "What FitTip knows." }),
+        page.getByRole("heading", { name: "Memory", exact: true }),
       ).toBeVisible();
       // The empty state states a fact, and claims no learning.
       await expect(page.getByText(/Nothing is stored yet/)).toBeVisible();
@@ -158,7 +158,7 @@ test.describe("M2-02 memory management", () => {
       const stalePage = await page.context().newPage();
       await stalePage.goto("/home/you/memory");
       await expect(
-        stalePage.getByRole("heading", { name: "What FitTip knows." }),
+        stalePage.getByRole("heading", { name: "Memory", exact: true }),
       ).toBeVisible();
       await addMemory(page, "preference", "Prefers early starts.");
       await settled(page);
