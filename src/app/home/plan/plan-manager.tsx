@@ -179,12 +179,19 @@ export function PlanManager({
   // Twenty-six weeks of tiles scroll sideways, so the one being shown is
   // brought into view: opening on a far week otherwise leaves the strip on
   // "This wk" with nothing marked. Instant, so there is no motion to reduce.
+  //
+  // Only the strip moves. `scrollIntoView` also scrolls the page until the
+  // tile is on screen, and the strip sits below the week, so a tap on a week
+  // arrow threw the owner to the bottom of the page (owner, 2 Oct 2026).
   const tilesRef = useRef<HTMLElement>(null);
   useEffect(() => {
-    const current = tilesRef.current?.querySelector('[aria-current="true"]');
-    if (current && typeof current.scrollIntoView === "function") {
-      current.scrollIntoView({ block: "nearest", inline: "center" });
-    }
+    const strip = tilesRef.current;
+    const current = strip?.querySelector('[aria-current="true"]');
+    if (!strip || !current) return;
+    const stripBox = strip.getBoundingClientRect();
+    const tileBox = current.getBoundingClientRect();
+    strip.scrollLeft +=
+      tileBox.left - stripBox.left - (stripBox.width - tileBox.width) / 2;
   }, [weekIndex]);
   const [sheet, setSheet] = useSheetClosedOnSave(state, seriesState);
   // The plan submission the open sheet started after, so a refusal shown in
