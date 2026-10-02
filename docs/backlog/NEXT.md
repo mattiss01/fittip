@@ -108,9 +108,13 @@ Not worth their own slot; do them when work lands nearby.
   sessions and 13 more of single ones — and re-reads all of it for every change, though
   it shows one week. Fine for one athlete's plan; a read per week is the fix if it ever
   is not, and is what a longer history than a quarter would need first.
-- **A logged card on the Plan shows the planned minutes, not the logged ones.** "40 min ·
-  Completed" is what the plan said (owner, 2 Oct 2026); the Plan reads a log's outcome and
-  date and not its duration. Progress shows what was done.
+- **A logged card on the Plan shows the planned minutes, not the logged ones.** "40 min
+  planned · Completed" (owner, 2 Oct 2026); the Plan reads a log's outcome and date and
+  not its duration. Progress shows what was done.
+- **The week strip jumps once as the Plan loads.** The server's HTML has the strip at its
+  oldest week, thirteen weeks back, and it moves to the shown week when the page becomes
+  interactive. Where it lands has no automated check either: unit tests have no layout.
+  With this week at the left edge, a sliver of last week's tile shows in the page inset.
 - **A date picked outside the allowed range gets the generic refusal.** The date fields on
   "Copy to", Edit and "Add to" carry `min` and `max`, which iOS Safari's picker does not
   enforce, so a date past day 180 is refused with "Check the session details and the

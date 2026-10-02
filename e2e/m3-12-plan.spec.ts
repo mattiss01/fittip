@@ -74,6 +74,18 @@ test.describe("M3-12 manual continuous planning", () => {
       await expect(
         page.locator('[data-past="true"] button[aria-label^="Add to"]'),
       ).toHaveCount(0);
+      // The weeks before this one are behind it, read-only (owner, 2 Oct
+      // 2026): none of a past week's days can be added to.
+      await page.getByRole("button", { name: "Previous week" }).click();
+      await expect(
+        page.getByRole("heading", { name: "Last week", exact: true }),
+      ).toBeVisible();
+      await expect(page.locator("[data-plan-date]")).toHaveCount(7);
+      await expect(page.locator('button[aria-label^="Add to"]')).toHaveCount(0);
+      await page.getByRole("button", { name: "Next week" }).click();
+      await expect(
+        page.getByRole("heading", { name: "This week", exact: true }),
+      ).toBeVisible();
 
       await addSession(page, today, "Aerobic run", "Running", "60");
       await expect(

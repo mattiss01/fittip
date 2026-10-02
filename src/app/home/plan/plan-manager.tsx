@@ -179,12 +179,12 @@ export function PlanManager({
   // The weeks before this one sit ahead of it in the list (owner, 2 Oct
   // 2026), so "this week" is no longer the first: the Plan opens on it, and
   // a week is named by how far it is from it.
-  const thisWeek = weekIndexOf(weeks, today);
+  const thisWeekIndex = weekIndexOf(weeks, today);
   const [weekIndex, setWeekIndex] = useState(() =>
-    weekIndexOf(weeks, initialDate, thisWeek),
+    weekIndexOf(weeks, initialDate, thisWeekIndex),
   );
   const week = weeks[Math.min(weekIndex, weeks.length - 1)];
-  const weekOffset = weekIndex - thisWeek;
+  const weekOffset = weekIndex - thisWeekIndex;
   // Some forty weeks of tiles scroll sideways, so the one being shown is
   // brought into view: the strip otherwise opens on its oldest week with
   // nothing marked. Instant, so there is no motion to reduce.
@@ -202,26 +202,28 @@ export function PlanManager({
     const strip = tilesRef.current;
     const tiles = strip?.children;
     const current = tiles?.[weekIndex];
-    const present = tiles?.[thisWeek];
-    if (!strip || !current || !present) return;
+    if (!strip || !tiles || !current) return;
     const stripBox = strip.getBoundingClientRect();
+    const tileBox = current.getBoundingClientRect();
     const inset = Number.parseFloat(getComputedStyle(strip).paddingLeft) || 0;
-    // Where the strip would have to be scrolled to for a tile to sit at its
-    // left edge.
-    const atLeftEdge = (tile: Element) =>
-      strip.scrollLeft +
-      tile.getBoundingClientRect().left -
-      stripBox.left -
-      inset;
-    const centred =
-      atLeftEdge(current) +
-      inset -
-      (stripBox.width - current.getBoundingClientRect().width) / 2;
-    strip.scrollLeft =
-      weekIndex > thisWeek
-        ? Math.max(centred, atLeftEdge(present))
-        : atLeftEdge(current);
-  }, [weekIndex, thisWeek]);
+    // The strip snaps to whole tiles, so "the middle" is counted in tiles:
+    // how many fit to the left of one that sits in the middle. Scrolling to
+    // a pixel centre instead is re-snapped by the browser, to one side or the
+    // other depending on a few pixels of width.
+    const pitch =
+      tiles.length > 1
+        ? tiles[1].getBoundingClientRect().left -
+          tiles[0].getBoundingClientRect().left
+        : 0;
+    const before =
+      pitch > 0 ? Math.round((stripBox.width - tileBox.width) / 2 / pitch) : 0;
+    const leftmost =
+      weekIndex > thisWeekIndex
+        ? tiles[Math.max(thisWeekIndex, weekIndex - before)]
+        : current;
+    strip.scrollLeft +=
+      leftmost.getBoundingClientRect().left - stripBox.left - inset;
+  }, [weekIndex, thisWeekIndex]);
   const [sheet, setSheet] = useSheetClosedOnSave(state, seriesState);
   const [monthOpen, setMonthOpen] = useState(false);
   // The plan submission the open sheet started after, so a refusal shown in
@@ -352,7 +354,9 @@ export function PlanManager({
             onClick={() => setWeekIndex(index)}
           >
             <span className={w.tileLabel}>
-              {index === thisWeek ? "This wk" : shortDateLabel(candidate.start)}
+              {index === thisWeekIndex
+                ? "This wk"
+                : shortDateLabel(candidate.start)}
             </span>
             <span className={w.tileBars} aria-hidden="true">
               {candidate.days.map((day) => (
@@ -381,7 +385,7 @@ export function PlanManager({
           shownWeekStart={week.start}
           sessionCounts={sessionCounts(sessions)}
           onPick={(date) => {
-            setWeekIndex(weekIndexOf(weeks, date, thisWeek));
+            setWeekIndex(weekIndexOf(weeks, date, thisWeekIndex));
             setMonthOpen(false);
           }}
           onClose={() => setMonthOpen(false)}
@@ -658,9 +662,6 @@ function PlanSessionCard({
 
 function cardDetail(session: PlanSessionView, cancelled: boolean): string {
   if (cancelled) return "Cancelled";
-  // The planned minutes stay on a logged card (owner, 2 Oct 2026). They are
-  // what the plan said, as everywhere on the Plan; what was done is on the
-  // log, which the Plan does not read.
   const planned =
     session.expectedDurationMinutes === null
       ? null
@@ -668,7 +669,10 @@ function cardDetail(session: PlanSessionView, cancelled: boolean): string {
   if (session.log) {
     const outcome = COMPLETION_OUTCOME_LABELS[session.log.outcome];
     return [
-      planned,
+      // The planned minutes stay on a logged card (owner, 2 Oct 2026), and
+      // say that they are the plan's: beside "Completed" a bare "40 min"
+      // reads as time trained, which the Plan does not know.
+      planned === null ? null : `${planned} planned`,
       session.log.actualLocalDate === session.localDate
         ? outcome
         : `${outcome} on ${dayLabel(session.log.actualLocalDate)}`,

@@ -257,7 +257,7 @@ describe("PlanManager", () => {
     const logged = day("2026-08-12");
     expect(logged.getAttribute("data-past")).toBe("true");
     // The planned minutes stay beside how it went.
-    expect(logged.textContent).toContain("60 min · Completed");
+    expect(logged.textContent).toContain("60 min planned · Completed");
     expect(
       within(logged)
         .getByRole("link", { name: "Tempo run" })
