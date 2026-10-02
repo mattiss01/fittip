@@ -50,22 +50,16 @@ main action. No week ring. The owner flagged a possible bias toward the look the
 so start with Today and adjust from there rather than committing every screen up front. Build
 lane, one screen per merge.
 
-- [ ] **R3b — A three-month horizon**, in three merges (owner, 29 Sep and 2 Oct 2026). The
-      first, the roadmap coach reading a series as one rule, is done; it had to come before
-      the window grows.
-  - [ ] **R3b-2 — Repeating sessions are written 13 weeks ahead.** Careful lane. Owner:
-        option A — real sessions, 91 days instead of 14. One forward migration re-emits
-        `materialize_rolling_plan_series` with `v_today + 90` (no signature change, nothing
-        destructive), `PLAN_WINDOW_DAYS` and `ROLLING_PLAN_WINDOW_DAYS` follow, and an
-        ADR-017 amendment says what it costs. Two things 14 days hid: a change set holds
-        100 changes, so a first fill tops up in passes; and the Plan looks up logs with
-        every session id in one request, so those reads go in chunks. Today's past-the-window
-        notice and the tests that pin 14 days move with it.
+- [ ] **R3b — A three-month horizon**, in three merges (owner, 29 Sep and 2 Oct 2026). Two
+      are done: the roadmap coach reads a series as one rule, and repeating sessions are
+      written 13 weeks ahead.
   - [ ] **R3b-3 — The Plan runs 26 weeks.** Build lane. Owner: a single session (a race)
         may be placed up to 180 days out, which is how far the coach already reads locked
         ones; repeats still stop at 13 weeks. A week past week 13 shows the roadmap phase
         band where a phase covers it and its days with a "+" for a single session. The
-        database never limited this, so no migration.
+        database never limited this, so no migration. Two things to carry: the log lookup
+        refuses more than 1,000 session ids, sized for 13 weeks; and the "Copy to" and
+        "Add to" date selects list every day, 91 now, so 181 wants a date field.
 - [ ] **R3 — The other screens, one per merge.** Today, the Plan, the session page,
       Progress and You are done. For each one left: cut the explanatory intro to one line or
       remove it, and say where an explanation must survive. In the order they can be started:
@@ -109,6 +103,14 @@ lane, one screen per merge.
 
 Not worth their own slot; do them when work lands nearby.
 
+- **A deleted occurrence makes the Plan re-run its top-up on every visit.** The page works
+  out which rule dates have no session (`findUncoveredSeriesDates`) without knowing the
+  dates a series was told to skip, so it fires the extension, which then writes nothing
+  and costs no revision. Since M3-20; a deleted occurrence now stays in the window for 13
+  weeks rather than two. `listSeries` would have to read `skipped_occurrence_dates`.
+- **The Plan carries the whole 13 weeks to the browser** and re-reads all of it for every
+  change, though it shows one week. Fine for one athlete's plan; a read per week is the
+  fix if it ever is not.
 - **Two back links drawn the same way.** `src/app/home/you/back-link.tsx` copies the one on
   a Progress record, markup and style. Progress could use the component; it would have to
   carry `data-back-link`, which m3-15c clicks.
