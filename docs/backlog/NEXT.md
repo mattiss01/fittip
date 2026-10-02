@@ -58,10 +58,13 @@ lane, one screen per merge.
       to match, an ADR-017 amendment (row growth ~6× per series, series edits rewrite more
       rows), Today's beyond-window notice, and the tests that pin 14 days. Confirm first that
       no coach context reads the whole window (it appears to read only its 1–7-day horizon).
-- [ ] **R3 — The other screens, one per merge.** Today, the Plan, the session page and
-      Progress are done. For each one left: cut the explanatory intro to one line or remove
-      it, and say where an explanation must survive. In the order they can be started:
-  - [ ] **You.** Not started; nothing blocks it. Goals, memory and onboarding sit under it.
+- [ ] **R3 — The other screens, one per merge.** Today, the Plan, the session page,
+      Progress and You are done. For each one left: cut the explanatory intro to one line or
+      remove it, and say where an explanation must survive. In the order they can be started:
+  - [ ] **Inside Goals, Memory and Guided setup.** The three pages got You's back link and
+        a plain heading and nothing else: their lists, filters, forms and buttons are
+        still in the old style, with mono kickers ("Primary attention / 0 of 3",
+        "Optional setup") and square controls.
   - [ ] **The Plan's sub-pages.** Session Library, Activity Library, Plan with Coach
         (proposal and review) and Roadmap got rounded controls with the forms and nothing
         else: each still has its old masthead, kicker and intro, and the two libraries
@@ -70,7 +73,8 @@ lane, one screen per merge.
   - [ ] **Log, as a sheet.** Blocked on the owner: one form as today, or "Logging in steps"
         (`Later`). The form's activity editor is already rounded.
   - [ ] **The shared state cards.** Loading, error and "confirm your time zone" on every
-        route still use the old masthead card.
+        route still use the old masthead card. You and Settings have no loading or error
+        file of their own.
 - [ ] **Small things the owner has not answered**, each a yes or no:
   - Session page: should Edit, Duplicate, Cancel and Delete open as bottom sheets like the
     Plan's "+", rather than below the card?
@@ -82,6 +86,9 @@ lane, one screen per merge.
     on the proposal or roadmap pages.
   - A record's "Logged for" date is long, so at 390px the duration wraps under it; a short
     date ("Tue 29 Sep") would keep them on one line.
+  - You's Memory row says "What the coach may use about you", but the page also lists
+    proposed, declined and disabled items, which the coach may not use. The owner took the
+    wording "for now" on 2 Oct 2026.
   - `next dev` appends a "This is NOT the Next.js you know" block to `CLAUDE.md` on every
     start. It is uncommitted; if wanted it goes in its own commit.
 - [ ] **R4 — Motion.** Day-change slide (View Transitions), sheet and press feedback,
@@ -94,6 +101,12 @@ lane, one screen per merge.
 
 Not worth their own slot; do them when work lands nearby.
 
+- **Two back links drawn the same way.** `src/app/home/you/back-link.tsx` copies the one on
+  a Progress record, markup and style. Progress could use the component; it would have to
+  carry `data-back-link`, which m3-15c clicks.
+- **Two links named "You" on the pages under You**, the back link and the navigation. A
+  spec that clicks `{ name: "You", exact: true }` from one of them fails as ambiguous; the
+  four that exist start from Today.
 - **White text on the orange buttons is short of AA contrast.** Paper on `--ember` is
   3.7:1 against the 4.5:1 that m3-16a asserts for "Plan with Coach", which is why that one
   button uses `--ember-dark` (6:1). Log this session, Edit, Edit log and Save session still use
@@ -119,6 +132,10 @@ Not worth their own slot; do them when work lands nearby.
 
 ## Later
 
+- **What goes in Settings.** Owner, 2 Oct 2026. The gear on You opens a page that says
+  "Nothing to set yet." Meant for it: account details, subscription, language, and light
+  or dark mode. None is decided or listed there; Sign out stays on You. Account details
+  touch auth and a subscription touches spend, so both are careful lane.
 - **Log a session live — idea.** Owner, 1 Oct 2026. Track a session while doing it, set by
   set and activity by activity, instead of filling the log in afterwards. To think
   through: what is saved if it is abandoned halfway (a partial log, or nothing), whether

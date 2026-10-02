@@ -29,10 +29,10 @@ test.describe("M2-01 goal management", () => {
     try {
       await signIn(page, account.email, account.password);
       await page.getByRole("link", { name: "You", exact: true }).click();
-      await page.getByRole("link", { name: "Manage goals" }).click();
+      await page.getByRole("link", { name: /^Goals/ }).click();
       await expect(page).toHaveURL(/\/home\/you\/goals$/);
       await expect(
-        page.getByRole("heading", { name: "Direct your attention." }),
+        page.getByRole("heading", { name: "Goals", exact: true }),
       ).toBeVisible();
       await expect(page.getByText(/No core goal yet/)).toBeVisible();
 
@@ -292,7 +292,7 @@ test.describe("M2-05 unconfirmed goal mutation", () => {
       await signIn(page, account.email, account.password);
       await page.goto("/home/you/goals");
       await expect(
-        page.getByRole("heading", { name: "Direct your attention." }),
+        page.getByRole("heading", { name: "Goals", exact: true }),
       ).toBeVisible();
 
       await page.route(

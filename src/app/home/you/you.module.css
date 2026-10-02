@@ -1,0 +1,137 @@
+/*
+ * You in the Coach's note direction (R3): a heading with Settings in its
+ * corner, and the three places that sit under it as rows of one card. Each row
+ * keeps one line saying what the place is for; the longer explanations live on
+ * the pages themselves. Sign out stays here; Settings is its own page. The
+ * pages under You share the back link and the heading.
+ */
+
+.header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0 0;
+}
+
+.settings {
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  margin-right: -0.5rem;
+  border-radius: var(--radius-pill);
+  color: var(--pine);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings:active {
+  background: var(--line);
+}
+
+.backLink {
+  width: fit-content;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0.25rem 0 0 -0.35rem;
+  padding: 0 0.7rem 0 0.35rem;
+  border-radius: var(--radius-pill);
+  color: var(--pine);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.backLink:active {
+  background: var(--line);
+}
+
+.header h1 {
+  font-size: 2.3rem;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.places {
+  width: 100%;
+  margin: 1rem 0 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  list-style: none;
+}
+
+.places li + li {
+  border-top: 1px solid var(--line);
+}
+
+.place {
+  min-height: 4.25rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  color: var(--pine);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.place:active {
+  background: var(--sage);
+}
+
+/* The card clips its overflow, so a row's ring is drawn inside it. Two
+   classes, to outrank the shell's own focus rule. */
+.places .place:focus-visible {
+  outline-offset: -3px;
+}
+
+.place strong {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.place span {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--moss);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.place svg {
+  color: var(--moss);
+}
+
+.signOut {
+  width: 100%;
+  margin-top: 1.5rem;
+}
+
+.note {
+  width: 100%;
+  margin: 0.6rem 0 0;
+  color: var(--moss);
+  line-height: 1.5;
+}
+
+.signOut button {
+  width: 100%;
+  margin: 0;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--pine);
+}
+
+.signOut button:hover {
+  background: var(--sage);
+}
