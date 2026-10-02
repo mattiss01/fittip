@@ -148,6 +148,47 @@ history, past sessions, or user-locked future content. All three are excluded
 from the sweep by construction, and locked future content is excluded because
 of this decision rather than in spite of it.
 
+## Amendment: the window is thirteen weeks
+
+Decided by the product owner on 29 September 2026 and built on 2 October 2026
+(R3b-2). The decision above is unchanged — an occurrence is still an ordinary
+row, written ahead by the owner-derived function from a Server Action — and
+wherever this ADR says "fourteen-day" the window is now **today plus ninety
+days, ninety-one in all**. The alternative the owner weighed and declined was
+projecting far occurrences instead of writing them, which is the option this ADR
+already rejected.
+
+What it changes, against the consequences below:
+
+- **Consequence 2, row growth.** The rate is the same: a daily series is still
+  about 365 rows a year. What grows is how many exist ahead of time — up to 91
+  per series instead of 14 — and how many a series change touches. Ending a
+  series, or changing "this and future", deletes every unlocked occurrence from
+  its date on, each with a `delete` entry carrying its full `before_state`, and
+  the successor is then written again: up to 91 deletions and 91 additions
+  where there were 14. An owner who edits a daily series every week leaves
+  about six and a half times the history they did.
+- **Consequence 4, revisions.** A change set holds at most one hundred changes.
+  At fourteen days that took eight daily series to reach; at ninety-one, two.
+  The function still stops at one hundred and reports the rest as skipped for
+  the change-set limit, and the application now calls it again while it does,
+  with a fixed cap on passes. A first fill can therefore cost several
+  revisions rather than one. `apply_rolling_plan_change_set` is not changed.
+- **Consequence 3, coverage.** Unchanged in kind — a consumer that is not the
+  Plan still tops up before reading — but an owner who stays away now has
+  thirteen weeks of occurrences waiting rather than two.
+- **Editing a series rewrites what the owner sees further out.** Occurrences
+  three months ahead are real, so they can be edited, moved, locked and
+  cancelled individually, and a later "this and future" change deletes the
+  unlocked ones among them with the rest.
+
+Not changed here: how far ahead a one-off session may be placed. No database
+function ever limited that; the fourteen-day limit on it was the application's.
+
+The first top-up after this ships writes the additional weeks into the owner's
+plan under the `series_expansion` provenance. Those rows and their change
+entries are permanent in the way every occurrence already is.
+
 ## Considered options
 
 ### Series plus projected occurrences, as ADR-016 wrote it
