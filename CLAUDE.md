@@ -65,13 +65,24 @@ For anything visible or behavioral that the careful lane does not cover:
 2. Run `npm.cmd run dev` in the background. The owner watches at 390px.
 3. Make small changes and say what changed after each one. The owner reacts; repeat until
    they are happy.
-4. Commit to a `ticket/<slug>` branch so CI triggers, and push. CI must be green.
-5. For anything past a copy or styling tweak, run `/code-review` on the diff and fix or
-   report what it finds.
-6. Merge to `master`, push, and add the log row to `docs/backlog/LOG-<year>.md`.
+4. Before the first push, run `lint`, `typecheck` and `test:run` locally, and for anything
+   past a copy or styling tweak run `/code-review` on the diff and fix or report what it
+   finds. A ticket should need one CI run, not one per round of fixes.
+5. Commit to a `ticket/<slug>` branch and push so CI triggers. Do not wait for it: watch the
+   run in the background (`gh run watch <id> --exit-status`), say that it is running, and
+   take the owner's next task on a new branch from `master`.
+6. When the run is green, merge to `master`, add the log row to
+   `docs/backlog/LOG-<year>.md`, and push the two together so `master` runs once. When it
+   is red, say so straight away and fix it before the next merge.
 
 No subagents, no ticket document, no validation record, no Preview wait. Add tests where the
 logic is non-trivial; do not add a per-ticket Playwright config or screenshot evidence.
+
+Steps 4 and 5 are in this order because of what the other order cost. Until 2 October 2026
+the push came first and the review second, so each ticket ran CI two to five times and the
+session waited on every one: sixteen branch runs that morning, about two of its four and a
+quarter hours. The price of not waiting is that two tickets can be open at once, and a red
+run interrupts whatever came next. Merging still needs green.
 
 ### Careful lane
 
@@ -148,7 +159,9 @@ PowerShell here blocks `npm.ps1`, so always use `npm.cmd` and `npx.cmd`.
 `.github/workflows/ci.yml` runs on `master`, `ticket/**`, `chore/**`, and pull requests.
 Three jobs, about four minutes: `static` (Prettier, ESLint, TypeScript, `test:run`, build),
 `database` (every migration from zero, db lint, advisors, pgTAP, concurrency harnesses), and
-`browser` (390px production Playwright flows).
+`browser` (390px production Playwright flows, split over three runners). Starting Supabase
+is about 1m40s of that on each runner and is the floor; a new browser flow goes into the
+shortest shard in `ci.yml` and its port into `.github/scripts/browser-flows.sh`.
 
 - Green CI for the commit being merged is the automated-test evidence. Don't re-run the
   suites by hand to produce a report.
@@ -156,7 +169,7 @@ Three jobs, about four minutes: `static` (Prettier, ESLint, TypeScript, `test:ru
   URL valid, and the log line says what flaked. An undiagnosed failure is a blocker.
 - Inspect with `gh run list --branch <branch>`, `gh run view <id>`,
   `gh run view <id> --log-failed`. For a browser failure,
-  `gh run download <id> -n playwright-report` has the trace.
+  `gh run download <id> -p "playwright-report-*"` has the trace of each shard that failed.
 - CI needs no repository secret: each Docker job starts its own disposable Supabase stack.
   Never add a secret, hosted project, deployment step, or paid resource without the owner's
   approval, and never weaken a check to make a branch green.
