@@ -119,12 +119,7 @@ export default async function CompletionPage({ params }: Props) {
           {/* Training that happened can become a saved session; a skip or a
               replacement records none, so it offers nothing to save. */}
           {!recordsTraining(completion.status) ? null : (
-            <SaveToLibrary
-              completionId={completion.id}
-              defaultName={
-                completion.title ?? completion.plannedSnapshot?.title ?? ""
-              }
-            />
+            <SaveToLibrary completionId={completion.id} />
           )}
         </>
       )}

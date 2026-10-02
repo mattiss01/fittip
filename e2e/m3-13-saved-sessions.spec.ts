@@ -74,7 +74,8 @@ test.describe("M3-13 private saved-session library", () => {
       await expect(
         save.getByText(/This session stays on your plan/i),
       ).toBeVisible();
-      await save.getByLabel("Name it").fill("Tuesday tempo");
+      // Nothing to name: the entry is called what the session is called.
+      await expect(save.locator("input[name='name']")).toHaveCount(0);
       await save.getByRole("button", { name: "Save to library" }).click();
       await expect(save.getByText("Saved to your library.")).toBeVisible();
       await page.screenshot({
@@ -93,7 +94,6 @@ test.describe("M3-13 private saved-session library", () => {
         page.getByRole("heading", { name: "Session Library" }),
       ).toBeVisible();
       const card = savedCard(page, "Threshold intervals");
-      await expect(card.getByText("Tuesday tempo")).toBeVisible();
       await expect(
         card.getByText("Running · 45 min · 2 activities"),
       ).toBeVisible();
@@ -110,14 +110,26 @@ test.describe("M3-13 private saved-session library", () => {
 
       // Edit the entry. The planned session it came from must not change.
       await openDisclosure(card, "Edit");
-      // The Edit form now holds the activity editor too, whose rows are also
-      // labelled "Name", so the entry's own field is found by its form name.
-      await card.locator("input[name='name']").fill("Tuesday tempo (v2)");
       await card.getByLabel("Title").fill("Longer threshold intervals");
       await card.getByRole("button", { name: "Save entry" }).click();
       const edited = savedCard(page, "Longer threshold intervals");
-      await expect(edited.getByText("Tuesday tempo (v2)")).toBeVisible();
       await expect(edited.getByText("2 activities")).toBeVisible();
+
+      // A session can be written in the library itself (owner, 2 Oct 2026).
+      // It makes an entry and nothing else, and goes again the same way.
+      await page.locator("summary", { hasText: "New session" }).click();
+      const create = page.locator("form", {
+        has: page.locator("input[name='operation'][value='create']"),
+      });
+      await create.getByLabel("Title").fill("Written in the library");
+      await create.getByLabel("Sport", { exact: true }).fill("Running");
+      await create.getByRole("button", { name: "Add to library" }).click();
+      const written = savedCard(page, "Written in the library");
+      await expect(written).toBeVisible();
+      await expect(written.getByText("Running", { exact: true })).toBeVisible();
+      await openDisclosure(written, "Delete");
+      await written.getByRole("button", { name: "Delete permanently" }).click();
+      await expect(written).toHaveCount(0);
 
       await page.goto("/home/plan");
       await expect(

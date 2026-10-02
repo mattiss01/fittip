@@ -12,6 +12,22 @@ import { SavedSessionPersistenceError } from "@/server/saved-sessions/saved-sess
  * the page down with it: both work without it. An authentication failure is
  * not swallowed, because the page's own redirect is the honest answer.
  */
+/**
+ * The library reads its entries in the order of a name nobody sees any more
+ * (2 Oct 2026). An entry saved before then may carry a name that differs from
+ * its title, so every list the owner sees is put in the order of what it
+ * shows.
+ */
+export function byTitle<Entry extends { title: string; id: string }>(
+  entries: readonly Entry[],
+): Entry[] {
+  return entries.toSorted(
+    (left, right) =>
+      left.title.localeCompare(right.title, "en", { sensitivity: "base" }) ||
+      left.id.localeCompare(right.id),
+  );
+}
+
 export async function readSavedSessionOptions(): Promise<SavedSessionOption[]> {
   let sessions;
   try {
@@ -20,9 +36,8 @@ export async function readSavedSessionOptions(): Promise<SavedSessionOption[]> {
     if (error instanceof SavedSessionPersistenceError) return [];
     throw error;
   }
-  return sessions.map((session) => ({
+  return byTitle(sessions).map((session) => ({
     id: session.id,
-    name: session.name,
     title: session.title,
     sport: session.sport,
     expectedDurationMinutes: session.expectedDurationMinutes ?? null,

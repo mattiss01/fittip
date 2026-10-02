@@ -775,7 +775,7 @@ function DaySheet({
                   })
                 }
               >
-                <span>{saved.name}</span>
+                <span>{saved.title}</span>
                 <span className={w.sheetChoiceDetail}>
                   {[
                     saved.sport,

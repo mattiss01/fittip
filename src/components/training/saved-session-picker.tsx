@@ -9,7 +9,6 @@ import type { ActivityValue } from "@/lib/training/activity-value";
 /** A saved session, as far as starting a new session or log needs it. */
 export type SavedSessionOption = {
   id: string;
-  name: string;
   title: string;
   sport: string;
   expectedDurationMinutes: number | null;
@@ -61,10 +60,9 @@ export function SavedSessionPicker({
                   setOpen(false);
                 }}
               >
-                <span className={styles.name}>{session.name}</span>
+                <span className={styles.name}>{session.title}</span>
                 <span className={styles.detail}>
                   {[
-                    session.title,
                     session.sport,
                     session.activities.length === 0
                       ? null
@@ -84,7 +82,7 @@ export function SavedSessionPicker({
       ) : null}
       {picked === undefined ? null : (
         <p className={styles.started} role="status">
-          Started from {picked.name}. Change anything that was different; the
+          Started from {picked.title}. Change anything that was different; the
           saved session keeps its own.
         </p>
       )}

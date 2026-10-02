@@ -30,13 +30,18 @@ export type RollingPlanRecurrenceRule = Pick<
  * keep is reusable on any date.
  */
 
-/** Save: a planned session becomes a library draft under an owner-given name. */
+/**
+ * Save: a planned session becomes a library draft.
+ *
+ * An entry had a name of its own beside the title it gives a session. They
+ * were almost always the same, and the owner asked for one (2 Oct 2026). The
+ * column stays, so every path that writes an entry stores the title in both.
+ */
 export function toSavedSessionDraft(
-  name: string,
   session: RollingPlanSession,
 ): SavedSessionDraft {
   return {
-    name,
+    name: session.title,
     title: session.title,
     sport: session.sport,
     ...(session.intent === undefined ? {} : { intent: session.intent }),
@@ -78,8 +83,8 @@ export function toRollingPlanSessionInput(
     localDate,
     position,
     isLocked: false,
-    // The owner's name for the library entry is how they find it again. It is
-    // not part of the planned session, which carries its own title.
+    // The entry's `name` stays in the library. It is the title again since
+    // 2 Oct 2026, and the planned session carries its own.
     activities: saved.activities.map((activity) => ({
       ...activity,
       isLocked: false,
@@ -157,13 +162,12 @@ export function plannedSessionToRollingPlanSeriesInput(
  * link to a plan stop here: they are facts about that day.
  */
 export function completionToSavedSessionDraft(
-  name: string,
   completion: Completion,
 ): SavedSessionDraft {
   const title = completion.title ?? completion.plannedSnapshot?.title;
   const sport = completion.sport ?? completion.plannedSnapshot?.sport;
   return {
-    name,
+    name: title ?? "",
     // Unset only on a log from before logs had names; the parser refuses the
     // blank, which is the honest answer for a log with nothing to call it.
     title: title ?? "",

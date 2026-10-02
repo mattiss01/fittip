@@ -518,10 +518,5 @@ function SaveLoggedSession({
   completion: TodayCompletionView;
 }) {
   if (!recordsTraining(completion.outcome)) return null;
-  return (
-    <SaveToLibrary
-      completionId={completion.id}
-      defaultName={completion.title ?? ""}
-    />
-  );
+  return <SaveToLibrary completionId={completion.id} />;
 }

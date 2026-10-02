@@ -62,8 +62,9 @@ const savedSession: SavedSession = {
 
 describe("saving a planned session into the library", () => {
   it("keeps the reusable fields and the activities", () => {
-    expect(toSavedSessionDraft("Tuesday tempo", plannedSession)).toEqual({
-      name: "Tuesday tempo",
+    // One name since 2 Oct 2026: an entry is called what the session is.
+    expect(toSavedSessionDraft(plannedSession)).toEqual({
+      name: "Tempo run",
       title: "Tempo run",
       sport: "Running",
       intent: "Threshold work",
@@ -84,7 +85,7 @@ describe("saving a planned session into the library", () => {
   });
 
   it("drops every fact that belongs to the Plan rather than to the content", () => {
-    const draft = toSavedSessionDraft("Tuesday tempo", plannedSession);
+    const draft = toSavedSessionDraft(plannedSession);
     for (const key of [
       "id",
       "localDate",
@@ -105,7 +106,7 @@ describe("saving a planned session into the library", () => {
   });
 
   it("carries no key for a field the planned session does not have", () => {
-    const draft = toSavedSessionDraft("Bare", {
+    const draft = toSavedSessionDraft({
       ...plannedSession,
       intent: undefined,
       expectedDurationMinutes: undefined,
@@ -113,7 +114,7 @@ describe("saving a planned session into the library", () => {
       activities: [],
     });
     expect(draft).toEqual({
-      name: "Bare",
+      name: "Tempo run",
       title: "Tempo run",
       sport: "Running",
       activities: [],
@@ -159,18 +160,18 @@ describe("reusing a library entry in the Plan", () => {
   });
 
   it("saves an occurrence by its content, not by its rule", () => {
-    const draft = toSavedSessionDraft("From a series", {
+    const draft = toSavedSessionDraft({
       ...plannedSession,
       seriesId: "77000000-0000-4000-8000-0000000000c1",
       occurrenceDate: "2026-08-19",
       hasDiverged: true,
     });
-    expect(draft).toEqual(toSavedSessionDraft("From a series", plannedSession));
+    expect(draft).toEqual(toSavedSessionDraft(plannedSession));
   });
 
   it("survives a round trip without gaining or losing a reusable field", () => {
     const planned = toRollingPlanSessionInput(savedSession, "2026-08-21", 0);
-    const returned = toSavedSessionDraft("Tuesday tempo", {
+    const returned = toSavedSessionDraft({
       ...planned,
       id: "77000000-0000-4000-8000-000000000003",
       status: "active",
@@ -184,7 +185,8 @@ describe("reusing a library entry in the Plan", () => {
       })),
     });
     expect(returned).toEqual({
-      name: savedSession.name,
+      // An entry whose name differed comes back named by its title.
+      name: savedSession.title,
       title: savedSession.title,
       sport: savedSession.sport,
       intent: savedSession.intent,

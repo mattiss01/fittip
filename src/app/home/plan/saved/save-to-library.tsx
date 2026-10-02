@@ -15,10 +15,8 @@ import styles from "./saved.module.css";
 export function SaveToLibrary({
   sessionId,
   completionId,
-  defaultName,
   bare = false,
 }: {
-  defaultName: string;
   /**
    * The form alone, for a caller that already gives it a heading and a way
    * to close it: the session page opens it from its menu.
@@ -46,18 +44,8 @@ export function SaveToLibrary({
       ) : (
         <input type="hidden" name="sessionId" value={sessionId} />
       )}
-      <div className={styles.field}>
-        <label htmlFor={`save-${id}-name`}>Name it</label>
-        <input
-          id={`save-${id}-name`}
-          name="name"
-          maxLength={120}
-          required
-          defaultValue={
-            state.status === "saved" ? defaultName : (state.name ?? defaultName)
-          }
-        />
-      </div>
+      {/* No name to give: an entry is called what the session is called
+          (owner, 2 Oct 2026). */}
       <p className={styles.consequence}>
         {fromLog
           ? "A copy goes to your saved sessions, with what you did as its targets. This log stays as it is, and the copy will not follow later edits."

@@ -24,7 +24,8 @@ export type SavedSessionActivity = {
 
 /**
  * Everything a saved session is, minus its identity and its activities: the
- * reusable fields of a planned session plus the owner's own name for it.
+ * reusable fields of a planned session plus a name. The surface stores the
+ * title as the name since 2 Oct 2026; the column and this field remain.
  */
 export type SavedSessionContent = {
   name: string;

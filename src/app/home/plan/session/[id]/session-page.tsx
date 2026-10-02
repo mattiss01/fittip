@@ -628,11 +628,7 @@ export function SessionPage({
           ) : null}
 
           {panel === "save" ? (
-            <SaveToLibrary
-              bare
-              sessionId={session.id}
-              defaultName={session.title}
-            />
+            <SaveToLibrary bare sessionId={session.id} />
           ) : null}
 
           {panel === "cancel" ? (

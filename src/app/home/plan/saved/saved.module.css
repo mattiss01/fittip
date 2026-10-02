@@ -91,15 +91,6 @@
   box-shadow: var(--shadow-card);
 }
 
-/* The name an entry was saved under, above the title it gives a session. */
-.tab {
-  margin: 0 0 0.2rem;
-  overflow-wrap: anywhere;
-  color: var(--moss);
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
 .cardBody {
   min-width: 0;
 }
@@ -157,7 +148,8 @@
   padding-top: 0.2rem;
 }
 
-/* "New activity" stands on the page, not in a card, so it is one itself. */
+/* "New activity" and "New session" stand on the page, not in a card, so
+   each is one itself. */
 .library > .disclosure {
   margin-top: 0;
   border: 0;
