@@ -73,14 +73,20 @@ lane, one screen per merge.
     says so. The owner asked for everything accepted first; this is its sharpest edge.
 - [ ] **Goals: how they look and what they hold, again.** Owner, 2 Oct 2026. Which
       attributes a goal has (title, outcome, category, areas, dates, target measure,
-      rationale, constraints) and how a card shows them. With it: Pause and Abandoned are
-      still two ways to set a goal aside, both undoable (Resume, Reopen). Archive, the
-      third and the only permanent one, left the card on 2 Oct 2026; the server still
-      has the operation and older archived goals still show in History. And a goal's
-      "Achieved on" day is its last-changed time, because the lifecycle log records
-      only reopening; logging every change is a migration.
-      It is wrong in one case: setup filing a new answer over a finished goal of the
-      same title moves the day to then.
+      rationale, constraints) and how a card shows them. With it:
+  - **Pause and Abandoned** are still two ways to set a goal aside, both undoable
+    (Resume, Reopen).
+  - **A migration to remove Archive for good.** Owner, 2 Oct 2026. Archive left the
+    card that day and nothing else went: `apply_goal_change` still accepts `archive`,
+    `goals.archived_at` is still a column, and goals archived earlier still show in
+    History. Careful lane. To decide first: what a goal that is already archived
+    becomes (most likely Abandoned, which would make it reopenable), since dropping
+    the column or changing those rows is irreversible, and the coach's context and
+    the delete refusal ("archive-required") both read `archived_at` today.
+  - **"Achieved on"** is the goal's last-changed time, because the lifecycle log
+    records only reopening; logging every change is a migration. It is wrong in one
+    case: setup filing a new answer over a finished goal of the same title moves the
+    day to then.
 - [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only
       "Generate roadmap proposal", and an owner without a subscription may not be able
       to generate one, so a roadmap must also be writable by hand: phases, dates, focus,
