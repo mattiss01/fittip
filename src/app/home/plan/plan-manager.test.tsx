@@ -215,6 +215,84 @@ describe("PlanManager", () => {
     expect(day(TODAY)).toBeNull();
   });
 
+  it("opens on this week with the weeks before it behind, read-only", () => {
+    // Two weeks of history: the Mondays of 3 and 10 August.
+    renderManager(
+      INITIAL_PLAN_ACTION_STATE,
+      [
+        session({
+          id: "7f000000-0000-4000-8000-0000000000a1",
+          localDate: "2026-08-12",
+          title: "Tempo run",
+          log: {
+            completionId: "7f000000-0000-4000-8000-0000000000c9",
+            outcome: "completed",
+            actualLocalDate: "2026-08-12",
+          },
+        }),
+        session({
+          id: "7f000000-0000-4000-8000-0000000000a2",
+          localDate: "2026-08-04",
+          title: "Long ride",
+        }),
+      ],
+      { firstDate: "2026-08-03" },
+    );
+
+    // History does not move where the Plan opens.
+    expect(screen.getByRole("heading", { name: "This week" })).toBeVisible();
+    expect(day(TODAY)).not.toBeNull();
+    expect(
+      document
+        .querySelector('[aria-current="true"]')
+        ?.getAttribute("data-week-start"),
+    ).toBe("2026-08-17");
+    expect(
+      document.querySelector('[data-week-start="2026-08-17"]')?.textContent,
+    ).toContain("This wk");
+
+    fireEvent.click(screen.getByRole("button", { name: "Previous week" }));
+    expect(screen.getByRole("heading", { name: "Last week" })).toBeVisible();
+    // What was planned and how it was logged, opened by its day.
+    const logged = day("2026-08-12");
+    expect(logged.getAttribute("data-past")).toBe("true");
+    // The planned minutes stay beside how it went.
+    expect(logged.textContent).toContain("60 min planned · Completed");
+    expect(
+      within(logged)
+        .getByRole("link", { name: "Tempo run" })
+        .getAttribute("href"),
+    ).toBe(
+      "/home/plan/session/7f000000-0000-4000-8000-0000000000a1?date=2026-08-12",
+    );
+    // No day of a past week can be added to.
+    expect(screen.queryByRole("button", { name: /^Add to / })).toBeNull();
+
+    // Further back a week is named by its dates, and the earliest is the end.
+    fireEvent.click(screen.getByRole("button", { name: "Previous week" }));
+    expect(
+      screen.getByRole("heading", { name: "3 Aug – 9 Aug" }),
+    ).toBeVisible();
+    expect(within(day("2026-08-04")).getByText("Long ride")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Previous week" })).toBeNull();
+  });
+
+  it("reaches a past week from the month calendar", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [], { firstDate: "2026-08-03" });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "This week, open calendar" }),
+    );
+    fireEvent.click(
+      screen
+        .getByRole("dialog")
+        .querySelector('[data-month-date="2026-08-05"]')!,
+    );
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(day("2026-08-05")).not.toBeNull();
+  });
+
   it("shows the roadmap phase the week sits in", () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [], {
       phases: [

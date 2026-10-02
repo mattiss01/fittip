@@ -9,7 +9,7 @@ import type { FillProposal } from "./fill/fill-state";
 import { toFillProposal } from "./fill/open-proposals";
 import { readSavedSessionOptions } from "./saved/session-options";
 import { PlanManager, type PlanSessionLog } from "./plan-manager";
-import { mondayOf, type PlanPhase } from "./plan-weeks";
+import { planHistoryStart, type PlanPhase } from "./plan-weeks";
 import { planWindowFor } from "./plan-window";
 import { redirectOnAuthError, toSessionView } from "./plan-read";
 import styles from "./plan.module.css";
@@ -87,9 +87,9 @@ async function PlanWindow({
   initialDate: string | null;
 }) {
   const { today, lastDate, lastPlaceableDate } = planWindowFor(timezoneName);
-  // The first week starts on the Monday on or before today, and its days
-  // before today show what was planned there, read-only.
-  const firstDate = mondayOf(today);
+  // A quarter of weeks before this one (owner, 2 Oct 2026). Every day before
+  // today shows what was planned there and how it was logged, read-only.
+  const firstDate = planHistoryStart(today);
 
   let slice;
   let series;
@@ -149,6 +149,7 @@ async function PlanWindow({
       >
         <PlanManager
           today={today}
+          firstDate={firstDate}
           lastPlaceableDate={lastPlaceableDate}
           repeatsThrough={lastDate}
           hasRepeats={series.some(

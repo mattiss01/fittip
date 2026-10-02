@@ -53,6 +53,22 @@ describe("MonthSheet", () => {
     expect(cells[3].textContent).toBe("1");
   });
 
+  it("is six rows tall whatever the month, so its buttons stay where they are", () => {
+    // February 2027 begins on a Monday and takes four rows; May 2027 begins
+    // on a Saturday and takes six.
+    for (const [shownWeekStart, month] of [
+      ["2027-02-08", "2027-02"],
+      ["2027-05-10", "2027-05"],
+    ]) {
+      renderSheet({ shownWeekStart, lastDate: "2027-06-06" });
+      const grid = document.querySelector("[data-plan-month]")!;
+      expect(grid.getAttribute("data-plan-month")).toBe(month);
+      // Seven weekday initials, then six weeks of seven.
+      expect(grid.children).toHaveLength(7 + 42);
+      cleanup();
+    }
+  });
+
   it("opens any other week on the month most of it is in", () => {
     // Monday 30 November to Sunday 6 December: five of its days are December.
     renderSheet({ shownWeekStart: "2026-11-30" });
