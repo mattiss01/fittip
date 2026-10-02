@@ -21,12 +21,6 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
-env:
-  # The tests use the database, the API gateway, auth, PostgREST and the mail
-  # catcher. A runner is thrown away after its job, so the stack is never
-  # stopped either.
-  SUPABASE_UNUSED_SERVICES: studio,realtime,storage-api,imgproxy,edge-runtime,logflare,vector
-
 jobs:
   static:
     name: Lint, types, unit tests, build
@@ -77,10 +71,9 @@ jobs:
 
       - run: npm ci
 
-      # Nothing in this job talks to the excluded services, and their images
-      # are most of what `supabase start` spends its time pulling.
+      # No job stops the stack again: the runner is thrown away with it.
       - name: Start local Supabase stack
-        run: npx supabase start -x "$SUPABASE_UNUSED_SERVICES"
+        run: npx supabase start
 
       - name: Derive local Supabase coordinates
         run: node .github/scripts/supabase-env.mjs
@@ -170,7 +163,7 @@ jobs:
       # A fresh stack applies every migration as it starts, so there is no
       # reset here; the `database` job is the one that proves them from zero.
       - name: Start local Supabase stack
-        run: npx supabase start -x "$SUPABASE_UNUSED_SERVICES"
+        run: npx supabase start
 
       - name: Derive local Supabase coordinates
         run: node .github/scripts/supabase-env.mjs
