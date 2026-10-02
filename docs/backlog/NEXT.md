@@ -88,8 +88,6 @@ lane, one screen per merge.
     Enough, or should far weeks be reached another way (a month jump, a date field)?
   - A week past the 13 weeks says "Repeats are added through <date>" under its totals, for
     an owner who has a series. Keep the line, reword it, or drop it?
-  - `next dev` appends a "This is NOT the Next.js you know" block to `CLAUDE.md` on every
-    start. It is uncommitted; if wanted it goes in its own commit.
 - [ ] **R4 — Motion.** Day-change slide (View Transitions), sheet and press feedback,
       instant log with background save; everything off under reduced motion.
 - Cost to expect: many unit and browser tests assert the current copy, so cutting text means
