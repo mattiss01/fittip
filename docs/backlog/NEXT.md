@@ -50,14 +50,30 @@ main action. No week ring. The owner flagged a possible bias toward the look the
 so start with Today and adjust from there rather than committing every screen up front. Build
 lane, one screen per merge.
 
-- [ ] **R3b — A three-month horizon.** Careful lane. Owner, 29 Sep 2026: option A — series
-      keep being written ahead as real sessions, now ~13 weeks instead of 14 days — and
-      option 3 for the far end: past those weeks the Plan continues only with the accepted
-      roadmap's phases and week outlines, no sessions. Needs a forward migration replacing
-      the two materializers' `v_today + 13`, `PLAN_WINDOW_DAYS` and `ROLLING_PLAN_WINDOW_DAYS`
-      to match, an ADR-017 amendment (row growth ~6× per series, series edits rewrite more
-      rows), Today's beyond-window notice, and the tests that pin 14 days. Confirm first that
-      no coach context reads the whole window (it appears to read only its 1–7-day horizon).
+- [ ] **R3b — A three-month horizon**, in three merges (owner, 29 Sep and 2 Oct 2026). In
+      this order, because the first protects the coach from the second:
+  - [~] **R3b-1 — The coach reads a series as one rule.** Careful lane (AI data boundary).
+        For a roadmap the coach is sent its next 12 planned sessions, nearest first, each
+        occurrence of a series as its own line; with 13 weeks written ahead, repeats would
+        push a locked race off the list. Owner: send a running series once, as a rule, and
+        do it before the window grows. Roadmap only — the seven-day plan and Fill send what
+        they send today. A rule carries title, sport and the recurrence, nothing a dated
+        line does not; it shares the 1,400 bytes plan commitments already have, so no
+        ceiling or spend limit moves. A single cancelled occurrence is not listed. ADR-013
+        decision 5 amended in its own commit. No migration.
+  - [ ] **R3b-2 — Repeating sessions are written 13 weeks ahead.** Careful lane. Owner:
+        option A — real sessions, 91 days instead of 14. One forward migration re-emits
+        `materialize_rolling_plan_series` with `v_today + 90` (no signature change, nothing
+        destructive), `PLAN_WINDOW_DAYS` and `ROLLING_PLAN_WINDOW_DAYS` follow, and an
+        ADR-017 amendment says what it costs. Two things 14 days hid: a change set holds
+        100 changes, so a first fill tops up in passes; and the Plan looks up logs with
+        every session id in one request, so those reads go in chunks. Today's past-the-window
+        notice and the tests that pin 14 days move with it.
+  - [ ] **R3b-3 — The Plan runs 26 weeks.** Build lane. Owner: a single session (a race)
+        may be placed up to 180 days out, which is how far the coach already reads locked
+        ones; repeats still stop at 13 weeks. A week past week 13 shows the roadmap phase
+        band where a phase covers it and its days with a "+" for a single session. The
+        database never limited this, so no migration.
 - [ ] **R3 — The other screens, one per merge.** Today, the Plan, the session page,
       Progress and You are done. For each one left: cut the explanatory intro to one line or
       remove it, and say where an explanation must survive. In the order they can be started:
