@@ -189,6 +189,23 @@ describe("PlanManager", () => {
     expect(screen.queryByText(/^Repeats are added through /)).toBeNull();
   });
 
+  it("goes to a day's week from the month calendar without opening its sheet", () => {
+    renderManager();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open calendar" }));
+    const calendar = screen.getByRole("dialog");
+    expect(
+      within(calendar).getByRole("heading", { name: "August 2026" }),
+    ).toBeVisible();
+
+    // DATES[8] is in next week.
+    fireEvent.click(calendar.querySelector(`[data-month-date="${DATES[8]}"]`)!);
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Next week" })).toBeVisible();
+    expect(day(DATES[8])).not.toBeNull();
+  });
+
   it("opens on the week of the day it was sent back to", () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [], { initialDate: DATES[8] });
     expect(day(DATES[8])).not.toBeNull();

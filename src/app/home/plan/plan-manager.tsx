@@ -9,7 +9,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { createPortal } from "react-dom";
 
 import {
   INITIAL_PLAN_ACTION_STATE,
@@ -18,6 +17,8 @@ import {
 import { changePlanAction } from "./actions";
 import { COMPLETION_OUTCOME_LABELS } from "../log/log-action-state";
 import { CreateSession, SkippedDates } from "./create-session";
+import { MonthSheet } from "./plan-month-sheet";
+import { SheetLayer } from "./plan-sheet";
 import styles from "./plan.module.css";
 import w from "./plan-week.module.css";
 import {
@@ -194,6 +195,7 @@ export function PlanManager({
       tileBox.left - stripBox.left - (stripBox.width - tileBox.width) / 2;
   }, [weekIndex]);
   const [sheet, setSheet] = useSheetClosedOnSave(state, seriesState);
+  const [monthOpen, setMonthOpen] = useState(false);
   // The plan submission the open sheet started after, so a refusal shown in
   // it is one of its own and not one from before it opened.
   const [sheetSince, setSheetSince] = useState(state.submission);
@@ -253,7 +255,21 @@ export function PlanManager({
             onGo={setWeekIndex}
           />
           <div className={w.weekTitle}>
-            <h2 id="plan-week-title">{weekLabel(week, weekIndex)}</h2>
+            {/* The title is the way to the month calendar: the button's hit
+                area is stretched over the whole row, so the heading stays a
+                heading and a tap on it still opens the sheet. */}
+            <div className={w.weekTitleRow}>
+              <h2 id="plan-week-title">{weekLabel(week, weekIndex)}</h2>
+              <button
+                type="button"
+                className={w.calendar}
+                aria-label="Open calendar"
+                aria-haspopup="dialog"
+                onClick={() => setMonthOpen(true)}
+              >
+                <CalendarIcon />
+              </button>
+            </div>
             {weekIndex < 2 ? (
               <p className={w.weekSum}>{weekRange(week)}</p>
             ) : null}
@@ -326,6 +342,21 @@ export function PlanManager({
           </button>
         ))}
       </nav>
+
+      {monthOpen ? (
+        <MonthSheet
+          today={today}
+          firstDate={weeks[0].start}
+          lastDate={weeks[weeks.length - 1].end}
+          shownWeekStart={week.start}
+          sessionCounts={sessionCounts(sessions)}
+          onPick={(date) => {
+            setWeekIndex(weekIndexOf(weeks, date));
+            setMonthOpen(false);
+          }}
+          onClose={() => setMonthOpen(false)}
+        />
+      ) : null}
 
       {sheet === null ? null : (
         <DaySheet
@@ -628,59 +659,18 @@ function DaySheet({
   onClose: () => void;
   children: ReactNode;
 }) {
-  // Read while rendering, before the title below takes focus.
-  const [opener] = useState(() => document.activeElement);
   const titleRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     titleRef.current?.focus();
   }, [sheet.view]);
-  const close = useRef(onClose);
-  useEffect(() => {
-    close.current = onClose;
-  });
-  const layerRef = useRef<HTMLDivElement>(null);
-  // Modal while open: everything else on the page is inert, so Tab stays in
-  // the sheet, and the page behind does not scroll. Escape closes; focus
-  // goes back to the "+" that opened the sheet.
-  useEffect(() => {
-    const layer = layerRef.current;
-    const background = Array.from(document.body.children).filter(
-      (element): element is HTMLElement =>
-        element instanceof HTMLElement && element !== layer && !element.inert,
-    );
-    for (const element of background) element.inert = true;
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") close.current();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      for (const element of background) element.inert = false;
-      document.body.style.overflow = overflow;
-      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
-    };
-  }, [opener]);
 
-  // Portalled to the body so it sits above the bottom navigation, whatever
-  // stacking context the page's main element makes.
-  return createPortal(
-    <div className={w.sheetLayer} ref={layerRef}>
-      <button
-        type="button"
-        className={w.scrim}
-        aria-label="Close"
-        tabIndex={-1}
-        onClick={onClose}
-      />
-      <div
-        className={w.sheet}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="plan-sheet-title"
-        data-plan-sheet={sheet.view}
-      >
+  return (
+    <SheetLayer
+      view={sheet.view}
+      labelledBy="plan-sheet-title"
+      onClose={onClose}
+    >
+      <>
         <header className={w.sheetHead}>
           {sheet.view === "menu" ? (
             <span />
@@ -763,9 +753,38 @@ function DaySheet({
         ) : (
           children
         )}
-      </div>
-    </div>,
-    document.body,
+      </>
+    </SheetLayer>
+  );
+}
+
+/** What the month calendar marks: a day holds a session the week would show. */
+function sessionCounts(sessions: PlanSessionView[]) {
+  const counts = new Map<string, number>();
+  for (const session of sessions) {
+    if (session.status !== "active" && !session.log) continue;
+    counts.set(session.localDate, (counts.get(session.localDate) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function CalendarIcon() {
+  return (
+    <svg
+      width={18}
+      height={18}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      focusable={false}
+    >
+      <rect x="3" y="4.5" width="18" height="16" rx="3" />
+      <path d="M3 9.5h18M8 2.5v4M16 2.5v4" />
+    </svg>
   );
 }
 

@@ -92,6 +92,27 @@ test.describe("M3-12 manual continuous planning", () => {
       await expect(
         await sessionCard(page, raceDay, "Autumn race"),
       ).toBeVisible();
+      // The month calendar is the way back from a far week: it marks the day
+      // that holds the race, and choosing today shows this week again.
+      await page.getByRole("button", { name: "Open calendar" }).click();
+      const calendar = page.getByRole("dialog");
+      await expect(
+        calendar.locator(`[data-month-date="${raceDay}"]`),
+      ).toHaveAccessibleName(/, 1 session$/);
+      for (let step = 0; step < 8; step += 1) {
+        if (
+          (await calendar.locator(`[data-month-date="${today}"]`).count()) > 0
+        ) {
+          break;
+        }
+        await calendar.getByRole("button", { name: "Previous month" }).click();
+      }
+      await calendar.locator(`[data-month-date="${today}"]`).click();
+      await expect(calendar).toBeHidden();
+      await expect(
+        page.getByRole("heading", { name: "This week", exact: true }),
+      ).toBeVisible();
+      await planDay(page, raceDay);
       // This owner has no series, so the week says nothing about repeats.
       await expect(page.locator("[data-plan-repeats-through]")).toHaveCount(0);
       // Today, asked for that day, shows it and says why no repeat is there.

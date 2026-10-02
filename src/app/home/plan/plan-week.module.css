@@ -160,6 +160,62 @@
   font: 400 0.72rem var(--font-mono);
 }
 
+/* The week's title and the calendar button beside it. The button's hit area
+   covers the whole row, so the title itself opens the month calendar. */
+.weekTitleRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.75rem;
+  padding: 0 0.6rem;
+  border-radius: var(--radius-pill);
+}
+
+.calendar {
+  position: static;
+  width: 1.5rem;
+  height: 1.5rem;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  background: none;
+  color: var(--moss);
+}
+
+.calendar:hover {
+  background: none;
+}
+
+.calendar::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  content: "";
+}
+
+/* The global press scale would make the pressed button the containing block
+   of its own stretched hit area, shrinking it to the icon mid-tap: the finger
+   then lifts over the title and no click happens. The row shows the press. */
+.weekTitleRow .calendar:active {
+  transform: none;
+}
+
+.weekTitleRow:has(.calendar:active) {
+  background: var(--sage);
+}
+
+.weekTitleRow:has(.calendar:focus-visible) {
+  outline: 3px solid var(--pine);
+  outline-offset: 2px;
+}
+
+.calendar:focus-visible {
+  outline: none;
+}
+
 .arrow {
   width: 2.75rem;
   height: 2.75rem;
@@ -595,6 +651,101 @@ span.arrow {
 .sheetChoiceDetail {
   color: var(--moss);
   font: 400 0.72rem var(--font-mono);
+}
+
+/* ---- Month calendar ---- */
+
+.monthHead {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr 2.75rem;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.monthHead h2 {
+  text-align: center;
+}
+
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.15rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.monthWeekday {
+  padding-bottom: 0.25rem;
+  color: var(--moss);
+  font: 500 0.68rem var(--font-mono);
+  text-align: center;
+}
+
+.monthDay {
+  min-width: 0;
+  display: grid;
+}
+
+.monthDay[data-out-of-plan] {
+  min-height: 2.9rem;
+  place-items: start center;
+  padding-top: 0.45rem;
+  color: var(--rule);
+}
+
+.monthPick {
+  width: 100%;
+  min-height: 2.9rem;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--pine);
+}
+
+.monthPick:hover {
+  background: var(--sage);
+}
+
+/* The week the Plan is showing behind the sheet. */
+.monthPick[data-shown-week] {
+  border-radius: 0;
+  background: var(--sage);
+}
+
+.monthDay:has(.monthPick[data-shown-week]):nth-child(7n + 1) .monthPick {
+  border-radius: var(--radius-control) 0 0 var(--radius-control);
+}
+
+.monthDay:has(.monthPick[data-shown-week]):nth-child(7n) .monthPick {
+  border-radius: 0 var(--radius-control) var(--radius-control) 0;
+}
+
+.monthNumber {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.monthPick[data-today] .monthNumber {
+  color: var(--ember-dark);
+  font-weight: 800;
+}
+
+.monthDot {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: var(--radius-pill);
+}
+
+.monthDot[data-filled] {
+  background: var(--pine);
 }
 
 /*
