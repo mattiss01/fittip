@@ -84,10 +84,6 @@ lane, one screen per merge.
   - You's Memory row says "What the coach may use about you", but the page also lists
     proposed, declined and disabled items, which the coach may not use. The owner took the
     wording "for now" on 2 Oct 2026.
-  - The Plan's week strip now holds 26 or 27 tiles and scrolls sideways to the week shown.
-    Enough, or should far weeks be reached another way (a month jump, a date field)?
-  - A week past the 13 weeks says "Repeats are added through <date>" under its totals, for
-    an owner who has a series. Keep the line, reword it, or drop it?
 - [ ] **R4 — Motion.** Day-change slide (View Transitions), sheet and press feedback,
       instant log with background save; everything off under reduced motion.
 - Cost to expect: many unit and browser tests assert the current copy, so cutting text means
