@@ -148,7 +148,9 @@ describe("plan window top-up before a non-Plan read", () => {
       day(90),
     );
 
-    expect(window.toppedUp).toBe(true);
+    // Not topped up: Today must be able to say a far day may be missing
+    // occurrences rather than show it as empty.
+    expect(window.toppedUp).toBe(false);
     expect(window.createdCount).toBe(100);
     expect(window.slice.sessions).toHaveLength(100);
     // What is still missing is named, never passed off as a full window.

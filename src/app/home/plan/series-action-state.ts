@@ -6,6 +6,29 @@ export type SeriesSkippedDate = {
 };
 
 /**
+ * What a list of skipped rule dates comes to on the page. Two series can skip
+ * the same date, and a fill that stopped at the change-set limit can leave
+ * hundreds behind (R3b-2), so the surface names each full date once and says
+ * how many occurrences are still to be written rather than listing them.
+ */
+export function summarizeSkippedDates(skipped: SeriesSkippedDate[]): {
+  fullDates: string[];
+  waiting: number;
+} {
+  return {
+    fullDates: [
+      ...new Set(
+        skipped
+          .filter((item) => item.reason === "daily-session-limit")
+          .map((item) => item.occurrenceDate),
+      ),
+    ].sort(),
+    waiting: skipped.filter((item) => item.reason === "change-set-limit")
+      .length,
+  };
+}
+
+/**
  * What one series operation did to the occurrences already on the Plan. Every
  * count the receipt carries is reported, including `completedKept`: from
  * M3-15B an occurrence can hold a completion, and an owner ending a series has

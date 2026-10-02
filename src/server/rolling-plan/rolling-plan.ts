@@ -325,8 +325,10 @@ export class RollingPlan {
 
   /**
    * Tops the window up with the occurrences every active series is missing.
-   * It is a write, so it is called from a Server Action and never from a read;
-   * it returns `unchanged` without advancing the revision when nothing is
+   * It is a write. The Plan calls it from a Server Action and never while
+   * rendering; Today and the coach context top up before they read, which
+   * ADR-017 consequence 3 requires of a consumer that is not the Plan. It
+   * returns `unchanged` without advancing the revision when nothing is
    * missing, so two open tabs do not fight over the revision.
    */
   async materializeSeries(

@@ -154,12 +154,15 @@ export class PostgresCompletionLogAdapter implements CompletionLogAdapter {
       .map((row) => row.id)
       .filter((id): id is string => typeof id === "string");
     const replacing = new Map<string, Completion["replaces"]>();
-    if (unplanned.length > 0) {
+    // In chunks, as `findByPlanSessions` reads. Every row that replaces one
+    // target arrives in the chunk holding that target, so the order within a
+    // target's list is the query's own.
+    for (const chunk of idChunks(unplanned)) {
       const { data, error } = await this.client
         .from("completions")
         .select("id, replaced_by_completion_id, title, planned_snapshot")
         .eq("user_id", userId)
-        .in("replaced_by_completion_id", unplanned)
+        .in("replaced_by_completion_id", chunk)
         .order("actual_local_date", { ascending: true })
         .order("id", { ascending: true });
       if (error) throw new CompletionPersistenceError();
@@ -184,12 +187,12 @@ export class PostgresCompletionLogAdapter implements CompletionLogAdapter {
         ]);
       }
     }
-    if (targets.length > 0) {
+    for (const chunk of idChunks(targets)) {
       const { data, error } = await this.client
         .from("completions")
         .select("id, actual_local_date, title, sport")
         .eq("user_id", userId)
-        .in("id", targets);
+        .in("id", chunk);
       if (error) throw new CompletionPersistenceError();
       for (const row of data ?? []) linked.set(row.id, row);
     }
