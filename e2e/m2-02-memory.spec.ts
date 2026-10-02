@@ -102,13 +102,12 @@ test.describe("M2-02 memory management", () => {
       await factCard.getByRole("button", { name: "Save memory" }).click();
       const editedCard = card(page, "Trains five mornings before work.");
       await expect(editedCard).toBeVisible();
-      await expect(editedCard).toContainText("Version 2");
-      await openDetails(
-        editedCard.locator("details").filter({ hasText: "Version history" }),
-      );
-      await expect(editedCard).toContainText(
-        "Trains four mornings before work.",
-      );
+      // The card is what is remembered now. Earlier versions are stored and
+      // not shown (owner, 2 Oct 2026).
+      await expect(editedCard).not.toContainText("Version");
+      await expect(
+        page.getByText("Trains four mornings before work."),
+      ).toHaveCount(0);
 
       // Disable removes it from context and keeps it inspectable; enable
       // restores it.

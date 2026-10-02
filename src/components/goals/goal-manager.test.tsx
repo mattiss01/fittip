@@ -198,11 +198,11 @@ describe("GoalManager", () => {
     editor!.open = true;
 
     for (const [action, consequence, confirmation] of [
-      ["Mark achieved", /records the goal as achieved/i, "Confirm achieved"],
-      ["Mark abandoned", /records the goal as abandoned/i, "Confirm abandoned"],
+      ["Achieved", /records the goal as achieved/i, "Confirm achieved"],
+      ["Abandoned", /records the goal as abandoned/i, "Confirm abandoned"],
       ["Archive", /remain in your archive/i, "Confirm archive"],
       [
-        "Delete if unused",
+        "Delete",
         /permanently deletes an unused goal/i,
         "Confirm permanent delete",
       ],

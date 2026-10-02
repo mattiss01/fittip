@@ -53,6 +53,24 @@ main action. No week ring. The owner flagged a possible bias toward the look the
 so start with Today and adjust from there rather than committing every screen up front. Build
 lane, one screen per merge.
 
+- [ ] **Guided setup, step by step with the owner.** Owner, 2 Oct 2026: the screens look
+      right, the setup itself does not, and it should be gone through together one
+      step at a time. Already named, each needing a migration, so careful lane:
+  - **Access and equipment** cannot be left empty and is a comma list of labels. The
+    owner dislikes both. `apply_onboarding_change` refuses fewer than one label.
+  - **Time zone and units belong in the profile, not in Memory.** Setup files both as
+    memory candidates today. `profiles` has `timezone_name` and no units column.
+  - **A half-filled step cannot be saved.** "Save and finish later" now leaves anyway
+    and You says the step was not saved; the draft has no place for a partial step.
+  - **The Guided setup row stays on You after setup is done**, leading to a page that
+    says it is finished. Hiding it needs the setup's state read on You.
+- [ ] **Goals: how they look and what they hold, again.** Owner, 2 Oct 2026. Which
+      attributes a goal has (title, outcome, category, areas, dates, target measure,
+      rationale, constraints) and how a card shows them. With it: Pause, Abandoned and
+      Archive are "a lot of options for almost the same"; the owner suggested Abandon and
+      Archive could be one. Today Pause and Abandoned can be undone (Resume, Reopen) and
+      Archive cannot. And a goal's "Achieved on" day is its last-changed time, because
+      the lifecycle log records only reopening; logging every change is a migration.
 - [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only
       "Generate roadmap proposal", and an owner without a subscription may not be able
       to generate one, so a roadmap must also be writable by hand: phases, dates, focus,
@@ -63,10 +81,6 @@ lane, one screen per merge.
 - [ ] **R3 — The other screens, one per merge.** Today, the Plan, the session page,
       Progress and You are done. For each one left: cut the explanatory intro to one line or
       remove it, and say where an explanation must survive. In the order they can be started:
-  - [ ] **Inside Goals, Memory and Guided setup.** The three pages got You's back link and
-        a plain heading and nothing else: their lists, filters, forms and buttons are
-        still in the old style, with mono kickers ("Primary attention / 0 of 3",
-        "Optional setup") and square controls.
   - [ ] **A proposal under review and a roadmap with phases are still in the old style.**
         The Plan's sub-pages were restyled on 2 Oct 2026 from their empty and one-entry
         states. Not done: in a review, the mono day stamps, badges and section labels,
@@ -89,9 +103,6 @@ lane, one screen per merge.
     on the proposal or roadmap pages.
   - A record's "Logged for" date is long, so at 390px the duration wraps under it; a short
     date ("Tue 29 Sep") would keep them on one line.
-  - You's Memory row says "What the coach may use about you", but the page also lists
-    proposed, declined and disabled items, which the coach may not use. The owner took the
-    wording "for now" on 2 Oct 2026.
 - [ ] **R4 — Motion.** Day-change slide (View Transitions), sheet and press feedback,
       instant log with background save; everything off under reduced motion.
 - Cost to expect: many unit and browser tests assert the current copy, so cutting text means

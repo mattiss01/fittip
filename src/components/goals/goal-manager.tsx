@@ -41,6 +41,11 @@ export type GoalView = {
   rationale: string | null;
   constraints: string | null;
   archivedAt: string | null;
+  /**
+   * The owner-local day the goal was paused, achieved, abandoned or
+   * archived. Absent for an active goal.
+   */
+  statusDate?: string | null;
 };
 
 type Props = {
@@ -116,6 +121,18 @@ export function GoalManager({ initialGoals, expectedRevision }: Props) {
         </a>
       ) : null}
 
+      {/* First on the page, not under both lists (owner, 2 Oct 2026). */}
+      <details className={styles.addPanel}>
+        <summary>Add goal</summary>
+        <GoalForm
+          key={`create-${state.submission}`}
+          action={action}
+          expectedRevision={expectedRevision}
+          pending={pending}
+          draft={state.operation === "create" ? state.draft : undefined}
+        />
+      </details>
+
       <section className={styles.attention} aria-labelledby="core-heading">
         <div className={styles.sectionHeading}>
           <div>
@@ -187,17 +204,6 @@ export function GoalManager({ initialGoals, expectedRevision }: Props) {
           </p>
         )}
       </section>
-
-      <details className={styles.addPanel}>
-        <summary>Add goal</summary>
-        <GoalForm
-          key={`create-${state.submission}`}
-          action={action}
-          expectedRevision={expectedRevision}
-          pending={pending}
-          draft={state.operation === "create" ? state.draft : undefined}
-        />
-      </details>
 
       <HistorySection
         title="Paused"
@@ -300,7 +306,7 @@ function GoalCard({
             />
             <ConfirmedAction
               operation="achieve"
-              label="Mark achieved"
+              label="Achieved"
               goal={goal}
               expectedRevision={expectedRevision}
               action={action}
@@ -308,7 +314,7 @@ function GoalCard({
             />
             <ConfirmedAction
               operation="abandon"
-              label="Mark abandoned"
+              label="Abandoned"
               goal={goal}
               expectedRevision={expectedRevision}
               action={action}
@@ -324,7 +330,7 @@ function GoalCard({
             />
             <ConfirmedAction
               operation="delete"
-              label="Delete if unused"
+              label="Delete"
               goal={goal}
               expectedRevision={expectedRevision}
               action={action}
@@ -662,7 +668,10 @@ function HistorySection({
   return (
     <details className={styles.history}>
       <summary>
-        {title} <span>{goals.length}</span>
+        {title}
+        {/* A count, set apart: run together it read "Paused1" (owner,
+            2 Oct 2026). */}
+        <span className={styles.count}>{goals.length}</span>
       </summary>
       <ul>
         {goals.map((goal) => (
@@ -670,8 +679,7 @@ function HistorySection({
             <div>
               <strong>{goal.title}</strong>
               <span>
-                {goal.archivedAt ? "archived" : goal.status} ·{" "}
-                {goal.priorityTier}
+                {statusLine(goal)} · {goal.priorityTier}
               </span>
             </div>
             {goal.archivedAt ? null : (
@@ -833,6 +841,36 @@ function stallNotice(stall: TransitionWatch | null) {
     return "This goal change has not been confirmed. Reload to see whether it was saved.";
   }
   return null;
+}
+
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+/**
+ * "Achieved on 2 Oct 2026". Spelled by hand rather than through Intl, whose
+ * output differs between the server and the browser and so fails hydration.
+ * Without a logged day it is the status alone, never a guessed date.
+ */
+function statusLine(goal: GoalView) {
+  const status = goal.archivedAt ? "archived" : goal.status;
+  const label = status.charAt(0).toUpperCase() + status.slice(1);
+  const date = goal.statusDate;
+  if (!date) return label;
+  return `${label} on ${Number(date.slice(8, 10))} ${
+    MONTHS[Number(date.slice(5, 7)) - 1]
+  } ${date.slice(0, 4)}`;
 }
 
 function byRank(a: GoalView, b: GoalView) {

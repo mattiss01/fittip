@@ -1,7 +1,8 @@
-/* A card index rather than a ledger: every remembered statement is filed on
-   its own card, spined and stamped with the status and origin that decide
-   whether coaching may use it. The stamp is the one loud element; everything
-   around it stays quiet. */
+/* Every remembered statement is on its own card, with a spine and a status
+   mark in the colour of what coaching may do with it. In the Coach's note
+   direction since 2 Oct 2026 (R3): paper cards, sans buttons, rounded fields
+   and filter chips. The status mark was a tilted rubber stamp; it is a pill
+   now and says the same word. */
 .page {
   --memory-stated: var(--pine-soft);
   --memory-proposed: #8a6a1f;
@@ -11,10 +12,12 @@
   --memory-file: #e3ebdb;
 }
 
+/* The shell centres its children and lets each shrink, so this takes the row. */
 .manager {
+  width: 100%;
   display: grid;
-  gap: 1.6rem;
-  margin-top: 1.75rem;
+  gap: 1rem;
+  margin-top: 1.25rem;
 }
 
 .notice {
@@ -23,7 +26,6 @@
   top: 0.75rem;
   margin: 0;
   padding: 0.8rem 1rem;
-  border: 1px solid var(--line);
   background: #e7f0dc;
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
@@ -45,37 +47,35 @@
   min-height: 2.75rem;
   display: inline-flex;
   align-items: center;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid var(--ledger-ink);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-control);
+  background: var(--line);
   color: var(--ledger-ink);
-  font: 500 0.7rem var(--font-mono);
+  font: 700 0.95rem var(--font-sans);
   text-decoration: none;
 }
 
-/* Filing tabs. Each option names the filter in full and carries its count, so
-   narrowing the view never hides what exists. */
+/* Filter chips, as on the Plan. Each names the filter in full and carries its
+   count, so narrowing the view never hides what exists. */
 .filters {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
   margin: 0;
-  padding: 0.6rem;
-  border: 1px solid var(--ledger-ink);
-  background: var(--memory-file);
 }
 
 .filters button {
   min-height: 2.75rem;
-  padding: 0.5rem 0.65rem;
-  border: 1px solid var(--ledger-ink);
-  background: transparent;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--ledger-paper);
   color: var(--ledger-ink);
-  font: 500 0.64rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font: 700 0.88rem var(--font-sans);
 }
 
 .filters button[aria-pressed="true"] {
+  border-color: var(--ledger-ink);
   background: var(--ledger-ink);
   color: var(--ledger-paper);
 }
@@ -90,22 +90,21 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 0.75rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--ledger-rule);
+  margin-top: 0.5rem;
 }
 
 .groupHeading h2 {
   margin: 0;
-  font-size: clamp(1.5rem, 6.5vw, 2.3rem);
-  letter-spacing: -0.04em;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 .groupCount {
   margin: 0;
   color: var(--ledger-muted);
-  font: 500 0.62rem var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .cardList {
@@ -117,32 +116,34 @@
 }
 
 .card {
-  border: 1px solid var(--line);
-  border-left: 7px solid var(--memory-stated);
+  --memory-spine: var(--memory-stated);
+  overflow: hidden;
   background: var(--ledger-paper);
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
+  box-shadow:
+    inset 5px 0 0 var(--memory-spine),
+    var(--shadow-card);
 }
 
 .card[data-state="proposed"] {
-  border-left-color: var(--memory-proposed);
+  --memory-spine: var(--memory-proposed);
 }
 
 .card[data-state="review-due"] {
-  border-left-color: var(--memory-review);
+  --memory-spine: var(--memory-review);
 }
 
 .card[data-state="archived"] {
-  border-left-color: var(--memory-disabled);
+  --memory-spine: var(--memory-disabled);
 }
 
 .card[data-state="rejected"] {
-  border-left-color: var(--memory-declined);
+  --memory-spine: var(--memory-declined);
 }
 
 .cardBody {
   min-width: 0;
-  padding: 1rem;
+  padding: 1.1rem 1.1rem 1.1rem 1.3rem;
 }
 
 .stampRow {
@@ -153,16 +154,15 @@
   gap: 0.6rem;
 }
 
-/* The signature element. A filed card carries a stamp saying exactly what
-   FitTip is allowed to do with it. */
+/* A card's status says exactly what FitTip is allowed to do with it. */
 .stamp {
-  padding: 0.35rem 0.5rem;
-  border: 2px solid currentColor;
+  padding: 0.2rem 0.6rem;
+  border: 1.5px solid currentColor;
+  border-radius: var(--radius-pill);
   color: var(--memory-stated);
-  font: 500 0.58rem var(--font-mono);
-  letter-spacing: 0.12em;
+  font: 500 0.62rem var(--font-mono);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  transform: rotate(-1.5deg);
 }
 
 .card[data-state="proposed"] .stamp {
@@ -182,33 +182,26 @@
 }
 
 .className,
-.origin,
-.revision {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+.origin {
+  color: var(--ledger-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 .className {
   margin: 0;
-  color: var(--ledger-muted);
-  font-size: 0.6rem;
 }
 
 /* Memory has no title. The remembered sentence is the display element. */
 .content {
-  margin: 0.7rem 0 0;
+  margin: 0.6rem 0 0;
   overflow-wrap: anywhere;
-  font-size: 1.12rem;
-  line-height: 1.5;
+  font-size: 1.1rem;
+  line-height: 1.45;
 }
 
-.origin,
-.revision {
-  margin: 0.7rem 0 0;
-  color: var(--ledger-muted);
-  font-size: 0.6rem;
+.origin {
+  margin: 0.5rem 0 0;
 }
 
 .reviewDate {
@@ -229,11 +222,12 @@
 .confirmation button,
 .form button {
   min-height: 2.75rem;
-  padding: 0.55rem 0.7rem;
-  border: 1px solid var(--ledger-ink);
-  background: transparent;
+  padding: 0.5rem 0.9rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--line);
   color: var(--ledger-ink);
-  font: 500 0.68rem var(--font-mono);
+  font: 700 0.9rem var(--font-sans);
 }
 
 .itemActions button:disabled,
@@ -244,22 +238,24 @@
 
 .confirmation {
   flex: 1 1 10rem;
-  border: 1px solid var(--ledger-rule);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
 }
 
 .confirmation > summary {
   min-height: 2.75rem;
   display: flex;
   align-items: center;
-  padding: 0.55rem 0.7rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius-control);
   cursor: pointer;
-  font: 500 0.68rem var(--font-mono);
+  font: 700 0.9rem var(--font-sans);
 }
 
 .confirmation > p {
   margin: 0;
-  padding: 0.75rem;
-  border-top: 1px solid var(--ledger-rule);
+  padding: 0.75rem 0.9rem;
+  border-top: 1px solid var(--line);
   color: var(--ledger-muted);
   font-size: 0.82rem;
   line-height: 1.45;
@@ -273,34 +269,30 @@
 }
 
 .editor,
-.historyPanel,
 .addPanel {
   margin-top: 0.9rem;
-  border-top: 1px solid var(--ledger-rule);
+  border-top: 1px solid var(--line);
 }
 
 .addPanel {
   margin-top: 0;
-  border: 1px solid var(--line);
+  border: 0;
   background: var(--ledger-paper);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
 }
 
 .editor > summary,
-.historyPanel > summary,
 .addPanel > summary {
   min-height: 3rem;
   display: flex;
   align-items: center;
   cursor: pointer;
-  font: 500 0.7rem var(--font-mono);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font: 700 0.95rem var(--font-sans);
 }
 
 .addPanel > summary {
-  padding: 0 1rem;
+  padding: 0 1.1rem;
 }
 
 .form {
@@ -310,14 +302,14 @@
 }
 
 .addPanel .form {
-  padding: 0 1rem 1rem;
+  padding: 0 1.1rem 1.1rem;
 }
 
 .form label {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.3rem;
   color: var(--ledger-muted);
-  font: 500 0.64rem var(--font-mono);
+  font: 500 0.62rem var(--font-mono);
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
@@ -326,13 +318,14 @@
 .form textarea,
 .form select {
   width: 100%;
-  min-height: 2.9rem;
-  padding: 0.65rem;
-  border: 1px solid var(--ledger-ink);
-  border-radius: 0;
+  min-height: 3rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
   background: white;
   color: var(--ledger-ink);
   font: 400 1rem/1.4 var(--font-sans);
+  letter-spacing: 0;
   text-transform: none;
 }
 
@@ -341,55 +334,30 @@
   resize: vertical;
 }
 
+/* The orange main button, as on the Plan and the libraries. */
 .form > button {
-  background: var(--memory-stated);
-  border-color: var(--memory-stated);
-  color: var(--ledger-paper);
-  min-height: 3rem;
+  min-height: 3.2rem;
+  background: var(--ember);
+  color: var(--paper);
+  font-size: 0.95rem;
 }
 
 /* Static, non-diagnostic, and shown only where the owner writes memory. */
 .safety {
   margin: 0;
-  padding: 0.75rem;
+  padding: 0.75rem 0.9rem;
   border: 1px dashed var(--memory-review);
+  border-radius: var(--radius-control);
   color: #6b3117;
   font-size: 0.84rem;
-  line-height: 1.45;
-}
-
-.historyList {
-  display: grid;
-  gap: 0.6rem;
-  margin: 0;
-  padding: 0 0 0.9rem;
-  list-style: none;
-}
-
-.historyList li {
-  padding: 0.7rem;
-  border-left: 3px solid var(--ledger-rule);
-  background: #f3f1e6;
-}
-
-.historyMeta {
-  margin: 0 0 0.35rem;
-  color: var(--ledger-muted);
-  font: 500 0.58rem var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.historyText {
-  margin: 0;
-  overflow-wrap: anywhere;
   line-height: 1.45;
 }
 
 .empty {
   margin: 0;
   padding: 1.1rem;
-  border: 1px dashed var(--ledger-rule);
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius-card);
   color: var(--ledger-muted);
   line-height: 1.55;
 }

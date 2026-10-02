@@ -228,17 +228,22 @@ describe("OnboardingManager", () => {
       },
     ];
     snapshot.goalCandidates = [
+      // Both start rejected, so the preview begins as the existing order and
+      // each acceptance below is one change to it. An undecided card starts
+      // accepted, which the test after this one covers.
       goalCandidate({
         id: "54000000-0000-4000-8000-000000000511",
         position: 1,
         title: "New first",
         targetRank: 1,
+        decision: "rejected",
       }),
       goalCandidate({
         id: "54000000-0000-4000-8000-000000000512",
         position: 2,
         title: "Replacement first",
         targetRank: 1,
+        decision: "rejected",
         comparison: {
           kind: "conflict",
           targetId: "54000000-0000-4000-8000-000000000502",
@@ -334,6 +339,44 @@ describe("OnboardingManager", () => {
     expect(
       submitted.get("resolution:54000000-0000-4000-8000-000000000512"),
     ).toBe("keep");
+  });
+
+  it("starts an undecided card accepted, with no empty choice to make", () => {
+    const snapshot = emptySnapshot();
+    snapshot.draft = draft({ currentStep: 6 });
+    snapshot.goalCandidates = [
+      goalCandidate({
+        id: "54000000-0000-4000-8000-000000000521",
+        title: "Undecided goal",
+        decision: "pending",
+      }),
+    ];
+
+    render(<OnboardingManager snapshot={snapshot} />);
+
+    const decision = screen.getByLabelText("Decision") as HTMLSelectElement;
+    expect(decision.value).toBe("accepted");
+    expect(Array.from(decision.options).map((option) => option.value)).toEqual([
+      "accepted",
+      "rejected",
+    ]);
+    expect(rankTitles()).toEqual(["Undecided goal"]);
+  });
+
+  it("does not offer setup again once it has been finished", () => {
+    const snapshot = emptySnapshot();
+    snapshot.hasPublished = true;
+
+    render(<OnboardingManager snapshot={snapshot} />);
+
+    expect(
+      screen.getByRole("heading", { name: "Your setup is finished." }),
+    ).toBeVisible();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.getByRole("link", { name: "Goals" })).toHaveAttribute(
+      "href",
+      "/home/you/goals",
+    );
   });
 
   it("surfaces inactive exact Memory and does not offer keep", () => {

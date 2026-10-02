@@ -72,7 +72,7 @@
 }
 
 .place {
-  min-height: 4.25rem;
+  min-height: 3.6rem;
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
@@ -100,14 +100,6 @@
   letter-spacing: -0.02em;
 }
 
-.place span {
-  display: block;
-  margin-top: 0.15rem;
-  color: var(--moss);
-  font-size: 0.85rem;
-  line-height: 1.35;
-}
-
 .place svg {
   color: var(--moss);
 }
@@ -115,6 +107,16 @@
 .signOut {
   width: 100%;
   margin-top: 1.5rem;
+}
+
+/* Said once, on arriving from "Save and finish later". */
+.kept {
+  width: 100%;
+  margin: 1rem 0 0;
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius-control);
+  background: #e7f0dc;
+  line-height: 1.45;
 }
 
 .note {

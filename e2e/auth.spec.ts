@@ -143,7 +143,7 @@ async function completeGuidedSetup(
   await page.getByLabel("Monday").check();
   await page.getByLabel("Saturday").check();
   await page.getByLabel("Access and equipment").fill("Road, Home weights");
-  await page.getByLabel("Timezone").fill("Europe/Berlin");
+  await page.getByLabel("Timezone").selectOption("Europe/Berlin");
   await page.getByRole("button", { name: "Save and continue" }).click();
   await expect(page.getByText("Step 4 of 6 · Preferences")).toBeVisible();
 
@@ -170,11 +170,13 @@ async function completeGuidedSetup(
     await decisions.nth(index).selectOption("accepted");
   }
   await page.getByRole("button", { name: "Save accepted items" }).click();
+  // Finishing goes straight back to You, which says it is saved.
+  await expect(page).toHaveURL(/\/home\/you\?setup=done$/);
   await expect(
-    page.getByRole("heading", {
-      name: "Your accepted context is filed.",
-    }),
-  ).toBeFocused();
+    page.getByText(
+      "Your setup is saved. What you accepted is in Goals and Memory.",
+    ),
+  ).toBeVisible();
 
   // Publication has deleted the draft, so this result screenshot contains no
   // intake answers or candidate text.
@@ -187,7 +189,7 @@ async function completeGuidedSetup(
     path: testInfo.outputPath("m2-03-published-390x844.png"),
   });
 
-  await page.getByRole("link", { name: "Goals", exact: true }).click();
+  await page.goto("/home/you/goals");
   await expect(page.getByText(goalTitle)).toBeVisible();
   await page.goto("/home/you/memory");
   await expect(
@@ -196,11 +198,14 @@ async function completeGuidedSetup(
       .filter({ hasText: /^I am not training currently\.$/ }),
   ).toBeVisible();
 
+  // Done once, setup is not offered again.
   await page.goto("/home/you/onboarding");
-  await page.getByRole("button", { name: "Run guided review again" }).click();
-  await expect(page.getByText("Step 1 of 6 · Goals")).toBeVisible();
-  await page.getByRole("button", { name: "Cancel and delete draft" }).click();
-  await expect(page).toHaveURL(/\/home\/you$/);
+  await expect(
+    page.getByRole("heading", { name: "Your setup is finished." }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /setup|review/i })).toHaveCount(
+    0,
+  );
 
   expect(
     await page.evaluate(

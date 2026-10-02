@@ -58,7 +58,13 @@ export default async function MemoryPage({
         <h1>Memory</h1>
       </header>
       <MemoryManager
-        items={collection.items}
+        // Only what the card shows crosses to the browser: earlier versions
+        // and the version number stay on the server.
+        items={collection.items.map(({ history, revisionNumber, ...item }) => {
+          void history;
+          void revisionNumber;
+          return item;
+        })}
         expectedRevision={collection.revision}
         today={collection.today}
       />

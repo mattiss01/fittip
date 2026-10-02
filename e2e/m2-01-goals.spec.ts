@@ -201,7 +201,7 @@ test.describe("M2-01 goal management", () => {
       await openGoalDetails(achievementCard);
       const achieveConfirmation = confirmation(
         achievementCard,
-        "Mark achieved",
+        "Achieved",
         "Confirm achieved",
       );
       await achieveConfirmation.summary.click();
@@ -221,7 +221,7 @@ test.describe("M2-01 goal management", () => {
       await openGoalDetails(abandonCard);
       const abandonConfirmation = confirmation(
         abandonCard,
-        "Mark abandoned",
+        "Abandoned",
         "Confirm abandoned",
       );
       await abandonConfirmation.summary.click();
@@ -241,7 +241,7 @@ test.describe("M2-01 goal management", () => {
       await openGoalDetails(temporaryCard);
       const deleteConfirmation = confirmation(
         temporaryCard,
-        "Delete if unused",
+        "Delete",
         "Confirm permanent delete",
       );
       await deleteConfirmation.summary.click();
@@ -408,10 +408,10 @@ function confirmation(
   confirmLabel: string,
 ) {
   const operation = {
-    "Mark achieved": "achieve",
-    "Mark abandoned": "abandon",
+    Achieved: "achieve",
+    Abandoned: "abandon",
     Archive: "archive",
-    "Delete if unused": "delete",
+    Delete: "delete",
   }[label];
   const details = card.locator(`details[data-confirmation="${operation}"]`);
   return {

@@ -65,9 +65,7 @@ async function resolveOnboardingAction(
       revalidate();
       return result(
         "saved",
-        operation === "start"
-          ? "Guided setup started."
-          : "The Home invitation has been removed.",
+        operation === "start" ? "" : "The Home invitation has been removed.",
         operation === "start" ? { nextStep: 1 } : {},
       );
     }
@@ -107,9 +105,12 @@ async function resolveOnboardingAction(
         idempotencyKey: parseIdempotencyKey(formData.get("idempotencyKey")),
       });
       revalidate();
+      // Straight back to You, which says it is saved (owner, 2 Oct 2026).
+      // There was a "Setup saved" page here that offered to run it again.
       return result(
         "published",
         "Accepted items were saved to Goals and Memory.",
+        { redirectTo: "/home/you?setup=done" },
       );
     }
 
@@ -126,13 +127,20 @@ async function resolveOnboardingAction(
     revalidate();
     return result("saved", "This step was saved.", {
       nextStep: advance ? nextStep(step) : step,
-      ...(advance ? {} : { redirectTo: "/home/you" }),
+      // You says how long the draft is kept; see `SETUP_KEPT` there.
+      ...(advance ? {} : { redirectTo: "/home/you?setup=kept" }),
     });
   } catch (error) {
     if (
       error instanceof OnboardingValidationError ||
       error instanceof OnboardingDatabaseValidationError
     ) {
+      // "Save and finish later" leaves whatever the step holds (owner,
+      // 2 Oct 2026). A step the draft cannot store as it stands is not saved,
+      // and You says so; the steps before it are already in the draft.
+      if (stringValue(formData.get("intent")) === "finish") {
+        return result("saved", "", { redirectTo: "/home/you?setup=left" });
+      }
       return result(
         "validation",
         "Review this step and correct the details. Nothing from this attempt was saved.",

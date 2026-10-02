@@ -269,42 +269,14 @@ describe("MemoryManager", () => {
     );
   });
 
-  it("keeps every version inspectable with its author and change", () => {
-    renderManager([
-      item({
-        id: "h",
-        content: "Needs an easy day after two hard sessions.",
-        revisionNumber: 2,
-        history: [
-          revision({
-            id: "r2",
-            revisionNumber: 2,
-            content: "Needs an easy day after two hard sessions.",
-            changeKind: "edited_and_accepted",
-          }),
-          revision({
-            id: "r1",
-            revisionNumber: 1,
-            content: "Recovers slowly after two hard sessions.",
-            authorClass: "system",
-            changeKind: "created",
-          }),
-        ],
-      }),
-    ]);
+  it("shows no version history: the card is what is remembered now", () => {
+    renderManager([item({ id: "h", content: "Needs an easy day." })]);
 
-    const history = screen
-      .getByText("Version history (2)")
-      .closest("details") as HTMLElement;
-    expect(
-      within(history).getByText("Recovers slowly after two hard sessions."),
-    ).toBeInTheDocument();
-    expect(
-      within(history).getByText(/v1 · Created · by FitTip/),
-    ).toBeInTheDocument();
-    expect(
-      within(history).getByText(/v2 · Edited and accepted · by you/),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/Version/)).toBeNull();
+    expect(document.querySelectorAll("li details")).toHaveLength(
+      // The editor and the permanent-delete confirmation, and nothing else.
+      2,
+    );
   });
 
   it("explains what permanent deletion does before asking for confirmation", () => {
@@ -599,24 +571,6 @@ function item(overrides: Partial<MemoryView> = {}): MemoryView {
     expiresOn: null,
     userConfirmedAt: null,
     content: "Trains before work.",
-    revisionNumber: 1,
-    history: [revision({})],
-    ...overrides,
-  };
-}
-
-function revision(
-  overrides: Partial<MemoryView["history"][number]>,
-): MemoryView["history"][number] {
-  return {
-    id: "revision-1",
-    revisionNumber: 1,
-    content: "Trains before work.",
-    authorClass: "user",
-    provenance: "user_created",
-    changeKind: "created",
-    statusAfter: "active",
-    createdAt: "2026-08-01T09:00:00.000Z",
     ...overrides,
   };
 }

@@ -26,17 +26,6 @@ import {
   type TransitionWatch,
 } from "@/lib/app-router/transition-watchdog";
 
-export type MemoryRevisionView = {
-  id: string;
-  revisionNumber: number;
-  content: string;
-  authorClass: "user" | "system";
-  provenance: string;
-  changeKind: string;
-  statusAfter: string;
-  createdAt: string;
-};
-
 export type MemoryView = {
   id: string;
   memoryType: "profile_fact" | "constraint" | "preference" | "observed_pattern";
@@ -47,8 +36,6 @@ export type MemoryView = {
   expiresOn: string | null;
   userConfirmedAt: string | null;
   content: string;
-  revisionNumber: number;
-  history: MemoryRevisionView[];
 };
 
 type Props = {
@@ -100,17 +87,6 @@ const PROVENANCE_LABELS: Record<string, string> = {
   user_created: "Stated by you",
   intake_confirmed: "Confirmed during intake",
   inferred_proposed: "Proposed from your records",
-};
-
-const CHANGE_LABELS: Record<string, string> = {
-  created: "Created",
-  edited: "Edited",
-  accepted: "Accepted",
-  edited_and_accepted: "Edited and accepted",
-  rejected: "Declined",
-  disabled: "Disabled",
-  enabled: "Enabled",
-  renewed: "Review date updated",
 };
 
 const SAFETY_NOTICE =
@@ -363,7 +339,6 @@ function MemoryCard({
           {item.sourceReference === null ? "" : ` · ${item.sourceReference}`}
           {item.userConfirmedAt === null ? "" : " · confirmed by you"}
         </p>
-        <p className={styles.revision}>Version {item.revisionNumber}</p>
         {item.expiresOn === null ? null : (
           <p className={styles.reviewDate}>
             {state === "review-due"
@@ -470,23 +445,8 @@ function MemoryCard({
             ) : null}
           </details>
         ) : null}
-
-        <details className={styles.historyPanel}>
-          <summary>Version history ({item.history.length})</summary>
-          <ul className={styles.historyList}>
-            {item.history.map((revision) => (
-              <li key={revision.id}>
-                <p className={styles.historyMeta}>
-                  v{revision.revisionNumber} ·{" "}
-                  {CHANGE_LABELS[revision.changeKind] ?? revision.changeKind} ·{" "}
-                  {revision.authorClass === "user" ? "by you" : "by FitTip"} ·{" "}
-                  {revision.createdAt.slice(0, 10)}
-                </p>
-                <p className={styles.historyText}>{revision.content}</p>
-              </li>
-            ))}
-          </ul>
-        </details>
+        {/* No version history (owner, 2 Oct 2026). Earlier versions are still
+            stored, and a permanent delete still erases them. */}
       </div>
     </li>
   );

@@ -1,5 +1,7 @@
-/* Guided setup keeps FitTip's ledger materials and spends its one visual
-   signature on the Context map: destination stamps make storage explicit. */
+/* Guided setup, in the Coach's note direction since 2 Oct 2026 (R3): paper
+   cards, sans headings and buttons, rounded fields. Its one signature stays
+   the Context map, where a mark on every card says whether an answer is kept
+   as a goal or as memory. */
 .page {
   --setup-goals: #294f73;
   --setup-memory: #6c4a22;
@@ -7,16 +9,19 @@
   --setup-soft-amber: #f2ead8;
 }
 
+/* The shell centres its children and lets each shrink, so this takes the row. */
 .manager {
+  width: 100%;
   display: grid;
-  gap: 1.25rem;
-  margin-top: 1.5rem;
+  gap: 1rem;
+  margin-top: 1.25rem;
 }
 
 .progress {
   overflow-x: auto;
-  border: 1px solid var(--ledger-ink);
+  border-radius: var(--radius-card);
   background: var(--ledger-paper);
+  box-shadow: var(--shadow-card);
 }
 
 .progress ol {
@@ -29,7 +34,7 @@
 }
 
 .progress li {
-  border-left: 1px solid var(--ledger-rule);
+  border-left: 1px solid var(--line);
 }
 
 .progress li:first-child {
@@ -57,11 +62,11 @@
 }
 
 .progress button span {
-  font-size: 0.6rem;
+  font: 500 0.62rem var(--font-mono);
 }
 
 .progress button strong {
-  font-size: 0.67rem;
+  font-size: 0.8rem;
   line-height: 1.2;
 }
 
@@ -86,7 +91,6 @@
   z-index: 20;
   top: 0.75rem;
   padding: 0.85rem 1rem;
-  border: 1px solid var(--line);
   background: #e7f0dc;
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
@@ -97,7 +101,6 @@
 .notice[data-state="conflict"],
 .notice[data-state="session"],
 .notice[data-state="error"] {
-  border-color: #7d2d1d;
   background: #fff0e1;
   color: #6c2718;
 }
@@ -112,17 +115,17 @@
 .loadingCard > p,
 .errorCard > p {
   margin: 0;
-  color: #9b3b24;
-  font: 500 0.67rem var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  color: var(--ledger-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .stepHeader h2 {
-  margin: 0.35rem 0;
-  font-size: clamp(2.2rem, 10vw, 4.2rem);
-  letter-spacing: -0.055em;
-  line-height: 0.98;
+  margin: 0.2rem 0 0.35rem;
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
 }
 
 .stepHeader span {
@@ -137,7 +140,11 @@
 
 .stepForm label {
   display: grid;
-  gap: 0.4rem;
+  gap: 0.3rem;
+  color: var(--ledger-muted);
+  font: 500 0.62rem var(--font-mono);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .stepForm input,
@@ -145,12 +152,14 @@
 .stepForm textarea {
   width: 100%;
   min-height: 3rem;
-  padding: 0.7rem 0.75rem;
-  border: 1px solid var(--ledger-rule);
-  border-radius: 0;
-  background: var(--paper);
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: white;
   color: var(--ledger-ink);
-  font: inherit;
+  font: 400 1rem/1.35 var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .stepForm textarea {
@@ -189,8 +198,8 @@
 .choiceGroup,
 .constraintList fieldset {
   margin: 0;
-  padding: 1rem;
-  border: 1px solid var(--line);
+  padding: 1.1rem;
+  border: 0;
   background: var(--ledger-paper);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
@@ -205,11 +214,22 @@
 .choiceGroup legend,
 .dayGrid legend,
 .constraintList legend {
-  padding: 0 0.35rem;
-  color: #8a351f;
-  font: 500 0.68rem var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  /* Floated so it sits inside the card: a legend otherwise rides the top
+     edge, which a card with a shadow and no border does not have. */
+  float: left;
+  width: 100%;
+  margin: 0 0 0.6rem;
+  padding: 0;
+  color: var(--ledger-ink);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.entryCard legend + *,
+.choiceGroup legend + *,
+.dayGrid legend + *,
+.constraintList legend + * {
+  clear: both;
 }
 
 .fieldGrid,
@@ -228,19 +248,23 @@
   gap: 0.65rem;
 }
 
+/* `label.constraintChoice`, so it outranks the form's own label rule as the
+   other two do. */
 .choiceGroup label,
 .dayGrid label,
-.constraintChoice {
+label.constraintChoice {
   display: flex;
   align-items: start;
   gap: 0.55rem;
   min-height: 2.75rem;
-  padding: 0.55rem;
-  border: 1px solid var(--ledger-rule);
-  background: #f4f1e6;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--sage);
+  color: var(--ledger-ink);
   font-family: var(--font-sans);
-  font-size: 0.92rem;
-  font-weight: 400;
+  font-size: 0.95rem;
+  font-weight: 600;
   letter-spacing: 0;
   line-height: 1.4;
   text-transform: none;
@@ -252,6 +276,12 @@
   width: 1.2rem;
   min-height: 1.2rem;
   margin: 0.1rem 0 0;
+}
+
+/* The days are a grid, and the floated legend would take a cell of it. */
+.dayGrid legend {
+  grid-column: 1 / -1;
+  margin-bottom: 0.2rem;
 }
 
 .dayGrid {
@@ -266,17 +296,18 @@
 .privacyNotice,
 .safetyCopy {
   margin: 0;
-  padding: 0.9rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-control);
   line-height: 1.5;
 }
 
 .privacyNotice {
-  border-left: 4px solid var(--setup-goals);
+  box-shadow: inset 4px 0 0 var(--setup-goals);
   background: var(--setup-soft-blue);
 }
 
 .safetyCopy {
-  border: 1px solid #9b3b24;
+  border: 1px dashed #9b3b24;
   background: #fff0e1;
   color: #6c2718;
 }
@@ -296,27 +327,33 @@
   flex-wrap: wrap;
   justify-content: end;
   gap: 0.55rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--ledger-rule);
+  padding-top: 0.5rem;
 }
 
 .stepActions button,
 .secondaryButton,
 .result button,
 .startCard button {
-  min-height: 2.9rem;
+  min-height: 3.2rem;
   margin: 0;
-  padding: 0.65rem 0.9rem;
-  border: 1px solid var(--ledger-ink);
-  border-radius: 0;
-  background: var(--ledger-signal);
-  color: white;
-  font: 500 0.72rem var(--font-mono);
+  padding: 0.6rem 1.2rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--ember);
+  color: var(--paper);
+  font: 700 0.95rem var(--font-sans);
+}
+
+/* One main action per step: saving to come back later is the quieter one. */
+.stepActions button[value="finish"] {
+  background: var(--line);
+  color: var(--ledger-ink);
 }
 
 .secondaryButton {
   width: fit-content;
-  background: transparent !important;
+  min-height: 3rem !important;
+  background: var(--line) !important;
   color: var(--ledger-ink) !important;
 }
 
@@ -325,7 +362,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.8rem;
   padding: 1rem;
-  border: 3px solid var(--ledger-ink);
+  border-radius: var(--radius-card);
   background: linear-gradient(
     90deg,
     color-mix(in srgb, var(--setup-soft-blue) 70%, transparent) 0 50%,
@@ -340,17 +377,17 @@
 
 .contextMap > header p {
   margin: 0;
-  color: #8a351f;
-  font: 500 0.67rem var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  color: var(--ledger-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .contextMap > header h3,
 .rankPreview h3 {
-  margin: 0.3rem 0 0;
-  font-size: clamp(1.8rem, 7vw, 2.8rem);
-  letter-spacing: -0.04em;
+  margin: 0.2rem 0 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 .mapLegend {
@@ -360,7 +397,8 @@
 }
 
 .mapLegend span {
-  padding: 0.55rem;
+  padding: 0.45rem;
+  border-radius: var(--radius-pill);
   color: white;
   font: 500 0.68rem var(--font-mono);
   letter-spacing: 0.08em;
@@ -382,8 +420,7 @@
   display: grid;
   align-content: start;
   gap: 0.75rem;
-  padding: 2.7rem 0.85rem 0.85rem;
-  border: 1px solid var(--line);
+  padding: 2.7rem 1rem 1rem;
   background: var(--ledger-paper);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
@@ -401,7 +438,8 @@
   position: absolute;
   top: 0.7rem;
   right: 0.7rem;
-  padding: 0.3rem 0.45rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-pill);
   color: white;
   font: 500 0.6rem var(--font-mono);
   letter-spacing: 0.08em;
@@ -419,7 +457,9 @@
 .reviewCard h4 {
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: 1.35rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .reviewCard > p {
@@ -431,17 +471,16 @@
 .comparison {
   display: grid;
   gap: 0.25rem;
-  padding: 0.7rem;
-  border-left: 4px solid var(--ledger-signal);
-  background: #f3f1e6;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-control);
+  background: var(--sage);
 }
 
 .comparison p {
   margin: 0;
-  color: #8a351f;
-  font: 500 0.63rem var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  color: var(--ledger-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .comparison span {
@@ -451,9 +490,10 @@
 }
 
 .rankPreview {
-  padding: 1rem;
-  border: 1px solid var(--ledger-ink);
+  padding: 1.1rem;
+  border-radius: var(--radius-card);
   background: var(--ledger-paper);
+  box-shadow: var(--shadow-card);
 }
 
 .rankPreview ol {
@@ -468,19 +508,18 @@
   display: grid;
   grid-template-columns: 6rem 1fr;
   gap: 0.6rem;
-  padding: 0.65rem;
-  border-top: 1px solid var(--ledger-rule);
+  padding: 0.65rem 0;
+  border-top: 1px solid var(--line);
 }
 
 .rankPreview li span {
-  color: #8a351f;
-  font: 500 0.62rem var(--font-mono);
-  text-transform: uppercase;
+  color: var(--ledger-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .cancelForm {
-  padding-top: 1rem;
-  border-top: 1px dashed var(--ledger-rule);
+  padding-top: 0.5rem;
 }
 
 .cancelForm button {
@@ -499,8 +538,7 @@
 .loadingCard,
 .errorCard {
   margin-top: 1.5rem;
-  padding: clamp(1.2rem, 5vw, 2rem);
-  border: 1px solid var(--line);
+  padding: 1.3rem 1.2rem;
   background: var(--ledger-paper);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
@@ -510,10 +548,11 @@
 .result h2,
 .loadingCard h1,
 .errorCard h1 {
-  margin: 0.45rem 0 0;
-  font-size: clamp(2rem, 9vw, 3.4rem);
-  letter-spacing: -0.05em;
-  line-height: 1;
+  margin: 0.2rem 0 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
 }
 
 .startCard > p:not(.eyebrow),
@@ -549,13 +588,15 @@
 
 .resultActions a,
 .errorCard a {
-  min-height: 2.9rem;
+  min-height: 3rem;
   display: inline-flex;
   align-items: center;
-  padding: 0.65rem 0.9rem;
-  border: 1px solid var(--ledger-ink);
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-control);
+  background: var(--line);
   color: var(--ledger-ink);
-  font: 500 0.72rem var(--font-mono);
+  font: 700 0.95rem var(--font-sans);
+  text-decoration: none;
 }
 
 .loadingCard,
@@ -564,9 +605,9 @@
 }
 
 .errorCard button {
-  min-height: 2.9rem;
+  min-height: 3rem;
   margin: 0;
-  border-radius: 0;
+  border-radius: var(--radius-control);
 }
 
 @media (max-width: 620px) {
