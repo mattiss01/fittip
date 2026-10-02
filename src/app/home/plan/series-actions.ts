@@ -21,6 +21,7 @@ import {
   RollingPlanAuthenticationError,
 } from "@/server/repositories/rolling-plan-repository";
 import {
+  materializeSeriesInPasses,
   RollingPlanConflictError,
   RollingPlanPersistenceError,
   RollingPlanRuleError,
@@ -208,9 +209,11 @@ export async function materializePlanSeriesAction(
   ): MaterializeActionState => ({ status, message, submission, ...extra });
   try {
     const expectedRevision = readInteger(formData.get("expectedRevision"));
-    const receipt = await (
-      await createRollingPlan()
-    ).materializeSeries(randomUUID(), expectedRevision);
+    const receipt = await materializeSeriesInPasses(
+      await createRollingPlan(),
+      randomUUID,
+      expectedRevision,
+    );
     revalidatePath("/home/plan");
     return result(
       "saved",

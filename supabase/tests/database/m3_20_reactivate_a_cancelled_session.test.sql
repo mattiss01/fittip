@@ -404,8 +404,10 @@ select 'first', * from public.materialize_rolling_plan_series(
 select is(
   (select count(*)::bigint from public.rolling_plan_sessions
    where series_id = '7a200000-0000-4000-8000-0000000000a1'),
-  13::bigint,
-  'the series fills every date from tomorrow to the end of the window'
+  -- R3b-2: tomorrow to day 90 is ninety dates. Day 20 already holds ten
+  -- sessions from section 5, so the series skips it, as it must.
+  89::bigint,
+  'the series fills every date from tomorrow to the end of the window that has room'
 );
 
 insert into change_receipt
@@ -443,7 +445,7 @@ select is(
 select is(
   (select count(*)::bigint from public.rolling_plan_sessions
    where series_id = '7a200000-0000-4000-8000-0000000000a1'),
-  11::bigint,
+  87::bigint,
   'a deleted occurrence is not written back, active or cancelled when it went'
 );
 
@@ -518,7 +520,7 @@ select 'after-edit', * from public.materialize_rolling_plan_series(
 select is(
   (select count(*)::bigint from public.rolling_plan_sessions
    where series_id = '7a200000-0000-4000-8000-0000000000a1'),
-  13::bigint,
+  89::bigint,
   'so the new rule fills every date again, including the ones deleted under the old one'
 );
 select is(

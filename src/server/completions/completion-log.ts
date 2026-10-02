@@ -361,7 +361,9 @@ export class CompletionLog {
    * as logged where it was planned.
    */
   async findByPlanSessions(planSessionIds: unknown): Promise<Completion[]> {
-    if (!Array.isArray(planSessionIds) || planSessionIds.length > 500) {
+    // A full Plan window: ten sessions on each of ninety-one days, and the
+    // week before today that the Plan also shows.
+    if (!Array.isArray(planSessionIds) || planSessionIds.length > 1000) {
       throw new CompletionValidationError();
     }
     if (planSessionIds.length === 0) return [];

@@ -132,7 +132,7 @@ describe("Today", () => {
   it("says a date past the materialization window is unfilled, not empty", async () => {
     render(
       await TodayPage({
-        searchParams: Promise.resolve({ date: shiftIsoDate(today(), 14) }),
+        searchParams: Promise.resolve({ date: shiftIsoDate(today(), 91) }),
       }),
     );
 

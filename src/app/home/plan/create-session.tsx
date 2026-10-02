@@ -4,9 +4,10 @@ import { useRef, useState } from "react";
 
 import { RecurrenceFields } from "./recurrence-fields";
 import type { PlanActionState } from "./action-state";
-import type {
-  SeriesActionState,
-  SeriesSkippedDate,
+import {
+  summarizeSkippedDates,
+  type SeriesActionState,
+  type SeriesSkippedDate,
 } from "./series-action-state";
 import { seriesOccurrenceDates } from "./series-recurrence";
 import { SessionFields } from "./session-fields";
@@ -215,7 +216,7 @@ export function CreateSession({
           </ol>
           <p className={styles.consequenceStandalone}>
             {reviewedPreview.openEnded
-              ? "This series has no end date. FitTip creates only the current fourteen-day window and extends it on later Plan visits."
+              ? "This series has no end date. FitTip creates the next thirteen weeks of it and extends them on later Plan visits."
               : "The series stops on the end date you chose."}{" "}
             If a date already has ten sessions, that date is skipped and named
             after the save.
@@ -241,6 +242,7 @@ export function CreateSession({
 
 export function SkippedDates({ skipped }: { skipped: SeriesSkippedDate[] }) {
   if (skipped.length === 0) return null;
+  const { fullDates, waiting } = summarizeSkippedDates(skipped);
   return (
     <section
       className={styles.skippedCard}
@@ -248,14 +250,15 @@ export function SkippedDates({ skipped }: { skipped: SeriesSkippedDate[] }) {
     >
       <h2 id="create-skipped-title">Dates not added</h2>
       <ul>
-        {skipped.map((item) => (
-          <li key={item.occurrenceDate + "-" + item.reason}>
-            {stampDate(item.occurrenceDate)} —{" "}
-            {item.reason === "daily-session-limit"
-              ? "already has ten sessions"
-              : "will be tried on the next Plan visit"}
-          </li>
+        {fullDates.map((date) => (
+          <li key={date}>{stampDate(date)} — already has ten sessions</li>
         ))}
+        {waiting === 0 ? null : (
+          <li>
+            {waiting} more recurring {waiting === 1 ? "session" : "sessions"}{" "}
+            will be tried on the next Plan visit
+          </li>
+        )}
       </ul>
     </section>
   );

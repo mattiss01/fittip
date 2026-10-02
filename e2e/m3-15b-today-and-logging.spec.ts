@@ -164,7 +164,7 @@ test.describe("M3-15B today and logging", () => {
       ).toBeVisible();
 
       // A date past the materialization window is unfilled, never empty.
-      await page.goto(`/home/today?date=${ownerDate(14)}`);
+      await page.goto(`/home/today?date=${ownerDate(91)}`);
       await expect(
         page.locator('[data-today-notice="beyond-window"]'),
       ).toContainText("unfilled rather than empty");

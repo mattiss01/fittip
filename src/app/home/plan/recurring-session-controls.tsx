@@ -51,7 +51,7 @@ type PlanFormAction = (formData: FormData) => void;
  *     outside it the bulk removal would change nothing;
  *   * it is also the condition under which `materialize_rolling_plan_series`
  *     will write a deleted occurrence back. The materializer fills only
- *     `today .. today + 13` and only between a segment's own dates, so once a
+ *     `today .. today + 90` and only between a segment's own dates, so once a
  *     moved occurrence's rule date falls behind today, deleting it keeps it
  *     deleted.
  *

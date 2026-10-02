@@ -4,6 +4,7 @@ import { startTransition, useActionState, useEffect, useRef } from "react";
 
 import {
   INITIAL_MATERIALIZE_ACTION_STATE,
+  summarizeSkippedDates,
   type SeriesSkippedDate,
 } from "./series-action-state";
 import { materializePlanSeriesAction } from "./series-actions";
@@ -69,12 +70,12 @@ export function SeriesMaterializer({
       data-state={noticeState}
       aria-labelledby="series-extension-title"
     >
-      <p className={styles.sectionLabel}>Fourteen-day window</p>
+      <p className={styles.sectionLabel}>Recurring sessions</p>
       <h2 id="series-extension-title">{notice}</h2>
       {extending && uncoveredDates.length > 0 ? (
         <p>
-          Checking {dateList(uncoveredDates)}. The Plan remains usable while
-          these owner-local dates are filled.
+          Checking {checkingLabel(uncoveredDates)}. The Plan remains usable
+          while these owner-local dates are filled.
         </p>
       ) : null}
       <p className={styles.srOnly} role="status" aria-live="polite">
@@ -95,18 +96,31 @@ export function SeriesMaterializer({
 
 function SkippedDates({ skipped }: { skipped: SeriesSkippedDate[] }) {
   if (skipped.length === 0) return null;
+  const { fullDates, waiting } = summarizeSkippedDates(skipped);
   return (
     <ul className={styles.extensionSkipped}>
-      {skipped.map((item) => (
-        <li key={item.occurrenceDate + "-" + item.reason}>
-          {stampDate(item.occurrenceDate)}:{" "}
-          {item.reason === "daily-session-limit"
-            ? "not added because this date already has ten sessions"
-            : "not added in this pass; reload the Plan to continue"}
+      {fullDates.map((date) => (
+        <li key={date}>
+          {stampDate(date)}: not added because this date already has ten
+          sessions
         </li>
       ))}
+      {waiting === 0 ? null : (
+        <li>
+          {waiting} more recurring {waiting === 1 ? "session" : "sessions"} not
+          added in this pass; reload the Plan to continue
+        </li>
+      )}
     </ul>
   );
+}
+
+/**
+ * The dates by name while they fit on a line or two; a first fill of thirteen
+ * weeks is checking dozens, and then the count says it.
+ */
+function checkingLabel(dates: string[]) {
+  return dates.length <= 5 ? dateList(dates) : `${dates.length} dates`;
 }
 
 function dateList(dates: string[]) {

@@ -120,7 +120,7 @@ export function RecurrenceFields({
       {noEnd ? (
         <p className={styles.fieldHint}>
           Open-ended means the rule continues. FitTip still creates only the
-          current fourteen-day Plan window.
+          next thirteen weeks of it.
         </p>
       ) : (
         <div className={styles.field}>
