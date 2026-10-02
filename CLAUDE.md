@@ -65,9 +65,10 @@ For anything visible or behavioral that the careful lane does not cover:
 2. Run `npm.cmd run dev` in the background. The owner watches at 390px.
 3. Make small changes and say what changed after each one. The owner reacts; repeat until
    they are happy.
-4. Before the first push, run `lint`, `typecheck` and `test:run` locally, and for anything
-   past a copy or styling tweak run `/code-review` on the diff and fix or report what it
-   finds. A ticket should need one CI run, not one per round of fixes.
+4. Before the first push, run Prettier over the files you touched and `lint`, `typecheck`
+   and `test:run` locally, and for anything past a copy or styling tweak run `/code-review`
+   on the diff and fix or report what it finds. A ticket should need one CI run, not one
+   per round of fixes.
 5. Commit to a `ticket/<slug>` branch and push so CI triggers. Do not wait for it: watch the
    run in the background (`gh run watch <id> --exit-status`), say that it is running, and
    take the owner's next task on a new branch from `master`.
@@ -91,7 +92,8 @@ or anything irreversible to the owner's data.
 
 - Write three to eight lines on the checklist line first: outcome, constraints, decisions
   the owner made.
-- Same interactive loop. Use the `schema-change` skill for database work.
+- Same interactive loop, with the same local checks before the first push and the same
+  rule of not waiting on CI. Use the `schema-change` skill for database work.
 - After pushing, spawn one reviewer subagent to review that commit's diff for data,
   authorization, and privacy. It reads the diff and reports; it does not re-run CI. Tell it
   in the prompt that this file is the working agreement and that `docs/backlog/M0`–`M3` are
@@ -160,11 +162,12 @@ PowerShell here blocks `npm.ps1`, so always use `npm.cmd` and `npx.cmd`.
 Three jobs, about four minutes: `static` (Prettier, ESLint, TypeScript, `test:run`, build),
 `database` (every migration from zero, db lint, advisors, pgTAP, concurrency harnesses), and
 `browser` (390px production Playwright flows, split over three runners). Starting Supabase
-is about 1m40s of that on each runner and is the floor; a new browser flow goes into the
-shortest shard in `ci.yml` and its port into `.github/scripts/browser-flows.sh`.
+is about two minutes of that on each runner and is the floor. A browser flow runs only if
+a shard in `ci.yml` names it.
 
 - Green CI for the commit being merged is the automated-test evidence. Don't re-run the
-  suites by hand to produce a report.
+  suites by hand to produce a report; the local checks before a push are there to keep the
+  one run green, not to stand in for it.
 - A red run blocks the merge. If it is a known flake, `gh run rerun --failed` keeps the run
   URL valid, and the log line says what flaked. An undiagnosed failure is a blocker.
 - Inspect with `gh run list --branch <branch>`, `gh run view <id>`,
