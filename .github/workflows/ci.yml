@@ -137,8 +137,7 @@ jobs:
       # Report every broken flow in one run, not just the first shard's.
       fail-fast: false
       # Every shard pays the same setup, so the flows are split by duration to
-      # finish together. A new flow goes into the shortest shard, and its port
-      # into `.github/scripts/browser-flows.sh`.
+      # finish together. A flow that no shard names does not run.
       matrix:
         include:
           - shard: a
