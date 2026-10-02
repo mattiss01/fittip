@@ -58,6 +58,13 @@ export type Goal = {
 
 export type GoalCollection = { revision: number; goals: Goal[] };
 
+/** A goal that is not active: the status it has, and when it entered it. */
+export type GoalStatusChange = {
+  goalId: string;
+  status: string;
+  changedAt: string;
+};
+
 export class GoalAuthenticationError extends Error {
   constructor(readonly accessError?: VerifiedUserAccessError) {
     super("An authenticated FitTip user is required.");
@@ -104,6 +111,36 @@ export class GoalRepository {
       ]);
     if (headError || error) throw new GoalPersistenceError();
     return { revision: head?.revision ?? 0, goals: data.map(toGoal) };
+  }
+
+  /**
+   * When each goal that is not active entered the status it has, for the
+   * Goals page, which says "Achieved on ...".
+   *
+   * This is the goal's own `updated_at`. `apply_goal_change` sets it when a
+   * goal is paused, achieved or abandoned. Nothing the Goals page offers
+   * writes to such a goal again except reopening or archiving it, so in
+   * practice it is the day of the change. It is not guaranteed: the `edit`
+   * operation accepts any goal that is not archived, and Guided setup uses it
+   * when a new answer is filed over a saved goal of the same title, which
+   * would move the day. The lifecycle log would be the exact source and is
+   * not one yet: it records reopening only (`docs/backlog/NEXT.md`).
+   *
+   * Kept out of `list()`, whose goals also go to the coach's context.
+   */
+  async listStatusChanges(): Promise<GoalStatusChange[]> {
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("goals")
+      .select("id, status, updated_at")
+      .eq("user_id", userId)
+      .neq("status", "active");
+    if (error) throw new GoalPersistenceError();
+    return data.map((row) => ({
+      goalId: row.id,
+      status: row.status,
+      changedAt: row.updated_at,
+    }));
   }
 
   async create(input: unknown, expectedRevision: unknown) {

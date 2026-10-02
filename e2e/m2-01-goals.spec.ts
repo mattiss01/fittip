@@ -173,19 +173,25 @@ test.describe("M2-01 goal management", () => {
 
       const mobilityCard = goalCard(page, "Mobility habit");
       await openGoalDetails(mobilityCard);
-      const archiveConfirmation = confirmation(
+      // Archive is no longer offered (owner, 2 Oct 2026). This goal is set
+      // aside by keyboard through Abandoned, which keeps the same checks: the
+      // confirmation opens on Enter and its button is next in the tab order.
+      const setAsideConfirmation = confirmation(
         mobilityCard,
-        "Archive",
-        "Confirm archive",
+        "Abandoned",
+        "Confirm abandoned",
       );
-      await archiveConfirmation.summary.focus();
+      await expect(
+        mobilityCard.locator('details[data-confirmation="archive"]'),
+      ).toHaveCount(0);
+      await setAsideConfirmation.summary.focus();
       await page.keyboard.press("Enter");
       await expect(
-        mobilityCard.getByText(/remain in your archive/i),
+        mobilityCard.getByText(/records the goal as abandoned/i),
       ).toBeVisible();
       await page.keyboard.press("Tab");
-      await expect(archiveConfirmation.confirm).toBeFocused();
-      await archiveConfirmation.confirm.click();
+      await expect(setAsideConfirmation.confirm).toBeFocused();
+      await setAsideConfirmation.confirm.click();
       // The status message is transient and is lost if the surface has to
       // reload itself, so every lifecycle step asserts the committed record
       // instead. The message copy is covered by the action unit tests.
@@ -193,7 +199,7 @@ test.describe("M2-01 goal management", () => {
         page.getByRole("heading", { name: "Mobility habit" }),
       ).toBeHidden();
       await expect(historyEntry(page, "Mobility habit")).toContainText(
-        "archived",
+        "Abandoned on",
       );
 
       await createGoal(page, "Achievement candidate", "supporting", "Cycling");
@@ -201,7 +207,7 @@ test.describe("M2-01 goal management", () => {
       await openGoalDetails(achievementCard);
       const achieveConfirmation = confirmation(
         achievementCard,
-        "Mark achieved",
+        "Achieved",
         "Confirm achieved",
       );
       await achieveConfirmation.summary.click();
@@ -213,7 +219,7 @@ test.describe("M2-01 goal management", () => {
         page.getByRole("heading", { name: "Achievement candidate" }),
       ).toBeHidden();
       await expect(historyEntry(page, "Achievement candidate")).toContainText(
-        "achieved",
+        "Achieved on",
       );
 
       await createGoal(page, "Abandon candidate", "supporting", "Rowing");
@@ -221,7 +227,7 @@ test.describe("M2-01 goal management", () => {
       await openGoalDetails(abandonCard);
       const abandonConfirmation = confirmation(
         abandonCard,
-        "Mark abandoned",
+        "Abandoned",
         "Confirm abandoned",
       );
       await abandonConfirmation.summary.click();
@@ -233,7 +239,7 @@ test.describe("M2-01 goal management", () => {
         page.getByRole("heading", { name: "Abandon candidate" }),
       ).toBeHidden();
       await expect(historyEntry(page, "Abandon candidate")).toContainText(
-        "abandoned",
+        "Abandoned on",
       );
 
       await createGoal(page, "Temporary idea", "supporting", "Walking");
@@ -241,7 +247,7 @@ test.describe("M2-01 goal management", () => {
       await openGoalDetails(temporaryCard);
       const deleteConfirmation = confirmation(
         temporaryCard,
-        "Delete if unused",
+        "Delete",
         "Confirm permanent delete",
       );
       await deleteConfirmation.summary.click();
@@ -383,7 +389,7 @@ function historyEntry(page: import("@playwright/test").Page, title: string) {
   return page
     .locator("details")
     .filter({
-      has: page.locator("summary").filter({ hasText: /^History and archive/ }),
+      has: page.locator("summary").filter({ hasText: /^History/ }),
     })
     .locator("li")
     .filter({ hasText: title });
@@ -408,10 +414,9 @@ function confirmation(
   confirmLabel: string,
 ) {
   const operation = {
-    "Mark achieved": "achieve",
-    "Mark abandoned": "abandon",
-    Archive: "archive",
-    "Delete if unused": "delete",
+    Achieved: "achieve",
+    Abandoned: "abandon",
+    Delete: "delete",
   }[label];
   const details = card.locator(`details[data-confirmation="${operation}"]`);
   return {

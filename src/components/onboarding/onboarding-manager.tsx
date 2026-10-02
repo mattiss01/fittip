@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -58,7 +64,15 @@ export function OnboardingActionNotice({
     }
   }, [state.status, state.submission]);
 
-  if (state.status === "idle" || state.status === "published") return null;
+  // A start says nothing: the first step appearing is the answer (owner,
+  // 2 Oct 2026). Every other result has a message.
+  if (
+    state.status === "idle" ||
+    state.status === "published" ||
+    state.message === ""
+  ) {
+    return null;
+  }
 
   return (
     <div
@@ -85,6 +99,18 @@ export function OnboardingManager({
     INITIAL_ONBOARDING_ACTION_STATE,
   );
   const [selectedStep, setVisibleStep] = useState<OnboardingStep | null>(null);
+  // A saved step goes where its result says. This is done on the result, not
+  // on the button's click: clearing the selection there unmounted a revisited
+  // step's form before it was sent, so nothing was saved and "Save and finish
+  // later" never left the setup (owner, 2 Oct 2026). The step is pinned, not
+  // cleared: a save refused on it afterwards names no next step, and without
+  // a selection the owner would be thrown to the draft's furthest step with
+  // this step's notice over it.
+  const [settled, setSettled] = useState(0);
+  if (state.submission !== settled) {
+    setSettled(state.submission);
+    if (state.status === "saved") setVisibleStep(state.nextStep ?? null);
+  }
   const [goalCount, setGoalCount] = useState(
     Math.max(1, snapshot.goalCandidates.length),
   );
@@ -102,7 +128,6 @@ export function OnboardingManager({
     reviewSelections,
   );
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const resultRef = useRef<HTMLHeadingElement>(null);
   const visibleStep =
     selectedStep ??
     (state.submission > 0 ? state.nextStep : undefined) ??
@@ -112,10 +137,7 @@ export function OnboardingManager({
   useEffect(() => {
     if (state.submission === 0) return;
     router.refresh();
-    if (state.status === "published") {
-      resultRef.current?.focus();
-    }
-  }, [router, state.status, state.submission]);
+  }, [router, state.submission]);
 
   useEffect(() => {
     if (
@@ -127,25 +149,18 @@ export function OnboardingManager({
     }
   }, [snapshot.draft, visibleStep, state.status]);
 
-  if (state.status === "published") {
+  // Done once, setup is not offered again (owner, 2 Oct 2026): everything it
+  // filed can be changed where it lives. A draft begun before that rule is
+  // still shown below, so it can be finished or cancelled.
+  if (!snapshot.draft && snapshot.hasPublished) {
     return (
-      <section className={styles.result} aria-labelledby="setup-result">
-        <p className={styles.eyebrow}>Setup saved</p>
-        <h2 id="setup-result" ref={resultRef} tabIndex={-1}>
-          Your accepted context is filed.
-        </h2>
-        <p>
-          The draft and its candidate text were deleted. Goals and Memory now
-          hold only the items you accepted.
-        </p>
+      <section className={styles.startCard} aria-labelledby="setup-done">
+        <p className={styles.eyebrow}>Setup done</p>
+        <h2 id="setup-done">Your setup is finished.</h2>
+        <p>What you accepted is in Goals and Memory. Change anything there.</p>
         <div className={styles.resultActions}>
           <Link href="/home/you/goals">Goals</Link>
           <Link href="/home/you/memory">Memory</Link>
-          <form action={formAction}>
-            <input name="operation" type="hidden" value="start" />
-            <input name="expectedDraftRevision" type="hidden" value="0" />
-            <button disabled={pending}>Run guided review again</button>
-          </form>
         </div>
       </section>
     );
@@ -154,14 +169,8 @@ export function OnboardingManager({
   if (!snapshot.draft) {
     return (
       <section className={styles.startCard} aria-labelledby="setup-start">
-        <p className={styles.eyebrow}>
-          {snapshot.hasPublished ? "Review again" : "Optional setup"}
-        </p>
-        <h2 id="setup-start">
-          {snapshot.hasPublished
-            ? "Run a fresh comparison."
-            : "Set up your coaching context."}
-        </h2>
+        <p className={styles.eyebrow}>Optional setup</p>
+        <h2 id="setup-start">Set up your coaching context.</h2>
         <p>
           Your answers are stored in your account so you can resume on another
           device. They are not sent to an AI provider. Setup is optional and
@@ -170,9 +179,7 @@ export function OnboardingManager({
         <form action={formAction}>
           <input name="operation" type="hidden" value="start" />
           <input name="expectedDraftRevision" type="hidden" value="0" />
-          <button disabled={pending}>
-            {snapshot.hasPublished ? "Run guided review again" : "Start setup"}
-          </button>
+          <button disabled={pending}>Start setup</button>
         </form>
         <Link className={styles.quietLink} href="/home/you">
           Back to You
@@ -243,18 +250,13 @@ export function OnboardingManager({
         <h2 ref={headingRef} tabIndex={-1}>
           {stepHeading(visibleStep)}
         </h2>
-        <span>
-          Draft expires {formatDate(draft.expiresAt)} after 30 inactive days.
-        </span>
+        {/* When the draft expires is said where it matters: on You, after
+            "Save and finish later" (owner, 2 Oct 2026). */}
       </header>
 
       {visibleStep === 1 ? (
         <form action={formAction} className={styles.stepForm}>
           <StepMeta operation="save_goals" revision={draft.revision} step={1} />
-          <p className={styles.explainer}>
-            Add one to three outcomes. Goal limits and the three-core boundary
-            are the same here as in Goals.
-          </p>
           {Array.from({ length: goalCount }, (_, index) => (
             <GoalFields
               candidate={snapshot.goalCandidates[index]}
@@ -399,12 +401,7 @@ export function OnboardingManager({
           <div className={styles.fieldGrid}>
             <label>
               Timezone
-              <input
-                defaultValue={snapshot.draft?.timezoneName ?? "UTC"}
-                maxLength={100}
-                name="timezoneName"
-                required
-              />
+              <TimezoneSelect saved={snapshot.draft?.timezoneName ?? null} />
             </label>
             <label>
               Units
@@ -534,8 +531,9 @@ export function OnboardingManager({
             value={draft.idempotencyKey}
           />
           <p className={styles.explainer}>
-            Nothing is preaccepted. Decide every card. Rejected cards stay only
-            in this draft and are deleted when publication succeeds.
+            A card you have not decided starts accepted. Reject what you do not
+            want kept. Rejected cards stay only in this draft and are deleted
+            when you save.
           </p>
           <section className={styles.contextMap} aria-labelledby="context-map">
             <header>
@@ -615,7 +613,11 @@ export function OnboardingManager({
             >
               Back
             </button>
-            <button disabled={pending} type="submit">
+            {/* More than three core goals is refused when saving, with a
+                message about another tab. With every card accepted from the
+                start this is the first thing some owners see, so the button
+                waits for the count the notice above asks for. */}
+            <button disabled={pending || coreGoalCount > 3} type="submit">
               Save accepted items
             </button>
           </div>
@@ -677,20 +679,13 @@ function StepActions({
           Back
         </button>
       ) : null}
-      <button
-        disabled={pending}
-        name="intent"
-        onClick={() => setVisibleStep(null)}
-        value="finish"
-      >
+      {/* Leaving must not wait on a field: the browser's own check is off
+          for this button, and the action leaves even when the step is not
+          complete enough to save. */}
+      <button disabled={pending} formNoValidate name="intent" value="finish">
         Save and finish later
       </button>
-      <button
-        disabled={pending}
-        name="intent"
-        onClick={() => setVisibleStep(null)}
-        value="continue"
-      >
+      <button disabled={pending} name="intent" value="continue">
         Save and continue
       </button>
     </div>
@@ -965,9 +960,6 @@ function ReviewCard({
           required
           value={selection.decision}
         >
-          <option disabled value="">
-            Choose
-          </option>
           <option value="accepted">Accept</option>
           <option value="rejected">Reject</option>
         </select>
@@ -1109,7 +1101,11 @@ function defaultReviewSelection(
     | OnboardingSnapshot["memoryCandidates"][number],
 ): ReviewSelection {
   return {
-    decision: candidate.decision === "pending" ? "" : candidate.decision,
+    // What the owner typed is theirs to keep unless they say otherwise, so
+    // an undecided card starts accepted (owner, 2 Oct 2026). It is stated,
+    // not inferred, and nothing is filed before "Save accepted items".
+    decision:
+      candidate.decision === "pending" ? "accepted" : candidate.decision,
     resolution:
       candidate.resolution ??
       (candidate.comparison.kind === "new"
@@ -1160,17 +1156,74 @@ function stepHeading(step: OnboardingStep) {
   return headings[step];
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(value));
-}
-
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * A time zone is chosen, not typed (owner, 2 Oct 2026). The list is the
+ * browser's own and is read on the client only: the server renders the one
+ * option it knows, the client agrees on its first render, and hydration
+ * cannot mismatch. With nothing saved yet it starts on the browser's zone.
+ */
+function TimezoneSelect({ saved }: { saved: string | null }) {
+  const zones = useSyncExternalStore(subscribeNothing, readZones, noZones);
+  const detected = useSyncExternalStore(
+    subscribeNothing,
+    readBrowserZone,
+    () => null,
+  );
+  const [chosen, setChosen] = useState<string | null>(null);
+  const value = chosen ?? saved ?? detected ?? "UTC";
+  // The browser's list need not hold the saved zone, and Chrome's leaves
+  // out UTC, which is what a draft with no zone starts from.
+  const options = [...new Set(["UTC", value, ...zones])].toSorted();
+  return (
+    <select
+      name="timezoneName"
+      onChange={(event) => setChosen(event.target.value)}
+      required
+      value={value}
+    >
+      {options.map((zone) => (
+        <option key={zone} value={zone}>
+          {zone.replaceAll("_", " ")}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function subscribeNothing() {
+  return () => {};
+}
+
+const NO_ZONES: readonly string[] = [];
+
+function noZones() {
+  return NO_ZONES;
+}
+
+let knownZones: readonly string[] | null = null;
+
+/** Cached, because a store's snapshot must be the same array every time. */
+function readZones(): readonly string[] {
+  if (knownZones === null) {
+    try {
+      knownZones = Intl.supportedValuesOf("timeZone");
+    } catch {
+      knownZones = NO_ZONES;
+    }
+  }
+  return knownZones;
+}
+
+function readBrowserZone(): string | null {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone ?? null;
+  } catch {
+    return null;
+  }
 }
 
 function stripConstraintPrefix(content: string, label: string) {

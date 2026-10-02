@@ -12,7 +12,26 @@ import styles from "./you.module.css";
 
 export const dynamic = "force-dynamic";
 
-export default async function YouPage() {
+/**
+ * Where "Save and finish later" lands. The flag only chooses which fixed
+ * sentence is shown; nothing else is read from it.
+ */
+const SETUP_NOTES: Record<string, string> = {
+  done: "Your setup is saved. What you accepted is in Goals and Memory.",
+  kept: "Your setup is saved. It is kept for 30 days from your last change, then deleted.",
+  left: "The step you were on was not complete, so it was not saved. The rest of your setup is kept for 30 days from your last change, then deleted.",
+};
+
+export default async function YouPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ setup?: string | string[] }>;
+}) {
+  const setup = (await searchParams)?.setup;
+  const setupNote =
+    typeof setup === "string" && Object.hasOwn(SETUP_NOTES, setup)
+      ? SETUP_NOTES[setup]
+      : null;
   const client = await createServerUserClient();
   let profile;
   try {
@@ -41,14 +60,16 @@ export default async function YouPage() {
           <Gear />
         </Link>
       </header>
+      {setupNote === null ? null : (
+        <p className={styles.kept} role="status">
+          {setupNote}
+        </p>
+      )}
       <ul className={styles.places}>
-        {PLACES.map(({ href, name, line }) => (
+        {PLACES.map(({ href, name }) => (
           <li key={href}>
             <Link className={styles.place} href={href}>
-              <div>
-                <strong>{name}</strong>
-                <span>{line}</span>
-              </div>
+              <strong>{name}</strong>
               <Chevron />
             </Link>
           </li>
@@ -62,26 +83,13 @@ export default async function YouPage() {
 }
 
 /**
- * The one line under each name is the explanation that survives R3: what the
- * place is for, and for Memory that it holds only what the coach is allowed to
- * use. Everything longer is said on the page it describes.
+ * Names only (owner, 2 Oct 2026). Each row had a line under it saying what
+ * the place is for; each page says that itself.
  */
 const PLACES = [
-  {
-    href: "/home/you/goals",
-    name: "Goals",
-    line: "What your training is aimed at",
-  },
-  {
-    href: "/home/you/memory",
-    name: "Memory",
-    line: "What the coach may use about you",
-  },
-  {
-    href: "/home/you/onboarding",
-    name: "Guided setup",
-    line: "Set up goals and memory step by step",
-  },
+  { href: "/home/you/goals", name: "Goals" },
+  { href: "/home/you/memory", name: "Memory" },
+  { href: "/home/you/onboarding", name: "Guided setup" },
 ] as const;
 
 /** The only way into Settings, so it is a full touch target with a name. */

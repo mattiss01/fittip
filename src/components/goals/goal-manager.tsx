@@ -41,6 +41,11 @@ export type GoalView = {
   rationale: string | null;
   constraints: string | null;
   archivedAt: string | null;
+  /**
+   * The owner-local day the goal was paused, achieved, abandoned or
+   * archived. Absent for an active goal.
+   */
+  statusDate?: string | null;
 };
 
 type Props = {
@@ -116,6 +121,18 @@ export function GoalManager({ initialGoals, expectedRevision }: Props) {
         </a>
       ) : null}
 
+      {/* First on the page, not under both lists (owner, 2 Oct 2026). */}
+      <details className={styles.addPanel}>
+        <summary>Add goal</summary>
+        <GoalForm
+          key={`create-${state.submission}`}
+          action={action}
+          expectedRevision={expectedRevision}
+          pending={pending}
+          draft={state.operation === "create" ? state.draft : undefined}
+        />
+      </details>
+
       <section className={styles.attention} aria-labelledby="core-heading">
         <div className={styles.sectionHeading}>
           <div>
@@ -188,17 +205,6 @@ export function GoalManager({ initialGoals, expectedRevision }: Props) {
         )}
       </section>
 
-      <details className={styles.addPanel}>
-        <summary>Add goal</summary>
-        <GoalForm
-          key={`create-${state.submission}`}
-          action={action}
-          expectedRevision={expectedRevision}
-          pending={pending}
-          draft={state.operation === "create" ? state.draft : undefined}
-        />
-      </details>
-
       <HistorySection
         title="Paused"
         goals={paused}
@@ -207,7 +213,7 @@ export function GoalManager({ initialGoals, expectedRevision }: Props) {
         pending={pending}
       />
       <HistorySection
-        title="History and archive"
+        title="History"
         goals={historical}
         expectedRevision={expectedRevision}
         action={action}
@@ -300,7 +306,7 @@ function GoalCard({
             />
             <ConfirmedAction
               operation="achieve"
-              label="Mark achieved"
+              label="Achieved"
               goal={goal}
               expectedRevision={expectedRevision}
               action={action}
@@ -308,23 +314,19 @@ function GoalCard({
             />
             <ConfirmedAction
               operation="abandon"
-              label="Mark abandoned"
+              label="Abandoned"
               goal={goal}
               expectedRevision={expectedRevision}
               action={action}
               pending={pending}
             />
-            <ConfirmedAction
-              operation="archive"
-              label="Archive"
-              goal={goal}
-              expectedRevision={expectedRevision}
-              action={action}
-              pending={pending}
-            />
+            {/* No Archive (owner, 2 Oct 2026): beside Pause and Abandoned it
+                was a third way to set a goal aside, and the only one that
+                could not be undone. Goals archived before still show in
+                History; the operation itself is untouched on the server. */}
             <ConfirmedAction
               operation="delete"
-              label="Delete if unused"
+              label="Delete"
               goal={goal}
               expectedRevision={expectedRevision}
               action={action}
@@ -332,8 +334,8 @@ function GoalCard({
             />
           </div>
           <p className={styles.consequence}>
-            Archive keeps this record. Permanent delete succeeds only before the
-            goal has retained history or another record references it.
+            Delete works only before the goal has history or another record
+            refers to it. After that, Abandoned sets it aside and keeps it.
           </p>
         </details>
       </div>
@@ -589,15 +591,10 @@ const CONFIRMATION_COPY = {
     consequence:
       "This ends active attention and records the goal as abandoned. Reopening it later requires a separate action.",
   },
-  archive: {
-    confirm: "Confirm archive",
-    consequence:
-      "This keeps the goal as history and removes it from active use. It will remain in your archive.",
-  },
   delete: {
     confirm: "Confirm permanent delete",
     consequence:
-      "This permanently deletes an unused goal and cannot be undone. Goals with retained history must be archived instead.",
+      "This permanently deletes an unused goal and cannot be undone. A goal with history cannot be deleted; mark it Abandoned instead.",
   },
 } as const;
 
@@ -662,7 +659,9 @@ function HistorySection({
   return (
     <details className={styles.history}>
       <summary>
-        {title} <span>{goals.length}</span>
+        {/* A count, set apart: run together it read "Paused1" (owner,
+            2 Oct 2026), to the eye and to a screen reader. */}
+        {title} <span className={styles.count}>{goals.length}</span>
       </summary>
       <ul>
         {goals.map((goal) => (
@@ -670,8 +669,7 @@ function HistorySection({
             <div>
               <strong>{goal.title}</strong>
               <span>
-                {goal.archivedAt ? "archived" : goal.status} ·{" "}
-                {goal.priorityTier}
+                {statusLine(goal)} · {goal.priorityTier}
               </span>
             </div>
             {goal.archivedAt ? null : (
@@ -833,6 +831,36 @@ function stallNotice(stall: TransitionWatch | null) {
     return "This goal change has not been confirmed. Reload to see whether it was saved.";
   }
   return null;
+}
+
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+/**
+ * "Achieved on 2 Oct 2026". Spelled by hand rather than through Intl, whose
+ * output differs between the server and the browser and so fails hydration.
+ * Without a logged day it is the status alone, never a guessed date.
+ */
+function statusLine(goal: GoalView) {
+  const status = goal.archivedAt ? "archived" : goal.status;
+  const label = status.charAt(0).toUpperCase() + status.slice(1);
+  const date = goal.statusDate;
+  if (!date) return label;
+  return `${label} on ${Number(date.slice(8, 10))} ${
+    MONTHS[Number(date.slice(5, 7)) - 1]
+  } ${date.slice(0, 4)}`;
 }
 
 function byRank(a: GoalView, b: GoalView) {

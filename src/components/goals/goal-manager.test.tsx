@@ -172,7 +172,7 @@ describe("GoalManager", () => {
       />,
     );
     expect(screen.getByText("Paused")).toBeVisible();
-    expect(screen.getByText("History and archive")).toBeVisible();
+    expect(screen.getByText("History")).toBeVisible();
     expect(screen.getByRole("button", { name: "Resume" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Reopen" })).toBeEnabled();
   });
@@ -198,11 +198,10 @@ describe("GoalManager", () => {
     editor!.open = true;
 
     for (const [action, consequence, confirmation] of [
-      ["Mark achieved", /records the goal as achieved/i, "Confirm achieved"],
-      ["Mark abandoned", /records the goal as abandoned/i, "Confirm abandoned"],
-      ["Archive", /remain in your archive/i, "Confirm archive"],
+      ["Achieved", /records the goal as achieved/i, "Confirm achieved"],
+      ["Abandoned", /records the goal as abandoned/i, "Confirm abandoned"],
       [
-        "Delete if unused",
+        "Delete",
         /permanently deletes an unused goal/i,
         "Confirm permanent delete",
       ],

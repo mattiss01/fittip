@@ -44,7 +44,7 @@ describe("onboarding actions", () => {
     expect(result).toMatchObject({
       status: "saved",
       message: "This step was saved.",
-      redirectTo: "/home/you",
+      redirectTo: "/home/you?setup=kept",
       nextStep: 1,
     });
     expect(apply).toHaveBeenCalledWith({
@@ -73,17 +73,76 @@ describe("onboarding actions", () => {
       },
     });
     expect(revalidatePathMock).toHaveBeenCalled();
-    expect(redirectMock).toHaveBeenCalledExactlyOnceWith("/home/you");
+    expect(redirectMock).toHaveBeenCalledExactlyOnceWith(
+      "/home/you?setup=kept",
+    );
+  });
+
+  it("leaves on finish later even when the step cannot be saved, and says so", async () => {
+    createRepositoryMock.mockResolvedValue({
+      apply: vi.fn().mockRejectedValue(new OnboardingDatabaseValidationError()),
+    });
+
+    await changeOnboardingAction(INITIAL_ONBOARDING_ACTION_STATE, goalForm());
+
+    // You tells the owner that the step they were on was not saved.
+    expect(redirectMock).toHaveBeenCalledExactlyOnceWith(
+      "/home/you?setup=left",
+    );
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+
+  it("leaves on finish later when the goals step breaks a goal rule", async () => {
+    const apply = vi.fn();
+    createRepositoryMock.mockResolvedValue({ apply });
+    const form = goalForm();
+    // A title without an outcome is refused by the goal rules, not the
+    // setup's own, and must leave all the same.
+    form.set("goalOutcome:0", "");
+
+    await changeOnboardingAction(INITIAL_ONBOARDING_ACTION_STATE, form);
+
+    expect(apply).not.toHaveBeenCalled();
+    expect(redirectMock).toHaveBeenCalledExactlyOnceWith(
+      "/home/you?setup=left",
+    );
+  });
+
+  it("does not start setup again once it has been finished", async () => {
+    const apply = vi.fn();
+    createRepositoryMock.mockResolvedValue({
+      apply,
+      getEntryState: vi
+        .fn()
+        .mockResolvedValue({ showHomeInvitation: false, hasPublished: true }),
+    });
+    const form = new FormData();
+    form.set("operation", "start");
+    form.set("expectedDraftRevision", "0");
+
+    const result = await changeOnboardingAction(
+      INITIAL_ONBOARDING_ACTION_STATE,
+      form,
+    );
+
+    expect(result).toMatchObject({
+      status: "validation",
+      message: "Setup is finished. Change anything in Goals and Memory.",
+    });
+    expect(apply).not.toHaveBeenCalled();
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 
   it("returns an actionable validation state instead of claiming a redirect", async () => {
     createRepositoryMock.mockResolvedValue({
       apply: vi.fn().mockRejectedValue(new OnboardingDatabaseValidationError()),
     });
+    const form = goalForm();
+    form.set("intent", "continue");
 
     const result = await changeOnboardingAction(
       INITIAL_ONBOARDING_ACTION_STATE,
-      goalForm(),
+      form,
     );
 
     expect(result).toMatchObject({
