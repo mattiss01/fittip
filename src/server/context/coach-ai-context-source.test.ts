@@ -101,6 +101,7 @@ const listCompletions = vi.fn();
 const getPlanSlice = vi.fn();
 const getCurrentVersion = vi.fn();
 const materializeSeries = vi.fn();
+const listSeries = vi.fn();
 const listLibrary = vi.fn();
 const listSavedSessions = vi.fn();
 
@@ -130,12 +131,14 @@ describe("the production coaching context source", () => {
       recoveryDates: [],
     });
     materializeSeries.mockResolvedValue({ createdCount: 0, skipped: [] });
+    listSeries.mockResolvedValue([]);
     createGoalMock.mockResolvedValue({ list: listGoals });
     createMemoryMock.mockResolvedValue({ list: listMemory });
     createCompletionLogMock.mockResolvedValue({ list: listCompletions });
     createRollingPlanMock.mockResolvedValue({
       getPlanSlice,
       materializeSeries,
+      listSeries,
     });
     getCurrentVersion.mockResolvedValue(null);
     createRoadmapMock.mockResolvedValue({ getCurrentVersion });
@@ -409,6 +412,7 @@ describe("the production coaching context source", () => {
         sport: "Running",
         isLocked: false,
         hasCompletion: true,
+        ruleSeriesId: null,
       },
       {
         localDate: "2026-08-02",
@@ -416,6 +420,7 @@ describe("the production coaching context source", () => {
         sport: "Running",
         isLocked: false,
         hasCompletion: false,
+        ruleSeriesId: null,
       },
     ]);
 
@@ -423,6 +428,115 @@ describe("the production coaching context source", () => {
     expect(assembled.context.trainingHistory.missedPlannedSessions).toEqual([
       { localDate: "2026-08-02", title: "Missed tempo", sport: "Running" },
     ]);
+  });
+
+  describe("recurring series (ADR-013 decision 5, amended 2 October 2026)", () => {
+    const SERIES_ID = "77000000-0000-4000-8000-000000000001";
+    const storedSeries = {
+      id: SERIES_ID,
+      predecessorSeriesId: null,
+      frequency: "weekly" as const,
+      intervalCount: 1,
+      weekdays: [1, 4] as (1 | 4)[],
+      startDate: "2026-07-06",
+      title: "Club run",
+      sport: "Running",
+      intent: "Private intent text",
+      expectedDurationMinutes: 50,
+      note: "Private series note",
+      activities: [
+        {
+          position: 0,
+          name: "Private activity name",
+          sport: "Running",
+          measurementMode: "duration" as const,
+        },
+      ],
+    };
+
+    it("reads the series for a roadmap and hands over only the rule, title and sport", async () => {
+      listSeries.mockResolvedValue([storedSeries]);
+
+      const records = await source().load(OWNER);
+
+      expect(listSeries).toHaveBeenCalledTimes(1);
+      expect(records.training.series).toEqual([
+        {
+          id: SERIES_ID,
+          title: "Club run",
+          sport: "Running",
+          frequency: "weekly",
+          intervalCount: 1,
+          weekdays: [1, 4],
+          startDate: "2026-07-06",
+          endDate: null,
+        },
+      ]);
+
+      const assembled = buildCoachAIContext("create_roadmap", records, COMPOSE);
+      expect(assembled.context.recurringSessions).toEqual([
+        {
+          title: "Club run",
+          sport: "Running",
+          frequency: "weekly",
+          intervalCount: 1,
+          weekdays: ["Monday", "Thursday"],
+          startDate: "2026-07-06",
+          endDate: null,
+        },
+      ]);
+      // Nothing else of the template can reach a provider.
+      expect(assembled.serialized).not.toContain("Private");
+      expect(assembled.serialized).not.toContain(SERIES_ID);
+    });
+
+    it("does not read the series at all for the seven-day plan", async () => {
+      listSeries.mockResolvedValue([storedSeries]);
+
+      const records = await source("create_seven_day_plan").load(OWNER);
+
+      expect(listSeries).not.toHaveBeenCalled();
+      expect(records.training.series).toEqual([]);
+    });
+
+    it("says an occurrence follows its rule only while it is untouched and on its date", async () => {
+      const occurrence = {
+        seriesId: SERIES_ID,
+        occurrenceDate: "2026-08-13",
+        localDate: "2026-08-13",
+      };
+      getPlanSlice.mockResolvedValue({
+        planId: "44000000-0000-4000-8000-000000000001",
+        revision: 12,
+        sessions: [
+          planSession({
+            ...occurrence,
+            id: "66000000-0000-4000-8000-00000000000a",
+          }),
+          planSession({
+            ...occurrence,
+            id: "66000000-0000-4000-8000-00000000000b",
+            hasDiverged: true,
+          }),
+          planSession({
+            ...occurrence,
+            id: "66000000-0000-4000-8000-00000000000c",
+            localDate: "2026-08-14",
+          }),
+          planSession({
+            id: "66000000-0000-4000-8000-00000000000d",
+            localDate: "2026-08-15",
+          }),
+        ],
+        recoveryDates: [],
+      });
+
+      const records = await source().load(OWNER);
+
+      expect(
+        records.training.plannedSessions.map((entry) => entry.ruleSeriesId),
+      ).toEqual([SERIES_ID, null, null, null]);
+    });
   });
 
   it("records as sources only the completions the coach is actually sent", async () => {

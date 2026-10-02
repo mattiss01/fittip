@@ -30,6 +30,7 @@ import {
   type SessionDetailRecords,
 } from "@/server/session-detail/session-detail-context";
 import {
+  MAX_RECURRING_SESSIONS,
   selectTrainingHistoryContext,
   type TrainingHistoryRecords,
 } from "@/server/training/training-history-context";
@@ -131,6 +132,11 @@ export type CoachAIContextLimits = {
   maxMemoryItems: number;
   maxTrainingSessions: number;
   maxPlanCommitments: number;
+  /**
+   * Recurring series sent as rules (ADR-013 decision 5, amended 2 October
+   * 2026). Zero for every operation except `create_roadmap`.
+   */
+  maxRecurringSessions: number;
   /** Per-source ceilings on the serialized bytes of that source alone. */
   bytes: {
     targetableGoals: number;
@@ -241,6 +247,7 @@ export const COACH_AI_CONTEXT_LIMITS = {
     maxMemoryItems: 20,
     maxTrainingSessions: 20,
     maxPlanCommitments: 12,
+    maxRecurringSessions: MAX_RECURRING_SESSIONS,
     bytes: {
       targetableGoals: 4_000,
       historicalGoals: 2_400,
@@ -291,6 +298,7 @@ export const COACH_AI_CONTEXT_LIMITS = {
     maxMemoryItems: 20,
     maxTrainingSessions: 20,
     maxPlanCommitments: 12,
+    maxRecurringSessions: 0,
     bytes: {
       targetableGoals: 4_000,
       historicalGoals: 1_600,
@@ -342,6 +350,7 @@ export const COACH_AI_CONTEXT_LIMITS = {
     maxMemoryItems: 20,
     maxTrainingSessions: 10,
     maxPlanCommitments: 0,
+    maxRecurringSessions: 0,
     bytes: {
       targetableGoals: 4_000,
       // Always empty here, and an empty list is its two brackets.
@@ -620,6 +629,7 @@ export function buildCoachAIContext(
       maxBytes: limits.bytes.trainingHistoryCompletions,
       maxPlanCommitments: limits.maxPlanCommitments,
       maxPlanCommitmentBytes: limits.bytes.planCommitments,
+      maxRecurringSessions: limits.maxRecurringSessions,
     },
   );
 
@@ -633,6 +643,11 @@ export function buildCoachAIContext(
     memory: memoryItems.map(toMemoryReference),
     trainingHistory: training.history,
     planCommitments: training.planCommitments,
+    // Keyed off the limit, not off the list being empty: an operation that
+    // sends no rules must not gain a key, or every one of its contexts grows.
+    ...(limits.maxRecurringSessions > 0
+      ? { recurringSessions: training.recurringSessions }
+      : {}),
     hasSafetySignal: training.hasSafetySignal,
     planningNote: assertBounded(
       compose.planningNote,
@@ -658,7 +673,12 @@ export function buildCoachAIContext(
     historical_goals: jsonBytes(context.historicalGoals),
     memory: jsonBytes(context.memory),
     training_history: jsonBytes(context.trainingHistory),
-    plan_commitments: jsonBytes(context.planCommitments),
+    // The rules share this allocation, so they are counted in it.
+    plan_commitments:
+      jsonBytes(context.planCommitments) +
+      (context.recurringSessions === undefined
+        ? 0
+        : jsonBytes(context.recurringSessions)),
     planning_note: jsonBytes(context.planningNote),
     regeneration_feedback: jsonBytes(context.regenerationFeedback),
     previous_proposal: jsonBytes(context.previousProposal),

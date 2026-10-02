@@ -33,6 +33,7 @@ class StubContextSource implements CoachAIContextSource {
         horizonEndDate: "2026-11-01",
         completions: [],
         plannedSessions: [],
+        series: [],
       },
     };
   }

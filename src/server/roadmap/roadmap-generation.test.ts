@@ -138,6 +138,7 @@ describe("generateRoadmapProposal", () => {
       materializeSeries: vi
         .fn()
         .mockResolvedValue({ createdCount: 0, skipped: [] }),
+      listSeries: vi.fn().mockResolvedValue([]),
     });
 
     roadmaps.beginGeneration.mockResolvedValue({

@@ -4,6 +4,8 @@ import type {
   CoachAICompletionReference,
   CoachAIMissedSessionReference,
   CoachAIPlanCommitmentReference,
+  CoachAIRecurringSessionReference,
+  CoachAIWeekdayName,
   CoachAITrainingHistory,
 } from "@/server/ai/contracts";
 
@@ -59,6 +61,11 @@ export const REPLACEMENT_DESCRIPTION_MAX_LENGTH = 240;
  */
 export const ROADMAP_FORWARD_LOCKED_WINDOW_DAYS = 180;
 export const MAX_PLAN_COMMITMENTS = 12;
+/**
+ * Decision 5 as amended on 2 October 2026: the most recurring series sent as
+ * rules. They are counted inside the plan-commitment byte allocation.
+ */
+export const MAX_RECURRING_SESSIONS = 6;
 
 /** The current revision of one completed session, already owner-scoped. */
 export type TrainingHistoryCompletion = {
@@ -85,6 +92,26 @@ export type TrainingHistoryPlannedSession = {
   isLocked: boolean;
   /** True when a completion references this planned session. */
   hasCompletion: boolean;
+  /**
+   * The series whose rule still describes this session: an occurrence that is
+   * on its rule date and whose content the owner has not edited. `null` for a
+   * one-off, and for an occurrence that was edited or moved. A lock is read
+   * separately, because a locked occurrence stays a dated entry either way.
+   */
+  ruleSeriesId: string | null;
+};
+
+/** One effective-dated series segment, already owner-scoped. */
+export type TrainingHistorySeries = {
+  id: string;
+  title: string;
+  sport: string;
+  frequency: "daily" | "weekly";
+  intervalCount: number;
+  /** Weekly only: 0 is Sunday through 6 is Saturday. */
+  weekdays: number[] | null;
+  startDate: string;
+  endDate: string | null;
 };
 
 export type TrainingHistoryRecords = {
@@ -98,11 +125,17 @@ export type TrainingHistoryRecords = {
    */
   completions: TrainingHistoryCompletion[];
   plannedSessions: TrainingHistoryPlannedSession[];
+  /**
+   * Empty unless the operation sends rules. A source that reads no series
+   * simply gets every occurrence as the dated entry it always was.
+   */
+  series: TrainingHistorySeries[];
 };
 
 export type TrainingHistorySelection = {
   history: CoachAITrainingHistory;
   planCommitments: CoachAIPlanCommitmentReference[];
+  recurringSessions: CoachAIRecurringSessionReference[];
   hasSafetySignal: boolean;
   /**
    * The input records this selection actually transmitted, in the order it
@@ -135,7 +168,13 @@ export function selectTrainingHistoryContext(
     maxBytes?: number;
     forwardLockedWindowDays?: number;
     maxPlanCommitments?: number;
+    /** Shared by the rules and the dated entries, rules first. */
     maxPlanCommitmentBytes?: number;
+    /**
+     * Zero unless a caller asks for rules. Deny by default: an operation that
+     * was never approved to send a recurrence sends none.
+     */
+    maxRecurringSessions?: number;
   } = {},
 ): TrainingHistorySelection {
   const windowDays = limits.windowDays ?? TRAINING_HISTORY_WINDOW_DAYS;
@@ -143,6 +182,7 @@ export function selectTrainingHistoryContext(
   const forwardDays =
     limits.forwardLockedWindowDays ?? ROADMAP_FORWARD_LOCKED_WINDOW_DAYS;
   const maxCommitments = limits.maxPlanCommitments ?? MAX_PLAN_COMMITMENTS;
+  const maxRecurring = limits.maxRecurringSessions ?? 0;
 
   const windowStartDate = addDays(records.today, -(windowDays - 1));
   const windowEndDate = records.today;
@@ -188,12 +228,53 @@ export function selectTrainingHistoryContext(
     .slice(0, maxSessions)
     .map(toMissedReference);
 
+  // Decision 5 as amended: a series running inside the horizon is sent once,
+  // as a rule. A series that only starts after the horizon is the unlocked
+  // speculation decision 5 already calls noise, and one that has ended is
+  // history. Earliest first, so a trim keeps what is already running.
+  const sentSeriesIds = new Set<string>();
+  const recurringSessions: CoachAIRecurringSessionReference[] = [];
+  let ruleBytes = 0;
+  for (const series of records.series
+    .filter(
+      (entry) =>
+        entry.startDate <= records.horizonEndDate &&
+        (entry.endDate === null || entry.endDate >= records.today),
+    )
+    .sort(
+      (a, b) =>
+        a.startDate.localeCompare(b.startDate) || a.id.localeCompare(b.id),
+    )
+    .slice(0, maxRecurring)) {
+    const reference = toRecurringSessionReference(series);
+    const cost = byteLength(JSON.stringify(reference)) + 1;
+    if (
+      limits.maxPlanCommitmentBytes !== undefined &&
+      ruleBytes + cost > limits.maxPlanCommitmentBytes
+    ) {
+      break;
+    }
+    ruleBytes += cost;
+    sentSeriesIds.add(series.id);
+    recurringSessions.push(reference);
+  }
+
   // Decision 5: every entry inside the horizon with its lock state, and beyond
-  // it locked entries only, within the bounded forward window.
+  // it locked entries only, within the bounded forward window. An occurrence a
+  // sent rule already describes is not repeated as a dated entry; a locked one
+  // is, because the lock is the owner's statement about that date. A series
+  // whose rule was trimmed keeps its occurrences here, so nothing vanishes.
   const forwardLimit = addDays(records.today, forwardDays);
   const commitments = records.plannedSessions
     .filter((entry) => {
       if (entry.localDate < records.today) return false;
+      if (
+        !entry.isLocked &&
+        entry.ruleSeriesId !== null &&
+        sentSeriesIds.has(entry.ruleSeriesId)
+      ) {
+        return false;
+      }
       if (entry.localDate <= records.horizonEndDate) return true;
       return entry.isLocked && entry.localDate <= forwardLimit;
     })
@@ -201,11 +282,12 @@ export function selectTrainingHistoryContext(
     .slice(0, maxCommitments)
     .map(toPlanCommitmentReference)
     .filter((entry, index, all) => {
+      // The rules were taken out of the same allocation first.
       const used = all
         .slice(0, index + 1)
         .reduce(
           (total, item) => total + byteLength(JSON.stringify(item)) + 1,
-          0,
+          ruleBytes,
         );
       return (
         limits.maxPlanCommitmentBytes === undefined ||
@@ -224,6 +306,7 @@ export function selectTrainingHistoryContext(
       missedPlannedSessions: missed,
     },
     planCommitments: commitments,
+    recurringSessions,
     // Decision 7 of M3-02: the flag is reported, never classified. Nothing here
     // infers severity, recovery, or elapsed-time clearance, because the model
     // holds no reliable structured state for any of those.
@@ -285,6 +368,39 @@ function toPlanCommitmentReference(
     title: entry.title.slice(0, 120),
     sport: entry.sport.slice(0, 80),
     isLocked: entry.isLocked,
+  };
+}
+
+const WEEKDAY_NAMES: readonly CoachAIWeekdayName[] = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+/**
+ * Copies exactly the fields the amendment enumerates. The series' intent,
+ * note, expected duration and activities are not eligible and are not read.
+ */
+function toRecurringSessionReference(
+  entry: TrainingHistorySeries,
+): CoachAIRecurringSessionReference {
+  return {
+    title: entry.title.slice(0, 120),
+    sport: entry.sport.slice(0, 80),
+    frequency: entry.frequency,
+    intervalCount: entry.intervalCount,
+    weekdays:
+      entry.frequency === "weekly" && entry.weekdays !== null
+        ? entry.weekdays
+            .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
+            .map((day) => WEEKDAY_NAMES[day])
+        : null,
+    startDate: entry.startDate,
+    endDate: entry.endDate,
   };
 }
 
