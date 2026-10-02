@@ -42,6 +42,7 @@ export function hasRecentSafetySignal(
       horizonEndDate: today,
       completions: completions.map(toWindowEntry),
       plannedSessions: [],
+      series: [],
     },
     { maxSessions: NO_SESSION_CAP },
   ).hasSafetySignal;

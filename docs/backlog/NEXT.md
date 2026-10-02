@@ -50,14 +50,22 @@ main action. No week ring. The owner flagged a possible bias toward the look the
 so start with Today and adjust from there rather than committing every screen up front. Build
 lane, one screen per merge.
 
-- [ ] **R3b — A three-month horizon.** Careful lane. Owner, 29 Sep 2026: option A — series
-      keep being written ahead as real sessions, now ~13 weeks instead of 14 days — and
-      option 3 for the far end: past those weeks the Plan continues only with the accepted
-      roadmap's phases and week outlines, no sessions. Needs a forward migration replacing
-      the two materializers' `v_today + 13`, `PLAN_WINDOW_DAYS` and `ROLLING_PLAN_WINDOW_DAYS`
-      to match, an ADR-017 amendment (row growth ~6× per series, series edits rewrite more
-      rows), Today's beyond-window notice, and the tests that pin 14 days. Confirm first that
-      no coach context reads the whole window (it appears to read only its 1–7-day horizon).
+- [ ] **R3b — A three-month horizon**, in three merges (owner, 29 Sep and 2 Oct 2026). The
+      first, the roadmap coach reading a series as one rule, is done; it had to come before
+      the window grows.
+  - [ ] **R3b-2 — Repeating sessions are written 13 weeks ahead.** Careful lane. Owner:
+        option A — real sessions, 91 days instead of 14. One forward migration re-emits
+        `materialize_rolling_plan_series` with `v_today + 90` (no signature change, nothing
+        destructive), `PLAN_WINDOW_DAYS` and `ROLLING_PLAN_WINDOW_DAYS` follow, and an
+        ADR-017 amendment says what it costs. Two things 14 days hid: a change set holds
+        100 changes, so a first fill tops up in passes; and the Plan looks up logs with
+        every session id in one request, so those reads go in chunks. Today's past-the-window
+        notice and the tests that pin 14 days move with it.
+  - [ ] **R3b-3 — The Plan runs 26 weeks.** Build lane. Owner: a single session (a race)
+        may be placed up to 180 days out, which is how far the coach already reads locked
+        ones; repeats still stop at 13 weeks. A week past week 13 shows the roadmap phase
+        band where a phase covers it and its days with a "+" for a single session. The
+        database never limited this, so no migration.
 - [ ] **R3 — The other screens, one per merge.** Today, the Plan, the session page,
       Progress and You are done. For each one left: cut the explanatory intro to one line or
       remove it, and say where an explanation must survive. In the order they can be started:
@@ -220,6 +228,14 @@ Not worth their own slot; do them when work lands nearby.
   project's life — so it takes 250 in a day or 2,500 ever to lock coaching out entirely.
   Far outside single-athlete traffic, but it accumulates permanently and no surface shows it.
 
+- **The roadmap prompt has 43 characters left.** Its static prefix is 5,957 of the 6,000
+  `openai-prompt.test.ts` allows, after the sentence naming `recurringSessions`. The next
+  sentence takes them from an existing one or raises the input ceiling, which is a
+  standing spend increase.
+- **The roadmap coach is not told which dates of a series differ.** A rule is sent as the
+  series stands (ADR-013, amended 2 Oct 2026): a cancelled or deleted occurrence is not
+  listed, and a locked, edited or moved one appears both as its own dated entry and
+  inside the rule.
 - **The plan context has no headroom left.** M3-16B spent it: prefix 7,400 + wrapper 64 +
   context 32,500 estimates 9,991 tokens against a 10,000 ceiling. The next source, or a longer
   prompt, takes bytes from an existing source or raises `maxInputTokens` — and the second is a

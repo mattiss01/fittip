@@ -27,7 +27,10 @@ import { createProfileRepository } from "@/server/repositories/profile-repositor
 import { createRoadmapRepository } from "@/server/repositories/roadmap-repository";
 import { createRollingPlan } from "@/server/repositories/rolling-plan-repository";
 import { createSavedSessionLibrary } from "@/server/repositories/saved-session-repository";
-import type { RollingPlanSession } from "@/server/rolling-plan/rolling-plan";
+import type {
+  RollingPlanSeries,
+  RollingPlanSession,
+} from "@/server/rolling-plan/rolling-plan";
 import { selectSessionDetailRecords } from "@/server/session-detail/session-detail-context";
 import {
   ROADMAP_FORWARD_LOCKED_WINDOW_DAYS,
@@ -36,6 +39,7 @@ import {
   type TrainingHistoryCompletion,
   type TrainingHistoryPlannedSession,
   type TrainingHistoryRecords,
+  type TrainingHistorySeries,
 } from "@/server/training/training-history-context";
 
 /**
@@ -160,7 +164,7 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       ROADMAP_FORWARD_LOCKED_WINDOW_DAYS,
     );
 
-    // Five independent owner-scoped reads, issued together rather than as a
+    // Independent owner-scoped reads, issued together rather than as a
     // waterfall. The plan read is the only one with a write side effect, and
     // the roadmap read is the only one an operation can skip.
     const fillsSession = this.#operation === "fill_session_activities";
@@ -169,6 +173,7 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       memory,
       completions,
       planWindow,
+      series,
       roadmapVersion,
       library,
       savedSessions,
@@ -186,6 +191,13 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
         windowStartDate,
         forwardEndDate,
       ),
+      // ADR-013 decision 5 as amended on 2 October 2026. Only the roadmap: its
+      // horizon is months, so a series reaches it once as a rule instead of as
+      // a dated entry per occurrence. The plan's horizon is days and Fill sends
+      // no commitments, so neither reads the series at all.
+      this.#operation === "create_roadmap"
+        ? (await createRollingPlan()).listSeries()
+        : [],
       // M3-16B. Only the plan operation: a roadmap is not planned against
       // itself, and reading one for `create_roadmap` would put owner records
       // in hand that that operation has no business holding.
@@ -237,6 +249,7 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
         .map((session) =>
           toTrainingHistoryPlannedSession(session, completedPlanSessionIds),
         ),
+      series: series.map(toTrainingHistorySeries),
     };
 
     // The session is found in the plan window already read, which reaches
@@ -360,5 +373,33 @@ function toTrainingHistoryPlannedSession(
     sport: session.sport,
     isLocked: session.isLocked,
     hasCompletion: completedPlanSessionIds.has(session.id),
+    // An occurrence its rule still describes: on its rule date, content as the
+    // series stamped it. An edited or moved one is its own dated entry.
+    ruleSeriesId:
+      session.seriesId !== null &&
+      !session.hasDiverged &&
+      session.occurrenceDate === session.localDate
+        ? session.seriesId
+        : null,
+  };
+}
+
+/**
+ * Only the recurrence, the title and the sport cross into the selection. The
+ * template's intent, note, duration and activities stay behind here, so the
+ * selection cannot send what it was never handed.
+ */
+function toTrainingHistorySeries(
+  series: RollingPlanSeries,
+): TrainingHistorySeries {
+  return {
+    id: series.id,
+    title: series.title,
+    sport: series.sport,
+    frequency: series.frequency,
+    intervalCount: series.intervalCount,
+    weekdays: series.weekdays ?? null,
+    startDate: series.startDate,
+    endDate: series.endDate ?? null,
   };
 }

@@ -108,6 +108,33 @@ export type CoachAIPlanCommitmentReference = {
 };
 
 /**
+ * A running recurring series, sent once as a rule rather than as one dated
+ * commitment per occurrence (ADR-013 decision 5, amended 2 October 2026). It
+ * carries the title and sport a dated commitment carries plus the recurrence,
+ * and nothing else of the series.
+ */
+export type CoachAIRecurringSessionReference = {
+  title: string;
+  sport: string;
+  frequency: "daily" | "weekly";
+  intervalCount: number;
+  /** Weekly only; `null` for a daily rule. */
+  weekdays: CoachAIWeekdayName[] | null;
+  startDate: string;
+  /** `null` when the series has no end. */
+  endDate: string | null;
+};
+
+export type CoachAIWeekdayName =
+  | "Sunday"
+  | "Monday"
+  | "Tuesday"
+  | "Wednesday"
+  | "Thursday"
+  | "Friday"
+  | "Saturday";
+
+/**
  * What the coach is told about the reductions ADR-013 approves. A trimmed
  * window that reads as a complete one is the specific failure decision 1
  * names, so the counts travel alongside the sessions.
@@ -254,6 +281,12 @@ export type CoachAIContext = {
   memory: CoachAIMemoryReference[];
   trainingHistory: CoachAITrainingHistory;
   planCommitments: CoachAIPlanCommitmentReference[];
+  /**
+   * Present for `create_roadmap` only, and absent rather than empty for every
+   * other operation, so what those send is byte for byte what they sent before
+   * the field existed.
+   */
+  recurringSessions?: CoachAIRecurringSessionReference[];
   /** True when any eligible completion carries one of the four safety flags. */
   hasSafetySignal: boolean;
   planningNote: string | null;

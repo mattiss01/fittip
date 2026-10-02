@@ -88,6 +88,8 @@ For each phase:
 
 Where "goalsOutsideHorizon" is non-empty, it lists goal ids whose target dates fall after this roadmap ends. You may build toward them, but do not imply the roadmap reaches them.
 
+"recurringSessions" are sessions the athlete repeats by rule, each given once; "planCommitments" are single dated ones. Both are already planned.
+
 Where "hasSafetySignal" is true, you must return at least one "safetyConsiderations" entry describing the conservative choice you made, and at least one review point about it. Describe load, not the symptom.
 
 Finally, "memoryCandidates": zero to four durable facts, constraints, preferences or observed patterns worth remembering beyond this request, each quoted as an exact substring of "planningNote". Copy the substring character for character; do not paraphrase it. Anything from "regenerationFeedback" is a comment on one rejected proposal and must never appear here. Return an empty list when the note holds nothing durable, which is the common case.`,

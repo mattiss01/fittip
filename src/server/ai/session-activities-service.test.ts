@@ -34,6 +34,7 @@ class SessionSource implements CoachAIContextSource {
         horizonEndDate: TODAY,
         completions: [],
         plannedSessions: [],
+        series: [],
       },
       sessionDetail: {
         session: {

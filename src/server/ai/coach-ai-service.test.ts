@@ -100,6 +100,7 @@ class FakeContextSource implements CoachAIContextSource {
         horizonEndDate: COACH_AI_FIXTURE_HORIZON_END,
         completions: [],
         plannedSessions: [],
+        series: [],
       },
     };
   }
