@@ -74,10 +74,12 @@ lane, one screen per merge.
         a plain heading and nothing else: their lists, filters, forms and buttons are
         still in the old style, with mono kickers ("Primary attention / 0 of 3",
         "Optional setup") and square controls.
-  - [ ] **A proposal under review and a roadmap with phases.** The Plan's sub-pages were
-        restyled on 2 Oct 2026 from their empty and one-entry states. The review's day
-        cards, choices and dock and the roadmap's spine, records and decision dock share
-        those stylesheets and were not looked at with content in them.
+  - [ ] **A proposal under review and a roadmap with phases are still in the old style.**
+        The Plan's sub-pages were restyled on 2 Oct 2026 from their empty and one-entry
+        states. Not done: in a review, the mono day stamps, badges and section labels,
+        the ink border on a taken day, the solid ink choice and the dock; a finished
+        proposal; on a roadmap, the spine, phase bands, attention chips, checkpoints,
+        section headings, the editor and the decision dock; and the memory link on both.
   - [ ] **Log, as a sheet.** Blocked on the owner: one form as today, or "Logging in steps"
         (`Later`). The form's activity editor is already rounded.
   - [ ] **The shared state cards.** Loading, error and "confirm your time zone" on every
@@ -140,8 +142,11 @@ Not worth their own slot; do them when work lands nearby.
   four that exist start from Today.
 - **White text on the orange buttons is short of AA contrast.** Paper on `--ember` is
   3.7:1 against the 4.5:1 that m3-16a asserts for "Plan with Coach", which is why that one
-  button uses `--ember-dark` (6:1). Log this session, Edit, Edit log and Save session still use
-  `--ember`. Owner's call: darken the orange everywhere, or keep it and accept it.
+  button uses `--ember-dark` (6:1), as do "Ask the coach" and "Generate roadmap proposal".
+  Log this session, Edit, Edit log, Save session and, since 2 Oct 2026, the libraries'
+  "Add to plan", "Save entry" and "Save to library" use `--ember`; those three were white
+  on navy at 8.8:1 before. Owner's call: darken the orange everywhere, or keep it and
+  accept it.
 - **The same session can be saved to the library twice.** Owner, 29 Sep 2026: saving a
   session that is already in the library creates a second entry. Decide what "the same"
   means (same name, or same name and activities) and whether a repeat save should update

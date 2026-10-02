@@ -205,7 +205,7 @@
 }
 
 .planDisclosure[open] > summary {
-  padding: 0 0.7rem;
+  padding: 0 0.9rem;
 }
 
 .form {
@@ -292,21 +292,6 @@
 .action:disabled,
 .primary:disabled {
   opacity: 0.45;
-}
-
-.repeatLink {
-  width: fit-content;
-  min-height: 3rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0.7rem 0 0;
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-control);
-  background: var(--line);
-  color: var(--pine);
-  font: 700 0.95rem var(--font-sans);
-  text-decoration: none;
 }
 
 .srOnly {

@@ -58,6 +58,16 @@ export function ComposeProposal({ hasGoals }: { hasGoals: boolean }) {
         className={styles.form}
         action={action}
         key={`compose-${state.submission}`}
+        // Enter in "Days to plan" sends the form whatever its button does,
+        // so without a goal the form itself opens the question too.
+        onSubmit={
+          hasGoals
+            ? undefined
+            : (event) => {
+                event.preventDefault();
+                setGoalPrompt(true);
+              }
+        }
       >
         <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
         <div className={styles.field}>

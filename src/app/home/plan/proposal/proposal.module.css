@@ -17,7 +17,6 @@
 
 /* The shell centres its children and lets each shrink, so these take the row. */
 .compose,
-.emptyState,
 .review {
   width: 100%;
   display: grid;
@@ -25,8 +24,7 @@
   margin-top: 1.5rem;
 }
 
-.compose > h2,
-.emptyState > h2 {
+.compose > h2 {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 800;

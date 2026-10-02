@@ -386,7 +386,9 @@ span.arrow {
 }
 
 .cardTitle {
-  flex: 1 1 6rem;
+  /* Narrow enough that a locked card's "45 min, Locked" still sits beside
+     its title; only a longer detail goes underneath. */
+  flex: 1 1 4.5rem;
   min-width: 0;
   overflow: hidden;
   font-size: 1rem;
