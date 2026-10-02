@@ -53,6 +53,20 @@ main action. No week ring. The owner flagged a possible bias toward the look the
 so start with Today and adjust from there rather than committing every screen up front. Build
 lane, one screen per merge.
 
+- [ ] **One title for a library session, and creating one in the library.** Owner,
+      2 Oct 2026. A saved session has a name and a title that are almost always the
+      same: show one field, "Title", on the card, in Edit and in "Save to library", and
+      store it in both columns, so no migration. An entry whose name differed shows its
+      title from then on, and the old name goes on its next edit. And a "New session"
+      card at the top of the Session Library, as "New activity" is on the other: it
+      makes a library entry only, through the existing create operation. Next ticket.
+- [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only
+      "Generate roadmap proposal", and an owner without a subscription may not be able
+      to generate one, so a roadmap must also be writable by hand: phases, dates, focus,
+      milestones, review points. Open before it starts: whether a hand-written first
+      version goes through a proposal and its acceptance as a coach one does (ADR-015)
+      or is written directly, which decides whether it needs a migration. Careful lane
+      if it does.
 - [ ] **R3 — The other screens, one per merge.** Today, the Plan, the session page,
       Progress and You are done. For each one left: cut the explanatory intro to one line or
       remove it, and say where an explanation must survive. In the order they can be started:
@@ -60,11 +74,12 @@ lane, one screen per merge.
         a plain heading and nothing else: their lists, filters, forms and buttons are
         still in the old style, with mono kickers ("Primary attention / 0 of 3",
         "Optional setup") and square controls.
-  - [ ] **The Plan's sub-pages.** Session Library, Activity Library, Plan with Coach
-        (proposal and review) and Roadmap got rounded controls with the forms and nothing
-        else: each still has its old masthead, kicker and intro, and the two libraries
-        still say "Saved sessions." and "Your activities." under chips that now say
-        "Session Library" and "Activity Library".
+  - [ ] **A proposal under review and a roadmap with phases are still in the old style.**
+        The Plan's sub-pages were restyled on 2 Oct 2026 from their empty and one-entry
+        states. Not done: in a review, the mono day stamps, badges and section labels,
+        the ink border on a taken day, the solid ink choice and the dock; a finished
+        proposal; on a roadmap, the spine, phase bands, attention chips, checkpoints,
+        section headings, the editor and the decision dock; and the memory link on both.
   - [ ] **Log, as a sheet.** Blocked on the owner: one form as today, or "Logging in steps"
         (`Later`). The form's activity editor is already rounded.
   - [ ] **The shared state cards.** Loading, error and "confirm your time zone" on every
@@ -127,8 +142,11 @@ Not worth their own slot; do them when work lands nearby.
   four that exist start from Today.
 - **White text on the orange buttons is short of AA contrast.** Paper on `--ember` is
   3.7:1 against the 4.5:1 that m3-16a asserts for "Plan with Coach", which is why that one
-  button uses `--ember-dark` (6:1). Log this session, Edit, Edit log and Save session still use
-  `--ember`. Owner's call: darken the orange everywhere, or keep it and accept it.
+  button uses `--ember-dark` (6:1), as do "Ask the coach" and "Generate roadmap proposal".
+  Log this session, Edit, Edit log, Save session and, since 2 Oct 2026, the libraries'
+  "Add to plan", "Save entry" and "Save to library" use `--ember`; those three were white
+  on navy at 8.8:1 before. Owner's call: darken the orange everywhere, or keep it and
+  accept it.
 - **The same session can be saved to the library twice.** Owner, 29 Sep 2026: saving a
   session that is already in the library creates a second entry. Decide what "the same"
   means (same name, or same name and activities) and whether a repeat save should update
@@ -150,6 +168,11 @@ Not worth their own slot; do them when work lands nearby.
 
 ## Later
 
+- **A start date for a coach proposal.** Owner, 2 Oct 2026. "Plan with Coach" always plans
+  from today for one to seven days. The idea: choose the first day, so next week can be
+  planned on a Friday. It changes what the coach is asked and what context it is sent,
+  so careful lane (AI data boundary), and the roadmap coach's own start date wants the
+  same answer.
 - **What goes in Settings.** Owner, 2 Oct 2026. The gear on You opens a page that says
   "Nothing to set yet." Meant for it: account details, subscription, language, and light
   or dark mode. None is decided or listed there; Sign out stays on You. Account details

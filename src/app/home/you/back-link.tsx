@@ -2,10 +2,14 @@ import Link from "next/link";
 
 import styles from "./you.module.css";
 
-/** The way back from a page under You, drawn as on a Progress record. */
+/**
+ * The way back from a page under You or under the Plan, drawn as on a
+ * Progress record. The page's navigation has a link of the same name, so a
+ * browser spec takes this one by `data-back-link`.
+ */
 export function BackLink({ href, label }: { href: string; label: string }) {
   return (
-    <Link className={styles.backLink} href={href}>
+    <Link className={styles.backLink} href={href} data-back-link>
       <svg
         width="18"
         height="18"

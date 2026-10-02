@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import styles from "./roadmap.module.css";
 
 import homeStyles from "../../home.module.css";
+import { SubPageHeader } from "../sub-page-header";
 import { RoadmapScreen } from "@/components/roadmap/roadmap-screen";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import { selectActiveGoalContext } from "@/server/goals/goal-records";
@@ -62,21 +62,17 @@ export default async function RoadmapPage() {
 
   return (
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
-      <Link className={homeStyles.backLink} href="/home/plan">
-        {ROADMAP_COPY.backLink}
-      </Link>
-      <header className={homeStyles.masthead}>
-        <div>
-          <p className={homeStyles.kicker}>{ROADMAP_COPY.routeKicker}</p>
-          <h1>{ROADMAP_COPY.routeTitle}</h1>
-          <p className={homeStyles.intro}>{ROADMAP_COPY.routeIntro}</p>
-        </div>
-        <p className={homeStyles.stamp}>
-          {state.current === null
-            ? ROADMAP_COPY.noRoadmapStamp
-            : ROADMAP_COPY.versionLabel(state.current.versionNumber)}
-        </p>
-      </header>
+      {/* With no roadmap the page's own empty state says so, so the header
+          names a version only when there is one. */}
+      <SubPageHeader
+        title={ROADMAP_COPY.routeTitle}
+        line={ROADMAP_COPY.routeIntro}
+        aside={
+          state.current === null
+            ? undefined
+            : ROADMAP_COPY.versionLabel(state.current.versionNumber)
+        }
+      />
       <RoadmapScreen state={state} />
     </main>
   );

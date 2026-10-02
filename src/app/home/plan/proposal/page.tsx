@@ -12,6 +12,7 @@ import {
 } from "./proposal-timeline";
 
 import homeStyles from "../../home.module.css";
+import { SubPageHeader } from "../sub-page-header";
 import { isoDateInTimezone } from "@/lib/date/local-date";
 import { toActivityValue } from "@/lib/training/activity-value";
 import { PLAN_PROPOSAL_COPY } from "@/lib/plan/plan-proposal-copy";
@@ -75,16 +76,9 @@ export default async function PlanProposalPage() {
 
   return (
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
-      <Link className={homeStyles.backLink} href="/home/plan">
-        {COPY.backLink}
-      </Link>
-      <header className={homeStyles.masthead}>
-        <div>
-          <p className={homeStyles.kicker}>{COPY.routeKicker}</p>
-          <h1>{COPY.routeTitle}</h1>
-          <p className={homeStyles.intro}>{COPY.routeIntro}</p>
-        </div>
-      </header>
+      {/* No intro (owner, 2 Oct 2026). That nothing reaches the plan before
+          the review is finished is said beside the button that asks. */}
+      <SubPageHeader title={COPY.routeTitle} />
 
       {state.timezoneName === null ? (
         <p className={styles.notice} data-state="rule">
@@ -108,12 +102,9 @@ export default async function PlanProposalPage() {
           {state.proposal === null || state.proposal.decision !== null ? (
             <ComposeProposal hasGoals={state.hasGoals} />
           ) : null}
-          {state.proposal === null ? (
-            <section className={styles.emptyState}>
-              <h2>{COPY.noProposalTitle}</h2>
-              <p className={styles.support}>{COPY.noProposalSupport}</p>
-            </section>
-          ) : state.proposal.decision !== null ? (
+          {/* With no proposal the form above is the whole page: a "No
+              proposal open" card under it only pointed back up at it. */}
+          {state.proposal === null ? null : state.proposal.decision !== null ? (
             <FinishedProposal proposal={state.proposal} />
           ) : (
             <ProposalReview

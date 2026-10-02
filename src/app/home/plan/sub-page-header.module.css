@@ -1,0 +1,30 @@
+/* The shell centres its children and lets each shrink, so both take the row. */
+.header {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding: 1rem 0 0;
+}
+
+.header h1 {
+  font-size: 2.3rem;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.aside {
+  margin: 0;
+  color: var(--moss);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.line {
+  width: 100%;
+  margin: 0.6rem 0 0;
+  color: var(--moss);
+  line-height: 1.5;
+}

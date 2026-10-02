@@ -20,21 +20,16 @@
  * like a real one.
  */
 export const PLAN_PROPOSAL_COPY = {
-  backLink: "Back to plan",
-  routeKicker: "FitTip / plan / coach proposal",
-  routeTitle: "Review a coach proposal.",
-  routeIntro:
-    "The coach proposes days. You decide each one, and only what you choose enters your plan.",
+  // The name the Plan's own button gives the page (R3).
+  routeTitle: "Plan with Coach",
 
-  /* ---- Compose ----------------------------------------------------------- */
+  /* ---- Compose -----------------------------------------------------------
+     The owner cut the intro and every helper line on 2 Oct 2026: the form is
+     two fields and a button. What stays is `generateSupport`, the one line
+     that says nothing reaches the plan before the review is finished. */
   composeTitle: "Ask for a proposal",
-  composeSupport:
-    "Pick how many days ahead to plan, and say anything the coach could not already know.",
   dayCountLabel: "Days to plan",
-  dayCountHelper: "Between one and seven days, starting today.",
   planningNoteLabel: "Anything the coach should account for? (optional)",
-  planningNoteHelper:
-    "Add commitments or constraints that your saved information does not show. Maximum 1,000 characters.",
   generateAction: "Ask the coach",
   generateSupport: "Nothing enters your plan until you finish the review.",
   pending:
@@ -240,12 +235,16 @@ export const PLAN_PROPOSAL_COPY = {
   /** Shown above a regenerated proposal, so the owner can judge the answer. */
   regeneratedFrom: (feedback: string) => `You asked for: ${feedback}`,
 
-  /* ---- Empty states ------------------------------------------------------ */
-  noProposalTitle: "No proposal open",
-  noProposalSupport:
-    "Ask the coach for one above. It will be laid out day by day next to what you already have planned.",
+  /* ---- No goals ----------------------------------------------------------
+     Asking without an active goal is refused, so the button opens a sheet with
+     the way to Goals instead of asking. A notice used to promise a
+     "deliberately general" proposal above a button that then refused, with
+     the refusal below the fold (owner, 2 Oct 2026). */
+  noGoalsTitle: "Add a goal first",
   noGoalsNotice:
-    "You have no active goals, so a proposal will stay deliberately general. Adding a goal first gives the coach something to aim at.",
+    "The coach plans toward your goals, and you have no active one.",
+  noGoalsLink: "Go to Goals",
+  noGoalsCancel: "Cancel",
 } as const;
 
 export const PLAN_PROPOSAL_NOTE_MAX_LENGTH = 1000;

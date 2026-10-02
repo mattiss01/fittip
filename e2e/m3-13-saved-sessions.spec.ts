@@ -90,7 +90,7 @@ test.describe("M3-13 private saved-session library", () => {
       await page.getByRole("link", { name: "Session Library" }).click();
       await expect(page).toHaveURL(/\/home\/plan\/saved$/);
       await expect(
-        page.getByRole("heading", { name: "Saved sessions." }),
+        page.getByRole("heading", { name: "Session Library" }),
       ).toBeVisible();
       const card = savedCard(page, "Threshold intervals");
       await expect(card.getByText("Tuesday tempo")).toBeVisible();
@@ -186,10 +186,10 @@ test.describe("M3-13 private saved-session library", () => {
       await expect(
         page.getByRole("heading", { name: "Nothing saved yet." }),
       ).toBeVisible();
-      await page.getByRole("link", { name: "Back to the plan" }).focus();
-      await expect(
-        page.getByRole("link", { name: "Back to the plan" }),
-      ).toBeFocused();
+      // The navigation has a link named "Plan" too, so the way back is
+      // taken by its hook.
+      await page.locator("[data-back-link]").focus();
+      await expect(page.locator("[data-back-link]")).toBeFocused();
       await page.screenshot({
         fullPage: true,
         path: path.join(evidenceDirectory, "M3-13-empty-library-390x844.png"),

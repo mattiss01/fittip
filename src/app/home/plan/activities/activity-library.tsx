@@ -109,8 +109,8 @@ function ActivityCard({
 
   return (
     <li className={styles.card}>
-      <p className={styles.tab}>{activity.name}</p>
       <div className={styles.cardBody}>
+        <h2>{activity.name}</h2>
         <p className={styles.meta}>
           {activity.sport} ·{" "}
           {MEASUREMENT_MODE_COPY[activity.measurementMode].label}

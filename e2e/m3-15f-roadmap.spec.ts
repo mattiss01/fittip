@@ -71,7 +71,7 @@ test.describe("M3-15F roadmap generation", () => {
       expect(first?.headers()["cache-control"]).toContain("private");
       expect(first?.headers()["cache-control"]).toContain("no-store");
       await expect(
-        page.getByRole("heading", { name: "Where this is going." }),
+        page.getByRole("heading", { level: 1, name: "Roadmap", exact: true }),
       ).toBeVisible();
       await expect(
         page.getByRole("heading", { name: "No roadmap yet." }),
