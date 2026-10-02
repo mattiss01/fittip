@@ -86,8 +86,10 @@ describe("plan window top-up before a non-Plan read", () => {
 
     const window = await readPlanWindowToppedUp(plan, day(0), day(13));
 
+    // The top-up fills the whole thirteen-week window, every third day of
+    // it; the read asked for the first fourteen days and gets those.
     expect(window).toMatchObject({
-      createdCount: 5,
+      createdCount: 31,
       skipped: [],
       toppedUp: true,
     });
@@ -98,6 +100,59 @@ describe("plan window top-up before a non-Plan read", () => {
       day(9),
       day(12),
     ]);
+  });
+
+  it("keeps what an earlier pass wrote when a later pass cannot run", async () => {
+    // Two daily series need two passes. The second loses the revision to
+    // another tab; the first hundred occurrences are still the owner's.
+    const adapter = new InMemoryRollingPlanAdapter({
+      timezoneName: TIMEZONE,
+      clock: () => NOW,
+    });
+    const daily = () => ({
+      operation: "add_series",
+      seriesId: randomUUID(),
+      series: {
+        frequency: "daily",
+        intervalCount: 1,
+        startDate: day(0),
+        title: "Daily session",
+        sport: "Running",
+        activities: [],
+      },
+    });
+    await new RollingPlan(adapter).applyChangeSet(
+      {
+        idempotencyKey: randomUUID(),
+        provenance: "owner_manual",
+        changes: [daily(), daily()],
+      },
+      0,
+    );
+    let calls = 0;
+    const secondPassLoses = new RollingPlan({
+      getPlanSlice: (input) => adapter.getPlanSlice(input),
+      listSeries: () => adapter.listSeries(),
+      applyChangeSet: (changeSet, revision) =>
+        adapter.applyChangeSet(changeSet, revision),
+      materializeSeries: async (key, revision) => {
+        calls += 1;
+        if (calls > 1) throw new RollingPlanConflictError();
+        return adapter.materializeSeries(key, revision);
+      },
+    });
+
+    const window = await readPlanWindowToppedUp(
+      secondPassLoses,
+      day(0),
+      day(90),
+    );
+
+    expect(window.toppedUp).toBe(true);
+    expect(window.createdCount).toBe(100);
+    expect(window.slice.sessions).toHaveLength(100);
+    // What is still missing is named, never passed off as a full window.
+    expect(window.skipped).toHaveLength(82);
   });
 
   it("costs no revision once the window is already current", async () => {

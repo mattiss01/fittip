@@ -2,10 +2,11 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import type {
-  RollingPlan,
-  RollingPlanSkippedOccurrence,
-  RollingPlanSlice,
+import {
+  materializeSeriesInPasses,
+  type RollingPlan,
+  type RollingPlanSkippedOccurrence,
+  type RollingPlanSlice,
 } from "@/server/rolling-plan/rolling-plan";
 
 export type ToppedUpPlanWindow = {
@@ -35,7 +36,9 @@ export type ToppedUpPlanWindow = {
  * the existing `materialize_rolling_plan_series` owner-derived RPC, and re-reads
  * only when that wrote something. Materialization returns `unchanged` without
  * advancing the revision when nothing is missing, so calling this on every read
- * costs one extra statement rather than a revision.
+ * costs one extra statement rather than a revision. A window too short for one
+ * change set to fill is filled in passes (R3b-2), which only a first fill or a
+ * long absence needs.
  *
  * A top-up that fails is never allowed to fail the read. Another tab racing
  * this one wins the revision and this call reports `toppedUp: false`; the
@@ -49,7 +52,11 @@ export async function readPlanWindowToppedUp(
 ): Promise<ToppedUpPlanWindow> {
   const slice = await plan.getPlanSlice(startDate, endDate);
   try {
-    const receipt = await plan.materializeSeries(randomUUID(), slice.revision);
+    const receipt = await materializeSeriesInPasses(
+      plan,
+      randomUUID,
+      slice.revision,
+    );
     return {
       slice:
         receipt.createdCount === 0

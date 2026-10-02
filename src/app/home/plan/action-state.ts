@@ -1,5 +1,9 @@
-/** The window the Plan surface reads and writes: owner-local today plus 13. */
-export const PLAN_WINDOW_DAYS = 14;
+/**
+ * The window the Plan surface reads and writes: owner-local today plus 90,
+ * thirteen weeks in all (R3b-2; it was fourteen days). The same number
+ * `materialize_rolling_plan_series` writes recurring sessions through.
+ */
+export const PLAN_WINDOW_DAYS = 91;
 
 export type PlanOperation =
   | "add"

@@ -23,8 +23,11 @@
 -- spanning both European transitions rather than end to end, because owner-local
 -- today is real time and cannot be moved onto a transition from inside a
 -- transaction. That function is the whole of the date-producing logic; the only
--- part outside it is `today + 13`, which is asserted separately to be `date`
+-- part outside it is `today + 90`, which is asserted separately to be `date`
 -- arithmetic.
+--
+-- R3b-2 moved the window from fourteen days to ninety-one. Every count and
+-- date list below that depends on it is written against day 0 to day 90.
 
 begin;
 
@@ -363,10 +366,10 @@ select is(
 );
 select is(
   (
-    pg_catalog.timezone('Europe/Berlin', '2026-10-25T09:00:00Z'::timestamptz)::date + 13
+    pg_catalog.timezone('Europe/Berlin', '2026-10-25T09:00:00Z'::timestamptz)::date + 90
   )::text,
-  '2026-11-07',
-  'the fourteen-day window is date arithmetic, so a transition cannot shorten it'
+  '2027-01-23',
+  'the ninety-one-day window is date arithmetic, so a transition cannot shorten it'
 );
 
 -- Owners ----------------------------------------------------------------------
@@ -484,11 +487,8 @@ select is(
   (select array_agg(occurrence_date order by occurrence_date)
    from public.rolling_plan_sessions
    where series_id = '7d000000-0000-4000-8000-0000000000a1'),
-  array[
-    pg_temp.owner_day(0), pg_temp.owner_day(2), pg_temp.owner_day(4),
-    pg_temp.owner_day(6), pg_temp.owner_day(8), pg_temp.owner_day(10),
-    pg_temp.owner_day(12)
-  ]::date[],
+  (select array_agg(pg_temp.owner_day(n)::date order by n)
+   from generate_series(0, 90, 2) as n),
   'an every-two-days rule materializes exactly its owner-local dates inside the window'
 );
 select ok(
@@ -502,7 +502,7 @@ select is(
   (select count(*)::bigint from public.rolling_plan_activities activity
    join public.rolling_plan_sessions session on session.id = activity.session_id
    where session.series_id = '7d000000-0000-4000-8000-0000000000a1'),
-  7::bigint,
+  46::bigint,
   'every occurrence carries a copy of the template activities'
 );
 select is(
@@ -634,7 +634,8 @@ select 'a-end', * from public.apply_rolling_plan_change_set(
 
 select is(
   (select series_effects->0->>'deleted' from change_receipt where label = 'a-end'),
-  '4',
+  -- Day 4 to day 90 every second day is 44 occurrences; one is locked.
+  '43',
   'ending the segment deletes every unlocked occurrence from the effective date on'
 );
 select is(
@@ -682,7 +683,7 @@ select is(
 select is(
   (select count(*)::bigint from public.rolling_plan_change_entries
    where change_kind = 'delete' and user_id = '7d000000-0000-4000-8000-000000000001'),
-  4::bigint,
+  43::bigint,
   'each deletion leaves one delete change entry'
 );
 select ok(
@@ -705,8 +706,8 @@ select is(
    where change_kind = 'delete'
      and user_id = '7d000000-0000-4000-8000-000000000001'
      and jsonb_array_length(before_state->'activities') = 1),
-  3::bigint,
-  'the three untouched occurrences kept their copied activity in the record'
+  42::bigint,
+  'the untouched occurrences kept their copied activity in the record'
 );
 select is(
   (select count(*)::bigint from public.rolling_plan_change_entries entry
@@ -760,14 +761,12 @@ select is(
   (select array_agg(occurrence_date order by occurrence_date)
    from public.rolling_plan_sessions
    where series_id = '7d000000-0000-4000-8000-0000000000b1'),
-  array[
-    pg_temp.owner_day(3), pg_temp.owner_day(5),
-    pg_temp.owner_day(10), pg_temp.owner_day(12)
-  ]::date[],
-  'a weekly weekday rule materializes both weekdays in both weeks of the window'
+  (select array_agg(pg_temp.owner_day(n)::date order by n)
+   from generate_series(0, 90) as n where n % 7 in (3, 5)),
+  'a weekly weekday rule materializes both weekdays in every week of the window'
 );
 select is(
-  (select created_count from materialization where label = 'b-first'), 4,
+  (select created_count from materialization where label = 'b-first'), 26,
   'and reports exactly what it created'
 );
 
@@ -803,7 +802,7 @@ select 'c-first', * from public.materialize_rolling_plan_series(
   '7d000000-0000-4000-8000-00000000c003');
 
 select is(
-  (select created_count from materialization where label = 'c-first'), 13,
+  (select created_count from materialization where label = 'c-first'), 90,
   'a date already holding ten sessions yields no occurrence, and the rest still do'
 );
 select is(
@@ -846,7 +845,7 @@ select 'd-first', * from public.materialize_rolling_plan_series(
   pg_temp.rev('7d000000-0000-4000-8000-000000000004'),
   '7d000000-0000-4000-8000-00000000d001');
 select is(
-  (select created_count from materialization where label = 'd-first'), 14,
+  (select created_count from materialization where label = 'd-first'), 91,
   'a segment that started before today still materializes only from today forward'
 );
 select is(
@@ -923,9 +922,8 @@ select is(
   (select array_agg(occurrence_date order by occurrence_date)
    from public.rolling_plan_sessions
    where series_id = '7d000000-0000-4000-8000-0000000000d2'),
-  array[
-    pg_temp.owner_day(5), pg_temp.owner_day(8), pg_temp.owner_day(11)
-  ]::date[],
+  (select array_agg(pg_temp.owner_day(n)::date order by n)
+   from generate_series(5, 90, 3) as n),
   'the successor rule then fills the rest of the window on its own schedule'
 );
 

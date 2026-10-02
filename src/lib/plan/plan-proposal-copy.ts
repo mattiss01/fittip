@@ -84,7 +84,7 @@ export const PLAN_PROPOSAL_COPY = {
     "Your plan has changed since the coach saw it — including anything you have just edited here. The days below are up to date, and finishing checks your plan again before adding anything.",
   /**
    * Shown in place of the editor on a day that has fallen behind owner-local
-   * today. The plan's own write refuses a date outside its fourteen-day window,
+   * today. The plan's own write refuses a date outside its thirteen-week window,
    * so the controls are withheld and the reason is given, rather than offering
    * a button whose failure message would explain nothing.
    */

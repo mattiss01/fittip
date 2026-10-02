@@ -628,7 +628,9 @@ select 'end', * from public.apply_rolling_plan_change_set(
 
 select is(
   (select series_effects->0->>'deleted' from change_receipt where label = 'end'),
-  '3',
+  -- R3b-2: the window is ninety-one days, so far more occurrences exist to
+  -- delete. The two that must survive are the same two.
+  '29',
   'ending the segment deletes every occurrence it is free to delete');
 select is(
   (select series_effects->0->>'lockedKept' from change_receipt where label = 'end'),
@@ -657,7 +659,7 @@ select is(
   (select count(*)::bigint from public.rolling_plan_change_entries
    where user_id = '7f000000-0000-4000-8000-000000000001'
      and change_kind = 'delete'),
-  3::bigint,
+  29::bigint,
   'each deletion still leaves a surviving delete entry, and a kept occurrence leaves none');
 select is(
   (select plan_session_id from public.completions

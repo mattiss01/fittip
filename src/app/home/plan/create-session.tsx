@@ -215,7 +215,7 @@ export function CreateSession({
           </ol>
           <p className={styles.consequenceStandalone}>
             {reviewedPreview.openEnded
-              ? "This series has no end date. FitTip creates only the current fourteen-day window and extends it on later Plan visits."
+              ? "This series has no end date. FitTip creates the next thirteen weeks of it and extends them on later Plan visits."
               : "The series stops on the end date you chose."}{" "}
             If a date already has ten sessions, that date is skipped and named
             after the save.

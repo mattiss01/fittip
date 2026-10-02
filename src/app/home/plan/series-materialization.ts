@@ -2,9 +2,10 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import type {
-  RollingPlan,
-  RollingPlanMaterializationReceipt,
+import {
+  materializeSeriesInPasses,
+  type RollingPlan,
+  type RollingPlanMaterializationReceipt,
 } from "@/server/rolling-plan/rolling-plan";
 
 export type PlanTopUpResult =
@@ -23,7 +24,7 @@ export async function topUpAfterPlanChange(
   try {
     return {
       ok: true,
-      receipt: await plan.materializeSeries(randomUUID(), planRevision),
+      receipt: await materializeSeriesInPasses(plan, randomUUID, planRevision),
     };
   } catch {
     return { ok: false };

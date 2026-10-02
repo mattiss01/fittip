@@ -45,7 +45,7 @@ try {
           seriesId,
           series: {
             // An interval of 365 days makes the rule fire exactly once inside
-            // the fourteen-day window, so each round owns one date and the
+            // the ninety-one-day window, so each round owns one date and the
             // ten-per-date cap is never in play.
             frequency: "daily",
             intervalCount: 365,

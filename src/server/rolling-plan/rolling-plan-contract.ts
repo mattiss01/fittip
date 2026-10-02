@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
+  materializeSeriesInPasses,
   RollingPlan,
   RollingPlanConflictError,
   RollingPlanRuleError,
@@ -511,10 +512,11 @@ export function registerRollingPlanContract(
         sessions: [],
       });
 
+      // Every third day across the ninety-one-day window: day 0 to day 90.
       const first = await plan.materializeSeries(randomUUID(), 1);
       expect(first).toMatchObject({
         result: "applied",
-        createdCount: 5,
+        createdCount: 31,
         planRevision: 2,
         skipped: [],
       });
@@ -553,6 +555,76 @@ export function registerRollingPlanContract(
       expect(stale).toMatchObject({ result: "unchanged", planRevision: 2 });
       expect(await plan.getPlanSlice(day(0), day(13))).toMatchObject({
         revision: 2,
+      });
+    });
+
+    it("fills a window too large for one change set in passes", async () => {
+      const { plan, day } = requireSubject(subject);
+      // Two daily series over ninety-one days are 182 occurrences, and one
+      // change set holds a hundred.
+      await plan.applyChangeSet(
+        changeSet([
+          addSeries(randomUUID(), day(0), 1),
+          addSeries(randomUUID(), day(0), 1),
+        ]),
+        0,
+      );
+
+      const single = await plan.materializeSeries(randomUUID(), 1);
+      expect(single).toMatchObject({
+        result: "applied",
+        createdCount: 100,
+        planRevision: 2,
+      });
+      expect(single.skipped).toHaveLength(82);
+      expect(
+        single.skipped.every((entry) => entry.reason === "change-set-limit"),
+      ).toBe(true);
+
+      // The remainder is one more pass, at the revision the first returned.
+      const rest = await materializeSeriesInPasses(plan, randomUUID, 2);
+      expect(rest).toMatchObject({
+        result: "applied",
+        createdCount: 82,
+        planRevision: 3,
+        skipped: [],
+      });
+
+      const filled = await plan.getPlanSlice(day(0), day(90));
+      expect(filled.sessions).toHaveLength(182);
+      // Nothing past the window, and nothing twice.
+      expect((await plan.getPlanSlice(day(91), day(120))).sessions).toEqual([]);
+      expect(new Set(filled.sessions.map((session) => session.id)).size).toBe(
+        182,
+      );
+      expect(
+        await materializeSeriesInPasses(plan, randomUUID, 3),
+      ).toMatchObject({
+        result: "unchanged",
+        createdCount: 0,
+        planRevision: 3,
+      });
+    });
+
+    it("fills the same window from empty in one call that makes both passes", async () => {
+      const { plan, day } = requireSubject(subject);
+      await plan.applyChangeSet(
+        changeSet([
+          addSeries(randomUUID(), day(0), 1),
+          addSeries(randomUUID(), day(0), 1),
+        ]),
+        0,
+      );
+
+      // One revision per pass (ADR-017 consequence 4), and the count is the
+      // total across them.
+      expect(
+        await materializeSeriesInPasses(plan, randomUUID, 1),
+      ).toMatchObject({
+        result: "applied",
+        createdCount: 182,
+        planRevision: 3,
+        skipped: [],
       });
     });
 
@@ -807,7 +879,8 @@ export function registerRollingPlanContract(
         {
           seriesId,
           operation: "end_series",
-          deleted: 3,
+          // Thirty occurrences from day 3 to day 90, less the locked one.
+          deleted: 29,
           divergedDeleted: 1,
           lockedKept: 1,
           completedKept: 0,

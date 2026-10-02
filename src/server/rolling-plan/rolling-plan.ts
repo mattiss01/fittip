@@ -50,7 +50,7 @@ export type RollingPlanSeriesActivityInput = Omit<
 /**
  * One effective-dated segment: the recurrence rule and the session template it
  * stamps out. `endDate` absent is an explicitly open-ended series; expansion is
- * still bounded, because only the fourteen-day window is ever asked for.
+ * still bounded, because only the thirteen-week window is ever asked for.
  */
 export type RollingPlanSeriesInput = {
   frequency: "daily" | "weekly";
@@ -255,12 +255,20 @@ export const ROLLING_PLAN_DAILY_SESSION_LIMIT = 10;
 
 /**
  * The owner-local window a series is materialized into: today plus the next
- * thirteen days. ADR-017 consequence 3 - nothing outside it exists as a row.
+ * ninety days, thirteen weeks in all (ADR-017 as amended on 2 October 2026;
+ * it was fourteen days). Consequence 3 - no occurrence outside it exists as a
+ * row.
  */
-export const ROLLING_PLAN_WINDOW_DAYS = 14;
+export const ROLLING_PLAN_WINDOW_DAYS = 91;
 
 /** The most changes one change set carries, which bounds one materialization. */
 export const ROLLING_PLAN_CHANGE_SET_LIMIT = 100;
+
+/**
+ * The most materializations one top-up makes. A full window is at most ten
+ * sessions on each of ninety-one days, so ten passes of a hundred cover it.
+ */
+export const ROLLING_PLAN_MATERIALIZATION_PASSES = 10;
 
 export type RollingPlanRuleReason =
   | "past-date"
@@ -330,6 +338,59 @@ export class RollingPlan {
       readInteger(expectedPlanRevision, 0, Number.MAX_SAFE_INTEGER),
     );
   }
+}
+
+/**
+ * Tops the window up until it is full rather than until one change set is.
+ *
+ * One materialization writes at most a hundred occurrences and reports the
+ * rest as skipped for the change-set limit. At fourteen days that took eight
+ * daily series to reach; at thirteen weeks two reach it on a first fill. So
+ * this calls again, with a fresh key and the revision the last pass returned,
+ * while a pass both wrote something and still reports that limit.
+ *
+ * Each pass is its own change set and its own revision (ADR-017 consequence
+ * 4). A later pass that fails does not undo the earlier ones: what was written
+ * is returned, with the last pass's skipped dates still naming what is left,
+ * so a caller reports a partly filled window as exactly that.
+ */
+export async function materializeSeriesInPasses(
+  plan: Pick<RollingPlan, "materializeSeries">,
+  nextIdempotencyKey: () => string,
+  expectedPlanRevision: number,
+): Promise<RollingPlanMaterializationReceipt> {
+  let receipt = await plan.materializeSeries(
+    nextIdempotencyKey(),
+    expectedPlanRevision,
+  );
+  let createdCount = receipt.createdCount;
+  for (
+    let pass = 1;
+    pass < ROLLING_PLAN_MATERIALIZATION_PASSES &&
+    receipt.createdCount > 0 &&
+    receipt.skipped.some((entry) => entry.reason === "change-set-limit");
+    pass += 1
+  ) {
+    let next: RollingPlanMaterializationReceipt;
+    try {
+      next = await plan.materializeSeries(
+        nextIdempotencyKey(),
+        receipt.planRevision,
+      );
+    } catch {
+      break;
+    }
+    createdCount += next.createdCount;
+    receipt = next;
+  }
+  return {
+    ...receipt,
+    createdCount,
+    result:
+      createdCount > 0 && receipt.result === "unchanged"
+        ? "applied"
+        : receipt.result,
+  };
 }
 
 export function parseChangeSet(value: unknown): RollingPlanChangeSet {

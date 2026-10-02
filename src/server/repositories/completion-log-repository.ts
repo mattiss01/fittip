@@ -6,6 +6,7 @@ import {
   requireAllowedVerifiedUser,
   VerifiedUserAccessError,
 } from "@/lib/auth/verified-user";
+import { idChunks } from "@/lib/id-chunks";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import {
   createServerUserClient,
@@ -91,15 +92,25 @@ export class PostgresCompletionLogAdapter implements CompletionLogAdapter {
     return data ? (await this.withReplacements(userId, [data]))[0] : null;
   }
 
+  /**
+   * Read in chunks (R3b-2). The ids travel in the request line, and a
+   * thirteen-week Plan can hold several hundred sessions: at 37 bytes an id,
+   * one request for all of them outgrows what the gateway accepts long before
+   * it outgrows the table. Each chunk repeats the owner predicate.
+   */
   async findByPlanSessions(planSessionIds: string[]): Promise<Completion[]> {
     const userId = await this.getVerifiedUserId();
-    const { data, error } = await this.client
-      .from("completions")
-      .select(COMPLETION_COLUMNS)
-      .eq("user_id", userId)
-      .in("plan_session_id", planSessionIds);
-    if (error) throw new CompletionPersistenceError();
-    return await this.withReplacements(userId, data ?? []);
+    const rows = [];
+    for (const chunk of idChunks(planSessionIds)) {
+      const { data, error } = await this.client
+        .from("completions")
+        .select(COMPLETION_COLUMNS)
+        .eq("user_id", userId)
+        .in("plan_session_id", chunk);
+      if (error) throw new CompletionPersistenceError();
+      rows.push(...(data ?? []));
+    }
+    return await this.withReplacements(userId, rows);
   }
 
   async findByPlanSession(planSessionId: string): Promise<Completion | null> {

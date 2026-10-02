@@ -6,6 +6,7 @@ import {
   requireAllowedVerifiedUser,
   VerifiedUserAccessError,
 } from "@/lib/auth/verified-user";
+import { idChunks } from "@/lib/id-chunks";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import {
   createServerUserClient,
@@ -203,19 +204,25 @@ export class SessionActivityRepository {
   ): Promise<SessionActivityProposalView[]> {
     if (sessionIds.length === 0) return [];
     const userId = await this.getVerifiedUserId();
-    const { data, error } = await this.client
-      .from("session_activity_proposals")
-      .select(PROPOSAL_COLUMNS)
-      .eq("user_id", userId)
-      .in("session_id", [...sessionIds])
-      .order("created_at", { ascending: false });
-    if (error) throw new SessionActivityPersistenceError();
-
+    // In chunks (R3b-2), for the reason `findByPlanSessions` gives: the ids
+    // travel in the request line. A session's proposals all arrive in the one
+    // chunk that holds its id, newest first, so "the newest per session" is
+    // decided inside a chunk and the chunks never have to be merged in order.
     const newest = new Map<string, SessionActivityProposalView>();
-    for (const row of data ?? []) {
-      const view = toProposalView(row);
-      if (view.decision !== null || view.sessionId === null) continue;
-      if (!newest.has(view.sessionId)) newest.set(view.sessionId, view);
+    for (const chunk of idChunks(sessionIds)) {
+      const { data, error } = await this.client
+        .from("session_activity_proposals")
+        .select(PROPOSAL_COLUMNS)
+        .eq("user_id", userId)
+        .in("session_id", chunk)
+        .order("created_at", { ascending: false });
+      if (error) throw new SessionActivityPersistenceError();
+
+      for (const row of data ?? []) {
+        const view = toProposalView(row);
+        if (view.decision !== null || view.sessionId === null) continue;
+        if (!newest.has(view.sessionId)) newest.set(view.sessionId, view);
+      }
     }
     return [...newest.values()];
   }

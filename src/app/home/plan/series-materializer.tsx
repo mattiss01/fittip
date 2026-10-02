@@ -69,7 +69,7 @@ export function SeriesMaterializer({
       data-state={noticeState}
       aria-labelledby="series-extension-title"
     >
-      <p className={styles.sectionLabel}>Fourteen-day window</p>
+      <p className={styles.sectionLabel}>Recurring sessions</p>
       <h2 id="series-extension-title">{notice}</h2>
       {extending && uncoveredDates.length > 0 ? (
         <p>
