@@ -668,10 +668,9 @@ function HistorySection({
   return (
     <details className={styles.history}>
       <summary>
-        {title}
         {/* A count, set apart: run together it read "Paused1" (owner,
-            2 Oct 2026). */}
-        <span className={styles.count}>{goals.length}</span>
+            2 Oct 2026), to the eye and to a screen reader. */}
+        {title} <span className={styles.count}>{goals.length}</span>
       </summary>
       <ul>
         {goals.map((goal) => (

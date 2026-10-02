@@ -102,11 +102,14 @@ export function OnboardingManager({
   // A saved step goes where its result says. This is done on the result, not
   // on the button's click: clearing the selection there unmounted a revisited
   // step's form before it was sent, so nothing was saved and "Save and finish
-  // later" never left the setup (owner, 2 Oct 2026). A refused step stays.
+  // later" never left the setup (owner, 2 Oct 2026). The step is pinned, not
+  // cleared: a save refused on it afterwards names no next step, and without
+  // a selection the owner would be thrown to the draft's furthest step with
+  // this step's notice over it.
   const [settled, setSettled] = useState(0);
   if (state.submission !== settled) {
     setSettled(state.submission);
-    if (state.status === "saved") setVisibleStep(null);
+    if (state.status === "saved") setVisibleStep(state.nextStep ?? null);
   }
   const [goalCount, setGoalCount] = useState(
     Math.max(1, snapshot.goalCandidates.length),
@@ -528,9 +531,9 @@ export function OnboardingManager({
             value={draft.idempotencyKey}
           />
           <p className={styles.explainer}>
-            Every card starts accepted. Reject what you do not want kept.
-            Rejected cards stay only in this draft and are deleted when you
-            save.
+            A card you have not decided starts accepted. Reject what you do not
+            want kept. Rejected cards stay only in this draft and are deleted
+            when you save.
           </p>
           <section className={styles.contextMap} aria-labelledby="context-map">
             <header>
@@ -610,7 +613,11 @@ export function OnboardingManager({
             >
               Back
             </button>
-            <button disabled={pending} type="submit">
+            {/* More than three core goals is refused when saving, with a
+                message about another tab. With every card accepted from the
+                start this is the first thing some owners see, so the button
+                waits for the count the notice above asks for. */}
+            <button disabled={pending || coreGoalCount > 3} type="submit">
               Save accepted items
             </button>
           </div>
@@ -1168,7 +1175,9 @@ function TimezoneSelect({ saved }: { saved: string | null }) {
   );
   const [chosen, setChosen] = useState<string | null>(null);
   const value = chosen ?? saved ?? detected ?? "UTC";
-  const options = zones.includes(value) ? zones : [value, ...zones];
+  // The browser's list need not hold the saved zone, and Chrome's leaves
+  // out UTC, which is what a draft with no zone starts from.
+  const options = [...new Set(["UTC", value, ...zones])].toSorted();
   return (
     <select
       name="timezoneName"

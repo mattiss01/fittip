@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import type { OnboardingActionState } from "./action-state";
 
+import { GoalValidationError } from "@/server/goals/goal-records";
 import {
   OnboardingValidationError,
   parseConstraintsPayload,
@@ -57,6 +58,17 @@ async function resolveOnboardingAction(
       formData.get("expectedDraftRevision"),
     );
     const repository = await createOnboardingRepository();
+    // Done once, setup is not started again (owner, 2 Oct 2026). The page
+    // no longer offers it; this is the same rule for a request made by hand.
+    if (
+      operation === "start" &&
+      (await repository.getEntryState()).hasPublished
+    ) {
+      return result(
+        "validation",
+        "Setup is finished. Change anything in Goals and Memory.",
+      );
+    }
     if (operation === "start" || operation === "dismiss_prompt") {
       await repository.apply({
         operation,
@@ -127,13 +139,15 @@ async function resolveOnboardingAction(
     revalidate();
     return result("saved", "This step was saved.", {
       nextStep: advance ? nextStep(step) : step,
-      // You says how long the draft is kept; see `SETUP_KEPT` there.
+      // You says how long the draft is kept; see `SETUP_NOTES` there.
       ...(advance ? {} : { redirectTo: "/home/you?setup=kept" }),
     });
   } catch (error) {
     if (
       error instanceof OnboardingValidationError ||
-      error instanceof OnboardingDatabaseValidationError
+      error instanceof OnboardingDatabaseValidationError ||
+      // The goals step is parsed by the goal rules, which have their own.
+      error instanceof GoalValidationError
     ) {
       // "Save and finish later" leaves whatever the step holds (owner,
       // 2 Oct 2026). A step the draft cannot store as it stands is not saved,

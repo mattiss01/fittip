@@ -118,10 +118,13 @@ export class GoalRepository {
    * Goals page, which says "Achieved on ...".
    *
    * This is the goal's own `updated_at`. `apply_goal_change` sets it when a
-   * goal is paused, achieved or abandoned, and after that writes only to
-   * active goals (ranks) or to the one goal an operation names, which for a
-   * goal in these states is reopening or archiving it. The lifecycle log
-   * would be the obvious source and is not one: it records reopening only.
+   * goal is paused, achieved or abandoned. Nothing the Goals page offers
+   * writes to such a goal again except reopening or archiving it, so in
+   * practice it is the day of the change. It is not guaranteed: the `edit`
+   * operation accepts any goal that is not archived, and Guided setup uses it
+   * when a new answer is filed over a saved goal of the same title, which
+   * would move the day. The lifecycle log would be the exact source and is
+   * not one yet: it records reopening only (`docs/backlog/NEXT.md`).
    *
    * Kept out of `list()`, whose goals also go to the coach's context.
    */

@@ -229,6 +229,8 @@ export class OnboardingRepository {
 
   async getEntryState(): Promise<{
     showHomeInvitation: boolean;
+    /** Setup has been finished once, so it is not started again. */
+    hasPublished: boolean;
   }> {
     const userId = await this.getVerifiedUserId();
     const [prompt, publication] = await Promise.all([
@@ -248,6 +250,7 @@ export class OnboardingRepository {
     }
     return {
       showHomeInvitation: prompt.data === null && publication.data.length === 0,
+      hasPublished: publication.data.length > 0,
     };
   }
 

@@ -193,7 +193,7 @@ test.describe("M2-01 goal management", () => {
         page.getByRole("heading", { name: "Mobility habit" }),
       ).toBeHidden();
       await expect(historyEntry(page, "Mobility habit")).toContainText(
-        "archived",
+        "Archived on",
       );
 
       await createGoal(page, "Achievement candidate", "supporting", "Cycling");
@@ -213,7 +213,7 @@ test.describe("M2-01 goal management", () => {
         page.getByRole("heading", { name: "Achievement candidate" }),
       ).toBeHidden();
       await expect(historyEntry(page, "Achievement candidate")).toContainText(
-        "achieved",
+        "Achieved on",
       );
 
       await createGoal(page, "Abandon candidate", "supporting", "Rowing");
@@ -233,7 +233,7 @@ test.describe("M2-01 goal management", () => {
         page.getByRole("heading", { name: "Abandon candidate" }),
       ).toBeHidden();
       await expect(historyEntry(page, "Abandon candidate")).toContainText(
-        "abandoned",
+        "Abandoned on",
       );
 
       await createGoal(page, "Temporary idea", "supporting", "Walking");
