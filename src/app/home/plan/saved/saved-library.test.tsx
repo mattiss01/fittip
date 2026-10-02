@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { useActionStateMock } = vi.hoisted(() => ({
@@ -40,7 +40,6 @@ function entry(overrides: Partial<SavedSessionView> = {}): SavedSessionView {
   return {
     id: SAVED_ID,
     revision: 2,
-    name: "Tuesday tempo",
     title: "Tempo run",
     sport: "Running",
     intent: null,
@@ -82,10 +81,11 @@ describe("the saved session library surface", () => {
       }),
     ]);
 
-    expect(screen.getByText("Tuesday tempo")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Tempo run" }),
     ).toBeInTheDocument();
+    // One field names an entry (owner, 2 Oct 2026): no form asks for a name.
+    expect(document.querySelector("input[name='name']")).toBeNull();
     expect(
       screen.getByText("Running · 60 min · 1 activity"),
     ).toBeInTheDocument();
@@ -155,8 +155,7 @@ describe("the saved session library surface", () => {
         savedSessionId: SAVED_ID,
         conflict: "stale",
         draft: {
-          name: "Renamed",
-          title: "Tempo run",
+          title: "Renamed",
           sport: "Running",
           intent: "",
           expectedDurationMinutes: "",
@@ -167,17 +166,59 @@ describe("the saved session library surface", () => {
     );
 
     expect(
-      document.querySelector<HTMLInputElement>(`#edit-${SAVED_ID}-name`),
+      document.querySelector<HTMLInputElement>(`#edit-${SAVED_ID}-title`),
     ).toHaveValue("Renamed");
     // The other entry's form keeps its own stored value.
     expect(
       document.querySelector<HTMLInputElement>(
-        "#edit-7f000000-0000-4000-8000-000000000002-name",
+        "#edit-7f000000-0000-4000-8000-000000000002-title",
       ),
-    ).toHaveValue("Tuesday tempo");
+    ).toHaveValue("Tempo run");
     expect(
       screen.getByRole("link", { name: "Reload the library" }),
     ).toBeInTheDocument();
+  });
+
+  it("offers a new session in the library, open when there is nothing saved", () => {
+    renderLibrary();
+    const create = document
+      .querySelector("input[name='operation'][value='create']")!
+      .closest("form")!;
+
+    expect(create.closest("details")).toHaveAttribute("open");
+    expect(within(create).getByLabelText("Title")).toBeRequired();
+    expect(within(create).getByLabelText("Sport")).toBeRequired();
+    // It submits its activities whole, as the edit form does.
+    expect(create.querySelector("input[name='activities']")).not.toBeNull();
+    expect(
+      within(create).getByRole("button", { name: "Add to library" }),
+    ).toBeEnabled();
+  });
+
+  it("keeps what was typed when a new session is refused", () => {
+    renderLibrary(
+      {
+        status: "validation",
+        message: "Check the session details and the date.",
+        submission: 1,
+        operation: "create",
+        draft: {
+          title: "Hill reps",
+          sport: "",
+          intent: "",
+          expectedDurationMinutes: "50",
+          note: "",
+        },
+      },
+      [entry()],
+    );
+
+    expect(document.querySelector("#create-title")).toHaveValue("Hill reps");
+    expect(document.querySelector("#create-minutes")).toHaveValue(50);
+    // The entry beside it is not given the refused form's values.
+    expect(
+      document.querySelector<HTMLInputElement>(`#edit-${SAVED_ID}-title`),
+    ).toHaveValue("Tempo run");
   });
 
   it("offers no reload when the surface has no reason to think it is stale", () => {

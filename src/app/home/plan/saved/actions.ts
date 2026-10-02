@@ -53,25 +53,29 @@ import {
   toSavedSessionDraft,
 } from "@/server/saved-sessions/session-copy";
 
-const OPERATIONS: readonly LibraryOperation[] = ["edit", "delete", "reuse"];
+const OPERATIONS: readonly LibraryOperation[] = [
+  "create",
+  "edit",
+  "delete",
+  "reuse",
+];
 
 /**
  * Save an owned planned session into the library.
  *
  * The content is read back from the Plan on the server; the browser supplies
- * only which session and what to call it. The Plan itself is not touched: no
- * session is added, moved, locked, or cancelled by saving one.
+ * only which session. The Plan itself is not touched: no session is added,
+ * moved, locked, or cancelled by saving one.
  */
 export async function saveSessionToLibraryAction(
   previous: LibrarySaveActionState,
   formData: FormData,
 ): Promise<LibrarySaveActionState> {
   const submission = previous.submission + 1;
-  const name = stringValue(formData.get("name"));
   const failure = (
     status: LibrarySaveActionState["status"],
     message: string,
-  ): LibrarySaveActionState => ({ status, message, submission, name });
+  ): LibrarySaveActionState => ({ status, message, submission });
 
   try {
     const window = await readPlanWindow();
@@ -89,7 +93,7 @@ export async function saveSessionToLibraryAction(
       await createSavedSessionLibrary()
     ).applyChange({
       operation: "create",
-      session: toSavedSessionDraft(name.trim(), session),
+      session: toSavedSessionDraft(session),
     });
     revalidatePath("/home/plan/saved");
     return { status: "saved", message: "Saved to your library.", submission };
@@ -101,15 +105,13 @@ export async function saveSessionToLibraryAction(
 /**
  * Save a written log into the library, from its receipt or its Progress
  * record. As with the Plan's save, the content is read back on the server and
- * the browser supplies only which log and what to call it. The log itself is
- * not touched.
+ * the browser supplies only which log. The log itself is not touched.
  */
 export async function saveLogToLibraryAction(
   previous: LibrarySaveActionState,
   formData: FormData,
 ): Promise<LibrarySaveActionState> {
   const submission = previous.submission + 1;
-  const name = stringValue(formData.get("name"));
   try {
     const completion = await (
       await createCompletionLog()
@@ -121,13 +123,13 @@ export async function saveLogToLibraryAction(
       await createSavedSessionLibrary()
     ).applyChange({
       operation: "create",
-      session: completionToSavedSessionDraft(name.trim(), completion),
+      session: completionToSavedSessionDraft(completion),
     });
     revalidatePath("/home/plan/saved");
     return { status: "saved", message: "Saved to your library.", submission };
   } catch (error) {
     const [status, message] = saveFailure(error);
-    return { status, message, submission, name };
+    return { status, message, submission };
   }
 }
 
@@ -150,7 +152,7 @@ export async function saveSessionDraftToLibraryAction(
   try {
     await (
       await createSavedSessionLibrary()
-    ).applyChange({ operation: "create", session: draft });
+    ).applyChange({ operation: "create", session: namedByTitle(draft) });
     revalidatePath("/home/plan/saved");
     return { status: "saved", message: "Saved to your library." };
   } catch (error) {
@@ -158,14 +160,14 @@ export async function saveSessionDraftToLibraryAction(
       return {
         status: "refused",
         message:
-          "Give it a name, and the log a title and a sport, before saving it. Every activity needs a name too.",
+          "Give the log a title and a sport before saving it. Every activity needs a name too.",
       };
     }
     return { status: "refused", message: saveFailure(error)[1] };
   }
 }
 
-/** Edit, delete, or reuse one library entry. */
+/** Create a library entry, or edit, delete, or reuse one. */
 export async function changeLibraryAction(
   previous: LibraryActionState,
   formData: FormData,
@@ -174,7 +176,10 @@ export async function changeLibraryAction(
     (candidate) => candidate === formData.get("operation"),
   );
   const savedSessionId = optionalText(formData, "savedSessionId");
-  const draft = operation === "edit" ? draftFrom(formData) : undefined;
+  const draft =
+    operation === "edit" || operation === "create"
+      ? draftFrom(formData)
+      : undefined;
   const result = (
     status: LibraryActionState["status"],
     message: string,
@@ -200,6 +205,11 @@ export async function changeLibraryAction(
       return result("saved", planChangeCopy("Added to your plan.", topUp));
     }
 
+    // The editor submits the whole list, so an edit replaces it.
+    const session = () => ({
+      ...readContent(formData),
+      activities: readSubmittedTemplateActivities(formData),
+    });
     await library.applyChange(
       operation === "delete"
         ? {
@@ -207,23 +217,25 @@ export async function changeLibraryAction(
             savedSessionId,
             expectedRevision: readInteger(formData.get("expectedRevision")),
           }
-        : {
-            operation: "edit",
-            savedSessionId,
-            expectedRevision: readInteger(formData.get("expectedRevision")),
-            // The editor submits the whole list, so the edit replaces it.
-            session: {
-              ...readContent(formData),
-              activities: readSubmittedTemplateActivities(formData),
+        : operation === "create"
+          ? // Written in the library itself (owner, 2 Oct 2026). It makes an
+            // entry and nothing else: the Plan is not read or touched.
+            { operation: "create", session: session() }
+          : {
+              operation: "edit",
+              savedSessionId,
+              expectedRevision: readInteger(formData.get("expectedRevision")),
+              session: session(),
             },
-          },
     );
     revalidatePath("/home/plan/saved");
     return result(
       "saved",
       operation === "delete"
         ? "Saved session deleted."
-        : "Saved session updated.",
+        : operation === "create"
+          ? "Added to your library."
+          : "Saved session updated.",
     );
   } catch (error) {
     if (error instanceof RollingPlanRuleError) {
@@ -357,7 +369,7 @@ function saveFailure(
   ) {
     return [
       "validation",
-      "Give the saved session a name of up to 120 characters.",
+      "This session cannot be saved as it is. It needs a title and a sport.",
     ];
   }
   if (
@@ -374,7 +386,8 @@ function saveFailure(
 function readContent(formData: FormData) {
   const minutes = optionalText(formData, "expectedDurationMinutes");
   return {
-    name: text(formData, "name"),
+    // One field since 2 Oct 2026: an entry is named by its title.
+    name: text(formData, "title"),
     title: text(formData, "title"),
     sport: text(formData, "sport"),
     ...(optionalText(formData, "intent") === undefined
@@ -417,7 +430,6 @@ function optionalText(formData: FormData, key: string): string | undefined {
 
 function draftFrom(formData: FormData): LibraryDraft {
   return {
-    name: stringValue(formData.get("name")),
     title: stringValue(formData.get("title")),
     sport: stringValue(formData.get("sport")),
     intent: stringValue(formData.get("intent")),
@@ -430,4 +442,16 @@ function draftFrom(formData: FormData): LibraryDraft {
 
 function stringValue(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value : "";
+}
+
+/**
+ * The log form sends its draft from the browser, so it is not trusted to have
+ * left the name alone: whatever arrives, the entry is named by its title. The
+ * library parses the rest under its usual suspicion.
+ */
+function namedByTitle(draft: unknown): unknown {
+  if (typeof draft !== "object" || draft === null || Array.isArray(draft)) {
+    return draft;
+  }
+  return { ...draft, name: (draft as { title?: unknown }).title };
 }

@@ -319,7 +319,8 @@ describe("Log", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Use session from library" }),
     );
-    fireEvent.click(screen.getByRole("button", { name: /Tuesday gym/ }));
+    // The picker lists an entry by its title, the one name it has now.
+    fireEvent.click(screen.getByRole("button", { name: /Upper body/ }));
 
     expect(title().value).toBe("Upper body");
     expect(document.querySelector<HTMLInputElement>("#log-sport")!.value).toBe(

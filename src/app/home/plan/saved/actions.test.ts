@@ -46,6 +46,7 @@ import {
 } from "@/server/rolling-plan/rolling-plan";
 import {
   SavedSessionConflictError,
+  SavedSessionValidationError,
   type SavedSessionChange,
 } from "@/server/saved-sessions/saved-sessions";
 
@@ -78,6 +79,7 @@ describe("saved session actions", () => {
     await expect(
       saveSessionToLibraryAction(
         INITIAL_LIBRARY_SAVE_ACTION_STATE,
+        // A name sent anyway is ignored: the entry is named by its title.
         form({ sessionId: PLAN_SESSION_ID, name: "  Tuesday tempo  " }),
       ),
     ).resolves.toMatchObject({
@@ -89,7 +91,7 @@ describe("saved session actions", () => {
     expect(change).toEqual({
       operation: "create",
       session: {
-        name: "Tuesday tempo",
+        name: "Aerobic run",
         title: "Aerobic run",
         sport: "Running",
         expectedDurationMinutes: 60,
@@ -122,7 +124,7 @@ describe("saved session actions", () => {
           name: "Borrowed",
         }),
       ),
-    ).resolves.toMatchObject({ status: "validation", name: "Borrowed" });
+    ).resolves.toMatchObject({ status: "validation" });
   });
 
   it("reuses an entry as a plain addition on the date the owner picked", async () => {
@@ -236,7 +238,6 @@ describe("saved session actions", () => {
         operation: "edit",
         savedSessionId: SAVED_ID,
         expectedRevision: "3",
-        name: "Tuesday tempo",
         title: "Longer tempo run",
         sport: "Running",
         expectedDurationMinutes: "80",
@@ -252,7 +253,8 @@ describe("saved session actions", () => {
       savedSessionId: SAVED_ID,
       expectedRevision: 3,
       session: {
-        name: "Tuesday tempo",
+        // The edit form has one field, and it names the entry too.
+        name: "Longer tempo run",
         title: "Longer tempo run",
         sport: "Running",
         expectedDurationMinutes: 80,
@@ -270,6 +272,72 @@ describe("saved session actions", () => {
     });
   });
 
+  it("writes a new entry in the library without touching the Plan", async () => {
+    const applyChange = vi.fn().mockResolvedValue({ result: "created" });
+    createLibraryMock.mockResolvedValue({ applyChange });
+
+    const result = await changeLibraryAction(
+      INITIAL_LIBRARY_ACTION_STATE,
+      form({
+        operation: "create",
+        title: "Hill reps",
+        sport: "Running",
+        expectedDurationMinutes: "50",
+        activities: JSON.stringify([
+          { name: "Strides", sport: "Running", measurementMode: "unmeasured" },
+        ]),
+      }),
+    );
+
+    expect(result).toMatchObject({
+      status: "saved",
+      operation: "create",
+      message: "Added to your library.",
+      draft: undefined,
+    });
+    expect(applyChange.mock.calls[0][0]).toEqual({
+      operation: "create",
+      session: {
+        name: "Hill reps",
+        title: "Hill reps",
+        sport: "Running",
+        expectedDurationMinutes: 50,
+        activities: [
+          {
+            position: 0,
+            name: "Strides",
+            sport: "Running",
+            measurementMode: "unmeasured",
+          },
+        ],
+      },
+    });
+    expect(createPlanMock).not.toHaveBeenCalled();
+  });
+
+  it("hands a refused new entry back to its form", async () => {
+    const applyChange = vi
+      .fn()
+      .mockRejectedValue(new SavedSessionValidationError());
+    createLibraryMock.mockResolvedValue({ applyChange });
+
+    await expect(
+      changeLibraryAction(
+        INITIAL_LIBRARY_ACTION_STATE,
+        form({
+          operation: "create",
+          title: "",
+          sport: "Running",
+          activities: "[]",
+        }),
+      ),
+    ).resolves.toMatchObject({
+      status: "validation",
+      operation: "create",
+      draft: { title: "", sport: "Running" },
+    });
+  });
+
   it("refuses an edit whose form carries no activities field", async () => {
     const applyChange = vi.fn();
     createLibraryMock.mockResolvedValue({ applyChange });
@@ -281,7 +349,6 @@ describe("saved session actions", () => {
           operation: "edit",
           savedSessionId: SAVED_ID,
           expectedRevision: "3",
-          name: "Tuesday tempo",
           title: "Tempo run",
           sport: "Running",
         }),
@@ -302,8 +369,7 @@ describe("saved session actions", () => {
           operation: "edit",
           savedSessionId: SAVED_ID,
           expectedRevision: "0",
-          name: "Renamed",
-          title: "Tempo run",
+          title: "Renamed",
           sport: "Running",
           activities: "[]",
         }),
@@ -311,7 +377,7 @@ describe("saved session actions", () => {
     ).resolves.toMatchObject({
       status: "conflict",
       conflict: "stale",
-      draft: expect.objectContaining({ name: "Renamed" }),
+      draft: expect.objectContaining({ title: "Renamed" }),
     });
   });
 

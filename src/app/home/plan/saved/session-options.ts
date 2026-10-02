@@ -22,7 +22,6 @@ export async function readSavedSessionOptions(): Promise<SavedSessionOption[]> {
   }
   return sessions.map((session) => ({
     id: session.id,
-    name: session.name,
     title: session.title,
     sport: session.sport,
     expectedDurationMinutes: session.expectedDurationMinutes ?? null,

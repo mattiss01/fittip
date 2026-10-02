@@ -53,13 +53,6 @@ main action. No week ring. The owner flagged a possible bias toward the look the
 so start with Today and adjust from there rather than committing every screen up front. Build
 lane, one screen per merge.
 
-- [ ] **One title for a library session, and creating one in the library.** Owner,
-      2 Oct 2026. A saved session has a name and a title that are almost always the
-      same: show one field, "Title", on the card, in Edit and in "Save to library", and
-      store it in both columns, so no migration. An entry whose name differed shows its
-      title from then on, and the old name goes on its next edit. And a "New session"
-      card at the top of the Session Library, as "New activity" is on the other: it
-      makes a library entry only, through the existing create operation. Next ticket.
 - [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only
       "Generate roadmap proposal", and an owner without a subscription may not be able
       to generate one, so a roadmap must also be writable by hand: phases, dates, focus,
@@ -149,8 +142,9 @@ Not worth their own slot; do them when work lands nearby.
   accept it.
 - **The same session can be saved to the library twice.** Owner, 29 Sep 2026: saving a
   session that is already in the library creates a second entry. Decide what "the same"
-  means (same name, or same name and activities) and whether a repeat save should update
-  the existing entry, be refused, or ask. A uniqueness rule in the database would be
+  means (same title, or same title and activities) and whether a repeat save should update
+  the existing entry, be refused, or ask. Since 2 Oct 2026 an entry has one title and no
+  name of its own, so two saves of one session now look identical in the library. A uniqueness rule in the database would be
   careful lane; the activity library already requires unique names among active entries
   (`16118fb`), which is the precedent.
 - A hand-made RPC payload with `position` or `plannedPosition` of `1.0` reaches

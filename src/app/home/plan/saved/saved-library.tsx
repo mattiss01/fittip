@@ -24,7 +24,6 @@ export type SavedSessionActivityView = ActivityValue;
 export type SavedSessionView = {
   id: string;
   revision: number;
-  name: string;
   title: string;
   sport: string;
   intent: string | null;
@@ -51,6 +50,13 @@ export function SavedLibrary({
   );
   const notice = pending ? "Saving change…" : null;
   const noticeState = pending ? "pending" : state.status;
+  // "New session" closes and empties once its entry is in the list below it;
+  // a refused one stays open with what was typed.
+  const created = state.operation === "create";
+  const createdKey = useTargetedResetKey(
+    state.submission,
+    created && state.status === "saved",
+  );
 
   return (
     <div className={styles.library}>
@@ -68,13 +74,39 @@ export function SavedLibrary({
         </a>
       ) : null}
 
+      {/* A session can be written here, not only saved from the Plan (owner,
+          2 Oct 2026). It makes a library entry and nothing else: nothing is in
+          the plan until "Use in plan" puts a copy there. */}
+      <details
+        className={styles.disclosure}
+        key={`create-${createdKey}`}
+        open={createdKey === 0 && sessions.length === 0 ? true : undefined}
+      >
+        <summary>New session</summary>
+        <form
+          className={styles.form}
+          action={action}
+          key={`create-form-${created ? state.submission : 0}`}
+        >
+          <input type="hidden" name="operation" value="create" />
+          <SavedSessionFields
+            idPrefix="create"
+            draft={created ? state.draft : undefined}
+          />
+          <ActivityEditor idPrefix="create" initial={[]} />
+          <button className={styles.primary} type="submit" disabled={pending}>
+            Add to library
+          </button>
+        </form>
+      </details>
+
       {sessions.length === 0 ? (
         <section className={styles.empty}>
           <h2>Nothing saved yet.</h2>
           <p>
-            Open a session on your plan and choose{" "}
-            <strong>Save to library</strong>. It is copied here, so you can use
-            it again on any later date.
+            Write one above, or open a session on your plan and choose{" "}
+            <strong>Save to library</strong>. Either way it is kept here, so you
+            can use it again on any later date.
           </p>
         </section>
       ) : (
@@ -118,7 +150,6 @@ function SavedSessionCard({
 
   return (
     <li className={styles.card}>
-      <p className={styles.tab}>{session.name}</p>
       <div className={styles.cardBody}>
         <h2>{session.title}</h2>
         <p className={styles.meta}>
@@ -258,16 +289,6 @@ function SavedSessionFields({
   return (
     <>
       <div className={styles.field}>
-        <label htmlFor={`${idPrefix}-name`}>Name</label>
-        <input
-          id={`${idPrefix}-name`}
-          name="name"
-          maxLength={120}
-          required
-          defaultValue={draft?.name ?? ""}
-        />
-      </div>
-      <div className={styles.field}>
         <label htmlFor={`${idPrefix}-title`}>Title</label>
         <input
           id={`${idPrefix}-title`}
@@ -338,7 +359,6 @@ function useTargetedResetKey(submission: number, targeted: boolean): number {
 
 function draftOf(session: SavedSessionView): LibraryDraft {
   return {
-    name: session.name,
     title: session.title,
     sport: session.sport,
     intent: session.intent ?? "",

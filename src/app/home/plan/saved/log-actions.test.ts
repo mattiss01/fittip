@@ -61,7 +61,8 @@ describe("saving a log to the session library", () => {
     expect(applyChange).toHaveBeenCalledWith({
       operation: "create",
       session: {
-        name: "Tuesday gym",
+        // Named by its title, whatever name the form sends.
+        name: "Upper body",
         title: "Upper body",
         sport: "Strength",
         expectedDurationMinutes: 55,
@@ -127,14 +128,14 @@ describe("saving a log to the session library", () => {
 
   it("says what is missing when the form cannot be saved", async () => {
     const result = await saveSessionDraftToLibraryAction({
-      name: "",
-      title: "Upper body",
+      name: "Tuesday gym",
+      title: "",
       sport: "Strength",
       activities: [],
     });
 
     expect(result.status).toBe("refused");
-    expect(result.message).toMatch(/Give it a name/);
+    expect(result.message).toMatch(/a title and a sport/);
   });
 });
 

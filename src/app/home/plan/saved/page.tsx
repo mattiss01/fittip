@@ -127,7 +127,6 @@ function toSavedSessionView(session: SavedSession): SavedSessionView {
   return {
     id: session.id,
     revision: session.revision,
-    name: session.name,
     title: session.title,
     sport: session.sport,
     intent: session.intent ?? null,

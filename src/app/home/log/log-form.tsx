@@ -163,9 +163,6 @@ export function LogForm({
       : undefined;
   const receiptHeading = useRef<HTMLHeadingElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
-  // The title as it was submitted, which the receipt offers as the saved
-  // session's name. The form is gone by the time the receipt shows.
-  const [submittedTitle, setSubmittedTitle] = useState("");
   const saved = state.status === "saved";
   // Training that did not happen has no duration, no effort and no way it
   // felt, so those three are not asked. Derived during render rather than
@@ -269,26 +266,14 @@ export function LogForm({
           {returnTo?.label ?? "Back to that day"}
         </Link>
         {state.completionId === undefined || !state.reusable ? null : (
-          <SaveToLibrary
-            completionId={state.completionId}
-            defaultName={submittedTitle}
-          />
+          <SaveToLibrary completionId={state.completionId} />
         )}
       </section>
     );
   }
 
   return (
-    <form
-      ref={formRef}
-      className={styles.form}
-      action={action}
-      onSubmit={(event) => {
-        const title = new FormData(event.currentTarget).get("title");
-        setSubmittedTitle(typeof title === "string" ? title.trim() : "");
-      }}
-      data-log-form
-    >
+    <form ref={formRef} className={styles.form} action={action} data-log-form>
       <input
         type="hidden"
         name="operation"
@@ -804,14 +789,13 @@ function ReplacedBy({
  * log (owner, 27 Sep 2026). It reads the form as it stands - title, sport,
  * duration and the activity list - so what is saved is what is on screen.
  * What was done becomes the saved session's targets, and the duration its
- * expected minutes. The name field has no `name`, so the log never sends it.
+ * expected minutes. The entry is called what the log is called.
  */
 function SaveFormToLibrary({
   formRef,
 }: {
   formRef: React.RefObject<HTMLFormElement | null>;
 }) {
-  const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -829,9 +813,10 @@ function SaveFormToLibrary({
     }
     setSaving(true);
     try {
+      const title = String(values.get("title") ?? "").trim();
       const result = await saveSessionDraftToLibraryAction({
-        name: name.trim(),
-        title: String(values.get("title") ?? "").trim(),
+        name: title,
+        title,
         sport: String(values.get("sport") ?? "").trim(),
         ...(Number.isInteger(minutes) && minutes > 0
           ? { expectedDurationMinutes: minutes }
@@ -850,7 +835,6 @@ function SaveFormToLibrary({
         })),
       });
       setNotice(result.message);
-      if (result.status === "saved") setName("");
     } catch {
       setNotice("It could not be saved. Try again.");
     } finally {
@@ -861,25 +845,14 @@ function SaveFormToLibrary({
   return (
     <details className={styles.saveSession} data-log-save-session>
       <summary>Save session to library</summary>
-      <div className={styles.field}>
-        <label htmlFor="log-save-session-name">Name it</label>
-        <input
-          id="log-save-session-name"
-          type="text"
-          maxLength={120}
-          autoComplete="off"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
-        <span className={styles.fieldHint}>
-          A copy of this log as it stands goes to your saved sessions, with what
-          you did as its targets. The log itself is not saved by this.
-        </span>
-      </div>
+      <p className={styles.fieldHint}>
+        A copy of this log as it stands goes to your saved sessions, with what
+        you did as its targets. The log itself is not saved by this.
+      </p>
       <button
         className={styles.secondary}
         type="button"
-        disabled={saving || name.trim() === ""}
+        disabled={saving}
         onClick={save}
       >
         {saving ? "Saving\u2026" : "Save to library"}

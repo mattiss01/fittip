@@ -1,8 +1,7 @@
-/** What the library surface can ask for. Creating happens from the Plan. */
-export type LibraryOperation = "edit" | "delete" | "reuse";
+/** What the library surface can ask for. */
+export type LibraryOperation = "create" | "edit" | "delete" | "reuse";
 
 export type LibraryDraft = {
-  name: string;
   title: string;
   sport: string;
   intent: string;
@@ -39,7 +38,6 @@ export type LibrarySaveActionState = {
   status: "idle" | "saved" | "validation" | "conflict" | "session" | "error";
   message: string;
   submission: number;
-  name?: string;
 };
 
 export const INITIAL_LIBRARY_SAVE_ACTION_STATE: LibrarySaveActionState = {

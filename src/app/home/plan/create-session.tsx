@@ -147,8 +147,8 @@ export function CreateSession({
       <input type="hidden" name="expectedRevision" value={expectedRevision} />
       {startFrom === undefined ? null : (
         <p className={styles.fieldHint} role="status">
-          Started from {startFrom.name}. Change anything that was different; the
-          saved session keeps its own.
+          Started from {startFrom.title}. Change anything that was different;
+          the saved session keeps its own.
         </p>
       )}
       <SessionFields

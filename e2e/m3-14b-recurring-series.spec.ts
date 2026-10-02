@@ -84,7 +84,6 @@ test.describe("M3-14B recurring series surface", () => {
       // recurrence shortcut.
       await chooseMore(page, "Save to library");
       const save = sessionPanel(page, "Save to library");
-      await save.getByLabel("Name it").fill("Base template");
       await save.getByRole("button", { name: "Save to library" }).click();
       await expect(save.getByText("Saved to your library.")).toBeVisible();
       await page.goto("/home/plan/saved");

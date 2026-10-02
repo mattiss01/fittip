@@ -345,8 +345,7 @@ describe("PlanManager", () => {
       savedSessions: [
         {
           id: "7f000000-0000-4000-8000-0000000000a1",
-          name: "Hill reps",
-          title: "Hills",
+          title: "Hill reps",
           sport: "Running",
           expectedDurationMinutes: 50,
           intent: null,
@@ -370,7 +369,7 @@ describe("PlanManager", () => {
       within(sheet).getByRole("button", { name: "Use session from library" }),
     );
     fireEvent.click(screen.getByRole("button", { name: /Hill reps/ }));
-    expect(createTitleInput()).toHaveValue("Hills");
+    expect(createTitleInput()).toHaveValue("Hill reps");
     expect(
       document.querySelector<HTMLInputElement>("input[name='localDate']"),
     ).toHaveValue(DATES[3]);
