@@ -80,6 +80,30 @@ test.describe("M3-12 manual continuous planning", () => {
         (await sessionCard(page, today, "Aerobic run")).getByText("60 min"),
       ).toBeVisible();
 
+      // R3b-3: a single session may sit up to 180 days out - a race months
+      // away - though recurring sessions are written only thirteen weeks
+      // ahead. A far day offers the session and not "Repeat this session".
+      const raceDay = ownerDate(150);
+      const far = await openNewSession(page, raceDay);
+      await expect(far.getByLabel("Repeat this session")).toHaveCount(0);
+      await far.getByLabel("Title").fill("Autumn race");
+      await far.getByLabel("Sport").fill("Running");
+      await far.getByRole("button", { name: "Create session" }).click();
+      await expect(
+        await sessionCard(page, raceDay, "Autumn race"),
+      ).toBeVisible();
+      // This owner has no series, so the week says nothing about repeats.
+      await expect(page.locator("[data-plan-repeats-through]")).toHaveCount(0);
+      // Today, asked for that day, shows it and says why no repeat is there.
+      await page.goto(`/home/today?date=${raceDay}`);
+      await expect(
+        page.getByRole("link", { name: "Autumn race", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.locator('[data-today-notice="beyond-window"]'),
+      ).toContainText("A single session placed here is.");
+      await page.goto("/home/plan");
+
       // Every verb lives on the session's own page since 29 Sep 2026 (owner):
       // the card opens it, Edit is in sight, and the rest sit behind ⋯. This
       // flow is the same journey through a surface that was replaced.
@@ -109,7 +133,7 @@ test.describe("M3-12 manual continuous planning", () => {
       // is a field on the edit form, so moving one is saving an edit.
       await chooseMore(page, "Duplicate");
       const duplicate = sessionPanel(page, "Duplicate");
-      await duplicate.getByLabel("Copy to").selectOption(tomorrow);
+      await duplicate.getByLabel("Copy to").fill(tomorrow);
       await duplicate
         .getByRole("button", { name: "Duplicate session" })
         .click();
@@ -124,7 +148,7 @@ test.describe("M3-12 manual continuous planning", () => {
       await openSession(page, tomorrow, "Long aerobic run");
       await page.getByRole("button", { name: "Edit", exact: true }).click();
       const copyEdit = sessionPanel(page, "Edit session");
-      await copyEdit.getByLabel("Date").selectOption(dayAfter);
+      await copyEdit.getByLabel("Date").fill(dayAfter);
       await copyEdit.getByRole("button", { name: "Save session" }).click();
       await expect(page.locator("[role='status']").first()).toContainText(
         "Session updated.",

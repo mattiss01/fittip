@@ -54,7 +54,8 @@ function manager(
   return (
     <PlanManager
       today={TODAY}
-      lastDate={LAST}
+      lastPlaceableDate={LAST}
+      repeatsThrough={LAST}
       expectedRevision={3}
       sessions={sessions}
       recoveryDates={[DATES[3]]}
@@ -152,6 +153,40 @@ describe("PlanManager", () => {
     expect(screen.queryByRole("button", { name: "Next week" })).toBeNull();
     // Totals say planned, never done.
     expect(screen.getByText(/1 session · 1 h 30 planned/)).toBeVisible();
+  });
+
+  it("keeps a day past the recurring window open for a single session only", () => {
+    // Repeats are written through Friday of the first week; sessions may be placed
+    // through the whole fortnight.
+    renderManager(INITIAL_PLAN_ACTION_STATE, [], {
+      repeatsThrough: DATES[2],
+      hasRepeats: true,
+    });
+
+    // The week that straddles the bound says where repeats stop.
+    expect(screen.getByText(/^Repeats are added through /)).toBeVisible();
+    // A day inside the recurring window offers the repeat...
+    fireEvent.click(
+      within(day(DATES[2])).getByRole("button", { name: /^Add to / }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "New session" }));
+    expect(screen.getByLabelText("Repeat this session")).toBeVisible();
+    fireEvent.click(screen.getByText("Close"));
+
+    // ...and one past it still has its "+", for a session without one.
+    fireEvent.click(screen.getByRole("button", { name: "Next week" }));
+    expect(day(DATES[8]).getAttribute("data-beyond")).toBe("false");
+    fireEvent.click(
+      within(day(DATES[8])).getByRole("button", { name: /^Add to / }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "New session" }));
+    expect(screen.getByLabelText("Title")).toBeVisible();
+    expect(screen.queryByLabelText("Repeat this session")).toBeNull();
+  });
+
+  it("says nothing about repeats to an owner who has none", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [], { repeatsThrough: DATES[4] });
+    expect(screen.queryByText(/^Repeats are added through /)).toBeNull();
   });
 
   it("opens on the week of the day it was sent back to", () => {

@@ -1,9 +1,21 @@
 /**
- * The window the Plan surface reads and writes: owner-local today plus 90,
- * thirteen weeks in all (R3b-2; it was fourteen days). The same number
- * `materialize_rolling_plan_series` writes recurring sessions through.
+ * How far ahead recurring sessions are written, and a series may start:
+ * owner-local today plus 90, thirteen weeks in all (R3b-2; it was fourteen
+ * days). The same number `materialize_rolling_plan_series` writes through. A
+ * single session reaches further; see `PLAN_PLACEMENT_DAYS`.
  */
 export const PLAN_WINDOW_DAYS = 91;
+
+/**
+ * How far ahead a single session may be placed: owner-local today plus 180
+ * (R3b-3, owner, 2 Oct 2026 - a race months away is a session, not only a
+ * goal). Recurring sessions stop at `PLAN_WINDOW_DAYS`. 180 days is how far
+ * the coach already reads locked sessions (ADR-013 decision 5), so a race
+ * placed at the far end can reach it once the owner locks it - a new session
+ * starts unlocked - and within the coach's own limit on how many entries it
+ * is sent. No database function limits this; the bound is this one.
+ */
+export const PLAN_PLACEMENT_DAYS = 181;
 
 export type PlanOperation =
   | "add"

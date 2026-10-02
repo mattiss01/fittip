@@ -39,11 +39,16 @@ vi.mock("@/server/repositories/profile-repository", async (original) => {
   return { ...actual, createProfileRepository: createProfileMock };
 });
 
-import { INITIAL_PLAN_ACTION_STATE, PLAN_WINDOW_DAYS } from "./action-state";
+import {
+  INITIAL_PLAN_ACTION_STATE,
+  PLAN_PLACEMENT_DAYS,
+  PLAN_WINDOW_DAYS,
+} from "./action-state";
 import { changePlanAction, confirmPlanTimezoneAction } from "./actions";
 import { INITIAL_TIMEZONE_ACTION_STATE } from "./action-state";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import { ProfileValidationError } from "@/server/repositories/profile-repository";
+import { ROADMAP_FORWARD_LOCKED_WINDOW_DAYS } from "@/server/training/training-history-context";
 import {
   RollingPlanConflictError,
   RollingPlanRuleError,
@@ -343,7 +348,7 @@ describe("plan actions", () => {
 
   it.each([
     [-1, "a date already past"],
-    [PLAN_WINDOW_DAYS, "a date beyond the window"],
+    [PLAN_PLACEMENT_DAYS, "a date beyond where a session may be placed"],
   ])("refuses %s (%s) before reaching persistence", async (offset) => {
     const applyChangeSet = vi.fn();
     createPlanMock.mockResolvedValue({
@@ -362,6 +367,51 @@ describe("plan actions", () => {
 
     expect(result.status).toBe("validation");
     expect(applyChangeSet).not.toHaveBeenCalled();
+  });
+
+  it("places a single session exactly as far as the coach reads a locked one", () => {
+    // ADR-013 decision 5 reads locked sessions through today plus this many
+    // days. A race placed on the last day the Plan allows must be one the
+    // coach can be sent, so the two numbers move together or not at all.
+    expect(PLAN_PLACEMENT_DAYS - 1).toBe(ROADMAP_FORWARD_LOCKED_WINDOW_DAYS);
+  });
+
+  it.each([
+    [PLAN_WINDOW_DAYS, "the first day past the recurring window"],
+    [PLAN_PLACEMENT_DAYS - 1, "the last day a session may be placed"],
+  ])("takes a single change on day %s (%s)", async (offset) => {
+    // R3b-3: a single session, or a label, may sit past the dates recurring
+    // sessions are written through - a race months out is a session.
+    const applyChangeSet = vi.fn().mockResolvedValue({
+      planRevision: 2,
+      seriesEffects: [],
+    });
+    const getPlanSlice = vi.fn().mockResolvedValue(slice());
+    createPlanMock.mockResolvedValue({
+      getPlanSlice,
+      applyChangeSet,
+      materializeSeries: vi
+        .fn()
+        .mockResolvedValue({ createdCount: 0, skipped: [], planRevision: 2 }),
+    });
+    const localDate = shiftIsoDate(today(), offset);
+
+    const result = await changePlanAction(
+      INITIAL_PLAN_ACTION_STATE,
+      form({
+        operation: "set_recovery_day",
+        localDate,
+        isRecoveryDay: "true",
+      }),
+    );
+
+    expect(result.status).toBe("saved");
+    expect(applyChangeSet).toHaveBeenCalledTimes(1);
+    // The slice it checks against reaches the same far date.
+    expect(getPlanSlice).toHaveBeenCalledWith(
+      today(),
+      shiftIsoDate(today(), PLAN_PLACEMENT_DAYS - 1),
+    );
   });
 
   it.each([

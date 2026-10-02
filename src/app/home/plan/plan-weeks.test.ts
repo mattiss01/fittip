@@ -19,7 +19,7 @@ describe("plan weeks", () => {
   });
 
   it("covers the window whole, Monday to Sunday", () => {
-    const weeks = planWeeks("2026-09-30", "2026-10-13");
+    const weeks = planWeeks("2026-09-30", "2026-10-13", "2026-10-13");
 
     expect(weeks.map((week) => [week.start, week.end])).toEqual([
       ["2026-09-28", "2026-10-04"],
@@ -30,6 +30,7 @@ describe("plan weeks", () => {
       date: "2026-09-29",
       past: true,
       beyond: false,
+      afterRepeats: false,
     });
     expect(weeks[0].days[2].past).toBe(false);
     expect(weeks[2].days[1]).toMatchObject({
@@ -42,8 +43,30 @@ describe("plan weeks", () => {
     });
   });
 
+  it("marks the days recurring sessions are not written to, which are still open", () => {
+    // Single sessions may sit through 13 October; repeats stop on the 6th.
+    const weeks = planWeeks("2026-09-30", "2026-10-13", "2026-10-06");
+
+    expect(weeks[1].days[1]).toMatchObject({
+      date: "2026-10-06",
+      beyond: false,
+      afterRepeats: false,
+    });
+    expect(weeks[1].days[2]).toMatchObject({
+      date: "2026-10-07",
+      beyond: false,
+      afterRepeats: true,
+    });
+    // Past the last placeable date a day is closed, whatever else it is.
+    expect(weeks[2].days[2]).toMatchObject({
+      date: "2026-10-14",
+      beyond: true,
+      afterRepeats: true,
+    });
+  });
+
   it("finds the week holding a date, and falls back to the first", () => {
-    const weeks = planWeeks("2026-09-30", "2026-10-13");
+    const weeks = planWeeks("2026-09-30", "2026-10-13", "2026-10-13");
     expect(weekIndexOf(weeks, "2026-10-11")).toBe(1);
     expect(weekIndexOf(weeks, "2027-01-01")).toBe(0);
     expect(weekIndexOf(weeks, null)).toBe(0);

@@ -113,7 +113,7 @@ function page(
       session={value}
       series={segment}
       today={TODAY}
-      dates={DATES}
+      dateRange={{ first: DATES[0], last: DATES[DATES.length - 1] }}
       expectedRevision={3}
       origin={origin}
       originDate={null}
@@ -248,7 +248,7 @@ describe("SessionPage", () => {
     });
   });
 
-  it("offers a copy on any date in the window", () => {
+  it("offers a copy on any date a single session may sit on", () => {
     render(page(session()));
     choose("Duplicate");
 
@@ -258,7 +258,12 @@ describe("SessionPage", () => {
     expect(form.querySelector("input[name='operation']")).toHaveValue(
       "duplicate",
     );
-    expect(form.querySelectorAll("option")).toHaveLength(14);
+    // A date field bounded by the range, opening on the session's own day.
+    const date = form.querySelector("input[name='localDate']");
+    expect(date).toHaveAttribute("type", "date");
+    expect(date).toHaveAttribute("min", DATES[0]);
+    expect(date).toHaveAttribute("max", DATES[DATES.length - 1]);
+    expect(date).toHaveValue(session().localDate);
   });
 
   it("says what each removal verb keeps, and submits the matching operation", () => {

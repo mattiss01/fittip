@@ -133,7 +133,7 @@ test.describe("M3-13 private saved-session library", () => {
         .locator("form")
         .filter({ has: page.getByRole("button", { name: "Add to plan" }) })
         .getByLabel("Add to")
-        .selectOption(reuseDate);
+        .fill(reuseDate);
       await reusable.getByRole("button", { name: "Add to plan" }).click();
       await expect(page.locator("[role='status']").first()).toContainText(
         "Added to your plan.",

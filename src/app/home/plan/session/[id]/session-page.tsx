@@ -14,6 +14,7 @@ import {
 } from "react";
 
 import { INITIAL_PLAN_ACTION_STATE } from "../../action-state";
+import { PlanDateInput, type PlanDateRange } from "../../plan-date-field";
 import { changePlanAction } from "../../actions";
 import { CancelReasonFields } from "../../cancel-reason-fields";
 import { INITIAL_CANCELLATION_ACTION_STATE } from "../../cancellation-action-state";
@@ -85,7 +86,7 @@ export function SessionPage({
   session,
   series,
   today,
-  dates,
+  dateRange,
   expectedRevision,
   origin,
   originDate,
@@ -94,7 +95,8 @@ export function SessionPage({
   session: PlanSessionView | null;
   series?: PlanSeriesView;
   today: string;
-  dates: string[];
+  /** Where a single session may be moved or copied to. */
+  dateRange: PlanDateRange;
   expectedRevision: number;
   origin: SessionPageOrigin;
   originDate: string | null;
@@ -559,22 +561,11 @@ export function SessionPage({
                   dateField={
                     <div className={styles.field}>
                       <label htmlFor={`edit-date-${session.id}`}>Date</label>
-                      <select
+                      <PlanDateInput
                         id={`edit-date-${session.id}`}
-                        name="localDate"
+                        range={dateRange}
                         defaultValue={session.localDate}
-                      >
-                        {[
-                          session.localDate,
-                          ...dates.filter((date) => date !== session.localDate),
-                        ]
-                          .sort()
-                          .map((date) => (
-                            <option key={date} value={date}>
-                              {stampDate(date)}
-                            </option>
-                          ))}
-                      </select>
+                      />
                     </div>
                   }
                 />
@@ -612,17 +603,11 @@ export function SessionPage({
               />
               <div className={styles.field}>
                 <label htmlFor={`duplicate-${session.id}`}>Copy to</label>
-                <select
+                <PlanDateInput
                   id={`duplicate-${session.id}`}
-                  name="localDate"
+                  range={dateRange}
                   defaultValue={session.localDate}
-                >
-                  {dates.map((date) => (
-                    <option key={date} value={date}>
-                      {stampDate(date)}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
               <p className={styles.consequenceStandalone}>
                 The copy is a new session. It starts unlocked and carries none

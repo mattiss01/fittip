@@ -86,7 +86,7 @@ async function PlanWindow({
   timezoneName: string;
   initialDate: string | null;
 }) {
-  const { today, lastDate } = planWindowFor(timezoneName);
+  const { today, lastDate, lastPlaceableDate } = planWindowFor(timezoneName);
   // The first week starts on the Monday on or before today, and its days
   // before today show what was planned there, read-only.
   const firstDate = mondayOf(today);
@@ -104,7 +104,9 @@ async function PlanWindow({
       createCompletionLog(),
     ]);
     [slice, series, library, savedSessions, phases] = await Promise.all([
-      plan.getPlanSlice(firstDate, lastDate),
+      // Through the last date a single session may sit on (R3b-3). Recurring
+      // sessions stop at `lastDate`, so the far weeks hold few rows.
+      plan.getPlanSlice(firstDate, lastPlaceableDate),
       plan.listSeries(),
       readLibraryOptions(),
       readSavedSessionOptions(),
@@ -147,7 +149,12 @@ async function PlanWindow({
       >
         <PlanManager
           today={today}
-          lastDate={lastDate}
+          lastPlaceableDate={lastPlaceableDate}
+          repeatsThrough={lastDate}
+          hasRepeats={series.some(
+            (segment) =>
+              segment.endDate === undefined || segment.endDate >= today,
+          )}
           initialDate={initialDate}
           phases={phases}
           expectedRevision={slice.revision}

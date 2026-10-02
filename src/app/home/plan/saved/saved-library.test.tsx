@@ -22,17 +22,17 @@ import {
 import { SavedLibrary, type SavedSessionView } from "./saved-library";
 
 const SAVED_ID = "7f000000-0000-4000-8000-000000000001";
-const DATES = ["2026-08-18", "2026-08-19", "2026-08-20"];
+const RANGE = { first: "2026-08-18", last: "2027-02-14" };
 const action = vi.fn();
 
 function renderLibrary(
   state: LibraryActionState = INITIAL_LIBRARY_ACTION_STATE,
   sessions: SavedSessionView[] = [],
-  dates: string[] = DATES,
+  dateRange: { first: string; last: string } | null = RANGE,
 ) {
   useActionStateMock.mockReturnValue([state, action, false]);
   return render(
-    <SavedLibrary dates={dates} planRevision={4} sessions={sessions} />,
+    <SavedLibrary dateRange={dateRange} planRevision={4} sessions={sessions} />,
   );
 }
 
@@ -138,7 +138,7 @@ describe("the saved session library surface", () => {
   });
 
   it("offers no date to reuse onto until the owner has a stored zone", () => {
-    renderLibrary(INITIAL_LIBRARY_ACTION_STATE, [entry()], []);
+    renderLibrary(INITIAL_LIBRARY_ACTION_STATE, [entry()], null);
     expect(screen.queryByLabelText("Add to")).toBeNull();
     expect(
       screen.getByText(/Confirm your time zone on the plan first/i),

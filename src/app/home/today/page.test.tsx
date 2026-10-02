@@ -129,7 +129,7 @@ describe("Today", () => {
     expect(document.querySelector('[data-today-empty="sessions"]')).toBe(null);
   });
 
-  it("says a date past the materialization window is unfilled, not empty", async () => {
+  it("says a date past the materialization window has no repeats yet, not that it is empty", async () => {
     render(
       await TodayPage({
         searchParams: Promise.resolve({ date: shiftIsoDate(today(), 91) }),
@@ -139,7 +139,9 @@ describe("Today", () => {
     const notice = document.querySelector(
       '[data-today-notice="beyond-window"]',
     );
-    expect(notice?.textContent).toContain("unfilled rather than empty");
+    expect(notice?.textContent).toContain("repeats are not on it yet");
+    // Day 91 can still take a single session, and the notice says so.
+    expect(notice?.textContent).toContain("A single session placed here is.");
     expect(document.querySelector('[data-today-empty="sessions"]')).toBe(null);
   });
 

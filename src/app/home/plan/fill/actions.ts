@@ -63,7 +63,10 @@ export async function fillSessionActivitiesAction(input: {
       readPlanWindow(),
       createSessionActivityRepository(),
     ]);
-    const slice = await plan.getPlanSlice(window.today, window.lastDate);
+    const slice = await plan.getPlanSlice(
+      window.today,
+      window.lastPlaceableDate,
+    );
     const session = slice.sessions.find(
       (candidate) =>
         candidate.id === input.sessionId && candidate.status === "active",

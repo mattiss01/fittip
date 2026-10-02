@@ -65,8 +65,12 @@ export type { PlanSessionLog, PlanSessionView } from "./session-view";
 
 type Props = {
   today: string;
-  /** The plan window's last date; nothing past it is read or written. */
-  lastDate: string;
+  /** The last date a session may be placed on; nothing past it is read. */
+  lastPlaceableDate: string;
+  /** The last date recurring sessions are written through. */
+  repeatsThrough: string;
+  /** Whether the owner has a series at all, so a week can say where it stops. */
+  hasRepeats?: boolean;
   /** The day to open on, e.g. the one a session page returns to. */
   initialDate?: string | null;
   expectedRevision: number;
@@ -87,7 +91,9 @@ type Sheet =
 
 export function PlanManager({
   today,
-  lastDate,
+  lastPlaceableDate,
+  repeatsThrough,
+  hasRepeats = false,
   initialDate = null,
   expectedRevision,
   sessions,
@@ -165,11 +171,28 @@ export function PlanManager({
       state.conflict === "timezone" ||
       stall === "unconfirmed";
 
-  const weeks = planWeeks(today, lastDate);
+  const weeks = planWeeks(today, lastPlaceableDate, repeatsThrough);
   const [weekIndex, setWeekIndex] = useState(() =>
     weekIndexOf(weeks, initialDate),
   );
   const week = weeks[Math.min(weekIndex, weeks.length - 1)];
+  // Twenty-six weeks of tiles scroll sideways, so the one being shown is
+  // brought into view: opening on a far week otherwise leaves the strip on
+  // "This wk" with nothing marked. Instant, so there is no motion to reduce.
+  //
+  // Only the strip moves. `scrollIntoView` also scrolls the page until the
+  // tile is on screen, and the strip sits below the week, so a tap on a week
+  // arrow threw the owner to the bottom of the page (owner, 2 Oct 2026).
+  const tilesRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const strip = tilesRef.current;
+    const current = strip?.querySelector('[aria-current="true"]');
+    if (!strip || !current) return;
+    const stripBox = strip.getBoundingClientRect();
+    const tileBox = current.getBoundingClientRect();
+    strip.scrollLeft +=
+      tileBox.left - stripBox.left - (stripBox.width - tileBox.width) / 2;
+  }, [weekIndex]);
   const [sheet, setSheet] = useSheetClosedOnSave(state, seriesState);
   // The plan submission the open sheet started after, so a refusal shown in
   // it is one of its own and not one from before it opened.
@@ -235,6 +258,14 @@ export function PlanManager({
               <p className={w.weekSum}>{weekRange(week)}</p>
             ) : null}
             <p className={w.weekSum}>{weekTotals(week, sessions)}</p>
+            {/* Otherwise a daily run simply stops after week 13 and nothing
+                says why. Only for an owner who has one. */}
+            {hasRepeats &&
+            week.days.some((day) => day.afterRepeats && !day.beyond) ? (
+              <p className={w.weekSum} data-plan-repeats-through>
+                Repeats are added through {shortDateLabel(repeatsThrough)}
+              </p>
+            ) : null}
           </div>
           <WeekArrow
             label="Next week"
@@ -261,7 +292,7 @@ export function PlanManager({
         </ol>
       </section>
 
-      <nav className={w.tiles} aria-label="Weeks">
+      <nav className={w.tiles} aria-label="Weeks" ref={tilesRef}>
         {weeks.map((candidate, index) => (
           <button
             key={candidate.start}
@@ -308,6 +339,7 @@ export function PlanManager({
             <CreateSession
               key={`${sheet.date}-${sheet.startFrom?.id ?? "empty"}`}
               date={sheet.date}
+              canRepeat={sheet.date <= repeatsThrough}
               startFrom={sheet.startFrom}
               expectedRevision={expectedRevision}
               planAction={trackedPlanAction}

@@ -215,7 +215,7 @@ describe("saved session actions", () => {
 
     for (const localDate of [
       shiftIsoDate(today(), -1),
-      shiftIsoDate(today(), 91),
+      shiftIsoDate(today(), 181),
     ]) {
       await expect(
         changeLibraryAction(

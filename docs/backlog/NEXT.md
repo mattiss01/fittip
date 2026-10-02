@@ -39,7 +39,10 @@ Ordered by dependency. A lane is named where it is not the build lane.
       all future" keep a locked session, and the owner's own edits are never blocked. Open
       for the owner: say it where Lock is chosen, rename it (e.g. "Keep as planned"), or
       rethink what it protects. Decide before the coach can replan live, which is when it
-      starts to matter.
+      starts to matter. It already matters in one place (R3b-3, 2 Oct 2026): a session
+      placed months out starts unlocked, and past its own horizon the coach is sent locked
+      sessions only, so a race the owner adds does not reach the roadmap coach until they
+      lock it, and nothing on the far day says so.
 
 **App redesign in the Coach's note direction.** The owner chose it on 29 Sep 2026 from three
 Today prototypes (`prototype/today-design`, `/prototype/today?variant=C`): FitTip's pine and
@@ -50,16 +53,6 @@ main action. No week ring. The owner flagged a possible bias toward the look the
 so start with Today and adjust from there rather than committing every screen up front. Build
 lane, one screen per merge.
 
-- [ ] **R3b — A three-month horizon**, in three merges (owner, 29 Sep and 2 Oct 2026). Two
-      are done: the roadmap coach reads a series as one rule, and repeating sessions are
-      written 13 weeks ahead.
-  - [ ] **R3b-3 — The Plan runs 26 weeks.** Build lane. Owner: a single session (a race)
-        may be placed up to 180 days out, which is how far the coach already reads locked
-        ones; repeats still stop at 13 weeks. A week past week 13 shows the roadmap phase
-        band where a phase covers it and its days with a "+" for a single session. The
-        database never limited this, so no migration. Two things to carry: the log lookup
-        refuses more than 1,000 session ids, sized for 13 weeks; and the "Copy to" and
-        "Add to" date selects list every day, 91 now, so 181 wants a date field.
 - [ ] **R3 — The other screens, one per merge.** Today, the Plan, the session page,
       Progress and You are done. For each one left: cut the explanatory intro to one line or
       remove it, and say where an explanation must survive. In the order they can be started:
@@ -91,8 +84,10 @@ lane, one screen per merge.
   - You's Memory row says "What the coach may use about you", but the page also lists
     proposed, declined and disabled items, which the coach may not use. The owner took the
     wording "for now" on 2 Oct 2026.
-  - `next dev` appends a "This is NOT the Next.js you know" block to `CLAUDE.md` on every
-    start. It is uncommitted; if wanted it goes in its own commit.
+  - The Plan's week strip now holds 26 or 27 tiles and scrolls sideways to the week shown.
+    Enough, or should far weeks be reached another way (a month jump, a date field)?
+  - A week past the 13 weeks says "Repeats are added through <date>" under its totals, for
+    an owner who has a series. Keep the line, reword it, or drop it?
 - [ ] **R4 — Motion.** Day-change slide (View Transitions), sheet and press feedback,
       instant log with background save; everything off under reduced motion.
 - Cost to expect: many unit and browser tests assert the current copy, so cutting text means
@@ -108,9 +103,13 @@ Not worth their own slot; do them when work lands nearby.
   dates a series was told to skip, so it fires the extension, which then writes nothing
   and costs no revision. Since M3-20; a deleted occurrence now stays in the window for 13
   weeks rather than two. `listSeries` would have to read `skipped_occurrence_dates`.
-- **The Plan carries the whole 13 weeks to the browser** and re-reads all of it for every
-  change, though it shows one week. Fine for one athlete's plan; a read per week is the
-  fix if it ever is not.
+- **The Plan carries every week to the browser** — 13 of recurring sessions and 13 more of
+  single ones — and re-reads all of it for every change, though it shows one week. Fine
+  for one athlete's plan; a read per week is the fix if it ever is not.
+- **A date picked outside the allowed range gets the generic refusal.** The date fields on
+  "Copy to", Edit and "Add to" carry `min` and `max`, which iOS Safari's picker does not
+  enforce, so a date past day 180 is refused with "Check the session details and the
+  date." rather than a sentence about how far ahead a session may sit.
 - **Two back links drawn the same way.** `src/app/home/you/back-link.tsx` copies the one on
   a Progress record, markup and style. Progress could use the component; it would have to
   carry `data-back-link`, which m3-15c clicks.

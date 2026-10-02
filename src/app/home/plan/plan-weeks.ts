@@ -2,18 +2,22 @@ import { shiftIsoDate } from "@/lib/date/local-date";
 
 /**
  * The Plan reads one week at a time (R3a, owner, 29 Sep 2026). Weeks run
- * Monday to Sunday and cover the plan window whole: the first starts on the
- * Monday on or before today, the last ends on the Sunday on or after the
- * window's last date. Days before today are shown and never offer a "+";
- * days past the window are shown as not open yet, because nothing may be
- * planned there until the window reaches them.
+ * Monday to Sunday and cover every date a session may be placed on: the first
+ * starts on the Monday on or before today, the last ends on the Sunday on or
+ * after the last placeable date. Days before today are shown and never offer
+ * a "+"; the few days past the last placeable date are shown as not open yet.
+ *
+ * R3b-3: recurring sessions are written through an earlier date than single
+ * ones may be placed on, so a day can be open and still past the repeats.
  */
 export type PlanWeekDay = {
   date: string;
   /** Before owner-local today: read-only. */
   past: boolean;
-  /** Past the plan window's last date: nothing is read or written there. */
+  /** Past the last placeable date: nothing is read or written there. */
   beyond: boolean;
+  /** Past the date recurring sessions are written through. */
+  afterRepeats: boolean;
 };
 
 export type PlanWeek = {
@@ -30,16 +34,25 @@ export function mondayOf(isoDate: string): string {
   return shiftIsoDate(isoDate, -((weekday + 6) % 7));
 }
 
-export function planWeeks(today: string, lastDate: string): PlanWeek[] {
+export function planWeeks(
+  today: string,
+  lastPlaceableDate: string,
+  repeatsThrough: string,
+): PlanWeek[] {
   const weeks: PlanWeek[] = [];
   for (
     let start = mondayOf(today);
-    start <= lastDate;
+    start <= lastPlaceableDate;
     start = shiftIsoDate(start, 7)
   ) {
     const days = Array.from({ length: 7 }, (_, offset) => {
       const date = shiftIsoDate(start, offset);
-      return { date, past: date < today, beyond: date > lastDate };
+      return {
+        date,
+        past: date < today,
+        beyond: date > lastPlaceableDate,
+        afterRepeats: date > repeatsThrough,
+      };
     });
     weeks.push({ start, end: days[6].date, days });
   }

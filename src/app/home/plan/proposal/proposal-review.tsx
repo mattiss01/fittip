@@ -316,7 +316,7 @@ export function ProposalReview({
  * neither is local — `slice.revision` is the plan's revision and not a
  * window-scoped one, so the number this form carries is the one the plan
  * surface would carry; and a proposal horizon is at most seven days from today
- * while the plan window is ninety-one, so every session shown here is inside the
+ * while a session may sit 180 days out, so every session shown here is inside the
  * window that action reads.
  *
  * Staged choices survive the save because they are rows in
