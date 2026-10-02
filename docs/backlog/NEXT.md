@@ -54,8 +54,11 @@ so start with Today and adjust from there rather than committing every screen up
 lane, one screen per merge.
 
 - [ ] **Guided setup, step by step with the owner.** Owner, 2 Oct 2026: the screens look
-      right, the setup itself does not, and it should be gone through together one
-      step at a time. Already named; the first three need a migration, so careful lane:
+      right, the setup itself does not. Go through all six steps together in detail,
+      from scratch: what each step asks and why, every question's wording, which
+      answers are required, where each answer is kept, and what the review step shows.
+      The list below is where that starts, not its scope. Already named; the first
+      three need a migration, so careful lane:
   - **Access and equipment** cannot be left empty and is a comma list of labels. The
     owner dislikes both. `apply_onboarding_change` refuses fewer than one label.
   - **Time zone and units belong in the profile, not in Memory.** Setup files both as
@@ -73,8 +76,9 @@ lane, one screen per merge.
       rationale, constraints) and how a card shows them. With it: Pause and Abandoned are
       still two ways to set a goal aside, both undoable (Resume, Reopen). Archive, the
       third and the only permanent one, left the card on 2 Oct 2026; the server still
-      has the operation and older archived goals still show in History. And a goal's "Achieved on" day is its last-changed time, because
-      the lifecycle log records only reopening; logging every change is a migration.
+      has the operation and older archived goals still show in History. And a goal's
+      "Achieved on" day is its last-changed time, because the lifecycle log records
+      only reopening; logging every change is a migration.
       It is wrong in one case: setup filing a new answer over a finished goal of the
       same title moves the day to then.
 - [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only
