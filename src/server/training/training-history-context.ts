@@ -228,72 +228,101 @@ export function selectTrainingHistoryContext(
     .slice(0, maxSessions)
     .map(toMissedReference);
 
-  // Decision 5 as amended: a series running inside the horizon is sent once,
-  // as a rule. A series that only starts after the horizon is the unlocked
-  // speculation decision 5 already calls noise, and one that has ended is
-  // history. Earliest first, so a trim keeps what is already running.
-  const sentSeriesIds = new Set<string>();
-  const recurringSessions: CoachAIRecurringSessionReference[] = [];
-  let ruleBytes = 0;
-  for (const series of records.series
-    .filter(
-      (entry) =>
-        entry.startDate <= records.horizonEndDate &&
-        (entry.endDate === null || entry.endDate >= records.today),
-    )
-    .sort(
-      (a, b) =>
-        a.startDate.localeCompare(b.startDate) || a.id.localeCompare(b.id),
-    )
-    .slice(0, maxRecurring)) {
-    const reference = toRecurringSessionReference(series);
-    const cost = byteLength(JSON.stringify(reference)) + 1;
-    if (
-      limits.maxPlanCommitmentBytes !== undefined &&
-      ruleBytes + cost > limits.maxPlanCommitmentBytes
-    ) {
-      break;
-    }
-    ruleBytes += cost;
-    sentSeriesIds.add(series.id);
-    recurringSessions.push(reference);
-  }
-
   // Decision 5: every entry inside the horizon with its lock state, and beyond
-  // it locked entries only, within the bounded forward window. An occurrence a
-  // sent rule already describes is not repeated as a dated entry; a locked one
-  // is, because the lock is the owner's statement about that date. A series
-  // whose rule was trimmed keeps its occurrences here, so nothing vanishes.
+  // it locked entries only, within the bounded forward window.
   const forwardLimit = addDays(records.today, forwardDays);
-  const commitments = records.plannedSessions
+  const eligible = records.plannedSessions
     .filter((entry) => {
       if (entry.localDate < records.today) return false;
-      if (
-        !entry.isLocked &&
-        entry.ruleSeriesId !== null &&
-        sentSeriesIds.has(entry.ruleSeriesId)
-      ) {
-        return false;
-      }
       if (entry.localDate <= records.horizonEndDate) return true;
       return entry.isLocked && entry.localDate <= forwardLimit;
     })
-    .sort((a, b) => a.localDate.localeCompare(b.localDate))
-    .slice(0, maxCommitments)
-    .map(toPlanCommitmentReference)
-    .filter((entry, index, all) => {
-      // The rules were taken out of the same allocation first.
-      const used = all
-        .slice(0, index + 1)
-        .reduce(
-          (total, item) => total + byteLength(JSON.stringify(item)) + 1,
-          ruleBytes,
-        );
-      return (
-        limits.maxPlanCommitmentBytes === undefined ||
-        used <= limits.maxPlanCommitmentBytes
-      );
-    });
+    .sort((a, b) => a.localDate.localeCompare(b.localDate));
+  const byteBudget = limits.maxPlanCommitmentBytes ?? Number.POSITIVE_INFINITY;
+  const costOf = (value: unknown) => byteLength(JSON.stringify(value)) + 1;
+
+  let commitments: CoachAIPlanCommitmentReference[];
+  const recurringSessions: CoachAIRecurringSessionReference[] = [];
+
+  if (maxRecurring === 0) {
+    // No rules: the nearest entries, then a byte trim. Kept exactly as it was
+    // before rules existed, so an operation that sends none sends what it
+    // always sent.
+    commitments = eligible
+      .slice(0, maxCommitments)
+      .map(toPlanCommitmentReference)
+      .filter((entry, index, all) => {
+        const used = all
+          .slice(0, index + 1)
+          .reduce((total, item) => total + costOf(item), 0);
+        return used <= byteBudget;
+      });
+  } else {
+    // Decision 5 as amended on 2 October 2026. One allocation, filled in the
+    // order of what the coach can least afford to lose:
+    //
+    // 1. Locked entries. A lock is the owner's statement about a date, and a
+    //    locked race is what the amendment exists to keep in view, so neither
+    //    a rule nor a nearer unlocked session may push one out.
+    // 2. Rules, one per series running inside the horizon.
+    // 3. Unlocked entries no sent rule already describes, nearest first.
+    let used = 0;
+    const kept: TrainingHistoryPlannedSession[] = [];
+    for (const entry of eligible.filter((candidate) => candidate.isLocked)) {
+      if (kept.length >= maxCommitments) break;
+      const cost = costOf(toPlanCommitmentReference(entry));
+      if (used + cost > byteBudget) continue;
+      used += cost;
+      kept.push(entry);
+    }
+
+    // A series that only starts after the horizon is the unlocked speculation
+    // decision 5 already calls noise; one that has ended is history; and one
+    // ended from its own first day has an end before its start and describes
+    // nothing. Earliest first, so a trim keeps what is already running. A rule
+    // too large for what is left is passed over rather than ending the loop,
+    // and its occurrences then stay dated entries below.
+    const sentSeriesIds = new Set<string>();
+    for (const series of records.series
+      .filter(
+        (entry) =>
+          entry.startDate <= records.horizonEndDate &&
+          (entry.endDate === null ||
+            (entry.endDate >= records.today &&
+              entry.endDate >= entry.startDate)),
+      )
+      .sort(
+        (a, b) =>
+          a.startDate.localeCompare(b.startDate) || a.id.localeCompare(b.id),
+      )
+      .slice(0, maxRecurring)) {
+      const reference = toRecurringSessionReference(series);
+      const cost = costOf(reference);
+      if (used + cost > byteBudget) continue;
+      used += cost;
+      sentSeriesIds.add(series.id);
+      recurringSessions.push(reference);
+    }
+
+    for (const entry of eligible) {
+      if (entry.isLocked) continue;
+      if (kept.length >= maxCommitments) break;
+      if (
+        entry.ruleSeriesId !== null &&
+        sentSeriesIds.has(entry.ruleSeriesId)
+      ) {
+        continue;
+      }
+      const cost = costOf(toPlanCommitmentReference(entry));
+      if (used + cost > byteBudget) break;
+      used += cost;
+      kept.push(entry);
+    }
+
+    commitments = kept
+      .sort((a, b) => a.localDate.localeCompare(b.localDate))
+      .map(toPlanCommitmentReference);
+  }
 
   return {
     includedCompletions: included,

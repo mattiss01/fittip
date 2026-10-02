@@ -499,6 +499,19 @@ describe("the production coaching context source", () => {
       expect(records.training.series).toEqual([]);
     });
 
+    it("does not read the series for a fill either", async () => {
+      listSeries.mockResolvedValue([storedSeries]);
+
+      const records = await new OwnedRecordsCoachAIContextSource({
+        operation: "fill_session_activities",
+        clock: () => NOW,
+        sessionId: "66000000-0000-4000-8000-0000000000f1",
+      }).load(OWNER);
+
+      expect(listSeries).not.toHaveBeenCalled();
+      expect(records.training.series).toEqual([]);
+    });
+
     it("says an occurrence follows its rule only while it is untouched and on its date", async () => {
       const occurrence = {
         seriesId: SERIES_ID,

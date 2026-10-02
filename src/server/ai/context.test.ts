@@ -678,12 +678,90 @@ describe("the per-source context allocation", () => {
         },
       });
 
-      // Worst-case rules do not all fit, and what is sent never exceeds what
-      // the commitments alone were allowed.
+      // Locked entries are fitted first, so worst-case rules cannot take the
+      // room they had before rules existed; and what is sent never exceeds
+      // what the commitments alone were allowed.
+      expect(assembled.context.planCommitments).toHaveLength(5);
       expect(assembled.context.recurringSessions?.length).toBeLessThan(6);
       expect(assembled.usage.plan_commitments).toBeLessThanOrEqual(
         limits.bytes.planCommitments + 100,
       );
+    });
+
+    it("fits a locked entry before the rules and before nearer unlocked ones", () => {
+      // Six ordinary series and a full fortnight of one-off sessions: more
+      // than the allocation holds. The race is the furthest entry out.
+      const series = Array.from({ length: 6 }, (_, index) => ({
+        ...weekly,
+        id: `series-${index}`,
+        title: `Series ${index}`,
+      }));
+      const oneOffs = Array.from({ length: 14 }, (_, index) => ({
+        localDate: shiftDate(TODAY, index),
+        title: `One-off ${index}`,
+        sport: "Running",
+        isLocked: false,
+        hasCompletion: false,
+        ruleSeriesId: null,
+      }));
+      const assembled = build({
+        training: {
+          ...EMPTY_TRAINING,
+          series,
+          plannedSessions: [...oneOffs, race],
+        },
+      });
+
+      expect(assembled.context.recurringSessions).toHaveLength(6);
+      expect(assembled.context.planCommitments.at(-1)).toEqual({
+        localDate: shiftDate(TODAY, 60),
+        title: "Autumn race",
+        sport: "Running",
+        isLocked: true,
+      });
+      // Dated entries still leave in date order, whatever order they were
+      // fitted in.
+      const dates = assembled.context.planCommitments.map((c) => c.localDate);
+      expect(dates).toEqual([...dates].sort());
+    });
+
+    it("sends a daily rule with no weekdays", () => {
+      const assembled = build({
+        training: {
+          ...EMPTY_TRAINING,
+          series: [
+            { ...weekly, frequency: "daily", intervalCount: 2, weekdays: null },
+          ],
+        },
+      });
+
+      expect(assembled.context.recurringSessions).toEqual([
+        {
+          title: "Club run",
+          sport: "Running",
+          frequency: "daily",
+          intervalCount: 2,
+          weekdays: null,
+          startDate: shiftDate(TODAY, -30),
+          endDate: null,
+        },
+      ]);
+    });
+
+    it("sends no rule for a series ended from its own first day", () => {
+      // The database allows an end one day before the start: a series that
+      // was ended before it ever ran. It describes nothing.
+      const start = shiftDate(TODAY, 5);
+      const assembled = build({
+        training: {
+          ...EMPTY_TRAINING,
+          series: [
+            { ...weekly, startDate: start, endDate: shiftDate(TODAY, 4) },
+          ],
+        },
+      });
+
+      expect(assembled.context.recurringSessions).toEqual([]);
     });
 
     it("gives the seven-day plan and a fill no rules and no key for them", () => {
@@ -699,6 +777,17 @@ describe("the per-source context allocation", () => {
       );
 
       expect(plan.serialized).not.toContain("recurringSessions");
+      // Byte for byte what it sends when no series exists at all.
+      expect(plan.serialized).toBe(
+        buildCoachAIContext(
+          "create_seven_day_plan",
+          records({
+            training: { ...training, series: [] },
+            timezoneName: "Europe/Berlin",
+          }),
+          { ...COMPOSE, horizonEndDate: shiftDate(TODAY, 6) },
+        ).serialized,
+      );
       // Its horizon is days, so the occurrence is sent dated, as before.
       expect(plan.context.planCommitments.map((c) => c.title)).toEqual([
         "Club run",

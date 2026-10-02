@@ -185,7 +185,8 @@ export type CoachAIContextLimits = {
  * The binding constraint is not ADR-013's "roughly 30,000 bytes". It is
  * `maxInputTokens` together with the adapter's refusal guard, which estimates
  * four characters per token over the **whole message set**. The measured static
- * prefix for this operation is 5,810 characters — `openai-prompt.test.ts` caps
+ * prefix for this operation was 5,810 characters then, and is 5,957 since the
+ * recurring-sessions sentence of 2 October 2026 — `openai-prompt.test.ts` caps
  * it at 6,000 — and the user-message wrapper is 32, so the context ceiling is
  * `4 * maxInputTokens` less roughly 6,064.
  *
@@ -215,7 +216,7 @@ export type CoachAIContextLimits = {
  * | regeneration note   |  1    |    600 | ADR-014 decision 4, fixed         |
  * | previous proposal   |  1    |  2,200 | reduced form, regeneration only   |
  * | sum of parts        |       | 32,800 |                                   |
- * | envelope + total    |       | 33,700 | 900 for keys and dates; 769 used  |
+ * | envelope + total    |       | 33,700 | 900 for keys and dates; 803 used  |
  *
  * That total sets the ceiling: `ceil((6_000 + 64 + 33_700) / 4)` is 9,941, so
  * `maxInputTokens` is 10,000 — the smallest hundred above the requirement,

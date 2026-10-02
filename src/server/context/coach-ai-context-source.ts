@@ -164,7 +164,7 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       ROADMAP_FORWARD_LOCKED_WINDOW_DAYS,
     );
 
-    // Five independent owner-scoped reads, issued together rather than as a
+    // Independent owner-scoped reads, issued together rather than as a
     // waterfall. The plan read is the only one with a write side effect, and
     // the roadmap read is the only one an operation can skip.
     const fillsSession = this.#operation === "fill_session_activities";
