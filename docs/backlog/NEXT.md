@@ -50,17 +50,9 @@ main action. No week ring. The owner flagged a possible bias toward the look the
 so start with Today and adjust from there rather than committing every screen up front. Build
 lane, one screen per merge.
 
-- [ ] **R3b — A three-month horizon**, in three merges (owner, 29 Sep and 2 Oct 2026). In
-      this order, because the first protects the coach from the second:
-  - [~] **R3b-1 — The coach reads a series as one rule.** Careful lane (AI data boundary).
-        For a roadmap the coach is sent its next 12 planned sessions, nearest first, each
-        occurrence of a series as its own line; with 13 weeks written ahead, repeats would
-        push a locked race off the list. Owner: send a running series once, as a rule, and
-        do it before the window grows. Roadmap only — the seven-day plan and Fill send what
-        they send today. A rule carries title, sport and the recurrence, nothing a dated
-        line does not; it shares the 1,400 bytes plan commitments already have, so no
-        ceiling or spend limit moves. A single cancelled occurrence is not listed. ADR-013
-        decision 5 amended in its own commit. No migration.
+- [ ] **R3b — A three-month horizon**, in three merges (owner, 29 Sep and 2 Oct 2026). The
+      first, the roadmap coach reading a series as one rule, is done; it had to come before
+      the window grows.
   - [ ] **R3b-2 — Repeating sessions are written 13 weeks ahead.** Careful lane. Owner:
         option A — real sessions, 91 days instead of 14. One forward migration re-emits
         `materialize_rolling_plan_series` with `v_today + 90` (no signature change, nothing
@@ -236,6 +228,14 @@ Not worth their own slot; do them when work lands nearby.
   project's life — so it takes 250 in a day or 2,500 ever to lock coaching out entirely.
   Far outside single-athlete traffic, but it accumulates permanently and no surface shows it.
 
+- **The roadmap prompt has 43 characters left.** Its static prefix is 5,957 of the 6,000
+  `openai-prompt.test.ts` allows, after the sentence naming `recurringSessions`. The next
+  sentence takes them from an existing one or raises the input ceiling, which is a
+  standing spend increase.
+- **The roadmap coach is not told which dates of a series differ.** A rule is sent as the
+  series stands (ADR-013, amended 2 Oct 2026): a cancelled or deleted occurrence is not
+  listed, and a locked, edited or moved one appears both as its own dated entry and
+  inside the rule.
 - **The plan context has no headroom left.** M3-16B spent it: prefix 7,400 + wrapper 64 +
   context 32,500 estimates 9,991 tokens against a 10,000 ceiling. The next source, or a longer
   prompt, takes bytes from an existing source or raises `maxInputTokens` — and the second is a
