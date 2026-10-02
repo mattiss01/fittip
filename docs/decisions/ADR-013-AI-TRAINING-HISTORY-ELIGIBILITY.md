@@ -333,15 +333,31 @@ occurrence the rule no longer describes — one that is locked, whose content th
 owner edited, or that was moved to another day. Beyond the horizon, locked
 entries only, as before.
 
-Limits, set here as tuning parameters: at most 6 rules, counted inside the
-existing 1,400-byte plan-commitment allocation, rules first. No byte ceiling and
-no token limit changes.
+Which series: one that starts on or before the horizon's last day and has not
+ended before today. A series that only starts after the horizon is the unlocked
+speculation decision 5 already calls noise.
+
+Limits, set here as tuning parameters: at most 6 rules, earliest start first,
+with the title and sport truncated as on a dated entry (120 and 80 characters),
+counted inside the existing 1,400-byte plan-commitment allocation. No byte
+ceiling and no token limit changes. The allocation is filled in this order:
+
+1. **Locked dated entries.** A locked race is what this amendment exists to
+   keep in view, so neither a rule nor a nearer unlocked session may push one
+   out. Before the amendment the list was simply the 12 nearest entries; for
+   `create_roadmap` a locked entry now outranks a nearer unlocked one.
+2. **Rules.** One that does not fit in what is left is not sent, and its
+   occurrences then stay dated entries, so a trimmed rule hides nothing.
+3. **Unlocked dated entries** no sent rule describes, nearest first.
 
 What this gives up, stated rather than discovered: a rule is the series as it
-stands. A single occurrence the owner cancelled or deleted is not listed, so the
-coach may assume a session on a date the owner called off. For a roadmap, which
-plans phases rather than days, that was judged smaller than the loss it
-replaces.
+stands, and nothing tells the coach which of its dates differ. A single
+occurrence the owner cancelled or deleted is not listed, so the coach may assume
+a session on a date the owner called off. And an occurrence that stays dated —
+locked, edited or moved — is described twice: once by its own entry and once by
+the rule, which still implies a session on its rule date. For a roadmap, which
+plans phases rather than days, both were judged smaller than the loss they
+replace.
 
 `create_seven_day_plan` is unchanged: its horizon is at most seven days, every
 entry inside it is still sent dated with its lock state, and it receives no
