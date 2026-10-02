@@ -34,7 +34,7 @@ type Preview = {
  */
 export function CreateSession({
   date,
-  canRepeat = true,
+  canRepeat,
   startFrom,
   expectedRevision,
   planAction,
@@ -45,7 +45,8 @@ export function CreateSession({
   seriesPending,
 }: {
   date: string;
-  canRepeat?: boolean;
+  /** False on a day past the dates a series may start on. */
+  canRepeat: boolean;
   startFrom?: SavedSessionOption;
   expectedRevision: number;
   planAction: FormAction;

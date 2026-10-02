@@ -19,7 +19,7 @@ describe("plan weeks", () => {
   });
 
   it("covers the window whole, Monday to Sunday", () => {
-    const weeks = planWeeks("2026-09-30", "2026-10-13");
+    const weeks = planWeeks("2026-09-30", "2026-10-13", "2026-10-13");
 
     expect(weeks.map((week) => [week.start, week.end])).toEqual([
       ["2026-09-28", "2026-10-04"],
@@ -66,7 +66,7 @@ describe("plan weeks", () => {
   });
 
   it("finds the week holding a date, and falls back to the first", () => {
-    const weeks = planWeeks("2026-09-30", "2026-10-13");
+    const weeks = planWeeks("2026-09-30", "2026-10-13", "2026-10-13");
     expect(weekIndexOf(weeks, "2026-10-11")).toBe(1);
     expect(weekIndexOf(weeks, "2027-01-01")).toBe(0);
     expect(weekIndexOf(weeks, null)).toBe(0);

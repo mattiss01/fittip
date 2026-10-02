@@ -75,6 +75,8 @@ type Props = {
   today: string;
   /** The last date recurring sessions are materialized through. */
   lastPlannedDate: string;
+  /** The last date a single session may be placed on. */
+  lastPlaceableDate: string;
   isRecoveryDay: boolean;
   /** False when the ADR-017 top-up could not run for this read. */
   toppedUp: boolean;
@@ -118,6 +120,7 @@ export function TodayDay({
   date,
   today,
   lastPlannedDate,
+  lastPlaceableDate,
   isRecoveryDay,
   toppedUp,
   sessions,
@@ -196,8 +199,11 @@ export function TodayDay({
       {beyondWindow ? (
         <p className={styles.notice} data-today-notice="beyond-window">
           FitTip writes recurring sessions ahead only through{" "}
-          {longDay(lastPlannedDate)}. This day is past that, so your repeats are
-          not on it yet. A single session placed here is.
+          {longDay(lastPlannedDate)}. This day is past that, so repeats are not
+          on it yet.
+          {date <= lastPlaceableDate
+            ? " A single session placed here is."
+            : null}
         </p>
       ) : null}
 

@@ -70,7 +70,11 @@ export async function changeSeriesAction(
     const window = await readPlanWindow();
     const plan = await createRollingPlan();
     const [slice, series] = await Promise.all([
-      plan.getPlanSlice(window.today, window.lastDate),
+      // Through the last placeable date, not the recurring window: an
+      // occurrence may have been moved past the dates its series is written
+      // to, and it must still be found. A series start stays within
+      // `lastDate`, below.
+      plan.getPlanSlice(window.today, window.lastPlaceableDate),
       plan.listSeries(),
     ]);
     if (slice.revision !== expectedRevision) {

@@ -22,7 +22,8 @@ export type PlanWindow = {
 };
 
 /**
- * The owner-local window every Plan write is bounded by. It is derived from
+ * The owner-local bounds every Plan write is held to: one for recurring
+ * sessions and one, further out, for a single session. They are derived from
  * the stored zone, never from the request, so nothing a caller sends can move
  * it. An owner with no stored zone has no plan yet, so this refuses rather
  * than guessing a zone on their behalf.

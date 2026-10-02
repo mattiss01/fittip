@@ -149,8 +149,12 @@ async function PlanWindow({
       >
         <PlanManager
           today={today}
-          lastDate={lastPlaceableDate}
+          lastPlaceableDate={lastPlaceableDate}
           repeatsThrough={lastDate}
+          hasRepeats={series.some(
+            (segment) =>
+              segment.endDate === undefined || segment.endDate >= today,
+          )}
           initialDate={initialDate}
           phases={phases}
           expectedRevision={slice.revision}

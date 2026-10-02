@@ -167,7 +167,7 @@ test.describe("M3-15B today and logging", () => {
       await page.goto(`/home/today?date=${ownerDate(91)}`);
       await expect(
         page.locator('[data-today-notice="beyond-window"]'),
-      ).toContainText("your repeats are not on it yet");
+      ).toContainText("repeats are not on it yet");
       await expect(page.locator('[data-today-empty="sessions"]')).toHaveCount(
         0,
       );

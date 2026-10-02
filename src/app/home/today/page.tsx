@@ -87,7 +87,7 @@ export default async function TodayPage({ searchParams }: Props) {
 async function renderDay(timezoneName: string, requested: string | null) {
   // One definition of owner-local today and of how far ahead the plan is
   // filled, shared with the Plan surface and its writes.
-  const { today, lastDate } = planWindowFor(timezoneName);
+  const { today, lastDate, lastPlaceableDate } = planWindowFor(timezoneName);
   const date = requested ?? today;
 
   let window;
@@ -148,6 +148,7 @@ async function renderDay(timezoneName: string, requested: string | null) {
       date={date}
       today={today}
       lastPlannedDate={lastDate}
+      lastPlaceableDate={lastPlaceableDate}
       isRecoveryDay={window.slice.recoveryDates.includes(date)}
       toppedUp={window.toppedUp}
       sessions={sessions}

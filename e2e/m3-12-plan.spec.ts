@@ -100,7 +100,7 @@ test.describe("M3-12 manual continuous planning", () => {
       ).toBeVisible();
       await expect(
         page.locator('[data-today-notice="beyond-window"]'),
-      ).toContainText("your repeats are not on it yet");
+      ).toContainText("A single session placed here is.");
       await page.goto("/home/plan");
 
       // Every verb lives on the session's own page since 29 Sep 2026 (owner):

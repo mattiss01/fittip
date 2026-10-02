@@ -36,13 +36,13 @@ export function mondayOf(isoDate: string): string {
 
 export function planWeeks(
   today: string,
-  lastDate: string,
-  repeatsThrough: string = lastDate,
+  lastPlaceableDate: string,
+  repeatsThrough: string,
 ): PlanWeek[] {
   const weeks: PlanWeek[] = [];
   for (
     let start = mondayOf(today);
-    start <= lastDate;
+    start <= lastPlaceableDate;
     start = shiftIsoDate(start, 7)
   ) {
     const days = Array.from({ length: 7 }, (_, offset) => {
@@ -50,7 +50,7 @@ export function planWeeks(
       return {
         date,
         past: date < today,
-        beyond: date > lastDate,
+        beyond: date > lastPlaceableDate,
         afterRepeats: date > repeatsThrough,
       };
     });

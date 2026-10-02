@@ -66,9 +66,11 @@ export type { PlanSessionLog, PlanSessionView } from "./session-view";
 type Props = {
   today: string;
   /** The last date a session may be placed on; nothing past it is read. */
-  lastDate: string;
+  lastPlaceableDate: string;
   /** The last date recurring sessions are written through. */
-  repeatsThrough?: string;
+  repeatsThrough: string;
+  /** Whether the owner has a series at all, so a week can say where it stops. */
+  hasRepeats?: boolean;
   /** The day to open on, e.g. the one a session page returns to. */
   initialDate?: string | null;
   expectedRevision: number;
@@ -89,8 +91,9 @@ type Sheet =
 
 export function PlanManager({
   today,
-  lastDate,
-  repeatsThrough = lastDate,
+  lastPlaceableDate,
+  repeatsThrough,
+  hasRepeats = false,
   initialDate = null,
   expectedRevision,
   sessions,
@@ -168,11 +171,21 @@ export function PlanManager({
       state.conflict === "timezone" ||
       stall === "unconfirmed";
 
-  const weeks = planWeeks(today, lastDate, repeatsThrough);
+  const weeks = planWeeks(today, lastPlaceableDate, repeatsThrough);
   const [weekIndex, setWeekIndex] = useState(() =>
     weekIndexOf(weeks, initialDate),
   );
   const week = weeks[Math.min(weekIndex, weeks.length - 1)];
+  // Twenty-six weeks of tiles scroll sideways, so the one being shown is
+  // brought into view: opening on a far week otherwise leaves the strip on
+  // "This wk" with nothing marked. Instant, so there is no motion to reduce.
+  const tilesRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const current = tilesRef.current?.querySelector('[aria-current="true"]');
+    if (current && typeof current.scrollIntoView === "function") {
+      current.scrollIntoView({ block: "nearest", inline: "center" });
+    }
+  }, [weekIndex]);
   const [sheet, setSheet] = useSheetClosedOnSave(state, seriesState);
   // The plan submission the open sheet started after, so a refusal shown in
   // it is one of its own and not one from before it opened.
@@ -239,8 +252,9 @@ export function PlanManager({
             ) : null}
             <p className={w.weekSum}>{weekTotals(week, sessions)}</p>
             {/* Otherwise a daily run simply stops after week 13 and nothing
-                says why. */}
-            {week.days.some((day) => day.afterRepeats && !day.beyond) ? (
+                says why. Only for an owner who has one. */}
+            {hasRepeats &&
+            week.days.some((day) => day.afterRepeats && !day.beyond) ? (
               <p className={w.weekSum} data-plan-repeats-through>
                 Repeats are added through {shortDateLabel(repeatsThrough)}
               </p>
@@ -271,7 +285,7 @@ export function PlanManager({
         </ol>
       </section>
 
-      <nav className={w.tiles} aria-label="Weeks">
+      <nav className={w.tiles} aria-label="Weeks" ref={tilesRef}>
         {weeks.map((candidate, index) => (
           <button
             key={candidate.start}
