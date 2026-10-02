@@ -49,14 +49,14 @@ export default async function MemoryPage({
         href={cameFromPlanProposal ? "/home/plan/proposal" : "/home/you"}
         label={cameFromPlanProposal ? "Coach proposal" : "You"}
       />
+      {/* No intro. The old one ended "Nothing here is inferred behind your
+          back", which alone reads as "nothing here is inferred" above a card
+          that says "Proposed from your records". The guarantee is stated
+          where it applies: "Needs your review" says a proposed item is never
+          used until it is accepted. */}
       <header className={youStyles.header}>
         <h1>Memory</h1>
       </header>
-      {/* The one sentence of the old intro that has to survive: it is the
-          promise the whole page exists to keep. */}
-      <p className={youStyles.line}>
-        Nothing here is inferred behind your back.
-      </p>
       <MemoryManager
         items={collection.items}
         expectedRevision={collection.revision}

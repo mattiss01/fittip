@@ -37,22 +37,22 @@ describe("MobileNavigation", () => {
     expect(navigation).not.toHaveTextContent("History");
   });
 
-  it.each(["/home/you/goals", "/home/you/settings", "/home/plan/saved"])(
-    "keeps the destination current on %s, a page under it",
-    (pathname) => {
-      usePathnameMock.mockReturnValueOnce(pathname);
-      render(<MobileNavigation />);
+  it.each([
+    ["/home/you/goals", "You"],
+    ["/home/you/settings", "You"],
+    ["/home/plan/saved", "Plan"],
+  ])("on %s, a page under it, %s is current", (pathname, destination) => {
+    usePathnameMock.mockReturnValueOnce(pathname);
+    render(<MobileNavigation />);
 
-      const destination = pathname.startsWith("/home/you") ? /You/ : /Plan/;
-      expect(screen.getByRole("link", { name: destination })).toHaveAttribute(
-        "aria-current",
-        "page",
-      );
-      expect(
-        screen
-          .getByRole("navigation", { name: "Primary" })
-          .querySelectorAll("[aria-current]"),
-      ).toHaveLength(1);
-    },
-  );
+    expect(screen.getByRole("link", { name: destination })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(
+      screen
+        .getByRole("navigation", { name: "Primary" })
+        .querySelectorAll("[aria-current]"),
+    ).toHaveLength(1);
+  });
 });

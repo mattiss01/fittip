@@ -38,7 +38,7 @@ export default async function SettingsPage() {
       <header className={styles.header}>
         <h1>Settings</h1>
       </header>
-      <p className={styles.line}>Nothing to set yet.</p>
+      <p className={styles.note}>Nothing to set yet.</p>
     </main>
   );
 }

@@ -78,8 +78,8 @@ async function completeGuidedSetup(
   await page.setViewportSize({ width: 390, height: 844 });
   expect(page.viewportSize()).toEqual({ width: 390, height: 844 });
 
-  // Training routes are in maintenance during M3-11. The preserved You surface
-  // keeps onboarding's permanent entry, and the screenshot contains no answers.
+  // You keeps onboarding's permanent entry, and the screenshot contains no
+  // answers.
   await page.getByRole("link", { name: "You", exact: true }).click();
   await expect(page.getByRole("link", { name: /^Guided setup/ })).toBeVisible();
   await page.screenshot({

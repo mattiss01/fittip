@@ -3,7 +3,7 @@
  * corner, and the three places that sit under it as rows of one card. Each row
  * keeps one line saying what the place is for; the longer explanations live on
  * the pages themselves. Sign out stays here; Settings is its own page. The
- * pages under You share the back link, the heading and the one line.
+ * pages under You share the back link and the heading.
  */
 
 .header {
@@ -87,7 +87,9 @@
   background: var(--sage);
 }
 
-.place:focus-visible {
+/* The card clips its overflow, so a row's ring is drawn inside it. Two
+   classes, to outrank the shell's own focus rule. */
+.places .place:focus-visible {
   outline-offset: -3px;
 }
 
@@ -115,7 +117,7 @@
   margin-top: 1.5rem;
 }
 
-.line {
+.note {
   width: 100%;
   margin: 0.6rem 0 0;
   color: var(--moss);
