@@ -10,7 +10,7 @@ Acceptance evidence is captured against a production build, not `next dev`.
 CI already runs every 390px flow against a production build on each push, and retains a
 Playwright trace on failure. Use this skill to develop a new flow or to debug a specific CI
 failure locally — not to reproduce evidence CI has already established. For a failing run,
-`gh run download <id> -n playwright-report` is usually faster than rebuilding the stack here.
+`gh run download <id> -p "playwright-report-*"` is usually faster than rebuilding the stack here.
 
 ## 1. Local stack
 
