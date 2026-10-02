@@ -77,7 +77,7 @@ export async function saveSessionToLibraryAction(
     const window = await readPlanWindow();
     const slice = await (
       await createRollingPlan()
-    ).getPlanSlice(window.today, window.lastDate);
+    ).getPlanSlice(window.today, window.lastPlaceableDate);
     const sessionId = formData.get("sessionId");
     const session = slice.sessions.find(
       (candidate) =>
@@ -309,7 +309,7 @@ async function reuse(
   if (!saved) throw new SavedSessionConflictError();
 
   const plan = await createRollingPlan();
-  const slice = await plan.getPlanSlice(window.today, window.lastDate);
+  const slice = await plan.getPlanSlice(window.today, window.lastPlaceableDate);
   if (slice.revision !== expectedRevision) throw new RollingPlanConflictError();
 
   const receipt = await plan.applyChangeSet(

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { PLAN_WINDOW_DAYS } from "./action-state";
+import { PLAN_PLACEMENT_DAYS, PLAN_WINDOW_DAYS } from "./action-state";
 
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import { createProfileRepository } from "@/server/repositories/profile-repository";
@@ -13,7 +13,13 @@ import {
 /** Positions are 0-99; nothing sensible remains once a date is that deep. */
 const MAX_POSITION = 99;
 
-export type PlanWindow = { today: string; lastDate: string };
+export type PlanWindow = {
+  today: string;
+  /** The last date recurring sessions are written through. */
+  lastDate: string;
+  /** The last date a single session may be placed on (R3b-3). */
+  lastPlaceableDate: string;
+};
 
 /**
  * The owner-local window every Plan write is bounded by. It is derived from
@@ -39,9 +45,17 @@ export async function readPlanWindow(): Promise<PlanWindow> {
  */
 export function planWindowFor(timezoneName: string): PlanWindow {
   const today = isoDateInTimezone(new Date(), timezoneName);
-  return { today, lastDate: shiftIsoDate(today, PLAN_WINDOW_DAYS - 1) };
+  return {
+    today,
+    lastDate: shiftIsoDate(today, PLAN_WINDOW_DAYS - 1),
+    lastPlaceableDate: shiftIsoDate(today, PLAN_PLACEMENT_DAYS - 1),
+  };
 }
 
+/**
+ * A date a single session may sit on: today through the placement bound. A
+ * series start is bounded separately and more tightly, by `lastDate`.
+ */
 export function readPlannableDate(
   value: FormDataEntryValue | null,
   window: PlanWindow,
@@ -49,7 +63,7 @@ export function readPlannableDate(
   if (
     typeof value !== "string" ||
     value < window.today ||
-    value > window.lastDate
+    value > window.lastPlaceableDate
   ) {
     throw new RollingPlanValidationError();
   }

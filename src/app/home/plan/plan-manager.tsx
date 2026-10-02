@@ -65,8 +65,10 @@ export type { PlanSessionLog, PlanSessionView } from "./session-view";
 
 type Props = {
   today: string;
-  /** The plan window's last date; nothing past it is read or written. */
+  /** The last date a session may be placed on; nothing past it is read. */
   lastDate: string;
+  /** The last date recurring sessions are written through. */
+  repeatsThrough?: string;
   /** The day to open on, e.g. the one a session page returns to. */
   initialDate?: string | null;
   expectedRevision: number;
@@ -88,6 +90,7 @@ type Sheet =
 export function PlanManager({
   today,
   lastDate,
+  repeatsThrough = lastDate,
   initialDate = null,
   expectedRevision,
   sessions,
@@ -165,7 +168,7 @@ export function PlanManager({
       state.conflict === "timezone" ||
       stall === "unconfirmed";
 
-  const weeks = planWeeks(today, lastDate);
+  const weeks = planWeeks(today, lastDate, repeatsThrough);
   const [weekIndex, setWeekIndex] = useState(() =>
     weekIndexOf(weeks, initialDate),
   );
@@ -235,6 +238,13 @@ export function PlanManager({
               <p className={w.weekSum}>{weekRange(week)}</p>
             ) : null}
             <p className={w.weekSum}>{weekTotals(week, sessions)}</p>
+            {/* Otherwise a daily run simply stops after week 13 and nothing
+                says why. */}
+            {week.days.some((day) => day.afterRepeats && !day.beyond) ? (
+              <p className={w.weekSum} data-plan-repeats-through>
+                Repeats are added through {shortDateLabel(repeatsThrough)}
+              </p>
+            ) : null}
           </div>
           <WeekArrow
             label="Next week"
@@ -308,6 +318,7 @@ export function PlanManager({
             <CreateSession
               key={`${sheet.date}-${sheet.startFrom?.id ?? "empty"}`}
               date={sheet.date}
+              canRepeat={sheet.date <= repeatsThrough}
               startFrom={sheet.startFrom}
               expectedRevision={expectedRevision}
               planAction={trackedPlanAction}

@@ -30,6 +30,7 @@ describe("plan weeks", () => {
       date: "2026-09-29",
       past: true,
       beyond: false,
+      afterRepeats: false,
     });
     expect(weeks[0].days[2].past).toBe(false);
     expect(weeks[2].days[1]).toMatchObject({
@@ -39,6 +40,28 @@ describe("plan weeks", () => {
     expect(weeks[2].days[2]).toMatchObject({
       date: "2026-10-14",
       beyond: true,
+    });
+  });
+
+  it("marks the days recurring sessions are not written to, which are still open", () => {
+    // Single sessions may sit through 13 October; repeats stop on the 6th.
+    const weeks = planWeeks("2026-09-30", "2026-10-13", "2026-10-06");
+
+    expect(weeks[1].days[1]).toMatchObject({
+      date: "2026-10-06",
+      beyond: false,
+      afterRepeats: false,
+    });
+    expect(weeks[1].days[2]).toMatchObject({
+      date: "2026-10-07",
+      beyond: false,
+      afterRepeats: true,
+    });
+    // Past the last placeable date a day is closed, whatever else it is.
+    expect(weeks[2].days[2]).toMatchObject({
+      date: "2026-10-14",
+      beyond: true,
+      afterRepeats: true,
     });
   });
 

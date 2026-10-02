@@ -27,11 +27,14 @@ type Preview = {
 /**
  * The one session editor, for one date (R3a): a day's "+" opens it in a
  * sheet, so the date is the day's and not a field. "Repeat this session"
- * turns the same form into a series starting there. `startFrom` is a saved
+ * turns the same form into a series starting there; it is withheld on a day
+ * past the dates recurring sessions are written through (R3b-3), where a
+ * series could not start. `startFrom` is a saved
  * session picked in the sheet; its values are copied, nothing links back.
  */
 export function CreateSession({
   date,
+  canRepeat = true,
   startFrom,
   expectedRevision,
   planAction,
@@ -42,6 +45,7 @@ export function CreateSession({
   seriesPending,
 }: {
   date: string;
+  canRepeat?: boolean;
   startFrom?: SavedSessionOption;
   expectedRevision: number;
   planAction: FormAction;
@@ -163,17 +167,19 @@ export function CreateSession({
         activities={startFrom?.activities}
       />
 
-      <label className={styles.checkField}>
-        <input
-          type="checkbox"
-          checked={repeat}
-          onChange={(event) => {
-            setRepeat(event.target.checked);
-            invalidatePreview();
-          }}
-        />
-        <span>Repeat this session</span>
-      </label>
+      {canRepeat ? (
+        <label className={styles.checkField}>
+          <input
+            type="checkbox"
+            checked={repeat}
+            onChange={(event) => {
+              setRepeat(event.target.checked);
+              invalidatePreview();
+            }}
+          />
+          <span>Repeat this session</span>
+        </label>
+      ) : null}
 
       {repeat ? (
         <RecurrenceFields

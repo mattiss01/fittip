@@ -91,7 +91,7 @@ test.describe("M3-14B recurring series surface", () => {
       const saved = savedCard(page, "Ordinary base");
       await expect(saved.getByRole("link", { name: "Repeat" })).toHaveCount(0);
       await openDisclosure(saved, "Use in plan");
-      await saved.getByLabel("Add to").selectOption(ownerDate(9));
+      await saved.getByLabel("Add to").fill(ownerDate(9));
       await saved.getByRole("button", { name: "Add to plan" }).click();
       await expect(page.locator("[role='status']").first()).toContainText(
         "Added to your plan.",

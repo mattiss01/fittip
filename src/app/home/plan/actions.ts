@@ -135,7 +135,10 @@ export async function changePlanAction(
     const expectedRevision = readInteger(formData.get("expectedRevision"));
     const plan = await createRollingPlan();
     const window = await readPlanWindow();
-    const slice = await plan.getPlanSlice(window.today, window.lastDate);
+    const slice = await plan.getPlanSlice(
+      window.today,
+      window.lastPlaceableDate,
+    );
     if (slice.revision !== expectedRevision) {
       throw new RollingPlanConflictError();
     }

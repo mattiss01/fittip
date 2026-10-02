@@ -196,8 +196,8 @@ export function TodayDay({
       {beyondWindow ? (
         <p className={styles.notice} data-today-notice="beyond-window">
           FitTip writes recurring sessions ahead only through{" "}
-          {longDay(lastPlannedDate)}. This day is past that, so it is unfilled
-          rather than empty. Open it again once it is inside the window.
+          {longDay(lastPlannedDate)}. This day is past that, so your repeats are
+          not on it yet. A single session placed here is.
         </p>
       ) : null}
 

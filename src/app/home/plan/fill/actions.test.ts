@@ -92,6 +92,7 @@ beforeEach(() => {
   readPlanWindowMock.mockResolvedValue({
     today: "2026-09-28",
     lastDate: "2026-10-11",
+    lastPlaceableDate: "2027-01-09",
   });
   createPlanMock.mockResolvedValue({
     getPlanSlice: vi.fn().mockResolvedValue({

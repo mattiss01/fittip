@@ -8,6 +8,7 @@ import {
   type LibraryDraft,
 } from "./action-state";
 import { changeLibraryAction } from "./actions";
+import { PlanDateInput, type PlanDateRange } from "../plan-date-field";
 import styles from "./saved.module.css";
 
 import {
@@ -35,12 +36,12 @@ export type SavedSessionView = {
 type FormAction = (formData: FormData) => void;
 
 export function SavedLibrary({
-  dates,
+  dateRange,
   planRevision,
   sessions,
 }: {
-  /** Owner-local dates a reuse may land on, ascending. Empty means none can. */
-  dates: string[];
+  /** Owner-local dates a reuse may land on. `null` means none can. */
+  dateRange: PlanDateRange | null;
   planRevision: number;
   sessions: SavedSessionView[];
 }) {
@@ -82,7 +83,7 @@ export function SavedLibrary({
             <SavedSessionCard
               key={session.id}
               session={session}
-              dates={dates}
+              dateRange={dateRange}
               planRevision={planRevision}
               action={action}
               state={state}
@@ -97,14 +98,14 @@ export function SavedLibrary({
 
 function SavedSessionCard({
   session,
-  dates,
+  dateRange,
   planRevision,
   action,
   state,
   pending,
 }: {
   session: SavedSessionView;
-  dates: string[];
+  dateRange: PlanDateRange | null;
   planRevision: number;
   action: FormAction;
   state: LibraryActionState;
@@ -152,7 +153,7 @@ function SavedSessionCard({
 
         <details className={styles.disclosure}>
           <summary>Use in plan</summary>
-          {dates.length === 0 ? (
+          {dateRange === null ? (
             <p className={styles.consequence}>
               Confirm your time zone on the plan first. Until then there is no
               date to add this to.
@@ -168,17 +169,11 @@ function SavedSessionCard({
               />
               <div className={styles.field}>
                 <label htmlFor={`reuse-${session.id}`}>Add to</label>
-                <select
+                <PlanDateInput
                   id={`reuse-${session.id}`}
-                  name="localDate"
-                  defaultValue={dates[0]}
-                >
-                  {dates.map((date) => (
-                    <option key={date} value={date}>
-                      {stampDate(date)}
-                    </option>
-                  ))}
-                </select>
+                  range={dateRange}
+                  defaultValue={dateRange.first}
+                />
               </div>
               <p className={styles.consequence}>
                 The plan gets a new session copied from this entry. It starts
@@ -362,13 +357,4 @@ function draftFor(
 ): LibraryDraft | undefined {
   if (state.operation !== "edit" || !state.draft) return undefined;
   return state.savedSessionId === savedSessionId ? state.draft : undefined;
-}
-
-function stampDate(isoDate: string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  }).format(new Date(`${isoDate}T12:00:00.000Z`));
 }

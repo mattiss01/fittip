@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { PLAN_WINDOW_DAYS } from "../../action-state";
+import { planWindowFor } from "../../plan-window";
 import {
   saveActivityToLibraryAction,
   updateActivityInLibraryAction,
@@ -27,7 +27,6 @@ import {
   ActivityLibraryProvider,
   type LibraryActivityOption,
 } from "@/components/training/activity-editor";
-import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import { createCompletionLog } from "@/server/repositories/completion-log-repository";
 import { createProfileRepository } from "@/server/repositories/profile-repository";
 import { createRollingPlan } from "@/server/repositories/rolling-plan-repository";
@@ -115,10 +114,7 @@ async function SessionRead({
   requestedDate: string | null;
   timezoneName: string;
 }) {
-  const today = isoDateInTimezone(new Date(), timezoneName);
-  const dates = Array.from({ length: PLAN_WINDOW_DAYS }, (_, offset) =>
-    shiftIsoDate(today, offset),
-  );
+  const { today, lastPlaceableDate } = planWindowFor(timezoneName);
 
   let session: PlanSessionView | null = null;
   let revision = 0;
@@ -128,7 +124,7 @@ async function SessionRead({
   try {
     const plan = await createRollingPlan();
     const [slice, allSeries, options] = await Promise.all([
-      plan.getPlanSlice(today, dates[dates.length - 1]),
+      plan.getPlanSlice(today, lastPlaceableDate),
       plan.listSeries(),
       readLibraryOptions(),
     ]);
@@ -198,7 +194,7 @@ async function SessionRead({
         session={session}
         series={segment === undefined ? undefined : toSeriesView(segment)}
         today={today}
-        dates={dates}
+        dateRange={{ first: today, last: lastPlaceableDate }}
         expectedRevision={revision}
         origin={origin}
         originDate={requestedDate}

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { SavedLibrary, type SavedSessionView } from "./saved-library";
 import styles from "./saved.module.css";
 
-import { PLAN_WINDOW_DAYS } from "../action-state";
+import { planWindowFor } from "../plan-window";
 import {
   saveActivityToLibraryAction,
   updateActivityInLibraryAction,
@@ -15,7 +15,6 @@ import {
   ActivityLibraryProvider,
   type LibraryActivityOption,
 } from "@/components/training/activity-editor";
-import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import { toActivityValue } from "@/lib/training/activity-value";
 import { PersonalActivityAuthenticationError } from "@/server/repositories/personal-activity-repository";
 import {
@@ -93,7 +92,7 @@ function ReuseUnavailable({ sessions }: { sessions: SavedSession[] }) {
     <>
       <p className={homeStyles.stamp}>Time zone not confirmed</p>
       <SavedLibrary
-        dates={[]}
+        dateRange={null}
         planRevision={0}
         sessions={sessions.map(toSavedSessionView)}
       />
@@ -108,17 +107,12 @@ async function ReadyLibrary({
   timezoneName: string;
   sessions: SavedSession[];
 }) {
-  const today = isoDateInTimezone(new Date(), timezoneName);
-  const dates = Array.from({ length: PLAN_WINDOW_DAYS }, (_, offset) =>
-    shiftIsoDate(today, offset),
-  );
+  const { today, lastPlaceableDate } = planWindowFor(timezoneName);
 
   let planRevision: number;
   try {
     planRevision = (
-      await (
-        await createRollingPlan()
-      ).getPlanSlice(today, dates[dates.length - 1])
+      await (await createRollingPlan()).getPlanSlice(today, lastPlaceableDate)
     ).revision;
   } catch (error) {
     redirectOnAuthError(error);
@@ -131,7 +125,7 @@ async function ReadyLibrary({
         {sessions.length} saved · Plan revision {planRevision}
       </p>
       <SavedLibrary
-        dates={dates}
+        dateRange={{ first: today, last: lastPlaceableDate }}
         planRevision={planRevision}
         sessions={sessions.map(toSavedSessionView)}
       />
