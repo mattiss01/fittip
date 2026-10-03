@@ -1,4 +1,5 @@
 import { ExampleTag } from "./roadmap-body";
+import { formatRoadmapRange } from "./roadmap-dates";
 
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import {
@@ -57,8 +58,8 @@ export function RoadmapProposalRecord({
       <ExampleTag providerCode={proposal.providerCode} />
       <h3 className={styles.recordTitle}>{proposal.content.title}</h3>
       <p className={styles.horizon}>
-        {ROADMAP_COPY.proposalOriginLabels[proposal.origin]} · {startDate} →{" "}
-        {endDate}
+        {ROADMAP_COPY.proposalOriginLabels[proposal.origin]} ·{" "}
+        {formatRoadmapRange(startDate, endDate)}
       </p>
       {state === "open" ? (
         <p className={styles.recordBody}>{proposal.content.summary}</p>

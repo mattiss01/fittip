@@ -114,62 +114,63 @@
   box-shadow: var(--shadow-card);
 }
 
-.day[data-today="true"] {
-  box-shadow:
-    inset 4px 0 0 var(--plan-today),
-    var(--shadow-card);
-}
-
+/* The Plan's day heading: the weekday small and quiet, the date in the sans,
+   and today said in the ember rather than with a stripe down the card. */
 .dayStamp {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 0.45rem;
+  align-items: baseline;
+  gap: 0.5rem;
   margin: 0;
-  color: var(--ledger-muted);
-  font: 500 0.68rem var(--font-mono);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  color: var(--pine);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 .dayMark,
 .recoveryStamp {
-  padding: 0.15rem 0.5rem;
-  border-radius: var(--radius-pill);
-  background: var(--sage);
-  color: var(--ledger-ink);
-  font-size: 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0;
 }
 
 .dayMark {
-  background: var(--plan-today);
+  color: var(--ember-dark);
+}
+
+.recoveryStamp {
+  color: var(--recovery);
 }
 
 .dayBody {
   display: grid;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 /* ---- Cards -------------------------------------------------------------- */
 
+/* The Plan's session card: a sage tile with a stripe down its left edge. */
 .planned,
 .proposed {
   display: grid;
-  gap: 0.4rem;
-  padding: 0.8rem 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-control);
+  gap: 0.35rem;
+  padding: 0.75rem 0.9rem 0.8rem 1.1rem;
+  border-radius: 0.85rem;
   background: var(--sage);
+  box-shadow: inset 4px 0 0 var(--ember);
 }
 
 /*
- * Already-planned content is visibly quieter than a proposal. It is context in
- * this slice, not something the owner is being asked about, and nothing here
- * offers an action on it.
+ * Already-planned content is visibly quieter than a proposal: it is context,
+ * not something the owner is being asked about, so it takes the Plan's look
+ * for a card that is already settled — no fill, a fern stripe.
  */
 .planned {
-  border-style: dashed;
   background: transparent;
+  box-shadow:
+    inset 4px 0 0 var(--fern),
+    inset 0 0 0 1px var(--fern);
 }
 
 .planned[data-cancelled="true"] {
@@ -177,12 +178,15 @@
 }
 
 .proposed[data-decision="staged"] {
-  border-color: var(--ledger-ink);
-  border-left: 4px solid var(--ledger-ink);
+  box-shadow: inset 4px 0 0 var(--pine);
 }
 
 .proposed[data-decision="rejected"] {
-  opacity: 0.65;
+  background: transparent;
+  box-shadow:
+    inset 4px 0 0 var(--fern),
+    inset 0 0 0 1px var(--fern);
+  color: var(--moss);
 }
 
 .cardHeader {
@@ -190,92 +194,114 @@
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.4rem;
+  gap: 0.2rem 0.6rem;
 }
 
 .cardHeader h3 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 1rem;
+  font-weight: 700;
   line-height: 1.3;
 }
 
+/* Where an item stands, as a word in the card's corner rather than a stamp. */
 .badge {
-  padding: 0.15rem 0.5rem;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-pill);
-  font: 500 0.6rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--moss);
+  font-size: 0.78rem;
+  font-weight: 700;
   white-space: nowrap;
 }
 
+.badge[data-kind="proposed"] {
+  color: var(--ember-dark);
+}
+
 .badge[data-kind="staged"] {
-  background: #e7f0dc;
-}
-
-.badge[data-kind="rejected"] {
-  background: #f1efe9;
-}
-
-.badge[data-kind="planned"] {
-  border-style: dashed;
+  color: var(--pine);
 }
 
 .meta {
   margin: 0;
-  color: var(--ledger-muted);
+  color: var(--moss);
   font-size: 0.85rem;
-  font-weight: 600;
 }
 
 .body,
 .rationale {
   margin: 0;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   line-height: 1.45;
 }
 
 .rationale {
-  color: var(--ledger-muted);
+  color: var(--moss);
 }
 
 .sectionLabel {
-  font: 500 0.62rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  color: var(--pine);
+  font-weight: 700;
+}
+
+.proposed[data-decision="rejected"] .sectionLabel {
+  color: inherit;
 }
 
 .empty {
   margin: 0;
-  color: var(--ledger-muted);
+  color: var(--moss);
   font-size: 0.85rem;
-  font-style: italic;
 }
 
 /* ---- Choices ------------------------------------------------------------ */
 
+/* One segmented control: three answers to one question, side by side. */
 .choices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 0.15rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.2rem;
+  margin-top: 0.35rem;
+  padding: 0.2rem;
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--fern);
 }
 
 .choice {
+  min-width: 0;
   min-height: 2.75rem;
-  padding: 0.5rem 0.9rem;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-control);
-  background: var(--ledger-paper);
-  color: var(--ledger-ink);
-  font: 700 0.9rem var(--font-sans);
+  margin: 0;
+  padding: 0.4rem 0.5rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--pine);
+  font: 700 0.85rem var(--font-sans);
+  white-space: nowrap;
   cursor: pointer;
 }
 
+.choice:hover {
+  background: var(--sage);
+}
+
 .choice[data-selected="true"] {
-  background: var(--ledger-ink);
-  color: var(--ledger-paper);
+  background: var(--pine);
+  color: var(--paper);
   cursor: default;
+}
+
+/* Rejected is a decision too, but not the one that changes the plan. */
+.choice[value="rejected"][data-selected="true"] {
+  background: var(--moss);
+}
+
+/* Undecided is where every item starts, so it is marked, not filled. */
+.choice[value="proposed"][data-selected="true"] {
+  background: var(--fern);
+  color: var(--pine);
 }
 
 .choice:disabled[data-selected="false"] {
@@ -285,6 +311,11 @@
 
 /* ---- Dock --------------------------------------------------------------- */
 
+/*
+ * A paper sheet resting on the navigation. It also carries the global
+ * `save-dock` class, which places it above the navigation and reserves room
+ * for it, and whose dark-dock border and mono label are undone here.
+ */
 .dock {
   position: fixed;
   right: 0;
@@ -292,32 +323,64 @@
   left: 0;
   z-index: 30;
   display: grid;
-  gap: 0.5rem;
-  padding: 0.8rem 1rem calc(0.8rem + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--line);
-  background: var(--ledger-paper);
-  box-shadow: 0 -10px 30px -18px rgb(23 51 46 / 0.3);
+  gap: 0.6rem;
+  padding: 0.9rem 1rem 1rem;
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-raised);
 }
 
-.dockSupport {
+.dock .dockSupport {
   margin: 0;
-  color: var(--ledger-muted);
-  font-size: 0.8rem;
-  line-height: 1.4;
+  color: var(--moss);
+  font: 400 0.85rem/1.4 var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .dockActions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
 }
 
-.dockActions form {
-  flex: 1 1 auto;
+/* The third ending, and the way out of it: a quiet outlined button across
+   the dock, so it reads as a choice and not as a link to somewhere else. */
+.quietAction {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--rule);
+  color: var(--pine);
+  font: 700 0.9rem var(--font-sans);
+  cursor: pointer;
+}
+
+.quietAction:hover {
+  background: var(--sage);
+}
+
+.quietAction:disabled {
+  opacity: 0.5;
+  cursor: progress;
 }
 
 .primary,
 .dangerAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
   width: 100%;
   min-height: 3.2rem;
   padding: 0.6rem 1rem;
@@ -374,7 +437,8 @@
   margin: 0;
   padding: 0.75rem 0.9rem;
   border-radius: var(--radius-control);
-  background: #e7f0dc;
+  background: var(--sage);
+  color: var(--pine);
   font-size: 0.85rem;
   line-height: 1.4;
 }
@@ -386,6 +450,12 @@
 
 .exampleNotice {
   background: #fff6db;
+}
+
+.dock .notice {
+  font: 400 0.85rem/1.4 var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .notice[data-state="conflict"],
@@ -422,52 +492,62 @@
  * they have to look the same; a shared stylesheet for four rules would couple
  * the proposal route's styling to the plan route's for the rest of its life.
  */
-.disclosure {
-  margin-top: 0.5rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-control);
+/* Edit and Lock as two small pills under the card's title. An open editor
+   takes the whole row, and Lock wraps under it. */
+.plannedActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.2rem;
 }
 
-.disclosure > summary {
-  min-height: 3rem;
-  display: flex;
+.disclosure {
+  min-width: 0;
+}
+
+.disclosure[open] {
+  flex-basis: 100%;
+}
+
+.disclosure > summary,
+.secondary {
+  min-height: 2.75rem;
+  display: inline-flex;
   align-items: center;
-  padding: 0 0.9rem;
-  border-radius: var(--radius-control);
+  margin: 0;
+  padding: 0 1.1rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--sage);
+  color: var(--pine);
+  font: 700 0.88rem var(--font-sans);
+  list-style: none;
   cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 700;
+}
+
+.disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure > summary:hover,
+.secondary:hover {
+  background: var(--fern);
+}
+
+.disclosure[open] > summary {
+  background: var(--fern);
 }
 
 .editorPanel {
   display: grid;
   gap: 0.8rem;
-  padding: 0 0.7rem 0.8rem;
+  padding: 0.6rem 0 0.2rem;
 }
 
 .editorPanel > .form {
-  padding-right: 0;
-  padding-left: 0;
-}
-
-.plannedActions {
-  display: grid;
-  gap: 0.5rem;
-  margin-top: 0.6rem;
-  padding-top: 0.6rem;
-  border-top: 1px solid var(--ledger-rule);
-}
-
-.secondary {
-  width: 100%;
-  min-height: 3rem;
-  padding: 0.6rem 1rem;
-  background: var(--line);
-  color: var(--ledger-ink);
-  border: 0;
-  border-radius: var(--radius-control);
-  font: 700 0.95rem var(--font-sans);
-  cursor: pointer;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 /*
@@ -511,9 +591,9 @@
   gap: 0.5rem;
   margin-top: 1.5rem;
   padding: 1.1rem;
-  border: 1px dashed var(--rule);
   border-radius: var(--radius-card);
-  background: var(--ledger-paper);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
 }
 
 .memoryPanel > h2 {
@@ -536,8 +616,8 @@
   margin: 1.5rem 0 0;
   padding: 0.75rem 0.9rem;
   border-radius: var(--radius-control);
-  box-shadow: inset 3px 0 0 var(--ledger-ink);
-  background: var(--ledger-paper);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
   font-size: 0.85rem;
   line-height: 1.45;
 }
@@ -548,9 +628,6 @@
 .regenerate {
   display: grid;
   gap: 0.5rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px dashed var(--ledger-rule);
 }
 
 /*
@@ -562,23 +639,28 @@
 .regenerate > h3 {
   margin: 0;
   color: var(--ledger-ink);
-  font-size: 0.95rem;
+  font-size: 1.05rem;
+  font-weight: 800;
   text-transform: none;
   letter-spacing: 0;
 }
 
 .regenerate > p {
   color: var(--ledger-muted);
-  font: 400 0.8rem/1.45 inherit;
+  font: 400 0.85rem/1.45 var(--font-sans);
   letter-spacing: 0;
   text-transform: none;
 }
 
-.regenerate label {
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ledger-muted);
+.dock .regenerate label {
+  color: var(--pine);
+  font: 700 0.9rem var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.regenerate .dockActions {
+  grid-template-columns: 1fr;
 }
 
 .regenerate textarea {
@@ -595,8 +677,8 @@
   margin: 1rem 0 0;
   padding: 0.75rem 0.9rem;
   border-radius: var(--radius-control);
-  box-shadow: inset 3px 0 0 var(--ledger-ink);
-  background: var(--ledger-paper);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
   font-size: 0.85rem;
   line-height: 1.45;
 }

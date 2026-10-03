@@ -117,9 +117,9 @@ describe("Roadmap", () => {
     // "Aim for by", never "Due": the wording is the product decision in
     // ROADMAP_COPY, so the test asserts that string rather than a copy of it.
     expect(
-      screen.getByText(`${ROADMAP_COPY.milestonePrefix} 2026-10-20`),
+      screen.getByText(`${ROADMAP_COPY.milestonePrefix} 20 Oct 2026`),
     ).toBeTruthy();
-    expect(screen.getByText("Review on 2026-10-25")).toBeTruthy();
+    expect(screen.getByText("Review on 25 Oct 2026")).toBeTruthy();
     // The goal is named from the goal read, not from the roadmap body.
     expect(screen.getByText(/primary · Finish a half marathon/)).toBeTruthy();
     expect(

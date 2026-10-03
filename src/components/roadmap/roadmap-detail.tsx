@@ -1,4 +1,5 @@
 import { RoadmapBody } from "./roadmap-body";
+import { formatRoadmapRange } from "./roadmap-dates";
 
 import {
   ROADMAP_COPY,
@@ -28,7 +29,7 @@ export function RoadmapDetail({
     <article data-roadmap-version={version.versionNumber}>
       <RoadmapBody
         content={roadmap}
-        meta={`${ROADMAP_COPY.versionLabel(version.versionNumber)} · ${roadmap.startDate} → ${roadmap.endDate}`}
+        meta={`${ROADMAP_COPY.versionLabel(version.versionNumber)} · ${formatRoadmapRange(roadmap.startDate, roadmap.endDate)}`}
         providerCode={version.providerCode}
         goalTitles={goalTitles}
       />

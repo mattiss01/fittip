@@ -22,6 +22,7 @@ import { INITIAL_PLAN_ACTION_STATE } from "../action-state";
 import { changePlanAction } from "../actions";
 import { SessionFields } from "../session-fields";
 
+import { CoachSpark } from "@/components/home/coach-spark";
 import { PLAN_PROPOSAL_COPY } from "@/lib/plan/plan-proposal-copy";
 import type {
   PlanProposalItemDecision,
@@ -235,11 +236,12 @@ export function ProposalReview({
               </button>
             </form>
             <button
-              className="text-button"
+              className={styles.quietAction}
               type="button"
               disabled={busy}
               onClick={() => setAskingAgain(true)}
             >
+              <CoachSpark size={16} />
               {COPY.regenerateOpen}
             </button>
           </div>
@@ -276,10 +278,11 @@ export function ProposalReview({
             <p className={styles.helper}>{COPY.regenerateHelper}</p>
             <div className={styles.dockActions}>
               <button className={styles.primary} type="submit" disabled={busy}>
+                <CoachSpark size={16} />
                 {COPY.regenerateSubmit}
               </button>
               <button
-                className="text-button"
+                className={styles.quietAction}
                 type="button"
                 disabled={busy}
                 onClick={() => setAskingAgain(false)}
@@ -501,6 +504,7 @@ function ProposedItem({
       <header className={styles.cardHeader}>
         <h3>{title}</h3>
         <span className={styles.badge} data-kind={item.decision}>
+          <CoachSpark size={13} />
           {item.decision === "staged"
             ? COPY.stagedBadge
             : item.decision === "rejected"

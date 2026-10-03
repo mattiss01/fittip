@@ -15,6 +15,7 @@ import {
 } from "@/app/home/plan/roadmap/action-state";
 import { generateRoadmapAction } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
+import { CoachSpark } from "@/components/home/coach-spark";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
 /**
@@ -216,6 +217,7 @@ export function RoadmapComposer({
             type="submit"
             disabled={pending}
           >
+            <CoachSpark size={16} />
             {isRegeneration
               ? ROADMAP_CONTROL_COPY.regenerateConfirm
               : ROADMAP_CONTROL_COPY.generateAction}

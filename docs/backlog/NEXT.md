@@ -94,31 +94,32 @@ lane, one screen per merge.
       version goes through a proposal and its acceptance as a coach one does (ADR-015)
       or is written directly, which decides whether it needs a migration. Careful lane
       if it does.
-- [ ] **R3 — The other screens, one per merge.** Today, the Plan, the session page,
-      Progress and You are done. For each one left: cut the explanatory intro to one line or
-      remove it, and say where an explanation must survive. In the order they can be started:
-  - [ ] **A proposal under review and a roadmap with phases are still in the old style.**
-        The Plan's sub-pages were restyled on 2 Oct 2026 from their empty and one-entry
-        states. Not done: in a review, the mono day stamps, badges and section labels,
-        the ink border on a taken day, the solid ink choice and the dock; a finished
-        proposal; on a roadmap, the spine, phase bands, attention chips, checkpoints,
-        section headings, the editor and the decision dock; and the memory link on both.
-  - [ ] **Log, as a sheet.** Blocked on the owner: one form as today, or "Logging in steps"
-        (`Later`). The form's activity editor is already rounded.
+- [ ] **Roadmap: what it holds, again.** Owner, 3 Oct 2026, as with goals: go through
+      the roadmap's data model together — phases, focus, goal attention, milestones,
+      review points, assumptions, uncertainties, versions and proposals — what each is
+      for, what the owner should be able to set, and how a roadmap screen shows it.
+      Belongs with "Write a roadmap yourself", which writes the same shape by hand. A
+      change to the stored shape is careful lane (`roadmap_versions` content, the AI
+      contract, ADR-015).
+- [ ] **A logged session cannot be edited, only its log.** Owner, 3 Oct 2026: a session
+      already logged today still shows Edit on its page; it should show Edit log, and
+      its plan should no longer be changeable from there.
+- [ ] **Outcomes all green.** Owner, 3 Oct 2026: "Partly completed" and "Replaced" go
+      green like completed and unplanned.
+- [ ] **A short "Logged for" date.** Owner, 3 Oct 2026: "Tue 29 Sep" on a record, so
+      the duration stays beside it at 390px.
+- [ ] **Logging in steps — a prototype first.** Owner, 3 Oct 2026: build a throwaway
+      prototype (`/prototype`) beside today's form to decide whether one question at a
+      time is better. "Log, as a sheet" waits on that answer.
+- [ ] **R3 — The other screens, one per merge.** Everything but these two is done:
+  - [ ] **Log, as a sheet.** Blocked on the logging prototype above. The form's activity
+        editor is already rounded.
   - [ ] **The shared state cards.** Loading, error and "confirm your time zone" on every
         route still use the old masthead card. You and Settings have no loading or error
         file of their own.
-- [ ] **Small things the owner has not answered**, each a yes or no:
-  - Session page: should Edit, Duplicate, Cancel and Delete open as bottom sheets like the
-    Plan's "+", rather than below the card?
-  - Activity editor: its input fields and the measurement line under a name are still in
-    the mono face; the count and hints moved to sans.
-  - Outcomes: completed and unplanned are green; "Partly completed" and "Replaced" are
-    still ember. Change either?
-  - The spark mark is on Plan with Coach, Fill with Coach and the suggestion box only, not
-    on the proposal or roadmap pages.
-  - A record's "Logged for" date is long, so at 390px the duration wraps under it; a short
-    date ("Tue 29 Sep") would keep them on one line.
+- [ ] **Activity editor in the mono face — not answered.** Its input fields and the
+      measurement line under a name are still in the mono face; the count and hints moved
+      to sans. The owner asked what the difference is (3 Oct 2026); recommended: sans.
 - [ ] **R4 — Motion.** Day-change slide (View Transitions), sheet and press feedback,
       instant log with background save; everything off under reduced motion.
 - Cost to expect: many unit and browser tests assert the current copy, so cutting text means
@@ -160,13 +161,6 @@ Not worth their own slot; do them when work lands nearby.
 - **Two links named "You" on the pages under You**, the back link and the navigation. A
   spec that clicks `{ name: "You", exact: true }` from one of them fails as ambiguous; the
   four that exist start from Today.
-- **White text on the orange buttons is short of AA contrast.** Paper on `--ember` is
-  3.7:1 against the 4.5:1 that m3-16a asserts for "Plan with Coach", which is why that one
-  button uses `--ember-dark` (6:1), as do "Ask the coach" and "Generate roadmap proposal".
-  Log this session, Edit, Edit log, Save session and, since 2 Oct 2026, the libraries'
-  "Add to plan", "Save entry" and "Save to library" use `--ember`; those three were white
-  on navy at 8.8:1 before. Owner's call: darken the orange everywhere, or keep it and
-  accept it.
 - **The same session can be saved to the library twice.** Owner, 29 Sep 2026: saving a
   session that is already in the library creates a second entry. Decide what "the same"
   means (same title, or same title and activities) and whether a repeat save should update
@@ -230,7 +224,8 @@ Not worth their own slot; do them when work lands nearby.
   question at a time (how it went, effort, how it felt, anything off) instead of one form.
   To think through: whether it is faster or slower for a routine log, how a correction or
   a skip fits, and where the pain, illness and fatigue question sits so it is never skipped
-  by accident. Would land with R3's "Log as a sheet" if wanted.
+  by accident. Would land with R3's "Log as a sheet" if wanted; a prototype comes first
+  (above, 3 Oct 2026).
 - **A goal bar on Today — undecided.** Owner, 29 Sep 2026: decide whether Today should show
   one at all. The prototype showed "3 weeks to 10k under 48 min" and "this week 40 min of
   4 h". Both would have to come from real records (`.claude/rules/ui.md`): which goal (the
