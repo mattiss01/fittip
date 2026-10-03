@@ -15,7 +15,6 @@ export type LogAnswers = {
   replaced?: (page: Page) => Promise<void>;
   minutes?: string;
   effort?: number;
-  feeling?: "Very good" | "Good" | "Neutral" | "Bad" | "Very bad";
   /** Works the activity list while it is shown. */
   activities?: (page: Page) => Promise<void>;
   /** The labels of the signals to report; none answers "Nothing was off". */
@@ -84,13 +83,6 @@ export async function logInSteps(
                 name: String(answers.effort),
                 exact: true,
               })
-        ).click();
-        break;
-      case "feeling":
-        await (
-          answers.feeling === undefined
-            ? shown.getByRole("button", { name: "Skip this question" })
-            : shown.getByRole("button", { name: answers.feeling, exact: true })
         ).click();
         break;
       case "activities":

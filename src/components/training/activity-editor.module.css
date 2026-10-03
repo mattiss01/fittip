@@ -126,7 +126,7 @@
 
 .summaryTarget {
   color: var(--ledger-muted);
-  font: 0.72rem/1.3 var(--font-mono);
+  font: 0.85rem/1.35 var(--font-sans);
   overflow-wrap: anywhere;
 }
 
@@ -172,10 +172,8 @@
 .editor label,
 .definition label {
   display: block;
-  color: var(--ledger-muted);
-  font: 500 0.62rem var(--font-mono);
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  color: var(--ledger-ink);
+  font: 700 0.85rem var(--font-sans);
 }
 
 .editor input,
@@ -192,7 +190,7 @@
   border-radius: 0.65rem;
   background: white;
   color: var(--ledger-ink);
-  font: 0.85rem var(--font-mono);
+  font: 1rem var(--font-sans);
 }
 
 .editor input:focus-visible,
@@ -340,9 +338,7 @@
 
 .groupHeadings span {
   color: var(--ledger-muted);
-  font: 500 0.6rem var(--font-mono);
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font: 700 0.8rem var(--font-sans);
 }
 
 .groupHandle {

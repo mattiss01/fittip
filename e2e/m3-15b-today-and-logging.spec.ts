@@ -185,9 +185,10 @@ test.describe("M3-15B today and logging", () => {
       await expect(page.locator("[data-log-source]")).toContainText(
         "Tempo run",
       );
-      // Logging in steps (owner, 3 Oct 2026): one question at a time.
+      // Logging in steps (owner, 3 Oct 2026): one question at a time, how it
+      // went first.
       await expect(
-        page.getByRole("heading", { name: "What did you do?" }),
+        page.getByRole("heading", { name: "How did it go?" }),
       ).toBeVisible();
       await logInSteps(
         page,
@@ -195,7 +196,6 @@ test.describe("M3-15B today and logging", () => {
           outcome: "Completed",
           minutes: "42",
           effort: 7,
-          feeling: "Good",
           signals: ["I felt pain"],
           note: "Held the pace to the last rep.",
         },
@@ -232,10 +232,10 @@ test.describe("M3-15B today and logging", () => {
         logged.getByText("Completed", { exact: true }),
       ).toBeVisible();
       await expect(logged.getByText("42 min")).toBeVisible();
-      // Recorded here so the later assertion that a skip removes all three is
-      // about something that was actually there.
+      // Recorded here so the later assertion that a skip removes both is
+      // about something that was actually there. "How did it feel?" is no
+      // longer asked (owner, 3 Oct 2026).
       await expect(logged.getByText("7 of 10")).toBeVisible();
-      await expect(logged.getByText("Good", { exact: true })).toBeVisible();
       await expect(logged.getByText(/You reported: Pain/)).toBeVisible();
       await expect(
         logged.getByRole("link", { name: "Log this session" }),
@@ -347,9 +347,8 @@ test.describe("M3-15B today and logging", () => {
       await todayCard(page, "Easy spin")
         .getByRole("link", { name: "Log this session" })
         .click();
-      await logStep(page, "what")
-        .getByRole("button", { name: "Next", exact: true })
-        .click();
+      // How it went is asked first (owner, 3 Oct 2026), so a skip is not
+      // asked what was done.
       await logStep(page, "outcome")
         .getByRole("button", { name: /^Skipped/ })
         .click();
@@ -362,7 +361,7 @@ test.describe("M3-15B today and logging", () => {
       ).toBeVisible();
       await expect(page.locator("#log-duration")).toHaveCount(0);
       await expect(logStep(page, "effort")).toHaveCount(0);
-      await expect(logStep(page, "feeling")).toHaveCount(0);
+      await expect(logStep(page, "what")).toBeHidden();
       await expect(page.locator("#log-note")).toHaveCount(1);
       for (const signal of [
         "I felt pain",
@@ -480,7 +479,7 @@ test.describe("M3-15B today and logging", () => {
         .click();
       await expect(page.locator("#log-duration")).toHaveCount(0);
       await expect(summary.locator("[data-log-clears]")).toContainText(
-        "removes the duration, the effort and how it felt",
+        "removes the duration and the effort",
       );
       await summary.getByRole("button", { name: "Save log" }).click();
       await expect(
@@ -491,10 +490,9 @@ test.describe("M3-15B today and logging", () => {
       await expect(
         corrected.getByText("Skipped", { exact: true }),
       ).toBeVisible();
-      // The three the form stopped asking for are gone from the record.
+      // The two the form stopped asking for are gone from the record.
       await expect(corrected.getByText("42 min")).toHaveCount(0);
       await expect(corrected.getByText("7 of 10")).toHaveCount(0);
-      await expect(corrected.getByText("Good", { exact: true })).toHaveCount(0);
       // The note and the reported signal are facts about the owner, not about
       // a session that happened, so they survive.
       await expect(
