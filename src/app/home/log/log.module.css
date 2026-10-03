@@ -360,9 +360,12 @@
   gap: 0.75rem;
 }
 
+/* The app-wide label rule is the ledger's stamped capitals; not here. */
 .form label {
   color: var(--pine);
   font: 700 0.9rem var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .form .stepperValue {
@@ -561,7 +564,7 @@
 .activityLine {
   margin: 0;
   color: var(--ledger-muted);
-  font: 0.74rem/1.4 var(--font-mono);
+  font: 0.85rem/1.4 var(--font-sans);
   overflow-wrap: anywhere;
 }
 
@@ -645,12 +648,18 @@
   color: var(--paper);
 }
 
-.secondary,
-.secondary:hover {
+/* Paper on the sage page, as the answers are: sage on sage disappeared. */
+.secondary {
   min-height: 2.75rem;
-  background: var(--sage);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
   color: var(--pine);
   font-size: 0.9rem;
+}
+
+.secondary:hover {
+  background: var(--sage);
+  color: var(--pine);
 }
 
 .primary:disabled {
@@ -786,13 +795,13 @@
 
 .pickName {
   color: var(--ledger-ink);
-  font: 500 0.82rem var(--font-mono);
+  font: 700 0.95rem var(--font-sans);
   overflow-wrap: anywhere;
 }
 
 .pickTarget {
   color: var(--ledger-muted);
-  font: 0.72rem/1.3 var(--font-mono);
+  font: 0.85rem/1.35 var(--font-sans);
   overflow-wrap: anywhere;
 }
 
@@ -817,4 +826,25 @@
   color: var(--pine);
   font: 700 0.9rem var(--font-sans);
   cursor: pointer;
+}
+
+/*
+ * Inside its step the activity list is the question's answer, not a framed
+ * section: the heading already asks it (owner, 3 Oct 2026: the empty list
+ * looked odd in its box).
+ */
+[data-log-step="activities"] > .activities {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+[data-log-step="activities"] > .activities > legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

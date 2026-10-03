@@ -176,36 +176,43 @@ describe("Log", () => {
     // On the planned day there is nothing to ask.
     expect(choice()).toBeNull();
 
-    // The day is a line on the first step; changing it brings in the date.
+    // The day is a line on the first question; its Change opens the date
+    // and returns to the question it was opened from.
+    expect(currentStep()).toBe("outcome");
     fireEvent.click(screen.getByRole("button", { name: /Change the date/ }));
+    expect(currentStep()).toBe("date");
     fireEvent.change(screen.getByLabelText("Date"), {
       target: { value: shiftIsoDate(today(), -1) },
     });
     expect(hiddenValue("actualLocalDate")).toBe(shiftIsoDate(today(), -1));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(currentStep()).toBe("outcome");
     chooseOutcome("Partly completed");
+    expect(currentStep()).toBe("what");
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(currentStep()).toBe("day");
     expect(choice()?.textContent).toMatch(/Instead of .+ session/);
     expect(choice()?.textContent).toMatch(/Extra .+ still do/);
     // Nothing is sent until the owner answers.
     expect(hiddenValue("dayChoice")).toBe(undefined);
 
-    // Extra can only have happened, so the outcome is no longer asked: from
-    // the next step, Back passes the day question and lands on the date.
-    fireEvent.click(
-      screen.getByRole("button", { name: /Extra/, hidden: true }),
-    );
+    // Extra can only have happened, so the outcome is no longer asked: Back
+    // from the next question passes the day question and stops at "what".
+    fireEvent.click(screen.getByRole("button", { name: /Extra/ }));
     expect(hiddenValue("dayChoice")).toBe("extra");
     expect(hiddenValue("status")).toBe("completed");
     expect(currentStep()).toBe("minutes");
     back();
     expect(currentStep()).toBe("day");
     back();
-    expect(currentStep()).toBe("date");
+    expect(currentStep()).toBe("what");
+    expect(screen.queryByRole("button", { name: /Back$/ })).toBeNull();
 
     // Choosing "instead" gives the question back.
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    expect(currentStep()).toBe("day");
     fireEvent.click(screen.getByRole("button", { name: /Instead of/ }));
     expect(hiddenValue("dayChoice")).toBe("instead");
+    back();
     back();
     back();
     expect(currentStep()).toBe("outcome");
@@ -797,7 +804,9 @@ describe("Log", () => {
     fireEvent.change(screen.getByLabelText("Date"), {
       target: { value: shiftIsoDate(today(), -1) },
     });
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
     chooseOutcome("Partly completed");
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.click(screen.getByRole("button", { name: /Extra/ }));
     expect(hiddenValue("status")).toBe("completed");
     back();

@@ -278,7 +278,7 @@ async function renderForm(
       <>
         <SourceCard
           label="Logging unplanned training"
-          title="Training that was not on the plan"
+          title="Unplanned training"
           meta={[longDay(date)]}
         />
         <LogForm

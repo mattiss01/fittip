@@ -95,7 +95,6 @@ test.describe("M3-15C progress", () => {
         outcome: "Completed",
         minutes: "42",
         effort: 7,
-        feeling: "Good",
         signals: ["I felt pain"],
         note: "Held the pace to the last rep.",
       });
@@ -131,7 +130,6 @@ test.describe("M3-15C progress", () => {
       await expect(planned.getByText("Running", { exact: true })).toBeVisible();
       await expect(planned.getByText("42 min")).toBeVisible();
       await expect(planned.getByText("7 of 10")).toBeVisible();
-      await expect(planned.getByText("Good", { exact: true })).toBeVisible();
       await expect(
         planned.getByText("Held the pace to the last rep."),
       ).toBeVisible();

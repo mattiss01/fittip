@@ -106,9 +106,12 @@ lane, one screen per merge.
       still accepts edit, move, lock and cancel on one (only delete is refused,
       `session-completed`); a page left open from before the log could still send them.
       Refusing them is a rule in the rolling-plan change function, so careful lane.
-- [ ] **Activity editor in the mono face — not answered.** Its input fields and the
-      measurement line under a name are still in the mono face; the count and hints moved
-      to sans. The owner asked what the difference is (3 Oct 2026); recommended: sans.
+- [ ] **A migration to remove a log's feeling.** Owner, 3 Oct 2026: "How did it feel?"
+      left the log's steps that day (effort says the same) and should go for good. Careful
+      lane. The column is `completions.feeling`, written by `apply_completion_change` and
+      read by the completion log, Today, Progress, saved-session copies, and the coach's
+      training history (`training-history-context.ts`, `contracts.ts`), so the AI context
+      changes too. Nothing is in production, so existing values need no keeping.
 - [ ] **R4 — Motion.** Day-change slide (View Transitions), sheet and press feedback,
       instant log with background save; everything off under reduced motion.
 - Cost to expect: many unit and browser tests assert the current copy, so cutting text means

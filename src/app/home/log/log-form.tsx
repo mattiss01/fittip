@@ -214,10 +214,12 @@ export function LogForm({
       : undefined;
   const [title, setTitle] = useState(existing?.title ?? planned?.title ?? "");
   const [sport, setSport] = useState(existing?.sport ?? planned?.sport ?? "");
+  // A new log starts at what the plan expected, or at 0 (owner, 3 Oct 2026);
+  // a correction at what was recorded.
   const [minutes, setMinutes] = useState<string>(
     String(
       existing === null
-        ? (planned?.expectedDurationMinutes ?? "")
+        ? (planned?.expectedDurationMinutes ?? 0)
         : (existing.durationMinutes ?? ""),
     ),
   );
@@ -238,8 +240,11 @@ export function LogForm({
   const [signalsAnswered, setSignalsAnswered] = useState(existing !== null);
 
   const [step, setStep] = useState<Step>(
-    existing === null ? "what" : "summary",
+    existing !== null ? "summary" : choices.length > 1 ? "outcome" : "what",
   );
+  // The date is asked only when the owner taps its Change, and returns to
+  // the question it was opened from.
+  const [dateReturn, setDateReturn] = useState<Step | null>(null);
   // Opened from the summary, a step returns there rather than walking on.
   const [fromSummary, setFromSummary] = useState(false);
 
@@ -319,17 +324,19 @@ export function LogForm({
       existing === null &&
       actualDate !== planned.localDate &&
       trained;
+    // How it went comes first (owner, 3 Oct 2026): a skip or a replacement
+    // is not asked what was done, and keeps the plan's name for the log.
+    // "How did it feel?" is no longer asked (owner, same day); a feeling an
+    // older log carries is kept, shown and correctable from its summary.
+    const happened = forOutcome !== "skipped" && forOutcome !== "replaced";
     return [
-      "what",
-      ...(dateOpen ? (["date"] as const) : []),
       ...(choices.length > 1 && !(whichDay && forDay === "extra")
         ? (["outcome"] as const)
         : []),
+      ...(happened ? (["what"] as const) : []),
       ...(forOutcome === "replaced" ? (["replaced"] as const) : []),
       ...(whichDay ? (["day"] as const) : []),
-      ...(forOutcome !== "skipped" && forOutcome !== "replaced"
-        ? (["minutes", "effort", "feeling"] as const)
-        : ([] as const)),
+      ...(happened ? (["minutes", "effort"] as const) : ([] as const)),
       ...(trained || forOutcome === "unplanned"
         ? (["activities"] as const)
         : []),
@@ -418,10 +425,6 @@ export function LogForm({
         <h2 ref={receiptHeading} tabIndex={-1}>
           {state.message}
         </h2>
-        <p className={styles.bodyCopy}>
-          Your training record is separate from your plan. Nothing on the plan
-          moved because of this.
-        </p>
         <Link
           className={styles.primary}
           href={
@@ -476,7 +479,18 @@ export function LogForm({
       setStep("summary");
       return;
     }
+    if (from === "date") {
+      setStep(dateReturn ?? list[0]);
+      setDateReturn(null);
+      return;
+    }
     setStep(list[list.indexOf(from) + 1] ?? "summary");
+  }
+
+  function openDate() {
+    setDateOpen(true);
+    if (!fromSummary) setDateReturn(step);
+    setStep("date");
   }
 
   function next() {
@@ -492,6 +506,11 @@ export function LogForm({
       setStep("summary");
       return;
     }
+    if (step === "date") {
+      setStep(dateReturn ?? steps[0]);
+      setDateReturn(null);
+      return;
+    }
     setStep(steps[Math.max(0, index - 1)]);
   }
 
@@ -501,7 +520,24 @@ export function LogForm({
   }
 
   const showBack =
-    step !== "summary" && (fromSummary || existing !== null || index > 0);
+    step !== "summary" &&
+    (fromSummary || existing !== null || index > 0 || step === "date");
+  // Off the ordered list: the summary, and the date detour.
+  const offList = step === "summary" || step === "date" || fromSummary;
+  /* The day the log is for, as one line on the first question. */
+  const dateLine = (
+    <p className={styles.dateLine} data-log-date-line>
+      For {dayLabel(actualDate)}
+      <button
+        className={styles.inlineChange}
+        type="button"
+        onClick={openDate}
+        aria-label={`Change the date, ${dayLabel(actualDate)}`}
+      >
+        Change
+      </button>
+    </p>
+  );
   const close = returnTo?.href ?? `/home/today?date=${returnDate}`;
 
   return (
@@ -572,15 +608,13 @@ export function LogForm({
           <span />
         )}
         <span className={styles.stepCount}>
-          {step === "summary" || fromSummary
-            ? ""
-            : `${index + 1} of ${steps.length}`}
+          {offList ? "" : `${index + 1} of ${steps.length}`}
         </span>
         <Link className={styles.stepClose} href={close}>
           Cancel
         </Link>
       </div>
-      {step === "summary" || fromSummary ? null : (
+      {offList ? null : (
         <div className={styles.progress} aria-hidden="true">
           {steps.map((name, position) => (
             <span key={name} data-on={position <= index} />
@@ -648,24 +682,7 @@ export function LogForm({
             onChange={(event) => setSport(event.target.value)}
           />
         </div>
-        <p className={styles.dateLine} data-log-date-line>
-          For {dayLabel(actualDate)}
-          {dateOpen ? null : (
-            <button
-              className={styles.inlineChange}
-              type="button"
-              onClick={() => {
-                // The picker opens now, as its own question; from a
-                // correction's summary it returns there like any answer.
-                setDateOpen(true);
-                setStep("date");
-              }}
-              aria-label={`Change the date, ${dayLabel(actualDate)}`}
-            >
-              Change
-            </button>
-          )}
-        </p>
+        {choices.length > 1 ? null : dateLine}
         <button className={styles.primary} type="button" onClick={next}>
           {fromSummary ? "Back to summary" : "Next"}
         </button>
@@ -701,6 +718,7 @@ export function LogForm({
       {/* ---- How did it go? ---- */}
       {choices.length > 1 ? (
         <section data-log-step="outcome" hidden={step !== "outcome"}>
+          {dateLine}
           <div
             className={styles.bigChoices}
             role="group"
@@ -1093,7 +1111,13 @@ export function LogForm({
       signals.has(signal.name),
     ).map((signal) => signal.label);
     return [
-      ["what", "What", [title, sport].filter(Boolean).join(" · ")],
+      ...(steps.includes("what")
+        ? ([["what", "What", [title, sport].filter(Boolean).join(" · ")]] as [
+            Step,
+            string,
+            string,
+          ][])
+        : []),
       ["date", "Date", dayLabel(actualDate)],
       ...(choices.length > 1 && !extraChosen
         ? ([["outcome", "How it went", COMPLETION_OUTCOME_LABELS[outcome]]] as [
@@ -1113,7 +1137,13 @@ export function LogForm({
         ? ([
             ["minutes", "Duration", minutes === "" ? "—" : `${minutes} min`],
             ["effort", "Effort", effort === null ? "—" : `${effort} of 10`],
-            ["feeling", "Felt", feelingLabel ?? "—"],
+            ...(feelingLabel === undefined
+              ? []
+              : ([["feeling", "Felt", feelingLabel]] as [
+                  Step,
+                  string,
+                  string,
+                ][])),
           ] as [Step, string, string][])
         : []),
       ...(activitiesHappened

@@ -9,12 +9,12 @@
   justify-self: stretch;
   min-height: 2.75rem;
   padding: 0.55rem 0.9rem;
-  border: 1px solid var(--ledger-ink);
-  background: var(--ledger-paper);
-  color: var(--ledger-ink);
-  font: 500 0.7rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  color: var(--pine);
+  font: 700 0.9rem var(--font-sans);
   cursor: pointer;
 }
 
@@ -22,8 +22,9 @@
   display: grid;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--ledger-ink);
-  background: var(--ledger-paper);
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
   list-style: none;
 }
 
@@ -45,7 +46,7 @@
 
 .name {
   color: var(--ledger-ink);
-  font: 500 0.82rem var(--font-mono);
+  font: 700 0.95rem var(--font-sans);
   overflow-wrap: anywhere;
 }
 
@@ -53,6 +54,6 @@
 .started {
   margin: 0;
   color: var(--ledger-muted);
-  font: 0.72rem/1.3 var(--font-mono);
+  font: 0.85rem/1.35 var(--font-sans);
   overflow-wrap: anywhere;
 }
