@@ -185,9 +185,10 @@ test.describe("M3-15B today and logging", () => {
       await expect(page.locator("[data-log-source]")).toContainText(
         "Tempo run",
       );
-      // Logging in steps (owner, 3 Oct 2026): one question at a time.
+      // Logging in steps (owner, 3 Oct 2026): one question at a time, how it
+      // went first.
       await expect(
-        page.getByRole("heading", { name: "What did you do?" }),
+        page.getByRole("heading", { name: "How did it go?" }),
       ).toBeVisible();
       await logInSteps(
         page,
