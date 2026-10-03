@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { SheetLayer } from "./plan-sheet";
+import { SheetCloseButton, SheetLayer } from "./plan-sheet";
 import { dayLabel, mondayOf } from "./plan-weeks";
 import { daysBetween } from "./series-recurrence";
 import w from "./plan-week.module.css";
@@ -91,9 +91,7 @@ export function MonthSheet({
     <SheetLayer view="month" labelledBy="plan-month-title" onClose={onClose}>
       <header className={w.sheetHead}>
         <span />
-        <button type="button" className={w.sheetClose} onClick={onClose}>
-          Close
-        </button>
+        <SheetCloseButton className={w.sheetClose}>Close</SheetCloseButton>
       </header>
       <div className={w.monthHead}>
         <MonthArrow

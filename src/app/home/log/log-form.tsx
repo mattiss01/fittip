@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { logCompletionAction } from "./actions";
 import {
@@ -144,6 +150,22 @@ type Step =
   | "off"
   | "note"
   | "summary";
+
+/** Every question in the order it can be asked, the summary last (R4). */
+const STEP_ORDER: Step[] = [
+  "outcome",
+  "date",
+  "what",
+  "replaced",
+  "day",
+  "minutes",
+  "effort",
+  "feeling",
+  "activities",
+  "off",
+  "note",
+  "summary",
+];
 
 const STEP_QUESTIONS: Record<Step, string> = {
   what: "What did you do?",
@@ -352,6 +374,17 @@ export function LogForm({
   useEffect(() => {
     if (saved) receiptHeading.current?.focus();
   }, [saved, state.submission]);
+  // R4 (owner, 3 Oct 2026): a question slides in from the right going on,
+  // from the left going back. Set before the frame is drawn, so the shown
+  // question starts with the right direction; reduced motion is the CSS's.
+  const lastOrder = useRef(STEP_ORDER.indexOf(step));
+  useLayoutEffect(() => {
+    const order = STEP_ORDER.indexOf(step);
+    if (order === lastOrder.current || formRef.current === null) return;
+    formRef.current.dataset.logDirection =
+      order > lastOrder.current ? "forward" : "back";
+    lastOrder.current = order;
+  }, [step]);
   useEffect(() => {
     if (shownStep.current === step) return;
     shownStep.current = step;
@@ -631,7 +664,12 @@ export function LogForm({
         {state.message}
       </p>
 
-      <h2 className={styles.question} ref={stepHeading} tabIndex={-1}>
+      <h2
+        key={step}
+        className={styles.question}
+        ref={stepHeading}
+        tabIndex={-1}
+      >
         {STEP_QUESTIONS[step]}
       </h2>
 

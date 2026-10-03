@@ -29,6 +29,12 @@
   margin-top: 1rem;
 }
 
+/* What slides when the day changes (R4): the same rhythm as the day. */
+.dayBody {
+  display: grid;
+  gap: 1rem;
+}
+
 /* ---- Week strip ---- */
 
 .strip {

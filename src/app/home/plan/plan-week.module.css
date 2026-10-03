@@ -597,6 +597,39 @@ span.arrow {
   }
 }
 
+/* Leaving (R4): the sheet slides back down and the scrim fades with it. */
+.sheetLayer[data-closing] .sheet {
+  animation: sheet-out 180ms ease-in forwards;
+}
+
+.sheetLayer[data-closing] .scrim {
+  animation: scrim-out 180ms ease-in forwards;
+}
+
+@keyframes sheet-out {
+  to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+.sheetLayer[data-placement="center"][data-closing] .sheet {
+  animation-name: card-out;
+}
+
+@keyframes card-out {
+  to {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+}
+
+@keyframes scrim-out {
+  to {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sheet {
     animation: none;
