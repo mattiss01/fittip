@@ -667,7 +667,7 @@ export function LogForm({
           )}
         </p>
         <button className={styles.primary} type="button" onClick={next}>
-          {fromSummary ? "Done" : "Next"}
+          {fromSummary ? "Back to summary" : "Next"}
         </button>
       </section>
 
@@ -693,7 +693,7 @@ export function LogForm({
             </span>
           </div>
           <button className={styles.primary} type="button" onClick={next}>
-            {fromSummary ? "Done" : "Next"}
+            {fromSummary ? "Back to summary" : "Next"}
           </button>
         </section>
       ) : null}
@@ -759,7 +759,7 @@ export function LogForm({
             updateInLibrary={updateActivityInLibrary}
           />
           <button className={styles.primary} type="button" onClick={next}>
-            {fromSummary ? "Done" : "Next"}
+            {fromSummary ? "Back to summary" : "Next"}
           </button>
         </section>
       ) : null}
@@ -859,7 +859,7 @@ export function LogForm({
             </button>
           </div>
           <button className={styles.primary} type="button" onClick={next}>
-            {fromSummary ? "Done" : "Next"}
+            {fromSummary ? "Back to summary" : "Next"}
           </button>
         </section>
       ) : null}
@@ -961,7 +961,7 @@ export function LogForm({
         />
         {activitiesHappened ? <SaveFormToLibrary formRef={formRef} /> : null}
         <button className={styles.primary} type="button" onClick={next}>
-          {fromSummary ? "Done" : "Next"}
+          {fromSummary ? "Back to summary" : "Next"}
         </button>
       </section>
 
@@ -1008,7 +1008,7 @@ export function LogForm({
                 advance();
               }}
             >
-              {fromSummary ? "Done" : "Next"}
+              {fromSummary ? "Back to summary" : "Next"}
             </button>
           </>
         ) : (
@@ -1039,7 +1039,7 @@ export function LogForm({
           />
         </div>
         <button className={styles.primary} type="button" onClick={next}>
-          {fromSummary ? "Done" : "Next"}
+          {fromSummary ? "Back to summary" : "Next"}
         </button>
       </section>
 

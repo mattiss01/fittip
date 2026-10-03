@@ -218,7 +218,9 @@ test.describe("M3-15B today and logging", () => {
         fullPage: true,
         path: path.join(evidenceDirectory, "M3-15B-log-form-390x844.png"),
       });
-      await logStep(page, "off").getByRole("button", { name: "Done" }).click();
+      await logStep(page, "off")
+        .getByRole("button", { name: "Back to summary" })
+        .click();
       await answers.getByRole("button", { name: "Save log" }).click();
       await expect(
         page.getByRole("heading", { name: "Log saved." }),
@@ -279,7 +281,7 @@ test.describe("M3-15B today and logging", () => {
         .selectOption("duration_intensity");
       await serves().getByLabel("Minutes").fill("20");
       await logStep(page, "activities")
-        .getByRole("button", { name: "Done" })
+        .getByRole("button", { name: "Back to summary" })
         .click();
       await logStep(page, "summary")
         .getByRole("button", { name: "Save log" })
@@ -443,7 +445,9 @@ test.describe("M3-15B today and logging", () => {
       // permanent. Correcting it is an ordinary edit.
       await title.fill("Sunrise lake swim");
       await sport.fill("Open water");
-      await logStep(page, "what").getByRole("button", { name: "Done" }).click();
+      await logStep(page, "what")
+        .getByRole("button", { name: "Back to summary" })
+        .click();
       await logStep(page, "summary")
         .getByRole("button", { name: "Save log" })
         .click();
