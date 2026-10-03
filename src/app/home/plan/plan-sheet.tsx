@@ -84,6 +84,7 @@ export function SheetLayer({
   const requestClose = useCallback(() => {
     if (
       typeof window === "undefined" ||
+      typeof window.matchMedia !== "function" ||
       window.matchMedia("(prefers-reduced-motion: reduce)").matches
     ) {
       close.current();

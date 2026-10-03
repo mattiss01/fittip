@@ -220,7 +220,9 @@ describe("Log", () => {
     // A skip is about the planned session whatever day it is written on.
     chooseOutcome("Skipped");
     expect(choice()).toBeNull();
-  });
+    // The longest walk in this file: it taps through most steps and back, and
+    // under a parallel full run it outlasted the 5 s default.
+  }, 15_000);
 
   it("offers skip as one outcome among the four a planned session may have", async () => {
     render(

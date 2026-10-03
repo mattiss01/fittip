@@ -113,8 +113,6 @@ lane, one screen per merge.
       replacement's `replacement.feeling` (no longer asked either), and the coach's
       training history (`training-history-context.ts`, `contracts.ts`), so the AI context
       changes too. Nothing is in production, so existing values need no keeping.
-- [ ] **R4 — Motion.** Day-change slide (View Transitions), sheet and press feedback,
-      instant log with background save; everything off under reduced motion.
 - Cost to expect: many unit and browser tests assert the current copy, so cutting text means
       rewriting those assertions in the same merge.
 
