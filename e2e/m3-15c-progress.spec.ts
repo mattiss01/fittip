@@ -184,46 +184,26 @@ test.describe("M3-15C progress", () => {
         path: path.join(evidenceDirectory, "M3-15C-one-session-390x844.png"),
       });
 
-      // ---- Editing the plan afterwards does not touch the copy. ----
+      // ---- A logged session is settled: its plan is not edited any more. ----
+      // Owner, 3 Oct 2026. That a plan edit could never reach this copy
+      // anyway is pgTAP m3_15a's ("leaves the stored snapshot byte-identical").
       await page.goto("/home/plan");
-      // Plan verbs live on the session's own page since 29 Sep 2026.
       await (await planCard(page, today, "Tempo run"))
         .getByRole("link", { name: "Tempo run", exact: true })
         .click();
-      await page.getByRole("button", { name: "Edit", exact: true }).click();
-      const edit = page.locator('[data-session-panel="Edit session"]');
-      await edit
-        .getByLabel("Title", { exact: true })
-        .fill("Renamed after the fact");
-      await edit.getByRole("button", { name: "Save session" }).click();
       await expect(
-        page.getByRole("heading", {
-          level: 1,
-          name: "Renamed after the fact",
-        }),
+        page
+          .locator("[data-session-actions]")
+          .getByRole("link", { name: "Edit log" }),
       ).toBeVisible();
-      await page.locator("[data-back-link]").click();
       await expect(
-        (await planDay(page, today)).getByRole("heading", {
-          name: "Renamed after the fact",
-          exact: true,
-        }),
-      ).toBeVisible();
+        page.getByRole("button", { name: "Edit", exact: true }),
+      ).toHaveCount(0);
 
       await page.goto(recordUrl);
-      // The whole of F-005 Review history step 4: the snapshot is the
-      // completion's own stored copy, so the plan's new title cannot reach it.
       await expect(
         carbon.getByRole("heading", { name: "Tempo run" }),
       ).toBeVisible();
-      await expect(page.getByText("Renamed after the fact")).toHaveCount(0);
-      await page.screenshot({
-        fullPage: true,
-        path: path.join(
-          evidenceDirectory,
-          "M3-15C-snapshot-unmoved-390x844.png",
-        ),
-      });
 
       // ---- Paging months, and a month with nothing logged in it. ----
       // The record's way back is its month's name, at the top of the page.
