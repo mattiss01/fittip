@@ -61,6 +61,41 @@
   display: none;
 }
 
+/*
+ * R4: the question shown slides in from the side it comes from, and its
+ * heading with it. Shown means display returns, which restarts the animation.
+ */
+.form[data-log-direction="forward"] > section:not([hidden]),
+.form[data-log-direction="forward"] > .question {
+  animation: step-forward 220ms var(--ease-out);
+}
+
+.form[data-log-direction="back"] > section:not([hidden]),
+.form[data-log-direction="back"] > .question {
+  animation: step-back 220ms var(--ease-out);
+}
+
+@keyframes step-forward {
+  from {
+    opacity: 0;
+    translate: 32px;
+  }
+}
+
+@keyframes step-back {
+  from {
+    opacity: 0;
+    translate: -32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .form > section,
+  .form > .question {
+    animation: none !important;
+  }
+}
+
 .stepBar {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -803,29 +838,6 @@
   color: var(--ledger-muted);
   font: 0.85rem/1.35 var(--font-sans);
   overflow-wrap: anywhere;
-}
-
-/* Save session to library, folded until asked for: most logs are not saved. */
-.saveSession {
-  display: grid;
-  gap: 0.6rem;
-  padding: 0 0.9rem;
-  border-radius: var(--radius-control);
-  background: var(--paper);
-  box-shadow: var(--shadow-card);
-}
-
-.saveSession[open] {
-  padding-bottom: 0.75rem;
-}
-
-.saveSession > summary {
-  min-height: 2.75rem;
-  display: flex;
-  align-items: center;
-  color: var(--pine);
-  font: 700 0.9rem var(--font-sans);
-  cursor: pointer;
 }
 
 /*

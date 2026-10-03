@@ -220,7 +220,9 @@ describe("Log", () => {
     // A skip is about the planned session whatever day it is written on.
     chooseOutcome("Skipped");
     expect(choice()).toBeNull();
-  });
+    // The longest walk in this file: it taps through most steps and back, and
+    // under a parallel full run it outlasted the 5 s default.
+  }, 15_000);
 
   it("offers skip as one outcome among the four a planned session may have", async () => {
     render(
@@ -825,6 +827,25 @@ describe("Log", () => {
     expect(hiddenValue("durationMinutes")).toBe("");
     fireEvent.change(minutes as HTMLInputElement, { target: { value: "30" } });
     expect(hiddenValue("durationMinutes")).toBe("30");
+  });
+
+  it("slides a question in from the side it comes from", async () => {
+    render(
+      await LogPage({
+        searchParams: Promise.resolve({
+          plannedSession: SESSION_ID,
+          date: today(),
+        }),
+      }),
+    );
+    const form = () =>
+      document.querySelector<HTMLFormElement>("[data-log-form]")?.dataset
+        .logDirection;
+
+    chooseOutcome("Completed");
+    expect(form()).toBe("forward");
+    back();
+    expect(form()).toBe("back");
   });
 
   it("replaces the form with a receipt that leads back to the day", async () => {

@@ -1,6 +1,7 @@
 import {
   cleanup,
   fireEvent,
+  waitFor,
   render,
   screen,
   within,
@@ -340,7 +341,7 @@ describe("PlanManager", () => {
     ).toBeVisible();
   });
 
-  it("offers a new session, the library, and the recovery label from a day's +", () => {
+  it("offers a new session, the library, and the recovery label from a day's +", async () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [], {
       savedSessions: [
         {
@@ -375,7 +376,8 @@ describe("PlanManager", () => {
     ).toHaveValue(DATES[3]);
 
     fireEvent.keyDown(document, { key: "Escape" });
-    expect(screen.queryByRole("dialog")).toBeNull();
+    // The sheet slides away before it is gone (R4).
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("keeps the sheet over a refused recovery label and closes it on a saved one", () => {

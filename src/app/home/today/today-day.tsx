@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { DayStrip } from "./day-strip";
 import styles from "./today.module.css";
 
 import {
@@ -16,6 +17,8 @@ import {
   ActivityList,
   type ActivityListItem,
 } from "@/components/training/activity-list";
+import { Slide, slideTowards } from "@/components/motion/slide";
+
 import { OutcomeMark } from "@/components/training/outcome-mark";
 import { shiftIsoDate } from "@/lib/date/local-date";
 
@@ -104,11 +107,6 @@ const HEADING_DAY = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-const WEEKDAY = new Intl.DateTimeFormat("en-GB", {
-  weekday: "short",
-  timeZone: "UTC",
-});
-
 const SHORT_DAY = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
   day: "numeric",
@@ -138,31 +136,13 @@ export function TodayDay({
       data-recovery={isRecoveryDay}
       aria-labelledby="today-day-heading"
     >
-      <nav className={styles.strip} aria-label="Week">
-        {stripDates(date).map((stripDate) => (
-          <Link
-            key={stripDate}
-            className={styles.stripDay}
-            href={dayHref(stripDate)}
-            aria-current={stripDate === date ? "date" : undefined}
-            aria-label={shortDay(stripDate)}
-            data-today={stripDate === today}
-          >
-            <span className={styles.stripWeekday} aria-hidden="true">
-              {WEEKDAY.format(asDate(stripDate))}
-            </span>
-            <span className={styles.stripNumber} aria-hidden="true">
-              {Number(stripDate.slice(8, 10))}
-            </span>
-            <span className={styles.stripDot} aria-hidden="true" />
-          </Link>
-        ))}
-      </nav>
+      <DayStrip dates={stripDates(date, today)} shown={date} today={today} />
 
       <header className={styles.dayHead}>
         <Link
           className={styles.step}
           href={dayHref(previousDate)}
+          transitionTypes={["slide-back"]}
           rel="prev"
           aria-label={`Previous day, ${shortDay(previousDate)}`}
         >
@@ -177,6 +157,7 @@ export function TodayDay({
         <Link
           className={styles.step}
           href={dayHref(nextDate)}
+          transitionTypes={["slide-forward"]}
           rel="next"
           aria-label={`Next day, ${shortDay(nextDate)}`}
         >
@@ -184,7 +165,11 @@ export function TodayDay({
         </Link>
       </header>
       {date === today ? null : (
-        <Link className={styles.returnLink} href="/home/today">
+        <Link
+          className={styles.returnLink}
+          href="/home/today"
+          transitionTypes={slideTowards(date, today)}
+        >
           Back to today
         </Link>
       )}
@@ -207,75 +192,84 @@ export function TodayDay({
         </p>
       ) : null}
 
-      {sessions.length > 0 ? (
-        <ol className={styles.sessions}>
-          {sessions.map((session) => (
-            <SessionCard key={session.id} date={date} session={session} />
-          ))}
-        </ol>
-      ) : toppedUp && !beyondWindow ? (
-        // "Nothing planned" is a claim about the plan, and it is only true
-        // when the window this day belongs to was actually filled. When the
-        // top-up could not run, or the day is past the horizon FitTip fills
-        // ahead, the notice above is the whole answer and this sentence would
-        // contradict it.
-        <p className={styles.empty} data-today-empty="sessions">
-          {past
-            ? "Nothing was planned on this day."
-            : "Nothing is planned on this day."}
-        </p>
-      ) : null}
+      {/* R4 (owner, 3 Oct 2026): a day's content slides in from the side
+          the day lies on. The strip and the day's own header stay put. */}
+      <Slide key={date}>
+        <div className={styles.dayBody}>
+          {sessions.length > 0 ? (
+            <ol className={styles.sessions}>
+              {sessions.map((session) => (
+                <SessionCard key={session.id} date={date} session={session} />
+              ))}
+            </ol>
+          ) : toppedUp && !beyondWindow ? (
+            // "Nothing planned" is a claim about the plan, and it is only true
+            // when the window this day belongs to was actually filled. When the
+            // top-up could not run, or the day is past the horizon FitTip fills
+            // ahead, the notice above is the whole answer and this sentence would
+            // contradict it.
+            <p className={styles.empty} data-today-empty="sessions">
+              {past
+                ? "Nothing was planned on this day."
+                : "Nothing is planned on this day."}
+            </p>
+          ) : null}
 
-      {unattached.length === 0 ? null : (
-        <section className={styles.unplanned} aria-labelledby="today-unplanned">
-          <h3 id="today-unplanned" className={styles.sectionLabel}>
-            Also logged
-          </h3>
-          <ol className={styles.sessions}>
-            {unattached.map((completion) => (
-              <li
-                key={completion.id}
-                className={styles.receipt}
-                data-today-completion={completion.id}
-              >
-                <div className={styles.receiptHead}>
-                  <OutcomeMark outcome={completion.outcome} />
-                  <h4>{completion.title ?? "Unplanned training"}</h4>
-                  <span
-                    className={styles.stamp}
-                    data-outcome={completion.outcome}
+          {unattached.length === 0 ? null : (
+            <section
+              className={styles.unplanned}
+              aria-labelledby="today-unplanned"
+            >
+              <h3 id="today-unplanned" className={styles.sectionLabel}>
+                Also logged
+              </h3>
+              <ol className={styles.sessions}>
+                {unattached.map((completion) => (
+                  <li
+                    key={completion.id}
+                    className={styles.receipt}
+                    data-today-completion={completion.id}
                   >
-                    {COMPLETION_OUTCOME_LABELS[completion.outcome]}
-                  </span>
-                </div>
-                {completion.sport === null &&
-                completion.plannedLocalDate === null ? null : (
-                  <div className={styles.marks}>
-                    {completion.sport === null ? null : (
-                      <span>{completion.sport}</span>
-                    )}
-                    {completion.plannedLocalDate === null ? null : (
-                      <span>
-                        Planned for {longDay(completion.plannedLocalDate)}
+                    <div className={styles.receiptHead}>
+                      <OutcomeMark outcome={completion.outcome} />
+                      <h4>{completion.title ?? "Unplanned training"}</h4>
+                      <span
+                        className={styles.stamp}
+                        data-outcome={completion.outcome}
+                      >
+                        {COMPLETION_OUTCOME_LABELS[completion.outcome]}
                       </span>
+                    </div>
+                    {completion.sport === null &&
+                    completion.plannedLocalDate === null ? null : (
+                      <div className={styles.marks}>
+                        {completion.sport === null ? null : (
+                          <span>{completion.sport}</span>
+                        )}
+                        {completion.plannedLocalDate === null ? null : (
+                          <span>
+                            Planned for {longDay(completion.plannedLocalDate)}
+                          </span>
+                        )}
+                      </div>
                     )}
-                  </div>
-                )}
-                <CompletionFacts completion={completion} date={date} />
-                <div className={styles.receiptActions}>
-                  <Link
-                    className={styles.textAction}
-                    href={`/home/log?completion=${completion.id}`}
-                  >
-                    Edit log
-                  </Link>
-                  <SaveLoggedSession completion={completion} />
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+                    <CompletionFacts completion={completion} date={date} />
+                    <div className={styles.receiptActions}>
+                      <Link
+                        className={styles.textAction}
+                        href={`/home/log?completion=${completion.id}`}
+                      >
+                        Edit log
+                      </Link>
+                      <SaveLoggedSession completion={completion} />
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+        </div>
+      </Slide>
 
       <Link className={styles.addAction} href={`/home/log?date=${date}`}>
         <span aria-hidden="true">+</span>
@@ -468,8 +462,19 @@ function CompletionFacts({
 }
 
 /** A week around the day on screen, which sits in the middle of it. */
-function stripDates(date: string) {
-  return [-3, -2, -1, 0, 1, 2, 3].map((offset) => shiftIsoDate(date, offset));
+/**
+ * The days the strip offers: thirteen weeks either side of today, as far as
+ * the Plan reaches, and wider when the day on screen lies outside them.
+ */
+function stripDates(date: string, today: string) {
+  const reach = 91;
+  const first = [shiftIsoDate(today, -reach), date].sort()[0];
+  const last = [shiftIsoDate(today, reach), date].sort()[1];
+  const dates: string[] = [];
+  for (let day = first; day <= last; day = shiftIsoDate(day, 1)) {
+    dates.push(day);
+  }
+  return dates;
 }
 
 function dayHref(date: string) {

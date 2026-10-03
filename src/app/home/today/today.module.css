@@ -29,15 +29,41 @@
   margin-top: 1rem;
 }
 
+/* What slides when the day changes (R4): the same rhythm as the day. */
+.dayBody {
+  display: grid;
+  gap: 1rem;
+}
+
+/* A day with nothing to show must not leave a gap where its content goes. */
+.dayBody:empty {
+  display: none;
+}
+
 /* ---- Week strip ---- */
 
+/* Swiped sideways like the Plan's week tiles (owner, 3 Oct 2026): seven
+   days across, snapping to whole days, reaching to the page's edges. */
 .strip {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.3rem;
+  --strip-gap: 0.3rem;
+  display: flex;
+  gap: var(--strip-gap);
+  margin: 0 -1rem;
+  padding: 0 1rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 1rem;
+  scrollbar-width: none;
+}
+
+.strip::-webkit-scrollbar {
+  display: none;
 }
 
 .stripDay {
+  flex: none;
+  width: calc((100% - 6 * var(--strip-gap)) / 7);
+  scroll-snap-align: start;
   min-height: 4.4rem;
   display: grid;
   justify-items: center;

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  startTransition,
   useActionState,
   useCallback,
   useEffect,
@@ -18,7 +19,8 @@ import { changePlanAction } from "./actions";
 import { COMPLETION_OUTCOME_LABELS } from "../log/log-action-state";
 import { CreateSession, SkippedDates } from "./create-session";
 import { MonthSheet } from "./plan-month-sheet";
-import { SheetLayer } from "./plan-sheet";
+import { markSlide, Slide } from "@/components/motion/slide";
+import { SheetCloseButton, SheetLayer } from "./plan-sheet";
 import styles from "./plan.module.css";
 import w from "./plan-week.module.css";
 import {
@@ -185,6 +187,19 @@ export function PlanManager({
   );
   const week = weeks[Math.min(weekIndex, weeks.length - 1)];
   const weekOffset = weekIndex - thisWeekIndex;
+  // R4 (owner, 3 Oct 2026): the week's days slide in from the side they come
+  // from. The change is a transition tagged with its direction, which the
+  // <ViewTransition> round the days reads; reduced motion is the CSS's.
+  const goToWeek = useCallback(
+    (index: number) => {
+      if (index === weekIndex) return;
+      startTransition(() => {
+        markSlide(index > weekIndex ? "slide-forward" : "slide-back");
+        setWeekIndex(index);
+      });
+    },
+    [weekIndex],
+  );
   // Some forty weeks of tiles scroll sideways, so the one being shown is
   // brought into view: the strip otherwise opens on its oldest week with
   // nothing marked. Instant, so there is no motion to reduce.
@@ -282,7 +297,7 @@ export function PlanManager({
             label="Previous week"
             glyph="‹"
             target={weekIndex > 0 ? weekIndex - 1 : null}
-            onGo={setWeekIndex}
+            onGo={goToWeek}
           />
           <div className={w.weekTitle}>
             {/* The title is the way to the month calendar: the button's hit
@@ -319,25 +334,27 @@ export function PlanManager({
             label="Next week"
             glyph="›"
             target={weekIndex < weeks.length - 1 ? weekIndex + 1 : null}
-            onGo={setWeekIndex}
+            onGo={goToWeek}
           />
         </header>
-        <ol className={w.days}>
-          {week.days.map((day) => (
-            <PlanDay
-              key={day.date}
-              day={day}
-              today={today}
-              isRecoveryDay={labelled.has(day.date)}
-              sessions={onDate(day.date)}
-              tones={tones}
-              onAdd={() => {
-                setSheetSince(state.submission);
-                setSheet({ date: day.date, view: "menu" });
-              }}
-            />
-          ))}
-        </ol>
+        <Slide key={week.start}>
+          <ol className={w.days}>
+            {week.days.map((day) => (
+              <PlanDay
+                key={day.date}
+                day={day}
+                today={today}
+                isRecoveryDay={labelled.has(day.date)}
+                sessions={onDate(day.date)}
+                tones={tones}
+                onAdd={() => {
+                  setSheetSince(state.submission);
+                  setSheet({ date: day.date, view: "menu" });
+                }}
+              />
+            ))}
+          </ol>
+        </Slide>
       </section>
 
       <nav className={w.tiles} aria-label="Weeks" ref={tilesRef}>
@@ -351,7 +368,7 @@ export function PlanManager({
               plannedMinutes(candidate, sessions),
             )} planned`}
             data-week-start={candidate.start}
-            onClick={() => setWeekIndex(index)}
+            onClick={() => goToWeek(index)}
           >
             <span className={w.tileLabel}>
               {index === thisWeekIndex
@@ -384,9 +401,9 @@ export function PlanManager({
           lastDate={weeks[weeks.length - 1].end}
           shownWeekStart={week.start}
           sessionCounts={sessionCounts(sessions)}
+          // The sheet slides away on its own after a pick, then closes.
           onPick={(date) => {
-            setWeekIndex(weekIndexOf(weeks, date, thisWeekIndex));
-            setMonthOpen(false);
+            goToWeek(weekIndexOf(weeks, date, thisWeekIndex));
           }}
           onClose={() => setMonthOpen(false)}
         />
@@ -723,9 +740,7 @@ function DaySheet({
             ‹ Back
           </button>
         )}
-        <button type="button" className={w.sheetClose} onClick={onClose}>
-          Close
-        </button>
+        <SheetCloseButton className={w.sheetClose}>Close</SheetCloseButton>
       </header>
       <h2 id="plan-sheet-title" ref={titleRef} tabIndex={-1}>
         {sheet.view === "library"

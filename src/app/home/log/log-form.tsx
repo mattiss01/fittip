@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { logCompletionAction } from "./actions";
 import {
@@ -24,7 +30,6 @@ import {
 import styles from "./log.module.css";
 
 import homeStyles from "../home.module.css";
-import { saveSessionDraftToLibraryAction } from "../plan/saved/actions";
 import { SaveToLibrary } from "../plan/saved/save-to-library";
 import type {
   LibraryActivityOption,
@@ -144,6 +149,22 @@ type Step =
   | "off"
   | "note"
   | "summary";
+
+/** Every question in the order it can be asked, the summary last (R4). */
+const STEP_ORDER: Step[] = [
+  "outcome",
+  "date",
+  "what",
+  "replaced",
+  "day",
+  "minutes",
+  "effort",
+  "feeling",
+  "activities",
+  "off",
+  "note",
+  "summary",
+];
 
 const STEP_QUESTIONS: Record<Step, string> = {
   what: "What did you do?",
@@ -352,6 +373,17 @@ export function LogForm({
   useEffect(() => {
     if (saved) receiptHeading.current?.focus();
   }, [saved, state.submission]);
+  // R4 (owner, 3 Oct 2026): a question slides in from the right going on,
+  // from the left going back. Set before the frame is drawn, so the shown
+  // question starts with the right direction; reduced motion is the CSS's.
+  const lastOrder = useRef(STEP_ORDER.indexOf(step));
+  useLayoutEffect(() => {
+    const order = STEP_ORDER.indexOf(step);
+    if (order === lastOrder.current || formRef.current === null) return;
+    formRef.current.dataset.logDirection =
+      order > lastOrder.current ? "forward" : "back";
+    lastOrder.current = order;
+  }, [step]);
   useEffect(() => {
     if (shownStep.current === step) return;
     shownStep.current = step;
@@ -631,7 +663,12 @@ export function LogForm({
         {state.message}
       </p>
 
-      <h2 className={styles.question} ref={stepHeading} tabIndex={-1}>
+      <h2
+        key={step}
+        className={styles.question}
+        ref={stepHeading}
+        tabIndex={-1}
+      >
         {STEP_QUESTIONS[step]}
       </h2>
 
@@ -986,7 +1023,6 @@ export function LogForm({
           }
           inactive={!activitiesHappened}
         />
-        {activitiesHappened ? <SaveFormToLibrary formRef={formRef} /> : null}
         <button className={styles.primary} type="button" onClick={next}>
           {fromSummary ? "Back to summary" : "Next"}
         </button>
@@ -1384,87 +1420,5 @@ function ReplacedBy({
         </>
       )}
     </fieldset>
-  );
-}
-
-/**
- * "Save session to library" while logging, before or without writing the
- * log (owner, 27 Sep 2026). It reads the form as it stands - title, sport,
- * duration and the activity list - so what is saved is what is on screen.
- * What was done becomes the saved session's targets, and the duration its
- * expected minutes. The entry is called what the log is called.
- */
-function SaveFormToLibrary({
-  formRef,
-}: {
-  formRef: React.RefObject<HTMLFormElement | null>;
-}) {
-  const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-
-  async function save() {
-    const form = formRef.current;
-    if (form === null) return;
-    const values = new FormData(form);
-    const minutes = Number(values.get("durationMinutes"));
-    let activities: Record<string, unknown>[] = [];
-    try {
-      const raw = values.get("activities");
-      activities = typeof raw === "string" ? JSON.parse(raw) : [];
-    } catch {
-      activities = [];
-    }
-    setSaving(true);
-    try {
-      const title = String(values.get("title") ?? "").trim();
-      const result = await saveSessionDraftToLibraryAction({
-        name: title,
-        title,
-        sport: String(values.get("sport") ?? "").trim(),
-        ...(Number.isInteger(minutes) && minutes > 0
-          ? { expectedDurationMinutes: minutes }
-          : {}),
-        activities: activities.map((activity, position) => ({
-          ...(typeof activity.personalActivityId === "string"
-            ? { personalActivityId: activity.personalActivityId }
-            : {}),
-          position,
-          name: activity.name,
-          sport: activity.sport,
-          measurementMode: activity.measurementMode,
-          ...(activity.actualMeasurement == null
-            ? {}
-            : { target: activity.actualMeasurement }),
-        })),
-      });
-      setNotice(result.message);
-    } catch {
-      setNotice("It could not be saved. Try again.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <details className={styles.saveSession} data-log-save-session>
-      <summary>Save session to library</summary>
-      <p className={styles.fieldHint}>
-        A copy of this log as it stands goes to your saved sessions, with what
-        you did as its targets. The log itself is not saved by this.
-      </p>
-      <button
-        className={styles.secondary}
-        type="button"
-        disabled={saving}
-        onClick={save}
-      >
-        {saving ? "Saving\u2026" : "Save to library"}
-      </button>
-      {notice === null ? null : (
-        <p className={styles.fieldHint} role="status">
-          {notice}
-        </p>
-      )}
-    </details>
   );
 }

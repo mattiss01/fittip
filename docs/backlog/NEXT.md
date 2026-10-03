@@ -113,8 +113,6 @@ lane, one screen per merge.
       replacement's `replacement.feeling` (no longer asked either), and the coach's
       training history (`training-history-context.ts`, `contracts.ts`), so the AI context
       changes too. Nothing is in production, so existing values need no keeping.
-- [ ] **R4 — Motion.** Day-change slide (View Transitions), sheet and press feedback,
-      instant log with background save; everything off under reduced motion.
 - Cost to expect: many unit and browser tests assert the current copy, so cutting text means
       rewriting those assertions in the same merge.
 
@@ -123,6 +121,9 @@ lane, one screen per merge.
 
 Not worth their own slot; do them when work lands nearby.
 
+- **`saveSessionDraftToLibraryAction` has no caller.** The log's own "Save session to
+  library" left the activities step (owner, 3 Oct 2026); saving a log goes through the
+  receipt, Today and Progress. The action and its tests in `plan/saved` can go.
 - **A plain new browser spec has no way into CI.** `.github/scripts/browser-flows.sh` runs
   `auth` or a flow with its own `e2e/<flow>.playwright.config.ts`, and `.claude/rules/tests.md`
   says not to add such configs. A new spec under the root config would pass review and

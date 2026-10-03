@@ -1,9 +1,59 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 
 import w from "./plan-week.module.css";
+
+/** How long a sheet takes to leave; the CSS's sheet-out runs the same. */
+const CLOSE_MS = 180;
+
+/**
+ * Closes the sheet it is inside the way the scrim and Escape do: it slides
+ * away first (R4, owner, 3 Oct 2026), then the owner of the sheet is told.
+ */
+const SheetCloseContext = createContext<() => void>(() => {});
+
+export function useCloseSheet() {
+  return useContext(SheetCloseContext);
+}
+
+/**
+ * A button that ends the sheet it is in, leaving as the sheet does: its own
+ * Close, or a choice like a day in the month calendar, whose action runs
+ * first.
+ */
+export function SheetCloseButton({
+  onBeforeClose,
+  children,
+  ...button
+}: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "type"> & {
+  onBeforeClose?: () => void;
+  children: ReactNode;
+}) {
+  const close = useCloseSheet();
+  return (
+    <button
+      {...button}
+      type="button"
+      onClick={() => {
+        onBeforeClose?.();
+        close();
+      }}
+    >
+      {children}
+    </button>
+  );
+}
 
 /**
  * The Plan's bottom sheet, without its contents: a day's "+" and the month
@@ -41,6 +91,25 @@ export function SheetLayer({
     close.current = onClose;
   });
   const layerRef = useRef<HTMLDivElement>(null);
+  // Leaving: the sheet slides down, then its owner is told. Without motion,
+  // or if the animation never reports its end, it is told at once or soon.
+  const [closing, setClosing] = useState(false);
+  const requestClose = useCallback(() => {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function" ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      close.current();
+      return;
+    }
+    setClosing(true);
+  }, []);
+  useEffect(() => {
+    if (!closing) return;
+    const timer = window.setTimeout(() => close.current(), CLOSE_MS + 60);
+    return () => window.clearTimeout(timer);
+  }, [closing]);
   useEffect(() => {
     const layer = layerRef.current;
     const background = Array.from(document.body.children).filter(
@@ -51,7 +120,7 @@ export function SheetLayer({
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") close.current();
+      if (event.key === "Escape") requestClose();
     }
     document.addEventListener("keydown", onKey);
     return () => {
@@ -60,16 +129,21 @@ export function SheetLayer({
       document.body.style.overflow = overflow;
       if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
     };
-  }, [opener]);
+  }, [opener, requestClose]);
 
   return createPortal(
-    <div className={w.sheetLayer} ref={layerRef} data-placement={placement}>
+    <div
+      className={w.sheetLayer}
+      ref={layerRef}
+      data-placement={placement}
+      data-closing={closing || undefined}
+    >
       <button
         type="button"
         className={w.scrim}
         aria-label="Close"
         tabIndex={-1}
-        onClick={onClose}
+        onClick={requestClose}
       />
       <div
         className={w.sheet}
@@ -77,8 +151,15 @@ export function SheetLayer({
         aria-modal="true"
         aria-labelledby={labelledBy}
         data-plan-sheet={view}
+        onAnimationEnd={(event) => {
+          if (closing && event.target === event.currentTarget) {
+            close.current();
+          }
+        }}
       >
-        {children}
+        <SheetCloseContext.Provider value={requestClose}>
+          {children}
+        </SheetCloseContext.Provider>
       </div>
     </div>,
     document.body,
