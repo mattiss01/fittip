@@ -32,8 +32,8 @@ export async function currentLogStep(page: Page) {
 }
 
 /**
- * Answers every step from the one shown to the note, then saves unless told
- * to stop there. Returns on the note step when `save` is false.
+ * Answers every step from the one shown to the summary, then saves unless
+ * told to stop there. Returns on the summary when `save` is false.
  */
 export async function logInSteps(
   page: Page,
@@ -111,8 +111,13 @@ export async function logInSteps(
         if (answers.note !== undefined) {
           await shown.getByLabel(/^Note/).fill(answers.note);
         }
+        await next();
+        // A new log ends on its summary, one Change per answer.
+        await expect(form).toHaveAttribute("data-log-step-current", "summary");
         if (save) {
-          await shown.getByRole("button", { name: "Save log" }).click();
+          await logStep(page, "summary")
+            .getByRole("button", { name: "Save log" })
+            .click();
         }
         return;
       default:

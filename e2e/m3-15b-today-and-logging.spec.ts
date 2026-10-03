@@ -201,9 +201,14 @@ test.describe("M3-15B today and logging", () => {
         },
         { save: false },
       );
+      // A new log ends on its summary, every answer with its own Change.
+      const answers = logStep(page, "summary");
+      await expect(answers).toContainText("42 min");
+      await expect(answers).toContainText("7 of 10");
+      await expect(answers).toContainText("I felt pain");
       // The conservative signal handling CLAUDE.md requires, in the wording
       // M1-03 approved and M2-02 shipped, on the question it qualifies.
-      await page.getByRole("button", { name: "Back" }).click();
+      await changeLogAnswer(page, "Anything off");
       await expect(
         logStep(page, "off").getByText(
           /stop training and speak to a qualified/,
@@ -213,12 +218,8 @@ test.describe("M3-15B today and logging", () => {
         fullPage: true,
         path: path.join(evidenceDirectory, "M3-15B-log-form-390x844.png"),
       });
-      await logStep(page, "off")
-        .getByRole("button", { name: "Next", exact: true })
-        .click();
-      await logStep(page, "note")
-        .getByRole("button", { name: "Save log" })
-        .click();
+      await logStep(page, "off").getByRole("button", { name: "Done" }).click();
+      await answers.getByRole("button", { name: "Save log" }).click();
       await expect(
         page.getByRole("heading", { name: "Log saved." }),
       ).toBeVisible();

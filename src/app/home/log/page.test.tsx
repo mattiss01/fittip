@@ -741,6 +741,70 @@ describe("Log", () => {
     );
   });
 
+  // Review of logging in steps, 3 Oct 2026: a hidden invalid field makes a
+  // browser refuse the submit and say nothing, so it must never be hidden.
+  it("opens the question Save cannot pass rather than failing silently", async () => {
+    // A replaced log written before replacements were linked: its "what you
+    // did instead" is still to be named, and the correction opens on the
+    // summary, where that field is out of sight.
+    getCompletion.mockResolvedValue({
+      ...completion(),
+      planSessionId: SESSION_ID,
+      status: "replaced" as const,
+      durationMinutes: undefined,
+      replacementDescription: "Swam instead.",
+      plannedSnapshot: snapshot(),
+    });
+
+    render(
+      await LogPage({
+        searchParams: Promise.resolve({ completion: COMPLETION_ID }),
+      }),
+    );
+
+    expect(currentStep()).toBe("summary");
+    const save = screen.getByRole("button", { name: "Save log" });
+    expect(fireEvent.click(save)).toBe(false);
+    expect(currentStep()).toBe("replaced");
+  });
+
+  it("does not return to the summary with an answer that cannot be saved", async () => {
+    getCompletion.mockResolvedValue(completion());
+
+    render(
+      await LogPage({
+        searchParams: Promise.resolve({ completion: COMPLETION_ID }),
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Change what" }));
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: /Summary$/ }));
+    expect(currentStep()).toBe("what");
+  });
+
+  it("gives back the outcome Extra replaced when Instead is chosen", async () => {
+    render(
+      await LogPage({
+        searchParams: Promise.resolve({
+          plannedSession: SESSION_ID,
+          date: today(),
+        }),
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Change the date/ }));
+    fireEvent.change(screen.getByLabelText("Date"), {
+      target: { value: shiftIsoDate(today(), -1) },
+    });
+    chooseOutcome("Partly completed");
+    fireEvent.click(screen.getByRole("button", { name: /Extra/ }));
+    expect(hiddenValue("status")).toBe("completed");
+    back();
+    fireEvent.click(screen.getByRole("button", { name: /Instead of/ }));
+    expect(hiddenValue("status")).toBe("partially_completed");
+  });
+
   it("replaces the form with a receipt that leads back to the day", async () => {
     useActionStateMock.mockReturnValue([
       {

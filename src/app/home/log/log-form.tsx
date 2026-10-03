@@ -246,7 +246,19 @@ export function LogForm({
   const receiptHeading = useRef<HTMLHeadingElement>(null);
   const stepHeading = useRef<HTMLHeadingElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
-  const firstRender = useRef(true);
+  // The step whose heading last had focus, so focus moves only on a change
+  // of step, not on mount (nor on a development double effect).
+  const shownStep = useRef<Step>(step);
+  // A field Save found invalid, reported once its step is on screen.
+  const reportAfter = useRef<HTMLElement | null>(null);
+  // The outcome Extra replaced, given back if the owner picks Instead.
+  const outcomeBeforeExtra = useRef<CompletionOutcome | null>(null);
+  // Two answers live inside their own components; the summary reads them
+  // from the form once it has rendered, never during a render.
+  const [observed, setObserved] = useState(() => ({
+    activities: countPhrase(existing?.activities.length ?? 0),
+    replacement: "Not said yet",
+  }));
   const saved = state.status === "saved";
   const skipped = outcome === "skipped";
   const activitiesHappened =
@@ -292,19 +304,40 @@ export function LogForm({
             : []),
         ];
 
-  const steps: Step[] = [
-    "what",
-    ...(dateOpen ? (["date"] as const) : []),
-    ...(choices.length > 1 && !extraChosen ? (["outcome"] as const) : []),
-    ...(outcome === "replaced" ? (["replaced"] as const) : []),
-    ...(askWhichDay ? (["day"] as const) : []),
-    ...(asksNumbers
-      ? (["minutes", "effort", "feeling"] as const)
-      : ([] as const)),
-    ...(activitiesHappened ? (["activities"] as const) : []),
-    "off",
-    "note",
-  ];
+  /**
+   * The questions a log asks for a given outcome and day answer: the one
+   * rule, read both for the steps shown now and for what follows the moment
+   * an outcome is tapped, before the new outcome has rendered.
+   */
+  function stepsFor(
+    forOutcome: CompletionOutcome,
+    forDay: "instead" | "extra" | null,
+  ): Step[] {
+    const trained = TRAINED_OUTCOMES.has(forOutcome);
+    const whichDay =
+      planned !== null &&
+      existing === null &&
+      actualDate !== planned.localDate &&
+      trained;
+    return [
+      "what",
+      ...(dateOpen ? (["date"] as const) : []),
+      ...(choices.length > 1 && !(whichDay && forDay === "extra")
+        ? (["outcome"] as const)
+        : []),
+      ...(forOutcome === "replaced" ? (["replaced"] as const) : []),
+      ...(whichDay ? (["day"] as const) : []),
+      ...(forOutcome !== "skipped" && forOutcome !== "replaced"
+        ? (["minutes", "effort", "feeling"] as const)
+        : ([] as const)),
+      ...(trained || forOutcome === "unplanned"
+        ? (["activities"] as const)
+        : []),
+      "off",
+      "note",
+    ];
+  }
+  const steps = stepsFor(outcome, dayChoice);
   const index = steps.indexOf(step);
 
   // The receipt replaces the form, and each step replaces the last: focus
@@ -313,12 +346,45 @@ export function LogForm({
     if (saved) receiptHeading.current?.focus();
   }, [saved, state.submission]);
   useEffect(() => {
-    if (firstRender.current) {
-      firstRender.current = false;
-      return;
-    }
+    if (shownStep.current === step) return;
+    shownStep.current = step;
     stepHeading.current?.focus();
+    const invalid = reportAfter.current;
+    if (invalid !== null) {
+      reportAfter.current = null;
+      if ("reportValidity" in invalid) {
+        (invalid as HTMLInputElement).reportValidity();
+      }
+    }
   }, [step]);
+  useEffect(() => {
+    if (step !== "summary" || formRef.current === null) return;
+    const form = formRef.current;
+    const listed = form.querySelector<HTMLInputElement>(
+      'input[name="activities"]',
+    );
+    let count = existing?.activities.length ?? 0;
+    try {
+      const rows: unknown = JSON.parse(listed?.value ?? "");
+      if (Array.isArray(rows)) count = rows.length;
+    } catch {
+      // No list in the form: what the record held.
+    }
+    const picked = form.querySelector<HTMLSelectElement>(
+      'select[name="replacedByCompletionId"]',
+    );
+    const named = form.querySelector<HTMLInputElement>(
+      'input[name="replacement.title"]',
+    )?.value;
+    setObserved({
+      activities: countPhrase(count),
+      replacement: picked
+        ? (picked.selectedOptions[0]?.textContent ?? "Chosen")
+        : named
+          ? named
+          : "Not said yet",
+    });
+  }, [step, outcome, existing]);
 
   if (alreadyLogged !== null && !saved) {
     return (
@@ -377,17 +443,30 @@ export function LogForm({
     const section = formRef.current?.querySelector<HTMLElement>(
       `[data-log-step="${step}"]`,
     );
-    if (!section) return true;
-    for (const control of section.querySelectorAll<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >("input, select, textarea")) {
-      if (control.type === "hidden") continue;
-      if (!control.checkValidity()) {
-        control.reportValidity();
-        return false;
-      }
+    const invalid = section ? firstInvalid(section) : null;
+    invalid?.reportValidity();
+    return invalid === null;
+  }
+
+  /**
+   * Save from the summary checks every question first. A browser refuses to
+   * submit a form whose invalid field is hidden, and says nothing, so the
+   * question holding it is opened and the field reported there instead.
+   */
+  function checkBeforeSave(event: React.MouseEvent<HTMLButtonElement>) {
+    const invalid = formRef.current ? firstInvalid(formRef.current) : null;
+    if (invalid === null) return;
+    event.preventDefault();
+    const target = invalid
+      .closest("[data-log-step]")
+      ?.getAttribute("data-log-step") as Step | null;
+    if (target === null || target === "summary") {
+      invalid.reportValidity();
+      return;
     }
-    return true;
+    if (target === "date") setDateOpen(true);
+    reportAfter.current = invalid;
+    change(target);
   }
 
   /** On to the next question, or back to the summary it was opened from. */
@@ -405,6 +484,9 @@ export function LogForm({
   }
 
   function back() {
+    // Back to the summary is an answer too: it must hold, or Save would be
+    // refused with the field out of sight.
+    if (fromSummary && !stepIsValid()) return;
     if (fromSummary || step === "summary") {
       setFromSummary(false);
       setStep("summary");
@@ -421,7 +503,6 @@ export function LogForm({
   const showBack =
     step !== "summary" && (fromSummary || existing !== null || index > 0);
   const close = returnTo?.href ?? `/home/today?date=${returnDate}`;
-  const lastStep = step === "note" && existing === null && !fromSummary;
 
   return (
     <form
@@ -432,7 +513,7 @@ export function LogForm({
       data-log-step-current={step}
       onSubmit={(event) => {
         // Enter in a text field submits the form; mid-way it means "next".
-        if (step !== "summary" && !lastStep) {
+        if (step !== "summary") {
           event.preventDefault();
           next();
         }
@@ -573,7 +654,12 @@ export function LogForm({
             <button
               className={styles.inlineChange}
               type="button"
-              onClick={() => setDateOpen(true)}
+              onClick={() => {
+                // The picker opens now, as its own question; from a
+                // correction's summary it returns there like any answer.
+                setDateOpen(true);
+                setStep("date");
+              }}
               aria-label={`Change the date, ${dayLabel(actualDate)}`}
             >
               Change
@@ -630,8 +716,8 @@ export function LogForm({
                   const nextOutcome = choice.value;
                   setOutcome(nextOutcome);
                   setOutcomeChosen(true);
-                  // The list the next step is read from depends on the answer.
-                  const nextSteps = stepsAfterOutcome(nextOutcome);
+                  // The step after this one depends on the answer just given.
+                  const nextSteps = stepsFor(nextOutcome, dayChoice);
                   if (fromSummary) {
                     // A replacement needs its own answer before the summary.
                     if (nextOutcome === "replaced") {
@@ -642,7 +728,7 @@ export function LogForm({
                     }
                     return;
                   }
-                  setStep(nextSteps[0] ?? "off");
+                  setStep(nextSteps[nextSteps.indexOf("outcome") + 1] ?? "off");
                 }}
               >
                 <strong>{choice.label}</strong>
@@ -684,13 +770,22 @@ export function LogForm({
           <p className={styles.sub}>
             This session is planned for {planned.dayLabel}.
           </p>
-          <div className={styles.bigChoices} data-log-day-choice>
+          <div
+            className={styles.bigChoices}
+            data-log-day-choice
+            role="group"
+            aria-label="Instead, or extra"
+          >
             <button
               type="button"
               aria-pressed={dayChoice === "instead"}
               data-selected={dayChoice === "instead"}
               onClick={() => {
                 setDayChoice("instead");
+                if (outcomeBeforeExtra.current !== null) {
+                  setOutcome(outcomeBeforeExtra.current);
+                  outcomeBeforeExtra.current = null;
+                }
                 advance();
               }}
             >
@@ -703,7 +798,9 @@ export function LogForm({
               data-selected={dayChoice === "extra"}
               onClick={() => {
                 setDayChoice("extra");
-                // "Partly completed" means something only against a plan.
+                // "Partly completed" means something only against a plan;
+                // kept, in case the owner changes their mind.
+                outcomeBeforeExtra.current = outcome;
                 setOutcome("completed");
                 advance();
               }}
@@ -801,7 +898,9 @@ export function LogForm({
               advance();
             }}
           >
-            Skip this question
+            {fromSummary && effort !== null
+              ? "Remove this answer"
+              : "Skip this question"}
           </button>
         </section>
       ) : null}
@@ -837,7 +936,9 @@ export function LogForm({
               advance();
             }}
           >
-            Skip this question
+            {fromSummary && feeling !== ""
+              ? "Remove this answer"
+              : "Skip this question"}
           </button>
         </section>
       ) : null}
@@ -937,22 +1038,13 @@ export function LogForm({
             onChange={(event) => setNote(event.target.value)}
           />
         </div>
-        {lastStep ? (
-          <button
-            className={styles.primary}
-            type="submit"
-            disabled={pending || !signalsAnswered}
-          >
-            {pending ? "Saving…" : "Save log"}
-          </button>
-        ) : (
-          <button className={styles.primary} type="button" onClick={next}>
-            {fromSummary ? "Done" : "Next"}
-          </button>
-        )}
+        <button className={styles.primary} type="button" onClick={next}>
+          {fromSummary ? "Done" : "Next"}
+        </button>
       </section>
 
-      {/* ---- The summary: where a correction starts, one Change per answer. */}
+      {/* ---- The summary: where a new log ends and a correction starts,
+          one Change per answer (prototype B; owner, 3 Oct 2026). ---- */}
       {step === "summary" ? (
         <section data-log-step="summary">
           <dl className={styles.summary}>
@@ -984,6 +1076,7 @@ export function LogForm({
             className={styles.primary}
             type="submit"
             disabled={pending || !signalsAnswered}
+            onClick={checkBeforeSave}
           >
             {pending ? "Saving…" : "Save log"}
           </button>
@@ -991,59 +1084,6 @@ export function LogForm({
       ) : null}
     </form>
   );
-
-  /** The steps that follow an outcome, before "Anything off?". */
-  function stepsAfterOutcome(value: CompletionOutcome): Step[] {
-    const trained = TRAINED_OUTCOMES.has(value);
-    const whichDay =
-      planned !== null &&
-      existing === null &&
-      actualDate !== planned.localDate &&
-      trained;
-    return [
-      ...(value === "replaced" ? (["replaced"] as const) : []),
-      ...(whichDay ? (["day"] as const) : []),
-      ...(value !== "skipped" && value !== "replaced"
-        ? (["minutes", "effort", "feeling"] as const)
-        : ([] as const)),
-      ...(trained || value === "unplanned" ? (["activities"] as const) : []),
-    ];
-  }
-
-  /*
-   * The two answers held inside their own components, read from the form as
-   * it stands. The summary is drawn after the form is mounted, and drawn again
-   * each time a step returns to it, so it shows what would be saved now.
-   */
-  function activitiesSummary(): string {
-    const field = formRef.current?.querySelector<HTMLInputElement>(
-      'input[name="activities"]',
-    );
-    let count = existing?.activities.length ?? 0;
-    try {
-      const rows: unknown = JSON.parse(field?.value ?? "");
-      if (Array.isArray(rows)) count = rows.length;
-    } catch {
-      // Not mounted yet: what the record held.
-    }
-    return count === 0
-      ? "None"
-      : count === 1
-        ? "1 activity"
-        : `${count} activities`;
-  }
-
-  function replacementSummary(): string {
-    const form = formRef.current;
-    const picked = form?.querySelector<HTMLSelectElement>(
-      'select[name="replacedByCompletionId"]',
-    );
-    if (picked) return picked.selectedOptions[0]?.textContent ?? "Chosen";
-    const named = form?.querySelector<HTMLInputElement>(
-      'input[name="replacement.title"]',
-    )?.value;
-    return named ? named : "Not said yet";
-  }
 
   function summaryRows(): [Step, string, string][] {
     const feelingLabel = COMPLETION_FEELING_CHOICES.find(
@@ -1063,7 +1103,7 @@ export function LogForm({
           ][])
         : []),
       ...(outcome === "replaced"
-        ? ([["replaced", "Instead", replacementSummary()]] as [
+        ? ([["replaced", "Instead", observed.replacement]] as [
             Step,
             string,
             string,
@@ -1077,7 +1117,7 @@ export function LogForm({
           ] as [Step, string, string][])
         : []),
       ...(activitiesHappened
-        ? ([["activities", "Activities", activitiesSummary()]] as [
+        ? ([["activities", "Activities", observed.activities]] as [
             Step,
             string,
             string,
@@ -1091,6 +1131,25 @@ export function LogForm({
       ["note", "Note", note.trim() === "" ? "—" : note],
     ];
   }
+}
+
+/** The first field in a part of the form that would refuse the submit. */
+function firstInvalid(scope: ParentNode): HTMLInputElement | null {
+  for (const control of scope.querySelectorAll<HTMLInputElement>(
+    "input, select, textarea",
+  )) {
+    if (control.type === "hidden" || control.disabled) continue;
+    if (!control.checkValidity()) return control;
+  }
+  return null;
+}
+
+function countPhrase(count: number): string {
+  return count === 0
+    ? "None"
+    : count === 1
+      ? "1 activity"
+      : `${count} activities`;
 }
 
 const DAY_LABEL = new Intl.DateTimeFormat("en-GB", {
