@@ -108,7 +108,10 @@ export function VariantB() {
               <button
                 type="button"
                 onClick={() =>
-                  setDraft({ ...draft, minutes: Math.max(0, draft.minutes - 5) })
+                  setDraft({
+                    ...draft,
+                    minutes: Math.max(0, draft.minutes - 5),
+                  })
                 }
               >
                 −5
@@ -119,7 +122,9 @@ export function VariantB() {
               </output>
               <button
                 type="button"
-                onClick={() => setDraft({ ...draft, minutes: draft.minutes + 5 })}
+                onClick={() =>
+                  setDraft({ ...draft, minutes: draft.minutes + 5 })
+                }
               >
                 +5
               </button>
@@ -137,7 +142,9 @@ export function VariantB() {
         {step === "effort" ? (
           <>
             <h1>How hard was it?</h1>
-            <p className={styles.sub}>1 is barely anything, 10 is everything.</p>
+            <p className={styles.sub}>
+              1 is barely anything, 10 is everything.
+            </p>
             <div className={styles.effortGrid}>
               {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
                 <button

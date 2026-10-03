@@ -67,7 +67,9 @@ export function VariantC() {
       case "effort":
         return draft.effort === null ? "Not said" : `${draft.effort} of 10`;
       case "feeling":
-        return FEELINGS.find((f) => f.value === draft.feeling)?.label ?? "Not said";
+        return (
+          FEELINGS.find((f) => f.value === draft.feeling)?.label ?? "Not said"
+        );
       case "off":
         return signals.length === 0
           ? "Nothing was off"
@@ -162,7 +164,9 @@ export function VariantC() {
                           type="button"
                           className={styles.dot}
                           data-selected={draft.effort === n}
-                          onClick={() => answer("effort", { ...draft, effort: n })}
+                          onClick={() =>
+                            answer("effort", { ...draft, effort: n })
+                          }
                         >
                           {n}
                         </button>
@@ -170,7 +174,9 @@ export function VariantC() {
                       <button
                         type="button"
                         className={styles.chipQuiet}
-                        onClick={() => answer("effort", { ...draft, effort: null })}
+                        onClick={() =>
+                          answer("effort", { ...draft, effort: null })
+                        }
                       >
                         Rather not say
                       </button>
@@ -225,7 +231,9 @@ export function VariantC() {
                         <button
                           type="button"
                           className={styles.primary}
-                          onClick={() => answer("off", { ...draft, signals: [] })}
+                          onClick={() =>
+                            answer("off", { ...draft, signals: [] })
+                          }
                         >
                           Nothing was off
                         </button>

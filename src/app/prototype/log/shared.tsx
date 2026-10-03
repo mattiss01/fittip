@@ -23,7 +23,11 @@ export const SESSION = {
   ],
 };
 
-export type Outcome = "completed" | "partially_completed" | "skipped" | "replaced";
+export type Outcome =
+  | "completed"
+  | "partially_completed"
+  | "skipped"
+  | "replaced";
 export type Feeling = "very_bad" | "bad" | "neutral" | "good" | "very_good";
 export type Signal = "pain" | "illness" | "injury" | "severeFatigue";
 

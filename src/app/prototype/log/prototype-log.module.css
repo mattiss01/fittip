@@ -497,3 +497,53 @@
 .answerBox .bigNote {
   width: 100%;
 }
+
+/* ---- Undo the app's global main and button rules inside the prototype ---- */
+
+.page,
+.stepPage {
+  display: block;
+  width: 100%;
+  place-items: initial;
+}
+
+.stepPage {
+  display: flex;
+  align-items: stretch;
+}
+
+.page button,
+.stepPage button {
+  margin-top: 0;
+}
+
+.page button:not(.primary):hover,
+.stepPage button:not(.primary):hover {
+  background: var(--fern);
+}
+
+.page button[data-selected="true"]:hover,
+.stepPage button[data-selected="true"]:hover {
+  background: var(--pine);
+}
+
+.page .skipLink:hover,
+.stepPage .skipLink:hover,
+.page .stepBack:hover,
+.stepPage .stepBack:hover,
+.page .chipQuiet:hover {
+  background: transparent;
+  color: var(--pine);
+}
+
+.page .primary,
+.stepPage .primary {
+  margin-top: 0.5rem;
+}
+
+.page .check {
+  color: var(--pine);
+  font: 400 1rem var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+}

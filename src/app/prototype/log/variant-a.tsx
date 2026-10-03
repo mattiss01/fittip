@@ -142,7 +142,9 @@ export function VariantA() {
           <textarea
             rows={3}
             value={draft.note}
-            onChange={(event) => setDraft({ ...draft, note: event.target.value })}
+            onChange={(event) =>
+              setDraft({ ...draft, note: event.target.value })
+            }
           />
         </label>
 
