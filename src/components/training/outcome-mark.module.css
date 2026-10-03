@@ -11,15 +11,14 @@
   color: var(--paper);
 }
 
-/* Training that was done reads green, not ember (owner, 1 Oct 2026: the
-   orange looked like something had gone wrong). */
+/* Every outcome that records training reads green, not ember (owner, 1 Oct
+   2026: the orange looked like something had gone wrong; 3 Oct 2026: partly
+   completed and replaced too). A skip stays grey. */
 .mark[data-outcome-mark="completed"],
+.mark[data-outcome-mark="partially_completed"],
+.mark[data-outcome-mark="replaced"],
 .mark[data-outcome-mark="unplanned"] {
   background: var(--pine-soft);
-}
-
-.mark[data-outcome-mark="partially_completed"] {
-  background: color-mix(in srgb, var(--ember) 70%, var(--paper));
 }
 
 .mark[data-outcome-mark="skipped"] {

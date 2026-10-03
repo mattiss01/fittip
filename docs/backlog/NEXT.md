@@ -106,10 +106,6 @@ lane, one screen per merge.
       still accepts edit, move, lock and cancel on one (only delete is refused,
       `session-completed`); a page left open from before the log could still send them.
       Refusing them is a rule in the rolling-plan change function, so careful lane.
-- [ ] **Outcomes all green.** Owner, 3 Oct 2026: "Partly completed" and "Replaced" go
-      green like completed and unplanned.
-- [ ] **A short "Logged for" date.** Owner, 3 Oct 2026: "Tue 29 Sep" on a record, so
-      the duration stays beside it at 390px.
 - [ ] **Logging in steps — a prototype first.** Owner, 3 Oct 2026: build a throwaway
       prototype (`/prototype`) beside today's form to decide whether one question at a
       time is better. "Log, as a sheet" waits on that answer.

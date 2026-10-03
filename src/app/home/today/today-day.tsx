@@ -407,7 +407,7 @@ function CompletionFacts({
         {completion.actualLocalDate === date ? null : (
           <div>
             <dt>Logged for</dt>
-            <dd>{longDay(completion.actualLocalDate)}</dd>
+            <dd>{shortDay(completion.actualLocalDate)}</dd>
           </div>
         )}
         {completion.durationMinutes === null ? null : (

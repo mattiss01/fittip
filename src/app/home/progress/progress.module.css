@@ -218,6 +218,8 @@
 /* Training that was done reads green, not ember (owner, 1 Oct 2026: the
    orange looked like something had gone wrong). */
 .stamp[data-outcome="completed"],
+.stamp[data-outcome="partially_completed"],
+.stamp[data-outcome="replaced"],
 .stamp[data-outcome="unplanned"] {
   background: color-mix(in srgb, var(--pine-soft) 14%, transparent);
   color: var(--pine-soft);
