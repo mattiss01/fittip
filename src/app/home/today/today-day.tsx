@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { DayStrip } from "./day-strip";
 import styles from "./today.module.css";
 
 import {
@@ -17,6 +18,7 @@ import {
   type ActivityListItem,
 } from "@/components/training/activity-list";
 import { Slide, slideTowards } from "@/components/motion/slide";
+
 import { OutcomeMark } from "@/components/training/outcome-mark";
 import { shiftIsoDate } from "@/lib/date/local-date";
 
@@ -105,11 +107,6 @@ const HEADING_DAY = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-const WEEKDAY = new Intl.DateTimeFormat("en-GB", {
-  weekday: "short",
-  timeZone: "UTC",
-});
-
 const SHORT_DAY = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
   day: "numeric",
@@ -139,27 +136,7 @@ export function TodayDay({
       data-recovery={isRecoveryDay}
       aria-labelledby="today-day-heading"
     >
-      <nav className={styles.strip} aria-label="Week">
-        {stripDates(date).map((stripDate) => (
-          <Link
-            key={stripDate}
-            className={styles.stripDay}
-            href={dayHref(stripDate)}
-            transitionTypes={slideTowards(date, stripDate)}
-            aria-current={stripDate === date ? "date" : undefined}
-            aria-label={shortDay(stripDate)}
-            data-today={stripDate === today}
-          >
-            <span className={styles.stripWeekday} aria-hidden="true">
-              {WEEKDAY.format(asDate(stripDate))}
-            </span>
-            <span className={styles.stripNumber} aria-hidden="true">
-              {Number(stripDate.slice(8, 10))}
-            </span>
-            <span className={styles.stripDot} aria-hidden="true" />
-          </Link>
-        ))}
-      </nav>
+      <DayStrip dates={stripDates(date, today)} shown={date} today={today} />
 
       <header className={styles.dayHead}>
         <Link
@@ -485,8 +462,19 @@ function CompletionFacts({
 }
 
 /** A week around the day on screen, which sits in the middle of it. */
-function stripDates(date: string) {
-  return [-3, -2, -1, 0, 1, 2, 3].map((offset) => shiftIsoDate(date, offset));
+/**
+ * The days the strip offers: thirteen weeks either side of today, as far as
+ * the Plan reaches, and wider when the day on screen lies outside them.
+ */
+function stripDates(date: string, today: string) {
+  const reach = 91;
+  const first = [shiftIsoDate(today, -reach), date].sort()[0];
+  const last = [shiftIsoDate(today, reach), date].sort()[1];
+  const dates: string[] = [];
+  for (let day = first; day <= last; day = shiftIsoDate(day, 1)) {
+    dates.push(day);
+  }
+  return dates;
 }
 
 function dayHref(date: string) {

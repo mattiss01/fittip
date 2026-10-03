@@ -600,6 +600,8 @@ span.arrow {
 /* Leaving (R4): the sheet slides back down and the scrim fades with it. */
 .sheetLayer[data-closing] .sheet {
   animation: sheet-out 180ms ease-in forwards;
+  /* Leaving: a tap on it now would act on a sheet that is already gone. */
+  pointer-events: none;
 }
 
 .sheetLayer[data-closing] .scrim {
@@ -631,7 +633,9 @@ span.arrow {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sheet {
+  .sheet,
+  .sheetLayer[data-closing] .sheet,
+  .sheetLayer[data-closing] .scrim {
     animation: none;
   }
 }

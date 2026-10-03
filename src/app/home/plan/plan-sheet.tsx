@@ -7,6 +7,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type ButtonHTMLAttributes,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
@@ -26,17 +27,29 @@ export function useCloseSheet() {
   return useContext(SheetCloseContext);
 }
 
-/** A sheet's own Close or Done, which leaves as the sheet does. */
+/**
+ * A button that ends the sheet it is in, leaving as the sheet does: its own
+ * Close, or a choice like a day in the month calendar, whose action runs
+ * first.
+ */
 export function SheetCloseButton({
-  className,
+  onBeforeClose,
   children,
-}: {
-  className?: string;
+  ...button
+}: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "type"> & {
+  onBeforeClose?: () => void;
   children: ReactNode;
 }) {
   const close = useCloseSheet();
   return (
-    <button type="button" className={className} onClick={close}>
+    <button
+      {...button}
+      type="button"
+      onClick={() => {
+        onBeforeClose?.();
+        close();
+      }}
+    >
       {children}
     </button>
   );

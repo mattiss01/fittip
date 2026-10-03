@@ -140,8 +140,7 @@ export function MonthSheet({
           }
           return (
             <li key={date} className={w.monthDay}>
-              <button
-                type="button"
+              <SheetCloseButton
                 className={w.monthPick}
                 data-month-date={date}
                 data-today={date === today || undefined}
@@ -151,7 +150,7 @@ export function MonthSheet({
                     ? "no sessions"
                     : `${count} ${count === 1 ? "session" : "sessions"}`
                 }`}
-                onClick={() => onPick(date)}
+                onBeforeClose={() => onPick(date)}
               >
                 <span className={w.monthNumber}>{number}</span>
                 <span
@@ -159,7 +158,7 @@ export function MonthSheet({
                   data-filled={count > 0 || undefined}
                   aria-hidden
                 />
-              </button>
+              </SheetCloseButton>
             </li>
           );
         })}

@@ -401,9 +401,9 @@ export function PlanManager({
           lastDate={weeks[weeks.length - 1].end}
           shownWeekStart={week.start}
           sessionCounts={sessionCounts(sessions)}
+          // The sheet slides away on its own after a pick, then closes.
           onPick={(date) => {
             goToWeek(weekIndexOf(weeks, date, thisWeekIndex));
-            setMonthOpen(false);
           }}
           onClose={() => setMonthOpen(false)}
         />

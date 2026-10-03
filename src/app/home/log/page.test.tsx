@@ -829,6 +829,25 @@ describe("Log", () => {
     expect(hiddenValue("durationMinutes")).toBe("30");
   });
 
+  it("slides a question in from the side it comes from", async () => {
+    render(
+      await LogPage({
+        searchParams: Promise.resolve({
+          plannedSession: SESSION_ID,
+          date: today(),
+        }),
+      }),
+    );
+    const form = () =>
+      document.querySelector<HTMLFormElement>("[data-log-form]")?.dataset
+        .logDirection;
+
+    chooseOutcome("Completed");
+    expect(form()).toBe("forward");
+    back();
+    expect(form()).toBe("back");
+  });
+
   it("replaces the form with a receipt that leads back to the day", async () => {
     useActionStateMock.mockReturnValue([
       {
