@@ -1,3 +1,5 @@
+import { formatRoadmapDate, formatRoadmapRange } from "./roadmap-dates";
+
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { ROADMAP_COPY } from "@/server/roadmap/roadmap-records";
 
@@ -109,7 +111,7 @@ function PhaseAndFollowingCheckpoints({
           </p>
           <h3 className={styles.phaseTitle}>{phase.title}</h3>
           <p className={styles.phaseDates}>
-            {phase.startDate} → {phase.endDate}
+            {formatRoadmapRange(phase.startDate, phase.endDate)}
           </p>
           <p className={styles.phaseFocus}>{phase.focus}</p>
 
@@ -144,7 +146,8 @@ function PhaseAndFollowingCheckpoints({
                     wording is a product decision, so it is imported rather
                     than written here. */}
                 <p className={styles.milestoneDate}>
-                  {ROADMAP_COPY.milestonePrefix} {milestone.targetDate}
+                  {ROADMAP_COPY.milestonePrefix}{" "}
+                  {formatRoadmapDate(milestone.targetDate)}
                 </p>
                 <p className={styles.milestoneCriterion}>
                   {milestone.observableCriterion}
@@ -167,7 +170,7 @@ function Checkpoint({ point }: { point: SpineReviewPoint }) {
       <div className={styles.checkpointBody}>
         <p className={styles.checkpointKind}>
           {point.triggerDate
-            ? ROADMAP_COPY.reviewOnDate(point.triggerDate)
+            ? ROADMAP_COPY.reviewOnDate(formatRoadmapDate(point.triggerDate))
             : ROADMAP_COPY.reviewWhenCondition(point.triggerCondition ?? "")}
         </p>
         <h3 className={styles.checkpointTitle}>{point.title}</h3>

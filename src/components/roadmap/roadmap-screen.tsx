@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ExampleTag } from "./roadmap-body";
 import { RoadmapComposer } from "./roadmap-composer";
+import { formatRoadmapRange } from "./roadmap-dates";
 import { RoadmapDetail } from "./roadmap-detail";
 import { RoadmapOutcomeNotice } from "./roadmap-outcome";
 import { RoadmapProposalRecord } from "./roadmap-proposal-record";
@@ -141,7 +142,10 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
                 <ExampleTag providerCode={version.providerCode} />
                 <h3 className={styles.recordTitle}>{version.content.title}</h3>
                 <p className={styles.horizon}>
-                  {version.content.startDate} → {version.content.endDate}
+                  {formatRoadmapRange(
+                    version.content.startDate,
+                    version.content.endDate,
+                  )}
                 </p>
               </li>
             ))}

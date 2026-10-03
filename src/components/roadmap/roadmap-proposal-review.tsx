@@ -1,7 +1,9 @@
 import { RoadmapBody } from "./roadmap-body";
+import { formatRoadmapRange } from "./roadmap-dates";
 import { RoadmapDecisionDock } from "./roadmap-decision-dock";
 
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
+import { CoachSpark } from "@/components/home/coach-spark";
 import {
   isExampleAuthored,
   ROADMAP_COPY,
@@ -42,6 +44,7 @@ export function RoadmapProposalReview({
   return (
     <section className={styles.card} data-roadmap-open-proposal={proposal.id}>
       <p className={styles.state} data-state="open">
+        <CoachSpark size={14} />
         {ROADMAP_COPY.proposalStateLabels.open}
       </p>
       <h2 className={styles.cardHeading}>{ROADMAP_COPY.openProposalHeading}</h2>
@@ -56,7 +59,7 @@ export function RoadmapProposalReview({
       <article>
         <RoadmapBody
           content={proposal.content}
-          meta={`${ROADMAP_COPY.proposalOriginLabels[proposal.origin]} · ${startDate} → ${endDate}`}
+          meta={`${ROADMAP_COPY.proposalOriginLabels[proposal.origin]} · ${formatRoadmapRange(startDate, endDate)}`}
           providerCode={proposal.providerCode}
           goalTitles={goalTitles}
         />

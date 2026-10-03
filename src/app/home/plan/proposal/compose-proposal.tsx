@@ -16,6 +16,7 @@ import styles from "./proposal.module.css";
 
 import { SheetLayer } from "../plan-sheet";
 
+import { CoachSpark } from "@/components/home/coach-spark";
 import {
   PLAN_PROPOSAL_COPY,
   PLAN_PROPOSAL_DEFAULT_DAYS,
@@ -99,6 +100,7 @@ export function ComposeProposal({ hasGoals }: { hasGoals: boolean }) {
         <p className={styles.consequence}>{COPY.generateSupport}</p>
         {hasGoals ? (
           <button className={styles.primary} type="submit" disabled={pending}>
+            <CoachSpark size={16} />
             {COPY.generateAction}
           </button>
         ) : (
@@ -111,6 +113,7 @@ export function ComposeProposal({ hasGoals }: { hasGoals: boolean }) {
             aria-haspopup="dialog"
             onClick={() => setGoalPrompt(true)}
           >
+            <CoachSpark size={16} />
             {COPY.generateAction}
           </button>
         )}
