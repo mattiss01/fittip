@@ -127,6 +127,51 @@ type Props = {
 /** One unplanned log a replaced one may point at, already in words. */
 export type LogUnplannedOption = { id: string; label: string };
 
+/**
+ * The questions a log can ask, in the order it asks them. Which of them a
+ * given log asks is `stepsFor`'s to say.
+ */
+type Step =
+  | "what"
+  | "date"
+  | "outcome"
+  | "replaced"
+  | "day"
+  | "minutes"
+  | "effort"
+  | "feeling"
+  | "activities"
+  | "off"
+  | "note"
+  | "summary";
+
+const STEP_QUESTIONS: Record<Step, string> = {
+  what: "What did you do?",
+  date: "When was it?",
+  outcome: "How did it go?",
+  replaced: "What did you do instead?",
+  day: "Instead of the planned session, or extra?",
+  minutes: "How long?",
+  effort: "How hard was it?",
+  feeling: "How did it feel?",
+  activities: "What did you do in it?",
+  off: "Anything off?",
+  note: "Anything to add?",
+  summary: "Your log",
+};
+
+/**
+ * Logging in steps (owner, 3 Oct 2026, from the prototype's variant B): one
+ * question at a time, a tap answers it and moves on, and "Anything off?" is
+ * answered with a signal or with "Nothing was off", never passed by. A
+ * correction opens on the summary, where each answer has its own Change.
+ *
+ * It is still one `<form>` sending what the one-page form sent. Every
+ * question is mounted and only the current one is shown, so an answer given
+ * three steps back is still in the form when it is saved, and the write
+ * function, its payload and its rules are untouched. What a question does not
+ * apply to is not rendered at all, as before, so it sends nothing.
+ */
 export function LogForm({
   planned,
   existing,
@@ -149,50 +194,85 @@ export function LogForm({
   const [outcome, setOutcome] = useState<CompletionOutcome>(
     existing?.outcome ?? choices[0].value,
   );
+  // A new planned log has not been told how it went yet; the outcome step is
+  // answered by a tap, not by a default the owner never chose.
+  const [outcomeChosen, setOutcomeChosen] = useState(
+    existing !== null || choices.length === 1,
+  );
   const [actualDate, setActualDate] = useState(
     existing?.actualLocalDate ?? defaultDate,
   );
+  const [dateOpen, setDateOpen] = useState(false);
   const [dayChoice, setDayChoice] = useState<"instead" | "extra" | null>(null);
   // The saved session an unplanned create started from, or "". Picking one
-  // remounts the title, sport and activity list with its values — a copy by
-  // value, as the Plan's reuse is — so what they held before is replaced.
+  // replaces the title, sport and activity list with its values — a copy by
+  // value, as the Plan's reuse is.
   const [startFrom, setStartFrom] = useState("");
   const startingSession =
     planned === null && existing === null
       ? savedSessions.find((session) => session.id === startFrom)
       : undefined;
+  const [title, setTitle] = useState(existing?.title ?? planned?.title ?? "");
+  const [sport, setSport] = useState(existing?.sport ?? planned?.sport ?? "");
+  const [minutes, setMinutes] = useState<string>(
+    String(
+      existing === null
+        ? (planned?.expectedDurationMinutes ?? "")
+        : (existing.durationMinutes ?? ""),
+    ),
+  );
+  const [effort, setEffort] = useState<number | null>(
+    existing?.perceivedEffort ?? null,
+  );
+  const [feeling, setFeeling] = useState<string>(existing?.feeling ?? "");
+  const [note, setNote] = useState(existing?.note ?? "");
+  const [signals, setSignals] = useState<ReadonlySet<string>>(
+    () =>
+      new Set(
+        COMPLETION_SIGNALS.map((signal) => signal.name).filter((name) =>
+          defaultSignal(existing, name),
+        ),
+      ),
+  );
+  // A correction has answered every question already.
+  const [signalsAnswered, setSignalsAnswered] = useState(existing !== null);
+
+  const [step, setStep] = useState<Step>(
+    existing === null ? "what" : "summary",
+  );
+  // Opened from the summary, a step returns there rather than walking on.
+  const [fromSummary, setFromSummary] = useState(false);
+
   const receiptHeading = useRef<HTMLHeadingElement>(null);
+  const stepHeading = useRef<HTMLHeadingElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const firstRender = useRef(true);
   const saved = state.status === "saved";
-  // Training that did not happen has no duration, no effort and no way it
-  // felt, so those three are not asked. Derived during render rather than
-  // mirrored into state, so there is one source of truth for the outcome.
   const skipped = outcome === "skipped";
-  // Per-activity actuals belong to training that happened, in whole or in
-  // part, planned or not. Skipped and replaced both say the planned
-  // activities did not, so the list is not asked and nothing is sent for it.
   const activitiesHappened =
     outcome === "completed" ||
     outcome === "partially_completed" ||
     outcome === "unplanned";
-  // Done on another day than planned: the planned session done early or late,
-  // or extra training with the planned one still ahead. Only a new log asks,
-  // and only for training that happened; a skip or a replacement is about the
-  // planned session whatever day it is written on.
+  // Done on another day than planned: only a new log asks, and only for
+  // training that happened; a skip or a replacement is about the planned
+  // session whatever day it is written on.
   const askWhichDay =
     planned !== null &&
     existing === null &&
     actualDate !== planned.localDate &&
     TRAINED_OUTCOMES.has(outcome);
-  // Extra training has nothing to be measured against, so it can only have
-  // happened: the outcome is not asked, and it is written as unplanned.
   const extraChosen = askWhichDay && dayChoice === "extra";
+  const status =
+    choices.length === 1
+      ? choices[0].value
+      : extraChosen
+        ? "completed"
+        : outcome;
+  const asksNumbers = !skipped && outcome !== "replaced";
   // Everything the chosen outcome would discard from a record that already
-  // exists. A field this form stops rendering submits nothing, and the write
-  // function assigns every one of these from the payload, so an absent key
-  // stores null. "What you did instead" belongs here for the same reason the
-  // three numbers do: it is unmounted by every outcome but `replaced`, and a
-  // log carrying only a description would otherwise lose it in silence.
+  // exists. A question this form stops rendering submits nothing, and the
+  // write function assigns every one of these from the payload, so an absent
+  // key stores null.
   const discarded =
     existing === null
       ? []
@@ -212,12 +292,33 @@ export function LogForm({
             : []),
         ];
 
-  // The receipt replaces the form, which takes the only live region and the
-  // focused control with it. Without this a keyboard or screen-reader user is
-  // returned to the document body with no signal that the write landed.
+  const steps: Step[] = [
+    "what",
+    ...(dateOpen ? (["date"] as const) : []),
+    ...(choices.length > 1 && !extraChosen ? (["outcome"] as const) : []),
+    ...(outcome === "replaced" ? (["replaced"] as const) : []),
+    ...(askWhichDay ? (["day"] as const) : []),
+    ...(asksNumbers
+      ? (["minutes", "effort", "feeling"] as const)
+      : ([] as const)),
+    ...(activitiesHappened ? (["activities"] as const) : []),
+    "off",
+    "note",
+  ];
+  const index = steps.indexOf(step);
+
+  // The receipt replaces the form, and each step replaces the last: focus
+  // goes to the new heading so a keyboard or screen-reader user is told.
   useEffect(() => {
     if (saved) receiptHeading.current?.focus();
   }, [saved, state.submission]);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    stepHeading.current?.focus();
+  }, [step]);
 
   if (alreadyLogged !== null && !saved) {
     return (
@@ -248,7 +349,6 @@ export function LogForm({
         role="status"
         aria-live="polite"
       >
-        <p className={styles.sectionLabel}>Written</p>
         <h2 ref={receiptHeading} tabIndex={-1}>
           {state.message}
         </h2>
@@ -272,8 +372,72 @@ export function LogForm({
     );
   }
 
+  /** Every field in the shown step must hold before the next one is asked. */
+  function stepIsValid(): boolean {
+    const section = formRef.current?.querySelector<HTMLElement>(
+      `[data-log-step="${step}"]`,
+    );
+    if (!section) return true;
+    for (const control of section.querySelectorAll<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >("input, select, textarea")) {
+      if (control.type === "hidden") continue;
+      if (!control.checkValidity()) {
+        control.reportValidity();
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** On to the next question, or back to the summary it was opened from. */
+  function advance(list: Step[] = steps, from: Step = step) {
+    if (fromSummary) {
+      setFromSummary(false);
+      setStep("summary");
+      return;
+    }
+    setStep(list[list.indexOf(from) + 1] ?? "summary");
+  }
+
+  function next() {
+    if (stepIsValid()) advance();
+  }
+
+  function back() {
+    if (fromSummary || step === "summary") {
+      setFromSummary(false);
+      setStep("summary");
+      return;
+    }
+    setStep(steps[Math.max(0, index - 1)]);
+  }
+
+  function change(target: Step) {
+    setFromSummary(true);
+    setStep(target);
+  }
+
+  const showBack =
+    step !== "summary" && (fromSummary || existing !== null || index > 0);
+  const close = returnTo?.href ?? `/home/today?date=${returnDate}`;
+  const lastStep = step === "note" && existing === null && !fromSummary;
+
   return (
-    <form ref={formRef} className={styles.form} action={action} data-log-form>
+    <form
+      ref={formRef}
+      className={styles.form}
+      action={action}
+      data-log-form
+      data-log-step-current={step}
+      onSubmit={(event) => {
+        // Enter in a text field submits the form; mid-way it means "next".
+        if (step !== "summary" && !lastStep) {
+          event.preventDefault();
+          next();
+        }
+      }}
+    >
       <input
         type="hidden"
         name="operation"
@@ -295,6 +459,53 @@ export function LogForm({
           <input type="hidden" name="plannedDate" value={planned.localDate} />
         </>
       )}
+      <input type="hidden" name="status" value={status} />
+      <input type="hidden" name="actualLocalDate" value={actualDate} />
+      {askWhichDay && dayChoice !== null ? (
+        <input type="hidden" name="dayChoice" value={dayChoice} />
+      ) : null}
+      {asksNumbers ? (
+        <>
+          <input type="hidden" name="perceivedEffort" value={effort ?? ""} />
+          <input type="hidden" name="feeling" value={feeling} />
+        </>
+      ) : null}
+      {COMPLETION_SIGNALS.filter((signal) => signals.has(signal.name)).map(
+        (signal) => (
+          <input
+            key={signal.name}
+            type="hidden"
+            name={signal.name}
+            value="true"
+          />
+        ),
+      )}
+
+      <div className={styles.stepBar}>
+        {showBack ? (
+          <button className={styles.stepBack} type="button" onClick={back}>
+            <span aria-hidden="true">&lsaquo;&nbsp;</span>
+            {fromSummary || existing !== null ? "Summary" : "Back"}
+          </button>
+        ) : (
+          <span />
+        )}
+        <span className={styles.stepCount}>
+          {step === "summary" || fromSummary
+            ? ""
+            : `${index + 1} of ${steps.length}`}
+        </span>
+        <Link className={styles.stepClose} href={close}>
+          Cancel
+        </Link>
+      </div>
+      {step === "summary" || fromSummary ? null : (
+        <div className={styles.progress} aria-hidden="true">
+          {steps.map((name, position) => (
+            <span key={name} data-on={position <= index} />
+          ))}
+        </div>
+      )}
 
       <p
         className={state.status === "idle" ? styles.srOnly : styles.notice}
@@ -305,185 +516,230 @@ export function LogForm({
         {state.message}
       </p>
 
-      {planned !== null || existing !== null ? null : (
-        <SavedSessionPicker
-          sessions={savedSessions}
-          picked={startingSession}
-          onPick={(session) => setStartFrom(session.id)}
-        />
-      )}
+      <h2 className={styles.question} ref={stepHeading} tabIndex={-1}>
+        {STEP_QUESTIONS[step]}
+      </h2>
 
-      {/* Every log carries its own name. A planned one starts as the plan's,
-          and changing it here renames the log alone: the plan, and the
-          snapshot the log was measured against, keep theirs. */}
-      <div className={styles.field}>
-        <label htmlFor="log-title">Title</label>
-        <input
-          id="log-title"
-          name="title"
-          type="text"
-          required
-          maxLength={120}
-          autoComplete="off"
-          key={`title-${startFrom}`}
-          defaultValue={
-            startingSession?.title ?? existing?.title ?? planned?.title ?? ""
-          }
-        />
-        <span className={styles.fieldHint}>
-          {planned === null
-            ? "What you did, in your own words."
-            : "Taken from the plan. Change it if you did something else; the plan keeps its own."}
-        </span>
-      </div>
-      <div className={styles.field}>
-        <label htmlFor="log-sport">Sport</label>
-        <input
-          id="log-sport"
-          name="sport"
-          type="text"
-          required
-          maxLength={80}
-          autoComplete="off"
-          key={`sport-${startFrom}`}
-          defaultValue={
-            startingSession?.sport ?? existing?.sport ?? planned?.sport ?? ""
-          }
-        />
-        <span className={styles.fieldHint}>
-          Whatever you call it. FitTip keeps your own words.
-        </span>
-      </div>
-
-      {choices.length === 1 ? (
-        <>
-          <input type="hidden" name="status" value={choices[0].value} />
-          <p className={styles.fieldHint} data-log-fixed-outcome>
-            {choices[0].hint} It is recorded as {choices[0].label.toLowerCase()}{" "}
-            training, with no planned session attached.
-          </p>
-        </>
-      ) : extraChosen ? (
-        <>
-          <input type="hidden" name="status" value="completed" />
-          <p className={styles.fieldHint} data-log-fixed-outcome>
-            Extra training is recorded as unplanned training you did, with no
-            planned session attached.
-          </p>
-        </>
-      ) : (
-        // A select, like "How it felt", rather than four full-width rules: the
-        // owner asked for it on 25 September 2026. The chosen outcome's hint
-        // stays beneath it, so what each one means is still said.
+      {/* ---- What did you do? ---- */}
+      <section data-log-step="what" hidden={step !== "what"}>
+        {planned !== null || existing !== null ? null : (
+          <SavedSessionPicker
+            sessions={savedSessions}
+            picked={startingSession}
+            onPick={(session) => {
+              setStartFrom(session.id);
+              setTitle(session.title);
+              setSport(session.sport);
+            }}
+          />
+        )}
+        {/* Every log carries its own name. A planned one starts as the plan's,
+            and changing it here renames the log alone. */}
         <div className={styles.field}>
-          <label htmlFor="log-status">What happened</label>
-          <select
-            id="log-status"
-            name="status"
-            value={outcome}
-            onChange={(event) =>
-              setOutcome(event.target.value as CompletionOutcome)
-            }
-          >
-            {choices.map((choice) => (
-              <option key={choice.value} value={choice.value}>
-                {choice.label}
-              </option>
-            ))}
-          </select>
-          <span className={styles.fieldHint}>
-            {choices.find((choice) => choice.value === outcome)?.hint}
-          </span>
+          <label htmlFor="log-title">Title</label>
+          <input
+            id="log-title"
+            name="title"
+            type="text"
+            required
+            maxLength={120}
+            autoComplete="off"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+          />
+          {planned === null ? null : (
+            <span className={styles.fieldHint}>
+              Taken from the plan. Change it if you did something else; the plan
+              keeps its own.
+            </span>
+          )}
         </div>
-      )}
+        <div className={styles.field}>
+          <label htmlFor="log-sport">Sport</label>
+          <input
+            id="log-sport"
+            name="sport"
+            type="text"
+            required
+            maxLength={80}
+            autoComplete="off"
+            value={sport}
+            onChange={(event) => setSport(event.target.value)}
+          />
+        </div>
+        <p className={styles.dateLine} data-log-date-line>
+          For {dayLabel(actualDate)}
+          {dateOpen ? null : (
+            <button
+              className={styles.inlineChange}
+              type="button"
+              onClick={() => setDateOpen(true)}
+              aria-label={`Change the date, ${dayLabel(actualDate)}`}
+            >
+              Change
+            </button>
+          )}
+        </p>
+        <button className={styles.primary} type="button" onClick={next}>
+          {fromSummary ? "Done" : "Next"}
+        </button>
+      </section>
 
-      {outcome === "replaced" ? (
-        <ReplacedBy
-          options={unplannedOptions}
-          linkedId={existing?.replacedById ?? null}
-          legacyText={existing?.replacementDescription ?? null}
-          sessionSport={planned?.sport ?? ""}
-          library={library}
-          saveToLibrary={saveActivityToLibrary}
-          updateInLibrary={updateActivityInLibrary}
-        />
+      {/* ---- When was it? Only once the owner asks to change the day. ---- */}
+      {dateOpen ? (
+        <section data-log-step="date" hidden={step !== "date"}>
+          <div className={styles.field}>
+            <label htmlFor="log-date">Date</label>
+            <input
+              id="log-date"
+              type="date"
+              required
+              max={today}
+              value={actualDate}
+              onChange={(event) => {
+                setActualDate(event.target.value);
+                setDayChoice(null);
+              }}
+            />
+            <span className={styles.fieldHint}>
+              Training cannot be logged before it happens, so this stops at
+              today.
+            </span>
+          </div>
+          <button className={styles.primary} type="button" onClick={next}>
+            {fromSummary ? "Done" : "Next"}
+          </button>
+        </section>
       ) : null}
 
-      <div className={styles.field}>
-        <label htmlFor="log-date">Date</label>
-        <input
-          id="log-date"
-          name="actualLocalDate"
-          type="date"
-          required
-          max={today}
-          value={actualDate}
-          onChange={(event) => setActualDate(event.target.value)}
-        />
-        <span className={styles.fieldHint}>
-          The day the training happened, on your own calendar. Training cannot
-          be logged before it happens, so this stops at today.
-        </span>
-      </div>
+      {/* ---- How did it go? ---- */}
+      {choices.length > 1 ? (
+        <section data-log-step="outcome" hidden={step !== "outcome"}>
+          <div
+            className={styles.bigChoices}
+            role="group"
+            aria-label="What happened"
+          >
+            {choices.map((choice) => (
+              <button
+                key={choice.value}
+                type="button"
+                aria-pressed={outcomeChosen && outcome === choice.value}
+                data-selected={outcomeChosen && outcome === choice.value}
+                onClick={() => {
+                  const nextOutcome = choice.value;
+                  setOutcome(nextOutcome);
+                  setOutcomeChosen(true);
+                  // The list the next step is read from depends on the answer.
+                  const nextSteps = stepsAfterOutcome(nextOutcome);
+                  if (fromSummary) {
+                    // A replacement needs its own answer before the summary.
+                    if (nextOutcome === "replaced") {
+                      setStep("replaced");
+                    } else {
+                      setFromSummary(false);
+                      setStep("summary");
+                    }
+                    return;
+                  }
+                  setStep(nextSteps[0] ?? "off");
+                }}
+              >
+                <strong>{choice.label}</strong>
+                <span>{choice.hint}</span>
+              </button>
+            ))}
+          </div>
+          {discarded.length === 0 ? null : (
+            <p className={styles.warning} data-log-clears role="status">
+              Saving this as {COMPLETION_OUTCOME_LABELS[outcome].toLowerCase()}{" "}
+              removes {listPhrase(discarded)}. Your note and anything you
+              reported stay.
+            </p>
+          )}
+        </section>
+      ) : null}
 
+      {/* ---- What did you do instead? ---- */}
+      {outcome === "replaced" ? (
+        <section data-log-step="replaced" hidden={step !== "replaced"}>
+          <ReplacedBy
+            options={unplannedOptions}
+            linkedId={existing?.replacedById ?? null}
+            legacyText={existing?.replacementDescription ?? null}
+            sessionSport={planned?.sport ?? ""}
+            library={library}
+            saveToLibrary={saveActivityToLibrary}
+            updateInLibrary={updateActivityInLibrary}
+          />
+          <button className={styles.primary} type="button" onClick={next}>
+            {fromSummary ? "Done" : "Next"}
+          </button>
+        </section>
+      ) : null}
+
+      {/* ---- Instead, or extra? ---- */}
       {askWhichDay && planned !== null ? (
-        <fieldset className={styles.dayChoice} data-log-day-choice>
-          <legend>This session is planned for {planned.dayLabel}</legend>
-          <label>
-            <input
-              type="radio"
-              name="dayChoice"
-              value="instead"
-              required
-              checked={dayChoice === "instead"}
-              onChange={() => setDayChoice("instead")}
-            />
-            <span>
+        <section data-log-step="day" hidden={step !== "day"}>
+          <p className={styles.sub}>
+            This session is planned for {planned.dayLabel}.
+          </p>
+          <div className={styles.bigChoices} data-log-day-choice>
+            <button
+              type="button"
+              aria-pressed={dayChoice === "instead"}
+              data-selected={dayChoice === "instead"}
+              onClick={() => {
+                setDayChoice("instead");
+                advance();
+              }}
+            >
               <strong>Instead of {planned.dayLabel}&rsquo;s session</strong>
-              <span className={styles.fieldHint}>
-                {planned.dayLabel} shows it as logged on this date.
-              </span>
-            </span>
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="dayChoice"
-              value="extra"
-              required
-              checked={dayChoice === "extra"}
-              onChange={() => {
+              <span>{planned.dayLabel} shows it as logged on this date.</span>
+            </button>
+            <button
+              type="button"
+              aria-pressed={dayChoice === "extra"}
+              data-selected={dayChoice === "extra"}
+              onClick={() => {
                 setDayChoice("extra");
                 // "Partly completed" means something only against a plan.
                 setOutcome("completed");
+                advance();
               }}
-            />
-            <span>
+            >
               <strong>
                 Extra &mdash; I&rsquo;ll still do {planned.dayLabel}
               </strong>
-              <span className={styles.fieldHint}>
+              <span>
                 Saved as its own unplanned log. {planned.dayLabel} stays
                 planned.
               </span>
-            </span>
-          </label>
-        </fieldset>
+            </button>
+          </div>
+        </section>
       ) : null}
 
-      {discarded.length === 0 ? null : (
-        <p className={styles.warning} data-log-clears role="status">
-          Saving this as {COMPLETION_OUTCOME_LABELS[outcome].toLowerCase()}{" "}
-          removes {listPhrase(discarded)}. Your note and anything you reported
-          stay.
-        </p>
-      )}
-
-      {skipped || outcome === "replaced" ? null : (
-        <>
-          <div className={styles.fieldPair}>
-            <div className={styles.field}>
-              <label htmlFor="log-duration">Duration (minutes)</label>
+      {/* ---- How long? ---- */}
+      {asksNumbers ? (
+        <section data-log-step="minutes" hidden={step !== "minutes"}>
+          {planned?.expectedDurationMinutes == null ? null : (
+            <p className={styles.sub}>
+              {planned.expectedDurationMinutes} min planned
+            </p>
+          )}
+          <div className={styles.stepper}>
+            <button
+              type="button"
+              aria-label="5 minutes less"
+              onClick={() =>
+                setMinutes(String(Math.max(0, (Number(minutes) || 0) - 5)))
+              }
+            >
+              &minus;5
+            </button>
+            <label className={styles.stepperValue}>
+              <span className={styles.srOnly}>Duration (minutes)</span>
               <input
                 id="log-duration"
                 name="durationMinutes"
@@ -492,108 +748,363 @@ export function LogForm({
                 min={0}
                 max={10080}
                 step={1}
-                // A new log starts at what the plan expected, like its
-                // activities do; an edit starts at what was recorded.
-                defaultValue={
-                  existing === null
-                    ? (planned?.expectedDurationMinutes ?? "")
-                    : (existing.durationMinutes ?? "")
-                }
+                value={minutes}
+                onChange={(event) => setMinutes(event.target.value)}
               />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="log-effort">Effort (1-10)</label>
-              <input
-                id="log-effort"
-                name="perceivedEffort"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={10}
-                step={1}
-                defaultValue={existing?.perceivedEffort ?? ""}
-              />
-            </div>
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="log-feeling">How it felt</label>
-            <select
-              id="log-feeling"
-              name="feeling"
-              defaultValue={existing?.feeling ?? ""}
+              <span aria-hidden="true">min</span>
+            </label>
+            <button
+              type="button"
+              aria-label="5 minutes more"
+              onClick={() => setMinutes(String((Number(minutes) || 0) + 5))}
             >
-              <option value="">Not recorded</option>
-              {COMPLETION_FEELING_CHOICES.map((choice) => (
-                <option key={choice.value} value={choice.value}>
-                  {choice.label}
-                </option>
-              ))}
-            </select>
+              +5
+            </button>
           </div>
-        </>
-      )}
+          <button className={styles.primary} type="button" onClick={next}>
+            {fromSummary ? "Done" : "Next"}
+          </button>
+        </section>
+      ) : null}
 
-      <ActualActivities
-        key={`activities-${startFrom}`}
-        activities={planned?.activities ?? []}
-        recorded={existing?.activities}
-        starting={startingSession?.activities}
-        library={library}
-        saveToLibrary={saveActivityToLibrary}
-        updateInLibrary={updateActivityInLibrary}
-        sessionSport={
-          startingSession?.sport ?? planned?.sport ?? existing?.sport ?? ""
-        }
-        inactive={!activitiesHappened}
-      />
+      {/* ---- How hard? ---- */}
+      {asksNumbers ? (
+        <section data-log-step="effort" hidden={step !== "effort"}>
+          <p className={styles.sub}>1 is barely anything, 10 is everything.</p>
+          <div
+            className={styles.effortGrid}
+            role="group"
+            aria-label="Effort (1-10)"
+          >
+            {Array.from({ length: 10 }, (_, position) => position + 1).map(
+              (value) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={effort === value}
+                  data-selected={effort === value}
+                  onClick={() => {
+                    setEffort(value);
+                    advance();
+                  }}
+                >
+                  {value}
+                </button>
+              ),
+            )}
+          </div>
+          <button
+            className={styles.skipQuestion}
+            type="button"
+            onClick={() => {
+              setEffort(null);
+              advance();
+            }}
+          >
+            Skip this question
+          </button>
+        </section>
+      ) : null}
 
-      {activitiesHappened ? <SaveFormToLibrary formRef={formRef} /> : null}
+      {/* ---- How did it feel? ---- */}
+      {asksNumbers ? (
+        <section data-log-step="feeling" hidden={step !== "feeling"}>
+          <div
+            className={styles.bigChoices}
+            role="group"
+            aria-label="How it felt"
+          >
+            {[...COMPLETION_FEELING_CHOICES].reverse().map((choice) => (
+              <button
+                key={choice.value}
+                type="button"
+                aria-pressed={feeling === choice.value}
+                data-selected={feeling === choice.value}
+                onClick={() => {
+                  setFeeling(choice.value);
+                  advance();
+                }}
+              >
+                <strong>{choice.label}</strong>
+              </button>
+            ))}
+          </div>
+          <button
+            className={styles.skipQuestion}
+            type="button"
+            onClick={() => {
+              setFeeling("");
+              advance();
+            }}
+          >
+            Skip this question
+          </button>
+        </section>
+      ) : null}
 
-      <div className={styles.field}>
-        <label htmlFor="log-note">Note</label>
-        <textarea
-          id="log-note"
-          name="note"
-          rows={3}
-          maxLength={2000}
-          defaultValue={existing?.note ?? ""}
+      {/* ---- Activities. Always mounted, so the list keeps its rows; it
+          sends nothing while the outcome says they did not happen. ---- */}
+      <section data-log-step="activities" hidden={step !== "activities"}>
+        <ActualActivities
+          key={`activities-${startFrom}`}
+          activities={planned?.activities ?? []}
+          recorded={existing?.activities}
+          starting={startingSession?.activities}
+          library={library}
+          saveToLibrary={saveActivityToLibrary}
+          updateInLibrary={updateActivityInLibrary}
+          sessionSport={
+            startingSession?.sport ?? planned?.sport ?? existing?.sport ?? ""
+          }
+          inactive={!activitiesHappened}
         />
-      </div>
-
-      <fieldset className={styles.signals}>
-        <legend>Anything to report</legend>
-        <p className={styles.fieldHint}>
-          FitTip records these as facts you reported. It does not diagnose, and
-          it changes nothing on your plan.
-        </p>
-        {COMPLETION_SIGNALS.map((signal) => (
-          <label key={signal.name} className={styles.checkField}>
-            <input
-              type="checkbox"
-              name={signal.name}
-              value="true"
-              defaultChecked={defaultSignal(existing, signal.name)}
-            />
-            <span>{signal.label}</span>
-          </label>
-        ))}
-        <p className={styles.safety}>{COMPLETION_SAFETY_NOTICE}</p>
-      </fieldset>
-
-      <div className={styles.actions}>
-        <button className={styles.primary} type="submit" disabled={pending}>
-          {pending ? "Saving…" : "Save log"}
+        {activitiesHappened ? <SaveFormToLibrary formRef={formRef} /> : null}
+        <button className={styles.primary} type="button" onClick={next}>
+          {fromSummary ? "Done" : "Next"}
         </button>
-        <Link
-          className={styles.secondary}
-          href={returnTo?.href ?? `/home/today?date=${returnDate}`}
+      </section>
+
+      {/* ---- Anything off? Never passed by: a signal, or "Nothing was off". */}
+      <section data-log-step="off" hidden={step !== "off"}>
+        <p className={styles.sub}>
+          Pick any that apply. FitTip records these as facts you reported; it
+          does not diagnose, and it changes nothing on your plan.
+        </p>
+        <div
+          className={styles.bigChoices}
+          role="group"
+          aria-label="Anything to report"
         >
-          Cancel
-        </Link>
-      </div>
+          {COMPLETION_SIGNALS.map((signal) => (
+            <button
+              key={signal.name}
+              type="button"
+              aria-pressed={signals.has(signal.name)}
+              data-selected={signals.has(signal.name)}
+              onClick={() => {
+                const nextSignals = new Set(signals);
+                if (nextSignals.has(signal.name)) {
+                  nextSignals.delete(signal.name);
+                } else {
+                  nextSignals.add(signal.name);
+                }
+                setSignals(nextSignals);
+              }}
+            >
+              <strong>{signal.label}</strong>
+            </button>
+          ))}
+        </div>
+        {/* The established notice, wherever a signal can be reported. */}
+        <p className={styles.safety}>{COMPLETION_SAFETY_NOTICE}</p>
+        {signals.size > 0 ? (
+          <>
+            <button
+              className={styles.primary}
+              type="button"
+              onClick={() => {
+                setSignalsAnswered(true);
+                advance();
+              }}
+            >
+              {fromSummary ? "Done" : "Next"}
+            </button>
+          </>
+        ) : (
+          <button
+            className={styles.primary}
+            type="button"
+            onClick={() => {
+              setSignalsAnswered(true);
+              advance();
+            }}
+          >
+            Nothing was off
+          </button>
+        )}
+      </section>
+
+      {/* ---- Anything to add? ---- */}
+      <section data-log-step="note" hidden={step !== "note"}>
+        <div className={styles.field}>
+          <label htmlFor="log-note">Note (optional)</label>
+          <textarea
+            id="log-note"
+            name="note"
+            rows={4}
+            maxLength={2000}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </div>
+        {lastStep ? (
+          <button
+            className={styles.primary}
+            type="submit"
+            disabled={pending || !signalsAnswered}
+          >
+            {pending ? "Saving…" : "Save log"}
+          </button>
+        ) : (
+          <button className={styles.primary} type="button" onClick={next}>
+            {fromSummary ? "Done" : "Next"}
+          </button>
+        )}
+      </section>
+
+      {/* ---- The summary: where a correction starts, one Change per answer. */}
+      {step === "summary" ? (
+        <section data-log-step="summary">
+          <dl className={styles.summary}>
+            {summaryRows().map(([target, term, value]) => (
+              <div key={term}>
+                <dt>{term}</dt>
+                <dd>{value}</dd>
+                <button
+                  type="button"
+                  aria-label={`Change ${term.toLowerCase()}`}
+                  onClick={() => {
+                    if (target === "date") setDateOpen(true);
+                    change(target);
+                  }}
+                >
+                  Change
+                </button>
+              </div>
+            ))}
+          </dl>
+          {discarded.length === 0 ? null : (
+            <p className={styles.warning} data-log-clears role="status">
+              Saving this as {COMPLETION_OUTCOME_LABELS[outcome].toLowerCase()}{" "}
+              removes {listPhrase(discarded)}. Your note and anything you
+              reported stay.
+            </p>
+          )}
+          <button
+            className={styles.primary}
+            type="submit"
+            disabled={pending || !signalsAnswered}
+          >
+            {pending ? "Saving…" : "Save log"}
+          </button>
+        </section>
+      ) : null}
     </form>
   );
+
+  /** The steps that follow an outcome, before "Anything off?". */
+  function stepsAfterOutcome(value: CompletionOutcome): Step[] {
+    const trained = TRAINED_OUTCOMES.has(value);
+    const whichDay =
+      planned !== null &&
+      existing === null &&
+      actualDate !== planned.localDate &&
+      trained;
+    return [
+      ...(value === "replaced" ? (["replaced"] as const) : []),
+      ...(whichDay ? (["day"] as const) : []),
+      ...(value !== "skipped" && value !== "replaced"
+        ? (["minutes", "effort", "feeling"] as const)
+        : ([] as const)),
+      ...(trained || value === "unplanned" ? (["activities"] as const) : []),
+    ];
+  }
+
+  /*
+   * The two answers held inside their own components, read from the form as
+   * it stands. The summary is drawn after the form is mounted, and drawn again
+   * each time a step returns to it, so it shows what would be saved now.
+   */
+  function activitiesSummary(): string {
+    const field = formRef.current?.querySelector<HTMLInputElement>(
+      'input[name="activities"]',
+    );
+    let count = existing?.activities.length ?? 0;
+    try {
+      const rows: unknown = JSON.parse(field?.value ?? "");
+      if (Array.isArray(rows)) count = rows.length;
+    } catch {
+      // Not mounted yet: what the record held.
+    }
+    return count === 0
+      ? "None"
+      : count === 1
+        ? "1 activity"
+        : `${count} activities`;
+  }
+
+  function replacementSummary(): string {
+    const form = formRef.current;
+    const picked = form?.querySelector<HTMLSelectElement>(
+      'select[name="replacedByCompletionId"]',
+    );
+    if (picked) return picked.selectedOptions[0]?.textContent ?? "Chosen";
+    const named = form?.querySelector<HTMLInputElement>(
+      'input[name="replacement.title"]',
+    )?.value;
+    return named ? named : "Not said yet";
+  }
+
+  function summaryRows(): [Step, string, string][] {
+    const feelingLabel = COMPLETION_FEELING_CHOICES.find(
+      (choice) => choice.value === feeling,
+    )?.label;
+    const reported = COMPLETION_SIGNALS.filter((signal) =>
+      signals.has(signal.name),
+    ).map((signal) => signal.label);
+    return [
+      ["what", "What", [title, sport].filter(Boolean).join(" · ")],
+      ["date", "Date", dayLabel(actualDate)],
+      ...(choices.length > 1 && !extraChosen
+        ? ([["outcome", "How it went", COMPLETION_OUTCOME_LABELS[outcome]]] as [
+            Step,
+            string,
+            string,
+          ][])
+        : []),
+      ...(outcome === "replaced"
+        ? ([["replaced", "Instead", replacementSummary()]] as [
+            Step,
+            string,
+            string,
+          ][])
+        : []),
+      ...(asksNumbers
+        ? ([
+            ["minutes", "Duration", minutes === "" ? "—" : `${minutes} min`],
+            ["effort", "Effort", effort === null ? "—" : `${effort} of 10`],
+            ["feeling", "Felt", feelingLabel ?? "—"],
+          ] as [Step, string, string][])
+        : []),
+      ...(activitiesHappened
+        ? ([["activities", "Activities", activitiesSummary()]] as [
+            Step,
+            string,
+            string,
+          ][])
+        : []),
+      [
+        "off",
+        "Anything off",
+        reported.length === 0 ? "Nothing" : reported.join(", "),
+      ],
+      ["note", "Note", note.trim() === "" ? "—" : note],
+    ];
+  }
+}
+
+const DAY_LABEL = new Intl.DateTimeFormat("en-GB", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  timeZone: "UTC",
+});
+
+function dayLabel(localDate: string): string {
+  const parsed = Date.parse(`${localDate}T00:00:00.000Z`);
+  return Number.isFinite(parsed)
+    ? DAY_LABEL.format(new Date(parsed))
+    : localDate;
 }
 
 /** "a, b and c", so the warning names every field rather than a count. */

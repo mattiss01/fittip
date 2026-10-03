@@ -6,6 +6,7 @@ import {
 } from "@playwright/test";
 import path from "node:path";
 
+import { logInSteps } from "./support/log-steps";
 import { openNewSession, planDay } from "./support/plan-week";
 
 const evidenceDirectory = path.join(
@@ -90,25 +91,25 @@ test.describe("M3-15C progress", () => {
       await todayCard(page, "Tempo run")
         .getByRole("link", { name: "Log this session" })
         .click();
-      await page.getByLabel("What happened").selectOption("completed");
-      await page.getByLabel("Duration (minutes)").fill("42");
-      await page.getByLabel("Effort (1-10)").fill("7");
-      await page.getByLabel("How it felt").selectOption("good");
-      await page
-        .getByLabel("Note", { exact: true })
-        .fill("Held the pace to the last rep.");
-      await page.getByLabel("I felt pain").check();
-      await page.getByRole("button", { name: "Save log" }).click();
+      await logInSteps(page, {
+        outcome: "Completed",
+        minutes: "42",
+        effort: 7,
+        feeling: "Good",
+        signals: ["I felt pain"],
+        note: "Held the pace to the last rep.",
+      });
       await expect(
         page.getByRole("heading", { name: "Log saved." }),
       ).toBeVisible();
       await page.getByRole("link", { name: "Back to that day" }).click();
 
       await page.getByRole("link", { name: "Log unplanned training" }).click();
-      await page.getByLabel("Title", { exact: true }).fill("Sunrise swim");
-      await page.getByLabel("Sport", { exact: true }).fill("Swimming");
-      await page.getByLabel("Duration (minutes)").fill("30");
-      await page.getByRole("button", { name: "Save log" }).click();
+      await logInSteps(page, {
+        title: "Sunrise swim",
+        sport: "Swimming",
+        minutes: "30",
+      });
       await expect(
         page.getByRole("heading", { name: "Log saved." }),
       ).toBeVisible();

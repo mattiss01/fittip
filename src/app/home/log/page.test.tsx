@@ -176,36 +176,42 @@ describe("Log", () => {
     // On the planned day there is nothing to ask.
     expect(choice()).toBeNull();
 
+    // The day is a line on the first step; changing it brings in the date.
+    fireEvent.click(screen.getByRole("button", { name: /Change the date/ }));
     fireEvent.change(screen.getByLabelText("Date"), {
       target: { value: shiftIsoDate(today(), -1) },
     });
+    expect(hiddenValue("actualLocalDate")).toBe(shiftIsoDate(today(), -1));
+    chooseOutcome("Partly completed");
     expect(choice()?.textContent).toMatch(/Instead of .+ session/);
     expect(choice()?.textContent).toMatch(/Extra .+ still do/);
-    const values = [
-      ...document.querySelectorAll<HTMLInputElement>("input[name='dayChoice']"),
-    ].map((input) => [input.value, input.required]);
-    expect(values).toEqual([
-      ["instead", true],
-      ["extra", true],
-    ]);
+    // Nothing is sent until the owner answers.
+    expect(hiddenValue("dayChoice")).toBe(undefined);
 
-    // Extra can only have happened, so the outcome is no longer asked.
-    fireEvent.change(screen.getByLabelText("What happened"), {
-      target: { value: "partially_completed" },
-    });
-    fireEvent.click(screen.getByRole("radio", { name: /Extra/ }));
-    expect(screen.queryByLabelText("What happened")).toBeNull();
+    // Extra can only have happened, so the outcome is no longer asked: from
+    // the next step, Back passes the day question and lands on the date.
+    fireEvent.click(
+      screen.getByRole("button", { name: /Extra/, hidden: true }),
+    );
+    expect(hiddenValue("dayChoice")).toBe("extra");
     expect(hiddenValue("status")).toBe("completed");
-    expect(choice()).not.toBeNull();
+    expect(currentStep()).toBe("minutes");
+    back();
+    expect(currentStep()).toBe("day");
+    back();
+    expect(currentStep()).toBe("date");
 
     // Choosing "instead" gives the question back.
-    fireEvent.click(screen.getByRole("radio", { name: /Instead of/ }));
-    expect(screen.getByLabelText("What happened")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(currentStep()).toBe("day");
+    fireEvent.click(screen.getByRole("button", { name: /Instead of/ }));
+    expect(hiddenValue("dayChoice")).toBe("instead");
+    back();
+    back();
+    expect(currentStep()).toBe("outcome");
 
     // A skip is about the planned session whatever day it is written on.
-    fireEvent.change(screen.getByLabelText("What happened"), {
-      target: { value: "skipped" },
-    });
+    chooseOutcome("Skipped");
     expect(choice()).toBeNull();
   });
 
@@ -220,17 +226,16 @@ describe("Log", () => {
     );
 
     const outcomes = [
-      ...document.querySelectorAll<HTMLOptionElement>(
-        "select[name='status'] option",
+      ...document.querySelectorAll<HTMLButtonElement>(
+        '[data-log-step="outcome"] [role="group"] button strong',
       ),
-    ].map((option) => option.value);
+    ].map((label) => label.textContent);
     expect(outcomes).toEqual([
-      "completed",
-      "partially_completed",
-      "skipped",
-      "replaced",
+      "Completed",
+      "Partly completed",
+      "Skipped",
+      "Replaced",
     ]);
-    expect(screen.getByText("Skipped")).toBeTruthy();
   });
 
   it("says so when the named session is not on that day", async () => {
@@ -261,9 +266,8 @@ describe("Log", () => {
 
     expect(getPlanSlice).not.toHaveBeenCalled();
     expect(hiddenValue("status")).toBe("unplanned");
-    expect(
-      document.querySelector("[data-log-fixed-outcome]")?.textContent,
-    ).toContain("no planned session attached");
+    // Unplanned training has one outcome, so "How did it go?" is not asked.
+    expect(document.querySelector('[data-log-step="outcome"]')).toBe(null);
   });
 
   it("asks unplanned training for a title and a sport", async () => {
@@ -465,19 +469,23 @@ describe("Log", () => {
     );
 
     expect(document.querySelector("#log-duration")).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("What happened"), {
-      target: { value: "skipped" },
-    });
+    chooseOutcome("Skipped");
     expect(document.querySelector("#log-duration")).toBe(null);
-    expect(document.querySelector("#log-effort")).toBe(null);
-    expect(document.querySelector("#log-feeling")).toBe(null);
-    // An owner may skip precisely because of pain, so the note and all four
-    // signals stay, and so does the notice that qualifies them.
+    expect(document.querySelector('[data-log-step="effort"]')).toBe(null);
+    expect(document.querySelector('[data-log-step="feeling"]')).toBe(null);
+    // A skip goes straight to "Anything off?": an owner may skip precisely
+    // because of pain, so the note and all four signals stay, and so does
+    // the notice that qualifies them.
+    expect(currentStep()).toBe("off");
     expect(document.querySelector("#log-note")).toBeTruthy();
-    expect(screen.getByLabelText("I felt pain")).toBeTruthy();
-    expect(screen.getByLabelText("I was ill")).toBeTruthy();
-    expect(screen.getByLabelText("I was injured")).toBeTruthy();
-    expect(screen.getByLabelText("I was severely fatigued")).toBeTruthy();
+    for (const signal of [
+      "I felt pain",
+      "I was ill",
+      "I was injured",
+      "I was severely fatigued",
+    ]) {
+      expect(screen.getByRole("button", { name: signal })).toBeTruthy();
+    }
     expect(
       screen.getByText(/stop training and speak to a qualified/),
     ).toBeTruthy();
@@ -500,9 +508,7 @@ describe("Log", () => {
     );
 
     expect(document.querySelector("[data-log-clears]")).toBe(null);
-    fireEvent.change(screen.getByLabelText("What happened"), {
-      target: { value: "skipped" },
-    });
+    chooseOutcome("Skipped");
     expect(document.querySelector("[data-log-clears]")?.textContent).toContain(
       "removes the duration, the effort and how it felt",
     );
@@ -527,9 +533,7 @@ describe("Log", () => {
     );
 
     expect(document.querySelector("[data-log-clears]")).toBe(null);
-    fireEvent.change(screen.getByLabelText("What happened"), {
-      target: { value: "skipped" },
-    });
+    chooseOutcome("Skipped");
     const warning = document.querySelector("[data-log-clears]") as HTMLElement;
     expect(warning.textContent).toContain("removes what you did instead");
     expect(warning.textContent).not.toContain("the duration");
@@ -553,9 +557,7 @@ describe("Log", () => {
       }),
     );
 
-    fireEvent.change(screen.getByLabelText("What happened"), {
-      target: { value: "completed" },
-    });
+    chooseOutcome("Completed");
     expect(document.querySelector("[data-log-clears]")?.textContent).toContain(
       "removes what you did instead",
     );
@@ -577,9 +579,7 @@ describe("Log", () => {
       }),
     );
 
-    fireEvent.change(screen.getByLabelText("What happened"), {
-      target: { value: "skipped" },
-    });
+    chooseOutcome("Skipped");
     const warning = document.querySelector("[data-log-clears]") as HTMLElement;
     expect(warning.textContent).toContain(
       "removes the duration, the effort and what you did instead",
@@ -626,6 +626,9 @@ describe("Log", () => {
     expect(
       document.querySelector<HTMLInputElement>("#log-duration")?.value,
     ).toBe("45");
+    // A correction opens on the summary, one Change per answer (owner).
+    expect(currentStep()).toBe("summary");
+    expect(screen.getByText("45 min")).toBeTruthy();
   });
 
   it("says so when the log behind the link is not there", async () => {
@@ -671,9 +674,11 @@ describe("Log", () => {
 
     const notice = screen.getByText(/stop training and speak to a qualified/);
     expect(notice.textContent).toContain("gives no medical advice");
-    // The four signals and the notice belong to the same fieldset, so the
-    // notice cannot be scrolled away from what it qualifies.
-    expect(notice.closest("fieldset")?.textContent).toContain("I felt pain");
+    // The four signals and the notice are one question, shown before any is
+    // picked, so the notice is never a step away from what it qualifies.
+    expect(notice.closest('[data-log-step="off"]')?.textContent).toContain(
+      "I felt pain",
+    );
   });
 
   it("asks what was done instead only once replaced is chosen", async () => {
@@ -687,9 +692,7 @@ describe("Log", () => {
     );
 
     expect(document.querySelector("[data-log-replaced-by]")).toBe(null);
-    fireEvent.change(screen.getByLabelText("What happened"), {
-      target: { value: "replaced" },
-    });
+    chooseOutcome("Replaced");
     // With nothing unplanned logged, the only way is to log it now, and the
     // numbers move to what was actually done.
     expect(document.querySelector("[data-log-replaced-by]")).toBeTruthy();
@@ -723,9 +726,7 @@ describe("Log", () => {
       }),
     );
 
-    fireEvent.change(screen.getByLabelText("What happened"), {
-      target: { value: "replaced" },
-    });
+    chooseOutcome("Replaced");
     fireEvent.click(screen.getByLabelText("I already logged it"));
 
     const select = screen.getByLabelText("Which training") as HTMLSelectElement;
@@ -764,6 +765,26 @@ describe("Log", () => {
     ).toBe(`/home/today?date=${today()}`);
   });
 });
+
+/** Answers "How did it go?" with one tap, as the owner would. */
+function chooseOutcome(label: string) {
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: new RegExp(`^${label}`),
+      hidden: true,
+    }),
+  );
+}
+
+function currentStep() {
+  return document
+    .querySelector("[data-log-form]")
+    ?.getAttribute("data-log-step-current");
+}
+
+function back() {
+  fireEvent.click(screen.getByRole("button", { name: /Back$/ }));
+}
 
 function hiddenValue(name: string) {
   return document.querySelector<HTMLInputElement>(

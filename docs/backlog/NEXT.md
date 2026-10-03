@@ -106,15 +106,10 @@ lane, one screen per merge.
       still accepts edit, move, lock and cancel on one (only delete is refused,
       `session-completed`); a page left open from before the log could still send them.
       Refusing them is a rule in the rolling-plan change function, so careful lane.
-- [ ] **Logging in steps — a prototype first.** Owner, 3 Oct 2026: build a throwaway
-      prototype (`/prototype`) beside today's form to decide whether one question at a
-      time is better. "Log, as a sheet" waits on that answer.
-- [ ] **R3 — The other screens, one per merge.** Everything but these two is done:
-  - [ ] **Log, as a sheet.** Blocked on the logging prototype above. The form's activity
-        editor is already rounded.
-  - [ ] **The shared state cards.** Loading, error and "confirm your time zone" on every
-        route still use the old masthead card. You and Settings have no loading or error
-        file of their own.
+- [ ] **R3 — The shared state cards, the last old-style screens.** Loading, error,
+      "confirm your time zone" and the log's own unavailable states on every route still
+      use the old masthead card. You and Settings have no loading or error file of their
+      own.
 - [ ] **Activity editor in the mono face — not answered.** Its input fields and the
       measurement line under a name are still in the mono face; the count and hints moved
       to sans. The owner asked what the difference is (3 Oct 2026); recommended: sans.
@@ -195,8 +190,8 @@ Not worth their own slot; do them when work lands nearby.
   set and activity by activity, instead of filling the log in afterwards. To think
   through: what is saved if it is abandoned halfway (a partial log, or nothing), whether
   a phone that sleeps or goes offline mid-session loses anything, how it sits beside the
-  after-the-fact form and "Logging in steps" below, and where the pain, illness and
-  fatigue question goes so it is never skipped. The log's records stay separate from the
+  after-the-fact log in steps, and where the pain, illness and fatigue question goes so
+  it is never skipped (in steps it is its own question, answered or "Nothing was off"). The log's records stay separate from the
   plan either way.
 - **Create and fill with Coach — idea.** Owner, 1 Oct 2026. Fill with Coach is offered only
   when editing, because the coach reads a saved session and its suggestion is stored
@@ -218,12 +213,6 @@ Not worth their own slot; do them when work lands nearby.
   reason carried with the plan proposal — and a label that says who wrote it. Coach text
   is careful lane (AI data boundary) and must stay a quote of an accepted plan, never
   composed on the page.
-- **Logging in steps — undecided.** Owner, 29 Sep 2026, not sure yet: ask what happened one
-  question at a time (how it went, effort, how it felt, anything off) instead of one form.
-  To think through: whether it is faster or slower for a routine log, how a correction or
-  a skip fits, and where the pain, illness and fatigue question sits so it is never skipped
-  by accident. Would land with R3's "Log as a sheet" if wanted; a prototype comes first
-  (above, 3 Oct 2026).
 - **A goal bar on Today — undecided.** Owner, 29 Sep 2026: decide whether Today should show
   one at all. The prototype showed "3 weeks to 10k under 48 min" and "this week 40 min of
   4 h". Both would have to come from real records (`.claude/rules/ui.md`): which goal (the
