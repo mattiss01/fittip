@@ -840,29 +840,6 @@
   overflow-wrap: anywhere;
 }
 
-/* Save session to library, folded until asked for: most logs are not saved. */
-.saveSession {
-  display: grid;
-  gap: 0.6rem;
-  padding: 0 0.9rem;
-  border-radius: var(--radius-control);
-  background: var(--paper);
-  box-shadow: var(--shadow-card);
-}
-
-.saveSession[open] {
-  padding-bottom: 0.75rem;
-}
-
-.saveSession > summary {
-  min-height: 2.75rem;
-  display: flex;
-  align-items: center;
-  color: var(--pine);
-  font: 700 0.9rem var(--font-sans);
-  cursor: pointer;
-}
-
 /*
  * Inside its step the activity list is the question's answer, not a framed
  * section: the heading already asks it (owner, 3 Oct 2026: the empty list

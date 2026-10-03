@@ -30,7 +30,6 @@ import {
 import styles from "./log.module.css";
 
 import homeStyles from "../home.module.css";
-import { saveSessionDraftToLibraryAction } from "../plan/saved/actions";
 import { SaveToLibrary } from "../plan/saved/save-to-library";
 import type {
   LibraryActivityOption,
@@ -1024,7 +1023,6 @@ export function LogForm({
           }
           inactive={!activitiesHappened}
         />
-        {activitiesHappened ? <SaveFormToLibrary formRef={formRef} /> : null}
         <button className={styles.primary} type="button" onClick={next}>
           {fromSummary ? "Back to summary" : "Next"}
         </button>
@@ -1422,87 +1420,5 @@ function ReplacedBy({
         </>
       )}
     </fieldset>
-  );
-}
-
-/**
- * "Save session to library" while logging, before or without writing the
- * log (owner, 27 Sep 2026). It reads the form as it stands - title, sport,
- * duration and the activity list - so what is saved is what is on screen.
- * What was done becomes the saved session's targets, and the duration its
- * expected minutes. The entry is called what the log is called.
- */
-function SaveFormToLibrary({
-  formRef,
-}: {
-  formRef: React.RefObject<HTMLFormElement | null>;
-}) {
-  const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-
-  async function save() {
-    const form = formRef.current;
-    if (form === null) return;
-    const values = new FormData(form);
-    const minutes = Number(values.get("durationMinutes"));
-    let activities: Record<string, unknown>[] = [];
-    try {
-      const raw = values.get("activities");
-      activities = typeof raw === "string" ? JSON.parse(raw) : [];
-    } catch {
-      activities = [];
-    }
-    setSaving(true);
-    try {
-      const title = String(values.get("title") ?? "").trim();
-      const result = await saveSessionDraftToLibraryAction({
-        name: title,
-        title,
-        sport: String(values.get("sport") ?? "").trim(),
-        ...(Number.isInteger(minutes) && minutes > 0
-          ? { expectedDurationMinutes: minutes }
-          : {}),
-        activities: activities.map((activity, position) => ({
-          ...(typeof activity.personalActivityId === "string"
-            ? { personalActivityId: activity.personalActivityId }
-            : {}),
-          position,
-          name: activity.name,
-          sport: activity.sport,
-          measurementMode: activity.measurementMode,
-          ...(activity.actualMeasurement == null
-            ? {}
-            : { target: activity.actualMeasurement }),
-        })),
-      });
-      setNotice(result.message);
-    } catch {
-      setNotice("It could not be saved. Try again.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <details className={styles.saveSession} data-log-save-session>
-      <summary>Save session to library</summary>
-      <p className={styles.fieldHint}>
-        A copy of this log as it stands goes to your saved sessions, with what
-        you did as its targets. The log itself is not saved by this.
-      </p>
-      <button
-        className={styles.secondary}
-        type="button"
-        disabled={saving}
-        onClick={save}
-      >
-        {saving ? "Saving\u2026" : "Save to library"}
-      </button>
-      {notice === null ? null : (
-        <p className={styles.fieldHint} role="status">
-          {notice}
-        </p>
-      )}
-    </details>
   );
 }

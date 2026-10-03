@@ -121,6 +121,9 @@ lane, one screen per merge.
 
 Not worth their own slot; do them when work lands nearby.
 
+- **`saveSessionDraftToLibraryAction` has no caller.** The log's own "Save session to
+  library" left the activities step (owner, 3 Oct 2026); saving a log goes through the
+  receipt, Today and Progress. The action and its tests in `plan/saved` can go.
 - **A plain new browser spec has no way into CI.** `.github/scripts/browser-flows.sh` runs
   `auth` or a flow with its own `e2e/<flow>.playwright.config.ts`, and `.claude/rules/tests.md`
   says not to add such configs. A new spec under the root config would pass review and
