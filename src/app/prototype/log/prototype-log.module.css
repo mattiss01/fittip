@@ -1,0 +1,499 @@
+/* PROTOTYPE — styles for the three log variants, in the app's palette. */
+
+.page,
+.stepPage {
+  min-height: 100dvh;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 4.5rem 1rem 3rem;
+  background: var(--sage);
+  color: var(--pine);
+  font-family: var(--font-sans);
+}
+
+.head h1 {
+  margin: 0.2rem 0 1rem;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.kicker {
+  margin: 0;
+  color: var(--moss);
+  font: 400 0.75rem var(--font-mono);
+}
+
+.card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.1rem;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.field > span {
+  color: var(--moss);
+  font: 500 0.62rem var(--font-mono);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.field input,
+.field select,
+.field textarea,
+.bigNote,
+.chipInput {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: white;
+  color: var(--pine);
+  font: 400 1rem/1.35 var(--font-sans);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.75rem;
+}
+
+.check input {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.activityList,
+.planned {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+}
+
+.activityList li,
+.planned li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.5rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 0.8rem;
+  background: var(--sage);
+}
+
+.planned {
+  margin-bottom: 1.25rem;
+}
+
+.planned li {
+  background: var(--paper);
+}
+
+.smallButton {
+  margin-left: auto;
+  min-height: 2.25rem;
+  padding: 0 0.8rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--fern);
+  color: var(--pine);
+  font: 700 0.8rem var(--font-sans);
+}
+
+.primary {
+  width: 100%;
+  min-height: 3.2rem;
+  margin-top: 0.5rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--ember-dark);
+  color: var(--paper);
+  font: 700 1rem var(--font-sans);
+  cursor: pointer;
+}
+
+.safety {
+  margin: 0.25rem 0 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-control);
+  background: #fff4ec;
+  box-shadow: inset 4px 0 0 var(--ember);
+  color: #6d2f13;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.state {
+  margin-top: 2rem;
+  font-size: 0.75rem;
+}
+
+.state summary {
+  color: var(--moss);
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+
+.state pre {
+  overflow-x: auto;
+  padding: 0.75rem;
+  border-radius: 0.6rem;
+  background: var(--pine);
+  color: var(--paper);
+}
+
+/* ---- B: steps ---- */
+
+.stepPage {
+  display: flex;
+  flex-direction: column;
+}
+
+.stepHead {
+  display: grid;
+  grid-template-columns: 5rem 1fr 5rem;
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+.stepBack {
+  justify-self: start;
+  min-height: 2.75rem;
+  padding: 0 0.4rem;
+  border: 0;
+  background: none;
+  color: var(--pine);
+  font: 700 0.95rem var(--font-sans);
+}
+
+.stepTitle {
+  text-align: center;
+  color: var(--moss);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.stepCount {
+  justify-self: end;
+  color: var(--moss);
+  font: 400 0.75rem var(--font-mono);
+}
+
+.progress {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0.4rem 0 1.5rem;
+}
+
+.progress span {
+  flex: 1;
+  height: 0.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--fern);
+}
+
+.progress span[data-on="true"] {
+  background: var(--ember);
+}
+
+.question {
+  display: grid;
+  gap: 0.75rem;
+  animation: rise 200ms var(--ease-out);
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(0.75rem);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .question {
+    animation: none;
+  }
+}
+
+.question h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.sub {
+  margin: -0.4rem 0 0.25rem;
+  color: var(--moss);
+}
+
+.bigChoices {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.bigChoices button {
+  display: grid;
+  gap: 0.15rem;
+  justify-items: start;
+  min-height: 3.75rem;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 1rem;
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  color: var(--pine);
+  text-align: left;
+  font: 700 1.05rem var(--font-sans);
+  cursor: pointer;
+}
+
+.bigChoices button span {
+  color: var(--moss);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.bigChoices button[data-selected="true"] {
+  background: var(--pine);
+  color: var(--paper);
+}
+
+.bigChoices button[data-selected="true"] span {
+  color: #b8cbc3;
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: 4rem 1fr 4rem;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.stepper button {
+  height: 4rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  color: var(--pine);
+  font: 700 1.1rem var(--font-sans);
+}
+
+.stepper output {
+  text-align: center;
+  font-size: 3.5rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.stepper small {
+  margin-left: 0.25rem;
+  color: var(--moss);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.effortGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+}
+
+.effortGrid button {
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 1rem;
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  color: var(--pine);
+  font: 800 1.4rem var(--font-sans);
+}
+
+.effortGrid button[data-selected="true"] {
+  background: var(--pine);
+  color: var(--paper);
+}
+
+.skipLink {
+  justify-self: center;
+  min-height: 2.75rem;
+  border: 0;
+  background: none;
+  color: var(--moss);
+  font: 600 0.9rem var(--font-sans);
+  text-decoration: underline;
+}
+
+.bigNote {
+  min-height: 7rem;
+}
+
+.summary {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+.summary div {
+  display: grid;
+  grid-template-columns: 7rem 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-top: 1px solid var(--fern);
+}
+
+.summary div:first-child {
+  border-top: 0;
+}
+
+.summary dt {
+  color: var(--moss);
+  font-size: 0.85rem;
+}
+
+.summary dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.summary button {
+  min-height: 2.5rem;
+  border: 0;
+  background: none;
+  color: var(--ember-dark);
+  font: 700 0.85rem var(--font-sans);
+}
+
+/* ---- C: conversation ---- */
+
+.thread {
+  display: grid;
+  gap: 1rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.turn {
+  display: grid;
+  gap: 0.5rem;
+  animation: rise 200ms var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .turn {
+    animation: none;
+  }
+}
+
+.ask {
+  justify-self: start;
+  max-width: 85%;
+  margin: 0;
+  padding: 0.65rem 0.95rem;
+  border-radius: 1.1rem 1.1rem 1.1rem 0.3rem;
+  background: var(--pine);
+  color: var(--paper);
+  font-weight: 700;
+}
+
+.reply {
+  justify-self: end;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  max-width: 85%;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.95rem;
+  border: 0;
+  border-radius: 1.1rem 1.1rem 0.3rem 1.1rem;
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  color: var(--pine);
+  font: 700 0.95rem var(--font-sans);
+  text-align: right;
+}
+
+.reply span {
+  color: var(--ember-dark);
+  font-size: 0.75rem;
+}
+
+.answerBox {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.chip,
+.chipQuiet,
+.dot {
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--fern);
+  color: var(--pine);
+  font: 700 0.9rem var(--font-sans);
+  cursor: pointer;
+}
+
+.chip[data-selected="true"],
+.dot[data-selected="true"] {
+  background: var(--pine);
+  color: var(--paper);
+}
+
+.chipQuiet {
+  background: transparent;
+  color: var(--moss);
+}
+
+.dot {
+  width: 2.75rem;
+  padding: 0;
+}
+
+.chipInput {
+  width: 6.5rem;
+  min-height: 2.75rem;
+  border-radius: var(--radius-pill);
+}
+
+.answerBox .safety,
+.answerBox .primary,
+.answerBox .bigNote {
+  width: 100%;
+}
