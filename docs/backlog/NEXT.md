@@ -101,9 +101,11 @@ lane, one screen per merge.
       Belongs with "Write a roadmap yourself", which writes the same shape by hand. A
       change to the stored shape is careful lane (`roadmap_versions` content, the AI
       contract, ADR-015).
-- [ ] **A logged session cannot be edited, only its log.** Owner, 3 Oct 2026: a session
-      already logged today still shows Edit on its page; it should show Edit log, and
-      its plan should no longer be changeable from there.
+- [ ] **The server does not refuse a plan change to a logged session.** Since 3 Oct 2026
+      a logged session's page offers only Edit log and Save to library, but `planAction`
+      still accepts edit, move, lock and cancel on one (only delete is refused,
+      `session-completed`); a page left open from before the log could still send them.
+      Refusing them is a rule in the rolling-plan change function, so careful lane.
 - [ ] **Outcomes all green.** Owner, 3 Oct 2026: "Partly completed" and "Replaced" go
       green like completed and unplanned.
 - [ ] **A short "Logged for" date.** Owner, 3 Oct 2026: "Tue 29 Sep" on a record, so

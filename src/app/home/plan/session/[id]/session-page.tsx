@@ -44,7 +44,6 @@ import { SessionFields } from "../../session-fields";
 import {
   draftOf,
   planDayHref,
-  readsAsLogged,
   sessionHref,
   stampDate,
   type PlanSessionView,
@@ -52,7 +51,10 @@ import {
 
 import page from "./session-page.module.css";
 
-import { COMPLETION_OUTCOME_LABELS } from "../../../log/log-action-state";
+import {
+  COMPLETION_OUTCOME_LABELS,
+  recordsTraining,
+} from "../../../log/log-action-state";
 import { ActivityList } from "@/components/training/activity-list";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
 
@@ -279,9 +281,9 @@ export function SessionPage({
     );
   }
 
-  const logged = readsAsLogged(session);
   const past = session.localDate < today;
-  const cancelled = session.status === "cancelled" && !logged;
+  // Trained after it was cancelled, it reads as logged, not cancelled.
+  const cancelled = session.status === "cancelled" && session.log === undefined;
   // Once anything is logged against it, the session is settled: its log is
   // what changes now, not its plan (owner, 3 Oct 2026). That includes a log
   // on its own day and a skip written ahead, which used to keep every plan
@@ -454,9 +456,7 @@ export function SessionPage({
             <MoreMenu>
               {(close) => (
                 <>
-                  <MenuLink href={logHref}>
-                    {session.log ? "Edit log" : "Log this session"}
-                  </MenuLink>
+                  <MenuLink href={logHref}>Log this session</MenuLink>
                   <MenuItem
                     onSelect={() => {
                       close();
@@ -506,21 +506,13 @@ export function SessionPage({
               )}
             </MoreMenu>
           ) : session.log ? (
-            // The copy actions only, as a Progress record offers: nothing in
-            // here changes this session. A cancelled one cannot be duplicated.
-            <MoreMenu>
-              {(close) => (
-                <>
-                  {session.status === "cancelled" ? null : (
-                    <MenuItem
-                      onSelect={() => {
-                        close();
-                        setPanel("duplicate");
-                      }}
-                    >
-                      Duplicate
-                    </MenuItem>
-                  )}
+            // What a Progress record offers (owner, 3 Oct 2026): training that
+            // happened can be saved to the library; a skip or a replacement
+            // records none, so it offers nothing. Nothing here changes the
+            // session itself.
+            recordsTraining(session.log.outcome) ? (
+              <MoreMenu>
+                {(close) => (
                   <MenuItem
                     onSelect={() => {
                       close();
@@ -529,9 +521,9 @@ export function SessionPage({
                   >
                     Save to library
                   </MenuItem>
-                </>
-              )}
-            </MoreMenu>
+                )}
+              </MoreMenu>
+            ) : null
           ) : cancelled ? (
             <MoreMenu>
               {(close) => (
@@ -638,8 +630,7 @@ export function SessionPage({
                 <PlanDateInput
                   id={`duplicate-${session.id}`}
                   range={dateRange}
-                  // A logged session may be in the past, where no copy can go.
-                  defaultValue={past ? today : session.localDate}
+                  defaultValue={session.localDate}
                 />
               </div>
               <p className={styles.consequenceStandalone}>

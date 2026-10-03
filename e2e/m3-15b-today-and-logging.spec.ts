@@ -471,10 +471,11 @@ test.describe("M3-15B today and logging", () => {
       await expect(
         page.getByRole("button", { name: "Edit", exact: true }),
       ).toHaveCount(0);
+      // The menu holds what a Progress record offers, and no plan verb.
       await page.getByRole("button", { name: "More actions" }).click();
-      await expect(
-        page.locator("[data-session-actions] li").getByText("Delete"),
-      ).toHaveCount(0);
+      const menu = page.locator("[data-session-actions] li");
+      await expect(menu.getByText("Save to library")).toBeVisible();
+      await expect(menu.getByText("Delete")).toHaveCount(0);
       await page.keyboard.press("Escape");
 
       // Tomorrow's occurrence is not logged, so the series ends from there,

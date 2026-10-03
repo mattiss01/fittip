@@ -42,10 +42,13 @@ export type PlanSessionLog = {
 };
 
 /**
- * A session reads as logged when the log settles what the plan still shows:
- * trained on another day, so it is not still ahead here, or trained after it
- * was cancelled. Logged on its own day, or skipped or replaced ahead of time,
- * it keeps its plan controls, which is where a series is ended from.
+ * A session reads as logged on the Plan when the log settles what the plan
+ * still shows: trained on another day, so it is not still ahead here, or
+ * trained after it was cancelled. Logged on its own day, or skipped or
+ * replaced ahead of time, its card keeps the plan's look.
+ *
+ * Not the test for plan controls: since 3 Oct 2026 (owner) any log settles
+ * the session, and its page offers Edit log instead (`session-page.tsx`).
  */
 export function readsAsLogged(
   session: PlanSessionView,

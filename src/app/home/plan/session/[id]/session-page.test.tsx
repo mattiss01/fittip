@@ -561,7 +561,7 @@ describe("SessionPage", () => {
     ).toBeVisible();
   });
 
-  it("offers a session logged on another day its log and the copy actions", () => {
+  it("offers a session trained on another day its log and Save to library", () => {
     render(
       page(
         session({
@@ -581,14 +581,14 @@ describe("SessionPage", () => {
     );
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
     openMenu();
-    expect(screen.getByRole("button", { name: "Duplicate" })).toBeVisible();
     expect(
       screen.getByRole("button", { name: "Save to library" }),
     ).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Duplicate" })).toBeNull();
   });
 
   // Owner, 3 Oct 2026: once logged, the log is what changes, not the plan.
-  it("settles a session logged on its own day: Edit log and copies only", () => {
+  it("settles a session logged on its own day: Edit log, Save to library", () => {
     render(
       page(
         occurrence({
@@ -608,10 +608,10 @@ describe("SessionPage", () => {
     );
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
     openMenu();
-    expect(screen.getByRole("button", { name: "Duplicate" })).toBeVisible();
     expect(
       screen.getByRole("button", { name: "Save to library" }),
     ).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Duplicate" })).toBeNull();
     for (const verb of ["Lock", "Unlock", "Cancel session", "Delete"]) {
       expect(screen.queryByRole("button", { name: verb })).toBeNull();
     }
@@ -633,6 +633,8 @@ describe("SessionPage", () => {
 
     expect(screen.getByRole("link", { name: "Edit log" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+    // A skip records no training, so there is nothing to save either.
+    expect(screen.queryByRole("button", { name: "More actions" })).toBeNull();
   });
 
   it("lets a past session be logged and nothing else", () => {
