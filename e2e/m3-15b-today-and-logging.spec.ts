@@ -447,7 +447,7 @@ test.describe("M3-15B today and logging", () => {
         path: path.join(evidenceDirectory, "M3-15B-logged-day-390x844.png"),
       });
 
-      // ---- The end_series receipt now reports a completed survivor. ----
+      // ---- A logged occurrence is settled; its series ends from the next. ----
       await todayCard(page, "Aerobic base")
         .getByRole("link", { name: "Log this session" })
         .click();
@@ -457,9 +457,29 @@ test.describe("M3-15B today and logging", () => {
         page.getByRole("heading", { name: "Log saved." }),
       ).toBeVisible();
 
-      // Opened from Today, which is where the owner just logged it. A logged
-      // occurrence survives its series' end, so the page stays and reports.
+      // Owner, 3 Oct 2026: once logged, its log is what changes, not its
+      // plan. The page offers Edit log and the copy actions, nothing more.
       await page.goto("/home/today");
+      await todayCard(page, "Aerobic base")
+        .getByRole("link", { name: "Aerobic base", exact: true })
+        .click();
+      await expect(
+        page
+          .locator("[data-session-actions]")
+          .getByRole("link", { name: "Edit log" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Edit", exact: true }),
+      ).toHaveCount(0);
+      await page.getByRole("button", { name: "More actions" }).click();
+      await expect(
+        page.locator("[data-session-actions] li").getByText("Delete"),
+      ).toHaveCount(0);
+      await page.keyboard.press("Escape");
+
+      // Tomorrow's occurrence is not logged, so the series ends from there,
+      // and today's logged one is kept.
+      await page.goto(`/home/today?date=${tomorrow}`);
       await todayCard(page, "Aerobic base")
         .getByRole("link", { name: "Aerobic base", exact: true })
         .click();
@@ -471,17 +491,15 @@ test.describe("M3-15B today and logging", () => {
         .last()
         .getByRole("button", { name: "Delete this and all future sessions" })
         .click();
-      const receipt = page
-        .getByRole("status")
-        .filter({ hasText: "Future recurring sessions removed permanently" });
-      await expect(receipt).toContainText(/\d+ locked kept/);
-      await expect(receipt).toContainText("1 completed kept");
+      await expect(page.locator(`[data-today-date="${tomorrow}"]`)).toBeVisible(
+        { timeout: 30_000 },
+      );
+      await expect(todayCard(page, "Aerobic base")).toHaveCount(0);
+      await page.goto("/home/today");
+      await expect(todayCard(page, "Aerobic base")).toBeVisible();
       await page.screenshot({
         fullPage: true,
-        path: path.join(
-          evidenceDirectory,
-          "M3-15B-completed-survivor-390x844.png",
-        ),
+        path: path.join(evidenceDirectory, "M3-15B-series-ended-390x844.png"),
       });
 
       expect(

@@ -282,7 +282,12 @@ export function SessionPage({
   const logged = readsAsLogged(session);
   const past = session.localDate < today;
   const cancelled = session.status === "cancelled" && !logged;
-  const plannable = !past && !logged && !cancelled;
+  // Once anything is logged against it, the session is settled: its log is
+  // what changes now, not its plan (owner, 3 Oct 2026). That includes a log
+  // on its own day and a skip written ahead, which used to keep every plan
+  // verb so a series could be ended from them; a series ends from an
+  // occurrence nobody has logged.
+  const plannable = !past && session.log === undefined && !cancelled;
   const recurring =
     series !== undefined && session.occurrenceDate !== null
       ? { series, occurrenceDate: session.occurrenceDate }
@@ -500,6 +505,33 @@ export function SessionPage({
                 </>
               )}
             </MoreMenu>
+          ) : session.log ? (
+            // The copy actions only, as a Progress record offers: nothing in
+            // here changes this session. A cancelled one cannot be duplicated.
+            <MoreMenu>
+              {(close) => (
+                <>
+                  {session.status === "cancelled" ? null : (
+                    <MenuItem
+                      onSelect={() => {
+                        close();
+                        setPanel("duplicate");
+                      }}
+                    >
+                      Duplicate
+                    </MenuItem>
+                  )}
+                  <MenuItem
+                    onSelect={() => {
+                      close();
+                      setPanel("save");
+                    }}
+                  >
+                    Save to library
+                  </MenuItem>
+                </>
+              )}
+            </MoreMenu>
           ) : cancelled ? (
             <MoreMenu>
               {(close) => (
@@ -606,7 +638,8 @@ export function SessionPage({
                 <PlanDateInput
                   id={`duplicate-${session.id}`}
                   range={dateRange}
-                  defaultValue={session.localDate}
+                  // A logged session may be in the past, where no copy can go.
+                  defaultValue={past ? today : session.localDate}
                 />
               </div>
               <p className={styles.consequenceStandalone}>
