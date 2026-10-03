@@ -814,6 +814,19 @@ describe("Log", () => {
     expect(hiddenValue("status")).toBe("partially_completed");
   });
 
+  it("starts the duration at 0 and sends 0 as no duration", async () => {
+    // Unplanned training has no planned duration to start from.
+    render(await LogPage({ searchParams: Promise.resolve({}) }));
+
+    const minutes = document.querySelector<HTMLInputElement>("#log-duration");
+    // 0 shows where the number goes (owner, 3 Oct 2026)...
+    expect(minutes?.value).toBe("0");
+    // ...and means "not entered": nothing reads "0 min" afterwards.
+    expect(hiddenValue("durationMinutes")).toBe("");
+    fireEvent.change(minutes as HTMLInputElement, { target: { value: "30" } });
+    expect(hiddenValue("durationMinutes")).toBe("30");
+  });
+
   it("replaces the form with a receipt that leads back to the day", async () => {
     useActionStateMock.mockReturnValue([
       {

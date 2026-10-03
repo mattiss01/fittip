@@ -859,7 +859,6 @@ export function LogForm({
               <span className={styles.srOnly}>Duration (minutes)</span>
               <input
                 id="log-duration"
-                name="durationMinutes"
                 type="number"
                 inputMode="numeric"
                 min={0}
@@ -870,6 +869,14 @@ export function LogForm({
               />
               <span aria-hidden="true">min</span>
             </label>
+            {/* 0 marks where the number goes and means "not entered" (owner,
+                3 Oct 2026): it is sent as no duration, so nothing reads
+                "0 min" afterwards. */}
+            <input
+              type="hidden"
+              name="durationMinutes"
+              value={durationEntered(minutes) ? minutes : ""}
+            />
             <button
               type="button"
               aria-label="5 minutes more"
@@ -1137,7 +1144,11 @@ export function LogForm({
         : []),
       ...(asksNumbers
         ? ([
-            ["minutes", "Duration", minutes === "" ? "—" : `${minutes} min`],
+            [
+              "minutes",
+              "Duration",
+              durationEntered(minutes) ? `${minutes} min` : "—",
+            ],
             ["effort", "Effort", effort === null ? "—" : `${effort} of 10`],
             ...(feelingLabel === undefined
               ? []
@@ -1174,6 +1185,11 @@ function firstInvalid(scope: ParentNode): HTMLInputElement | null {
     if (!control.checkValidity()) return control;
   }
   return null;
+}
+
+/** A duration the owner set: anything but blank or the starting 0. */
+function durationEntered(minutes: string): boolean {
+  return minutes.trim() !== "" && Number(minutes) !== 0;
 }
 
 function countPhrase(count: number): string {
