@@ -61,6 +61,14 @@ const LONG_DAY = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
+/* Short enough to sit beside the duration at 390px (owner, 3 Oct 2026). */
+const SHORT_DAY = new Intl.DateTimeFormat("en-GB", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  timeZone: "UTC",
+});
+
 /** What the owner recorded, in the same words the log form wrote it with. */
 export function RecordedFacts({
   completion,
@@ -80,7 +88,7 @@ export function RecordedFacts({
 
   const facts = [
     showDate
-      ? { term: "Logged for", value: longDay(completion.actualLocalDate) }
+      ? { term: "Logged for", value: shortDay(completion.actualLocalDate) }
       : null,
     completion.durationMinutes === null
       ? null
@@ -144,4 +152,8 @@ export function RecordedFacts({
 
 export function longDay(date: string) {
   return LONG_DAY.format(new Date(`${date}T00:00:00.000Z`));
+}
+
+function shortDay(date: string) {
+  return SHORT_DAY.format(new Date(`${date}T00:00:00.000Z`));
 }

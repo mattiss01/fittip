@@ -117,6 +117,8 @@
 }
 
 .marks > span[data-outcome="completed"],
+.marks > span[data-outcome="partially_completed"],
+.marks > span[data-outcome="replaced"],
 .marks > span[data-outcome="unplanned"] {
   background: color-mix(in srgb, var(--pine-soft) 14%, transparent);
   color: var(--pine-soft);

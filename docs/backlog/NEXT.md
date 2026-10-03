@@ -104,10 +104,6 @@ lane, one screen per merge.
 - [ ] **A logged session cannot be edited, only its log.** Owner, 3 Oct 2026: a session
       already logged today still shows Edit on its page; it should show Edit log, and
       its plan should no longer be changeable from there.
-- [ ] **Outcomes all green.** Owner, 3 Oct 2026: "Partly completed" and "Replaced" go
-      green like completed and unplanned.
-- [ ] **A short "Logged for" date.** Owner, 3 Oct 2026: "Tue 29 Sep" on a record, so
-      the duration stays beside it at 390px.
 - [ ] **Logging in steps — a prototype first.** Owner, 3 Oct 2026: build a throwaway
       prototype (`/prototype`) beside today's form to decide whether one question at a
       time is better. "Log, as a sheet" waits on that answer.
