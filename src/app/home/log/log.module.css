@@ -9,28 +9,24 @@
   --log-quiet: var(--recovery);
 }
 
+/* The session being logged, as one quiet line above the questions. */
 .sourceCard {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  border: 1px solid var(--line);
-  border-left: 7px solid var(--log-mark);
-  background: var(--ledger-paper);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
+  width: 100%;
+  margin-top: 0.5rem;
 }
 
-.sourceCard h2 {
-  margin: 0.35rem 0 0;
-  font-size: 1.3rem;
+.sourceCard h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
 
 .sourceMeta {
-  margin: 0.5rem 0 0;
-  color: var(--ledger-muted);
-  font: 0.72rem var(--font-mono);
-  letter-spacing: 0.03em;
+  margin: 0.15rem 0 0;
+  color: var(--moss);
+  font-size: 0.85rem;
 }
 
 .sectionLabel {
@@ -48,15 +44,294 @@
   line-height: 1.55;
 }
 
+/* Logging in steps (owner, 3 Oct 2026): one question fills the page. */
 .form {
+  width: 100%;
   display: grid;
-  gap: 1.1rem;
-  margin-top: 1.25rem;
-  padding: 1rem;
-  border: 1px solid var(--line);
-  background: var(--ledger-paper);
-  border-radius: var(--radius-card);
+  gap: 0.9rem;
+  margin-top: 0.75rem;
+}
+
+.form > section {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.form > section[hidden] {
+  display: none;
+}
+
+.stepBar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+.form .stepBack,
+.stepClose {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 0 0.25rem;
+  border: 0;
+  background: none;
+  color: var(--pine);
+  font: 700 0.95rem var(--font-sans);
+  text-decoration: none;
+}
+
+.form .stepBack {
+  justify-self: start;
+}
+
+.stepClose {
+  justify-self: end;
+  color: var(--moss);
+}
+
+.form .stepBack:hover,
+.stepClose:hover {
+  background: none;
+  color: var(--ember-dark);
+}
+
+.stepCount {
+  color: var(--moss);
+  font: 400 0.75rem var(--font-mono);
+}
+
+.progress {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.progress span {
+  flex: 1;
+  height: 0.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--fern);
+}
+
+.progress span[data-on="true"] {
+  background: var(--ember);
+}
+
+.question {
+  margin: 0.4rem 0 0;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.question:focus {
+  outline: none;
+}
+
+.sub {
+  margin: -0.4rem 0 0;
+  color: var(--moss);
+  line-height: 1.45;
+}
+
+/* A question's answers: big cards, one tap each. */
+.bigChoices {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.form .bigChoices button {
+  display: grid;
+  align-content: center;
+  gap: 0.15rem;
+  justify-items: start;
+  min-height: 3.75rem;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 1rem;
+  background: var(--paper);
   box-shadow: var(--shadow-card);
+  color: var(--pine);
+  text-align: left;
+  font: 700 1.05rem var(--font-sans);
+}
+
+.bigChoices button span {
+  color: var(--moss);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.form .bigChoices button:hover {
+  background: var(--sage);
+}
+
+.form .bigChoices button[data-selected="true"] {
+  background: var(--pine);
+  color: var(--paper);
+}
+
+.bigChoices button[data-selected="true"] span {
+  color: #b8cbc3;
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: 4rem 1fr 4rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form .stepper > button {
+  height: 4rem;
+  margin: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  color: var(--pine);
+  font: 700 1.1rem var(--font-sans);
+}
+
+.form .stepper > button:hover {
+  background: var(--sage);
+}
+
+.stepperValue {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.3rem;
+  color: var(--moss);
+  font-weight: 600;
+}
+
+.form .stepper .stepperValue input::-webkit-inner-spin-button,
+.form .stepper .stepperValue input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.form .stepper .stepperValue input {
+  appearance: textfield;
+  width: 6.5rem;
+  min-height: 4rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--pine);
+  text-align: center;
+  font: 800 3rem var(--font-sans);
+  letter-spacing: -0.04em;
+}
+
+.effortGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+}
+
+.form .effortGrid button {
+  aspect-ratio: 1;
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 1rem;
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  color: var(--pine);
+  font: 800 1.4rem var(--font-sans);
+}
+
+.form .effortGrid button:hover {
+  background: var(--sage);
+}
+
+.form .effortGrid button[data-selected="true"] {
+  background: var(--pine);
+  color: var(--paper);
+}
+
+.form .skipQuestion,
+.form .inlineChange {
+  justify-self: center;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--moss);
+  font: 600 0.9rem var(--font-sans);
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+
+.form .skipQuestion:hover,
+.form .inlineChange:hover {
+  background: none;
+  color: var(--pine);
+}
+
+.dateLine {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--moss);
+}
+
+.form .inlineChange {
+  color: var(--ember-dark);
+  text-decoration: none;
+}
+
+.summary {
+  margin: 0;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+.summary div {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem 0.35rem 1rem;
+  border-top: 1px solid var(--fern);
+}
+
+.summary div:first-child {
+  border-top: 0;
+}
+
+.summary dt {
+  color: var(--moss);
+  font-size: 0.85rem;
+}
+
+.summary dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.form .summary button {
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--ember-dark);
+  font: 700 0.85rem var(--font-sans);
+}
+
+.form .summary button:hover {
+  background: none;
+  color: var(--pine);
 }
 
 .notice {
@@ -86,10 +361,13 @@
 }
 
 .form label {
-  color: var(--ledger-ink);
-  font: 500 0.68rem var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  color: var(--pine);
+  font: 700 0.9rem var(--font-sans);
+}
+
+.form .stepperValue {
+  color: var(--moss);
+  font: 600 1rem var(--font-sans);
 }
 
 .fieldHint {
@@ -202,10 +480,8 @@
 .activities > legend {
   margin-left: 0.4rem;
   padding: 0 0.35rem;
-  color: var(--ledger-ink);
-  font: 500 0.64rem var(--font-mono);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  color: var(--pine);
+  font: 700 0.9rem var(--font-sans);
 }
 
 .activityRows {
@@ -316,8 +592,8 @@
 .warning {
   margin: 0;
   padding: 0.75rem 0.85rem;
-  border: 1px solid var(--log-mark);
-  border-left-width: 5px;
+  border-radius: var(--radius-control);
+  box-shadow: inset 4px 0 0 var(--ember);
   background: #fff0e1;
   font-family: var(--font-sans);
   font-size: 0.9rem;
@@ -327,8 +603,10 @@
 /* Static, non-diagnostic, and shown wherever the owner reports a signal. */
 .safety {
   margin: 0.25rem 0 0;
-  padding: 0.75rem;
-  border: 1px dashed var(--log-mark);
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-control);
+  box-shadow: inset 4px 0 0 var(--ember);
+  background: #fff4ec;
   color: #6b3117;
   font-family: var(--font-sans);
   font-size: 0.84rem;
@@ -346,27 +624,33 @@
 .primary,
 .secondary {
   width: 100%;
-  min-height: 2.75rem;
+  min-height: 3.2rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.6rem 0.9rem;
-  border: 1px solid var(--ledger-ink);
-  font: 500 0.72rem var(--font-mono);
-  letter-spacing: 0.05em;
+  margin: 0;
+  padding: 0.6rem 1rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  font: 700 1rem var(--font-sans);
   text-decoration: none;
-  text-transform: uppercase;
   cursor: pointer;
 }
 
-.primary {
-  background: var(--ledger-ink);
-  color: var(--ledger-paper);
+/* The darker ember, as on the Plan's coach actions: paper on --ember is
+   short of 4.5:1. */
+.primary,
+.primary:hover {
+  background: var(--ember-dark);
+  color: var(--paper);
 }
 
-.secondary {
-  background: transparent;
-  color: var(--ledger-ink);
+.secondary,
+.secondary:hover {
+  min-height: 2.75rem;
+  background: var(--sage);
+  color: var(--pine);
+  font-size: 0.9rem;
 }
 
 .primary:disabled {
@@ -379,9 +663,7 @@
   gap: 0.5rem;
   margin-top: 1.25rem;
   padding: 1.1rem 1rem;
-  border: 1px solid var(--line);
-  border-top: 7px solid var(--log-mark);
-  background: var(--ledger-paper);
+  background: var(--paper);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
 }
@@ -518,9 +800,10 @@
 .saveSession {
   display: grid;
   gap: 0.6rem;
-  padding: 0 0.75rem;
-  border: 1px solid var(--ledger-rule);
-  background: var(--ledger-paper);
+  padding: 0 0.9rem;
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
 }
 
 .saveSession[open] {
@@ -531,9 +814,7 @@
   min-height: 2.75rem;
   display: flex;
   align-items: center;
-  color: var(--ledger-ink);
-  font: 500 0.72rem var(--font-mono);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  color: var(--pine);
+  font: 700 0.9rem var(--font-sans);
   cursor: pointer;
 }

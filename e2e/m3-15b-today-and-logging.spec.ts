@@ -7,6 +7,7 @@ import {
 } from "@playwright/test";
 import path from "node:path";
 
+import { changeLogAnswer, logInSteps, logStep } from "./support/log-steps";
 import {
   openNewSession,
   planDay,
@@ -181,28 +182,46 @@ test.describe("M3-15B today and logging", () => {
       await todayCard(page, "Tempo run")
         .getByRole("link", { name: "Log this session" })
         .click();
-      await expect(
-        page.getByRole("heading", { name: "Log training." }),
-      ).toBeVisible();
       await expect(page.locator("[data-log-source]")).toContainText(
         "Tempo run",
       );
-      // The conservative signal handling CLAUDE.md requires, in the wording
-      // M1-03 approved and M2-02 shipped.
+      // Logging in steps (owner, 3 Oct 2026): one question at a time.
       await expect(
-        page.getByText(/stop training and speak to a qualified/),
+        page.getByRole("heading", { name: "What did you do?" }),
       ).toBeVisible();
-      await page.getByLabel("What happened").selectOption("completed");
-      await page.getByLabel("Duration (minutes)").fill("42");
-      await page.getByLabel("Effort (1-10)").fill("7");
-      await page.getByLabel("How it felt").selectOption("good");
-      await page.getByLabel("Note").fill("Held the pace to the last rep.");
-      await page.getByLabel("I felt pain").check();
+      await logInSteps(
+        page,
+        {
+          outcome: "Completed",
+          minutes: "42",
+          effort: 7,
+          feeling: "Good",
+          signals: ["I felt pain"],
+          note: "Held the pace to the last rep.",
+        },
+        { save: false },
+      );
+      // A new log ends on its summary, every answer with its own Change.
+      const answers = logStep(page, "summary");
+      await expect(answers).toContainText("42 min");
+      await expect(answers).toContainText("7 of 10");
+      await expect(answers).toContainText("I felt pain");
+      // The conservative signal handling CLAUDE.md requires, in the wording
+      // M1-03 approved and M2-02 shipped, on the question it qualifies.
+      await changeLogAnswer(page, "Anything off");
+      await expect(
+        logStep(page, "off").getByText(
+          /stop training and speak to a qualified/,
+        ),
+      ).toBeVisible();
       await page.screenshot({
         fullPage: true,
         path: path.join(evidenceDirectory, "M3-15B-log-form-390x844.png"),
       });
-      await page.getByRole("button", { name: "Save log" }).click();
+      await logStep(page, "off")
+        .getByRole("button", { name: "Back to summary" })
+        .click();
+      await answers.getByRole("button", { name: "Save log" }).click();
       await expect(
         page.getByRole("heading", { name: "Log saved." }),
       ).toBeVisible();
@@ -232,13 +251,16 @@ test.describe("M3-15B today and logging", () => {
         page
           .locator("[data-log-activity]")
           .filter({ hasText: "Serve practice" });
-      await expect(serves().getByText("Planned: no target")).toBeVisible();
-      await expect(serves().getByText("Did: not measured")).toBeVisible();
       await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
         "Serve and volley",
       );
-      await page.getByLabel("Title", { exact: true }).fill("Serve and return");
-      await page.getByRole("button", { name: "Save log" }).click();
+      await logInSteps(page, {
+        title: "Serve and return",
+        activities: async () => {
+          await expect(serves().getByText("Planned: no target")).toBeVisible();
+          await expect(serves().getByText("Did: not measured")).toBeVisible();
+        },
+      });
       await expect(
         page.getByRole("heading", { name: "Log saved." }),
       ).toBeVisible();
@@ -251,12 +273,19 @@ test.describe("M3-15B today and logging", () => {
       await expect(page.locator("[data-log-source]")).toContainText(
         "Serve and return",
       );
+      // A correction opens on the summary; Change opens the one answer.
+      await changeLogAnswer(page, "Activities");
       await serves().getByRole("button", { name: "Adjust" }).click();
       await serves()
         .getByLabel("Measured as")
         .selectOption("duration_intensity");
       await serves().getByLabel("Minutes").fill("20");
-      await page.getByRole("button", { name: "Save log" }).click();
+      await logStep(page, "activities")
+        .getByRole("button", { name: "Back to summary" })
+        .click();
+      await logStep(page, "summary")
+        .getByRole("button", { name: "Save log" })
+        .click();
       await expect(
         page.getByRole("heading", { name: "Log updated." }),
       ).toBeVisible();
@@ -264,6 +293,7 @@ test.describe("M3-15B today and logging", () => {
       await todayCard(page, "Serve and volley")
         .getByRole("link", { name: "Edit log" })
         .click();
+      await changeLogAnswer(page, "Activities");
       await expect(serves().getByText("Did: 20 min")).toBeVisible();
       await expect(serves().getByText("Planned: no target")).toBeVisible();
       await page.goto("/home/today");
@@ -273,12 +303,16 @@ test.describe("M3-15B today and logging", () => {
       await todayCard(page, "Core circuit")
         .getByRole("link", { name: "Log this session" })
         .click();
-      await page.getByLabel("What happened").selectOption("replaced");
-      await expect(page.getByLabel("Log it now")).toBeChecked();
-      await page.getByLabel("Title of what you did").fill("Hill ride");
-      await page.getByLabel("Sport of what you did").fill("Cycling");
-      await page.getByLabel("Duration (minutes)").fill("70");
-      await page.getByRole("button", { name: "Save log" }).click();
+      await logInSteps(page, {
+        outcome: "Replaced",
+        replaced: async () => {
+          const instead = logStep(page, "replaced");
+          await expect(instead.getByLabel("Log it now")).toBeChecked();
+          await instead.getByLabel("Title of what you did").fill("Hill ride");
+          await instead.getByLabel("Sport of what you did").fill("Cycling");
+          await instead.getByLabel("Duration (minutes)").fill("70");
+        },
+      });
       await expect(
         page.getByRole("heading", { name: "Log saved." }),
       ).toBeVisible();
@@ -291,12 +325,16 @@ test.describe("M3-15B today and logging", () => {
       await todayCard(page, "Easy jog")
         .getByRole("link", { name: "Log this session" })
         .click();
-      await page.getByLabel("What happened").selectOption("replaced");
-      await page.getByLabel("I already logged it").check();
-      await expect(page.getByLabel("Which training")).toContainText(
-        "Hill ride · Cycling",
-      );
-      await page.getByRole("button", { name: "Save log" }).click();
+      await logInSteps(page, {
+        outcome: "Replaced",
+        replaced: async () => {
+          const instead = logStep(page, "replaced");
+          await instead.getByLabel("I already logged it").check();
+          await expect(instead.getByLabel("Which training")).toContainText(
+            "Hill ride · Cycling",
+          );
+        },
+      });
       await expect(
         page.getByRole("heading", { name: "Log saved." }),
       ).toBeVisible();
@@ -309,23 +347,32 @@ test.describe("M3-15B today and logging", () => {
       await todayCard(page, "Easy spin")
         .getByRole("link", { name: "Log this session" })
         .click();
-      await expect(page.getByLabel("Duration (minutes)")).toBeVisible();
-      await page.getByLabel("What happened").selectOption("skipped");
+      await logStep(page, "what")
+        .getByRole("button", { name: "Next", exact: true })
+        .click();
+      await logStep(page, "outcome")
+        .getByRole("button", { name: /^Skipped/ })
+        .click();
       // Training that did not happen has no duration, no effort and no way it
-      // felt, so it is not asked for them.
-      await expect(page.getByLabel("Duration (minutes)")).toHaveCount(0);
-      await expect(page.getByLabel("Effort (1-10)")).toHaveCount(0);
-      await expect(page.getByLabel("How it felt")).toHaveCount(0);
-      // An owner may skip precisely because of pain: the note, the four
-      // signals and the notice that qualifies them all stay.
-      await expect(page.getByLabel("Note", { exact: true })).toBeVisible();
+      // felt, so it is not asked for them: a skip goes straight to "Anything
+      // off?", since an owner may skip precisely because of pain. The four
+      // signals, the notice that qualifies them, and the note all stay.
+      await expect(
+        page.getByRole("heading", { name: "Anything off?" }),
+      ).toBeVisible();
+      await expect(page.locator("#log-duration")).toHaveCount(0);
+      await expect(logStep(page, "effort")).toHaveCount(0);
+      await expect(logStep(page, "feeling")).toHaveCount(0);
+      await expect(page.locator("#log-note")).toHaveCount(1);
       for (const signal of [
         "I felt pain",
         "I was ill",
         "I was injured",
         "I was severely fatigued",
       ]) {
-        await expect(page.getByLabel(signal, { exact: true })).toBeVisible();
+        await expect(
+          page.getByRole("button", { name: signal, exact: true }),
+        ).toBeVisible();
       }
       await expect(
         page.getByText(/stop training and speak to a qualified/),
@@ -334,7 +381,7 @@ test.describe("M3-15B today and logging", () => {
         fullPage: true,
         path: path.join(evidenceDirectory, "M3-15B-skip-form-390x844.png"),
       });
-      await page.getByRole("button", { name: "Save log" }).click();
+      await logInSteps(page);
       await expect(
         page.getByRole("heading", { name: "Log saved." }),
       ).toBeVisible();
@@ -349,16 +396,14 @@ test.describe("M3-15B today and logging", () => {
 
       // ---- Unplanned training has its own entry. ----
       await page.getByRole("link", { name: "Log unplanned training" }).click();
-      await expect(page.locator("[data-log-fixed-outcome]")).toContainText(
-        "no planned session attached",
-      );
-      await page.getByLabel("Title", { exact: true }).fill("Sunrise swim");
-      await page.getByLabel("Sport", { exact: true }).fill("Swimming");
-      await page.getByLabel("Duration (minutes)").fill("30");
-      await page
-        .getByLabel("Note", { exact: true })
-        .fill("Walked the long way home.");
-      await page.getByRole("button", { name: "Save log" }).click();
+      // Unplanned training has one outcome, so "How did it go?" is not asked.
+      await expect(logStep(page, "outcome")).toHaveCount(0);
+      await logInSteps(page, {
+        title: "Sunrise swim",
+        sport: "Swimming",
+        minutes: "30",
+        note: "Walked the long way home.",
+      });
       await page.getByRole("link", { name: "Back to that day" }).click();
 
       // The ride that replaced two sessions is unplanned training too; this
@@ -383,6 +428,10 @@ test.describe("M3-15B today and logging", () => {
       // Reopening offers both for correction: unplanned training carries its
       // name as its one activity, so this is the only place that name lives.
       await unplanned.getByRole("link", { name: "Edit log" }).click();
+      await expect(logStep(page, "summary")).toContainText(
+        "Sunrise swim · Swimming",
+      );
+      await changeLogAnswer(page, "What");
       const title = page.getByLabel("Title", { exact: true });
       const sport = page.getByLabel("Sport", { exact: true });
       await expect(title).toHaveValue("Sunrise swim");
@@ -396,7 +445,12 @@ test.describe("M3-15B today and logging", () => {
       // permanent. Correcting it is an ordinary edit.
       await title.fill("Sunrise lake swim");
       await sport.fill("Open water");
-      await page.getByRole("button", { name: "Save log" }).click();
+      await logStep(page, "what")
+        .getByRole("button", { name: "Back to summary" })
+        .click();
+      await logStep(page, "summary")
+        .getByRole("button", { name: "Save log" })
+        .click();
       await page.getByRole("link", { name: "Back to that day" }).click();
       await expect(page.locator(`[data-today-date="${today}"]`)).toBeVisible();
       await expect(
@@ -413,17 +467,22 @@ test.describe("M3-15B today and logging", () => {
       await todayCard(page, "Tempo run")
         .getByRole("link", { name: "Edit log" })
         .click();
-      await expect(page.locator("[data-log-source]")).toContainText(
+      await expect(page.locator("[data-log-source]")).toHaveAttribute(
+        "data-log-kind",
         "Editing a log",
       );
-      await expect(page.getByLabel("Duration (minutes)")).toHaveValue("42");
+      const summary = logStep(page, "summary");
+      await expect(summary).toContainText("42 min");
       await expect(page.locator("[data-log-clears]")).toHaveCount(0);
-      await page.getByLabel("What happened").selectOption("skipped");
-      await expect(page.getByLabel("Duration (minutes)")).toHaveCount(0);
-      await expect(page.locator("[data-log-clears]")).toContainText(
+      await changeLogAnswer(page, "How it went");
+      await logStep(page, "outcome")
+        .getByRole("button", { name: /^Skipped/ })
+        .click();
+      await expect(page.locator("#log-duration")).toHaveCount(0);
+      await expect(summary.locator("[data-log-clears]")).toContainText(
         "removes the duration, the effort and how it felt",
       );
-      await page.getByRole("button", { name: "Save log" }).click();
+      await summary.getByRole("button", { name: "Save log" }).click();
       await expect(
         page.getByRole("heading", { name: "Log updated." }),
       ).toBeVisible();
@@ -451,8 +510,7 @@ test.describe("M3-15B today and logging", () => {
       await todayCard(page, "Aerobic base")
         .getByRole("link", { name: "Log this session" })
         .click();
-      await page.getByLabel("What happened").selectOption("completed");
-      await page.getByRole("button", { name: "Save log" }).click();
+      await logInSteps(page, { outcome: "Completed" });
       await expect(
         page.getByRole("heading", { name: "Log saved." }),
       ).toBeVisible();

@@ -89,16 +89,6 @@ export default async function LogPage({ searchParams }: Props) {
 
   return (
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
-      <header className={homeStyles.masthead}>
-        <div>
-          <p className={homeStyles.kicker}>FitTip / log</p>
-          <h1>Log training.</h1>
-          <p className={homeStyles.intro}>
-            What actually happened, in your own words. This is a separate
-            permanent record; writing it never changes your plan.
-          </p>
-        </div>
-      </header>
       {timezoneName === null ? (
         <Unavailable
           label="Time zone needed"
@@ -110,20 +100,6 @@ export default async function LogPage({ searchParams }: Props) {
         />
       ) : (
         await renderForm(timezoneName, completionId, plannedSessionId, params)
-      )}
-      {/* Opened from a Progress record, the page's own way back leads there
-          too, so it and the form's Cancel do not disagree. */}
-      {params.from === "progress" && completionId !== null ? (
-        <Link
-          className={styles.backLink}
-          href={`/home/progress/${completionId}`}
-        >
-          Back to the record
-        </Link>
-      ) : (
-        <Link className={styles.backLink} href="/home/today">
-          Back to Today
-        </Link>
       )}
     </main>
   );
@@ -324,6 +300,11 @@ async function renderForm(
   }
 }
 
+/**
+ * The session being logged, as the page's heading and one quiet line. The
+ * questions below it are the form's own (logging in steps, 3 Oct 2026); the
+ * label says what kind of log this is, for a screen reader and for a spec.
+ */
 function SourceCard({
   label,
   title,
@@ -334,9 +315,13 @@ function SourceCard({
   meta: (string | null)[];
 }) {
   return (
-    <section className={styles.sourceCard} data-log-source>
-      <p className={styles.sectionLabel}>{label}</p>
-      <h2>{title}</h2>
+    <section
+      className={styles.sourceCard}
+      data-log-source
+      data-log-kind={label}
+      aria-label={label}
+    >
+      <h1>{title}</h1>
       <p className={styles.sourceMeta}>{meta.filter(Boolean).join(" · ")}</p>
     </section>
   );
