@@ -251,18 +251,17 @@
 }
 
 .zoneCard {
-  padding: 1.2rem;
-  border: 1px solid var(--line);
-  border-top: 7px solid var(--plan-today);
-  background: var(--ledger-paper);
+  padding: 1.25rem 1.1rem;
+  background: var(--paper);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
 }
 
 .zoneCard h2 {
-  margin: 0 0 0.7rem;
-  font-size: clamp(1.7rem, 8vw, 2.6rem);
-  letter-spacing: -0.04em;
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 .zoneCard p {
@@ -277,7 +276,7 @@
   padding: 0.7rem 0.8rem;
   border-radius: var(--radius-control);
   background: var(--sage);
-  font: 500 0.9rem var(--font-mono);
+  font: 700 1rem var(--font-sans);
   overflow-wrap: anywhere;
 }
 
