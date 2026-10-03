@@ -106,10 +106,6 @@ lane, one screen per merge.
       still accepts edit, move, lock and cancel on one (only delete is refused,
       `session-completed`); a page left open from before the log could still send them.
       Refusing them is a rule in the rolling-plan change function, so careful lane.
-- [ ] **R3 — The shared state cards, the last old-style screens.** Loading, error,
-      "confirm your time zone" and the log's own unavailable states on every route still
-      use the old masthead card. You and Settings have no loading or error file of their
-      own.
 - [ ] **Activity editor in the mono face — not answered.** Its input fields and the
       measurement line under a name are still in the mono face; the count and hints moved
       to sans. The owner asked what the difference is (3 Oct 2026); recommended: sans.

@@ -507,3 +507,62 @@
     transform: translateY(0);
   }
 }
+
+/*
+ * R3, the shared state cards (3 Oct 2026): loading, error, unavailable and
+ * "already logged" in the Coach's note direction. A paper card with no rule,
+ * its label in the sans rather than stamped mono capitals, a plain heading,
+ * and the darker ember for the one action, as on every restyled screen.
+ */
+.stateCard {
+  margin-top: 1rem;
+  padding: 1.25rem 1.1rem;
+  border: 0;
+}
+
+.stateCard .kicker,
+.stateCard .sectionLabel {
+  margin: 0 0 0.35rem;
+  color: var(--moss);
+  font: 700 0.85rem var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.stateCard h1,
+.stateCard h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.stateCard p {
+  margin: 0.5rem 0 0;
+}
+
+.stateCard .actions {
+  margin-top: 1.1rem;
+}
+
+.stateCard .primaryAction,
+.stateCard button.primaryAction {
+  width: 100%;
+  min-height: 3.2rem;
+  margin: 1.1rem 0 0;
+  border: 0;
+  background: var(--ember-dark);
+  color: var(--paper);
+  font: 700 1rem var(--font-sans);
+}
+
+.stateCard .actions .primaryAction {
+  margin-top: 0;
+}
+
+.stateCard .secondaryAction {
+  border: 0;
+  background: var(--sage);
+  color: var(--pine);
+}
