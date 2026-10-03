@@ -682,7 +682,9 @@ export function LogForm({
             onChange={(event) => setSport(event.target.value)}
           />
         </div>
-        {choices.length > 1 ? null : dateLine}
+        {/* On whichever question comes first: here for unplanned training,
+            and after Extra, which takes "How did it go?" away. */}
+        {steps[0] === "what" ? dateLine : null}
         <button className={styles.primary} type="button" onClick={next}>
           {fromSummary ? "Back to summary" : "Next"}
         </button>
@@ -1354,21 +1356,6 @@ function ReplacedBy({
                 step={1}
               />
             </div>
-          </div>
-          <div className={styles.field}>
-            <label htmlFor="log-replacement-feeling">How it felt</label>
-            <select
-              id="log-replacement-feeling"
-              name="replacement.feeling"
-              defaultValue=""
-            >
-              <option value="">Not recorded</option>
-              {COMPLETION_FEELING_CHOICES.map((choice) => (
-                <option key={choice.value} value={choice.value}>
-                  {choice.label}
-                </option>
-              ))}
-            </select>
           </div>
           <ActualActivities
             name="replacement.activities"

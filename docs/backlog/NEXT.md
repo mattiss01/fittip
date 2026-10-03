@@ -109,7 +109,8 @@ lane, one screen per merge.
 - [ ] **A migration to remove a log's feeling.** Owner, 3 Oct 2026: "How did it feel?"
       left the log's steps that day (effort says the same) and should go for good. Careful
       lane. The column is `completions.feeling`, written by `apply_completion_change` and
-      read by the completion log, Today, Progress, saved-session copies, and the coach's
+      read by the completion log, Today, Progress, saved-session copies, the inline
+      replacement's `replacement.feeling` (no longer asked either), and the coach's
       training history (`training-history-context.ts`, `contracts.ts`), so the AI context
       changes too. Nothing is in production, so existing values need no keeping.
 - [ ] **R4 — Motion.** Day-change slide (View Transitions), sheet and press feedback,
