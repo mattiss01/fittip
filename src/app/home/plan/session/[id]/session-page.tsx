@@ -44,7 +44,6 @@ import { SessionFields } from "../../session-fields";
 import {
   draftOf,
   planDayHref,
-  readsAsLogged,
   sessionHref,
   stampDate,
   type PlanSessionView,
@@ -52,7 +51,10 @@ import {
 
 import page from "./session-page.module.css";
 
-import { COMPLETION_OUTCOME_LABELS } from "../../../log/log-action-state";
+import {
+  COMPLETION_OUTCOME_LABELS,
+  recordsTraining,
+} from "../../../log/log-action-state";
 import { ActivityList } from "@/components/training/activity-list";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
 
@@ -279,10 +281,15 @@ export function SessionPage({
     );
   }
 
-  const logged = readsAsLogged(session);
   const past = session.localDate < today;
-  const cancelled = session.status === "cancelled" && !logged;
-  const plannable = !past && !logged && !cancelled;
+  // Trained after it was cancelled, it reads as logged, not cancelled.
+  const cancelled = session.status === "cancelled" && session.log === undefined;
+  // Once anything is logged against it, the session is settled: its log is
+  // what changes now, not its plan (owner, 3 Oct 2026). That includes a log
+  // on its own day and a skip written ahead, which used to keep every plan
+  // verb so a series could be ended from them; a series ends from an
+  // occurrence nobody has logged.
+  const plannable = !past && session.log === undefined && !cancelled;
   const recurring =
     series !== undefined && session.occurrenceDate !== null
       ? { series, occurrenceDate: session.occurrenceDate }
@@ -449,9 +456,7 @@ export function SessionPage({
             <MoreMenu>
               {(close) => (
                 <>
-                  <MenuLink href={logHref}>
-                    {session.log ? "Edit log" : "Log this session"}
-                  </MenuLink>
+                  <MenuLink href={logHref}>Log this session</MenuLink>
                   <MenuItem
                     onSelect={() => {
                       close();
@@ -500,6 +505,25 @@ export function SessionPage({
                 </>
               )}
             </MoreMenu>
+          ) : session.log ? (
+            // What a Progress record offers (owner, 3 Oct 2026): training that
+            // happened can be saved to the library; a skip or a replacement
+            // records none, so it offers nothing. Nothing here changes the
+            // session itself.
+            recordsTraining(session.log.outcome) ? (
+              <MoreMenu>
+                {(close) => (
+                  <MenuItem
+                    onSelect={() => {
+                      close();
+                      setPanel("save");
+                    }}
+                  >
+                    Save to library
+                  </MenuItem>
+                )}
+              </MoreMenu>
+            ) : null
           ) : cancelled ? (
             <MoreMenu>
               {(close) => (
