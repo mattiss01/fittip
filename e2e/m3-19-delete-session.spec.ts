@@ -143,30 +143,26 @@ test.describe("M3-19 delete a planned session", () => {
         (await planDay(page, tomorrow)).locator("[data-cancelled]"),
       ).toHaveCount(0);
 
-      // A session with training logged against it is refused, in the owner's
-      // own words rather than as a foreign-key violation. The completion is
-      // written through M3-15A's own owner-derived function, because the
-      // logging surface itself is M3-15B. It is a skip written ahead: since
-      // 26 Sep 2026 a completed log dated before its session reads as done on
-      // the Plan and offers no Delete, while a skip keeps its card.
+      // A session with a log against it offers no Delete (owner, 3 Oct 2026:
+      // a logged session is settled, and its log is what changes). The
+      // database's own refusal of that delete is pgTAP m3_19's. The log is
+      // written through M3-15A's owner-derived function: a skip written
+      // ahead, which records no training, so the page offers Edit log alone.
       const sessionId = await sessionIdOf(page, tomorrow, "Logged run");
       await logCompletion(request, account, sessionId, today, "skipped");
 
       await openSession(page, tomorrow, "Logged run");
-      await chooseMore(page, "Delete");
-      await sessionPanel(page, "Delete session")
-        .getByRole("button", { name: "Delete session" })
-        .click();
-      const notice = page.locator("[role='status']").first();
-      await expect(notice).toHaveAttribute("data-state", "rule");
-      await expect(notice).toContainText(/cannot be deleted/i);
-      await expect(notice).toContainText(/cancel it instead/i);
       await expect(
-        page.getByRole("heading", { level: 1, name: "Logged run" }),
+        page
+          .locator("[data-session-actions]")
+          .getByRole("link", { name: "Edit log" }),
       ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "More actions" }),
+      ).toHaveCount(0);
       await page.screenshot({
         fullPage: true,
-        path: path.join(evidenceDirectory, "M3-19-logged-refusal-390x844.png"),
+        path: path.join(evidenceDirectory, "M3-19-logged-settled-390x844.png"),
       });
       await backToPlan(page);
 
