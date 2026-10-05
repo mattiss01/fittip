@@ -57,8 +57,12 @@ lane, one screen per merge.
       right, the setup itself does not. Go through all six steps together in detail,
       from scratch: what each step asks and why, every question's wording, which
       answers are required, where each answer is kept, and what the review step shows.
-      The list below is where that starts, not its scope. Already named; the first
-      three need a migration, so careful lane:
+      The list below is where that starts, not its scope. Owner, 5 Oct 2026: it
+      comes after the three items below it (goals migration, sports list, personal
+      details), which it is built from, and step 1 becomes the slim goal form.
+      Still to decide: whether sign-up leads straight into setup. Today it is
+      reached only from You; `OnboardingHomeInvitation` exists and nothing renders
+      it. Already named; the first three need a migration, so careful lane:
   - **Access and equipment** cannot be left empty and is a comma list of labels. The
     owner dislikes both. `apply_onboarding_change` refuses fewer than one label.
   - **Time zone and units belong in the profile, not in Memory.** Setup files both as
@@ -71,22 +75,44 @@ lane, one screen per merge.
   - **A card that matches something saved starts accepted as "update"**, so one press
     writes over a saved goal or brings back a declined or disabled memory. The card
     says so. The owner asked for everything accepted first; this is its sharpest edge.
-- [ ] **Goals: how they look and what they hold, again.** Owner, 2 Oct 2026. Which
-      attributes a goal has (title, outcome, category, areas, dates, target measure,
-      rationale, constraints) and how a card shows them. With it:
-  - **Pause and Abandoned** are still two ways to set a goal aside, both undoable
-    (Resume, Reopen).
-  - **A migration to remove Archive for good.** Owner, 2 Oct 2026. Archive left the
-    card that day and nothing else went: `apply_goal_change` still accepts `archive`,
-    `goals.archived_at` is still a column, and goals archived earlier still show in
-    History. Careful lane. To decide first: what a goal that is already archived
-    becomes (most likely Abandoned, which would make it reopenable), since dropping
-    the column or changing those rows is irreversible, and the coach's context and
-    the delete refusal ("archive-required") both read `archived_at` today.
+- [ ] **One goals migration.** Careful lane. The form and card were slimmed on
+      5 Oct 2026 (title, desired outcome, sports, target date, core or supporting)
+      without touching the database; this is what that left:
+  - **Drop what is no longer asked** (owner, 5 Oct 2026): `start_date`,
+    `target_detail`, the three `target_metric_*`, `rationale` and
+    `constraints_text`, from `goals`, `apply_goal_change` and setup's goal
+    candidates. Irreversible, so ask again before applying. Until then they travel
+    hidden through every edit, and a target date before an older goal's hidden
+    start date gets the generic refusal.
+  - **The coach reads the desired outcome**, for the roadmap above all (owner,
+    5 Oct 2026). AI data boundary, ADR-012. Goals have 4,000 bytes for twelve at
+    326 each and an outcome may be 1,000 characters, so it needs a shorter limit,
+    fewer goals, or the roadmap only; the plan context has no headroom.
+  - **Sports in place of category.** The form sends `other` for every new goal,
+    and category is one of the four goal fields the coach is sent. Swap it for
+    the goal's sports in the same change, then drop the column.
+  - **Remove Archive for good.** Owner, 2 Oct 2026. `apply_goal_change` still
+    accepts `archive`, `goals.archived_at` is still a column, and goals archived
+    earlier still show in History. To decide first: what an archived goal becomes
+    (most likely Abandoned, so reopenable); the coach's context and the delete
+    refusal ("archive-required") both read `archived_at`.
   - **"Achieved on"** is the goal's last-changed time, because the lifecycle log
-    records only reopening; logging every change is a migration. It is wrong in one
-    case: setup filing a new answer over a finished goal of the same title moves the
-    day to then.
+    records only reopening. It is wrong in one case: setup filing a new answer
+    over a finished goal of the same title moves the day to then.
+  - **Pause and Abandoned** are still two ways to set a goal aside, both undoable.
+- [ ] **A sports list in the profile.** Owner, 5 Oct 2026; this settles "sport or
+      category" as one shared list. A large preset list of sport names plus the
+      owner's own, chosen in setup and offered wherever a sport is typed today:
+      a goal's sports, a session's and an activity's `sport`. Names only, so it
+      is not the exercise library the invariants rule out. Careful lane
+      (migration). Open: the preset list, which is shared vocabulary and wants a
+      line in `CONTEXT.md`, and whether the stored `sport` columns are renamed.
+- [ ] **Personal details in the profile.** Owner, 5 Oct 2026: name, birthday,
+      height, weight and gender, asked as setup's first step, before goals.
+      Careful lane (migration). Storing them is this item; the coach reading
+      them is "Athlete profile for the coach" under Later and needs its ADR
+      first. Open: which are required, whether weight keeps a history, the
+      gender options.
 - [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only
       "Generate roadmap proposal", and an owner without a subscription may not be able
       to generate one, so a roadmap must also be writable by hand: phases, dates, focus,
@@ -149,6 +175,9 @@ Not worth their own slot; do them when work lands nearby.
   "Copy to", Edit and "Add to" carry `min` and `max`, which iOS Safari's picker does not
   enforce, so a date past day 180 is refused with "Check the session details and the
   date." rather than a sentence about how far ahead a session may sit.
+- **Dragging a goal does not scroll the page.** Since 5 Oct 2026 a goal is
+  reordered by dragging its number. A list taller than the screen cannot be
+  dragged end to end; the arrow keys on the number can, which a phone lacks.
 - **Two back links drawn the same way.** `src/app/home/you/back-link.tsx` copies the one on
   a Progress record, markup and style. Progress could use the component; it would have to
   carry `data-back-link`, which m3-15c clicks.
@@ -219,25 +248,13 @@ Not worth their own slot; do them when work lands nearby.
   4 h". Both would have to come from real records (`.claude/rules/ui.md`): which goal (the
   first core one?), a target date only if the goal has one, and logged minutes against
   planned minutes this week. Left out of R2 until decided.
-- **Sport or category — undecided.** Moved here by the owner on 25 Sep 2026, who could not
-  decide yet; this replaces A2d, which planned to rename an activity's `sport` to `category`.
-  Where the discussion stood: the owner leans to **one field, the same on sessions and
-  activities**, whose values may be a sport (Tennis, Running) or a kind of work (Strength,
-  Mobility, Recovery). "Category" reads right for both kinds of value, where "Sport:
-  Mobility" does not. That field already exists — it is today's `sport` — so the cheap
-  version is a relabel plus presets and the owner's own past values offered back, with no
-  migration. The expensive version also renames the column across about seven tables and
-  functions, the AI contract, and reads of stored snapshots, which keep `sport` forever.
-  Open: which of the two, the preset list (it is shared vocabulary, so it wants the owner's
-  agreement and a line in `CONTEXT.md`), and whether an activity keeps starting from its
-  session's value, which is right under the one-field reading.
 - **Saved sessions in the plan proposal.** Kept out of the plan operation by the owner on
   28 Sep 2026 (ADR-020 decision 4), to be revisited. It would need a proposal able to
   reference a saved session (schema), plan-context bytes there are none of, and a view on
   whether a names-only index is enough.
 - **Athlete profile for the coach.** The owner wants the coach to know age, gender, weight
-  and similar, collected in onboarding. Not decided: which fields, whether each is
-  optional, how weight changes over time, and eligibility — this is a new class of personal
+  and similar. Collecting and storing them is "Personal details in the profile" under Now.
+  Not decided: which of them the coach is sent — this is a new class of personal
   data, weight is health-adjacent, and it needs its own ADR before it crosses. ADR-020's
   "nothing identifies the person" reasoning should be rechecked against it.
 - **Automatic session detail.** Filling sessions without a request, perhaps per
