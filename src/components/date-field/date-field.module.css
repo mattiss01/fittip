@@ -1,0 +1,88 @@
+/*
+ * A typed date: three short fields and, where asked for, a calendar button.
+ * The fields take their border, height and face from the form they sit in;
+ * these rules name the element as well as the class so that they win over a
+ * form's own `input` rule whichever stylesheet loads last.
+ */
+.group {
+  min-width: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+/* Drawn as a field's label is, in guided setup and on Goals alike. */
+.label {
+  color: var(--ledger-muted);
+  font: 500 0.62rem var(--font-mono);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.parts {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.parts[data-centred="true"] {
+  justify-content: center;
+}
+
+.parts input.part {
+  width: 4.2rem;
+  padding-inline: 0.4rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.parts input.part[data-part="year"] {
+  width: 5.6rem;
+}
+
+.parts button.calendar {
+  flex: none;
+  width: 3rem;
+  min-height: 3rem;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--line);
+  color: var(--ledger-ink);
+}
+
+.parts button.calendar:hover {
+  background: var(--rule);
+}
+
+.parts button.calendar:focus-visible {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
+}
+
+/* There for its picker alone: under the button, out of sight and out of the
+   way of a tap. It is not `display: none`, or its picker could not open. */
+.parts input.native {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  min-height: 0;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}

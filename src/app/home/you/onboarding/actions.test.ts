@@ -1,12 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createRepositoryMock, redirectMock, revalidatePathMock } = vi.hoisted(
-  () => ({
-    createRepositoryMock: vi.fn(),
-    redirectMock: vi.fn(),
-    revalidatePathMock: vi.fn(),
-  }),
-);
+const {
+  createRepositoryMock,
+  createProfileRepositoryMock,
+  redirectMock,
+  revalidatePathMock,
+} = vi.hoisted(() => ({
+  createRepositoryMock: vi.fn(),
+  createProfileRepositoryMock: vi.fn(),
+  redirectMock: vi.fn(),
+  revalidatePathMock: vi.fn(),
+}));
+
+vi.mock("@/server/repositories/profile-repository", () => ({
+  createProfileRepository: createProfileRepositoryMock,
+}));
 
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 vi.mock("next/navigation", () => ({ redirect: redirectMock }));
@@ -44,7 +52,7 @@ describe("onboarding actions", () => {
     expect(result).toMatchObject({
       status: "saved",
       message: "This step was saved.",
-      redirectTo: "/home/you?setup=kept",
+      redirectTo: "/home/today",
       nextStep: 1,
     });
     expect(apply).toHaveBeenCalledWith({
@@ -73,9 +81,41 @@ describe("onboarding actions", () => {
       },
     });
     expect(revalidatePathMock).toHaveBeenCalled();
-    expect(redirectMock).toHaveBeenCalledExactlyOnceWith(
-      "/home/you?setup=kept",
+    expect(redirectMock).toHaveBeenCalledExactlyOnceWith("/home/today");
+  });
+
+  it("adds a sport made up on the goal step to the owner's sports, once", async () => {
+    const saveSports = vi.fn();
+    createRepositoryMock.mockResolvedValue({ apply: vi.fn() });
+    createProfileRepositoryMock.mockResolvedValue({
+      getDetails: vi.fn().mockResolvedValue({ sports: ["Cycling"] }),
+      saveSports,
+    });
+
+    // The goal's sport in the form is "Running", which the owner has not
+    // got; a sport they already have, however it is capitalised, is not
+    // added again.
+    await changeOnboardingAction(INITIAL_ONBOARDING_ACTION_STATE, goalForm());
+    expect(saveSports).toHaveBeenCalledExactlyOnceWith(["Cycling", "Running"]);
+
+    saveSports.mockClear();
+    createProfileRepositoryMock.mockResolvedValue({
+      getDetails: vi.fn().mockResolvedValue({ sports: ["running"] }),
+      saveSports,
+    });
+    await changeOnboardingAction(INITIAL_ONBOARDING_ACTION_STATE, goalForm());
+    expect(saveSports).not.toHaveBeenCalled();
+  });
+
+  it("saves the goal step even when the owner's sports cannot be read", async () => {
+    createRepositoryMock.mockResolvedValue({ apply: vi.fn() });
+    createProfileRepositoryMock.mockRejectedValue(new Error("unavailable"));
+
+    const state = await changeOnboardingAction(
+      INITIAL_ONBOARDING_ACTION_STATE,
+      goalForm(),
     );
+    expect(state.status).toBe("saved");
   });
 
   it("leaves on finish later even when the step cannot be saved, and says so", async () => {
@@ -85,10 +125,7 @@ describe("onboarding actions", () => {
 
     await changeOnboardingAction(INITIAL_ONBOARDING_ACTION_STATE, goalForm());
 
-    // You tells the owner that the step they were on was not saved.
-    expect(redirectMock).toHaveBeenCalledExactlyOnceWith(
-      "/home/you?setup=left",
-    );
+    expect(redirectMock).toHaveBeenCalledExactlyOnceWith("/home/today");
     expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 
@@ -102,10 +139,13 @@ describe("onboarding actions", () => {
 
     await changeOnboardingAction(INITIAL_ONBOARDING_ACTION_STATE, form);
 
-    expect(apply).not.toHaveBeenCalled();
-    expect(redirectMock).toHaveBeenCalledExactlyOnceWith(
-      "/home/you?setup=left",
-    );
+    // Nothing of the step is saved. What is recorded is that the owner
+    // left, so the next sign-in asks about setup instead of opening it.
+    expect(apply).toHaveBeenCalledExactlyOnceWith({
+      operation: "dismiss_prompt",
+      expectedDraftRevision: 0,
+    });
+    expect(redirectMock).toHaveBeenCalledExactlyOnceWith("/home/today");
   });
 
   it("does not start setup again once it has been finished", async () => {

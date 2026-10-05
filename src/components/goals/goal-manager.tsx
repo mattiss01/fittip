@@ -19,6 +19,7 @@ import {
 } from "@/app/home/you/goals/action-state";
 import { changeGoalAction } from "@/app/home/you/goals/actions";
 import styles from "@/app/home/you/goals/goals.module.css";
+import { DateField } from "@/components/date-field/date-field";
 import { formatRoadmapDate } from "@/components/roadmap/roadmap-dates";
 import {
   latestActionResponseAt,
@@ -586,14 +587,13 @@ function GoalForm({
           )}
         />
       </label>
-      <label>
-        Target date (optional)
-        <input
-          name="targetDate"
-          type="date"
-          defaultValue={initial("targetDate", goal?.targetDate ?? "")}
-        />
-      </label>
+      {/* Typed, or picked from the calendar beside it (owner, 5 Oct 2026). */}
+      <DateField
+        calendar
+        initial={initial("targetDate", goal?.targetDate ?? "") || null}
+        label="Target date (optional)"
+        name="targetDate"
+      />
       {/* Chosen when adding and changed here when editing (owner, 5 Oct
           2026). A new goal starts on core while a core slot is free. */}
       <fieldset className={styles.attentionChoice}>

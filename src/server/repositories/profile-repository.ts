@@ -2,6 +2,12 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { UNITS_SYSTEMS } from "@/lib/profile/body-measures";
+import {
+  GENDERS,
+  type ProfileDetailsView,
+  type WeightEntryView,
+} from "@/lib/profile/profile-contract";
 import type { Database } from "@/lib/supabase/database.types";
 import {
   requireAllowedVerifiedUser,
@@ -13,6 +19,29 @@ import {
 } from "@/lib/supabase/server-user-client";
 
 const PROFILE_COLUMNS = "user_id, created_at, timezone_name" as const;
+const PROFILE_DETAIL_COLUMNS =
+  "timezone_name, display_name, birth_date, height_cm, gender, units_system, sports" as const;
+const WEIGHT_ENTRY_COLUMNS = "measured_on, weight_kg" as const;
+
+/** What `saveDetails` writes; the weight goes to the history, not here. */
+export type ProfileDetailsChange = {
+  displayName: string;
+  birthDate: string | null;
+  gender: ProfileDetailsView["gender"];
+  unitsSystem: NonNullable<ProfileDetailsView["unitsSystem"]>;
+  heightCm: number | null;
+  weightKg: number | null;
+};
+
+/**
+ * A weight typed in pounds comes back a few grams off the kilograms it was
+ * shown from. Closer than this to the latest entry, it is the same weight
+ * shown again, not a new measurement.
+ */
+const SAME_WEIGHT_KG = 0.05;
+
+/** A year of daily entries and some: what Settings lists. */
+const WEIGHT_HISTORY_LIMIT = 400;
 
 export type Profile = {
   userId: string;
@@ -124,6 +153,160 @@ export class ProfileRepository {
     return toProfile(data);
   }
 
+  /**
+   * The owner's details and sports with their latest weight, or `null` before
+   * the profile exists.
+   */
+  async getDetails(): Promise<ProfileDetailsView | null> {
+    const userId = await this.getVerifiedUserId();
+    const [profile, weight] = await Promise.all([
+      this.client
+        .from("profiles")
+        .select(PROFILE_DETAIL_COLUMNS)
+        .eq("user_id", userId)
+        .maybeSingle(),
+      this.client
+        .from("weight_entries")
+        .select(WEIGHT_ENTRY_COLUMNS)
+        .eq("user_id", userId)
+        .order("measured_on", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+    if (profile.error || weight.error) throw new ProfilePersistenceError();
+    if (!profile.data) return null;
+    const row = profile.data;
+    return {
+      displayName: row.display_name,
+      birthDate: row.birth_date,
+      // A stored value outside the ones the app knows is shown as not given.
+      gender: GENDERS.find((gender) => gender === row.gender) ?? null,
+      unitsSystem:
+        UNITS_SYSTEMS.find((units) => units === row.units_system) ?? null,
+      heightCm: row.height_cm,
+      timezoneName: row.timezone_name,
+      sports: row.sports,
+      latestWeightKg: weight.data?.weight_kg ?? null,
+    };
+  }
+
+  /**
+   * Saves "About you". A weight is recorded for `measuredOn`, the owner's own
+   * day, unless it is the latest entry shown back unchanged.
+   */
+  async saveDetails(
+    change: ProfileDetailsChange,
+    measuredOn: string,
+  ): Promise<void> {
+    await this.ensureCurrentProfile();
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("profiles")
+      .update({
+        display_name: change.displayName,
+        birth_date: change.birthDate,
+        gender: change.gender,
+        units_system: change.unitsSystem,
+        height_cm: change.heightCm,
+      })
+      .eq("user_id", userId)
+      .select("user_id")
+      .maybeSingle();
+    if (error) throw mapDetailsError(error.code);
+    if (!data) throw new ProfilePersistenceError();
+
+    if (change.weightKg === null) return;
+    const latest = (await this.listWeightEntries(1))[0];
+    if (
+      latest &&
+      Math.abs(latest.weightKg - change.weightKg) < SAME_WEIGHT_KG
+    ) {
+      return;
+    }
+    await this.recordWeight(measuredOn, change.weightKg);
+  }
+
+  /** The units measures are shown and typed in; nothing stored changes. */
+  async saveUnits(
+    unitsSystem: ProfileDetailsChange["unitsSystem"],
+  ): Promise<void> {
+    await this.ensureCurrentProfile();
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("profiles")
+      .update({ units_system: unitsSystem })
+      .eq("user_id", userId)
+      .select("user_id")
+      .maybeSingle();
+    if (error) throw mapDetailsError(error.code);
+    if (!data) throw new ProfilePersistenceError();
+  }
+
+  async saveSports(sports: string[]): Promise<void> {
+    await this.ensureCurrentProfile();
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("profiles")
+      .update({ sports })
+      .eq("user_id", userId)
+      .select("user_id")
+      .maybeSingle();
+    if (error) throw mapDetailsError(error.code);
+    if (!data) throw new ProfilePersistenceError();
+  }
+
+  /** Newest first. */
+  async listWeightEntries(
+    limit: number = WEIGHT_HISTORY_LIMIT,
+  ): Promise<WeightEntryView[]> {
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("weight_entries")
+      .select(WEIGHT_ENTRY_COLUMNS)
+      .eq("user_id", userId)
+      .order("measured_on", { ascending: false })
+      .limit(limit);
+    if (error) throw new ProfilePersistenceError();
+    return data.map((row) => ({
+      measuredOn: row.measured_on,
+      weightKg: row.weight_kg,
+    }));
+  }
+
+  /**
+   * One entry a day: a second weight on the same day corrects the first. It is
+   * an update and then, if the day had none, an insert, because the grant
+   * allows only the weight to be updated and an upsert would ask for more.
+   */
+  async recordWeight(measuredOn: string, weightKg: number): Promise<void> {
+    const userId = await this.getVerifiedUserId();
+    const updated = await this.client
+      .from("weight_entries")
+      .update({ weight_kg: weightKg })
+      .eq("user_id", userId)
+      .eq("measured_on", measuredOn)
+      .select("measured_on");
+    if (updated.error) throw mapDetailsError(updated.error.code);
+    if (updated.data.length > 0) return;
+
+    const inserted = await this.client.from("weight_entries").insert({
+      user_id: userId,
+      measured_on: measuredOn,
+      weight_kg: weightKg,
+    });
+    if (inserted.error) throw mapDetailsError(inserted.error.code);
+  }
+
+  async deleteWeightEntry(measuredOn: string): Promise<void> {
+    const userId = await this.getVerifiedUserId();
+    const { error } = await this.client
+      .from("weight_entries")
+      .delete()
+      .eq("user_id", userId)
+      .eq("measured_on", measuredOn);
+    if (error) throw new ProfilePersistenceError();
+  }
+
   private async getVerifiedUserId(): Promise<string> {
     try {
       return await requireAllowedVerifiedUser(this.client);
@@ -141,13 +324,23 @@ export async function createProfileRepository(): Promise<ProfileRepository> {
 }
 
 function toProfile(
-  row: Database["public"]["Tables"]["profiles"]["Row"],
+  row: Pick<
+    Database["public"]["Tables"]["profiles"]["Row"],
+    "user_id" | "created_at" | "timezone_name"
+  >,
 ): Profile {
   return {
     userId: row.user_id,
     createdAt: row.created_at,
     timezoneName: row.timezone_name,
   };
+}
+
+/** A value a table check refused is the caller's to correct; the rest is not. */
+function mapDetailsError(code: string | undefined): Error {
+  return code === "23514"
+    ? new ProfileValidationError()
+    : new ProfilePersistenceError();
 }
 
 function mapPersistenceError(code: string | undefined): Error {

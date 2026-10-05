@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import type { OnboardingActionState } from "./action-state";
 
+import { SPORTS_MAX_COUNT } from "@/lib/sports/sport-presets";
 import { GoalValidationError } from "@/server/goals/goal-records";
 import {
   OnboardingValidationError,
@@ -19,6 +20,7 @@ import {
   parseTrainingPayload,
   type OnboardingStep,
 } from "@/server/onboarding/onboarding-records";
+import { createProfileRepository } from "@/server/repositories/profile-repository";
 import {
   createOnboardingRepository,
   OnboardingAuthenticationError,
@@ -27,6 +29,59 @@ import {
   OnboardingPersistenceError,
   type OnboardingOperation,
 } from "@/server/repositories/onboarding-repository";
+
+/**
+ * "Continue later" from a step the profile saves ("About you", "Your
+ * sports"): records that the owner chose to leave, so the next sign-in asks
+ * about setup instead of opening it, and goes to the app.
+ */
+export async function leaveSetupAction(): Promise<void> {
+  await recordSkip();
+  redirect("/home/today");
+}
+
+/**
+ * A sport a goal names that is not among the owner's sports was made up on
+ * the goal step, and joins them (owner, 5 Oct 2026), so it is there to pick
+ * the next time. The goals are already saved by now; if this cannot be done
+ * the goal keeps its sport and the owner's list is simply not longer.
+ */
+async function keepGoalSports(
+  goals: readonly { activityAreas: readonly string[] }[],
+): Promise<void> {
+  try {
+    const profiles = await createProfileRepository();
+    const owned = (await profiles.getDetails())?.sports ?? [];
+    const known = new Set(owned.map((sport) => sport.toLocaleLowerCase()));
+    const added: string[] = [];
+    for (const sport of goals.flatMap((goal) => goal.activityAreas)) {
+      const key = sport.toLocaleLowerCase();
+      if (known.has(key)) continue;
+      known.add(key);
+      added.push(sport);
+    }
+    // Held to the list's own limit; past it the goal still keeps its sport.
+    const room = Math.max(0, SPORTS_MAX_COUNT - owned.length);
+    if (added.length > 0 && room > 0) {
+      await profiles.saveSports([...owned, ...added.slice(0, room)]);
+    }
+  } catch {
+    // See above: the goal step's own save has gone through.
+  }
+}
+
+/** Never in the way of leaving: a skip that cannot be recorded is not one. */
+async function recordSkip(): Promise<void> {
+  try {
+    const repository = await createOnboardingRepository();
+    await repository.apply({
+      operation: "dismiss_prompt",
+      expectedDraftRevision: 0,
+    });
+  } catch {
+    // The next sign-in opens setup rather than asking; nothing is lost.
+  }
+}
 
 export async function changeOnboardingAction(
   previous: OnboardingActionState,
@@ -136,11 +191,15 @@ async function resolveOnboardingAction(
       ),
       payload,
     });
+    if (step === 1) {
+      await keepGoalSports(parseGoalsPayload(formData, advance).goals);
+    }
     revalidate();
+    if (!advance) await recordSkip();
     return result("saved", "This step was saved.", {
       nextStep: advance ? nextStep(step) : step,
-      // You says how long the draft is kept; see `SETUP_NOTES` there.
-      ...(advance ? {} : { redirectTo: "/home/you?setup=kept" }),
+      // "Continue later" goes to the app (owner, 5 Oct 2026).
+      ...(advance ? {} : { redirectTo: "/home/today" }),
     });
   } catch (error) {
     if (
@@ -149,11 +208,12 @@ async function resolveOnboardingAction(
       // The goals step is parsed by the goal rules, which have their own.
       error instanceof GoalValidationError
     ) {
-      // "Save and finish later" leaves whatever the step holds (owner,
-      // 2 Oct 2026). A step the draft cannot store as it stands is not saved,
-      // and You says so; the steps before it are already in the draft.
+      // "Continue later" leaves whatever the step holds (owner, 2 Oct
+      // 2026). A step the draft cannot store as it stands is not saved; the
+      // steps before it are already in the draft.
       if (stringValue(formData.get("intent")) === "finish") {
-        return result("saved", "", { redirectTo: "/home/you?setup=left" });
+        await recordSkip();
+        return result("saved", "", { redirectTo: "/home/today" });
       }
       return result(
         "validation",

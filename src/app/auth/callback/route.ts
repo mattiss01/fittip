@@ -40,8 +40,14 @@ export async function GET(request: Request) {
     return failed();
   }
 
+  await startSetup(client);
+
+  // The link confirms the account; it does not sign it in (owner, 5 Oct
+  // 2026). The session this route needed to confirm with is ended, and the
+  // account signs in on the page it lands on, which says it is confirmed.
+  await client.auth.signOut();
   return mergeAuthResponseHeaders(
-    privateRedirect(new URL(await startSetupOrGoHome(client), requestUrl)),
+    privateRedirect(new URL("/?auth=confirmed", requestUrl)),
     pending,
   );
 }
@@ -49,26 +55,21 @@ export async function GET(request: Request) {
 /**
  * Signing up leads straight into guided setup (owner, 5 Oct 2026). This route
  * is where a new account's confirmation link lands, so it is the one moment
- * that is "just signed up": the setup draft is started here and the account
- * goes to its first step. Setup stays optional after that. It can be left or
- * cancelled, and signing in later goes to Today as before.
+ * that is "just signed up": the setup draft is started here, and the sign-in
+ * that follows opens it while nothing in it has been saved (see the sign-in
+ * route). Setup stays optional: it can be left or cancelled.
  *
- * Nothing here may cost the account its sign-in: if setup cannot be read, the
- * account lands on Today, and if the draft cannot be started, the setup page
- * offers to start it.
+ * Nothing here may cost the account its confirmation: if setup cannot be read
+ * or started, the account still confirms, signs in and lands on Today, and
+ * setup is reached from You.
  */
-async function startSetupOrGoHome(client: ServerUserClient): Promise<string> {
+async function startSetup(client: ServerUserClient): Promise<void> {
   const onboarding = new OnboardingRepository(client);
   try {
-    if ((await onboarding.getEntryState()).hasPublished) return "/home/today";
-  } catch {
-    return "/home/today";
-  }
-  try {
+    if ((await onboarding.getEntryState()).hasPublished) return;
     await onboarding.apply({ operation: "start", expectedDraftRevision: 0 });
   } catch {
-    // A draft that has been worked on refuses a second start; the page shows
-    // it either way.
+    // A draft that has been worked on refuses a second start, and it is
+    // then the owner's to come back to.
   }
-  return "/home/you/onboarding";
 }

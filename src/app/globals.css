@@ -101,10 +101,71 @@ h1 {
   line-height: 1.6;
 }
 
+/* Sign-in and sign-up in the Coach's note direction (owner, 5 Oct 2026): the
+   heading at the size the pages inside the app use, no intro above the form. */
+.auth-card h1 {
+  font-size: 2rem;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
 .auth-form {
   display: grid;
   gap: 0.55rem;
   margin-top: 1.75rem;
+}
+
+/* The field and the switch that shows what is typed in it. */
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 3.4rem;
+}
+
+/* Pinned by its edges, not centred with a transform: every button shrinks a
+   little when pressed, and that would take a transform's place. */
+.password-reveal {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  bottom: 0.3rem;
+  width: 2.75rem;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.password-reveal:hover {
+  background: var(--line);
+}
+
+/* A link that is the page's one action, drawn as the form's button is. */
+.auth-action {
+  min-height: 3.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1.75rem;
+  border-radius: var(--radius-control);
+  background: var(--accent);
+  color: var(--paper);
+  font: 700 0.95rem var(--font-sans);
+  text-decoration: none;
+}
+
+.auth-action:hover {
+  background: var(--accent-dark);
+}
+
+.auth-action:focus-visible {
+  outline: 3px solid var(--foreground);
+  outline-offset: 2px;
 }
 label {
   font-family: var(--font-mono);
