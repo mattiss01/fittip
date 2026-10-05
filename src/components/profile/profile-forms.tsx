@@ -377,9 +377,7 @@ export function AboutYouForm({
             {field}
             {/* Beside the field, not inside its label, whose name it would
                 otherwise become part of. */}
-            {index > 0 ? (
-              <small>Optional. Leave it empty to skip it.</small>
-            ) : null}
+            {index > 0 ? <small>Optional</small> : null}
           </div>
         ))
       ) : (

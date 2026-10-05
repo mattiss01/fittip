@@ -565,10 +565,12 @@ label.constraintChoice {
   gap: 0.75rem;
 }
 
+/* With Back an arrow at the top, a step's one button and "Continue later"
+   under it sit in the middle (owner, 5 Oct 2026). */
 .stepActions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: end;
+  justify-content: center;
   gap: 0.55rem;
   padding-top: 0.5rem;
 }
@@ -597,7 +599,7 @@ label.constraintChoice {
   background: transparent;
   color: var(--ledger-ink);
   font-weight: 600;
-  text-align: right;
+  text-align: center;
   text-decoration: underline;
   text-underline-offset: 0.25rem;
 }
@@ -661,6 +663,21 @@ label.constraintChoice {
 .stepForm .question select {
   text-align: center;
   text-align-last: center;
+}
+
+/* A date field draws its value in parts of its own, which `text-align` on the
+   field does not reach, and keeps a calendar button on the right that would
+   push the date off centre; the same room is left on the left. */
+.stepForm .question input[type="date"] {
+  padding-left: 2.4rem;
+}
+
+.stepForm .question input[type="date"]::-webkit-datetime-edit {
+  text-align: center;
+}
+
+.stepForm .question input[type="date"]::-webkit-date-and-time-value {
+  text-align: center;
 }
 
 .stepForm .question > small {

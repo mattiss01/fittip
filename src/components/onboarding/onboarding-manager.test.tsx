@@ -135,7 +135,7 @@ describe("OnboardingManager", () => {
     expect(screen.getByLabelText("Name")).not.toBeVisible();
     expect(
       screen
-        .getAllByText("Optional. Leave it empty to skip it.")
+        .getAllByText("Optional")
         .some((hint) => hint.closest("[hidden]") === null),
     ).toBe(true);
 
