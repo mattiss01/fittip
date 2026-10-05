@@ -15,6 +15,7 @@ import {
   OnboardingManager,
 } from "./onboarding-manager";
 import { AboutYouForm, SportsForm } from "@/components/profile/profile-forms";
+import { adoptBrowserTimezoneAction } from "@/app/home/you/profile-actions";
 import type { OnboardingSnapshot } from "@/lib/onboarding/onboarding-contract";
 import type { ProfileDetailsView } from "@/lib/profile/profile-contract";
 
@@ -38,10 +39,14 @@ vi.mock("@/app/home/you/profile-actions", () => {
     saveProfileSportsAction: saved,
     saveAppSettingsAction: saved,
     deleteWeightEntryAction: saved,
+    adoptBrowserTimezoneAction: vi.fn(async () => {}),
   };
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.mocked(adoptBrowserTimezoneAction).mockClear();
+});
 
 describe("OnboardingManager", () => {
   it("explains storage and no-AI behavior before creating a draft", () => {
@@ -151,6 +156,37 @@ describe("OnboardingManager", () => {
     // The last question's save moves setup on to the sports.
     fireEvent.click(screen.getByRole("button", { name: "Save and continue" }));
     expect(await heading("Your sports")).toBeVisible();
+  });
+
+  it("stores the browser's time zone as setup opens, and only for a profile without one", () => {
+    const view = render(
+      <OnboardingManager
+        profile={{ ...namedProfile(), displayName: null, timezoneName: null }}
+        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 1 }) }}
+      />,
+    );
+    // Before any answer: an owner who leaves at the first question still
+    // has a day for Today to show.
+    expect(adoptBrowserTimezoneAction).toHaveBeenCalledExactlyOnceWith(
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    );
+    view.rerender(
+      <OnboardingManager
+        profile={{ ...namedProfile(), displayName: null, timezoneName: null }}
+        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 1 }) }}
+      />,
+    );
+    expect(adoptBrowserTimezoneAction).toHaveBeenCalledOnce();
+
+    cleanup();
+    vi.mocked(adoptBrowserTimezoneAction).mockClear();
+    render(
+      <OnboardingManager
+        profile={namedProfile()}
+        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 1 }) }}
+      />,
+    );
+    expect(adoptBrowserTimezoneAction).not.toHaveBeenCalled();
   });
 
   it("asks before opening setup again for an owner who chose Continue later", () => {

@@ -557,10 +557,34 @@ label.constraintChoice {
   padding-top: 0.4rem;
 }
 
-/* The hint under a question's one field. */
-.stepForm div > small {
+/* A question asked on its own: what is typed, and the hint under it, sit in
+   the middle like the heading above (owner, 5 Oct 2026). `hidden` has to be
+   said again because a class that sets `display` would undo it. */
+.question[hidden] {
+  display: none;
+}
+
+.stepForm .question input,
+.stepForm .question select {
+  text-align: center;
+  text-align-last: center;
+}
+
+.stepForm .question > small {
   display: block;
   margin-top: 0.4rem;
+  text-align: center;
+}
+
+.stepForm .question label {
+  text-align: center;
+}
+
+/* "Your setup is not finished": in the middle of the screen, like a step. */
+.startCard.reminder {
+  width: 100%;
+  margin-block: auto;
+  text-align: center;
 }
 
 .secondaryButton {

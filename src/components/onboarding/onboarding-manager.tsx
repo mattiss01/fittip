@@ -20,6 +20,7 @@ import {
   type OnboardingActionState,
 } from "@/app/home/you/onboarding/action-state";
 import styles from "@/app/home/you/onboarding/onboarding.module.css";
+import { adoptBrowserTimezoneAction } from "@/app/home/you/profile-actions";
 import {
   ABOUT_YOU_QUESTIONS,
   AboutYouForm,
@@ -192,6 +193,23 @@ export function OnboardingManager({
     }
   }, [snapshot.draft, visibleStep, profileStep, aboutQuestion, state.status]);
 
+  // The profile's time zone is the browser's until the owner changes it,
+  // and it is stored as setup opens: see `adoptBrowserTimezoneAction`.
+  const needsZone = profile.timezoneName === null && snapshot.draft !== null;
+  const zoneSent = useRef(false);
+  useEffect(() => {
+    if (!needsZone || zoneSent.current) return;
+    let zone: string | undefined;
+    try {
+      zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch {
+      return;
+    }
+    if (!zone) return;
+    zoneSent.current = true;
+    void adoptBrowserTimezoneAction(zone);
+  }, [needsZone]);
+
   // Done once, setup is not offered again (owner, 2 Oct 2026): everything it
   // filed can be changed where it lives. A draft begun before that rule is
   // still shown below, so it can be finished or cancelled.
@@ -235,7 +253,10 @@ export function OnboardingManager({
   // saying setup is not finished, with one button to go on and one to skip.
   if (reminding) {
     return (
-      <section className={styles.startCard} aria-labelledby="setup-reminder">
+      <section
+        className={`${styles.startCard} ${styles.reminder}`}
+        aria-labelledby="setup-reminder"
+      >
         <h2 id="setup-reminder">Your setup is not finished</h2>
         <p>
           Your coach and your plan work from what you tell us in setup. It takes

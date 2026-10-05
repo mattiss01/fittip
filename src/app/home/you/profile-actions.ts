@@ -46,6 +46,28 @@ export async function saveProfileDetailsAction(
   });
 }
 
+/**
+ * Guided setup takes the time zone from the browser without asking (owner,
+ * 5 Oct 2026), and it does so as it opens rather than with a step's save, so
+ * an owner who leaves at the first question still has a day for Today to
+ * show. It only ever fills an empty zone: a stored one is changed under App
+ * settings and nowhere else, so another device cannot move it by having a
+ * different clock. Failing is silent; the Plan still asks, as it always did.
+ */
+export async function adoptBrowserTimezoneAction(
+  timezoneName: string,
+): Promise<void> {
+  try {
+    const profiles = await createProfileRepository();
+    if ((await profiles.ensureCurrentProfile()).timezoneName !== null) return;
+    await profiles.confirmTimezone(parseTimezoneName(timezoneName));
+  } catch {
+    return;
+  }
+  revalidatePath("/home/you/onboarding");
+  revalidatePath("/home/you/settings");
+}
+
 /** App settings on Settings: the units and the time zone, changed on purpose. */
 export async function saveAppSettingsAction(
   previous: ProfileActionState,

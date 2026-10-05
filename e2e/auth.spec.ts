@@ -68,6 +68,17 @@ test.describe("public account authentication", () => {
     await expect(
       page.getByRole("heading", { name: "What's your name?" }),
     ).toBeVisible();
+    // Leaving at the first question, with nothing answered, still lands on
+    // a Today that has a day to show: setup stored the browser's time zone
+    // as it opened, so nothing asks for it.
+    await page.getByRole("button", { name: "Continue later" }).click();
+    await page.getByRole("button", { name: "Continue later" }).click();
+    await expect(page).toHaveURL(/\/home\/today$/);
+    await expect(page.getByText(/Confirm your time zone/)).toHaveCount(0);
+    await page.goto("/home/you/onboarding");
+    await expect(
+      page.getByRole("heading", { name: "What's your name?" }),
+    ).toBeVisible();
     // Setup is walked without the app's navigation under it.
     await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(
       0,

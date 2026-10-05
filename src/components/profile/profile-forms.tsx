@@ -369,7 +369,11 @@ export function AboutYouForm({
         // Every field stays in the form, so one save sends them all; the
         // questions not being asked are only out of sight.
         fields.map((field, index) => (
-          <div hidden={index !== question} key={field.key}>
+          <div
+            className={styles.question}
+            hidden={index !== question}
+            key={field.key}
+          >
             {field}
             {/* Beside the field, not inside its label, whose name it would
                 otherwise become part of. */}
