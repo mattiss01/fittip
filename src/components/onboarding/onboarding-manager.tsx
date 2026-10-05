@@ -348,7 +348,7 @@ export function OnboardingManager({
     profileStep === 2
       ? "Select the sports you do or are interested in"
       : profileStep === null && visibleStep === 1
-        ? "What you want to train for, up to three"
+        ? "What you want to train for"
         : null;
   // Back is one arrow at the top of the page, not a button on every step
   // (owner, 5 Oct 2026). The first question has nowhere to go back to.
@@ -464,7 +464,7 @@ export function OnboardingManager({
             ))}
             {goalCount < 3 ? (
               <button
-                className={styles.secondaryButton}
+                className={styles.addEntry}
                 onClick={() => setGoalCount((count) => count + 1)}
                 type="button"
               >
@@ -904,9 +904,9 @@ function GoalFields({
           rows={1}
         />
       </label>
-      <GoalSports
+      <GoalSport
         index={index}
-        initial={candidate?.activityAreas ?? []}
+        initial={candidate?.activityAreas[0] ?? null}
         sports={sports}
       />
       <label>
@@ -1282,84 +1282,78 @@ export function isActionErrorStatus(
   );
 }
 
+/** A select value no sport can have: a name is never a lone control mark. */
+const ANOTHER_SPORT = "\u0000another";
+
 /**
- * A goal's sports, picked from the ones chosen in "Your sports" (owner, 5 Oct
- * 2026), together with any the goal already names that are not among them.
- * The draft stores them as it always did, a list in one field, so the picks
- * are sent that way. With no sports chosen there is nothing to pick from, and
- * the field is typed as before.
+ * A goal's sport (owner, 5 Oct 2026): exactly one, chosen from a list of the
+ * sports picked in "Your sports", or made up on the spot. A made-up one is
+ * sent as the goal's sport like any other, and the step's save adds it to
+ * the owner's sports. Nothing is chosen to begin with, so a goal is never
+ * filed under a sport the owner did not pick.
  */
-function GoalSports({
+function GoalSport({
   index,
   initial,
   sports,
 }: {
   index: number;
-  initial: string[];
+  initial: string | null;
   sports: string[];
 }) {
-  const options = [
-    ...sports,
-    ...initial.filter(
-      (named) =>
-        !sports.some(
-          (sport) => sport.toLocaleLowerCase() === named.toLocaleLowerCase(),
-        ),
-    ),
-  ];
-  const [chosen, setChosen] = useState(
-    () => new Set(initial.map((sport) => sport.toLocaleLowerCase())),
-  );
-
-  if (options.length === 0) {
-    return (
-      <label>
-        Sports
-        <input
-          name={`goalActivities:${index}`}
-          placeholder="Running, strength"
-          required={index === 0}
-        />
-      </label>
+  const known = (name: string) =>
+    sports.find(
+      (sport) => sport.toLocaleLowerCase() === name.toLocaleLowerCase(),
     );
-  }
+  // A sport the draft already holds that is no longer among the owner's is
+  // still offered, rather than silently dropped from the goal.
+  const options =
+    initial !== null && known(initial) === undefined
+      ? [...sports, initial]
+      : sports;
+  const [choice, setChoice] = useState(
+    initial === null ? "" : (known(initial) ?? initial),
+  );
+  const [made, setMade] = useState("");
+  const adding = choice === ANOTHER_SPORT;
 
   return (
-    <div
-      aria-labelledby={`goal-sports-${index}`}
-      className={styles.fieldGroup}
-      role="group"
-    >
-      <span className={styles.fieldLabel} id={`goal-sports-${index}`}>
-        Sports
-      </span>
-      <div className={styles.chips}>
-        {options.map((sport) => (
-          <label className={styles.chip} key={sport}>
-            <input
-              checked={chosen.has(sport.toLocaleLowerCase())}
-              onChange={() =>
-                setChosen((current) => {
-                  const next = new Set(current);
-                  const key = sport.toLocaleLowerCase();
-                  if (!next.delete(key)) next.add(key);
-                  return next;
-                })
-              }
-              type="checkbox"
-            />
-            <span>{sport}</span>
-          </label>
-        ))}
-      </div>
+    <>
+      <label>
+        Sport
+        <select
+          onChange={(event) => setChoice(event.target.value)}
+          required={index === 0}
+          value={choice}
+        >
+          <option value="">Choose a sport</option>
+          {options.map((sport) => (
+            <option key={sport} value={sport}>
+              {sport}
+            </option>
+          ))}
+          <option value={ANOTHER_SPORT}>Add another sport…</option>
+        </select>
+      </label>
+      {adding ? (
+        <label>
+          New sport
+          <input
+            maxLength={60}
+            onChange={(event) => setMade(event.target.value)}
+            // A comma separates sports where they are stored as a list.
+            pattern="[^,]+"
+            required
+            value={made}
+          />
+        </label>
+      ) : null}
       <input
         name={`goalActivities:${index}`}
         type="hidden"
-        value={options
-          .filter((sport) => chosen.has(sport.toLocaleLowerCase()))
-          .join(", ")}
+        value={adding ? made.trim() : choice}
       />
-    </div>
+    </>
   );
 }
 

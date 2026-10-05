@@ -19,6 +19,7 @@ import {
   parseTrainingPayload,
   type OnboardingStep,
 } from "@/server/onboarding/onboarding-records";
+import { createProfileRepository } from "@/server/repositories/profile-repository";
 import {
   createOnboardingRepository,
   OnboardingAuthenticationError,
@@ -36,6 +37,32 @@ import {
 export async function leaveSetupAction(): Promise<void> {
   await recordSkip();
   redirect("/home/today");
+}
+
+/**
+ * A sport a goal names that is not among the owner's sports was made up on
+ * the goal step, and joins them (owner, 5 Oct 2026), so it is there to pick
+ * the next time. The goals are already saved by now; if this cannot be done
+ * the goal keeps its sport and the owner's list is simply not longer.
+ */
+async function keepGoalSports(
+  goals: readonly { activityAreas: readonly string[] }[],
+): Promise<void> {
+  try {
+    const profiles = await createProfileRepository();
+    const owned = (await profiles.getDetails())?.sports ?? [];
+    const known = new Set(owned.map((sport) => sport.toLocaleLowerCase()));
+    const added: string[] = [];
+    for (const sport of goals.flatMap((goal) => goal.activityAreas)) {
+      const key = sport.toLocaleLowerCase();
+      if (known.has(key)) continue;
+      known.add(key);
+      added.push(sport);
+    }
+    if (added.length > 0) await profiles.saveSports([...owned, ...added]);
+  } catch {
+    // See above: the goal step's own save has gone through.
+  }
 }
 
 /** Never in the way of leaving: a skip that cannot be recorded is not one. */
@@ -159,6 +186,9 @@ async function resolveOnboardingAction(
       ),
       payload,
     });
+    if (step === 1) {
+      await keepGoalSports(parseGoalsPayload(formData, advance).goals);
+    }
     revalidate();
     if (!advance) await recordSkip();
     return result("saved", "This step was saved.", {

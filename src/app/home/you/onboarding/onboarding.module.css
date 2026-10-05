@@ -179,6 +179,26 @@ main.setupPage {
   line-height: 1.1;
 }
 
+/* "Add another goal": a second entry is offered where it can be seen, in
+   the app's orange but as an outline, so "Next" stays the step's one filled
+   button (owner, 5 Oct 2026). */
+.stepForm .addEntry {
+  width: fit-content;
+  min-height: 3rem;
+  margin: 0;
+  padding: 0 1.2rem;
+  border: 2px solid var(--ember);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ember-dark);
+  font: 700 0.95rem var(--font-sans);
+  justify-self: center;
+}
+
+.stepForm .addEntry:hover {
+  background: #fff0e1;
+}
+
 /* The line under a heading that says what the step asks. */
 .stepHeader span {
   display: block;

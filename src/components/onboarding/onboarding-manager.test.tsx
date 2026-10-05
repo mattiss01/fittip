@@ -376,19 +376,25 @@ describe("OnboardingManager", () => {
     ).toBeVisible();
   });
 
-  it("lets a goal's sports be typed when none was chosen in Your sports", () => {
+  it("still offers a sport the draft holds that is no longer among the owner's", () => {
     render(
       <OnboardingManager
-        profile={{ ...namedProfile(), sports: [] }}
+        profile={{ ...namedProfile(), sports: ["Cycling"] }}
         snapshot={{
           ...emptySnapshot(),
           draft: draft({ currentStep: 1, revision: 1 }),
+          goalCandidates: [goalCandidate({ activityAreas: ["Running"] })],
         }}
       />,
     );
 
-    expect(screen.getByLabelText("Sports")).toBeRequired();
-    expect(screen.queryByRole("group", { name: "Sports" })).toBeNull();
+    const sport = screen.getByLabelText("Sport");
+    expect(sport).toHaveValue("Running");
+    expect(
+      within(sport)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Choose a sport", "Cycling", "Running", "Add another sport…"]);
   });
 
   it("asks again before leaving setup, and says what setup is for", () => {
@@ -433,21 +439,27 @@ describe("OnboardingManager", () => {
     expect(screen.getByRole("heading", { name: "Goals" })).toBeVisible();
     expect(screen.getByLabelText("Goal title")).toBeRequired();
     expect(screen.getByLabelText("Desired outcome")).toBeRequired();
-    expect(
-      screen.getByText("What you want to train for, up to three"),
-    ).toBeVisible();
-    // The goal picks from the sports chosen in "Your sports", and sends the
-    // picks as the list the draft has always stored.
-    const sports = screen.getByRole("group", { name: "Sports" });
-    const running = within(sports).getByLabelText("Running");
-    expect(running).not.toBeChecked();
-    expect(
-      container.querySelector('input[name="goalActivities:0"]'),
-    ).toHaveValue("");
-    fireEvent.click(running);
-    expect(
-      container.querySelector('input[name="goalActivities:0"]'),
-    ).toHaveValue("Running");
+    expect(screen.getByText("What you want to train for")).toBeVisible();
+    // The goal has exactly one sport, chosen from the ones picked in "Your
+    // sports" or made up here; nothing is chosen to begin with.
+    const sport = screen.getByLabelText("Sport");
+    const goalSport = () =>
+      container.querySelector<HTMLInputElement>(
+        'input[name="goalActivities:0"]',
+      );
+    expect(sport).toBeRequired();
+    expect(sport).toHaveValue("");
+    fireEvent.change(sport, { target: { value: "Running" } });
+    expect(goalSport()).toHaveValue("Running");
+
+    const another = within(sport).getByRole<HTMLOptionElement>("option", {
+      name: "Add another sport…",
+    });
+    fireEvent.change(sport, { target: { value: another.value } });
+    const made = screen.getByLabelText("New sport");
+    expect(made).toBeRequired();
+    fireEvent.change(made, { target: { value: "  Stabwurf " } });
+    expect(goalSport()).toHaveValue("Stabwurf");
     expect(screen.getByLabelText("Target date (optional)")).not.toBeRequired();
     // Two choices side by side, as on Goals, and an outcome field that
     // starts one line tall.
