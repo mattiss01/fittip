@@ -16,6 +16,7 @@ import {
 } from "@/app/home/you/profile-action-state";
 import {
   deleteWeightEntryAction,
+  saveAppSettingsAction,
   saveProfileDetailsAction,
   saveProfileSportsAction,
 } from "@/app/home/you/profile-actions";
@@ -91,16 +92,17 @@ export function AboutYouForm({
   );
   useSaved(state, onSaved);
 
-  // Units are suggested from the browser's language and shown, never decided
-  // silently. The server renders metric; the browser corrects it on its first
+  // The units and the time zone are not asked (owner, 5 Oct 2026). Until the
+  // profile has them they are the browser's: its language says the units,
+  // and its own zone is sent once. Both are changed under App settings. The
+  // server renders metric and no zone; the browser corrects that on its first
   // render, before anything is typed.
-  const suggested = useSyncExternalStore(
+  const units = useUnits(profile);
+  const browserZone = useSyncExternalStore(
     subscribeNothing,
-    readSuggestedUnits,
-    () => "metric" as const,
+    readBrowserZone,
+    () => null,
   );
-  const [chosenUnits, setChosenUnits] = useState<UnitsSystem | null>(null);
-  const units = chosenUnits ?? profile.unitsSystem ?? suggested;
   const height =
     profile.heightCm === null ? null : cmToFeetAndInches(profile.heightCm);
 
@@ -144,27 +146,14 @@ export function AboutYouForm({
           </select>
         </label>
       </div>
-      <div className={styles.fieldGrid}>
-        <label>
-          Units
-          <select
-            name="unitsSystem"
-            onChange={(event) =>
-              setChosenUnits(event.target.value as UnitsSystem)
-            }
-            value={units}
-          >
-            <option value="metric">Metric (cm, kg)</option>
-            <option value="imperial">Imperial (ft, lb)</option>
-          </select>
-        </label>
-        <label>
-          Time zone
-          <TimezoneSelect saved={profile.timezoneName} />
-        </label>
-      </div>
-      {/* Keyed by the units: switching shows the stored measures in the other
-          system rather than leaving a number that now means something else. */}
+      <input name="unitsSystem" type="hidden" value={units} />
+      <input
+        name="timezoneName"
+        type="hidden"
+        value={profile.timezoneName ? "" : (browserZone ?? "")}
+      />
+      {/* Keyed by the units: once the browser has said which, the measures
+          are shown in that system from the start. */}
       {units === "metric" ? (
         <div className={styles.fieldGrid} key="metric">
           <label>
@@ -221,6 +210,58 @@ export function AboutYouForm({
       </div>
     </form>
   );
+}
+
+/**
+ * The units and the time zone, on Settings. They are the app's settings
+ * rather than something about the owner, so setup sets them from the browser
+ * without asking and this is where they are changed.
+ */
+export function AppSettingsForm({ profile }: { profile: ProfileDetailsView }) {
+  const [state, action, pending] = useActionState(
+    saveAppSettingsAction,
+    INITIAL_PROFILE_ACTION_STATE,
+  );
+  const suggested = useUnits(profile);
+  const [chosenUnits, setChosenUnits] = useState<UnitsSystem | null>(null);
+
+  return (
+    <form action={action} className={styles.stepForm} data-app-settings>
+      <ProfileNotice state={state} />
+      <div className={styles.fieldGrid}>
+        <label>
+          Units
+          <select
+            name="unitsSystem"
+            onChange={(event) =>
+              setChosenUnits(event.target.value as UnitsSystem)
+            }
+            value={chosenUnits ?? suggested}
+          >
+            <option value="metric">Metric (cm, kg)</option>
+            <option value="imperial">Imperial (ft, lb)</option>
+          </select>
+        </label>
+        <label>
+          Time zone
+          <TimezoneSelect saved={profile.timezoneName} />
+        </label>
+      </div>
+      <div className={styles.stepActions}>
+        <button disabled={pending}>Save settings</button>
+      </div>
+    </form>
+  );
+}
+
+/** The profile's units, or the ones the browser's language suggests. */
+function useUnits(profile: ProfileDetailsView): UnitsSystem {
+  const suggested = useSyncExternalStore(
+    subscribeNothing,
+    readSuggestedUnits,
+    () => "metric" as const,
+  );
+  return profile.unitsSystem ?? suggested;
 }
 
 export function SportsForm({

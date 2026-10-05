@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import {
   AboutYouForm,
+  AppSettingsForm,
   SportsForm,
   WeightHistory,
 } from "@/components/profile/profile-forms";
@@ -18,10 +19,11 @@ export const dynamic = "force-dynamic";
 
 /**
  * Settings, reached from the gear on You. It holds what guided setup asks
- * first and saves to the profile: the owner's details, their weight history
- * and their sports (owner, 5 Oct 2026). Subscription, language and
- * appearance are meant to land here too, and none is listed until it exists.
- * Sign out stays on You (owner, 2 Oct 2026).
+ * first: the owner's details, their weight history and their sports, and
+ * then the app's own settings, the units and the time zone, which setup takes
+ * from the browser without asking (owner, 5 Oct 2026). Subscription, language
+ * and appearance are meant to land here too, and none is listed until it
+ * exists. Sign out stays on You (owner, 2 Oct 2026).
  */
 export default async function SettingsPage() {
   let details;
@@ -67,6 +69,10 @@ export default async function SettingsPage() {
       <section className={setupStyles.settingsCard} aria-labelledby="sports">
         <h2 id="sports">Your sports</h2>
         <SportsForm sports={details.sports} submitLabel="Save sports" />
+      </section>
+      <section className={setupStyles.settingsCard} aria-labelledby="app">
+        <h2 id="app">App settings</h2>
+        <AppSettingsForm profile={details} />
       </section>
     </main>
   );

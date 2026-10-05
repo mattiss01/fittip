@@ -12,7 +12,13 @@ export function AuthForm({
 }: {
   initialMode?: Mode;
   allowSignUp?: boolean;
-  searchParams?: { checkEmail?: boolean; error?: string; next?: string };
+  searchParams?: {
+    checkEmail?: boolean;
+    /** The confirmation link was opened and the account is confirmed. */
+    confirmed?: boolean;
+    error?: string;
+    next?: string;
+  };
 }) {
   const mode = initialMode;
   const isSignUp = mode === "sign-up";
@@ -25,10 +31,10 @@ export function AuthForm({
     return (
       <section className="auth-card" aria-labelledby="auth-title" role="status">
         <p className="eyebrow">FitTip</p>
-        <h1 id="auth-title">Check your email.</h1>
+        <h1 id="auth-title">Check your email</h1>
         <p className="auth-intro">
-          We sent you a link to confirm your account. Open it in this browser
-          and you go straight into setup.
+          We sent you a link to confirm your account. Open it in this browser,
+          then sign in and setup starts.
         </p>
         <Link className="auth-action" href="/">
           Back to sign in
@@ -40,7 +46,7 @@ export function AuthForm({
   return (
     <section className="auth-card" aria-labelledby="auth-title">
       <p className="eyebrow">FitTip</p>
-      <h1 id="auth-title">{isSignUp ? "Join FitTip." : "Welcome back."}</h1>
+      <h1 id="auth-title">{isSignUp ? "Join FitTip" : "Welcome back"}</h1>
 
       <form
         action={isSignUp ? "/auth/signup" : "/auth/signin"}
@@ -77,6 +83,11 @@ export function AuthForm({
             minLength={8}
             name="confirmation"
           />
+        ) : null}
+        {!isSignUp && searchParams?.confirmed && !error ? (
+          <p className="form-message success" role="status">
+            Your account is confirmed. Sign in to get started.
+          </p>
         ) : null}
         {error ? (
           <p className="form-message error" role="alert">

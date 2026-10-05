@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { ProfileActionState } from "./profile-action-state";
 
 import { isoDateInTimezone } from "@/lib/date/local-date";
+import { UNITS_SYSTEMS } from "@/lib/profile/body-measures";
 import {
   parseProfileDetails,
   parseProfileSports,
@@ -19,10 +20,12 @@ import {
 } from "@/server/repositories/profile-repository";
 
 /**
- * "About you", from guided setup and from Settings (owner, 5 Oct 2026). The
- * time zone is read first, because it decides which day is today: the latest
- * birthday accepted and the day a weight is recorded for. Nothing is written
- * until everything that was sent has been checked.
+ * "About you", from guided setup and from Settings (owner, 5 Oct 2026). It
+ * does not ask for the time zone or the units: the form sends what the
+ * browser says, the zone only while the profile has none, and both are
+ * changed under App settings. The zone is read first, because it decides
+ * which day is today: the latest birthday accepted and the day a weight is
+ * recorded for. Nothing is written until everything sent has been checked.
  */
 export async function saveProfileDetailsAction(
   previous: ProfileActionState,
@@ -40,6 +43,22 @@ export async function saveProfileDetailsAction(
     const details = parseProfileDetails(formData, today);
     if (chosenZone !== null) await profiles.confirmTimezone(chosenZone);
     await profiles.saveDetails(details, today);
+  });
+}
+
+/** App settings on Settings: the units and the time zone, changed on purpose. */
+export async function saveAppSettingsAction(
+  previous: ProfileActionState,
+  formData: FormData,
+): Promise<ProfileActionState> {
+  return run(previous, "Your settings are saved.", async (profiles) => {
+    const timezoneName = parseTimezoneName(formData.get("timezoneName"));
+    const unitsSystem = UNITS_SYSTEMS.find(
+      (units) => units === formData.get("unitsSystem"),
+    );
+    if (!unitsSystem) throw new ProfileDetailsValidationError();
+    await profiles.confirmTimezone(timezoneName);
+    await profiles.saveUnits(unitsSystem);
   });
 }
 

@@ -6,6 +6,7 @@ const {
   ensureCurrentProfileMock,
   getEntryStateMock,
   applyOnboardingMock,
+  hasUntouchedDraftMock,
 } = vi.hoisted(() => {
   const client = {
     auth: {
@@ -27,6 +28,7 @@ const {
     ensureCurrentProfileMock: vi.fn(),
     getEntryStateMock: vi.fn(),
     applyOnboardingMock: vi.fn(),
+    hasUntouchedDraftMock: vi.fn(),
   };
 });
 
@@ -45,6 +47,7 @@ vi.mock("@/server/repositories/onboarding-repository", () => ({
   OnboardingRepository: class {
     getEntryState = getEntryStateMock;
     apply = applyOnboardingMock;
+    hasUntouchedDraft = hasUntouchedDraftMock;
   },
 }));
 
@@ -101,6 +104,7 @@ describe("production authentication route handlers", () => {
       hasPublished: false,
     });
     applyOnboardingMock.mockResolvedValue(undefined);
+    hasUntouchedDraftMock.mockResolvedValue(false);
     delete process.env.FITTIP_RUNTIME_MODE;
     delete process.env.FITTIP_OWNER_USER_ID;
     delete process.env.VERCEL;
@@ -125,11 +129,20 @@ describe("production authentication route handlers", () => {
     expectPrivate303(response, "/");
   });
 
-  it("starts guided setup for a confirmed account and sends it there, with exactly composed headers", async () => {
+  /** The link confirms the account and leaves it signed out on sign-in. */
+  function expectConfirmedAndSignedOut(response: Response) {
+    expectPrivate303(response, "/");
+    expect(
+      new URL(response.headers.get("location") ?? "").searchParams.get("auth"),
+    ).toBe("confirmed");
+    expect(client.auth.signOut).toHaveBeenCalledOnce();
+  }
+
+  it("confirms an account, starts its guided setup and leaves it signed out on sign-in, with exactly composed headers", async () => {
     const response = await callback(
       new Request(`${origin}/auth/callback?code=valid-code`),
     );
-    expectPrivate303(response, "/home/you/onboarding");
+    expectConfirmedAndSignedOut(response);
     expect(ensureCurrentProfileMock).toHaveBeenCalledOnce();
     expect(applyOnboardingMock).toHaveBeenCalledExactlyOnceWith({
       operation: "start",
@@ -137,15 +150,15 @@ describe("production authentication route handlers", () => {
     });
   });
 
-  it("still sends a confirmed account to setup when its draft already exists", async () => {
+  it("still confirms an account whose setup draft cannot be started", async () => {
     applyOnboardingMock.mockRejectedValue(new Error("conflict"));
     const response = await callback(
       new Request(`${origin}/auth/callback?code=valid-code`),
     );
-    expectPrivate303(response, "/home/you/onboarding");
+    expectConfirmedAndSignedOut(response);
   });
 
-  it("sends a confirmed account that finished setup to home", async () => {
+  it("does not start setup again for an account that finished it", async () => {
     getEntryStateMock.mockResolvedValue({
       showHomeInvitation: false,
       hasPublished: true,
@@ -153,18 +166,17 @@ describe("production authentication route handlers", () => {
     const response = await callback(
       new Request(`${origin}/auth/callback?code=valid-code`),
     );
-    expectPrivate303(response, "/home/today");
+    expectConfirmedAndSignedOut(response);
     expect(applyOnboardingMock).not.toHaveBeenCalled();
   });
 
-  it("does not let unreadable setup state cost a confirmed account its sign-in", async () => {
+  it("does not let unreadable setup state cost an account its confirmation", async () => {
     getEntryStateMock.mockRejectedValue(new Error("database unavailable"));
     const response = await callback(
       new Request(`${origin}/auth/callback?code=valid-code`),
     );
-    expectPrivate303(response, "/home/today");
+    expectConfirmedAndSignedOut(response);
     expect(applyOnboardingMock).not.toHaveBeenCalled();
-    expect(client.auth.signOut).not.toHaveBeenCalled();
   });
 
   it("returns the generic callback response when profile provisioning fails", async () => {
@@ -200,6 +212,43 @@ describe("production authentication route handlers", () => {
     );
     expectPrivate303(response, "/home/today");
     expect(ensureCurrentProfileMock).toHaveBeenCalledOnce();
+  });
+
+  it("opens guided setup on the sign-in that follows a confirmation", async () => {
+    // Confirming started the draft; nothing in it has been saved yet.
+    hasUntouchedDraftMock.mockResolvedValue(true);
+    const response = await signin(
+      post("/auth/signin", {
+        email: "new@example.com",
+        password: "password",
+        // Setup comes first even when the sign-in page carried a way back.
+        next: "/home/plan",
+      }),
+    );
+    expectPrivate303(response, "/home/you/onboarding");
+  });
+
+  it("does not let an unreadable setup draft cost a sign-in", async () => {
+    hasUntouchedDraftMock.mockRejectedValue(new Error("database unavailable"));
+    const response = await signin(
+      post("/auth/signin", {
+        email: "member@example.com",
+        password: "password",
+      }),
+    );
+    expectPrivate303(response, "/home/today");
+    expect(client.auth.signOut).not.toHaveBeenCalled();
+  });
+
+  it("does not look for a setup draft when the sign-in is refused", async () => {
+    client.auth.signInWithPassword.mockResolvedValue({ error: new Error() });
+    await signin(
+      post("/auth/signin", {
+        email: "missing@example.com",
+        password: "password",
+      }),
+    );
+    expect(hasUntouchedDraftMock).not.toHaveBeenCalled();
   });
 
   it("restores only an allowlisted same-origin private destination", async () => {

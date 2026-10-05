@@ -227,6 +227,23 @@ export class OnboardingRepository {
     };
   }
 
+  /**
+   * Whether setup has been started for this account and nothing in it has
+   * been saved yet. Confirming a new account starts it; this is how the
+   * sign-in that follows knows to open it.
+   */
+  async hasUntouchedDraft(): Promise<boolean> {
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("onboarding_drafts")
+      .select("revision")
+      .eq("user_id", userId)
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle();
+    if (error) throw new OnboardingPersistenceError();
+    return data !== null && data.revision === 0;
+  }
+
   async getEntryState(): Promise<{
     showHomeInvitation: boolean;
     /** Setup has been finished once, so it is not started again. */

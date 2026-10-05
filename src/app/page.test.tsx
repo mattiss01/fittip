@@ -14,7 +14,7 @@ describe("Home", () => {
     render(await Home({ searchParams: Promise.resolve({}) }));
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Welcome back." }),
+      screen.getByRole("heading", { level: 1, name: "Welcome back" }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Email")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();

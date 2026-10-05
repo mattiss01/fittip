@@ -186,7 +186,7 @@ export function OnboardingManager({
     return (
       <section className={styles.startCard} aria-labelledby="setup-done">
         <p className={styles.eyebrow}>Setup done</p>
-        <h2 id="setup-done">Your setup is finished.</h2>
+        <h2 id="setup-done">Your setup is finished</h2>
         <p>What you accepted is in Goals and Memory. Change anything there.</p>
         <div className={styles.resultActions}>
           <Link href="/home/you/goals">Goals</Link>
@@ -200,7 +200,7 @@ export function OnboardingManager({
     return (
       <section className={styles.startCard} aria-labelledby="setup-start">
         <p className={styles.eyebrow}>Optional setup</p>
-        <h2 id="setup-start">Set up your coaching context.</h2>
+        <h2 id="setup-start">Set up your coaching context</h2>
         <p>
           Your answers are stored in your account so you can resume on another
           device. They are not sent to an AI provider. Setup is optional and
@@ -295,9 +295,9 @@ export function OnboardingManager({
         </p>
         <h2 ref={headingRef} tabIndex={-1}>
           {profileStep === 1
-            ? "Start with the basics."
+            ? "Start with the basics"
             : profileStep === 2
-              ? "Pick your sports."
+              ? "Pick your sports"
               : stepHeading(visibleStep)}
         </h2>
         {/* When the draft expires is said where it matters: on You, after
@@ -609,7 +609,7 @@ export function OnboardingManager({
           <section className={styles.contextMap} aria-labelledby="context-map">
             <header>
               <p>Context map</p>
-              <h3 id="context-map">Choose where each statement lands.</h3>
+              <h3 id="context-map">Choose where each statement lands</h3>
             </header>
             <div className={styles.mapLegend}>
               <span data-destination="goals">Goals</span>
@@ -1194,12 +1194,12 @@ export function isActionErrorStatus(
 
 function stepHeading(step: OnboardingStep) {
   const headings = {
-    1: "Name the outcomes.",
-    2: "Record the baseline.",
-    3: "Set the feasible frame.",
-    4: "State what helps.",
-    5: "Name constraints, if useful.",
-    6: "File only what you accept.",
+    1: "Name the outcomes",
+    2: "Record the baseline",
+    3: "Set the feasible frame",
+    4: "State what helps",
+    5: "Name constraints, if useful",
+    6: "File only what you accept",
   } satisfies Record<OnboardingStep, string>;
   return headings[step];
 }

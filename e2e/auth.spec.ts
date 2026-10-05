@@ -13,6 +13,10 @@ const localEnvironmentReady = Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
 );
 
+// The units and the time zone are taken from the browser, so the browser is
+// pinned: German in Berlin gives metric and Europe/Berlin.
+test.use({ locale: "de-DE", timezoneId: "Europe/Berlin" });
+
 test.describe("public account authentication", () => {
   test.skip(!localEnvironmentReady, "requires the local Supabase environment");
 
@@ -27,13 +31,13 @@ test.describe("public account authentication", () => {
 
     await page.goto("/");
     await expect(
-      page.getByRole("heading", { name: "Welcome back." }),
+      page.getByRole("heading", { name: "Welcome back" }),
     ).toBeVisible();
     await page
       .getByRole("link", { name: "New here? Create an account" })
       .click();
     await expect(
-      page.getByRole("heading", { name: "Join FitTip." }),
+      page.getByRole("heading", { name: "Join FitTip" }),
     ).toBeVisible();
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
@@ -48,28 +52,24 @@ test.describe("public account authentication", () => {
     );
     await page.goto(confirmationUrl);
     await expectPrivateSessionHeaders(await callbackResponse);
-    // Signing up leads straight into guided setup, already started (owner,
-    // 5 Oct 2026): the first step is there without a "Start setup" press.
-    await expect(page).toHaveURL(/\/home\/you\/onboarding$/);
-    await expect(
-      page.getByRole("heading", { name: "Start with the basics." }),
-    ).toBeVisible();
-    // It lands past the start card, so the first step says what that says.
-    await expect(page.getByText(/not sent to an AI provider/)).toBeVisible();
+    // The link confirms the account and leaves it signed out on sign-in,
+    // which says so (owner, 5 Oct 2026).
+    await expect(page).toHaveURL(/\/\?auth=confirmed$/);
+    await expect(page.getByRole("status")).toContainText(
+      "Your account is confirmed",
+    );
 
-    // Setup does not hold the account: it can leave, sign out, and a later
-    // sign-in goes to Today as before.
-    await page.goto("/home/you");
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await expect(page).toHaveURL(/\/$/);
-
+    // Signing in then opens guided setup, already started: the first step
+    // is there without a "Start setup" press.
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page).toHaveURL(/\/home\/today$/);
+    await expect(page).toHaveURL(/\/home\/you\/onboarding$/);
     await expect(
-      page.getByRole("heading", { name: "Today", exact: true }),
+      page.getByRole("heading", { name: "Start with the basics" }),
     ).toBeVisible();
+    // It lands past the start card, so the first step says what that says.
+    await expect(page.getByText(/not sent to an AI provider/)).toBeVisible();
 
     // M2-03 reuses this CI-invoked authenticated production-browser journey
     // so its 390px flow does not require a .github workflow change or an
@@ -86,8 +86,8 @@ async function completeGuidedSetup(
   expect(page.viewportSize()).toEqual({ width: 390, height: 844 });
 
   // You keeps onboarding's permanent entry, and the screenshot contains no
-  // answers.
-  await page.getByRole("link", { name: "You", exact: true }).click();
+  // answers. Reached by address: on a page under You two links are named You.
+  await page.goto("/home/you");
   await expect(page.getByRole("link", { name: /^Guided setup/ })).toBeVisible();
   await page.screenshot({
     fullPage: true,
@@ -101,9 +101,10 @@ async function completeGuidedSetup(
   // profile (owner, 5 Oct 2026). Only the name is required; the units and
   // the time zone arrive filled in from the browser.
   await expect(page.getByText("Step 1 of 8 · About you")).toBeVisible();
-  await expect(page.getByLabel("Units")).toHaveValue(/^(metric|imperial)$/);
-  await page.getByLabel("Units").selectOption("metric");
-  await page.getByLabel("Time zone").selectOption("Europe/Berlin");
+  // Neither the units nor the time zone is asked. This browser is German,
+  // in Berlin, so the measures are metric from the start.
+  await expect(page.getByLabel("Units")).toHaveCount(0);
+  await expect(page.getByLabel("Time zone")).toHaveCount(0);
   await page.getByLabel("Name").fill("Alex");
   await page.getByLabel("Weight in kg (optional)").fill("80,5");
   await page.getByRole("button", { name: "Save and continue" }).click();
@@ -119,7 +120,7 @@ async function completeGuidedSetup(
   const goalOutcome = "Run the autumn event with even pacing.";
   await expect(page.getByText("Step 3 of 8 · Goals")).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Name the outcomes." }),
+    page.getByRole("heading", { name: "Name the outcomes" }),
   ).toBeVisible();
   await page.getByLabel("Goal title").fill(goalTitle);
   await page.getByLabel("Desired outcome").fill(goalOutcome);
@@ -188,7 +189,7 @@ async function completeGuidedSetup(
   await expect(page.getByText(/^(Timezone|Units): /)).toHaveCount(0);
   await expect(
     page.getByRole("heading", {
-      name: "Choose where each statement lands.",
+      name: "Choose where each statement lands",
     }),
   ).toBeVisible();
 
@@ -232,18 +233,24 @@ async function completeGuidedSetup(
       .filter({ hasText: /^(Timezone|Units): / }),
   ).toHaveCount(0);
 
-  // What the first two steps saved is on Settings, where it is changed.
+  // What the first two steps saved is on Settings, where it is changed,
+  // with the units and the time zone setup took from the browser.
   await page.goto("/home/you/settings");
   await expect(page.getByLabel("Name")).toHaveValue("Alex");
+  await expect(page.getByLabel("Units")).toHaveValue("metric");
   await expect(page.getByLabel("Time zone")).toHaveValue("Europe/Berlin");
   await expect(page.getByText("80.5 kg")).toBeVisible();
+  // Changing the units changes how a measure is shown, not what is stored.
+  await page.getByLabel("Units").selectOption("imperial");
+  await page.getByRole("button", { name: "Save settings" }).click();
+  await expect(page.getByText("177.5 lb")).toBeVisible();
   await expect(page.getByRole("checkbox", { name: "Running" })).toBeChecked();
   await expect(page.getByRole("checkbox", { name: "Latzug" })).toBeChecked();
 
   // Done once, setup is not offered again.
   await page.goto("/home/you/onboarding");
   await expect(
-    page.getByRole("heading", { name: "Your setup is finished." }),
+    page.getByRole("heading", { name: "Your setup is finished" }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: /setup|review/i })).toHaveCount(
     0,

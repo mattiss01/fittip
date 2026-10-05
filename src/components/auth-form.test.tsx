@@ -48,11 +48,24 @@ describe("AuthForm", () => {
       <AuthForm initialMode="sign-up" searchParams={{ checkEmail: true }} />,
     );
 
-    expect(screen.getByRole("status")).toHaveTextContent("Check your email.");
+    expect(screen.getByRole("status")).toHaveTextContent("Check your email");
     expect(document.querySelector("form")).toBeNull();
     expect(
       screen.getByRole("link", { name: "Back to sign in" }),
     ).toHaveAttribute("href", "/");
+  });
+
+  it("says the account is confirmed on sign-in, and not over a failed sign-in", () => {
+    const view = render(<AuthForm searchParams={{ confirmed: true }} />);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Your account is confirmed. Sign in to get started.",
+    );
+
+    view.rerender(
+      <AuthForm searchParams={{ confirmed: true, error: "credentials" }} />,
+    );
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByRole("alert")).toBeVisible();
   });
 
   it("omits the signup path when hosted staging closes registration", () => {

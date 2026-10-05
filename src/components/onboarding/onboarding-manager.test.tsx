@@ -34,7 +34,7 @@ describe("OnboardingManager", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Set up your coaching context.",
+        name: "Set up your coaching context",
       }),
     ).toBeVisible();
     expect(
@@ -65,9 +65,15 @@ describe("OnboardingManager", () => {
     ]) {
       expect(screen.getByLabelText(optional)).not.toBeRequired();
     }
-    // Suggested, shown and changeable rather than asked cold.
-    expect(screen.getByLabelText("Units")).toHaveValue("metric");
-    expect(screen.getByLabelText("Time zone")).toHaveValue("Europe/Berlin");
+    // Neither the units nor the time zone is asked: both are sent as the
+    // browser has them, and the zone only while the profile has none.
+    expect(screen.queryByLabelText("Units")).toBeNull();
+    expect(screen.queryByLabelText("Time zone")).toBeNull();
+    const sent = new FormData(
+      document.querySelector<HTMLFormElement>("form[data-about-you]")!,
+    );
+    expect(sent.get("unitsSystem")).toBe("metric");
+    expect(sent.get("timezoneName")).toBe("");
     // The draft is already at its third step; without a name nothing past
     // the first step opens.
     for (const later of [/2Your sports/, /3Goals/, /5Time and access/]) {
@@ -92,13 +98,7 @@ describe("OnboardingManager", () => {
     expect(screen.getByLabelText("Height, feet (optional)")).toHaveValue("5");
     expect(screen.getByLabelText("Inches")).toHaveValue("11");
     expect(screen.getByLabelText("Weight in lb (optional)")).toHaveValue("176");
-
-    fireEvent.change(screen.getByLabelText("Units"), {
-      target: { value: "metric" },
-    });
-    expect(screen.getByLabelText("Height in cm (optional)")).toHaveValue(
-      "180.3",
-    );
+    expect(screen.queryByLabelText("Height in cm (optional)")).toBeNull();
   });
 
   it("offers the sports as chips, with the owner's own first and addable", () => {
@@ -262,7 +262,7 @@ describe("OnboardingManager", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Choose where each statement lands.",
+        name: "Choose where each statement lands",
       }),
     ).toBeVisible();
     expect(screen.getAllByText("Goals").length).toBeGreaterThan(0);
@@ -573,7 +573,7 @@ describe("OnboardingManager", () => {
     render(<OnboardingManager profile={namedProfile()} snapshot={snapshot} />);
 
     expect(
-      screen.getByRole("heading", { name: "Your setup is finished." }),
+      screen.getByRole("heading", { name: "Your setup is finished" }),
     ).toBeVisible();
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.getByRole("link", { name: "Goals" })).toHaveAttribute(

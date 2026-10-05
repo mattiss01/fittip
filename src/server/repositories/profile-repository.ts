@@ -226,6 +226,22 @@ export class ProfileRepository {
     await this.recordWeight(measuredOn, change.weightKg);
   }
 
+  /** The units measures are shown and typed in; nothing stored changes. */
+  async saveUnits(
+    unitsSystem: ProfileDetailsChange["unitsSystem"],
+  ): Promise<void> {
+    await this.ensureCurrentProfile();
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("profiles")
+      .update({ units_system: unitsSystem })
+      .eq("user_id", userId)
+      .select("user_id")
+      .maybeSingle();
+    if (error) throw mapDetailsError(error.code);
+    if (!data) throw new ProfilePersistenceError();
+  }
+
   async saveSports(sports: string[]): Promise<void> {
     await this.ensureCurrentProfile();
     const userId = await this.getVerifiedUserId();
@@ -273,13 +289,11 @@ export class ProfileRepository {
     if (updated.error) throw mapDetailsError(updated.error.code);
     if (updated.data.length > 0) return;
 
-    const inserted = await this.client
-      .from("weight_entries")
-      .insert({
-        user_id: userId,
-        measured_on: measuredOn,
-        weight_kg: weightKg,
-      });
+    const inserted = await this.client.from("weight_entries").insert({
+      user_id: userId,
+      measured_on: measuredOn,
+      weight_kg: weightKg,
+    });
     if (inserted.error) throw mapDetailsError(inserted.error.code);
   }
 

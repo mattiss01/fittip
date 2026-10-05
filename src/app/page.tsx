@@ -6,15 +6,20 @@ export const dynamic = "force-dynamic";
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; next?: string }>;
+  searchParams: Promise<{ auth?: string; error?: string; next?: string }>;
 }) {
   const policy = readRuntimePolicy();
+  const params = await searchParams;
 
   return (
     <main>
       <AuthForm
         allowSignUp={policy.mode === "local"}
-        searchParams={await searchParams}
+        searchParams={{
+          confirmed: params.auth === "confirmed",
+          error: params.error,
+          next: params.next,
+        }}
       />
     </main>
   );
