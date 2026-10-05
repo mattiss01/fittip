@@ -121,7 +121,7 @@ h1 {
 }
 
 .password-field input {
-  padding-right: 4.75rem;
+  padding-right: 3.4rem;
 }
 
 /* Pinned by its edges, not centred with a transform: every button shrinks a
@@ -131,12 +131,14 @@ h1 {
   top: 0.3rem;
   right: 0.3rem;
   bottom: 0.3rem;
+  width: 2.75rem;
   min-height: 0;
+  display: grid;
+  place-items: center;
   margin: 0;
-  padding: 0 0.8rem;
+  padding: 0;
   background: transparent;
-  color: var(--foreground);
-  font: 700 0.85rem var(--font-sans);
+  color: var(--muted);
 }
 
 .password-reveal:hover {
