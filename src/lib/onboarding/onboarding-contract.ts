@@ -84,6 +84,25 @@ export type GoalCandidateView = {
   comparison: CandidateComparison;
 };
 
+/** What a goal step's fields hold, whether a draft's or a saved goal's. */
+export type GoalFieldsView = Pick<
+  GoalCandidateView,
+  | "title"
+  | "desiredOutcome"
+  | "category"
+  | "activityAreas"
+  | "startDate"
+  | "targetDate"
+  | "targetDetail"
+  | "targetMetricLabel"
+  | "targetMetricValue"
+  | "targetMetricUnit"
+  | "priorityTier"
+  | "targetRank"
+  | "rationale"
+  | "constraints"
+>;
+
 export type MemoryCandidateView = {
   id: string;
   position: number;
@@ -109,6 +128,12 @@ export type OnboardingSnapshot = {
     priorityTier: "core" | "supporting";
     activeRank: number;
   }>;
+  /**
+   * The owner's active goals, up to three, core first: what setup's goal step
+   * starts from when its draft holds none, so goals made before setup are
+   * edited there instead of typed again (owner, 5 Oct 2026).
+   */
+  existingGoals: GoalFieldsView[];
   promptDismissed: boolean;
   hasPublished: boolean;
 };

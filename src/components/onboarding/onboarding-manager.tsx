@@ -32,6 +32,7 @@ import {
   LIMITATION_CATEGORIES,
   ONBOARDING_STEPS,
   type GoalCandidateView,
+  type GoalFieldsView,
   type OnboardingResolution,
   type OnboardingSnapshot,
   type OnboardingStep,
@@ -188,9 +189,14 @@ export function OnboardingManager({
   const [, startLeaving] = useTransition();
   const continueLater = () => startLeaving(() => leaveSetupAction());
   const [reminding, setReminding] = useState(reminder);
-  const [goalCount, setGoalCount] = useState(
-    Math.max(1, snapshot.goalCandidates.length),
-  );
+  // A draft with no goals yet starts from the goals the owner already has,
+  // so goals made before setup are edited here rather than typed again
+  // (owner, 5 Oct 2026). Sent back unchanged, one is recognised at review as
+  // already saved; changed under the same title, it updates the saved goal.
+  const goalFields: GoalFieldsView[] = snapshot.goalCandidates.length
+    ? snapshot.goalCandidates
+    : snapshot.existingGoals;
+  const [goalCount, setGoalCount] = useState(Math.max(1, goalFields.length));
   const [activityCount, setActivityCount] = useState(
     Math.max(1, snapshot.activities.length),
   );
@@ -456,7 +462,7 @@ export function OnboardingManager({
             />
             {Array.from({ length: goalCount }, (_, index) => (
               <GoalFields
-                candidate={snapshot.goalCandidates[index]}
+                candidate={goalFields[index]}
                 index={index}
                 key={index}
                 sports={profile.sports}
@@ -871,7 +877,7 @@ function GoalFields({
   index,
   sports,
 }: {
-  candidate?: GoalCandidateView;
+  candidate?: GoalFieldsView;
   index: number;
   /** The sports chosen in "Your sports", offered for the goal to pick from. */
   sports: string[];
@@ -906,7 +912,7 @@ function GoalFields({
       </label>
       <GoalSport
         index={index}
-        initial={candidate?.activityAreas[0] ?? null}
+        initial={candidate?.activityAreas ?? []}
         sports={sports}
       />
       <label>
@@ -1298,22 +1304,21 @@ function GoalSport({
   sports,
 }: {
   index: number;
-  initial: string | null;
+  /** What the goal names already; a goal made before today may name several. */
+  initial: string[];
   sports: string[];
 }) {
   const known = (name: string) =>
     sports.find(
       (sport) => sport.toLocaleLowerCase() === name.toLocaleLowerCase(),
     );
-  // A sport the draft already holds that is no longer among the owner's is
-  // still offered, rather than silently dropped from the goal.
+  const first = initial[0] ?? null;
+  // A sport the goal already holds that is not among the owner's is still
+  // offered, rather than silently dropped from the goal.
   const options =
-    initial !== null && known(initial) === undefined
-      ? [...sports, initial]
-      : sports;
-  const [choice, setChoice] = useState(
-    initial === null ? "" : (known(initial) ?? initial),
-  );
+    first !== null && known(first) === undefined ? [...sports, first] : sports;
+  const start = first === null ? "" : (known(first) ?? first);
+  const [choice, setChoice] = useState(start);
   const [made, setMade] = useState("");
   const adding = choice === ANOTHER_SPORT;
 
@@ -1351,7 +1356,15 @@ function GoalSport({
       <input
         name={`goalActivities:${index}`}
         type="hidden"
-        value={adding ? made.trim() : choice}
+        // Left on the sport it came with, a goal keeps every sport it
+        // named; only a different choice makes it that one alone.
+        value={
+          adding
+            ? made.trim()
+            : choice === start && initial.length > 1
+              ? initial.join(", ")
+              : choice
+        }
       />
     </>
   );

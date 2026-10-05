@@ -240,6 +240,24 @@ main.setupPage {
   resize: vertical;
 }
 
+/* A list to choose from is drawn as the other fields are, with one chevron of
+   our own in place of the browser's arrow (owner, 5 Oct 2026). The list it
+   opens is the device's own. */
+.stepForm select {
+  appearance: none;
+  padding-right: 2.6rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2317332e' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  background-size: 1.1rem;
+  cursor: pointer;
+}
+
+/* Centred under a question, the chevron's room is matched on the left. */
+.stepForm .question select {
+  padding-left: 2.6rem;
+}
+
 /* A field that starts one line tall and is as tall as its text. */
 .stepForm textarea.growing {
   min-height: 3rem;
@@ -759,28 +777,29 @@ label.constraintChoice {
   outline: none;
 }
 
-/* A date field is a row of its own: the date, then a calendar button. The
-   date is kept to its own width and the row centred, with the button taken
-   out of the row to the field's right edge, so the date alone is in the
-   middle. Firefox has no such parts and centres the text itself; iOS has one
-   part for the whole value. */
-.stepForm .question input[type="date"] {
-  position: relative;
+/* A birthday is typed: day, month and year, each in a short field of its
+   own, in the order the owner's language writes them. */
+.dateParts {
   display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 0.4rem;
 }
 
-.stepForm .question input[type="date"]::-webkit-datetime-edit {
-  flex: 0 0 auto;
-}
-
-.stepForm .question input[type="date"]::-webkit-calendar-picker-indicator {
-  position: absolute;
-  right: 0.8rem;
-}
-
-.stepForm .question input[type="date"]::-webkit-date-and-time-value {
+.stepForm .dateParts input {
+  width: 4.2rem;
+  padding-inline: 0.4rem;
+  font-variant-numeric: tabular-nums;
   text-align: center;
+}
+
+.stepForm .dateParts input[data-part="year"] {
+  width: 5.6rem;
+}
+
+.dateParts > span {
+  color: var(--ledger-muted);
+  font-weight: 600;
 }
 
 .stepForm .question > small {

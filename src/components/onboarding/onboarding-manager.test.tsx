@@ -131,7 +131,9 @@ describe("OnboardingManager", () => {
     );
     // The question is the heading, so its one field shows no label; the
     // name it has is for a screen reader. An optional one says so.
-    expect(screen.getByLabelText("Birthday (optional)")).toBeVisible();
+    expect(
+      screen.getByRole("group", { name: "Birthday (optional)" }),
+    ).toBeVisible();
     expect(screen.getByLabelText("Name")).not.toBeVisible();
     expect(
       screen
@@ -276,6 +278,89 @@ describe("OnboardingManager", () => {
     expect(
       screen.getByRole("heading", { name: "Current training" }),
     ).toBeVisible();
+  });
+
+  it("takes a birthday typed as day, month and year, and sends it as one date", () => {
+    const { container } = render(
+      <AboutYouForm
+        profile={justNamedProfile()}
+        question={1}
+        submitLabel="Next"
+      />,
+    );
+    const date = () =>
+      container.querySelector<HTMLInputElement>('input[name="birthDate"]');
+    const type = (label: string, value: string) =>
+      fireEvent.change(screen.getByLabelText(label), { target: { value } });
+
+    // Not answered is sent as no date at all.
+    expect(date()).toHaveValue("");
+    type("Day", "7");
+    // A full part moves on to the one after it, so the keyboard alone fills
+    // the date. Which comes after the month depends on the language.
+    type("Month", "05");
+    expect(document.activeElement).toHaveAttribute("data-part");
+    expect(document.activeElement).not.toBe(screen.getByLabelText("Month"));
+    type("Year", "1990");
+    expect(date()).toHaveValue("1990-05-07");
+    // Only digits are kept.
+    type("Day", "1x");
+    expect(screen.getByLabelText("Day")).toHaveValue("1");
+  });
+
+  it("shows a saved birthday in its three fields", () => {
+    render(
+      <AboutYouForm
+        profile={{ ...justNamedProfile(), birthDate: "1990-05-17" }}
+        submitLabel="Save"
+      />,
+    );
+    expect(screen.getByLabelText("Day")).toHaveValue("17");
+    expect(screen.getByLabelText("Month")).toHaveValue("05");
+    expect(screen.getByLabelText("Year")).toHaveValue("1990");
+  });
+
+  it("starts the goal step from the goals the account already has", () => {
+    const { container } = render(
+      <OnboardingManager
+        profile={namedProfile()}
+        snapshot={{
+          ...emptySnapshot(),
+          draft: draft({ currentStep: 1, revision: 1 }),
+          existingGoals: [
+            {
+              title: "10k under 48 minutes",
+              desiredOutcome: "Run it in autumn.",
+              category: "endurance",
+              activityAreas: ["Running", "Hiking"],
+              startDate: "2026-09-01",
+              targetDate: "2026-11-15",
+              priorityTier: "supporting",
+              targetRank: 2,
+              rationale: "Kept from before",
+            },
+          ],
+        }}
+      />,
+    );
+
+    // Goals made before setup are edited here instead of typed again.
+    expect(screen.getByLabelText("Goal title")).toHaveValue(
+      "10k under 48 minutes",
+    );
+    expect(screen.getByLabelText("Desired outcome")).toHaveValue(
+      "Run it in autumn.",
+    );
+    expect(screen.getByRole("radio", { name: "Supporting" })).toBeChecked();
+    // Everything the goal stores travels with it, so sent back unchanged it
+    // is recognised at review as the goal already saved.
+    const sent = new FormData(container.querySelector("form")!);
+    expect(sent.get("goalActivities:0")).toBe("Running, Hiking");
+    expect(sent.get("goalCategory:0")).toBe("endurance");
+    expect(sent.get("goalStartDate:0")).toBe("2026-09-01");
+    expect(sent.get("goalTargetDate:0")).toBe("2026-11-15");
+    expect(sent.get("goalRank:0")).toBe("2");
+    expect(sent.get("goalRationale:0")).toBe("Kept from before");
   });
 
   it("asks a measure as a number with its unit beside it and a step either way", () => {
@@ -988,6 +1073,7 @@ function emptySnapshot(): OnboardingSnapshot {
     goalRevision: 0,
     memoryRevision: 0,
     activeGoalOrder: [],
+    existingGoals: [],
     promptDismissed: false,
     hasPublished: false,
   };

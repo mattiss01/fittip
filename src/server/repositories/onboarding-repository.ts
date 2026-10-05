@@ -14,6 +14,7 @@ import {
 import type {
   CandidateComparison,
   GoalCandidateView,
+  GoalFieldsView,
   MemoryCandidateView,
   OnboardingDraftView,
   OnboardingSnapshot,
@@ -222,6 +223,20 @@ export class OnboardingRepository {
             left.priorityTier.localeCompare(right.priorityTier) ||
             left.activeRank - right.activeRank,
         ),
+      existingGoals: goalRows
+        .filter(
+          (goal) =>
+            goal.active_rank !== null &&
+            (goal.priority_tier === "core" ||
+              goal.priority_tier === "supporting"),
+        )
+        .sort(
+          (left, right) =>
+            left.priority_tier.localeCompare(right.priority_tier) ||
+            left.active_rank! - right.active_rank!,
+        )
+        .slice(0, 3)
+        .map(toGoalFields),
       promptDismissed: promptResult.data !== null,
       hasPublished: (publicationResult.data?.length ?? 0) > 0,
     };
@@ -524,6 +539,29 @@ function toMemoryCandidate(
     resolution: row.resolution as OnboardingResolution | null,
     targetMemoryId: row.target_memory_id,
     comparison,
+  };
+}
+
+/**
+ * A saved goal as the goal step's fields, every stored value carried, so a
+ * goal sent back unchanged is recognised as the one already saved.
+ */
+function toGoalFields(goal: GoalRow): GoalFieldsView {
+  return {
+    title: goal.title,
+    desiredOutcome: goal.desired_outcome,
+    category: goal.category as GoalFieldsView["category"],
+    activityAreas: goal.activity_areas,
+    startDate: goal.start_date,
+    targetDate: goal.target_date ?? undefined,
+    targetDetail: goal.target_detail ?? undefined,
+    targetMetricLabel: goal.target_metric_label ?? undefined,
+    targetMetricValue: goal.target_metric_value ?? undefined,
+    targetMetricUnit: goal.target_metric_unit ?? undefined,
+    priorityTier: goal.priority_tier as GoalFieldsView["priorityTier"],
+    targetRank: goal.active_rank ?? undefined,
+    rationale: goal.rationale ?? undefined,
+    constraints: goal.constraints_text ?? undefined,
   };
 }
 
