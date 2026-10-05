@@ -77,6 +77,38 @@ function isProfileOwned(candidate: { fieldKey: string }) {
   );
 }
 
+/**
+ * Where setup opens. The draft remembers its own step, but nothing records
+ * how far the profile's steps got, so that is read from what they saved:
+ * the first "About you" question still unanswered, then "Your sports" while
+ * none is chosen. Only while the draft's own steps are untouched; once one
+ * of those is saved the owner is past the profile's, and setup opens where
+ * the draft is. An optional question left empty on purpose is asked again,
+ * which costs one press of Next.
+ */
+function resumeAt(
+  profile: ProfileDetailsView,
+  draft: OnboardingSnapshot["draft"],
+): { profileStep: ProfileStep | null; aboutQuestion: number } {
+  if (!profile.displayName) return { profileStep: 1, aboutQuestion: 0 };
+  if (draft && draft.revision > 0) {
+    return { profileStep: null, aboutQuestion: 0 };
+  }
+  const answered = [
+    profile.displayName,
+    profile.birthDate,
+    profile.gender,
+    profile.heightCm,
+    profile.latestWeightKg,
+  ];
+  const unanswered = answered.findIndex((answer) => answer === null);
+  if (unanswered >= 0) return { profileStep: 1, aboutQuestion: unanswered };
+  return {
+    profileStep: profile.sports.length === 0 ? 2 : null,
+    aboutQuestion: 0,
+  };
+}
+
 type ReviewSelection = {
   decision: "" | "accepted" | "rejected";
   resolution: OnboardingResolution;
@@ -142,11 +174,12 @@ export function OnboardingManager({
   const [selectedStep, setVisibleStep] = useState<OnboardingStep | null>(null);
   // Only the name is required, and it is asked first: until it is saved,
   // setup opens on "About you", and the only way on is to save it.
-  const named = Boolean(profile.displayName);
   const [profileStep, setProfileStep] = useState<ProfileStep | null>(
-    named ? null : 1,
+    () => resumeAt(profile, snapshot.draft).profileStep,
   );
-  const [aboutQuestion, setAboutQuestion] = useState(0);
+  const [aboutQuestion, setAboutQuestion] = useState(
+    () => resumeAt(profile, snapshot.draft).aboutQuestion,
+  );
   // "Continue later" is setup's one way out besides finishing (owner, 5 Oct
   // 2026): it saves what the step holds and goes to the app. There is no
   // "Cancel and delete draft" any more; an untouched draft expires by itself.
@@ -309,6 +342,19 @@ export function OnboardingManager({
       : profileStep === 2
         ? SPORTS_HEADING
         : ONBOARDING_STEPS[visibleStep - 1];
+  // Back is one arrow at the top of the page, not a button on every step
+  // (owner, 5 Oct 2026). The first question has nowhere to go back to.
+  const goBack =
+    position === 1
+      ? null
+      : () => {
+          if (profileStep === 1) setAboutQuestion(aboutQuestion - 1);
+          else if (profileStep === 2) {
+            setAboutQuestion(ABOUT_YOU_QUESTIONS.length - 1);
+            setProfileStep(1);
+          } else if (visibleStep === 1) setProfileStep(2);
+          else setVisibleStep((visibleStep - 1) as OnboardingStep);
+        };
   // The steps before this one: nothing is done on the first.
   const percentDone = Math.round(((position - 1) / STEP_COUNT) * 100);
   const reviewedMemory = snapshot.memoryCandidates.filter(
@@ -322,7 +368,29 @@ export function OnboardingManager({
     <div className={styles.manager}>
       {/* One bar and how much is done, not a row of eight steps, and the
           step's own name as its heading with no second line under it (owner,
-          5 Oct 2026). A step is left by its Back button. */}
+          5 Oct 2026). A step is left by the arrow above it. */}
+      {goBack ? (
+        <button
+          aria-label="Back"
+          className={styles.backArrow}
+          onClick={goBack}
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            fill="none"
+            height="22"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2.2"
+            viewBox="0 0 24 24"
+            width="22"
+          >
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
+        </button>
+      ) : null}
       <div className={styles.progress}>
         <div
           aria-label="Guided setup progress"
@@ -363,10 +431,6 @@ export function OnboardingManager({
 
         {profileStep === 2 ? (
           <SportsForm
-            onBack={() => {
-              setAboutQuestion(ABOUT_YOU_QUESTIONS.length - 1);
-              setProfileStep(1);
-            }}
             onLater={continueLater}
             onSaved={() => setProfileStep(null)}
             sports={profile.sports}
@@ -397,12 +461,7 @@ export function OnboardingManager({
                 Add another goal
               </button>
             ) : null}
-            <StepActions
-              currentStep={1}
-              onBack={() => setProfileStep(2)}
-              pending={pending}
-              setVisibleStep={setVisibleStep}
-            />
+            <StepActions pending={pending} />
           </form>
         ) : null}
 
@@ -458,11 +517,7 @@ export function OnboardingManager({
                 ) : null}
               </>
             ) : null}
-            <StepActions
-              currentStep={2}
-              pending={pending}
-              setVisibleStep={setVisibleStep}
-            />
+            <StepActions pending={pending} />
           </form>
         ) : null}
 
@@ -534,11 +589,7 @@ export function OnboardingManager({
               type="hidden"
               value={profile.unitsSystem ?? draft.units ?? "metric"}
             />
-            <StepActions
-              currentStep={3}
-              pending={pending}
-              setVisibleStep={setVisibleStep}
-            />
+            <StepActions pending={pending} />
           </form>
         ) : null}
 
@@ -565,11 +616,7 @@ export function OnboardingManager({
                 1,000 characters each.
               </small>
             </label>
-            <StepActions
-              currentStep={4}
-              pending={pending}
-              setVisibleStep={setVisibleStep}
-            />
+            <StepActions pending={pending} />
           </form>
         ) : null}
 
@@ -618,11 +665,7 @@ export function OnboardingManager({
                 );
               })}
             </div>
-            <StepActions
-              currentStep={5}
-              pending={pending}
-              setVisibleStep={setVisibleStep}
-            />
+            <StepActions pending={pending} />
           </form>
         ) : null}
 
@@ -749,13 +792,6 @@ export function OnboardingManager({
               </section>
             ) : null}
             <div className={styles.stepActions}>
-              <button
-                className={styles.secondaryButton}
-                onClick={() => setVisibleStep(5)}
-                type="button"
-              >
-                Back
-              </button>
               {/* More than three core goals is refused when saving, with a
                 message about another tab. With every card accepted from the
                 start this is the first thing some owners see, so the button
@@ -789,30 +825,9 @@ function StepMeta({
   );
 }
 
-function StepActions({
-  currentStep,
-  onBack,
-  pending,
-  setVisibleStep,
-}: {
-  currentStep: OnboardingStep;
-  /** Where Back goes when it is not the draft's step before this one. */
-  onBack?: () => void;
-  pending: boolean;
-  setVisibleStep: (step: OnboardingStep | null) => void;
-}) {
+function StepActions({ pending }: { pending: boolean }) {
   return (
     <div className={styles.stepActions}>
-      <button
-        className={styles.secondaryButton}
-        onClick={
-          onBack ??
-          (() => setVisibleStep(Math.max(1, currentStep - 1) as OnboardingStep))
-        }
-        type="button"
-      >
-        Back
-      </button>
       {/* Leaving must not wait on a field: the browser's own check is off
           for this button, and the action leaves even when the step is not
           complete enough to save. */}
@@ -866,11 +881,14 @@ function GoalFields({
       <label>
         Desired outcome
         <textarea
+          className={styles.growing}
           defaultValue={candidate?.desiredOutcome ?? ""}
           maxLength={1000}
           name={`goalOutcome:${index}`}
+          onInput={(event) => fitToText(event.currentTarget)}
+          ref={fitToText}
           required={index === 0}
-          rows={4}
+          rows={1}
         />
       </label>
       <label>
@@ -882,26 +900,29 @@ function GoalFields({
           required={index === 0}
         />
       </label>
-      <div className={styles.fieldGrid}>
-        <label>
-          Target date (optional)
-          <input
-            defaultValue={candidate?.targetDate ?? ""}
-            name={`goalTargetDate:${index}`}
-            type="date"
-          />
-        </label>
-        <label>
-          Attention
-          <select
-            defaultValue={candidate?.priorityTier ?? "core"}
-            name={`goalTier:${index}`}
-          >
-            <option value="core">Core</option>
-            <option value="supporting">Supporting</option>
-          </select>
-        </label>
-      </div>
+      <label>
+        Target date (optional)
+        <input
+          defaultValue={candidate?.targetDate ?? ""}
+          name={`goalTargetDate:${index}`}
+          type="date"
+        />
+      </label>
+      {/* Two choices side by side, as on Goals, not a list to open. */}
+      <fieldset className={styles.attentionChoice}>
+        <legend>Attention</legend>
+        {(["core", "supporting"] as const).map((tier) => (
+          <label key={tier}>
+            <input
+              defaultChecked={(candidate?.priorityTier ?? "core") === tier}
+              name={`goalTier:${index}`}
+              type="radio"
+              value={tier}
+            />
+            {tier === "core" ? "Core" : "Supporting"}
+          </label>
+        ))}
+      </fieldset>
       <input
         name={`goalCategory:${index}`}
         type="hidden"
@@ -1240,6 +1261,16 @@ export function isActionErrorStatus(
     status === "session" ||
     status === "error"
   );
+}
+
+/**
+ * As tall as what is in it: one line when empty, like the title above it,
+ * and a line more for each line typed (owner, 5 Oct 2026).
+ */
+function fitToText(field: HTMLTextAreaElement | null) {
+  if (!field) return;
+  field.style.height = "auto";
+  field.style.height = `${field.scrollHeight}px`;
 }
 
 function today() {

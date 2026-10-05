@@ -19,6 +19,36 @@ main.setupPage {
   padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
 }
 
+/* Back: an arrow in the corner of the page, on the line of its heading. */
+main.setupPage {
+  position: relative;
+}
+
+.backArrow {
+  position: absolute;
+  top: calc(max(1.25rem, env(safe-area-inset-top)) + 0.75rem);
+  left: 0.5rem;
+  width: 2.75rem;
+  min-height: 2.75rem;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--pine);
+}
+
+.backArrow:hover {
+  background: var(--line);
+}
+
+.backArrow:focus-visible {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
+}
+
 /* The bar stays at the top; the step takes the rest and sits in its middle. */
 .manager {
   flex: 1;
@@ -185,6 +215,69 @@ main.setupPage {
 
 .stepForm textarea {
   resize: vertical;
+}
+
+/* A field that starts one line tall and is as tall as its text. */
+.stepForm textarea.growing {
+  min-height: 3rem;
+  overflow: hidden;
+  resize: none;
+}
+
+/* Core or Supporting: two choices side by side, the chosen one filled, as on
+   Goals. */
+.attentionChoice {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.attentionChoice legend {
+  margin-bottom: 0.3rem;
+  padding: 0;
+  color: var(--ledger-muted);
+  font: 500 0.62rem var(--font-mono);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.stepForm .attentionChoice label {
+  position: relative;
+  min-height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: white;
+  color: var(--ledger-ink);
+  font: 700 0.95rem var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.stepForm .attentionChoice input {
+  position: absolute;
+  width: 1px;
+  min-height: 0;
+  height: 1px;
+  padding: 0;
+  opacity: 0;
+}
+
+.stepForm .attentionChoice label:has(input:checked) {
+  border-color: var(--ledger-ink);
+  background: var(--sage);
+}
+
+.stepForm .attentionChoice label:has(input:focus-visible) {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
 }
 
 .stepForm small {
@@ -585,6 +678,21 @@ label.constraintChoice {
   width: 100%;
   margin-block: auto;
   text-align: center;
+}
+
+/* Its one button, and under it the way past, drawn as "Continue later" is. */
+.startCard.reminder button {
+  display: block;
+  margin: 1.25rem auto 0;
+}
+
+.startCard.reminder .quietLink {
+  display: flex;
+  justify-content: center;
+  margin: 0.5rem 0 0;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.25rem;
 }
 
 .secondaryButton {

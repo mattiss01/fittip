@@ -189,6 +189,71 @@ describe("OnboardingManager", () => {
     expect(adoptBrowserTimezoneAction).not.toHaveBeenCalled();
   });
 
+  it.each([
+    [
+      "the first unanswered question",
+      { birthDate: "1990-05-17" },
+      "What's your gender?",
+    ],
+    [
+      "the sports once every question is answered",
+      {
+        birthDate: "1990-05-17",
+        gender: "other" as const,
+        heightCm: 180,
+        latestWeightKg: 80,
+      },
+      "Your sports",
+    ],
+    [
+      "the draft once the sports are chosen too",
+      {
+        birthDate: "1990-05-17",
+        gender: "other" as const,
+        heightCm: 180,
+        latestWeightKg: 80,
+        sports: ["Running"],
+      },
+      "Goals",
+    ],
+  ])("resumes an untouched setup at %s", (_label, answers, heading) => {
+    render(
+      <OnboardingManager
+        profile={{ ...justNamedProfile(), ...answers }}
+        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 1 }) }}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: heading })).toBeVisible();
+  });
+
+  it("goes back by the arrow at the top, across the profile's steps and the draft's", () => {
+    render(
+      <OnboardingManager
+        profile={namedProfile()}
+        snapshot={{
+          ...emptySnapshot(),
+          draft: draft({ currentStep: 2, revision: 3 }),
+        }}
+      />,
+    );
+    const back = () =>
+      fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    const heading = (name: string) => screen.getByRole("heading", { name });
+
+    // A draft that has been worked on opens where it is.
+    expect(heading("Current training")).toBeVisible();
+    back();
+    expect(heading("Goals")).toBeVisible();
+    back();
+    expect(heading("Your sports")).toBeVisible();
+    back();
+    expect(heading("How much do you weigh?")).toBeVisible();
+    for (let question = 0; question < 4; question += 1) back();
+    expect(heading("What's your name?")).toBeVisible();
+    // The first question has nowhere to go back to.
+    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+  });
+
   it("asks before opening setup again for an owner who chose Continue later", () => {
     render(
       <OnboardingManager
@@ -325,7 +390,14 @@ describe("OnboardingManager", () => {
     expect(screen.getByLabelText("Desired outcome")).toBeRequired();
     expect(screen.getByLabelText("Sports")).toBeRequired();
     expect(screen.getByLabelText("Target date (optional)")).not.toBeRequired();
-    expect(screen.getByLabelText("Attention")).toHaveValue("core");
+    // Two choices side by side, as on Goals, and an outcome field that
+    // starts one line tall.
+    expect(screen.getByRole("radio", { name: "Core" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Supporting" })).not.toBeChecked();
+    expect(screen.getByLabelText("Desired outcome")).toHaveAttribute(
+      "rows",
+      "1",
+    );
     for (const gone of ["Category", "Start date", "Rank", "Rationale"]) {
       expect(screen.queryByLabelText(gone)).toBeNull();
     }
@@ -807,15 +879,30 @@ describe("OnboardingManager", () => {
   });
 });
 
-/** A profile whose name is saved, so setup opens on the draft's own step. */
+/**
+ * A profile with every "About you" question answered and a sport chosen, so
+ * setup opens on the draft's own step.
+ */
 function namedProfile(): ProfileDetailsView {
   return {
     displayName: "Alex",
+    birthDate: "1990-05-17",
+    gender: "other",
+    unitsSystem: "metric",
+    heightCm: 180,
+    timezoneName: "Europe/Berlin",
+    sports: ["Running"],
+    latestWeightKg: 80,
+  };
+}
+
+/** Only the name saved: the rest of "About you" and the sports are open. */
+function justNamedProfile(): ProfileDetailsView {
+  return {
+    ...namedProfile(),
     birthDate: null,
     gender: null,
-    unitsSystem: "metric",
     heightCm: null,
-    timezoneName: "Europe/Berlin",
     sports: [],
     latestWeightKg: null,
   };

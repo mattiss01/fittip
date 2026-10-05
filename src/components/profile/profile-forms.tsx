@@ -394,15 +394,6 @@ export function AboutYouForm({
         </>
       )}
       <div className={styles.stepActions}>
-        {paged && question > 0 ? (
-          <button
-            className={styles.secondaryButton}
-            onClick={() => onQuestion?.(question - 1)}
-            type="button"
-          >
-            Back
-          </button>
-        ) : null}
         {onLater ? (
           <LaterButton
             // Without a name there is nothing to save yet.
@@ -480,13 +471,11 @@ export function SportsForm({
   sports,
   submitLabel,
   onSaved,
-  onBack,
   onLater,
 }: {
   sports: string[];
   submitLabel: string;
   onSaved?: () => void;
-  onBack?: () => void;
   /** Setup only: where "Continue later" goes once the sports are saved. */
   onLater?: () => void;
 }) {
@@ -580,15 +569,6 @@ export function SportsForm({
         group(label, names),
       )}
       <div className={styles.stepActions}>
-        {onBack ? (
-          <button
-            className={styles.secondaryButton}
-            onClick={onBack}
-            type="button"
-          >
-            Back
-          </button>
-        ) : null}
         {onLater ? (
           <LaterButton leavingRef={leavingRef} onLater={onLater} />
         ) : null}
