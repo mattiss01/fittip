@@ -55,6 +55,10 @@ export function parseGoalsPayload(
       rationale: optionalText(formData, `goalRationale:${index}`),
       constraints: optionalText(formData, `goalConstraints:${index}`),
     });
+    // A goal names at least one sport, here as on Goals (owner, 5 Oct 2026).
+    // The form can only require it of the first goal, since the others may
+    // be left blank, so the rule is held here for all three.
+    if (goal.activityAreas.length < 1) throw new OnboardingValidationError();
     goals.push({
       ...goal,
       targetDate: goal.targetDate ?? "",

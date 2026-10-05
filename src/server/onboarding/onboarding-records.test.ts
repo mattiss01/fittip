@@ -10,6 +10,39 @@ import {
 } from "./onboarding-records";
 
 describe("onboarding payload parsing", () => {
+  it("refuses a goal that names no sport, whichever of the three it is", () => {
+    const form = new FormData();
+    for (const index of [0, 1]) {
+      form.set(`goalTitle:${index}`, `Goal ${index + 1}`);
+      form.set(`goalOutcome:${index}`, "An outcome.");
+      form.set(`goalCategory:${index}`, "other");
+      form.set(`goalActivities:${index}`, index === 0 ? "Running" : " ");
+      form.set(`goalStartDate:${index}`, "2026-10-05");
+      form.set(`goalTier:${index}`, "core");
+      for (const key of [
+        "goalTargetDate",
+        "goalTargetDetail",
+        "goalMetricLabel",
+        "goalMetricValue",
+        "goalMetricUnit",
+        "goalRank",
+        "goalRationale",
+        "goalConstraints",
+      ]) {
+        form.set(`${key}:${index}`, "");
+      }
+    }
+    expect(() => parseGoalsPayload(form, true)).toThrow(
+      OnboardingValidationError,
+    );
+
+    // With a sport on both, and no rank sent, both are kept and unranked.
+    form.set("goalActivities:1", "Strength");
+    expect(
+      parseGoalsPayload(form, true).goals.map((goal) => goal.targetRank),
+    ).toEqual(["", ""]);
+  });
+
   it("maps a goal through the accepted goal validator", () => {
     const form = new FormData();
     form.set("goalTitle:0", "Finish a calm 10K");

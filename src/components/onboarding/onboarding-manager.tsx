@@ -17,7 +17,6 @@ import {
 } from "@/app/home/you/onboarding/action-state";
 import styles from "@/app/home/you/onboarding/onboarding.module.css";
 import {
-  GOAL_CATEGORIES,
   LIMITATION_CATEGORIES,
   ONBOARDING_STEPS,
   type GoalCandidateView,
@@ -257,6 +256,13 @@ export function OnboardingManager({
       {visibleStep === 1 ? (
         <form action={formAction} className={styles.stepForm}>
           <StepMeta operation="save_goals" revision={draft.revision} step={1} />
+          {/* The start card says this, and an account that has just signed
+              up never sees the start card: it lands here. */}
+          <p className={styles.explainer}>
+            Your answers are stored in your account so you can resume on another
+            device. They are not sent to an AI provider. Setup is optional and
+            never blocks planning or logging.
+          </p>
           {Array.from({ length: goalCount }, (_, index) => (
             <GoalFields
               candidate={snapshot.goalCandidates[index]}
@@ -692,6 +698,13 @@ function StepActions({
   );
 }
 
+/**
+ * The same four questions and the same choice as a goal on Goals (owner,
+ * 5 Oct 2026). The draft still stores the rest of a goal, so the fields that
+ * are no longer asked are sent empty, the kind as "other" and today as the
+ * start. No rank is sent, so a goal is filed last among its own kind: a rank
+ * counted over all three goals was refused when they were not all core.
+ */
 function GoalFields({
   candidate,
   index,
@@ -699,6 +712,9 @@ function GoalFields({
   candidate?: GoalCandidateView;
   index: number;
 }) {
+  // The owner's own day once the browser is there to ask; the server, which
+  // does not know their zone yet, renders the UTC one.
+  const startDate = useSyncExternalStore(subscribeNothing, localToday, today);
   return (
     <fieldset className={styles.entryCard}>
       <legend>Goal {index + 1}</legend>
@@ -721,22 +737,26 @@ function GoalFields({
           rows={4}
         />
       </label>
+      <label>
+        Sports
+        <input
+          defaultValue={candidate?.activityAreas.join(", ") ?? ""}
+          name={`goalActivities:${index}`}
+          placeholder="Running, strength"
+          required={index === 0}
+        />
+      </label>
       <div className={styles.fieldGrid}>
         <label>
-          Category
-          <select
-            defaultValue={candidate?.category ?? "other"}
-            name={`goalCategory:${index}`}
-          >
-            {GOAL_CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {category.replaceAll("_", " ")}
-              </option>
-            ))}
-          </select>
+          Target date (optional)
+          <input
+            defaultValue={candidate?.targetDate ?? ""}
+            name={`goalTargetDate:${index}`}
+            type="date"
+          />
         </label>
         <label>
-          Attention tier
+          Attention
           <select
             defaultValue={candidate?.priorityTier ?? "core"}
             name={`goalTier:${index}`}
@@ -746,96 +766,38 @@ function GoalFields({
           </select>
         </label>
       </div>
-      <label>
-        Activity areas
+      <input
+        name={`goalCategory:${index}`}
+        type="hidden"
+        value={candidate?.category ?? "other"}
+      />
+      <input
+        name={`goalStartDate:${index}`}
+        type="hidden"
+        value={candidate?.startDate ?? startDate}
+      />
+      <input
+        name={`goalRank:${index}`}
+        type="hidden"
+        value={candidate?.targetRank ?? ""}
+      />
+      {(
+        [
+          ["goalTargetDetail", candidate?.targetDetail],
+          ["goalMetricLabel", candidate?.targetMetricLabel],
+          ["goalMetricValue", candidate?.targetMetricValue],
+          ["goalMetricUnit", candidate?.targetMetricUnit],
+          ["goalRationale", candidate?.rationale],
+          ["goalConstraints", candidate?.constraints],
+        ] as const
+      ).map(([name, value]) => (
         <input
-          defaultValue={candidate?.activityAreas.join(", ") ?? ""}
-          name={`goalActivities:${index}`}
-          placeholder="Running, strength"
+          key={name}
+          name={`${name}:${index}`}
+          type="hidden"
+          value={value ?? ""}
         />
-      </label>
-      <div className={styles.fieldGrid}>
-        <label>
-          Start date
-          <input
-            defaultValue={candidate?.startDate ?? today()}
-            name={`goalStartDate:${index}`}
-            required={index === 0}
-            type="date"
-          />
-        </label>
-        <label>
-          Target date
-          <input
-            defaultValue={candidate?.targetDate ?? ""}
-            name={`goalTargetDate:${index}`}
-            type="date"
-          />
-        </label>
-      </div>
-      <label>
-        Target detail
-        <textarea
-          defaultValue={candidate?.targetDetail ?? ""}
-          maxLength={500}
-          name={`goalTargetDetail:${index}`}
-          rows={2}
-        />
-      </label>
-      <div className={styles.metricGrid}>
-        <label>
-          Metric
-          <input
-            defaultValue={candidate?.targetMetricLabel ?? ""}
-            maxLength={80}
-            name={`goalMetricLabel:${index}`}
-          />
-        </label>
-        <label>
-          Value
-          <input
-            defaultValue={candidate?.targetMetricValue ?? ""}
-            maxLength={120}
-            name={`goalMetricValue:${index}`}
-          />
-        </label>
-        <label>
-          Unit
-          <input
-            defaultValue={candidate?.targetMetricUnit ?? ""}
-            maxLength={40}
-            name={`goalMetricUnit:${index}`}
-          />
-        </label>
-      </div>
-      <div className={styles.fieldGrid}>
-        <label>
-          Rank
-          <input
-            defaultValue={candidate?.targetRank ?? index + 1}
-            min="1"
-            name={`goalRank:${index}`}
-            type="number"
-          />
-        </label>
-        <label>
-          Rationale
-          <input
-            defaultValue={candidate?.rationale ?? ""}
-            maxLength={500}
-            name={`goalRationale:${index}`}
-          />
-        </label>
-      </div>
-      <label>
-        Constraints tied to this goal
-        <textarea
-          defaultValue={candidate?.constraints ?? ""}
-          maxLength={1000}
-          name={`goalConstraints:${index}`}
-          rows={2}
-        />
-      </label>
+      ))}
     </fieldset>
   );
 }
@@ -1158,6 +1120,13 @@ function stepHeading(step: OnboardingStep) {
 
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function localToday() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
 }
 
 /**

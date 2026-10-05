@@ -58,6 +58,44 @@ describe("OnboardingManager", () => {
     expect(screen.getAllByRole("listitem")).toHaveLength(6);
   });
 
+  it("asks a goal what Goals asks and sends the rest hidden", () => {
+    const { container } = render(
+      <OnboardingManager
+        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 1 }) }}
+      />,
+    );
+
+    // An account that has just signed up lands here, past the start card,
+    // so this step says what the start card says.
+    expect(screen.getByText(/not sent to an AI provider/)).toBeVisible();
+    expect(screen.getByLabelText("Goal title")).toBeRequired();
+    expect(screen.getByLabelText("Desired outcome")).toBeRequired();
+    expect(screen.getByLabelText("Sports")).toBeRequired();
+    expect(screen.getByLabelText("Target date (optional)")).not.toBeRequired();
+    expect(screen.getByLabelText("Attention")).toHaveValue("core");
+    for (const gone of ["Category", "Start date", "Rank", "Rationale"]) {
+      expect(screen.queryByLabelText(gone)).toBeNull();
+    }
+
+    // The draft still stores a whole goal, so every key the server reads is
+    // sent. No rank: a goal is filed last among its own kind.
+    const sent = (name: string) =>
+      container.querySelector<HTMLInputElement>(`input[name="${name}:0"]`);
+    expect(sent("goalCategory")).toHaveValue("other");
+    expect(sent("goalStartDate")?.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(sent("goalRank")).toHaveValue("");
+    for (const name of [
+      "goalTargetDetail",
+      "goalMetricLabel",
+      "goalMetricValue",
+      "goalMetricUnit",
+      "goalRationale",
+      "goalConstraints",
+    ]) {
+      expect(sent(name)).toHaveValue("");
+    }
+  });
+
   it("shows the approved safety copy without a severity control", () => {
     render(
       <OnboardingManager
