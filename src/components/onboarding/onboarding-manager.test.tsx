@@ -26,6 +26,20 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
+// A draft step's save goes through and names the step after it, as the real
+// action does, so a test can press Next.
+vi.mock("@/app/home/you/onboarding/actions", () => ({
+  changeOnboardingAction: vi.fn(
+    async (previous: { submission: number }, formData: FormData) => ({
+      status: "saved",
+      message: "This step was saved.",
+      submission: previous.submission + 1,
+      nextStep: Number(formData.get("step")) + 1,
+    }),
+  ),
+  leaveSetupAction: vi.fn(),
+}));
+
 // The profile's own steps save through these. Each save goes through, so a
 // test can walk from one question to the next.
 vi.mock("@/app/home/you/profile-actions", () => {
@@ -254,6 +268,27 @@ describe("OnboardingManager", () => {
     expect(heading("What's your name?")).toBeVisible();
     // The first question has nowhere to go back to.
     expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+  });
+
+  it("moves on from a saved step even after Back was used to reach it", async () => {
+    const { container } = render(
+      <OnboardingManager
+        profile={namedProfile()}
+        snapshot={{
+          ...emptySnapshot(),
+          draft: draft({ currentStep: 2, revision: 1 }),
+        }}
+      />,
+    );
+    // Back pins the step shown, and a pinned step outranks a save's result
+    // unless the result is applied on purpose.
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByRole("heading", { name: "Goals" })).toBeVisible();
+
+    fireEvent.submit(container.querySelector("form")!);
+    expect(
+      await screen.findByRole("heading", { name: "Current training" }),
+    ).toBeVisible();
   });
 
   it("asks before opening setup again for an owner who chose Continue later", () => {

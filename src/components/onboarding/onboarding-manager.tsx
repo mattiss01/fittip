@@ -190,6 +190,17 @@ export function OnboardingManager({
   const [, startLeaving] = useTransition();
   const continueLater = () => startLeaving(() => leaveSetupAction());
   const [reminding, setReminding] = useState(reminder);
+  // A saved step goes where its result says. This is done on the result, not
+  // on the button's click, and the step is pinned rather than cleared: a save
+  // refused afterwards names no next step. It has to be done even though the
+  // result alone would pick the step, because Back pins a step too, and a
+  // pinned step outranks the result. This block was lost in an edit on 5 Oct
+  // 2026, and after one press of Back, Next saved and went nowhere.
+  const [settled, setSettled] = useState(0);
+  if (state.submission !== settled) {
+    setSettled(state.submission);
+    if (state.status === "saved") setVisibleStep(state.nextStep ?? null);
+  }
   // A draft with no goals yet starts from the goals the owner already has,
   // so goals made before setup are edited here rather than typed again
   // (owner, 5 Oct 2026). Sent back unchanged, one is recognised at review as
