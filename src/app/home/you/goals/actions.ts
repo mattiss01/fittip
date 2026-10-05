@@ -66,10 +66,9 @@ export async function changeGoalAction(
         desiredOutcome: text(formData, "desiredOutcome"),
         category: text(formData, "category"),
         activityAreas,
-        // The form no longer asks when a goal starts; a new one starts today.
-        startDate:
-          optionalText(formData, "startDate") ??
-          new Date().toISOString().slice(0, 10),
+        // Not asked any more: the form sends the owner's day for a new goal
+        // and the goal's own start date for an edit.
+        startDate: text(formData, "startDate"),
         targetDate: optionalText(formData, "targetDate"),
         targetDetail: optionalText(formData, "targetDetail"),
         targetMetricLabel: optionalText(formData, "targetMetricLabel"),

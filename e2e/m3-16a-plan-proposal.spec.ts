@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { watchConsoleErrors } from "./support/console-errors";
 import { openNewSession } from "./support/plan-week";
+import { openAddGoalForm } from "./support/goal-form";
 
 /**
  * M3-16A: asking for a coach proposal and applying part of it.
@@ -237,12 +238,7 @@ test.describe("M3-16A plan proposal review", () => {
 /** The same steps `m2-01-goals.spec.ts` uses, because the surface is theirs. */
 async function addGoal(page: Page, title: string) {
   await page.goto("/home/you/goals");
-  const add = page.getByRole("button", { name: "Add goal" });
-  const form = page.locator('section[aria-label="Add goal"] form');
-  // One of the two is on the page once it has loaded: the button, or the
-  // form it opens.
-  await expect(add.or(form)).toBeVisible();
-  if (await add.isVisible()) await add.click();
+  const form = await openAddGoalForm(page);
   await form.getByLabel("Goal title").fill(title);
   await form
     .getByLabel("Desired outcome")

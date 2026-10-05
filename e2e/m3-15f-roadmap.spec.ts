@@ -5,6 +5,7 @@ import {
   type Page,
 } from "@playwright/test";
 import path from "node:path";
+import { openAddGoalForm } from "./support/goal-form";
 
 const evidenceDirectory = path.join(
   process.cwd(),
@@ -268,12 +269,7 @@ async function expectNoHorizontalOverflow(page: Page) {
 }
 
 async function createGoal(page: Page, title: string) {
-  const add = page.getByRole("button", { name: "Add goal" });
-  const form = page.locator('section[aria-label="Add goal"] form');
-  // One of the two is on the page once it has loaded: the button, or the
-  // form it opens.
-  await expect(add.or(form)).toBeVisible();
-  if (await add.isVisible()) await add.click();
+  const form = await openAddGoalForm(page);
   await form.getByLabel("Goal title").fill(title);
   await form
     .getByLabel("Desired outcome")

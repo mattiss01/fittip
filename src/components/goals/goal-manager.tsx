@@ -56,6 +56,8 @@ export type GoalView = {
 type Props = {
   initialGoals: GoalView[];
   expectedRevision: number;
+  /** The owner's day, which is when a new goal starts. */
+  today: string;
 };
 
 /**
@@ -68,7 +70,7 @@ const RECOVERY_FLAG = "fittip.goals.recovered:v1";
 const RECOVERED_NOTICE =
   "Your last goal change did not appear, so these goals were reloaded. The list below is what is saved.";
 
-export function GoalManager({ initialGoals, expectedRevision }: Props) {
+export function GoalManager({ initialGoals, expectedRevision, today }: Props) {
   const [state, action, pending] = useActionState(
     changeGoalAction,
     INITIAL_GOAL_ACTION_STATE,
@@ -129,12 +131,15 @@ export function GoalManager({ initialGoals, expectedRevision }: Props) {
       {adding ? (
         <section className={styles.addPanel} aria-label="Add goal">
           <GoalForm
-            key={`create-${state.submission}`}
+            // Remounted by its own result only: a reorder sent while this
+            // is open must not empty what has been typed.
+            key={`create-${state.operation === "create" ? state.submission : 0}`}
             action={action}
             expectedRevision={expectedRevision}
             pending={pending}
             draft={state.operation === "create" ? state.draft : undefined}
             newGoalTier={core.length < 3 ? "core" : "supporting"}
+            today={today}
             onCancel={() => setAdding(false)}
           />
         </section>
@@ -267,9 +272,12 @@ function GoalList({
     }
   }
   const cards = useRef(new Map<string, HTMLLIElement>());
+  // Nothing can move in a list of one, or while a card is open.
+  const fixed = shown.length < 2 || editingId !== null;
+  const locked = fixed || pending;
 
   const move = (from: number, to: number) => {
-    if (to < 0 || to >= shown.length || to === from) return;
+    if (locked || to < 0 || to >= shown.length || to === from) return;
     const next = [...shown];
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved);
@@ -289,7 +297,7 @@ function GoalList({
     id: string,
     from: number,
   ) => {
-    if (event.button !== 0) return;
+    if (locked || event.button !== 0) return;
     const rects = shown.map((goal) =>
       cards.current.get(goal.id)?.getBoundingClientRect(),
     );
@@ -308,19 +316,15 @@ function GoalList({
   };
 
   const follow = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (!drag) return;
-    const dy = event.clientY - drag.startY;
-    const centre = drag.centres[drag.from] + dy;
-    let to = drag.from;
-    while (to < shown.length - 1 && centre > drag.centres[to + 1]) to += 1;
-    while (to > 0 && centre < drag.centres[to - 1]) to -= 1;
-    setDrag({ ...drag, dy, to });
+    if (drag) setDrag({ ...drag, ...dragTarget(drag, event.clientY) });
   };
 
-  const drop = () => {
+  // Where the card lands is read from the release itself, not from the last
+  // move React happened to have rendered.
+  const drop = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (!drag) return;
     setDrag(null);
-    move(drag.from, drag.to);
+    move(drag.from, dragTarget(drag, event.clientY).to);
   };
 
   return (
@@ -338,13 +342,17 @@ function GoalList({
         >
           <button
             aria-label={`${goal.title}: rank ${index + 1} of ${shown.length}. Drag or use the arrow keys to reorder.`}
+            // Not `disabled`: that would drop the focus a second arrow key
+            // needs, on every move.
+            aria-disabled={locked}
             className={styles.rank}
-            disabled={pending || shown.length < 2 || editingId !== null}
+            data-fixed={fixed ? "true" : undefined}
             onKeyDown={(event) => {
               if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
               event.preventDefault();
               move(index, event.key === "ArrowUp" ? index - 1 : index + 1);
             }}
+            onLostPointerCapture={() => setDrag(null)}
             onPointerCancel={() => setDrag(null)}
             onPointerDown={(event) => begin(event, goal.id, index)}
             onPointerMove={follow}
@@ -379,6 +387,16 @@ function GoalList({
       ))}
     </ol>
   );
+}
+
+/** How far the card has been dragged and the place that puts it in. */
+function dragTarget(drag: Drag, clientY: number) {
+  const dy = clientY - drag.startY;
+  const centre = drag.centres[drag.from] + dy;
+  let to = drag.from;
+  while (to < drag.centres.length - 1 && centre > drag.centres[to + 1]) to += 1;
+  while (to > 0 && centre < drag.centres[to - 1]) to -= 1;
+  return { dy, to };
 }
 
 /** The dragged card follows the finger; the ones it passes step aside. */
@@ -507,6 +525,7 @@ function GoalForm({
   pending,
   draft,
   newGoalTier = "supporting",
+  today = "",
   onCancel,
 }: {
   action: (payload: FormData) => void;
@@ -515,6 +534,8 @@ function GoalForm({
   pending: boolean;
   draft?: GoalActionDraft;
   newGoalTier?: GoalView["priorityTier"];
+  /** Only a new goal needs it; an edit keeps the goal's own start date. */
+  today?: string;
   onCancel?: () => void;
 }) {
   const initial = (field: keyof GoalActionDraft, fallback = "") =>
@@ -592,7 +613,7 @@ function GoalForm({
           </label>
         ))}
       </fieldset>
-      <StoredGoalFields goal={goal} />
+      <StoredGoalFields goal={goal} today={today} />
       <div className={styles.formActions}>
         <button className={styles.primary} disabled={pending}>
           {goal ? "Save goal" : "Create active goal"}
@@ -611,14 +632,14 @@ function GoalForm({
  * What a goal stores and the form no longer asks for (owner, 5 Oct 2026):
  * the kind of goal, its start date, the target's detail and measure, why it
  * matters and its own constraints. An edit sends the whole goal, so these
- * travel hidden and a goal written before keeps what it held.
+ * travel hidden and a goal written before keeps what it held. A new goal
+ * starts on the owner's day.
  */
-function StoredGoalFields({ goal }: { goal?: GoalView }) {
+function StoredGoalFields({ goal, today }: { goal?: GoalView; today: string }) {
   return (
     <>
       <input type="hidden" name="category" value={goal?.category ?? "other"} />
-      {/* Empty on a new goal: the action starts it today. */}
-      <input type="hidden" name="startDate" value={goal?.startDate ?? ""} />
+      <input type="hidden" name="startDate" value={goal?.startDate ?? today} />
       <input
         type="hidden"
         name="targetDetail"

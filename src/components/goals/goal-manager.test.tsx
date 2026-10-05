@@ -130,6 +130,7 @@ describe("GoalManager", () => {
   it("separates ranked core and supporting attention", () => {
     render(
       <GoalManager
+        today="2026-10-05"
         expectedRevision={4}
         initialGoals={[
           goal({ id: "1", title: "Trail event", priorityTier: "core" }),
@@ -154,6 +155,7 @@ describe("GoalManager", () => {
   it("keeps paused and terminal records outside active ranks", () => {
     render(
       <GoalManager
+        today="2026-10-05"
         expectedRevision={2}
         initialGoals={[
           goal({
@@ -178,14 +180,18 @@ describe("GoalManager", () => {
   });
 
   it("provides a bounded empty state and add-goal control", () => {
-    render(<GoalManager expectedRevision={0} initialGoals={[]} />);
+    render(
+      <GoalManager today="2026-10-05" expectedRevision={0} initialGoals={[]} />,
+    );
     expect(screen.getByText(/no core goal yet/i)).toBeVisible();
     expect(screen.getByText("None yet.")).toBeVisible();
     expect(screen.getByRole("button", { name: "Add goal" })).toBeVisible();
   });
 
   it("asks a new goal for a title, an outcome, a sport, a date and its attention", () => {
-    render(<GoalManager expectedRevision={0} initialGoals={[]} />);
+    render(
+      <GoalManager today="2026-10-05" expectedRevision={0} initialGoals={[]} />,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Add goal" }));
 
     expect(screen.getByLabelText("Goal title")).toBeRequired();
@@ -194,6 +200,10 @@ describe("GoalManager", () => {
     expect(screen.getByLabelText("Sports")).toBeRequired();
     expect(screen.getByLabelText("Sports")).toHaveValue("");
     expect(screen.getByLabelText("Target date (optional)")).not.toBeRequired();
+    // Not asked: a new goal starts on the owner's day.
+    expect(document.querySelector('input[name="startDate"]')).toHaveValue(
+      "2026-10-05",
+    );
     // A core slot is free, so that is where a new goal starts.
     expect(screen.getByRole("radio", { name: "Core" })).toBeChecked();
     for (const gone of ["Category", "Start date", "Target measure"]) {
@@ -208,6 +218,7 @@ describe("GoalManager", () => {
   it("starts a new goal on supporting once three core goals are active", () => {
     render(
       <GoalManager
+        today="2026-10-05"
         expectedRevision={3}
         initialGoals={["1", "2", "3"].map((id) =>
           goal({ id, title: `Core ${id}`, activeRank: Number(id) }),
@@ -220,7 +231,9 @@ describe("GoalManager", () => {
   });
 
   it("closes the add form once its goal is created and keeps it on a refusal", () => {
-    const view = render(<GoalManager expectedRevision={0} initialGoals={[]} />);
+    const view = render(
+      <GoalManager today="2026-10-05" expectedRevision={0} initialGoals={[]} />,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Add goal" }));
 
     useActionStateMock.mockReturnValue([
@@ -235,7 +248,9 @@ describe("GoalManager", () => {
       vi.fn(),
       false,
     ]);
-    view.rerender(<GoalManager expectedRevision={0} initialGoals={[]} />);
+    view.rerender(
+      <GoalManager today="2026-10-05" expectedRevision={0} initialGoals={[]} />,
+    );
     expect(screen.getByLabelText("Goal title")).toHaveValue("Half typed");
 
     useActionStateMock.mockReturnValue([
@@ -249,7 +264,9 @@ describe("GoalManager", () => {
       vi.fn(),
       false,
     ]);
-    view.rerender(<GoalManager expectedRevision={1} initialGoals={[]} />);
+    view.rerender(
+      <GoalManager today="2026-10-05" expectedRevision={1} initialGoals={[]} />,
+    );
     expect(screen.queryByLabelText("Goal title")).toBeNull();
   });
 
@@ -262,6 +279,7 @@ describe("GoalManager", () => {
     ]);
     render(
       <GoalManager
+        today="2026-10-05"
         expectedRevision={7}
         initialGoals={[
           goal({ id: "1", title: "Trail event", activeRank: 1 }),
@@ -281,6 +299,8 @@ describe("GoalManager", () => {
       fireEvent.keyDown(handle, { key: "ArrowDown" });
     });
     expect(action).toHaveBeenCalledTimes(1);
+    // Still focusable, so the next arrow key lands on it.
+    expect(handle).not.toBeDisabled();
     const sent = action.mock.calls[0][0] as FormData;
     expect(Object.fromEntries(sent)).toEqual({
       operation: "reorder",
@@ -302,22 +322,30 @@ describe("GoalManager", () => {
       goal({ id: "2", title: "Swim endurance", activeRank: 2 }),
     ];
     const view = render(
-      <GoalManager expectedRevision={1} initialGoals={goals} />,
+      <GoalManager
+        today="2026-10-05"
+        expectedRevision={1}
+        initialGoals={goals}
+      />,
     );
     // The card says what the goal is for and by when, and nothing about its
     // kind or tier: the list it sits in says that.
     expect(screen.getByText("Trail running · By 31 Dec 2026")).toBeVisible();
     const handles = () => screen.getAllByRole("button", { name: /: rank \d/ });
-    expect(handles().every((handle) => !handle.hasAttribute("disabled"))).toBe(
-      true,
-    );
+    expect(
+      handles().every(
+        (handle) => handle.getAttribute("aria-disabled") !== "true",
+      ),
+    ).toBe(true);
 
     fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
     expect(screen.getByLabelText("Goal title")).toHaveValue("Trail event");
     expect(screen.getByRole("radio", { name: "Core" })).toBeChecked();
-    expect(handles().every((handle) => handle.hasAttribute("disabled"))).toBe(
-      true,
-    );
+    expect(
+      handles().every(
+        (handle) => handle.getAttribute("aria-disabled") === "true",
+      ),
+    ).toBe(true);
 
     useActionStateMock.mockReturnValue([
       {
@@ -331,16 +359,25 @@ describe("GoalManager", () => {
       vi.fn(),
       false,
     ]);
-    view.rerender(<GoalManager expectedRevision={2} initialGoals={goals} />);
-    expect(screen.queryByLabelText("Goal title")).toBeNull();
-    expect(handles().every((handle) => !handle.hasAttribute("disabled"))).toBe(
-      true,
+    view.rerender(
+      <GoalManager
+        today="2026-10-05"
+        expectedRevision={2}
+        initialGoals={goals}
+      />,
     );
+    expect(screen.queryByLabelText("Goal title")).toBeNull();
+    expect(
+      handles().every(
+        (handle) => handle.getAttribute("aria-disabled") !== "true",
+      ),
+    ).toBe(true);
   });
 
   it("requires explicit confirmations with consequences and restores focus on cancel", () => {
     render(
       <GoalManager
+        today="2026-10-05"
         expectedRevision={1}
         initialGoals={[goal({ title: "Trail event" })]}
       />,
@@ -380,7 +417,9 @@ describe("GoalManager", () => {
       false,
     ]);
 
-    render(<GoalManager expectedRevision={2} initialGoals={[]} />);
+    render(
+      <GoalManager today="2026-10-05" expectedRevision={2} initialGoals={[]} />,
+    );
 
     expect(
       screen.getByRole("link", { name: "Reload current goals" }),
@@ -395,7 +434,9 @@ describe("GoalManager", () => {
       true,
     ]);
 
-    render(<GoalManager expectedRevision={2} initialGoals={[]} />);
+    render(
+      <GoalManager today="2026-10-05" expectedRevision={2} initialGoals={[]} />,
+    );
     act(() => {
       vi.advanceTimersByTime(CONFIRMATION_BUDGET_MS - WATCH_INTERVAL_MS);
     });
@@ -415,7 +456,9 @@ describe("GoalManager", () => {
       true,
     ]);
 
-    render(<GoalManager expectedRevision={2} initialGoals={[]} />);
+    render(
+      <GoalManager today="2026-10-05" expectedRevision={2} initialGoals={[]} />,
+    );
     act(() => {
       vi.advanceTimersByTime(CONFIRMATION_BUDGET_MS + WATCH_INTERVAL_MS);
     });
@@ -445,7 +488,9 @@ describe("GoalManager", () => {
       true,
     ]);
 
-    render(<GoalManager expectedRevision={2} initialGoals={[]} />);
+    render(
+      <GoalManager today="2026-10-05" expectedRevision={2} initialGoals={[]} />,
+    );
     advance(RENDER_GRACE_MS + WATCH_INTERVAL_MS);
 
     const notice = screen.getByRole("status");
@@ -476,7 +521,9 @@ describe("GoalManager", () => {
       true,
     ]);
 
-    render(<GoalManager expectedRevision={2} initialGoals={[]} />);
+    render(
+      <GoalManager today="2026-10-05" expectedRevision={2} initialGoals={[]} />,
+    );
     advance(RENDER_GRACE_MS + WATCH_INTERVAL_MS);
 
     expect(screen.getByRole("status")).toHaveTextContent("Saving goal change…");
@@ -495,7 +542,9 @@ describe("GoalManager", () => {
       true,
     ]);
 
-    const view = render(<GoalManager expectedRevision={2} initialGoals={[]} />);
+    const view = render(
+      <GoalManager today="2026-10-05" expectedRevision={2} initialGoals={[]} />,
+    );
     advance(RENDER_GRACE_MS + WATCH_INTERVAL_MS);
     expect(screen.getByRole("status")).toHaveAttribute(
       "data-state",
@@ -514,7 +563,9 @@ describe("GoalManager", () => {
       vi.fn(),
       false,
     ]);
-    view.rerender(<GoalManager expectedRevision={3} initialGoals={[]} />);
+    view.rerender(
+      <GoalManager today="2026-10-05" expectedRevision={3} initialGoals={[]} />,
+    );
     advance(RECOVERY_NOTICE_MS * 4);
 
     expect(reload).not.toHaveBeenCalled();
@@ -524,7 +575,9 @@ describe("GoalManager", () => {
   it("explains a reload it triggered itself", () => {
     window.sessionStorage.setItem(RECOVERY_FLAG, "1");
 
-    render(<GoalManager expectedRevision={2} initialGoals={[]} />);
+    render(
+      <GoalManager today="2026-10-05" expectedRevision={2} initialGoals={[]} />,
+    );
 
     const notice = screen.getByRole("status");
     expect(notice).toHaveTextContent(
@@ -546,7 +599,9 @@ describe("GoalManager", () => {
       false,
     ]);
 
-    render(<GoalManager expectedRevision={3} initialGoals={[]} />);
+    render(
+      <GoalManager today="2026-10-05" expectedRevision={3} initialGoals={[]} />,
+    );
 
     const notice = screen.getByRole("status");
     expect(notice).toHaveTextContent("Goal created.");

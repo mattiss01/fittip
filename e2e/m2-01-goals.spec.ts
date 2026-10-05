@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import path from "node:path";
 
+import { addGoalForm, openAddGoalForm } from "./support/goal-form";
+
 const evidenceDirectory = path.join(
   process.cwd(),
   "test-results",
@@ -50,7 +52,7 @@ test.describe("M2-01 goal management", () => {
         path: path.join(evidenceDirectory, "M2-01-core-supporting-390x844.png"),
       });
 
-      await openAddPanel(page);
+      await openAddGoalForm(page);
       const addForm = addGoalForm(page);
       await addForm.getByLabel("Goal title").fill("Fourth core");
       await addForm
@@ -127,10 +129,15 @@ test.describe("M2-01 goal management", () => {
       await expect(
         goalCard(page, "Swim endurance").getByLabel("Rank 1"),
       ).toBeVisible();
-      await moveUp(stalePage, "Trail event");
-      await expect(
-        stalePage.getByText(/Goals changed in another tab/),
-      ).toBeVisible();
+      // This page has only just loaded, and a key pressed before it is
+      // interactive is lost. Every press from it is stale, so it is pressed
+      // until the refusal shows.
+      await expect(async () => {
+        await moveUp(stalePage, "Trail event");
+        await expect(
+          stalePage.getByText(/Goals changed in another tab/),
+        ).toBeVisible({ timeout: 2_000 });
+      }).toPass();
       const reloadGoals = stalePage.getByRole("link", {
         name: "Reload current goals",
       });
@@ -312,7 +319,7 @@ test.describe("M2-05 unconfirmed goal mutation", () => {
         },
       );
 
-      await openAddPanel(page);
+      await openAddGoalForm(page);
       const form = addGoalForm(page);
       await form.getByLabel("Goal title").fill("Unconfirmed goal");
       await form.getByLabel("Desired outcome").fill("This is never confirmed.");
@@ -357,7 +364,7 @@ async function createGoal(
   tier: "core" | "supporting",
   area: string,
 ) {
-  await openAddPanel(page);
+  await openAddGoalForm(page);
   const form = addGoalForm(page);
   await form.getByLabel("Goal title").fill(title);
   await form
@@ -367,19 +374,6 @@ async function createGoal(
   await form.getByLabel(tier === "core" ? "Core" : "Supporting").check();
   await form.getByRole("button", { name: "Create active goal" }).click();
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
-}
-
-/** "Add goal" is a button that opens the form; creating a goal closes it. */
-async function openAddPanel(page: import("@playwright/test").Page) {
-  const open = page.getByRole("button", { name: "Add goal" });
-  // One of the two is on the page once it has loaded.
-  await expect(open.or(addGoalForm(page))).toBeVisible();
-  if (await open.isVisible()) await open.click();
-  await expect(addGoalForm(page)).toBeVisible();
-}
-
-function addGoalForm(page: import("@playwright/test").Page) {
-  return page.locator('section[aria-label="Add goal"] form');
 }
 
 /**

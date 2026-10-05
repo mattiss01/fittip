@@ -84,7 +84,8 @@
 
 .goalCard {
   display: grid;
-  grid-template-columns: 2.6rem 1fr;
+  /* As wide as a touch target: the number is the only way to drag. */
+  grid-template-columns: 2.75rem 1fr;
   border-bottom: 1px solid var(--line);
 }
 
@@ -119,14 +120,18 @@
   touch-action: none;
 }
 
-.rank:disabled {
-  cursor: default;
-  opacity: 1;
+/* Every button darkens under the pointer; this one has no fill to darken. */
+.rank:hover {
+  background: transparent;
 }
 
 /* No grip where nothing can move: a single goal, or a list with a card
-   open for editing. The number keeps its full colour either way. */
-.rank:disabled svg {
+   open for editing. */
+.rank[data-fixed="true"] {
+  cursor: default;
+}
+
+.rank[data-fixed="true"] svg {
   visibility: hidden;
 }
 
@@ -403,6 +408,10 @@
   font: 700 0.95rem var(--font-sans);
 }
 
+.cancel:hover {
+  background: var(--rule);
+}
+
 .empty {
   margin: 0;
   padding: 1rem 1.1rem;
@@ -490,12 +499,6 @@
 .manager a:focus-visible {
   outline: 3px solid var(--ledger-ink);
   outline-offset: 2px;
-}
-
-@media (max-width: 520px) {
-  .goalCard {
-    grid-template-columns: 2.2rem 1fr;
-  }
 }
 
 @media (prefers-reduced-motion: no-preference) {
