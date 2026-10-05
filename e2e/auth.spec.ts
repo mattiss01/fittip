@@ -52,8 +52,10 @@ test.describe("public account authentication", () => {
     // 5 Oct 2026): the first step is there without a "Start setup" press.
     await expect(page).toHaveURL(/\/home\/you\/onboarding$/);
     await expect(
-      page.getByRole("heading", { name: "Name the outcomes." }),
+      page.getByRole("heading", { name: "Start with the basics." }),
     ).toBeVisible();
+    // It lands past the start card, so the first step says what that says.
+    await expect(page.getByText(/not sent to an AI provider/)).toBeVisible();
 
     // Setup does not hold the account: it can leave, sign out, and a later
     // sign-in goes to Today as before.
@@ -95,11 +97,30 @@ async function completeGuidedSetup(
   // The draft that sign-up started is waiting on its first step.
   await expect(page).toHaveURL(/\/home\/you\/onboarding$/);
 
+  // "About you" and "Your sports" come first and are saved straight to the
+  // profile (owner, 5 Oct 2026). Only the name is required; the units and
+  // the time zone arrive filled in from the browser.
+  await expect(page.getByText("Step 1 of 8 · About you")).toBeVisible();
+  await expect(page.getByLabel("Units")).toHaveValue(/^(metric|imperial)$/);
+  await page.getByLabel("Units").selectOption("metric");
+  await page.getByLabel("Time zone").selectOption("Europe/Berlin");
+  await page.getByLabel("Name").fill("Alex");
+  await page.getByLabel("Weight in kg (optional)").fill("80,5");
+  await page.getByRole("button", { name: "Save and continue" }).click();
+
+  await expect(page.getByText("Step 2 of 8 · Your sports")).toBeVisible();
+  await page.getByText("Running", { exact: true }).click();
+  await page.getByLabel("Add your own").fill("Latzug");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(page.getByRole("checkbox", { name: "Latzug" })).toBeChecked();
+  await page.getByRole("button", { name: "Save and continue" }).click();
+
   const goalTitle = "Finish a calm 10K";
   const goalOutcome = "Run the autumn event with even pacing.";
+  await expect(page.getByText("Step 3 of 8 · Goals")).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Name the outcomes." }),
-  ).toBeFocused();
+  ).toBeVisible();
   await page.getByLabel("Goal title").fill(goalTitle);
   await page.getByLabel("Desired outcome").fill(goalOutcome);
   await page.getByLabel("Sports").fill("Running");
@@ -139,29 +160,32 @@ async function completeGuidedSetup(
   await page.getByLabel("Desired outcome").fill(goalOutcome);
   await page.getByLabel("Sports").fill("Running");
   await page.getByRole("button", { name: "Save and continue" }).click();
-  await expect(page.getByText("Step 2 of 6 · Current training")).toBeVisible();
+  await expect(page.getByText("Step 4 of 8 · Current training")).toBeVisible();
 
   await page.getByLabel("I am not training currently").check();
   await page.getByRole("button", { name: "Save and continue" }).click();
-  await expect(page.getByText("Step 3 of 6 · Time and access")).toBeVisible();
+  await expect(page.getByText("Step 5 of 8 · Time and access")).toBeVisible();
 
   await page.getByLabel("Monday").check();
   await page.getByLabel("Saturday").check();
   await page.getByLabel("Access and equipment").fill("Road, Home weights");
-  await page.getByLabel("Timezone").selectOption("Europe/Berlin");
+  // The time zone and the units were chosen in "About you".
+  await expect(page.getByLabel("Timezone")).toHaveCount(0);
   await page.getByRole("button", { name: "Save and continue" }).click();
-  await expect(page.getByText("Step 4 of 6 · Preferences")).toBeVisible();
+  await expect(page.getByText("Step 6 of 8 · Preferences")).toBeVisible();
 
   // Preferences and constraints are optional. The exact conservative safety
   // copy remains visible without a severity question or acknowledgement gate.
   await page.getByRole("button", { name: "Save and continue" }).click();
-  await expect(page.getByText("Step 5 of 6 · Constraints")).toBeVisible();
+  await expect(page.getByText("Step 7 of 8 · Constraints")).toBeVisible();
   await expect(
     page.getByText(/FitTip cannot assess or diagnose symptoms/),
   ).toBeVisible();
   await expect(page.getByLabel(/severity/i)).toHaveCount(0);
   await page.getByRole("button", { name: "Save and continue" }).click();
-  await expect(page.getByText("Step 6 of 6 · Review and save")).toBeVisible();
+  await expect(page.getByText("Step 8 of 8 · Review and save")).toBeVisible();
+  // The profile's own two never come up for review.
+  await expect(page.getByText(/^(Timezone|Units): /)).toHaveCount(0);
   await expect(
     page.getByRole("heading", {
       name: "Choose where each statement lands.",
@@ -202,6 +226,19 @@ async function completeGuidedSetup(
       .locator('[data-memory-content="true"]')
       .filter({ hasText: /^I am not training currently\.$/ }),
   ).toBeVisible();
+  await expect(
+    page
+      .locator('[data-memory-content="true"]')
+      .filter({ hasText: /^(Timezone|Units): / }),
+  ).toHaveCount(0);
+
+  // What the first two steps saved is on Settings, where it is changed.
+  await page.goto("/home/you/settings");
+  await expect(page.getByLabel("Name")).toHaveValue("Alex");
+  await expect(page.getByLabel("Time zone")).toHaveValue("Europe/Berlin");
+  await expect(page.getByText("80.5 kg")).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Running" })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Latzug" })).toBeChecked();
 
   // Done once, setup is not offered again.
   await page.goto("/home/you/onboarding");

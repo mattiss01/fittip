@@ -188,6 +188,145 @@
   outline-offset: 2px;
 }
 
+/* "About you" in feet and pounds: two short height boxes and the weight. */
+.measureGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.4fr;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+/* "Your sports": a group is a heading and its sports as chips that wrap. */
+.sportGroup {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.sportGroup legend {
+  margin-bottom: 0.5rem;
+  padding: 0;
+  color: var(--ledger-ink);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.stepForm .chip {
+  position: relative;
+  display: block;
+  cursor: pointer;
+}
+
+/* The checkbox is there for the keyboard and the form; the chip is drawn by
+   the text beside it. */
+.stepForm .chip input {
+  position: absolute;
+  width: 1px;
+  min-height: 0;
+  height: 1px;
+  padding: 0;
+  opacity: 0;
+}
+
+.stepForm .chip span {
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  padding: 0 0.95rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-pill);
+  background: white;
+  color: var(--ledger-ink);
+  font: 600 0.92rem var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.stepForm .chip input:checked + span {
+  border-color: var(--pine);
+  background: var(--pine);
+  color: var(--paper);
+}
+
+.stepForm .chip input:focus-visible + span {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
+}
+
+.addSport {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.55rem;
+  align-items: end;
+}
+
+.addSport button {
+  margin: 0;
+  padding: 0 1.1rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  font: 700 0.95rem var(--font-sans);
+}
+
+/* Settings: each form and the weight history in a card of its own. */
+.settingsCard {
+  width: 100%;
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1.1rem;
+  background: var(--ledger-paper);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.settingsCard h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.weightList {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.weightList li {
+  min-height: 3.5rem;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.8rem;
+  border-top: 1px solid var(--line);
+}
+
+.weightList li:first-child {
+  border-top: 0;
+}
+
+.weightList span {
+  color: var(--ledger-muted);
+  font-size: 0.9rem;
+}
+
+.weightList button {
+  margin: 0;
+  padding: 0 0.9rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  font: 700 0.9rem var(--font-sans);
+}
+
 .explainer {
   margin: 0;
   color: var(--ledger-muted);

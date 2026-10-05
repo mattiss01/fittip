@@ -15,6 +15,7 @@ import {
   OnboardingManager,
 } from "./onboarding-manager";
 import type { OnboardingSnapshot } from "@/lib/onboarding/onboarding-contract";
+import type { ProfileDetailsView } from "@/lib/profile/profile-contract";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -27,7 +28,9 @@ afterEach(cleanup);
 
 describe("OnboardingManager", () => {
   it("explains storage and no-AI behavior before creating a draft", () => {
-    render(<OnboardingManager snapshot={emptySnapshot()} />);
+    render(
+      <OnboardingManager profile={namedProfile()} snapshot={emptySnapshot()} />,
+    );
 
     expect(
       screen.getByRole("heading", {
@@ -41,9 +44,96 @@ describe("OnboardingManager", () => {
     expect(screen.getByRole("button", { name: "Start setup" })).toBeVisible();
   });
 
-  it("renders six textual steps and keeps later steps unavailable", () => {
+  it("opens on About you until a name is saved, and says what setup stores", () => {
     render(
       <OnboardingManager
+        profile={{ ...namedProfile(), displayName: null }}
+        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 3 }) }}
+      />,
+    );
+
+    expect(screen.getByText("Step 1 of 8 · About you")).toBeVisible();
+    // An account that has just signed up lands here, past the start card,
+    // so this step says what the start card says.
+    expect(screen.getByText(/not sent to an AI provider/)).toBeVisible();
+    expect(screen.getByLabelText("Name")).toBeRequired();
+    for (const optional of [
+      "Birthday (optional)",
+      "Gender (optional)",
+      "Height in cm (optional)",
+      "Weight in kg (optional)",
+    ]) {
+      expect(screen.getByLabelText(optional)).not.toBeRequired();
+    }
+    // Suggested, shown and changeable rather than asked cold.
+    expect(screen.getByLabelText("Units")).toHaveValue("metric");
+    expect(screen.getByLabelText("Time zone")).toHaveValue("Europe/Berlin");
+    // The draft is already at its third step; without a name nothing past
+    // the first step opens.
+    for (const later of [/2Your sports/, /3Goals/, /5Time and access/]) {
+      expect(screen.getByRole("button", { name: later })).toBeDisabled();
+    }
+  });
+
+  it("shows the stored measures in feet and pounds when the units say so", () => {
+    render(
+      <OnboardingManager
+        profile={{
+          ...namedProfile(),
+          unitsSystem: "imperial",
+          heightCm: 180.3,
+          latestWeightKg: 79.83,
+        }}
+        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 1 }) }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /1About you/ }));
+
+    expect(screen.getByLabelText("Height, feet (optional)")).toHaveValue("5");
+    expect(screen.getByLabelText("Inches")).toHaveValue("11");
+    expect(screen.getByLabelText("Weight in lb (optional)")).toHaveValue("176");
+
+    fireEvent.change(screen.getByLabelText("Units"), {
+      target: { value: "metric" },
+    });
+    expect(screen.getByLabelText("Height in cm (optional)")).toHaveValue(
+      "180.3",
+    );
+  });
+
+  it("offers the sports as chips, with the owner's own first and addable", () => {
+    render(
+      <OnboardingManager
+        profile={{ ...namedProfile(), sports: ["Running", "Latzug"] }}
+        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 1 }) }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /2Your sports/ }));
+
+    expect(screen.getByText("Step 2 of 8 · Your sports")).toBeVisible();
+    // By label, not by role: a role query walks all 64 chips each time and
+    // took this test past its time limit when the whole suite ran.
+    expect(screen.getByLabelText("Running")).toBeChecked();
+    expect(screen.getByLabelText("Latzug")).toBeChecked();
+    expect(screen.getByLabelText("Cycling")).not.toBeChecked();
+    expect(screen.getByText("Your own")).toBeVisible();
+
+    // A sport typed in is added ticked; a preset typed in is ticked where it
+    // already stands rather than listed twice.
+    const own = screen.getByLabelText("Add your own");
+    fireEvent.change(own, { target: { value: "  Stabwurf " } });
+    fireEvent.click(screen.getByText("Add", { selector: "button" }));
+    expect(screen.getByLabelText("Stabwurf")).toBeChecked();
+    fireEvent.change(own, { target: { value: "cycling" } });
+    fireEvent.keyDown(own, { key: "Enter" });
+    expect(screen.getAllByLabelText(/^cycling$/i)).toHaveLength(1);
+    expect(screen.getByLabelText("Cycling")).toBeChecked();
+  });
+
+  it("renders eight textual steps and keeps later steps unavailable", () => {
+    render(
+      <OnboardingManager
+        profile={namedProfile()}
         snapshot={{
           ...emptySnapshot(),
           draft: draft({ currentStep: 2 }),
@@ -51,23 +141,22 @@ describe("OnboardingManager", () => {
       />,
     );
 
-    expect(screen.getByText("Step 2 of 6 · Current training")).toBeVisible();
+    expect(screen.getByText("Step 4 of 8 · Current training")).toBeVisible();
     expect(
-      screen.getByRole("button", { name: /3Time and access/ }),
+      screen.getByRole("button", { name: /5Time and access/ }),
     ).toBeDisabled();
-    expect(screen.getAllByRole("listitem")).toHaveLength(6);
+    expect(screen.getAllByRole("listitem")).toHaveLength(8);
   });
 
   it("asks a goal what Goals asks and sends the rest hidden", () => {
     const { container } = render(
       <OnboardingManager
+        profile={namedProfile()}
         snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 1 }) }}
       />,
     );
 
-    // An account that has just signed up lands here, past the start card,
-    // so this step says what the start card says.
-    expect(screen.getByText(/not sent to an AI provider/)).toBeVisible();
+    expect(screen.getByText("Step 3 of 8 · Goals")).toBeVisible();
     expect(screen.getByLabelText("Goal title")).toBeRequired();
     expect(screen.getByLabelText("Desired outcome")).toBeRequired();
     expect(screen.getByLabelText("Sports")).toBeRequired();
@@ -99,6 +188,7 @@ describe("OnboardingManager", () => {
   it("shows the approved safety copy without a severity control", () => {
     render(
       <OnboardingManager
+        profile={namedProfile()}
         snapshot={{
           ...emptySnapshot(),
           draft: draft({ currentStep: 5 }),
@@ -120,6 +210,7 @@ describe("OnboardingManager", () => {
     const memoryId = "54000000-0000-4000-8000-000000000102";
     render(
       <OnboardingManager
+        profile={namedProfile()}
         snapshot={{
           ...emptySnapshot(),
           draft: draft({ currentStep: 6 }),
@@ -150,9 +241,9 @@ describe("OnboardingManager", () => {
             {
               id: memoryId,
               position: 1,
-              fieldKey: "context:units",
-              memoryType: "preference",
-              content: "Units: Metric.",
+              fieldKey: "context:access",
+              memoryType: "profile_fact",
+              content: "Access and equipment: Track.",
               decision: "pending",
               resolution: null,
               targetMemoryId: null,
@@ -182,6 +273,77 @@ describe("OnboardingManager", () => {
     expect(
       screen.getByRole("button", { name: "Save accepted items" }),
     ).toBeVisible();
+  });
+
+  it("sends the profile's time zone and units with Time and access, unseen", () => {
+    const { container } = render(
+      <OnboardingManager
+        profile={{ ...namedProfile(), unitsSystem: "imperial" }}
+        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 3 }) }}
+      />,
+    );
+
+    expect(screen.getByText("Step 5 of 8 · Time and access")).toBeVisible();
+    expect(screen.queryByLabelText("Timezone")).toBeNull();
+    expect(screen.queryByLabelText("Units")).toBeNull();
+    expect(
+      container.querySelector('input[type="hidden"][name="timezoneName"]'),
+    ).toHaveValue("Europe/Berlin");
+    expect(
+      container.querySelector('input[type="hidden"][name="units"]'),
+    ).toHaveValue("imperial");
+  });
+
+  it("never offers the time zone or the units for Memory, and files them rejected", () => {
+    const ids = [
+      "54000000-0000-4000-8000-000000000a01",
+      "54000000-0000-4000-8000-000000000a02",
+      "54000000-0000-4000-8000-000000000a03",
+    ];
+    const candidate = (id: string, fieldKey: string, content: string) => ({
+      id,
+      position: 1,
+      fieldKey,
+      memoryType: "preference",
+      content,
+      decision: "pending" as const,
+      resolution: null,
+      targetMemoryId: null,
+      comparison: {
+        kind: "new" as const,
+        targetId: null,
+        existingLabel: null,
+        existingDetail: null,
+        existingStatus: null,
+      },
+    });
+    const { container } = render(
+      <OnboardingManager
+        profile={namedProfile()}
+        snapshot={{
+          ...emptySnapshot(),
+          draft: draft({ currentStep: 6 }),
+          memoryCandidates: [
+            candidate(ids[0], "context:timezone", "Timezone: Europe/Berlin."),
+            candidate(ids[1], "context:units", "Units: Metric."),
+            candidate(ids[2], "preference:1", "Keep hard sessions short."),
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.queryByText("Timezone: Europe/Berlin.")).toBeNull();
+    expect(screen.queryByText("Units: Metric.")).toBeNull();
+    expect(screen.getByText("Keep hard sessions short.")).toBeVisible();
+    expect(screen.getAllByRole("combobox", { name: "Decision" })).toHaveLength(
+      1,
+    );
+    // Every candidate still gets a decision, or the draft refuses the save.
+    const sent = new FormData(container.querySelector("form")!);
+    expect(sent.getAll("candidateId")).toEqual(ids);
+    expect(sent.get(`decision:${ids[0]}`)).toBe("rejected");
+    expect(sent.get(`decision:${ids[1]}`)).toBe("rejected");
+    expect(sent.get(`decision:${ids[2]}`)).toBe("accepted");
   });
 
   it("previews only accepted create and update decisions", () => {
@@ -292,7 +454,9 @@ describe("OnboardingManager", () => {
       }),
     ];
 
-    const { rerender } = render(<OnboardingManager snapshot={snapshot} />);
+    const { rerender } = render(
+      <OnboardingManager profile={namedProfile()} snapshot={snapshot} />,
+    );
 
     expect(rankTitles()).toEqual([
       "Existing one",
@@ -318,6 +482,7 @@ describe("OnboardingManager", () => {
 
     rerender(
       <OnboardingManager
+        profile={namedProfile()}
         snapshot={{
           ...snapshot,
           draft: draft({ currentStep: 6, revision: 1 }),
@@ -390,7 +555,7 @@ describe("OnboardingManager", () => {
       }),
     ];
 
-    render(<OnboardingManager snapshot={snapshot} />);
+    render(<OnboardingManager profile={namedProfile()} snapshot={snapshot} />);
 
     const decision = screen.getByLabelText("Decision") as HTMLSelectElement;
     expect(decision.value).toBe("accepted");
@@ -405,7 +570,7 @@ describe("OnboardingManager", () => {
     const snapshot = emptySnapshot();
     snapshot.hasPublished = true;
 
-    render(<OnboardingManager snapshot={snapshot} />);
+    render(<OnboardingManager profile={namedProfile()} snapshot={snapshot} />);
 
     expect(
       screen.getByRole("heading", { name: "Your setup is finished." }),
@@ -420,6 +585,7 @@ describe("OnboardingManager", () => {
   it("surfaces inactive exact Memory and does not offer keep", () => {
     render(
       <OnboardingManager
+        profile={namedProfile()}
         snapshot={{
           ...emptySnapshot(),
           draft: draft({ currentStep: 6 }),
@@ -474,6 +640,20 @@ describe("OnboardingManager", () => {
     expect(isActionErrorStatus("saved")).toBe(false);
   });
 });
+
+/** A profile whose name is saved, so setup opens on the draft's own step. */
+function namedProfile(): ProfileDetailsView {
+  return {
+    displayName: "Alex",
+    birthDate: null,
+    gender: null,
+    unitsSystem: "metric",
+    heightCm: null,
+    timezoneName: "Europe/Berlin",
+    sports: [],
+    latestWeightKg: null,
+  };
+}
 
 function emptySnapshot(): OnboardingSnapshot {
   return {

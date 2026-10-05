@@ -16,6 +16,8 @@ import {
   type OnboardingActionState,
 } from "@/app/home/you/onboarding/action-state";
 import styles from "@/app/home/you/onboarding/onboarding.module.css";
+import { AboutYouForm, SportsForm } from "@/components/profile/profile-forms";
+import type { ProfileDetailsView } from "@/lib/profile/profile-contract";
 import {
   LIMITATION_CATEGORIES,
   ONBOARDING_STEPS,
@@ -42,6 +44,27 @@ const LIMITATION_LABELS = {
   unusual_fatigue: "Unusual fatigue",
   other: "Other constraint",
 } as const;
+
+/**
+ * Setup's eight steps (owner, 5 Oct 2026). The first two are the profile's
+ * own, saved straight to it; the other six are the draft's, which still
+ * counts them from one. A step's number on screen is the draft's plus two.
+ */
+const PROFILE_STEPS = ["About you", "Your sports"] as const;
+const SETUP_STEPS = [...PROFILE_STEPS, ...ONBOARDING_STEPS] as const;
+type ProfileStep = 1 | 2;
+
+/**
+ * The time zone and the units are the profile's, chosen in "About you". The
+ * draft still writes a memory statement for each when "Time and access" is
+ * saved; those two are never shown for review and never filed.
+ */
+function isProfileOwned(candidate: { fieldKey: string }) {
+  return (
+    candidate.fieldKey === "context:timezone" ||
+    candidate.fieldKey === "context:units"
+  );
+}
 
 type ReviewSelection = {
   decision: "" | "accepted" | "rejected";
@@ -89,8 +112,10 @@ export function OnboardingActionNotice({
 
 export function OnboardingManager({
   snapshot,
+  profile,
 }: {
   snapshot: OnboardingSnapshot;
+  profile: ProfileDetailsView;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(
@@ -98,6 +123,12 @@ export function OnboardingManager({
     INITIAL_ONBOARDING_ACTION_STATE,
   );
   const [selectedStep, setVisibleStep] = useState<OnboardingStep | null>(null);
+  // Only the name is required, and it is asked first: until it is saved,
+  // setup opens on "About you" and the later steps wait.
+  const named = Boolean(profile.displayName);
+  const [profileStep, setProfileStep] = useState<ProfileStep | null>(
+    named ? null : 1,
+  );
   // A saved step goes where its result says. This is done on the result, not
   // on the button's click: clearing the selection there unmounted a revisited
   // step's form before it was sent, so nothing was saved and "Save and finish
@@ -146,7 +177,7 @@ export function OnboardingManager({
     ) {
       headingRef.current?.focus();
     }
-  }, [snapshot.draft, visibleStep, state.status]);
+  }, [snapshot.draft, visibleStep, profileStep, state.status]);
 
   // Done once, setup is not offered again (owner, 2 Oct 2026): everything it
   // filed can be changed where it lives. A draft begun before that rule is
@@ -209,6 +240,11 @@ export function OnboardingManager({
     }),
   );
   const rankPreview = buildRankPreview(snapshot, activeReviewSelections);
+  const draftStep = profileStep === null ? visibleStep : null;
+  const shownStep = profileStep ?? visibleStep + PROFILE_STEPS.length;
+  const reviewedMemory = snapshot.memoryCandidates.filter(
+    (candidate) => !isProfileOwned(candidate),
+  );
   const coreGoalCount = rankPreview.filter(
     (goal) => goal.tier === "core",
   ).length;
@@ -217,18 +253,28 @@ export function OnboardingManager({
     <div className={styles.manager}>
       <nav className={styles.progress} aria-label="Guided setup progress">
         <ol>
-          {ONBOARDING_STEPS.map((label, index) => {
-            const step = (index + 1) as OnboardingStep;
+          {SETUP_STEPS.map((label, index) => {
+            const step = index + 1;
+            const ofDraft = step - PROFILE_STEPS.length;
+            const reachable =
+              ofDraft < 1 ? step === 1 || named : ofDraft <= draft.currentStep;
             return (
               <li
-                data-current={visibleStep === step ? "true" : undefined}
-                data-saved={draft.currentStep > step ? "true" : undefined}
+                data-current={shownStep === step ? "true" : undefined}
+                data-saved={
+                  (ofDraft < 1 ? named : draft.currentStep > ofDraft)
+                    ? "true"
+                    : undefined
+                }
                 key={label}
               >
                 <button
-                  aria-current={visibleStep === step ? "step" : undefined}
-                  disabled={step > draft.currentStep}
-                  onClick={() => setVisibleStep(step)}
+                  aria-current={shownStep === step ? "step" : undefined}
+                  disabled={!reachable || !named}
+                  onClick={() => {
+                    setProfileStep(ofDraft < 1 ? (step as ProfileStep) : null);
+                    if (ofDraft >= 1) setVisibleStep(ofDraft as OnboardingStep);
+                  }}
                   type="button"
                 >
                   <span>{step}</span>
@@ -244,25 +290,49 @@ export function OnboardingManager({
 
       <header className={styles.stepHeader}>
         <p>
-          Step {visibleStep} of 6 · {ONBOARDING_STEPS[visibleStep - 1]}
+          Step {shownStep} of {SETUP_STEPS.length} ·{" "}
+          {SETUP_STEPS[shownStep - 1]}
         </p>
         <h2 ref={headingRef} tabIndex={-1}>
-          {stepHeading(visibleStep)}
+          {profileStep === 1
+            ? "Start with the basics."
+            : profileStep === 2
+              ? "Pick your sports."
+              : stepHeading(visibleStep)}
         </h2>
         {/* When the draft expires is said where it matters: on You, after
             "Save and finish later" (owner, 2 Oct 2026). */}
       </header>
 
-      {visibleStep === 1 ? (
+      {profileStep === 1 ? (
+        <AboutYouForm
+          intro={
+            // The start card says this, and an account that has just signed
+            // up never sees the start card: it lands here.
+            <p className={styles.explainer}>
+              Your answers are stored in your account so you can resume on
+              another device. They are not sent to an AI provider. Setup is
+              optional and never blocks planning or logging.
+            </p>
+          }
+          onSaved={() => setProfileStep(2)}
+          profile={profile}
+          submitLabel="Save and continue"
+        />
+      ) : null}
+
+      {profileStep === 2 ? (
+        <SportsForm
+          onBack={() => setProfileStep(1)}
+          onSaved={() => setProfileStep(null)}
+          sports={profile.sports}
+          submitLabel="Save and continue"
+        />
+      ) : null}
+
+      {draftStep === 1 ? (
         <form action={formAction} className={styles.stepForm}>
           <StepMeta operation="save_goals" revision={draft.revision} step={1} />
-          {/* The start card says this, and an account that has just signed
-              up never sees the start card: it lands here. */}
-          <p className={styles.explainer}>
-            Your answers are stored in your account so you can resume on another
-            device. They are not sent to an AI provider. Setup is optional and
-            never blocks planning or logging.
-          </p>
           {Array.from({ length: goalCount }, (_, index) => (
             <GoalFields
               candidate={snapshot.goalCandidates[index]}
@@ -281,14 +351,14 @@ export function OnboardingManager({
           ) : null}
           <StepActions
             currentStep={1}
-            first
+            onBack={() => setProfileStep(2)}
             pending={pending}
             setVisibleStep={setVisibleStep}
           />
         </form>
       ) : null}
 
-      {visibleStep === 2 ? (
+      {draftStep === 2 ? (
         <form action={formAction} className={styles.stepForm}>
           <StepMeta
             operation="save_training"
@@ -348,7 +418,7 @@ export function OnboardingManager({
         </form>
       ) : null}
 
-      {visibleStep === 3 ? (
+      {draftStep === 3 ? (
         <form action={formAction} className={styles.stepForm}>
           <StepMeta
             operation="save_context"
@@ -404,23 +474,18 @@ export function OnboardingManager({
             />
             <small>Up to 10 labels, separated by commas.</small>
           </label>
-          <div className={styles.fieldGrid}>
-            <label>
-              Timezone
-              <TimezoneSelect saved={snapshot.draft?.timezoneName ?? null} />
-            </label>
-            <label>
-              Units
-              <select
-                defaultValue={draft.units ?? "metric"}
-                name="units"
-                required
-              >
-                <option value="metric">Metric</option>
-                <option value="imperial">Imperial</option>
-              </select>
-            </label>
-          </div>
+          {/* Chosen in "About you" and kept in the profile. The draft still
+              asks for both, so they are sent from there, unseen. */}
+          <input
+            name="timezoneName"
+            type="hidden"
+            value={profile.timezoneName ?? draft.timezoneName ?? "UTC"}
+          />
+          <input
+            name="units"
+            type="hidden"
+            value={profile.unitsSystem ?? draft.units ?? "metric"}
+          />
           <StepActions
             currentStep={3}
             pending={pending}
@@ -429,7 +494,7 @@ export function OnboardingManager({
         </form>
       ) : null}
 
-      {visibleStep === 4 ? (
+      {draftStep === 4 ? (
         <form action={formAction} className={styles.stepForm}>
           <StepMeta
             operation="save_preferences"
@@ -460,7 +525,7 @@ export function OnboardingManager({
         </form>
       ) : null}
 
-      {visibleStep === 5 ? (
+      {draftStep === 5 ? (
         <form action={formAction} className={styles.stepForm}>
           <StepMeta
             operation="save_constraints"
@@ -513,7 +578,7 @@ export function OnboardingManager({
         </form>
       ) : null}
 
-      {visibleStep === 6 ? (
+      {draftStep === 6 ? (
         <form action={formAction} className={styles.stepForm}>
           <input name="operation" type="hidden" value="publish" />
           <input
@@ -570,7 +635,28 @@ export function OnboardingManager({
                 }
               />
             ))}
-            {snapshot.memoryCandidates.map((candidate) => (
+            {snapshot.memoryCandidates
+              .filter(isProfileOwned)
+              .map((candidate) => (
+                <span hidden key={candidate.id}>
+                  <input
+                    name="candidateId"
+                    type="hidden"
+                    value={candidate.id}
+                  />
+                  <input
+                    name={`kind:${candidate.id}`}
+                    type="hidden"
+                    value="memory"
+                  />
+                  <input
+                    name={`decision:${candidate.id}`}
+                    type="hidden"
+                    value="rejected"
+                  />
+                </span>
+              ))}
+            {reviewedMemory.map((candidate) => (
               <ReviewCard
                 candidate={candidate}
                 destination="Memory"
@@ -663,28 +749,28 @@ function StepMeta({
 
 function StepActions({
   currentStep,
-  first = false,
+  onBack,
   pending,
   setVisibleStep,
 }: {
   currentStep: OnboardingStep;
-  first?: boolean;
+  /** Where Back goes when it is not the draft's step before this one. */
+  onBack?: () => void;
   pending: boolean;
   setVisibleStep: (step: OnboardingStep | null) => void;
 }) {
   return (
     <div className={styles.stepActions}>
-      {!first ? (
-        <button
-          className={styles.secondaryButton}
-          onClick={() =>
-            setVisibleStep(Math.max(1, currentStep - 1) as OnboardingStep)
-          }
-          type="button"
-        >
-          Back
-        </button>
-      ) : null}
+      <button
+        className={styles.secondaryButton}
+        onClick={
+          onBack ??
+          (() => setVisibleStep(Math.max(1, currentStep - 1) as OnboardingStep))
+        }
+        type="button"
+      >
+        Back
+      </button>
       {/* Leaving must not wait on a field: the browser's own check is off
           for this button, and the action leaves even when the step is not
           complete enough to save. */}
@@ -1129,70 +1215,8 @@ function localToday() {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
-/**
- * A time zone is chosen, not typed (owner, 2 Oct 2026). The list is the
- * browser's own and is read on the client only: the server renders the one
- * option it knows, the client agrees on its first render, and hydration
- * cannot mismatch. With nothing saved yet it starts on the browser's zone.
- */
-function TimezoneSelect({ saved }: { saved: string | null }) {
-  const zones = useSyncExternalStore(subscribeNothing, readZones, noZones);
-  const detected = useSyncExternalStore(
-    subscribeNothing,
-    readBrowserZone,
-    () => null,
-  );
-  const [chosen, setChosen] = useState<string | null>(null);
-  const value = chosen ?? saved ?? detected ?? "UTC";
-  // The browser's list need not hold the saved zone, and Chrome's leaves
-  // out UTC, which is what a draft with no zone starts from.
-  const options = [...new Set(["UTC", value, ...zones])].toSorted();
-  return (
-    <select
-      name="timezoneName"
-      onChange={(event) => setChosen(event.target.value)}
-      required
-      value={value}
-    >
-      {options.map((zone) => (
-        <option key={zone} value={zone}>
-          {zone.replaceAll("_", " ")}
-        </option>
-      ))}
-    </select>
-  );
-}
-
 function subscribeNothing() {
   return () => {};
-}
-
-const NO_ZONES: readonly string[] = [];
-
-function noZones() {
-  return NO_ZONES;
-}
-
-let knownZones: readonly string[] | null = null;
-
-/** Cached, because a store's snapshot must be the same array every time. */
-function readZones(): readonly string[] {
-  if (knownZones === null) {
-    try {
-      knownZones = Intl.supportedValuesOf("timeZone");
-    } catch {
-      knownZones = NO_ZONES;
-    }
-  }
-  return knownZones;
-}
-
-function readBrowserZone(): string | null {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone ?? null;
-  } catch {
-    return null;
-  }
 }
 
 function stripConstraintPrefix(content: string, label: string) {

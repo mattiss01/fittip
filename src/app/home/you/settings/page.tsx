@@ -1,25 +1,37 @@
 import { redirect } from "next/navigation";
 
 import {
+  AboutYouForm,
+  SportsForm,
+  WeightHistory,
+} from "@/components/profile/profile-forms";
+import {
   createProfileRepository,
   ProfileAuthenticationError,
 } from "@/server/repositories/profile-repository";
 import homeStyles from "../../home.module.css";
 import { BackLink } from "../back-link";
+import setupStyles from "../onboarding/onboarding.module.css";
 import styles from "../you.module.css";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Settings, reached from the gear on You. It holds nothing yet: account
- * details, subscription, language and appearance are meant to land here, and
- * none of them is listed until it exists. Sign out stays on You (owner,
- * 2 Oct 2026).
+ * Settings, reached from the gear on You. It holds what guided setup asks
+ * first and saves to the profile: the owner's details, their weight history
+ * and their sports (owner, 5 Oct 2026). Subscription, language and
+ * appearance are meant to land here too, and none is listed until it exists.
+ * Sign out stays on You (owner, 2 Oct 2026).
  */
 export default async function SettingsPage() {
-  let profile;
+  let details;
+  let weights;
   try {
-    profile = await (await createProfileRepository()).getCurrentProfile();
+    const profiles = await createProfileRepository();
+    [details, weights] = await Promise.all([
+      profiles.getDetails(),
+      profiles.listWeightEntries(),
+    ]);
   } catch (error) {
     if (
       error instanceof ProfileAuthenticationError &&
@@ -30,15 +42,32 @@ export default async function SettingsPage() {
     if (error instanceof ProfileAuthenticationError) redirect("/");
     throw error;
   }
-  if (!profile) redirect("/");
+  if (!details) redirect("/");
 
   return (
-    <main className={homeStyles.shell} id="main-content">
+    <main
+      className={`${homeStyles.shell} ${setupStyles.page}`}
+      id="main-content"
+    >
       <BackLink href="/home/you" label="You" />
       <header className={styles.header}>
         <h1>Settings</h1>
       </header>
-      <p className={styles.note}>Nothing to set yet.</p>
+      <section className={setupStyles.settingsCard} aria-labelledby="about">
+        <h2 id="about">About you</h2>
+        <AboutYouForm profile={details} submitLabel="Save" />
+      </section>
+      <section className={setupStyles.settingsCard} aria-labelledby="weights">
+        <h2 id="weights">Weight history</h2>
+        <WeightHistory
+          entries={weights}
+          unitsSystem={details.unitsSystem ?? "metric"}
+        />
+      </section>
+      <section className={setupStyles.settingsCard} aria-labelledby="sports">
+        <h2 id="sports">Your sports</h2>
+        <SportsForm sports={details.sports} submitLabel="Save sports" />
+      </section>
     </main>
   );
 }

@@ -1337,18 +1337,36 @@ export type Database = {
       };
       profiles: {
         Row: {
+          birth_date: string | null;
           created_at: string;
+          display_name: string | null;
+          gender: string | null;
+          height_cm: number | null;
+          sports: string[];
           timezone_name: string | null;
+          units_system: string | null;
           user_id: string;
         };
         Insert: {
+          birth_date?: string | null;
           created_at?: string;
+          display_name?: string | null;
+          gender?: string | null;
+          height_cm?: number | null;
+          sports?: string[];
           timezone_name?: string | null;
+          units_system?: string | null;
           user_id: string;
         };
         Update: {
+          birth_date?: string | null;
           created_at?: string;
+          display_name?: string | null;
+          gender?: string | null;
+          height_cm?: number | null;
+          sports?: string[];
           timezone_name?: string | null;
+          units_system?: string | null;
           user_id?: string;
         };
         Relationships: [];
@@ -2503,6 +2521,35 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "rolling_plan_sessions";
             referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      weight_entries: {
+        Row: {
+          created_at: string;
+          measured_on: string;
+          user_id: string;
+          weight_kg: number;
+        };
+        Insert: {
+          created_at?: string;
+          measured_on: string;
+          user_id: string;
+          weight_kg: number;
+        };
+        Update: {
+          created_at?: string;
+          measured_on?: string;
+          user_id?: string;
+          weight_kg?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "weight_entries_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
           },
         ];
       };

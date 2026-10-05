@@ -6,13 +6,11 @@ import {
   WEIGHT_KG_RANGE,
   type UnitsSystem,
 } from "@/lib/profile/body-measures";
+import { GENDERS, type Gender } from "@/lib/profile/profile-contract";
 import {
   SPORT_NAME_MAX_LENGTH,
   SPORTS_MAX_COUNT,
 } from "@/lib/sports/sport-presets";
-
-export const GENDERS = ["female", "male", "other"] as const;
-export type Gender = (typeof GENDERS)[number];
 
 /**
  * "About you" as it is saved (owner, 5 Oct 2026). Only the name is required;
