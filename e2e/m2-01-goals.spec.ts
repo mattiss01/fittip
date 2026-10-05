@@ -61,8 +61,10 @@ test.describe("M2-01 goal management", () => {
       await addForm.getByLabel("Sports").fill("Running");
       // With three core goals the form starts on Supporting; Core is chosen
       // on purpose so the server has a fourth to refuse.
-      await expect(addForm.getByLabel("Supporting")).toBeChecked();
-      await addForm.getByLabel("Core").check();
+      await expect(
+        addForm.getByRole("radio", { name: "Supporting" }),
+      ).toBeChecked();
+      await addForm.getByRole("radio", { name: "Core" }).check();
       await addForm.getByRole("button", { name: "Create active goal" }).click();
       await expect(
         page.getByText(/Three core goals are already active/),
@@ -72,7 +74,7 @@ test.describe("M2-01 goal management", () => {
       await expect(addForm.getByLabel("Desired outcome")).toHaveValue(
         "This must not become active core.",
       );
-      await expect(addForm.getByLabel("Core")).toBeChecked();
+      await expect(addForm.getByRole("radio", { name: "Core" })).toBeChecked();
       await page.screenshot({
         fullPage: true,
         path: path.join(evidenceDirectory, "M2-01-fourth-core-390x844.png"),
@@ -81,7 +83,7 @@ test.describe("M2-01 goal management", () => {
 
       const trailCard = goalCard(page, "Trail event");
       await openGoalDetails(trailCard);
-      await trailCard.getByLabel("Supporting").check();
+      await trailCard.getByRole("radio", { name: "Supporting" }).check();
       await trailCard.getByRole("button", { name: "Save goal" }).click();
       // Saving closes the editor.
       await expect(trailCard.locator("[data-goal-editor]")).toHaveCount(0);
@@ -89,7 +91,9 @@ test.describe("M2-01 goal management", () => {
         goalCard(page, "Trail event").getByLabel("Rank 2"),
       ).toBeVisible();
       await openGoalDetails(goalCard(page, "Trail event"));
-      await goalCard(page, "Trail event").getByLabel("Core").check();
+      await goalCard(page, "Trail event")
+        .getByRole("radio", { name: "Core" })
+        .check();
       await goalCard(page, "Trail event")
         .getByRole("button", { name: "Save goal" })
         .click();
@@ -99,13 +103,15 @@ test.describe("M2-01 goal management", () => {
 
       const mobilityTierCard = goalCard(page, "Mobility habit");
       await openGoalDetails(mobilityTierCard);
-      await mobilityTierCard.getByLabel("Core").check();
+      await mobilityTierCard.getByRole("radio", { name: "Core" }).check();
       await mobilityTierCard.getByRole("button", { name: "Save goal" }).click();
       await expect(
         page.getByText(/Three core goals are already active/),
       ).toBeVisible();
       // A refusal keeps the editor open with what was chosen.
-      await expect(mobilityTierCard.getByLabel("Core")).toBeChecked();
+      await expect(
+        mobilityTierCard.getByRole("radio", { name: "Core" }),
+      ).toBeChecked();
       await expect(mobilityTierCard.getByLabel("Rank 1")).toBeVisible();
       await mobilityTierCard.getByRole("button", { name: "Cancel" }).click();
 
@@ -324,7 +330,7 @@ test.describe("M2-05 unconfirmed goal mutation", () => {
       await form.getByLabel("Goal title").fill("Unconfirmed goal");
       await form.getByLabel("Desired outcome").fill("This is never confirmed.");
       await form.getByLabel("Sports").fill("Running");
-      await form.getByLabel("Supporting").check();
+      await form.getByRole("radio", { name: "Supporting" }).check();
       await form.getByRole("button", { name: "Create active goal" }).click();
 
       const notice = page.getByRole("status");
@@ -371,7 +377,9 @@ async function createGoal(
     .getByLabel("Desired outcome")
     .fill(`Make measurable progress toward ${title.toLowerCase()}.`);
   await form.getByLabel("Sports").fill(area);
-  await form.getByLabel(tier === "core" ? "Core" : "Supporting").check();
+  await form
+    .getByRole("radio", { name: tier === "core" ? "Core" : "Supporting" })
+    .check();
   await form.getByRole("button", { name: "Create active goal" }).click();
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
 }

@@ -244,7 +244,7 @@ async function addGoal(page: Page, title: string) {
     .getByLabel("Desired outcome")
     .fill("Finish a half marathon feeling strong rather than surviving it.");
   await form.getByLabel("Sports").fill("Running");
-  await form.getByLabel("Core").check();
+  await form.getByRole("radio", { name: "Core" }).check();
   await form.getByRole("button", { name: "Create active goal" }).click();
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
 }
