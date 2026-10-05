@@ -149,7 +149,8 @@ async function completeGuidedSetup(
   await page.getByLabel("Goal title").fill(goalTitle);
   await page.getByLabel("Desired outcome").fill(goalOutcome);
   // The goal has one sport, chosen from the ones picked two steps before.
-  await page.getByLabel("Sport", { exact: true }).selectOption("Running");
+  await page.getByRole("button", { name: /^Sport/ }).click();
+  await page.getByRole("option", { name: "Running" }).click();
   // "Continue later" is setup's one way out besides finishing: it saves the
   // step and goes to the app. There is no "Cancel and delete draft".
   await expect(

@@ -21,6 +21,7 @@ import {
 } from "@/app/home/you/onboarding/action-state";
 import styles from "@/app/home/you/onboarding/onboarding.module.css";
 import { adoptBrowserTimezoneAction } from "@/app/home/you/profile-actions";
+import { DateField } from "@/components/date-field/date-field";
 import {
   ABOUT_YOU_QUESTIONS,
   AboutYouForm,
@@ -465,6 +466,13 @@ export function OnboardingManager({
                 candidate={goalFields[index]}
                 index={index}
                 key={index}
+                // A goal just added can be taken away again; the first is
+                // the one the step asks for.
+                onRemove={
+                  index > 0 && index === goalCount - 1
+                    ? () => setGoalCount((count) => count - 1)
+                    : undefined
+                }
                 sports={profile.sports}
               />
             ))}
@@ -876,11 +884,13 @@ function GoalFields({
   candidate,
   index,
   sports,
+  onRemove,
 }: {
   candidate?: GoalFieldsView;
   index: number;
   /** The sports chosen in "Your sports", offered for the goal to pick from. */
   sports: string[];
+  onRemove?: () => void;
 }) {
   // The owner's own day once the browser is there to ask; the server, which
   // does not know their zone yet, renders the UTC one.
@@ -915,14 +925,12 @@ function GoalFields({
         initial={candidate?.activityAreas ?? []}
         sports={sports}
       />
-      <label>
-        Target date (optional)
-        <input
-          defaultValue={candidate?.targetDate ?? ""}
-          name={`goalTargetDate:${index}`}
-          type="date"
-        />
-      </label>
+      <DateField
+        calendar
+        initial={candidate?.targetDate ?? null}
+        label="Target date (optional)"
+        name={`goalTargetDate:${index}`}
+      />
       {/* Two choices side by side, as on Goals, not a list to open. A group
           with a plain label over it: inside this card a fieldset's legend
           is drawn as a card title, and took a place beside "Core". */}
@@ -980,6 +988,11 @@ function GoalFields({
           value={value ?? ""}
         />
       ))}
+      {onRemove ? (
+        <button className={styles.removeEntry} onClick={onRemove} type="button">
+          Remove this goal
+        </button>
+      ) : null}
     </fieldset>
   );
 }
@@ -1320,26 +1333,81 @@ function GoalSport({
   const start = first === null ? "" : (known(first) ?? first);
   const [choice, setChoice] = useState(start);
   const [made, setMade] = useState("");
+  const [open, setOpen] = useState(false);
   const adding = choice === ANOTHER_SPORT;
+  const labelId = `goal-sport-${index}`;
+  const pick = (value: string) => {
+    setChoice(value);
+    setOpen(false);
+  };
+  // Left on the sport it came with, a goal keeps every sport it named; only
+  // a different choice makes it that one alone.
+  const sent = adding
+    ? made.trim()
+    : choice === start && initial.length > 1
+      ? initial.join(", ")
+      : choice;
 
+  // A list of our own, opened under its button, in place of the browser's
+  // drop-down, whose opened list cannot be styled (owner, 5 Oct 2026).
   return (
-    <>
-      <label>
+    <div className={styles.fieldGroup}>
+      <span className={styles.fieldLabel} id={labelId}>
         Sport
-        <select
-          onChange={(event) => setChoice(event.target.value)}
-          required={index === 0}
-          value={choice}
+      </span>
+      <button
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-labelledby={`${labelId} ${labelId}-value`}
+        className={styles.picker}
+        data-empty={choice === "" ? "true" : undefined}
+        onClick={() => setOpen((current) => !current)}
+        type="button"
+      >
+        <span id={`${labelId}-value`}>
+          {adding ? "Another sport" : choice || "Choose a sport"}
+        </span>
+        <svg
+          aria-hidden="true"
+          fill="none"
+          height="18"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2.2"
+          viewBox="0 0 24 24"
+          width="18"
         >
-          <option value="">Choose a sport</option>
+          <path d={open ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6"} />
+        </svg>
+      </button>
+      {open ? (
+        <div
+          aria-labelledby={labelId}
+          className={styles.pickerOptions}
+          role="listbox"
+        >
           {options.map((sport) => (
-            <option key={sport} value={sport}>
+            <button
+              aria-selected={choice === sport}
+              key={sport}
+              onClick={() => pick(sport)}
+              role="option"
+              type="button"
+            >
               {sport}
-            </option>
+            </button>
           ))}
-          <option value={ANOTHER_SPORT}>Add another sport…</option>
-        </select>
-      </label>
+          <button
+            aria-selected={adding}
+            onClick={() => pick(ANOTHER_SPORT)}
+            role="option"
+            type="button"
+          >
+            Add another sport…
+          </button>
+        </div>
+      ) : null}
       {adding ? (
         <label>
           New sport
@@ -1353,20 +1421,21 @@ function GoalSport({
           />
         </label>
       ) : null}
-      <input
-        name={`goalActivities:${index}`}
-        type="hidden"
-        // Left on the sport it came with, a goal keeps every sport it
-        // named; only a different choice makes it that one alone.
-        value={
-          adding
-            ? made.trim()
-            : choice === start && initial.length > 1
-              ? initial.join(", ")
-              : choice
-        }
-      />
-    </>
+      <input name={`goalActivities:${index}`} type="hidden" value={sent} />
+      {/* The first goal must name a sport, and a hidden field cannot be
+          required, so this one stands in for it: out of sight, but where the
+          browser can point at it when nothing is chosen. */}
+      {index === 0 ? (
+        <input
+          aria-hidden="true"
+          className={styles.requiredProxy}
+          onChange={() => {}}
+          required
+          tabIndex={-1}
+          value={sent}
+        />
+      ) : null}
+    </div>
   );
 }
 

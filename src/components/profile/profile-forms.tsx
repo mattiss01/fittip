@@ -22,6 +22,7 @@ import {
   saveProfileDetailsAction,
   saveProfileSportsAction,
 } from "@/app/home/you/profile-actions";
+import { DateField } from "@/components/date-field/date-field";
 import { formatRoadmapDate } from "@/components/roadmap/roadmap-dates";
 import {
   cmToFeetAndInches,
@@ -274,10 +275,14 @@ export function AboutYouForm({
         required
       />
     </label>,
-    <BirthdayField
+    // Typed only: a calendar is a poor way to reach a year decades back.
+    <DateField
+      centred={paged}
       hideLabel={paged}
       initial={profile.birthDate}
       key="birthday"
+      label="Birthday (optional)"
+      name="birthDate"
     />,
     <label key="gender">
       {name("Gender (optional)")}
@@ -467,106 +472,6 @@ export function AboutYouForm({
         </button>
       </div>
     </form>
-  );
-}
-
-const DATE_PARTS = {
-  day: { label: "Day", hint: "DD", length: 2 },
-  month: { label: "Month", hint: "MM", length: 2 },
-  year: { label: "Year", hint: "YYYY", length: 4 },
-} as const;
-type DatePart = keyof typeof DATE_PARTS;
-type DateOrder = readonly [DatePart, DatePart, DatePart];
-
-const DAY_FIRST: DateOrder = ["day", "month", "year"];
-const MONTH_FIRST: DateOrder = ["month", "day", "year"];
-const YEAR_FIRST: DateOrder = ["year", "month", "day"];
-
-/**
- * The order the browser's language writes a date in. One of three fixed
- * arrays, because a store's snapshot must be the same value every time.
- */
-function readDateOrder(): DateOrder {
-  try {
-    const order = new Intl.DateTimeFormat(navigator.language)
-      .formatToParts(new Date(2000, 11, 31))
-      .map((part) => part.type)
-      .filter((type) => type in DATE_PARTS);
-    if (order[0] === "month") return MONTH_FIRST;
-    if (order[0] === "year") return YEAR_FIRST;
-  } catch {
-    // Day first, below.
-  }
-  return DAY_FIRST;
-}
-
-/**
- * A birthday typed on the keyboard (owner, 5 Oct 2026): day, month and year
- * in three short fields, in the order the owner's language writes them, each
- * moving on to the next when it is full. A calendar is a poor way to reach a
- * year decades back. It is sent as one date; a date half typed is sent as it
- * stands and refused by the same check as any other date that is not one.
- */
-function BirthdayField({
-  initial,
-  hideLabel,
-}: {
-  initial: string | null;
-  hideLabel: boolean;
-}) {
-  const order = useSyncExternalStore(
-    subscribeNothing,
-    readDateOrder,
-    () => DAY_FIRST,
-  );
-  const [parts, setParts] = useState<Record<DatePart, string>>(() => {
-    const [year = "", month = "", day = ""] = (initial ?? "").split("-");
-    return { day, month, year };
-  });
-  const fields = useRef<Partial<Record<DatePart, HTMLInputElement | null>>>({});
-  const empty = !parts.day && !parts.month && !parts.year;
-  const date = empty
-    ? ""
-    : `${parts.year}-${parts.month.padStart(2, "0")}-${parts.day.padStart(2, "0")}`;
-
-  return (
-    <div
-      aria-labelledby="birthday-label"
-      className={styles.fieldGroup}
-      role="group"
-    >
-      <span
-        className={hideLabel ? styles.srOnly : styles.fieldLabel}
-        id="birthday-label"
-      >
-        Birthday (optional)
-      </span>
-      <div className={styles.dateParts}>
-        {order.map((part, position) => (
-          <input
-            aria-label={DATE_PARTS[part].label}
-            data-part={part}
-            inputMode="numeric"
-            key={part}
-            maxLength={DATE_PARTS[part].length}
-            onChange={(event) => {
-              const digits = event.target.value.replace(/\D/g, "");
-              setParts((current) => ({ ...current, [part]: digits }));
-              const next = order[position + 1];
-              if (next && digits.length === DATE_PARTS[part].length) {
-                fields.current[next]?.focus();
-              }
-            }}
-            placeholder={DATE_PARTS[part].hint}
-            ref={(field) => {
-              fields.current[part] = field;
-            }}
-            value={parts[part]}
-          />
-        ))}
-      </div>
-      <input name="birthDate" type="hidden" value={date} />
-    </div>
   );
 }
 

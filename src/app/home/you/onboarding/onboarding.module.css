@@ -267,9 +267,101 @@ main.setupPage {
 
 /* A group of choices under one label, drawn as a field's label is. */
 .fieldGroup {
+  position: relative;
   min-width: 0;
   display: grid;
   gap: 0.3rem;
+}
+
+/* A list to choose one from, of our own making: a button drawn as a field
+   is, and under it, when open, the choices as rows with the chosen one in
+   the app's orange. */
+.stepForm .picker {
+  width: 100%;
+  min-height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: white;
+  color: var(--ledger-ink);
+  font: 400 1rem/1.35 var(--font-sans);
+  text-align: left;
+}
+
+.stepForm .picker:hover {
+  background: white;
+}
+
+.stepForm .picker[data-empty="true"] > span {
+  color: var(--ledger-muted);
+}
+
+.pickerOptions {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.35rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: white;
+  box-shadow: var(--shadow-card);
+}
+
+.stepForm .pickerOptions button {
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: calc(var(--radius-control) - 0.3rem);
+  background: transparent;
+  color: var(--ledger-ink);
+  font: 600 0.98rem var(--font-sans);
+  text-align: left;
+}
+
+.stepForm .pickerOptions button:hover {
+  background: var(--line);
+}
+
+.stepForm .pickerOptions button[aria-selected="true"] {
+  background: var(--ember);
+  color: var(--paper);
+}
+
+.stepForm input.requiredProxy {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  min-height: 0;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Under a goal that was just added: the way to take it away again. */
+.stepForm .removeEntry {
+  width: fit-content;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #8d2f20;
+  font: 600 0.92rem var(--font-sans);
+  justify-self: center;
+  text-decoration: underline;
+  text-underline-offset: 0.25rem;
+}
+
+.stepForm .removeEntry:hover {
+  background: transparent;
 }
 
 .fieldLabel {
@@ -775,31 +867,6 @@ label.constraintChoice {
 
 .stepForm .measure input:focus {
   outline: none;
-}
-
-/* A birthday is typed: day, month and year, each in a short field of its
-   own, in the order the owner's language writes them. */
-.dateParts {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-}
-
-.stepForm .dateParts input {
-  width: 4.2rem;
-  padding-inline: 0.4rem;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
-
-.stepForm .dateParts input[data-part="year"] {
-  width: 5.6rem;
-}
-
-.dateParts > span {
-  color: var(--ledger-muted);
-  font-weight: 600;
 }
 
 .stepForm .question > small {

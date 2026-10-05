@@ -473,13 +473,37 @@ describe("OnboardingManager", () => {
       />,
     );
 
-    const sport = screen.getByLabelText("Sport");
-    expect(sport).toHaveValue("Running");
+    const sport = screen.getByRole("button", { name: /^Sport/ });
+    expect(sport).toHaveTextContent("Running");
+    fireEvent.click(sport);
     expect(
-      within(sport)
-        .getAllByRole("option")
-        .map((option) => option.textContent),
-    ).toEqual(["Choose a sport", "Cycling", "Running", "Add another sport…"]);
+      screen.getAllByRole("option").map((option) => option.textContent),
+    ).toEqual(["Cycling", "Running", "Add another sport…"]);
+    expect(screen.getByRole("option", { name: "Running" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("lets a goal that was just added be taken away again, but not the first", () => {
+    render(
+      <OnboardingManager
+        profile={namedProfile()}
+        snapshot={{
+          ...emptySnapshot(),
+          draft: draft({ currentStep: 1, revision: 1 }),
+        }}
+      />,
+    );
+    const remove = () =>
+      screen.queryByRole("button", { name: "Remove this goal" });
+
+    expect(remove()).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Add another goal" }));
+    expect(screen.getAllByLabelText("Goal title")).toHaveLength(2);
+    fireEvent.click(remove()!);
+    expect(screen.getAllByLabelText("Goal title")).toHaveLength(1);
+    expect(remove()).toBeNull();
   });
 
   it("asks again before leaving setup, and says what setup is for", () => {
@@ -527,25 +551,55 @@ describe("OnboardingManager", () => {
     expect(screen.getByText("What you want to train for")).toBeVisible();
     // The goal has exactly one sport, chosen from the ones picked in "Your
     // sports" or made up here; nothing is chosen to begin with.
-    const sport = screen.getByLabelText("Sport");
+    const sport = screen.getByRole("button", { name: /^Sport/ });
     const goalSport = () =>
       container.querySelector<HTMLInputElement>(
         'input[name="goalActivities:0"]',
       );
-    expect(sport).toBeRequired();
-    expect(sport).toHaveValue("");
-    fireEvent.change(sport, { target: { value: "Running" } });
+    const choose = (name: string) => {
+      fireEvent.click(sport);
+      fireEvent.click(screen.getByRole("option", { name }));
+    };
+    expect(sport).toHaveTextContent("Choose a sport");
+    expect(goalSport()).toHaveValue("");
+    // The first goal must name one: a field stands in for the hidden value
+    // so the browser can refuse the step and point at it.
+    expect(
+      container.querySelector('input[required][aria-hidden="true"]'),
+    ).toHaveValue("");
+    // The list is ours, opened under its button and closed by a choice.
+    expect(screen.queryByRole("listbox")).toBeNull();
+    choose("Running");
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(sport).toHaveTextContent("Running");
     expect(goalSport()).toHaveValue("Running");
 
-    const another = within(sport).getByRole<HTMLOptionElement>("option", {
-      name: "Add another sport…",
-    });
-    fireEvent.change(sport, { target: { value: another.value } });
+    choose("Add another sport…");
     const made = screen.getByLabelText("New sport");
     expect(made).toBeRequired();
     fireEvent.change(made, { target: { value: "  Stabwurf " } });
     expect(goalSport()).toHaveValue("Stabwurf");
-    expect(screen.getByLabelText("Target date (optional)")).not.toBeRequired();
+    // The target date is typed or picked from a calendar, and optional.
+    const target = screen.getByRole("group", {
+      name: "Target date (optional)",
+    });
+    expect(
+      within(target).getByRole("button", {
+        name: "Pick target date (optional) from a calendar",
+      }),
+    ).toBeVisible();
+    fireEvent.change(within(target).getByLabelText("Day"), {
+      target: { value: "15" },
+    });
+    fireEvent.change(within(target).getByLabelText("Month"), {
+      target: { value: "11" },
+    });
+    fireEvent.change(within(target).getByLabelText("Year"), {
+      target: { value: "2026" },
+    });
+    expect(
+      container.querySelector('input[name="goalTargetDate:0"]'),
+    ).toHaveValue("2026-11-15");
     // Two choices side by side, as on Goals, and an outcome field that
     // starts one line tall.
     expect(screen.getByRole("radio", { name: "Core" })).toBeChecked();

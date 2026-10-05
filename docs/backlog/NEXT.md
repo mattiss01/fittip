@@ -121,6 +121,16 @@ lane, one screen per merge.
       missed the restyle. A password field shows what is typed on request.
       "Create account" must not just empty the form over a small "Check your
       email": say it in a dialog whose button goes back to sign-in.
+- [ ] **Setup takes more than three goals.** Owner, 5 Oct 2026: three is the limit on core
+      goals, not on goals. Setup's goal step stops at three because the database does:
+      `apply_onboarding_change` refuses a fourth and `onboarding_goal_candidates.position`
+      is checked 1 to 3. Raising it replaces that function, so careful lane; do it with
+      the goals migration. The Goals page has no such limit.
+- [ ] **A date typed or picked, everywhere.** Owner, 5 Oct 2026. `DateField` (three typed
+      fields and a calendar button) is on a goal's target date, in setup and on Goals,
+      and, without the calendar, on the birthday. Still plain date fields: a session's
+      date (`plan-date-field.tsx`, with its `min` and `max`), a series' end, the log's
+      date, a memory's expiry, the roadmap's dates. Several are pinned by browser specs.
 - [ ] **Numbers without the struck-through zero.** Owner, 5 Oct 2026: the mono face
       (DM Mono, `--font-mono`) draws 0 with a line through it and the owner does not
       want it anywhere a number shows. Setup's percentage is in the sans face already;

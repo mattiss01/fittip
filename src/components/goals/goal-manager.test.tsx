@@ -199,7 +199,15 @@ describe("GoalManager", () => {
     // Empty and required: there is no "Other" to leave standing.
     expect(screen.getByLabelText("Sports")).toBeRequired();
     expect(screen.getByLabelText("Sports")).toHaveValue("");
-    expect(screen.getByLabelText("Target date (optional)")).not.toBeRequired();
+    // Typed, or picked from the calendar beside it; either way optional.
+    expect(
+      screen.getByRole("group", { name: "Target date (optional)" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        name: "Pick target date (optional) from a calendar",
+      }),
+    ).toBeVisible();
     // Not asked: a new goal starts on the owner's day.
     expect(document.querySelector('input[name="startDate"]')).toHaveValue(
       "2026-10-05",
