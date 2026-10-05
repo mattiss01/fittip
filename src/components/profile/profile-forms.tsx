@@ -294,21 +294,56 @@ export function AboutYouForm({
         ))}
       </select>
     </label>,
+    // Asked on its own, a measure is a number with its unit always beside
+    // it and a step either way (owner, 5 Oct 2026); on Settings it is a
+    // plain field under its label, which names the unit.
     units === "metric" ? (
-      <label key="height-metric">
-        {name("Height in cm (optional)")}
-        <input
-          defaultValue={profile.heightCm ?? ""}
-          inputMode="decimal"
+      paged ? (
+        <MeasureInput
+          initial={profile.heightCm}
+          key="height-metric"
+          label="Height in cm (optional)"
           name="heightCm"
-          placeholder={paged ? "cm" : undefined}
+          range={{ min: 50, max: 272 }}
+          start={170}
+          step={1}
+          unit="cm"
         />
-      </label>
+      ) : (
+        <label key="height-metric">
+          Height in cm (optional)
+          <input
+            defaultValue={profile.heightCm ?? ""}
+            inputMode="decimal"
+            name="heightCm"
+          />
+        </label>
+      )
+    ) : paged ? (
+      <div className={styles.measurePair} key="height-imperial">
+        <MeasureInput
+          initial={height?.feet ?? null}
+          label="Height, feet (optional)"
+          name="heightFeet"
+          range={{ min: 1, max: 8 }}
+          start={5}
+          step={1}
+          unit="ft"
+        />
+        <MeasureInput
+          initial={height?.inches ?? null}
+          label="Inches"
+          name="heightInches"
+          range={{ min: 0, max: 11 }}
+          start={7}
+          step={1}
+          unit="in"
+        />
+      </div>
     ) : (
-      // Two fields, so each keeps a word saying which it is.
       <div className={styles.fieldGrid} key="height-imperial">
         <label>
-          {paged ? "Feet" : "Height, feet (optional)"}
+          Height, feet (optional)
           <input
             defaultValue={height?.feet ?? ""}
             inputMode="numeric"
@@ -326,18 +361,45 @@ export function AboutYouForm({
       </div>
     ),
     units === "metric" ? (
-      <label key="weight-metric">
-        {name("Weight in kg (optional)")}
-        <input
-          defaultValue={profile.latestWeightKg ?? ""}
-          inputMode="decimal"
+      paged ? (
+        <MeasureInput
+          initial={profile.latestWeightKg}
+          key="weight-metric"
+          label="Weight in kg (optional)"
           name="weightKg"
-          placeholder={paged ? "kg" : undefined}
+          range={{ min: 20, max: 400 }}
+          start={70}
+          step={0.5}
+          unit="kg"
         />
-      </label>
+      ) : (
+        <label key="weight-metric">
+          Weight in kg (optional)
+          <input
+            defaultValue={profile.latestWeightKg ?? ""}
+            inputMode="decimal"
+            name="weightKg"
+          />
+        </label>
+      )
+    ) : paged ? (
+      <MeasureInput
+        initial={
+          profile.latestWeightKg === null
+            ? null
+            : kgToPounds(profile.latestWeightKg)
+        }
+        key="weight-imperial"
+        label="Weight in lb (optional)"
+        name="weightLb"
+        range={{ min: 44, max: 880 }}
+        start={155}
+        step={1}
+        unit="lb"
+      />
     ) : (
       <label key="weight-imperial">
-        {name("Weight in lb (optional)")}
+        Weight in lb (optional)
         <input
           defaultValue={
             profile.latestWeightKg === null
@@ -346,7 +408,6 @@ export function AboutYouForm({
           }
           inputMode="decimal"
           name="weightLb"
-          placeholder={paged ? "lb" : undefined}
         />
       </label>
     ),
@@ -410,6 +471,80 @@ export function AboutYouForm({
         </button>
       </div>
     </form>
+  );
+}
+
+/**
+ * A measure asked on its own in setup: the number, large, with its unit
+ * always beside it, and a button either side to step it. It can still be
+ * typed, with a comma or a point. Empty means not given; the first step from
+ * empty lands on `start`, a value in the middle of what people enter, rather
+ * than on the smallest one allowed.
+ */
+function MeasureInput({
+  name,
+  label,
+  unit,
+  step,
+  start,
+  range,
+  initial,
+}: {
+  name: string;
+  label: string;
+  unit: string;
+  step: number;
+  start: number;
+  range: { min: number; max: number };
+  initial: number | null;
+}) {
+  const [value, setValue] = useState(initial === null ? "" : String(initial));
+
+  const stepBy = (direction: 1 | -1) =>
+    setValue((current) => {
+      const typed = Number(current.trim().replace(",", "."));
+      if (current.trim() === "" || !Number.isFinite(typed)) {
+        return String(start);
+      }
+      const next = Math.min(
+        range.max,
+        Math.max(range.min, typed + direction * step),
+      );
+      // Halves stay halves and whole numbers stay whole.
+      return String(Math.round(next * 10) / 10);
+    });
+
+  return (
+    <div className={styles.measure}>
+      <button
+        aria-label={`Less: ${label}`}
+        onClick={() => stepBy(-1)}
+        type="button"
+      >
+        −
+      </button>
+      {/* The unit sits beside the label, not in it, or it would become part
+          of the field's name. */}
+      <div className={styles.measureBox}>
+        <label>
+          <span className={styles.srOnly}>{label}</span>
+          <input
+            inputMode="decimal"
+            name={name}
+            onChange={(event) => setValue(event.target.value)}
+            value={value}
+          />
+        </label>
+        <span aria-hidden="true">{unit}</span>
+      </div>
+      <button
+        aria-label={`More: ${label}`}
+        onClick={() => stepBy(1)}
+        type="button"
+      >
+        +
+      </button>
+    </div>
   );
 }
 

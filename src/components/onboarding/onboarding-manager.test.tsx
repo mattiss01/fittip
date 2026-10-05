@@ -278,6 +278,36 @@ describe("OnboardingManager", () => {
     ).toBeVisible();
   });
 
+  it("asks a measure as a number with its unit beside it and a step either way", () => {
+    render(
+      <AboutYouForm
+        profile={justNamedProfile()}
+        question={3}
+        submitLabel="Save and continue"
+      />,
+    );
+    const height = screen.getByLabelText("Height in cm (optional)");
+    const press = (name: string) =>
+      fireEvent.click(screen.getByRole("button", { name }));
+
+    // Empty until answered, with the unit there before and after typing.
+    expect(height).toHaveValue("");
+    expect(screen.getByText("cm")).toBeVisible();
+    // The first step lands in the middle of what people enter, not on the
+    // smallest height allowed.
+    press("More: Height in cm (optional)");
+    expect(height).toHaveValue("170");
+    press("More: Height in cm (optional)");
+    press("Less: Height in cm (optional)");
+    press("Less: Height in cm (optional)");
+    expect(height).toHaveValue("169");
+    // It can still be typed, with a comma, and stepped from there.
+    fireEvent.change(height, { target: { value: "180,5" } });
+    press("More: Height in cm (optional)");
+    expect(height).toHaveValue("181.5");
+    expect(screen.getByText("cm")).toBeVisible();
+  });
+
   it("shows the stored measures in feet and pounds when the units say so", () => {
     render(
       <AboutYouForm
