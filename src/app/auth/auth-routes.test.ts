@@ -1,27 +1,34 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { client, createServerUserClientMock, ensureCurrentProfileMock } =
-  vi.hoisted(() => {
-    const client = {
-      auth: {
-        exchangeCodeForSession: vi.fn(),
-        getClaims: vi.fn(),
-        signInWithPassword: vi.fn(),
-        signUp: vi.fn(),
-        signOut: vi.fn(),
-      },
-    };
+const {
+  client,
+  createServerUserClientMock,
+  ensureCurrentProfileMock,
+  getEntryStateMock,
+  applyOnboardingMock,
+} = vi.hoisted(() => {
+  const client = {
+    auth: {
+      exchangeCodeForSession: vi.fn(),
+      getClaims: vi.fn(),
+      signInWithPassword: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+    },
+  };
 
-    return {
-      client,
-      createServerUserClientMock: vi.fn(async (pending?: Response) => {
-        pending?.headers.append("Set-Cookie", "sb-refresh=updated; Path=/");
-        pending?.headers.set("X-Auth-Refresh", "present");
-        return client;
-      }),
-      ensureCurrentProfileMock: vi.fn(),
-    };
-  });
+  return {
+    client,
+    createServerUserClientMock: vi.fn(async (pending?: Response) => {
+      pending?.headers.append("Set-Cookie", "sb-refresh=updated; Path=/");
+      pending?.headers.set("X-Auth-Refresh", "present");
+      return client;
+    }),
+    ensureCurrentProfileMock: vi.fn(),
+    getEntryStateMock: vi.fn(),
+    applyOnboardingMock: vi.fn(),
+  };
+});
 
 vi.mock("@/lib/supabase/server-user-client", async (importActual) => ({
   ...(await importActual<typeof import("@/lib/supabase/server-user-client")>()),
@@ -31,6 +38,13 @@ vi.mock("@/lib/supabase/server-user-client", async (importActual) => ({
 vi.mock("@/server/repositories/profile-repository", () => ({
   ProfileRepository: class {
     ensureCurrentProfile = ensureCurrentProfileMock;
+  },
+}));
+
+vi.mock("@/server/repositories/onboarding-repository", () => ({
+  OnboardingRepository: class {
+    getEntryState = getEntryStateMock;
+    apply = applyOnboardingMock;
   },
 }));
 
@@ -82,6 +96,11 @@ describe("production authentication route handlers", () => {
     client.auth.signUp.mockResolvedValue({ error: null });
     client.auth.signOut.mockResolvedValue({ error: null });
     ensureCurrentProfileMock.mockResolvedValue(undefined);
+    getEntryStateMock.mockResolvedValue({
+      showHomeInvitation: true,
+      hasPublished: false,
+    });
+    applyOnboardingMock.mockResolvedValue(undefined);
     delete process.env.FITTIP_RUNTIME_MODE;
     delete process.env.FITTIP_OWNER_USER_ID;
     delete process.env.VERCEL;
@@ -106,12 +125,46 @@ describe("production authentication route handlers", () => {
     expectPrivate303(response, "/");
   });
 
-  it("redirects a confirmed account to home with exactly composed headers", async () => {
+  it("starts guided setup for a confirmed account and sends it there, with exactly composed headers", async () => {
+    const response = await callback(
+      new Request(`${origin}/auth/callback?code=valid-code`),
+    );
+    expectPrivate303(response, "/home/you/onboarding");
+    expect(ensureCurrentProfileMock).toHaveBeenCalledOnce();
+    expect(applyOnboardingMock).toHaveBeenCalledExactlyOnceWith({
+      operation: "start",
+      expectedDraftRevision: 0,
+    });
+  });
+
+  it("still sends a confirmed account to setup when its draft already exists", async () => {
+    applyOnboardingMock.mockRejectedValue(new Error("conflict"));
+    const response = await callback(
+      new Request(`${origin}/auth/callback?code=valid-code`),
+    );
+    expectPrivate303(response, "/home/you/onboarding");
+  });
+
+  it("sends a confirmed account that finished setup to home", async () => {
+    getEntryStateMock.mockResolvedValue({
+      showHomeInvitation: false,
+      hasPublished: true,
+    });
     const response = await callback(
       new Request(`${origin}/auth/callback?code=valid-code`),
     );
     expectPrivate303(response, "/home/today");
-    expect(ensureCurrentProfileMock).toHaveBeenCalledOnce();
+    expect(applyOnboardingMock).not.toHaveBeenCalled();
+  });
+
+  it("does not let unreadable setup state cost a confirmed account its sign-in", async () => {
+    getEntryStateMock.mockRejectedValue(new Error("database unavailable"));
+    const response = await callback(
+      new Request(`${origin}/auth/callback?code=valid-code`),
+    );
+    expectPrivate303(response, "/home/today");
+    expect(applyOnboardingMock).not.toHaveBeenCalled();
+    expect(client.auth.signOut).not.toHaveBeenCalled();
   });
 
   it("returns the generic callback response when profile provisioning fails", async () => {

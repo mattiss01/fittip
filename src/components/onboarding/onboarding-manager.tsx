@@ -17,7 +17,6 @@ import {
 } from "@/app/home/you/onboarding/action-state";
 import styles from "@/app/home/you/onboarding/onboarding.module.css";
 import {
-  GOAL_CATEGORIES,
   LIMITATION_CATEGORIES,
   ONBOARDING_STEPS,
   type GoalCandidateView,
@@ -692,6 +691,12 @@ function StepActions({
   );
 }
 
+/**
+ * The same four questions and the same choice as a goal on Goals (owner,
+ * 5 Oct 2026). The draft still stores the rest of a goal, so the fields that
+ * are no longer asked are sent empty, the kind as "other", today as the start
+ * and the goal's place in the list as its rank.
+ */
 function GoalFields({
   candidate,
   index,
@@ -721,22 +726,26 @@ function GoalFields({
           rows={4}
         />
       </label>
+      <label>
+        Sports
+        <input
+          defaultValue={candidate?.activityAreas.join(", ") ?? ""}
+          name={`goalActivities:${index}`}
+          placeholder="Running, strength"
+          required={index === 0}
+        />
+      </label>
       <div className={styles.fieldGrid}>
         <label>
-          Category
-          <select
-            defaultValue={candidate?.category ?? "other"}
-            name={`goalCategory:${index}`}
-          >
-            {GOAL_CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {category.replaceAll("_", " ")}
-              </option>
-            ))}
-          </select>
+          Target date (optional)
+          <input
+            defaultValue={candidate?.targetDate ?? ""}
+            name={`goalTargetDate:${index}`}
+            type="date"
+          />
         </label>
         <label>
-          Attention tier
+          Attention
           <select
             defaultValue={candidate?.priorityTier ?? "core"}
             name={`goalTier:${index}`}
@@ -746,96 +755,38 @@ function GoalFields({
           </select>
         </label>
       </div>
-      <label>
-        Activity areas
+      <input
+        name={`goalCategory:${index}`}
+        type="hidden"
+        value={candidate?.category ?? "other"}
+      />
+      <input
+        name={`goalStartDate:${index}`}
+        type="hidden"
+        value={candidate?.startDate ?? today()}
+      />
+      <input
+        name={`goalRank:${index}`}
+        type="hidden"
+        value={candidate?.targetRank ?? index + 1}
+      />
+      {(
+        [
+          ["goalTargetDetail", candidate?.targetDetail],
+          ["goalMetricLabel", candidate?.targetMetricLabel],
+          ["goalMetricValue", candidate?.targetMetricValue],
+          ["goalMetricUnit", candidate?.targetMetricUnit],
+          ["goalRationale", candidate?.rationale],
+          ["goalConstraints", candidate?.constraints],
+        ] as const
+      ).map(([name, value]) => (
         <input
-          defaultValue={candidate?.activityAreas.join(", ") ?? ""}
-          name={`goalActivities:${index}`}
-          placeholder="Running, strength"
+          key={name}
+          name={`${name}:${index}`}
+          type="hidden"
+          value={value ?? ""}
         />
-      </label>
-      <div className={styles.fieldGrid}>
-        <label>
-          Start date
-          <input
-            defaultValue={candidate?.startDate ?? today()}
-            name={`goalStartDate:${index}`}
-            required={index === 0}
-            type="date"
-          />
-        </label>
-        <label>
-          Target date
-          <input
-            defaultValue={candidate?.targetDate ?? ""}
-            name={`goalTargetDate:${index}`}
-            type="date"
-          />
-        </label>
-      </div>
-      <label>
-        Target detail
-        <textarea
-          defaultValue={candidate?.targetDetail ?? ""}
-          maxLength={500}
-          name={`goalTargetDetail:${index}`}
-          rows={2}
-        />
-      </label>
-      <div className={styles.metricGrid}>
-        <label>
-          Metric
-          <input
-            defaultValue={candidate?.targetMetricLabel ?? ""}
-            maxLength={80}
-            name={`goalMetricLabel:${index}`}
-          />
-        </label>
-        <label>
-          Value
-          <input
-            defaultValue={candidate?.targetMetricValue ?? ""}
-            maxLength={120}
-            name={`goalMetricValue:${index}`}
-          />
-        </label>
-        <label>
-          Unit
-          <input
-            defaultValue={candidate?.targetMetricUnit ?? ""}
-            maxLength={40}
-            name={`goalMetricUnit:${index}`}
-          />
-        </label>
-      </div>
-      <div className={styles.fieldGrid}>
-        <label>
-          Rank
-          <input
-            defaultValue={candidate?.targetRank ?? index + 1}
-            min="1"
-            name={`goalRank:${index}`}
-            type="number"
-          />
-        </label>
-        <label>
-          Rationale
-          <input
-            defaultValue={candidate?.rationale ?? ""}
-            maxLength={500}
-            name={`goalRationale:${index}`}
-          />
-        </label>
-      </div>
-      <label>
-        Constraints tied to this goal
-        <textarea
-          defaultValue={candidate?.constraints ?? ""}
-          maxLength={1000}
-          name={`goalConstraints:${index}`}
-          rows={2}
-        />
-      </label>
+      ))}
     </fieldset>
   );
 }

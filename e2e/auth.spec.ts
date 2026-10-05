@@ -48,14 +48,16 @@ test.describe("public account authentication", () => {
     );
     await page.goto(confirmationUrl);
     await expectPrivateSessionHeaders(await callbackResponse);
-    await expect(page).toHaveURL(/\/home\/today$/);
-    // M3-15B reopened this route, so the landing assertion is Today's own
-    // heading rather than the retired maintenance stub's.
+    // Signing up leads straight into guided setup, already started (owner,
+    // 5 Oct 2026): the first step is there without a "Start setup" press.
+    await expect(page).toHaveURL(/\/home\/you\/onboarding$/);
     await expect(
-      page.getByRole("heading", { name: "Today", exact: true }),
+      page.getByRole("heading", { name: "Name the outcomes." }),
     ).toBeVisible();
 
-    await page.getByRole("link", { name: "You", exact: true }).click();
+    // Setup does not hold the account: it can leave, sign out, and a later
+    // sign-in goes to Today as before.
+    await page.goto("/home/you");
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/$/);
 
@@ -63,6 +65,9 @@ test.describe("public account authentication", () => {
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/\/home\/today$/);
+    await expect(
+      page.getByRole("heading", { name: "Today", exact: true }),
+    ).toBeVisible();
 
     // M2-03 reuses this CI-invoked authenticated production-browser journey
     // so its 390px flow does not require a .github workflow change or an
@@ -87,9 +92,8 @@ async function completeGuidedSetup(
     path: path.join(m2EvidenceDirectory, "M2-03-start-390x844.png"),
   });
   await page.getByRole("link", { name: /^Guided setup/ }).click();
+  // The draft that sign-up started is waiting on its first step.
   await expect(page).toHaveURL(/\/home\/you\/onboarding$/);
-  await expect(page.getByText(/not sent to an AI provider/)).toBeVisible();
-  await page.getByRole("button", { name: "Start setup" }).click();
 
   const goalTitle = "Finish a calm 10K";
   const goalOutcome = "Run the autumn event with even pacing.";
@@ -98,7 +102,7 @@ async function completeGuidedSetup(
   ).toBeFocused();
   await page.getByLabel("Goal title").fill(goalTitle);
   await page.getByLabel("Desired outcome").fill(goalOutcome);
-  await page.getByLabel("Activity areas").fill("Running");
+  await page.getByLabel("Sports").fill("Running");
   await page.getByRole("button", { name: "Save and finish later" }).click();
   await expect
     .poll(
@@ -128,11 +132,12 @@ async function completeGuidedSetup(
   await page.getByRole("button", { name: "Cancel and delete draft" }).click();
   await expect(page).toHaveURL(/\/home\/you$/);
   await page.getByRole("link", { name: /^Guided setup/ }).click();
+  await expect(page.getByText(/not sent to an AI provider/)).toBeVisible();
   await page.getByRole("button", { name: "Start setup" }).click();
 
   await page.getByLabel("Goal title").fill(goalTitle);
   await page.getByLabel("Desired outcome").fill(goalOutcome);
-  await page.getByLabel("Activity areas").fill("Running");
+  await page.getByLabel("Sports").fill("Running");
   await page.getByRole("button", { name: "Save and continue" }).click();
   await expect(page.getByText("Step 2 of 6 · Current training")).toBeVisible();
 
