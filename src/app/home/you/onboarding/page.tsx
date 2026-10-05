@@ -11,7 +11,6 @@ import {
   ProfileAuthenticationError,
 } from "@/server/repositories/profile-repository";
 import homeStyles from "../../home.module.css";
-import { BackLink } from "../back-link";
 import youStyles from "../you.module.css";
 import styles from "./onboarding.module.css";
 
@@ -50,12 +49,18 @@ export default async function OnboardingPage() {
   if (!profile) redirect("/");
 
   return (
-    <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
-      <BackLink href="/home/you" label="You" />
-      {/* No intro: the start card and the first step say what setup stores
-          and that it is optional, and the last step is where each item is
-          decided. */}
-      <header className={youStyles.header}>
+    <main
+      className={`${homeStyles.shell} ${styles.page} ${styles.setupPage}`}
+      id="main-content"
+    >
+      {/* No intro: the start card says what setup stores and that it is
+          optional, and the last step is where each item is decided. An
+          account that has just signed up lands past the start card and is
+          not told again (owner, 5 Oct 2026). */}
+      {/* No back link and no navigation under it (owner, 5 Oct 2026): setup
+          is left by "Continue later", or by the links its start and finish
+          cards carry. */}
+      <header className={`${youStyles.header} ${styles.centered}`}>
         <h1>Guided setup</h1>
       </header>
       <OnboardingManager profile={profile} snapshot={snapshot} />

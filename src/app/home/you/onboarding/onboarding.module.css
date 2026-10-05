@@ -9,81 +9,69 @@
   --setup-soft-amber: #f2ead8;
 }
 
-/* The shell centres its children and lets each shrink, so this takes the row. */
+/* Setup's own page is as tall as the screen and has no navigation under it,
+   so it needs no room kept for one. Written with the element so it wins over
+   the shell's own rules whichever stylesheet loads last. */
+main.setupPage {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+
+/* The bar stays at the top; the step takes the rest and sits in its middle. */
 .manager {
+  flex: 1;
   width: 100%;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
   margin-top: 1.25rem;
 }
 
-.progress {
-  overflow-x: auto;
-  border-radius: var(--radius-card);
-  background: var(--ledger-paper);
-  box-shadow: var(--shadow-card);
-}
-
-.progress ol {
-  min-width: 42rem;
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.progress li {
-  border-left: 1px solid var(--line);
-}
-
-.progress li:first-child {
-  border-left: 0;
-}
-
-.progress button {
+.stepBody {
   width: 100%;
-  min-height: 4.2rem;
   display: grid;
-  place-content: center;
-  gap: 0.2rem;
-  margin: 0;
-  padding: 0.5rem;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--ledger-muted);
-  text-align: left;
+  gap: 1rem;
+  margin-block: auto;
 }
 
-.progress button span,
-.progress button strong {
+/* How far setup is: a bar the whole width, and its percentage under its
+   middle, so neither pulls the other off centre. */
+.progress {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: center;
+}
+
+.progressTrack {
+  width: 100%;
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--line);
+}
+
+.progressTrack span {
+  height: 100%;
   display: block;
+  border-radius: var(--radius-pill);
+  background: var(--ember);
 }
 
-.progress button span {
-  font: 500 0.62rem var(--font-mono);
+/* In the sans face: the mono one draws its zero with a line through it,
+   which the owner does not want (5 Oct 2026). */
+.progress p {
+  margin: 0;
+  color: var(--ledger-muted);
+  font: 600 0.82rem var(--font-sans);
+  font-variant-numeric: tabular-nums;
 }
 
-.progress button strong {
-  font-size: 0.8rem;
-  line-height: 1.2;
-}
-
-.progress li[data-saved="true"] button {
-  background: var(--sage);
-  color: var(--ledger-ink);
-}
-
-.progress li[data-current="true"] button {
-  box-shadow: inset 0 4px 0 var(--ledger-signal);
-  background: var(--ledger-ink);
-  color: var(--ledger-paper);
-}
-
-.progress button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
+@media (prefers-reduced-motion: no-preference) {
+  .progressTrack span {
+    transition: width 300ms var(--ease-out);
+  }
 }
 
 .notice {
@@ -105,12 +93,29 @@
   color: #6c2718;
 }
 
+/* The page's heading and each step's sit in the middle (owner, 5 Oct 2026). */
+.centered {
+  justify-content: center;
+  text-align: center;
+}
+
+/* Read by a screen reader, not shown: the label of a field whose question is
+   the heading above it. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
 .stepHeader {
+  text-align: center;
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--line);
 }
 
-.stepHeader p,
 .eyebrow,
 .loadingCard > p,
 .errorCard > p {
@@ -121,7 +126,7 @@
 }
 
 .stepHeader h2 {
-  margin: 0.2rem 0 0.35rem;
+  margin: 0 0 0.35rem;
   font-size: 1.7rem;
   font-weight: 800;
   letter-spacing: -0.03em;
@@ -178,22 +183,12 @@
 .stepForm select:focus,
 .stepForm textarea:focus,
 .stepForm button:focus-visible,
-.progress button:focus-visible,
 .startCard a:focus-visible,
 .startCard button:focus-visible,
 .result a:focus-visible,
-.result button:focus-visible,
-.cancelForm button:focus-visible {
+.result button:focus-visible {
   outline: 3px solid var(--ledger-ink);
   outline-offset: 2px;
-}
-
-/* "About you" in feet and pounds: two short height boxes and the weight. */
-.measureGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1.4fr;
-  gap: 0.75rem;
-  align-items: end;
 }
 
 /* "Your sports": a group is a heading and its sports as chips that wrap. */
@@ -483,10 +478,60 @@ label.constraintChoice {
   font: 700 0.95rem var(--font-sans);
 }
 
-/* One main action per step: saving to come back later is the quieter one. */
-.stepActions button[value="finish"] {
-  background: var(--line);
+/* "Continue later" is a line of its own under the step's buttons, drawn as
+   the link under the sign-in form is (owner, 5 Oct 2026). */
+.stepActions .laterLink {
+  order: 1;
+  flex-basis: 100%;
+  min-height: 2.75rem;
+  padding: 0;
+  background: transparent;
   color: var(--ledger-ink);
+  font-weight: 600;
+  text-align: right;
+  text-decoration: underline;
+  text-underline-offset: 0.25rem;
+}
+
+.stepActions .laterLink:hover {
+  background: transparent;
+  color: var(--ember-dark);
+}
+
+/* Pressed, it asks again in the same place before anything leaves. */
+.leavePanel {
+  order: 1;
+  flex-basis: 100%;
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-radius: var(--radius-card);
+  background: #fff0e1;
+  color: var(--ledger-ink);
+}
+
+.leavePanel strong {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.leavePanel p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.leavePanel > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 0.55rem;
+  padding-top: 0.25rem;
+}
+
+/* The hint under a question's one field. */
+.stepForm div > small {
+  display: block;
+  margin-top: 0.4rem;
 }
 
 .secondaryButton {
@@ -655,21 +700,6 @@ label.constraintChoice {
   color: var(--ledger-muted);
   font-size: 0.82rem;
   font-weight: 700;
-}
-
-.cancelForm {
-  padding-top: 0.5rem;
-}
-
-.cancelForm button {
-  min-height: 2.75rem;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #8d2f20;
-  text-decoration: underline;
-  text-underline-offset: 0.25rem;
 }
 
 .startCard,

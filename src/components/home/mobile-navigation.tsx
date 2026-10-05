@@ -21,6 +21,11 @@ const DESTINATIONS = [
 export function MobileNavigation() {
   const pathname = usePathname();
 
+  // Guided setup is walked from its first step to its last without the app's
+  // navigation under it (owner, 5 Oct 2026). "Continue later" and the back
+  // link are its ways out.
+  if (pathname === "/home/you/onboarding") return null;
+
   return (
     <nav className={styles.navigation} aria-label="Primary">
       <ul>

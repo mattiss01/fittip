@@ -66,10 +66,12 @@ test.describe("public account authentication", () => {
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/\/home\/you\/onboarding$/);
     await expect(
-      page.getByRole("heading", { name: "Start with the basics" }),
+      page.getByRole("heading", { name: "What's your name?" }),
     ).toBeVisible();
-    // It lands past the start card, so the first step says what that says.
-    await expect(page.getByText(/not sent to an AI provider/)).toBeVisible();
+    // Setup is walked without the app's navigation under it.
+    await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(
+      0,
+    );
 
     // M2-03 reuses this CI-invoked authenticated production-browser journey
     // so its 390px flow does not require a .github workflow change or an
@@ -97,19 +99,32 @@ async function completeGuidedSetup(
   // The draft that sign-up started is waiting on its first step.
   await expect(page).toHaveURL(/\/home\/you\/onboarding$/);
 
-  // "About you" and "Your sports" come first and are saved straight to the
-  // profile (owner, 5 Oct 2026). Only the name is required; the units and
-  // the time zone arrive filled in from the browser.
-  await expect(page.getByText("Step 1 of 8 · About you")).toBeVisible();
-  // Neither the units nor the time zone is asked. This browser is German,
-  // in Berlin, so the measures are metric from the start.
+  // "About you" comes first, one question at a time, then "Your sports";
+  // both are saved straight to the profile (owner, 5 Oct 2026). Only the
+  // name must be answered. Neither the units nor the time zone is asked:
+  // this browser is German, in Berlin, so the measures are metric.
+  const heading = (name: string) =>
+    page.getByRole("heading", { name, exact: true });
+  const next = () => page.getByRole("button", { name: "Next" }).click();
+  await expect(heading("What's your name?")).toBeVisible();
   await expect(page.getByLabel("Units")).toHaveCount(0);
   await expect(page.getByLabel("Time zone")).toHaveCount(0);
+  // Without a name the first question stays.
+  await next();
+  await expect(heading("What's your name?")).toBeVisible();
   await page.getByLabel("Name").fill("Alex");
+  await next();
+  await expect(heading("When is your birthday?")).toBeVisible();
+  await next();
+  await expect(heading("What's your gender?")).toBeVisible();
+  await next();
+  await expect(heading("How tall are you?")).toBeVisible();
+  await next();
+  await expect(heading("How much do you weigh?")).toBeVisible();
   await page.getByLabel("Weight in kg (optional)").fill("80,5");
   await page.getByRole("button", { name: "Save and continue" }).click();
 
-  await expect(page.getByText("Step 2 of 8 · Your sports")).toBeVisible();
+  await expect(heading("Your sports")).toBeVisible();
   await page.getByText("Running", { exact: true }).click();
   await page.getByLabel("Add your own").fill("Latzug");
   await page.getByRole("button", { name: "Add", exact: true }).click();
@@ -118,14 +133,24 @@ async function completeGuidedSetup(
 
   const goalTitle = "Finish a calm 10K";
   const goalOutcome = "Run the autumn event with even pacing.";
-  await expect(page.getByText("Step 3 of 8 · Goals")).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Name the outcomes" }),
-  ).toBeVisible();
+  await expect(heading("Goals")).toBeVisible();
   await page.getByLabel("Goal title").fill(goalTitle);
   await page.getByLabel("Desired outcome").fill(goalOutcome);
   await page.getByLabel("Sports").fill("Running");
-  await page.getByRole("button", { name: "Save and finish later" }).click();
+  // "Continue later" is setup's one way out besides finishing: it saves the
+  // step and goes to the app. There is no "Cancel and delete draft".
+  await expect(
+    page.getByRole("button", { name: /cancel|delete/i }),
+  ).toHaveCount(0);
+  // It asks again first, and says what setup is for.
+  await page.getByRole("button", { name: "Continue later" }).click();
+  await expect(page.locator("[data-leave-setup]")).toContainText(
+    "Setup makes FitTip useful",
+  );
+  await page.getByRole("button", { name: "Keep going" }).click();
+  await expect(page.locator("[data-leave-setup]")).toHaveCount(0);
+  await page.getByRole("button", { name: "Continue later" }).click();
+  await page.getByRole("button", { name: "Continue later" }).click();
   await expect
     .poll(
       async () => {
@@ -142,30 +167,22 @@ async function completeGuidedSetup(
       },
       {
         message:
-          "Save and finish later must redirect to You; any actionable validation state is reported",
+          "Continue later must go to Today; any actionable validation state is reported",
       },
     )
-    .toBe("/home/you");
+    .toBe("/home/today");
 
-  // Resume restores the saved candidate; cancel deletes it. The permanent You
-  // entry then starts a genuinely fresh draft.
+  // Coming back from You resumes where it was left, with what was saved.
+  await page.goto("/home/you");
   await page.getByRole("link", { name: /^Guided setup/ }).click();
+  await expect(heading("Goals")).toBeVisible();
   await expect(page.getByLabel("Goal title")).toHaveValue(goalTitle);
-  await page.getByRole("button", { name: "Cancel and delete draft" }).click();
-  await expect(page).toHaveURL(/\/home\/you$/);
-  await page.getByRole("link", { name: /^Guided setup/ }).click();
-  await expect(page.getByText(/not sent to an AI provider/)).toBeVisible();
-  await page.getByRole("button", { name: "Start setup" }).click();
-
-  await page.getByLabel("Goal title").fill(goalTitle);
-  await page.getByLabel("Desired outcome").fill(goalOutcome);
-  await page.getByLabel("Sports").fill("Running");
   await page.getByRole("button", { name: "Save and continue" }).click();
-  await expect(page.getByText("Step 4 of 8 · Current training")).toBeVisible();
+  await expect(heading("Current training")).toBeVisible();
 
   await page.getByLabel("I am not training currently").check();
   await page.getByRole("button", { name: "Save and continue" }).click();
-  await expect(page.getByText("Step 5 of 8 · Time and access")).toBeVisible();
+  await expect(heading("Time and access")).toBeVisible();
 
   await page.getByLabel("Monday").check();
   await page.getByLabel("Saturday").check();
@@ -173,18 +190,18 @@ async function completeGuidedSetup(
   // The time zone and the units were chosen in "About you".
   await expect(page.getByLabel("Timezone")).toHaveCount(0);
   await page.getByRole("button", { name: "Save and continue" }).click();
-  await expect(page.getByText("Step 6 of 8 · Preferences")).toBeVisible();
+  await expect(heading("Preferences")).toBeVisible();
 
   // Preferences and constraints are optional. The exact conservative safety
   // copy remains visible without a severity question or acknowledgement gate.
   await page.getByRole("button", { name: "Save and continue" }).click();
-  await expect(page.getByText("Step 7 of 8 · Constraints")).toBeVisible();
+  await expect(heading("Constraints")).toBeVisible();
   await expect(
     page.getByText(/FitTip cannot assess or diagnose symptoms/),
   ).toBeVisible();
   await expect(page.getByLabel(/severity/i)).toHaveCount(0);
   await page.getByRole("button", { name: "Save and continue" }).click();
-  await expect(page.getByText("Step 8 of 8 · Review and save")).toBeVisible();
+  await expect(heading("Review and save")).toBeVisible();
   // The profile's own two never come up for review.
   await expect(page.getByText(/^(Timezone|Units): /)).toHaveCount(0);
   await expect(

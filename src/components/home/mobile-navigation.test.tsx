@@ -37,6 +37,13 @@ describe("MobileNavigation", () => {
     expect(navigation).not.toHaveTextContent("History");
   });
 
+  it("is not shown during guided setup", () => {
+    usePathnameMock.mockReturnValueOnce("/home/you/onboarding");
+    render(<MobileNavigation />);
+
+    expect(screen.queryByRole("navigation", { name: "Primary" })).toBeNull();
+  });
+
   it.each([
     ["/home/you/goals", "You"],
     ["/home/you/settings", "You"],

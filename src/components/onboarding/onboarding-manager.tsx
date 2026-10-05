@@ -16,7 +16,12 @@ import {
   type OnboardingActionState,
 } from "@/app/home/you/onboarding/action-state";
 import styles from "@/app/home/you/onboarding/onboarding.module.css";
-import { AboutYouForm, SportsForm } from "@/components/profile/profile-forms";
+import {
+  ABOUT_YOU_QUESTIONS,
+  AboutYouForm,
+  ContinueLater,
+  SportsForm,
+} from "@/components/profile/profile-forms";
 import type { ProfileDetailsView } from "@/lib/profile/profile-contract";
 import {
   LIMITATION_CATEGORIES,
@@ -46,13 +51,14 @@ const LIMITATION_LABELS = {
 } as const;
 
 /**
- * Setup's eight steps (owner, 5 Oct 2026). The first two are the profile's
- * own, saved straight to it; the other six are the draft's, which still
- * counts them from one. A step's number on screen is the draft's plus two.
+ * Setup's steps (owner, 5 Oct 2026). The profile's own come first and are
+ * saved straight to it: "About you", asked one question at a time, then
+ * "Your sports". The draft's six follow, which it still counts from one.
  */
-const PROFILE_STEPS = ["About you", "Your sports"] as const;
-const SETUP_STEPS = [...PROFILE_STEPS, ...ONBOARDING_STEPS] as const;
 type ProfileStep = 1 | 2;
+const SPORTS_HEADING = "Your sports";
+const STEPS_BEFORE_DRAFT = ABOUT_YOU_QUESTIONS.length + 1;
+const STEP_COUNT = STEPS_BEFORE_DRAFT + ONBOARDING_STEPS.length;
 
 /**
  * The time zone and the units are the profile's, chosen in "About you". The
@@ -124,14 +130,19 @@ export function OnboardingManager({
   );
   const [selectedStep, setVisibleStep] = useState<OnboardingStep | null>(null);
   // Only the name is required, and it is asked first: until it is saved,
-  // setup opens on "About you" and the later steps wait.
+  // setup opens on "About you", and the only way on is to save it.
   const named = Boolean(profile.displayName);
   const [profileStep, setProfileStep] = useState<ProfileStep | null>(
     named ? null : 1,
   );
+  const [aboutQuestion, setAboutQuestion] = useState(0);
+  // "Continue later" is setup's one way out besides finishing (owner, 5 Oct
+  // 2026): it saves what the step holds and goes to the app. There is no
+  // "Cancel and delete draft" any more; an untouched draft expires by itself.
+  const continueLater = () => router.push("/home/today");
   // A saved step goes where its result says. This is done on the result, not
   // on the button's click: clearing the selection there unmounted a revisited
-  // step's form before it was sent, so nothing was saved and "Save and finish
+  // step's form before it was sent, so nothing was saved and "Continue
   // later" never left the setup (owner, 2 Oct 2026). The step is pinned, not
   // cleared: a save refused on it afterwards names no next step, and without
   // a selection the owner would be thrown to the draft's furthest step with
@@ -177,7 +188,7 @@ export function OnboardingManager({
     ) {
       headingRef.current?.focus();
     }
-  }, [snapshot.draft, visibleStep, profileStep, state.status]);
+  }, [snapshot.draft, visibleStep, profileStep, aboutQuestion, state.status]);
 
   // Done once, setup is not offered again (owner, 2 Oct 2026): everything it
   // filed can be changed where it lives. A draft begun before that rule is
@@ -241,7 +252,22 @@ export function OnboardingManager({
   );
   const rankPreview = buildRankPreview(snapshot, activeReviewSelections);
   const draftStep = profileStep === null ? visibleStep : null;
-  const shownStep = profileStep ?? visibleStep + PROFILE_STEPS.length;
+  // Where setup stands among all its steps, each question of "About you"
+  // counted as one, and the heading that step is shown under.
+  const position =
+    profileStep === 1
+      ? aboutQuestion + 1
+      : profileStep === 2
+        ? STEPS_BEFORE_DRAFT
+        : STEPS_BEFORE_DRAFT + visibleStep;
+  const heading =
+    profileStep === 1
+      ? ABOUT_YOU_QUESTIONS[aboutQuestion]
+      : profileStep === 2
+        ? SPORTS_HEADING
+        : ONBOARDING_STEPS[visibleStep - 1];
+  // The steps before this one: nothing is done on the first.
+  const percentDone = Math.round(((position - 1) / STEP_COUNT) * 100);
   const reviewedMemory = snapshot.memoryCandidates.filter(
     (candidate) => !isProfileOwned(candidate),
   );
@@ -251,480 +277,453 @@ export function OnboardingManager({
 
   return (
     <div className={styles.manager}>
-      <nav className={styles.progress} aria-label="Guided setup progress">
-        <ol>
-          {SETUP_STEPS.map((label, index) => {
-            const step = index + 1;
-            const ofDraft = step - PROFILE_STEPS.length;
-            const reachable =
-              ofDraft < 1 ? step === 1 || named : ofDraft <= draft.currentStep;
-            return (
-              <li
-                data-current={shownStep === step ? "true" : undefined}
-                data-saved={
-                  (ofDraft < 1 ? named : draft.currentStep > ofDraft)
-                    ? "true"
-                    : undefined
-                }
-                key={label}
-              >
-                <button
-                  aria-current={shownStep === step ? "step" : undefined}
-                  disabled={!reachable || !named}
-                  onClick={() => {
-                    setProfileStep(ofDraft < 1 ? (step as ProfileStep) : null);
-                    if (ofDraft >= 1) setVisibleStep(ofDraft as OnboardingStep);
-                  }}
-                  type="button"
-                >
-                  <span>{step}</span>
-                  <strong>{label}</strong>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-      </nav>
+      {/* One bar and how much is done, not a row of eight steps, and the
+          step's own name as its heading with no second line under it (owner,
+          5 Oct 2026). A step is left by its Back button. */}
+      <div className={styles.progress}>
+        <div
+          aria-label="Guided setup progress"
+          aria-valuemax={100}
+          aria-valuemin={0}
+          aria-valuenow={percentDone}
+          aria-valuetext={`Step ${position} of ${STEP_COUNT}, ${percentDone}% done`}
+          className={styles.progressTrack}
+          role="progressbar"
+        >
+          <span style={{ width: `${percentDone}%` }} />
+        </div>
+        <p aria-hidden="true">{percentDone}%</p>
+      </div>
 
       <OnboardingActionNotice state={state} />
 
-      <header className={styles.stepHeader}>
-        <p>
-          Step {shownStep} of {SETUP_STEPS.length} ·{" "}
-          {SETUP_STEPS[shownStep - 1]}
-        </p>
-        <h2 ref={headingRef} tabIndex={-1}>
-          {profileStep === 1
-            ? "Start with the basics"
-            : profileStep === 2
-              ? "Pick your sports"
-              : stepHeading(visibleStep)}
-        </h2>
-        {/* When the draft expires is said where it matters: on You, after
-            "Save and finish later" (owner, 2 Oct 2026). */}
-      </header>
+      {/* The step itself sits in the middle of what is left of the screen
+          under the bar (owner, 5 Oct 2026); a step taller than that starts
+          right under the bar as before. */}
+      <div className={styles.stepBody}>
+        <header className={styles.stepHeader}>
+          <h2 ref={headingRef} tabIndex={-1}>
+            {heading}
+          </h2>
+        </header>
 
-      {profileStep === 1 ? (
-        <AboutYouForm
-          intro={
-            // The start card says this, and an account that has just signed
-            // up never sees the start card: it lands here.
-            <p className={styles.explainer}>
-              Your answers are stored in your account so you can resume on
-              another device. They are not sent to an AI provider. Setup is
-              optional and never blocks planning or logging.
-            </p>
-          }
-          onSaved={() => setProfileStep(2)}
-          profile={profile}
-          submitLabel="Save and continue"
-        />
-      ) : null}
+        {profileStep === 1 ? (
+          <AboutYouForm
+            onLater={continueLater}
+            onQuestion={setAboutQuestion}
+            onSaved={() => setProfileStep(2)}
+            profile={profile}
+            question={aboutQuestion}
+            submitLabel="Save and continue"
+          />
+        ) : null}
 
-      {profileStep === 2 ? (
-        <SportsForm
-          onBack={() => setProfileStep(1)}
-          onSaved={() => setProfileStep(null)}
-          sports={profile.sports}
-          submitLabel="Save and continue"
-        />
-      ) : null}
+        {profileStep === 2 ? (
+          <SportsForm
+            onBack={() => {
+              setAboutQuestion(ABOUT_YOU_QUESTIONS.length - 1);
+              setProfileStep(1);
+            }}
+            onLater={continueLater}
+            onSaved={() => setProfileStep(null)}
+            sports={profile.sports}
+            submitLabel="Save and continue"
+          />
+        ) : null}
 
-      {draftStep === 1 ? (
-        <form action={formAction} className={styles.stepForm}>
-          <StepMeta operation="save_goals" revision={draft.revision} step={1} />
-          {Array.from({ length: goalCount }, (_, index) => (
-            <GoalFields
-              candidate={snapshot.goalCandidates[index]}
-              index={index}
-              key={index}
+        {draftStep === 1 ? (
+          <form action={formAction} className={styles.stepForm}>
+            <StepMeta
+              operation="save_goals"
+              revision={draft.revision}
+              step={1}
             />
-          ))}
-          {goalCount < 3 ? (
-            <button
-              className={styles.secondaryButton}
-              onClick={() => setGoalCount((count) => count + 1)}
-              type="button"
-            >
-              Add another goal
-            </button>
-          ) : null}
-          <StepActions
-            currentStep={1}
-            onBack={() => setProfileStep(2)}
-            pending={pending}
-            setVisibleStep={setVisibleStep}
-          />
-        </form>
-      ) : null}
-
-      {draftStep === 2 ? (
-        <form action={formAction} className={styles.stepForm}>
-          <StepMeta
-            operation="save_training"
-            revision={draft.revision}
-            step={2}
-          />
-          <fieldset className={styles.choiceGroup}>
-            <legend>Current training answer</legend>
-            <label>
-              <input
-                checked={trainingStatus === "current"}
-                name="trainingStatus"
-                onChange={() => setTrainingStatus("current")}
-                type="radio"
-                value="current"
+            {Array.from({ length: goalCount }, (_, index) => (
+              <GoalFields
+                candidate={snapshot.goalCandidates[index]}
+                index={index}
+                key={index}
               />
-              I am training currently
-            </label>
-            <label>
-              <input
-                checked={trainingStatus === "none"}
-                name="trainingStatus"
-                onChange={() => setTrainingStatus("none")}
-                type="radio"
-                value="none"
-              />
-              I am not training currently
-            </label>
-          </fieldset>
-          {trainingStatus === "current" ? (
-            <>
-              {Array.from({ length: activityCount }, (_, index) => (
-                <ActivityFields
-                  activity={snapshot.activities[index]}
-                  index={index}
-                  key={index}
-                />
-              ))}
-              {activityCount < 10 ? (
-                <button
-                  className={styles.secondaryButton}
-                  onClick={() =>
-                    setActivityCount((count) => Math.min(10, count + 1))
-                  }
-                  type="button"
-                >
-                  Add another activity
-                </button>
-              ) : null}
-            </>
-          ) : null}
-          <StepActions
-            currentStep={2}
-            pending={pending}
-            setVisibleStep={setVisibleStep}
-          />
-        </form>
-      ) : null}
+            ))}
+            {goalCount < 3 ? (
+              <button
+                className={styles.secondaryButton}
+                onClick={() => setGoalCount((count) => count + 1)}
+                type="button"
+              >
+                Add another goal
+              </button>
+            ) : null}
+            <StepActions
+              currentStep={1}
+              onBack={() => setProfileStep(2)}
+              pending={pending}
+              setVisibleStep={setVisibleStep}
+            />
+          </form>
+        ) : null}
 
-      {draftStep === 3 ? (
-        <form action={formAction} className={styles.stepForm}>
-          <StepMeta
-            operation="save_context"
-            revision={draft.revision}
-            step={3}
-          />
-          <fieldset className={styles.dayGrid}>
-            <legend>Available days</legend>
-            {DAY_OPTIONS.map((day) => (
-              <label key={day}>
+        {draftStep === 2 ? (
+          <form action={formAction} className={styles.stepForm}>
+            <StepMeta
+              operation="save_training"
+              revision={draft.revision}
+              step={2}
+            />
+            <fieldset className={styles.choiceGroup}>
+              <legend>Current training answer</legend>
+              <label>
                 <input
-                  defaultChecked={draft.availableDays.includes(day)}
-                  name="availableDays"
-                  type="checkbox"
-                  value={day}
+                  checked={trainingStatus === "current"}
+                  name="trainingStatus"
+                  onChange={() => setTrainingStatus("current")}
+                  type="radio"
+                  value="current"
                 />
-                {day}
+                I am training currently
               </label>
-            ))}
-          </fieldset>
-          <div className={styles.fieldGrid}>
-            <label>
-              Feasible sessions per week
-              <input
-                defaultValue={draft.sessionsPerWeek ?? 3}
-                max="14"
-                min="1"
-                name="sessionsPerWeek"
-                required
-                type="number"
-              />
-            </label>
-            <label>
-              Typical minutes per session
-              <input
-                defaultValue={draft.sessionDurationMinutes ?? 45}
-                max="1440"
-                min="5"
-                name="durationMinutes"
-                required
-                type="number"
-              />
-            </label>
-          </div>
-          <label>
-            Access and equipment
-            <input
-              defaultValue={draft.accessLabels.join(", ")}
-              maxLength={619}
-              name="accessLabels"
-              placeholder="Track, gym, none, not sure"
-              required
-            />
-            <small>Up to 10 labels, separated by commas.</small>
-          </label>
-          {/* Chosen in "About you" and kept in the profile. The draft still
-              asks for both, so they are sent from there, unseen. */}
-          <input
-            name="timezoneName"
-            type="hidden"
-            value={profile.timezoneName ?? draft.timezoneName ?? "UTC"}
-          />
-          <input
-            name="units"
-            type="hidden"
-            value={profile.unitsSystem ?? draft.units ?? "metric"}
-          />
-          <StepActions
-            currentStep={3}
-            pending={pending}
-            setVisibleStep={setVisibleStep}
-          />
-        </form>
-      ) : null}
-
-      {draftStep === 4 ? (
-        <form action={formAction} className={styles.stepForm}>
-          <StepMeta
-            operation="save_preferences"
-            revision={draft.revision}
-            step={4}
-          />
-          <label>
-            Coaching or training preferences
-            <textarea
-              defaultValue={preferences}
-              maxLength={10009}
-              name="preferences"
-              placeholder={
-                "Keep hard sessions short.\nPrefer outdoor training."
-              }
-              rows={7}
-            />
-            <small>
-              Optional. One memory statement per line, up to 10 lines and 1,000
-              characters each.
-            </small>
-          </label>
-          <StepActions
-            currentStep={4}
-            pending={pending}
-            setVisibleStep={setVisibleStep}
-          />
-        </form>
-      ) : null}
-
-      {draftStep === 5 ? (
-        <form action={formAction} className={styles.stepForm}>
-          <StepMeta
-            operation="save_constraints"
-            revision={draft.revision}
-            step={5}
-          />
-          <aside className={styles.privacyNotice}>
-            Constraints are optional, health-adjacent account data. They stay in
-            your draft until you accept them, and are not sent to an AI
-            provider.
-          </aside>
-          <p className={styles.safetyCopy}>
-            FitTip cannot assess or diagnose symptoms. If symptoms are severe,
-            sudden, or getting worse, stop the affected activity and contact a
-            qualified health professional.
-          </p>
-          <div className={styles.constraintList}>
-            {LIMITATION_CATEGORIES.map((category) => {
-              const candidate = snapshot.memoryCandidates.find(
-                (item) => item.fieldKey === `constraint:${category}`,
-              );
-              return (
-                <fieldset key={category}>
-                  <label className={styles.constraintChoice}>
-                    <input
-                      defaultChecked={Boolean(candidate)}
-                      name={`constraint:${category}`}
-                      type="checkbox"
-                    />
-                    {LIMITATION_LABELS[category]}
-                  </label>
-                  <label>
-                    Optional detail
-                    <textarea
-                      defaultValue={limitationDetails[category]}
-                      maxLength={970}
-                      name={`constraintDetail:${category}`}
-                      rows={3}
-                    />
-                  </label>
-                </fieldset>
-              );
-            })}
-          </div>
-          <StepActions
-            currentStep={5}
-            pending={pending}
-            setVisibleStep={setVisibleStep}
-          />
-        </form>
-      ) : null}
-
-      {draftStep === 6 ? (
-        <form action={formAction} className={styles.stepForm}>
-          <input name="operation" type="hidden" value="publish" />
-          <input
-            name="expectedDraftRevision"
-            type="hidden"
-            value={draft.revision}
-          />
-          <input
-            name="expectedGoalRevision"
-            type="hidden"
-            value={snapshot.goalRevision}
-          />
-          <input
-            name="expectedMemoryRevision"
-            type="hidden"
-            value={snapshot.memoryRevision}
-          />
-          <input
-            name="idempotencyKey"
-            type="hidden"
-            value={draft.idempotencyKey}
-          />
-          <p className={styles.explainer}>
-            A card you have not decided starts accepted. Reject what you do not
-            want kept. Rejected cards stay only in this draft and are deleted
-            when you save.
-          </p>
-          <section className={styles.contextMap} aria-labelledby="context-map">
-            <header>
-              <p>Context map</p>
-              <h3 id="context-map">Choose where each statement lands</h3>
-            </header>
-            <div className={styles.mapLegend}>
-              <span data-destination="goals">Goals</span>
-              <span data-destination="memory">Memory</span>
-            </div>
-            {snapshot.goalCandidates.map((candidate) => (
-              <ReviewCard
-                candidate={candidate}
-                destination="Goals"
-                key={candidate.id}
-                kind="goal"
-                onSelectionChange={(selection) =>
-                  setReviewSelections((current) =>
-                    reconcileReviewSelections(snapshot, {
-                      ...current,
-                      [candidate.id]: selection,
-                    }),
-                  )
-                }
-                selection={
-                  activeReviewSelections[candidate.id] ??
-                  defaultReviewSelection(candidate)
-                }
-              />
-            ))}
-            {snapshot.memoryCandidates
-              .filter(isProfileOwned)
-              .map((candidate) => (
-                <span hidden key={candidate.id}>
-                  <input
-                    name="candidateId"
-                    type="hidden"
-                    value={candidate.id}
+              <label>
+                <input
+                  checked={trainingStatus === "none"}
+                  name="trainingStatus"
+                  onChange={() => setTrainingStatus("none")}
+                  type="radio"
+                  value="none"
+                />
+                I am not training currently
+              </label>
+            </fieldset>
+            {trainingStatus === "current" ? (
+              <>
+                {Array.from({ length: activityCount }, (_, index) => (
+                  <ActivityFields
+                    activity={snapshot.activities[index]}
+                    index={index}
+                    key={index}
                   />
-                  <input
-                    name={`kind:${candidate.id}`}
-                    type="hidden"
-                    value="memory"
-                  />
-                  <input
-                    name={`decision:${candidate.id}`}
-                    type="hidden"
-                    value="rejected"
-                  />
-                </span>
-              ))}
-            {reviewedMemory.map((candidate) => (
-              <ReviewCard
-                candidate={candidate}
-                destination="Memory"
-                key={candidate.id}
-                kind="memory"
-                onSelectionChange={(selection) =>
-                  setReviewSelections((current) =>
-                    reconcileReviewSelections(snapshot, {
-                      ...current,
-                      [candidate.id]: selection,
-                    }),
-                  )
-                }
-                selection={
-                  activeReviewSelections[candidate.id] ??
-                  defaultReviewSelection(candidate)
-                }
-              />
-            ))}
-          </section>
-          {rankPreview.length ? (
-            <section className={styles.rankPreview}>
-              <p className={styles.eyebrow}>Full rank preview</p>
-              <h3>Result from your current choices</h3>
-              {coreGoalCount > 3 ? (
-                <p role="alert">
-                  These choices would create {coreGoalCount} core goals. Reduce
-                  the result to at most three before publication.
-                </p>
-              ) : null}
-              <ol>
-                {rankPreview.map((goal) => (
-                  <li key={goal.key}>
-                    <span>{goal.tier}</span>
-                    <strong>{goal.title}</strong>
-                  </li>
                 ))}
-              </ol>
-            </section>
-          ) : null}
-          <div className={styles.stepActions}>
-            <button
-              className={styles.secondaryButton}
-              onClick={() => setVisibleStep(5)}
-              type="button"
+                {activityCount < 10 ? (
+                  <button
+                    className={styles.secondaryButton}
+                    onClick={() =>
+                      setActivityCount((count) => Math.min(10, count + 1))
+                    }
+                    type="button"
+                  >
+                    Add another activity
+                  </button>
+                ) : null}
+              </>
+            ) : null}
+            <StepActions
+              currentStep={2}
+              pending={pending}
+              setVisibleStep={setVisibleStep}
+            />
+          </form>
+        ) : null}
+
+        {draftStep === 3 ? (
+          <form action={formAction} className={styles.stepForm}>
+            <StepMeta
+              operation="save_context"
+              revision={draft.revision}
+              step={3}
+            />
+            <fieldset className={styles.dayGrid}>
+              <legend>Available days</legend>
+              {DAY_OPTIONS.map((day) => (
+                <label key={day}>
+                  <input
+                    defaultChecked={draft.availableDays.includes(day)}
+                    name="availableDays"
+                    type="checkbox"
+                    value={day}
+                  />
+                  {day}
+                </label>
+              ))}
+            </fieldset>
+            <div className={styles.fieldGrid}>
+              <label>
+                Feasible sessions per week
+                <input
+                  defaultValue={draft.sessionsPerWeek ?? 3}
+                  max="14"
+                  min="1"
+                  name="sessionsPerWeek"
+                  required
+                  type="number"
+                />
+              </label>
+              <label>
+                Typical minutes per session
+                <input
+                  defaultValue={draft.sessionDurationMinutes ?? 45}
+                  max="1440"
+                  min="5"
+                  name="durationMinutes"
+                  required
+                  type="number"
+                />
+              </label>
+            </div>
+            <label>
+              Access and equipment
+              <input
+                defaultValue={draft.accessLabels.join(", ")}
+                maxLength={619}
+                name="accessLabels"
+                placeholder="Track, gym, none, not sure"
+                required
+              />
+              <small>Up to 10 labels, separated by commas.</small>
+            </label>
+            {/* Chosen in "About you" and kept in the profile. The draft still
+              asks for both, so they are sent from there, unseen. */}
+            <input
+              name="timezoneName"
+              type="hidden"
+              value={profile.timezoneName ?? draft.timezoneName ?? "UTC"}
+            />
+            <input
+              name="units"
+              type="hidden"
+              value={profile.unitsSystem ?? draft.units ?? "metric"}
+            />
+            <StepActions
+              currentStep={3}
+              pending={pending}
+              setVisibleStep={setVisibleStep}
+            />
+          </form>
+        ) : null}
+
+        {draftStep === 4 ? (
+          <form action={formAction} className={styles.stepForm}>
+            <StepMeta
+              operation="save_preferences"
+              revision={draft.revision}
+              step={4}
+            />
+            <label>
+              Coaching or training preferences
+              <textarea
+                defaultValue={preferences}
+                maxLength={10009}
+                name="preferences"
+                placeholder={
+                  "Keep hard sessions short.\nPrefer outdoor training."
+                }
+                rows={7}
+              />
+              <small>
+                Optional. One memory statement per line, up to 10 lines and
+                1,000 characters each.
+              </small>
+            </label>
+            <StepActions
+              currentStep={4}
+              pending={pending}
+              setVisibleStep={setVisibleStep}
+            />
+          </form>
+        ) : null}
+
+        {draftStep === 5 ? (
+          <form action={formAction} className={styles.stepForm}>
+            <StepMeta
+              operation="save_constraints"
+              revision={draft.revision}
+              step={5}
+            />
+            <aside className={styles.privacyNotice}>
+              Constraints are optional, health-adjacent account data. They stay
+              in your draft until you accept them, and are not sent to an AI
+              provider.
+            </aside>
+            <p className={styles.safetyCopy}>
+              FitTip cannot assess or diagnose symptoms. If symptoms are severe,
+              sudden, or getting worse, stop the affected activity and contact a
+              qualified health professional.
+            </p>
+            <div className={styles.constraintList}>
+              {LIMITATION_CATEGORIES.map((category) => {
+                const candidate = snapshot.memoryCandidates.find(
+                  (item) => item.fieldKey === `constraint:${category}`,
+                );
+                return (
+                  <fieldset key={category}>
+                    <label className={styles.constraintChoice}>
+                      <input
+                        defaultChecked={Boolean(candidate)}
+                        name={`constraint:${category}`}
+                        type="checkbox"
+                      />
+                      {LIMITATION_LABELS[category]}
+                    </label>
+                    <label>
+                      Optional detail
+                      <textarea
+                        defaultValue={limitationDetails[category]}
+                        maxLength={970}
+                        name={`constraintDetail:${category}`}
+                        rows={3}
+                      />
+                    </label>
+                  </fieldset>
+                );
+              })}
+            </div>
+            <StepActions
+              currentStep={5}
+              pending={pending}
+              setVisibleStep={setVisibleStep}
+            />
+          </form>
+        ) : null}
+
+        {draftStep === 6 ? (
+          <form action={formAction} className={styles.stepForm}>
+            <input name="operation" type="hidden" value="publish" />
+            <input
+              name="expectedDraftRevision"
+              type="hidden"
+              value={draft.revision}
+            />
+            <input
+              name="expectedGoalRevision"
+              type="hidden"
+              value={snapshot.goalRevision}
+            />
+            <input
+              name="expectedMemoryRevision"
+              type="hidden"
+              value={snapshot.memoryRevision}
+            />
+            <input
+              name="idempotencyKey"
+              type="hidden"
+              value={draft.idempotencyKey}
+            />
+            <p className={styles.explainer}>
+              A card you have not decided starts accepted. Reject what you do
+              not want kept. Rejected cards stay only in this draft and are
+              deleted when you save.
+            </p>
+            <section
+              className={styles.contextMap}
+              aria-labelledby="context-map"
             >
-              Back
-            </button>
-            {/* More than three core goals is refused when saving, with a
+              <header>
+                <p>Context map</p>
+                <h3 id="context-map">Choose where each statement lands</h3>
+              </header>
+              <div className={styles.mapLegend}>
+                <span data-destination="goals">Goals</span>
+                <span data-destination="memory">Memory</span>
+              </div>
+              {snapshot.goalCandidates.map((candidate) => (
+                <ReviewCard
+                  candidate={candidate}
+                  destination="Goals"
+                  key={candidate.id}
+                  kind="goal"
+                  onSelectionChange={(selection) =>
+                    setReviewSelections((current) =>
+                      reconcileReviewSelections(snapshot, {
+                        ...current,
+                        [candidate.id]: selection,
+                      }),
+                    )
+                  }
+                  selection={
+                    activeReviewSelections[candidate.id] ??
+                    defaultReviewSelection(candidate)
+                  }
+                />
+              ))}
+              {snapshot.memoryCandidates
+                .filter(isProfileOwned)
+                .map((candidate) => (
+                  <span hidden key={candidate.id}>
+                    <input
+                      name="candidateId"
+                      type="hidden"
+                      value={candidate.id}
+                    />
+                    <input
+                      name={`kind:${candidate.id}`}
+                      type="hidden"
+                      value="memory"
+                    />
+                    <input
+                      name={`decision:${candidate.id}`}
+                      type="hidden"
+                      value="rejected"
+                    />
+                  </span>
+                ))}
+              {reviewedMemory.map((candidate) => (
+                <ReviewCard
+                  candidate={candidate}
+                  destination="Memory"
+                  key={candidate.id}
+                  kind="memory"
+                  onSelectionChange={(selection) =>
+                    setReviewSelections((current) =>
+                      reconcileReviewSelections(snapshot, {
+                        ...current,
+                        [candidate.id]: selection,
+                      }),
+                    )
+                  }
+                  selection={
+                    activeReviewSelections[candidate.id] ??
+                    defaultReviewSelection(candidate)
+                  }
+                />
+              ))}
+            </section>
+            {rankPreview.length ? (
+              <section className={styles.rankPreview}>
+                <p className={styles.eyebrow}>Full rank preview</p>
+                <h3>Result from your current choices</h3>
+                {coreGoalCount > 3 ? (
+                  <p role="alert">
+                    These choices would create {coreGoalCount} core goals.
+                    Reduce the result to at most three before publication.
+                  </p>
+                ) : null}
+                <ol>
+                  {rankPreview.map((goal) => (
+                    <li key={goal.key}>
+                      <span>{goal.tier}</span>
+                      <strong>{goal.title}</strong>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ) : null}
+            <div className={styles.stepActions}>
+              <button
+                className={styles.secondaryButton}
+                onClick={() => setVisibleStep(5)}
+                type="button"
+              >
+                Back
+              </button>
+              {/* More than three core goals is refused when saving, with a
                 message about another tab. With every card accepted from the
                 start this is the first thing some owners see, so the button
                 waits for the count the notice above asks for. */}
-            <button disabled={pending || coreGoalCount > 3} type="submit">
-              Save accepted items
-            </button>
-          </div>
-        </form>
-      ) : null}
-
-      <form action={formAction} className={styles.cancelForm}>
-        <input name="operation" type="hidden" value="cancel" />
-        <input
-          name="expectedDraftRevision"
-          type="hidden"
-          value={draft.revision}
-        />
-        <button disabled={pending}>Cancel and delete draft</button>
-      </form>
+              <button disabled={pending || coreGoalCount > 3} type="submit">
+                Save accepted items
+              </button>
+            </div>
+          </form>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -774,9 +773,17 @@ function StepActions({
       {/* Leaving must not wait on a field: the browser's own check is off
           for this button, and the action leaves even when the step is not
           complete enough to save. */}
-      <button disabled={pending} formNoValidate name="intent" value="finish">
-        Save and finish later
-      </button>
+      <ContinueLater>
+        <button
+          className={styles.secondaryButton}
+          disabled={pending}
+          formNoValidate
+          name="intent"
+          value="finish"
+        >
+          Continue later
+        </button>
+      </ContinueLater>
       <button disabled={pending} name="intent" value="continue">
         Save and continue
       </button>
@@ -1190,18 +1197,6 @@ export function isActionErrorStatus(
     status === "session" ||
     status === "error"
   );
-}
-
-function stepHeading(step: OnboardingStep) {
-  const headings = {
-    1: "Name the outcomes",
-    2: "Record the baseline",
-    3: "Set the feasible frame",
-    4: "State what helps",
-    5: "Name constraints, if useful",
-    6: "File only what you accept",
-  } satisfies Record<OnboardingStep, string>;
-  return headings[step];
 }
 
 function today() {

@@ -44,7 +44,7 @@ describe("onboarding actions", () => {
     expect(result).toMatchObject({
       status: "saved",
       message: "This step was saved.",
-      redirectTo: "/home/you?setup=kept",
+      redirectTo: "/home/today",
       nextStep: 1,
     });
     expect(apply).toHaveBeenCalledWith({
@@ -73,9 +73,7 @@ describe("onboarding actions", () => {
       },
     });
     expect(revalidatePathMock).toHaveBeenCalled();
-    expect(redirectMock).toHaveBeenCalledExactlyOnceWith(
-      "/home/you?setup=kept",
-    );
+    expect(redirectMock).toHaveBeenCalledExactlyOnceWith("/home/today");
   });
 
   it("leaves on finish later even when the step cannot be saved, and says so", async () => {
@@ -86,9 +84,7 @@ describe("onboarding actions", () => {
     await changeOnboardingAction(INITIAL_ONBOARDING_ACTION_STATE, goalForm());
 
     // You tells the owner that the step they were on was not saved.
-    expect(redirectMock).toHaveBeenCalledExactlyOnceWith(
-      "/home/you?setup=left",
-    );
+    expect(redirectMock).toHaveBeenCalledExactlyOnceWith("/home/today");
     expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 
@@ -103,9 +99,7 @@ describe("onboarding actions", () => {
     await changeOnboardingAction(INITIAL_ONBOARDING_ACTION_STATE, form);
 
     expect(apply).not.toHaveBeenCalled();
-    expect(redirectMock).toHaveBeenCalledExactlyOnceWith(
-      "/home/you?setup=left",
-    );
+    expect(redirectMock).toHaveBeenCalledExactlyOnceWith("/home/today");
   });
 
   it("does not start setup again once it has been finished", async () => {

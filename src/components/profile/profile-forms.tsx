@@ -61,36 +61,143 @@ function ProfileNotice({ state }: { state: ProfileActionState }) {
 }
 
 /**
- * Runs `onSaved` once for each save that went through. In an effect, because
- * it changes the step its parent shows, and a parent is not to be updated
- * while its child renders.
+ * Runs once for each save that went through: `onLater` when the save was made
+ * to leave ("Continue later"), `onSaved` otherwise. In an effect, because both
+ * change what a parent shows, and a parent is not to be updated while its
+ * child renders. A save that was refused stays where it is, with its notice.
  */
-function useSaved(state: ProfileActionState, onSaved?: () => void) {
+function useSaved(
+  state: ProfileActionState,
+  onSaved?: () => void,
+  onLater?: () => void,
+) {
   const handled = useRef(state.submission);
+  const leavingRef = useRef(false);
   useEffect(() => {
     if (handled.current === state.submission) return;
     handled.current = state.submission;
-    if (state.status === "saved") onSaved?.();
+    const left = leavingRef.current;
+    leavingRef.current = false;
+    if (state.status !== "saved") return;
+    if (left) onLater?.();
+    else onSaved?.();
   });
+  return leavingRef;
 }
+
+/**
+ * "Continue later" in guided setup (owner, 5 Oct 2026): a link under a step's
+ * buttons that does not leave at once. It first says what setup is for and
+ * asks again; `children` is the button that then really leaves, which each
+ * step supplies because each saves in its own way.
+ */
+export function ContinueLater({ children }: { children: ReactNode }) {
+  const [asking, setAsking] = useState(false);
+
+  if (!asking) {
+    return (
+      <button
+        className={styles.laterLink}
+        onClick={() => setAsking(true)}
+        type="button"
+      >
+        Continue later
+      </button>
+    );
+  }
+
+  return (
+    <div className={styles.leavePanel} data-leave-setup role="alert">
+      <strong>Setup makes FitTip useful</strong>
+      <p>
+        Your coach and your plan work from what you tell us here. Without it
+        they have little to go on. You can pick it up again from You.
+      </p>
+      <div>
+        <button onClick={() => setAsking(false)} type="button">
+          Keep going
+        </button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The button that leaves a profile step once the owner has confirmed: it
+ * saves what the step holds and goes to the app. `canSave` is false when the
+ * step has nothing it could save yet, and then it only leaves.
+ */
+function LaterButton({
+  leavingRef,
+  onLater,
+  canSave = () => true,
+}: {
+  leavingRef: { current: boolean };
+  onLater: () => void;
+  canSave?: (form: HTMLFormElement) => boolean;
+}) {
+  return (
+    <ContinueLater>
+      <button
+        className={styles.secondaryButton}
+        onClick={(event) => {
+          const form = event.currentTarget.form;
+          if (!form || !canSave(form)) {
+            onLater();
+            return;
+          }
+          leavingRef.current = true;
+          form.requestSubmit();
+        }}
+        type="button"
+      >
+        Continue later
+      </button>
+    </ContinueLater>
+  );
+}
+
+/**
+ * "About you" one question at a time, as guided setup asks it (owner, 5 Oct
+ * 2026): the heading each question is asked under, in order. Only the first
+ * must be answered.
+ */
+export const ABOUT_YOU_QUESTIONS = [
+  "What's your name?",
+  "When is your birthday?",
+  "What's your gender?",
+  "How tall are you?",
+  "How much do you weigh?",
+] as const;
 
 export function AboutYouForm({
   profile,
   submitLabel,
-  intro,
+  question,
+  onQuestion,
   onSaved,
+  onLater,
 }: {
   profile: ProfileDetailsView;
   submitLabel: string;
-  intro?: ReactNode;
+  /**
+   * Setup shows one question, by its place in `ABOUT_YOU_QUESTIONS`, and
+   * says which one it is on. Without it this is Settings: every field at
+   * once. Either way it is one form, saved once.
+   */
+  question?: number;
+  onQuestion?: (question: number) => void;
   /** Setup moves on; Settings stays and says it is saved. */
   onSaved?: () => void;
+  /** Setup only: where "Continue later" goes once what is here is saved. */
+  onLater?: () => void;
 }) {
   const [state, action, pending] = useActionState(
     saveProfileDetailsAction,
     INITIAL_PROFILE_ACTION_STATE,
   );
-  useSaved(state, onSaved);
+  const leavingRef = useSaved(state, onSaved, onLater);
 
   // The units and the time zone are not asked (owner, 5 Oct 2026). Until the
   // profile has them they are the browser's: its language says the units,
@@ -106,107 +213,199 @@ export function AboutYouForm({
   const height =
     profile.heightCm === null ? null : cmToFeetAndInches(profile.heightCm);
 
+  const paged = question !== undefined;
+  const last = ABOUT_YOU_QUESTIONS.length - 1;
+  /** On to the next question, unless this one is the name and it is empty. */
+  const next = (form: HTMLFormElement) => {
+    const name = form.elements.namedItem("displayName");
+    if (
+      question === 0 &&
+      name instanceof HTMLInputElement &&
+      !name.reportValidity()
+    ) {
+      return;
+    }
+    onQuestion?.((question ?? 0) + 1);
+  };
+
+  // A question asked on its own is named by its heading, so its one field
+  // shows no label over it (owner, 5 Oct 2026); the label is still there for
+  // a screen reader. Settings shows every field at once, each with its label.
+  const name = (text: string) =>
+    paged ? <span className={styles.srOnly}>{text}</span> : text;
+
+  // Keyed by the units: once the browser has said which, the measures are
+  // shown in that system from the start.
+  const fields = [
+    <label key="name">
+      {name("Name")}
+      <input
+        autoComplete="name"
+        defaultValue={profile.displayName ?? ""}
+        maxLength={80}
+        name="displayName"
+        required
+      />
+    </label>,
+    <label key="birthday">
+      {name("Birthday (optional)")}
+      <input
+        defaultValue={profile.birthDate ?? ""}
+        min="1900-01-01"
+        name="birthDate"
+        type="date"
+      />
+    </label>,
+    <label key="gender">
+      {name("Gender (optional)")}
+      <select defaultValue={profile.gender ?? ""} name="gender">
+        <option value="">Not set</option>
+        {GENDERS.map((gender) => (
+          <option key={gender} value={gender}>
+            {GENDER_LABELS[gender]}
+          </option>
+        ))}
+      </select>
+    </label>,
+    units === "metric" ? (
+      <label key="height-metric">
+        {name("Height in cm (optional)")}
+        <input
+          defaultValue={profile.heightCm ?? ""}
+          inputMode="decimal"
+          name="heightCm"
+          placeholder={paged ? "cm" : undefined}
+        />
+      </label>
+    ) : (
+      // Two fields, so each keeps a word saying which it is.
+      <div className={styles.fieldGrid} key="height-imperial">
+        <label>
+          {paged ? "Feet" : "Height, feet (optional)"}
+          <input
+            defaultValue={height?.feet ?? ""}
+            inputMode="numeric"
+            name="heightFeet"
+          />
+        </label>
+        <label>
+          Inches
+          <input
+            defaultValue={height?.inches ?? ""}
+            inputMode="decimal"
+            name="heightInches"
+          />
+        </label>
+      </div>
+    ),
+    units === "metric" ? (
+      <label key="weight-metric">
+        {name("Weight in kg (optional)")}
+        <input
+          defaultValue={profile.latestWeightKg ?? ""}
+          inputMode="decimal"
+          name="weightKg"
+          placeholder={paged ? "kg" : undefined}
+        />
+      </label>
+    ) : (
+      <label key="weight-imperial">
+        {name("Weight in lb (optional)")}
+        <input
+          defaultValue={
+            profile.latestWeightKg === null
+              ? ""
+              : kgToPounds(profile.latestWeightKg)
+          }
+          inputMode="decimal"
+          name="weightLb"
+          placeholder={paged ? "lb" : undefined}
+        />
+      </label>
+    ),
+  ];
+
   return (
-    <form action={action} className={styles.stepForm} data-about-you>
+    <form
+      action={action}
+      className={styles.stepForm}
+      data-about-you
+      // Enter in a field would send the form from the first question on;
+      // until the last one it asks for the next question instead.
+      onSubmit={(event) => {
+        if (!paged || question === last || leavingRef.current) return;
+        event.preventDefault();
+        next(event.currentTarget);
+      }}
+    >
       {/* Setup has a notice of its own, and there a save moves to the next
           step; without `onSaved` this is Settings, which stays and says so. */}
       {onSaved && state.status === "saved" ? null : (
         <ProfileNotice state={state} />
       )}
-      {intro}
-      <label>
-        Name
-        <input
-          autoComplete="name"
-          defaultValue={profile.displayName ?? ""}
-          maxLength={80}
-          name="displayName"
-          required
-        />
-      </label>
-      <div className={styles.fieldGrid}>
-        <label>
-          Birthday (optional)
-          <input
-            defaultValue={profile.birthDate ?? ""}
-            min="1900-01-01"
-            name="birthDate"
-            type="date"
-          />
-        </label>
-        <label>
-          Gender (optional)
-          <select defaultValue={profile.gender ?? ""} name="gender">
-            <option value="">Not set</option>
-            {GENDERS.map((gender) => (
-              <option key={gender} value={gender}>
-                {GENDER_LABELS[gender]}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
       <input name="unitsSystem" type="hidden" value={units} />
       <input
         name="timezoneName"
         type="hidden"
         value={profile.timezoneName ? "" : (browserZone ?? "")}
       />
-      {/* Keyed by the units: once the browser has said which, the measures
-          are shown in that system from the start. */}
-      {units === "metric" ? (
-        <div className={styles.fieldGrid} key="metric">
-          <label>
-            Height in cm (optional)
-            <input
-              defaultValue={profile.heightCm ?? ""}
-              inputMode="decimal"
-              name="heightCm"
-            />
-          </label>
-          <label>
-            Weight in kg (optional)
-            <input
-              defaultValue={profile.latestWeightKg ?? ""}
-              inputMode="decimal"
-              name="weightKg"
-            />
-          </label>
-        </div>
+      {paged ? (
+        // Every field stays in the form, so one save sends them all; the
+        // questions not being asked are only out of sight.
+        fields.map((field, index) => (
+          <div hidden={index !== question} key={field.key}>
+            {field}
+            {/* Beside the field, not inside its label, whose name it would
+                otherwise become part of. */}
+            {index > 0 ? (
+              <small>Optional. Leave it empty to skip it.</small>
+            ) : null}
+          </div>
+        ))
       ) : (
-        <div className={styles.measureGrid} key="imperial">
-          <label>
-            Height, feet (optional)
-            <input
-              defaultValue={height?.feet ?? ""}
-              inputMode="numeric"
-              name="heightFeet"
-            />
-          </label>
-          <label>
-            Inches
-            <input
-              defaultValue={height?.inches ?? ""}
-              inputMode="decimal"
-              name="heightInches"
-            />
-          </label>
-          <label>
-            Weight in lb (optional)
-            <input
-              defaultValue={
-                profile.latestWeightKg === null
-                  ? ""
-                  : kgToPounds(profile.latestWeightKg)
-              }
-              inputMode="decimal"
-              name="weightLb"
-            />
-          </label>
-        </div>
+        <>
+          {fields[0]}
+          <div className={styles.fieldGrid}>
+            {fields[1]}
+            {fields[2]}
+          </div>
+          {fields[3]}
+          {fields[4]}
+        </>
       )}
       <div className={styles.stepActions}>
-        <button disabled={pending}>{submitLabel}</button>
+        {paged && question > 0 ? (
+          <button
+            className={styles.secondaryButton}
+            onClick={() => onQuestion?.(question - 1)}
+            type="button"
+          >
+            Back
+          </button>
+        ) : null}
+        {onLater ? (
+          <LaterButton
+            // Without a name there is nothing to save yet.
+            canSave={(form) => {
+              const name = form.elements.namedItem("displayName");
+              return (
+                name instanceof HTMLInputElement && name.value.trim() !== ""
+              );
+            }}
+            leavingRef={leavingRef}
+            onLater={onLater}
+          />
+        ) : null}
+        {paged && question < last ? (
+          <button
+            onClick={(event) => next(event.currentTarget.form!)}
+            type="button"
+          >
+            Next
+          </button>
+        ) : (
+          <button disabled={pending}>{submitLabel}</button>
+        )}
       </div>
     </form>
   );
@@ -269,17 +468,20 @@ export function SportsForm({
   submitLabel,
   onSaved,
   onBack,
+  onLater,
 }: {
   sports: string[];
   submitLabel: string;
   onSaved?: () => void;
   onBack?: () => void;
+  /** Setup only: where "Continue later" goes once the sports are saved. */
+  onLater?: () => void;
 }) {
   const [state, action, pending] = useActionState(
     saveProfileSportsAction,
     INITIAL_PROFILE_ACTION_STATE,
   );
-  useSaved(state, onSaved);
+  const leavingRef = useSaved(state, onSaved, onLater);
 
   // The owner's own sports: the saved ones that are no preset, then whatever
   // they add here. A preset is recognised however it was typed.
@@ -373,6 +575,9 @@ export function SportsForm({
           >
             Back
           </button>
+        ) : null}
+        {onLater ? (
+          <LaterButton leavingRef={leavingRef} onLater={onLater} />
         ) : null}
         <button disabled={pending}>{submitLabel}</button>
       </div>

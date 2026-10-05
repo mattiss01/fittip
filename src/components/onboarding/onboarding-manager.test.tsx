@@ -14,6 +14,7 @@ import {
   OnboardingActionNotice,
   OnboardingManager,
 } from "./onboarding-manager";
+import { AboutYouForm, SportsForm } from "@/components/profile/profile-forms";
 import type { OnboardingSnapshot } from "@/lib/onboarding/onboarding-contract";
 import type { ProfileDetailsView } from "@/lib/profile/profile-contract";
 
@@ -44,7 +45,7 @@ describe("OnboardingManager", () => {
     expect(screen.getByRole("button", { name: "Start setup" })).toBeVisible();
   });
 
-  it("opens on About you until a name is saved, and says what setup stores", () => {
+  it("opens on the name until one is saved, with a bar for how far setup is", () => {
     render(
       <OnboardingManager
         profile={{ ...namedProfile(), displayName: null }}
@@ -52,19 +53,25 @@ describe("OnboardingManager", () => {
       />,
     );
 
-    expect(screen.getByText("Step 1 of 8 · About you")).toBeVisible();
-    // An account that has just signed up lands here, past the start card,
-    // so this step says what the start card says.
-    expect(screen.getByText(/not sent to an AI provider/)).toBeVisible();
-    expect(screen.getByLabelText("Name")).toBeRequired();
-    for (const optional of [
-      "Birthday (optional)",
-      "Gender (optional)",
-      "Height in cm (optional)",
-      "Weight in kg (optional)",
-    ]) {
-      expect(screen.getByLabelText(optional)).not.toBeRequired();
-    }
+    expect(
+      screen.getByRole("heading", { name: "What's your name?" }),
+    ).toBeVisible();
+    // Nothing is done on the first of twelve steps.
+    const bar = screen.getByRole("progressbar", {
+      name: "Guided setup progress",
+    });
+    expect(bar).toHaveAttribute("aria-valuenow", "0");
+    expect(bar).toHaveAttribute("aria-valuetext", "Step 1 of 12, 0% done");
+    // One bar, not a row of steps to jump between, and no way to delete the
+    // draft: a step is left by Back, Next or "Continue later".
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: /cancel|delete/i })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Continue later" }),
+    ).toBeVisible();
+    // Not said here: an account that has just signed up is not told what
+    // the start card says (owner, 5 Oct 2026).
+    expect(screen.queryByText(/not sent to an AI provider/)).toBeNull();
     // Neither the units nor the time zone is asked: both are sent as the
     // browser has them, and the zone only while the profile has none.
     expect(screen.queryByLabelText("Units")).toBeNull();
@@ -74,43 +81,92 @@ describe("OnboardingManager", () => {
     );
     expect(sent.get("unitsSystem")).toBe("metric");
     expect(sent.get("timezoneName")).toBe("");
-    // The draft is already at its third step; without a name nothing past
-    // the first step opens.
-    for (const later of [/2Your sports/, /3Goals/, /5Time and access/]) {
-      expect(screen.getByRole("button", { name: later })).toBeDisabled();
-    }
+  });
+
+  it("asks About you one question at a time, and only the name must be answered", () => {
+    render(
+      <OnboardingManager
+        profile={{ ...namedProfile(), displayName: null }}
+        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 1 }) }}
+      />,
+    );
+    const heading = (name: string) => screen.getByRole("heading", { name });
+    const next = () =>
+      fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    // Without a name the first question stays.
+    next();
+    expect(heading("What's your name?")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "Alex" },
+    });
+    next();
+    expect(heading("When is your birthday?")).toBeVisible();
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuenow",
+      "8",
+    );
+    // The question is the heading, so its one field shows no label; the
+    // name it has is for a screen reader. An optional one says so.
+    expect(screen.getByLabelText("Birthday (optional)")).toBeVisible();
+    expect(screen.getByLabelText("Name")).not.toBeVisible();
+    expect(
+      screen
+        .getAllByText("Optional. Leave it empty to skip it.")
+        .some((hint) => hint.closest("[hidden]") === null),
+    ).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(heading("What's your name?")).toBeVisible();
+    // What was typed is still there: it is one form, saved once at the end.
+    expect(screen.getByLabelText("Name")).toHaveValue("Alex");
+
+    next();
+    next();
+    expect(heading("What's your gender?")).toBeVisible();
+    next();
+    expect(heading("How tall are you?")).toBeVisible();
+    next();
+    expect(heading("How much do you weigh?")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Next" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Save and continue" }),
+    ).toBeVisible();
+    const sent = new FormData(
+      document.querySelector<HTMLFormElement>("form[data-about-you]")!,
+    );
+    expect(sent.get("displayName")).toBe("Alex");
+    expect(sent.has("birthDate") && sent.has("gender")).toBe(true);
   });
 
   it("shows the stored measures in feet and pounds when the units say so", () => {
     render(
-      <OnboardingManager
+      <AboutYouForm
         profile={{
           ...namedProfile(),
           unitsSystem: "imperial",
           heightCm: 180.3,
           latestWeightKg: 79.83,
         }}
-        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 1 }) }}
+        submitLabel="Save"
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: /1About you/ }));
 
+    // Settings shows every field at once, each under its label.
+    expect(screen.getByLabelText("Name")).toHaveValue("Alex");
     expect(screen.getByLabelText("Height, feet (optional)")).toHaveValue("5");
     expect(screen.getByLabelText("Inches")).toHaveValue("11");
     expect(screen.getByLabelText("Weight in lb (optional)")).toHaveValue("176");
     expect(screen.queryByLabelText("Height in cm (optional)")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Next" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Continue later" })).toBeNull();
   });
 
   it("offers the sports as chips, with the owner's own first and addable", () => {
-    render(
-      <OnboardingManager
-        profile={{ ...namedProfile(), sports: ["Running", "Latzug"] }}
-        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 1 }) }}
-      />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: /2Your sports/ }));
+    render(<SportsForm sports={["Running", "Latzug"]} submitLabel="Save" />);
 
-    expect(screen.getByText("Step 2 of 8 · Your sports")).toBeVisible();
     // By label, not by role: a role query walks all 64 chips each time and
     // took this test past its time limit when the whole suite ran.
     expect(screen.getByLabelText("Running")).toBeChecked();
@@ -130,7 +186,7 @@ describe("OnboardingManager", () => {
     expect(screen.getByLabelText("Cycling")).toBeChecked();
   });
 
-  it("renders eight textual steps and keeps later steps unavailable", () => {
+  it("opens a named account on the draft's own step, counted among all twelve", () => {
     render(
       <OnboardingManager
         profile={namedProfile()}
@@ -141,11 +197,43 @@ describe("OnboardingManager", () => {
       />,
     );
 
-    expect(screen.getByText("Step 4 of 8 · Current training")).toBeVisible();
     expect(
-      screen.getByRole("button", { name: /5Time and access/ }),
-    ).toBeDisabled();
-    expect(screen.getAllByRole("listitem")).toHaveLength(8);
+      screen.getByRole("heading", { name: "Current training" }),
+    ).toBeVisible();
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuetext",
+      "Step 8 of 12, 58% done",
+    );
+    expect(
+      screen.getByRole("button", { name: "Continue later" }),
+    ).toBeVisible();
+  });
+
+  it("asks again before leaving setup, and says what setup is for", () => {
+    render(
+      <OnboardingManager
+        profile={namedProfile()}
+        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 2 }) }}
+      />,
+    );
+    const later = () => screen.getByRole("button", { name: "Continue later" });
+
+    // The link only asks; nothing in the form says "leave" yet.
+    expect(later()).toHaveAttribute("type", "button");
+    fireEvent.click(later());
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Setup makes FitTip useful",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Keep going" }));
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    // Asked again and confirmed, it is the step's own save with the intent
+    // to leave, and it does not wait on a field.
+    fireEvent.click(later());
+    expect(later()).toHaveAttribute("name", "intent");
+    expect(later()).toHaveAttribute("value", "finish");
+    expect(later()).toHaveAttribute("formnovalidate");
   });
 
   it("asks a goal what Goals asks and sends the rest hidden", () => {
@@ -156,7 +244,7 @@ describe("OnboardingManager", () => {
       />,
     );
 
-    expect(screen.getByText("Step 3 of 8 · Goals")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Goals" })).toBeVisible();
     expect(screen.getByLabelText("Goal title")).toBeRequired();
     expect(screen.getByLabelText("Desired outcome")).toBeRequired();
     expect(screen.getByLabelText("Sports")).toBeRequired();
@@ -283,7 +371,9 @@ describe("OnboardingManager", () => {
       />,
     );
 
-    expect(screen.getByText("Step 5 of 8 · Time and access")).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Time and access" }),
+    ).toBeVisible();
     expect(screen.queryByLabelText("Timezone")).toBeNull();
     expect(screen.queryByLabelText("Units")).toBeNull();
     expect(

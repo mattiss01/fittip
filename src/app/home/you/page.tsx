@@ -13,13 +13,11 @@ import styles from "./you.module.css";
 export const dynamic = "force-dynamic";
 
 /**
- * Where "Save and finish later" lands. The flag only chooses which fixed
- * sentence is shown; nothing else is read from it.
+ * Where finishing setup lands. The flag only chooses which fixed sentence is
+ * shown; nothing else is read from it.
  */
 const SETUP_NOTES: Record<string, string> = {
   done: "Your setup is saved. What you accepted is in Goals and Memory.",
-  kept: "Your setup is saved. It is kept for 30 days from your last change, then deleted.",
-  left: "The step you were on was not complete, so it was not saved. The rest of your setup is kept for 30 days from your last change, then deleted.",
 };
 
 export default async function YouPage({

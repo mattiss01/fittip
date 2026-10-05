@@ -121,6 +121,15 @@ lane, one screen per merge.
       missed the restyle. A password field shows what is typed on request.
       "Create account" must not just empty the form over a small "Check your
       email": say it in a dialog whose button goes back to sign-in.
+- [ ] **Numbers without the struck-through zero.** Owner, 5 Oct 2026: the mono face
+      (DM Mono, `--font-mono`) draws 0 with a line through it and the owner does not
+      want it anywhere a number shows. Setup's percentage is in the sans face already;
+      71 other rules use the mono face, for small labels as well as numbers. Open:
+      another mono face with a plain zero, or the sans face with tabular figures
+      wherever a number is shown. Build lane, one sweep, the owner looking.
+- [ ] **No full stop on a heading, everywhere.** Owner, 5 Oct 2026. Done on sign-in,
+      sign-up and in setup; about fifty older headings (loading, error and empty
+      states) still end with one, each quoted by a test or a browser spec.
 - [ ] **Forgot password.** Owner, 5 Oct 2026: a link on sign-in that sends a
       reset mail and lets the password be set again. Careful lane (auth).
 - [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only

@@ -139,8 +139,8 @@ async function resolveOnboardingAction(
     revalidate();
     return result("saved", "This step was saved.", {
       nextStep: advance ? nextStep(step) : step,
-      // You says how long the draft is kept; see `SETUP_NOTES` there.
-      ...(advance ? {} : { redirectTo: "/home/you?setup=kept" }),
+      // "Continue later" goes to the app (owner, 5 Oct 2026).
+      ...(advance ? {} : { redirectTo: "/home/today" }),
     });
   } catch (error) {
     if (
@@ -149,11 +149,11 @@ async function resolveOnboardingAction(
       // The goals step is parsed by the goal rules, which have their own.
       error instanceof GoalValidationError
     ) {
-      // "Save and finish later" leaves whatever the step holds (owner,
-      // 2 Oct 2026). A step the draft cannot store as it stands is not saved,
-      // and You says so; the steps before it are already in the draft.
+      // "Continue later" leaves whatever the step holds (owner, 2 Oct
+      // 2026). A step the draft cannot store as it stands is not saved; the
+      // steps before it are already in the draft.
       if (stringValue(formData.get("intent")) === "finish") {
-        return result("saved", "", { redirectTo: "/home/you?setup=left" });
+        return result("saved", "", { redirectTo: "/home/today" });
       }
       return result(
         "validation",
