@@ -153,7 +153,10 @@ select ok((select created_at is not null from public.profiles where user_id = '0
 select hasnt_column('public', 'profiles', 'email', 'profiles does not duplicate email');
 select hasnt_column('public', 'profiles', 'password', 'profiles does not store passwords');
 select hasnt_table('public', 'invites', 'no invite table exists');
-select is((select count(*)::bigint from information_schema.columns where table_schema = 'public' and table_name = 'profiles'), 3::bigint, 'profiles has exactly the three approved columns');
+-- Nine since 5 Oct 2026: `profile_details_and_sports` added the owner's name,
+-- birthday, height, gender, units and sports, which that migration's own test
+-- names one by one. The count stays pinned so a tenth is a decision too.
+select is((select count(*)::bigint from information_schema.columns where table_schema = 'public' and table_name = 'profiles'), 9::bigint, 'profiles has exactly the nine approved columns');
 
 select * from finish();
 
