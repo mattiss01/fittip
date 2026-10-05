@@ -59,10 +59,9 @@ lane, one screen per merge.
       answers are required, where each answer is kept, and what the review step shows.
       The list below is where that starts, not its scope. Owner, 5 Oct 2026: it
       comes after the three items below it (goals migration, sports list, personal
-      details), which it is built from, and step 1 becomes the slim goal form.
-      Still to decide: whether sign-up leads straight into setup. Today it is
-      reached only from You; `OnboardingHomeInvitation` exists and nothing renders
-      it. Already named; the first three need a migration, so careful lane:
+      details), which it is built from. Signing up now starts it, and its goal
+      step is the slim form. Already named; the first three need a migration, so
+      careful lane:
   - **Access and equipment** cannot be left empty and is a comma list of labels. The
     owner dislikes both. `apply_onboarding_change` refuses fewer than one label.
   - **Time zone and units belong in the profile, not in Memory.** Setup files both as
@@ -100,19 +99,30 @@ lane, one screen per merge.
     records only reopening. It is wrong in one case: setup filing a new answer
     over a finished goal of the same title moves the day to then.
   - **Pause and Abandoned** are still two ways to set a goal aside, both undoable.
-- [ ] **A sports list in the profile.** Owner, 5 Oct 2026; this settles "sport or
-      category" as one shared list. A large preset list of sport names plus the
-      owner's own, chosen in setup and offered wherever a sport is typed today:
-      a goal's sports, a session's and an activity's `sport`. Names only, so it
-      is not the exercise library the invariants rule out. Careful lane
-      (migration). Open: the preset list, which is shared vocabulary and wants a
-      line in `CONTEXT.md`, and whether the stored `sport` columns are renamed.
-- [ ] **Personal details in the profile.** Owner, 5 Oct 2026: name, birthday,
-      height, weight and gender, asked as setup's first step, before goals.
-      Careful lane (migration). Storing them is this item; the coach reading
-      them is "Athlete profile for the coach" under Later and needs its ADR
-      first. Open: which are required, whether weight keeps a history, the
-      gender options.
+- [~] **"About you" and "Your sports", setup's first two steps.** Careful lane
+      (migration `profile_details_and_sports`), owner's decisions of 5 Oct 2026.
+      Outcome: setup opens with name, birthday, gender, height and weight, then
+      a sports picker (presets by group plus the owner's own), both saved
+      straight to the profile, not through the setup draft, and changeable on
+      Settings. Only the name is required; gender is Female, Male or Other; no
+      sport is required; weight keeps a history, one entry a day. Units and the
+      time zone are guessed from the browser and shown to be changed, so they
+      leave "Time and access". Stored metric. Nothing here reaches the coach.
+- [ ] **The sports list wherever a sport is typed.** Owner, 5 Oct 2026; this
+      settles "sport or category" as one shared list. Offer the profile's sports
+      in a goal's sports and a session's and an activity's `sport`. Build lane
+      once the list exists. Open: whether the stored `sport` columns are renamed.
+- [ ] **The coach reads age, gender, height and weight.** Owner, 5 Oct 2026:
+      those four, age worked out from the birthday, and never the name. AI data
+      boundary, so careful lane and its own ADR (021). The plan context has
+      about 9 tokens free and this needs about 20 plus a prompt sentence; bring
+      measured numbers and the safety wording (non-diagnostic) before pushing.
+- [ ] **Sign-in and sign-up in the new style.** Owner, 5 Oct 2026: both pages
+      missed the restyle. A password field shows what is typed on request.
+      "Create account" must not just empty the form over a small "Check your
+      email": say it in a dialog whose button goes back to sign-in.
+- [ ] **Forgot password.** Owner, 5 Oct 2026: a link on sign-in that sends a
+      reset mail and lets the password be set again. Careful lane (auth).
 - [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only
       "Generate roadmap proposal", and an owner without a subscription may not be able
       to generate one, so a roadmap must also be writable by hand: phases, dates, focus,
@@ -178,6 +188,10 @@ Not worth their own slot; do them when work lands nearby.
 - **Dragging a goal does not scroll the page.** Since 5 Oct 2026 a goal is
   reordered by dragging its number. A list taller than the screen cannot be
   dragged end to end; the arrow keys on the number can, which a phone lacks.
+- **A confirmation link opened in another browser does not start setup.** Only
+  the browser that signed up can be confirmed into a session; elsewhere the
+  link fails, the sign-in that follows goes to Today, and setup is reached
+  from You. `OnboardingHomeInvitation` is unrendered and could cover it.
 - **Two back links drawn the same way.** `src/app/home/you/back-link.tsx` copies the one on
   a Progress record, markup and style. Progress could use the component; it would have to
   carry `data-back-link`, which m3-15c clicks.
@@ -252,11 +266,6 @@ Not worth their own slot; do them when work lands nearby.
   28 Sep 2026 (ADR-020 decision 4), to be revisited. It would need a proposal able to
   reference a saved session (schema), plan-context bytes there are none of, and a view on
   whether a names-only index is enough.
-- **Athlete profile for the coach.** The owner wants the coach to know age, gender, weight
-  and similar. Collecting and storing them is "Personal details in the profile" under Now.
-  Not decided: which of them the coach is sent — this is a new class of personal
-  data, weight is health-adjacent, and it needs its own ADR before it crosses. ADR-020's
-  "nothing identifies the person" reasoning should be rechecked against it.
 - **Automatic session detail.** Filling sessions without a request, perhaps per
   subscription tier. ADR-020 decision 3 rules it out for now; it would be a new spend and
   autonomy decision.
