@@ -109,18 +109,24 @@ lane, one screen per merge.
       about 9 tokens free and this needs about 20 plus a prompt sentence; bring
       measured numbers and the safety wording (non-diagnostic) before pushing.
 - [ ] **Setup after goals, rethought.** Owner, 5 Oct 2026: current training, time and
-      access, preferences and constraints all go. Direction so far: facts are tapped
-      and kept as profile settings (how often they train now and want to, which days
-      and how much time each has, places and equipment); no session length; what is
-      said in words (likes, limits) is the only source of memory items, drafted by the
-      coach and accepted in review. The limits text may be sent to the AI (ADR needed;
-      the screen says today that it is not), and limits as a whole are to be thought
-      through again. Careful lane: replaces most of `apply_onboarding_change`.
-- [ ] **Setup's small ends.** From the review of 5 Oct 2026. The leave popup has no
+      access, preferences and constraints all go. Decided: (1) "How often do you want
+      to train?", sessions a week, and nothing about training now; (2) "Any days you
+      can't train?", every day free until tapped, with an optional line in words;
+      no session length. Still to shape with the owner: (3) places and equipment as
+      chips; (4) what the coach should know and (5) what limits you, both free text
+      and the only source of memory items, drafted by the coach and accepted in
+      (6) review. The tapped facts are profile settings, not memory. The limits text
+      may be sent to the AI (ADR needed; the screen says today that it is not), and
+      limits as a whole are to be thought through again. Careful lane: replaces most
+      of `apply_onboarding_change`.
+- [ ] **Setup's small ends.** From the reviews of 5 Oct 2026. The leave popup has no
       focus trap and the sport list no arrow keys, Escape or outside press; an "About
       you" save refused for a question that is not on screen names no field; removing
       the last weight loses its notice; `weight_entries.measured_on` and `birth_date`
-      have no future check in the database; `ageOn` waits for the coach item above.
+      have no future check in the database; a sport a goal adds skips the list's
+      tidying of spaces and is written read-then-write; a first time zone can be
+      stored when the rest of "About you" then fails; the confirmation link does not
+      check its sign-out; `ageOn` waits for the coach item above.
 - [ ] **Setup takes more than three goals.** Owner, 5 Oct 2026: three is the limit on core
       goals, not on goals. Setup's goal step stops at three because the database does:
       `apply_onboarding_change` refuses a fourth and `onboarding_goal_candidates.position`

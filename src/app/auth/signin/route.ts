@@ -25,7 +25,13 @@ export async function POST(request: Request) {
     try {
       await requireAllowedVerifiedUser(client);
       const profiles = new ProfileRepository(client);
-      firstSignIn = (await profiles.getCurrentProfile()) === null;
+      // An account that signed up here was sent a confirmation mail, which
+      // Auth records and the account cannot change. One made for it another
+      // way (a test's, or the local owner's) was not, and goes where signing
+      // in always went.
+      firstSignIn =
+        (await profiles.getCurrentProfile()) === null &&
+        Boolean((await client.auth.getUser()).data.user?.confirmation_sent_at);
       await profiles.ensureCurrentProfile();
     } catch {
       await client.auth.signOut();
@@ -45,9 +51,9 @@ export async function POST(request: Request) {
     //
     // A confirmation link opened in another browser confirms the account
     // without reaching our callback, so nothing was started for it. Such an
-    // account has no profile until this sign-in makes one, and that is how
-    // it is told from an older account that never ran setup: its setup is
-    // started here instead.
+    // account signed up here and has no profile until this sign-in makes
+    // one, and that is how it is told from an older account that never ran
+    // setup: its setup is started here instead.
     try {
       const onboarding = new OnboardingRepository(client);
       let setup = await onboarding.getSetupState();

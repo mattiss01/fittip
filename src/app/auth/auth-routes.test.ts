@@ -13,6 +13,7 @@ const {
     auth: {
       exchangeCodeForSession: vi.fn(),
       getClaims: vi.fn(),
+      getUser: vi.fn(),
       signInWithPassword: vi.fn(),
       signUp: vi.fn(),
       signOut: vi.fn(),
@@ -101,6 +102,9 @@ describe("production authentication route handlers", () => {
     client.auth.signInWithPassword.mockResolvedValue({ error: null });
     client.auth.signUp.mockResolvedValue({ error: null });
     client.auth.signOut.mockResolvedValue({ error: null });
+    client.auth.getUser.mockResolvedValue({
+      data: { user: { confirmation_sent_at: "2026-10-05T10:00:00Z" } },
+    });
     ensureCurrentProfileMock.mockResolvedValue(undefined);
     // An account that has signed in before, unless a test says otherwise.
     getCurrentProfileMock.mockResolvedValue({ userId: "user-1" });
@@ -253,6 +257,16 @@ describe("production authentication route handlers", () => {
       expectedDraftRevision: 0,
     });
     expectPrivate303(response, "/home/you/onboarding");
+  });
+
+  it("does not start setup at the first sign-in of an account that never signed up here", async () => {
+    getCurrentProfileMock.mockResolvedValue(null);
+    client.auth.getUser.mockResolvedValue({ data: { user: {} } });
+    const response = await signin(
+      post("/auth/signin", { email: "made@example.com", password: "password" }),
+    );
+    expect(applyOnboardingMock).not.toHaveBeenCalled();
+    expectPrivate303(response, "/home/today");
   });
 
   it("does not start setup for an older account that never ran it", async () => {

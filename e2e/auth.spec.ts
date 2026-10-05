@@ -279,7 +279,7 @@ async function completeGuidedSetup(
   // What the first two steps saved is on Settings, where it is changed,
   // with the units and the time zone setup took from the browser.
   await page.goto("/home/you/settings");
-  await expect(page.getByLabel("Name")).toHaveValue("Alex");
+  await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue("Alex");
   await expect(page.getByLabel("Units")).toHaveValue("metric");
   await expect(page.getByLabel("Time zone")).toHaveValue("Europe/Berlin");
   await expect(page.getByText("80.5 kg")).toBeVisible();
