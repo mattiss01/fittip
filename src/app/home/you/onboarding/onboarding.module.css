@@ -179,9 +179,12 @@ main.setupPage {
   line-height: 1.1;
 }
 
+/* The line under a heading that says what the step asks. */
 .stepHeader span {
+  display: block;
   color: var(--ledger-muted);
-  font-size: 0.85rem;
+  font-size: 0.92rem;
+  line-height: 1.4;
 }
 
 .stepForm {
@@ -224,28 +227,29 @@ main.setupPage {
   resize: none;
 }
 
-/* Core or Supporting: two choices side by side, the chosen one filled, as on
-   Goals. */
-.attentionChoice {
+/* A group of choices under one label, drawn as a field's label is. */
+.fieldGroup {
   min-width: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.4rem;
-  margin: 0;
-  padding: 0;
-  border: 0;
+  gap: 0.3rem;
 }
 
-.attentionChoice legend {
-  margin-bottom: 0.3rem;
-  padding: 0;
+.fieldLabel {
   color: var(--ledger-muted);
   font: 500 0.62rem var(--font-mono);
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
-.stepForm .attentionChoice label {
+/* Core or Supporting: two choices side by side, the chosen one filled, as on
+   Goals. */
+.attentionOptions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.stepForm .attentionOptions label {
   position: relative;
   min-height: 3rem;
   display: flex;
@@ -261,7 +265,7 @@ main.setupPage {
   cursor: pointer;
 }
 
-.stepForm .attentionChoice input {
+.stepForm .attentionOptions input {
   position: absolute;
   width: 1px;
   min-height: 0;
@@ -270,12 +274,12 @@ main.setupPage {
   opacity: 0;
 }
 
-.stepForm .attentionChoice label:has(input:checked) {
+.stepForm .attentionOptions label:has(input:checked) {
   border-color: var(--ledger-ink);
   background: var(--sage);
 }
 
-.stepForm .attentionChoice label:has(input:focus-visible) {
+.stepForm .attentionOptions label:has(input:focus-visible) {
   outline: 3px solid var(--ledger-ink);
   outline-offset: 2px;
 }

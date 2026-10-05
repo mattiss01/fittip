@@ -342,6 +342,14 @@ export function OnboardingManager({
       : profileStep === 2
         ? SPORTS_HEADING
         : ONBOARDING_STEPS[visibleStep - 1];
+  // A line under the heading where the heading alone does not say what to
+  // do (owner, 5 Oct 2026).
+  const caption =
+    profileStep === 2
+      ? "Select the sports you do or are interested in"
+      : profileStep === null && visibleStep === 1
+        ? "What you want to train for, up to three"
+        : null;
   // Back is one arrow at the top of the page, not a button on every step
   // (owner, 5 Oct 2026). The first question has nowhere to go back to.
   const goBack =
@@ -416,6 +424,7 @@ export function OnboardingManager({
           <h2 ref={headingRef} tabIndex={-1}>
             {heading}
           </h2>
+          {caption ? <span>{caption}</span> : null}
         </header>
 
         {profileStep === 1 ? (
@@ -450,6 +459,7 @@ export function OnboardingManager({
                 candidate={snapshot.goalCandidates[index]}
                 index={index}
                 key={index}
+                sports={profile.sports}
               />
             ))}
             {goalCount < 3 ? (
@@ -859,9 +869,12 @@ function StepActions({ pending }: { pending: boolean }) {
 function GoalFields({
   candidate,
   index,
+  sports,
 }: {
   candidate?: GoalCandidateView;
   index: number;
+  /** The sports chosen in "Your sports", offered for the goal to pick from. */
+  sports: string[];
 }) {
   // The owner's own day once the browser is there to ask; the server, which
   // does not know their zone yet, renders the UTC one.
@@ -891,15 +904,11 @@ function GoalFields({
           rows={1}
         />
       </label>
-      <label>
-        Sports
-        <input
-          defaultValue={candidate?.activityAreas.join(", ") ?? ""}
-          name={`goalActivities:${index}`}
-          placeholder="Running, strength"
-          required={index === 0}
-        />
-      </label>
+      <GoalSports
+        index={index}
+        initial={candidate?.activityAreas ?? []}
+        sports={sports}
+      />
       <label>
         Target date (optional)
         <input
@@ -908,21 +917,31 @@ function GoalFields({
           type="date"
         />
       </label>
-      {/* Two choices side by side, as on Goals, not a list to open. */}
-      <fieldset className={styles.attentionChoice}>
-        <legend>Attention</legend>
-        {(["core", "supporting"] as const).map((tier) => (
-          <label key={tier}>
-            <input
-              defaultChecked={(candidate?.priorityTier ?? "core") === tier}
-              name={`goalTier:${index}`}
-              type="radio"
-              value={tier}
-            />
-            {tier === "core" ? "Core" : "Supporting"}
-          </label>
-        ))}
-      </fieldset>
+      {/* Two choices side by side, as on Goals, not a list to open. A group
+          with a plain label over it: inside this card a fieldset's legend
+          is drawn as a card title, and took a place beside "Core". */}
+      <div
+        aria-labelledby={`goal-attention-${index}`}
+        className={styles.fieldGroup}
+        role="radiogroup"
+      >
+        <span className={styles.fieldLabel} id={`goal-attention-${index}`}>
+          Attention
+        </span>
+        <div className={styles.attentionOptions}>
+          {(["core", "supporting"] as const).map((tier) => (
+            <label key={tier}>
+              <input
+                defaultChecked={(candidate?.priorityTier ?? "core") === tier}
+                name={`goalTier:${index}`}
+                type="radio"
+                value={tier}
+              />
+              {tier === "core" ? "Core" : "Supporting"}
+            </label>
+          ))}
+        </div>
+      </div>
       <input
         name={`goalCategory:${index}`}
         type="hidden"
@@ -1260,6 +1279,87 @@ export function isActionErrorStatus(
     status === "conflict" ||
     status === "session" ||
     status === "error"
+  );
+}
+
+/**
+ * A goal's sports, picked from the ones chosen in "Your sports" (owner, 5 Oct
+ * 2026), together with any the goal already names that are not among them.
+ * The draft stores them as it always did, a list in one field, so the picks
+ * are sent that way. With no sports chosen there is nothing to pick from, and
+ * the field is typed as before.
+ */
+function GoalSports({
+  index,
+  initial,
+  sports,
+}: {
+  index: number;
+  initial: string[];
+  sports: string[];
+}) {
+  const options = [
+    ...sports,
+    ...initial.filter(
+      (named) =>
+        !sports.some(
+          (sport) => sport.toLocaleLowerCase() === named.toLocaleLowerCase(),
+        ),
+    ),
+  ];
+  const [chosen, setChosen] = useState(
+    () => new Set(initial.map((sport) => sport.toLocaleLowerCase())),
+  );
+
+  if (options.length === 0) {
+    return (
+      <label>
+        Sports
+        <input
+          name={`goalActivities:${index}`}
+          placeholder="Running, strength"
+          required={index === 0}
+        />
+      </label>
+    );
+  }
+
+  return (
+    <div
+      aria-labelledby={`goal-sports-${index}`}
+      className={styles.fieldGroup}
+      role="group"
+    >
+      <span className={styles.fieldLabel} id={`goal-sports-${index}`}>
+        Sports
+      </span>
+      <div className={styles.chips}>
+        {options.map((sport) => (
+          <label className={styles.chip} key={sport}>
+            <input
+              checked={chosen.has(sport.toLocaleLowerCase())}
+              onChange={() =>
+                setChosen((current) => {
+                  const next = new Set(current);
+                  const key = sport.toLocaleLowerCase();
+                  if (!next.delete(key)) next.add(key);
+                  return next;
+                })
+              }
+              type="checkbox"
+            />
+            <span>{sport}</span>
+          </label>
+        ))}
+      </div>
+      <input
+        name={`goalActivities:${index}`}
+        type="hidden"
+        value={options
+          .filter((sport) => chosen.has(sport.toLocaleLowerCase()))
+          .join(", ")}
+      />
+    </div>
   );
 }
 

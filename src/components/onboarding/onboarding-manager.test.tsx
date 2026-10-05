@@ -376,6 +376,21 @@ describe("OnboardingManager", () => {
     ).toBeVisible();
   });
 
+  it("lets a goal's sports be typed when none was chosen in Your sports", () => {
+    render(
+      <OnboardingManager
+        profile={{ ...namedProfile(), sports: [] }}
+        snapshot={{
+          ...emptySnapshot(),
+          draft: draft({ currentStep: 1, revision: 1 }),
+        }}
+      />,
+    );
+
+    expect(screen.getByLabelText("Sports")).toBeRequired();
+    expect(screen.queryByRole("group", { name: "Sports" })).toBeNull();
+  });
+
   it("asks again before leaving setup, and says what setup is for", () => {
     render(
       <OnboardingManager
@@ -418,7 +433,21 @@ describe("OnboardingManager", () => {
     expect(screen.getByRole("heading", { name: "Goals" })).toBeVisible();
     expect(screen.getByLabelText("Goal title")).toBeRequired();
     expect(screen.getByLabelText("Desired outcome")).toBeRequired();
-    expect(screen.getByLabelText("Sports")).toBeRequired();
+    expect(
+      screen.getByText("What you want to train for, up to three"),
+    ).toBeVisible();
+    // The goal picks from the sports chosen in "Your sports", and sends the
+    // picks as the list the draft has always stored.
+    const sports = screen.getByRole("group", { name: "Sports" });
+    const running = within(sports).getByLabelText("Running");
+    expect(running).not.toBeChecked();
+    expect(
+      container.querySelector('input[name="goalActivities:0"]'),
+    ).toHaveValue("");
+    fireEvent.click(running);
+    expect(
+      container.querySelector('input[name="goalActivities:0"]'),
+    ).toHaveValue("Running");
     expect(screen.getByLabelText("Target date (optional)")).not.toBeRequired();
     // Two choices side by side, as on Goals, and an outcome field that
     // starts one line tall.

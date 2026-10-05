@@ -148,7 +148,11 @@ async function completeGuidedSetup(
   await expect(heading("Goals")).toBeVisible();
   await page.getByLabel("Goal title").fill(goalTitle);
   await page.getByLabel("Desired outcome").fill(goalOutcome);
-  await page.getByLabel("Sports").fill("Running");
+  // The goal picks from the sports chosen two steps before.
+  await page
+    .getByRole("group", { name: "Sports" })
+    .getByText("Running", { exact: true })
+    .click();
   // "Continue later" is setup's one way out besides finishing: it saves the
   // step and goes to the app. There is no "Cancel and delete draft".
   await expect(
