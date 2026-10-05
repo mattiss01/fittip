@@ -6,6 +6,8 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  useTransition,
+  type FormEvent,
   type ReactNode,
 } from "react";
 
@@ -106,18 +108,37 @@ export function ContinueLater({ children }: { children: ReactNode }) {
     );
   }
 
+  // A popup over the step (owner, 5 Oct 2026). It is drawn from inside the
+  // step's form, where `children` has to be to send that form, and laid over
+  // the whole screen; Escape and a press beside it both go back to the step.
   return (
-    <div className={styles.leavePanel} data-leave-setup role="alert">
-      <strong>Setup makes FitTip useful</strong>
-      <p>
-        Your coach and your plan work from what you tell us here. Without it
-        they have little to go on. You can pick it up again from You.
-      </p>
-      <div>
-        <button onClick={() => setAsking(false)} type="button">
-          Keep going
-        </button>
-        {children}
+    <div
+      className={styles.leaveBackdrop}
+      data-leave-setup
+      onClick={() => setAsking(false)}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") setAsking(false);
+      }}
+    >
+      <div
+        aria-describedby="leave-setup-why"
+        aria-labelledby="leave-setup-title"
+        aria-modal="true"
+        className={styles.leavePanel}
+        onClick={(event) => event.stopPropagation()}
+        role="alertdialog"
+      >
+        <strong id="leave-setup-title">Setup makes FitTip useful</strong>
+        <p id="leave-setup-why">
+          Your coach and your plan work from what you tell us here. Without it
+          they have little to go on. You can pick it up again from You.
+        </p>
+        <div>
+          <button autoFocus onClick={() => setAsking(false)} type="button">
+            Keep going
+          </button>
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -183,8 +204,9 @@ export function AboutYouForm({
   submitLabel: string;
   /**
    * Setup shows one question, by its place in `ABOUT_YOU_QUESTIONS`, and
-   * says which one it is on. Without it this is Settings: every field at
-   * once. Either way it is one form, saved once.
+   * says which one it is on; each Next saves the form as it stands, so
+   * nothing typed is lost by leaving. Without it this is Settings: every
+   * field at once, saved by its one button.
    */
   question?: number;
   onQuestion?: (question: number) => void;
@@ -197,7 +219,27 @@ export function AboutYouForm({
     saveProfileDetailsAction,
     INITIAL_PROFILE_ACTION_STATE,
   );
-  const leavingRef = useSaved(state, onSaved, onLater);
+  // Sent by hand rather than as the form's own action: React empties a
+  // form's fields once its action has run, and these are saved question by
+  // question while the owner may still go Back to one.
+  const [sending, startSending] = useTransition();
+  const send = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const answers = new FormData(event.currentTarget);
+    startSending(() => action(answers));
+  };
+
+  const paged = question !== undefined;
+  const last = ABOUT_YOU_QUESTIONS.length - 1;
+  const leavingRef = useSaved(
+    state,
+    // A saved question moves to the next one; the last moves setup on.
+    () => {
+      if (paged && question < last) onQuestion?.(question + 1);
+      else onSaved?.();
+    },
+    onLater,
+  );
 
   // The units and the time zone are not asked (owner, 5 Oct 2026). Until the
   // profile has them they are the browser's: its language says the units,
@@ -212,21 +254,6 @@ export function AboutYouForm({
   );
   const height =
     profile.heightCm === null ? null : cmToFeetAndInches(profile.heightCm);
-
-  const paged = question !== undefined;
-  const last = ABOUT_YOU_QUESTIONS.length - 1;
-  /** On to the next question, unless this one is the name and it is empty. */
-  const next = (form: HTMLFormElement) => {
-    const name = form.elements.namedItem("displayName");
-    if (
-      question === 0 &&
-      name instanceof HTMLInputElement &&
-      !name.reportValidity()
-    ) {
-      return;
-    }
-    onQuestion?.((question ?? 0) + 1);
-  };
 
   // A question asked on its own is named by its heading, so its one field
   // shows no label over it (owner, 5 Oct 2026); the label is still there for
@@ -326,18 +353,7 @@ export function AboutYouForm({
   ];
 
   return (
-    <form
-      action={action}
-      className={styles.stepForm}
-      data-about-you
-      // Enter in a field would send the form from the first question on;
-      // until the last one it asks for the next question instead.
-      onSubmit={(event) => {
-        if (!paged || question === last || leavingRef.current) return;
-        event.preventDefault();
-        next(event.currentTarget);
-      }}
-    >
+    <form className={styles.stepForm} data-about-you onSubmit={send}>
       {/* Setup has a notice of its own, and there a save moves to the next
           step; without `onSaved` this is Settings, which stays and says so. */}
       {onSaved && state.status === "saved" ? null : (
@@ -396,16 +412,9 @@ export function AboutYouForm({
             onLater={onLater}
           />
         ) : null}
-        {paged && question < last ? (
-          <button
-            onClick={(event) => next(event.currentTarget.form!)}
-            type="button"
-          >
-            Next
-          </button>
-        ) : (
-          <button disabled={pending}>{submitLabel}</button>
-        )}
+        <button disabled={pending || sending}>
+          {paged && question < last ? "Next" : submitLabel}
+        </button>
       </div>
     </form>
   );

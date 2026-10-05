@@ -29,11 +29,27 @@ main.setupPage {
   margin-top: 1.25rem;
 }
 
+/* A third of the room left under the bar is above the step and two thirds
+   below it, which puts a short step's field about mid-screen rather than its
+   heading (owner, 5 Oct 2026). The two spacers are placed around the step by
+   order; a step taller than the room leaves them nothing to take. */
+.manager::before,
+.manager::after {
+  content: "";
+  flex: 1;
+  order: 1;
+}
+
+.manager::after {
+  flex: 2;
+  order: 3;
+}
+
 .stepBody {
+  order: 2;
   width: 100%;
   display: grid;
   gap: 1rem;
-  margin-block: auto;
 }
 
 /* How far setup is: a bar the whole width, and its percentage under its
@@ -498,25 +514,38 @@ label.constraintChoice {
   color: var(--ember-dark);
 }
 
-/* Pressed, it asks again in the same place before anything leaves. */
-.leavePanel {
-  order: 1;
-  flex-basis: 100%;
+/* Pressed, it asks again in a popup over the step before anything leaves. */
+.leaveBackdrop {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
   display: grid;
-  gap: 0.5rem;
-  padding: 1rem;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgb(23 51 46 / 0.5);
+}
+
+.leavePanel {
+  width: min(100%, 24rem);
+  display: grid;
+  gap: 0.6rem;
+  padding: 1.25rem;
   border-radius: var(--radius-card);
-  background: #fff0e1;
+  background: var(--ledger-paper);
+  box-shadow: var(--shadow-raised);
   color: var(--ledger-ink);
+  text-align: left;
 }
 
 .leavePanel strong {
-  font-size: 1.05rem;
+  font-size: 1.2rem;
   font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .leavePanel p {
   margin: 0;
+  color: var(--ledger-muted);
   line-height: 1.5;
 }
 
@@ -525,7 +554,7 @@ label.constraintChoice {
   flex-wrap: wrap;
   justify-content: end;
   gap: 0.55rem;
-  padding-top: 0.25rem;
+  padding-top: 0.4rem;
 }
 
 /* The hint under a question's one field. */

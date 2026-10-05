@@ -6,11 +6,15 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  useTransition,
 } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { changeOnboardingAction } from "@/app/home/you/onboarding/actions";
+import {
+  changeOnboardingAction,
+  leaveSetupAction,
+} from "@/app/home/you/onboarding/actions";
 import {
   INITIAL_ONBOARDING_ACTION_STATE,
   type OnboardingActionState,
@@ -119,9 +123,15 @@ export function OnboardingActionNotice({
 export function OnboardingManager({
   snapshot,
   profile,
+  reminder = false,
 }: {
   snapshot: OnboardingSnapshot;
   profile: ProfileDetailsView;
+  /**
+   * The owner chose "Continue later" before and has just signed in: setup
+   * does not open by itself again, it asks first.
+   */
+  reminder?: boolean;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(
@@ -139,19 +149,11 @@ export function OnboardingManager({
   // "Continue later" is setup's one way out besides finishing (owner, 5 Oct
   // 2026): it saves what the step holds and goes to the app. There is no
   // "Cancel and delete draft" any more; an untouched draft expires by itself.
-  const continueLater = () => router.push("/home/today");
-  // A saved step goes where its result says. This is done on the result, not
-  // on the button's click: clearing the selection there unmounted a revisited
-  // step's form before it was sent, so nothing was saved and "Continue
-  // later" never left the setup (owner, 2 Oct 2026). The step is pinned, not
-  // cleared: a save refused on it afterwards names no next step, and without
-  // a selection the owner would be thrown to the draft's furthest step with
-  // this step's notice over it.
-  const [settled, setSettled] = useState(0);
-  if (state.submission !== settled) {
-    setSettled(state.submission);
-    if (state.status === "saved") setVisibleStep(state.nextStep ?? null);
-  }
+  // It also records that the owner left, which is what makes the next
+  // sign-in ask about setup instead of opening it.
+  const [, startLeaving] = useTransition();
+  const continueLater = () => startLeaving(() => leaveSetupAction());
+  const [reminding, setReminding] = useState(reminder);
   const [goalCount, setGoalCount] = useState(
     Math.max(1, snapshot.goalCandidates.length),
   );
@@ -224,6 +226,26 @@ export function OnboardingManager({
         </form>
         <Link className={styles.quietLink} href="/home/you">
           Back to You
+        </Link>
+      </section>
+    );
+  }
+
+  // Signed in again after "Continue later" (owner, 5 Oct 2026): one page
+  // saying setup is not finished, with one button to go on and one to skip.
+  if (reminding) {
+    return (
+      <section className={styles.startCard} aria-labelledby="setup-reminder">
+        <h2 id="setup-reminder">Your setup is not finished</h2>
+        <p>
+          Your coach and your plan work from what you tell us in setup. It takes
+          a few minutes, and what you already answered is kept.
+        </p>
+        <button onClick={() => setReminding(false)} type="button">
+          Continue setup
+        </button>
+        <Link className={styles.quietLink} href="/home/today">
+          Skip for now
         </Link>
       </section>
     );

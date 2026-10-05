@@ -83,7 +83,6 @@ describe("onboarding actions", () => {
 
     await changeOnboardingAction(INITIAL_ONBOARDING_ACTION_STATE, goalForm());
 
-    // You tells the owner that the step they were on was not saved.
     expect(redirectMock).toHaveBeenCalledExactlyOnceWith("/home/today");
     expect(revalidatePathMock).not.toHaveBeenCalled();
   });
@@ -98,7 +97,12 @@ describe("onboarding actions", () => {
 
     await changeOnboardingAction(INITIAL_ONBOARDING_ACTION_STATE, form);
 
-    expect(apply).not.toHaveBeenCalled();
+    // Nothing of the step is saved. What is recorded is that the owner
+    // left, so the next sign-in asks about setup instead of opening it.
+    expect(apply).toHaveBeenCalledExactlyOnceWith({
+      operation: "dismiss_prompt",
+      expectedDraftRevision: 0,
+    });
     expect(redirectMock).toHaveBeenCalledExactlyOnceWith("/home/today");
   });
 

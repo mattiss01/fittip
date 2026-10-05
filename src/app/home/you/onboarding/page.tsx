@@ -16,7 +16,14 @@ import styles from "./onboarding.module.css";
 
 export const dynamic = "force-dynamic";
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ remind?: string | string[] }>;
+}) {
+  // Set by the sign-in route alone, and it only chooses between two fixed
+  // screens; nothing else is read from it.
+  const reminder = (await searchParams)?.remind === "1";
   let snapshot;
   let profile: ProfileDetailsView | null;
   try {
@@ -63,7 +70,13 @@ export default async function OnboardingPage() {
       <header className={`${youStyles.header} ${styles.centered}`}>
         <h1>Guided setup</h1>
       </header>
-      <OnboardingManager profile={profile} snapshot={snapshot} />
+      <OnboardingManager
+        profile={profile}
+        // Only while there is a draft to go on with; without one the start
+        // card is what there is to show.
+        reminder={reminder && snapshot.draft !== null}
+        snapshot={snapshot}
+      />
     </main>
   );
 }

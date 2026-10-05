@@ -6,7 +6,7 @@ const {
   ensureCurrentProfileMock,
   getEntryStateMock,
   applyOnboardingMock,
-  hasUntouchedDraftMock,
+  getSetupStateMock,
 } = vi.hoisted(() => {
   const client = {
     auth: {
@@ -28,7 +28,7 @@ const {
     ensureCurrentProfileMock: vi.fn(),
     getEntryStateMock: vi.fn(),
     applyOnboardingMock: vi.fn(),
-    hasUntouchedDraftMock: vi.fn(),
+    getSetupStateMock: vi.fn(),
   };
 });
 
@@ -47,7 +47,7 @@ vi.mock("@/server/repositories/onboarding-repository", () => ({
   OnboardingRepository: class {
     getEntryState = getEntryStateMock;
     apply = applyOnboardingMock;
-    hasUntouchedDraft = hasUntouchedDraftMock;
+    getSetupState = getSetupStateMock;
   },
 }));
 
@@ -104,7 +104,11 @@ describe("production authentication route handlers", () => {
       hasPublished: false,
     });
     applyOnboardingMock.mockResolvedValue(undefined);
-    hasUntouchedDraftMock.mockResolvedValue(false);
+    getSetupStateMock.mockResolvedValue({
+      published: false,
+      skipped: false,
+      hasDraft: false,
+    });
     delete process.env.FITTIP_RUNTIME_MODE;
     delete process.env.FITTIP_OWNER_USER_ID;
     delete process.env.VERCEL;
@@ -215,8 +219,12 @@ describe("production authentication route handlers", () => {
   });
 
   it("opens guided setup on the sign-in that follows a confirmation", async () => {
-    // Confirming started the draft; nothing in it has been saved yet.
-    hasUntouchedDraftMock.mockResolvedValue(true);
+    // Confirming started the draft, and the owner has not skipped it.
+    getSetupStateMock.mockResolvedValue({
+      published: false,
+      skipped: false,
+      hasDraft: true,
+    });
     const response = await signin(
       post("/auth/signin", {
         email: "new@example.com",
@@ -226,10 +234,43 @@ describe("production authentication route handlers", () => {
       }),
     );
     expectPrivate303(response, "/home/you/onboarding");
+    expect(new URL(response.headers.get("location") ?? "").search).toBe("");
+  });
+
+  it("asks rather than opens setup once the owner has chosen Continue later", async () => {
+    getSetupStateMock.mockResolvedValue({
+      published: false,
+      skipped: true,
+      hasDraft: true,
+    });
+    const response = await signin(
+      post("/auth/signin", {
+        email: "member@example.com",
+        password: "password",
+      }),
+    );
+    expectPrivate303(response, "/home/you/onboarding");
+    expect(new URL(response.headers.get("location") ?? "").search).toBe(
+      "?remind=1",
+    );
+  });
+
+  it.each([
+    ["a finished setup", { published: true, skipped: true, hasDraft: true }],
+    ["no draft", { published: false, skipped: true, hasDraft: false }],
+  ])("signs in to Today with %s", async (_label, setup) => {
+    getSetupStateMock.mockResolvedValue(setup);
+    const response = await signin(
+      post("/auth/signin", {
+        email: "member@example.com",
+        password: "password",
+      }),
+    );
+    expectPrivate303(response, "/home/today");
   });
 
   it("does not let an unreadable setup draft cost a sign-in", async () => {
-    hasUntouchedDraftMock.mockRejectedValue(new Error("database unavailable"));
+    getSetupStateMock.mockRejectedValue(new Error("database unavailable"));
     const response = await signin(
       post("/auth/signin", {
         email: "member@example.com",
@@ -248,7 +289,7 @@ describe("production authentication route handlers", () => {
         password: "password",
       }),
     );
-    expect(hasUntouchedDraftMock).not.toHaveBeenCalled();
+    expect(getSetupStateMock).not.toHaveBeenCalled();
   });
 
   it("restores only an allowlisted same-origin private destination", async () => {

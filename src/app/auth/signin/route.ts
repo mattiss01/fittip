@@ -32,14 +32,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // A new account's confirmation started guided setup and signed it out
-    // again, so this is where it opens (owner, 5 Oct 2026). Only while
-    // nothing in it has been saved: once the owner has worked on it, or
-    // cancelled it, signing in goes where it always did. The destination is
-    // a constant, and failing to read the draft never costs the sign-in.
+    // Guided setup that is waiting comes before anything else (owner, 5 Oct
+    // 2026). A new account's confirmation started it and signed the account
+    // out again, so this is where it opens. Once the owner has chosen
+    // "Continue later", it no longer opens by itself: the same page asks
+    // whether to go on with it or skip. A finished setup, and an account with
+    // no draft, go where signing in always went. Both destinations are
+    // constants, and failing to read the state never costs the sign-in.
     try {
-      if (await new OnboardingRepository(client).hasUntouchedDraft()) {
-        returnTo = "/home/you/onboarding";
+      const setup = await new OnboardingRepository(client).getSetupState();
+      if (!setup.published && setup.hasDraft) {
+        returnTo = setup.skipped
+          ? "/home/you/onboarding?remind=1"
+          : "/home/you/onboarding";
       }
     } catch {
       // Setup is optional and reached from You.

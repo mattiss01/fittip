@@ -76,13 +76,14 @@ test.describe("public account authentication", () => {
     // M2-03 reuses this CI-invoked authenticated production-browser journey
     // so its 390px flow does not require a .github workflow change or an
     // uninvoked ticket config.
-    await completeGuidedSetup(page, testInfo);
+    await completeGuidedSetup(page, testInfo, { email, password });
   });
 });
 
 async function completeGuidedSetup(
   page: import("@playwright/test").Page,
   testInfo: import("@playwright/test").TestInfo,
+  account: { email: string; password: string },
 ) {
   await page.setViewportSize({ width: 390, height: 844 });
   expect(page.viewportSize()).toEqual({ width: 390, height: 844 });
@@ -109,7 +110,7 @@ async function completeGuidedSetup(
   await expect(heading("What's your name?")).toBeVisible();
   await expect(page.getByLabel("Units")).toHaveCount(0);
   await expect(page.getByLabel("Time zone")).toHaveCount(0);
-  // Without a name the first question stays.
+  // Without a name the first question stays: the browser will not send it.
   await next();
   await expect(heading("What's your name?")).toBeVisible();
   await page.getByLabel("Name").fill("Alex");
@@ -144,9 +145,9 @@ async function completeGuidedSetup(
   ).toHaveCount(0);
   // It asks again first, and says what setup is for.
   await page.getByRole("button", { name: "Continue later" }).click();
-  await expect(page.locator("[data-leave-setup]")).toContainText(
-    "Setup makes FitTip useful",
-  );
+  await expect(
+    page.getByRole("alertdialog", { name: "Setup makes FitTip useful" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Keep going" }).click();
   await expect(page.locator("[data-leave-setup]")).toHaveCount(0);
   await page.getByRole("button", { name: "Continue later" }).click();
@@ -172,9 +173,19 @@ async function completeGuidedSetup(
     )
     .toBe("/home/today");
 
-  // Coming back from You resumes where it was left, with what was saved.
+  // Having chosen "Continue later", the next sign-in does not open setup by
+  // itself: one page says it is not finished and offers to go on or skip.
   await page.goto("/home/you");
-  await page.getByRole("link", { name: /^Guided setup/ }).click();
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await page.getByLabel("Email").fill(account.email);
+  await page.getByLabel("Password", { exact: true }).fill(account.password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/home\/you\/onboarding\?remind=1$/);
+  await expect(heading("Your setup is not finished")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Skip for now" })).toBeVisible();
+  // Going on resumes where it was left, with what was saved.
+  await page.getByRole("button", { name: "Continue setup" }).click();
   await expect(heading("Goals")).toBeVisible();
   await expect(page.getByLabel("Goal title")).toHaveValue(goalTitle);
   await page.getByRole("button", { name: "Save and continue" }).click();

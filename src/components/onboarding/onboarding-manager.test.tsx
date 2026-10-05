@@ -25,6 +25,22 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
+// The profile's own steps save through these. Each save goes through, so a
+// test can walk from one question to the next.
+vi.mock("@/app/home/you/profile-actions", () => {
+  const saved = vi.fn(async (previous: { submission: number }) => ({
+    status: "saved",
+    message: "",
+    submission: previous.submission + 1,
+  }));
+  return {
+    saveProfileDetailsAction: saved,
+    saveProfileSportsAction: saved,
+    saveAppSettingsAction: saved,
+    deleteWeightEntryAction: saved,
+  };
+});
+
 afterEach(cleanup);
 
 describe("OnboardingManager", () => {
@@ -83,27 +99,27 @@ describe("OnboardingManager", () => {
     expect(sent.get("timezoneName")).toBe("");
   });
 
-  it("asks About you one question at a time, and only the name must be answered", () => {
+  it("asks About you one question at a time, saving each, and only the name must be answered", async () => {
     render(
       <OnboardingManager
         profile={{ ...namedProfile(), displayName: null }}
         snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 1 }) }}
       />,
     );
-    const heading = (name: string) => screen.getByRole("heading", { name });
+    const heading = (name: string) => screen.findByRole("heading", { name });
     const next = () =>
       fireEvent.click(screen.getByRole("button", { name: "Next" }));
 
-    // Without a name the first question stays.
-    next();
-    expect(heading("What's your name?")).toBeVisible();
+    // The name is the one field the browser will not send empty.
+    expect(screen.getByLabelText("Name")).toBeRequired();
     expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
 
     fireEvent.change(screen.getByLabelText("Name"), {
       target: { value: "Alex" },
     });
+    // Next saves the form as it stands and only then moves on.
     next();
-    expect(heading("When is your birthday?")).toBeVisible();
+    expect(await heading("When is your birthday?")).toBeVisible();
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-valuenow",
       "8",
@@ -119,26 +135,46 @@ describe("OnboardingManager", () => {
     ).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
-    expect(heading("What's your name?")).toBeVisible();
-    // What was typed is still there: it is one form, saved once at the end.
+    expect(await heading("What's your name?")).toBeVisible();
     expect(screen.getByLabelText("Name")).toHaveValue("Alex");
 
     next();
+    expect(await heading("When is your birthday?")).toBeVisible();
     next();
-    expect(heading("What's your gender?")).toBeVisible();
+    expect(await heading("What's your gender?")).toBeVisible();
     next();
-    expect(heading("How tall are you?")).toBeVisible();
+    expect(await heading("How tall are you?")).toBeVisible();
     next();
-    expect(heading("How much do you weigh?")).toBeVisible();
+    expect(await heading("How much do you weigh?")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Next" })).toBeNull();
-    expect(
-      screen.getByRole("button", { name: "Save and continue" }),
-    ).toBeVisible();
-    const sent = new FormData(
-      document.querySelector<HTMLFormElement>("form[data-about-you]")!,
+
+    // The last question's save moves setup on to the sports.
+    fireEvent.click(screen.getByRole("button", { name: "Save and continue" }));
+    expect(await heading("Your sports")).toBeVisible();
+  });
+
+  it("asks before opening setup again for an owner who chose Continue later", () => {
+    render(
+      <OnboardingManager
+        profile={namedProfile()}
+        reminder
+        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 2 }) }}
+      />,
     );
-    expect(sent.get("displayName")).toBe("Alex");
-    expect(sent.has("birthDate") && sent.has("gender")).toBe(true);
+
+    expect(
+      screen.getByRole("heading", { name: "Your setup is not finished" }),
+    ).toBeVisible();
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(screen.getByRole("link", { name: "Skip for now" })).toHaveAttribute(
+      "href",
+      "/home/today",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Continue setup" }));
+    expect(
+      screen.getByRole("heading", { name: "Current training" }),
+    ).toBeVisible();
   });
 
   it("shows the stored measures in feet and pounds when the units say so", () => {
@@ -221,12 +257,16 @@ describe("OnboardingManager", () => {
     // The link only asks; nothing in the form says "leave" yet.
     expect(later()).toHaveAttribute("type", "button");
     fireEvent.click(later());
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Setup makes FitTip useful",
-    );
+    const popup = screen.getByRole("alertdialog", {
+      name: "Setup makes FitTip useful",
+    });
+    expect(popup).toHaveAttribute("aria-modal", "true");
 
     fireEvent.click(screen.getByRole("button", { name: "Keep going" }));
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    fireEvent.click(later());
+    fireEvent.keyDown(screen.getByRole("alertdialog"), { key: "Escape" });
+    expect(screen.queryByRole("alertdialog")).toBeNull();
 
     // Asked again and confirmed, it is the step's own save with the intent
     // to leave, and it does not wait on a field.

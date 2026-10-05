@@ -28,6 +28,29 @@ import {
   type OnboardingOperation,
 } from "@/server/repositories/onboarding-repository";
 
+/**
+ * "Continue later" from a step the profile saves ("About you", "Your
+ * sports"): records that the owner chose to leave, so the next sign-in asks
+ * about setup instead of opening it, and goes to the app.
+ */
+export async function leaveSetupAction(): Promise<void> {
+  await recordSkip();
+  redirect("/home/today");
+}
+
+/** Never in the way of leaving: a skip that cannot be recorded is not one. */
+async function recordSkip(): Promise<void> {
+  try {
+    const repository = await createOnboardingRepository();
+    await repository.apply({
+      operation: "dismiss_prompt",
+      expectedDraftRevision: 0,
+    });
+  } catch {
+    // The next sign-in opens setup rather than asking; nothing is lost.
+  }
+}
+
 export async function changeOnboardingAction(
   previous: OnboardingActionState,
   formData: FormData,
@@ -137,6 +160,7 @@ async function resolveOnboardingAction(
       payload,
     });
     revalidate();
+    if (!advance) await recordSkip();
     return result("saved", "This step was saved.", {
       nextStep: advance ? nextStep(step) : step,
       // "Continue later" goes to the app (owner, 5 Oct 2026).
@@ -153,6 +177,7 @@ async function resolveOnboardingAction(
       // 2026). A step the draft cannot store as it stands is not saved; the
       // steps before it are already in the draft.
       if (stringValue(formData.get("intent")) === "finish") {
+        await recordSkip();
         return result("saved", "", { redirectTo: "/home/today" });
       }
       return result(

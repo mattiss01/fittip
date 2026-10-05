@@ -228,20 +228,42 @@ export class OnboardingRepository {
   }
 
   /**
-   * Whether setup has been started for this account and nothing in it has
-   * been saved yet. Confirming a new account starts it; this is how the
-   * sign-in that follows knows to open it.
+   * What a sign-in needs to know about setup: whether it is finished, whether
+   * the owner has chosen "Continue later" before, and whether a draft is
+   * waiting. Confirming a new account starts the draft.
    */
-  async hasUntouchedDraft(): Promise<boolean> {
+  async getSetupState(): Promise<{
+    published: boolean;
+    skipped: boolean;
+    hasDraft: boolean;
+  }> {
     const userId = await this.getVerifiedUserId();
-    const { data, error } = await this.client
-      .from("onboarding_drafts")
-      .select("revision")
-      .eq("user_id", userId)
-      .gt("expires_at", new Date().toISOString())
-      .maybeSingle();
-    if (error) throw new OnboardingPersistenceError();
-    return data !== null && data.revision === 0;
+    const [draft, prompt, publication] = await Promise.all([
+      this.client
+        .from("onboarding_drafts")
+        .select("id")
+        .eq("user_id", userId)
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle(),
+      this.client
+        .from("onboarding_prompt_states")
+        .select("dismissed_at")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      this.client
+        .from("onboarding_publication_receipts")
+        .select("id")
+        .eq("user_id", userId)
+        .limit(1),
+    ]);
+    if (draft.error || prompt.error || publication.error) {
+      throw new OnboardingPersistenceError();
+    }
+    return {
+      published: publication.data.length > 0,
+      skipped: prompt.data !== null,
+      hasDraft: draft.data !== null,
+    };
   }
 
   async getEntryState(): Promise<{
