@@ -40,9 +40,7 @@ export function AuthForm({
   return (
     <section className="auth-card" aria-labelledby="auth-title">
       <p className="eyebrow">FitTip</p>
-      <h1 id="auth-title">
-        {isSignUp ? "Start with your next move." : "Welcome back."}
-      </h1>
+      <h1 id="auth-title">{isSignUp ? "Join FitTip." : "Welcome back."}</h1>
 
       <form
         action={isSignUp ? "/auth/signup" : "/auth/signin"}

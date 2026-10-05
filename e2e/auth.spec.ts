@@ -33,7 +33,7 @@ test.describe("public account authentication", () => {
       .getByRole("link", { name: "New here? Create an account" })
       .click();
     await expect(
-      page.getByRole("heading", { name: "Start with your next move." }),
+      page.getByRole("heading", { name: "Join FitTip." }),
     ).toBeVisible();
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
