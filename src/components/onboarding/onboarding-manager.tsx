@@ -425,7 +425,7 @@ export function OnboardingManager({
             onSaved={() => setProfileStep(2)}
             profile={profile}
             question={aboutQuestion}
-            submitLabel="Save and continue"
+            submitLabel="Next"
           />
         ) : null}
 
@@ -434,7 +434,7 @@ export function OnboardingManager({
             onLater={continueLater}
             onSaved={() => setProfileStep(null)}
             sports={profile.sports}
-            submitLabel="Save and continue"
+            submitLabel="Next"
           />
         ) : null}
 
@@ -843,7 +843,7 @@ function StepActions({ pending }: { pending: boolean }) {
         </button>
       </ContinueLater>
       <button disabled={pending} name="intent" value="continue">
-        Save and continue
+        Next
       </button>
     </div>
   );

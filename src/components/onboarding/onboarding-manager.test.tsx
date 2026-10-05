@@ -151,10 +151,10 @@ describe("OnboardingManager", () => {
     expect(await heading("How tall are you?")).toBeVisible();
     next();
     expect(await heading("How much do you weigh?")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Next" })).toBeNull();
 
-    // The last question's save moves setup on to the sports.
-    fireEvent.click(screen.getByRole("button", { name: "Save and continue" }));
+    // Every step's button says Next; the last question's moves setup on to
+    // the sports.
+    next();
     expect(await heading("Your sports")).toBeVisible();
   });
 
@@ -283,7 +283,7 @@ describe("OnboardingManager", () => {
       <AboutYouForm
         profile={justNamedProfile()}
         question={3}
-        submitLabel="Save and continue"
+        submitLabel="Next"
       />,
     );
     const height = screen.getByLabelText("Height in cm (optional)");

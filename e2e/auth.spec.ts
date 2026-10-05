@@ -134,14 +134,14 @@ async function completeGuidedSetup(
   await next();
   await expect(heading("How much do you weigh?")).toBeVisible();
   await page.getByLabel("Weight in kg (optional)").fill("80,5");
-  await page.getByRole("button", { name: "Save and continue" }).click();
+  await page.getByRole("button", { name: "Next" }).click();
 
   await expect(heading("Your sports")).toBeVisible();
   await page.getByText("Running", { exact: true }).click();
   await page.getByLabel("Add your own").fill("Latzug");
   await page.getByRole("button", { name: "Add", exact: true }).click();
   await expect(page.getByRole("checkbox", { name: "Latzug" })).toBeChecked();
-  await page.getByRole("button", { name: "Save and continue" }).click();
+  await page.getByRole("button", { name: "Next" }).click();
 
   const goalTitle = "Finish a calm 10K";
   const goalOutcome = "Run the autumn event with even pacing.";
@@ -199,11 +199,11 @@ async function completeGuidedSetup(
   await page.getByRole("button", { name: "Continue setup" }).click();
   await expect(heading("Goals")).toBeVisible();
   await expect(page.getByLabel("Goal title")).toHaveValue(goalTitle);
-  await page.getByRole("button", { name: "Save and continue" }).click();
+  await page.getByRole("button", { name: "Next" }).click();
   await expect(heading("Current training")).toBeVisible();
 
   await page.getByLabel("I am not training currently").check();
-  await page.getByRole("button", { name: "Save and continue" }).click();
+  await page.getByRole("button", { name: "Next" }).click();
   await expect(heading("Time and access")).toBeVisible();
 
   await page.getByLabel("Monday").check();
@@ -211,18 +211,18 @@ async function completeGuidedSetup(
   await page.getByLabel("Access and equipment").fill("Road, Home weights");
   // The time zone and the units were chosen in "About you".
   await expect(page.getByLabel("Timezone")).toHaveCount(0);
-  await page.getByRole("button", { name: "Save and continue" }).click();
+  await page.getByRole("button", { name: "Next" }).click();
   await expect(heading("Preferences")).toBeVisible();
 
   // Preferences and constraints are optional. The exact conservative safety
   // copy remains visible without a severity question or acknowledgement gate.
-  await page.getByRole("button", { name: "Save and continue" }).click();
+  await page.getByRole("button", { name: "Next" }).click();
   await expect(heading("Constraints")).toBeVisible();
   await expect(
     page.getByText(/FitTip cannot assess or diagnose symptoms/),
   ).toBeVisible();
   await expect(page.getByLabel(/severity/i)).toHaveCount(0);
-  await page.getByRole("button", { name: "Save and continue" }).click();
+  await page.getByRole("button", { name: "Next" }).click();
   await expect(heading("Review and save")).toBeVisible();
   // The profile's own two never come up for review.
   await expect(page.getByText(/^(Timezone|Units): /)).toHaveCount(0);

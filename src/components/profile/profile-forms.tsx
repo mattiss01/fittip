@@ -532,6 +532,11 @@ function MeasureInput({
             inputMode="decimal"
             name={name}
             onChange={(event) => setValue(event.target.value)}
+            placeholder="0"
+            // As wide as what is in it, so the number and its unit sit in
+            // the middle together instead of the number hugging the unit
+            // across an empty field.
+            style={{ width: `${Math.max(value.length, 1)}ch` }}
             value={value}
           />
         </label>
@@ -677,6 +682,11 @@ export function SportsForm({
       {onSaved && state.status === "saved" ? null : (
         <ProfileNotice state={state} />
       )}
+      {SPORT_PRESET_GROUPS.map(({ label, sports: names }) =>
+        group(label, names),
+      )}
+      {/* The owner's own come after the list, with the field that adds one
+          (owner, 5 Oct 2026). */}
       {group("Your own", own)}
       <div className={styles.addSport}>
         <label>
@@ -698,9 +708,6 @@ export function SportsForm({
           Add
         </button>
       </div>
-      {SPORT_PRESET_GROUPS.map(({ label, sports: names }) =>
-        group(label, names),
-      )}
       <div className={styles.stepActions}>
         {onLater ? (
           <LaterButton leavingRef={leavingRef} onLater={onLater} />

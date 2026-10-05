@@ -353,9 +353,10 @@ main.setupPage {
   text-transform: none;
 }
 
+/* A chosen sport is the app's orange (owner, 5 Oct 2026). */
 .stepForm .chip input:checked + span {
-  border-color: var(--pine);
-  background: var(--pine);
+  border-color: var(--ember);
+  background: var(--ember);
   color: var(--paper);
 }
 
@@ -717,9 +718,8 @@ label.constraintChoice {
   outline-offset: 2px;
 }
 
-/* Wide enough for "180.5"; the number ends where the unit begins. */
+/* Its width is set to its text by the component. */
 .stepForm .measure input {
-  width: 5ch;
   min-height: 0;
   padding: 0;
   border: 0;
@@ -728,23 +728,31 @@ label.constraintChoice {
   color: var(--ledger-ink);
   font: 800 1.9rem/1.2 var(--font-sans);
   font-variant-numeric: tabular-nums;
-  text-align: right;
-  text-align-last: right;
+  text-align: center;
 }
 
 .stepForm .measure input:focus {
   outline: none;
 }
 
-/* A date field draws its value in parts of its own, which `text-align` on the
-   field does not reach, and keeps a calendar button on the right that would
-   push the date off centre; the same room is left on the left. */
+/* A date field is a row of its own: the date, then a calendar button. The
+   date is kept to its own width and the row centred, with the button taken
+   out of the row to the field's right edge, so the date alone is in the
+   middle. Firefox has no such parts and centres the text itself; iOS has one
+   part for the whole value. */
 .stepForm .question input[type="date"] {
-  padding-left: 2.4rem;
+  position: relative;
+  display: flex;
+  justify-content: center;
 }
 
 .stepForm .question input[type="date"]::-webkit-datetime-edit {
-  text-align: center;
+  flex: 0 0 auto;
+}
+
+.stepForm .question input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  right: 0.8rem;
 }
 
 .stepForm .question input[type="date"]::-webkit-date-and-time-value {
