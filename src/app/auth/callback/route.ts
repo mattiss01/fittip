@@ -7,6 +7,7 @@ import {
   createServerUserClient,
   mergeAuthResponseHeaders,
   privateRedirect,
+  type ServerUserClient,
 } from "@/lib/supabase/server-user-client";
 
 export async function GET(request: Request) {
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
   }
 
   return mergeAuthResponseHeaders(
-    privateRedirect(new URL(await firstDestination(client), requestUrl)),
+    privateRedirect(new URL(await startSetupOrGoHome(client), requestUrl)),
     pending,
   );
 }
@@ -56,9 +57,7 @@ export async function GET(request: Request) {
  * account lands on Today, and if the draft cannot be started, the setup page
  * offers to start it.
  */
-async function firstDestination(
-  client: ConstructorParameters<typeof OnboardingRepository>[0],
-): Promise<string> {
+async function startSetupOrGoHome(client: ServerUserClient): Promise<string> {
   const onboarding = new OnboardingRepository(client);
   try {
     if ((await onboarding.getEntryState()).hasPublished) return "/home/today";
@@ -68,7 +67,8 @@ async function firstDestination(
   try {
     await onboarding.apply({ operation: "start", expectedDraftRevision: 0 });
   } catch {
-    // A draft that already exists refuses a second start; the page shows it.
+    // A draft that has been worked on refuses a second start; the page shows
+    // it either way.
   }
   return "/home/you/onboarding";
 }

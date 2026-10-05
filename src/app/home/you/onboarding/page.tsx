@@ -30,8 +30,9 @@ export default async function OnboardingPage() {
   return (
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
       <BackLink href="/home/you" label="You" />
-      {/* No intro: the start card says what setup stores and that it is
-          optional, and the last step is where each item is decided. */}
+      {/* No intro: the start card and the first step say what setup stores
+          and that it is optional, and the last step is where each item is
+          decided. */}
       <header className={youStyles.header}>
         <h1>Guided setup</h1>
       </header>

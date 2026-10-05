@@ -256,6 +256,13 @@ export function OnboardingManager({
       {visibleStep === 1 ? (
         <form action={formAction} className={styles.stepForm}>
           <StepMeta operation="save_goals" revision={draft.revision} step={1} />
+          {/* The start card says this, and an account that has just signed
+              up never sees the start card: it lands here. */}
+          <p className={styles.explainer}>
+            Your answers are stored in your account so you can resume on another
+            device. They are not sent to an AI provider. Setup is optional and
+            never blocks planning or logging.
+          </p>
           {Array.from({ length: goalCount }, (_, index) => (
             <GoalFields
               candidate={snapshot.goalCandidates[index]}
@@ -694,8 +701,9 @@ function StepActions({
 /**
  * The same four questions and the same choice as a goal on Goals (owner,
  * 5 Oct 2026). The draft still stores the rest of a goal, so the fields that
- * are no longer asked are sent empty, the kind as "other", today as the start
- * and the goal's place in the list as its rank.
+ * are no longer asked are sent empty, the kind as "other" and today as the
+ * start. No rank is sent, so a goal is filed last among its own kind: a rank
+ * counted over all three goals was refused when they were not all core.
  */
 function GoalFields({
   candidate,
@@ -704,6 +712,9 @@ function GoalFields({
   candidate?: GoalCandidateView;
   index: number;
 }) {
+  // The owner's own day once the browser is there to ask; the server, which
+  // does not know their zone yet, renders the UTC one.
+  const startDate = useSyncExternalStore(subscribeNothing, localToday, today);
   return (
     <fieldset className={styles.entryCard}>
       <legend>Goal {index + 1}</legend>
@@ -763,12 +774,12 @@ function GoalFields({
       <input
         name={`goalStartDate:${index}`}
         type="hidden"
-        value={candidate?.startDate ?? today()}
+        value={candidate?.startDate ?? startDate}
       />
       <input
         name={`goalRank:${index}`}
         type="hidden"
-        value={candidate?.targetRank ?? index + 1}
+        value={candidate?.targetRank ?? ""}
       />
       {(
         [
@@ -1109,6 +1120,13 @@ function stepHeading(step: OnboardingStep) {
 
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function localToday() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
 }
 
 /**

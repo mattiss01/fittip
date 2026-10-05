@@ -59,7 +59,7 @@ export async function changeGoalAction(
         .map((area) => area.trim())
         .filter(Boolean);
       // A goal names at least one sport (owner, 5 Oct 2026). The rule is the
-      // form's, not the database's: guided setup still files goals without.
+      // forms', here and in guided setup, not the database's.
       if (activityAreas.length < 1) throw new GoalValidationError();
       const input = {
         title: text(formData, "title"),
