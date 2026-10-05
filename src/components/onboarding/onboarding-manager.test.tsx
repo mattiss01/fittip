@@ -207,9 +207,19 @@ describe("OnboardingManager", () => {
 
   it.each([
     [
-      "the first unanswered question",
+      "the question after the last one answered",
       { birthDate: "1990-05-17" },
       "What's your gender?",
+    ],
+    [
+      "the sports when an earlier question was skipped on purpose",
+      { latestWeightKg: 80 },
+      "Your sports",
+    ],
+    [
+      "the draft once sports are chosen, whatever was skipped",
+      { sports: ["Running"] },
+      "Goals",
     ],
     [
       "the sports once every question is answered",

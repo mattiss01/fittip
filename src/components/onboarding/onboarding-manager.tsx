@@ -82,18 +82,19 @@ function isProfileOwned(candidate: { fieldKey: string }) {
 /**
  * Where setup opens. The draft remembers its own step, but nothing records
  * how far the profile's steps got, so that is read from what they saved:
- * the first "About you" question still unanswered, then "Your sports" while
- * none is chosen. Only while the draft's own steps are untouched; once one
- * of those is saved the owner is past the profile's, and setup opens where
- * the draft is. An optional question left empty on purpose is asked again,
- * which costs one press of Next.
+ * the question after the last one answered, and "Your sports" after the
+ * last question. Chosen sports mean those steps are done. Only while the
+ * draft's own steps are untouched; once one of those is saved the owner is
+ * past the profile's, and setup opens where the draft is. An optional
+ * question skipped before a later answer is not asked again; ones skipped at
+ * the end are, which costs a press of Next each.
  */
 function resumeAt(
   profile: ProfileDetailsView,
   draft: OnboardingSnapshot["draft"],
 ): { profileStep: ProfileStep | null; aboutQuestion: number } {
   if (!profile.displayName) return { profileStep: 1, aboutQuestion: 0 };
-  if (draft && draft.revision > 0) {
+  if ((draft && draft.revision > 0) || profile.sports.length > 0) {
     return { profileStep: null, aboutQuestion: 0 };
   }
   const answered = [
@@ -103,12 +104,10 @@ function resumeAt(
     profile.heightCm,
     profile.latestWeightKg,
   ];
-  const unanswered = answered.findIndex((answer) => answer === null);
-  if (unanswered >= 0) return { profileStep: 1, aboutQuestion: unanswered };
-  return {
-    profileStep: profile.sports.length === 0 ? 2 : null,
-    aboutQuestion: 0,
-  };
+  const next = answered.findLastIndex((answer) => answer !== null) + 1;
+  return next < answered.length
+    ? { profileStep: 1, aboutQuestion: next }
+    : { profileStep: 2, aboutQuestion: 0 };
 }
 
 type ReviewSelection = {
@@ -906,6 +905,8 @@ function GoalFields({
   // The owner's own day once the browser is there to ask; the server, which
   // does not know their zone yet, renders the UTC one.
   const startDate = useSyncExternalStore(subscribeNothing, localToday, today);
+  // A goal with a title is one that will be saved, and so must name a sport.
+  const [titled, setTitled] = useState(Boolean(candidate?.title));
   return (
     <fieldset className={styles.entryCard}>
       <legend>Goal {index + 1}</legend>
@@ -915,6 +916,7 @@ function GoalFields({
           defaultValue={candidate?.title ?? ""}
           maxLength={120}
           name={`goalTitle:${index}`}
+          onChange={(event) => setTitled(event.target.value.trim() !== "")}
           required={index === 0}
         />
       </label>
@@ -934,6 +936,7 @@ function GoalFields({
       <GoalSport
         index={index}
         initial={candidate?.activityAreas ?? []}
+        required={index === 0 || titled}
         sports={sports}
       />
       <DateField
@@ -1326,8 +1329,10 @@ function GoalSport({
   index,
   initial,
   sports,
+  required,
 }: {
   index: number;
+  required: boolean;
   /** What the goal names already; a goal made before today may name several. */
   initial: string[];
   sports: string[];
@@ -1433,10 +1438,10 @@ function GoalSport({
         </label>
       ) : null}
       <input name={`goalActivities:${index}`} type="hidden" value={sent} />
-      {/* The first goal must name a sport, and a hidden field cannot be
+      {/* A goal that will be saved must name a sport, and a hidden field cannot be
           required, so this one stands in for it: out of sight, but where the
           browser can point at it when nothing is chosen. */}
-      {index === 0 ? (
+      {required ? (
         <input
           aria-hidden="true"
           className={styles.requiredProxy}

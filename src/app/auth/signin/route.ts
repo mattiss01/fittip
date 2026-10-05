@@ -21,9 +21,12 @@ export async function POST(request: Request) {
   });
 
   if (!error) {
+    let firstSignIn = false;
     try {
       await requireAllowedVerifiedUser(client);
-      await new ProfileRepository(client).ensureCurrentProfile();
+      const profiles = new ProfileRepository(client);
+      firstSignIn = (await profiles.getCurrentProfile()) === null;
+      await profiles.ensureCurrentProfile();
     } catch {
       await client.auth.signOut();
       return mergeAuthResponseHeaders(
@@ -39,8 +42,22 @@ export async function POST(request: Request) {
     // whether to go on with it or skip. A finished setup, and an account with
     // no draft, go where signing in always went. Both destinations are
     // constants, and failing to read the state never costs the sign-in.
+    //
+    // A confirmation link opened in another browser confirms the account
+    // without reaching our callback, so nothing was started for it. Such an
+    // account has no profile until this sign-in makes one, and that is how
+    // it is told from an older account that never ran setup: its setup is
+    // started here instead.
     try {
-      const setup = await new OnboardingRepository(client).getSetupState();
+      const onboarding = new OnboardingRepository(client);
+      let setup = await onboarding.getSetupState();
+      if (firstSignIn && !setup.published && !setup.hasDraft) {
+        await onboarding.apply({
+          operation: "start",
+          expectedDraftRevision: 0,
+        });
+        setup = { ...setup, hasDraft: true };
+      }
       if (!setup.published && setup.hasDraft) {
         returnTo = setup.skipped
           ? "/home/you/onboarding?remind=1"

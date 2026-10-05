@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { ProfileActionState } from "./profile-action-state";
 
 import { isoDateInTimezone } from "@/lib/date/local-date";
-import { UNITS_SYSTEMS } from "@/lib/profile/body-measures";
+import { cmToFeetAndInches, UNITS_SYSTEMS } from "@/lib/profile/body-measures";
 import {
   parseProfileDetails,
   parseProfileSports,
@@ -37,13 +37,32 @@ export async function saveProfileDetailsAction(
       typeof submittedZone === "string" && submittedZone.trim() !== ""
         ? parseTimezoneName(submittedZone)
         : null;
-    const timezoneName =
-      chosenZone ?? (await profiles.ensureCurrentProfile()).timezoneName;
+    // A zone already stored is never moved from here, whatever is sent.
+    const storedZone = (await profiles.ensureCurrentProfile()).timezoneName;
+    const timezoneName = storedZone ?? chosenZone;
     const today = isoDateInTimezone(new Date(), timezoneName ?? "UTC");
     const details = parseProfileDetails(formData, today);
-    if (chosenZone !== null) await profiles.confirmTimezone(chosenZone);
-    await profiles.saveDetails(details, today);
+    if (storedZone === null && chosenZone !== null) {
+      await profiles.confirmTimezone(chosenZone);
+    }
+    // Feet and inches are whole inches, so a height shown in them and sent
+    // back untouched would come back up to half an inch off. The same feet
+    // and inches as before is the same height.
+    const storedHeight = (await profiles.getDetails())?.heightCm ?? null;
+    const heightCm =
+      details.unitsSystem === "imperial" &&
+      storedHeight !== null &&
+      details.heightCm !== null &&
+      sameFeetAndInches(storedHeight, details.heightCm)
+        ? storedHeight
+        : details.heightCm;
+    await profiles.saveDetails({ ...details, heightCm }, today);
   });
+}
+
+function sameFeetAndInches(a: number, b: number): boolean {
+  const [x, y] = [cmToFeetAndInches(a), cmToFeetAndInches(b)];
+  return x.feet === y.feet && x.inches === y.inches;
 }
 
 /**

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import type { OnboardingActionState } from "./action-state";
 
+import { SPORTS_MAX_COUNT } from "@/lib/sports/sport-presets";
 import { GoalValidationError } from "@/server/goals/goal-records";
 import {
   OnboardingValidationError,
@@ -59,7 +60,11 @@ async function keepGoalSports(
       known.add(key);
       added.push(sport);
     }
-    if (added.length > 0) await profiles.saveSports([...owned, ...added]);
+    // Held to the list's own limit; past it the goal still keeps its sport.
+    const room = Math.max(0, SPORTS_MAX_COUNT - owned.length);
+    if (added.length > 0 && room > 0) {
+      await profiles.saveSports([...owned, ...added.slice(0, room)]);
+    }
   } catch {
     // See above: the goal step's own save has gone through.
   }

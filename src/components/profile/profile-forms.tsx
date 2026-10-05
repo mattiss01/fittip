@@ -67,7 +67,8 @@ function ProfileNotice({ state }: { state: ProfileActionState }) {
  * Runs once for each save that went through: `onLater` when the save was made
  * to leave ("Continue later"), `onSaved` otherwise. In an effect, because both
  * change what a parent shows, and a parent is not to be updated while its
- * child renders. A save that was refused stays where it is, with its notice.
+ * child renders. A save that was refused stays where it is, with its notice,
+ * unless the owner was leaving.
  */
 function useSaved(
   state: ProfileActionState,
@@ -81,9 +82,10 @@ function useSaved(
     handled.current = state.submission;
     const left = leavingRef.current;
     leavingRef.current = false;
-    if (state.status !== "saved") return;
+    // "Continue later" leaves whether or not the step could be saved: an
+    // answer half typed is not a reason to be kept in setup.
     if (left) onLater?.();
-    else onSaved?.();
+    else if (state.status === "saved") onSaved?.();
   });
   return leavingRef;
 }

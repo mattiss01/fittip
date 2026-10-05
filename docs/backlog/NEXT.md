@@ -99,15 +99,6 @@ lane, one screen per merge.
     records only reopening. It is wrong in one case: setup filing a new answer
     over a finished goal of the same title moves the day to then.
   - **Pause and Abandoned** are still two ways to set a goal aside, both undoable.
-- [~] **"About you" and "Your sports", setup's first two steps.** Careful lane
-      (migration `profile_details_and_sports`), owner's decisions of 5 Oct 2026.
-      Outcome: setup opens with name, birthday, gender, height and weight, then
-      a sports picker (presets by group plus the owner's own), both saved
-      straight to the profile, not through the setup draft, and changeable on
-      Settings. Only the name is required; gender is Female, Male or Other; no
-      sport is required; weight keeps a history, one entry a day. Units and the
-      time zone are guessed from the browser and shown to be changed, so they
-      leave "Time and access". Stored metric. Nothing here reaches the coach.
 - [ ] **The sports list wherever a sport is typed.** Owner, 5 Oct 2026; this
       settles "sport or category" as one shared list. Offer the profile's sports
       in a goal's sports and a session's and an activity's `sport`. Build lane
@@ -117,10 +108,19 @@ lane, one screen per merge.
       boundary, so careful lane and its own ADR (021). The plan context has
       about 9 tokens free and this needs about 20 plus a prompt sentence; bring
       measured numbers and the safety wording (non-diagnostic) before pushing.
-- [ ] **Sign-in and sign-up in the new style.** Owner, 5 Oct 2026: both pages
-      missed the restyle. A password field shows what is typed on request.
-      "Create account" must not just empty the form over a small "Check your
-      email": say it in a dialog whose button goes back to sign-in.
+- [ ] **Setup after goals, rethought.** Owner, 5 Oct 2026: current training, time and
+      access, preferences and constraints all go. Direction so far: facts are tapped
+      and kept as profile settings (how often they train now and want to, which days
+      and how much time each has, places and equipment); no session length; what is
+      said in words (likes, limits) is the only source of memory items, drafted by the
+      coach and accepted in review. The limits text may be sent to the AI (ADR needed;
+      the screen says today that it is not), and limits as a whole are to be thought
+      through again. Careful lane: replaces most of `apply_onboarding_change`.
+- [ ] **Setup's small ends.** From the review of 5 Oct 2026. The leave popup has no
+      focus trap and the sport list no arrow keys, Escape or outside press; an "About
+      you" save refused for a question that is not on screen names no field; removing
+      the last weight loses its notice; `weight_entries.measured_on` and `birth_date`
+      have no future check in the database; `ageOn` waits for the coach item above.
 - [ ] **Setup takes more than three goals.** Owner, 5 Oct 2026: three is the limit on core
       goals, not on goals. Setup's goal step stops at three because the database does:
       `apply_onboarding_change` refuses a fourth and `onboarding_goal_candidates.position`

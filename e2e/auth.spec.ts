@@ -133,7 +133,9 @@ async function completeGuidedSetup(
   await expect(heading("How tall are you?")).toBeVisible();
   await next();
   await expect(heading("How much do you weigh?")).toBeVisible();
-  await page.getByLabel("Weight in kg (optional)").fill("80,5");
+  await page
+    .getByLabel("Weight in kg (optional)", { exact: true })
+    .fill("80,5");
   await page.getByRole("button", { name: "Next" }).click();
 
   await expect(heading("Your sports")).toBeVisible();
@@ -285,7 +287,9 @@ async function completeGuidedSetup(
   await page.getByLabel("Units").selectOption("imperial");
   await page.getByRole("button", { name: "Save settings" }).click();
   await expect(page.getByText("177.5 lb")).toBeVisible();
-  await expect(page.getByRole("checkbox", { name: "Running" })).toBeChecked();
+  await expect(
+    page.getByRole("checkbox", { name: "Running", exact: true }),
+  ).toBeChecked();
   await expect(page.getByRole("checkbox", { name: "Latzug" })).toBeChecked();
 
   // Done once, setup is not offered again.

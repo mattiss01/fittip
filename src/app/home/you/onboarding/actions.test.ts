@@ -115,7 +115,7 @@ describe("onboarding actions", () => {
       INITIAL_ONBOARDING_ACTION_STATE,
       goalForm(),
     );
-    expect(state.status).not.toBe("error");
+    expect(state.status).toBe("saved");
   });
 
   it("leaves on finish later even when the step cannot be saved, and says so", async () => {

@@ -4,6 +4,7 @@ const {
   client,
   createServerUserClientMock,
   ensureCurrentProfileMock,
+  getCurrentProfileMock,
   getEntryStateMock,
   applyOnboardingMock,
   getSetupStateMock,
@@ -26,6 +27,7 @@ const {
       return client;
     }),
     ensureCurrentProfileMock: vi.fn(),
+    getCurrentProfileMock: vi.fn(),
     getEntryStateMock: vi.fn(),
     applyOnboardingMock: vi.fn(),
     getSetupStateMock: vi.fn(),
@@ -40,6 +42,7 @@ vi.mock("@/lib/supabase/server-user-client", async (importActual) => ({
 vi.mock("@/server/repositories/profile-repository", () => ({
   ProfileRepository: class {
     ensureCurrentProfile = ensureCurrentProfileMock;
+    getCurrentProfile = getCurrentProfileMock;
   },
 }));
 
@@ -99,6 +102,8 @@ describe("production authentication route handlers", () => {
     client.auth.signUp.mockResolvedValue({ error: null });
     client.auth.signOut.mockResolvedValue({ error: null });
     ensureCurrentProfileMock.mockResolvedValue(undefined);
+    // An account that has signed in before, unless a test says otherwise.
+    getCurrentProfileMock.mockResolvedValue({ userId: "user-1" });
     getEntryStateMock.mockResolvedValue({
       showHomeInvitation: true,
       hasPublished: false,
@@ -235,6 +240,27 @@ describe("production authentication route handlers", () => {
     );
     expectPrivate303(response, "/home/you/onboarding");
     expect(new URL(response.headers.get("location") ?? "").search).toBe("");
+  });
+
+  it("starts setup at the first sign-in of an account whose confirmation never reached the callback", async () => {
+    // Confirmed in another browser: no profile and no draft exist yet.
+    getCurrentProfileMock.mockResolvedValue(null);
+    const response = await signin(
+      post("/auth/signin", { email: "new@example.com", password: "password" }),
+    );
+    expect(applyOnboardingMock).toHaveBeenCalledWith({
+      operation: "start",
+      expectedDraftRevision: 0,
+    });
+    expectPrivate303(response, "/home/you/onboarding");
+  });
+
+  it("does not start setup for an older account that never ran it", async () => {
+    const response = await signin(
+      post("/auth/signin", { email: "old@example.com", password: "password" }),
+    );
+    expect(applyOnboardingMock).not.toHaveBeenCalled();
+    expectPrivate303(response, "/home/today");
   });
 
   it("asks rather than opens setup once the owner has chosen Continue later", async () => {
