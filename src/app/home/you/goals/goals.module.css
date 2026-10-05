@@ -50,16 +50,10 @@
   letter-spacing: -0.03em;
 }
 
-.eyebrow,
-.category,
 .areas {
   color: var(--ledger-muted);
   font-size: 0.82rem;
   font-weight: 600;
-}
-
-.eyebrow {
-  margin: 0 0 0.2rem;
 }
 
 .slotSignal {
@@ -90,7 +84,8 @@
 
 .goalCard {
   display: grid;
-  grid-template-columns: 2.6rem 1fr;
+  /* As wide as a touch target: the number is the only way to drag. */
+  grid-template-columns: 2.75rem 1fr;
   border-bottom: 1px solid var(--line);
 }
 
@@ -98,12 +93,46 @@
   border-bottom: 0;
 }
 
+/* Lifted: above its neighbours, which step aside as it passes. */
+.goalCard[data-dragging="true"] {
+  position: relative;
+  z-index: 2;
+  background: var(--ledger-paper);
+  box-shadow: var(--shadow-card);
+}
+
+/* The number is the handle. `touch-action` keeps a drag from scrolling. */
 .rank {
+  align-self: start;
+  min-height: 3.5rem;
   display: grid;
-  place-items: start end;
-  padding-top: 1.25rem;
+  align-content: start;
+  justify-items: end;
+  gap: 0.4rem;
+  margin-top: 0.85rem;
+  padding: 0.4rem 0 0.4rem 0.4rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
   color: var(--ledger-muted);
   font: 500 0.8rem var(--font-mono);
+  cursor: grab;
+  touch-action: none;
+}
+
+/* Every button darkens under the pointer; this one has no fill to darken. */
+.rank:hover {
+  background: transparent;
+}
+
+/* No grip where nothing can move: a single goal, or a list with a card
+   open for editing. */
+.rank[data-fixed="true"] {
+  cursor: default;
+}
+
+.rank[data-fixed="true"] svg {
+  visibility: hidden;
 }
 
 .goalBody {
@@ -111,34 +140,12 @@
   padding: 1.1rem 1.1rem 1.1rem 0.7rem;
 }
 
-.goalHeader {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 0.8rem;
-}
-
-.goalHeader h3 {
+.goalBody h3 {
   margin: 0;
   font-size: 1.3rem;
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.15;
-}
-
-.category {
-  margin: 0 0 0.2rem;
-}
-
-.tier {
-  flex: none;
-  padding: 0.2rem 0.55rem;
-  border-radius: var(--radius-pill);
-  background: var(--sage);
-  color: var(--ledger-ink);
-  font: 500 0.62rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .outcome {
@@ -159,10 +166,16 @@
   margin-top: 0.9rem;
 }
 
-/* Pause is a form and the others are disclosures; both sit on one line. */
+/* Pause is a form and the others are disclosures; both sit on one line.
+   Every button in the app starts with a top margin, which a disclosure's
+   summary does not have, so Pause sat lower than the three beside it. */
 .lifecycle > form {
   display: flex;
   border: 1px solid transparent;
+}
+
+.lifecycle > form > button {
+  margin-top: 0;
 }
 
 .controls button,
@@ -177,6 +190,11 @@
   font: 700 0.9rem var(--font-sans);
 }
 
+.controls .edit {
+  background: var(--ember);
+  color: var(--paper);
+}
+
 .controls button:disabled,
 .lifecycle button:disabled,
 .history button:disabled,
@@ -187,6 +205,25 @@
 .detail {
   margin-top: 1rem;
   border-top: 1px solid var(--line);
+}
+
+.formActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.formActions .primary {
+  flex: 1;
+}
+
+.cancel {
+  min-height: 3.2rem;
+  padding: 0 1.1rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--line);
+  color: var(--ledger-ink);
+  font: 700 0.95rem var(--font-sans);
 }
 
 /* Closed, a confirmation is a button like Pause beside it (owner, 2 Oct
@@ -237,8 +274,6 @@
   padding: 0 0.75rem 0.75rem;
 }
 
-.detail > summary,
-.addPanel > summary,
 .history > summary {
   min-height: 3.25rem;
   display: flex;
@@ -247,9 +282,18 @@
   font: 700 0.95rem var(--font-sans);
 }
 
-.addPanel > summary,
 .history > summary {
   padding: 0 1.1rem;
+}
+
+.add {
+  justify-self: center;
+  min-height: 3.6rem;
+  margin-top: 0;
+  padding: 0 2.4rem;
+  font-size: 1.05rem;
+  background: var(--ember);
+  color: var(--paper);
 }
 
 .history > summary .count {
@@ -268,7 +312,7 @@
 }
 
 .addPanel .form {
-  padding: 0 1.1rem 1.1rem;
+  padding: 1.1rem;
 }
 
 .form label {
@@ -300,15 +344,59 @@
   resize: vertical;
 }
 
-.fieldPair,
-.metric {
+/* Core or Supporting: two choices side by side, the chosen one filled. */
+.attentionChoice {
+  min-width: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.7rem;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
-.metric {
-  grid-template-columns: 1fr 1fr 0.7fr;
+.attentionChoice legend {
+  margin-bottom: 0.3rem;
+  padding: 0;
+  color: var(--ledger-muted);
+  font: 500 0.62rem var(--font-mono);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.form .attentionChoice label {
+  position: relative;
+  min-height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: white;
+  color: var(--ledger-ink);
+  font: 700 0.95rem var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.form .attentionChoice input {
+  position: absolute;
+  width: 1px;
+  min-height: 0;
+  height: 1px;
+  padding: 0;
+  opacity: 0;
+}
+
+.form .attentionChoice label:has(input:checked) {
+  border-color: var(--ledger-ink);
+  background: var(--sage);
+}
+
+.form .attentionChoice label:has(input:focus-visible) {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
 }
 
 .primary {
@@ -320,17 +408,16 @@
   font: 700 0.95rem var(--font-sans);
 }
 
-.consequence,
+.cancel:hover {
+  background: var(--rule);
+}
+
 .empty {
   margin: 0;
   padding: 1rem 1.1rem;
   color: var(--ledger-muted);
   font-size: 0.86rem;
   line-height: 1.5;
-}
-
-.consequence {
-  padding: 0.8rem 0 0;
 }
 
 .history ul {
@@ -414,18 +501,13 @@
   outline-offset: 2px;
 }
 
-@media (max-width: 520px) {
-  .fieldPair,
-  .metric {
-    grid-template-columns: 1fr;
-  }
-
-  .goalCard {
-    grid-template-columns: 2.2rem 1fr;
-  }
-}
-
 @media (prefers-reduced-motion: no-preference) {
+  /* Only while a drag is on: at the drop the list is already in its new
+     order, and easing from the old offsets would show it jump back first. */
+  .goalList[data-reordering="true"] > .goalCard:not([data-dragging="true"]) {
+    transition: transform 150ms ease-out;
+  }
+
   .attention,
   .supporting,
   .addPanel,

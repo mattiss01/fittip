@@ -57,13 +57,14 @@ export default async function GoalsPage() {
   return (
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
       <BackLink href="/home/you" label="You" />
-      {/* No intro: the two lists below name themselves as primary and
-          secondary attention, which is all the old one said. */}
+      {/* No intro: the two lists below are headed Core goals and
+          Supporting goals, which is all the old one said. */}
       <header className={youStyles.header}>
         <h1>Goals</h1>
       </header>
       <GoalManager
         expectedRevision={collection.revision}
+        today={isoDateInTimezone(new Date(), timezoneName)}
         initialGoals={collection.goals.map((goal) =>
           withStatusDate(goal, changes, timezoneName),
         )}

@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { watchConsoleErrors } from "./support/console-errors";
 import { openNewSession } from "./support/plan-week";
+import { openAddGoalForm } from "./support/goal-form";
 
 /**
  * M3-16A: asking for a coach proposal and applying part of it.
@@ -237,18 +238,13 @@ test.describe("M3-16A plan proposal review", () => {
 /** The same steps `m2-01-goals.spec.ts` uses, because the surface is theirs. */
 async function addGoal(page: Page, title: string) {
   await page.goto("/home/you/goals");
-  const panel = page.locator("details").filter({ hasText: "Add goal" });
-  if ((await panel.getAttribute("open")) === null) {
-    await panel.getByText("Add goal", { exact: true }).click();
-  }
-  const form = panel.locator("form");
+  const form = await openAddGoalForm(page);
   await form.getByLabel("Goal title").fill(title);
   await form
     .getByLabel("Desired outcome")
     .fill("Finish a half marathon feeling strong rather than surviving it.");
-  await form.getByLabel("Attention").selectOption("core");
-  await form.getByLabel("Sports or activity areas").fill("Running");
-  await form.getByLabel("Start date").fill(ownerToday());
+  await form.getByLabel("Sports").fill("Running");
+  await form.getByRole("radio", { name: "Core" }).check();
   await form.getByRole("button", { name: "Create active goal" }).click();
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
 }

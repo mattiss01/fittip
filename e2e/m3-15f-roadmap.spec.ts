@@ -5,6 +5,7 @@ import {
   type Page,
 } from "@playwright/test";
 import path from "node:path";
+import { openAddGoalForm } from "./support/goal-form";
 
 const evidenceDirectory = path.join(
   process.cwd(),
@@ -268,26 +269,15 @@ async function expectNoHorizontalOverflow(page: Page) {
 }
 
 async function createGoal(page: Page, title: string) {
-  const panel = page.locator("details").filter({ hasText: "Add goal" });
-  if ((await panel.getAttribute("open")) === null) {
-    await panel.getByText("Add goal", { exact: true }).click();
-  }
-  const form = panel.locator("form");
+  const form = await openAddGoalForm(page);
   await form.getByLabel("Goal title").fill(title);
   await form
     .getByLabel("Desired outcome")
     .fill("Finish the hilly half without walking the climbs.");
-  await form.getByLabel("Attention").selectOption("core");
-  await form.getByLabel("Sports or activity areas").fill("Running");
-  await form.getByLabel("Start date").fill(isoDate(0));
+  await form.getByLabel("Sports").fill("Running");
+  await form.getByRole("radio", { name: "Core" }).check();
   await form.getByRole("button", { name: "Create active goal" }).click();
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
-}
-
-function isoDate(offsetDays: number): string {
-  return new Date(Date.now() + offsetDays * 86_400_000)
-    .toISOString()
-    .slice(0, 10);
 }
 
 async function signIn(page: Page, email: string, password: string) {

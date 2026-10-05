@@ -94,6 +94,19 @@ describe("goal actions", () => {
     },
   );
 
+  it("refuses a goal that names no sport and keeps what was typed", async () => {
+    const create = vi.fn();
+    createRepositoryMock.mockResolvedValue({ create });
+    const form = createForm();
+    form.set("activityAreas", " , ");
+
+    const result = await changeGoalAction(INITIAL_GOAL_ACTION_STATE, form);
+
+    expect(result.status).toBe("validation");
+    expect(result.draft).toMatchObject({ title: "Run a trail event" });
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it("omits the source-tier rank when an edit changes attention tier", async () => {
     const edit = vi.fn().mockResolvedValue({
       goal_id: "52000000-0000-4000-8000-000000000001",

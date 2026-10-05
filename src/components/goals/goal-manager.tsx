@@ -3,9 +3,13 @@
 import {
   useActionState,
   useEffect,
+  useOptimistic,
   useRef,
   useState,
   useSyncExternalStore,
+  useTransition,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
 } from "react";
 
 import {
@@ -15,6 +19,7 @@ import {
 } from "@/app/home/you/goals/action-state";
 import { changeGoalAction } from "@/app/home/you/goals/actions";
 import styles from "@/app/home/you/goals/goals.module.css";
+import { formatRoadmapDate } from "@/components/roadmap/roadmap-dates";
 import {
   latestActionResponseAt,
   RECOVERY_NOTICE_MS,
@@ -51,18 +56,9 @@ export type GoalView = {
 type Props = {
   initialGoals: GoalView[];
   expectedRevision: number;
+  /** The owner's day, which is when a new goal starts. */
+  today: string;
 };
-
-const CATEGORIES = [
-  ["performance_event", "Performance or event"],
-  ["skill", "Skill"],
-  ["strength", "Strength"],
-  ["endurance", "Endurance"],
-  ["mobility", "Mobility"],
-  ["body_composition", "Body composition"],
-  ["recovery_general_fitness", "Recovery or general fitness"],
-  ["other", "Other"],
-] as const;
 
 /**
  * Session-scoped, non-personal, versioned marker that survives the recovery
@@ -74,11 +70,20 @@ const RECOVERY_FLAG = "fittip.goals.recovered:v1";
 const RECOVERED_NOTICE =
   "Your last goal change did not appear, so these goals were reloaded. The list below is what is saved.";
 
-export function GoalManager({ initialGoals, expectedRevision }: Props) {
+export function GoalManager({ initialGoals, expectedRevision, today }: Props) {
   const [state, action, pending] = useActionState(
     changeGoalAction,
     INITIAL_GOAL_ACTION_STATE,
   );
+  const [adding, setAdding] = useState(false);
+  // The add form closes once its goal is created and stays open on a refusal.
+  const [settled, setSettled] = useState(state.submission);
+  if (state.submission !== settled) {
+    setSettled(state.submission);
+    if (state.status === "saved" && state.operation === "create") {
+      setAdding(false);
+    }
+  }
   const stall = useMutationStall(pending, state.submission);
   const recovered = useRecoveredReload(state.submission);
   const notice =
@@ -121,26 +126,36 @@ export function GoalManager({ initialGoals, expectedRevision }: Props) {
         </a>
       ) : null}
 
-      {/* First on the page, not under both lists (owner, 2 Oct 2026). */}
-      <details className={styles.addPanel}>
-        <summary>Add goal</summary>
-        <GoalForm
-          key={`create-${state.submission}`}
-          action={action}
-          expectedRevision={expectedRevision}
-          pending={pending}
-          draft={state.operation === "create" ? state.draft : undefined}
-        />
-      </details>
+      {/* First on the page, not under both lists (owner, 2 Oct 2026), and a
+          button of its own width that opens the form (owner, 5 Oct 2026). */}
+      {adding ? (
+        <section className={styles.addPanel} aria-label="Add goal">
+          <GoalForm
+            // Remounted by its own result only: a reorder sent while this
+            // is open must not empty what has been typed.
+            key={`create-${state.operation === "create" ? state.submission : 0}`}
+            action={action}
+            expectedRevision={expectedRevision}
+            pending={pending}
+            draft={state.operation === "create" ? state.draft : undefined}
+            newGoalTier={core.length < 3 ? "core" : "supporting"}
+            today={today}
+            onCancel={() => setAdding(false)}
+          />
+        </section>
+      ) : (
+        <button
+          className={styles.add}
+          onClick={() => setAdding(true)}
+          type="button"
+        >
+          Add goal
+        </button>
+      )}
 
       <section className={styles.attention} aria-labelledby="core-heading">
         <div className={styles.sectionHeading}>
-          <div>
-            <p className={styles.eyebrow}>
-              Primary attention / {core.length} of 3
-            </p>
-            <h2 id="core-heading">Core goals</h2>
-          </div>
+          <h2 id="core-heading">Core goals</h2>
           <span
             className={styles.slotSignal}
             aria-label={`${3 - core.length} core slots open`}
@@ -151,20 +166,14 @@ export function GoalManager({ initialGoals, expectedRevision }: Props) {
           </span>
         </div>
         {core.length ? (
-          <ol className={styles.goalList}>
-            {core.map((goal, index) => (
-              <GoalCard
-                key={goal.id}
-                goal={goal}
-                expectedRevision={expectedRevision}
-                order={core}
-                index={index}
-                action={action}
-                actionState={state}
-                pending={pending}
-              />
-            ))}
-          </ol>
+          <GoalList
+            goals={core}
+            tier="core"
+            expectedRevision={expectedRevision}
+            action={action}
+            actionState={state}
+            pending={pending}
+          />
         ) : (
           <p className={styles.empty}>
             No core goal yet. Choose up to three outcomes that deserve primary
@@ -178,30 +187,19 @@ export function GoalManager({ initialGoals, expectedRevision }: Props) {
         aria-labelledby="supporting-heading"
       >
         <div className={styles.sectionHeading}>
-          <div>
-            <p className={styles.eyebrow}>Secondary attention</p>
-            <h2 id="supporting-heading">Supporting goals</h2>
-          </div>
+          <h2 id="supporting-heading">Supporting goals</h2>
         </div>
         {supporting.length ? (
-          <ol className={styles.goalList}>
-            {supporting.map((goal, index) => (
-              <GoalCard
-                key={goal.id}
-                goal={goal}
-                expectedRevision={expectedRevision}
-                order={supporting}
-                index={index}
-                action={action}
-                actionState={state}
-                pending={pending}
-              />
-            ))}
-          </ol>
+          <GoalList
+            goals={supporting}
+            tier="supporting"
+            expectedRevision={expectedRevision}
+            action={action}
+            actionState={state}
+            pending={pending}
+          />
         ) : (
-          <p className={styles.empty}>
-            Supporting goals stay visible without consuming a core slot.
-          </p>
+          <p className={styles.empty}>None yet.</p>
         )}
       </section>
 
@@ -223,77 +221,258 @@ export function GoalManager({ initialGoals, expectedRevision }: Props) {
   );
 }
 
-function GoalCard({
-  goal,
+type Drag = {
+  id: string;
+  from: number;
+  to: number;
+  dy: number;
+  startY: number;
+  /** Each card's vertical centre and the dragged card's height, at the start. */
+  centres: number[];
+  height: number;
+};
+
+/**
+ * One ranked list. A card is moved by dragging its number, or with the arrow
+ * keys while the number has focus, in place of Move up and Move down (owner,
+ * 5 Oct 2026). The new order shows at once and is sent as one reorder; if the
+ * server refuses it the list falls back to what is saved.
+ */
+function GoalList({
+  goals,
+  tier,
   expectedRevision,
-  order,
-  index,
   action,
   actionState,
   pending,
 }: {
-  goal: GoalView;
+  goals: GoalView[];
+  tier: GoalView["priorityTier"];
   expectedRevision: number;
-  order: GoalView[];
-  index: number;
   action: (payload: FormData) => void;
   actionState: GoalActionState;
   pending: boolean;
 }) {
+  const [, startTransition] = useTransition();
+  const [shown, showOrder] = useOptimistic(
+    goals,
+    (_saved, next: GoalView[]) => next,
+  );
+  const [drag, setDrag] = useState<Drag | null>(null);
+  // One editor at a time in a list. It closes on its own goal's save and
+  // stays open on a refusal, so what was typed is still there to correct.
+  // While it is open the list is not reordered and shows no grips (owner,
+  // 5 Oct 2026): an open card is too tall to drag past its neighbours.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [settled, setSettled] = useState(actionState.submission);
+  if (actionState.submission !== settled) {
+    setSettled(actionState.submission);
+    if (actionState.status === "saved" && actionState.goalId === editingId) {
+      setEditingId(null);
+    }
+  }
+  const cards = useRef(new Map<string, HTMLLIElement>());
+  // Nothing can move in a list of one, or while a card is open.
+  const fixed = shown.length < 2 || editingId !== null;
+  const locked = fixed || pending;
+
+  const move = (from: number, to: number) => {
+    if (locked || to < 0 || to >= shown.length || to === from) return;
+    const next = [...shown];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    const payload = new FormData();
+    payload.set("operation", "reorder");
+    payload.set("expectedRevision", String(expectedRevision));
+    payload.set("priorityTier", tier);
+    payload.set("orderedGoalIds", next.map(({ id }) => id).join(","));
+    startTransition(() => {
+      showOrder(next);
+      action(payload);
+    });
+  };
+
+  const begin = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+    id: string,
+    from: number,
+  ) => {
+    if (locked || event.button !== 0) return;
+    const rects = shown.map((goal) =>
+      cards.current.get(goal.id)?.getBoundingClientRect(),
+    );
+    const own = rects[from];
+    if (!own || rects.some((rect) => !rect)) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDrag({
+      id,
+      from,
+      to: from,
+      dy: 0,
+      startY: event.clientY,
+      centres: rects.map((rect) => (rect ? rect.top + rect.height / 2 : 0)),
+      height: own.height,
+    });
+  };
+
+  const follow = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (drag) setDrag({ ...drag, ...dragTarget(drag, event.clientY) });
+  };
+
+  // Where the card lands is read from the release itself, not from the last
+  // move React happened to have rendered.
+  const drop = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!drag) return;
+    setDrag(null);
+    move(drag.from, dragTarget(drag, event.clientY).to);
+  };
+
   return (
-    <li className={styles.goalCard}>
-      <div className={styles.rank} aria-label={`Rank ${goal.activeRank}`}>
-        {String(goal.activeRank).padStart(2, "0")}
+    <ol className={styles.goalList} data-reordering={drag ? "true" : undefined}>
+      {shown.map((goal, index) => (
+        <li
+          className={styles.goalCard}
+          data-dragging={drag?.id === goal.id ? "true" : undefined}
+          key={goal.id}
+          ref={(element) => {
+            if (element) cards.current.set(goal.id, element);
+            else cards.current.delete(goal.id);
+          }}
+          style={dragOffset(drag, index)}
+        >
+          <button
+            aria-label={`${goal.title}: rank ${index + 1} of ${shown.length}. Drag or use the arrow keys to reorder.`}
+            // Not `disabled`: that would drop the focus a second arrow key
+            // needs, on every move.
+            aria-disabled={locked}
+            className={styles.rank}
+            data-fixed={fixed ? "true" : undefined}
+            onKeyDown={(event) => {
+              if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+              event.preventDefault();
+              move(index, event.key === "ArrowUp" ? index - 1 : index + 1);
+            }}
+            onLostPointerCapture={() => setDrag(null)}
+            onPointerCancel={() => setDrag(null)}
+            onPointerDown={(event) => begin(event, goal.id, index)}
+            onPointerMove={follow}
+            onPointerUp={drop}
+            type="button"
+          >
+            {String(index + 1).padStart(2, "0")}
+            <svg aria-hidden="true" height="14" viewBox="0 0 10 14" width="10">
+              {[2, 7, 12].flatMap((y) =>
+                [2, 8].map((x) => (
+                  <circle
+                    cx={x}
+                    cy={y}
+                    fill="currentColor"
+                    key={`${x}-${y}`}
+                    r="1.3"
+                  />
+                )),
+              )}
+            </svg>
+          </button>
+          <GoalCard
+            goal={goal}
+            expectedRevision={expectedRevision}
+            action={action}
+            actionState={actionState}
+            pending={pending}
+            editing={editingId === goal.id}
+            onEditing={(open) => setEditingId(open ? goal.id : null)}
+          />
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** How far the card has been dragged and the place that puts it in. */
+function dragTarget(drag: Drag, clientY: number) {
+  const dy = clientY - drag.startY;
+  const centre = drag.centres[drag.from] + dy;
+  let to = drag.from;
+  while (to < drag.centres.length - 1 && centre > drag.centres[to + 1]) to += 1;
+  while (to > 0 && centre < drag.centres[to - 1]) to -= 1;
+  return { dy, to };
+}
+
+/** The dragged card follows the finger; the ones it passes step aside. */
+function dragOffset(
+  drag: Drag | null,
+  index: number,
+): CSSProperties | undefined {
+  if (!drag) return undefined;
+  if (index === drag.from) return { transform: `translateY(${drag.dy}px)` };
+  if (drag.from < drag.to && index > drag.from && index <= drag.to) {
+    return { transform: `translateY(${-drag.height}px)` };
+  }
+  if (drag.to < drag.from && index >= drag.to && index < drag.from) {
+    return { transform: `translateY(${drag.height}px)` };
+  }
+  return undefined;
+}
+
+function GoalCard({
+  goal,
+  expectedRevision,
+  action,
+  actionState,
+  pending,
+  editing,
+  onEditing,
+}: {
+  goal: GoalView;
+  expectedRevision: number;
+  action: (payload: FormData) => void;
+  actionState: GoalActionState;
+  pending: boolean;
+  editing: boolean;
+  onEditing: (open: boolean) => void;
+}) {
+  const ownEdit =
+    actionState.operation === "edit" && actionState.goalId === goal.id;
+
+  return (
+    <div className={styles.goalBody}>
+      {/* The list a card sits in says core or supporting, so the card does
+          not repeat it; the kind-of-goal label left with its field (owner,
+          5 Oct 2026). */}
+      <h3>{goal.title}</h3>
+      <p className={styles.outcome}>{goal.desiredOutcome}</p>
+      {goal.activityAreas.length || goal.targetDate ? (
+        <p className={styles.areas}>
+          {[
+            ...goal.activityAreas,
+            ...(goal.targetDate
+              ? [`By ${formatRoadmapDate(goal.targetDate)}`]
+              : []),
+          ].join(" · ")}
+        </p>
+      ) : null}
+      <div className={styles.controls}>
+        {editing ? null : (
+          <button
+            className={styles.edit}
+            onClick={() => onEditing(true)}
+            type="button"
+          >
+            Edit
+          </button>
+        )}
       </div>
-      <div className={styles.goalBody}>
-        <div className={styles.goalHeader}>
-          <div>
-            <p className={styles.category}>{categoryLabel(goal.category)}</p>
-            <h3>{goal.title}</h3>
-          </div>
-          <span className={styles.tier}>{goal.priorityTier}</span>
-        </div>
-        <p className={styles.outcome}>{goal.desiredOutcome}</p>
-        {goal.activityAreas.length ? (
-          <p className={styles.areas}>{goal.activityAreas.join(" · ")}</p>
-        ) : null}
-        <div className={styles.controls}>
-          <ReorderButton
-            label="Move up"
-            goal={goal}
-            order={order}
-            destination={index - 1}
-            action={action}
-            expectedRevision={expectedRevision}
-            disabled={pending || index === 0}
-          />
-          <ReorderButton
-            label="Move down"
-            goal={goal}
-            order={order}
-            destination={index + 1}
-            action={action}
-            expectedRevision={expectedRevision}
-            disabled={pending || index === order.length - 1}
-          />
-        </div>
-        <details className={styles.detail} data-goal-editor>
-          <summary>Review and edit</summary>
+      {editing ? (
+        <div className={styles.detail} data-goal-editor>
           <GoalForm
-            key={`edit-${goal.id}-${
-              actionState.operation === "edit" && actionState.goalId === goal.id
-                ? actionState.submission
-                : 0
-            }`}
+            key={`edit-${goal.id}-${ownEdit ? actionState.submission : 0}`}
             action={action}
             expectedRevision={expectedRevision}
             goal={goal}
             pending={pending}
-            draft={
-              actionState.operation === "edit" && actionState.goalId === goal.id
-                ? actionState.draft
-                : undefined
-            }
+            draft={ownEdit ? actionState.draft : undefined}
+            onCancel={() => onEditing(false)}
           />
           <div className={styles.lifecycle}>
             <SimpleAction
@@ -333,13 +512,9 @@ function GoalCard({
               pending={pending}
             />
           </div>
-          <p className={styles.consequence}>
-            Delete works only before the goal has history or another record
-            refers to it. After that, Abandoned sets it aside and keeps it.
-          </p>
-        </details>
-      </div>
-    </li>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -349,12 +524,19 @@ function GoalForm({
   goal,
   pending,
   draft,
+  newGoalTier = "supporting",
+  today = "",
+  onCancel,
 }: {
   action: (payload: FormData) => void;
   expectedRevision: number;
   goal?: GoalView;
   pending: boolean;
   draft?: GoalActionDraft;
+  newGoalTier?: GoalView["priorityTier"];
+  /** Only a new goal needs it; an edit keeps the goal's own start date. */
+  today?: string;
+  onCancel?: () => void;
 }) {
   const initial = (field: keyof GoalActionDraft, fallback = "") =>
     draft?.[field] ?? fallback;
@@ -389,167 +571,99 @@ function GoalForm({
           defaultValue={initial("desiredOutcome", goal?.desiredOutcome)}
         />
       </label>
-      <div className={styles.fieldPair}>
-        <label>
-          Category
-          <select
-            name="category"
-            defaultValue={initial("category", goal?.category ?? "other")}
-          >
-            {CATEGORIES.map(([value, label]) => (
-              <option value={value} key={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Attention
-          <select
-            name="priorityTier"
-            defaultValue={initial(
-              "priorityTier",
-              goal?.priorityTier ?? "supporting",
-            )}
-          >
-            <option value="core">Core</option>
-            <option value="supporting">Supporting</option>
-          </select>
-        </label>
-      </div>
+      {/* Empty until the owner names one: no "Other" to leave standing
+          (owner, 5 Oct 2026). */}
       <label>
-        Sports or activity areas
+        Sports
         <input
           name="activityAreas"
+          required
           maxLength={600}
-          placeholder="Running, football, mobility"
+          placeholder="Running, strength"
           defaultValue={initial(
             "activityAreas",
             goal?.activityAreas.join(", "),
           )}
         />
       </label>
-      <div className={styles.fieldPair}>
-        <label>
-          Start date
-          <input
-            name="startDate"
-            type="date"
-            required
-            defaultValue={initial("startDate", goal?.startDate)}
-          />
-        </label>
-        <label>
-          Target date (optional)
-          <input
-            name="targetDate"
-            type="date"
-            defaultValue={initial("targetDate", goal?.targetDate ?? "")}
-          />
-        </label>
-      </div>
       <label>
-        Target or event detail (optional)
+        Target date (optional)
         <input
-          name="targetDetail"
-          maxLength={500}
-          defaultValue={initial("targetDetail", goal?.targetDetail ?? "")}
+          name="targetDate"
+          type="date"
+          defaultValue={initial("targetDate", goal?.targetDate ?? "")}
         />
       </label>
-      <div className={styles.metric}>
-        <label>
-          Target measure
-          <input
-            name="targetMetricLabel"
-            maxLength={80}
-            placeholder="Finish time"
-            defaultValue={initial(
-              "targetMetricLabel",
-              goal?.targetMetricLabel ?? "",
-            )}
-          />
-        </label>
-        <label>
-          Target value
-          <input
-            name="targetMetricValue"
-            maxLength={120}
-            placeholder="Under 3 hours"
-            defaultValue={initial(
-              "targetMetricValue",
-              goal?.targetMetricValue ?? "",
-            )}
-          />
-        </label>
-        <label>
-          Unit
-          <input
-            name="targetMetricUnit"
-            maxLength={40}
-            placeholder="hours"
-            defaultValue={initial(
-              "targetMetricUnit",
-              goal?.targetMetricUnit ?? "",
-            )}
-          />
-        </label>
+      {/* Chosen when adding and changed here when editing (owner, 5 Oct
+          2026). A new goal starts on core while a core slot is free. */}
+      <fieldset className={styles.attentionChoice}>
+        <legend>Attention</legend>
+        {(["core", "supporting"] as const).map((tier) => (
+          <label key={tier}>
+            <input
+              defaultChecked={
+                initial("priorityTier", goal?.priorityTier ?? newGoalTier) ===
+                tier
+              }
+              name="priorityTier"
+              type="radio"
+              value={tier}
+            />
+            {tier === "core" ? "Core" : "Supporting"}
+          </label>
+        ))}
+      </fieldset>
+      <StoredGoalFields goal={goal} today={today} />
+      <div className={styles.formActions}>
+        <button className={styles.primary} disabled={pending}>
+          {goal ? "Save goal" : "Create active goal"}
+        </button>
+        {onCancel ? (
+          <button className={styles.cancel} onClick={onCancel} type="button">
+            Cancel
+          </button>
+        ) : null}
       </div>
-      <label>
-        Why this matters (optional)
-        <textarea
-          name="rationale"
-          maxLength={500}
-          defaultValue={initial("rationale", goal?.rationale ?? "")}
-        />
-      </label>
-      <label>
-        Goal-specific constraints (optional)
-        <textarea
-          name="constraints"
-          maxLength={1000}
-          defaultValue={initial("constraints", goal?.constraints ?? "")}
-        />
-      </label>
-      <input name="targetRank" type="hidden" value={goal?.activeRank ?? ""} />
-      <button className={styles.primary} disabled={pending}>
-        {goal ? "Save goal" : "Create active goal"}
-      </button>
     </form>
   );
 }
 
-function ReorderButton({
-  label,
-  goal,
-  order,
-  destination,
-  expectedRevision,
-  action,
-  disabled,
-}: {
-  label: string;
-  goal: GoalView;
-  order: GoalView[];
-  destination: number;
-  expectedRevision: number;
-  action: (payload: FormData) => void;
-  disabled: boolean;
-}) {
-  const ids = order.map(({ id }) => id);
-  if (destination >= 0 && destination < ids.length) {
-    [ids[order.indexOf(goal)], ids[destination]] = [
-      ids[destination],
-      ids[order.indexOf(goal)],
-    ];
-  }
+/**
+ * What a goal stores and the form no longer asks for (owner, 5 Oct 2026):
+ * the kind of goal, its start date, the target's detail and measure, why it
+ * matters and its own constraints. An edit sends the whole goal, so these
+ * travel hidden and a goal written before keeps what it held. A new goal
+ * starts on the owner's day.
+ */
+function StoredGoalFields({ goal, today }: { goal?: GoalView; today: string }) {
   return (
-    <form action={action}>
-      <input type="hidden" name="operation" value="reorder" />
-      <input type="hidden" name="expectedRevision" value={expectedRevision} />
-      <input type="hidden" name="priorityTier" value={goal.priorityTier} />
-      <input type="hidden" name="orderedGoalIds" value={ids.join(",")} />
-      <button disabled={disabled}>{label}</button>
-    </form>
+    <>
+      <input type="hidden" name="category" value={goal?.category ?? "other"} />
+      <input type="hidden" name="startDate" value={goal?.startDate ?? today} />
+      <input
+        type="hidden"
+        name="targetDetail"
+        value={goal?.targetDetail ?? ""}
+      />
+      <input
+        type="hidden"
+        name="targetMetricLabel"
+        value={goal?.targetMetricLabel ?? ""}
+      />
+      <input
+        type="hidden"
+        name="targetMetricValue"
+        value={goal?.targetMetricValue ?? ""}
+      />
+      <input
+        type="hidden"
+        name="targetMetricUnit"
+        value={goal?.targetMetricUnit ?? ""}
+      />
+      <input type="hidden" name="rationale" value={goal?.rationale ?? ""} />
+      <input type="hidden" name="constraints" value={goal?.constraints ?? ""} />
+      <input name="targetRank" type="hidden" value={goal?.activeRank ?? ""} />
+    </>
   );
 }
 
@@ -865,8 +979,4 @@ function statusLine(goal: GoalView) {
 
 function byRank(a: GoalView, b: GoalView) {
   return (a.activeRank ?? 0) - (b.activeRank ?? 0);
-}
-
-function categoryLabel(category: string) {
-  return CATEGORIES.find(([value]) => value === category)?.[1] ?? "Other";
 }
