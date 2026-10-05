@@ -180,8 +180,162 @@ describe("GoalManager", () => {
   it("provides a bounded empty state and add-goal control", () => {
     render(<GoalManager expectedRevision={0} initialGoals={[]} />);
     expect(screen.getByText(/no core goal yet/i)).toBeVisible();
-    expect(screen.getByText(/supporting goals stay visible/i)).toBeVisible();
-    expect(screen.getByText("Add goal")).toBeVisible();
+    expect(screen.getByText("None yet.")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Add goal" })).toBeVisible();
+  });
+
+  it("asks a new goal for a title, an outcome, a sport, a date and its attention", () => {
+    render(<GoalManager expectedRevision={0} initialGoals={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Add goal" }));
+
+    expect(screen.getByLabelText("Goal title")).toBeRequired();
+    expect(screen.getByLabelText("Desired outcome")).toBeRequired();
+    // Empty and required: there is no "Other" to leave standing.
+    expect(screen.getByLabelText("Sports")).toBeRequired();
+    expect(screen.getByLabelText("Sports")).toHaveValue("");
+    expect(screen.getByLabelText("Target date (optional)")).not.toBeRequired();
+    // A core slot is free, so that is where a new goal starts.
+    expect(screen.getByRole("radio", { name: "Core" })).toBeChecked();
+    for (const gone of ["Category", "Start date", "Target measure"]) {
+      expect(screen.queryByLabelText(gone)).toBeNull();
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByLabelText("Goal title")).toBeNull();
+    expect(screen.getByRole("button", { name: "Add goal" })).toBeVisible();
+  });
+
+  it("starts a new goal on supporting once three core goals are active", () => {
+    render(
+      <GoalManager
+        expectedRevision={3}
+        initialGoals={["1", "2", "3"].map((id) =>
+          goal({ id, title: `Core ${id}`, activeRank: Number(id) }),
+        )}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add goal" }));
+
+    expect(screen.getByRole("radio", { name: "Supporting" })).toBeChecked();
+  });
+
+  it("closes the add form once its goal is created and keeps it on a refusal", () => {
+    const view = render(<GoalManager expectedRevision={0} initialGoals={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Add goal" }));
+
+    useActionStateMock.mockReturnValue([
+      {
+        ...INITIAL_GOAL_ACTION_STATE,
+        status: "validation",
+        message: "Check the goal details and dates.",
+        submission: 1,
+        operation: "create",
+        draft: { title: "Half typed" },
+      },
+      vi.fn(),
+      false,
+    ]);
+    view.rerender(<GoalManager expectedRevision={0} initialGoals={[]} />);
+    expect(screen.getByLabelText("Goal title")).toHaveValue("Half typed");
+
+    useActionStateMock.mockReturnValue([
+      {
+        ...INITIAL_GOAL_ACTION_STATE,
+        status: "saved",
+        message: "Goal created.",
+        submission: 2,
+        operation: "create",
+      },
+      vi.fn(),
+      false,
+    ]);
+    view.rerender(<GoalManager expectedRevision={1} initialGoals={[]} />);
+    expect(screen.queryByLabelText("Goal title")).toBeNull();
+  });
+
+  it("reorders a list from the keyboard on a card's number", () => {
+    const action = vi.fn();
+    useActionStateMock.mockReturnValue([
+      INITIAL_GOAL_ACTION_STATE,
+      action,
+      false,
+    ]);
+    render(
+      <GoalManager
+        expectedRevision={7}
+        initialGoals={[
+          goal({ id: "1", title: "Trail event", activeRank: 1 }),
+          goal({ id: "2", title: "Swim endurance", activeRank: 2 }),
+        ]}
+      />,
+    );
+
+    const handle = screen.getByRole("button", {
+      name: /^Trail event: rank 1 of 2/,
+    });
+    // The first card has nowhere to go up to.
+    fireEvent.keyDown(handle, { key: "ArrowUp" });
+    expect(action).not.toHaveBeenCalled();
+
+    act(() => {
+      fireEvent.keyDown(handle, { key: "ArrowDown" });
+    });
+    expect(action).toHaveBeenCalledTimes(1);
+    const sent = action.mock.calls[0][0] as FormData;
+    expect(Object.fromEntries(sent)).toEqual({
+      operation: "reorder",
+      expectedRevision: "7",
+      priorityTier: "core",
+      orderedGoalIds: "2,1",
+    });
+  });
+
+  it("opens one goal for editing, without grips, and closes it on its save", () => {
+    const goals = [
+      goal({
+        id: "1",
+        title: "Trail event",
+        activeRank: 1,
+        activityAreas: ["Trail running"],
+        targetDate: "2026-12-31",
+      }),
+      goal({ id: "2", title: "Swim endurance", activeRank: 2 }),
+    ];
+    const view = render(
+      <GoalManager expectedRevision={1} initialGoals={goals} />,
+    );
+    // The card says what the goal is for and by when, and nothing about its
+    // kind or tier: the list it sits in says that.
+    expect(screen.getByText("Trail running · By 31 Dec 2026")).toBeVisible();
+    const handles = () => screen.getAllByRole("button", { name: /: rank \d/ });
+    expect(handles().every((handle) => !handle.hasAttribute("disabled"))).toBe(
+      true,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+    expect(screen.getByLabelText("Goal title")).toHaveValue("Trail event");
+    expect(screen.getByRole("radio", { name: "Core" })).toBeChecked();
+    expect(handles().every((handle) => handle.hasAttribute("disabled"))).toBe(
+      true,
+    );
+
+    useActionStateMock.mockReturnValue([
+      {
+        ...INITIAL_GOAL_ACTION_STATE,
+        status: "saved",
+        message: "Goal updated.",
+        submission: 1,
+        operation: "edit",
+        goalId: "1",
+      },
+      vi.fn(),
+      false,
+    ]);
+    view.rerender(<GoalManager expectedRevision={2} initialGoals={goals} />);
+    expect(screen.queryByLabelText("Goal title")).toBeNull();
+    expect(handles().every((handle) => !handle.hasAttribute("disabled"))).toBe(
+      true,
+    );
   });
 
   it("requires explicit confirmations with consequences and restores focus on cancel", () => {
@@ -191,11 +345,7 @@ describe("GoalManager", () => {
         initialGoals={[goal({ title: "Trail event" })]}
       />,
     );
-    const editor = screen
-      .getByText("Review and edit", { selector: "summary" })
-      .closest("details");
-    expect(editor).not.toBeNull();
-    editor!.open = true;
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
 
     for (const [action, consequence, confirmation] of [
       ["Achieved", /records the goal as achieved/i, "Confirm achieved"],

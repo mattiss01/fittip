@@ -41,7 +41,6 @@ test.describe("M2-01 goal management", () => {
       await createGoal(page, "Climbing skill", "core", "Climbing");
       await createGoal(page, "Mobility habit", "supporting", "Mobility");
 
-      await expect(page.getByText("Primary attention / 3 of 3")).toBeVisible();
       await expect(
         page.getByRole("heading", { name: "Mobility habit" }),
       ).toBeVisible();
@@ -57,34 +56,38 @@ test.describe("M2-01 goal management", () => {
       await addForm
         .getByLabel("Desired outcome")
         .fill("This must not become active core.");
-      await addForm.getByLabel("Attention").selectOption("core");
-      await addForm.getByLabel("Start date").fill("2026-07-29");
+      await addForm.getByLabel("Sports").fill("Running");
+      // With three core goals the form starts on Supporting; Core is chosen
+      // on purpose so the server has a fourth to refuse.
+      await expect(addForm.getByLabel("Supporting")).toBeChecked();
+      await addForm.getByLabel("Core").check();
       await addForm.getByRole("button", { name: "Create active goal" }).click();
       await expect(
         page.getByText(/Three core goals are already active/),
       ).toBeVisible();
-      await expect(page.getByText("Primary attention / 3 of 3")).toBeVisible();
+      await expect(page.getByLabel("0 core slots open")).toBeVisible();
       await expect(addForm.getByLabel("Goal title")).toHaveValue("Fourth core");
       await expect(addForm.getByLabel("Desired outcome")).toHaveValue(
         "This must not become active core.",
       );
-      await expect(addForm.getByLabel("Attention")).toHaveValue("core");
+      await expect(addForm.getByLabel("Core")).toBeChecked();
       await page.screenshot({
         fullPage: true,
         path: path.join(evidenceDirectory, "M2-01-fourth-core-390x844.png"),
       });
+      await addForm.getByRole("button", { name: "Cancel" }).click();
 
       const trailCard = goalCard(page, "Trail event");
       await openGoalDetails(trailCard);
-      await trailCard.getByLabel("Attention").selectOption("supporting");
+      await trailCard.getByLabel("Supporting").check();
       await trailCard.getByRole("button", { name: "Save goal" }).click();
+      // Saving closes the editor.
+      await expect(trailCard.locator("[data-goal-editor]")).toHaveCount(0);
       await expect(
         goalCard(page, "Trail event").getByLabel("Rank 2"),
       ).toBeVisible();
       await openGoalDetails(goalCard(page, "Trail event"));
-      await goalCard(page, "Trail event")
-        .getByLabel("Attention")
-        .selectOption("core");
+      await goalCard(page, "Trail event").getByLabel("Core").check();
       await goalCard(page, "Trail event")
         .getByRole("button", { name: "Save goal" })
         .click();
@@ -94,21 +97,19 @@ test.describe("M2-01 goal management", () => {
 
       const mobilityTierCard = goalCard(page, "Mobility habit");
       await openGoalDetails(mobilityTierCard);
-      await mobilityTierCard.getByLabel("Attention").selectOption("core");
+      await mobilityTierCard.getByLabel("Core").check();
       await mobilityTierCard.getByRole("button", { name: "Save goal" }).click();
       await expect(
         page.getByText(/Three core goals are already active/),
       ).toBeVisible();
-      await expect(mobilityTierCard.getByLabel("Attention")).toHaveValue(
-        "core",
-      );
+      // A refusal keeps the editor open with what was chosen.
+      await expect(mobilityTierCard.getByLabel("Core")).toBeChecked();
       await expect(mobilityTierCard.getByLabel("Rank 1")).toBeVisible();
+      await mobilityTierCard.getByRole("button", { name: "Cancel" }).click();
 
       const stalePage = await page.context().newPage();
       await stalePage.goto("/home/you/goals");
-      await expect(
-        stalePage.getByText("Primary attention / 3 of 3"),
-      ).toBeVisible();
+      await expect(stalePage.getByLabel("0 core slots open")).toBeVisible();
 
       // Trail event holds rank 3 and Climbing skill rank 2 before this move.
       // Asserting Swim endurance still holds rank 1 proves nothing, because
@@ -116,7 +117,7 @@ test.describe("M2-01 goal management", () => {
       await expect(
         goalCard(page, "Climbing skill").getByLabel("Rank 2"),
       ).toBeVisible();
-      await trailCard.getByRole("button", { name: "Move up" }).click();
+      await moveUp(page, "Trail event");
       await expect(
         goalCard(page, "Trail event").getByLabel("Rank 2"),
       ).toBeVisible();
@@ -126,9 +127,7 @@ test.describe("M2-01 goal management", () => {
       await expect(
         goalCard(page, "Swim endurance").getByLabel("Rank 1"),
       ).toBeVisible();
-      await goalCard(stalePage, "Trail event")
-        .getByRole("button", { name: "Move up" })
-        .click();
+      await moveUp(stalePage, "Trail event");
       await expect(
         stalePage.getByText(/Goals changed in another tab/),
       ).toBeVisible();
@@ -160,7 +159,7 @@ test.describe("M2-01 goal management", () => {
       const climbingCard = goalCard(page, "Climbing skill");
       await openGoalDetails(climbingCard);
       await climbingCard.getByRole("button", { name: "Pause" }).click();
-      await expect(page.getByText("Primary attention / 2 of 3")).toBeVisible();
+      await expect(page.getByLabel("1 core slots open")).toBeVisible();
       const pausedSection = page.locator("details").filter({
         has: page.locator("summary").filter({ hasText: /^Paused/ }),
       });
@@ -169,7 +168,7 @@ test.describe("M2-01 goal management", () => {
         pausedSection.getByText("Climbing skill", { exact: true }),
       ).toBeVisible();
       await pausedSection.getByRole("button", { name: "Resume" }).click();
-      await expect(page.getByText("Primary attention / 3 of 3")).toBeVisible();
+      await expect(page.getByLabel("0 core slots open")).toBeVisible();
 
       const mobilityCard = goalCard(page, "Mobility habit");
       await openGoalDetails(mobilityCard);
@@ -317,8 +316,8 @@ test.describe("M2-05 unconfirmed goal mutation", () => {
       const form = addGoalForm(page);
       await form.getByLabel("Goal title").fill("Unconfirmed goal");
       await form.getByLabel("Desired outcome").fill("This is never confirmed.");
-      await form.getByLabel("Attention").selectOption("supporting");
-      await form.getByLabel("Start date").fill("2026-07-29");
+      await form.getByLabel("Sports").fill("Running");
+      await form.getByLabel("Supporting").check();
       await form.getByRole("button", { name: "Create active goal" }).click();
 
       const notice = page.getByRole("status");
@@ -364,25 +363,36 @@ async function createGoal(
   await form
     .getByLabel("Desired outcome")
     .fill(`Make measurable progress toward ${title.toLowerCase()}.`);
-  await form.getByLabel("Attention").selectOption(tier);
-  await form.getByLabel("Sports or activity areas").fill(area);
-  await form.getByLabel("Start date").fill("2026-07-29");
+  await form.getByLabel("Sports").fill(area);
+  await form.getByLabel(tier === "core" ? "Core" : "Supporting").check();
   await form.getByRole("button", { name: "Create active goal" }).click();
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
 }
 
+/** "Add goal" is a button that opens the form; creating a goal closes it. */
 async function openAddPanel(page: import("@playwright/test").Page) {
-  const panel = page.locator("details").filter({ hasText: "Add goal" });
-  if ((await panel.getAttribute("open")) === null) {
-    await panel.getByText("Add goal", { exact: true }).click();
-  }
+  const open = page.getByRole("button", { name: "Add goal" });
+  // One of the two is on the page once it has loaded.
+  await expect(open.or(addGoalForm(page))).toBeVisible();
+  if (await open.isVisible()) await open.click();
+  await expect(addGoalForm(page)).toBeVisible();
 }
 
 function addGoalForm(page: import("@playwright/test").Page) {
-  return page
-    .locator("details")
-    .filter({ hasText: "Add goal" })
-    .locator("form");
+  return page.locator('section[aria-label="Add goal"] form');
+}
+
+/**
+ * A card is reordered by dragging its number or, as here, with the arrow keys
+ * while the number has focus. Move up and Move down are gone (5 Oct 2026).
+ */
+async function moveUp(page: import("@playwright/test").Page, title: string) {
+  const handle = goalCard(page, title).getByRole("button", {
+    name: /: rank \d+ of \d+/,
+  });
+  await expect(handle).toBeEnabled();
+  await handle.focus();
+  await page.keyboard.press("ArrowUp");
 }
 
 function historyEntry(page: import("@playwright/test").Page, title: string) {
@@ -401,11 +411,13 @@ function goalCard(page: import("@playwright/test").Page, title: string) {
     .filter({ has: page.getByRole("heading", { name: title }) });
 }
 
+/** Edit opens a card's editor; it stays open after a refused save. */
 async function openGoalDetails(card: import("@playwright/test").Locator) {
-  const details = card.locator("details[data-goal-editor]");
-  if ((await details.getAttribute("open")) === null) {
-    await details.locator(":scope > summary").click();
+  const editor = card.locator("[data-goal-editor]");
+  if ((await editor.count()) === 0) {
+    await card.getByRole("button", { name: "Edit", exact: true }).click();
   }
+  await expect(editor).toBeVisible();
 }
 
 function confirmation(

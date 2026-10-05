@@ -268,26 +268,20 @@ async function expectNoHorizontalOverflow(page: Page) {
 }
 
 async function createGoal(page: Page, title: string) {
-  const panel = page.locator("details").filter({ hasText: "Add goal" });
-  if ((await panel.getAttribute("open")) === null) {
-    await panel.getByText("Add goal", { exact: true }).click();
-  }
-  const form = panel.locator("form");
+  const add = page.getByRole("button", { name: "Add goal" });
+  const form = page.locator('section[aria-label="Add goal"] form');
+  // One of the two is on the page once it has loaded: the button, or the
+  // form it opens.
+  await expect(add.or(form)).toBeVisible();
+  if (await add.isVisible()) await add.click();
   await form.getByLabel("Goal title").fill(title);
   await form
     .getByLabel("Desired outcome")
     .fill("Finish the hilly half without walking the climbs.");
-  await form.getByLabel("Attention").selectOption("core");
-  await form.getByLabel("Sports or activity areas").fill("Running");
-  await form.getByLabel("Start date").fill(isoDate(0));
+  await form.getByLabel("Sports").fill("Running");
+  await form.getByLabel("Core").check();
   await form.getByRole("button", { name: "Create active goal" }).click();
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
-}
-
-function isoDate(offsetDays: number): string {
-  return new Date(Date.now() + offsetDays * 86_400_000)
-    .toISOString()
-    .slice(0, 10);
 }
 
 async function signIn(page: Page, email: string, password: string) {

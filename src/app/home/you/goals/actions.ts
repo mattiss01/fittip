@@ -54,15 +54,22 @@ export async function changeGoalAction(
         operation === "edit"
           ? optionalText(formData, "originalPriorityTier")
           : undefined;
+      const activityAreas = text(formData, "activityAreas")
+        .split(",")
+        .map((area) => area.trim())
+        .filter(Boolean);
+      // A goal names at least one sport (owner, 5 Oct 2026). The rule is the
+      // form's, not the database's: guided setup still files goals without.
+      if (activityAreas.length < 1) throw new GoalValidationError();
       const input = {
         title: text(formData, "title"),
         desiredOutcome: text(formData, "desiredOutcome"),
         category: text(formData, "category"),
-        activityAreas: text(formData, "activityAreas")
-          .split(",")
-          .map((area) => area.trim())
-          .filter(Boolean),
-        startDate: text(formData, "startDate"),
+        activityAreas,
+        // The form no longer asks when a goal starts; a new one starts today.
+        startDate:
+          optionalText(formData, "startDate") ??
+          new Date().toISOString().slice(0, 10),
         targetDate: optionalText(formData, "targetDate"),
         targetDetail: optionalText(formData, "targetDetail"),
         targetMetricLabel: optionalText(formData, "targetMetricLabel"),
