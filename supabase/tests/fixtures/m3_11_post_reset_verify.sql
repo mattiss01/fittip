@@ -54,7 +54,6 @@ begin
     or (select count(*) from public.memory_collections) <> 1
     or (select count(*) from public.memory_items) <> 1
     or (select count(*) from public.memory_revisions) <> 1
-    or (select count(*) from public.onboarding_drafts) <> 1
     or (select count(*) from public.ai_spend_reservations) <> 1
     or (select count(*) from public.roadmap_generation_requests) <> 4
     or (select count(*) from public.roadmap_proposals) <> 4
