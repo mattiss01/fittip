@@ -115,12 +115,18 @@ lane, one screen per merge.
       session length; (3) "Where can you train?", about eight place chips plus the
       owner's own; (4) "What do you have at home?", equipment chips in groups, asked
       only when Home is picked, and without bikes or skis, which the sports say.
-      All four are profile settings, changed on Settings, never memory items. Still
-      to shape with the owner: what the coach should know and what limits you, both
-      free text and the only source of memory items, drafted by the coach and
-      accepted in review. The limits text may be sent to the AI (ADR needed; the
-      screen says today that it is not), and limits as a whole are to be thought
-      through again. Careful lane: replaces most of `apply_onboarding_change`.
+      All four are profile settings, changed on Settings, never memory items.
+      (5) One screen, "Anything your coach should know?", with a line on why it
+      matters and prompt chips; a tap adds a labelled text field, and any chip can be
+      tapped again for another: An old injury, A health condition to consider, What
+      I enjoy, What I can't stand, My training background, Why I'm doing this, My
+      job and daily routine, Other preference, Other limitation. These fields are
+      the only source of memory items: the coach drafts them (one field may give
+      several) and they are accepted in review; without the coach each field is one
+      item under its label. This replaces the limits step and its seven categories,
+      so the text is sent to the AI (ADR needed; the screen says today that it is
+      not) and the safety note moves here, shortened. Still to shape: review.
+      Careful lane: replaces most of `apply_onboarding_change`.
 - [ ] **Setup's small ends.** From the reviews of 5 Oct 2026. The leave popup has no
       focus trap and the sport list no arrow keys, Escape or outside press; an "About
       you" save refused for a question that is not on screen names no field; removing
