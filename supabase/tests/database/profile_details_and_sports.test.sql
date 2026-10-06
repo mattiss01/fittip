@@ -20,8 +20,9 @@ select col_is_null('public', 'profiles', 'units_system', 'units_system may be un
 select col_not_null('public', 'profiles', 'sports', 'sports is never null');
 select col_default_is('public', 'profiles', 'sports', '{}', 'sports starts empty');
 
--- The grant is column-scoped: the six new columns and the time zone, and
--- nothing that identifies or dates the row.
+-- The grant is column-scoped: the settings (these six, the time zone, and the
+-- training setup and setup's own state added on 6 Oct 2026), and nothing that
+-- identifies or dates the row.
 select ok(
   not has_table_privilege('authenticated', 'public.profiles', 'UPDATE'),
   'authenticated still has no table-wide UPDATE on profiles'
@@ -36,12 +37,20 @@ select is(
       and privilege_type = 'UPDATE'
   ),
   array[
+    'availability_note',
     'birth_date',
     'display_name',
     'gender',
     'height_cm',
+    'home_equipment',
+    'sessions_per_week',
+    'setup_finished_at',
+    'setup_skipped_at',
+    'setup_step',
     'sports',
     'timezone_name',
+    'training_places',
+    'unavailable_days',
     'units_system'
   ],
   'authenticated may update exactly the settings columns'

@@ -49,7 +49,7 @@ import {
  * there is no draft and nothing to review.
  */
 
-function ProfileNotice({ state }: { state: ProfileActionState }) {
+export function ProfileNotice({ state }: { state: ProfileActionState }) {
   if (state.status === "idle" || state.message === "") return null;
   return (
     <div
@@ -70,7 +70,7 @@ function ProfileNotice({ state }: { state: ProfileActionState }) {
  * child renders. A save that was refused stays where it is, with its notice,
  * unless the owner was leaving.
  */
-function useSaved(
+export function useSaved(
   state: ProfileActionState,
   onSaved?: () => void,
   onLater?: () => void,
@@ -152,7 +152,7 @@ export function ContinueLater({ children }: { children: ReactNode }) {
  * saves what the step holds and goes to the app. `canSave` is false when the
  * step has nothing it could save yet, and then it only leaves.
  */
-function LaterButton({
+export function LaterButton({
   leavingRef,
   onLater,
   canSave = () => true,
@@ -484,7 +484,7 @@ export function AboutYouForm({
  * empty lands on `start`, a value in the middle of what people enter, rather
  * than on the smallest one allowed.
  */
-function MeasureInput({
+export function MeasureInput({
   name,
   label,
   unit,

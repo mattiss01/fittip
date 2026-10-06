@@ -1,4 +1,6 @@
 import type { UnitsSystem } from "@/lib/profile/body-measures";
+import type { SetupStateView } from "@/lib/setup/setup-steps";
+import type { TrainingSetupView } from "@/lib/training/training-setup";
 
 export const GENDERS = ["female", "male", "other"] as const;
 export type Gender = (typeof GENDERS)[number];
@@ -23,6 +25,10 @@ export type ProfileDetailsView = {
   timezoneName: string | null;
   sports: string[];
   latestWeightKg: number | null;
+  /** How often, when not, where and with what (owner, 6 Oct 2026). */
+  training: TrainingSetupView;
+  /** Where guided setup stands for this account. */
+  setup: SetupStateView;
 };
 
 export type WeightEntryView = {

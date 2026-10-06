@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -9,39 +10,35 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  buildRankPreview,
-  isActionErrorStatus,
-  OnboardingActionNotice,
-  OnboardingManager,
-} from "./onboarding-manager";
-import { AboutYouForm, SportsForm } from "@/components/profile/profile-forms";
+  leaveSetupAction,
+  recordSetupStepAction,
+  saveSetupGoalsAction,
+} from "@/app/home/you/onboarding/actions";
 import { adoptBrowserTimezoneAction } from "@/app/home/you/profile-actions";
-import type { OnboardingSnapshot } from "@/lib/onboarding/onboarding-contract";
+import { OnboardingManager } from "@/components/onboarding/onboarding-manager";
+import { AboutYouForm, SportsForm } from "@/components/profile/profile-forms";
+import { TrainingSetupForm } from "@/components/profile/training-forms";
 import type { ProfileDetailsView } from "@/lib/profile/profile-contract";
+import type { SetupGoalView } from "@/lib/setup/setup-steps";
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-    refresh: vi.fn(),
-  }),
-}));
+// Setup's own two screens save through these. Each save goes through, so a
+// test can press Next; a test that needs a refusal says so itself.
+vi.mock("@/app/home/you/onboarding/actions", () => {
+  const saved = vi.fn(async (previous: { submission: number }) => ({
+    status: "saved",
+    message: "",
+    submission: previous.submission + 1,
+  }));
+  return {
+    saveSetupGoalsAction: saved,
+    finishSetupAction: vi.fn(saved.getMockImplementation()),
+    leaveSetupAction: vi.fn(async () => {}),
+    recordSetupStepAction: vi.fn(async () => {}),
+    startSetupAction: vi.fn(async () => {}),
+  };
+});
 
-// A draft step's save goes through and names the step after it, as the real
-// action does, so a test can press Next.
-vi.mock("@/app/home/you/onboarding/actions", () => ({
-  changeOnboardingAction: vi.fn(
-    async (previous: { submission: number }, formData: FormData) => ({
-      status: "saved",
-      message: "This step was saved.",
-      submission: previous.submission + 1,
-      nextStep: Number(formData.get("step")) + 1,
-    }),
-  ),
-  leaveSetupAction: vi.fn(),
-}));
-
-// The profile's own steps save through these. Each save goes through, so a
-// test can walk from one question to the next.
+// The profile's screens save through these.
 vi.mock("@/app/home/you/profile-actions", () => {
   const saved = vi.fn(async (previous: { submission: number }) => ({
     status: "saved",
@@ -51,6 +48,7 @@ vi.mock("@/app/home/you/profile-actions", () => {
   return {
     saveProfileDetailsAction: saved,
     saveProfileSportsAction: saved,
+    saveTrainingSetupAction: saved,
     saveAppSettingsAction: saved,
     deleteWeightEntryAction: saved,
     adoptBrowserTimezoneAction: vi.fn(async () => {}),
@@ -59,75 +57,86 @@ vi.mock("@/app/home/you/profile-actions", () => {
 
 afterEach(() => {
   cleanup();
-  vi.mocked(adoptBrowserTimezoneAction).mockClear();
+  vi.clearAllMocks();
 });
 
+const heading = (name: string) => screen.findByRole("heading", { name });
+const next = () =>
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+const back = () =>
+  fireEvent.click(screen.getByRole("button", { name: "Back" }));
+
 describe("OnboardingManager", () => {
-  it("explains storage and no-AI behavior before creating a draft", () => {
+  it("offers setup to an account it was never begun for, and says what it is", () => {
     render(
-      <OnboardingManager profile={namedProfile()} snapshot={emptySnapshot()} />,
+      <OnboardingManager goals={[]} profile={atStep(namedProfile(), null)} />,
     );
 
     expect(
-      screen.getByRole("heading", {
-        name: "Set up your coaching context",
-      }),
+      screen.getByRole("heading", { name: "Set up your coaching context" }),
     ).toBeVisible();
-    expect(
-      screen.getByText(/stored in your account so you can resume/),
-    ).toBeVisible();
-    expect(screen.getByText(/not sent to an AI provider/)).toBeVisible();
+    expect(screen.getByText(/Each answer is saved as you go/)).toBeVisible();
     expect(screen.getByRole("button", { name: "Start setup" })).toBeVisible();
+    expect(screen.queryByRole("progressbar")).toBeNull();
+  });
+
+  it("does not offer setup again once it has been finished", () => {
+    render(
+      <OnboardingManager
+        goals={[]}
+        profile={{
+          ...namedProfile(),
+          setup: { step: 12, finished: true, skipped: false },
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Your setup is finished" }),
+    ).toBeVisible();
+    for (const place of ["Goals", "Memory", "Settings"]) {
+      expect(screen.getByRole("link", { name: place })).toBeVisible();
+    }
+    expect(screen.queryByRole("button", { name: /setup/i })).toBeNull();
   });
 
   it("opens on the name until one is saved, with a bar for how far setup is", () => {
     render(
       <OnboardingManager
-        profile={{ ...namedProfile(), displayName: null }}
-        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 3 }) }}
+        goals={[]}
+        // Whatever screen is stored: the name comes first.
+        profile={atStep({ ...namedProfile(), displayName: null }, 9)}
       />,
     );
 
     expect(
       screen.getByRole("heading", { name: "What's your name?" }),
     ).toBeVisible();
-    // Nothing is done on the first of twelve steps.
+    // Nothing is done on the first of twelve screens.
     const bar = screen.getByRole("progressbar", {
       name: "Guided setup progress",
     });
     expect(bar).toHaveAttribute("aria-valuenow", "0");
     expect(bar).toHaveAttribute("aria-valuetext", "Step 1 of 12, 0% done");
-    // One bar, not a row of steps to jump between, and no way to delete the
-    // draft: a step is left by Back, Next or "Continue later".
+    // One bar, not a row of steps to jump between, and nothing to delete: a
+    // screen is left by Back, Next or "Continue later".
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
     expect(screen.queryByRole("button", { name: /cancel|delete/i })).toBeNull();
     expect(
       screen.getByRole("button", { name: "Continue later" }),
     ).toBeVisible();
-    // Not said here: an account that has just signed up is not told what
-    // the start card says (owner, 5 Oct 2026).
-    expect(screen.queryByText(/not sent to an AI provider/)).toBeNull();
-    // Neither the units nor the time zone is asked: both are sent as the
-    // browser has them, and the zone only while the profile has none.
+    // Neither the units nor the time zone is asked.
     expect(screen.queryByLabelText("Units")).toBeNull();
     expect(screen.queryByLabelText("Time zone")).toBeNull();
-    const sent = new FormData(
-      document.querySelector<HTMLFormElement>("form[data-about-you]")!,
-    );
-    expect(sent.get("unitsSystem")).toBe("metric");
-    expect(sent.get("timezoneName")).toBe("");
   });
 
   it("asks About you one question at a time, saving each, and only the name must be answered", async () => {
     render(
       <OnboardingManager
-        profile={{ ...namedProfile(), displayName: null }}
-        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 1 }) }}
+        goals={[]}
+        profile={atStep({ ...namedProfile(), displayName: null }, 1)}
       />,
     );
-    const heading = (name: string) => screen.findByRole("heading", { name });
-    const next = () =>
-      fireEvent.click(screen.getByRole("button", { name: "Next" }));
 
     // The name is the one field the browser will not send empty.
     expect(screen.getByLabelText("Name")).toBeRequired();
@@ -136,26 +145,23 @@ describe("OnboardingManager", () => {
     fireEvent.change(screen.getByLabelText("Name"), {
       target: { value: "Alex" },
     });
-    // Next saves the form as it stands and only then moves on.
+    // Next saves the form as it stands and only then moves on, and the
+    // screen it moves to is stored, so setup reopens there.
     next();
     expect(await heading("When is your birthday?")).toBeVisible();
+    expect(recordSetupStepAction).toHaveBeenLastCalledWith(2);
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-valuenow",
       "8",
     );
     // The question is the heading, so its one field shows no label; the
-    // name it has is for a screen reader. An optional one says so.
+    // name it has is for a screen reader.
     expect(
       screen.getByRole("group", { name: "Birthday (optional)" }),
     ).toBeVisible();
     expect(screen.getByLabelText("Name")).not.toBeVisible();
-    expect(
-      screen
-        .getAllByText("Optional")
-        .some((hint) => hint.closest("[hidden]") === null),
-    ).toBe(true);
 
-    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    back();
     expect(await heading("What's your name?")).toBeVisible();
     expect(screen.getByLabelText("Name")).toHaveValue("Alex");
 
@@ -167,161 +173,449 @@ describe("OnboardingManager", () => {
     expect(await heading("How tall are you?")).toBeVisible();
     next();
     expect(await heading("How much do you weigh?")).toBeVisible();
-
-    // Every step's button says Next; the last question's moves setup on to
-    // the sports.
+    // Every screen's button says Next; the last question's moves on to the
+    // sports.
     next();
     expect(await heading("Your sports")).toBeVisible();
+    expect(recordSetupStepAction).toHaveBeenLastCalledWith(6);
+  });
+
+  it("reopens on the screen the profile stores", () => {
+    render(
+      <OnboardingManager goals={[]} profile={atStep(namedProfile(), 9)} />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Any days you can't train?" }),
+    ).toBeVisible();
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuetext",
+      "Step 9 of 12, 67% done",
+    );
   });
 
   it("stores the browser's time zone as setup opens, and only for a profile without one", () => {
-    const view = render(
+    render(
       <OnboardingManager
-        profile={{ ...namedProfile(), displayName: null, timezoneName: null }}
-        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 1 }) }}
+        goals={[]}
+        profile={atStep({ ...namedProfile(), timezoneName: null }, 1)}
       />,
     );
-    // Before any answer: an owner who leaves at the first question still
-    // has a day for Today to show.
-    expect(adoptBrowserTimezoneAction).toHaveBeenCalledExactlyOnceWith(
+    expect(adoptBrowserTimezoneAction).toHaveBeenCalledWith(
       Intl.DateTimeFormat().resolvedOptions().timeZone,
     );
-    view.rerender(
-      <OnboardingManager
-        profile={{ ...namedProfile(), displayName: null, timezoneName: null }}
-        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 1 }) }}
-      />,
-    );
-    expect(adoptBrowserTimezoneAction).toHaveBeenCalledOnce();
 
     cleanup();
     vi.mocked(adoptBrowserTimezoneAction).mockClear();
     render(
-      <OnboardingManager
-        profile={namedProfile()}
-        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 1 }) }}
-      />,
+      <OnboardingManager goals={[]} profile={atStep(namedProfile(), 1)} />,
     );
     expect(adoptBrowserTimezoneAction).not.toHaveBeenCalled();
-  });
-
-  it.each([
-    [
-      "the question after the last one answered",
-      { birthDate: "1990-05-17" },
-      "What's your gender?",
-    ],
-    [
-      "the sports when an earlier question was skipped on purpose",
-      { latestWeightKg: 80 },
-      "Your sports",
-    ],
-    [
-      "the draft once sports are chosen, whatever was skipped",
-      { sports: ["Running"] },
-      "Goals",
-    ],
-    [
-      "the sports once every question is answered",
-      {
-        birthDate: "1990-05-17",
-        gender: "other" as const,
-        heightCm: 180,
-        latestWeightKg: 80,
-      },
-      "Your sports",
-    ],
-    [
-      "the draft once the sports are chosen too",
-      {
-        birthDate: "1990-05-17",
-        gender: "other" as const,
-        heightCm: 180,
-        latestWeightKg: 80,
-        sports: ["Running"],
-      },
-      "Goals",
-    ],
-  ])("resumes an untouched setup at %s", (_label, answers, heading) => {
-    render(
-      <OnboardingManager
-        profile={{ ...justNamedProfile(), ...answers }}
-        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 1 }) }}
-      />,
-    );
-    expect(screen.getByRole("heading", { name: heading })).toBeVisible();
-  });
-
-  it("goes back by the arrow at the top, across the profile's steps and the draft's", () => {
-    render(
-      <OnboardingManager
-        profile={namedProfile()}
-        snapshot={{
-          ...emptySnapshot(),
-          draft: draft({ currentStep: 2, revision: 3 }),
-        }}
-      />,
-    );
-    const back = () =>
-      fireEvent.click(screen.getByRole("button", { name: "Back" }));
-    const heading = (name: string) => screen.getByRole("heading", { name });
-
-    // A draft that has been worked on opens where it is.
-    expect(heading("Current training")).toBeVisible();
-    back();
-    expect(heading("Goals")).toBeVisible();
-    back();
-    expect(heading("Your sports")).toBeVisible();
-    back();
-    expect(heading("How much do you weigh?")).toBeVisible();
-    for (let question = 0; question < 4; question += 1) back();
-    expect(heading("What's your name?")).toBeVisible();
-    // The first question has nowhere to go back to.
-    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
-  });
-
-  it("moves on from a saved step even after Back was used to reach it", async () => {
-    const { container } = render(
-      <OnboardingManager
-        profile={namedProfile()}
-        snapshot={{
-          ...emptySnapshot(),
-          draft: draft({ currentStep: 2, revision: 1 }),
-        }}
-      />,
-    );
-    // Back pins the step shown, and a pinned step outranks a save's result
-    // unless the result is applied on purpose.
-    fireEvent.click(screen.getByRole("button", { name: "Back" }));
-    expect(screen.getByRole("heading", { name: "Goals" })).toBeVisible();
-
-    fireEvent.submit(container.querySelector("form")!);
-    expect(
-      await screen.findByRole("heading", { name: "Current training" }),
-    ).toBeVisible();
   });
 
   it("asks before opening setup again for an owner who chose Continue later", () => {
     render(
       <OnboardingManager
-        profile={namedProfile()}
+        goals={[]}
+        profile={atStep(namedProfile(), 8)}
         reminder
-        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 2 }) }}
       />,
     );
 
     expect(
       screen.getByRole("heading", { name: "Your setup is not finished" }),
     ).toBeVisible();
-    expect(screen.queryByRole("progressbar")).toBeNull();
     expect(screen.getByRole("link", { name: "Skip for now" })).toHaveAttribute(
       "href",
       "/home/today",
     );
-
     fireEvent.click(screen.getByRole("button", { name: "Continue setup" }));
+    // It goes on where it was left, not from the start.
     expect(
-      screen.getByRole("heading", { name: "Current training" }),
+      screen.getByRole("heading", { name: "How often do you want to train?" }),
+    ).toBeVisible();
+  });
+
+  it("asks again before leaving setup, says what setup is for, and leaves from the screen it is on", async () => {
+    render(
+      <OnboardingManager goals={[]} profile={atStep(namedProfile(), 7)} />,
+    );
+    const later = () => screen.getByRole("button", { name: "Continue later" });
+
+    // The link only asks; nothing in the form says "leave" yet.
+    expect(later()).toHaveAttribute("type", "button");
+    fireEvent.click(later());
+    const popup = screen.getByRole("alertdialog", {
+      name: "Setup makes FitTip useful",
+    });
+    expect(popup).toHaveAttribute("aria-modal", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Keep going" }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    fireEvent.click(later());
+    fireEvent.keyDown(screen.getByRole("alertdialog"), { key: "Escape" });
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+
+    // Asked again and confirmed, it is the screen's own save with the intent
+    // to leave, and it does not wait on a field.
+    fireEvent.click(later());
+    expect(later()).toHaveAttribute("name", "intent");
+    expect(later()).toHaveAttribute("value", "later");
+    expect(later()).toHaveAttribute("formnovalidate");
+
+    // On a profile screen the answer is saved first and setup is then left
+    // from that screen, so it reopens there.
+    cleanup();
+    render(
+      <OnboardingManager goals={[]} profile={atStep(namedProfile(), 8)} />,
+    );
+    fireEvent.click(later());
+    fireEvent.click(later());
+    await waitFor(() => expect(leaveSetupAction).toHaveBeenCalledWith(8));
+  });
+
+  it("starts the goals screen from the goals the account already has, and saves them as goals", async () => {
+    render(
+      <OnboardingManager
+        goals={[savedGoal()]}
+        profile={atStep(namedProfile(), 7)}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Goals" })).toBeVisible();
+    expect(screen.getByText("What you want to train for")).toBeVisible();
+    expect(screen.queryByText(/up to three/i)).toBeNull();
+    // A goal made before setup is edited here instead of typed again.
+    expect(screen.getByLabelText("Goal title")).toHaveValue(
+      "10k under 48 minutes",
+    );
+    expect(screen.getByLabelText("Desired outcome")).toHaveValue(
+      "Run it in autumn.",
+    );
+    expect(screen.getByRole("radio", { name: "Supporting" })).toBeChecked();
+    // A saved goal is changed or removed on Goals, not taken away here.
+    expect(
+      screen.queryByRole("button", { name: "Remove this goal" }),
+    ).toBeNull();
+
+    next();
+    await waitFor(() => expect(saveSetupGoalsAction).toHaveBeenCalled());
+    const sent = vi.mocked(saveSetupGoalsAction).mock.calls[0][1];
+    // It carries its id, which is what makes saving it an edit, and every
+    // sport it names.
+    expect(sent.get("goalCount")).toBe("1");
+    expect(sent.get("goalId:0")).toBe(GOAL_ID);
+    expect(sent.get("goalTitle:0")).toBe("10k under 48 minutes");
+    expect(sent.get("goalActivities:0")).toBe("Running, Hiking");
+    expect(sent.get("goalTargetDate:0")).toBe("2026-11-15");
+    expect(sent.get("goalTier:0")).toBe("supporting");
+    expect(sent.get("intent")).toBe("continue");
+    // Saved, setup moves on to how often.
+    expect(await heading("How often do you want to train?")).toBeVisible();
+    expect(recordSetupStepAction).toHaveBeenLastCalledWith(8);
+  });
+
+  it("asks a goal what Goals asks, takes any number of them, and lets an unsaved one go again", () => {
+    const { container } = render(
+      <OnboardingManager
+        goals={[]}
+        profile={atStep(
+          { ...namedProfile(), sports: ["Cycling", "Running"] },
+          7,
+        )}
+      />,
+    );
+    const remove = () =>
+      screen.queryAllByRole("button", { name: "Remove this goal" });
+    const add = () =>
+      fireEvent.click(screen.getByRole("button", { name: "Add another goal" }));
+
+    // The first goal must be given; nothing else is asked for firmly.
+    expect(screen.getByLabelText("Goal title")).toBeRequired();
+    expect(screen.getByLabelText("Desired outcome")).toBeRequired();
+    expect(remove()).toHaveLength(0);
+    // Not limited to three: that is the limit on core goals, which Goals'
+    // own rule keeps.
+    add();
+    add();
+    add();
+    expect(screen.getAllByLabelText("Goal title")).toHaveLength(4);
+    expect(remove()).toHaveLength(4);
+    fireEvent.click(remove()[1]);
+    expect(screen.getAllByLabelText("Goal title")).toHaveLength(3);
+
+    // One sport, from the owner's own, in a list of ours.
+    const sport = screen.getAllByRole("button", { name: /^Sport/ })[0];
+    const goalSport = () =>
+      container.querySelector<HTMLInputElement>(
+        'input[name="goalActivities:0"]',
+      );
+    expect(sport).toHaveTextContent("Choose a sport");
+    expect(screen.queryByRole("listbox")).toBeNull();
+    fireEvent.click(sport);
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent),
+    ).toEqual(["Cycling", "Running", "Add another sport…"]);
+    fireEvent.click(screen.getByRole("option", { name: "Running" }));
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(goalSport()).toHaveValue("Running");
+    // Or one made up on the spot, which the save adds to the owner's sports.
+    fireEvent.click(sport);
+    fireEvent.click(screen.getByRole("option", { name: "Add another sport…" }));
+    fireEvent.change(screen.getByLabelText("New sport"), {
+      target: { value: "  Stabwurf " },
+    });
+    expect(goalSport()).toHaveValue("Stabwurf");
+
+    // A goal with a title must name a sport too, whichever row it is in.
+    const proxies = () =>
+      container.querySelectorAll('input[required][aria-hidden="true"]');
+    expect(proxies()).toHaveLength(1);
+    fireEvent.change(screen.getAllByLabelText("Goal title")[2], {
+      target: { value: "Bench press 80 kg" },
+    });
+    expect(proxies()).toHaveLength(2);
+
+    // The target date is typed or picked from a calendar, and optional.
+    const target = screen.getAllByRole("group", {
+      name: "Target date (optional)",
+    })[0];
+    fireEvent.change(within(target).getByLabelText("Day"), {
+      target: { value: "15" },
+    });
+    fireEvent.change(within(target).getByLabelText("Month"), {
+      target: { value: "11" },
+    });
+    fireEvent.change(within(target).getByLabelText("Year"), {
+      target: { value: "2026" },
+    });
+    expect(
+      container.querySelector('input[name="goalTargetDate:0"]'),
+    ).toHaveValue("2026-11-15");
+    // Two choices side by side, and a new goal starts as core.
+    expect(screen.getAllByRole("radio", { name: "Core" })[0]).toBeChecked();
+  });
+
+  it("keeps a refused goals screen as it was typed, with the ids of the rows that were saved", async () => {
+    vi.mocked(saveSetupGoalsAction).mockImplementationOnce(
+      async (previous) => ({
+        status: "conflict",
+        message:
+          "At most three goals can be core. Make one of them supporting.",
+        submission: previous.submission + 1,
+        goalIds: [GOAL_ID, null],
+      }),
+    );
+    const { container } = render(
+      <OnboardingManager goals={[]} profile={atStep(namedProfile(), 7)} />,
+    );
+    fireEvent.change(screen.getByLabelText("Goal title"), {
+      target: { value: "Run a marathon" },
+    });
+    fireEvent.submit(container.querySelector("form[data-goals]")!);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "At most three goals can be core",
+    );
+    expect(await screen.findByRole("alert")).toHaveFocus();
+    // Still on the goals screen, with what was typed.
+    expect(screen.getByRole("heading", { name: "Goals" })).toBeVisible();
+    expect(screen.getByLabelText("Goal title")).toHaveValue("Run a marathon");
+    // The row that went through is that goal now: pressing Next again edits
+    // it and does not make it a second time.
+    await waitFor(() =>
+      expect(container.querySelector('input[name="goalId:0"]')).toHaveValue(
+        GOAL_ID,
+      ),
+    );
+  });
+
+  it("asks how often with a number to step, and the days that are out as chips", async () => {
+    const { container } = render(
+      <OnboardingManager goals={[]} profile={atStep(namedProfile(), 8)} />,
+    );
+
+    const often = screen.getByLabelText("Sessions a week");
+    expect(often).toHaveValue("");
+    fireEvent.click(
+      screen.getByRole("button", { name: "More: Sessions a week" }),
+    );
+    expect(often).toHaveValue("3");
+    fireEvent.click(
+      screen.getByRole("button", { name: "More: Sessions a week" }),
+    );
+    expect(often).toHaveValue("4");
+    expect(
+      new FormData(container.querySelector("form")!).getAll("part"),
+    ).toEqual(["frequency"]);
+
+    next();
+    expect(await heading("Any days you can't train?")).toBeVisible();
+    // Every day is free until it is tapped.
+    const days = screen.getAllByRole("checkbox");
+    expect(days.map((day) => day.getAttribute("value"))).toEqual([
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday",
+    ]);
+    expect(days.every((day) => !(day as HTMLInputElement).checked)).toBe(true);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Sunday" }));
+    fireEvent.change(
+      screen.getByLabelText("Anything else about your week (optional)"),
+      { target: { value: "Mondays only after 18:00" } },
+    );
+    const sent = new FormData(container.querySelector("form")!);
+    expect(sent.getAll("part")).toEqual(["days"]);
+    expect(sent.getAll("unavailableDays")).toEqual(["sunday"]);
+    expect(sent.get("availabilityNote")).toBe("Mondays only after 18:00");
+  });
+
+  it("asks what there is at home only of someone who trains there", async () => {
+    // No Home among the places: the equipment screen is passed over, both
+    // ways.
+    const { rerender } = render(
+      <OnboardingManager goals={[]} profile={atStep(namedProfile(), 10)} />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Where can you train?" }),
+    ).toBeVisible();
+    expect(screen.getByRole("checkbox", { name: "Gym" })).not.toBeChecked();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Gym" }));
+    // A place of the owner's own joins the list, ticked.
+    fireEvent.change(screen.getByLabelText("Add another place"), {
+      target: { value: "Company gym" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getByRole("checkbox", { name: "Company gym" })).toBeChecked();
+    next();
+    expect(await heading("Anything your coach should know?")).toBeVisible();
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuetext",
+      "Step 12 of 12, 92% done",
+    );
+    back();
+    expect(await heading("Where can you train?")).toBeVisible();
+
+    // With Home saved, the same Next leads to the equipment.
+    rerender(
+      <OnboardingManager
+        goals={[]}
+        profile={atStep(
+          {
+            ...namedProfile(),
+            training: { ...namedProfile().training, trainingPlaces: ["Home"] },
+          },
+          10,
+        )}
+      />,
+    );
+    next();
+    expect(await heading("What do you have at home?")).toBeVisible();
+    expect(screen.getByRole("group", { name: "Weights" })).toBeVisible();
+    expect(screen.getByRole("checkbox", { name: "Dumbbells" })).toBeVisible();
+    expect(screen.queryByRole("checkbox", { name: /bike$/i })).toBeNull();
+  });
+
+  it("offers what to write about on the last screen, a field for each tap", async () => {
+    const { container } = render(
+      <OnboardingManager goals={[]} profile={atStep(namedProfile(), 12)} />,
+    );
+    const form = () => new FormData(container.querySelector("form")!);
+    const tap = (name: string) =>
+      fireEvent.click(screen.getByRole("button", { name }));
+
+    expect(
+      screen.getByRole("heading", { name: "Anything your coach should know?" }),
+    ).toBeVisible();
+    expect(screen.getByText(/A few words are enough/)).toBeVisible();
+    // Says who reads it, and stays non-diagnostic.
+    expect(
+      screen.getByText(/Your coach reads what you write here/),
+    ).toBeVisible();
+    expect(screen.getByText(/cannot assess or diagnose/)).toBeVisible();
+    // Nothing to fill in until a prompt is tapped.
+    expect(screen.queryByRole("textbox")).toBeNull();
+    for (const prompt of [
+      "An old injury",
+      "A health condition to consider",
+      "What I enjoy",
+      "What I can't stand",
+      "My training background",
+      "Why I'm doing this",
+      "My job and daily routine",
+      "Other preference",
+      "Other limitation",
+    ]) {
+      expect(screen.getByRole("button", { name: prompt })).toBeVisible();
+    }
+
+    tap("An old injury");
+    const first = await screen.findByLabelText("An old injury");
+    await waitFor(() => expect(first).toHaveFocus());
+    fireEvent.change(first, { target: { value: "Left knee, 2019" } });
+    // Any prompt can be tapped again for another field.
+    tap("An old injury");
+    tap("What I enjoy");
+    expect(screen.getAllByLabelText("An old injury")).toHaveLength(2);
+    fireEvent.change(screen.getByLabelText("What I enjoy"), {
+      target: { value: "Long runs outdoors" },
+    });
+    expect(form().getAll("noteKind")).toEqual(["injury", "injury", "enjoy"]);
+    expect(form().getAll("noteText")).toEqual([
+      "Left knee, 2019",
+      "",
+      "Long runs outdoors",
+    ]);
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Remove: An old injury" })[1],
+    );
+    expect(form().getAll("noteKind")).toEqual(["injury", "enjoy"]);
+    // The last screen's button finishes setup.
+    expect(screen.getByRole("button", { name: "Finish setup" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Next" })).toBeNull();
+
+    // No more fields than the coach has room for.
+    await act(async () => {
+      for (let count = 2; count < 12; count += 1) tap("Other preference");
+    });
+    expect(screen.getAllByRole("textbox")).toHaveLength(12);
+    expect(
+      screen.getByRole("button", { name: "An old injury" }),
+    ).toBeDisabled();
+  });
+
+  it("shows the whole training setup on Settings, equipment only with Home", () => {
+    const { container } = render(
+      <TrainingSetupForm
+        training={{
+          sessionsPerWeek: 4,
+          unavailableDays: ["sunday"],
+          availabilityNote: null,
+          trainingPlaces: ["Gym"],
+          homeEquipment: ["Mat"],
+        }}
+      />,
+    );
+    const parts = () =>
+      new FormData(container.querySelector("form")!).getAll("part");
+
+    expect(screen.getByLabelText("Sessions a week")).toHaveValue("4");
+    expect(screen.getByRole("checkbox", { name: "Sunday" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Gym" })).toBeChecked();
+    // Not named as a part without Home, so what was saved for it is kept.
+    expect(screen.queryByRole("checkbox", { name: "Mat" })).toBeNull();
+    expect(parts()).toEqual(["frequency", "days", "places"]);
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Home" }));
+    expect(screen.getByRole("checkbox", { name: "Mat" })).toBeChecked();
+    expect(parts()).toEqual(["frequency", "days", "places", "equipment"]);
+    expect(
+      screen.getByRole("button", { name: "Save training setup" }),
     ).toBeVisible();
   });
 
@@ -363,49 +657,6 @@ describe("OnboardingManager", () => {
     expect(screen.getByLabelText("Day")).toHaveValue("17");
     expect(screen.getByLabelText("Month")).toHaveValue("05");
     expect(screen.getByLabelText("Year")).toHaveValue("1990");
-  });
-
-  it("starts the goal step from the goals the account already has", () => {
-    const { container } = render(
-      <OnboardingManager
-        profile={namedProfile()}
-        snapshot={{
-          ...emptySnapshot(),
-          draft: draft({ currentStep: 1, revision: 1 }),
-          existingGoals: [
-            {
-              title: "10k under 48 minutes",
-              desiredOutcome: "Run it in autumn.",
-              category: "endurance",
-              activityAreas: ["Running", "Hiking"],
-              startDate: "2026-09-01",
-              targetDate: "2026-11-15",
-              priorityTier: "supporting",
-              targetRank: 2,
-              rationale: "Kept from before",
-            },
-          ],
-        }}
-      />,
-    );
-
-    // Goals made before setup are edited here instead of typed again.
-    expect(screen.getByLabelText("Goal title")).toHaveValue(
-      "10k under 48 minutes",
-    );
-    expect(screen.getByLabelText("Desired outcome")).toHaveValue(
-      "Run it in autumn.",
-    );
-    expect(screen.getByRole("radio", { name: "Supporting" })).toBeChecked();
-    // Everything the goal stores travels with it, so sent back unchanged it
-    // is recognised at review as the goal already saved.
-    const sent = new FormData(container.querySelector("form")!);
-    expect(sent.get("goalActivities:0")).toBe("Running, Hiking");
-    expect(sent.get("goalCategory:0")).toBe("endurance");
-    expect(sent.get("goalStartDate:0")).toBe("2026-09-01");
-    expect(sent.get("goalTargetDate:0")).toBe("2026-11-15");
-    expect(sent.get("goalRank:0")).toBe("2");
-    expect(sent.get("goalRationale:0")).toBe("Kept from before");
   });
 
   it("asks a measure as a number with its unit beside it and a step either way", () => {
@@ -482,662 +733,29 @@ describe("OnboardingManager", () => {
     expect(screen.getAllByLabelText(/^cycling$/i)).toHaveLength(1);
     expect(screen.getByLabelText("Cycling")).toBeChecked();
   });
-
-  it("opens a named account on the draft's own step, counted among all twelve", () => {
-    render(
-      <OnboardingManager
-        profile={namedProfile()}
-        snapshot={{
-          ...emptySnapshot(),
-          draft: draft({ currentStep: 2 }),
-        }}
-      />,
-    );
-
-    expect(
-      screen.getByRole("heading", { name: "Current training" }),
-    ).toBeVisible();
-    expect(screen.getByRole("progressbar")).toHaveAttribute(
-      "aria-valuetext",
-      "Step 8 of 12, 58% done",
-    );
-    expect(
-      screen.getByRole("button", { name: "Continue later" }),
-    ).toBeVisible();
-  });
-
-  it("still offers a sport the draft holds that is no longer among the owner's", () => {
-    render(
-      <OnboardingManager
-        profile={{ ...namedProfile(), sports: ["Cycling"] }}
-        snapshot={{
-          ...emptySnapshot(),
-          draft: draft({ currentStep: 1, revision: 1 }),
-          goalCandidates: [goalCandidate({ activityAreas: ["Running"] })],
-        }}
-      />,
-    );
-
-    const sport = screen.getByRole("button", { name: /^Sport/ });
-    expect(sport).toHaveTextContent("Running");
-    fireEvent.click(sport);
-    expect(
-      screen.getAllByRole("option").map((option) => option.textContent),
-    ).toEqual(["Cycling", "Running", "Add another sport…"]);
-    expect(screen.getByRole("option", { name: "Running" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-  });
-
-  it("lets a goal that was just added be taken away again, but not the first", () => {
-    render(
-      <OnboardingManager
-        profile={namedProfile()}
-        snapshot={{
-          ...emptySnapshot(),
-          draft: draft({ currentStep: 1, revision: 1 }),
-        }}
-      />,
-    );
-    const remove = () =>
-      screen.queryByRole("button", { name: "Remove this goal" });
-
-    expect(remove()).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Add another goal" }));
-    expect(screen.getAllByLabelText("Goal title")).toHaveLength(2);
-    fireEvent.click(remove()!);
-    expect(screen.getAllByLabelText("Goal title")).toHaveLength(1);
-    expect(remove()).toBeNull();
-  });
-
-  it("asks again before leaving setup, and says what setup is for", () => {
-    render(
-      <OnboardingManager
-        profile={namedProfile()}
-        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 2 }) }}
-      />,
-    );
-    const later = () => screen.getByRole("button", { name: "Continue later" });
-
-    // The link only asks; nothing in the form says "leave" yet.
-    expect(later()).toHaveAttribute("type", "button");
-    fireEvent.click(later());
-    const popup = screen.getByRole("alertdialog", {
-      name: "Setup makes FitTip useful",
-    });
-    expect(popup).toHaveAttribute("aria-modal", "true");
-
-    fireEvent.click(screen.getByRole("button", { name: "Keep going" }));
-    expect(screen.queryByRole("alertdialog")).toBeNull();
-    fireEvent.click(later());
-    fireEvent.keyDown(screen.getByRole("alertdialog"), { key: "Escape" });
-    expect(screen.queryByRole("alertdialog")).toBeNull();
-
-    // Asked again and confirmed, it is the step's own save with the intent
-    // to leave, and it does not wait on a field.
-    fireEvent.click(later());
-    expect(later()).toHaveAttribute("name", "intent");
-    expect(later()).toHaveAttribute("value", "finish");
-    expect(later()).toHaveAttribute("formnovalidate");
-  });
-
-  it("asks a goal what Goals asks and sends the rest hidden", () => {
-    const { container } = render(
-      <OnboardingManager
-        profile={namedProfile()}
-        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 1 }) }}
-      />,
-    );
-
-    expect(screen.getByRole("heading", { name: "Goals" })).toBeVisible();
-    expect(screen.getByLabelText("Goal title")).toBeRequired();
-    expect(screen.getByLabelText("Desired outcome")).toBeRequired();
-    expect(screen.getByText("What you want to train for")).toBeVisible();
-    // The goal has exactly one sport, chosen from the ones picked in "Your
-    // sports" or made up here; nothing is chosen to begin with.
-    const sport = screen.getByRole("button", { name: /^Sport/ });
-    const goalSport = () =>
-      container.querySelector<HTMLInputElement>(
-        'input[name="goalActivities:0"]',
-      );
-    const choose = (name: string) => {
-      fireEvent.click(sport);
-      fireEvent.click(screen.getByRole("option", { name }));
-    };
-    expect(sport).toHaveTextContent("Choose a sport");
-    expect(goalSport()).toHaveValue("");
-    // The first goal must name one: a field stands in for the hidden value
-    // so the browser can refuse the step and point at it.
-    expect(
-      container.querySelector('input[required][aria-hidden="true"]'),
-    ).toHaveValue("");
-    // The list is ours, opened under its button and closed by a choice.
-    expect(screen.queryByRole("listbox")).toBeNull();
-    choose("Running");
-    expect(screen.queryByRole("listbox")).toBeNull();
-    expect(sport).toHaveTextContent("Running");
-    expect(goalSport()).toHaveValue("Running");
-
-    choose("Add another sport…");
-    const made = screen.getByLabelText("New sport");
-    expect(made).toBeRequired();
-    fireEvent.change(made, { target: { value: "  Stabwurf " } });
-    expect(goalSport()).toHaveValue("Stabwurf");
-    // The target date is typed or picked from a calendar, and optional.
-    const target = screen.getByRole("group", {
-      name: "Target date (optional)",
-    });
-    expect(
-      within(target).getByRole("button", {
-        name: "Pick target date (optional) from a calendar",
-      }),
-    ).toBeVisible();
-    fireEvent.change(within(target).getByLabelText("Day"), {
-      target: { value: "15" },
-    });
-    fireEvent.change(within(target).getByLabelText("Month"), {
-      target: { value: "11" },
-    });
-    fireEvent.change(within(target).getByLabelText("Year"), {
-      target: { value: "2026" },
-    });
-    expect(
-      container.querySelector('input[name="goalTargetDate:0"]'),
-    ).toHaveValue("2026-11-15");
-    // Two choices side by side, as on Goals, and an outcome field that
-    // starts one line tall.
-    expect(screen.getByRole("radio", { name: "Core" })).toBeChecked();
-    expect(screen.getByRole("radio", { name: "Supporting" })).not.toBeChecked();
-    expect(screen.getByLabelText("Desired outcome")).toHaveAttribute(
-      "rows",
-      "1",
-    );
-    for (const gone of ["Category", "Start date", "Rank", "Rationale"]) {
-      expect(screen.queryByLabelText(gone)).toBeNull();
-    }
-
-    // The draft still stores a whole goal, so every key the server reads is
-    // sent. No rank: a goal is filed last among its own kind.
-    const sent = (name: string) =>
-      container.querySelector<HTMLInputElement>(`input[name="${name}:0"]`);
-    expect(sent("goalCategory")).toHaveValue("other");
-    expect(sent("goalStartDate")?.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(sent("goalRank")).toHaveValue("");
-    for (const name of [
-      "goalTargetDetail",
-      "goalMetricLabel",
-      "goalMetricValue",
-      "goalMetricUnit",
-      "goalRationale",
-      "goalConstraints",
-    ]) {
-      expect(sent(name)).toHaveValue("");
-    }
-  });
-
-  it("shows the approved safety copy without a severity control", () => {
-    render(
-      <OnboardingManager
-        profile={namedProfile()}
-        snapshot={{
-          ...emptySnapshot(),
-          draft: draft({ currentStep: 5 }),
-        }}
-      />,
-    );
-
-    expect(
-      screen.getByText(
-        /FitTip cannot assess or diagnose symptoms. If symptoms are severe, sudden, or getting worse/,
-      ),
-    ).toBeVisible();
-    expect(screen.queryByLabelText(/severity/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/not sent to an AI provider/)).toBeVisible();
-  });
-
-  it("stamps every review card with its permanent destination", () => {
-    const goalId = "54000000-0000-4000-8000-000000000101";
-    const memoryId = "54000000-0000-4000-8000-000000000102";
-    render(
-      <OnboardingManager
-        profile={namedProfile()}
-        snapshot={{
-          ...emptySnapshot(),
-          draft: draft({ currentStep: 6 }),
-          goalCandidates: [
-            {
-              id: goalId,
-              position: 1,
-              title: "Finish a calm 10K",
-              desiredOutcome: "Run with even pacing.",
-              category: "performance_event",
-              activityAreas: ["Running"],
-              startDate: "2026-08-02",
-              priorityTier: "core",
-              targetRank: 1,
-              decision: "pending",
-              resolution: null,
-              targetGoalId: null,
-              comparison: {
-                kind: "new",
-                targetId: null,
-                existingLabel: null,
-                existingDetail: null,
-                existingStatus: null,
-              },
-            },
-          ],
-          memoryCandidates: [
-            {
-              id: memoryId,
-              position: 1,
-              fieldKey: "context:access",
-              memoryType: "profile_fact",
-              content: "Access and equipment: Track.",
-              decision: "pending",
-              resolution: null,
-              targetMemoryId: null,
-              comparison: {
-                kind: "new",
-                targetId: null,
-                existingLabel: null,
-                existingDetail: null,
-                existingStatus: null,
-              },
-            },
-          ],
-        }}
-      />,
-    );
-
-    expect(
-      screen.getByRole("heading", {
-        name: "Choose where each statement lands",
-      }),
-    ).toBeVisible();
-    expect(screen.getAllByText("Goals").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Memory").length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("combobox", { name: "Decision" })).toHaveLength(
-      2,
-    );
-    expect(
-      screen.getByRole("button", { name: "Save accepted items" }),
-    ).toBeVisible();
-  });
-
-  it("sends the profile's time zone and units with Time and access, unseen", () => {
-    const { container } = render(
-      <OnboardingManager
-        profile={{ ...namedProfile(), unitsSystem: "imperial" }}
-        snapshot={{ ...emptySnapshot(), draft: draft({ currentStep: 3 }) }}
-      />,
-    );
-
-    expect(
-      screen.getByRole("heading", { name: "Time and access" }),
-    ).toBeVisible();
-    expect(screen.queryByLabelText("Timezone")).toBeNull();
-    expect(screen.queryByLabelText("Units")).toBeNull();
-    expect(
-      container.querySelector('input[type="hidden"][name="timezoneName"]'),
-    ).toHaveValue("Europe/Berlin");
-    expect(
-      container.querySelector('input[type="hidden"][name="units"]'),
-    ).toHaveValue("imperial");
-  });
-
-  it("never offers the time zone or the units for Memory, and files them rejected", () => {
-    const ids = [
-      "54000000-0000-4000-8000-000000000a01",
-      "54000000-0000-4000-8000-000000000a02",
-      "54000000-0000-4000-8000-000000000a03",
-    ];
-    const candidate = (id: string, fieldKey: string, content: string) => ({
-      id,
-      position: 1,
-      fieldKey,
-      memoryType: "preference",
-      content,
-      decision: "pending" as const,
-      resolution: null,
-      targetMemoryId: null,
-      comparison: {
-        kind: "new" as const,
-        targetId: null,
-        existingLabel: null,
-        existingDetail: null,
-        existingStatus: null,
-      },
-    });
-    const { container } = render(
-      <OnboardingManager
-        profile={namedProfile()}
-        snapshot={{
-          ...emptySnapshot(),
-          draft: draft({ currentStep: 6 }),
-          memoryCandidates: [
-            candidate(ids[0], "context:timezone", "Timezone: Europe/Berlin."),
-            candidate(ids[1], "context:units", "Units: Metric."),
-            candidate(ids[2], "preference:1", "Keep hard sessions short."),
-          ],
-        }}
-      />,
-    );
-
-    expect(screen.queryByText("Timezone: Europe/Berlin.")).toBeNull();
-    expect(screen.queryByText("Units: Metric.")).toBeNull();
-    expect(screen.getByText("Keep hard sessions short.")).toBeVisible();
-    expect(screen.getAllByRole("combobox", { name: "Decision" })).toHaveLength(
-      1,
-    );
-    // Every candidate still gets a decision, or the draft refuses the save.
-    const sent = new FormData(container.querySelector("form")!);
-    expect(sent.getAll("candidateId")).toEqual(ids);
-    expect(sent.get(`decision:${ids[0]}`)).toBe("rejected");
-    expect(sent.get(`decision:${ids[1]}`)).toBe("rejected");
-    expect(sent.get(`decision:${ids[2]}`)).toBe("accepted");
-  });
-
-  it("previews only accepted create and update decisions", () => {
-    const snapshot = emptySnapshot();
-    snapshot.activeGoalOrder = [
-      {
-        id: "54000000-0000-4000-8000-000000000201",
-        title: "Existing core",
-        priorityTier: "core",
-        activeRank: 1,
-      },
-    ];
-    snapshot.goalCandidates = [
-      goalCandidate({
-        id: "54000000-0000-4000-8000-000000000301",
-        title: "Rejected candidate",
-        decision: "rejected",
-      }),
-      goalCandidate({
-        id: "54000000-0000-4000-8000-000000000302",
-        title: "Kept exact",
-        decision: "accepted",
-        resolution: "keep",
-        targetGoalId: "54000000-0000-4000-8000-000000000201",
-        comparison: {
-          kind: "exact",
-          targetId: "54000000-0000-4000-8000-000000000201",
-          existingLabel: "Existing core",
-          existingDetail: "Existing outcome",
-          existingStatus: null,
-        },
-      }),
-      goalCandidate({
-        id: "54000000-0000-4000-8000-000000000303",
-        title: "Accepted new",
-        decision: "accepted",
-        resolution: "create",
-      }),
-      goalCandidate({
-        id: "54000000-0000-4000-8000-000000000304",
-        title: "Accepted replacement",
-        decision: "accepted",
-        resolution: "update",
-        targetGoalId: "54000000-0000-4000-8000-000000000201",
-        comparison: {
-          kind: "conflict",
-          targetId: "54000000-0000-4000-8000-000000000201",
-          existingLabel: "Existing core",
-          existingDetail: "Existing outcome",
-          existingStatus: null,
-        },
-      }),
-    ];
-
-    expect(buildRankPreview(snapshot).map((goal) => goal.title)).toEqual([
-      "Accepted new",
-      "Accepted replacement",
-    ]);
-  });
-
-  it("updates the complete rank preview from first-pass live choices", () => {
-    const snapshot = emptySnapshot();
-    snapshot.draft = draft({ currentStep: 6 });
-    snapshot.activeGoalOrder = [
-      {
-        id: "54000000-0000-4000-8000-000000000501",
-        title: "Existing one",
-        priorityTier: "core",
-        activeRank: 1,
-      },
-      {
-        id: "54000000-0000-4000-8000-000000000502",
-        title: "Existing two",
-        priorityTier: "core",
-        activeRank: 2,
-      },
-      {
-        id: "54000000-0000-4000-8000-000000000503",
-        title: "Existing three",
-        priorityTier: "core",
-        activeRank: 3,
-      },
-    ];
-    snapshot.goalCandidates = [
-      // Both start rejected, so the preview begins as the existing order and
-      // each acceptance below is one change to it. An undecided card starts
-      // accepted, which the test after this one covers.
-      goalCandidate({
-        id: "54000000-0000-4000-8000-000000000511",
-        position: 1,
-        title: "New first",
-        targetRank: 1,
-        decision: "rejected",
-      }),
-      goalCandidate({
-        id: "54000000-0000-4000-8000-000000000512",
-        position: 2,
-        title: "Replacement first",
-        targetRank: 1,
-        decision: "rejected",
-        comparison: {
-          kind: "conflict",
-          targetId: "54000000-0000-4000-8000-000000000502",
-          existingLabel: "Existing two",
-          existingDetail: "Existing outcome",
-          existingStatus: null,
-        },
-      }),
-    ];
-
-    const { rerender } = render(
-      <OnboardingManager profile={namedProfile()} snapshot={snapshot} />,
-    );
-
-    expect(rankTitles()).toEqual([
-      "Existing one",
-      "Existing two",
-      "Existing three",
-    ]);
-
-    const newCard = screen
-      .getByRole("heading", { name: "New first" })
-      .closest("article")!;
-    fireEvent.change(within(newCard).getByLabelText("Decision"), {
-      target: { value: "accepted" },
-    });
-    expect(rankTitles()).toEqual([
-      "New first",
-      "Existing one",
-      "Existing two",
-      "Existing three",
-    ]);
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      /would create 4 core goals/,
-    );
-
-    rerender(
-      <OnboardingManager
-        profile={namedProfile()}
-        snapshot={{
-          ...snapshot,
-          draft: draft({ currentStep: 6, revision: 1 }),
-        }}
-      />,
-    );
-    expect(rankTitles()).toEqual([
-      "New first",
-      "Existing one",
-      "Existing two",
-      "Existing three",
-    ]);
-
-    fireEvent.change(within(newCard).getByLabelText("Decision"), {
-      target: { value: "rejected" },
-    });
-    expect(rankTitles()).toEqual([
-      "Existing one",
-      "Existing two",
-      "Existing three",
-    ]);
-    expect(
-      screen.queryByText(/would create 4 core goals/),
-    ).not.toBeInTheDocument();
-
-    const replacementCard = screen
-      .getByRole("heading", { name: "Replacement first" })
-      .closest("article")!;
-    fireEvent.change(within(replacementCard).getByLabelText("Decision"), {
-      target: { value: "accepted" },
-    });
-    expect(rankTitles()).toEqual([
-      "Replacement first",
-      "Existing one",
-      "Existing three",
-    ]);
-
-    fireEvent.change(within(replacementCard).getByLabelText("If accepted"), {
-      target: { value: "keep" },
-    });
-    expect(rankTitles()).toEqual([
-      "Existing one",
-      "Existing two",
-      "Existing three",
-    ]);
-    const submitted = new FormData(
-      screen
-        .getByRole("button", { name: "Save accepted items" })
-        .closest("form")!,
-    );
-    expect(submitted.get("decision:54000000-0000-4000-8000-000000000511")).toBe(
-      "rejected",
-    );
-    expect(submitted.get("decision:54000000-0000-4000-8000-000000000512")).toBe(
-      "accepted",
-    );
-    expect(
-      submitted.get("resolution:54000000-0000-4000-8000-000000000512"),
-    ).toBe("keep");
-  });
-
-  it("starts an undecided card accepted, with no empty choice to make", () => {
-    const snapshot = emptySnapshot();
-    snapshot.draft = draft({ currentStep: 6 });
-    snapshot.goalCandidates = [
-      goalCandidate({
-        id: "54000000-0000-4000-8000-000000000521",
-        title: "Undecided goal",
-        decision: "pending",
-      }),
-    ];
-
-    render(<OnboardingManager profile={namedProfile()} snapshot={snapshot} />);
-
-    const decision = screen.getByLabelText("Decision") as HTMLSelectElement;
-    expect(decision.value).toBe("accepted");
-    expect(Array.from(decision.options).map((option) => option.value)).toEqual([
-      "accepted",
-      "rejected",
-    ]);
-    expect(rankTitles()).toEqual(["Undecided goal"]);
-  });
-
-  it("does not offer setup again once it has been finished", () => {
-    const snapshot = emptySnapshot();
-    snapshot.hasPublished = true;
-
-    render(<OnboardingManager profile={namedProfile()} snapshot={snapshot} />);
-
-    expect(
-      screen.getByRole("heading", { name: "Your setup is finished" }),
-    ).toBeVisible();
-    expect(screen.queryByRole("button")).toBeNull();
-    expect(screen.getByRole("link", { name: "Goals" })).toHaveAttribute(
-      "href",
-      "/home/you/goals",
-    );
-  });
-
-  it("surfaces inactive exact Memory and does not offer keep", () => {
-    render(
-      <OnboardingManager
-        profile={namedProfile()}
-        snapshot={{
-          ...emptySnapshot(),
-          draft: draft({ currentStep: 6 }),
-          memoryCandidates: [
-            {
-              id: "54000000-0000-4000-8000-000000000401",
-              position: 1,
-              fieldKey: "preference:1",
-              memoryType: "preference",
-              content: "Synthetic preference.",
-              decision: "pending",
-              resolution: null,
-              targetMemoryId: null,
-              comparison: {
-                kind: "conflict",
-                targetId: "54000000-0000-4000-8000-000000000402",
-                existingLabel: "preference",
-                existingDetail: "Synthetic preference.",
-                existingStatus: "archived",
-              },
-            },
-          ],
-        }}
-      />,
-    );
-
-    expect(screen.getByText(/Saved status: archived/)).toBeVisible();
-    expect(
-      screen.queryByRole("option", { name: /Keep what/ }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("option", { name: /Update what/ }),
-    ).toBeInTheDocument();
-  });
-
-  it("focuses the actionable error notice", async () => {
-    render(
-      <OnboardingActionNotice
-        state={{
-          status: "validation",
-          message: "Review this step.",
-          submission: 1,
-        }}
-      />,
-    );
-
-    await waitFor(() => expect(screen.getByRole("alert")).toHaveFocus());
-    expect(isActionErrorStatus("validation")).toBe(true);
-    expect(isActionErrorStatus("conflict")).toBe(true);
-    expect(isActionErrorStatus("session")).toBe(true);
-    expect(isActionErrorStatus("error")).toBe(true);
-    expect(isActionErrorStatus("saved")).toBe(false);
-  });
 });
 
-/**
- * A profile with every "About you" question answered and a sport chosen, so
- * setup opens on the draft's own step.
- */
+const GOAL_ID = "70000000-0000-4000-8000-000000000001";
+
+function savedGoal(): SetupGoalView {
+  return {
+    id: GOAL_ID,
+    title: "10k under 48 minutes",
+    desiredOutcome: "Run it in autumn.",
+    activityAreas: ["Running", "Hiking"],
+    targetDate: "2026-11-15",
+    priorityTier: "supporting",
+  };
+}
+
+/** Setup begun and standing on `step`; null for one that was never begun. */
+function atStep(
+  profile: ProfileDetailsView,
+  step: number | null,
+): ProfileDetailsView {
+  return { ...profile, setup: { step, finished: false, skipped: false } };
+}
+
 function namedProfile(): ProfileDetailsView {
   return {
     displayName: "Alex",
@@ -1148,6 +766,14 @@ function namedProfile(): ProfileDetailsView {
     timezoneName: "Europe/Berlin",
     sports: ["Running"],
     latestWeightKg: 80,
+    training: {
+      sessionsPerWeek: null,
+      unavailableDays: [],
+      availabilityNote: null,
+      trainingPlaces: [],
+      homeEquipment: [],
+    },
+    setup: { step: 1, finished: false, skipped: false },
   };
 }
 
@@ -1161,75 +787,4 @@ function justNamedProfile(): ProfileDetailsView {
     sports: [],
     latestWeightKg: null,
   };
-}
-
-function emptySnapshot(): OnboardingSnapshot {
-  return {
-    draft: null,
-    activities: [],
-    goalCandidates: [],
-    memoryCandidates: [],
-    goalRevision: 0,
-    memoryRevision: 0,
-    activeGoalOrder: [],
-    existingGoals: [],
-    promptDismissed: false,
-    hasPublished: false,
-  };
-}
-
-function draft(
-  overrides: Partial<NonNullable<OnboardingSnapshot["draft"]>>,
-): NonNullable<OnboardingSnapshot["draft"]> {
-  return {
-    id: "54000000-0000-4000-8000-000000000001",
-    revision: 0,
-    currentStep: 1,
-    trainingStatus: null,
-    availableDays: [],
-    sessionsPerWeek: null,
-    sessionDurationMinutes: null,
-    accessLabels: [],
-    timezoneName: "Europe/Berlin",
-    units: "metric",
-    idempotencyKey: "54000000-0000-4000-8000-000000000002",
-    expiresAt: "2026-09-01T10:00:00.000Z",
-    ...overrides,
-  };
-}
-
-function goalCandidate(
-  overrides: Partial<OnboardingSnapshot["goalCandidates"][number]>,
-): OnboardingSnapshot["goalCandidates"][number] {
-  return {
-    id: "54000000-0000-4000-8000-000000000399",
-    position: 1,
-    title: "Candidate",
-    desiredOutcome: "Candidate outcome",
-    category: "other",
-    activityAreas: [],
-    startDate: "2026-08-02",
-    priorityTier: "core",
-    targetRank: 2,
-    decision: "pending",
-    resolution: null,
-    targetGoalId: null,
-    comparison: {
-      kind: "new",
-      targetId: null,
-      existingLabel: null,
-      existingDetail: null,
-      existingStatus: null,
-    },
-    ...overrides,
-  };
-}
-
-function rankTitles() {
-  const preview = screen
-    .getByRole("heading", { name: "Result from your current choices" })
-    .closest("section")!;
-  return within(preview)
-    .getAllByRole("listitem")
-    .map((item) => item.querySelector("strong")?.textContent);
 }

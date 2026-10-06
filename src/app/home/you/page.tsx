@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
  * shown; nothing else is read from it.
  */
 const SETUP_NOTES: Record<string, string> = {
-  done: "Your setup is saved. What you accepted is in Goals and Memory.",
+  done: "Your setup is saved. Change anything in Goals, Memory and Settings.",
 };
 
 export default async function YouPage({

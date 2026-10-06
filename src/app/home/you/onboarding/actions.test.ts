@@ -1,238 +1,398 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
-  createRepositoryMock,
+  createGoalRepositoryMock,
+  createMemoryRepositoryMock,
   createProfileRepositoryMock,
   redirectMock,
   revalidatePathMock,
 } = vi.hoisted(() => ({
-  createRepositoryMock: vi.fn(),
+  createGoalRepositoryMock: vi.fn(),
+  createMemoryRepositoryMock: vi.fn(),
   createProfileRepositoryMock: vi.fn(),
   redirectMock: vi.fn(),
   revalidatePathMock: vi.fn(),
 }));
 
-vi.mock("@/server/repositories/profile-repository", () => ({
+vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
+vi.mock("next/navigation", () => ({ redirect: redirectMock }));
+vi.mock("@/server/repositories/goal-repository", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/server/repositories/goal-repository")
+  >()),
+  createGoalRepository: createGoalRepositoryMock,
+}));
+vi.mock("@/server/repositories/memory-repository", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/server/repositories/memory-repository")
+  >()),
+  createMemoryRepository: createMemoryRepositoryMock,
+}));
+vi.mock("@/server/repositories/profile-repository", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/server/repositories/profile-repository")
+  >()),
   createProfileRepository: createProfileRepositoryMock,
 }));
 
-vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
-vi.mock("next/navigation", () => ({ redirect: redirectMock }));
-vi.mock(
-  "@/server/repositories/onboarding-repository",
-  async (importOriginal) => {
-    const actual =
-      await importOriginal<
-        typeof import("@/server/repositories/onboarding-repository")
-      >();
-    return { ...actual, createOnboardingRepository: createRepositoryMock };
-  },
-);
+import { INITIAL_SETUP_ACTION_STATE } from "./action-state";
+import {
+  finishSetupAction,
+  leaveSetupAction,
+  recordSetupStepAction,
+  saveSetupGoalsAction,
+  startSetupAction,
+} from "./actions";
+import {
+  GoalConflictError,
+  type Goal,
+} from "@/server/repositories/goal-repository";
 
-import { INITIAL_ONBOARDING_ACTION_STATE } from "./action-state";
-import { changeOnboardingAction } from "./actions";
-import { OnboardingDatabaseValidationError } from "@/server/repositories/onboarding-repository";
+const GOAL_ID = "70000000-0000-4000-8000-000000000001";
+const NEW_ID = "70000000-0000-4000-8000-000000000002";
 
-describe("onboarding actions", () => {
-  beforeEach(() => vi.clearAllMocks());
+describe("guided setup actions", () => {
+  const goals = { list: vi.fn(), create: vi.fn(), edit: vi.fn() };
+  const memory = { list: vi.fn(), create: vi.fn() };
+  const profiles = {
+    getDetails: vi.fn(),
+    saveSports: vi.fn(),
+    saveSetupStep: vi.fn(),
+    skipSetup: vi.fn(),
+    finishSetup: vi.fn(),
+    startSetup: vi.fn(),
+  };
 
-  it("saves the one rendered goal row and returns the named finish redirect", async () => {
-    const apply = vi.fn().mockResolvedValue({
-      draft_id: "54000000-0000-4000-8000-000000000001",
-      draft_revision: 1,
-      result: "saved",
-    });
-    createRepositoryMock.mockResolvedValue({ apply });
+  beforeEach(() => {
+    vi.resetAllMocks();
+    createGoalRepositoryMock.mockResolvedValue(goals);
+    createMemoryRepositoryMock.mockResolvedValue(memory);
+    createProfileRepositoryMock.mockResolvedValue(profiles);
+    goals.list.mockResolvedValue({ revision: 4, goals: [savedGoal()] });
+    goals.create.mockResolvedValue({ goal_id: NEW_ID, collection_revision: 5 });
+    goals.edit.mockResolvedValue({ goal_id: GOAL_ID, collection_revision: 5 });
+    memory.list.mockResolvedValue({ revision: 2, items: [] });
+    memory.create.mockImplementation(
+      async (_type, _content, _date, revision) => ({
+        collection_revision: revision + 1,
+      }),
+    );
+    profiles.getDetails.mockResolvedValue({ sports: ["Running"] });
+  });
 
-    const result = await changeOnboardingAction(
-      INITIAL_ONBOARDING_ACTION_STATE,
-      goalForm(),
+  it("creates a goal typed in setup as a goal, with the owner's day as its start", async () => {
+    goals.list.mockResolvedValue({ revision: 0, goals: [] });
+    const state = await saveSetupGoalsAction(
+      INITIAL_SETUP_ACTION_STATE,
+      goalForm([{ title: "Finish a calm 10K", sport: "Running" }]),
     );
 
-    expect(result).toMatchObject({
+    expect(state).toMatchObject({
       status: "saved",
-      message: "This step was saved.",
-      redirectTo: "/home/today",
-      nextStep: 1,
+      submission: 1,
+      goalIds: [NEW_ID],
     });
-    expect(apply).toHaveBeenCalledWith({
-      operation: "save_goals",
-      expectedDraftRevision: 0,
-      payload: {
-        advance: false,
-        goals: [
-          {
-            title: "Finish a calm 10K",
-            desiredOutcome: "Run the autumn event with even pacing.",
-            category: "other",
-            activityAreas: ["Running"],
-            startDate: "2026-08-02",
-            targetDate: "",
-            targetDetail: "",
-            targetMetricLabel: "",
-            targetMetricValue: "",
-            targetMetricUnit: "",
-            priorityTier: "core",
-            targetRank: 1,
-            rationale: "",
-            constraints: "",
-          },
-        ],
+    expect(goals.create).toHaveBeenCalledExactlyOnceWith(
+      {
+        title: "Finish a calm 10K",
+        desiredOutcome: "Run the autumn event with even pacing.",
+        category: "other",
+        activityAreas: ["Running"],
+        startDate: "2026-10-06",
+        priorityTier: "core",
       },
-    });
-    expect(revalidatePathMock).toHaveBeenCalled();
-    expect(redirectMock).toHaveBeenCalledExactlyOnceWith("/home/today");
+      0,
+    );
+    expect(goals.edit).not.toHaveBeenCalled();
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 
-  it("adds a sport made up on the goal step to the owner's sports, once", async () => {
-    const saveSports = vi.fn();
-    createRepositoryMock.mockResolvedValue({ apply: vi.fn() });
-    createProfileRepositoryMock.mockResolvedValue({
-      getDetails: vi.fn().mockResolvedValue({ sports: ["Cycling"] }),
-      saveSports,
-    });
+  it("edits a goal the account already has, keeping what setup does not ask", async () => {
+    const state = await saveSetupGoalsAction(
+      INITIAL_SETUP_ACTION_STATE,
+      goalForm([
+        { id: GOAL_ID, title: "10k under 47 minutes", sport: "Running" },
+      ]),
+    );
 
-    // The goal's sport in the form is "Running", which the owner has not
-    // got; a sport they already have, however it is capitalised, is not
-    // added again.
-    await changeOnboardingAction(INITIAL_ONBOARDING_ACTION_STATE, goalForm());
-    expect(saveSports).toHaveBeenCalledExactlyOnceWith(["Cycling", "Running"]);
-
-    saveSports.mockClear();
-    createProfileRepositoryMock.mockResolvedValue({
-      getDetails: vi.fn().mockResolvedValue({ sports: ["running"] }),
-      saveSports,
-    });
-    await changeOnboardingAction(INITIAL_ONBOARDING_ACTION_STATE, goalForm());
-    expect(saveSports).not.toHaveBeenCalled();
+    expect(state.status).toBe("saved");
+    expect(goals.create).not.toHaveBeenCalled();
+    expect(goals.edit).toHaveBeenCalledExactlyOnceWith(
+      GOAL_ID,
+      {
+        title: "10k under 47 minutes",
+        desiredOutcome: "Run the autumn event with even pacing.",
+        // Its own kind, start date, reason and place among the core goals.
+        category: "endurance",
+        activityAreas: ["Running"],
+        startDate: "2026-09-01",
+        priorityTier: "core",
+        targetRank: 2,
+        rationale: "Kept from before",
+      },
+      4,
+    );
   });
 
-  it("saves the goal step even when the owner's sports cannot be read", async () => {
-    createRepositoryMock.mockResolvedValue({ apply: vi.fn() });
-    createProfileRepositoryMock.mockRejectedValue(new Error("unavailable"));
+  it("does not write a goal again that is sent back as it is saved", async () => {
+    const goal = savedGoal();
+    const state = await saveSetupGoalsAction(
+      INITIAL_SETUP_ACTION_STATE,
+      goalForm([
+        {
+          id: GOAL_ID,
+          title: goal.title,
+          outcome: goal.desiredOutcome,
+          sport: "Running",
+        },
+      ]),
+    );
 
-    const state = await changeOnboardingAction(
-      INITIAL_ONBOARDING_ACTION_STATE,
-      goalForm(),
+    expect(state).toMatchObject({ status: "saved", goalIds: [GOAL_ID] });
+    expect(goals.edit).not.toHaveBeenCalled();
+    expect(goals.create).not.toHaveBeenCalled();
+  });
+
+  it("saves several goals one after another on the revision each leaves, passing over an empty row", async () => {
+    goals.list.mockResolvedValue({ revision: 0, goals: [] });
+    goals.create
+      .mockResolvedValueOnce({ goal_id: GOAL_ID, collection_revision: 1 })
+      .mockResolvedValueOnce({ goal_id: NEW_ID, collection_revision: 2 });
+    const state = await saveSetupGoalsAction(
+      INITIAL_SETUP_ACTION_STATE,
+      goalForm([
+        { title: "Run a marathon", sport: "Running" },
+        { title: "" },
+        { title: "Bench press 80 kg", sport: "Latzug", tier: "supporting" },
+      ]),
+    );
+
+    expect(state.goalIds).toEqual([GOAL_ID, null, NEW_ID]);
+    expect(goals.create.mock.calls.map((call) => call[1])).toEqual([0, 1]);
+    // A sport made up on the goals screen joins the owner's sports.
+    expect(profiles.saveSports).toHaveBeenCalledExactlyOnceWith([
+      "Running",
+      "Latzug",
+    ]);
+  });
+
+  it.each([
+    ["no goal at all", [{ title: "" }]],
+    ["a goal without a sport", [{ title: "Run a marathon" }]],
+    [
+      "an id that is not one of the owner's goals",
+      [{ id: NEW_ID, title: "Run a marathon", sport: "Running" }],
+    ],
+  ])("refuses %s before anything is written", async (_label, rows) => {
+    const state = await saveSetupGoalsAction(
+      INITIAL_SETUP_ACTION_STATE,
+      goalForm(rows),
+    );
+
+    expect(state.status).toBe("validation");
+    expect(goals.create).not.toHaveBeenCalled();
+    expect(goals.edit).not.toHaveBeenCalled();
+  });
+
+  it("says so when a fourth core goal is refused, and reports the rows that were saved", async () => {
+    goals.list.mockResolvedValue({ revision: 0, goals: [] });
+    goals.create
+      .mockResolvedValueOnce({ goal_id: GOAL_ID, collection_revision: 1 })
+      .mockRejectedValueOnce(new GoalConflictError("core-limit"));
+    const state = await saveSetupGoalsAction(
+      INITIAL_SETUP_ACTION_STATE,
+      goalForm([
+        { title: "Run a marathon", sport: "Running" },
+        { title: "Swim 2 km", sport: "Swimming" },
+      ]),
+    );
+
+    expect(state).toMatchObject({
+      status: "conflict",
+      message: "At most three goals can be core. Make one of them supporting.",
+      goalIds: [GOAL_ID],
+    });
+  });
+
+  it("saves the goals screen even when the owner's sports cannot be read", async () => {
+    goals.list.mockResolvedValue({ revision: 0, goals: [] });
+    profiles.getDetails.mockRejectedValue(new Error("unavailable"));
+    const state = await saveSetupGoalsAction(
+      INITIAL_SETUP_ACTION_STATE,
+      goalForm([{ title: "Run a marathon", sport: "Running" }]),
     );
     expect(state.status).toBe("saved");
   });
 
-  it("leaves on finish later even when the step cannot be saved, and says so", async () => {
-    createRepositoryMock.mockResolvedValue({
-      apply: vi.fn().mockRejectedValue(new OnboardingDatabaseValidationError()),
-    });
+  it("leaves on Continue later whether or not the goals could be saved, from the screen it was on", async () => {
+    const form = goalForm([{ title: "Run a marathon" }]);
+    form.set("intent", "later");
+    await saveSetupGoalsAction(INITIAL_SETUP_ACTION_STATE, form);
 
-    await changeOnboardingAction(INITIAL_ONBOARDING_ACTION_STATE, goalForm());
-
-    expect(redirectMock).toHaveBeenCalledExactlyOnceWith("/home/today");
-    expect(revalidatePathMock).not.toHaveBeenCalled();
-  });
-
-  it("leaves on finish later when the goals step breaks a goal rule", async () => {
-    const apply = vi.fn();
-    createRepositoryMock.mockResolvedValue({ apply });
-    const form = goalForm();
-    // A title without an outcome is refused by the goal rules, not the
-    // setup's own, and must leave all the same.
-    form.set("goalOutcome:0", "");
-
-    await changeOnboardingAction(INITIAL_ONBOARDING_ACTION_STATE, form);
-
-    // Nothing of the step is saved. What is recorded is that the owner
-    // left, so the next sign-in asks about setup instead of opening it.
-    expect(apply).toHaveBeenCalledExactlyOnceWith({
-      operation: "dismiss_prompt",
-      expectedDraftRevision: 0,
-    });
+    expect(goals.create).not.toHaveBeenCalled();
+    expect(profiles.skipSetup).toHaveBeenCalledExactlyOnceWith(7);
     expect(redirectMock).toHaveBeenCalledExactlyOnceWith("/home/today");
   });
 
-  it("does not start setup again once it has been finished", async () => {
-    const apply = vi.fn();
-    createRepositoryMock.mockResolvedValue({
-      apply,
-      getEntryState: vi
-        .fn()
-        .mockResolvedValue({ showHomeInvitation: false, hasPublished: true }),
-    });
-    const form = new FormData();
-    form.set("operation", "start");
-    form.set("expectedDraftRevision", "0");
-
-    const result = await changeOnboardingAction(
-      INITIAL_ONBOARDING_ACTION_STATE,
-      form,
+  it("files each field of the last screen in Memory as written, then finishes setup", async () => {
+    const state = await finishSetupAction(
+      INITIAL_SETUP_ACTION_STATE,
+      notesForm([
+        ["injury", "Left knee, 2019"],
+        ["enjoy", "  Long runs   outdoors "],
+        ["why", ""],
+      ]),
     );
 
-    expect(result).toMatchObject({
-      status: "validation",
-      message: "Setup is finished. Change anything in Goals and Memory.",
+    expect(state.status).toBe("saved");
+    expect(memory.create.mock.calls).toEqual([
+      ["constraint", "An old injury: Left knee, 2019", undefined, 2],
+      ["preference", "What I enjoy: Long runs outdoors", undefined, 3],
+    ]);
+    expect(profiles.finishSetup).toHaveBeenCalledOnce();
+    // Straight back to You, which says setup is saved.
+    expect(redirectMock).toHaveBeenCalledExactlyOnceWith(
+      "/home/you?setup=done",
+    );
+  });
+
+  it("finishes setup with nothing written, without touching Memory", async () => {
+    const state = await finishSetupAction(
+      INITIAL_SETUP_ACTION_STATE,
+      notesForm([]),
+    );
+
+    expect(state.status).toBe("saved");
+    expect(createMemoryRepositoryMock).not.toHaveBeenCalled();
+    expect(profiles.finishSetup).toHaveBeenCalledOnce();
+  });
+
+  it("passes over text Memory already holds, so pressing Finish again is safe", async () => {
+    memory.list.mockResolvedValue({
+      revision: 3,
+      items: [{ content: "An old injury: Left knee, 2019" }],
     });
-    expect(apply).not.toHaveBeenCalled();
+    await finishSetupAction(
+      INITIAL_SETUP_ACTION_STATE,
+      notesForm([
+        ["injury", "Left knee, 2019"],
+        ["enjoy", "Long runs outdoors"],
+      ]),
+    );
+
+    expect(memory.create).toHaveBeenCalledExactlyOnceWith(
+      "preference",
+      "What I enjoy: Long runs outdoors",
+      undefined,
+      3,
+    );
+  });
+
+  it("does not finish setup when a field is refused, and stays on the screen", async () => {
+    const state = await finishSetupAction(
+      INITIAL_SETUP_ACTION_STATE,
+      notesForm([["injury", "x".repeat(301)]]),
+    );
+
+    expect(state.status).toBe("validation");
+    expect(memory.create).not.toHaveBeenCalled();
+    expect(profiles.finishSetup).not.toHaveBeenCalled();
     expect(redirectMock).not.toHaveBeenCalled();
   });
 
-  it("returns an actionable validation state instead of claiming a redirect", async () => {
-    createRepositoryMock.mockResolvedValue({
-      apply: vi.fn().mockRejectedValue(new OnboardingDatabaseValidationError()),
-    });
-    const form = goalForm();
-    form.set("intent", "continue");
+  it("saves what was written on Continue later without finishing setup", async () => {
+    const form = notesForm([["injury", "Left knee, 2019"]]);
+    form.set("intent", "later");
+    await finishSetupAction(INITIAL_SETUP_ACTION_STATE, form);
 
-    const result = await changeOnboardingAction(
-      INITIAL_ONBOARDING_ACTION_STATE,
-      form,
-    );
-
-    expect(result).toMatchObject({
-      status: "validation",
-      message:
-        "Review this step and correct the details. Nothing from this attempt was saved.",
-    });
-    expect(result.redirectTo).toBeUndefined();
-    expect(redirectMock).not.toHaveBeenCalled();
-    expect(revalidatePathMock).not.toHaveBeenCalled();
+    expect(memory.create).toHaveBeenCalledOnce();
+    expect(profiles.finishSetup).not.toHaveBeenCalled();
+    expect(profiles.skipSetup).toHaveBeenCalledExactlyOnceWith(12);
+    expect(redirectMock).toHaveBeenCalledExactlyOnceWith("/home/today");
   });
 
-  it("lets the framework redirect escape the persistence error mapper", async () => {
-    const frameworkRedirect = new Error("NEXT_REDIRECT");
-    createRepositoryMock.mockResolvedValue({
-      apply: vi.fn().mockResolvedValue({
-        draft_id: "54000000-0000-4000-8000-000000000001",
-        draft_revision: 1,
-        result: "saved",
-      }),
-    });
-    redirectMock.mockImplementationOnce(() => {
-      throw frameworkRedirect;
-    });
+  it("records the screen setup moved to, and nothing that is not a screen", async () => {
+    await recordSetupStepAction(9);
+    expect(profiles.saveSetupStep).toHaveBeenCalledExactlyOnceWith(9);
 
-    await expect(
-      changeOnboardingAction(INITIAL_ONBOARDING_ACTION_STATE, goalForm()),
-    ).rejects.toBe(frameworkRedirect);
+    profiles.saveSetupStep.mockClear();
+    await recordSetupStepAction(13);
+    await recordSetupStepAction(0);
+    expect(profiles.saveSetupStep).not.toHaveBeenCalled();
+  });
+
+  it("leaves setup even when the skip cannot be recorded", async () => {
+    profiles.skipSetup.mockRejectedValue(new Error("unavailable"));
+    await leaveSetupAction(3);
+    expect(redirectMock).toHaveBeenCalledExactlyOnceWith("/home/today");
+  });
+
+  it("begins setup from You and opens it", async () => {
+    await startSetupAction();
+    expect(profiles.startSetup).toHaveBeenCalledOnce();
+    expect(redirectMock).toHaveBeenCalledExactlyOnceWith(
+      "/home/you/onboarding",
+    );
   });
 });
 
-function goalForm() {
+function savedGoal(): Goal {
+  return {
+    id: GOAL_ID,
+    title: "10k under 48 minutes",
+    desiredOutcome: "Run it in autumn.",
+    category: "endurance",
+    activityAreas: ["Running"],
+    startDate: "2026-09-01",
+    targetDate: null,
+    targetDetail: null,
+    targetMetricLabel: null,
+    targetMetricValue: null,
+    targetMetricUnit: null,
+    priorityTier: "core",
+    status: "active",
+    activeRank: 2,
+    rationale: "Kept from before",
+    constraints: null,
+    archivedAt: null,
+  };
+}
+
+function goalForm(
+  rows: {
+    id?: string;
+    title: string;
+    outcome?: string;
+    sport?: string;
+    tier?: string;
+  }[],
+) {
   const form = new FormData();
-  form.set("operation", "save_goals");
-  form.set("expectedDraftRevision", "0");
-  form.set("step", "1");
-  form.set("intent", "finish");
-  form.set("goalTitle:0", "Finish a calm 10K");
-  form.set("goalOutcome:0", "Run the autumn event with even pacing.");
-  form.set("goalCategory:0", "other");
-  form.set("goalActivities:0", "Running");
-  form.set("goalStartDate:0", "2026-08-02");
-  form.set("goalTargetDate:0", "");
-  form.set("goalTargetDetail:0", "");
-  form.set("goalMetricLabel:0", "");
-  form.set("goalMetricValue:0", "");
-  form.set("goalMetricUnit:0", "");
-  form.set("goalTier:0", "core");
-  form.set("goalRank:0", "1");
-  form.set("goalRationale:0", "");
-  form.set("goalConstraints:0", "");
+  form.set("goalCount", String(rows.length));
+  form.set("setupStep", "7");
+  form.set("intent", "continue");
+  rows.forEach((row, index) => {
+    form.set(`goalId:${index}`, row.id ?? "");
+    form.set(`goalTitle:${index}`, row.title);
+    form.set(
+      `goalOutcome:${index}`,
+      row.outcome ?? "Run the autumn event with even pacing.",
+    );
+    form.set(`goalActivities:${index}`, row.sport ?? "");
+    form.set(`goalStartDate:${index}`, "2026-10-06");
+    form.set(`goalTargetDate:${index}`, "");
+    form.set(`goalTier:${index}`, row.tier ?? "core");
+  });
+  return form;
+}
+
+function notesForm(notes: [kind: string, text: string][]) {
+  const form = new FormData();
+  form.set("setupStep", "12");
+  form.set("intent", "continue");
+  for (const [kind, text] of notes) {
+    form.append("noteKind", kind);
+    form.append("noteText", text);
+  }
   return form;
 }
