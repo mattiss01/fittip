@@ -8,7 +8,12 @@ import {
   type ProfileDetailsView,
   type WeightEntryView,
 } from "@/lib/profile/profile-contract";
+import type { SetupStateView } from "@/lib/setup/setup-steps";
 import type { Database } from "@/lib/supabase/database.types";
+import {
+  WEEKDAYS,
+  type TrainingSetupView,
+} from "@/lib/training/training-setup";
 import {
   requireAllowedVerifiedUser,
   VerifiedUserAccessError,
@@ -20,7 +25,9 @@ import {
 
 const PROFILE_COLUMNS = "user_id, created_at, timezone_name" as const;
 const PROFILE_DETAIL_COLUMNS =
-  "timezone_name, display_name, birth_date, height_cm, gender, units_system, sports" as const;
+  "timezone_name, display_name, birth_date, height_cm, gender, units_system, sports, sessions_per_week, unavailable_days, availability_note, training_places, home_equipment, setup_step, setup_finished_at, setup_skipped_at" as const;
+const SETUP_STATE_COLUMNS =
+  "setup_step, setup_finished_at, setup_skipped_at" as const;
 const WEIGHT_ENTRY_COLUMNS = "measured_on, weight_kg" as const;
 
 /** What `saveDetails` writes; the weight goes to the history, not here. */
@@ -187,7 +194,101 @@ export class ProfileRepository {
       timezoneName: row.timezone_name,
       sports: row.sports,
       latestWeightKg: weight.data?.weight_kg ?? null,
+      training: {
+        sessionsPerWeek: row.sessions_per_week,
+        unavailableDays: WEEKDAYS.filter((day) =>
+          row.unavailable_days.includes(day),
+        ),
+        availabilityNote: row.availability_note,
+        trainingPlaces: row.training_places,
+        homeEquipment: row.home_equipment,
+      },
+      setup: toSetupState(row),
     };
+  }
+
+  /**
+   * Where guided setup stands. It is three columns of the profile since
+   * 6 Oct 2026: nothing waits in a draft, so there is no draft to ask.
+   */
+  async getSetupState(): Promise<SetupStateView> {
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("profiles")
+      .select(SETUP_STATE_COLUMNS)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error) throw new ProfilePersistenceError();
+    return data
+      ? toSetupState(data)
+      : { step: null, finished: false, skipped: false };
+  }
+
+  /** Begins setup at its first screen, unless it was begun or finished. */
+  async startSetup(): Promise<void> {
+    await this.ensureCurrentProfile();
+    const userId = await this.getVerifiedUserId();
+    const { error } = await this.client
+      .from("profiles")
+      .update({ setup_step: 1 })
+      .eq("user_id", userId)
+      .is("setup_step", null)
+      .is("setup_finished_at", null);
+    if (error) throw new ProfilePersistenceError();
+  }
+
+  /** The screen the owner is on, so that setup reopens there. */
+  async saveSetupStep(step: number): Promise<void> {
+    await this.updateOwnRow({ setup_step: step });
+  }
+
+  /** "Continue later": the next sign-in asks about setup instead of opening it. */
+  async skipSetup(step?: number): Promise<void> {
+    await this.updateOwnRow({
+      setup_skipped_at: new Date().toISOString(),
+      ...(step === undefined ? {} : { setup_step: step }),
+    });
+  }
+
+  /** Done once, setup is not offered again. */
+  async finishSetup(): Promise<void> {
+    await this.updateOwnRow({ setup_finished_at: new Date().toISOString() });
+  }
+
+  /** Only the parts given are written; the others keep what they hold. */
+  async saveTrainingSetup(change: Partial<TrainingSetupView>): Promise<void> {
+    await this.updateOwnRow({
+      ...(change.sessionsPerWeek === undefined
+        ? {}
+        : { sessions_per_week: change.sessionsPerWeek }),
+      ...(change.unavailableDays === undefined
+        ? {}
+        : { unavailable_days: change.unavailableDays }),
+      ...(change.availabilityNote === undefined
+        ? {}
+        : { availability_note: change.availabilityNote }),
+      ...(change.trainingPlaces === undefined
+        ? {}
+        : { training_places: change.trainingPlaces }),
+      ...(change.homeEquipment === undefined
+        ? {}
+        : { home_equipment: change.homeEquipment }),
+    });
+  }
+
+  private async updateOwnRow(
+    change: Database["public"]["Tables"]["profiles"]["Update"],
+  ): Promise<void> {
+    await this.ensureCurrentProfile();
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("profiles")
+      .update(change)
+      .eq("user_id", userId)
+      .select("user_id")
+      .maybeSingle();
+    if (error) throw mapDetailsError(error.code);
+    if (!data) throw new ProfilePersistenceError();
   }
 
   /**
@@ -317,6 +418,19 @@ export class ProfileRepository {
       throw new ProfileAuthenticationError();
     }
   }
+}
+
+function toSetupState(
+  row: Pick<
+    Database["public"]["Tables"]["profiles"]["Row"],
+    "setup_step" | "setup_finished_at" | "setup_skipped_at"
+  >,
+): SetupStateView {
+  return {
+    step: row.setup_step,
+    finished: row.setup_finished_at !== null,
+    skipped: row.setup_skipped_at !== null,
+  };
 }
 
 export async function createProfileRepository(): Promise<ProfileRepository> {

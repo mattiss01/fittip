@@ -6,7 +6,6 @@ import {
   privateRedirect,
 } from "@/lib/supabase/server-user-client";
 import { requireAllowedVerifiedUser } from "@/lib/auth/verified-user";
-import { OnboardingRepository } from "@/server/repositories/onboarding-repository";
 import { ProfileRepository } from "@/server/repositories/profile-repository";
 import { safeAuthReturn } from "@/lib/auth/safe-return";
 
@@ -21,10 +20,10 @@ export async function POST(request: Request) {
   });
 
   if (!error) {
+    const profiles = new ProfileRepository(client);
     let firstSignIn = false;
     try {
       await requireAllowedVerifiedUser(client);
-      const profiles = new ProfileRepository(client);
       // An account that signed up here was sent a confirmation mail, which
       // Auth records and the account cannot change. One made for it another
       // way (a test's, or the local owner's) was not, and goes where signing
@@ -42,29 +41,23 @@ export async function POST(request: Request) {
     }
 
     // Guided setup that is waiting comes before anything else (owner, 5 Oct
-    // 2026). A new account's confirmation started it and signed the account
+    // 2026). A new account's confirmation began it and signed the account
     // out again, so this is where it opens. Once the owner has chosen
     // "Continue later", it no longer opens by itself: the same page asks
-    // whether to go on with it or skip. A finished setup, and an account with
-    // no draft, go where signing in always went. Both destinations are
-    // constants, and failing to read the state never costs the sign-in.
+    // whether to go on with it or skip. A finished setup, and an account
+    // whose setup was never begun, go where signing in always went. Both
+    // destinations are constants, and failing to read the state never costs
+    // the sign-in.
     //
     // A confirmation link opened in another browser confirms the account
-    // without reaching our callback, so nothing was started for it. Such an
+    // without reaching our callback, so nothing was begun for it. Such an
     // account signed up here and has no profile until this sign-in makes
     // one, and that is how it is told from an older account that never ran
-    // setup: its setup is started here instead.
+    // setup: its setup is begun here instead.
     try {
-      const onboarding = new OnboardingRepository(client);
-      let setup = await onboarding.getSetupState();
-      if (firstSignIn && !setup.published && !setup.hasDraft) {
-        await onboarding.apply({
-          operation: "start",
-          expectedDraftRevision: 0,
-        });
-        setup = { ...setup, hasDraft: true };
-      }
-      if (!setup.published && setup.hasDraft) {
+      if (firstSignIn) await profiles.startSetup();
+      const setup = await profiles.getSetupState();
+      if (!setup.finished && setup.step !== null) {
         returnTo = setup.skipped
           ? "/home/you/onboarding?remind=1"
           : "/home/you/onboarding";

@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { OnboardingRepository } from "@/server/repositories/onboarding-repository";
 import { ProfileRepository } from "@/server/repositories/profile-repository";
 import { requireAllowedVerifiedUser } from "@/lib/auth/verified-user";
 import {
   createServerUserClient,
   mergeAuthResponseHeaders,
   privateRedirect,
-  type ServerUserClient,
 } from "@/lib/supabase/server-user-client";
 
 export async function GET(request: Request) {
@@ -31,16 +29,16 @@ export async function GET(request: Request) {
     return failed();
   }
 
+  const profiles = new ProfileRepository(client);
   try {
     await requireAllowedVerifiedUser(client);
-    const profiles = new ProfileRepository(client);
     await profiles.ensureCurrentProfile();
   } catch {
     await client.auth.signOut();
     return failed();
   }
 
-  await startSetup(client);
+  await startSetup(profiles);
 
   // The link confirms the account; it does not sign it in (owner, 5 Oct
   // 2026). The session this route needed to confirm with is ended, and the
@@ -55,21 +53,17 @@ export async function GET(request: Request) {
 /**
  * Signing up leads straight into guided setup (owner, 5 Oct 2026). This route
  * is where a new account's confirmation link lands, so it is the one moment
- * that is "just signed up": the setup draft is started here, and the sign-in
- * that follows opens it while nothing in it has been saved (see the sign-in
- * route). Setup stays optional: it can be left or cancelled.
+ * that is "just signed up": setup is begun here, and the sign-in that follows
+ * opens it (see the sign-in route). Setup stays optional: it can be left.
  *
- * Nothing here may cost the account its confirmation: if setup cannot be read
- * or started, the account still confirms, signs in and lands on Today, and
- * setup is reached from You.
+ * Nothing here may cost the account its confirmation: if setup cannot be
+ * begun, the account still confirms and signs in, and setup is reached from
+ * You. An account that finished setup is left as it is.
  */
-async function startSetup(client: ServerUserClient): Promise<void> {
-  const onboarding = new OnboardingRepository(client);
+async function startSetup(profiles: ProfileRepository): Promise<void> {
   try {
-    if ((await onboarding.getEntryState()).hasPublished) return;
-    await onboarding.apply({ operation: "start", expectedDraftRevision: 0 });
+    await profiles.startSetup();
   } catch {
-    // A draft that has been worked on refuses a second start, and it is
-    // then the owner's to come back to.
+    // Reached from You instead.
   }
 }

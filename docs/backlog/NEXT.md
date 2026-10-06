@@ -103,35 +103,34 @@ lane, one screen per merge.
       settles "sport or category" as one shared list. Offer the profile's sports
       in a goal's sports and a session's and an activity's `sport`. Build lane
       once the list exists. Open: whether the stored `sport` columns are renamed.
-- [ ] **The coach reads age, gender, height and weight.** Owner, 5 Oct 2026:
-      those four, age worked out from the birthday, and never the name. AI data
-      boundary, so careful lane and its own ADR (021). The plan context has
+- [ ] **The coach reads the athlete profile.** Owner, 5 Oct 2026: age (worked out
+      from the birthday), gender, height and weight, and never the name. Since
+      6 Oct 2026 also the training setup (sessions a week, days out and the note,
+      places, home equipment), which the coach no longer learns from memory. AI
+      data boundary, so careful lane and its own ADR (022). The plan context has
       about 9 tokens free and this needs about 20 plus a prompt sentence; bring
       measured numbers and the safety wording (non-diagnostic) before pushing.
-- [ ] **Setup after goals, rethought.** Owner, 5 Oct 2026: current training, time and
-      access, preferences and constraints all go. Decided: (1) "How often do you want
-      to train?", sessions a week, and nothing about training now; (2) "Any days you
-      can't train?", every day free until tapped, with an optional line in words;
-      no session length. Still to shape with the owner: (3) places and equipment as
-      chips; (4) what the coach should know and (5) what limits you, both free text
-      and the only source of memory items, drafted by the coach and accepted in
-      (6) review. The tapped facts are profile settings, not memory. The limits text
-      may be sent to the AI (ADR needed; the screen says today that it is not), and
-      limits as a whole are to be thought through again. Careful lane: replaces most
-      of `apply_onboarding_change`.
-- [ ] **Setup's small ends.** From the reviews of 5 Oct 2026. The leave popup has no
-      focus trap and the sport list no arrow keys, Escape or outside press; an "About
-      you" save refused for a question that is not on screen names no field; removing
-      the last weight loses its notice; `weight_entries.measured_on` and `birth_date`
-      have no future check in the database; a sport a goal adds skips the list's
-      tidying of spaces and is written read-then-write; a first time zone can be
-      stored when the rest of "About you" then fails; the confirmation link does not
-      check its sign-out; `ageOn` waits for the coach item above.
-- [ ] **Setup takes more than three goals.** Owner, 5 Oct 2026: three is the limit on core
-      goals, not on goals. Setup's goal step stops at three because the database does:
-      `apply_onboarding_change` refuses a fourth and `onboarding_goal_candidates.position`
-      is checked 1 to 3. Raising it replaces that function, so careful lane; do it with
-      the goals migration. The Goals page has no such limit.
+- [ ] **Remove the setup draft.** Owner, 6 Oct 2026: setup saves directly now, so the
+      draft goes. Destructive migration, its own merge, careful lane: drop the six
+      `onboarding_*` tables, `apply_onboarding_change`, the three
+      `private.onboarding_*` helpers and the nightly `fittip-onboarding-expiry-cleanup`
+      job; keep the `intake_confirmed` provenance and the
+      `clear_memory_confidence_after_owner_edit` trigger, which Memory uses. Rewrite
+      `m2_03_onboarding.test.sql` and the M3-11 reset fixtures; ADR-021 retires
+      ADR-011. The owner removes the dead files (`onboarding-repository.ts`,
+      `onboarding-records.ts`, `onboarding-contract.ts` and their tests).
+- [ ] **Setup's small ends.** From the reviews of 5 and 6 Oct 2026. The leave popup has
+      no focus trap and the sport list no arrow keys or outside press; an "About you"
+      save refused for a question that is not on screen names no field; removing the
+      last weight loses its notice; `weight_entries.measured_on`, `birth_date` and
+      the names in the training lists are bounded by the app, not the database; a
+      sport a goal adds is written read-then-write; a first time zone can be stored
+      when the rest of "About you" then fails; the confirmation link does not check
+      its sign-out. "Continue later" drops, without saying so, a goal or note that
+      cannot be saved. Setup's notes are limited in characters and the coach's memory
+      in bytes, so many long notes can leave the coach refusing to plan. The goals
+      screen cannot be passed without a goal. Limits as a whole are still to be
+      thought through with the owner, and the coach tidying the notes is not built.
 - [ ] **A date typed or picked, everywhere.** Owner, 5 Oct 2026. `DateField` (three typed
       fields and a calendar button) is on a goal's target date, in setup and on Goals,
       and, without the calendar, on the birthday. Still plain date fields: a session's

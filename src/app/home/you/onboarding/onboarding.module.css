@@ -499,6 +499,51 @@ main.setupPage {
   outline-offset: 2px;
 }
 
+/* The days of the week, asked alone under their heading, sit in the middle
+   as the heading does. */
+.chips[data-centred="true"] {
+  justify-content: center;
+}
+
+/* What the last screen offers to write about: a tap adds a field. Drawn as
+   the chips are, but buttons, since nothing stays chosen. */
+.prompts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.stepForm .prompts button {
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0 0.95rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: white;
+  color: var(--ledger-ink);
+  font: 600 0.95rem var(--font-sans);
+}
+
+.stepForm .prompts button:hover {
+  background: var(--line);
+}
+
+.stepForm .prompts button:disabled {
+  opacity: 0.5;
+}
+
+.noteField {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.stepForm .noteField .removeEntry {
+  justify-self: end;
+  min-height: 2.25rem;
+  font-size: 0.85rem;
+}
+
 .addSport {
   display: grid;
   grid-template-columns: 1fr auto;

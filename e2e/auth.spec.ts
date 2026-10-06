@@ -103,12 +103,14 @@ async function completeGuidedSetup(
   // answers. Reached by address: on a page under You two links are named You.
   await page.goto("/home/you");
   await expect(page.getByRole("link", { name: /^Guided setup/ })).toBeVisible();
+  // Still to be done, so "You" carries a dot in the navigation.
+  await expect(page.locator("[data-setup-open]")).toHaveCount(1);
   await page.screenshot({
     fullPage: true,
     path: path.join(m2EvidenceDirectory, "M2-03-start-390x844.png"),
   });
   await page.getByRole("link", { name: /^Guided setup/ }).click();
-  // The draft that sign-up started is waiting on its first step.
+  // The setup that sign-up began is waiting on its first screen.
   await expect(page).toHaveURL(/\/home\/you\/onboarding$/);
 
   // "About you" comes first, one question at a time, then "Your sports";
@@ -154,7 +156,8 @@ async function completeGuidedSetup(
   await page.getByRole("button", { name: /^Sport/ }).click();
   await page.getByRole("option", { name: "Running" }).click();
   // "Continue later" is setup's one way out besides finishing: it saves the
-  // step and goes to the app. There is no "Cancel and delete draft".
+  // screen, here the goal as a goal, and goes to the app. Nothing is there
+  // to cancel or delete.
   await expect(
     page.getByRole("button", { name: /cancel|delete/i }),
   ).toHaveCount(0);
@@ -171,10 +174,10 @@ async function completeGuidedSetup(
     .poll(
       async () => {
         const notice = page.locator(
-          "[data-onboarding-notice][data-state='validation'], " +
-            "[data-onboarding-notice][data-state='conflict'], " +
-            "[data-onboarding-notice][data-state='session'], " +
-            "[data-onboarding-notice][data-state='error']",
+          "[data-setup-notice][data-state='validation'], " +
+            "[data-setup-notice][data-state='conflict'], " +
+            "[data-setup-notice][data-state='session'], " +
+            "[data-setup-notice][data-state='error']",
         );
         if (await notice.isVisible().catch(() => false)) {
           return `action notice: ${await notice.innerText()}`;
@@ -203,56 +206,60 @@ async function completeGuidedSetup(
   await page.getByRole("button", { name: "Continue setup" }).click();
   await expect(heading("Goals")).toBeVisible();
   await expect(page.getByLabel("Goal title")).toHaveValue(goalTitle);
-  await page.getByRole("button", { name: "Next" }).click();
-  await expect(heading("Current training")).toBeVisible();
+  await next();
 
-  await page.getByLabel("I am not training currently").check();
-  await page.getByRole("button", { name: "Next" }).click();
-  await expect(heading("Time and access")).toBeVisible();
+  // After goals, four taps that are saved as settings of the profile (owner,
+  // 6 Oct 2026): how often, which days are out, where, and what is at home.
+  await expect(heading("How often do you want to train?")).toBeVisible();
+  await page.getByRole("button", { name: "More: Sessions a week" }).click();
+  await expect(page.getByLabel("Sessions a week", { exact: true })).toHaveValue(
+    "3",
+  );
+  await next();
+  await expect(heading("Any days you can't train?")).toBeVisible();
+  await page.getByText("Sunday", { exact: true }).click();
+  await next();
+  await expect(heading("Where can you train?")).toBeVisible();
+  await page.getByText("Home", { exact: true }).click();
+  await next();
+  // Asked because Home is a place.
+  await expect(heading("What do you have at home?")).toBeVisible();
+  await page.getByText("Dumbbells", { exact: true }).click();
+  await next();
 
-  await page.getByLabel("Monday").check();
-  await page.getByLabel("Saturday").check();
-  await page.getByLabel("Access and equipment").fill("Road, Home weights");
-  // The time zone and the units were chosen in "About you".
-  await expect(page.getByLabel("Timezone")).toHaveCount(0);
-  await page.getByRole("button", { name: "Next" }).click();
-  await expect(heading("Preferences")).toBeVisible();
-
-  // Preferences and constraints are optional. The exact conservative safety
-  // copy remains visible without a severity question or acknowledgement gate.
-  await page.getByRole("button", { name: "Next" }).click();
-  await expect(heading("Constraints")).toBeVisible();
+  // The last screen offers what to write about; each field is filed in
+  // Memory as written. The conservative safety copy is there, with no
+  // severity question and nothing to acknowledge.
+  await expect(heading("Anything your coach should know?")).toBeVisible();
   await expect(
     page.getByText(/FitTip cannot assess or diagnose symptoms/),
   ).toBeVisible();
   await expect(page.getByLabel(/severity/i)).toHaveCount(0);
-  await page.getByRole("button", { name: "Next" }).click();
-  await expect(heading("Review and save")).toBeVisible();
-  // The profile's own two never come up for review.
-  await expect(page.getByText(/^(Timezone|Units): /)).toHaveCount(0);
-  await expect(
-    page.getByRole("heading", {
-      name: "Choose where each statement lands",
-    }),
-  ).toBeVisible();
-
-  const decisions = page.getByLabel("Decision");
-  const decisionCount = await decisions.count();
-  expect(decisionCount).toBeGreaterThan(1);
-  for (let index = 0; index < decisionCount; index += 1) {
-    await decisions.nth(index).selectOption("accepted");
-  }
-  await page.getByRole("button", { name: "Save accepted items" }).click();
-  // Finishing goes straight back to You, which says it is saved.
+  await page.getByRole("button", { name: "An old injury" }).click();
+  await page
+    .getByLabel("An old injury", { exact: true })
+    .fill("Left knee, 2019");
+  await page.getByRole("button", { name: "What I enjoy" }).click();
+  await page
+    .getByLabel("What I enjoy", { exact: true })
+    .fill("Long runs outdoors");
+  await page.getByRole("button", { name: "Finish setup" }).click();
+  // Finishing goes straight back to You, which says it is saved. There is
+  // no review in between.
   await expect(page).toHaveURL(/\/home\/you\?setup=done$/);
   await expect(
     page.getByText(
-      "Your setup is saved. What you accepted is in Goals and Memory.",
+      "Your setup is saved. Change anything in Goals, Memory and Settings.",
     ),
   ).toBeVisible();
 
-  // Publication has deleted the draft, so this result screenshot contains no
-  // intake answers or candidate text.
+  // Finished, setup is no longer listed on You, and the dot is gone.
+  await expect(page.getByRole("link", { name: /^Guided setup/ })).toHaveCount(
+    0,
+  );
+  await expect(page.locator("[data-setup-open]")).toHaveCount(0);
+
+  // You shows none of the answers, so neither does this screenshot.
   await page.screenshot({
     fullPage: true,
     path: path.join(m2EvidenceDirectory, "M2-03-published-390x844.png"),
@@ -262,21 +269,22 @@ async function completeGuidedSetup(
     path: testInfo.outputPath("m2-03-published-390x844.png"),
   });
 
+  // The goal was saved once, by "Continue later", and not a second time by
+  // the Next that followed.
   await page.goto("/home/you/goals");
-  await expect(page.getByText(goalTitle)).toBeVisible();
+  await expect(page.getByText(goalTitle)).toHaveCount(1);
   await page.goto("/home/you/memory");
+  const memory = page.locator('[data-memory-content="true"]');
   await expect(
-    page
-      .locator('[data-memory-content="true"]')
-      .filter({ hasText: /^I am not training currently\.$/ }),
+    memory.filter({ hasText: /^An old injury: Left knee, 2019$/ }),
   ).toBeVisible();
   await expect(
-    page
-      .locator('[data-memory-content="true"]')
-      .filter({ hasText: /^(Timezone|Units): / }),
-  ).toHaveCount(0);
+    memory.filter({ hasText: /^What I enjoy: Long runs outdoors$/ }),
+  ).toBeVisible();
+  // The tapped answers are settings, never memory items.
+  await expect(memory).toHaveCount(2);
 
-  // What the first two steps saved is on Settings, where it is changed,
+  // What setup saved to the profile is on Settings, where it is changed,
   // with the units and the time zone setup took from the browser.
   await page.goto("/home/you/settings");
   await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue("Alex");
@@ -291,6 +299,17 @@ async function completeGuidedSetup(
     page.getByRole("checkbox", { name: "Running", exact: true }),
   ).toBeChecked();
   await expect(page.getByRole("checkbox", { name: "Latzug" })).toBeChecked();
+  await expect(page.getByLabel("Sessions a week", { exact: true })).toHaveValue(
+    "3",
+  );
+  await expect(page.getByRole("checkbox", { name: "Sunday" })).toBeChecked();
+  await expect(
+    page.getByRole("checkbox", { name: "Monday" }),
+  ).not.toBeChecked();
+  await expect(
+    page.getByRole("checkbox", { name: "Home", exact: true }),
+  ).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Dumbbells" })).toBeChecked();
 
   // Done once, setup is not offered again.
   await page.goto("/home/you/onboarding");

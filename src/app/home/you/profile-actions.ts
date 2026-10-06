@@ -11,6 +11,7 @@ import {
   parseProfileSports,
   ProfileDetailsValidationError,
 } from "@/server/profile/profile-records";
+import { parseTrainingSetup } from "@/server/profile/training-setup-records";
 import {
   createProfileRepository,
   parseTimezoneName,
@@ -109,6 +110,20 @@ export async function saveProfileSportsAction(
 ): Promise<ProfileActionState> {
   return run(previous, "Your sports are saved.", (profiles) =>
     profiles.saveSports(parseProfileSports(formData)),
+  );
+}
+
+/**
+ * The training setup (owner, 6 Oct 2026): how often, which days are out,
+ * where, and what there is at home. Guided setup sends one of the four from
+ * each screen and Settings all of them; only what a form names is written.
+ */
+export async function saveTrainingSetupAction(
+  previous: ProfileActionState,
+  formData: FormData,
+): Promise<ProfileActionState> {
+  return run(previous, "Your training setup is saved.", (profiles) =>
+    profiles.saveTrainingSetup(parseTrainingSetup(formData)),
   );
 }
 

@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
  * shown; nothing else is read from it.
  */
 const SETUP_NOTES: Record<string, string> = {
-  done: "Your setup is saved. What you accepted is in Goals and Memory.",
+  done: "Your setup is saved. Change anything in Goals, Memory and Settings.",
 };
 
 export default async function YouPage({
@@ -32,8 +32,11 @@ export default async function YouPage({
       : null;
   const client = await createServerUserClient();
   let profile;
+  let setupOpen: boolean;
   try {
-    profile = await new ProfileRepository(client).getCurrentProfile();
+    const profiles = new ProfileRepository(client);
+    profile = await profiles.getCurrentProfile();
+    setupOpen = !(await profiles.getSetupState()).finished;
   } catch (error) {
     if (
       error instanceof ProfileAuthenticationError &&
@@ -64,6 +67,21 @@ export default async function YouPage({
         </p>
       )}
       <ul className={styles.places}>
+        {/* Guided setup is listed while it is still to be done, first and
+            with the dot the navigation shows for it; once finished it is
+            gone from here (owner, 6 Oct 2026). */}
+        {setupOpen ? (
+          <li>
+            <Link className={styles.place} href="/home/you/onboarding">
+              <strong>
+                Guided setup
+                <span aria-hidden="true" className={styles.dot} />
+                <span className="sr-only">, not finished</span>
+              </strong>
+              <Chevron />
+            </Link>
+          </li>
+        ) : null}
         {PLACES.map(({ href, name }) => (
           <li key={href}>
             <Link className={styles.place} href={href}>
@@ -87,7 +105,6 @@ export default async function YouPage({
 const PLACES = [
   { href: "/home/you/goals", name: "Goals" },
   { href: "/home/you/memory", name: "Memory" },
-  { href: "/home/you/onboarding", name: "Guided setup" },
 ] as const;
 
 /** The only way into Settings, so it is a full touch target with a name. */

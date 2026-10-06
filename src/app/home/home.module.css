@@ -91,6 +91,24 @@
     transform 220ms var(--ease-out);
 }
 
+/* Something under this destination is waiting to be done: the orange dot of
+   a notification, at the icon's corner. */
+.navigationIcon {
+  position: relative;
+}
+
+.navigationDot {
+  position: absolute;
+  top: 0.1rem;
+  right: 0.85rem;
+  width: 0.6rem;
+  height: 0.6rem;
+  border: 2px solid var(--paper);
+  border-radius: 50%;
+  background: var(--ember);
+  box-sizing: content-box;
+}
+
 .navigation a > strong {
   font-size: 0.72rem;
   font-weight: 600;
