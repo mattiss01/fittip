@@ -103,13 +103,17 @@ lane, one screen per merge.
       settles "sport or category" as one shared list. Offer the profile's sports
       in a goal's sports and a session's and an activity's `sport`. Build lane
       once the list exists. Open: whether the stored `sport` columns are renamed.
-- [ ] **The coach reads the athlete profile.** Owner, 5 Oct 2026: age (worked out
-      from the birthday), gender, height and weight, and never the name. Since
-      6 Oct 2026 also the training setup (sessions a week, days out and the note,
-      places, home equipment), which the coach no longer learns from memory. AI
-      data boundary, so careful lane and its own ADR (022). The plan context has
-      about 9 tokens free and this needs about 20 plus a prompt sentence; bring
-      measured numbers and the safety wording (non-diagnostic) before pushing.
+- [ ] **What the coach is given, thought through again.** Owner, 6 Oct 2026: before
+      anything is added, go through with the owner what exactly the coach reads for
+      each thing it does, since it may need more than the profile. Not started;
+      begin by listing what crosses today (goals, memory, training history, session
+      detail, the planning note) beside what does not. Already decided as wanted:
+      age (worked out from the birthday), gender, height and weight, and never the
+      name (5 Oct 2026). Open since the setup rework: the training setup (sessions a
+      week, days out and the note, places, home equipment), which the coach no
+      longer learns from memory, and the sports. AI data boundary, so careful lane
+      and its own ADR (022). The plan context had about 9 tokens free; bring measured
+      numbers and the safety wording (non-diagnostic) with the options.
 - [ ] **Setup's small ends.** From the reviews of 5 and 6 Oct 2026. The leave popup has
       no focus trap and the sport list no arrow keys or outside press; an "About you"
       save refused for a question that is not on screen names no field; removing the
