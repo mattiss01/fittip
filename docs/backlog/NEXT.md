@@ -108,17 +108,19 @@ lane, one screen per merge.
       boundary, so careful lane and its own ADR (021). The plan context has
       about 9 tokens free and this needs about 20 plus a prompt sentence; bring
       measured numbers and the safety wording (non-diagnostic) before pushing.
-- [ ] **Setup after goals, rethought.** Owner, 5 Oct 2026: current training, time and
-      access, preferences and constraints all go. Decided: (1) "How often do you want
-      to train?", sessions a week, and nothing about training now; (2) "Any days you
-      can't train?", every day free until tapped, with an optional line in words;
-      no session length. Still to shape with the owner: (3) places and equipment as
-      chips; (4) what the coach should know and (5) what limits you, both free text
-      and the only source of memory items, drafted by the coach and accepted in
-      (6) review. The tapped facts are profile settings, not memory. The limits text
-      may be sent to the AI (ADR needed; the screen says today that it is not), and
-      limits as a whole are to be thought through again. Careful lane: replaces most
-      of `apply_onboarding_change`.
+- [ ] **Setup after goals, rethought.** Owner, 5 and 6 Oct 2026: current training, time
+      and access, preferences and constraints all go. Decided: (1) "How often do you
+      want to train?", sessions a week, nothing about training now; (2) "Any days you
+      can't train?", every day free until tapped, with an optional line in words; no
+      session length; (3) "Where can you train?", about eight place chips plus the
+      owner's own; (4) "What do you have at home?", equipment chips in groups, asked
+      only when Home is picked, and without bikes or skis, which the sports say.
+      All four are profile settings, changed on Settings, never memory items. Still
+      to shape with the owner: what the coach should know and what limits you, both
+      free text and the only source of memory items, drafted by the coach and
+      accepted in review. The limits text may be sent to the AI (ADR needed; the
+      screen says today that it is not), and limits as a whole are to be thought
+      through again. Careful lane: replaces most of `apply_onboarding_change`.
 - [ ] **Setup's small ends.** From the reviews of 5 Oct 2026. The leave popup has no
       focus trap and the sport list no arrow keys, Escape or outside press; an "About
       you" save refused for a question that is not on screen names no field; removing
