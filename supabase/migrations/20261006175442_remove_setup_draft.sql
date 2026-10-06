@@ -13,8 +13,10 @@
 -- Kept from M2-03, because Memory uses them and items filed by the old setup
 -- still carry them: the `intake_confirmed` provenance, the
 -- `memory_items.intake_field_key` column with its check and index, and the
--- trigger that clears a confidence after the owner edits an item. The
--- scheduler extension stays too; only this job is taken off it.
+-- trigger that clears a confidence after the owner edits an item. M2-03 also
+-- widened `apply_memory_change` so that a rejected item can be accepted; that
+-- function is not touched here and keeps doing so. The scheduler extension
+-- stays too; only this job is taken off it.
 
 -- 1. The nightly cleanup, before the function it calls ------------------------
 

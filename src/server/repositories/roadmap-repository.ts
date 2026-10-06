@@ -467,7 +467,7 @@ export class RoadmapRepository {
    * One place that runs an ADR-015 function and maps its failure.
    *
    * These five deliberately keep the client's default transport retry, unlike
-   * the plan, completion, goal, memory and onboarding RPCs, which switch it off
+   * the plan, completion, goal and memory RPCs, which switch it off
    * because an automatic second attempt could re-run a change the owner was
    * told to review.
    *

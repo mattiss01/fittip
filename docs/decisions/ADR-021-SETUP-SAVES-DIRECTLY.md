@@ -47,7 +47,8 @@ the nightly cleanup job are dropped
 (`20261006175442_remove_setup_draft`). The `intake_confirmed` provenance, the
 `memory_items.intake_field_key` column and the trigger that clears a confidence
 after an owner's edit are kept: Memory uses them, and items filed by the old
-setup still carry them.
+setup still carry them. `apply_memory_change` also keeps what the same
+migration added to it, that a rejected item can be accepted.
 
 ## What is given up
 
