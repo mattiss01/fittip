@@ -1,6 +1,9 @@
 # ADR-011: M2 guided-onboarding draft and publication boundary
 
-**Status:** accepted
+**Status:** superseded by [ADR-021](ADR-021-SETUP-SAVES-DIRECTLY.md) on
+6 October 2026: guided setup saves directly, and the draft, its publication
+function and its cleanup job were removed. Kept as the record of why they
+existed.
 
 **Date:** 2 August 2026
 

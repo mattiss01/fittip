@@ -21,7 +21,7 @@ paths:
   atomic RPC for that ticket, not a sequence of client-side statements.
 - `.retry(false)` is allowed **only** on the atomic `apply_*_change` RPC calls — today
   `apply_completion_change`, `apply_goal_change`, `apply_memory_change`,
-  `apply_onboarding_change`, `apply_rolling_plan_change_set` and `apply_saved_session_change`.
+  `apply_rolling_plan_change_set` and `apply_saved_session_change`.
   `src/architecture/server-boundary.test.ts` asserts the exact set; adding it elsewhere is a
   deliberate architectural change.
 - Map constraint and conflict errors to stable domain results (e.g. the `PT409` conflict path)

@@ -110,15 +110,6 @@ lane, one screen per merge.
       data boundary, so careful lane and its own ADR (022). The plan context has
       about 9 tokens free and this needs about 20 plus a prompt sentence; bring
       measured numbers and the safety wording (non-diagnostic) before pushing.
-- [ ] **Remove the setup draft.** Owner, 6 Oct 2026: setup saves directly now, so the
-      draft goes. Destructive migration, its own merge, careful lane: drop the six
-      `onboarding_*` tables, `apply_onboarding_change`, the three
-      `private.onboarding_*` helpers and the nightly `fittip-onboarding-expiry-cleanup`
-      job; keep the `intake_confirmed` provenance and the
-      `clear_memory_confidence_after_owner_edit` trigger, which Memory uses. Rewrite
-      `m2_03_onboarding.test.sql` and the M3-11 reset fixtures; ADR-021 retires
-      ADR-011. The owner removes the dead files (`onboarding-repository.ts`,
-      `onboarding-records.ts`, `onboarding-contract.ts` and their tests).
 - [ ] **Setup's small ends.** From the reviews of 5 and 6 Oct 2026. The leave popup has
       no focus trap and the sport list no arrow keys or outside press; an "About you"
       save refused for a question that is not on screen names no field; removing the
@@ -128,9 +119,9 @@ lane, one screen per merge.
       when the rest of "About you" then fails; the confirmation link does not check
       its sign-out. "Continue later" drops, without saying so, a goal or note that
       cannot be saved. Setup's notes are limited in characters and the coach's memory
-      in bytes, so many long notes can leave the coach refusing to plan. The goals
-      screen cannot be passed without a goal. Limits as a whole are still to be
-      thought through with the owner, and the coach tidying the notes is not built.
+      in bytes, so many long notes can leave the coach refusing to plan. Limits as a
+      whole are still to be thought through with the owner, and the coach tidying the
+      notes is not built.
 - [ ] **A date typed or picked, everywhere.** Owner, 5 Oct 2026. `DateField` (three typed
       fields and a calendar button) is on a goal's target date, in setup and on Goals,
       and, without the calendar, on the birthday. Still plain date fields: a session's

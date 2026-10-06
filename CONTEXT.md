@@ -39,7 +39,8 @@ _Avoid_: context (unqualified), prompt data, user data
 **Candidate**:
 A record produced for the owner's explicit review — accept, edit and accept, or
 reject — that becomes a goal or memory item only through an explicit
-publication. Onboarding produces candidates; so does a coaching AI.
+publication. A coaching AI produces candidates. Guided setup does not: what
+the owner answers there is saved as written (ADR-021).
 _Avoid_: suggestion, draft, recommendation
 
 ### Planning and training

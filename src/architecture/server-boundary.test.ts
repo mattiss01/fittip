@@ -47,13 +47,6 @@ describe("server repository import boundary", () => {
       "repositories",
       "memory-repository.ts",
     );
-    const onboardingRepositoryPath = join(
-      process.cwd(),
-      "src",
-      "server",
-      "repositories",
-      "onboarding-repository.ts",
-    );
     const rollingPlanRepositoryPath = join(
       process.cwd(),
       "src",
@@ -77,7 +70,6 @@ describe("server repository import boundary", () => {
     );
     const goalRepository = readFileSync(goalRepositoryPath, "utf8");
     const memoryRepository = readFileSync(memoryRepositoryPath, "utf8");
-    const onboardingRepository = readFileSync(onboardingRepositoryPath, "utf8");
     const rollingPlanRepository = readFileSync(
       rollingPlanRepositoryPath,
       "utf8",
@@ -95,7 +87,6 @@ describe("server repository import boundary", () => {
       [
         goalRepositoryPath,
         memoryRepositoryPath,
-        onboardingRepositoryPath,
         rollingPlanRepositoryPath,
         savedSessionRepositoryPath,
         completionLogRepositoryPath,
@@ -108,10 +99,6 @@ describe("server repository import boundary", () => {
     expect(memoryRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
     expect(memoryRepository).toMatch(
       /\.rpc\(\s*"apply_memory_change",[\s\S]*?\)\s*\.retry\(false\)/,
-    );
-    expect(onboardingRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
-    expect(onboardingRepository).toMatch(
-      /\.rpc\(\s*"apply_onboarding_change",[\s\S]*?\)\s*\.retry\(false\)/,
     );
     expect(rollingPlanRepository.match(/\.retry\(false\)/g)).toHaveLength(1);
     expect(rollingPlanRepository).toMatch(
