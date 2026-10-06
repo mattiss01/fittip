@@ -381,6 +381,8 @@ function stepOf(formData: FormData): number | undefined {
 }
 
 function revalidate() {
+  // The layout too: it marks "You" in the navigation while setup is open.
+  revalidatePath("/home", "layout");
   revalidatePath("/home/today");
   revalidatePath("/home/you");
   revalidatePath("/home/you/onboarding");

@@ -100,6 +100,17 @@
   letter-spacing: -0.02em;
 }
 
+/* Still to be done: the same orange dot the navigation puts on "You". */
+.dot {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-left: 0.45rem;
+  border-radius: 50%;
+  background: var(--ember);
+  vertical-align: middle;
+}
+
 .place svg {
   color: var(--moss);
 }

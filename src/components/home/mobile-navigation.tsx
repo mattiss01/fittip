@@ -18,7 +18,12 @@ const DESTINATIONS = [
   { href: "/home/you", label: "You", Icon: YouIcon },
 ] as const;
 
-export function MobileNavigation() {
+export function MobileNavigation({
+  setupOpen = false,
+}: {
+  /** Guided setup is not finished: "You", where it is reached, is marked. */
+  setupOpen?: boolean;
+}) {
   const pathname = usePathname();
 
   // Guided setup is walked from its first step to its last without the app's
@@ -37,8 +42,18 @@ export function MobileNavigation() {
               <Link aria-current={current ? "page" : undefined} href={href}>
                 <span className={styles.navigationIcon}>
                   <Icon />
+                  {setupOpen && href === "/home/you" ? (
+                    <span
+                      aria-hidden="true"
+                      className={styles.navigationDot}
+                      data-setup-open
+                    />
+                  ) : null}
                 </span>
                 <strong>{label}</strong>
+                {setupOpen && href === "/home/you" ? (
+                  <span className="sr-only">, setup not finished</span>
+                ) : null}
               </Link>
             </li>
           );

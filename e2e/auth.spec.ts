@@ -103,6 +103,8 @@ async function completeGuidedSetup(
   // answers. Reached by address: on a page under You two links are named You.
   await page.goto("/home/you");
   await expect(page.getByRole("link", { name: /^Guided setup/ })).toBeVisible();
+  // Still to be done, so "You" carries a dot in the navigation.
+  await expect(page.locator("[data-setup-open]")).toHaveCount(1);
   await page.screenshot({
     fullPage: true,
     path: path.join(m2EvidenceDirectory, "M2-03-start-390x844.png"),
@@ -250,6 +252,12 @@ async function completeGuidedSetup(
       "Your setup is saved. Change anything in Goals, Memory and Settings.",
     ),
   ).toBeVisible();
+
+  // Finished, setup is no longer listed on You, and the dot is gone.
+  await expect(page.getByRole("link", { name: /^Guided setup/ })).toHaveCount(
+    0,
+  );
+  await expect(page.locator("[data-setup-open]")).toHaveCount(0);
 
   // You shows none of the answers, so neither does this screenshot.
   await page.screenshot({

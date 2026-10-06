@@ -37,6 +37,21 @@ describe("MobileNavigation", () => {
     expect(navigation).not.toHaveTextContent("History");
   });
 
+  it("marks You while guided setup is still to be done, and not otherwise", () => {
+    const { container, rerender } = render(<MobileNavigation setupOpen />);
+
+    expect(container.querySelectorAll("[data-setup-open]")).toHaveLength(1);
+    // Said as well as shown.
+    expect(
+      screen.getByRole("link", { name: "You, setup not finished" }),
+    ).toHaveAttribute("href", "/home/you");
+    expect(screen.getByRole("link", { name: "Today" })).toBeVisible();
+
+    rerender(<MobileNavigation />);
+    expect(container.querySelector("[data-setup-open]")).toBeNull();
+    expect(screen.getByRole("link", { name: "You" })).toBeVisible();
+  });
+
   it("is not shown during guided setup", () => {
     usePathnameMock.mockReturnValueOnce("/home/you/onboarding");
     render(<MobileNavigation />);
