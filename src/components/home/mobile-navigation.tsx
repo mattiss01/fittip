@@ -37,12 +37,19 @@ export function MobileNavigation({
         {DESTINATIONS.map(({ href, label, Icon }) => {
           // A page under a destination keeps that destination current.
           const current = pathname === href || pathname.startsWith(`${href}/`);
+          // Said as well as shown, but as a description: the link is still
+          // named "You", which is what it is looked for by.
+          const marked = setupOpen && href === "/home/you";
           return (
             <li key={href}>
-              <Link aria-current={current ? "page" : undefined} href={href}>
+              <Link
+                aria-current={current ? "page" : undefined}
+                aria-describedby={marked ? "setup-open-note" : undefined}
+                href={href}
+              >
                 <span className={styles.navigationIcon}>
                   <Icon />
-                  {setupOpen && href === "/home/you" ? (
+                  {marked ? (
                     <span
                       aria-hidden="true"
                       className={styles.navigationDot}
@@ -51,10 +58,12 @@ export function MobileNavigation({
                   ) : null}
                 </span>
                 <strong>{label}</strong>
-                {setupOpen && href === "/home/you" ? (
-                  <span className="sr-only">, setup not finished</span>
-                ) : null}
               </Link>
+              {marked ? (
+                <span className="sr-only" id="setup-open-note">
+                  Guided setup is not finished
+                </span>
+              ) : null}
             </li>
           );
         })}

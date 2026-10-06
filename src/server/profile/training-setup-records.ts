@@ -151,7 +151,12 @@ export function parseSetupNotes(formData: FormData): SetupNoteInput[] {
   const seen = new Set<string>();
   texts.forEach((value, index) => {
     if (typeof value !== "string") throw new ProfileDetailsValidationError();
-    const written = value.trim().replace(/\s+/g, " ");
+    // As written, line breaks included; only runs of spaces are tidied.
+    const written = value
+      .replace(/\r\n?/g, "\n")
+      .replace(/[ \t]+/g, " ")
+      .replace(/ ?\n ?/g, "\n")
+      .trim();
     if (written === "") return;
     const prompt = SETUP_NOTE_PROMPTS.find(
       (known) => known.key === kinds[index],

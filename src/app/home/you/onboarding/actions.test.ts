@@ -270,19 +270,23 @@ describe("guided setup actions", () => {
   it("passes over text Memory already holds, so pressing Finish again is safe", async () => {
     memory.list.mockResolvedValue({
       revision: 3,
-      items: [{ content: "An old injury: Left knee, 2019" }],
+      items: [
+        { status: "active", content: "An old injury: Left knee, 2019" },
+        // Set aside earlier, so the same text is wanted again.
+        { status: "archived", content: "Why I'm doing this: For my health" },
+      ],
     });
     await finishSetupAction(
       INITIAL_SETUP_ACTION_STATE,
       notesForm([
         ["injury", "Left knee, 2019"],
-        ["enjoy", "Long runs outdoors"],
+        ["why", "For my health"],
       ]),
     );
 
     expect(memory.create).toHaveBeenCalledExactlyOnceWith(
-      "preference",
-      "What I enjoy: Long runs outdoors",
+      "profile_fact",
+      "Why I'm doing this: For my health",
       undefined,
       3,
     );

@@ -143,7 +143,7 @@ describe("parseSetupNotes", () => {
       parseSetupNotes(
         form([
           ["noteKind", "injury"],
-          ["noteText", " Left knee,\n 2019 "],
+          ["noteText", " Left   knee,\r\n 2019 "],
           ["noteKind", "dislike"],
           ["noteText", "Treadmills"],
           ["noteKind", "routine"],
@@ -153,7 +153,8 @@ describe("parseSetupNotes", () => {
         ]),
       ),
     ).toEqual([
-      { memoryType: "constraint", content: "An old injury: Left knee, 2019" },
+      // Line breaks are kept; runs of spaces are not.
+      { memoryType: "constraint", content: "An old injury: Left knee,\n2019" },
       { memoryType: "preference", content: "What I can't stand: Treadmills" },
       {
         memoryType: "profile_fact",

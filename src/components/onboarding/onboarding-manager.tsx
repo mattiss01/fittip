@@ -425,7 +425,7 @@ function GoalsStep({
           // A goal added here and not saved yet can be taken away again;
           // a saved one is changed or removed on Goals.
           onRemove={
-            row.id === null && rows.length > 1
+            row.id === null && rows.length > 1 && !pending
               ? () =>
                   setRows((current) =>
                     current.filter((other) => other.key !== row.key),
@@ -437,6 +437,9 @@ function GoalsStep({
       ))}
       <button
         className={styles.addEntry}
+        // Not while a save is on its way: its answer names the rows by
+        // their place, which adding or removing one would shift.
+        disabled={pending}
         onClick={() => {
           const key = nextKey.current;
           nextKey.current += 1;
@@ -592,12 +595,13 @@ function NotesStep() {
   const [fields, setFields] = useState<NoteField[]>([]);
   const nextKey = useRef(0);
   const added = useRef<HTMLTextAreaElement | null>(null);
+  const justAdded = useRef(false);
   const full = fields.length >= SETUP_NOTES_MAX_COUNT;
 
   // The field a tap just added is the one to write in.
   useEffect(() => {
-    added.current?.focus();
-    added.current = null;
+    if (justAdded.current) added.current?.focus();
+    justAdded.current = false;
   }, [fields.length]);
 
   return (
@@ -612,6 +616,7 @@ function NotesStep() {
             onClick={() => {
               const key = nextKey.current;
               nextKey.current += 1;
+              justAdded.current = true;
               setFields((current) => [
                 ...current,
                 { key, kind: prompt.key, text: "" },
@@ -647,7 +652,7 @@ function NotesStep() {
                 onInput={(event) => fitToText(event.currentTarget)}
                 ref={(element) => {
                   fitToText(element);
-                  if (element && index === fields.length - 1 && !field.text) {
+                  if (element && index === fields.length - 1) {
                     added.current = element;
                   }
                 }}
@@ -728,9 +733,16 @@ function GoalSport({
   const [open, setOpen] = useState(false);
   const adding = choice === ANOTHER_SPORT;
   const labelId = `goal-sport-${index}`;
+  const button = useRef<HTMLButtonElement>(null);
+  // The list goes away with the choice, so focus goes back to the button
+  // that opened it instead of being left on nothing.
+  const close = () => {
+    setOpen(false);
+    button.current?.focus();
+  };
   const pick = (value: string) => {
     setChoice(value);
-    setOpen(false);
+    close();
   };
   // Left on the sport it came with, a goal keeps every sport it named; only
   // a different choice makes it that one alone.
@@ -743,11 +755,20 @@ function GoalSport({
   // A list of our own, opened under its button, in place of the browser's
   // drop-down, whose opened list cannot be styled (owner, 5 Oct 2026).
   return (
-    <div className={styles.fieldGroup}>
+    <div
+      className={styles.fieldGroup}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && open) {
+          event.stopPropagation();
+          close();
+        }
+      }}
+    >
       <span className={styles.fieldLabel} id={labelId}>
         Sport
       </span>
       <button
+        ref={button}
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-labelledby={`${labelId} ${labelId}-value`}

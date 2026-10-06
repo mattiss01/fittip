@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 
 import { ConnectionNotice } from "@/components/home/connection-notice";
 import { MobileNavigation } from "@/components/home/mobile-navigation";
@@ -7,11 +7,7 @@ import styles from "./home.module.css";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomeLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function HomeLayout({ children }: { children: ReactNode }) {
   return (
     <div className={styles.appShell}>
       <a className={styles.skipLink} href="#main-content">
@@ -19,9 +15,17 @@ export default async function HomeLayout({
       </a>
       <ConnectionNotice />
       {children}
-      <MobileNavigation setupOpen={await isSetupOpen()} />
+      {/* The page is not kept waiting for the mark: the navigation is there
+          at once and gains its dot when the answer comes. */}
+      <Suspense fallback={<MobileNavigation />}>
+        <MarkedNavigation />
+      </Suspense>
     </div>
   );
+}
+
+async function MarkedNavigation() {
+  return <MobileNavigation setupOpen={await isSetupOpen()} />;
 }
 
 /**

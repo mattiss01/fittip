@@ -313,7 +313,13 @@ async function saveNotes(
     if (notes.length > 0) {
       const memory = await createMemoryRepository();
       const collection = await memory.list();
-      const held = new Set(collection.items.map((item) => item.content));
+      // Only what Memory holds as active: text that matches an item set
+      // aside earlier is wanted again and is filed anew.
+      const held = new Set(
+        collection.items
+          .filter((item) => item.status === "active")
+          .map((item) => item.content),
+      );
       let revision = collection.revision;
       for (const note of notes) {
         if (held.has(note.content)) continue;

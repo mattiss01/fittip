@@ -104,8 +104,8 @@ set setup_skipped_at = prompt.dismissed_at
 from public.onboarding_prompt_states as prompt
 where prompt.user_id = profile.user_id;
 
--- Begun: a draft that has not expired. It opens at the first screen it has
--- not answered, which the application works out from the profile.
+-- Begun: a draft that has not expired. Setup opens at its first screen, with
+-- what the profile and Goals already hold filled in.
 update public.profiles as profile
 set setup_step = 1
 from public.onboarding_drafts as draft
