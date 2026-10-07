@@ -163,13 +163,6 @@ lane, one screen per merge.
       session's link to the log that replaced it; the coach's proposals record which
       logs they read; ADR-013 decision 3 already says a deleted record reaches no
       provider and no summary.
-- [~] **A migration to remove a log's feeling.** Careful lane. Outcome:
-      `completions.feeling` and its check are dropped, `apply_completion_change`
-      refuses the key, no screen shows "Felt", and the coach's training history no
-      longer carries it. Owner, 7 Oct 2026: drop it for good, founder values
-      included (destructive, confirmed); ADR-013 decision 4 amended in its own
-      commit. In the same replacement of the function: the planned session's row
-      is held before its snapshot is read, so a log and an edit cannot cross.
 - Cost to expect: many unit and browser tests assert the current copy, so cutting text means
       rewriting those assertions in the same merge.
 
