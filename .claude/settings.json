@@ -47,6 +47,8 @@
       "Bash(npx supabase test db --local *)",
       "Bash(npx.cmd supabase gen types --local *)",
       "Bash(npx supabase gen types --local *)",
+      "Bash(npm.cmd run types:gen)",
+      "Bash(npm run types:gen)",
       "Bash(npx.cmd supabase migration new *)",
       "Bash(npx supabase migration new *)",
       "Bash(git status *)",

@@ -12,6 +12,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "types:gen": "node scripts/generate-database-types.mjs",
     "types:patch": "node scripts/patch-database-types.mjs",
     "test": "vitest",
     "test:run": "vitest run",
