@@ -201,9 +201,9 @@ test.describe("M2-01 goal management", () => {
       // The status message is transient and is lost if the surface has to
       // reload itself, so every lifecycle step asserts the committed record
       // instead. The message copy is covered by the action unit tests.
-      await expect(
-        page.getByRole("heading", { name: "Mobility habit" }),
-      ).toBeHidden();
+      // The card, not any heading: the sheet is named by the goal as well
+      // and is still leaving when the card has gone (run 37608545951).
+      await expect(goalCard(page, "Mobility habit")).toHaveCount(0);
       await expect(historyEntry(page, "Mobility habit")).toContainText(
         "Abandoned on",
       );
@@ -220,9 +220,7 @@ test.describe("M2-01 goal management", () => {
         achievementMenu.getByText(/records the goal as achieved/i),
       ).toBeVisible();
       await achieveConfirmation.confirm.click();
-      await expect(
-        page.getByRole("heading", { name: "Achievement candidate" }),
-      ).toBeHidden();
+      await expect(goalCard(page, "Achievement candidate")).toHaveCount(0);
       await expect(historyEntry(page, "Achievement candidate")).toContainText(
         "Achieved on",
       );
@@ -239,9 +237,7 @@ test.describe("M2-01 goal management", () => {
         abandonMenu.getByText(/records the goal as abandoned/i),
       ).toBeVisible();
       await abandonConfirmation.confirm.click();
-      await expect(
-        page.getByRole("heading", { name: "Abandon candidate" }),
-      ).toBeHidden();
+      await expect(goalCard(page, "Abandon candidate")).toHaveCount(0);
       await expect(historyEntry(page, "Abandon candidate")).toContainText(
         "Abandoned on",
       );
@@ -280,9 +276,7 @@ test.describe("M2-01 goal management", () => {
         ),
       });
       await deleteConfirmation.confirm.click();
-      await expect(
-        page.getByRole("heading", { name: "Temporary idea" }),
-      ).toBeHidden();
+      await expect(goalCard(page, "Temporary idea")).toHaveCount(0);
 
       expect(
         await page.evaluate(
