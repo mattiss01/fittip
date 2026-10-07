@@ -156,14 +156,6 @@ lane, one screen per merge.
       Belongs with "Write a roadmap yourself", which writes the same shape by hand. A
       change to the stored shape is careful lane (`roadmap_versions` content, the AI
       contract, ADR-015).
-- [~] **The server does not refuse a plan change to a logged session.** Careful lane.
-      Outcome: edit, move, lock, cancel and reactivate answer `PT425` once a log names
-      the session, as delete already did, and the coach is not asked to fill one.
-      Owner, 7 Oct 2026: all five verbs; any log settles it, a skip logged ahead
-      included; deleting a log is to become possible (next item), and this rule needs
-      no change for it. Constraints: one function body each in
-      `apply_rolling_plan_change_set` and `begin_session_activity_generation`, no
-      table, column, type or grant change.
 - [ ] **Delete a log.** Owner, 7 Oct 2026: it should be possible, which also frees a
       settled session for planning again. Careful lane: `apply_completion_change`
       accepts only create and edit, and completions are permanent records today. Open
