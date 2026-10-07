@@ -23,14 +23,14 @@ select is(
 select ok(
   (
     select position(
-      'array_position(activity_areas, NULL::text) IS NULL'
+      'array_position(sports, NULL::text) IS NULL'
       in pg_get_constraintdef(oid)
     ) > 0
     from pg_constraint
     where conrelid = 'public.goals'::regclass
-      and conname = 'goals_activity_areas_check'
+      and conname = 'goals_sports_check'
   ),
-  'the table constraint rejects NULL activity-area elements'
+  'the table constraint rejects NULL sports'
 );
 
 insert into auth.users (id, email, raw_app_meta_data, raw_user_meta_data)
@@ -67,9 +67,7 @@ select lives_ok(
       p_operation => 'create',
       p_title => 'Core one',
       p_desired_outcome => 'Keep core one measurable.',
-      p_category => 'other',
-      p_activity_areas => array['Running'],
-      p_start_date => '2026-07-29',
+      p_sports => array['Running'],
       p_priority_tier => 'core'
     )
   $sql$,
@@ -82,9 +80,7 @@ select lives_ok(
       p_operation => 'create',
       p_title => 'Core two',
       p_desired_outcome => 'Keep core two measurable.',
-      p_category => 'other',
-      p_activity_areas => array['Swimming'],
-      p_start_date => '2026-07-29',
+      p_sports => array['Swimming'],
       p_priority_tier => 'core'
     )
   $sql$,
@@ -97,9 +93,7 @@ select lives_ok(
       p_operation => 'create',
       p_title => 'Support one',
       p_desired_outcome => 'Keep support one measurable.',
-      p_category => 'other',
-      p_activity_areas => array['Mobility'],
-      p_start_date => '2026-07-29',
+      p_sports => array['Mobility'],
       p_priority_tier => 'supporting'
     )
   $sql$,
@@ -112,9 +106,7 @@ select lives_ok(
       p_operation => 'create',
       p_title => 'Support two',
       p_desired_outcome => 'Keep support two measurable.',
-      p_category => 'other',
-      p_activity_areas => array['Walking'],
-      p_start_date => '2026-07-29',
+      p_sports => array['Walking'],
       p_priority_tier => 'supporting'
     )
   $sql$,
@@ -126,17 +118,15 @@ select throws_ok(
     select public.apply_goal_change(
       p_expected_collection_revision => 4,
       p_operation => 'create',
-      p_title => 'Null area through function',
+      p_title => 'Null sport through function',
       p_desired_outcome => 'This must roll back.',
-      p_category => 'other',
-      p_activity_areas => array['Cycling', null],
-      p_start_date => '2026-07-29',
+      p_sports => array['Cycling', null],
       p_priority_tier => 'supporting'
     )
   $sql$,
-  '23514',
-  null,
-  'the function path rejects a NULL activity-area label'
+  '22023',
+  'Invalid goal change.',
+  'the function path rejects a NULL sport'
 );
 select is(
   (
@@ -151,7 +141,7 @@ select is(
   (
     select count(*)::bigint
     from public.goals
-    where title = 'Null area through function'
+    where title = 'Null sport through function'
   ),
   0::bigint,
   'the rejected function mutation persists no goal'
@@ -164,26 +154,22 @@ select throws_ok(
       user_id,
       title,
       desired_outcome,
-      category,
-      activity_areas,
-      start_date,
+      sports,
       priority_tier,
       active_rank
     )
     values (
       '53000000-0000-4000-8000-000000000001',
-      'Null area direct',
+      'Null sport direct',
       'The table constraint must reject this.',
-      'other',
       array['Cycling', null],
-      '2026-07-29',
       'supporting',
       3
     )
   $sql$,
   '23514',
   null,
-  'the table boundary directly rejects a NULL activity-area label'
+  'the table boundary directly rejects a NULL sport'
 );
 
 set local role authenticated;
@@ -201,9 +187,7 @@ select lives_ok(
         p_goal_id => %L::uuid,
         p_title => 'Core one',
         p_desired_outcome => 'Keep core one measurable.',
-        p_category => 'other',
-        p_activity_areas => array['Running'],
-        p_start_date => '2026-07-29',
+        p_sports => array['Running'],
         p_priority_tier => 'supporting'
       )
     $sql$,
@@ -240,9 +224,7 @@ select lives_ok(
         p_goal_id => %L::uuid,
         p_title => 'Core one',
         p_desired_outcome => 'Keep core one measurable.',
-        p_category => 'other',
-        p_activity_areas => array['Running'],
-        p_start_date => '2026-07-29',
+        p_sports => array['Running'],
         p_priority_tier => 'core'
       )
     $sql$,
@@ -277,9 +259,7 @@ select lives_ok(
       p_operation => 'create',
       p_title => 'Core three',
       p_desired_outcome => 'Fill the remaining core slot.',
-      p_category => 'other',
-      p_activity_areas => array['Climbing'],
-      p_start_date => '2026-07-29',
+      p_sports => array['Climbing'],
       p_priority_tier => 'core'
     )
   $sql$,
@@ -294,9 +274,7 @@ select throws_ok(
         p_goal_id => %L::uuid,
         p_title => 'Support one',
         p_desired_outcome => 'Keep support one measurable.',
-        p_category => 'other',
-        p_activity_areas => array['Mobility'],
-        p_start_date => '2026-07-29',
+        p_sports => array['Mobility'],
         p_priority_tier => 'core'
       )
     $sql$,
@@ -333,8 +311,6 @@ select throws_ok(
       p_operation => 'create',
       p_title => 'Stale create',
       p_desired_outcome => 'This must roll back.',
-      p_category => 'other',
-      p_start_date => '2026-07-29',
       p_priority_tier => 'supporting'
     )
   $sql$,
@@ -356,8 +332,6 @@ select throws_ok(
         p_goal_id => %L::uuid,
         p_title => 'Stale edit',
         p_desired_outcome => 'This must roll back.',
-        p_category => 'other',
-        p_start_date => '2026-07-29',
         p_priority_tier => 'supporting'
       )
     $sql$,
@@ -377,7 +351,7 @@ select throws_ok(
     $sql$
       select public.apply_goal_change(
         p_expected_collection_revision => 6,
-        p_operation => 'archive',
+        p_operation => 'pause',
         p_goal_id => %L::uuid
       )
     $sql$,
@@ -385,12 +359,12 @@ select throws_ok(
   ),
   'PT409',
   'Goals changed. Reload and try again.',
-  'stale archive is rejected'
+  'stale pause is rejected'
 );
 select is(
-  (select archived_at from public.goals where title = 'Support one'),
-  null::timestamptz,
-  'stale archive leaves the goal unarchived'
+  (select status from public.goals where title = 'Support one'),
+  'active',
+  'stale pause leaves the goal active'
 );
 select throws_ok(
   format(
@@ -479,9 +453,7 @@ select lives_ok(
       p_operation => 'create',
       p_title => 'User B private goal',
       p_desired_outcome => 'Remain isolated from user A.',
-      p_category => 'other',
-      p_activity_areas => array['Cycling'],
-      p_start_date => '2026-07-29',
+      p_sports => array['Cycling'],
       p_priority_tier => 'supporting'
     )
   $sql$,
