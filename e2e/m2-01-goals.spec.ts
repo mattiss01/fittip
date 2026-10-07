@@ -185,17 +185,13 @@ test.describe("M2-01 goal management", () => {
 
       const mobilityCard = goalCard(page, "Mobility habit");
       await openGoalDetails(mobilityCard);
-      // Archive is no longer offered (owner, 2 Oct 2026). This goal is set
-      // aside by keyboard through Abandoned, which keeps the same checks: the
+      // This goal is set aside by keyboard through Abandoned: the
       // confirmation opens on Enter and its button is next in the tab order.
       const setAsideConfirmation = confirmation(
         mobilityCard,
         "Abandoned",
         "Confirm abandoned",
       );
-      await expect(
-        mobilityCard.locator('details[data-confirmation="archive"]'),
-      ).toHaveCount(0);
       await setAsideConfirmation.summary.focus();
       await page.keyboard.press("Enter");
       await expect(

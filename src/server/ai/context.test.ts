@@ -97,7 +97,14 @@ function build(
 
 describe("coach AI context assembly", () => {
   it("copies only the allowlisted goal and memory fields", () => {
-    const assembled = build();
+    // The repository's goal carries more than the coach may read: the desired
+    // outcome waits for its own decision (ADR-012, amended 7 Oct 2026).
+    const stored = {
+      ...goal(),
+      desiredOutcome: "OUTCOME-THAT-MUST-NOT-TRAVEL",
+      activeRank: 1,
+    };
+    const assembled = build({ goals: [stored] });
 
     expect(assembled.context.targetableGoals).toEqual([
       {
@@ -116,7 +123,9 @@ describe("coach AI context assembly", () => {
       },
     ]);
     // Nothing spreads the source record, so a column added later stays invisible.
-    expect(assembled.serialized).not.toContain("archivedAt");
+    expect(assembled.serialized).not.toContain("OUTCOME-THAT-MUST-NOT-TRAVEL");
+    expect(assembled.serialized).not.toContain("desiredOutcome");
+    expect(assembled.serialized).not.toContain("activeRank");
     expect(assembled.serialized).not.toContain("provenance");
   });
 
