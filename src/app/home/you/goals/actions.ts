@@ -54,26 +54,18 @@ export async function changeGoalAction(
         operation === "edit"
           ? optionalText(formData, "originalPriorityTier")
           : undefined;
-      const activityAreas = text(formData, "activityAreas")
+      const sports = text(formData, "sports")
         .split(",")
-        .map((area) => area.trim())
+        .map((sport) => sport.trim())
         .filter(Boolean);
-      // A goal names at least one sport (owner, 5 Oct 2026). The rule is the
-      // forms', here and in guided setup, not the database's.
-      if (activityAreas.length < 1) throw new GoalValidationError();
+      // A goal names at least one sport (owner, 5 Oct 2026). Refused here
+      // too, before the repository and the database refuse it.
+      if (sports.length < 1) throw new GoalValidationError();
       const input = {
         title: text(formData, "title"),
         desiredOutcome: text(formData, "desiredOutcome"),
-        category: text(formData, "category"),
-        activityAreas,
-        // Not asked any more: the form sends the owner's day for a new goal
-        // and the goal's own start date for an edit.
-        startDate: text(formData, "startDate"),
+        sports,
         targetDate: optionalText(formData, "targetDate"),
-        targetDetail: optionalText(formData, "targetDetail"),
-        targetMetricLabel: optionalText(formData, "targetMetricLabel"),
-        targetMetricValue: optionalText(formData, "targetMetricValue"),
-        targetMetricUnit: optionalText(formData, "targetMetricUnit"),
         priorityTier,
         targetRank:
           operation === "edit" &&
@@ -81,8 +73,6 @@ export async function changeGoalAction(
           originalPriorityTier !== priorityTier
             ? undefined
             : optionalNumber(formData, "targetRank"),
-        rationale: optionalText(formData, "rationale"),
-        constraints: optionalText(formData, "constraints"),
       };
       if (operation === "create") {
         await repository.create(input, expectedRevision);
@@ -100,15 +90,9 @@ export async function changeGoalAction(
         expectedRevision,
       );
     } else if (
-      [
-        "pause",
-        "resume",
-        "achieve",
-        "abandon",
-        "reopen",
-        "archive",
-        "delete",
-      ].includes(operation)
+      ["pause", "resume", "achieve", "abandon", "reopen", "delete"].includes(
+        operation,
+      )
     ) {
       await repository.transition(
         operation as
@@ -117,7 +101,6 @@ export async function changeGoalAction(
           | "achieve"
           | "abandon"
           | "reopen"
-          | "archive"
           | "delete",
         formData.get("goalId"),
         expectedRevision,
@@ -155,14 +138,6 @@ export async function changeGoalAction(
           "Three core goals are already active. Make this supporting or pause another core goal.",
           true,
           "core-limit",
-        );
-      }
-      if (error.reason === "archive-required") {
-        return resultState(
-          "conflict",
-          "This goal has history, so it cannot be deleted. Mark it Abandoned instead.",
-          true,
-          "archive-required",
         );
       }
       return resultState(
@@ -214,17 +189,9 @@ function draftFrom(formData: FormData): GoalActionDraft {
   return {
     title: stringValue(formData.get("title")),
     desiredOutcome: stringValue(formData.get("desiredOutcome")),
-    category: stringValue(formData.get("category")),
-    activityAreas: stringValue(formData.get("activityAreas")),
-    startDate: stringValue(formData.get("startDate")),
+    sports: stringValue(formData.get("sports")),
     targetDate: stringValue(formData.get("targetDate")),
-    targetDetail: stringValue(formData.get("targetDetail")),
-    targetMetricLabel: stringValue(formData.get("targetMetricLabel")),
-    targetMetricValue: stringValue(formData.get("targetMetricValue")),
-    targetMetricUnit: stringValue(formData.get("targetMetricUnit")),
     priorityTier: stringValue(formData.get("priorityTier")),
-    rationale: stringValue(formData.get("rationale")),
-    constraints: stringValue(formData.get("constraints")),
   };
 }
 
@@ -242,7 +209,6 @@ function resultCopy(operation: string): string {
     achieve: "Goal marked achieved.",
     abandon: "Goal marked abandoned.",
     reopen: "Goal reopened.",
-    archive: "Goal archived.",
     delete: "Goal permanently deleted.",
   };
   return copy[operation] ?? "Goal change saved.";

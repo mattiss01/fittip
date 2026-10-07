@@ -1,14 +1,3 @@
-export const GOAL_CATEGORIES = [
-  "performance_event",
-  "skill",
-  "strength",
-  "endurance",
-  "mobility",
-  "body_composition",
-  "recovery_general_fitness",
-  "other",
-] as const;
-
 export const GOAL_TIERS = ["core", "supporting"] as const;
 
 export const GOAL_STATUSES = [
@@ -18,7 +7,6 @@ export const GOAL_STATUSES = [
   "abandoned",
 ] as const;
 
-export type GoalCategory = (typeof GOAL_CATEGORIES)[number];
 export type GoalTier = (typeof GOAL_TIERS)[number];
 export type GoalStatus = (typeof GOAL_STATUSES)[number];
 
@@ -29,7 +17,6 @@ export type GoalStatus = (typeof GOAL_STATUSES)[number];
  */
 export type GoalContextCandidate = {
   status: GoalStatus;
-  archivedAt: string | null;
 };
 
 /**
@@ -53,31 +40,19 @@ export type GoalContextSelection<Candidate extends GoalContextCandidate> = {
 export function selectActiveGoalContext<Candidate extends GoalContextCandidate>(
   goals: Candidate[],
 ): GoalContextSelection<Candidate> {
-  // Archiving disqualifies on its own and is checked before status, so a future
-  // status value cannot make an archived goal eligible by accident.
-  const live = goals.filter((goal) => goal.archivedAt === null);
-
   return {
-    targetable: live.filter((goal) => goal.status === "active"),
-    historical: live.filter((goal) => goal.status === "achieved"),
+    targetable: goals.filter((goal) => goal.status === "active"),
+    historical: goals.filter((goal) => goal.status === "achieved"),
   };
 }
 
 export type GoalInput = {
   title: string;
   desiredOutcome: string;
-  category: GoalCategory;
-  activityAreas: string[];
-  startDate: string;
+  sports: string[];
   targetDate?: string;
-  targetDetail?: string;
-  targetMetricLabel?: string;
-  targetMetricValue?: string;
-  targetMetricUnit?: string;
   priorityTier: GoalTier;
   targetRank?: number;
-  rationale?: string;
-  constraints?: string;
 };
 
 export class GoalValidationError extends Error {
@@ -92,29 +67,18 @@ export function parseGoalInput(value: unknown): GoalInput {
 
   const title = boundedRequired(value.title, 120);
   const desiredOutcome = boundedRequired(value.desiredOutcome, 1000);
-  const category = enumValue(value.category, GOAL_CATEGORIES);
   const priorityTier = enumValue(value.priorityTier, GOAL_TIERS);
-  const startDate = isoDate(value.startDate);
   const targetDate = optionalIsoDate(value.targetDate);
-  if (targetDate && targetDate < startDate) throw new GoalValidationError();
 
-  const activityAreas = Array.isArray(value.activityAreas)
-    ? value.activityAreas.map((area) => boundedRequired(area, 60))
+  // One to ten, as `apply_goal_change` requires.
+  const sports = Array.isArray(value.sports)
+    ? value.sports.map((sport) => boundedRequired(sport, 60))
     : [];
   if (
-    activityAreas.length > 10 ||
-    new Set(activityAreas.map((area) => area.toLocaleLowerCase())).size !==
-      activityAreas.length
-  ) {
-    throw new GoalValidationError();
-  }
-
-  const targetMetricLabel = optionalBounded(value.targetMetricLabel, 80);
-  const targetMetricValue = optionalBounded(value.targetMetricValue, 120);
-  const targetMetricUnit = optionalBounded(value.targetMetricUnit, 40);
-  if (
-    (targetMetricLabel === undefined) !== (targetMetricValue === undefined) ||
-    (targetMetricUnit !== undefined && targetMetricLabel === undefined)
+    sports.length < 1 ||
+    sports.length > 10 ||
+    new Set(sports.map((sport) => sport.toLocaleLowerCase())).size !==
+      sports.length
   ) {
     throw new GoalValidationError();
   }
@@ -127,18 +91,10 @@ export function parseGoalInput(value: unknown): GoalInput {
   return {
     title,
     desiredOutcome,
-    category,
-    activityAreas,
-    startDate,
+    sports,
     ...(targetDate ? { targetDate } : {}),
-    ...optional("targetDetail", optionalBounded(value.targetDetail, 500)),
-    ...optional("targetMetricLabel", targetMetricLabel),
-    ...optional("targetMetricValue", targetMetricValue),
-    ...optional("targetMetricUnit", targetMetricUnit),
     priorityTier,
     ...(targetRank === undefined ? {} : { targetRank }),
-    ...optional("rationale", optionalBounded(value.rationale, 500)),
-    ...optional("constraints", optionalBounded(value.constraints, 1000)),
   };
 }
 
@@ -174,11 +130,6 @@ function boundedRequired(value: unknown, max: number): string {
   const clean = value.trim();
   if (clean.length < 1 || clean.length > max) throw new GoalValidationError();
   return clean;
-}
-
-function optionalBounded(value: unknown, max: number): string | undefined {
-  if (value === undefined || value === null || value === "") return undefined;
-  return boundedRequired(value, max);
 }
 
 function isoDate(value: unknown): string {
@@ -219,15 +170,6 @@ function enumValue<const T extends readonly string[]>(
     throw new GoalValidationError();
   }
   return value;
-}
-
-function optional<Key extends string>(
-  key: Key,
-  value: string | undefined,
-): { [K in Key]?: string } {
-  return value === undefined
-    ? {}
-    : ({ [key]: value } as { [K in Key]: string });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

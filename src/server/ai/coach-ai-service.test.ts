@@ -1054,11 +1054,10 @@ function targetableGoal(): CoachAIGoalRecord {
   return {
     id: COACH_AI_FIXTURE_TARGETABLE_GOAL_ID,
     title: GOAL_TITLE,
-    category: "performance_event",
+    sports: ["Running"],
     priorityTier: "core",
     targetDate: "2026-11-15",
     status: "active",
-    archivedAt: null,
   };
 }
 
@@ -1066,11 +1065,10 @@ function historicalGoal(): CoachAIGoalRecord {
   return {
     id: COACH_AI_FIXTURE_HISTORICAL_GOAL_ID,
     title: "Hold a 30 second front lever",
-    category: "skill",
+    sports: ["Calisthenics"],
     priorityTier: "supporting",
     targetDate: null,
     status: "achieved",
-    archivedAt: null,
   };
 }
 

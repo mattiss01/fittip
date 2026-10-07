@@ -41,12 +41,7 @@ export default async function OnboardingPage({
     // setup's goals screen goes on from. Paused and finished goals are
     // Goals' to show.
     goals = collection.goals
-      .filter(
-        (goal) =>
-          goal.status === "active" &&
-          goal.activeRank !== null &&
-          goal.archivedAt === null,
-      )
+      .filter((goal) => goal.status === "active" && goal.activeRank !== null)
       .sort(
         (left, right) =>
           left.priorityTier.localeCompare(right.priorityTier) ||
@@ -56,7 +51,7 @@ export default async function OnboardingPage({
         id: goal.id,
         title: goal.title,
         desiredOutcome: goal.desiredOutcome,
-        activityAreas: goal.activityAreas,
+        sports: goal.sports,
         targetDate: goal.targetDate,
         priorityTier: goal.priorityTier,
       }));

@@ -46,7 +46,7 @@ export type SetupGoalView = {
   id: string;
   title: string;
   desiredOutcome: string;
-  activityAreas: string[];
+  sports: string[];
   targetDate: string | null;
   priorityTier: "core" | "supporting";
 };

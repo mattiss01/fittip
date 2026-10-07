@@ -35,11 +35,10 @@ function goal(overrides: Partial<CoachAIGoalRecord> = {}): CoachAIGoalRecord {
   return {
     id: "a1000000-0000-4000-8000-000000000001",
     title: "Run a hilly half marathon",
-    category: "performance_event",
+    sports: ["Running"],
     priorityTier: "core",
     targetDate: "2026-10-15",
     status: "active",
-    archivedAt: null,
     ...overrides,
   };
 }
@@ -104,7 +103,7 @@ describe("coach AI context assembly", () => {
       {
         id: "a1000000-0000-4000-8000-000000000001",
         title: "Run a hilly half marathon",
-        category: "performance_event",
+        sports: ["Running"],
         priorityTier: "core",
         targetDate: "2026-10-15",
       },
@@ -121,7 +120,7 @@ describe("coach AI context assembly", () => {
     expect(assembled.serialized).not.toContain("provenance");
   });
 
-  it("excludes paused, abandoned, and archived goals", () => {
+  it("excludes paused and abandoned goals", () => {
     const assembled = build({
       goals: [
         goal(),
@@ -129,10 +128,6 @@ describe("coach AI context assembly", () => {
         goal({
           id: "a1000000-0000-4000-8000-000000000003",
           status: "abandoned",
-        }),
-        goal({
-          id: "a1000000-0000-4000-8000-000000000004",
-          archivedAt: "2026-07-01T00:00:00.000Z",
         }),
         goal({
           id: "a1000000-0000-4000-8000-000000000005",
@@ -308,14 +303,15 @@ describe("the per-source context allocation", () => {
     }
   });
 
-  it("admits the maximum permitted goals at their worst-case size", () => {
-    // The count cap and the byte allocation must agree, or the count cap is a
-    // number that never binds and the byte cap is a surprise.
+  it("admits twelve goals with the longest title and a long sport", () => {
+    // The allocation is a limit rather than a worst case since a goal is sent
+    // with its sports (ADR-012, amended 7 Oct 2026). This is the size it must
+    // still hold: the count cap, each goal at its longest title.
     const many = Array.from({ length: 12 }, (_, index) =>
       goal({
         id: `a1000000-0000-4000-8000-0000000000${index + 10}`,
         title: "t".repeat(120),
-        category: "c".repeat(60),
+        sports: ["s".repeat(60)],
       }),
     );
 
@@ -324,6 +320,27 @@ describe("the per-source context allocation", () => {
     expect(assembled.usage.targetable_goals).toBeLessThanOrEqual(
       limits.bytes.targetableGoals,
     );
+  });
+
+  it("names goals when their sports carry them past the allocation", () => {
+    const many = Array.from({ length: 6 }, (_, index) =>
+      goal({
+        id: `a1000000-0000-4000-8000-0000000000${index + 10}`,
+        title: "t".repeat(120),
+        sports: Array.from({ length: 10 }, (_, sport) =>
+          `${sport}`.padEnd(60, "s"),
+        ),
+      }),
+    );
+
+    try {
+      build({ goals: many });
+      expect.unreachable("expected a refusal");
+    } catch (error) {
+      expect((error as CoachAIContextTooLargeError).source).toBe(
+        "targetable_goals",
+      );
+    }
   });
 
   it("still generates for an owner whose window is full and who missed everything", () => {
@@ -1111,7 +1128,7 @@ describe("what a plan regeneration would cost", () => {
       goal({
         id: `a1000000-0000-4000-8000-0000000000${index + 10}`,
         title: "Run a hilly half marathon in the spring",
-        category: "performance_event",
+        sports: ["Running"],
       }),
     );
     const memory = Array.from({ length: 12 }, (_, index) =>

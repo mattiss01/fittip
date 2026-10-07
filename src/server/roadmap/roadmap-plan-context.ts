@@ -49,9 +49,9 @@ import type {
  * - `out_of_window` — the week being planned is not inside the roadmap's own
  *   dates. The direction still informs the week; it just does not describe it.
  * - `goal_missing` — a goal one of the phases gives attention to is gone,
- *   archived, or no longer active or achieved. That is the predicate
+ *   or no longer active or achieved. That is the predicate
  *   `accept_roadmap_proposal` already applies to a goal source
- *   (`20260916075522_m3_15f_roadmap_generation.sql:433`), rather than a second
+ *   (`20261007094408_goals_match_the_form.sql`), rather than a second
  *   definition of what makes a goal reference stale. Goals carry a collection
  *   revision and not a per-goal one, so existence is the fact available here.
  */
@@ -72,7 +72,7 @@ export type RoadmapPlanContextInput = {
   horizonEndDate: string;
   /**
    * Ids of goals the owner may currently be coached toward — active or
-   * achieved and not archived. A phase attending to anything else is the
+   * achieved. A phase attending to anything else is the
    * `goal_missing` stale reason.
    */
   targetableGoalIds: ReadonlySet<string>;

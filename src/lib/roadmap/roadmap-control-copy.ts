@@ -182,7 +182,7 @@ export const ROADMAP_CONTROL_COPY = {
     memory:
       "There is too much active memory to send in one request. Disable or shorten a few items, then try again.",
     goals:
-      "There are too many active goals to send in one request. Pause or archive a few, then try again.",
+      "Your active goals are too much to send in one request. Pause a few, or shorten the sports they name, then try again.",
     planning_note:
       "That note is longer than the request allows. Shorten it and try again.",
     regeneration_feedback:

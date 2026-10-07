@@ -64,7 +64,6 @@ export default async function GoalsPage() {
       </header>
       <GoalManager
         expectedRevision={collection.revision}
-        today={isoDateInTimezone(new Date(), timezoneName)}
         initialGoals={collection.goals.map((goal) =>
           withStatusDate(goal, changes, timezoneName),
         )}
@@ -74,9 +73,9 @@ export default async function GoalsPage() {
 }
 
 /**
- * The day a goal entered the status it has now, in the owner's zone. An
- * archive has its own timestamp; the others are the goal's last change, read
- * with the status it had then, and used only while the goal still has it.
+ * The day a goal entered the status it has now, in the owner's zone: the
+ * moment it was achieved, or for a paused or abandoned goal its last change.
+ * Read with the status it had then, and used only while the goal still has it.
  */
 function withStatusDate(
   goal: Goal,
@@ -85,10 +84,9 @@ function withStatusDate(
 ): GoalView {
   const change = changes.find((candidate) => candidate.goalId === goal.id);
   const at =
-    goal.archivedAt ??
-    (goal.status !== "active" && change?.status === goal.status
+    goal.status !== "active" && change?.status === goal.status
       ? change.changedAt
-      : null);
+      : null;
   return {
     ...goal,
     statusDate:

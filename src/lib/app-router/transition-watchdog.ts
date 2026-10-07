@@ -38,8 +38,8 @@
  * What these rules can observe is narrow, and the copy they drive must not
  * exceed it. A resource timing entry proves that a **response arrived**. It
  * does not prove what the response said: these actions answer 200 for a
- * validation failure, a stale conflict, a core-limit conflict, an
- * archive-required conflict, an expired session, and a persistence error just
+ * validation failure, a stale conflict, a core-limit conflict,
+ * an expired session, and a persistence error just
  * as they do for a success. So the outcome here is only ever "a reply came
  * back and never rendered" or "nothing came back at all" — never "it saved".
  *

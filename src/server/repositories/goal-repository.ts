@@ -23,37 +23,31 @@ import {
 } from "@/server/goals/goal-records";
 
 const GOAL_COLUMNS =
-  "id, user_id, title, desired_outcome, category, activity_areas, start_date, target_date, target_detail, target_metric_label, target_metric_value, target_metric_unit, priority_tier, status, active_rank, last_active_rank, rationale, constraints_text, archived_at, created_at, updated_at" as const;
+  "id, user_id, title, desired_outcome, sports, target_date, priority_tier, status, active_rank, last_active_rank, created_at, updated_at" as const;
 
 type GoalClient = SupabaseClient<Database> | ServerUserClient;
-type GoalRow = Database["public"]["Tables"]["goals"]["Row"];
+// Without `achieved_at`, which `listStatusChanges` reads on its own.
+type GoalRow = Omit<
+  Database["public"]["Tables"]["goals"]["Row"],
+  "achieved_at"
+>;
 type GoalOperation =
   | "pause"
   | "resume"
   | "achieve"
   | "abandon"
   | "reopen"
-  | "archive"
   | "delete";
 
 export type Goal = {
   id: string;
   title: string;
   desiredOutcome: string;
-  category: string;
-  activityAreas: string[];
-  startDate: string;
+  sports: string[];
   targetDate: string | null;
-  targetDetail: string | null;
-  targetMetricLabel: string | null;
-  targetMetricValue: string | null;
-  targetMetricUnit: string | null;
   priorityTier: GoalTier;
   status: GoalStatus;
   activeRank: number | null;
-  rationale: string | null;
-  constraints: string | null;
-  archivedAt: string | null;
 };
 
 export type GoalCollection = { revision: number; goals: Goal[] };
@@ -80,9 +74,7 @@ export class GoalPersistenceError extends Error {
 }
 
 export class GoalConflictError extends Error {
-  constructor(
-    readonly reason: "stale" | "core-limit" | "archive-required" = "stale",
-  ) {
+  constructor(readonly reason: "stale" | "core-limit" = "stale") {
     super("The goal collection changed before this save.");
     this.name = "GoalConflictError";
   }
@@ -104,7 +96,6 @@ export class GoalRepository {
           .from("goals")
           .select(GOAL_COLUMNS)
           .eq("user_id", userId)
-          .order("archived_at", { nullsFirst: true })
           .order("status")
           .order("priority_tier")
           .order("active_rank"),
@@ -117,14 +108,10 @@ export class GoalRepository {
    * When each goal that is not active entered the status it has, for the
    * Goals page, which says "Achieved on ...".
    *
-   * This is the goal's own `updated_at`. `apply_goal_change` sets it when a
-   * goal is paused, achieved or abandoned. Nothing the Goals page offers
-   * writes to such a goal again except reopening or archiving it, so in
-   * practice it is the day of the change. It is not guaranteed: the `edit`
-   * operation accepts any goal that is not archived, and Guided setup uses it
-   * when a new answer is filed over a saved goal of the same title, which
-   * would move the day. The lifecycle log would be the exact source and is
-   * not one yet: it records reopening only (`docs/backlog/NEXT.md`).
+   * An achieved goal has its own `achieved_at`, which `apply_goal_change` sets
+   * on `achieve` and clears on `reopen` and nothing else writes. A paused or
+   * abandoned goal has none, so it answers with `updated_at`, which an edit of
+   * such a goal would move.
    *
    * Kept out of `list()`, whose goals also go to the coach's context.
    */
@@ -132,14 +119,14 @@ export class GoalRepository {
     const userId = await this.getVerifiedUserId();
     const { data, error } = await this.client
       .from("goals")
-      .select("id, status, updated_at")
+      .select("id, status, achieved_at, updated_at")
       .eq("user_id", userId)
       .neq("status", "active");
     if (error) throw new GoalPersistenceError();
     return data.map((row) => ({
       goalId: row.id,
       status: row.status,
-      changedAt: row.updated_at,
+      changedAt: row.achieved_at ?? row.updated_at,
     }));
   }
 
@@ -201,24 +188,10 @@ export class GoalRepository {
       ...(id ? { p_goal_id: id } : {}),
       p_title: goal.title,
       p_desired_outcome: goal.desiredOutcome,
-      p_category: goal.category,
-      p_activity_areas: goal.activityAreas,
-      p_start_date: goal.startDate,
+      p_sports: goal.sports,
       ...(goal.targetDate ? { p_target_date: goal.targetDate } : {}),
-      ...(goal.targetDetail ? { p_target_detail: goal.targetDetail } : {}),
-      ...(goal.targetMetricLabel
-        ? { p_target_metric_label: goal.targetMetricLabel }
-        : {}),
-      ...(goal.targetMetricValue
-        ? { p_target_metric_value: goal.targetMetricValue }
-        : {}),
-      ...(goal.targetMetricUnit
-        ? { p_target_metric_unit: goal.targetMetricUnit }
-        : {}),
       p_priority_tier: goal.priorityTier,
       ...(goal.targetRank ? { p_target_rank: goal.targetRank } : {}),
-      ...(goal.rationale ? { p_rationale: goal.rationale } : {}),
-      ...(goal.constraints ? { p_constraints_text: goal.constraints } : {}),
     });
   }
 
@@ -234,9 +207,7 @@ export class GoalRepository {
         const reason =
           error.message === "Three core goals are already active."
             ? "core-limit"
-            : error.message === "This goal must be archived."
-              ? "archive-required"
-              : "stale";
+            : "stale";
         throw new GoalConflictError(reason);
       }
       throw new GoalPersistenceError();
@@ -266,19 +237,10 @@ function toGoal(row: GoalRow): Goal {
     id: row.id,
     title: row.title,
     desiredOutcome: row.desired_outcome,
-    category: row.category,
-    activityAreas: row.activity_areas,
-    startDate: row.start_date,
+    sports: row.sports,
     targetDate: row.target_date,
-    targetDetail: row.target_detail,
-    targetMetricLabel: row.target_metric_label,
-    targetMetricValue: row.target_metric_value,
-    targetMetricUnit: row.target_metric_unit,
     priorityTier: row.priority_tier as GoalTier,
     status: row.status as Goal["status"],
     activeRank: row.active_rank,
-    rationale: row.rationale,
-    constraints: row.constraints_text,
-    archivedAt: row.archived_at,
   };
 }

@@ -254,6 +254,23 @@ test.describe("M2-01 goal management", () => {
         "Abandoned on",
       );
 
+      // A finished goal can be deleted too (owner, 7 Oct 2026), from History.
+      await page
+        .locator("summary")
+        .filter({ hasText: /^History/ })
+        .click();
+      const achievedEntry = historyEntry(page, "Achievement candidate");
+      const historyDelete = confirmation(
+        achievedEntry,
+        "Delete",
+        "Confirm permanent delete",
+      );
+      await historyDelete.summary.click();
+      await expect(achievedEntry.getByText(/cannot be undone/i)).toBeVisible();
+      await historyDelete.confirm.click();
+      await expect(achievedEntry).toHaveCount(0);
+      await expect(historyEntry(page, "Abandon candidate")).toHaveCount(1);
+
       await createGoal(page, "Temporary idea", "supporting", "Walking");
       const temporaryCard = goalCard(page, "Temporary idea");
       await openGoalDetails(temporaryCard);

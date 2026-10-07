@@ -49,7 +49,7 @@ describe("goal actions", () => {
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
         title: "Run a trail event",
-        activityAreas: ["Trail running", "Hiking"],
+        sports: ["Trail running", "Hiking"],
         priorityTier: "core",
       }),
       0,
@@ -98,7 +98,7 @@ describe("goal actions", () => {
     const create = vi.fn();
     createRepositoryMock.mockResolvedValue({ create });
     const form = createForm();
-    form.set("activityAreas", " , ");
+    form.set("sports", " , ");
 
     const result = await changeGoalAction(INITIAL_GOAL_ACTION_STATE, form);
 
@@ -141,7 +141,6 @@ describe("goal actions", () => {
     ["achieve", "Goal marked achieved."],
     ["abandon", "Goal marked abandoned."],
     ["reopen", "Goal reopened."],
-    ["archive", "Goal archived."],
     ["delete", "Goal permanently deleted."],
   ])("reports %s as %s", async (operation, message) => {
     const transition = vi.fn().mockResolvedValue({
@@ -178,17 +177,9 @@ function createForm() {
   form.set("expectedRevision", "0");
   form.set("title", "Run a trail event");
   form.set("desiredOutcome", "Finish with steady pacing.");
-  form.set("category", "performance_event");
-  form.set("activityAreas", "Trail running, Hiking");
-  form.set("startDate", "2026-07-29");
+  form.set("sports", "Trail running, Hiking");
   form.set("targetDate", "2026-10-10");
-  form.set("targetDetail", "");
-  form.set("targetMetricLabel", "Finish time");
-  form.set("targetMetricValue", "Under 3 hours");
-  form.set("targetMetricUnit", "hours");
   form.set("priorityTier", "core");
   form.set("targetRank", "");
-  form.set("rationale", "");
-  form.set("constraints", "");
   return form;
 }

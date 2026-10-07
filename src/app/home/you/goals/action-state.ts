@@ -1,17 +1,9 @@
 export type GoalActionDraft = {
   title: string;
   desiredOutcome: string;
-  category: string;
-  activityAreas: string;
-  startDate: string;
+  sports: string;
   targetDate: string;
-  targetDetail: string;
-  targetMetricLabel: string;
-  targetMetricValue: string;
-  targetMetricUnit: string;
   priorityTier: string;
-  rationale: string;
-  constraints: string;
 };
 
 export type GoalActionState = {
@@ -21,7 +13,7 @@ export type GoalActionState = {
   operation?: string;
   goalId?: string;
   draft?: GoalActionDraft;
-  conflict?: "stale" | "core-limit" | "archive-required";
+  conflict?: "stale" | "core-limit";
 };
 
 export const INITIAL_GOAL_ACTION_STATE: GoalActionState = {

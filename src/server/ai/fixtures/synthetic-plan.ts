@@ -498,10 +498,10 @@ function horizonDates(context: CoachAIContext): string[] {
 
 function sportFor(goal: CoachAIGoalReference | undefined): string {
   if (!goal) return "General training";
-  const haystack = `${goal.title} ${goal.category}`.toLowerCase();
+  const haystack = `${goal.title} ${goal.sports.join(" ")}`.toLowerCase();
   return (
     SPORTS.find(([needle]) => haystack.includes(needle))?.[1] ??
-    bound(goal.category.replace(/_/g, " "), 60)
+    bound(goal.sports[0] ?? "General training", 60)
   );
 }
 

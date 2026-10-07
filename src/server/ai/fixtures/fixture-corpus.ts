@@ -33,7 +33,7 @@ export const COACH_AI_FIXTURE_PLAN_DAY_COUNT = 7;
 const PHASE_ONE_END = "2026-09-14";
 const PHASE_TWO_START = "2026-09-15";
 
-/** An active, unarchived core goal: the only kind a proposal may target. */
+/** An active core goal: the only kind a proposal may target. */
 export const COACH_AI_FIXTURE_TARGETABLE_GOAL_ID =
   "a1000000-0000-4000-8000-000000000001";
 /** An achieved goal: readable history under ADR-012, never a valid objective. */
@@ -78,7 +78,7 @@ export const COACH_AI_FIXTURE_CONTEXT: CoachAIContext = {
     {
       id: COACH_AI_FIXTURE_TARGETABLE_GOAL_ID,
       title: "Run a hilly half marathon",
-      category: "performance_event",
+      sports: ["Running"],
       priorityTier: "core",
       targetDate: "2026-11-15",
     },
@@ -87,7 +87,7 @@ export const COACH_AI_FIXTURE_CONTEXT: CoachAIContext = {
     {
       id: COACH_AI_FIXTURE_HISTORICAL_GOAL_ID,
       title: "Hold a 30 second front lever",
-      category: "skill",
+      sports: ["Calisthenics"],
       priorityTier: "supporting",
       targetDate: null,
     },

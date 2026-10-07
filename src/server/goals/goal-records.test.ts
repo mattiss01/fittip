@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  GOAL_STATUSES,
   GoalValidationError,
   parseExpectedRevision,
   parseGoalInput,
@@ -14,13 +13,8 @@ import {
 const VALID = {
   title: "Run a trail event",
   desiredOutcome: "Finish with steady pacing.",
-  category: "performance_event",
-  activityAreas: ["Trail running"],
-  startDate: "2026-07-29",
+  sports: ["Trail running"],
   targetDate: "2026-10-10",
-  targetMetricLabel: "Finish time",
-  targetMetricValue: "Under 3 hours",
-  targetMetricUnit: "hours",
   priorityTier: "core",
 };
 
@@ -34,10 +28,13 @@ describe("goal record validation", () => {
   it.each([
     { ...VALID, title: "" },
     { ...VALID, desiredOutcome: "x".repeat(1001) },
-    { ...VALID, category: "running_only" },
-    { ...VALID, activityAreas: ["Run", "run"] },
-    { ...VALID, targetDate: "2026-07-28" },
-    { ...VALID, targetMetricValue: undefined },
+    { ...VALID, sports: [] },
+    { ...VALID, sports: ["Run", "run"] },
+    {
+      ...VALID,
+      sports: Array.from({ length: 11 }, (_, index) => `Sport ${index}`),
+    },
+    { ...VALID, targetDate: "10 October" },
     { ...VALID, priorityTier: "core", targetRank: 4 },
   ])("rejects invalid field boundaries", (input) => {
     expect(() => parseGoalInput(input)).toThrow(GoalValidationError);
@@ -68,20 +65,11 @@ describe("active goal context", () => {
     ["achieved", "historical"],
     ["paused", "excluded"],
     ["abandoned", "excluded"],
-  ])("places an unarchived %s goal in %s", (status, placement) => {
+  ])("places a %s goal in %s", (status, placement) => {
     const context = selectActiveGoalContext([goal({ status })]);
 
     expect(context.targetable).toHaveLength(placement === "targetable" ? 1 : 0);
     expect(context.historical).toHaveLength(placement === "historical" ? 1 : 0);
-  });
-
-  it.each(GOAL_STATUSES)("excludes an archived %s goal", (status) => {
-    const context = selectActiveGoalContext([
-      goal({ status, archivedAt: "2026-07-30T09:00:00.000Z" }),
-    ]);
-
-    expect(context.targetable).toHaveLength(0);
-    expect(context.historical).toHaveLength(0);
   });
 
   it("never lets an achieved goal reach the targetable field", () => {
@@ -121,7 +109,6 @@ function goal(
   return {
     id: "10000000-0000-4000-8000-000000000001",
     status: "active",
-    archivedAt: null,
     ...overrides,
   };
 }

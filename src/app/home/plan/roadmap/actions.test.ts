@@ -598,11 +598,10 @@ function goal() {
   return {
     id: GOAL_ID,
     title: "Hilly half marathon",
-    category: "endurance",
+    sports: ["Running"],
     priorityTier: "core" as const,
     targetDate: addDays(SOURCE_START, 70),
     status: "active" as const,
-    archivedAt: null,
   };
 }
 

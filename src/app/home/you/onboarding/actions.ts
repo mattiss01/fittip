@@ -136,14 +136,14 @@ async function saveGoals(
       }
     }
     await keepGoalSports(
-      rows.flatMap((row) => (row === null ? [] : row.input.activityAreas)),
+      rows.flatMap((row) => (row === null ? [] : row.input.sports)),
     );
   } catch (error) {
     revalidate();
     if (error instanceof GoalValidationError) {
       return result(
         "validation",
-        "Check each goal: it needs a title, a desired outcome and a sport, and a target date that is not in the past.",
+        "Check each goal: it needs a title, a desired outcome and a sport.",
       );
     }
     if (error instanceof GoalConflictError) {
@@ -191,43 +191,27 @@ function parseGoalRows(formData: FormData, saved: Goal[]): GoalRow[] {
     const asked = {
       title,
       desiredOutcome: text(formData, `goalOutcome:${index}`),
-      activityAreas: text(formData, `goalActivities:${index}`)
+      sports: text(formData, `goalActivities:${index}`)
         .split(",")
-        .map((area) => area.trim())
+        .map((sport) => sport.trim())
         .filter(Boolean),
       targetDate: text(formData, `goalTargetDate:${index}`) || undefined,
       priorityTier,
     };
-    // A goal names at least one sport, here as on Goals (owner, 5 Oct 2026).
-    if (asked.activityAreas.length < 1) throw new GoalValidationError();
-
+    // A goal names at least one sport, here as on Goals (owner, 5 Oct 2026):
+    // `parseGoalInput` refuses one without.
     const input = parseGoalInput(
       existing
         ? {
             ...asked,
-            category: existing.category,
-            startDate: existing.startDate,
-            targetDetail: existing.targetDetail ?? undefined,
-            targetMetricLabel: existing.targetMetricLabel ?? undefined,
-            targetMetricValue: existing.targetMetricValue ?? undefined,
-            targetMetricUnit: existing.targetMetricUnit ?? undefined,
             // It keeps its place among its own kind, and is filed last
             // among the other kind when that is changed.
             targetRank:
               existing.priorityTier === priorityTier
                 ? (existing.activeRank ?? undefined)
                 : undefined,
-            rationale: existing.rationale ?? undefined,
-            constraints: existing.constraints ?? undefined,
           }
-        : {
-            ...asked,
-            // Setup asks for no kind; the goal's sports say what it is about.
-            category: "other",
-            // The owner's own day, which the form knows and the server,
-            // before a zone is certain, does not.
-            startDate: text(formData, `goalStartDate:${index}`),
-          },
+        : asked,
     );
     return {
       input,
@@ -240,7 +224,7 @@ function parseGoalRows(formData: FormData, saved: Goal[]): GoalRow[] {
         existing.desiredOutcome !== input.desiredOutcome ||
         existing.priorityTier !== input.priorityTier ||
         (existing.targetDate ?? undefined) !== input.targetDate ||
-        existing.activityAreas.join("\n") !== input.activityAreas.join("\n"),
+        existing.sports.join("\n") !== input.sports.join("\n"),
     };
   });
 }

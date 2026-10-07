@@ -484,10 +484,9 @@ function goal() {
   return {
     id: GOAL_ID,
     title: "Run a half marathon",
-    category: "endurance",
+    sports: ["Running"],
     priorityTier: "core" as const,
     status: "active" as const,
-    archivedAt: null,
     targetDate: null,
     activeRank: 1,
   };

@@ -620,7 +620,7 @@ describe("the production coaching context source", () => {
       {
         id: goal().id,
         title: goal().title,
-        category: goal().category,
+        sports: goal().sports,
         priorityTier: goal().priorityTier,
         targetDate: goal().targetDate,
       },
@@ -721,11 +721,10 @@ function goal(): CoachAIGoalRecord {
   return {
     id: "c1000000-0000-4000-8000-000000000001",
     title: "Run a hilly half marathon",
-    category: "performance_event",
+    sports: ["Running"],
     priorityTier: "core",
     targetDate: "2026-11-15",
     status: "active",
-    archivedAt: null,
   };
 }
 

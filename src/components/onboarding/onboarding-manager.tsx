@@ -5,7 +5,6 @@ import {
   useEffect,
   useRef,
   useState,
-  useSyncExternalStore,
   useTransition,
   type FormEvent,
 } from "react";
@@ -499,17 +498,12 @@ function GoalFields({
   sports: string[];
   onRemove?: () => void;
 }) {
-  // The owner's own day once the browser is there to ask; the server, which
-  // does not know their zone yet, renders the UTC one. It is the start date
-  // of a goal made here.
-  const startDate = useSyncExternalStore(subscribeNothing, localToday, today);
   // A goal with a title is one that will be saved, and so must name a sport.
   const [titled, setTitled] = useState(Boolean(goal?.title));
   return (
     <fieldset className={styles.entryCard}>
       <legend>Goal {index + 1}</legend>
       <input name={`goalId:${index}`} type="hidden" value={id ?? ""} />
-      <input name={`goalStartDate:${index}`} type="hidden" value={startDate} />
       <label>
         Goal title
         <input
@@ -535,7 +529,7 @@ function GoalFields({
       </label>
       <GoalSport
         index={index}
-        initial={goal?.activityAreas ?? []}
+        initial={goal?.sports ?? []}
         required={index === 0 || titled}
         sports={sports}
       />
@@ -860,19 +854,4 @@ function fitToText(field: HTMLTextAreaElement | null) {
   if (!field) return;
   field.style.height = "auto";
   field.style.height = `${field.scrollHeight}px`;
-}
-
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function localToday() {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
-}
-
-function subscribeNothing() {
-  return () => {};
 }

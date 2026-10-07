@@ -38,7 +38,6 @@ describe("GoalRepository", () => {
 
   it.each([
     ["Three core goals are already active.", "core-limit"],
-    ["This goal must be archived.", "archive-required"],
     ["Goals changed. Reload and try again.", "stale"],
   ] as const)(
     "maps only deliberate PT409 conflicts",
@@ -101,7 +100,7 @@ describe("GoalRepository", () => {
     const rpc = vi.fn();
     const repository = new GoalRepository(client({ auth, rpc }));
     await expect(
-      repository.create({ ...goal(), targetDate: "2026-07-01" }, 0),
+      repository.create({ ...goal(), targetDate: "1 July 2026" }, 0),
     ).rejects.toThrow("The goal details are invalid.");
     expect(auth.getClaims).not.toHaveBeenCalled();
     expect(rpc).not.toHaveBeenCalled();
@@ -124,9 +123,7 @@ function goal() {
   return {
     title: "Run a trail event",
     desiredOutcome: "Finish with steady pacing.",
-    category: "performance_event",
-    activityAreas: ["Trail running"],
-    startDate: "2026-07-29",
+    sports: ["Trail running"],
     priorityTier: "core",
   };
 }

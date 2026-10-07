@@ -96,9 +96,7 @@ describe("guided setup actions", () => {
       {
         title: "Finish a calm 10K",
         desiredOutcome: "Run the autumn event with even pacing.",
-        category: "other",
-        activityAreas: ["Running"],
-        startDate: "2026-10-06",
+        sports: ["Running"],
         priorityTier: "core",
       },
       0,
@@ -107,7 +105,7 @@ describe("guided setup actions", () => {
     expect(redirectMock).not.toHaveBeenCalled();
   });
 
-  it("edits a goal the account already has, keeping what setup does not ask", async () => {
+  it("edits a goal the account already has, keeping its place", async () => {
     const state = await saveSetupGoalsAction(
       INITIAL_SETUP_ACTION_STATE,
       goalForm([
@@ -122,13 +120,10 @@ describe("guided setup actions", () => {
       {
         title: "10k under 47 minutes",
         desiredOutcome: "Run the autumn event with even pacing.",
-        // Its own kind, start date, reason and place among the core goals.
-        category: "endurance",
-        activityAreas: ["Running"],
-        startDate: "2026-09-01",
+        sports: ["Running"],
         priorityTier: "core",
+        // Its own place among the core goals.
         targetRank: 2,
-        rationale: "Kept from before",
       },
       4,
     );
@@ -345,20 +340,11 @@ function savedGoal(): Goal {
     id: GOAL_ID,
     title: "10k under 48 minutes",
     desiredOutcome: "Run it in autumn.",
-    category: "endurance",
-    activityAreas: ["Running"],
-    startDate: "2026-09-01",
+    sports: ["Running"],
     targetDate: null,
-    targetDetail: null,
-    targetMetricLabel: null,
-    targetMetricValue: null,
-    targetMetricUnit: null,
     priorityTier: "core",
     status: "active",
     activeRank: 2,
-    rationale: "Kept from before",
-    constraints: null,
-    archivedAt: null,
   };
 }
 
@@ -383,7 +369,6 @@ function goalForm(
       row.outcome ?? "Run the autumn event with even pacing.",
     );
     form.set(`goalActivities:${index}`, row.sport ?? "");
-    form.set(`goalStartDate:${index}`, "2026-10-06");
     form.set(`goalTargetDate:${index}`, "");
     form.set(`goalTier:${index}`, row.tier ?? "core");
   });

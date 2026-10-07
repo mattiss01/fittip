@@ -75,7 +75,7 @@ describe("GoalsPage", () => {
   it("loads only the authenticated collection on the server", async () => {
     listMock.mockResolvedValue({
       revision: 3,
-      goals: [{ id: "goal", status: "active", archivedAt: null }],
+      goals: [{ id: "goal", status: "active" }],
     });
     render(await GoalsPage());
     expect(screen.getByText(/Goals revision 3, count 1/)).toBeVisible();
@@ -86,9 +86,9 @@ describe("GoalsPage", () => {
     listMock.mockResolvedValue({
       revision: 3,
       goals: [
-        { id: "achieved", status: "achieved", archivedAt: null },
-        { id: "reopened", status: "active", archivedAt: null },
-        { id: "unlogged", status: "abandoned", archivedAt: null },
+        { id: "achieved", status: "achieved" },
+        { id: "reopened", status: "active" },
+        { id: "unlogged", status: "abandoned" },
       ],
     });
     listChangesMock.mockResolvedValue([

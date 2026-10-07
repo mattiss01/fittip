@@ -472,7 +472,6 @@ function goal() {
     priorityTier: "core" as const,
     targetDate: "2026-11-01",
     status: "active" as const,
-    archivedAt: null,
   };
 }
 

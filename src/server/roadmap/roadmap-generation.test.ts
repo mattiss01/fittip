@@ -334,10 +334,9 @@ function goal() {
   return {
     id: GOAL_ID,
     title: "Finish a half marathon",
-    category: "endurance",
+    sports: ["Running"],
     priorityTier: "core" as const,
     targetDate: addDays(TODAY, 70),
     status: "active" as const,
-    archivedAt: null,
   };
 }
