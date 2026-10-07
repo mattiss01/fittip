@@ -156,11 +156,21 @@ lane, one screen per merge.
       Belongs with "Write a roadmap yourself", which writes the same shape by hand. A
       change to the stored shape is careful lane (`roadmap_versions` content, the AI
       contract, ADR-015).
-- [ ] **The server does not refuse a plan change to a logged session.** Since 3 Oct 2026
-      a logged session's page offers only Edit log and Save to library, but `planAction`
-      still accepts edit, move, lock and cancel on one (only delete is refused,
-      `session-completed`); a page left open from before the log could still send them.
-      Refusing them is a rule in the rolling-plan change function, so careful lane.
+- [~] **The server does not refuse a plan change to a logged session.** Careful lane.
+      Outcome: edit, move, lock, cancel and reactivate answer `PT425` once a log names
+      the session, as delete already did, and the coach is not asked to fill one.
+      Owner, 7 Oct 2026: all five verbs; any log settles it, a skip logged ahead
+      included; deleting a log is to become possible (next item), and this rule needs
+      no change for it. Constraints: one function body each in
+      `apply_rolling_plan_change_set` and `begin_session_activity_generation`, no
+      table, column, type or grant change.
+- [ ] **Delete a log.** Owner, 7 Oct 2026: it should be possible, which also frees a
+      settled session for planning again. Careful lane: `apply_completion_change`
+      accepts only create and edit, and completions are permanent records today. Open
+      for the owner: any log or only a skip logged ahead; what happens to a replaced
+      session's link to the log that replaced it; the coach's proposals record which
+      logs they read; ADR-013 decision 3 already says a deleted record reaches no
+      provider and no summary.
 - [ ] **A migration to remove a log's feeling.** Owner, 3 Oct 2026: "How did it feel?"
       left the log's steps that day (effort says the same) and should go for good. Careful
       lane. The column is `completions.feeling`, written by `apply_completion_change` and
@@ -168,6 +178,8 @@ lane, one screen per merge.
       replacement's `replacement.feeling` (no longer asked either), and the coach's
       training history (`training-history-context.ts`, `contracts.ts`), so the AI context
       changes too. Nothing is in production, so existing values need no keeping.
+      Owner, 7 Oct 2026: drop the column for good, founder values included; ADR-013
+      decision 4 is amended in its own commit. After the logged-session rule.
 - Cost to expect: many unit and browser tests assert the current copy, so cutting text means
       rewriting those assertions in the same merge.
 
