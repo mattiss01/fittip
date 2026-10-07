@@ -75,7 +75,6 @@ export type TrainingHistoryCompletion = {
   sport: string | null;
   durationMinutes: number | null;
   perceivedEffort: number | null;
-  feeling: string | null;
   painReported: boolean;
   illnessReported: boolean;
   injuryReported: boolean;
@@ -363,7 +362,6 @@ function toCompletionReference(
     sport: entry.sport,
     durationMinutes: entry.durationMinutes,
     perceivedEffort: entry.perceivedEffort,
-    feeling: entry.feeling,
     painReported: entry.painReported,
     illnessReported: entry.illnessReported,
     injuryReported: entry.injuryReported,

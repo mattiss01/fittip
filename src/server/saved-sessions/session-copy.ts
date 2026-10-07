@@ -158,7 +158,7 @@ export function plannedSessionToRollingPlanSeriesInput(
  * Save from a log: training that happened becomes a library draft. What was
  * done becomes the entry's targets, and how long it took its expected
  * minutes (owner, 27 Sep 2026), so starting from it next time starts from
- * this time. The log's date, outcome, effort, feeling, note, signals and its
+ * this time. The log's date, outcome, effort, note, signals and its
  * link to a plan stop here: they are facts about that day.
  */
 export function completionToSavedSessionDraft(

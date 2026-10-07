@@ -92,7 +92,6 @@ describe("completion log interface validation", () => {
       { perceivedEffort: 0 },
       { durationMinutes: -1 },
       { durationMinutes: 10081 },
-      { feeling: "fine" },
     ]) {
       await expect(
         log().applyChange({

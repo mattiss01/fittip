@@ -157,6 +157,10 @@ npm run format
 npm run types:patch
 ```
 
+`npm run types:gen` runs the same three steps as one command, formatting only
+the generated file, and refuses CLI output that is not the types. It is the
+form the agent is permitted to run.
+
 `git status` must be clean afterwards. If it is not, the schema changed and the
 new output belongs in your commit.
 

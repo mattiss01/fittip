@@ -20,7 +20,6 @@ import {
   CompletionPersistenceError,
   CompletionTimezoneRequiredError,
   CompletionValidationError,
-  COMPLETION_FEELINGS,
   COMPLETION_STATUSES,
   type Completion,
   type CompletionActivity,
@@ -40,7 +39,7 @@ type CompletionClient = SupabaseClient<Database> | ServerUserClient;
 
 const COMPLETION_COLUMNS = `
   id, plan_session_id, status, actual_local_date, timezone_name,
-  actual_started_at, duration_minutes, perceived_effort, feeling, note,
+  actual_started_at, duration_minutes, perceived_effort, note,
   replacement_description, pain_reported, illness_reported, injury_reported,
   severe_fatigue_reported, planned_snapshot, title, sport, revision,
   updated_at, replaced_by_completion_id,
@@ -304,10 +303,6 @@ function parseCompletion(
       completion.perceived_effort === null ||
       isInteger(completion.perceived_effort, 1)
     ) ||
-    !(
-      completion.feeling === null ||
-      isChoice(completion.feeling, COMPLETION_FEELINGS)
-    ) ||
     !(completion.note === null || typeof completion.note === "string") ||
     !(
       completion.replacement_description === null ||
@@ -351,7 +346,6 @@ function parseCompletion(
     ...(completion.perceived_effort === null
       ? {}
       : { perceivedEffort: completion.perceived_effort }),
-    ...(completion.feeling === null ? {} : { feeling: completion.feeling }),
     ...(completion.note === null ? {} : { note: completion.note }),
     ...(completion.replacement_description === null
       ? {}

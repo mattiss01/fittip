@@ -82,33 +82,6 @@ export const COMPLETION_OUTCOME_LABELS: Record<CompletionOutcome, string> = {
   unplanned: "Unplanned",
 };
 
-export type CompletionFeelingValue =
-  | "very_bad"
-  | "bad"
-  | "neutral"
-  | "good"
-  | "very_good";
-
-export const COMPLETION_FEELING_CHOICES: readonly {
-  value: CompletionFeelingValue;
-  label: string;
-}[] = [
-  { value: "very_bad", label: "Very bad" },
-  { value: "bad", label: "Bad" },
-  { value: "neutral", label: "Neutral" },
-  { value: "good", label: "Good" },
-  { value: "very_good", label: "Very good" },
-] as const;
-
-export const COMPLETION_FEELING_LABELS: Record<CompletionFeelingValue, string> =
-  {
-    very_bad: "Very bad",
-    bad: "Bad",
-    neutral: "Neutral",
-    good: "Good",
-    very_good: "Very good",
-  };
-
 /**
  * The FitTip safety notice, word for word as M1-03 approved it and M2-02
  * shipped it on the memory surface (`src/components/memory/memory-manager.tsx`

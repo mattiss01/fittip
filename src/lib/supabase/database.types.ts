@@ -156,7 +156,6 @@ export type Database = {
           actual_started_at: string | null;
           created_at: string;
           duration_minutes: number | null;
-          feeling: string | null;
           id: string;
           illness_reported: boolean;
           injury_reported: boolean;
@@ -181,7 +180,6 @@ export type Database = {
           actual_started_at?: string | null;
           created_at?: string;
           duration_minutes?: number | null;
-          feeling?: string | null;
           id?: string;
           illness_reported?: boolean;
           injury_reported?: boolean;
@@ -206,7 +204,6 @@ export type Database = {
           actual_started_at?: string | null;
           created_at?: string;
           duration_minutes?: number | null;
-          feeling?: string | null;
           id?: string;
           illness_reported?: boolean;
           injury_reported?: boolean;

@@ -89,7 +89,6 @@ function toWindowEntry(completion: Completion): TrainingHistoryCompletion {
     sport: completion.sport ?? completion.plannedSnapshot?.sport ?? null,
     durationMinutes: completion.durationMinutes ?? null,
     perceivedEffort: completion.perceivedEffort ?? null,
-    feeling: completion.feeling ?? null,
     painReported: completion.painReported,
     illnessReported: completion.illnessReported,
     injuryReported: completion.injuryReported,

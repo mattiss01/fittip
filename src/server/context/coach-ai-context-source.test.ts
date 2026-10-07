@@ -319,7 +319,6 @@ describe("the production coaching context source", () => {
         sport: "Running",
         durationMinutes: 58,
         perceivedEffort: 6,
-        feeling: "good",
         painReported: false,
         illnessReported: false,
         injuryReported: false,
@@ -363,7 +362,6 @@ describe("the production coaching context source", () => {
         note: undefined,
         durationMinutes: undefined,
         perceivedEffort: undefined,
-        feeling: undefined,
       }),
     ]);
 
@@ -374,7 +372,6 @@ describe("the production coaching context source", () => {
       note: null,
       durationMinutes: null,
       perceivedEffort: null,
-      feeling: null,
       activityNames: ["Easy running"],
     });
   });
@@ -670,7 +667,6 @@ function completion(overrides: Partial<Completion> = {}): Completion {
     replaces: [],
     durationMinutes: 58,
     perceivedEffort: 6,
-    feeling: "good",
     note: "Legs came round after twenty minutes.",
     painReported: false,
     illnessReported: false,

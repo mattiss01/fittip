@@ -163,19 +163,13 @@ lane, one screen per merge.
       session's link to the log that replaced it; the coach's proposals record which
       logs they read; ADR-013 decision 3 already says a deleted record reaches no
       provider and no summary.
-- [ ] **A migration to remove a log's feeling.** Owner, 3 Oct 2026: "How did it feel?"
-      left the log's steps that day (effort says the same) and should go for good. Careful
-      lane. The column is `completions.feeling`, written by `apply_completion_change` and
-      read by the completion log, Today, Progress, saved-session copies, the inline
-      replacement's `replacement.feeling` (no longer asked either), and the coach's
-      training history (`training-history-context.ts`, `contracts.ts`), so the AI context
-      changes too. Nothing is in production, so existing values need no keeping.
-      Owner, 7 Oct 2026: drop the column for good, founder values included; ADR-013
-      decision 4 is amended in its own commit. After the logged-session rule.
-      In the same replacement of `apply_completion_change`: lock the planned
-      session's row before reading its snapshot. Today an edit that commits between
-      that read and the log's insert leaves a log measured against the session as
-      it was before the edit (review, 7 Oct 2026; one call wide, two tabs at once).
+- [~] **A migration to remove a log's feeling.** Careful lane. Outcome:
+      `completions.feeling` and its check are dropped, `apply_completion_change`
+      refuses the key, no screen shows "Felt", and the coach's training history no
+      longer carries it. Owner, 7 Oct 2026: drop it for good, founder values
+      included (destructive, confirmed); ADR-013 decision 4 amended in its own
+      commit. In the same replacement of the function: the planned session's row
+      is held before its snapshot is read, so a log and an edit cannot cross.
 - Cost to expect: many unit and browser tests assert the current copy, so cutting text means
       rewriting those assertions in the same merge.
 

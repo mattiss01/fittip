@@ -202,7 +202,6 @@ function completion() {
     timezoneName: TIMEZONE,
     durationMinutes: 42,
     perceivedEffort: 7,
-    feeling: "good" as const,
     note: "Held the pace to the last rep.",
     painReported: true,
     illnessReported: false,
