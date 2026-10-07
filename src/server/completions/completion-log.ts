@@ -23,16 +23,6 @@ export const COMPLETION_STATUSES = [
 
 export type CompletionStatus = (typeof COMPLETION_STATUSES)[number];
 
-export const COMPLETION_FEELINGS = [
-  "very_bad",
-  "bad",
-  "neutral",
-  "good",
-  "very_good",
-] as const;
-
-export type CompletionFeeling = (typeof COMPLETION_FEELINGS)[number];
-
 /** What one activity of a session actually was. */
 export type CompletionActivity = {
   personalActivityId?: string;
@@ -95,7 +85,6 @@ export type CompletionFacts = {
   actualStartedAt?: string;
   durationMinutes?: number;
   perceivedEffort?: number;
-  feeling?: CompletionFeeling;
   note?: string;
   /**
    * What the owner typed as the instead, on a replaced log written before
@@ -124,7 +113,6 @@ export type CompletionName = { title: string; sport: string };
 export type ReplacementDraft = CompletionName & {
   durationMinutes?: number;
   perceivedEffort?: number;
-  feeling?: CompletionFeeling;
   activities: CompletionActivity[];
 };
 
@@ -468,7 +456,6 @@ function parseReplacement(
     "sport",
     "durationMinutes",
     "perceivedEffort",
-    "feeling",
     "activities",
   ]);
   const activities = parseActivityList(record.activities);
@@ -482,9 +469,6 @@ function parseReplacement(
       sport: readRequiredString(record.sport, 80),
       ...optionalInteger("durationMinutes", record.durationMinutes, 0, 10080),
       ...optionalInteger("perceivedEffort", record.perceivedEffort, 1, 10),
-      ...(record.feeling === undefined || record.feeling === null
-        ? {}
-        : { feeling: readChoice(record.feeling, COMPLETION_FEELINGS) }),
       activities,
     },
   };
@@ -549,7 +533,6 @@ function parseFacts(value: unknown): CompletionFacts {
     "actualStartedAt",
     "durationMinutes",
     "perceivedEffort",
-    "feeling",
     "note",
     "replacementDescription",
     "painReported",
@@ -577,9 +560,6 @@ function parseFacts(value: unknown): CompletionFacts {
       : { actualStartedAt: readTimestamp(record.actualStartedAt) }),
     ...optionalInteger("durationMinutes", record.durationMinutes, 0, 10080),
     ...optionalInteger("perceivedEffort", record.perceivedEffort, 1, 10),
-    ...(record.feeling === undefined || record.feeling === null
-      ? {}
-      : { feeling: readChoice(record.feeling, COMPLETION_FEELINGS) }),
     ...optionalString("note", record.note, 2000),
     ...(replacementDescription === undefined ? {} : { replacementDescription }),
     painReported: readFlag(record.painReported),

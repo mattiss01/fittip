@@ -358,7 +358,6 @@ select 'first', * from public.apply_completion_change(
     'actualLocalDate', pg_temp.owner_day(0),
     'durationMinutes', 58,
     'perceivedEffort', 6,
-    'feeling', 'good',
     'note', 'Legs came round after twenty minutes.',
     'activities', jsonb_build_array(jsonb_build_object(
       'personalActivityId', '7f000000-0000-4000-8000-0000000000a1',
@@ -466,7 +465,7 @@ select is(
   'the correction keeps no trail: there is one record, not two');
 select ok(
   (select status = 'partially_completed' and duration_minutes = 41
-     and perceived_effort is null and feeling is null
+     and perceived_effort is null
    from public.completions
    where id = (select completion_id from logged where label = 'first')),
   'an edit replaces the whole record rather than merging into it');

@@ -199,7 +199,6 @@ function toCompletionView(completion: Completion): TodayCompletionView {
     plannedLocalDate: completion.plannedSnapshot?.localDate ?? null,
     durationMinutes: completion.durationMinutes ?? null,
     perceivedEffort: completion.perceivedEffort ?? null,
-    feeling: completion.feeling ?? null,
     note: completion.note ?? null,
     replacementDescription: completion.replacementDescription ?? null,
     replacedBy: replacedByLabel(completion),

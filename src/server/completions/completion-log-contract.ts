@@ -64,7 +64,6 @@ export function registerCompletionLogContract(
         actualLocalDate: day(0),
         durationMinutes: 58,
         perceivedEffort: 6,
-        feeling: "good",
         painReported: false,
         revision: 0,
       });
@@ -157,7 +156,6 @@ export function registerCompletionLogContract(
       // An edit replaces the whole record rather than merging into it, and it
       // never touches the activity or planned snapshots beside it.
       expect(corrected?.perceivedEffort).toBeUndefined();
-      expect(corrected?.feeling).toBeUndefined();
       expect(corrected?.activities).toHaveLength(1);
       expect(await completions.list(day(0), day(0))).toHaveLength(1);
     });
@@ -789,7 +787,6 @@ function create(planSessionId: string, actualLocalDate: string) {
       actualLocalDate,
       durationMinutes: 58,
       perceivedEffort: 6,
-      feeling: "good",
       note: "Legs came round after twenty minutes.",
       activities: [
         {

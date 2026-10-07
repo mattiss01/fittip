@@ -16,7 +16,6 @@ import {
   type LogRecordedActivityView,
 } from "./actual-activities";
 import {
-  COMPLETION_FEELING_CHOICES,
   COMPLETION_OUTCOME_LABELS,
   COMPLETION_SAFETY_NOTICE,
   COMPLETION_SIGNALS,
@@ -65,7 +64,6 @@ export type LogExistingView = {
   actualLocalDate: string;
   durationMinutes: number | null;
   perceivedEffort: number | null;
-  feeling: string | null;
   note: string | null;
   replacementDescription: string | null;
   /**
@@ -144,7 +142,6 @@ type Step =
   | "day"
   | "minutes"
   | "effort"
-  | "feeling"
   | "activities"
   | "off"
   | "note"
@@ -159,7 +156,6 @@ const STEP_ORDER: Step[] = [
   "day",
   "minutes",
   "effort",
-  "feeling",
   "activities",
   "off",
   "note",
@@ -174,7 +170,6 @@ const STEP_QUESTIONS: Record<Step, string> = {
   day: "Instead of the planned session, or extra?",
   minutes: "How long?",
   effort: "How hard was it?",
-  feeling: "How did it feel?",
   activities: "What did you do in it?",
   off: "Anything off?",
   note: "Anything to add?",
@@ -247,7 +242,6 @@ export function LogForm({
   const [effort, setEffort] = useState<number | null>(
     existing?.perceivedEffort ?? null,
   );
-  const [feeling, setFeeling] = useState<string>(existing?.feeling ?? "");
   const [note, setNote] = useState(existing?.note ?? "");
   const [signals, setSignals] = useState<ReadonlySet<string>>(
     () =>
@@ -321,7 +315,6 @@ export function LogForm({
           ...(skipped && existing.perceivedEffort !== null
             ? ["the effort"]
             : []),
-          ...(skipped && existing.feeling !== null ? ["how it felt"] : []),
           ...(outcome !== "replaced" && existing.replacementDescription !== null
             ? ["what you did instead"]
             : []),
@@ -347,8 +340,6 @@ export function LogForm({
       trained;
     // How it went comes first (owner, 3 Oct 2026): a skip or a replacement
     // is not asked what was done, and keeps the plan's name for the log.
-    // "How did it feel?" is no longer asked (owner, same day); a feeling an
-    // older log carries is kept, shown and correctable from its summary.
     const happened = forOutcome !== "skipped" && forOutcome !== "replaced";
     return [
       ...(choices.length > 1 && !(whichDay && forDay === "extra")
@@ -614,10 +605,7 @@ export function LogForm({
         <input type="hidden" name="dayChoice" value={dayChoice} />
       ) : null}
       {asksNumbers ? (
-        <>
-          <input type="hidden" name="perceivedEffort" value={effort ?? ""} />
-          <input type="hidden" name="feeling" value={feeling} />
-        </>
+        <input type="hidden" name="perceivedEffort" value={effort ?? ""} />
       ) : null}
       {COMPLETION_SIGNALS.filter((signal) => signals.has(signal.name)).map(
         (signal) => (
@@ -969,44 +957,6 @@ export function LogForm({
         </section>
       ) : null}
 
-      {/* ---- How did it feel? ---- */}
-      {asksNumbers ? (
-        <section data-log-step="feeling" hidden={step !== "feeling"}>
-          <div
-            className={styles.bigChoices}
-            role="group"
-            aria-label="How it felt"
-          >
-            {[...COMPLETION_FEELING_CHOICES].reverse().map((choice) => (
-              <button
-                key={choice.value}
-                type="button"
-                aria-pressed={feeling === choice.value}
-                data-selected={feeling === choice.value}
-                onClick={() => {
-                  setFeeling(choice.value);
-                  advance();
-                }}
-              >
-                <strong>{choice.label}</strong>
-              </button>
-            ))}
-          </div>
-          <button
-            className={styles.skipQuestion}
-            type="button"
-            onClick={() => {
-              setFeeling("");
-              advance();
-            }}
-          >
-            {fromSummary && feeling !== ""
-              ? "Remove this answer"
-              : "Skip this question"}
-          </button>
-        </section>
-      ) : null}
-
       {/* ---- Activities. Always mounted, so the list keeps its rows; it
           sends nothing while the outcome says they did not happen. ---- */}
       <section data-log-step="activities" hidden={step !== "activities"}>
@@ -1149,9 +1099,6 @@ export function LogForm({
   );
 
   function summaryRows(): [Step, string, string][] {
-    const feelingLabel = COMPLETION_FEELING_CHOICES.find(
-      (choice) => choice.value === feeling,
-    )?.label;
     const reported = COMPLETION_SIGNALS.filter((signal) =>
       signals.has(signal.name),
     ).map((signal) => signal.label);
@@ -1186,13 +1133,6 @@ export function LogForm({
               durationEntered(minutes) ? `${minutes} min` : "—",
             ],
             ["effort", "Effort", effort === null ? "—" : `${effort} of 10`],
-            ...(feelingLabel === undefined
-              ? []
-              : ([["feeling", "Felt", feelingLabel]] as [
-                  Step,
-                  string,
-                  string,
-                ][])),
           ] as [Step, string, string][])
         : []),
       ...(activitiesHappened

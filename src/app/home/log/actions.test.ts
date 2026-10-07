@@ -70,7 +70,6 @@ describe("logCompletionAction", () => {
         returnDate: DAY,
         durationMinutes: "45",
         perceivedEffort: "7",
-        feeling: "good",
         note: "Held the pace.",
         painReported: "true",
       }),
@@ -84,7 +83,6 @@ describe("logCompletionAction", () => {
         planSessionId: SESSION_ID,
         durationMinutes: 45,
         perceivedEffort: 7,
-        feeling: "good",
         note: "Held the pace.",
         painReported: true,
         illnessReported: false,
@@ -344,9 +342,9 @@ describe("logCompletionAction", () => {
     expect(result.message).toMatch(copy);
   });
 
-  it("clears duration, effort and feeling when a log becomes skipped", async () => {
-    // The skipped form unmounts those three, so nothing is submitted for
-    // them. The write function assigns all three unconditionally from the
+  it("clears duration and effort when a log becomes skipped", async () => {
+    // The skipped form unmounts those two, so nothing is submitted for
+    // them. The write function assigns both unconditionally from the
     // payload, so an absent key stores null: the point of this assertion is
     // that the action forwards the absence rather than defaulting it back.
     await logCompletionAction(
@@ -365,7 +363,6 @@ describe("logCompletionAction", () => {
     const [change] = applyChange.mock.calls[0];
     expect(Object.keys(change.completion)).not.toContain("durationMinutes");
     expect(Object.keys(change.completion)).not.toContain("perceivedEffort");
-    expect(Object.keys(change.completion)).not.toContain("feeling");
     expect(change.completion.note).toBe("Knee was sore.");
     expect(change.completion.painReported).toBe(true);
   });
@@ -466,7 +463,6 @@ describe("logCompletionAction", () => {
         "replacement.title": " Hill ride ",
         "replacement.sport": "Cycling",
         "replacement.durationMinutes": "70",
-        "replacement.feeling": "good",
         "replacement.activities": "[]",
       }),
     );
@@ -478,7 +474,6 @@ describe("logCompletionAction", () => {
         title: "Hill ride",
         sport: "Cycling",
         durationMinutes: 70,
-        feeling: "good",
         activities: [],
       },
     });

@@ -467,7 +467,7 @@ describe("Log", () => {
     ).toBe("/home/log?completion=8f000000-0000-4000-8000-0000000000c1");
   });
 
-  it("stops asking for duration, effort and how it felt once skipped is chosen", async () => {
+  it("stops asking for duration and effort once skipped is chosen", async () => {
     render(
       await LogPage({
         searchParams: Promise.resolve({
@@ -481,7 +481,6 @@ describe("Log", () => {
     chooseOutcome("Skipped");
     expect(document.querySelector("#log-duration")).toBe(null);
     expect(document.querySelector('[data-log-step="effort"]')).toBe(null);
-    expect(document.querySelector('[data-log-step="feeling"]')).toBe(null);
     // A skip goes straight to "Anything off?": an owner may skip precisely
     // because of pain, so the note and all four signals stay, and so does
     // the notice that qualifies them.
@@ -506,7 +505,6 @@ describe("Log", () => {
       planSessionId: SESSION_ID,
       status: "completed" as const,
       perceivedEffort: 7,
-      feeling: "good" as const,
       plannedSnapshot: snapshot(),
     });
 
@@ -519,7 +517,7 @@ describe("Log", () => {
     expect(document.querySelector("[data-log-clears]")).toBe(null);
     chooseOutcome("Skipped");
     expect(document.querySelector("[data-log-clears]")?.textContent).toContain(
-      "removes the duration, the effort and how it felt",
+      "removes the duration and the effort",
     );
   });
 
@@ -593,8 +591,6 @@ describe("Log", () => {
     expect(warning.textContent).toContain(
       "removes the duration, the effort and what you did instead",
     );
-    // No feeling was recorded, so the warning does not claim to remove one.
-    expect(warning.textContent).not.toContain("how it felt");
   });
 
   it("says nothing about clearing when there is nothing to clear", async () => {

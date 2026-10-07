@@ -81,7 +81,6 @@ export type CoachAICompletionReference = {
   sport: string | null;
   durationMinutes: number | null;
   perceivedEffort: number | null;
-  feeling: string | null;
   painReported: boolean;
   illnessReported: boolean;
   injuryReported: boolean;

@@ -4,10 +4,8 @@ import { DayStrip } from "./day-strip";
 import styles from "./today.module.css";
 
 import {
-  COMPLETION_FEELING_LABELS,
   COMPLETION_OUTCOME_LABELS,
   COMPLETION_SIGNAL_STAMPS,
-  type CompletionFeelingValue,
   type CompletionOutcome,
   recordsTraining,
 } from "../log/log-action-state";
@@ -35,7 +33,6 @@ export type TodayCompletionView = {
   plannedLocalDate: string | null;
   durationMinutes: number | null;
   perceivedEffort: number | null;
-  feeling: CompletionFeelingValue | null;
   note: string | null;
   replacementDescription: string | null;
   /**
@@ -414,12 +411,6 @@ function CompletionFacts({
           <div>
             <dt>Effort</dt>
             <dd>{completion.perceivedEffort} of 10</dd>
-          </div>
-        )}
-        {completion.feeling === null ? null : (
-          <div>
-            <dt>Felt</dt>
-            <dd>{COMPLETION_FEELING_LABELS[completion.feeling]}</dd>
           </div>
         )}
       </dl>

@@ -125,7 +125,8 @@ describe("Progress", () => {
     expect(within(entry).getByText("Running")).toBeTruthy();
     expect(within(entry).getByText("42 min")).toBeTruthy();
     expect(within(entry).getByText("7 of 10")).toBeTruthy();
-    expect(within(entry).getByText("Good")).toBeTruthy();
+    // A log no longer carries how it felt (owner, 7 Oct 2026).
+    expect(within(entry).queryByText("Felt")).toBeNull();
     expect(
       document.querySelector("[data-progress-signals]")?.textContent,
     ).toContain("Pain");
@@ -258,7 +259,6 @@ function completion() {
     timezoneName: TIMEZONE,
     durationMinutes: 42,
     perceivedEffort: 7,
-    feeling: "good" as const,
     painReported: true,
     illnessReported: false,
     injuryReported: false,

@@ -364,7 +364,6 @@ function toExistingView(completion: Completion): LogExistingView {
     actualLocalDate: completion.actualLocalDate,
     durationMinutes: completion.durationMinutes ?? null,
     perceivedEffort: completion.perceivedEffort ?? null,
-    feeling: completion.feeling ?? null,
     note: completion.note ?? null,
     replacementDescription: completion.replacementDescription ?? null,
     replacedById: completion.replacedBy?.completionId ?? null,

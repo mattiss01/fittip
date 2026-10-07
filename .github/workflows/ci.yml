@@ -123,6 +123,9 @@ jobs:
       - name: M3-15A concurrent completion corrections
         run: npm run test:m3-15a-concurrency
 
+      - name: A log and an edit of one session at once
+        run: npm run test:snapshot-lock-concurrency
+
       - name: M3-15F concurrent same-key roadmap generation
         run: npm run test:m3-15f-concurrency
 

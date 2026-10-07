@@ -3,9 +3,7 @@ import Link from "next/link";
 import styles from "./progress.module.css";
 
 import {
-  COMPLETION_FEELING_LABELS,
   COMPLETION_SIGNAL_STAMPS,
-  type CompletionFeelingValue,
   type CompletionOutcome,
 } from "../log/log-action-state";
 
@@ -31,7 +29,6 @@ export type ProgressCompletionView = {
   plannedLocalDate: string | null;
   durationMinutes: number | null;
   perceivedEffort: number | null;
-  feeling: CompletionFeelingValue | null;
   note: string | null;
   replacementDescription: string | null;
   /**
@@ -96,9 +93,6 @@ export function RecordedFacts({
     completion.perceivedEffort === null
       ? null
       : { term: "Effort", value: `${completion.perceivedEffort} of 10` },
-    completion.feeling === null
-      ? null
-      : { term: "Felt", value: COMPLETION_FEELING_LABELS[completion.feeling] },
   ].filter((fact): fact is { term: string; value: string } => fact !== null);
 
   return (

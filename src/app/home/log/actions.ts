@@ -260,7 +260,6 @@ function readReplacedBy(formData: FormData, editing: boolean) {
     };
   }
   const nothing = editing ? "Nothing was changed." : "Nothing was logged.";
-  const feeling = optionalText(formData, "replacement.feeling");
   return {
     replacement: {
       title: readActivityText(formData, "replacement.title", 120, {
@@ -279,7 +278,6 @@ function readReplacedBy(formData: FormData, editing: boolean) {
         optionalNumber(formData, "replacement.perceivedEffort"),
         "perceivedEffort",
       ),
-      ...(feeling === undefined ? {} : { feeling }),
       activities: readActualActivities(formData, "replacement.activities"),
     },
   };
@@ -341,7 +339,6 @@ async function assertSessionOnDay(sessionId: string, localDate: string) {
  * rather than silently stored.
  */
 function readFacts(formData: FormData): Record<string, unknown> {
-  const feeling = optionalText(formData, "feeling");
   const note = optionalText(formData, "note");
   const replacement = optionalText(formData, "replacementDescription");
   return {
@@ -349,7 +346,6 @@ function readFacts(formData: FormData): Record<string, unknown> {
     actualLocalDate: requiredDate(formData.get("actualLocalDate")),
     ...optionalNumber(formData, "durationMinutes"),
     ...optionalNumber(formData, "perceivedEffort"),
-    ...(feeling === undefined ? {} : { feeling }),
     ...(note === undefined ? {} : { note }),
     ...(replacement === undefined
       ? {}

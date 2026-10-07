@@ -174,7 +174,7 @@ select lives_ok(
       'status', 'replaced', 'actualLocalDate', %L, 'activities', '[]'::jsonb,
       'note', 'Legs were heavy.',
       'replacement', jsonb_build_object('title', 'Hill ride', 'sport', 'Cycling',
-        'durationMinutes', 70, 'perceivedEffort', 6, 'feeling', 'good',
+        'durationMinutes', 70, 'perceivedEffort', 6,
         'activities', jsonb_build_array(jsonb_build_object('position', 0,
           'name', 'Climbs', 'sport', 'Cycling',
           'measurementMode', 'unmeasured')))))$$,

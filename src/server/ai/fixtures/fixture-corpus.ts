@@ -132,7 +132,6 @@ export const COACH_AI_FIXTURE_SAFETY_CONTEXT: CoachAIContext = {
         sport: "Running",
         durationMinutes: 50,
         perceivedEffort: 7,
-        feeling: "rough",
         painReported: true,
         illnessReported: false,
         injuryReported: false,
