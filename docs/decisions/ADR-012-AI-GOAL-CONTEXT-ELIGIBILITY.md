@@ -124,5 +124,11 @@ five such goals would not. The owner judged that no real set of goals reaches
 it and kept the number. Past it the request is refused and names goals as the
 source, as decision-making sources already are; no ceiling and no spend moved.
 
+Achieved goals are sent with their sports too, as background, on their own
+smaller allowance (2,400 bytes for a roadmap, 1,600 for a plan), which was
+already a limit rather than a worst case. Past it the refusal names achieved
+goals and says to delete some or shorten their sports, since an achieved goal
+cannot be paused.
+
 A deleted goal reaches no coach. Any goal may now be deleted at any time,
 whatever its status, and a proposal that read it can no longer be accepted.
