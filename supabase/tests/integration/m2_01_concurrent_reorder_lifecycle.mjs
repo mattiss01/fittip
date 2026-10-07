@@ -113,9 +113,7 @@ function createArgs(expectedRevision, title, area) {
     p_operation: "create",
     p_title: title,
     p_desired_outcome: `Make measurable progress in ${area}.`,
-    p_category: "other",
-    p_activity_areas: [area],
-    p_start_date: "2026-07-29",
+    p_sports: [area],
     p_priority_tier: "supporting",
   };
 }

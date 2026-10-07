@@ -95,6 +95,46 @@ describe("GoalRepository", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it("dates an achieved goal by its achieved moment and the others by their last change", async () => {
+    const neq = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: "achieved",
+          status: "achieved",
+          achieved_at: "2026-09-20T16:00:00.000Z",
+          updated_at: "2026-10-01T09:00:00.000Z",
+        },
+        {
+          id: "paused",
+          status: "paused",
+          achieved_at: null,
+          updated_at: "2026-10-02T09:00:00.000Z",
+        },
+      ],
+      error: null,
+    });
+    const eq = vi.fn().mockReturnValue({ neq });
+    const from = vi
+      .fn()
+      .mockReturnValue({ select: vi.fn().mockReturnValue({ eq }) });
+    const repository = new GoalRepository(client({ from }));
+
+    await expect(repository.listStatusChanges()).resolves.toEqual([
+      // Not the later edit: the day it was achieved.
+      {
+        goalId: "achieved",
+        status: "achieved",
+        changedAt: "2026-09-20T16:00:00.000Z",
+      },
+      {
+        goalId: "paused",
+        status: "paused",
+        changedAt: "2026-10-02T09:00:00.000Z",
+      },
+    ]);
+    expect(eq).toHaveBeenCalledWith("user_id", USER_ID);
+  });
+
   it("rejects malformed goal content before authentication", async () => {
     const auth = { getClaims: vi.fn() };
     const rpc = vi.fn();

@@ -1,6 +1,8 @@
 import "server-only";
 
 import {
+  GOAL_SPORT_MAX_LENGTH,
+  GOAL_SPORTS_MAX,
   selectActiveGoalContext,
   type GoalContextCandidate,
   type GoalTier,
@@ -205,7 +207,7 @@ export type CoachAIContextLimits = {
  * | source              | items | bytes  | basis                             |
  * | ------------------- | ----- | ------ | --------------------------------- |
  * | targetable goals    | 12    |  4,000 | a limit, not a worst case: below  |
- * | historical goals    |  8    |  2,400 | 8 x 300; background only          |
+ * | historical goals    |  8    |  2,400 | a limit too; background only      |
  * | memory              | 20    |  5,600 | corpus mean 420 B/item, max 1,082 |
  * | - history: sessions | 20    | 10,200 | 20 x the 501-byte corpus worst    |
  * | - history: misses   | 20    |  5,000 | 20 x 249-byte structural worst    |
@@ -222,7 +224,8 @@ export type CoachAIContextLimits = {
  * a goal is sent with its sports, up to ten of sixty characters, so one goal
  * can approach 940 bytes where with a category it could not pass 326. The
  * owner kept 4,000 as a limit no real set of goals reaches; past it the
- * request is refused with goals named, like the other curated sources.
+ * request is refused with goals named, like the other curated sources. Achieved
+ * goals carry their sports as well and are refused the same way.
  *
  * That total sets the ceiling: `ceil((6_000 + 64 + 33_700) / 4)` is 9,941, so
  * `maxInputTokens` is 10,000 — the smallest hundred above the requirement,
@@ -408,8 +411,6 @@ const CANONICAL_UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_TITLE_LENGTH = 120;
-const MAX_GOAL_SPORTS = 10;
-const MAX_SPORT_LENGTH = 60;
 const MAX_MEMORY_CONTENT_LENGTH = 1000;
 
 /**
@@ -858,8 +859,8 @@ function toGoalReference(goal: CoachAIGoalRecord): CoachAIGoalReference {
   if (
     !CANONICAL_UUID_PATTERN.test(goal.id) ||
     !isBounded(goal.title, MAX_TITLE_LENGTH) ||
-    goal.sports.length > MAX_GOAL_SPORTS ||
-    !goal.sports.every((sport) => isBounded(sport, MAX_SPORT_LENGTH)) ||
+    goal.sports.length > GOAL_SPORTS_MAX ||
+    !goal.sports.every((sport) => isBounded(sport, GOAL_SPORT_MAX_LENGTH)) ||
     (goal.priorityTier !== "core" && goal.priorityTier !== "supporting") ||
     (goal.targetDate !== null && !isIsoDate(goal.targetDate))
   ) {

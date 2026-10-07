@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(66);
+select plan(69);
 
 select has_table('public', 'goals', 'goals table exists');
 select has_table(
@@ -76,6 +76,39 @@ select is(
   ),
   0::bigint,
   'the columns the goal form no longer asks are gone'
+);
+select is(
+  (
+    select pg_get_constraintdef(oid)
+    from pg_constraint
+    where conrelid = 'public.goals'::regclass
+      and conname = 'goals_achieved_at_check'
+  ),
+  'CHECK (((status = ''achieved''::text) = (achieved_at IS NOT NULL)))',
+  'a goal has an achieved moment exactly while it is achieved'
+);
+select ok(
+  (
+    select position('archived_at' in pg_get_constraintdef(oid)) = 0
+      and position('active_rank IS NOT NULL' in pg_get_constraintdef(oid)) > 0
+    from pg_constraint
+    where conrelid = 'public.goals'::regclass
+      and conname = 'goals_active_rank_check'
+  ),
+  'active ranks are still tied to status, without the archive half'
+);
+select is(
+  (
+    select string_agg(attribute.attname, ',' order by keys.ordinality)
+    from pg_index
+    cross join lateral unnest(indkey) with ordinality as keys(attnum, ordinality)
+    join pg_attribute attribute
+      on attribute.attrelid = indrelid
+      and attribute.attnum = keys.attnum
+    where indexrelid = 'public.goals_owner_list_idx'::regclass
+  ),
+  'user_id,status,priority_tier,active_rank',
+  'the owner list index covers the columns the list orders by'
 );
 select ok(
   (

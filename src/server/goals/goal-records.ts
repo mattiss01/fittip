@@ -7,6 +7,10 @@ export const GOAL_STATUSES = [
   "abandoned",
 ] as const;
 
+/** A goal names one to ten sports, each a label of at most sixty characters. */
+export const GOAL_SPORTS_MAX = 10;
+export const GOAL_SPORT_MAX_LENGTH = 60;
+
 export type GoalTier = (typeof GOAL_TIERS)[number];
 export type GoalStatus = (typeof GOAL_STATUSES)[number];
 
@@ -72,11 +76,11 @@ export function parseGoalInput(value: unknown): GoalInput {
 
   // One to ten, as `apply_goal_change` requires.
   const sports = Array.isArray(value.sports)
-    ? value.sports.map((sport) => boundedRequired(sport, 60))
+    ? value.sports.map((sport) => boundedRequired(sport, GOAL_SPORT_MAX_LENGTH))
     : [];
   if (
     sports.length < 1 ||
-    sports.length > 10 ||
+    sports.length > GOAL_SPORTS_MAX ||
     new Set(sports.map((sport) => sport.toLocaleLowerCase())).size !==
       sports.length
   ) {

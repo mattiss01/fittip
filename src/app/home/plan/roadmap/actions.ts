@@ -395,8 +395,9 @@ function contextSourceMessage(source: string): string {
     case "memory":
       return tooLarge.memory;
     case "targetable_goals":
-    case "historical_goals":
       return tooLarge.goals;
+    case "historical_goals":
+      return tooLarge.achieved_goals;
     case "planning_note":
       return tooLarge.planning_note;
     case "regeneration_feedback":
