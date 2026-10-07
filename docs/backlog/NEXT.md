@@ -74,9 +74,17 @@ lane, one screen per merge.
   - **A card that matches something saved starts accepted as "update"**, so one press
     writes over a saved goal or brings back a declined or disabled memory. The card
     says so. The owner asked for everything accepted first; this is its sharpest edge.
-- [ ] **One goals migration.** Careful lane. The form and card were slimmed on
+- [~] **One goals migration.** Careful lane. The form and card were slimmed on
       5 Oct 2026 (title, desired outcome, sports, target date, core or supporting)
-      without touching the database; this is what that left:
+      without touching the database. Outcome: the `goals` table and
+      `apply_goal_change` hold what the form asks and nothing else. Owner, 7 Oct 2026:
+      drop the seven unasked columns and `category`; `activity_areas` becomes `sports`
+      and the coach reads it in place of category; the desired outcome is not sent
+      yet (it waits for "What the coach is given"); the 4,000 bytes for goals stay,
+      now a limit the coach refuses over rather than a proven worst case; goals
+      archived earlier are deleted and any goal can be deleted at any time; Pause and
+      Abandoned both stay; an achieved goal stores its day. Destructive, so the
+      founder apply is asked about again. What it started from:
   - **Drop what is no longer asked** (owner, 5 Oct 2026): `start_date`,
     `target_detail`, the three `target_metric_*`, `rationale` and
     `constraints_text`, from `goals`, `apply_goal_change` and setup's goal
