@@ -392,7 +392,7 @@ select throws_ok(
     '79000000-0000-4000-8000-00000000e016', 'owner_manual',
     '[{"operation":"delete","sessionId":"79000000-0000-4000-8000-0000000000b4"}]'::jsonb)$$,
     (select value #>> '{}' from snapshot where label = 'completed-revision')),
-  'PT425', 'This session has training logged against it, so it cannot be deleted.',
+  'PT425', 'This session has training logged against it, so its plan entry cannot be changed.',
   'a session carrying a completion is refused before the foreign key can fire'
 );
 select is(
@@ -510,31 +510,27 @@ select is(
   'and wrote no history under the outsider either'
 );
 
--- 8. Delete leaves cancel alone -----------------------------------------------
+-- 8. A completion refuses the cancel too ---------------------------------------
 
--- What a completion refuses is the delete that would remove the plan entry it
--- was measured against. It does not refuse the cancel, because cancelling
--- keeps that entry exactly where it was.
-insert into change_receipt
-select 'cancel-completed', * from public.apply_rolling_plan_change_set(
-  pg_temp.rev('79000000-0000-4000-8000-000000000001'),
-  '79000000-0000-4000-8000-00000000e021', 'owner_manual',
-  jsonb_build_array(jsonb_build_object(
-    'operation', 'cancel', 'sessionId', '79000000-0000-4000-8000-0000000000b4')));
-
-select is(
-  (select status from public.rolling_plan_sessions
-   where id = '79000000-0000-4000-8000-0000000000b4'),
-  'cancelled',
-  'a session carrying a completion may still be cancelled, only not deleted'
+-- Until 7 Oct 2026 a completion refused only the delete, and this section
+-- proved the cancel still went through. A logged session is now settled for
+-- every plan verb (`logged_session_is_settled.test.sql` proves each one); what
+-- stays proven here is that the refused cancel leaves no trace of itself.
+select throws_ok(
+  format($$select public.apply_rolling_plan_change_set(%s,
+    '79000000-0000-4000-8000-00000000e021', 'owner_manual',
+    '[{"operation":"cancel","sessionId":"79000000-0000-4000-8000-0000000000b4"}]'::jsonb)$$,
+    (select pg_temp.rev('79000000-0000-4000-8000-000000000001'))),
+  'PT425', 'This session has training logged against it, so its plan entry cannot be changed.',
+  'a session carrying a completion can no longer be cancelled either'
 );
 select is(
   (select count(*)::bigint from public.rolling_plan_change_entries
    where user_id = '79000000-0000-4000-8000-000000000001'
      and change_kind = 'cancel'
      and session_id = '79000000-0000-4000-8000-0000000000b4'),
-  1::bigint,
-  'and that cancel is recorded as a cancel naming its own session'
+  0::bigint,
+  'and the refused cancel is recorded nowhere'
 );
 select is(
   (select count(*)::bigint from public.rolling_plan_change_entries

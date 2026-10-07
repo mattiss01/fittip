@@ -418,31 +418,31 @@ select is(
   1,
   'and the planned activities with it');
 
-insert into change_receipt
-select 'replan', * from public.apply_rolling_plan_change_set(
-  pg_temp.rev('7f000000-0000-4000-8000-000000000001'),
-  '7f000000-0000-4000-8000-00000000e002', 'owner_manual',
-  jsonb_build_array(
-    jsonb_build_object(
-      'operation', 'edit',
-      'sessionId', '7f000000-0000-4000-8000-0000000000b1',
-      'session', jsonb_build_object(
-        'title', 'Something else entirely', 'sport', 'Cycling',
-        'activities', '[]'::jsonb)),
-    jsonb_build_object(
-      'operation', 'cancel',
-      'sessionId', '7f000000-0000-4000-8000-0000000000b1')));
-
-select is(
-  (select title from public.rolling_plan_sessions
-   where id = '7f000000-0000-4000-8000-0000000000b1'),
-  'Something else entirely',
-  'the plan side stays mutable after training was logged against it');
+-- Until 7 Oct 2026 the plan side stayed mutable after a log, and this proved
+-- the snapshot survived an edit and a cancel. A logged session is now settled
+-- (`logged_session_is_settled.test.sql`), so the same change set is refused
+-- and the snapshot is identical for the simpler reason that nothing moved.
+select throws_ok(
+  format($$select public.apply_rolling_plan_change_set(%s,
+    '7f000000-0000-4000-8000-00000000e002', 'owner_manual', %L::jsonb)$$,
+    pg_temp.rev('7f000000-0000-4000-8000-000000000001'),
+    jsonb_build_array(
+      jsonb_build_object(
+        'operation', 'edit',
+        'sessionId', '7f000000-0000-4000-8000-0000000000b1',
+        'session', jsonb_build_object(
+          'title', 'Something else entirely', 'sport', 'Cycling',
+          'activities', '[]'::jsonb)),
+      jsonb_build_object(
+        'operation', 'cancel',
+        'sessionId', '7f000000-0000-4000-8000-0000000000b1'))),
+  'PT425', 'This session has training logged against it, so its plan entry cannot be changed.',
+  'the plan side is settled once training was logged against it');
 select is(
   (select planned_snapshot from public.completions
    where id = (select completion_id from logged where label = 'first')),
   (select value from snapshot where label = 'planned'),
-  'editing and cancelling the planned session leaves the stored snapshot byte-identical');
+  'and the refused edit and cancel leave the stored snapshot byte-identical');
 
 -- Editing the record in place -------------------------------------------------
 

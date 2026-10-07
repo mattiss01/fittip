@@ -353,6 +353,8 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
           throw new RollingPlanValidationError();
         const localDate = requirePlannable(current.localDate);
         touchedDates.add(localDate);
+        if (this.completedSessions.has(change.sessionId))
+          throw new RollingPlanRuleError("session-completed");
         const taken = new Set(
           [...next.values()]
             .filter(
@@ -376,6 +378,10 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
       if (!current || current.status !== "active")
         throw new RollingPlanValidationError();
       touchedDates.add(requirePlannable(current.localDate));
+      // A logged session is settled: the past boundary first, then this, as
+      // `apply_rolling_plan_change_set` asks them.
+      if (this.completedSessions.has(change.sessionId))
+        throw new RollingPlanRuleError("session-completed");
       const before = JSON.stringify(current);
       if (change.operation === "edit") {
         Object.assign(current, change.session, {
