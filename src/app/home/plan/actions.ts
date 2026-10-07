@@ -67,7 +67,7 @@ const RULE_COPY = {
   "daily-session-limit":
     "A date holds at most ten sessions. Cancel or move one first.",
   "session-completed":
-    "You have logged training against this session, so it cannot be deleted. Cancel it instead to keep the record.",
+    "You have logged this session, so its plan entry can no longer be changed. Use Edit log to change what you recorded.",
 } as const;
 
 export async function confirmPlanTimezoneAction(

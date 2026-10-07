@@ -430,7 +430,7 @@ describe("plan actions", () => {
     [
       new RollingPlanRuleError("session-completed"),
       "rule",
-      /cannot be deleted/i,
+      /can no longer be changed/i,
       "session-completed",
     ],
     [

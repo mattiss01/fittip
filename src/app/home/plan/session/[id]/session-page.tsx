@@ -695,7 +695,7 @@ export function SessionPage({
               <form className={styles.form} action={planAction}>
                 <p className={styles.permanentConsequence}>
                   {ONE_OFF_WARNING} A session you have logged training against
-                  cannot be deleted; cancel it instead.
+                  cannot be deleted.
                 </p>
                 <input type="hidden" name="operation" value="delete" />
                 <input type="hidden" name="sessionId" value={session.id} />

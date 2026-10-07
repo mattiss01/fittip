@@ -23,7 +23,7 @@ export type CompletionLogContractSubject = {
    * most precisely is what happens to a completion when that session changes.
    */
   addPlanSession: (localDate: string, title: string) => Promise<string>;
-  /** Rewrites that planned session afterwards, as replanning does. */
+  /** Tries to rewrite that planned session afterwards, as replanning would. */
   editPlanSession: (sessionId: string, title: string) => Promise<void>;
   /** Removes the owner's stored zone, as nulling `profiles.timezone_name` would. */
   clearTimezone: () => Promise<void>;
@@ -105,7 +105,11 @@ export function registerCompletionLogContract(
       );
       const before = await completions.get(completionId);
 
-      await editPlanSession(planSessionId, "Something else entirely");
+      // A logged session is settled (owner, 7 Oct 2026): the plan refuses the
+      // rewrite outright, where it used to accept it and leave the snapshot.
+      await expect(
+        editPlanSession(planSessionId, "Something else entirely"),
+      ).rejects.toThrow();
 
       expect((await completions.get(completionId))?.plannedSnapshot).toEqual(
         before?.plannedSnapshot,

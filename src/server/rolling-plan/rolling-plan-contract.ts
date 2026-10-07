@@ -220,6 +220,61 @@ export function registerRollingPlanContract(
       });
     });
 
+    it("refuses every plan change to a session that carries a completion", async () => {
+      const { plan, day, completeSession } = requireSubject(subject);
+      const logged = randomUUID();
+      const cancelledThenLogged = randomUUID();
+      await plan.applyChangeSet(
+        changeSet([
+          add(logged, day(0), 0, "Logged"),
+          add(cancelledThenLogged, day(0), 1, "Trained anyway"),
+        ]),
+        0,
+      );
+      await plan.applyChangeSet(
+        changeSet([{ operation: "cancel", sessionId: cancelledThenLogged }]),
+        1,
+      );
+      await completeSession(logged);
+      await completeSession(cancelledThenLogged);
+      const settled = await plan.getPlanSlice(day(0), day(1));
+
+      // A logged session is settled (owner, 7 Oct 2026): the lock and the
+      // cancelled state as much as the content and the day.
+      const changes = [
+        {
+          operation: "edit",
+          sessionId: logged,
+          session: {
+            title: "Rewritten",
+            sport: "Running",
+            expectedDurationMinutes: 30,
+            activities: [],
+          },
+        },
+        {
+          operation: "move",
+          sessionId: logged,
+          localDate: day(1),
+          position: 0,
+        },
+        { operation: "set_lock", sessionId: logged, isLocked: true },
+        { operation: "cancel", sessionId: logged },
+        { operation: "reactivate", sessionId: cancelledThenLogged },
+      ];
+      for (const change of changes) {
+        const refusal = await plan.applyChangeSet(changeSet([change]), 2).then(
+          () => null,
+          (thrown: unknown) => thrown,
+        );
+        expect(refusal, change.operation).toBeInstanceOf(RollingPlanRuleError);
+        expect((refusal as RollingPlanRuleError).reason, change.operation).toBe(
+          "session-completed",
+        );
+      }
+      expect(await plan.getPlanSlice(day(0), day(1))).toEqual(settled);
+    });
+
     it("refuses a delete naming no session, and an unknown operation", async () => {
       const { plan, day } = requireSubject(subject);
       const sessionId = randomUUID();

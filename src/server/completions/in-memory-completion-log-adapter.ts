@@ -55,10 +55,20 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
     return id;
   }
 
-  /** Rewrites a planned session in place, as replanning does. */
+  /**
+   * Rewrites a planned session in place, as replanning does. A logged session
+   * is settled (owner, 7 Oct 2026), so the plan refuses the rewrite as
+   * `apply_rolling_plan_change_set` does.
+   */
   editPlanSession(sessionId: string, title: string): void {
     const session = this.planSessions.get(sessionId);
     if (!session) throw new CompletionValidationError();
+    if (
+      [...this.completions.values()].some(
+        (completion) => completion.planSessionId === sessionId,
+      )
+    )
+      throw new Error("A logged session is settled.");
     this.planSessions.set(sessionId, { ...session, title, activities: [] });
   }
 
