@@ -94,10 +94,16 @@ which is a real constraint on how history may be precomputed.
 ### 4. Safety flags and free text are both sent, and free text is truncated
 
 **Sent:** `actual_local_date`, `status`, `duration_minutes`, `perceived_effort`,
-`feeling`, and the four boolean signals `pain_reported`, `illness_reported`,
+and the four boolean signals `pain_reported`, `illness_reported`,
 `injury_reported`, `severe_fatigue_reported`. Session `title` and `sport`, and
 personal activity names. And all three free-text fields on the current
 revision: `note`, `replacement_description`, and `correction_reason`.
+
+*Amended 7 Oct 2026:* `feeling` is no longer sent, because it no longer exists.
+The log stopped asking "How did it feel?" on 3 Oct 2026 (effort says the same),
+and the owner had the column dropped for good
+(`20261007083912_remove_completion_feeling`). Nothing replaces it and the bytes
+it freed are not allocated to anything else by this amendment.
 
 *Clarified 25 Sep 2026 (A4bc):* a completion's `title` and `sport` are the
 log's own — what the owner called the training when logging it — falling back
