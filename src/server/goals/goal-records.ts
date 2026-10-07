@@ -66,6 +66,33 @@ export class GoalValidationError extends Error {
   }
 }
 
+/**
+ * A target date may not lie before the owner's day (owner, 7 Oct 2026). Only
+ * a date that is new or changed is judged: a goal whose date has since passed
+ * keeps it through an edit of anything else. The application's rule and not
+ * the database's, which does not know the owner's day.
+ */
+export class GoalTargetDateError extends GoalValidationError {
+  constructor() {
+    super();
+    this.name = "GoalTargetDateError";
+  }
+}
+
+export function assertTargetDateNotPast(
+  targetDate: string | undefined,
+  storedTargetDate: string | null | undefined,
+  today: string,
+): void {
+  if (
+    targetDate !== undefined &&
+    targetDate < today &&
+    targetDate !== (storedTargetDate ?? undefined)
+  ) {
+    throw new GoalTargetDateError();
+  }
+}
+
 export function parseGoalInput(value: unknown): GoalInput {
   if (!isRecord(value)) throw new GoalValidationError();
 

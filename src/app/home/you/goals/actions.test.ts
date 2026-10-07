@@ -1,9 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createRepositoryMock, revalidatePathMock } = vi.hoisted(() => ({
-  createRepositoryMock: vi.fn(),
-  revalidatePathMock: vi.fn(),
-}));
+const { createRepositoryMock, createProfileMock, revalidatePathMock } =
+  vi.hoisted(() => ({
+    createRepositoryMock: vi.fn(),
+    createProfileMock: vi.fn(),
+    revalidatePathMock: vi.fn(),
+  }));
 
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 vi.mock("@/server/repositories/goal-repository", async (importOriginal) => {
@@ -13,6 +15,12 @@ vi.mock("@/server/repositories/goal-repository", async (importOriginal) => {
     >();
   return { ...actual, createGoalRepository: createRepositoryMock };
 });
+vi.mock("@/server/repositories/profile-repository", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/server/repositories/profile-repository")
+  >()),
+  createProfileRepository: createProfileMock,
+}));
 
 import { INITIAL_GOAL_ACTION_STATE } from "./action-state";
 import { changeGoalAction } from "./actions";
@@ -24,7 +32,18 @@ import {
 import { GoalValidationError } from "@/server/goals/goal-records";
 
 describe("goal actions", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // The owner's day is 7 Oct 2026 in Berlin, whatever the wall clock says.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-07T10:00:00.000Z"));
+    createProfileMock.mockResolvedValue({
+      getCurrentProfile: vi
+        .fn()
+        .mockResolvedValue({ timezoneName: "Europe/Berlin" }),
+    });
+  });
+  afterEach(() => vi.useRealTimers());
 
   it("passes validated content to an authenticated repository and revalidates You", async () => {
     const create = vi.fn().mockResolvedValue({
@@ -107,13 +126,73 @@ describe("goal actions", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
+  it("refuses a new goal whose target date is before today", async () => {
+    const create = vi.fn();
+    createRepositoryMock.mockResolvedValue({ create });
+    const form = createForm();
+    form.set("targetDate", "2026-10-06");
+
+    const result = await changeGoalAction(INITIAL_GOAL_ACTION_STATE, form);
+
+    expect(result.status).toBe("validation");
+    expect(result.message).toMatch(/cannot be before today/i);
+    expect(result.draft).toMatchObject({ targetDate: "2026-10-06" });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("accepts today as a target date", async () => {
+    const create = vi.fn().mockResolvedValue({});
+    createRepositoryMock.mockResolvedValue({ create });
+    const form = createForm();
+    form.set("targetDate", "2026-10-07");
+
+    await expect(
+      changeGoalAction(INITIAL_GOAL_ACTION_STATE, form),
+    ).resolves.toMatchObject({ status: "saved" });
+  });
+
+  it.each([
+    ["keeps a date that has passed since", "2026-09-01", "saved"],
+    ["refuses a date changed to another past day", "2026-09-02", "validation"],
+  ])("on an edit, %s", async (_name, targetDate, status) => {
+    const edit = vi.fn().mockResolvedValue({});
+    createRepositoryMock.mockResolvedValue({
+      edit,
+      list: vi.fn().mockResolvedValue({
+        revision: 0,
+        goals: [
+          {
+            id: "52000000-0000-4000-8000-000000000001",
+            targetDate: "2026-09-01",
+          },
+        ],
+      }),
+    });
+    const form = createForm();
+    form.set("operation", "edit");
+    form.set("goalId", "52000000-0000-4000-8000-000000000001");
+    form.set("originalPriorityTier", "core");
+    form.set("targetDate", targetDate);
+
+    const result = await changeGoalAction(INITIAL_GOAL_ACTION_STATE, form);
+
+    expect(result.status).toBe(status);
+    if (status === "validation") {
+      expect(result.message).toMatch(/cannot be before today/i);
+    }
+    expect(edit).toHaveBeenCalledTimes(status === "saved" ? 1 : 0);
+  });
+
   it("omits the source-tier rank when an edit changes attention tier", async () => {
     const edit = vi.fn().mockResolvedValue({
       goal_id: "52000000-0000-4000-8000-000000000001",
       collection_revision: 5,
       result: "edited",
     });
-    createRepositoryMock.mockResolvedValue({ edit });
+    createRepositoryMock.mockResolvedValue({
+      edit,
+      list: vi.fn().mockResolvedValue({ revision: 0, goals: [] }),
+    });
     const form = createForm();
     form.set("operation", "edit");
     form.set("goalId", "52000000-0000-4000-8000-000000000001");

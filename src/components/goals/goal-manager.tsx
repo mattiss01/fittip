@@ -18,6 +18,8 @@ import {
   type GoalActionState,
 } from "@/app/home/you/goals/action-state";
 import { changeGoalAction } from "@/app/home/you/goals/actions";
+import { SheetCloseButton, SheetLayer } from "@/app/home/plan/plan-sheet";
+import sheetStyles from "@/app/home/plan/plan-week.module.css";
 import styles from "@/app/home/you/goals/goals.module.css";
 import { DateField } from "@/components/date-field/date-field";
 import { formatRoadmapDate } from "@/components/roadmap/roadmap-dates";
@@ -416,6 +418,16 @@ function GoalCard({
 }) {
   const ownEdit =
     actionState.operation === "edit" && actionState.goalId === goal.id;
+  // What can be done to a goal besides editing it sits behind "⋯", beside
+  // Edit, in a bottom sheet (owner, 7 Oct 2026). It closes once its change
+  // is answered; a refusal is then read on the page, where the notice is.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [settled, setSettled] = useState(actionState.submission);
+  if (actionState.submission !== settled) {
+    setSettled(actionState.submission);
+    setMenuOpen(false);
+  }
+  const menuTitleId = `goal-menu-${goal.id}`;
 
   return (
     <div className={styles.goalBody}>
@@ -444,6 +456,17 @@ function GoalCard({
             Edit
           </button>
         )}
+        {editing ? null : (
+          <button
+            aria-haspopup="dialog"
+            aria-label={`More for ${goal.title}`}
+            className={styles.more}
+            onClick={() => setMenuOpen(true)}
+            type="button"
+          >
+            ⋯
+          </button>
+        )}
       </div>
       {editing ? (
         <div className={styles.detail} data-goal-editor>
@@ -456,7 +479,22 @@ function GoalCard({
             draft={ownEdit ? actionState.draft : undefined}
             onCancel={() => onEditing(false)}
           />
-          <div className={styles.lifecycle}>
+        </div>
+      ) : null}
+      {menuOpen ? (
+        <SheetLayer
+          view="goal-actions"
+          labelledBy={menuTitleId}
+          onClose={() => setMenuOpen(false)}
+        >
+          <header className={sheetStyles.sheetHead}>
+            <span />
+            <SheetCloseButton className={sheetStyles.sheetClose}>
+              Close
+            </SheetCloseButton>
+          </header>
+          <h2 id={menuTitleId}>{goal.title}</h2>
+          <div className={`${styles.lifecycle} ${styles.menu}`}>
             <SimpleAction
               operation="pause"
               label="Pause"
@@ -493,7 +531,7 @@ function GoalCard({
               pending={pending}
             />
           </div>
-        </div>
+        </SheetLayer>
       ) : null}
     </div>
   );

@@ -105,6 +105,35 @@ describe("guided setup actions", () => {
     expect(redirectMock).not.toHaveBeenCalled();
   });
 
+  it("refuses a goal whose new target date is before the owner's today", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-07T10:00:00.000Z"));
+    profiles.getDetails.mockResolvedValue({
+      sports: ["Running"],
+      timezoneName: "Europe/Berlin",
+    });
+    goals.list.mockResolvedValue({ revision: 0, goals: [] });
+
+    try {
+      const state = await saveSetupGoalsAction(
+        INITIAL_SETUP_ACTION_STATE,
+        goalForm([
+          {
+            title: "Finish a calm 10K",
+            sport: "Running",
+            targetDate: "2026-10-06",
+          },
+        ]),
+      );
+
+      expect(state.status).toBe("validation");
+      expect(state.message).toMatch(/not before today/);
+      expect(goals.create).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("edits a goal the account already has, keeping its place", async () => {
     const state = await saveSetupGoalsAction(
       INITIAL_SETUP_ACTION_STATE,
@@ -355,6 +384,7 @@ function goalForm(
     outcome?: string;
     sport?: string;
     tier?: string;
+    targetDate?: string;
   }[],
 ) {
   const form = new FormData();
@@ -369,7 +399,7 @@ function goalForm(
       row.outcome ?? "Run the autumn event with even pacing.",
     );
     form.set(`goalActivities:${index}`, row.sport ?? "");
-    form.set(`goalTargetDate:${index}`, "");
+    form.set(`goalTargetDate:${index}`, row.targetDate ?? "");
     form.set(`goalTier:${index}`, row.tier ?? "core");
   });
   return form;

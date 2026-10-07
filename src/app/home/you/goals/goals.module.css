@@ -540,3 +540,23 @@
     transform: translateY(0);
   }
 }
+
+/* "⋯" beside Edit: the rest of what can be done to a goal. */
+.controls .more {
+  min-width: 2.75rem;
+  padding: 0.5rem 0.7rem;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+/* The same actions as a list in the sheet: one to a row, full width. */
+.menu {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.menu > form > button,
+.menu > .confirmation > summary {
+  width: 100%;
+}

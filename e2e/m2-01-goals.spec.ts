@@ -169,33 +169,31 @@ test.describe("M2-01 goal management", () => {
         page.getByRole("heading", { name: "Trail event revised" }),
       ).toBeVisible();
 
-      const climbingCard = goalCard(page, "Climbing skill");
-      await openGoalDetails(climbingCard);
-      await climbingCard.getByRole("button", { name: "Pause" }).click();
+      const climbingMenu = await openGoalMenu(page, "Climbing skill");
+      await climbingMenu.getByRole("button", { name: "Pause" }).click();
       await expect(page.getByLabel("1 core slots open")).toBeVisible();
       const pausedSection = page.locator("details").filter({
         has: page.locator("summary").filter({ hasText: /^Paused/ }),
       });
-      await pausedSection.locator("summary").click();
+      await pausedSection.locator(":scope > summary").click();
       await expect(
         pausedSection.getByText("Climbing skill", { exact: true }),
       ).toBeVisible();
       await pausedSection.getByRole("button", { name: "Resume" }).click();
       await expect(page.getByLabel("0 core slots open")).toBeVisible();
 
-      const mobilityCard = goalCard(page, "Mobility habit");
-      await openGoalDetails(mobilityCard);
+      const mobilityMenu = await openGoalMenu(page, "Mobility habit");
       // This goal is set aside by keyboard through Abandoned: the
       // confirmation opens on Enter and its button is next in the tab order.
       const setAsideConfirmation = confirmation(
-        mobilityCard,
+        mobilityMenu,
         "Abandoned",
         "Confirm abandoned",
       );
       await setAsideConfirmation.summary.focus();
       await page.keyboard.press("Enter");
       await expect(
-        mobilityCard.getByText(/records the goal as abandoned/i),
+        mobilityMenu.getByText(/records the goal as abandoned/i),
       ).toBeVisible();
       await page.keyboard.press("Tab");
       await expect(setAsideConfirmation.confirm).toBeFocused();
@@ -211,16 +209,15 @@ test.describe("M2-01 goal management", () => {
       );
 
       await createGoal(page, "Achievement candidate", "supporting", "Cycling");
-      const achievementCard = goalCard(page, "Achievement candidate");
-      await openGoalDetails(achievementCard);
+      const achievementMenu = await openGoalMenu(page, "Achievement candidate");
       const achieveConfirmation = confirmation(
-        achievementCard,
+        achievementMenu,
         "Achieved",
         "Confirm achieved",
       );
       await achieveConfirmation.summary.click();
       await expect(
-        achievementCard.getByText(/records the goal as achieved/i),
+        achievementMenu.getByText(/records the goal as achieved/i),
       ).toBeVisible();
       await achieveConfirmation.confirm.click();
       await expect(
@@ -231,16 +228,15 @@ test.describe("M2-01 goal management", () => {
       );
 
       await createGoal(page, "Abandon candidate", "supporting", "Rowing");
-      const abandonCard = goalCard(page, "Abandon candidate");
-      await openGoalDetails(abandonCard);
+      const abandonMenu = await openGoalMenu(page, "Abandon candidate");
       const abandonConfirmation = confirmation(
-        abandonCard,
+        abandonMenu,
         "Abandoned",
         "Confirm abandoned",
       );
       await abandonConfirmation.summary.click();
       await expect(
-        abandonCard.getByText(/records the goal as abandoned/i),
+        abandonMenu.getByText(/records the goal as abandoned/i),
       ).toBeVisible();
       await abandonConfirmation.confirm.click();
       await expect(
@@ -268,15 +264,14 @@ test.describe("M2-01 goal management", () => {
       await expect(historyEntry(page, "Abandon candidate")).toHaveCount(1);
 
       await createGoal(page, "Temporary idea", "supporting", "Walking");
-      const temporaryCard = goalCard(page, "Temporary idea");
-      await openGoalDetails(temporaryCard);
+      const temporaryMenu = await openGoalMenu(page, "Temporary idea");
       const deleteConfirmation = confirmation(
-        temporaryCard,
+        temporaryMenu,
         "Delete",
         "Confirm permanent delete",
       );
       await deleteConfirmation.summary.click();
-      await expect(temporaryCard.getByText(/cannot be undone/i)).toBeVisible();
+      await expect(temporaryMenu.getByText(/cannot be undone/i)).toBeVisible();
       await page.screenshot({
         fullPage: true,
         path: path.join(
@@ -433,6 +428,22 @@ async function openGoalDetails(card: import("@playwright/test").Locator) {
     await card.getByRole("button", { name: "Edit", exact: true }).click();
   }
   await expect(editor).toBeVisible();
+}
+
+/**
+ * "⋯" beside Edit opens a sheet with what else can be done to a goal: Pause,
+ * Achieved, Abandoned and Delete (owner, 7 Oct 2026).
+ */
+async function openGoalMenu(
+  page: import("@playwright/test").Page,
+  title: string,
+) {
+  await goalCard(page, title)
+    .getByRole("button", { name: `More for ${title}` })
+    .click();
+  const menu = page.getByRole("dialog", { name: title });
+  await expect(menu).toBeVisible();
+  return menu;
 }
 
 function confirmation(

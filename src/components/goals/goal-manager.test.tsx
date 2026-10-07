@@ -4,6 +4,7 @@ import {
   fireEvent,
   render,
   screen,
+  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -369,7 +370,12 @@ describe("GoalManager", () => {
         initialGoals={[goal({ title: "Trail event" })]}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    // Beside Edit, not inside it (owner, 7 Oct 2026).
+    fireEvent.click(
+      screen.getByRole("button", { name: "More for Trail event" }),
+    );
+    const sheet = screen.getByRole("dialog", { name: "Trail event" });
+    expect(within(sheet).getByRole("button", { name: "Pause" })).toBeEnabled();
 
     for (const [action, consequence, confirmation] of [
       ["Achieved", /records the goal as achieved/i, "Confirm achieved"],

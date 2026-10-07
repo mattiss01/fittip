@@ -4,10 +4,14 @@ import { revalidatePath } from "next/cache";
 
 import type { GoalActionDraft, GoalActionState } from "./action-state";
 
+import { isoDateInTimezone } from "@/lib/date/local-date";
 import {
+  assertTargetDateNotPast,
+  GoalTargetDateError,
   GoalValidationError,
   parseExpectedRevision,
   parseGoalId,
+  parseGoalInput,
 } from "@/server/goals/goal-records";
 import {
   createGoalRepository,
@@ -15,6 +19,10 @@ import {
   GoalConflictError,
   GoalPersistenceError,
 } from "@/server/repositories/goal-repository";
+import {
+  createProfileRepository,
+  ProfileAuthenticationError,
+} from "@/server/repositories/profile-repository";
 
 export async function changeGoalAction(
   previous: GoalActionState,
@@ -74,14 +82,27 @@ export async function changeGoalAction(
             ? undefined
             : optionalNumber(formData, "targetRank"),
       };
-      if (operation === "create") {
+      const goalId =
+        operation === "edit" ? parseGoalId(formData.get("goalId")) : undefined;
+      // Parsed here as well as in the repository, so that the date below is
+      // a date before it is compared.
+      const { targetDate } = parseGoalInput(input);
+      if (targetDate !== undefined) {
+        const [profile, saved] = await Promise.all([
+          (await createProfileRepository()).getCurrentProfile(),
+          goalId === undefined ? null : repository.list(),
+        ]);
+        assertTargetDateNotPast(
+          targetDate,
+          saved?.goals.find((goal) => goal.id === goalId)?.targetDate,
+          // A day needs a zone. Without a stored one it is UTC's.
+          isoDateInTimezone(new Date(), profile?.timezoneName ?? "UTC"),
+        );
+      }
+      if (goalId === undefined) {
         await repository.create(input, expectedRevision);
       } else {
-        await repository.edit(
-          parseGoalId(formData.get("goalId")),
-          input,
-          expectedRevision,
-        );
+        await repository.edit(goalId, input, expectedRevision);
       }
     } else if (operation === "reorder") {
       await repository.reorder(
@@ -124,6 +145,13 @@ export async function changeGoalAction(
     revalidatePath("/home/you/goals");
     return resultState("saved", resultCopy(operation), false);
   } catch (error) {
+    if (error instanceof GoalTargetDateError) {
+      return resultState(
+        "validation",
+        "The target date cannot be before today. Your change has not been saved.",
+        true,
+      );
+    }
     if (error instanceof GoalValidationError) {
       return resultState(
         "validation",
@@ -147,7 +175,10 @@ export async function changeGoalAction(
         "stale",
       );
     }
-    if (error instanceof GoalAuthenticationError) {
+    if (
+      error instanceof GoalAuthenticationError ||
+      error instanceof ProfileAuthenticationError
+    ) {
       return resultState(
         "session",
         "Your session ended. Sign in again before changing goals.",

@@ -5,8 +5,10 @@ import { redirect } from "next/navigation";
 
 import type { SetupActionState } from "./action-state";
 
+import { isoDateInTimezone } from "@/lib/date/local-date";
 import { SPORTS_MAX_COUNT } from "@/lib/sports/sport-presets";
 import {
+  assertTargetDateNotPast,
   GoalValidationError,
   parseGoalInput,
   type GoalInput,
@@ -120,6 +122,22 @@ async function saveGoals(
     // Everything sent is checked before anything is written.
     const rows = parseGoalRows(formData, collection.goals);
     if (rows.every((row) => row === null)) throw new GoalValidationError();
+    const dated = rows.filter((row) => row?.input.targetDate !== undefined);
+    if (dated.length > 0) {
+      const profile = await (await createProfileRepository()).getDetails();
+      // A day needs a zone. Without a stored one it is UTC's.
+      const today = isoDateInTimezone(
+        new Date(),
+        profile?.timezoneName ?? "UTC",
+      );
+      for (const row of dated) {
+        assertTargetDateNotPast(
+          row?.input.targetDate,
+          row?.existing?.targetDate,
+          today,
+        );
+      }
+    }
 
     let revision = collection.revision;
     for (const row of rows) {
@@ -143,7 +161,7 @@ async function saveGoals(
     if (error instanceof GoalValidationError) {
       return result(
         "validation",
-        "Check each goal: it needs a title, a desired outcome and a sport.",
+        "Check each goal: it needs a title, a desired outcome and a sport, and a target date that is not before today.",
       );
     }
     if (error instanceof GoalConflictError) {
