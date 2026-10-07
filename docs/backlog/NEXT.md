@@ -180,6 +180,10 @@ lane, one screen per merge.
       changes too. Nothing is in production, so existing values need no keeping.
       Owner, 7 Oct 2026: drop the column for good, founder values included; ADR-013
       decision 4 is amended in its own commit. After the logged-session rule.
+      In the same replacement of `apply_completion_change`: lock the planned
+      session's row before reading its snapshot. Today an edit that commits between
+      that read and the log's insert leaves a log measured against the session as
+      it was before the edit (review, 7 Oct 2026; one call wide, two tabs at once).
 - Cost to expect: many unit and browser tests assert the current copy, so cutting text means
       rewriting those assertions in the same merge.
 

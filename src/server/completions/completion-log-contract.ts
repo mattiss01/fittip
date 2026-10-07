@@ -9,6 +9,8 @@ import {
   type CompletionLog,
 } from "./completion-log";
 
+import { RollingPlanRuleError } from "@/server/rolling-plan/rolling-plan";
+
 export type CompletionLogContractSubject = {
   completions: CompletionLog;
   /**
@@ -107,9 +109,17 @@ export function registerCompletionLogContract(
 
       // A logged session is settled (owner, 7 Oct 2026): the plan refuses the
       // rewrite outright, where it used to accept it and leave the snapshot.
-      await expect(
-        editPlanSession(planSessionId, "Something else entirely"),
-      ).rejects.toThrow();
+      const refusal = await editPlanSession(
+        planSessionId,
+        "Something else entirely",
+      ).then(
+        () => null,
+        (thrown: unknown) => thrown,
+      );
+      expect(refusal).toBeInstanceOf(RollingPlanRuleError);
+      expect((refusal as RollingPlanRuleError).reason).toBe(
+        "session-completed",
+      );
 
       expect((await completions.get(completionId))?.plannedSnapshot).toEqual(
         before?.plannedSnapshot,

@@ -17,9 +17,16 @@
 -- `20260929143946_session_cancellation_reason` (its live definition matched
 -- that file) with the changes marked "Logged session". The check sits behind
 -- the same `for update` row lock Delete's does, which is stronger than the key
--- share a concurrent completion insert takes, so it cannot be raced. The past
--- boundary is still asked first, the order the owner already sees the two
--- refusals in.
+-- share a completion insert takes: a change waits for a log being written and
+-- then sees it. The past boundary is still asked first, the order the owner
+-- already sees the two refusals in.
+--
+-- What this does not close (review, 7 Oct 2026): `apply_completion_change`
+-- reads the planned snapshot before its insert and takes no lock for the
+-- read, so an edit committing between the two is an edit of a session that
+-- was not yet logged, and the log then carries the snapshot from before it.
+-- Older than this rule and one function call wide; locking the session row
+-- there belongs to the next replacement of that function (`NEXT.md`).
 --
 -- Not changed, on purpose: a series edit or "delete this and all future"
 -- already keeps a logged occurrence (`completedKept`); a coach's plan proposal
@@ -570,7 +577,7 @@ begin
         -- Logged session: what a log was measured against is settled, for
         -- the lock as much as for the content, because the page that offers
         -- none of these is the rule being enforced. Behind the row lock
-        -- above, as Delete's check is, so a concurrent log cannot slip past.
+        -- above, as Delete's check is, so a log being written is waited for.
         if exists (
           select 1 from public.completions completion
           where completion.user_id = v_user_id

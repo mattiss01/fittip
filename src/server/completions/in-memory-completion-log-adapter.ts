@@ -17,6 +17,8 @@ import {
   type ParsedCompletionWindow,
 } from "./completion-log";
 
+import { RollingPlanRuleError } from "@/server/rolling-plan/rolling-plan";
+
 export type InMemoryCompletionLogOptions = {
   timezoneName?: string | null;
   clock?: () => Date;
@@ -68,7 +70,7 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
         (completion) => completion.planSessionId === sessionId,
       )
     )
-      throw new Error("A logged session is settled.");
+      throw new RollingPlanRuleError("session-completed");
     this.planSessions.set(sessionId, { ...session, title, activities: [] });
   }
 
