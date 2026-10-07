@@ -870,9 +870,12 @@ begin
 
   -- Logged session: its activities can no longer be saved, so the coach is
   -- not asked. The same answer as a session that is gone, because for
-  -- planning it is. No row lock is taken here, so a log written in the
-  -- same moment can still let one request through; its suggestion is then
-  -- refused at Save by the rule above.
+  -- planning it is. This is asked once, when the request is claimed:
+  -- `finish_session_activity_generation` does not ask again, so a log
+  -- written while the coach is answering still costs that one call and
+  -- leaves a suggestion open. Accepting it is an `edit`, refused by the rule
+  -- above; Dismiss clears it. A suggestion already open when the session is
+  -- logged stays open the same way.
   if exists (
     select 1 from public.completions completion
     where completion.user_id = v_user_id
