@@ -11,13 +11,15 @@ import assert from "node:assert/strict";
 // the title from before an edit the plan kept.
 //
 // The window that produced that state was one function call wide, so a round
-// that passes does not prove the lock; it is the invariant over many rounds,
-// in both orders, that this asserts.
+// that passes does not prove the lock; it is the invariant over many rounds
+// that this asserts. Both orders have to have happened for the run to count:
+// one in which every edit lost, or every edit won, says nothing about the
+// other side and fails.
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const ROUNDS = 24;
+const ROUNDS = 40;
 const TIMEZONE = "UTC";
 const today = new Date().toISOString().slice(0, 10);
 
@@ -121,6 +123,11 @@ try {
       `round ${round}: the log was measured against the session the plan holds`,
     );
   }
+
+  assert.ok(
+    editsKept > 0 && editsRefused > 0,
+    `both orders must occur for the run to prove anything: the edit landed first ${editsKept} times and was refused ${editsRefused} times in ${ROUNDS} rounds`,
+  );
 
   console.log(
     `Snapshot lock PASS: ${ROUNDS} simultaneous log-and-edit pairs each left a log whose planned snapshot is the session the plan holds; the edit landed first ${editsKept} times and was refused as a change to a logged session ${editsRefused} times.`,

@@ -22,10 +22,17 @@
 -- session's row from before it reads the snapshot until it commits. Without
 -- it, an edit committing between that read and the insert left a log measured
 -- against the session as it stood before the edit. A key share is enough: it
--- is what the insert's foreign key takes anyway, taken earlier, and every plan
--- verb asks for the row `for update`, so the edit waits and is then refused by
--- the logged-session rule; a log that arrives second waits and reads the
--- edited session.
+-- is what the insert's foreign key takes anyway, taken earlier, and edit,
+-- move, set_lock, cancel, reactivate and delete each ask for the row
+-- `for update`, so one of those waits and is then refused by the
+-- logged-session rule; a log that arrives second waits and reads the session
+-- as changed. It takes no timeout of its own, so no new refusal exists.
+--
+-- Not covered (review, 7 Oct 2026; older than this): a series sweep decides
+-- which occurrences are logged before it reaches their rows, so a log written
+-- in that moment makes the sweep's delete fail on `completions_plan_fkey` and
+-- the whole series change answers 22023 instead of keeping the occurrence.
+-- Nothing is lost and the owner's retry succeeds.
 --
 -- Owner-visible conditions: none new. Signatures and grants are unchanged.
 
@@ -320,17 +327,13 @@ begin
       -- when it belongs to this owner, so another owner's session is simply
       -- not there. The snapshot is taken now and never read through again.
       -- Snapshot lock: hold the planned row before it is read, so what is
-      -- read is what the log is written against. Bounded like the edit
-      -- path below, so a plan change in flight is an answer and not a hang.
-      perform pg_catalog.set_config('lock_timeout', '3s', true);
-      begin
-        perform 1 from public.rolling_plan_sessions session
-        where session.id = v_plan_session_id and session.user_id = v_user_id
-        for key share;
-      exception when lock_not_available then
-        raise exception using errcode = 'PT409',
-          message = 'Your plan changed. Reload and try again.';
-      end;
+      -- read is what the log is written against. No timeout of its own: this
+      -- is the wait the insert's foreign key already made, moved earlier, and
+      -- the only holder it can wait for is a plan change, which bounds its
+      -- own waits at three seconds and commits or fails.
+      perform 1 from public.rolling_plan_sessions session
+      where session.id = v_plan_session_id and session.user_id = v_user_id
+      for key share;
       v_snapshot := public.rolling_plan_session_state(v_user_id, v_plan_session_id);
       if v_snapshot is null then
         raise exception using errcode = '22023',
