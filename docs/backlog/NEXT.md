@@ -62,7 +62,7 @@ lane, one screen per merge.
       name (5 Oct 2026). Open since the setup rework: the training setup (sessions a
       week, days out and the note, places, home equipment), which the coach no
       longer learns from memory, and the sports. AI data boundary, so careful lane
-      and its own ADR (022). The plan context had about 9 tokens free; bring measured
+      and its own ADR (023). The plan context had about 9 tokens free; bring measured
       numbers and the safety wording (non-diagnostic) with the options. Waiting
       for this round since 7 Oct 2026: a goal's desired outcome, which the owner wants
       the coach to read, for the roadmap above all; and one sentence in the prompt.
@@ -87,8 +87,14 @@ lane, one screen per merge.
       Both need `DateField` to be held by its form, which it is not yet. A typed
       date outside a session's range still gets the general refusal, and a goal's
       calendar still offers days before today, which the save then refuses.
-- [ ] **Forgot password.** Owner, 5 Oct 2026: a link on sign-in that sends a
-      reset mail and lets the password be set again. Careful lane (auth).
+- [~] **Forgot password.** Owner, 5 Oct 2026. Careful lane (auth), ADR-022.
+      Outcome: a link on sign-in sends a reset mail, and its link lets the password be
+      set again. Constraints: no migration and nothing stored by FitTip; the same answer
+      whether or not the address has an account; the passwords are checked before the
+      link is spent, and opening the link does not spend it; on the hosted app only the
+      owner's account can be reset. Owner, 8 Oct 2026: the link works on any device;
+      after the reset you land on sign-in, signed out; every other device is signed
+      out. The hosted mail template is the owner's to paste.
 - [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only
       "Generate roadmap proposal", and an owner without a subscription may not be able
       to generate one, so a roadmap must also be writable by hand: phases, dates, focus,

@@ -19,4 +19,19 @@ describe("Next response safety headers", () => {
       value: "private, no-cache, no-store, must-revalidate, max-age=0",
     });
   });
+
+  it("keeps the reset pages out of caches and referrers", async () => {
+    const headers = await nextConfig.headers?.();
+    for (const source of ["/forgot-password", "/reset-password"]) {
+      const rule = headers?.find((candidate) => candidate.source === source);
+      expect(rule?.headers).toContainEqual({
+        key: "Cache-Control",
+        value: "private, no-cache, no-store, must-revalidate, max-age=0",
+      });
+      expect(rule?.headers).toContainEqual({
+        key: "Referrer-Policy",
+        value: "no-referrer",
+      });
+    }
+  });
 });

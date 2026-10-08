@@ -6,6 +6,8 @@
 
 **Approval:** Product owner approved reducing M0-03 to the basic testable MVP authentication flow
 
+**Recovery deferral superseded by:** [ADR-022](ADR-022-PASSWORD-RECOVERY.md) adds forgotten-password and password-reset behavior; the conditions for external users below still stand
+
 **Supersedes:** The requirement in [ADR-003](ADR-003-PUBLIC-EMAIL-PASSWORD-AUTH.md) to implement forgotten-password and password-reset behavior in the first authentication ticket
 
 ## Context

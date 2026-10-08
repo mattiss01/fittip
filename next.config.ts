@@ -27,6 +27,15 @@ const nextConfig: NextConfig = {
         source: "/home/:path*",
         headers: privateSessionHeaders(),
       },
+      // A reset link's one-time code is in the address of the page it opens
+      // (ADR-022): never stored, and never sent on as a referrer.
+      ...["/forgot-password", "/reset-password"].map((source) => ({
+        source,
+        headers: [
+          ...privateSessionHeaders(),
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      })),
     ];
   },
 };

@@ -46,7 +46,11 @@ test.describe("public account authentication", () => {
     expect(pageErrors).toEqual([]);
     await expect(page.getByRole("status")).toContainText("Check your email");
 
-    const confirmationUrl = await pollForConfirmationUrl(request, email);
+    const confirmationUrl = await pollForMailUrl(
+      request,
+      email,
+      CONFIRMATION_LINK,
+    );
     const callbackResponse = page.waitForResponse(
       (response) => new URL(response.url()).pathname === "/auth/callback",
     );
@@ -88,6 +92,113 @@ test.describe("public account authentication", () => {
     // so its 390px flow does not require a .github workflow change or an
     // uninvoked ticket config.
     await completeGuidedSetup(page, testInfo, { email, password });
+  });
+
+  test("resets a forgotten password through a mailed link that works in another browser", async ({
+    page,
+    request,
+    browser,
+  }) => {
+    const email = `fittip-reset-${Date.now()}@example.test`;
+    const password = `Local-${crypto.randomUUID()}-9`;
+    const newPassword = `Reset-${crypto.randomUUID()}-7`;
+
+    // An account to forget the password of.
+    await page.goto("/signup");
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByLabel("Confirm password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Create account" }).click();
+    await expect(page.getByRole("status")).toContainText("Check your email");
+    await page.goto(await pollForMailUrl(request, email, CONFIRMATION_LINK));
+    await expect(page).toHaveURL(/\/\?auth=confirmed$/);
+
+    // Sign-in offers the way back in. The answer is the same for an address
+    // with an account and one without.
+    const answer = "If that address has an account";
+    await page.getByRole("link", { name: "Forgot password?" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Forgot your password?" }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      ),
+    ).toBe(false);
+    await page.getByLabel("Email").fill(`nobody-${Date.now()}@example.test`);
+    await page.getByRole("button", { name: "Send the link" }).click();
+    await expect(page.getByRole("status")).toContainText(answer);
+    await page.goto("/forgot-password");
+    await page.getByLabel("Email").fill(email);
+    await page.getByRole("button", { name: "Send the link" }).click();
+    await expect(page.getByRole("status")).toContainText(answer);
+    const resetUrl = await pollForMailUrl(request, email, RESET_LINK);
+
+    // The link is opened where it was not asked for: a browser with none of
+    // the first one's cookies, as a phone would be (owner, 8 Oct 2026).
+    const elsewhere = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+    });
+    try {
+      const other = await elsewhere.newPage();
+      const opened = await other.goto(resetUrl);
+      // Its one-time code is in the address: not stored, not sent on.
+      expect(opened?.headers()["cache-control"]).toContain("no-store");
+      expect(opened?.headers()["referrer-policy"]).toBe("no-referrer");
+      await expect(
+        other.getByRole("heading", { name: "Set a new password" }),
+      ).toBeVisible();
+      expect(
+        await other.evaluate(
+          () => document.documentElement.scrollWidth > window.innerWidth,
+        ),
+      ).toBe(false);
+
+      // Two passwords that differ cost nothing: the form is back, and the
+      // link is still good.
+      const fill = async (first: string, second: string) => {
+        await other.getByLabel("New password", { exact: true }).fill(first);
+        await other
+          .getByLabel("Confirm new password", { exact: true })
+          .fill(second);
+        await other.getByRole("button", { name: "Change password" }).click();
+      };
+      await fill(newPassword, `${newPassword}-typo`);
+      await expect(other.locator(".form-message.error")).toContainText(
+        "Use matching passwords",
+      );
+
+      await fill(newPassword, newPassword);
+      // Signed out, on sign-in, which says so.
+      await expect(other).toHaveURL(/\/\?auth=password-changed$/);
+      await expect(other.getByRole("status")).toContainText(
+        "Your password is changed",
+      );
+
+      // The old password no longer works and the new one does.
+      const signIn = async (secret: string) => {
+        await other.getByLabel("Email").fill(email);
+        await other.getByLabel("Password", { exact: true }).fill(secret);
+        await other.getByRole("button", { name: "Sign in" }).click();
+      };
+      await signIn(password);
+      await expect(other.locator(".form-message.error")).toContainText(
+        "We could not sign you in",
+      );
+      await signIn(newPassword);
+      await expect(other).toHaveURL(/\/home\//);
+
+      // The link worked once. The page still opens, since opening spends
+      // nothing, and the reset is refused.
+      await other.goto(resetUrl);
+      await fill(`${newPassword}-again`, `${newPassword}-again`);
+      await expect(other).toHaveURL(/\/forgot-password\?error=link$/);
+      await expect(other.locator(".form-message.error")).toContainText(
+        "expired or was already used",
+      );
+    } finally {
+      await elsewhere.close();
+    }
   });
 });
 
@@ -352,11 +463,18 @@ async function expectPrivateSessionHeaders(
   ]);
 }
 
-async function pollForConfirmationUrl(
-  request: Parameters<typeof test>[0] extends never
-    ? never
-    : import("@playwright/test").APIRequestContext,
+const CONFIRMATION_LINK = /https?:\/\/[^"'\s<]+\/auth\/callback[^"'\s<]*/;
+const RESET_LINK = /https?:\/\/[^"'\s<]+\/reset-password\?[^"'\s<]*/;
+
+/**
+ * The link of the given kind in a mail Mailpit holds for this address. An
+ * address gets more than one mail in the reset flow, so every one of them is
+ * looked through.
+ */
+async function pollForMailUrl(
+  request: import("@playwright/test").APIRequestContext,
   email: string,
+  link: RegExp,
 ): Promise<string> {
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const response = await request.get(
@@ -365,22 +483,19 @@ async function pollForConfirmationUrl(
     const body = (await response.json()) as {
       messages?: Array<{ ID?: string; To?: Array<{ Address?: string }> }>;
     };
-    const message = body.messages?.find((candidate) =>
+    const messages = (body.messages ?? []).filter((candidate) =>
       candidate.To?.some((recipient) => recipient.Address === email),
     );
-    if (!message?.ID) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      continue;
+    for (const message of messages) {
+      if (!message.ID) continue;
+      const detail = await request.get(
+        `http://127.0.0.1:54324/api/v1/message/${message.ID}`,
+      );
+      const html = ((await detail.json()) as { HTML?: string }).HTML;
+      const url = html?.match(link)?.[0];
+      if (url) return url.replace(/&amp;/g, "&");
     }
-    const detail = await request.get(
-      `http://127.0.0.1:54324/api/v1/message/${message.ID}`,
-    );
-    const html = ((await detail.json()) as { HTML?: string }).HTML;
-    const url = html?.match(
-      /https?:\/\/[^"'\s<]+\/auth\/callback[^"'\s<]*/,
-    )?.[0];
-    if (url) return url.replace(/&amp;/g, "&");
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  throw new Error("No local confirmation email arrived in Mailpit.");
+  throw new Error(`No local email with a ${link.source} link arrived.`);
 }
