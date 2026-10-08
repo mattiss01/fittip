@@ -37,8 +37,12 @@ const YEAR_FIRST: DateOrder = ["year", "month", "day"];
  * unless the form gives `rangeMessage`: then a date outside `min` and `max`
  * is stopped in the browser too, with that sentence.
  *
- * A form that shows something of its own for the date takes `onChange`, which
- * is handed the date once it is one the form may use, and "" while it is not.
+ * A form that shows something of its own for the date takes `onChange`. It
+ * is told at each change, with the date if it is one the form may use and ""
+ * if it is not. That includes dates passed through while typing: on the way
+ * from the 7th to the 17th the fields read the 1st. A form that acts on the
+ * date keeps what it is told and acts when the owner moves on, as the log
+ * does.
  */
 export function DateField({
   name,
@@ -74,7 +78,10 @@ export function DateField({
   unchecked?: boolean;
   /** Shown and sent, not changed: the three fields are fixed, with no calendar. */
   readOnly?: boolean;
-  /** Limits of the calendar; what is typed is checked where it is saved. */
+  /**
+   * Limits of the calendar. What is typed is held to them only with
+   * `rangeMessage`, and is otherwise checked where it is saved.
+   */
   min?: string;
   max?: string;
   /** What to say of a typed date outside `min` and `max`, to stop it here. */
@@ -155,6 +162,8 @@ export function DateField({
             }}
             placeholder={DATE_PARTS[part].hint}
             readOnly={readOnly}
+            // Named, so a form's rule for its text fields draws these too.
+            type="text"
             ref={(field) => {
               fields.current[part] = field;
             }}

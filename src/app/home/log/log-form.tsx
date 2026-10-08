@@ -262,6 +262,8 @@ export function LogForm({
   // The date is asked only when the owner taps its Change, and returns to
   // the question it was opened from.
   const [dateReturn, setDateReturn] = useState<Step | null>(null);
+  // What the date step's fields hold, when it is a day that can be logged for.
+  const typedDate = useRef("");
   // Opened from the summary, a step returns there rather than walking on.
   const [fromSummary, setFromSummary] = useState(false);
 
@@ -497,8 +499,20 @@ export function LogForm({
     change(target);
   }
 
+  /**
+   * Leaving the date step, by Next, Back or Enter: the day its fields hold
+   * becomes the day the log is for, if it is one that can be logged for.
+   */
+  function takeDate() {
+    const date = typedDate.current;
+    if (step !== "date" || date === "" || date === actualDate) return;
+    setActualDate(date);
+    setDayChoice(null);
+  }
+
   /** On to the next question, or back to the summary it was opened from. */
   function advance(list: Step[] = steps, from: Step = step) {
+    takeDate();
     if (fromSummary) {
       setFromSummary(false);
       setStep("summary");
@@ -526,6 +540,7 @@ export function LogForm({
     // Back to the summary is an answer too: it must hold, or Save would be
     // refused with the field out of sight.
     if (fromSummary && !stepIsValid()) return;
+    takeDate();
     if (fromSummary || step === "summary") {
       setFromSummary(false);
       setStep("summary");
@@ -718,9 +733,10 @@ export function LogForm({
       {dateOpen ? (
         <section data-log-step="date" hidden={step !== "date"}>
           <div className={styles.field}>
-            {/* Typed or picked (owner, 5 Oct 2026). The form keeps the last
-                day that can be logged for: a date half typed or after today
-                stops this step and changes nothing above it. */}
+            {/* Typed or picked (owner, 5 Oct 2026). What the fields hold is
+                kept aside and taken when this step is left (`takeDate`), not
+                at each digit: on the way from the 7th to the 17th they read
+                the 1st. A date half typed or after today stops the step. */}
             <DateField
               calendar
               describedBy="log-date-hint"
@@ -729,9 +745,7 @@ export function LogForm({
               labelClassName={styles.dateLabel}
               max={today}
               onChange={(date) => {
-                if (date === "" || date === actualDate) return;
-                setActualDate(date);
-                setDayChoice(null);
+                typedDate.current = date;
               }}
               rangeMessage="Choose today or an earlier day."
               required
