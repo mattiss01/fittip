@@ -46,7 +46,7 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 **App redesign in the Coach's note direction.** The owner chose it on 29 Sep 2026 from three
 Today prototypes (`prototype/today-design`, `/prototype/today?variant=C`): FitTip's pine and
-ember with a modern sans (Schibsted Grotesk, DM Mono for small labels), icon nav, a scrollable
+ember with a modern sans (Schibsted Grotesk, Chivo Mono for small labels), icon nav, a scrollable
 day strip, the coach's one-line reason, session cards that fold into a receipt once logged, and
 bottom sheets instead of new pages. Less text: each screen is a heading, the content and one
 main action. No week ring. The owner flagged a possible bias toward the look they already know,
@@ -86,12 +86,6 @@ lane, one screen per merge.
       date (`plan-date-field.tsx`, with its `min` and `max`), a series' end, the log's
       date, a memory's expiry, the roadmap's dates. Several are pinned by browser specs.
       A goal's calendar still offers days before today, which the save then refuses.
-- [ ] **Numbers without the struck-through zero.** Owner, 5 Oct 2026: the mono face
-      (DM Mono, `--font-mono`) draws 0 with a line through it and the owner does not
-      want it anywhere a number shows. Setup's percentage is in the sans face already;
-      71 other rules use the mono face, for small labels as well as numbers. Open:
-      another mono face with a plain zero, or the sans face with tabular figures
-      wherever a number is shown. Build lane, one sweep, the owner looking.
 - [ ] **Forgot password.** Owner, 5 Oct 2026: a link on sign-in that sends a
       reset mail and lets the password be set again. Careful lane (auth).
 - [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only
