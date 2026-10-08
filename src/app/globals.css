@@ -33,7 +33,7 @@
      the typefaces come from next/font in the root layout. */
   --font-sans:
     var(--font-schibsted), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: var(--font-dm-mono), ui-monospace, "SFMono-Regular", monospace;
+  --font-mono: var(--font-mono-face), ui-monospace, "SFMono-Regular", monospace;
   --radius-card: 1.25rem;
   --radius-control: 0.9rem;
   --radius-pill: 999px;

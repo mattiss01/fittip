@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { DM_Mono, Schibsted_Grotesk } from "next/font/google";
+import { Chivo_Mono, Schibsted_Grotesk } from "next/font/google";
 import "./globals.css";
 
 const sans = Schibsted_Grotesk({
@@ -9,10 +9,13 @@ const sans = Schibsted_Grotesk({
   display: "swap",
 });
 
-const mono = DM_Mono({
+// Chivo Mono, not DM Mono (owner, 5 and 8 Oct 2026): DM Mono draws 0 with a
+// line through it and has no other zero to switch to. This one is as wide
+// and draws a plain 0.
+const mono = Chivo_Mono({
   subsets: ["latin", "latin-ext"],
   weight: ["400", "500"],
-  variable: "--font-dm-mono",
+  variable: "--font-mono-face",
   display: "swap",
 });
 
