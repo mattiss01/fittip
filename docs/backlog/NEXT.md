@@ -80,13 +80,6 @@ lane, one screen per merge.
       in bytes, so many long notes can leave the coach refusing to plan. Limits as a
       whole are still to be thought through with the owner, and the coach tidying the
       notes is not built.
-- [ ] **A date typed or picked, the last two places.** Owner, 5 Oct 2026. `DateField`
-      (three typed fields and a calendar button) is everywhere but the log's date
-      (`log-form.tsx`, part of the log's step checks, with its `max` of today) and the
-      roadmap's dates (`roadmap-composer.tsx`, `roadmap-editor.tsx`, edited live).
-      Both need `DateField` to be held by its form, which it is not yet. A typed
-      date outside a session's range still gets the general refusal, and a goal's
-      calendar still offers days before today, which the save then refuses.
 - [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only
       "Generate roadmap proposal", and an owner without a subscription may not be able
       to generate one, so a roadmap must also be writable by hand: phases, dates, focus,
@@ -140,10 +133,6 @@ Not worth their own slot; do them when work lands nearby.
   oldest week, thirteen weeks back, and it moves to the shown week when the page becomes
   interactive. Where it lands has no automated check either: unit tests have no layout.
   With this week at the left edge, a sliver of last week's tile shows in the page inset.
-- **A date picked outside the allowed range gets the generic refusal.** The date fields on
-  "Copy to", Edit and "Add to" carry `min` and `max`, which iOS Safari's picker does not
-  enforce, so a date past day 180 is refused with "Check the session details and the
-  date." rather than a sentence about how far ahead a session may sit.
 - **The sports field's loose ends.** Since 8 Oct 2026 a typed sport joins the owner's
   sports after a save (`keepSports`). It is offered from the next page load, not at once;
   it is read-then-write, so a sport removed on Settings at that moment comes back; a
@@ -152,6 +141,14 @@ Not worth their own slot; do them when work lands nearby.
 - **The Plan's series-extension notice is drawn as a heading** (`series-materializer.tsx`)
   though it is a status sentence, sometimes two, so it kept its full stop on 8 Oct 2026.
   It wants to be a paragraph with `role="status"`; m3-14b may find it by its heading.
+- **Three dates are still plain date fields**: a phase's start and end and a milestone's
+  date in the roadmap editor (`roadmap-editor.tsx`). They are held by the editor, and a
+  phase is keyed by its start date, so its block is rebuilt as that date changes. Do
+  them with "Roadmap: what it holds, again".
+- **A typed date outside a session's range gets the general refusal**, since only the
+  calendar is held to it (`plan-date-field.tsx` gives no `rangeMessage`, so that a page
+  left open past midnight is not blocked). A goal's calendar still offers days before
+  today, which the save then refuses.
 - **Dragging a goal does not scroll the page.** Since 5 Oct 2026 a goal is
   reordered by dragging its number. A list taller than the screen cannot be
   dragged end to end; the arrow keys on the number can, which a phone lacks.
