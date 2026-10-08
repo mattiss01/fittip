@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 const ERRORS: Record<string, string> = {
   link: "That link has expired or was already used. Ask for a new one.",
   password:
-    "The password could not be changed. Ask for a new link and choose a password you have not used here.",
+    "The password could not be changed. Ask for a new link and choose a password that is not your current one.",
 };
 
 /**
@@ -33,7 +33,7 @@ export default async function ForgotPasswordPage({
           <h1 id="auth-title">Check your email</h1>
           <p className="auth-intro">
             If that address has an account, a link to set a new password is on
-            its way. It works once, for an hour, on any device.
+            its way. It works once, on any device.
           </p>
           <Link className="auth-action" href="/">
             Back to sign in
@@ -68,9 +68,11 @@ export default async function ForgotPasswordPage({
           ) : null}
           <button type="submit">Send the link</button>
         </form>
-        <Link className="text-button" href="/">
-          Back to sign in
-        </Link>
+        <div className="auth-links">
+          <Link className="text-button" href="/">
+            Back to sign in
+          </Link>
+        </div>
       </section>
     </main>
   );

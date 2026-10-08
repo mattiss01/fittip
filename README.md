@@ -52,7 +52,8 @@ confirmation message in Mailpit, then continue to the protected `/home` route.
 A forgotten password is reset from the sign-in page: the mail is captured in
 Mailpit too, and its link opens `/reset-password` on `http://127.0.0.1:3000`
 (ADR-022). The hosted project needs the text of
-`supabase/templates/recovery.html` pasted into its Reset password mail.
+`supabase/templates/recovery.html` pasted into its Reset password mail, and
+its Site URL set to the app's own address, which the link is built from.
 
 ## Local Supabase
 

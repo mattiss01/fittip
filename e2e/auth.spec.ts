@@ -120,6 +120,11 @@ test.describe("public account authentication", () => {
     await expect(
       page.getByRole("heading", { name: "Forgot your password?" }),
     ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      ),
+    ).toBe(false);
     await page.getByLabel("Email").fill(`nobody-${Date.now()}@example.test`);
     await page.getByRole("button", { name: "Send the link" }).click();
     await expect(page.getByRole("status")).toContainText(answer);
@@ -159,7 +164,7 @@ test.describe("public account authentication", () => {
         await other.getByRole("button", { name: "Change password" }).click();
       };
       await fill(newPassword, `${newPassword}-typo`);
-      await expect(other.getByRole("alert")).toContainText(
+      await expect(other.locator(".form-message.error")).toContainText(
         "Use matching passwords",
       );
 
@@ -177,7 +182,7 @@ test.describe("public account authentication", () => {
         await other.getByRole("button", { name: "Sign in" }).click();
       };
       await signIn(password);
-      await expect(other.getByRole("alert")).toContainText(
+      await expect(other.locator(".form-message.error")).toContainText(
         "We could not sign you in",
       );
       await signIn(newPassword);
@@ -188,7 +193,7 @@ test.describe("public account authentication", () => {
       await other.goto(resetUrl);
       await fill(`${newPassword}-again`, `${newPassword}-again`);
       await expect(other).toHaveURL(/\/forgot-password\?error=link$/);
-      await expect(other.getByRole("alert")).toContainText(
+      await expect(other.locator(".form-message.error")).toContainText(
         "expired or was already used",
       );
     } finally {

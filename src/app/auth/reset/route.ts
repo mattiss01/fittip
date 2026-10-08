@@ -50,29 +50,38 @@ export async function POST(request: Request) {
     return mergeAuthResponseHeaders(privateRedirect(failed("link")), pending);
   }
 
+  // From here this request holds a session. Whatever happens next, it is
+  // ended before the answer goes out. On the refusals only this request's is:
+  // a reset that changed nothing must not sign the account's other devices
+  // out, and a bare `signOut()` would, since its scope is every session.
+  const refuse = async (reason: "link" | "password") => {
+    await client.auth.signOut({ scope: "local" }).catch(() => undefined);
+    return mergeAuthResponseHeaders(privateRedirect(failed(reason)), pending);
+  };
+
   try {
     await requireAllowedVerifiedUser(client);
   } catch {
-    await client.auth.signOut();
-    return mergeAuthResponseHeaders(privateRedirect(failed("link")), pending);
+    return refuse("link");
   }
 
-  const { error: refused } = await client.auth.updateUser({ password });
-  if (refused) {
-    // The code is spent and the password is the old one: a new link is the
-    // way on. Auth refuses, among others, the password the account has.
-    await client.auth.signOut();
-    return mergeAuthResponseHeaders(
-      privateRedirect(failed("password")),
-      pending,
-    );
-  }
+  // The code is spent and the password is the old one: a new link is the
+  // way on. Auth refuses, among others, the password the account has.
+  const changed = await client.auth
+    .updateUser({ password })
+    .then(({ error: refused }) => !refused)
+    .catch(() => false);
+  if (!changed) return refuse("password");
 
-  const { error: stillSignedIn } = await client.auth.signOut({
-    scope: "global",
-  });
-  // This browser is signed out whatever became of the others.
-  if (stillSignedIn) await client.auth.signOut({ scope: "local" });
+  // The password is the new one. This browser is signed out whatever
+  // became of the others.
+  const everywhere = await client.auth
+    .signOut({ scope: "global" })
+    .then(({ error: stillSignedIn }) => !stillSignedIn)
+    .catch(() => false);
+  if (!everywhere) {
+    await client.auth.signOut({ scope: "local" }).catch(() => undefined);
+  }
 
   return mergeAuthResponseHeaders(
     privateRedirect(new URL("/?auth=password-changed", request.url)),

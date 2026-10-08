@@ -106,18 +106,21 @@ export function AuthForm({
         <button type="submit">{isSignUp ? "Create account" : "Sign in"}</button>
       </form>
 
-      {isSignUp ? null : (
-        <Link className="text-button" href="/forgot-password">
-          Forgot password?
-        </Link>
-      )}
-      {allowSignUp ? (
-        <Link className="text-button" href={isSignUp ? "/" : "/signup"}>
-          {isSignUp
-            ? "Already have an account? Sign in"
-            : "New here? Create an account"}
-        </Link>
-      ) : null}
+      {/* One under the other: side by side they read as one sentence. */}
+      <div className="auth-links">
+        {isSignUp ? null : (
+          <Link className="text-button" href="/forgot-password">
+            Forgot password?
+          </Link>
+        )}
+        {allowSignUp ? (
+          <Link className="text-button" href={isSignUp ? "/" : "/signup"}>
+            {isSignUp
+              ? "Already have an account? Sign in"
+              : "New here? Create an account"}
+          </Link>
+        ) : null}
+      </div>
     </section>
   );
 }

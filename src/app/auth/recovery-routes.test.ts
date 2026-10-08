@@ -21,6 +21,19 @@ const { client, createServerUserClientMock, calls } = vi.hoisted(() => {
   };
 });
 
+// The mail is asked for after the answer has gone out. There is no request
+// to outlive here, so the work is run and awaited by the test.
+const afterWork: Promise<unknown>[] = [];
+vi.mock("next/server", async (importActual) => ({
+  ...(await importActual<typeof import("next/server")>()),
+  after: (work: () => Promise<unknown>) => {
+    afterWork.push(work());
+  },
+}));
+const settled = async () => {
+  await Promise.all(afterWork.splice(0));
+};
+
 vi.mock("@/lib/supabase/server-user-client", async (importActual) => ({
   ...(await importActual<typeof import("@/lib/supabase/server-user-client")>()),
   createServerUserClient: createServerUserClientMock,
@@ -88,6 +101,7 @@ describe("password recovery route handlers", () => {
         await forgot(post("/auth/forgot", { email: " owner@example.test " })),
         sent,
       );
+      await settled();
       expect(client.auth.resetPasswordForEmail).toHaveBeenCalledWith(
         "owner@example.test",
       );
@@ -105,6 +119,19 @@ describe("password recovery route handlers", () => {
         await forgot(post("/auth/forgot", { email: "owner@example.test" })),
         sent,
       );
+      await settled();
+      expect(client.auth.resetPasswordForEmail).toHaveBeenCalledTimes(3);
+    });
+
+    it("answers without waiting for Auth, so the delay says nothing either", async () => {
+      // Auth never answers; the route does.
+      client.auth.resetPasswordForEmail.mockReturnValue(new Promise(() => {}));
+
+      expectPrivate303(
+        await forgot(post("/auth/forgot", { email: "owner@example.test" })),
+        "/forgot-password?sent=1",
+      );
+      afterWork.length = 0;
     });
 
     it("hands Auth nothing for an empty or absurd address", async () => {
@@ -114,14 +141,6 @@ describe("password recovery route handlers", () => {
       );
 
       expect(client.auth.resetPasswordForEmail).not.toHaveBeenCalled();
-    });
-
-    it("passes on nothing Auth set while sending", async () => {
-      const response = await forgot(
-        post("/auth/forgot", { email: "owner@example.test" }),
-      );
-
-      expect(response.headers.getSetCookie()).toEqual([]);
     });
   });
 
@@ -190,7 +209,8 @@ describe("password recovery route handlers", () => {
       expectPrivate303(await reset(resetForm()), "/forgot-password?error=link");
 
       expect(client.auth.updateUser).not.toHaveBeenCalled();
-      expect(calls).toEqual(["verify", "signOut:default"]);
+      // This request's session only: the account's devices stay signed in.
+      expect(calls).toEqual(["verify", "signOut:local"]);
     });
 
     it("lets the owner's account through on the hosted environment", async () => {
@@ -210,7 +230,17 @@ describe("password recovery route handlers", () => {
         await reset(resetForm()),
         "/forgot-password?error=password",
       );
-      expect(client.auth.signOut).toHaveBeenCalledTimes(1);
+      expect(calls).toEqual(["verify", "signOut:local"]);
+    });
+
+    it("leaves no session behind when Auth fails outright after the link is spent", async () => {
+      client.auth.updateUser.mockRejectedValue(new Error("down"));
+
+      expectPrivate303(
+        await reset(resetForm()),
+        "/forgot-password?error=password",
+      );
+      expect(calls).toEqual(["verify", "signOut:local"]);
     });
 
     it("signs this browser out even when the others could not be", async () => {

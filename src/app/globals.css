@@ -231,6 +231,18 @@ button:disabled {
   background: transparent;
   color: var(--accent-dark);
 }
+.auth-links {
+  display: grid;
+  justify-items: start;
+  gap: 0.9rem;
+  margin-top: 1.1rem;
+}
+.auth-links .text-button {
+  margin: 0;
+}
+.auth-links:empty {
+  display: none;
+}
 .form-message {
   margin: 0.25rem 0 0;
   font-size: 0.9rem;
