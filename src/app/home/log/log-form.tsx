@@ -30,6 +30,7 @@ import styles from "./log.module.css";
 
 import homeStyles from "../home.module.css";
 import { SaveToLibrary } from "../plan/saved/save-to-library";
+import { DateField } from "@/components/date-field/date-field";
 import { SportInput } from "@/components/sports/sport-input";
 import type {
   LibraryActivityOption,
@@ -261,6 +262,8 @@ export function LogForm({
   // The date is asked only when the owner taps its Change, and returns to
   // the question it was opened from.
   const [dateReturn, setDateReturn] = useState<Step | null>(null);
+  // What the date step's fields hold, when it is a day that can be logged for.
+  const typedDate = useRef("");
   // Opened from the summary, a step returns there rather than walking on.
   const [fromSummary, setFromSummary] = useState(false);
 
@@ -496,8 +499,20 @@ export function LogForm({
     change(target);
   }
 
+  /**
+   * Leaving the date step, by Next, Back or Enter: the day its fields hold
+   * becomes the day the log is for, if it is one that can be logged for.
+   */
+  function takeDate() {
+    const date = typedDate.current;
+    if (step !== "date" || date === "" || date === actualDate) return;
+    setActualDate(date);
+    setDayChoice(null);
+  }
+
   /** On to the next question, or back to the summary it was opened from. */
   function advance(list: Step[] = steps, from: Step = step) {
+    takeDate();
     if (fromSummary) {
       setFromSummary(false);
       setStep("summary");
@@ -525,6 +540,7 @@ export function LogForm({
     // Back to the summary is an answer too: it must hold, or Save would be
     // refused with the field out of sight.
     if (fromSummary && !stepIsValid()) return;
+    takeDate();
     if (fromSummary || step === "summary") {
       setFromSummary(false);
       setStep("summary");
@@ -717,19 +733,24 @@ export function LogForm({
       {dateOpen ? (
         <section data-log-step="date" hidden={step !== "date"}>
           <div className={styles.field}>
-            <label htmlFor="log-date">Date</label>
-            <input
-              id="log-date"
-              type="date"
-              required
+            {/* Typed or picked (owner, 5 Oct 2026). What the fields hold is
+                kept aside and taken when this step is left (`takeDate`), not
+                at each digit: on the way from the 7th to the 17th they read
+                the 1st. A date half typed or after today stops the step. */}
+            <DateField
+              calendar
+              describedBy="log-date-hint"
+              initial={actualDate}
+              label="Date"
+              labelClassName={styles.dateLabel}
               max={today}
-              value={actualDate}
-              onChange={(event) => {
-                setActualDate(event.target.value);
-                setDayChoice(null);
+              onChange={(date) => {
+                typedDate.current = date;
               }}
+              rangeMessage="Choose today or an earlier day."
+              required
             />
-            <span className={styles.fieldHint}>
+            <span className={styles.fieldHint} id="log-date-hint">
               Training cannot be logged before it happens, so this stops at
               today.
             </span>

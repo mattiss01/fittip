@@ -45,6 +45,11 @@
   text-align: center;
 }
 
+/* A date that is shown and not changed, as a regeneration's is. */
+.parts input.part:read-only {
+  background: var(--line);
+}
+
 .parts input.part[data-part="year"] {
   width: 5.6rem;
 }
@@ -74,7 +79,7 @@
 
 /* There for its picker alone: under the button, out of sight and out of the
    way of a tap. It is not `display: none`, or its picker could not open. */
-.parts input.native {
+.group .parts input.native {
   position: absolute;
   right: 0;
   bottom: 0;

@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
@@ -72,6 +78,21 @@ const getCompletion = vi.fn();
 const findByPlanSession = vi.fn();
 const listCompletions = vi.fn();
 const listSavedSessions = vi.fn();
+
+/** Types a date into the log's date step, one field for each part. */
+function typeDate(isoDate: string) {
+  const [year, month, day] = isoDate.split("-");
+  const field = screen.getByRole("group", { name: "Date" });
+  for (const [part, value] of [
+    ["Day", day],
+    ["Month", month],
+    ["Year", year],
+  ] as const) {
+    fireEvent.change(within(field).getByLabelText(part), {
+      target: { value },
+    });
+  }
+}
 
 describe("Log", () => {
   beforeEach(() => {
@@ -181,11 +202,16 @@ describe("Log", () => {
     expect(currentStep()).toBe("outcome");
     fireEvent.click(screen.getByRole("button", { name: /Change the date/ }));
     expect(currentStep()).toBe("date");
-    fireEvent.change(screen.getByLabelText("Date"), {
-      target: { value: shiftIsoDate(today(), -1) },
-    });
-    expect(hiddenValue("actualLocalDate")).toBe(shiftIsoDate(today(), -1));
+    // A day that has not come stops the step and is not taken.
+    typeDate(shiftIsoDate(today(), 1));
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(currentStep()).toBe("date");
+    expect(hiddenValue("actualLocalDate")).toBe(today());
+    // The day typed is taken when the step is left, not at each digit.
+    typeDate(shiftIsoDate(today(), -1));
+    expect(hiddenValue("actualLocalDate")).toBe(today());
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(hiddenValue("actualLocalDate")).toBe(shiftIsoDate(today(), -1));
     expect(currentStep()).toBe("outcome");
     chooseOutcome("Partly completed");
     expect(currentStep()).toBe("what");
@@ -461,7 +487,7 @@ describe("Log", () => {
     // Said before the owner fills anything in: `list` is bounded by the actual
     // date, so a log written on another day was invisible to this surface.
     expect(screen.getByText("This session is already logged")).toBeTruthy();
-    expect(document.querySelector("#log-date")).toBe(null);
+    expect(screen.queryByRole("group", { name: "Date" })).toBeNull();
     expect(
       screen.getByRole("link", { name: "Open that log" }).getAttribute("href"),
     ).toBe("/home/log?completion=8f000000-0000-4000-8000-0000000000c1");
@@ -799,9 +825,7 @@ describe("Log", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Change the date/ }));
-    fireEvent.change(screen.getByLabelText("Date"), {
-      target: { value: shiftIsoDate(today(), -1) },
-    });
+    typeDate(shiftIsoDate(today(), -1));
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     chooseOutcome("Partly completed");
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
