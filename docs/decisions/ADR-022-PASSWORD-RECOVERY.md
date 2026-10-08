@@ -36,8 +36,8 @@ request, no record that one was made.
   on any device (owner). The default link needs a cookie held by the browser
   that asked, which is why a new account's confirmation link fails elsewhere.
   That needs a custom mail template: `supabase/templates/recovery.html` for the
-  local stack and CI, and the same text pasted into the hosted project by the
-  owner, since no agent can reach hosted Auth settings.
+  local stack and CI. The hosted project would need the same text, and cannot
+  take it yet (Consequences).
 - **Opening the link spends nothing.** The page only shows the form. The code
   is verified in the same request that sets the password, so a mail scanner
   that opens links before the owner does cannot use it up, and no session
@@ -62,12 +62,18 @@ request, no record that one was made.
 - Hosted mail goes through Supabase's built-in sender, a few mails an hour.
   That is enough for one owner. ADR-005's condition stands: real SMTP, bot
   protection and reviewed rate limits before anyone outside is let in.
-- Until the owner pastes the template into the hosted project, the hosted mail
-  carries Supabase's default link. That link is verified by Supabase itself,
-  which spends it and sends the browser to the Site URL: the owner lands on
+- **The hosted app has no working reset, and the owner has put it off**
+  (8 Oct 2026) until further users are invited. The hosted project is on the
+  free plan and Supabase's built-in mail sender, and its dashboard does not
+  let such a project change a mail template: it asks for custom SMTP first.
+  So the hosted mail carries Supabase's default link, which Supabase verifies
+  itself and spends, sending the browser to the Site URL: the owner lands on
   sign-in with no form to set a password and a link that is used up. Nothing
-  is exposed, and nothing is reset. The hosted project's Site URL must also be
-  the app's own address, because the template builds the link from it.
+  is exposed, and nothing is reset. Until then a forgotten hosted password is
+  set from the Supabase SQL editor. When it is taken up: a mail sender of the
+  owner's (an SMTP password kept in Supabase, never in the repository), then
+  the template pasted in, and the Site URL set to the app's own address,
+  because the template builds the link from it.
 - If ending the other sessions fails, the password is still the new one and
   this browser is still signed out, but another device keeps its session
   until it runs out. The page does not say so.
