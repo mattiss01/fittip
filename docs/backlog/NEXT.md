@@ -257,11 +257,13 @@ Not worth their own slot; do them when work lands nearby.
   project's life — so it takes 250 in a day or 2,500 ever to lock coaching out entirely.
   Far outside single-athlete traffic, but it accumulates permanently and no surface shows it.
 
-- **A hosted password reset does not work until the owner has set it up.** The hosted
-  project needs `supabase/templates/recovery.html` pasted into its Reset password mail
-  and its Site URL set to the app's address (ADR-022); no agent can reach either. Until
-  then a hosted reset link is used up by Supabase and lands on sign-in with nothing
-  reset. Remove this when the owner says a hosted reset went through.
+- **A hosted password reset does not work.** Owner, 8 Oct 2026: decided later, when
+  further users are invited. Supabase lets a free-plan project on its built-in sender
+  change no mail template, so the hosted mail carries the default link, which is used
+  up by Supabase and lands on sign-in with nothing reset. It needs a mail sender of
+  the owner's (custom SMTP), then the text of `supabase/templates/recovery.html`
+  pasted in and the Site URL checked (ADR-022). A forgotten hosted password is set
+  from the Supabase SQL editor until then.
 
 - **The roadmap prompt has 43 characters left.** Its static prefix is 5,957 of the 6,000
   `openai-prompt.test.ts` allows, after the sentence naming `recurringSessions`. The next
