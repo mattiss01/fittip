@@ -68,6 +68,12 @@ request, no record that one was made.
   sign-in with no form to set a password and a link that is used up. Nothing
   is exposed, and nothing is reset. The hosted project's Site URL must also be
   the app's own address, because the template builds the link from it.
+- If ending the other sessions fails, the password is still the new one and
+  this browser is still signed out, but another device keeps its session
+  until it runs out. The page does not say so.
+- The one-time code is in the address of the reset page, so it is in that
+  browser's history and in the host's request log until it is used or
+  expires.
 - Auth is asked for the mail after the answer has been sent, so the time the
   answer takes does not tell an address with an account from one without.
 - Anyone who knows the owner's address can ask for mails to it. FitTip bounds
