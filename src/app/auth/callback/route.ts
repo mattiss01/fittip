@@ -43,7 +43,18 @@ export async function GET(request: Request) {
   // The link confirms the account; it does not sign it in (owner, 5 Oct
   // 2026). The session this route needed to confirm with is ended, and the
   // account signs in on the page it lands on, which says it is confirmed.
-  await client.auth.signOut();
+  // Only this browser's session, the one just made: if that cannot be ended
+  // the page must not say "sign in" to someone who is signed in.
+  const signedOut = await client.auth
+    .signOut({ scope: "local" })
+    .then(({ error: stillSignedIn }) => !stillSignedIn)
+    .catch(() => false);
+  if (!signedOut) {
+    return mergeAuthResponseHeaders(
+      privateRedirect(new URL("/home/today", requestUrl)),
+      pending,
+    );
+  }
   return mergeAuthResponseHeaders(
     privateRedirect(new URL("/?auth=confirmed", requestUrl)),
     pending,

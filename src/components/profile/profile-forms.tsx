@@ -98,12 +98,22 @@ export function useSaved(
  */
 export function ContinueLater({ children }: { children: ReactNode }) {
   const [asking, setAsking] = useState(false);
+  const link = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  // Closed again, focus goes back to the link that opened the popup instead
+  // of being left on nothing.
+  const asked = useRef(false);
+  useEffect(() => {
+    if (asked.current && !asking) link.current?.focus();
+    asked.current = asking;
+  }, [asking]);
 
   if (!asking) {
     return (
       <button
         className={styles.laterLink}
         onClick={() => setAsking(true)}
+        ref={link}
         type="button"
       >
         Continue later
@@ -121,6 +131,30 @@ export function ContinueLater({ children }: { children: ReactNode }) {
       onClick={() => setAsking(false)}
       onKeyDown={(event) => {
         if (event.key === "Escape") setAsking(false);
+        // Tab stays among the popup's own buttons: the step behind it is
+        // still in the page, and must not take focus while this asks.
+        if (event.key !== "Tab") return;
+        const buttons = Array.from(
+          panel.current?.querySelectorAll<HTMLButtonElement>(
+            "button:not(:disabled)",
+          ) ?? [],
+        );
+        if (buttons.length === 0) return;
+        const first = buttons[0];
+        const last = buttons[buttons.length - 1];
+        const inside = buttons.includes(
+          document.activeElement as HTMLButtonElement,
+        );
+        if (event.shiftKey && (!inside || document.activeElement === first)) {
+          event.preventDefault();
+          last.focus();
+        } else if (
+          !event.shiftKey &&
+          (!inside || document.activeElement === last)
+        ) {
+          event.preventDefault();
+          first.focus();
+        }
       }}
     >
       <div
@@ -129,6 +163,7 @@ export function ContinueLater({ children }: { children: ReactNode }) {
         aria-modal="true"
         className={styles.leavePanel}
         onClick={(event) => event.stopPropagation()}
+        ref={panel}
         role="alertdialog"
       >
         <strong id="leave-setup-title">Setup makes FitTip useful</strong>
@@ -243,6 +278,23 @@ export function AboutYouForm({
     },
     onLater,
   );
+
+  // A refused answer may be one that is not on screen: setup saves every
+  // answer with each Next. It goes to that question, where the notice says
+  // which one it is. Not when the owner was leaving, which leaves regardless.
+  const refused = useRef(state.submission);
+  useEffect(() => {
+    if (refused.current === state.submission) return;
+    refused.current = state.submission;
+    if (
+      paged &&
+      state.status === "validation" &&
+      state.question !== undefined &&
+      state.question !== question
+    ) {
+      onQuestion?.(state.question);
+    }
+  });
 
   // The units and the time zone are not asked (owner, 5 Oct 2026). Until the
   // profile has them they are the browser's: its language says the units,
@@ -738,9 +790,14 @@ export function WeightHistory({
 
   if (entries.length === 0) {
     return (
-      <p className={styles.explainer}>
-        No weight recorded yet. A weight saved above is kept here with its day.
-      </p>
+      <>
+        {/* Removing the last one lands here, and still says it was removed. */}
+        <ProfileNotice state={state} />
+        <p className={styles.explainer}>
+          No weight recorded yet. A weight saved above is kept here with its
+          day.
+        </p>
+      </>
     );
   }
 

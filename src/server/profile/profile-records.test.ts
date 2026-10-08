@@ -103,6 +103,25 @@ describe("profile details", () => {
     );
   });
 
+  it("names the answer it refuses, so setup can go to its question", () => {
+    const refused = (values: Record<string, string>) => {
+      try {
+        parseProfileDetails(details(values), TODAY);
+      } catch (error) {
+        return (error as ProfileDetailsValidationError).answer;
+      }
+      return "accepted";
+    };
+
+    expect(refused({ displayName: " " })).toBe("name");
+    expect(refused({ birthDate: "2026-02-30" })).toBe("birthday");
+    expect(refused({ gender: "unknown" })).toBe("gender");
+    expect(refused({ heightCm: "400" })).toBe("height");
+    expect(refused({ weightKg: "9" })).toBe("weight");
+    // Not one of the answers: the units are sent by the form, never asked.
+    expect(refused({ unitsSystem: "stone" })).toBeUndefined();
+  });
+
   it("accepts a birthday of today, the owner's own day", () => {
     expect(
       parseProfileDetails(details({ birthDate: TODAY }), TODAY).birthDate,

@@ -152,6 +152,18 @@ describe("production authentication route handlers", () => {
     expect(startSetupMock).toHaveBeenCalledOnce();
   });
 
+  it('does not say "sign in" to an account its confirmation could not sign out', async () => {
+    client.auth.signOut.mockResolvedValue({ error: { message: "down" } });
+
+    const response = await callback(
+      new Request(`${origin}/auth/callback?code=valid-code`),
+    );
+
+    // Still signed in, so it goes where a signed-in account goes.
+    expectPrivate303(response, "/home/today");
+    expect(client.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
+  });
+
   it("still confirms an account whose setup cannot be begun", async () => {
     startSetupMock.mockRejectedValue(new Error("database unavailable"));
     const response = await callback(
