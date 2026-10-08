@@ -583,14 +583,11 @@ export function SessionPage({
                   activities={session.activities}
                   fill={{ sessionId: session.id, open: session.openFill }}
                   dateField={
-                    <div className={styles.field}>
-                      <label htmlFor={`edit-date-${session.id}`}>Date</label>
-                      <PlanDateInput
-                        id={`edit-date-${session.id}`}
-                        range={dateRange}
-                        defaultValue={session.localDate}
-                      />
-                    </div>
+                    <PlanDateInput
+                      label="Date"
+                      range={dateRange}
+                      defaultValue={session.localDate}
+                    />
                   }
                 />
                 <button
@@ -625,14 +622,11 @@ export function SessionPage({
                 name="expectedRevision"
                 value={expectedRevision}
               />
-              <div className={styles.field}>
-                <label htmlFor={`duplicate-${session.id}`}>Copy to</label>
-                <PlanDateInput
-                  id={`duplicate-${session.id}`}
-                  range={dateRange}
-                  defaultValue={session.localDate}
-                />
-              </div>
+              <PlanDateInput
+                label="Copy to"
+                range={dateRange}
+                defaultValue={session.localDate}
+              />
               <p className={styles.consequenceStandalone}>
                 The copy is a new session. It starts unlocked and carries none
                 of this session&rsquo;s history.

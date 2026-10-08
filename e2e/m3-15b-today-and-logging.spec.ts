@@ -7,6 +7,7 @@ import {
 } from "@playwright/test";
 import path from "node:path";
 
+import { fillDate } from "./support/date-field";
 import { changeLogAnswer, logInSteps, logStep } from "./support/log-steps";
 import {
   openNewSession,
@@ -689,7 +690,7 @@ async function addSeries(
   await details.getByLabel("Repeat", { exact: true }).selectOption("daily");
   await details.getByLabel("Every").fill("1");
   await details.getByText("No end date", { exact: true }).click();
-  await details.getByLabel("End date", { exact: true }).fill(endDate);
+  await fillDate(details, "End date", endDate);
   await details
     .getByRole("button", { name: "Review recurring sessions" })
     .click();

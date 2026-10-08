@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+
+import { fillDate } from "./support/date-field";
 import path from "node:path";
 
 import {
@@ -196,7 +198,7 @@ test.describe("M3-12 manual continuous planning", () => {
       await openSession(page, tomorrow, "Long aerobic run");
       await page.getByRole("button", { name: "Edit", exact: true }).click();
       const copyEdit = sessionPanel(page, "Edit session");
-      await copyEdit.getByLabel("Date").fill(dayAfter);
+      await fillDate(copyEdit, "Date", dayAfter);
       await copyEdit.getByRole("button", { name: "Save session" }).click();
       await expect(page.locator("[role='status']").first()).toContainText(
         "Session updated.",

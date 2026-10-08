@@ -7,6 +7,7 @@ import {
 } from "@playwright/test";
 import path from "node:path";
 
+import { fillDate } from "./support/date-field";
 import { planDay } from "./support/plan-week";
 
 const evidenceDirectory = path.join(
@@ -141,11 +142,13 @@ test.describe("M3-13 private saved-session library", () => {
       await page.getByRole("link", { name: "Session Library" }).click();
       const reusable = savedCard(page, "Longer threshold intervals");
       await openDisclosure(reusable, "Use in plan");
-      await reusable
-        .locator("form")
-        .filter({ has: page.getByRole("button", { name: "Add to plan" }) })
-        .getByLabel("Add to")
-        .fill(reuseDate);
+      await fillDate(
+        reusable
+          .locator("form")
+          .filter({ has: page.getByRole("button", { name: "Add to plan" }) }),
+        "Add to",
+        reuseDate,
+      );
       await reusable.getByRole("button", { name: "Add to plan" }).click();
       await expect(page.locator("[role='status']").first()).toContainText(
         "Added to your plan.",

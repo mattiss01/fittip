@@ -7,6 +7,7 @@ import {
 } from "@playwright/test";
 import path from "node:path";
 
+import { fillDate } from "./support/date-field";
 import { openNewSession, planDay } from "./support/plan-week";
 
 import { watchConsoleErrors } from "./support/console-errors";
@@ -90,7 +91,7 @@ test.describe("M3-14B recurring series surface", () => {
       const saved = savedCard(page, "Ordinary base");
       await expect(saved.getByRole("link", { name: "Repeat" })).toHaveCount(0);
       await openDisclosure(saved, "Use in plan");
-      await saved.getByLabel("Add to").fill(ownerDate(9));
+      await fillDate(saved, "Add to", ownerDate(9));
       await saved.getByRole("button", { name: "Add to plan" }).click();
       await expect(page.locator("[role='status']").first()).toContainText(
         "Added to your plan.",
@@ -109,7 +110,7 @@ test.describe("M3-14B recurring series surface", () => {
       await create.getByLabel("Repeat", { exact: true }).selectOption("daily");
       await create.getByLabel("Every").fill("2");
       await create.getByText("No end date", { exact: true }).click();
-      await create.getByLabel("End date", { exact: true }).fill(dailyEnd);
+      await fillDate(create, "End date", dailyEnd);
       await create
         .getByRole("button", { name: "Review recurring sessions" })
         .click();

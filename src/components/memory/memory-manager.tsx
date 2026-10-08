@@ -15,6 +15,7 @@ import {
 } from "@/app/home/you/memory/action-state";
 import { changeMemoryAction } from "@/app/home/you/memory/actions";
 import styles from "@/app/home/you/memory/memory.module.css";
+import { DateField } from "@/components/date-field/date-field";
 // The timing rules are not memory-specific: this surface reproduces the same
 // App Router defect as goals, roadmap and the plan proposal (see
 // `useMutationStall` below), so all four share one module.
@@ -432,14 +433,12 @@ function MemoryCard({
                   name="expectedRevision"
                   value={expectedRevision}
                 />
-                <label>
-                  New review date
-                  <input
-                    type="date"
-                    name="reviewDate"
-                    defaultValue={item.expiresOn ?? ""}
-                  />
-                </label>
+                <DateField
+                  calendar
+                  initial={item.expiresOn ?? null}
+                  label="New review date"
+                  name="reviewDate"
+                />
                 <button disabled={pending}>Update review date</button>
               </form>
             ) : null}
@@ -501,14 +500,12 @@ function MemoryForm({
           defaultValue={draft?.content ?? content ?? ""}
         />
       </label>
-      <label>
-        Review date (optional)
-        <input
-          type="date"
-          name="reviewDate"
-          defaultValue={draft?.reviewDate ?? reviewDate ?? ""}
-        />
-      </label>
+      <DateField
+        calendar
+        initial={draft?.reviewDate ?? reviewDate ?? null}
+        label="Review date (optional)"
+        name="reviewDate"
+      />
       <p className={styles.safety}>{SAFETY_NOTICE}</p>
       <button disabled={pending}>{submitLabel}</button>
     </form>
