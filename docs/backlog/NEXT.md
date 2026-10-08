@@ -53,27 +53,6 @@ main action. No week ring. The owner flagged a possible bias toward the look the
 so start with Today and adjust from there rather than committing every screen up front. Build
 lane, one screen per merge.
 
-- [ ] **Guided setup, step by step with the owner.** Owner, 2 Oct 2026: the screens look
-      right, the setup itself does not. Go through all six steps together in detail,
-      from scratch: what each step asks and why, every question's wording, which
-      answers are required, where each answer is kept, and what the review step shows.
-      The list below is where that starts, not its scope. Owner, 5 Oct 2026: it
-      comes after the three items below it (goals migration, sports list, personal
-      details), which it is built from. Signing up now starts it, and its goal
-      step is the slim form. Already named; the first three need a migration, so
-      careful lane:
-  - **Access and equipment** cannot be left empty and is a comma list of labels. The
-    owner dislikes both. `apply_onboarding_change` refuses fewer than one label.
-  - **Time zone and units belong in the profile, not in Memory.** Setup files both as
-    memory candidates today. `profiles` has `timezone_name` and no units column.
-  - **A half-filled step cannot be saved.** "Save and finish later" now leaves anyway
-    and You says the step was not saved; the draft has no place for a partial step,
-    and the button still says "Save".
-  - **The Guided setup row stays on You after setup is done**, leading to a page that
-    says it is finished. Hiding it needs the setup's state read on You, no migration.
-  - **A card that matches something saved starts accepted as "update"**, so one press
-    writes over a saved goal or brings back a declined or disabled memory. The card
-    says so. The owner asked for everything accepted first; this is its sharpest edge.
 - [ ] **The sports list wherever a sport is typed.** Owner, 5 Oct 2026; this
       settles "sport or category" as one shared list. Offer the profile's sports
       in a goal's sports and a session's and an activity's `sport`. Build lane
