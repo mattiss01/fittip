@@ -11,6 +11,7 @@ import { changeLibraryAction } from "./actions";
 import { PlanDateInput, type PlanDateRange } from "../plan-date-field";
 import styles from "./saved.module.css";
 
+import { SportInput } from "@/components/sports/sport-input";
 import {
   ActivityEditor,
   type ActivityValue,
@@ -342,17 +343,12 @@ function SavedSessionFields({
       <div className={styles.fieldPair}>
         <div className={styles.field}>
           <label htmlFor={`${idPrefix}-sport`}>Sport</label>
-          <input
+          <SportInput
             id={`${idPrefix}-sport`}
             name="sport"
-            maxLength={80}
             required
             defaultValue={draft?.sport ?? ""}
-            onChange={
-              onSportChange === undefined
-                ? undefined
-                : (event) => onSportChange(event.target.value)
-            }
+            onChange={onSportChange}
           />
         </div>
         <div className={styles.field}>

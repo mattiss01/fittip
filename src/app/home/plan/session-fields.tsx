@@ -7,6 +7,7 @@ import type { FillProposal } from "./fill/fill-state";
 import { FillWithCoach } from "./fill/fill-with-coach";
 import styles from "./plan.module.css";
 
+import { SportInput } from "@/components/sports/sport-input";
 import {
   ActivityEditor,
   type ActivityEditorHandle,
@@ -59,13 +60,12 @@ export function SessionFields({
       <div className={styles.fieldPair}>
         <div className={styles.field}>
           <label htmlFor={`${idPrefix}-sport`}>Sport</label>
-          <input
+          <SportInput
             id={`${idPrefix}-sport`}
             name="sport"
-            maxLength={80}
             required
             value={sport}
-            onChange={(event) => setSport(event.target.value)}
+            onChange={setSport}
           />
         </div>
         <div className={styles.field}>

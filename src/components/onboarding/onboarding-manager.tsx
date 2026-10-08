@@ -3,6 +3,7 @@
 import {
   useActionState,
   useEffect,
+  useId,
   useRef,
   useState,
   useTransition,
@@ -34,6 +35,7 @@ import {
   TRAINING_QUESTIONS,
   TrainingQuestionForm,
 } from "@/components/profile/training-forms";
+import { SportsInput } from "@/components/sports/sport-input";
 import type { ProfileDetailsView } from "@/lib/profile/profile-contract";
 import {
   SETUP_NOTE_MAX_LENGTH,
@@ -500,6 +502,7 @@ function GoalFields({
 }) {
   // A goal with a title is one that will be saved, and so must name a sport.
   const [titled, setTitled] = useState(Boolean(goal?.title));
+  const sportsId = useId();
   return (
     <fieldset className={styles.entryCard}>
       <legend>Goal {index + 1}</legend>
@@ -527,12 +530,20 @@ function GoalFields({
           rows={1}
         />
       </label>
-      <GoalSport
-        index={index}
-        initial={goal?.sports ?? []}
-        required={index === 0 || titled}
-        sports={sports}
-      />
+      {/* As on Goals (owner, 8 Oct 2026): any number, typed or tapped from
+          the sports chosen two screens before. */}
+      <div className={styles.fieldGroup}>
+        <label className={styles.fieldLabel} htmlFor={sportsId}>
+          Sports
+        </label>
+        <SportsInput
+          defaultValue={goal?.sports ?? []}
+          id={sportsId}
+          name={`goalActivities:${index}`}
+          required={index === 0 || titled}
+          sports={sports}
+        />
+      </div>
       <DateField
         calendar
         initial={goal?.targetDate ?? null}
@@ -687,162 +698,6 @@ export function isActionErrorStatus(
     status === "conflict" ||
     status === "session" ||
     status === "error"
-  );
-}
-
-/** A select value no sport can have: a name is never a lone control mark. */
-const ANOTHER_SPORT = "\u0000another";
-
-/**
- * A goal's sport (owner, 5 Oct 2026): exactly one, chosen from a list of the
- * sports picked in "Your sports", or made up on the spot. A made-up one is
- * sent as the goal's sport like any other, and the step's save adds it to
- * the owner's sports. Nothing is chosen to begin with, so a goal is never
- * filed under a sport the owner did not pick.
- */
-function GoalSport({
-  index,
-  initial,
-  sports,
-  required,
-}: {
-  index: number;
-  required: boolean;
-  /** What the goal names already; a goal made before today may name several. */
-  initial: string[];
-  sports: string[];
-}) {
-  const known = (name: string) =>
-    sports.find(
-      (sport) => sport.toLocaleLowerCase() === name.toLocaleLowerCase(),
-    );
-  const first = initial[0] ?? null;
-  // A sport the goal already holds that is not among the owner's is still
-  // offered, rather than silently dropped from the goal.
-  const options =
-    first !== null && known(first) === undefined ? [...sports, first] : sports;
-  const start = first === null ? "" : (known(first) ?? first);
-  const [choice, setChoice] = useState(start);
-  const [made, setMade] = useState("");
-  const [open, setOpen] = useState(false);
-  const adding = choice === ANOTHER_SPORT;
-  const labelId = `goal-sport-${index}`;
-  const button = useRef<HTMLButtonElement>(null);
-  // The list goes away with the choice, so focus goes back to the button
-  // that opened it instead of being left on nothing.
-  const close = () => {
-    setOpen(false);
-    button.current?.focus();
-  };
-  const pick = (value: string) => {
-    setChoice(value);
-    close();
-  };
-  // Left on the sport it came with, a goal keeps every sport it named; only
-  // a different choice makes it that one alone.
-  const sent = adding
-    ? made.trim()
-    : choice === start && initial.length > 1
-      ? initial.join(", ")
-      : choice;
-
-  // A list of our own, opened under its button, in place of the browser's
-  // drop-down, whose opened list cannot be styled (owner, 5 Oct 2026).
-  return (
-    <div
-      className={styles.fieldGroup}
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && open) {
-          event.stopPropagation();
-          close();
-        }
-      }}
-    >
-      <span className={styles.fieldLabel} id={labelId}>
-        Sport
-      </span>
-      <button
-        ref={button}
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        aria-labelledby={`${labelId} ${labelId}-value`}
-        className={styles.picker}
-        data-empty={choice === "" ? "true" : undefined}
-        onClick={() => setOpen((current) => !current)}
-        type="button"
-      >
-        <span id={`${labelId}-value`}>
-          {adding ? "Another sport" : choice || "Choose a sport"}
-        </span>
-        <svg
-          aria-hidden="true"
-          fill="none"
-          height="18"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2.2"
-          viewBox="0 0 24 24"
-          width="18"
-        >
-          <path d={open ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6"} />
-        </svg>
-      </button>
-      {open ? (
-        <div
-          aria-labelledby={labelId}
-          className={styles.pickerOptions}
-          role="listbox"
-        >
-          {options.map((sport) => (
-            <button
-              aria-selected={choice === sport}
-              key={sport}
-              onClick={() => pick(sport)}
-              role="option"
-              type="button"
-            >
-              {sport}
-            </button>
-          ))}
-          <button
-            aria-selected={adding}
-            onClick={() => pick(ANOTHER_SPORT)}
-            role="option"
-            type="button"
-          >
-            Add another sport…
-          </button>
-        </div>
-      ) : null}
-      {adding ? (
-        <label>
-          New sport
-          <input
-            maxLength={60}
-            onChange={(event) => setMade(event.target.value)}
-            // A comma separates sports where they are stored as a list.
-            pattern="[^,]+"
-            required
-            value={made}
-          />
-        </label>
-      ) : null}
-      <input name={`goalActivities:${index}`} type="hidden" value={sent} />
-      {/* A goal that will be saved must name a sport, and a hidden field cannot be
-          required, so this one stands in for it: out of sight, but where the
-          browser can point at it when nothing is chosen. */}
-      {required ? (
-        <input
-          aria-hidden="true"
-          className={styles.requiredProxy}
-          onChange={() => {}}
-          required
-          tabIndex={-1}
-          value={sent}
-        />
-      ) : null}
-    </div>
   );
 }
 

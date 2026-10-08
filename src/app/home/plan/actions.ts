@@ -19,6 +19,7 @@ import {
 } from "./plan-window";
 import { planChangeCopy, topUpAfterPlanChange } from "./series-materialization";
 
+import { keepSports, submittedSports } from "@/server/profile/keep-sports";
 import {
   createProfileRepository,
   ProfileAuthenticationError,
@@ -172,6 +173,7 @@ export async function changePlanAction(
       expectedRevision,
     );
     const topUp = await topUpAfterPlanChange(plan, receipt.planRevision);
+    await keepSports(submittedSports(formData));
 
     revalidatePath("/home/plan");
     // M3-16B: the review surface renders the same sessions, and an edit made

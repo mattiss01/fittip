@@ -26,6 +26,7 @@ import {
   CompletionAuthenticationError,
   createCompletionLog,
 } from "@/server/repositories/completion-log-repository";
+import { keepSports, submittedSports } from "@/server/profile/keep-sports";
 import { ProfileAuthenticationError } from "@/server/repositories/profile-repository";
 import {
   createRollingPlan,
@@ -228,6 +229,7 @@ export async function changeLibraryAction(
               session: session(),
             },
     );
+    await keepSports(submittedSports(formData));
     revalidatePath("/home/plan/saved");
     return result(
       "saved",
