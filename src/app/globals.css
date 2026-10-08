@@ -16,6 +16,10 @@
   --fern: #d5ddd0;
   --rule: #aab7a7;
   --recovery: #557667;
+  /* Delete, wherever it is offered (owner, 8 Oct 2026): a plain red, apart
+     from the brown-leaning one that marks a locked session. */
+  --danger: #991b1b;
+  --danger-dark: #7f1d1d;
 
   --background: var(--sage);
   --foreground: var(--pine);

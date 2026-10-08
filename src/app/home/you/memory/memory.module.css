@@ -398,3 +398,13 @@
     transform: translateY(0);
   }
 }
+
+/* Delete in the app's red: named in it, and filled with it to confirm. */
+.confirmation[data-confirmation="delete"] > summary {
+  color: var(--danger);
+}
+
+.confirmation[data-confirmation="delete"] form > button {
+  background: var(--danger);
+  color: white;
+}

@@ -153,7 +153,7 @@ function ActivityCard({
           </form>
         </details>
 
-        <details className={styles.disclosure}>
+        <details className={styles.disclosure} data-danger>
           <summary>Remove from library</summary>
           <p className={styles.consequence}>
             It leaves your library and can no longer be added to a session.

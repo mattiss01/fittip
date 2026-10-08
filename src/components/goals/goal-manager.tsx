@@ -464,7 +464,19 @@ function GoalCard({
             onClick={() => setMenuOpen(true)}
             type="button"
           >
-            ⋯
+            {/* The session page's three dots, so "more" is drawn one way. */}
+            <svg
+              aria-hidden="true"
+              fill="currentColor"
+              focusable="false"
+              height="22"
+              viewBox="0 0 24 24"
+              width="22"
+            >
+              <circle cx="5" cy="12" r="1.9" />
+              <circle cx="12" cy="12" r="1.9" />
+              <circle cx="19" cy="12" r="1.9" />
+            </svg>
           </button>
         )}
       </div>

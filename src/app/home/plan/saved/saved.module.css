@@ -337,3 +337,19 @@
     transform: translateY(0);
   }
 }
+
+/* Delete, and the Activity Library's Remove: the summary names it in the
+   app's red and the button that does it is filled with it. */
+.disclosure[data-danger] > summary {
+  color: var(--danger);
+}
+
+.disclosure[data-danger] .action {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: white;
+}
+
+.disclosure[data-danger] .action:hover {
+  background: var(--danger-dark);
+}
