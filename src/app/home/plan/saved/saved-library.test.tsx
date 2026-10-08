@@ -63,7 +63,7 @@ describe("the saved session library surface", () => {
   it("reads an empty library as empty rather than as a failure", () => {
     renderLibrary();
     expect(
-      screen.getByRole("heading", { name: "Nothing saved yet." }),
+      screen.getByRole("heading", { name: "Nothing saved yet" }),
     ).toBeInTheDocument();
     expect(screen.queryByText(/error|unavailable|failed/i)).toBeNull();
     // Nothing implies a score, a streak, or something to earn.

@@ -9,7 +9,7 @@ export default function SessionError({ reset }: { reset: () => void }) {
     <main className={homeStyles.shell} id="main-content">
       <section className={homeStyles.stateCard}>
         <p className={homeStyles.kicker}>Plan</p>
-        <h1>This session is unavailable.</h1>
+        <h1>This session is unavailable</h1>
         <p>Nothing was changed. Retry the private read.</p>
         <button className={homeStyles.primaryAction} onClick={reset}>
           Retry

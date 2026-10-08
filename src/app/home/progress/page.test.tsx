@@ -208,7 +208,7 @@ describe("Progress", () => {
     render(await ProgressPage({ searchParams: Promise.resolve({}) }));
 
     const empty = document.querySelector('[data-progress-empty="never"]');
-    expect(empty?.textContent).toContain("Your record starts here.");
+    expect(empty?.textContent).toContain("Your record starts here");
     // The two empty states are different sentences, never the same one twice.
     expect(document.querySelector('[data-progress-empty="month"]')).toBe(null);
   });

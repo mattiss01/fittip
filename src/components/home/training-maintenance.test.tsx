@@ -8,7 +8,7 @@ describe("TrainingMaintenance", () => {
     render(<TrainingMaintenance />);
 
     expect(
-      screen.getByRole("heading", { name: "One plan is taking shape." }),
+      screen.getByRole("heading", { name: "One plan is taking shape" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/temporarily unavailable/i)).toBeInTheDocument();
     expect(screen.getByText(/roadmap records/i)).toBeInTheDocument();

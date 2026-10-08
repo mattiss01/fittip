@@ -223,7 +223,7 @@ test.describe("M3-15B today and logging", () => {
         .click();
       await answers.getByRole("button", { name: "Save log" }).click();
       await expect(
-        page.getByRole("heading", { name: "Log saved." }),
+        page.getByRole("heading", { name: "Log saved" }),
       ).toBeVisible();
       await page.getByRole("link", { name: "Back to that day" }).click();
 
@@ -262,7 +262,7 @@ test.describe("M3-15B today and logging", () => {
         },
       });
       await expect(
-        page.getByRole("heading", { name: "Log saved." }),
+        page.getByRole("heading", { name: "Log saved" }),
       ).toBeVisible();
       await page.getByRole("link", { name: "Back to that day" }).click();
 
@@ -287,7 +287,7 @@ test.describe("M3-15B today and logging", () => {
         .getByRole("button", { name: "Save log" })
         .click();
       await expect(
-        page.getByRole("heading", { name: "Log updated." }),
+        page.getByRole("heading", { name: "Log updated" }),
       ).toBeVisible();
       await page.getByRole("link", { name: "Back to that day" }).click();
       await todayCard(page, "Serve and volley")
@@ -314,7 +314,7 @@ test.describe("M3-15B today and logging", () => {
         },
       });
       await expect(
-        page.getByRole("heading", { name: "Log saved." }),
+        page.getByRole("heading", { name: "Log saved" }),
       ).toBeVisible();
       await page.getByRole("link", { name: "Back to that day" }).click();
       await expect(
@@ -336,7 +336,7 @@ test.describe("M3-15B today and logging", () => {
         },
       });
       await expect(
-        page.getByRole("heading", { name: "Log saved." }),
+        page.getByRole("heading", { name: "Log saved" }),
       ).toBeVisible();
       await page.getByRole("link", { name: "Back to that day" }).click();
       await expect(
@@ -382,7 +382,7 @@ test.describe("M3-15B today and logging", () => {
       });
       await logInSteps(page);
       await expect(
-        page.getByRole("heading", { name: "Log saved." }),
+        page.getByRole("heading", { name: "Log saved" }),
       ).toBeVisible();
       await page.getByRole("link", { name: "Back to that day" }).click();
       await expect(
@@ -483,7 +483,7 @@ test.describe("M3-15B today and logging", () => {
       );
       await summary.getByRole("button", { name: "Save log" }).click();
       await expect(
-        page.getByRole("heading", { name: "Log updated." }),
+        page.getByRole("heading", { name: "Log updated" }),
       ).toBeVisible();
       await page.getByRole("link", { name: "Back to that day" }).click();
       const corrected = todayCard(page, "Tempo run");
@@ -510,7 +510,7 @@ test.describe("M3-15B today and logging", () => {
         .click();
       await logInSteps(page, { outcome: "Completed" });
       await expect(
-        page.getByRole("heading", { name: "Log saved." }),
+        page.getByRole("heading", { name: "Log saved" }),
       ).toBeVisible();
 
       // Owner, 3 Oct 2026: once logged, its log is what changes, not its

@@ -260,13 +260,13 @@ export function SessionPage({
           {gone ? (
             <>
               <h1>
-                {replacedBySeriesEdit ? "Change saved." : "Session removed."}
+                {replacedBySeriesEdit ? "Change saved" : "Session removed"}
               </h1>
               <p>Taking you back to {returnLabel}.</p>
             </>
           ) : (
             <>
-              <h1>That session is not there.</h1>
+              <h1>That session is not there</h1>
               <p>
                 It may have been deleted, or it is not one of yours. Nothing was
                 changed.

@@ -89,7 +89,7 @@ export function CompletionRecord({ completion, planned }: Props) {
           data-progress-sheet="unplanned"
         >
           <p className={styles.sheetLabel}>What was planned</p>
-          <h2>This training was not planned.</h2>
+          <h2>This training was not planned</h2>
           <p className={styles.carbonNote}>
             There is no plan to set it beside. The record above is the whole of
             it.

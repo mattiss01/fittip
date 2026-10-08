@@ -7,7 +7,7 @@ export default function MemoryError({ reset }: { reset: () => void }) {
     <main className={homeStyles.shell} id="main-content">
       <section className={homeStyles.stateCard}>
         <p className={homeStyles.kicker}>You / memory</p>
-        <h1>Memory is unavailable.</h1>
+        <h1>Memory is unavailable</h1>
         <p>Nothing was changed. Retry the private read or return to You.</p>
         <button className={homeStyles.primaryAction} onClick={reset}>
           Retry

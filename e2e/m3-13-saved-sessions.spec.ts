@@ -178,7 +178,7 @@ test.describe("M3-13 private saved-session library", () => {
       ).toBeVisible();
       await doomed.getByRole("button", { name: "Delete permanently" }).click();
       await expect(
-        page.getByRole("heading", { name: "Nothing saved yet." }),
+        page.getByRole("heading", { name: "Nothing saved yet" }),
       ).toBeVisible();
 
       await page.goto("/home/plan");
@@ -196,7 +196,7 @@ test.describe("M3-13 private saved-session library", () => {
       expect(headers["cache-control"]).toContain("no-store");
       expect(headers["cache-control"]).toContain("private");
       await expect(
-        page.getByRole("heading", { name: "Nothing saved yet." }),
+        page.getByRole("heading", { name: "Nothing saved yet" }),
       ).toBeVisible();
       // The navigation has a link named "Plan" too, so the way back is
       // taken by its hook.

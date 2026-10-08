@@ -15,7 +15,7 @@ export default function OnboardingError({
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
       <section className={styles.errorCard}>
         <p>Guided setup unavailable</p>
-        <h1>Your draft could not be confirmed.</h1>
+        <h1>Your draft could not be confirmed</h1>
         <span>
           No answer has been shown or copied into this error. Try the
           owner-scoped read again.

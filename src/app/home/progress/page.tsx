@@ -68,7 +68,7 @@ export default async function ProgressPage({ searchParams }: Props) {
       {timezoneName === null || month === null || currentMonth === null ? (
         <section className={homeStyles.stateCard} data-progress-state="no-zone">
           <p className={homeStyles.sectionLabel}>Time zone needed</p>
-          <h2>Confirm your time zone first.</h2>
+          <h2>Confirm your time zone first</h2>
           <p>
             Your months start and end on your own calendar, and FitTip does not
             guess which one that is. Confirm your zone on the Plan and your

@@ -64,7 +64,7 @@ test.describe("M3-15C progress", () => {
         page.getByRole("heading", { name: "Progress" }),
       ).toBeVisible();
       await expect(page.locator('[data-progress-empty="never"]')).toContainText(
-        "Your record starts here.",
+        "Your record starts here",
       );
       // The first-run sentence and the empty-month sentence are two different
       // facts and never appear together.
@@ -99,7 +99,7 @@ test.describe("M3-15C progress", () => {
         note: "Held the pace to the last rep.",
       });
       await expect(
-        page.getByRole("heading", { name: "Log saved." }),
+        page.getByRole("heading", { name: "Log saved" }),
       ).toBeVisible();
       await page.getByRole("link", { name: "Back to that day" }).click();
 
@@ -110,7 +110,7 @@ test.describe("M3-15C progress", () => {
         minutes: "30",
       });
       await expect(
-        page.getByRole("heading", { name: "Log saved." }),
+        page.getByRole("heading", { name: "Log saved" }),
       ).toBeVisible();
 
       // ---- The month shows both, each with what the owner recorded. ----
@@ -235,7 +235,7 @@ test.describe("M3-15C progress", () => {
       const unowned = await page.goto(`/home/progress/${crypto.randomUUID()}`);
       expect(unowned?.status()).toBe(200);
       await expect(
-        page.getByRole("heading", { name: "That record is not there." }),
+        page.getByRole("heading", { name: "That record is not there" }),
       ).toBeVisible();
       const unownedCopy = await page
         .locator('[data-progress-state="no-completion"]')

@@ -11,7 +11,7 @@ export default function PersonalActivitiesError({
     <main className={homeStyles.shell} id="main-content">
       <section className={homeStyles.stateCard}>
         <p className={homeStyles.kicker}>Activity Library</p>
-        <h1>Your activities are unavailable.</h1>
+        <h1>Your activities are unavailable</h1>
         <p>Nothing was changed. Retry the private read.</p>
         <button className={homeStyles.primaryAction} onClick={reset}>
           Retry

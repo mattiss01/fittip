@@ -90,7 +90,7 @@ export function SavedLibrary({
 
       {sessions.length === 0 ? (
         <section className={styles.empty}>
-          <h2>Nothing saved yet.</h2>
+          <h2>Nothing saved yet</h2>
           <p>
             Write one above, or open a session on your plan and choose{" "}
             <strong>Save to library</strong>. Either way it is kept here, so you
