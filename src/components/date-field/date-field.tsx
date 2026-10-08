@@ -43,6 +43,7 @@ export function DateField({
   centred = false,
   calendar = false,
   required = false,
+  unchecked = false,
   min,
   max,
 }: {
@@ -54,6 +55,12 @@ export function DateField({
   centred?: boolean;
   calendar?: boolean;
   required?: boolean;
+  /**
+   * Sent as typed, with no check in the browser: for a form that must be
+   * able to leave with a date half typed, as setup's "Continue later" does,
+   * or that keeps this field out of sight on another question.
+   */
+  unchecked?: boolean;
   /** Limits of the calendar; what is typed is checked where it is saved. */
   min?: string;
   max?: string;
@@ -71,16 +78,22 @@ export function DateField({
   const date = empty
     ? ""
     : `${parts.year}-${parts.month.padStart(2, "0")}-${parts.day.padStart(2, "0")}`;
-  const problem = empty
-    ? required
-      ? "Enter a date."
-      : ""
-    : isCalendarDate(date)
-      ? ""
-      : "Enter a full date: day, month and year.";
+  const problem = unchecked
+    ? ""
+    : empty
+      ? required
+        ? "Enter a date."
+        : ""
+      : isCalendarDate(date)
+        ? ""
+        : "Enter a full date: day, month and year.";
   // On the first of the three, which is where the browser then points.
+  // Taken off again when the order changes, or it would stay on a field
+  // that is no longer first and block the form for good.
   useEffect(() => {
-    fields.current[order[0]]?.setCustomValidity(problem);
+    const first = fields.current[order[0]];
+    first?.setCustomValidity(problem);
+    return () => first?.setCustomValidity("");
   }, [order, problem]);
 
   return (

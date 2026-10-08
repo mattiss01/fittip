@@ -183,7 +183,7 @@ test.describe("M3-12 manual continuous planning", () => {
       // is a field on the edit form, so moving one is saving an edit.
       await chooseMore(page, "Duplicate");
       const duplicate = sessionPanel(page, "Duplicate");
-      await duplicate.getByLabel("Copy to").fill(tomorrow);
+      await fillDate(duplicate, "Copy to", tomorrow);
       await duplicate
         .getByRole("button", { name: "Duplicate session" })
         .click();
