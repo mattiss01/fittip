@@ -68,12 +68,13 @@ export function ProfileNotice({ state }: { state: ProfileActionState }) {
  * to leave ("Continue later"), `onSaved` otherwise. In an effect, because both
  * change what a parent shows, and a parent is not to be updated while its
  * child renders. A save that was refused stays where it is, with its notice,
- * unless the owner was leaving.
+ * unless the owner was leaving; `onRefused` is told of one it stayed for.
  */
 export function useSaved(
   state: ProfileActionState,
   onSaved?: () => void,
   onLater?: () => void,
+  onRefused?: (state: ProfileActionState) => void,
 ) {
   const handled = useRef(state.submission);
   const leavingRef = useRef(false);
@@ -86,6 +87,7 @@ export function useSaved(
     // answer half typed is not a reason to be kept in setup.
     if (left) onLater?.();
     else if (state.status === "saved") onSaved?.();
+    else if (state.status === "validation") onRefused?.(state);
   });
   return leavingRef;
 }
@@ -98,12 +100,22 @@ export function useSaved(
  */
 export function ContinueLater({ children }: { children: ReactNode }) {
   const [asking, setAsking] = useState(false);
+  const link = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  // Closed again, focus goes back to the link that opened the popup instead
+  // of being left on nothing.
+  const asked = useRef(false);
+  useEffect(() => {
+    if (asked.current && !asking) link.current?.focus();
+    asked.current = asking;
+  }, [asking]);
 
   if (!asking) {
     return (
       <button
         className={styles.laterLink}
         onClick={() => setAsking(true)}
+        ref={link}
         type="button"
       >
         Continue later
@@ -121,6 +133,30 @@ export function ContinueLater({ children }: { children: ReactNode }) {
       onClick={() => setAsking(false)}
       onKeyDown={(event) => {
         if (event.key === "Escape") setAsking(false);
+        // Tab stays among the popup's own buttons: the step behind it is
+        // still in the page, and must not take focus while this asks.
+        if (event.key !== "Tab") return;
+        const buttons = Array.from(
+          panel.current?.querySelectorAll<HTMLButtonElement>(
+            "button:not(:disabled)",
+          ) ?? [],
+        );
+        if (buttons.length === 0) return;
+        const first = buttons[0];
+        const last = buttons[buttons.length - 1];
+        const inside = buttons.includes(
+          document.activeElement as HTMLButtonElement,
+        );
+        if (event.shiftKey && (!inside || document.activeElement === first)) {
+          event.preventDefault();
+          last.focus();
+        } else if (
+          !event.shiftKey &&
+          (!inside || document.activeElement === last)
+        ) {
+          event.preventDefault();
+          first.focus();
+        }
       }}
     >
       <div
@@ -129,7 +165,11 @@ export function ContinueLater({ children }: { children: ReactNode }) {
         aria-modal="true"
         className={styles.leavePanel}
         onClick={(event) => event.stopPropagation()}
+        ref={panel}
         role="alertdialog"
+        // Focusable, so a press on its text leaves focus in the popup,
+        // where Tab and Escape are still heard, and not on the page.
+        tabIndex={-1}
       >
         <strong id="leave-setup-title">Setup makes FitTip useful</strong>
         <p id="leave-setup-why">
@@ -242,6 +282,18 @@ export function AboutYouForm({
       else onSaved?.();
     },
     onLater,
+    // A refused answer may be one that is not on screen: setup saves every
+    // answer with each Next. It goes to that question, where the notice says
+    // which one it is. Not told when the owner was leaving, which leaves.
+    (refused) => {
+      if (
+        paged &&
+        refused.question !== undefined &&
+        refused.question !== question
+      ) {
+        onQuestion?.(refused.question);
+      }
+    },
   );
 
   // The units and the time zone are not asked (owner, 5 Oct 2026). Until the
@@ -738,9 +790,14 @@ export function WeightHistory({
 
   if (entries.length === 0) {
     return (
-      <p className={styles.explainer}>
-        No weight recorded yet. A weight saved above is kept here with its day.
-      </p>
+      <>
+        {/* Removing the last one lands here, and still says it was removed. */}
+        <ProfileNotice state={state} />
+        <p className={styles.explainer}>
+          No weight recorded yet. A weight saved above is kept here with its
+          day.
+        </p>
+      </>
     );
   }
 

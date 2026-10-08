@@ -250,8 +250,24 @@ describe("OnboardingManager", () => {
     });
     expect(popup).toHaveAttribute("aria-modal", "true");
 
-    fireEvent.click(screen.getByRole("button", { name: "Keep going" }));
+    // Tab stays among the popup's two buttons, whichever way it goes.
+    const keep = screen.getByRole("button", { name: "Keep going" });
+    const leave = within(popup).getByRole("button", { name: "Continue later" });
+    leave.focus();
+    fireEvent.keyDown(popup, { key: "Tab" });
+    expect(keep).toHaveFocus();
+    fireEvent.keyDown(popup, { key: "Tab", shiftKey: true });
+    expect(leave).toHaveFocus();
+    // From the popup itself, where a press on its text leaves focus.
+    popup.focus();
+    expect(popup).toHaveFocus();
+    fireEvent.keyDown(popup, { key: "Tab" });
+    expect(keep).toHaveFocus();
+
+    // Closed, focus is back on the link that opened it.
+    fireEvent.click(keep);
     expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(later()).toHaveFocus();
     fireEvent.click(later());
     fireEvent.keyDown(screen.getByRole("alertdialog"), { key: "Escape" });
     expect(screen.queryByRole("alertdialog")).toBeNull();

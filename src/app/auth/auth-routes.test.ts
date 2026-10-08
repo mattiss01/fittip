@@ -152,6 +152,21 @@ describe("production authentication route handlers", () => {
     expect(startSetupMock).toHaveBeenCalledOnce();
   });
 
+  it("still confirms an account whose sign-out could not reach the server", async () => {
+    client.auth.signOut.mockRejectedValue(new Error("down"));
+
+    const response = await callback(
+      new Request(`${origin}/auth/callback?code=valid-code`),
+    );
+
+    expectPrivate303(response, "/");
+    expect(new URL(response.headers.get("location") ?? "").search).toBe(
+      "?auth=confirmed",
+    );
+    // The one session the link made, not the account's others.
+    expect(client.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
+  });
+
   it("still confirms an account whose setup cannot be begun", async () => {
     startSetupMock.mockRejectedValue(new Error("database unavailable"));
     const response = await callback(

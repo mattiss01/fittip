@@ -9,6 +9,7 @@ import { cmToFeetAndInches, UNITS_SYSTEMS } from "@/lib/profile/body-measures";
 import {
   parseProfileDetails,
   parseProfileSports,
+  ABOUT_YOU_ANSWERS,
   ProfileDetailsValidationError,
 } from "@/server/profile/profile-records";
 import { parseTrainingSetup } from "@/server/profile/training-setup-records";
@@ -160,6 +161,19 @@ async function run(
   try {
     await change(await createProfileRepository());
   } catch (error) {
+    if (
+      error instanceof ProfileDetailsValidationError &&
+      error.answer !== undefined
+    ) {
+      // Which answer, never what was typed.
+      return {
+        ...result(
+          "validation",
+          `Check your ${error.answer} and try again. Nothing from this attempt was saved.`,
+        ),
+        question: ABOUT_YOU_ANSWERS.indexOf(error.answer),
+      };
+    }
     if (
       error instanceof ProfileDetailsValidationError ||
       error instanceof ProfileValidationError

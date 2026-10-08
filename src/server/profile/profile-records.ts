@@ -27,11 +27,38 @@ export type ProfileDetailsInput = {
   weightKg: number | null;
 };
 
+/** The questions of "About you", in the order setup asks them. */
+export const ABOUT_YOU_ANSWERS = [
+  "name",
+  "birthday",
+  "gender",
+  "height",
+  "weight",
+] as const;
+export type AboutYouAnswer = (typeof ABOUT_YOU_ANSWERS)[number];
+
 export class ProfileDetailsValidationError extends Error {
-  constructor() {
+  /**
+   * Which answer was refused, when it is one of "About you". Setup asks them
+   * one a screen and saves them all together, so the one at fault may not be
+   * the one on screen.
+   */
+  constructor(readonly answer?: AboutYouAnswer) {
     // What was typed is deliberately never included in an exception.
     super("The profile details are invalid.");
     this.name = "ProfileDetailsValidationError";
+  }
+}
+
+/** Runs one answer's checks, and names that answer if they refuse it. */
+function answering<T>(answer: AboutYouAnswer, read: () => T): T {
+  try {
+    return read();
+  } catch (error) {
+    if (error instanceof ProfileDetailsValidationError) {
+      throw new ProfileDetailsValidationError(answer);
+    }
+    throw error;
   }
 }
 
@@ -45,25 +72,32 @@ export function parseProfileDetails(
   formData: FormData,
   today: string,
 ): ProfileDetailsInput {
-  const displayName = text(formData, "displayName").trim();
-  if (displayName.length < 1 || displayName.length > 80) {
-    throw new ProfileDetailsValidationError();
-  }
+  const displayName = answering("name", () => {
+    const name = text(formData, "displayName").trim();
+    if (name.length < 1 || name.length > 80) {
+      throw new ProfileDetailsValidationError();
+    }
+    return name;
+  });
 
-  const birthDate = text(formData, "birthDate").trim() || null;
-  if (
-    birthDate !== null &&
-    (!isIsoDate(birthDate) ||
-      birthDate < EARLIEST_BIRTH_DATE ||
-      birthDate > today)
-  ) {
-    throw new ProfileDetailsValidationError();
-  }
+  const birthDate = answering("birthday", () => {
+    const date = text(formData, "birthDate").trim() || null;
+    if (
+      date !== null &&
+      (!isIsoDate(date) || date < EARLIEST_BIRTH_DATE || date > today)
+    ) {
+      throw new ProfileDetailsValidationError();
+    }
+    return date;
+  });
 
-  const gender = text(formData, "gender") || null;
-  if (gender !== null && !isOneOf(gender, GENDERS)) {
-    throw new ProfileDetailsValidationError();
-  }
+  const gender = answering("gender", () => {
+    const chosen = text(formData, "gender") || null;
+    if (chosen !== null && !isOneOf(chosen, GENDERS)) {
+      throw new ProfileDetailsValidationError();
+    }
+    return chosen;
+  });
 
   const unitsSystem = text(formData, "unitsSystem");
   if (!isOneOf(unitsSystem, UNITS_SYSTEMS)) {
@@ -75,8 +109,12 @@ export function parseProfileDetails(
     birthDate,
     gender,
     unitsSystem,
-    heightCm: within(height(formData, unitsSystem), HEIGHT_CM_RANGE),
-    weightKg: within(weight(formData, unitsSystem), WEIGHT_KG_RANGE),
+    heightCm: answering("height", () =>
+      within(height(formData, unitsSystem), HEIGHT_CM_RANGE),
+    ),
+    weightKg: answering("weight", () =>
+      within(weight(formData, unitsSystem), WEIGHT_KG_RANGE),
+    ),
   };
 }
 
