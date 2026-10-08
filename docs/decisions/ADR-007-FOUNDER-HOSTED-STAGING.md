@@ -7,6 +7,9 @@
 **Approval:** The product owner approved the founder-hosted FitTip MVP plan in
 chat and explicitly requested implementation
 
+**Recovery approved by:** [ADR-022](ADR-022-PASSWORD-RECOVERY.md), for the
+owner's account only; the rest of the approval boundary below stands
+
 **Supersedes:** only ADR-006's prohibition on hosted use for the narrow
 founder/synthetic staging scope; ADR-006 remains the historical local-AI
 decision

@@ -63,8 +63,18 @@ request, no record that one was made.
   That is enough for one owner. ADR-005's condition stands: real SMTP, bot
   protection and reviewed rate limits before anyone outside is let in.
 - Until the owner pastes the template into the hosted project, the hosted mail
-  carries Supabase's default link, which FitTip's page does not accept. It
-  fails with "expired or already used" and exposes nothing.
+  carries Supabase's default link. That link is verified by Supabase itself,
+  which spends it and sends the browser to the Site URL: the owner lands on
+  sign-in with no form to set a password and a link that is used up. Nothing
+  is exposed, and nothing is reset. The hosted project's Site URL must also be
+  the app's own address, because the template builds the link from it.
+- Auth is asked for the mail after the answer has been sent, so the time the
+  answer takes does not tell an address with an account from one without.
+- Anyone who knows the owner's address can ask for mails to it. FitTip bounds
+  nothing but the address's length; the limit is Supabase's, and on the hosted
+  project its few mails an hour can be used up by someone else, which delays
+  the owner's own reset. Accepted for one owner; it belongs with the bot
+  protection ADR-005 asks for before outside users.
 - A new account's confirmation link still works only in the browser that signed
   up. The same approach would fix it; it is a line in `NEXT.md`, not part of
   this decision.
