@@ -6,6 +6,24 @@ import { AuthForm } from "@/components/auth-form";
 describe("AuthForm", () => {
   afterEach(cleanup);
 
+  it("offers a way back in from sign-in, and says when a reset went through", () => {
+    const { rerender } = render(<AuthForm allowSignUp={false} />);
+
+    // Offered on the hosted app too, where signing up is not.
+    expect(
+      screen.getByRole("link", { name: "Forgot password?" }),
+    ).toHaveAttribute("href", "/forgot-password");
+    expect(screen.queryByRole("status")).toBeNull();
+
+    rerender(<AuthForm searchParams={{ passwordChanged: true }} />);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Your password is changed. Sign in with it.",
+    );
+
+    rerender(<AuthForm initialMode="sign-up" />);
+    expect(screen.queryByRole("link", { name: "Forgot password?" })).toBeNull();
+  });
+
   it("renders a server-posted sign-up form and safe validation feedback", () => {
     render(
       <AuthForm initialMode="sign-up" searchParams={{ error: "validation" }} />,

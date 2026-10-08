@@ -16,6 +16,8 @@ export function AuthForm({
     checkEmail?: boolean;
     /** The confirmation link was opened and the account is confirmed. */
     confirmed?: boolean;
+    /** A reset link was used and the password is the new one (ADR-022). */
+    passwordChanged?: boolean;
     error?: string;
     next?: string;
   };
@@ -89,6 +91,11 @@ export function AuthForm({
             Your account is confirmed. Sign in to get started.
           </p>
         ) : null}
+        {!isSignUp && searchParams?.passwordChanged && !error ? (
+          <p className="form-message success" role="status">
+            Your password is changed. Sign in with it.
+          </p>
+        ) : null}
         {error ? (
           <p className="form-message error" role="alert">
             {isSignUp && error === "validation"
@@ -99,6 +106,11 @@ export function AuthForm({
         <button type="submit">{isSignUp ? "Create account" : "Sign in"}</button>
       </form>
 
+      {isSignUp ? null : (
+        <Link className="text-button" href="/forgot-password">
+          Forgot password?
+        </Link>
+      )}
       {allowSignUp ? (
         <Link className="text-button" href={isSignUp ? "/" : "/signup"}>
           {isSignUp

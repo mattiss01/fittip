@@ -248,6 +248,13 @@ otp_expiry = 3600
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
 
+# The reset mail's link opens FitTip's own page with a one-time code, so it
+# works in any browser (ADR-022). The hosted project needs the same text
+# pasted into its dashboard; this file configures the local stack and CI only.
+[auth.email.template.recovery]
+subject = "Reset your FitTip password"
+content_path = "./supabase/templates/recovery.html"
+
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
 # enabled = true

@@ -17,6 +17,7 @@ export default async function Home({
         allowSignUp={policy.mode === "local"}
         searchParams={{
           confirmed: params.auth === "confirmed",
+          passwordChanged: params.auth === "password-changed",
           error: params.error,
           next: params.next,
         }}
