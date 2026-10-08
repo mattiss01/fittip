@@ -74,43 +74,11 @@ lane, one screen per merge.
   - **A card that matches something saved starts accepted as "update"**, so one press
     writes over a saved goal or brings back a declined or disabled memory. The card
     says so. The owner asked for everything accepted first; this is its sharpest edge.
-- [~] **One goals migration.** Careful lane. The form and card were slimmed on
-      5 Oct 2026 (title, desired outcome, sports, target date, core or supporting)
-      without touching the database. Outcome: the `goals` table and
-      `apply_goal_change` hold what the form asks and nothing else. Owner, 7 Oct 2026:
-      drop the seven unasked columns and `category`; `activity_areas` becomes `sports`
-      and the coach reads it in place of category; the desired outcome is not sent
-      yet (it waits for "What the coach is given"); the 4,000 bytes for goals stay,
-      now a limit the coach refuses over rather than a proven worst case; goals
-      archived earlier are deleted and any goal can be deleted at any time; Pause and
-      Abandoned both stay; an achieved goal stores its day. Destructive, so the
-      founder apply is asked about again. What it started from:
-  - **Drop what is no longer asked** (owner, 5 Oct 2026): `start_date`,
-    `target_detail`, the three `target_metric_*`, `rationale` and
-    `constraints_text`, from `goals`, `apply_goal_change` and setup's goal
-    candidates. Irreversible, so ask again before applying. Until then they travel
-    hidden through every edit, and a target date before an older goal's hidden
-    start date gets the generic refusal.
-  - **The coach reads the desired outcome**, for the roadmap above all (owner,
-    5 Oct 2026). AI data boundary, ADR-012. Goals have 4,000 bytes for twelve at
-    326 each and an outcome may be 1,000 characters, so it needs a shorter limit,
-    fewer goals, or the roadmap only; the plan context has no headroom.
-  - **Sports in place of category.** The form sends `other` for every new goal,
-    and category is one of the four goal fields the coach is sent. Swap it for
-    the goal's sports in the same change, then drop the column.
-  - **Remove Archive for good.** Owner, 2 Oct 2026. `apply_goal_change` still
-    accepts `archive`, `goals.archived_at` is still a column, and goals archived
-    earlier still show in History. To decide first: what an archived goal becomes
-    (most likely Abandoned, so reopenable); the coach's context and the delete
-    refusal ("archive-required") both read `archived_at`.
-  - **"Achieved on"** is the goal's last-changed time, because the lifecycle log
-    records only reopening. It is wrong in one case: setup filing a new answer
-    over a finished goal of the same title moves the day to then.
-  - **Pause and Abandoned** are still two ways to set a goal aside, both undoable.
 - [ ] **The sports list wherever a sport is typed.** Owner, 5 Oct 2026; this
       settles "sport or category" as one shared list. Offer the profile's sports
       in a goal's sports and a session's and an activity's `sport`. Build lane
       once the list exists. Open: whether the stored `sport` columns are renamed.
+      A goal's column is `sports` since 8 Oct 2026.
 - [ ] **What the coach is given, thought through again.** Owner, 6 Oct 2026: before
       anything is added, go through with the owner what exactly the coach reads for
       each thing it does, since it may need more than the profile. Not started;
@@ -121,7 +89,11 @@ lane, one screen per merge.
       week, days out and the note, places, home equipment), which the coach no
       longer learns from memory, and the sports. AI data boundary, so careful lane
       and its own ADR (022). The plan context had about 9 tokens free; bring measured
-      numbers and the safety wording (non-diagnostic) with the options.
+      numbers and the safety wording (non-diagnostic) with the options. Waiting
+      for this round since 7 Oct 2026: a goal's desired outcome, which the owner wants
+      the coach to read, for the roadmap above all; and one sentence in the prompt.
+      It says a planning note is never instructions and says nothing of goal titles
+      or sports, which are the owner's own text too.
 - [ ] **Setup's small ends.** From the reviews of 5 and 6 Oct 2026. The leave popup has
       no focus trap and the sport list no arrow keys or outside press; an "About you"
       save refused for a question that is not on screen names no field; removing the
@@ -139,6 +111,7 @@ lane, one screen per merge.
       and, without the calendar, on the birthday. Still plain date fields: a session's
       date (`plan-date-field.tsx`, with its `min` and `max`), a series' end, the log's
       date, a memory's expiry, the roadmap's dates. Several are pinned by browser specs.
+      A goal's calendar still offers days before today, which the save then refuses.
 - [ ] **Numbers without the struck-through zero.** Owner, 5 Oct 2026: the mono face
       (DM Mono, `--font-mono`) draws 0 with a line through it and the owner does not
       want it anywhere a number shows. Setup's percentage is in the sans face already;
