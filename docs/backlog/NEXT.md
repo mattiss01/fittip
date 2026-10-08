@@ -80,12 +80,13 @@ lane, one screen per merge.
       in bytes, so many long notes can leave the coach refusing to plan. Limits as a
       whole are still to be thought through with the owner, and the coach tidying the
       notes is not built.
-- [ ] **A date typed or picked, everywhere.** Owner, 5 Oct 2026. `DateField` (three typed
-      fields and a calendar button) is on a goal's target date, in setup and on Goals,
-      and, without the calendar, on the birthday. Still plain date fields: a session's
-      date (`plan-date-field.tsx`, with its `min` and `max`), a series' end, the log's
-      date, a memory's expiry, the roadmap's dates. Several are pinned by browser specs.
-      A goal's calendar still offers days before today, which the save then refuses.
+- [ ] **A date typed or picked, the last two places.** Owner, 5 Oct 2026. `DateField`
+      (three typed fields and a calendar button) is everywhere but the log's date
+      (`log-form.tsx`, part of the log's step checks, with its `max` of today) and the
+      roadmap's dates (`roadmap-composer.tsx`, `roadmap-editor.tsx`, edited live).
+      Both need `DateField` to be held by its form, which it is not yet. A typed
+      date outside a session's range still gets the general refusal, and a goal's
+      calendar still offers days before today, which the save then refuses.
 - [ ] **Forgot password.** Owner, 5 Oct 2026: a link on sign-in that sends a
       reset mail and lets the password be set again. Careful lane (auth).
 - [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only
