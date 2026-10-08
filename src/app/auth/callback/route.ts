@@ -43,18 +43,11 @@ export async function GET(request: Request) {
   // The link confirms the account; it does not sign it in (owner, 5 Oct
   // 2026). The session this route needed to confirm with is ended, and the
   // account signs in on the page it lands on, which says it is confirmed.
-  // Only this browser's session, the one just made: if that cannot be ended
-  // the page must not say "sign in" to someone who is signed in.
-  const signedOut = await client.auth
-    .signOut({ scope: "local" })
-    .then(({ error: stillSignedIn }) => !stillSignedIn)
-    .catch(() => false);
-  if (!signedOut) {
-    return mergeAuthResponseHeaders(
-      privateRedirect(new URL("/home/today", requestUrl)),
-      pending,
-    );
-  }
+  // Only this browser's session, the one just made. Auth's client drops it
+  // from this browser even when the server could not be told (checked in
+  // auth-js 2.110), so the page is right to say "sign in" either way, and a
+  // failure here must not cost the account its confirmation.
+  await client.auth.signOut({ scope: "local" }).catch(() => undefined);
   return mergeAuthResponseHeaders(
     privateRedirect(new URL("/?auth=confirmed", requestUrl)),
     pending,

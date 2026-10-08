@@ -258,6 +258,11 @@ describe("OnboardingManager", () => {
     expect(keep).toHaveFocus();
     fireEvent.keyDown(popup, { key: "Tab", shiftKey: true });
     expect(leave).toHaveFocus();
+    // From the popup itself, where a press on its text leaves focus.
+    popup.focus();
+    expect(popup).toHaveFocus();
+    fireEvent.keyDown(popup, { key: "Tab" });
+    expect(keep).toHaveFocus();
 
     // Closed, focus is back on the link that opened it.
     fireEvent.click(keep);

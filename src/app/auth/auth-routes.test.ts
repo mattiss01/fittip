@@ -152,15 +152,18 @@ describe("production authentication route handlers", () => {
     expect(startSetupMock).toHaveBeenCalledOnce();
   });
 
-  it('does not say "sign in" to an account its confirmation could not sign out', async () => {
-    client.auth.signOut.mockResolvedValue({ error: { message: "down" } });
+  it("still confirms an account whose sign-out could not reach the server", async () => {
+    client.auth.signOut.mockRejectedValue(new Error("down"));
 
     const response = await callback(
       new Request(`${origin}/auth/callback?code=valid-code`),
     );
 
-    // Still signed in, so it goes where a signed-in account goes.
-    expectPrivate303(response, "/home/today");
+    expectPrivate303(response, "/");
+    expect(new URL(response.headers.get("location") ?? "").search).toBe(
+      "?auth=confirmed",
+    );
+    // The one session the link made, not the account's others.
     expect(client.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
   });
 

@@ -721,6 +721,10 @@ label.constraintChoice {
   text-align: left;
 }
 
+.leavePanel:focus {
+  outline: none;
+}
+
 .leavePanel strong {
   font-size: 1.2rem;
   font-weight: 800;

@@ -68,12 +68,13 @@ export function ProfileNotice({ state }: { state: ProfileActionState }) {
  * to leave ("Continue later"), `onSaved` otherwise. In an effect, because both
  * change what a parent shows, and a parent is not to be updated while its
  * child renders. A save that was refused stays where it is, with its notice,
- * unless the owner was leaving.
+ * unless the owner was leaving; `onRefused` is told of one it stayed for.
  */
 export function useSaved(
   state: ProfileActionState,
   onSaved?: () => void,
   onLater?: () => void,
+  onRefused?: (state: ProfileActionState) => void,
 ) {
   const handled = useRef(state.submission);
   const leavingRef = useRef(false);
@@ -86,6 +87,7 @@ export function useSaved(
     // answer half typed is not a reason to be kept in setup.
     if (left) onLater?.();
     else if (state.status === "saved") onSaved?.();
+    else if (state.status === "validation") onRefused?.(state);
   });
   return leavingRef;
 }
@@ -165,6 +167,9 @@ export function ContinueLater({ children }: { children: ReactNode }) {
         onClick={(event) => event.stopPropagation()}
         ref={panel}
         role="alertdialog"
+        // Focusable, so a press on its text leaves focus in the popup,
+        // where Tab and Escape are still heard, and not on the page.
+        tabIndex={-1}
       >
         <strong id="leave-setup-title">Setup makes FitTip useful</strong>
         <p id="leave-setup-why">
@@ -277,24 +282,19 @@ export function AboutYouForm({
       else onSaved?.();
     },
     onLater,
+    // A refused answer may be one that is not on screen: setup saves every
+    // answer with each Next. It goes to that question, where the notice says
+    // which one it is. Not told when the owner was leaving, which leaves.
+    (refused) => {
+      if (
+        paged &&
+        refused.question !== undefined &&
+        refused.question !== question
+      ) {
+        onQuestion?.(refused.question);
+      }
+    },
   );
-
-  // A refused answer may be one that is not on screen: setup saves every
-  // answer with each Next. It goes to that question, where the notice says
-  // which one it is. Not when the owner was leaving, which leaves regardless.
-  const refused = useRef(state.submission);
-  useEffect(() => {
-    if (refused.current === state.submission) return;
-    refused.current = state.submission;
-    if (
-      paged &&
-      state.status === "validation" &&
-      state.question !== undefined &&
-      state.question !== question
-    ) {
-      onQuestion?.(state.question);
-    }
-  });
 
   // The units and the time zone are not asked (owner, 5 Oct 2026). Until the
   // profile has them they are the browser's: its language says the units,
