@@ -4,6 +4,7 @@ import {
   fireEvent,
   render,
   screen,
+  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -130,7 +131,6 @@ describe("GoalManager", () => {
   it("separates ranked core and supporting attention", () => {
     render(
       <GoalManager
-        today="2026-10-05"
         expectedRevision={4}
         initialGoals={[
           goal({ id: "1", title: "Trail event", priorityTier: "core" }),
@@ -155,7 +155,6 @@ describe("GoalManager", () => {
   it("keeps paused and terminal records outside active ranks", () => {
     render(
       <GoalManager
-        today="2026-10-05"
         expectedRevision={2}
         initialGoals={[
           goal({
@@ -177,21 +176,21 @@ describe("GoalManager", () => {
     expect(screen.getByText("History")).toBeVisible();
     expect(screen.getByRole("button", { name: "Resume" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Reopen" })).toBeEnabled();
+    // A paused and a finished goal can each be deleted (owner, 7 Oct 2026).
+    expect(screen.getAllByText("Delete", { selector: "summary" })).toHaveLength(
+      2,
+    );
   });
 
   it("provides a bounded empty state and add-goal control", () => {
-    render(
-      <GoalManager today="2026-10-05" expectedRevision={0} initialGoals={[]} />,
-    );
+    render(<GoalManager expectedRevision={0} initialGoals={[]} />);
     expect(screen.getByText(/no core goal yet/i)).toBeVisible();
     expect(screen.getByText("None yet.")).toBeVisible();
     expect(screen.getByRole("button", { name: "Add goal" })).toBeVisible();
   });
 
   it("asks a new goal for a title, an outcome, a sport, a date and its attention", () => {
-    render(
-      <GoalManager today="2026-10-05" expectedRevision={0} initialGoals={[]} />,
-    );
+    render(<GoalManager expectedRevision={0} initialGoals={[]} />);
     fireEvent.click(screen.getByRole("button", { name: "Add goal" }));
 
     expect(screen.getByLabelText("Goal title")).toBeRequired();
@@ -208,10 +207,10 @@ describe("GoalManager", () => {
         name: "Pick target date (optional) from a calendar",
       }),
     ).toBeVisible();
-    // Not asked: a new goal starts on the owner's day.
-    expect(document.querySelector('input[name="startDate"]')).toHaveValue(
-      "2026-10-05",
-    );
+    // Nothing unasked travels with the form any more.
+    for (const gone of ["category", "startDate", "rationale"]) {
+      expect(document.querySelector(`input[name="${gone}"]`)).toBeNull();
+    }
     // A core slot is free, so that is where a new goal starts.
     expect(screen.getByRole("radio", { name: "Core" })).toBeChecked();
     for (const gone of ["Category", "Start date", "Target measure"]) {
@@ -226,7 +225,6 @@ describe("GoalManager", () => {
   it("starts a new goal on supporting once three core goals are active", () => {
     render(
       <GoalManager
-        today="2026-10-05"
         expectedRevision={3}
         initialGoals={["1", "2", "3"].map((id) =>
           goal({ id, title: `Core ${id}`, activeRank: Number(id) }),
@@ -239,9 +237,7 @@ describe("GoalManager", () => {
   });
 
   it("closes the add form once its goal is created and keeps it on a refusal", () => {
-    const view = render(
-      <GoalManager today="2026-10-05" expectedRevision={0} initialGoals={[]} />,
-    );
+    const view = render(<GoalManager expectedRevision={0} initialGoals={[]} />);
     fireEvent.click(screen.getByRole("button", { name: "Add goal" }));
 
     useActionStateMock.mockReturnValue([
@@ -256,9 +252,7 @@ describe("GoalManager", () => {
       vi.fn(),
       false,
     ]);
-    view.rerender(
-      <GoalManager today="2026-10-05" expectedRevision={0} initialGoals={[]} />,
-    );
+    view.rerender(<GoalManager expectedRevision={0} initialGoals={[]} />);
     expect(screen.getByLabelText("Goal title")).toHaveValue("Half typed");
 
     useActionStateMock.mockReturnValue([
@@ -272,9 +266,7 @@ describe("GoalManager", () => {
       vi.fn(),
       false,
     ]);
-    view.rerender(
-      <GoalManager today="2026-10-05" expectedRevision={1} initialGoals={[]} />,
-    );
+    view.rerender(<GoalManager expectedRevision={1} initialGoals={[]} />);
     expect(screen.queryByLabelText("Goal title")).toBeNull();
   });
 
@@ -287,7 +279,6 @@ describe("GoalManager", () => {
     ]);
     render(
       <GoalManager
-        today="2026-10-05"
         expectedRevision={7}
         initialGoals={[
           goal({ id: "1", title: "Trail event", activeRank: 1 }),
@@ -324,17 +315,13 @@ describe("GoalManager", () => {
         id: "1",
         title: "Trail event",
         activeRank: 1,
-        activityAreas: ["Trail running"],
+        sports: ["Trail running"],
         targetDate: "2026-12-31",
       }),
       goal({ id: "2", title: "Swim endurance", activeRank: 2 }),
     ];
     const view = render(
-      <GoalManager
-        today="2026-10-05"
-        expectedRevision={1}
-        initialGoals={goals}
-      />,
+      <GoalManager expectedRevision={1} initialGoals={goals} />,
     );
     // The card says what the goal is for and by when, and nothing about its
     // kind or tier: the list it sits in says that.
@@ -367,13 +354,7 @@ describe("GoalManager", () => {
       vi.fn(),
       false,
     ]);
-    view.rerender(
-      <GoalManager
-        today="2026-10-05"
-        expectedRevision={2}
-        initialGoals={goals}
-      />,
-    );
+    view.rerender(<GoalManager expectedRevision={2} initialGoals={goals} />);
     expect(screen.queryByLabelText("Goal title")).toBeNull();
     expect(
       handles().every(
@@ -385,21 +366,21 @@ describe("GoalManager", () => {
   it("requires explicit confirmations with consequences and restores focus on cancel", () => {
     render(
       <GoalManager
-        today="2026-10-05"
         expectedRevision={1}
         initialGoals={[goal({ title: "Trail event" })]}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    // Beside Edit, not inside it (owner, 7 Oct 2026).
+    fireEvent.click(
+      screen.getByRole("button", { name: "More for Trail event" }),
+    );
+    const sheet = screen.getByRole("dialog", { name: "Trail event" });
+    expect(within(sheet).getByRole("button", { name: "Pause" })).toBeEnabled();
 
     for (const [action, consequence, confirmation] of [
       ["Achieved", /records the goal as achieved/i, "Confirm achieved"],
       ["Abandoned", /records the goal as abandoned/i, "Confirm abandoned"],
-      [
-        "Delete",
-        /permanently deletes an unused goal/i,
-        "Confirm permanent delete",
-      ],
+      ["Delete", /permanently deletes the goal/i, "Confirm permanent delete"],
     ] as const) {
       const summary = screen.getByText(action, { selector: "summary" });
       const details = summary.closest("details");
@@ -425,9 +406,7 @@ describe("GoalManager", () => {
       false,
     ]);
 
-    render(
-      <GoalManager today="2026-10-05" expectedRevision={2} initialGoals={[]} />,
-    );
+    render(<GoalManager expectedRevision={2} initialGoals={[]} />);
 
     expect(
       screen.getByRole("link", { name: "Reload current goals" }),
@@ -442,9 +421,7 @@ describe("GoalManager", () => {
       true,
     ]);
 
-    render(
-      <GoalManager today="2026-10-05" expectedRevision={2} initialGoals={[]} />,
-    );
+    render(<GoalManager expectedRevision={2} initialGoals={[]} />);
     act(() => {
       vi.advanceTimersByTime(CONFIRMATION_BUDGET_MS - WATCH_INTERVAL_MS);
     });
@@ -464,9 +441,7 @@ describe("GoalManager", () => {
       true,
     ]);
 
-    render(
-      <GoalManager today="2026-10-05" expectedRevision={2} initialGoals={[]} />,
-    );
+    render(<GoalManager expectedRevision={2} initialGoals={[]} />);
     act(() => {
       vi.advanceTimersByTime(CONFIRMATION_BUDGET_MS + WATCH_INTERVAL_MS);
     });
@@ -496,9 +471,7 @@ describe("GoalManager", () => {
       true,
     ]);
 
-    render(
-      <GoalManager today="2026-10-05" expectedRevision={2} initialGoals={[]} />,
-    );
+    render(<GoalManager expectedRevision={2} initialGoals={[]} />);
     advance(RENDER_GRACE_MS + WATCH_INTERVAL_MS);
 
     const notice = screen.getByRole("status");
@@ -529,9 +502,7 @@ describe("GoalManager", () => {
       true,
     ]);
 
-    render(
-      <GoalManager today="2026-10-05" expectedRevision={2} initialGoals={[]} />,
-    );
+    render(<GoalManager expectedRevision={2} initialGoals={[]} />);
     advance(RENDER_GRACE_MS + WATCH_INTERVAL_MS);
 
     expect(screen.getByRole("status")).toHaveTextContent("Saving goal change…");
@@ -550,9 +521,7 @@ describe("GoalManager", () => {
       true,
     ]);
 
-    const view = render(
-      <GoalManager today="2026-10-05" expectedRevision={2} initialGoals={[]} />,
-    );
+    const view = render(<GoalManager expectedRevision={2} initialGoals={[]} />);
     advance(RENDER_GRACE_MS + WATCH_INTERVAL_MS);
     expect(screen.getByRole("status")).toHaveAttribute(
       "data-state",
@@ -571,9 +540,7 @@ describe("GoalManager", () => {
       vi.fn(),
       false,
     ]);
-    view.rerender(
-      <GoalManager today="2026-10-05" expectedRevision={3} initialGoals={[]} />,
-    );
+    view.rerender(<GoalManager expectedRevision={3} initialGoals={[]} />);
     advance(RECOVERY_NOTICE_MS * 4);
 
     expect(reload).not.toHaveBeenCalled();
@@ -583,9 +550,7 @@ describe("GoalManager", () => {
   it("explains a reload it triggered itself", () => {
     window.sessionStorage.setItem(RECOVERY_FLAG, "1");
 
-    render(
-      <GoalManager today="2026-10-05" expectedRevision={2} initialGoals={[]} />,
-    );
+    render(<GoalManager expectedRevision={2} initialGoals={[]} />);
 
     const notice = screen.getByRole("status");
     expect(notice).toHaveTextContent(
@@ -607,9 +572,7 @@ describe("GoalManager", () => {
       false,
     ]);
 
-    render(
-      <GoalManager today="2026-10-05" expectedRevision={3} initialGoals={[]} />,
-    );
+    render(<GoalManager expectedRevision={3} initialGoals={[]} />);
 
     const notice = screen.getByRole("status");
     expect(notice).toHaveTextContent("Goal created.");
@@ -622,20 +585,11 @@ function goal(overrides: Partial<GoalView>): GoalView {
     id: "0",
     title: "Goal",
     desiredOutcome: "Outcome",
-    category: "other",
-    activityAreas: [],
-    startDate: "2026-07-29",
+    sports: [],
     targetDate: null,
-    targetDetail: null,
-    targetMetricLabel: null,
-    targetMetricValue: null,
-    targetMetricUnit: null,
     priorityTier: "core",
     status: "active",
     activeRank: 1,
-    rationale: null,
-    constraints: null,
-    archivedAt: null,
     ...overrides,
   };
 }

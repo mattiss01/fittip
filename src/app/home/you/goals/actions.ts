@@ -4,10 +4,14 @@ import { revalidatePath } from "next/cache";
 
 import type { GoalActionDraft, GoalActionState } from "./action-state";
 
+import { isoDateInTimezone } from "@/lib/date/local-date";
 import {
+  assertTargetDateNotPast,
+  GoalTargetDateError,
   GoalValidationError,
   parseExpectedRevision,
   parseGoalId,
+  parseGoalInput,
 } from "@/server/goals/goal-records";
 import {
   createGoalRepository,
@@ -15,6 +19,10 @@ import {
   GoalConflictError,
   GoalPersistenceError,
 } from "@/server/repositories/goal-repository";
+import {
+  createProfileRepository,
+  ProfileAuthenticationError,
+} from "@/server/repositories/profile-repository";
 
 export async function changeGoalAction(
   previous: GoalActionState,
@@ -54,26 +62,18 @@ export async function changeGoalAction(
         operation === "edit"
           ? optionalText(formData, "originalPriorityTier")
           : undefined;
-      const activityAreas = text(formData, "activityAreas")
+      const sports = text(formData, "sports")
         .split(",")
-        .map((area) => area.trim())
+        .map((sport) => sport.trim())
         .filter(Boolean);
-      // A goal names at least one sport (owner, 5 Oct 2026). The rule is the
-      // forms', here and in guided setup, not the database's.
-      if (activityAreas.length < 1) throw new GoalValidationError();
+      // A goal names at least one sport (owner, 5 Oct 2026). Refused here
+      // too, before the repository and the database refuse it.
+      if (sports.length < 1) throw new GoalValidationError();
       const input = {
         title: text(formData, "title"),
         desiredOutcome: text(formData, "desiredOutcome"),
-        category: text(formData, "category"),
-        activityAreas,
-        // Not asked any more: the form sends the owner's day for a new goal
-        // and the goal's own start date for an edit.
-        startDate: text(formData, "startDate"),
+        sports,
         targetDate: optionalText(formData, "targetDate"),
-        targetDetail: optionalText(formData, "targetDetail"),
-        targetMetricLabel: optionalText(formData, "targetMetricLabel"),
-        targetMetricValue: optionalText(formData, "targetMetricValue"),
-        targetMetricUnit: optionalText(formData, "targetMetricUnit"),
         priorityTier,
         targetRank:
           operation === "edit" &&
@@ -81,17 +81,28 @@ export async function changeGoalAction(
           originalPriorityTier !== priorityTier
             ? undefined
             : optionalNumber(formData, "targetRank"),
-        rationale: optionalText(formData, "rationale"),
-        constraints: optionalText(formData, "constraints"),
       };
-      if (operation === "create") {
+      const goalId =
+        operation === "edit" ? parseGoalId(formData.get("goalId")) : undefined;
+      // Parsed here as well as in the repository, so that the date below is
+      // a date before it is compared.
+      const { targetDate } = parseGoalInput(input);
+      if (targetDate !== undefined) {
+        const [profile, saved] = await Promise.all([
+          (await createProfileRepository()).getCurrentProfile(),
+          goalId === undefined ? null : repository.list(),
+        ]);
+        assertTargetDateNotPast(
+          targetDate,
+          saved?.goals.find((goal) => goal.id === goalId)?.targetDate,
+          // A day needs a zone. Without a stored one it is UTC's.
+          isoDateInTimezone(new Date(), profile?.timezoneName ?? "UTC"),
+        );
+      }
+      if (goalId === undefined) {
         await repository.create(input, expectedRevision);
       } else {
-        await repository.edit(
-          parseGoalId(formData.get("goalId")),
-          input,
-          expectedRevision,
-        );
+        await repository.edit(goalId, input, expectedRevision);
       }
     } else if (operation === "reorder") {
       await repository.reorder(
@@ -100,15 +111,9 @@ export async function changeGoalAction(
         expectedRevision,
       );
     } else if (
-      [
-        "pause",
-        "resume",
-        "achieve",
-        "abandon",
-        "reopen",
-        "archive",
-        "delete",
-      ].includes(operation)
+      ["pause", "resume", "achieve", "abandon", "reopen", "delete"].includes(
+        operation,
+      )
     ) {
       await repository.transition(
         operation as
@@ -117,7 +122,6 @@ export async function changeGoalAction(
           | "achieve"
           | "abandon"
           | "reopen"
-          | "archive"
           | "delete",
         formData.get("goalId"),
         expectedRevision,
@@ -141,6 +145,13 @@ export async function changeGoalAction(
     revalidatePath("/home/you/goals");
     return resultState("saved", resultCopy(operation), false);
   } catch (error) {
+    if (error instanceof GoalTargetDateError) {
+      return resultState(
+        "validation",
+        "The target date cannot be before today. Your change has not been saved.",
+        true,
+      );
+    }
     if (error instanceof GoalValidationError) {
       return resultState(
         "validation",
@@ -157,14 +168,6 @@ export async function changeGoalAction(
           "core-limit",
         );
       }
-      if (error.reason === "archive-required") {
-        return resultState(
-          "conflict",
-          "This goal has history, so it cannot be deleted. Mark it Abandoned instead.",
-          true,
-          "archive-required",
-        );
-      }
       return resultState(
         "conflict",
         "Goals changed in another tab. Reload before trying this change again.",
@@ -172,7 +175,10 @@ export async function changeGoalAction(
         "stale",
       );
     }
-    if (error instanceof GoalAuthenticationError) {
+    if (
+      error instanceof GoalAuthenticationError ||
+      error instanceof ProfileAuthenticationError
+    ) {
       return resultState(
         "session",
         "Your session ended. Sign in again before changing goals.",
@@ -214,17 +220,9 @@ function draftFrom(formData: FormData): GoalActionDraft {
   return {
     title: stringValue(formData.get("title")),
     desiredOutcome: stringValue(formData.get("desiredOutcome")),
-    category: stringValue(formData.get("category")),
-    activityAreas: stringValue(formData.get("activityAreas")),
-    startDate: stringValue(formData.get("startDate")),
+    sports: stringValue(formData.get("sports")),
     targetDate: stringValue(formData.get("targetDate")),
-    targetDetail: stringValue(formData.get("targetDetail")),
-    targetMetricLabel: stringValue(formData.get("targetMetricLabel")),
-    targetMetricValue: stringValue(formData.get("targetMetricValue")),
-    targetMetricUnit: stringValue(formData.get("targetMetricUnit")),
     priorityTier: stringValue(formData.get("priorityTier")),
-    rationale: stringValue(formData.get("rationale")),
-    constraints: stringValue(formData.get("constraints")),
   };
 }
 
@@ -242,7 +240,6 @@ function resultCopy(operation: string): string {
     achieve: "Goal marked achieved.",
     abandon: "Goal marked abandoned.",
     reopen: "Goal reopened.",
-    archive: "Goal archived.",
     delete: "Goal permanently deleted.",
   };
   return copy[operation] ?? "Goal change saved.";

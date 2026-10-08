@@ -186,7 +186,7 @@ async function loadProposalState() {
   const hasGoals = targetable.length > 0;
   // The goals a roadmap may still be pointed at. Same set the context source
   // checked when the proposal was made, read again now — which is the point:
-  // a goal archived since is exactly what makes a roadmap stale.
+  // a goal paused or deleted since is exactly what makes a roadmap stale.
   const targetableGoalIds = new Set(targetable.map((goal) => goal.id));
 
   // A finished proposal needs no plan read: it is shown as the record of what
@@ -264,7 +264,7 @@ async function loadProposalState() {
  *
  * Recomputed from the current roadmap and the current goals rather than stored
  * with the proposal. Staleness is a relationship between a roadmap and today,
- * not a property the proposal has: a goal archived an hour ago makes a
+ * not a property the proposal has: a goal paused an hour ago makes a
  * proposal's roadmap stale without anything about the proposal changing.
  *
  * The version is matched by id. A roadmap accepted since the proposal was made

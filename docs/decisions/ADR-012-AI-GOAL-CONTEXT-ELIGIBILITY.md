@@ -96,3 +96,39 @@ accepted pattern rather than introducing a new one.
   that has not been observed, and "not now" is a clear enough instruction to
   honor literally.
 - **Defer the whole question to M3-01.** Rejected for the reason in Context.
+
+## Recorded amendment to decisions 1 and 5, and the fields a goal is sent as
+
+**Decided by the product owner on 7 October 2026**, with the goals migration
+(`docs/backlog/NEXT.md`, "One goals migration").
+
+**Decision 5 is retired, and decision 1 loses its second half.** Archive no
+longer exists: the operation is refused, `goals.archived_at` is dropped, and
+goals archived earlier were deleted with it. A goal is targetable when
+`status = 'active'` and that is the whole test. Decision 7 is what keeps this
+safe: the gate still enumerates the statuses it admits.
+
+**A goal reaches a coach as `id`, `title`, `sports`, `priorityTier` and
+`targetDate`.** `sports` replaces `category`, which the slimmed form stopped
+asking on 5 October 2026 and sent as `other` for every goal since. Sports are
+the owner's own labels, at most ten of sixty characters each.
+
+**The desired outcome is still not sent.** The owner wants the coach to read
+it, for the roadmap above all, and decided it waits for the review of
+everything a coach is given (to be ADR-022).
+
+**The goal budget becomes a limit rather than a proven worst case.** Twelve
+targetable goals share 4,000 bytes. With `category` a goal could not exceed 326
+bytes, so twelve always fit; with ten long sports one goal can approach 940, so
+five such goals would not. The owner judged that no real set of goals reaches
+it and kept the number. Past it the request is refused and names goals as the
+source, as decision-making sources already are; no ceiling and no spend moved.
+
+Achieved goals are sent with their sports too, as background, on their own
+smaller allowance (2,400 bytes for a roadmap, 1,600 for a plan), which was
+already a limit rather than a worst case. Past it the refusal names achieved
+goals and says to delete some or shorten their sports, since an achieved goal
+cannot be paused.
+
+A deleted goal reaches no coach. Any goal may now be deleted at any time,
+whatever its status, and a proposal that read it can no longer be accepted.

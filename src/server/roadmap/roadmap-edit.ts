@@ -32,7 +32,7 @@ export async function buildEditValidationContext(
     targetableGoals: eligible.targetable.map((goal) => ({
       id: goal.id,
       title: goal.title,
-      category: goal.category,
+      sports: goal.sports,
       priorityTier: goal.priorityTier,
       targetDate: goal.targetDate,
     })),

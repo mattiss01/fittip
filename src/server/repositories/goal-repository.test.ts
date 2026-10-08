@@ -38,7 +38,6 @@ describe("GoalRepository", () => {
 
   it.each([
     ["Three core goals are already active.", "core-limit"],
-    ["This goal must be archived.", "archive-required"],
     ["Goals changed. Reload and try again.", "stale"],
   ] as const)(
     "maps only deliberate PT409 conflicts",
@@ -96,12 +95,52 @@ describe("GoalRepository", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it("dates an achieved goal by its achieved moment and the others by their last change", async () => {
+    const neq = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: "achieved",
+          status: "achieved",
+          achieved_at: "2026-09-20T16:00:00.000Z",
+          updated_at: "2026-10-01T09:00:00.000Z",
+        },
+        {
+          id: "paused",
+          status: "paused",
+          achieved_at: null,
+          updated_at: "2026-10-02T09:00:00.000Z",
+        },
+      ],
+      error: null,
+    });
+    const eq = vi.fn().mockReturnValue({ neq });
+    const from = vi
+      .fn()
+      .mockReturnValue({ select: vi.fn().mockReturnValue({ eq }) });
+    const repository = new GoalRepository(client({ from }));
+
+    await expect(repository.listStatusChanges()).resolves.toEqual([
+      // Not the later edit: the day it was achieved.
+      {
+        goalId: "achieved",
+        status: "achieved",
+        changedAt: "2026-09-20T16:00:00.000Z",
+      },
+      {
+        goalId: "paused",
+        status: "paused",
+        changedAt: "2026-10-02T09:00:00.000Z",
+      },
+    ]);
+    expect(eq).toHaveBeenCalledWith("user_id", USER_ID);
+  });
+
   it("rejects malformed goal content before authentication", async () => {
     const auth = { getClaims: vi.fn() };
     const rpc = vi.fn();
     const repository = new GoalRepository(client({ auth, rpc }));
     await expect(
-      repository.create({ ...goal(), targetDate: "2026-07-01" }, 0),
+      repository.create({ ...goal(), targetDate: "1 July 2026" }, 0),
     ).rejects.toThrow("The goal details are invalid.");
     expect(auth.getClaims).not.toHaveBeenCalled();
     expect(rpc).not.toHaveBeenCalled();
@@ -124,9 +163,7 @@ function goal() {
   return {
     title: "Run a trail event",
     desiredOutcome: "Finish with steady pacing.",
-    category: "performance_event",
-    activityAreas: ["Trail running"],
-    startDate: "2026-07-29",
+    sports: ["Trail running"],
     priorityTier: "core",
   };
 }

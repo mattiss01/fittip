@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(55);
+select plan(69);
 
 select has_table('public', 'goals', 'goals table exists');
 select has_table(
@@ -24,18 +24,10 @@ select has_function(
     'uuid',
     'text',
     'text',
-    'text',
     'text[]',
     'date',
-    'date',
-    'text',
-    'text',
-    'text',
-    'text',
     'text',
     'smallint',
-    'text',
-    'text',
     'uuid[]'
   ],
   'the atomic goal change function exists'
@@ -56,12 +48,74 @@ select is(
   3::bigint,
   'every goal record category has a required owner'
 );
+select has_column('public', 'goals', 'sports', 'a goal has sports');
+select has_column(
+  'public',
+  'goals',
+  'achieved_at',
+  'a goal stores when it was achieved'
+);
+select is(
+  (
+    select count(*)::bigint
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'goals'
+      and column_name in (
+        'category',
+        'activity_areas',
+        'start_date',
+        'target_detail',
+        'target_metric_label',
+        'target_metric_value',
+        'target_metric_unit',
+        'rationale',
+        'constraints_text',
+        'archived_at'
+      )
+  ),
+  0::bigint,
+  'the columns the goal form no longer asks are gone'
+);
+select is(
+  (
+    select pg_get_constraintdef(oid)
+    from pg_constraint
+    where conrelid = 'public.goals'::regclass
+      and conname = 'goals_achieved_at_check'
+  ),
+  'CHECK (((status = ''achieved''::text) = (achieved_at IS NOT NULL)))',
+  'a goal has an achieved moment exactly while it is achieved'
+);
+select ok(
+  (
+    select position('archived_at' in pg_get_constraintdef(oid)) = 0
+      and position('active_rank IS NOT NULL' in pg_get_constraintdef(oid)) > 0
+    from pg_constraint
+    where conrelid = 'public.goals'::regclass
+      and conname = 'goals_active_rank_check'
+  ),
+  'active ranks are still tied to status, without the archive half'
+);
+select is(
+  (
+    select string_agg(attribute.attname, ',' order by keys.ordinality)
+    from pg_index
+    cross join lateral unnest(indkey) with ordinality as keys(attnum, ordinality)
+    join pg_attribute attribute
+      on attribute.attrelid = indrelid
+      and attribute.attnum = keys.attnum
+    where indexrelid = 'public.goals_owner_list_idx'::regclass
+  ),
+  'user_id,status,priority_tier,active_rank',
+  'the owner list index covers the columns the list orders by'
+);
 select ok(
   (
     select prosecdef
       and proconfig = array['search_path=""']
     from pg_proc
-    where oid = 'public.apply_goal_change(bigint,text,uuid,text,text,text,text[],date,date,text,text,text,text,text,smallint,text,text,uuid[])'::regprocedure
+    where oid = 'public.apply_goal_change(bigint,text,uuid,text,text,text[],date,text,smallint,uuid[])'::regprocedure
   ),
   'the goal mutation is security definer with an empty search path'
 );
@@ -69,7 +123,7 @@ select is(
   (
     select pg_get_userbyid(proowner)
     from pg_proc
-    where oid = 'public.apply_goal_change(bigint,text,uuid,text,text,text,text[],date,date,text,text,text,text,text,smallint,text,text,uuid[])'::regprocedure
+    where oid = 'public.apply_goal_change(bigint,text,uuid,text,text,text[],date,text,smallint,uuid[])'::regprocedure
   ),
   'postgres',
   'the privileged goal mutation has the expected owner'
@@ -97,7 +151,7 @@ select ok(
 select ok(
   not has_function_privilege(
     'anon',
-    'public.apply_goal_change(bigint,text,uuid,text,text,text,text[],date,date,text,text,text,text,text,smallint,text,text,uuid[])',
+    'public.apply_goal_change(bigint,text,uuid,text,text,text[],date,text,smallint,uuid[])',
     'EXECUTE'
   ),
   'anonymous callers cannot execute goal mutations'
@@ -109,7 +163,7 @@ select ok(
     cross join lateral aclexplode(
       coalesce(proacl, acldefault('f', proowner))
     )
-    where oid = 'public.apply_goal_change(bigint,text,uuid,text,text,text,text[],date,date,text,text,text,text,text,smallint,text,text,uuid[])'::regprocedure
+    where oid = 'public.apply_goal_change(bigint,text,uuid,text,text,text[],date,text,smallint,uuid[])'::regprocedure
       and grantee = 0
       and privilege_type = 'EXECUTE'
   ),
@@ -118,7 +172,7 @@ select ok(
 select ok(
   has_function_privilege(
     'authenticated',
-    'public.apply_goal_change(bigint,text,uuid,text,text,text,text[],date,date,text,text,text,text,text,smallint,text,text,uuid[])',
+    'public.apply_goal_change(bigint,text,uuid,text,text,text[],date,text,smallint,uuid[])',
     'EXECUTE'
   ),
   'authenticated callers can execute goal mutations'
@@ -126,7 +180,7 @@ select ok(
 select ok(
   not has_function_privilege(
     'service_role',
-    'public.apply_goal_change(bigint,text,uuid,text,text,text,text[],date,date,text,text,text,text,text,smallint,text,text,uuid[])',
+    'public.apply_goal_change(bigint,text,uuid,text,text,text[],date,text,smallint,uuid[])',
     'EXECUTE'
   ),
   'the service role cannot bypass the authenticated goal mutation contract'
@@ -187,7 +241,7 @@ select ok(
     'execute ' || 'immediate'
     in lower(
       pg_get_functiondef(
-        'public.apply_goal_change(bigint,text,uuid,text,text,text,text[],date,date,text,text,text,text,text,smallint,text,text,uuid[])'::regprocedure
+        'public.apply_goal_change(bigint,text,uuid,text,text,text[],date,text,smallint,uuid[])'::regprocedure
       )
     )
   ) = 0,
@@ -218,12 +272,8 @@ select lives_ok(
       p_operation => 'create',
       p_title => 'Run a trail event',
       p_desired_outcome => 'Finish the local trail event with steady pacing.',
-      p_category => 'performance_event',
-      p_activity_areas => array['Trail running'],
-      p_start_date => '2026-07-29',
+      p_sports => array['Trail running'],
       p_target_date => '2026-10-10',
-      p_target_metric_label => 'Finish time',
-      p_target_metric_value => 'Under 3 hours',
       p_priority_tier => 'core'
     )
   $sql$,
@@ -236,9 +286,7 @@ select lives_ok(
       p_operation => 'create',
       p_title => 'Move more freely',
       p_desired_outcome => 'Build a consistent mobility practice.',
-      p_category => 'mobility',
-      p_activity_areas => array['Mobility'],
-      p_start_date => '2026-07-29',
+      p_sports => array['Mobility'],
       p_priority_tier => 'supporting'
     )
   $sql$,
@@ -263,8 +311,6 @@ select throws_ok(
       user_id,
       title,
       desired_outcome,
-      category,
-      start_date,
       priority_tier,
       active_rank
     )
@@ -272,8 +318,6 @@ select throws_ok(
       '51000000-0000-4000-8000-000000000001',
       'Bypass',
       'Bypass the transaction.',
-      'other',
-      '2026-07-29',
       'supporting',
       2
     )
@@ -298,9 +342,7 @@ select lives_ok(
       p_operation => 'create',
       p_title => 'Practice ball control',
       p_desired_outcome => 'Improve close control for football.',
-      p_category => 'skill',
-      p_activity_areas => array['Football'],
-      p_start_date => '2026-07-29',
+      p_sports => array['Football'],
       p_priority_tier => 'supporting'
     )
   $sql$,
@@ -399,6 +441,14 @@ select lives_ok(
   ),
   'the owner can mark a goal achieved'
 );
+select ok(
+  (
+    select achieved_at is not null
+    from public.goals
+    where title = 'Run a trail event'
+  ),
+  'achieving a goal stores the moment'
+);
 select lives_ok(
   format(
     $sql$
@@ -413,6 +463,14 @@ select lives_ok(
   ),
   'the owner can explicitly reopen a terminal goal'
 );
+select ok(
+  (
+    select achieved_at is null
+    from public.goals
+    where title = 'Run a trail event'
+  ),
+  'reopening clears the achieved moment'
+);
 select is(
   (select count(*)::bigint from public.goal_lifecycle_events),
   1::bigint,
@@ -423,7 +481,7 @@ select throws_ok(
     $sql$
       select public.apply_goal_change(
         p_expected_collection_revision => 7,
-        p_operation => 'archive',
+        p_operation => 'pause',
         p_goal_id => %L::uuid
       )
     $sql$,
@@ -445,9 +503,7 @@ select lives_ok(
       p_operation => 'create',
       p_title => 'Improve swim endurance',
       p_desired_outcome => 'Swim continuously with calm technique.',
-      p_category => 'endurance',
-      p_activity_areas => array['Swimming'],
-      p_start_date => '2026-07-29',
+      p_sports => array['Swimming'],
       p_priority_tier => 'core'
     )
   $sql$,
@@ -460,9 +516,7 @@ select lives_ok(
       p_operation => 'create',
       p_title => 'Build climbing skill',
       p_desired_outcome => 'Move efficiently on technical routes.',
-      p_category => 'skill',
-      p_activity_areas => array['Climbing'],
-      p_start_date => '2026-07-29',
+      p_sports => array['Climbing'],
       p_priority_tier => 'core'
     )
   $sql$,
@@ -475,9 +529,7 @@ select throws_ok(
       p_operation => 'create',
       p_title => 'Fourth core',
       p_desired_outcome => 'This must remain supporting.',
-      p_category => 'other',
-      p_activity_areas => array['Hiking'],
-      p_start_date => '2026-07-29',
+      p_sports => array['Hiking'],
       p_priority_tier => 'core'
     )
   $sql$,
@@ -504,9 +556,7 @@ select throws_ok(
         p_goal_id => %L::uuid,
         p_title => 'Move more freely',
         p_desired_outcome => 'Build a consistent mobility practice.',
-        p_category => 'mobility',
-        p_activity_areas => array['Mobility'],
-        p_start_date => '2026-07-29',
+        p_sports => array['Mobility'],
         p_priority_tier => 'core'
       )
     $sql$,
@@ -523,9 +573,7 @@ select lives_ok(
       p_operation => 'create',
       p_title => 'Temporary goal',
       p_desired_outcome => 'Check a short-lived idea.',
-      p_category => 'other',
-      p_activity_areas => array['Walking'],
-      p_start_date => '2026-07-29',
+      p_sports => array['Walking'],
       p_priority_tier => 'supporting'
     )
   $sql$,
@@ -562,7 +610,7 @@ select lives_ok(
   ),
   'the owner can abandon an active goal'
 );
-select throws_ok(
+select lives_ok(
   format(
     $sql$
       select public.apply_goal_change(
@@ -573,51 +621,73 @@ select throws_ok(
     $sql$,
     (select id from public.goals where title = 'Move more freely')
   ),
-  'PT409',
-  'This goal must be archived.',
-  'a terminal goal cannot be hard deleted'
+  'an abandoned goal can be hard deleted'
+);
+select is(
+  (select count(*)::bigint from public.goals where title = 'Move more freely'),
+  0::bigint,
+  'the abandoned goal is gone'
+);
+select throws_ok(
+  format(
+    $sql$
+      select public.apply_goal_change(
+        p_expected_collection_revision => 14,
+        p_operation => 'archive',
+        p_goal_id => %L::uuid
+      )
+    $sql$,
+    (select id from public.goals where title = 'Practice ball control')
+  ),
+  '22023',
+  'Invalid goal change.',
+  'archive is no longer an operation'
 );
 select lives_ok(
   format(
     $sql$
       select public.apply_goal_change(
-        p_expected_collection_revision => 13,
-        p_operation => 'archive',
+        p_expected_collection_revision => 14,
+        p_operation => 'delete',
         p_goal_id => %L::uuid
       )
     $sql$,
-    (select id from public.goals where title = 'Move more freely')
+    (select id from public.goals where title = 'Run a trail event')
   ),
-  'a terminal goal can be archived'
+  'a goal that was reopened can be hard deleted'
 );
-select ok(
+select is(
+  (select count(*)::bigint from public.goal_lifecycle_events),
+  0::bigint,
+  'deleting a goal removes its reopen history'
+);
+select is(
   (
-    select archived_at is not null and active_rank is null
+    select string_agg(active_rank::text, ',' order by active_rank)
     from public.goals
-    where title = 'Move more freely'
+    where priority_tier = 'core'
+      and status = 'active'
   ),
-  'archive retains the goal outside active ordering'
+  '1,2',
+  'deleting an active goal closes the core rank gap'
 );
 select throws_ok(
   $sql$
     select public.apply_goal_change(
-      p_expected_collection_revision => 14,
+      p_expected_collection_revision => 15,
       p_operation => 'create',
-      p_title => 'Bad dates',
-      p_desired_outcome => 'Reject an invalid target date.',
-      p_category => 'other',
-      p_start_date => '2026-08-01',
-      p_target_date => '2026-07-31',
+      p_title => 'No sport',
+      p_desired_outcome => 'Reject a goal that names no sport.',
       p_priority_tier => 'supporting'
     )
   $sql$,
   '22023',
   'Invalid goal change.',
-  'invalid dates fail before persistence'
+  'a goal without a sport fails before persistence'
 );
 select is(
   (select revision from public.goal_collections),
-  14::bigint,
+  15::bigint,
   'invalid input does not advance the collection'
 );
 
@@ -645,8 +715,7 @@ select lives_ok(
       p_operation => 'create',
       p_title => 'User B private goal',
       p_desired_outcome => 'Remain isolated from user A.',
-      p_category => 'other',
-      p_start_date => '2026-07-29',
+      p_sports => array['Walking'],
       p_priority_tier => 'supporting'
     )
   $sql$,
@@ -680,6 +749,47 @@ select is(
   (select status from public.goals where title = 'User B private goal'),
   'active',
   'the rejected mutation leaves user B state unchanged'
+);
+
+select lives_ok(
+  format(
+    $sql$
+      select public.apply_goal_change(
+        p_expected_collection_revision => 1,
+        p_operation => 'achieve',
+        p_goal_id => %L::uuid
+      )
+    $sql$,
+    (select id from public.goals where title = 'User B private goal')
+  ),
+  'user B can achieve their goal'
+);
+select lives_ok(
+  format(
+    $sql$
+      select public.apply_goal_change(
+        p_expected_collection_revision => 2,
+        p_operation => 'edit',
+        p_goal_id => %L::uuid,
+        p_title => 'User B private goal',
+        p_desired_outcome => 'Remain isolated from user A, reworded.',
+        p_sports => array['Walking', 'Hiking'],
+        p_priority_tier => 'supporting'
+      )
+    $sql$,
+    (select id from public.goals where title = 'User B private goal')
+  ),
+  'an achieved goal can still be edited'
+);
+select ok(
+  (
+    select achieved_at is not null
+      and achieved_at < updated_at
+      and sports = array['Walking', 'Hiking']
+    from public.goals
+    where title = 'User B private goal'
+  ),
+  'editing an achieved goal leaves the achieved moment alone'
 );
 
 reset role;

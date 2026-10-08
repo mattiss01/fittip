@@ -18,6 +18,8 @@ import {
   type GoalActionState,
 } from "@/app/home/you/goals/action-state";
 import { changeGoalAction } from "@/app/home/you/goals/actions";
+import { SheetCloseButton, SheetLayer } from "@/app/home/plan/plan-sheet";
+import sheetStyles from "@/app/home/plan/plan-week.module.css";
 import styles from "@/app/home/you/goals/goals.module.css";
 import { DateField } from "@/components/date-field/date-field";
 import { formatRoadmapDate } from "@/components/roadmap/roadmap-dates";
@@ -33,23 +35,14 @@ export type GoalView = {
   id: string;
   title: string;
   desiredOutcome: string;
-  category: string;
-  activityAreas: string[];
-  startDate: string;
+  sports: string[];
   targetDate: string | null;
-  targetDetail: string | null;
-  targetMetricLabel: string | null;
-  targetMetricValue: string | null;
-  targetMetricUnit: string | null;
   priorityTier: "core" | "supporting";
   status: "active" | "paused" | "achieved" | "abandoned";
   activeRank: number | null;
-  rationale: string | null;
-  constraints: string | null;
-  archivedAt: string | null;
   /**
-   * The owner-local day the goal was paused, achieved, abandoned or
-   * archived. Absent for an active goal.
+   * The owner-local day the goal was paused, achieved or abandoned. Absent
+   * for an active goal.
    */
   statusDate?: string | null;
 };
@@ -57,8 +50,6 @@ export type GoalView = {
 type Props = {
   initialGoals: GoalView[];
   expectedRevision: number;
-  /** The owner's day, which is when a new goal starts. */
-  today: string;
 };
 
 /**
@@ -71,7 +62,7 @@ const RECOVERY_FLAG = "fittip.goals.recovered:v1";
 const RECOVERED_NOTICE =
   "Your last goal change did not appear, so these goals were reloaded. The list below is what is saved.";
 
-export function GoalManager({ initialGoals, expectedRevision, today }: Props) {
+export function GoalManager({ initialGoals, expectedRevision }: Props) {
   const [state, action, pending] = useActionState(
     changeGoalAction,
     INITIAL_GOAL_ACTION_STATE,
@@ -92,23 +83,16 @@ export function GoalManager({ initialGoals, expectedRevision, today }: Props) {
     (pending ? "Saving goal change…" : null) ??
     (recovered ? RECOVERED_NOTICE : null);
   const noticeState = stall ?? (recovered ? "recovered" : state.status);
-  const active = initialGoals.filter(
-    (goal) => goal.status === "active" && goal.archivedAt === null,
-  );
+  const active = initialGoals.filter((goal) => goal.status === "active");
   const core = active
     .filter((goal) => goal.priorityTier === "core")
     .toSorted(byRank);
   const supporting = active
     .filter((goal) => goal.priorityTier === "supporting")
     .toSorted(byRank);
-  const paused = initialGoals.filter(
-    (goal) => goal.status === "paused" && goal.archivedAt === null,
-  );
+  const paused = initialGoals.filter((goal) => goal.status === "paused");
   const historical = initialGoals.filter(
-    (goal) =>
-      goal.archivedAt !== null ||
-      goal.status === "achieved" ||
-      goal.status === "abandoned",
+    (goal) => goal.status === "achieved" || goal.status === "abandoned",
   );
 
   return (
@@ -140,7 +124,6 @@ export function GoalManager({ initialGoals, expectedRevision, today }: Props) {
             pending={pending}
             draft={state.operation === "create" ? state.draft : undefined}
             newGoalTier={core.length < 3 ? "core" : "supporting"}
-            today={today}
             onCancel={() => setAdding(false)}
           />
         </section>
@@ -435,6 +418,16 @@ function GoalCard({
 }) {
   const ownEdit =
     actionState.operation === "edit" && actionState.goalId === goal.id;
+  // What can be done to a goal besides editing it sits behind "⋯", beside
+  // Edit, in a bottom sheet (owner, 7 Oct 2026). It closes once its change
+  // is answered; a refusal is then read on the page, where the notice is.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [settled, setSettled] = useState(actionState.submission);
+  if (actionState.submission !== settled) {
+    setSettled(actionState.submission);
+    setMenuOpen(false);
+  }
+  const menuTitleId = `goal-menu-${goal.id}`;
 
   return (
     <div className={styles.goalBody}>
@@ -443,10 +436,10 @@ function GoalCard({
           5 Oct 2026). */}
       <h3>{goal.title}</h3>
       <p className={styles.outcome}>{goal.desiredOutcome}</p>
-      {goal.activityAreas.length || goal.targetDate ? (
+      {goal.sports.length || goal.targetDate ? (
         <p className={styles.areas}>
           {[
-            ...goal.activityAreas,
+            ...goal.sports,
             ...(goal.targetDate
               ? [`By ${formatRoadmapDate(goal.targetDate)}`]
               : []),
@@ -463,6 +456,17 @@ function GoalCard({
             Edit
           </button>
         )}
+        {editing ? null : (
+          <button
+            aria-haspopup="dialog"
+            aria-label={`More for ${goal.title}`}
+            className={styles.more}
+            onClick={() => setMenuOpen(true)}
+            type="button"
+          >
+            ⋯
+          </button>
+        )}
       </div>
       {editing ? (
         <div className={styles.detail} data-goal-editor>
@@ -475,7 +479,22 @@ function GoalCard({
             draft={ownEdit ? actionState.draft : undefined}
             onCancel={() => onEditing(false)}
           />
-          <div className={styles.lifecycle}>
+        </div>
+      ) : null}
+      {menuOpen ? (
+        <SheetLayer
+          view="goal-actions"
+          labelledBy={menuTitleId}
+          onClose={() => setMenuOpen(false)}
+        >
+          <header className={sheetStyles.sheetHead}>
+            <span />
+            <SheetCloseButton className={sheetStyles.sheetClose}>
+              Close
+            </SheetCloseButton>
+          </header>
+          <h2 id={menuTitleId}>{goal.title}</h2>
+          <div className={`${styles.lifecycle} ${styles.menu}`}>
             <SimpleAction
               operation="pause"
               label="Pause"
@@ -502,8 +521,7 @@ function GoalCard({
             />
             {/* No Archive (owner, 2 Oct 2026): beside Pause and Abandoned it
                 was a third way to set a goal aside, and the only one that
-                could not be undone. Goals archived before still show in
-                History; the operation itself is untouched on the server. */}
+                could not be undone. */}
             <ConfirmedAction
               operation="delete"
               label="Delete"
@@ -513,7 +531,7 @@ function GoalCard({
               pending={pending}
             />
           </div>
-        </div>
+        </SheetLayer>
       ) : null}
     </div>
   );
@@ -526,7 +544,6 @@ function GoalForm({
   pending,
   draft,
   newGoalTier = "supporting",
-  today = "",
   onCancel,
 }: {
   action: (payload: FormData) => void;
@@ -535,8 +552,6 @@ function GoalForm({
   pending: boolean;
   draft?: GoalActionDraft;
   newGoalTier?: GoalView["priorityTier"];
-  /** Only a new goal needs it; an edit keeps the goal's own start date. */
-  today?: string;
   onCancel?: () => void;
 }) {
   const initial = (field: keyof GoalActionDraft, fallback = "") =>
@@ -577,14 +592,11 @@ function GoalForm({
       <label>
         Sports
         <input
-          name="activityAreas"
+          name="sports"
           required
           maxLength={600}
           placeholder="Running, strength"
-          defaultValue={initial(
-            "activityAreas",
-            goal?.activityAreas.join(", "),
-          )}
+          defaultValue={initial("sports", goal?.sports.join(", "))}
         />
       </label>
       {/* Typed, or picked from the calendar beside it (owner, 5 Oct 2026). */}
@@ -613,7 +625,7 @@ function GoalForm({
           </label>
         ))}
       </fieldset>
-      <StoredGoalFields goal={goal} today={today} />
+      <input name="targetRank" type="hidden" value={goal?.activeRank ?? ""} />
       <div className={styles.formActions}>
         <button className={styles.primary} disabled={pending}>
           {goal ? "Save goal" : "Create active goal"}
@@ -625,45 +637,6 @@ function GoalForm({
         ) : null}
       </div>
     </form>
-  );
-}
-
-/**
- * What a goal stores and the form no longer asks for (owner, 5 Oct 2026):
- * the kind of goal, its start date, the target's detail and measure, why it
- * matters and its own constraints. An edit sends the whole goal, so these
- * travel hidden and a goal written before keeps what it held. A new goal
- * starts on the owner's day.
- */
-function StoredGoalFields({ goal, today }: { goal?: GoalView; today: string }) {
-  return (
-    <>
-      <input type="hidden" name="category" value={goal?.category ?? "other"} />
-      <input type="hidden" name="startDate" value={goal?.startDate ?? today} />
-      <input
-        type="hidden"
-        name="targetDetail"
-        value={goal?.targetDetail ?? ""}
-      />
-      <input
-        type="hidden"
-        name="targetMetricLabel"
-        value={goal?.targetMetricLabel ?? ""}
-      />
-      <input
-        type="hidden"
-        name="targetMetricValue"
-        value={goal?.targetMetricValue ?? ""}
-      />
-      <input
-        type="hidden"
-        name="targetMetricUnit"
-        value={goal?.targetMetricUnit ?? ""}
-      />
-      <input type="hidden" name="rationale" value={goal?.rationale ?? ""} />
-      <input type="hidden" name="constraints" value={goal?.constraints ?? ""} />
-      <input name="targetRank" type="hidden" value={goal?.activeRank ?? ""} />
-    </>
   );
 }
 
@@ -707,8 +680,7 @@ const CONFIRMATION_COPY = {
   },
   delete: {
     confirm: "Confirm permanent delete",
-    consequence:
-      "This permanently deletes an unused goal and cannot be undone. A goal with history cannot be deleted; mark it Abandoned instead.",
+    consequence: "This permanently deletes the goal and cannot be undone.",
   },
 } as const;
 
@@ -786,16 +758,24 @@ function HistorySection({
                 {statusLine(goal)} · {goal.priorityTier}
               </span>
             </div>
-            {goal.archivedAt ? null : (
-              <SimpleAction
-                operation={goal.status === "paused" ? "resume" : "reopen"}
-                label={goal.status === "paused" ? "Resume" : "Reopen"}
-                goal={goal}
-                expectedRevision={expectedRevision}
-                action={action}
-                pending={pending}
-              />
-            )}
+            <SimpleAction
+              operation={goal.status === "paused" ? "resume" : "reopen"}
+              label={goal.status === "paused" ? "Resume" : "Reopen"}
+              goal={goal}
+              expectedRevision={expectedRevision}
+              action={action}
+              pending={pending}
+            />
+            {/* Any goal can be deleted, a finished one included (owner,
+                7 Oct 2026). */}
+            <ConfirmedAction
+              operation="delete"
+              label="Delete"
+              goal={goal}
+              expectedRevision={expectedRevision}
+              action={action}
+              pending={pending}
+            />
           </li>
         ))}
       </ul>
@@ -968,8 +948,7 @@ const MONTHS = [
  * Without a logged day it is the status alone, never a guessed date.
  */
 function statusLine(goal: GoalView) {
-  const status = goal.archivedAt ? "archived" : goal.status;
-  const label = status.charAt(0).toUpperCase() + status.slice(1);
+  const label = goal.status.charAt(0).toUpperCase() + goal.status.slice(1);
   const date = goal.statusDate;
   if (!date) return label;
   return `${label} on ${Number(date.slice(8, 10))} ${

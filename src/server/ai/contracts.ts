@@ -57,7 +57,7 @@ export function isCoachAIOperation(value: unknown): value is CoachAIOperation {
 export type CoachAIGoalReference = {
   id: string;
   title: string;
-  category: string;
+  sports: string[];
   priorityTier: GoalTier;
   targetDate: string | null;
 };

@@ -742,7 +742,7 @@ function savedGoal(): SetupGoalView {
     id: GOAL_ID,
     title: "10k under 48 minutes",
     desiredOutcome: "Run it in autumn.",
-    activityAreas: ["Running", "Hiking"],
+    sports: ["Running", "Hiking"],
     targetDate: "2026-11-15",
     priorityTier: "supporting",
   };

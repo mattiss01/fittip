@@ -18,7 +18,7 @@ export const ROADMAP_PLAN_STALE_REASONS = [
   /** The horizon falls outside the roadmap's own start and end dates. */
   "out_of_window",
   /**
-   * A phase gives attention to a goal that is gone, archived, or no longer
+   * A phase gives attention to a goal that is gone or no longer
    * active or achieved — the predicate `accept_roadmap_proposal` applies to a
    * goal source.
    */
