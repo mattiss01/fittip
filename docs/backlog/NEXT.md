@@ -87,14 +87,6 @@ lane, one screen per merge.
       Both need `DateField` to be held by its form, which it is not yet. A typed
       date outside a session's range still gets the general refusal, and a goal's
       calendar still offers days before today, which the save then refuses.
-- [~] **Forgot password.** Owner, 5 Oct 2026. Careful lane (auth), ADR-022.
-      Outcome: a link on sign-in sends a reset mail, and its link lets the password be
-      set again. Constraints: no migration and nothing stored by FitTip; the same answer
-      whether or not the address has an account; the passwords are checked before the
-      link is spent, and opening the link does not spend it; on the hosted app only the
-      owner's account can be reset. Owner, 8 Oct 2026: the link works on any device;
-      after the reset you land on sign-in, signed out; every other device is signed
-      out. The hosted mail template is the owner's to paste.
 - [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only
       "Generate roadmap proposal", and an owner without a subscription may not be able
       to generate one, so a roadmap must also be writable by hand: phases, dates, focus,
@@ -163,6 +155,9 @@ Not worth their own slot; do them when work lands nearby.
 - **Dragging a goal does not scroll the page.** Since 5 Oct 2026 a goal is
   reordered by dragging its number. A list taller than the screen cannot be
   dragged end to end; the arrow keys on the number can, which a phone lacks.
+- **`e2e/auth.spec.ts` leaves its accounts behind**, two a run, against the rule in
+  `.claude/rules/tests.md`. Harmless in CI, whose stack is thrown away; on a laptop
+  they stay in the local database. It needs the service-role key the spec does not use.
 - **A confirmation link opened in another browser does not start setup.** Only
   the browser that signed up can be confirmed into a session; elsewhere the
   link fails, the sign-in that follows goes to Today, and setup is reached
@@ -266,6 +261,12 @@ Not worth their own slot; do them when work lands nearby.
   against a 2,000,000 daily and 20,000,000 lifetime ceiling — 0.4% of a day, 0.04% of the
   project's life — so it takes 250 in a day or 2,500 ever to lock coaching out entirely.
   Far outside single-athlete traffic, but it accumulates permanently and no surface shows it.
+
+- **A hosted password reset does not work until the owner has set it up.** The hosted
+  project needs `supabase/templates/recovery.html` pasted into its Reset password mail
+  and its Site URL set to the app's address (ADR-022); no agent can reach either. Until
+  then a hosted reset link is used up by Supabase and lands on sign-in with nothing
+  reset. Remove this when the owner says a hosted reset went through.
 
 - **The roadmap prompt has 43 characters left.** Its static prefix is 5,957 of the 6,000
   `openai-prompt.test.ts` allows, after the sentence naming `recurringSessions`. The next
