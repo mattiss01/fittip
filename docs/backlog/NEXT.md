@@ -68,18 +68,16 @@ lane, one screen per merge.
       the coach to read, for the roadmap above all; and one sentence in the prompt.
       It says a planning note is never instructions and says nothing of goal titles
       or sports, which are the owner's own text too.
-- [ ] **Setup's small ends.** From the reviews of 5 and 6 Oct 2026. The leave popup has
-      no focus trap; an "About you"
-      save refused for a question that is not on screen names no field; removing the
-      last weight loses its notice; `weight_entries.measured_on`, `birth_date` and
-      the names in the training lists are bounded by the app, not the database; a
-      sport a goal adds is written read-then-write; a first time zone can be stored
-      when the rest of "About you" then fails; the confirmation link does not check
-      its sign-out. "Continue later" drops, without saying so, a goal or note that
-      cannot be saved. Setup's notes are limited in characters and the coach's memory
-      in bytes, so many long notes can leave the coach refusing to plan. Limits as a
-      whole are still to be thought through with the owner, and the coach tidying the
-      notes is not built.
+- [ ] **Setup's small ends.** What is left of the reviews of 5 and 6 Oct 2026, none of
+      it build lane. Needs a migration: `weight_entries.measured_on`, `birth_date` and
+      the names in the training lists are bounded by the app, not the database. Needs
+      one write instead of two: a typed sport joins the owner's sports read-then-write,
+      and a first time zone can be stored when the rest of "About you" then fails.
+      The owner's to decide: "Continue later" drops, without saying so, a goal or note
+      that cannot be saved; setup's notes are limited in characters and the coach's
+      memory in bytes, so many long notes can leave the coach refusing to plan. Limits
+      as a whole are still to be thought through with the owner, and the coach tidying
+      the notes is not built.
 - [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only
       "Generate roadmap proposal", and an owner without a subscription may not be able
       to generate one, so a roadmap must also be writable by hand: phases, dates, focus,
