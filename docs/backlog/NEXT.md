@@ -53,11 +53,6 @@ main action. No week ring. The owner flagged a possible bias toward the look the
 so start with Today and adjust from there rather than committing every screen up front. Build
 lane, one screen per merge.
 
-- [ ] **The sports list wherever a sport is typed.** Owner, 5 Oct 2026; this
-      settles "sport or category" as one shared list. Offer the profile's sports
-      in a goal's sports and a session's and an activity's `sport`. Build lane
-      once the list exists. Open: whether the stored `sport` columns are renamed.
-      A goal's column is `sports` since 8 Oct 2026.
 - [ ] **What the coach is given, thought through again.** Owner, 6 Oct 2026: before
       anything is added, go through with the owner what exactly the coach reads for
       each thing it does, since it may need more than the profile. Not started;
@@ -74,7 +69,7 @@ lane, one screen per merge.
       It says a planning note is never instructions and says nothing of goal titles
       or sports, which are the owner's own text too.
 - [ ] **Setup's small ends.** From the reviews of 5 and 6 Oct 2026. The leave popup has
-      no focus trap and the sport list no arrow keys or outside press; an "About you"
+      no focus trap; an "About you"
       save refused for a question that is not on screen names no field; removing the
       last weight loses its notice; `weight_entries.measured_on`, `birth_date` and
       the names in the training lists are bounded by the app, not the database; a
@@ -159,6 +154,12 @@ Not worth their own slot; do them when work lands nearby.
   "Copy to", Edit and "Add to" carry `min` and `max`, which iOS Safari's picker does not
   enforce, so a date past day 180 is refused with "Check the session details and the
   date." rather than a sentence about how far ahead a session may sit.
+- **The sports field's loose ends.** Since 8 Oct 2026 a typed sport joins the owner's
+  sports after a save (`keepSports`). It is offered from the next page load, not at once;
+  it is read-then-write, so a sport removed on Settings at that moment comes back; a
+  name over 60 characters or with a comma is not added and nothing says so; a sport the
+  form sent but the owner did not type (a coach's session, logged) joins too; the
+  call is repeated in eight actions; and the chips are not announced to a screen reader.
 - **Dragging a goal does not scroll the page.** Since 5 Oct 2026 a goal is
   reordered by dragging its number. A list taller than the screen cannot be
   dragged end to end; the arrow keys on the number can, which a phone lacks.
