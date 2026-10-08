@@ -285,6 +285,9 @@ export function AboutYouForm({
       key="birthday"
       label="Birthday (optional)"
       name="birthDate"
+      // Setup asks one question a screen in a single form and can be left
+      // at any of them, so the save decides, as it did before.
+      unchecked
     />,
     <label key="gender">
       {name("Gender (optional)")}

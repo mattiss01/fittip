@@ -186,14 +186,11 @@ function SavedSessionCard({
                 name="expectedRevision"
                 value={planRevision}
               />
-              <div className={styles.field}>
-                <label htmlFor={`reuse-${session.id}`}>Add to</label>
-                <PlanDateInput
-                  id={`reuse-${session.id}`}
-                  range={dateRange}
-                  defaultValue={dateRange.first}
-                />
-              </div>
+              <PlanDateInput
+                label="Add to"
+                range={dateRange}
+                defaultValue={dateRange.first}
+              />
               <p className={styles.consequence}>
                 The plan gets a new session copied from this entry. It starts
                 unlocked, and later changes here will not reach it.

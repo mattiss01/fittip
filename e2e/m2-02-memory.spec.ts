@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+
+import { fillDate } from "./support/date-field";
 import path from "node:path";
 
 const evidenceDirectory = path.join(
@@ -135,9 +137,7 @@ test.describe("M2-02 memory management", () => {
         "No pool access until the local pool reopens.",
       );
       await openDetails(constraintCard.locator("details[data-memory-editor]"));
-      await constraintCard
-        .getByLabel("New review date")
-        .fill(FUTURE_REVIEW_DATE);
+      await fillDate(constraintCard, "New review date", FUTURE_REVIEW_DATE);
       await constraintCard
         .getByRole("button", { name: "Update review date" })
         .click();
@@ -275,7 +275,7 @@ async function addMemory(
   const form = panel.locator("form").first();
   await form.getByLabel("Memory type").selectOption(memoryType);
   await form.getByLabel("What FitTip should remember").fill(content);
-  await form.getByLabel("Review date (optional)").fill(reviewDate ?? "");
+  await fillDate(form, "Review date (optional)", reviewDate ?? "");
   await expect(
     form.getByText(/speak to a qualified health professional/),
   ).toBeVisible();

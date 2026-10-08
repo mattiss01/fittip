@@ -1,6 +1,12 @@
 "use client";
 
-import { useId, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import styles from "./date-field.module.css";
 
@@ -25,8 +31,9 @@ const YEAR_FIRST: DateOrder = ["year", "month", "day"];
  * way to reach a year decades back.
  *
  * It is sent under `name` as one `YYYY-MM-DD` date, or empty when nothing is
- * typed. A date half typed is sent as it stands and refused by the same check
- * as any other date that is not one.
+ * typed. A date half typed, or one the calendar does not have, stops the form
+ * in the browser with a sentence saying so; `required` does the same for one
+ * left empty. Whether the date is allowed is still checked where it is saved.
  */
 export function DateField({
   name,
@@ -35,6 +42,8 @@ export function DateField({
   hideLabel = false,
   centred = false,
   calendar = false,
+  required = false,
+  unchecked = false,
   min,
   max,
 }: {
@@ -45,6 +54,13 @@ export function DateField({
   hideLabel?: boolean;
   centred?: boolean;
   calendar?: boolean;
+  required?: boolean;
+  /**
+   * Sent as typed, with no check in the browser: for a form that must be
+   * able to leave with a date half typed, as setup's "Continue later" does,
+   * or that keeps this field out of sight on another question.
+   */
+  unchecked?: boolean;
   /** Limits of the calendar; what is typed is checked where it is saved. */
   min?: string;
   max?: string;
@@ -62,6 +78,23 @@ export function DateField({
   const date = empty
     ? ""
     : `${parts.year}-${parts.month.padStart(2, "0")}-${parts.day.padStart(2, "0")}`;
+  const problem = unchecked
+    ? ""
+    : empty
+      ? required
+        ? "Enter a date."
+        : ""
+      : isCalendarDate(date)
+        ? ""
+        : "Enter a full date: day, month and year.";
+  // On the first of the three, which is where the browser then points.
+  // Taken off again when the order changes, or it would stay on a field
+  // that is no longer first and block the form for good.
+  useEffect(() => {
+    const first = fields.current[order[0]];
+    first?.setCustomValidity(problem);
+    return () => first?.setCustomValidity("");
+  }, [order, problem]);
 
   return (
     <div aria-labelledby={labelId} className={styles.group} role="group">
@@ -119,7 +152,7 @@ export function DateField({
               ref={picker}
               tabIndex={-1}
               type="date"
-              value={/^\d{4}-\d{2}-\d{2}$/.test(date) ? date : ""}
+              value={isCalendarDate(date) ? date : ""}
             />
           </>
         ) : null}
@@ -127,6 +160,13 @@ export function DateField({
       <input name={name} type="hidden" value={date} />
     </div>
   );
+}
+
+/** A day the calendar has: 2026-02-30 is the right shape and is not one. */
+function isCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const day = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(day.getTime()) && day.toISOString().startsWith(value);
 }
 
 function splitDate(value: string | null): Record<DatePart, string> {

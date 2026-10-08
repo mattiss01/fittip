@@ -202,10 +202,9 @@ describe("SessionPage", () => {
     const { rerender } = render(page(session()));
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
 
-    const date = screen.getByLabelText("Date", {
-      selector: `#edit-date-${session().id}`,
-    });
-    expect(date).toHaveValue(TODAY);
+    // Typed or picked, and sent as one date.
+    const date = screen.getByRole("group", { name: "Date" });
+    expect(date.querySelector("input[name='localDate']")).toHaveValue(TODAY);
     expect(
       date.closest("form")?.querySelector("input[name='operation']"),
     ).toHaveValue("edit");
@@ -258,12 +257,13 @@ describe("SessionPage", () => {
     expect(form.querySelector("input[name='operation']")).toHaveValue(
       "duplicate",
     );
-    // A date field bounded by the range, opening on the session's own day.
-    const date = form.querySelector("input[name='localDate']");
-    expect(date).toHaveAttribute("type", "date");
-    expect(date).toHaveAttribute("min", DATES[0]);
-    expect(date).toHaveAttribute("max", DATES[DATES.length - 1]);
-    expect(date).toHaveValue(session().localDate);
+    // Opening on the session's own day, with a calendar bounded by the range.
+    expect(form.querySelector("input[name='localDate']")).toHaveValue(
+      session().localDate,
+    );
+    const calendar = form.querySelector("input[type='date']");
+    expect(calendar).toHaveAttribute("min", DATES[0]);
+    expect(calendar).toHaveAttribute("max", DATES[DATES.length - 1]);
   });
 
   it("says what each removal verb keeps, and submits the matching operation", () => {

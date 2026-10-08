@@ -4,6 +4,8 @@ import { useState } from "react";
 
 import styles from "./plan.module.css";
 
+import { DateField } from "@/components/date-field/date-field";
+
 const WEEKDAYS = [
   [1, "Mon"],
   [2, "Tue"],
@@ -123,17 +125,14 @@ export function RecurrenceFields({
           next thirteen weeks of it.
         </p>
       ) : (
-        <div className={styles.field}>
-          <label htmlFor={`${idPrefix}-end`}>End date</label>
-          <input
-            id={`${idPrefix}-end`}
-            name="endDate"
-            type="date"
-            min={startDate}
-            required
-            defaultValue={initial?.endDate ?? startDate}
-          />
-        </div>
+        <DateField
+          calendar
+          initial={initial?.endDate ?? startDate}
+          label="End date"
+          min={startDate}
+          name="endDate"
+          required
+        />
       )}
     </fieldset>
   );

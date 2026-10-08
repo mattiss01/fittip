@@ -549,6 +549,8 @@ function GoalFields({
         initial={goal?.targetDate ?? null}
         label="Target date (optional)"
         name={`goalTargetDate:${index}`}
+        // Setup can be left from any screen; the save decides.
+        unchecked
       />
       {/* Two choices side by side, as on Goals, not a list to open. A group
           with a plain label over it: inside this card a fieldset's legend
