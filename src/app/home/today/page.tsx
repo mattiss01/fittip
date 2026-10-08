@@ -66,7 +66,7 @@ export default async function TodayPage({ searchParams }: Props) {
       </header>
       {timezoneName === null ? (
         <section className={homeStyles.stateCard} data-today-state="no-zone">
-          <h2>Confirm your time zone first.</h2>
+          <h2>Confirm your time zone first</h2>
           <p>
             FitTip does not guess which calendar your day follows. Confirm your
             zone on the Plan and this day appears.

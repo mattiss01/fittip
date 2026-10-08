@@ -94,7 +94,7 @@ export default async function CompletionPage({ params }: Props) {
           className={homeStyles.stateCard}
           data-progress-state="no-completion"
         >
-          <h1>That record is not there.</h1>
+          <h1>That record is not there</h1>
           <p>It was removed, or the link is not yours. Nothing was changed.</p>
           <div className={homeStyles.actions}>
             <Link className={homeStyles.primaryAction} href="/home/progress">

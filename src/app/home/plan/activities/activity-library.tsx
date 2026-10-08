@@ -70,7 +70,7 @@ export function ActivityLibrary({
 
       {activities.length === 0 ? (
         <section className={styles.empty}>
-          <h2>No activities yet.</h2>
+          <h2>No activities yet</h2>
           <p>
             Add the ones you do often — a squat, an interval set, a serve drill
             — with the target you usually give them. Then add them to a session

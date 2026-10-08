@@ -13,10 +13,10 @@
  */
 export const ROADMAP_ROUTE_STATE_COPY = {
   stateKicker: "Roadmap",
-  errorTitle: "Your roadmap could not be read.",
+  errorTitle: "Your roadmap could not be read",
   errorBody:
     "Nothing was lost and nothing was changed. This surface only reads, so it is safe to try again.",
   errorRetry: "Retry",
-  loadingTitle: "Loading your roadmap.",
+  loadingTitle: "Loading your roadmap",
   loadingBody: "Nothing is proposed or changed while this loads.",
 } as const;

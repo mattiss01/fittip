@@ -75,7 +75,7 @@ test.describe("M3-15F roadmap generation", () => {
         page.getByRole("heading", { level: 1, name: "Roadmap", exact: true }),
       ).toBeVisible();
       await expect(
-        page.getByRole("heading", { name: "No roadmap yet." }),
+        page.getByRole("heading", { name: "No roadmap yet" }),
       ).toBeVisible();
 
       const compose = page.locator('[data-roadmap-compose="initial"]');
@@ -110,7 +110,7 @@ test.describe("M3-15F roadmap generation", () => {
       await expect(
         page
           .locator("[data-roadmap-current]")
-          .getByRole("heading", { name: "No roadmap yet." }),
+          .getByRole("heading", { name: "No roadmap yet" }),
       ).toBeVisible();
       // While a proposal is open there is nothing to compose.
       await expect(page.locator("[data-roadmap-compose]")).toHaveCount(0);
@@ -182,7 +182,7 @@ test.describe("M3-15F roadmap generation", () => {
       await expect(page.locator('[data-roadmap-version="1"]')).toBeVisible();
       await expect(
         page
-          .getByRole("heading", { name: "No roadmap yet." })
+          .getByRole("heading", { name: "No roadmap yet" })
           .or(page.getByText("No roadmap yet", { exact: true })),
       ).toHaveCount(0);
       const acceptedTitle = await page

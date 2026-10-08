@@ -12,7 +12,7 @@ export default function ProgressError({ reset }: { reset: () => void }) {
     <main className={homeStyles.shell} id="main-content">
       <section className={homeStyles.stateCard}>
         <p className={homeStyles.kicker}>Progress</p>
-        <h1>Your record could not be read.</h1>
+        <h1>Your record could not be read</h1>
         <p>
           Nothing was lost and nothing was changed. This surface only reads, so
           it is safe to try again.

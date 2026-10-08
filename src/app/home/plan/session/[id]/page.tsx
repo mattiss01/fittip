@@ -84,7 +84,7 @@ export default async function PlanSessionPage({ params, searchParams }: Props) {
         {timezoneName === null ? (
           <section className={homeStyles.stateCard}>
             <p className={homeStyles.kicker}>Plan</p>
-            <h1>Confirm your time zone first.</h1>
+            <h1>Confirm your time zone first</h1>
             <p>Sessions are planned by your local date.</p>
             <Link className={homeStyles.primaryAction} href="/home/plan">
               Open Plan

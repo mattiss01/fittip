@@ -132,7 +132,7 @@ describe("one completion", () => {
     expect(screen.getByRole("heading", { name: "Sunrise swim" })).toBeTruthy();
     expect(
       document.querySelector('[data-progress-sheet="unplanned"]')?.textContent,
-    ).toContain("This training was not planned.");
+    ).toContain("This training was not planned");
     expect(document.querySelector('[data-progress-sheet="planned"]')).toBe(
       null,
     );

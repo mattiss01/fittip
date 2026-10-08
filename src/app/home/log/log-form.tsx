@@ -421,7 +421,7 @@ export function LogForm({
     return (
       <section className={homeStyles.stateCard} data-log-state="already-logged">
         <p className={homeStyles.sectionLabel}>Already logged</p>
-        <h2>This session is already logged.</h2>
+        <h2>This session is already logged</h2>
         <p>
           The log is dated {alreadyLogged.dayLabel}. One planned session carries
           one log, and that log can be corrected.

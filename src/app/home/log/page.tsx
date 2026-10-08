@@ -92,7 +92,7 @@ export default async function LogPage({ searchParams }: Props) {
       {timezoneName === null ? (
         <Unavailable
           label="Time zone needed"
-          heading="Confirm your time zone first."
+          heading="Confirm your time zone first"
           body="Training is recorded against a day on your own calendar, and FitTip does not guess which one that is. Confirm your zone on the Plan and this form appears."
           href="/home/plan"
           action="Open Plan"
@@ -121,7 +121,7 @@ async function renderForm(
         return (
           <Unavailable
             label="Not found"
-            heading="That log is not there."
+            heading="That log is not there"
             body="It was removed, or the link is not yours. Nothing was changed."
             href="/home/today"
             action="Back to Today"
@@ -201,7 +201,7 @@ async function renderForm(
         return (
           <Unavailable
             label="Not on this day"
-            heading="That session is not on this day."
+            heading="That session is not on this day"
             body="It was moved, deleted, or the link is not yours. Open the day again and pick the session from there."
             href={`/home/today?date=${date}`}
             action="Open that day"

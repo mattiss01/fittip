@@ -374,7 +374,7 @@ export const ROADMAP_COPY = {
     owner_edit: "Your edit",
   } satisfies Record<RoadmapProposalOrigin, string>,
   routeIntro: "Months of direction, not a week of sessions.",
-  emptyRoadmapTitle: "No roadmap yet.",
+  emptyRoadmapTitle: "No roadmap yet",
   emptyRoadmapBody:
     "A roadmap is months of direction rather than a week of sessions. Once you have one it stays here, with every version before it.",
   supersededRoadmapsSupport: "Earlier versions stay readable and unchanged.",

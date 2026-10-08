@@ -367,7 +367,7 @@ describe("SessionPage", () => {
     };
     rerender(page(null));
 
-    expect(screen.getByText("Session removed.")).toBeVisible();
+    expect(screen.getByText("Session removed")).toBeVisible();
     expect(replaceMock).toHaveBeenCalledWith(
       `/home/plan?day=${TODAY}#plan-day-${TODAY}`,
     );
@@ -425,8 +425,8 @@ describe("SessionPage", () => {
     };
     rerender(page(null));
 
-    expect(screen.getByText("Change saved.")).toBeVisible();
-    expect(screen.queryByText("Session removed.")).toBeNull();
+    expect(screen.getByText("Change saved")).toBeVisible();
+    expect(screen.queryByText("Session removed")).toBeNull();
     expect(replaceMock).toHaveBeenCalledWith(
       `/home/plan?day=${TODAY}#plan-day-${TODAY}`,
     );
@@ -435,7 +435,7 @@ describe("SessionPage", () => {
   it("says a session is not there, without guessing why, when nothing removed it here", () => {
     render(page(null));
     expect(
-      screen.getByRole("heading", { name: "That session is not there." }),
+      screen.getByRole("heading", { name: "That session is not there" }),
     ).toBeVisible();
     expect(replaceMock).not.toHaveBeenCalled();
   });

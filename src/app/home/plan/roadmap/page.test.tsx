@@ -131,11 +131,11 @@ describe("Roadmap", () => {
     render(await RoadmapPage());
 
     expect(
-      screen.getByRole("heading", { name: "No roadmap yet." }),
+      screen.getByRole("heading", { name: "No roadmap yet" }),
     ).toBeTruthy();
     // The empty state says it once: the header names a version only when
     // there is one, and is otherwise the page's plain name.
-    expect(screen.queryByText("No roadmap yet")).toBeNull();
+    expect(screen.getAllByText("No roadmap yet")).toHaveLength(1);
     expect(
       screen.getByRole("heading", { level: 1, name: "Roadmap" }),
     ).toBeTruthy();

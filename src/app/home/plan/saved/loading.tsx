@@ -5,7 +5,7 @@ export default function LoadingSavedSessions() {
     <main className={homeStyles.shell} id="main-content">
       <section className={homeStyles.stateCard} aria-live="polite">
         <p className={homeStyles.kicker}>Session Library</p>
-        <h1>Loading your library.</h1>
+        <h1>Loading your library</h1>
         <p>Nothing is saved, changed or added while this private read runs.</p>
       </section>
     </main>

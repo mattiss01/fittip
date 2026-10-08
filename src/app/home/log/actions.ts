@@ -90,7 +90,7 @@ export async function logCompletionAction(
       revalidatePath("/home/today");
       // A correction can be made from Progress, which lists this record.
       revalidatePath("/home/progress", "layout");
-      return result("saved", "Log updated.", {
+      return result("saved", "Log updated", {
         result: receipt.result,
         returnDate,
         completionId: receipt.completionId,
@@ -128,7 +128,7 @@ export async function logCompletionAction(
     });
     await keepSports(submittedSports(formData));
     revalidatePath("/home/today");
-    return result("saved", "Log saved.", {
+    return result("saved", "Log saved", {
       result: receipt.result,
       returnDate,
       completionId: receipt.completionId,

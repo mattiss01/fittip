@@ -460,7 +460,7 @@ describe("Log", () => {
 
     // Said before the owner fills anything in: `list` is bounded by the actual
     // date, so a log written on another day was invisible to this surface.
-    expect(screen.getByText("This session is already logged.")).toBeTruthy();
+    expect(screen.getByText("This session is already logged")).toBeTruthy();
     expect(document.querySelector("#log-date")).toBe(null);
     expect(
       screen.getByRole("link", { name: "Open that log" }).getAttribute("href"),
@@ -848,7 +848,7 @@ describe("Log", () => {
     useActionStateMock.mockReturnValue([
       {
         status: "saved",
-        message: "Log saved.",
+        message: "Log saved",
         submission: 1,
         result: "created",
         returnDate: today(),
@@ -860,7 +860,7 @@ describe("Log", () => {
     render(await LogPage({ searchParams: Promise.resolve({}) }));
 
     expect(document.querySelector("[data-log-form]")).toBe(null);
-    expect(screen.getByRole("heading", { name: "Log saved." })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Log saved" })).toBeTruthy();
     expect(
       screen
         .getByRole("link", { name: "Back to that day" })

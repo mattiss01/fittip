@@ -96,7 +96,7 @@ describe("logCompletionAction", () => {
     expect(applyChangeSet).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       status: "saved",
-      message: "Log saved.",
+      message: "Log saved",
       returnDate: DAY,
     });
     expect(revalidatePathMock).toHaveBeenCalledWith("/home/today");
@@ -406,7 +406,7 @@ describe("logCompletionAction", () => {
     });
     expect(result).toMatchObject({
       status: "saved",
-      message: "Log updated.",
+      message: "Log updated",
       result: "updated",
     });
   });
