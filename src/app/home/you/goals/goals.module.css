@@ -324,6 +324,12 @@
   text-transform: uppercase;
 }
 
+.sportsField {
+  min-width: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
 .form input,
 .form textarea,
 .form select {

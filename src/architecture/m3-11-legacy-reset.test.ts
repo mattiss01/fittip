@@ -229,6 +229,11 @@ const activityLibrarySurface = [
 const allowedServerModules = [
   "@/server/completions/completion-log",
   "@/server/completions/plan-window-top-up",
+  // The sports list (owner, 8 Oct 2026): a sport typed on a session, a
+  // series or a log joins the owner's sports once that save has gone
+  // through. One narrow module that reads and writes `profiles.sports` and
+  // nothing of the plan.
+  "@/server/profile/keep-sports",
   "@/server/repositories/completion-log-repository",
   "@/server/repositories/personal-activity-repository",
   "@/server/repositories/profile-repository",

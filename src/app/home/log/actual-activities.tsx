@@ -18,6 +18,7 @@ import {
   MeasurementFields,
   MeasurementModeField,
 } from "@/components/training/measurement-fields";
+import { SportInput } from "@/components/sports/sport-input";
 import { ReorderHandle } from "@/components/training/reorder-handle";
 import type { ActivityValue } from "@/lib/training/activity-value";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
@@ -491,14 +492,11 @@ function ActualRow({
             </div>
             <div className={styles.field}>
               <label htmlFor={`${idPrefix}-sport`}>Activity sport</label>
-              <input
+              <SportInput
                 id={`${idPrefix}-sport`}
-                type="text"
-                value={row.sport}
-                maxLength={80}
                 required
-                autoComplete="off"
-                onChange={(event) => onChange({ sport: event.target.value })}
+                value={row.sport}
+                onChange={(sport) => onChange({ sport })}
               />
             </div>
           </>

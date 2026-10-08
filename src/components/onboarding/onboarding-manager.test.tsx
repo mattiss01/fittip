@@ -344,37 +344,33 @@ describe("OnboardingManager", () => {
     fireEvent.click(remove()[1]);
     expect(screen.getAllByLabelText("Goal title")).toHaveLength(3);
 
-    // One sport, from the owner's own, in a list of ours.
-    const sport = screen.getAllByRole("button", { name: /^Sport/ })[0];
-    const goalSport = () =>
+    // Its sports as on Goals: the owner's own offered from the first
+    // letter, and nothing before one is typed.
+    const sports = () => screen.getAllByLabelText("Sports");
+    const goalSports = () =>
       container.querySelector<HTMLInputElement>(
         'input[name="goalActivities:0"]',
       );
-    expect(sport).toHaveTextContent("Choose a sport");
-    expect(screen.queryByRole("listbox")).toBeNull();
-    fireEvent.click(sport);
-    expect(
-      screen.getAllByRole("option").map((option) => option.textContent),
-    ).toEqual(["Cycling", "Running", "Add another sport…"]);
-    fireEvent.click(screen.getByRole("option", { name: "Running" }));
-    expect(screen.queryByRole("listbox")).toBeNull();
-    expect(goalSport()).toHaveValue("Running");
+    expect(screen.queryByRole("group", { name: "Suggestions" })).toBeNull();
+    fireEvent.change(sports()[0], { target: { value: "r" } });
+    fireEvent.click(
+      within(screen.getByRole("group", { name: "Suggestions" })).getByRole(
+        "button",
+        { name: "Running" },
+      ),
+    );
+    expect(goalSports()).toHaveValue("Running");
     // Or one made up on the spot, which the save adds to the owner's sports.
-    fireEvent.click(sport);
-    fireEvent.click(screen.getByRole("option", { name: "Add another sport…" }));
-    fireEvent.change(screen.getByLabelText("New sport"), {
-      target: { value: "  Stabwurf " },
-    });
-    expect(goalSport()).toHaveValue("Stabwurf");
+    fireEvent.change(sports()[0], { target: { value: "  Stabwurf " } });
+    expect(goalSports()).toHaveValue("Running, Stabwurf");
 
     // A goal with a title must name a sport too, whichever row it is in.
-    const proxies = () =>
-      container.querySelectorAll('input[required][aria-hidden="true"]');
-    expect(proxies()).toHaveLength(1);
+    expect(sports()[1]).not.toBeRequired();
+    expect(sports()[2]).not.toBeRequired();
     fireEvent.change(screen.getAllByLabelText("Goal title")[2], {
       target: { value: "Bench press 80 kg" },
     });
-    expect(proxies()).toHaveLength(2);
+    expect(sports()[2]).toBeRequired();
 
     // The target date is typed or picked from a calendar, and optional.
     const target = screen.getAllByRole("group", {

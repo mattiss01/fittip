@@ -15,6 +15,7 @@ import { seriesOccurrenceDates } from "./series-recurrence";
 import { readPlanWindow } from "./plan-window";
 
 import { shiftIsoDate } from "@/lib/date/local-date";
+import { keepSports, submittedSports } from "@/server/profile/keep-sports";
 import { ProfileAuthenticationError } from "@/server/repositories/profile-repository";
 import {
   createRollingPlan,
@@ -98,6 +99,7 @@ export async function changeSeriesAction(
       expectedRevision,
     );
     const topUp = await topUpAfterPlanChange(plan, receipt.planRevision);
+    await keepSports(submittedSports(formData));
     revalidatePath("/home/plan");
 
     if (operation === "end_series") {

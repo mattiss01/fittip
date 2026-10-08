@@ -20,6 +20,7 @@ import {
 } from "./library-row-actions";
 import { ReorderHandle } from "./reorder-handle";
 
+import { SportInput } from "@/components/sports/sport-input";
 import type { ActivityValue } from "@/lib/training/activity-value";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
 import {
@@ -587,12 +588,11 @@ export function ActivityFields({
       </div>
       <div className={styles.field}>
         <label htmlFor={`${idPrefix}-sport`}>Sport</label>
-        <input
+        <SportInput
           id={`${idPrefix}-sport`}
-          value={value.sport}
-          maxLength={80}
           required
-          onChange={(event) => onChange({ sport: event.target.value })}
+          value={value.sport}
+          onChange={(sport) => onChange({ sport })}
         />
         {sportHint === null ? null : <p className={styles.hint}>{sportHint}</p>}
       </div>

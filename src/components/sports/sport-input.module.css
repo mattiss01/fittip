@@ -1,0 +1,47 @@
+.wrap {
+  min-width: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+/* Named with the element and its wrapper so that a form's own rule for every
+   button in it does not redraw a chip. */
+.wrap .chips button.chip {
+  width: auto;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0 0.95rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-pill);
+  background: white;
+  color: var(--ledger-ink);
+  font: 600 0.92rem var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.wrap .chips button.chip:hover {
+  background: var(--line);
+}
+
+.wrap .chips button.chip:focus-visible {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
+}
+
+/* A sport the goal holds is the app's orange, as a chosen one is in setup. */
+.wrap .chips button.chip[data-chosen="true"] {
+  border-color: var(--ember);
+  background: var(--ember);
+  color: var(--paper);
+}

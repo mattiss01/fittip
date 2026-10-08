@@ -3,6 +3,7 @@
 import {
   useActionState,
   useEffect,
+  useId,
   useOptimistic,
   useRef,
   useState,
@@ -23,6 +24,7 @@ import sheetStyles from "@/app/home/plan/plan-week.module.css";
 import styles from "@/app/home/you/goals/goals.module.css";
 import { DateField } from "@/components/date-field/date-field";
 import { formatRoadmapDate } from "@/components/roadmap/roadmap-dates";
+import { SportsInput } from "@/components/sports/sport-input";
 import {
   latestActionResponseAt,
   RECOVERY_NOTICE_MS,
@@ -568,6 +570,7 @@ function GoalForm({
 }) {
   const initial = (field: keyof GoalActionDraft, fallback = "") =>
     draft?.[field] ?? fallback;
+  const sportsId = useId();
 
   return (
     <form action={action} className={styles.form}>
@@ -601,16 +604,23 @@ function GoalForm({
       </label>
       {/* Empty until the owner names one: no "Other" to leave standing
           (owner, 5 Oct 2026). */}
-      <label>
-        Sports
-        <input
+      {/* Not inside its label: a chip in one would be pressed by a tap
+          anywhere on the label. */}
+      <div className={styles.sportsField}>
+        <label htmlFor={sportsId}>Sports</label>
+        <SportsInput
+          id={sportsId}
           name="sports"
-          required
-          maxLength={600}
-          placeholder="Running, strength"
-          defaultValue={initial("sports", goal?.sports.join(", "))}
+          defaultValue={
+            draft?.sports === undefined
+              ? (goal?.sports ?? [])
+              : draft.sports
+                  .split(",")
+                  .map((sport) => sport.trim())
+                  .filter(Boolean)
+          }
         />
-      </label>
+      </div>
       {/* Typed, or picked from the calendar beside it (owner, 5 Oct 2026). */}
       <DateField
         calendar

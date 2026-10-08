@@ -16,6 +16,11 @@ import {
   PersonalActivityValidationError,
 } from "@/server/personal-activities/personal-activities";
 import {
+  keepSports,
+  sportOf,
+  submittedSports,
+} from "@/server/profile/keep-sports";
+import {
   createPersonalActivityLibrary,
   PersonalActivityAuthenticationError,
 } from "@/server/repositories/personal-activity-repository";
@@ -68,6 +73,7 @@ export async function changeActivityLibraryAction(
             }
           : { operation, personalActivityId, expectedUpdatedAt },
     );
+    await keepSports(submittedSports(formData));
     revalidatePath("/home/plan/activities");
     return {
       ...result(
@@ -127,6 +133,7 @@ export async function saveActivityToLibraryAction(
     const saved = await (
       await createPersonalActivityLibrary()
     ).applyChange({ operation: "create", activity });
+    await keepSports([sportOf(activity)]);
     revalidatePath("/home/plan/activities");
     return {
       status: "saved",
@@ -187,6 +194,7 @@ export async function updateActivityInLibraryAction(
       expectedUpdatedAt,
       activity,
     });
+    await keepSports([sportOf(activity)]);
     revalidatePath("/home/plan/activities");
     return {
       status: "saved",

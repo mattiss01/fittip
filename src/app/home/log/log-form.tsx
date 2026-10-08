@@ -30,6 +30,7 @@ import styles from "./log.module.css";
 
 import homeStyles from "../home.module.css";
 import { SaveToLibrary } from "../plan/saved/save-to-library";
+import { SportInput } from "@/components/sports/sport-input";
 import type {
   LibraryActivityOption,
   SaveToLibrary as SaveActivityToLibrary,
@@ -696,15 +697,12 @@ export function LogForm({
         </div>
         <div className={styles.field}>
           <label htmlFor="log-sport">Sport</label>
-          <input
+          <SportInput
             id="log-sport"
             name="sport"
-            type="text"
             required
-            maxLength={80}
-            autoComplete="off"
             value={sport}
-            onChange={(event) => setSport(event.target.value)}
+            onChange={setSport}
           />
         </div>
         {/* On whichever question comes first: here for unplanned training,
@@ -1312,13 +1310,10 @@ function ReplacedBy({
           </div>
           <div className={styles.field}>
             <label htmlFor="log-replacement-sport">Sport of what you did</label>
-            <input
+            <SportInput
               id="log-replacement-sport"
               name="replacement.sport"
-              type="text"
               required
-              maxLength={80}
-              autoComplete="off"
             />
           </div>
           <div className={styles.fieldPair}>

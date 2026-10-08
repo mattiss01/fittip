@@ -17,6 +17,7 @@ import {
   CompletionTimezoneRequiredError,
   CompletionValidationError,
 } from "@/server/completions/completion-log";
+import { keepSports, submittedSports } from "@/server/profile/keep-sports";
 import {
   CompletionAuthenticationError,
   createCompletionLog,
@@ -82,6 +83,7 @@ export async function logCompletionAction(
         expectedRevision: readInteger(formData.get("expectedRevision")),
         completion: { ...facts, ...content },
       });
+      await keepSports(submittedSports(formData));
       // Today only. Revalidating this route would re-render the page the owner
       // is standing on, and the write they just made would turn it into the
       // "already logged" notice in place of their receipt.
@@ -124,6 +126,7 @@ export async function logCompletionAction(
         ...(extra ? { activities: unlinkFromPlan(content.activities) } : {}),
       },
     });
+    await keepSports(submittedSports(formData));
     revalidatePath("/home/today");
     return result("saved", "Log saved.", {
       result: receipt.result,

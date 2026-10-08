@@ -224,6 +224,24 @@ export class ProfileRepository {
       : { step: null, finished: false, skipped: false };
   }
 
+  /**
+   * What the layout over Home needs, in one read: whether setup is still to
+   * be done, and the owner's sports for the fields that offer them.
+   */
+  async getHomeShell(): Promise<{ setupOpen: boolean; sports: string[] }> {
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("profiles")
+      .select("setup_finished_at, sports")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error) throw new ProfilePersistenceError();
+    return {
+      setupOpen: !data || data.setup_finished_at === null,
+      sports: data?.sports ?? [],
+    };
+  }
+
   /** Begins setup at its first screen, unless it was begun or finished. */
   async startSetup(): Promise<void> {
     await this.ensureCurrentProfile();

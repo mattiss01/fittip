@@ -152,9 +152,13 @@ async function completeGuidedSetup(
   await expect(heading("Goals")).toBeVisible();
   await page.getByLabel("Goal title").fill(goalTitle);
   await page.getByLabel("Desired outcome").fill(goalOutcome);
-  // The goal has one sport, chosen from the ones picked two steps before.
-  await page.getByRole("button", { name: /^Sport/ }).click();
-  await page.getByRole("option", { name: "Running" }).click();
+  // The goal's sport, offered from the ones picked two steps before as
+  // soon as a letter is typed.
+  await page.getByLabel("Sports", { exact: true }).fill("r");
+  await page
+    .getByRole("group", { name: "Suggestions" })
+    .getByRole("button", { name: "Running", exact: true })
+    .click();
   // "Continue later" is setup's one way out besides finishing: it saves the
   // screen, here the goal as a goal, and goes to the app. Nothing is there
   // to cancel or delete.

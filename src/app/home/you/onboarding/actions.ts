@@ -6,7 +6,6 @@ import { redirect } from "next/navigation";
 import type { SetupActionState } from "./action-state";
 
 import { isoDateInTimezone } from "@/lib/date/local-date";
-import { SPORTS_MAX_COUNT } from "@/lib/sports/sport-presets";
 import {
   assertTargetDateNotPast,
   GoalValidationError,
@@ -14,6 +13,7 @@ import {
   type GoalInput,
 } from "@/server/goals/goal-records";
 import { MemoryValidationError } from "@/server/memory/memory-records";
+import { keepSports } from "@/server/profile/keep-sports";
 import { ProfileDetailsValidationError } from "@/server/profile/profile-records";
 import {
   parseSetupNotes,
@@ -153,7 +153,8 @@ async function saveGoals(
         goalIds.push(receipt.goal_id ?? row.existing?.id ?? null);
       }
     }
-    await keepGoalSports(
+    // A sport made up on the goal screen joins the owner's sports.
+    await keepSports(
       rows.flatMap((row) => (row === null ? [] : row.input.sports)),
     );
   } catch (error) {
@@ -245,34 +246,6 @@ function parseGoalRows(formData: FormData, saved: Goal[]): GoalRow[] {
         existing.sports.join("\n") !== input.sports.join("\n"),
     };
   });
-}
-
-/**
- * A sport a goal names that is not among the owner's sports was made up on
- * the goal screen, and joins them (owner, 5 Oct 2026), so it is there to pick
- * the next time. The goals are already saved by now; if this cannot be done
- * the goal keeps its sport and the owner's list is simply not longer.
- */
-async function keepGoalSports(sports: readonly string[]): Promise<void> {
-  try {
-    const profiles = await createProfileRepository();
-    const owned = (await profiles.getDetails())?.sports ?? [];
-    const known = new Set(owned.map((sport) => sport.toLocaleLowerCase()));
-    const added: string[] = [];
-    for (const sport of sports) {
-      const key = sport.toLocaleLowerCase();
-      if (known.has(key)) continue;
-      known.add(key);
-      added.push(sport);
-    }
-    // Held to the list's own limit; past it the goal still keeps its sport.
-    const room = Math.max(0, SPORTS_MAX_COUNT - owned.length);
-    if (added.length > 0 && room > 0) {
-      await profiles.saveSports([...owned, ...added.slice(0, room)]);
-    }
-  } catch {
-    // See above: the goal screen's own save has gone through.
-  }
 }
 
 /**

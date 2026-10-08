@@ -13,6 +13,7 @@ import {
   parseGoalId,
   parseGoalInput,
 } from "@/server/goals/goal-records";
+import { keepSports } from "@/server/profile/keep-sports";
 import {
   createGoalRepository,
   GoalAuthenticationError,
@@ -104,6 +105,7 @@ export async function changeGoalAction(
       } else {
         await repository.edit(goalId, input, expectedRevision);
       }
+      await keepSports(sports);
     } else if (operation === "reorder") {
       await repository.reorder(
         formData.get("priorityTier"),
