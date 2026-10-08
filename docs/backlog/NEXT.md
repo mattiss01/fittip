@@ -157,9 +157,8 @@ Not worth their own slot; do them when work lands nearby.
 - **The sports field's loose ends.** Since 8 Oct 2026 a typed sport joins the owner's
   sports after a save (`keepSports`). It is offered from the next page load, not at once;
   it is read-then-write, so a sport removed on Settings at that moment comes back; a
-  name over 60 characters or with a comma is not added and nothing says so; a sport the
-  form sent but the owner did not type (a coach's session, logged) joins too; the
-  call is repeated in eight actions; and the chips are not announced to a screen reader.
+  name over 60 characters or with a comma is not added and nothing says so; the call is
+  repeated in eight actions; and the chips are not announced to a screen reader.
 - **Dragging a goal does not scroll the page.** Since 5 Oct 2026 a goal is
   reordered by dragging its number. A list taller than the screen cannot be
   dragged end to end; the arrow keys on the number can, which a phone lacks.
