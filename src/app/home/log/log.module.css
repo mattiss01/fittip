@@ -403,6 +403,12 @@
   text-transform: none;
 }
 
+/* The date's label is not a `label`: it names three fields at once. */
+.dateLabel {
+  color: var(--pine);
+  font: 700 0.9rem var(--font-sans);
+}
+
 .form .stepperValue {
   color: var(--moss);
   font: 600 1rem var(--font-sans);

@@ -33,7 +33,12 @@ const YEAR_FIRST: DateOrder = ["year", "month", "day"];
  * It is sent under `name` as one `YYYY-MM-DD` date, or empty when nothing is
  * typed. A date half typed, or one the calendar does not have, stops the form
  * in the browser with a sentence saying so; `required` does the same for one
- * left empty. Whether the date is allowed is still checked where it is saved.
+ * left empty. Whether the date is allowed is still checked where it is saved,
+ * unless the form gives `rangeMessage`: then a date outside `min` and `max`
+ * is stopped in the browser too, with that sentence.
+ *
+ * A form that shows something of its own for the date takes `onChange`, which
+ * is handed the date once it is one the form may use, and "" while it is not.
  */
 export function DateField({
   name,
@@ -44,10 +49,16 @@ export function DateField({
   calendar = false,
   required = false,
   unchecked = false,
+  readOnly = false,
   min,
   max,
+  rangeMessage,
+  labelClassName,
+  describedBy,
+  onChange,
 }: {
-  name: string;
+  /** Left out by a form that sends the date itself, from `onChange`. */
+  name?: string;
   label: string;
   initial: string | null;
   /** The label is kept for a screen reader only: a heading already asks. */
@@ -61,9 +72,18 @@ export function DateField({
    * or that keeps this field out of sight on another question.
    */
   unchecked?: boolean;
+  /** Shown and sent, not changed: the three fields are fixed, with no calendar. */
+  readOnly?: boolean;
   /** Limits of the calendar; what is typed is checked where it is saved. */
   min?: string;
   max?: string;
+  /** What to say of a typed date outside `min` and `max`, to stop it here. */
+  rangeMessage?: string;
+  /** The form's own label style, where its labels are not the app's capitals. */
+  labelClassName?: string;
+  /** The id of a hint under the field. */
+  describedBy?: string;
+  onChange?: (date: string) => void;
 }) {
   const labelId = useId();
   const order = useSyncExternalStore(
@@ -74,19 +94,26 @@ export function DateField({
   const [parts, setParts] = useState(() => splitDate(initial));
   const fields = useRef<Partial<Record<DatePart, HTMLInputElement | null>>>({});
   const picker = useRef<HTMLInputElement>(null);
-  const empty = !parts.day && !parts.month && !parts.year;
-  const date = empty
-    ? ""
-    : `${parts.year}-${parts.month.padStart(2, "0")}-${parts.day.padStart(2, "0")}`;
+  const date = joinDate(parts);
+  const outOfRange = (value: string) =>
+    rangeMessage !== undefined &&
+    ((min !== undefined && value < min) || (max !== undefined && value > max));
   const problem = unchecked
     ? ""
-    : empty
+    : date === ""
       ? required
         ? "Enter a date."
         : ""
-      : isCalendarDate(date)
-        ? ""
-        : "Enter a full date: day, month and year.";
+      : !isCalendarDate(date)
+        ? "Enter a full date: day, month and year."
+        : outOfRange(date)
+          ? (rangeMessage ?? "")
+          : "";
+  const change = (next: Record<DatePart, string>) => {
+    setParts(next);
+    const value = joinDate(next);
+    onChange?.(isCalendarDate(value) && !outOfRange(value) ? value : "");
+  };
   // On the first of the three, which is where the browser then points.
   // Taken off again when the order changes, or it would stay on a field
   // that is no longer first and block the form for good.
@@ -97,8 +124,16 @@ export function DateField({
   }, [order, problem]);
 
   return (
-    <div aria-labelledby={labelId} className={styles.group} role="group">
-      <span className={hideLabel ? styles.srOnly : styles.label} id={labelId}>
+    <div
+      aria-describedby={describedBy}
+      aria-labelledby={labelId}
+      className={styles.group}
+      role="group"
+    >
+      <span
+        className={hideLabel ? styles.srOnly : (labelClassName ?? styles.label)}
+        id={labelId}
+      >
         {label}
       </span>
       <div className={styles.parts} data-centred={centred ? "true" : undefined}>
@@ -112,20 +147,21 @@ export function DateField({
             maxLength={DATE_PARTS[part].length}
             onChange={(event) => {
               const digits = event.target.value.replace(/\D/g, "");
-              setParts((current) => ({ ...current, [part]: digits }));
+              change({ ...parts, [part]: digits });
               const next = order[position + 1];
               if (next && digits.length === DATE_PARTS[part].length) {
                 fields.current[next]?.focus();
               }
             }}
             placeholder={DATE_PARTS[part].hint}
+            readOnly={readOnly}
             ref={(field) => {
               fields.current[part] = field;
             }}
             value={parts[part]}
           />
         ))}
-        {calendar ? (
+        {calendar && !readOnly ? (
           <>
             <button
               aria-label={`Pick ${label.toLowerCase()} from a calendar`}
@@ -148,7 +184,7 @@ export function DateField({
               className={styles.native}
               max={max}
               min={min}
-              onChange={(event) => setParts(splitDate(event.target.value))}
+              onChange={(event) => change(splitDate(event.target.value))}
               ref={picker}
               tabIndex={-1}
               type="date"
@@ -157,7 +193,9 @@ export function DateField({
           </>
         ) : null}
       </div>
-      <input name={name} type="hidden" value={date} />
+      {name === undefined ? null : (
+        <input name={name} type="hidden" value={date} />
+      )}
     </div>
   );
 }
@@ -167,6 +205,12 @@ function isCalendarDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const day = new Date(`${value}T00:00:00.000Z`);
   return !Number.isNaN(day.getTime()) && day.toISOString().startsWith(value);
+}
+
+/** The three fields as one date, or nothing when all three are empty. */
+function joinDate(parts: Record<DatePart, string>): string {
+  if (!parts.day && !parts.month && !parts.year) return "";
+  return `${parts.year}-${parts.month.padStart(2, "0")}-${parts.day.padStart(2, "0")}`;
 }
 
 function splitDate(value: string | null): Record<DatePart, string> {

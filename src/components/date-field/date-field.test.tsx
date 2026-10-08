@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DateField } from "./date-field";
 
@@ -64,5 +64,59 @@ describe("DateField", () => {
 
     expect(problems()).toEqual([]);
     expect(sent(container)).toBe("-00-08");
+  });
+
+  it("hands the form a date it may use, and nothing while there is none", () => {
+    const onChange = vi.fn();
+    render(
+      <DateField
+        initial="2026-10-08"
+        label="Date"
+        max="2026-10-08"
+        onChange={onChange}
+        rangeMessage="Choose today or an earlier day."
+        required
+      />,
+    );
+
+    fireEvent.change(part("Day"), { target: { value: "7" } });
+    expect(onChange).toHaveBeenLastCalledWith("2026-10-07");
+
+    // After the last day allowed: stopped here, with the form's sentence.
+    fireEvent.change(part("Day"), { target: { value: "9" } });
+    expect(onChange).toHaveBeenLastCalledWith("");
+    expect(problems()).toEqual(["Choose today or an earlier day."]);
+
+    fireEvent.change(part("Day"), { target: { value: "" } });
+    expect(onChange).toHaveBeenLastCalledWith("");
+  });
+
+  it("bounds only the calendar where the form gave no sentence for it", () => {
+    render(
+      <DateField
+        initial="2026-10-09"
+        label="Date"
+        max="2026-10-08"
+        name="date"
+      />,
+    );
+
+    expect(problems()).toEqual([]);
+  });
+
+  it("shows a date that cannot be changed without a calendar, and still sends it", () => {
+    const { container } = render(
+      <DateField
+        calendar
+        initial="2026-12-06"
+        label="Date"
+        name="date"
+        readOnly
+      />,
+    );
+
+    expect(part("Day").readOnly).toBe(true);
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(sent(container)).toBe("2026-12-06");
   });
 });

@@ -15,6 +15,7 @@ import {
 } from "@/app/home/plan/roadmap/action-state";
 import { generateRoadmapAction } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
+import { DateField } from "@/components/date-field/date-field";
 import { CoachSpark } from "@/components/home/coach-spark";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
@@ -135,25 +136,28 @@ export function RoadmapComposer({
         ) : null}
 
         <div className={styles.field}>
-          <label className={styles.label} htmlFor={`${fieldId}-end`}>
-            {ROADMAP_CONTROL_COPY.endDateLabel}
-          </label>
-          <input
-            className={styles.input}
-            id={`${fieldId}-end`}
-            aria-describedby={`${fieldId}-end-help`}
-            type="date"
-            name="endDate"
-            min={minEndDate}
+          {/* A regeneration is defined as the same question about the same
+              dates, and the database refuses one whose horizon moved. Showing
+              the date but refusing to change it is honest about that; hiding
+              it would leave the owner guessing which dates they are asking
+              about. */}
+          <DateField
+            calendar
+            describedBy={`${fieldId}-end-help`}
+            initial={endDate}
+            label={ROADMAP_CONTROL_COPY.endDateLabel}
+            labelClassName={styles.label}
             max={maxEndDate}
-            required
-            // A regeneration is defined as the same question about the same
-            // dates, and the database refuses one whose horizon moved. Showing
-            // the field but refusing to change it is honest about that; hiding
-            // it would leave the owner guessing which dates they are asking
-            // about.
+            min={minEndDate}
+            name="endDate"
+            // A typed date is held to the range as a picked one is. Not a
+            // regeneration's: its date is the earlier proposal's, whatever
+            // today allows.
+            rangeMessage={
+              isRegeneration ? undefined : ROADMAP_CONTROL_COPY.endDateHelper
+            }
             readOnly={isRegeneration}
-            defaultValue={endDate}
+            required
           />
           <span className={styles.helper} id={`${fieldId}-end-help`}>
             {isRegeneration

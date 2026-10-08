@@ -30,6 +30,7 @@ import styles from "./log.module.css";
 
 import homeStyles from "../home.module.css";
 import { SaveToLibrary } from "../plan/saved/save-to-library";
+import { DateField } from "@/components/date-field/date-field";
 import { SportInput } from "@/components/sports/sport-input";
 import type {
   LibraryActivityOption,
@@ -717,19 +718,25 @@ export function LogForm({
       {dateOpen ? (
         <section data-log-step="date" hidden={step !== "date"}>
           <div className={styles.field}>
-            <label htmlFor="log-date">Date</label>
-            <input
-              id="log-date"
-              type="date"
-              required
+            {/* Typed or picked (owner, 5 Oct 2026). The form keeps the last
+                day that can be logged for: a date half typed or after today
+                stops this step and changes nothing above it. */}
+            <DateField
+              calendar
+              describedBy="log-date-hint"
+              initial={actualDate}
+              label="Date"
+              labelClassName={styles.dateLabel}
               max={today}
-              value={actualDate}
-              onChange={(event) => {
-                setActualDate(event.target.value);
+              onChange={(date) => {
+                if (date === "" || date === actualDate) return;
+                setActualDate(date);
                 setDayChoice(null);
               }}
+              rangeMessage="Choose today or an earlier day."
+              required
             />
-            <span className={styles.fieldHint}>
+            <span className={styles.fieldHint} id="log-date-hint">
               Training cannot be logged before it happens, so this stops at
               today.
             </span>

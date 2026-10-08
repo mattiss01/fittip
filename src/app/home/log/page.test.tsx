@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
@@ -72,6 +78,21 @@ const getCompletion = vi.fn();
 const findByPlanSession = vi.fn();
 const listCompletions = vi.fn();
 const listSavedSessions = vi.fn();
+
+/** Types a date into the log's date step, one field for each part. */
+function typeDate(isoDate: string) {
+  const [year, month, day] = isoDate.split("-");
+  const field = screen.getByRole("group", { name: "Date" });
+  for (const [part, value] of [
+    ["Day", day],
+    ["Month", month],
+    ["Year", year],
+  ] as const) {
+    fireEvent.change(within(field).getByLabelText(part), {
+      target: { value },
+    });
+  }
+}
 
 describe("Log", () => {
   beforeEach(() => {
@@ -181,9 +202,7 @@ describe("Log", () => {
     expect(currentStep()).toBe("outcome");
     fireEvent.click(screen.getByRole("button", { name: /Change the date/ }));
     expect(currentStep()).toBe("date");
-    fireEvent.change(screen.getByLabelText("Date"), {
-      target: { value: shiftIsoDate(today(), -1) },
-    });
+    typeDate(shiftIsoDate(today(), -1));
     expect(hiddenValue("actualLocalDate")).toBe(shiftIsoDate(today(), -1));
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     expect(currentStep()).toBe("outcome");
@@ -799,9 +818,7 @@ describe("Log", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Change the date/ }));
-    fireEvent.change(screen.getByLabelText("Date"), {
-      target: { value: shiftIsoDate(today(), -1) },
-    });
+    typeDate(shiftIsoDate(today(), -1));
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     chooseOutcome("Partly completed");
     fireEvent.click(screen.getByRole("button", { name: "Next" }));

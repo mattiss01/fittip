@@ -275,11 +275,19 @@ describe("Roadmap", () => {
     ).toBe(FIRST_PROPOSAL);
     // The horizon is the predecessor's and cannot be moved: the database
     // refuses a regeneration whose dates changed.
-    const endDate = within(compose).getByLabelText(
-      ROADMAP_COPY.endDateLabel,
-    ) as HTMLInputElement;
-    expect(endDate.readOnly).toBe(true);
-    expect(endDate.value).toBe("2026-12-06");
+    const endDate = within(compose).getByRole("group", {
+      name: ROADMAP_COPY.endDateLabel,
+    });
+    for (const part of ["Day", "Month", "Year"]) {
+      expect(
+        within(endDate).getByLabelText<HTMLInputElement>(part).readOnly,
+      ).toBe(true);
+    }
+    // No calendar to pick another day from, and the date is still sent.
+    expect(within(endDate).queryByRole("button")).toBeNull();
+    expect(
+      endDate.querySelector<HTMLInputElement>('input[name="endDate"]')?.value,
+    ).toBe("2026-12-06");
   });
 
   // The ceiling is a fact about these dates, not a missing control.
