@@ -5,7 +5,6 @@ import { useRef, useState } from "react";
 import { useOwnedSports } from "./owned-sports";
 import styles from "./sport-input.module.css";
 
-import { SPORT_NAME_MAX_LENGTH } from "@/lib/sports/sport-presets";
 import { suggestSports } from "@/lib/sports/sport-suggestions";
 
 type SportInputProps = {
@@ -36,14 +35,16 @@ export function SportInput({
 }: SportInputProps) {
   const sports = useOwnedSports();
   const [own, setOwn] = useState(defaultValue ?? "");
-  const [typing, setTyping] = useState(false);
+  // What the owner last typed here. A value the form put in the field
+  // itself, or a sport just tapped, is not something to complete.
+  const [typed, setTyped] = useState<string | null>(null);
   const field = useRef<HTMLInputElement>(null);
   const shown = value ?? own;
   const set = (sport: string) => {
     setOwn(sport);
     onChange?.(sport);
   };
-  const offered = typing ? suggestSports(sports, shown) : [];
+  const offered = typed === shown ? suggestSports(sports, shown) : [];
 
   return (
     <div className={styles.wrap}>
@@ -57,14 +58,14 @@ export function SportInput({
         autoComplete="off"
         value={shown}
         onChange={(event) => {
-          setTyping(true);
+          setTyped(event.target.value);
           set(event.target.value);
         }}
       />
       <SportChips
         offered={offered}
         onPick={(sport) => {
-          setTyping(false);
+          setTyped(null);
           set(sport);
           field.current?.focus();
         }}
@@ -149,7 +150,8 @@ export function SportsInput({
         // A goal names at least one sport; once it does, the field may be
         // left empty.
         required={required && chosen.length === 0}
-        maxLength={SPORT_NAME_MAX_LENGTH * 2}
+        // Room for a list typed with commas, as this field once took it.
+        maxLength={600}
         autoComplete="off"
         placeholder={chosen.length === 0 ? "Running" : "Add another sport"}
         value={typed}

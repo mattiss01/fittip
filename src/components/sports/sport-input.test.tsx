@@ -57,6 +57,27 @@ describe("SportInput", () => {
     expect(suggestions()).toBeNull();
   });
 
+  it("offers nothing for a value the form put there after typing", () => {
+    const { rerender } = renderWithSports(
+      <SportInput id="sport" name="sport" value="" onChange={() => {}} />,
+    );
+    fireEvent.change(screen.getByLabelText("Sport"), {
+      target: { value: "r" },
+    });
+
+    rerender(
+      <OwnedSportsProvider sports={SPORTS}>
+        <form aria-label="form">
+          <label htmlFor="sport">Sport</label>
+          <SportInput id="sport" name="sport" value="Tr" onChange={() => {}} />
+        </form>
+      </OwnedSportsProvider>,
+    );
+
+    expect(screen.getByLabelText("Sport")).toHaveValue("Tr");
+    expect(suggestions()).toBeNull();
+  });
+
   it("keeps a sport that is not on the list as typed", () => {
     renderWithSports(<SportInput id="sport" name="sport" />);
 
