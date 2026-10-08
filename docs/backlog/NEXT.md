@@ -92,9 +92,6 @@ lane, one screen per merge.
       71 other rules use the mono face, for small labels as well as numbers. Open:
       another mono face with a plain zero, or the sans face with tabular figures
       wherever a number is shown. Build lane, one sweep, the owner looking.
-- [ ] **No full stop on a heading, everywhere.** Owner, 5 Oct 2026. Done on sign-in,
-      sign-up and in setup; about fifty older headings (loading, error and empty
-      states) still end with one, each quoted by a test or a browser spec.
 - [ ] **Forgot password.** Owner, 5 Oct 2026: a link on sign-in that sends a
       reset mail and lets the password be set again. Careful lane (auth).
 - [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only
@@ -159,6 +156,9 @@ Not worth their own slot; do them when work lands nearby.
   it is read-then-write, so a sport removed on Settings at that moment comes back; a
   name over 60 characters or with a comma is not added and nothing says so; the call is
   repeated in eight actions; and the chips are not announced to a screen reader.
+- **The Plan's series-extension notice is drawn as a heading** (`series-materializer.tsx`)
+  though it is a status sentence, sometimes two, so it kept its full stop on 8 Oct 2026.
+  It wants to be a paragraph with `role="status"`; m3-14b may find it by its heading.
 - **Dragging a goal does not scroll the page.** Since 5 Oct 2026 a goal is
   reordered by dragging its number. A list taller than the screen cannot be
   dragged end to end; the arrow keys on the number can, which a phone lacks.
