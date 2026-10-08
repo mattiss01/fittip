@@ -348,13 +348,13 @@
   padding: 0.5rem 1rem;
   border: 0;
   border-radius: var(--radius-control);
-  background: var(--plan-locked);
+  background: var(--danger);
   color: white;
   font: 700 0.95rem var(--font-sans);
 }
 
 .dangerAction:hover {
-  background: #6f2817;
+  background: var(--danger-dark);
 }
 
 .repeatLink {

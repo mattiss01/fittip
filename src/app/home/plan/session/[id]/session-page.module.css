@@ -273,7 +273,7 @@
 }
 
 .menuItem[data-danger] {
-  color: var(--plan-locked);
+  color: var(--danger);
 }
 
 .menuItem:disabled {

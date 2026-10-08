@@ -563,15 +563,15 @@
 }
 
 /* Delete is red wherever it is offered (owner, 8 Oct 2026): closed as a
-   button, open as its heading, and on the button that confirms it. A plain
-   red of its own: the Plan's leans brown (owner, 8 Oct 2026). */
+   button, open as its heading, and on the button that confirms it.
+   The app's one red for it, `--danger`. */
 .confirmation[data-confirmation="delete"] > summary,
 .confirmation[data-confirmation="delete"] form > button {
-  background: #991b1b;
+  background: var(--danger);
   color: white;
 }
 
 .confirmation[data-confirmation="delete"][open] > summary {
   background: transparent;
-  color: #991b1b;
+  color: var(--danger);
 }

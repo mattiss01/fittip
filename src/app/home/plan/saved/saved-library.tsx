@@ -242,7 +242,7 @@ function SavedSessionCard({
           </form>
         </details>
 
-        <details className={styles.disclosure}>
+        <details className={styles.disclosure} data-danger>
           <summary>Delete</summary>
           <p className={styles.consequence}>
             Deleting removes this entry permanently. There is no archive and no
