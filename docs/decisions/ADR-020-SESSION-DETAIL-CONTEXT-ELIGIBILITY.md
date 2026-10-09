@@ -136,7 +136,8 @@ things about `fill_session_activities`. They change this ADR in four places:
   illness, injury or severe fatigue was reported, as the date and the four
   flags, one entry a day, at most twenty with the rest counted. Its history of
   what was logged stays seven days, and `hasSafetySignal` is true when either
-  carries a flag. The logs behind those days are recorded as sources.
+  carries a flag. The logs behind those days are recorded as sources, which is
+  provenance: nothing yet compares a fill's sources when it is accepted.
 
 Two further things reach a fill that this ADR did not consider: the phase of
 the accepted roadmap its session's day falls in, as title, focus and dates, and

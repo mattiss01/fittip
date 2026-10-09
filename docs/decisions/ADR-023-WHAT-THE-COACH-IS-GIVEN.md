@@ -96,8 +96,11 @@ than being cut silently.
 15. The safety flags of the last 28 days, one entry a day as the date and the four
     flags, without the rest of those logs: at most twenty days, newest first, the rest
     counted. The call's own history stays seven days, and the safety signal is raised by
-    either. A log whose flag was sent is recorded as a source of the suggestion, so
-    correcting the flag away conflicts with what was built on it.
+    either. A log whose flag was sent is recorded as a source of the suggestion, at most
+    seven logs a day. That is a record of what informed it and no more: nothing compares a
+    fill's sources when it is accepted, so correcting a flag away afterwards does not stop
+    the suggestion built around it. That check does not exist for a fill at all yet and is
+    its own backlog line.
 16. The activity names of the neighbouring sessions, up to eight of sixty characters
     each, so "do not load the same thing hard on consecutive days" can be followed. No
     targets.
@@ -107,7 +110,9 @@ than being cut silently.
 18. Last results are looked up over six months (183 days), not eight weeks, and the
     prompt says a result more than a few weeks old is where the athlete was: start below
     it. Nothing else reads past ADR-013's eight weeks. A log that old is recorded as a
-    source when it supplied a result.
+    source when it supplied a result, and what travels of it is the date, how the
+    activity is measured, and the result itself; for an activity measured in the owner's
+    own words, that result holds their label and unit.
 19. The prompt: use only equipment the athlete has for where the session is done; at
     home, what the setup lists.
 
