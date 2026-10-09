@@ -13,7 +13,7 @@ import {
   coachAIStaticPrefix,
 } from "@/server/ai/openai-prompt";
 
-const STATIC_PREFIX_BUDGET = 7_700;
+const STATIC_PREFIX_BUDGET = 7_800;
 
 /**
  * The plan prompt gets a larger allowance than the roadmap's, and that is a
@@ -84,7 +84,7 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
           4,
       );
 
-    expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(14_154);
+    expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(14_179);
     expect(tokens("create_seven_day_plan", PLAN_STATIC_PREFIX_BUDGET)).toBe(
       14_991,
     );

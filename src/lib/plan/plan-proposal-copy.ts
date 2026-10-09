@@ -196,6 +196,9 @@ export const PLAN_PROPOSAL_COPY = {
      * so it must not say nothing was written. Both of those are true and
      * permanent by the time the coach fails to answer.
      */
+    /* Said before anything is closed, so the proposal is still there. */
+    regenerationTooLarge:
+      "This proposal is too large to send back to the coach with your feedback. Finish or discard it, then ask for a new plan.",
     regenerationLost:
       "What you added is in your plan and the old proposal is closed, but the coach could not answer. Ask for a new plan above.",
     /** Appended to a conflict or rule message on that same path. */

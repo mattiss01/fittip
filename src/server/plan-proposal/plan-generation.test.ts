@@ -76,7 +76,10 @@ vi.mock("@/server/ai/composition", async (original) => {
 
 import type { CoachAIOwner } from "@/server/ai/owner";
 import { MemoryCandidateBatchError } from "@/server/proposal-logging/memory-candidate-batch";
-import { generatePlanProposal } from "@/server/plan-proposal/plan-generation";
+import {
+  generatePlanProposal,
+  previousPlanFits,
+} from "@/server/plan-proposal/plan-generation";
 import type { PlanProposalRepository } from "@/server/repositories/plan-proposal-repository";
 
 /**
@@ -112,6 +115,36 @@ const proposals = {
   finishGenerationAsFailed: vi.fn(),
   recordMemoryCandidates: vi.fn(),
 };
+
+describe("previousPlanFits", () => {
+  // The largest plan the database stores: three sessions on each of seven
+  // days, with the longest title and sport.
+  const largest = (letter: string) =>
+    ({
+      schemaVersion: "fittip.seven-day-plan.v2",
+      weekDescription: letter.repeat(600),
+      startDate: "2026-10-09",
+      endDate: "2026-10-15",
+      sessions: Array.from({ length: 21 }, (_, index) => ({
+        date: `2026-10-${String(9 + (index % 7)).padStart(2, "0")}`,
+        title: letter.repeat(120),
+        sport: letter.repeat(60),
+        focus: "f",
+        intent: "i",
+        durationMinutes: 180,
+        primaryGoalId: GOAL_ID,
+        rationale: "r",
+      })),
+    }) as Parameters<typeof previousPlanFits>[0];
+
+  it("admits the largest plan in one-byte characters", () => {
+    expect(previousPlanFits(largest("t"))).toBe(true);
+  });
+
+  it("says no to the same plan in a three-byte script, before a review is closed over it", () => {
+    expect(previousPlanFits(largest("漢"))).toBe(false);
+  });
+});
 
 describe("generatePlanProposal", () => {
   // The batch-failure tests spy on the console; never leak one past its test.

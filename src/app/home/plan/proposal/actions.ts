@@ -24,7 +24,10 @@ import {
   OwnerTextValidationError,
   parsePlanningNote,
 } from "@/server/ai/owner-text";
-import { generatePlanProposal } from "@/server/plan-proposal/plan-generation";
+import {
+  generatePlanProposal,
+  previousPlanFits,
+} from "@/server/plan-proposal/plan-generation";
 import {
   parseExpectedPlanRevision,
   parsePlanDayCount,
@@ -267,6 +270,11 @@ export async function regeneratePlanProposalAction(
     }
     // Bound to a const so the narrowing survives into `askAgain` below.
     const source = rejected;
+    // The one refusal assembly would otherwise make only after the review
+    // below has closed for good: a proposal too large to send back.
+    if (!previousPlanFits(source.content)) {
+      return invalid(OUTCOMES.regenerationTooLarge, submission);
+    }
 
     for (const item of rejected.items) {
       if (item.decision === "proposed") {

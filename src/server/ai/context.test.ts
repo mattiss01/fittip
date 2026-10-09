@@ -428,7 +428,7 @@ describe("the per-source context allocation", () => {
     // guard over the whole message set. Measured against the prefix budget
     // `openai-prompt.test.ts` enforces rather than against today's prefix, so
     // this cannot pass only because the prompt happens to be short right now.
-    const staticPrefixBudget = 7_700;
+    const staticPrefixBudget = 7_800;
     const wrapperAllowance = 64;
     const estimatedTokens = Math.ceil(
       (staticPrefixBudget + wrapperAllowance + limits.bytes.total) / 4,
@@ -438,7 +438,7 @@ describe("the per-source context allocation", () => {
     // and each goal's desired outcome, with a longer shared prompt for them.
     // 12,991 after ADR-023's shared part; its roadmap part added thirty
     // planned sessions with minutes and the roadmap in force.
-    expect(estimatedTokens).toBe(14_154);
+    expect(estimatedTokens).toBe(14_179);
     expect(estimatedTokens).toBeLessThanOrEqual(
       COACH_AI_LIVE_LIMITS.maxInputTokens,
     );

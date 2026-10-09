@@ -286,7 +286,7 @@ export type CoachAIContextLimits = {
  * from before that day; this is what holds now, and `context.test.ts` and
  * `openai-prompt.test.ts` assert it:
  *
- *   roadmap  prefix 7,700 + wrapper 64 + context 48,850 = 56,614  14,154 tokens
+ *   roadmap  prefix 7,800 + wrapper 64 + context 48,850 = 56,714  14,179 tokens
  *   plan     prefix 8,700 + wrapper 64 + context 51,200 = 59,964  14,991 tokens
  *   fill     prefix 7,300 + wrapper 64 + context 41,300 = 48,664  12,166 tokens
  *
@@ -415,7 +415,7 @@ export const COACH_AI_CONTEXT_LIMITS = {
       // 5,900 since ADR-023: the legal worst case in ASCII measures 5,797,
       // and the 500 it gives back is part of what lets `total` hold every
       // part. A rejected plan in a script of three bytes a character can pass
-      // it and is refused with this source named.
+      // it; `previousPlanFits` says so before "ask again" closes the review.
       previousProposal: 5_900,
       roadmap: 4_000,
       currentRoadmap: 0,

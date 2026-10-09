@@ -9,7 +9,9 @@ const {
   verifyOwnerMock,
   generateMock,
   createCompletionLogMock,
+  previousPlanFitsMock,
 } = vi.hoisted(() => ({
+  previousPlanFitsMock: vi.fn(),
   createCompletionLogMock: vi.fn(),
   revalidatePathMock: vi.fn(),
   createProposalsMock: vi.fn(),
@@ -52,6 +54,7 @@ vi.mock("@/server/ai/owner", async (original) => {
 });
 vi.mock("@/server/plan-proposal/plan-generation", () => ({
   generatePlanProposal: generateMock,
+  previousPlanFits: previousPlanFitsMock,
 }));
 
 import {
@@ -111,6 +114,7 @@ describe("regeneratePlanProposalAction", () => {
       listReplaceableSessions,
     });
     listReplaceableSessions.mockResolvedValue([]);
+    previousPlanFitsMock.mockReturnValue(true);
     createCompletionLogMock.mockResolvedValue({
       findByPlanSessions: listCompletions,
     });
@@ -157,6 +161,21 @@ describe("regeneratePlanProposalAction", () => {
     expect(generateMock.mock.calls[0][0]).toMatchObject({
       replaceableSessionIds: [KEPT_ID],
     });
+  });
+
+  it("refuses a proposal too large to send back, while it is still open", async () => {
+    previousPlanFitsMock.mockReturnValue(false);
+
+    const state = await regenerate();
+
+    expect(state).toMatchObject({
+      status: "validation",
+      message: OUTCOMES.regenerationTooLarge,
+    });
+    // Nothing rejected, nothing finished: the review can still be completed.
+    expect(decideItem).not.toHaveBeenCalled();
+    expect(finishReview).not.toHaveBeenCalled();
+    expect(generateMock).not.toHaveBeenCalled();
   });
 
   it("refuses missing feedback before anything is written", async () => {
