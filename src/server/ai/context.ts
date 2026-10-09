@@ -276,9 +276,9 @@ export type CoachAIContextLimits = {
  * from before that day; this is what holds now, and `context.test.ts` and
  * `openai-prompt.test.ts` assert it:
  *
- *   roadmap  prefix 7,200 + wrapper 64 + context 44,600 = 51,864  12,966 tokens
- *   plan     prefix 8,600 + wrapper 64 + context 44,000 = 52,664  13,166 tokens
- *   fill     prefix 7,200 + wrapper 64 + context 41,300 = 48,564  12,141 tokens
+ *   roadmap  prefix 7,300 + wrapper 64 + context 44,600 = 51,964  12,991 tokens
+ *   plan     prefix 8,700 + wrapper 64 + context 44,000 = 52,764  13,191 tokens
+ *   fill     prefix 7,300 + wrapper 64 + context 41,300 = 48,664  12,166 tokens
  *
  * The plan's `total` is below the sum of its parts (47,200), as it was before
  * this day (38,400 against 35,100): a rejected plan and a reduced roadmap at
