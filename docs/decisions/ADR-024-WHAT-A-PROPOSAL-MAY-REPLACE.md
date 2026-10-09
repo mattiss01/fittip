@@ -35,7 +35,8 @@ is made true by the database rather than promised by a screen.
 3. **The coach is shown a handle, never a session id.** Each mark gets `r1`,
    `r2`… in calendar order. A planned session inside the chosen days is sent
    with its minutes and its handle, or null for one that stays (ADR-013,
-   amended). A proposed session may name one handle in `replaces`.
+   amended). A proposed session may name one handle in `replaces`. It need not
+   be on the same day as the session it replaces; the review shows both.
 4. **An answer that names anything else is refused whole.** A handle the
    request never issued, or one handle named twice, is refused by the output
    validator and again by `finish_plan_generation`, as an invented goal id is.
@@ -48,10 +49,14 @@ is made true by the database rather than promised by a screen.
    `apply_rolling_plan_change_set`. The swap happens whole or not at all, and
    nothing changes before Finish. Replacing deletes; it does not cancel (owner).
 7. **A logged session is never replaced.** Before adding the `delete`, Finish
-   checks again that the session is still active, still on a day that can be
-   changed, still marked for this proposal's own request, and has no log. One
-   that fails is left alone and the proposed session is added beside it. The
-   review shows this before the owner chooses.
+   checks again that the session is still active, not behind today, still on
+   one of the days the proposal was asked about, still marked for this
+   proposal's own request, and has no log. One that fails is left alone and the
+   proposed session is added beside it. The review applies the same tests to
+   the plan as it is when the page is read, and offers a plain add with the
+   reason in place of Replace. A session moved off those days is the case that
+   needs the third test: without it Finish would delete a session the review,
+   which reads those days, could no longer show.
 8. **Asking again keeps the marks** that can still be replaced. One replaced by
    the finish that closed the review is gone, and one logged or cancelled since
    is dropped.

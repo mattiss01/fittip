@@ -536,6 +536,6 @@ records it. Decisions 1, 3, 6 and 7 are unchanged.
 planned. Decision 5's eligibility stands; its fill order puts the planned days
 ahead of the days before them. The third amendment above records it.
 
-**Amended a third time 9 October 2026.** For the plan operation, an entry
+**Fourth amendment, 9 October 2026.** For the plan operation, an entry
 inside the days being planned carries its minutes and a replace handle
 (ADR-024), and the list holds 30 entries. The fourth amendment above records it.
