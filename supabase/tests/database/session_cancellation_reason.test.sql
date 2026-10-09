@@ -66,7 +66,6 @@ as $$
       'position', p_position,
       'title', p_title,
       'sport', 'Running',
-      'isLocked', false,
       'activities', '[]'::jsonb
     )
   )

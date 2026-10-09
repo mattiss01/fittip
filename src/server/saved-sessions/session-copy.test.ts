@@ -18,7 +18,6 @@ const plannedSession: RollingPlanSession = {
   intent: "Threshold work",
   expectedDurationMinutes: 60,
   note: "Shoes with the orange laces",
-  isLocked: true,
   status: "active",
   cancelledAt: null,
   seriesId: null,
@@ -34,7 +33,6 @@ const plannedSession: RollingPlanSession = {
       instructions: "3 x 8 minutes",
       measurementMode: "duration_intensity",
       target: { duration_minutes: 24, intensity: "hard" },
-      isLocked: true,
     },
   ],
 };
@@ -90,7 +88,6 @@ describe("saving a planned session into the library", () => {
       "id",
       "localDate",
       "position",
-      "isLocked",
       "status",
       "cancelledAt",
       // M3-14. Saving an occurrence to the library saves its content, not its
@@ -102,7 +99,6 @@ describe("saving a planned session into the library", () => {
       expect(draft).not.toHaveProperty(key);
     }
     expect(draft.activities[0]).not.toHaveProperty("id");
-    expect(draft.activities[0]).not.toHaveProperty("isLocked");
   });
 
   it("carries no key for a field the planned session does not have", () => {
@@ -131,7 +127,6 @@ describe("reusing a library entry in the Plan", () => {
       expectedDurationMinutes: 60,
       localDate: "2026-08-21",
       position: 2,
-      isLocked: false,
       activities: [
         {
           personalActivityId: "77000000-0000-4000-8000-0000000000b1",
@@ -140,7 +135,6 @@ describe("reusing a library entry in the Plan", () => {
           sport: "Running",
           measurementMode: "duration_intensity",
           target: { duration_minutes: 24, intensity: "hard" },
-          isLocked: false,
         },
       ],
     });
@@ -152,7 +146,6 @@ describe("reusing a library entry in the Plan", () => {
       "2026-08-21",
       0,
     );
-    expect(input.isLocked).toBe(false);
     expect(input).not.toHaveProperty("id");
     expect(input).not.toHaveProperty("name");
     expect(input).not.toHaveProperty("revision");
@@ -231,7 +224,7 @@ describe("building a series template from a library entry", () => {
     });
   });
 
-  it("takes no date, no position, and no `isLocked` key from the library entry", () => {
+  it("takes no date and no position from the library entry", () => {
     const template = toRollingPlanSeriesInput(savedSession, {
       ...rule,
       weekdays: [1, 4],
@@ -239,7 +232,6 @@ describe("building a series template from a library entry", () => {
     for (const key of ["id", "name", "revision", "localDate", "position"]) {
       expect(template).not.toHaveProperty(key);
     }
-    expect(template.activities[0]).not.toHaveProperty("isLocked");
   });
 
   it("carries no key for a field the library entry does not have", () => {

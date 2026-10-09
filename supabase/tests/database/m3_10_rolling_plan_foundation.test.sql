@@ -262,7 +262,7 @@ select lives_ok(
     0,
     '77000000-0000-4000-8000-000000000101',
     'owner_manual',
-    '[{"operation":"add","sessionId":"77000000-0000-4000-8000-000000000011","session":{"localDate":"2126-08-16","position":0,"title":"Aerobic run","sport":"Running","intent":"Build endurance","expectedDurationMinutes":60,"note":null,"isLocked":false,"activities":[{"personalActivityId":"77000000-0000-4000-8000-0000000000a1","position":0,"name":"Easy run","sport":"Running","measurementMode":"duration_intensity","target":{"duration_minutes":60,"intensity":"easy"},"isLocked":false}]}}]'::jsonb
+    '[{"operation":"add","sessionId":"77000000-0000-4000-8000-000000000011","session":{"localDate":"2126-08-16","position":0,"title":"Aerobic run","sport":"Running","intent":"Build endurance","expectedDurationMinutes":60,"note":null,"activities":[{"personalActivityId":"77000000-0000-4000-8000-0000000000a1","position":0,"name":"Easy run","sport":"Running","measurementMode":"duration_intensity","target":{"duration_minutes":60,"intensity":"easy"}}]}}]'::jsonb
   )$$,
   'one owner transaction adds current session and activity state'
 );
@@ -290,7 +290,7 @@ select lives_ok(
     0,
     '77000000-0000-4000-8000-000000000101',
     'owner_manual',
-    '[{"operation":"add","sessionId":"77000000-0000-4000-8000-000000000011","session":{"localDate":"2126-08-16","position":0,"title":"Aerobic run","sport":"Running","intent":"Build endurance","expectedDurationMinutes":60,"note":null,"isLocked":false,"activities":[{"personalActivityId":"77000000-0000-4000-8000-0000000000a1","position":0,"name":"Easy run","sport":"Running","measurementMode":"duration_intensity","target":{"duration_minutes":60,"intensity":"easy"},"isLocked":false}]}}]'::jsonb
+    '[{"operation":"add","sessionId":"77000000-0000-4000-8000-000000000011","session":{"localDate":"2126-08-16","position":0,"title":"Aerobic run","sport":"Running","intent":"Build endurance","expectedDurationMinutes":60,"note":null,"activities":[{"personalActivityId":"77000000-0000-4000-8000-0000000000a1","position":0,"name":"Easy run","sport":"Running","measurementMode":"duration_intensity","target":{"duration_minutes":60,"intensity":"easy"}}]}}]'::jsonb
   )$$,
   'an exact idempotency replay succeeds despite the old expected revision'
 );
@@ -312,28 +312,28 @@ select lives_ok(
     1,
     '77000000-0000-4000-8000-000000000102',
     'owner_manual',
-    '[{"operation":"edit","sessionId":"77000000-0000-4000-8000-000000000011","session":{"title":"Long aerobic run","sport":"Running","expectedDurationMinutes":75,"activities":[]}},{"operation":"move","sessionId":"77000000-0000-4000-8000-000000000011","localDate":"2126-08-17","position":1},{"operation":"set_lock","sessionId":"77000000-0000-4000-8000-000000000011","isLocked":true}]'::jsonb
+    '[{"operation":"edit","sessionId":"77000000-0000-4000-8000-000000000011","session":{"title":"Long aerobic run","sport":"Running","expectedDurationMinutes":75,"activities":[]}},{"operation":"move","sessionId":"77000000-0000-4000-8000-000000000011","localDate":"2126-08-17","position":1}]'::jsonb
   )$$,
-  'edit, move, and lock apply as one grouped owner action'
+  'edit and move apply as one grouped owner action'
 );
-select is((select revision from public.rolling_plans), 2::bigint, 'three subchanges advance only one owner revision');
+select is((select revision from public.rolling_plans), 2::bigint, 'two subchanges advance only one owner revision');
 select is(
   (select count(*)::bigint from public.rolling_plan_change_entries where change_set_id = (
     select id from public.rolling_plan_change_sets where plan_revision = 2
-  )), 3::bigint,
-  'the grouped action has three ordered before-after entries'
+  )), 2::bigint,
+  'the grouped action has two ordered before-after entries'
 );
 select ok(
-  (select title = 'Long aerobic run' and local_date = '2126-08-17' and position = 1 and is_locked
+  (select title = 'Long aerobic run' and local_date = '2126-08-17' and position = 1
    from public.rolling_plan_sessions),
-  'edit, move, and lock are visible in current state'
+  'edit and move are visible in current state'
 );
 select throws_ok(
   $$select public.apply_rolling_plan_change_set(
     2,
     '77000000-0000-4000-8000-000000000103',
     'owner_manual',
-    '[{"operation":"add","sessionId":"77000000-0000-4000-8000-000000000012","session":{"localDate":"2126-08-18","position":0,"title":"Ride","sport":"Cycling","isLocked":false,"activities":[]}},{"operation":"add","sessionId":"77000000-0000-4000-8000-000000000013","session":{"localDate":"2126-08-18","position":0,"title":"Swim","sport":"Swimming","isLocked":false,"activities":[]}}]'::jsonb
+    '[{"operation":"add","sessionId":"77000000-0000-4000-8000-000000000012","session":{"localDate":"2126-08-18","position":0,"title":"Ride","sport":"Cycling","activities":[]}},{"operation":"add","sessionId":"77000000-0000-4000-8000-000000000013","session":{"localDate":"2126-08-18","position":0,"title":"Swim","sport":"Swimming","activities":[]}}]'::jsonb
   )$$,
   '22023', 'Invalid rolling plan change set.',
   'a failed subchange rolls the entire grouped action back'
@@ -373,7 +373,7 @@ select throws_ok(
     0,
     '77000000-0000-4000-8000-000000000202',
     'owner_manual',
-    '[{"operation":"add","sessionId":"77000000-0000-4000-8000-000000000021","session":{"localDate":"2126-08-19","position":0,"title":"Attack","sport":"Running","isLocked":false,"activities":[{"personalActivityId":"77000000-0000-4000-8000-0000000000a1","position":0,"name":"Stolen","sport":"Running","measurementMode":"duration_intensity","target":{"duration_minutes":10,"intensity":"easy"},"isLocked":false}]}}]'::jsonb
+    '[{"operation":"add","sessionId":"77000000-0000-4000-8000-000000000021","session":{"localDate":"2126-08-19","position":0,"title":"Attack","sport":"Running","activities":[{"personalActivityId":"77000000-0000-4000-8000-0000000000a1","position":0,"name":"Stolen","sport":"Running","measurementMode":"duration_intensity","target":{"duration_minutes":10,"intensity":"easy"}}]}}]'::jsonb
   )$$,
   '22023', 'Invalid rolling plan activity.',
   'a cross-owner personal activity reference is denied atomically'
@@ -408,7 +408,7 @@ select throws_ok(
     2,
     '77000000-0000-4000-8000-000000000105',
     'owner_manual',
-    '[{"operation":"add","sessionId":"77000000-0000-4000-8000-000000000014","session":{"localDate":"2126-08-20","position":0,"title":"Stale","sport":"Run","isLocked":false,"activities":[]}}]'::jsonb
+    '[{"operation":"add","sessionId":"77000000-0000-4000-8000-000000000014","session":{"localDate":"2126-08-20","position":0,"title":"Stale","sport":"Run","activities":[]}}]'::jsonb
   )$$,
   'PT409', 'Your plan changed. Reload and try again.',
   'a stale expected revision is rejected'

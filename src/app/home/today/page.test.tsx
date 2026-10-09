@@ -255,7 +255,6 @@ describe("Today", () => {
             groups: [{ sets: 5, reps: 5, load: 82.5 }],
             load_unit: "kg",
           },
-          isLocked: false,
         },
       ],
     };
@@ -463,7 +462,6 @@ function session(): RollingPlanSession {
     position: 0,
     title: "Threshold intervals",
     sport: "Running",
-    isLocked: false,
     status: "active",
     cancelledAt: null,
     seriesId: null,

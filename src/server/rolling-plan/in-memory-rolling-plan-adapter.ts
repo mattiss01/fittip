@@ -503,12 +503,10 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
               ? {}
               : { expectedDurationMinutes: segment.expectedDurationMinutes }),
             ...(segment.note === undefined ? {} : { note: segment.note }),
-            isLocked: false,
             seriesId: segment.id,
             occurrenceDate,
             activities: segment.activities.map((activity) => ({
               ...activity,
-              isLocked: false,
             })),
           },
         });

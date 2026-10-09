@@ -49,7 +49,6 @@ try {
           position: 0,
           title: `Planned ${round}`,
           sport: "Running",
-          isLocked: false,
           activities: [],
         },
       },

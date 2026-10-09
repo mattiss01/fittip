@@ -208,7 +208,6 @@ async function planOneSession(token) {
               position: 0,
               title: "Aerobic run",
               sport: "Running",
-              isLocked: false,
               activities: [],
             },
           },

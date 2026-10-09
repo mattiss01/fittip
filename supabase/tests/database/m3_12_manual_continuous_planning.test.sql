@@ -182,7 +182,7 @@ select throws_ok(
   format(
     $$select public.apply_rolling_plan_change_set(
       0, '7c000000-0000-4000-8000-000000000101', 'owner_manual',
-      '[{"operation":"add","sessionId":"7c000000-0000-4000-8000-000000000011","session":{"localDate":"%s","position":0,"title":"Aerobic run","sport":"Running","isLocked":false,"activities":[]}}]'::jsonb
+      '[{"operation":"add","sessionId":"7c000000-0000-4000-8000-000000000011","session":{"localDate":"%s","position":0,"title":"Aerobic run","sport":"Running","activities":[]}}]'::jsonb
     )$$,
     pg_temp.owner_day(1)
   ),
@@ -234,7 +234,7 @@ select throws_ok(
   format(
     $$select public.apply_rolling_plan_change_set(
       0, '7c000000-0000-4000-8000-000000000102', 'owner_manual',
-      '[{"operation":"add","sessionId":"7c000000-0000-4000-8000-000000000012","session":{"localDate":"%s","position":0,"title":"Yesterday","sport":"Running","isLocked":false,"activities":[]}}]'::jsonb
+      '[{"operation":"add","sessionId":"7c000000-0000-4000-8000-000000000012","session":{"localDate":"%s","position":0,"title":"Yesterday","sport":"Running","activities":[]}}]'::jsonb
     )$$,
     pg_temp.owner_day(-1)
   ),
@@ -257,7 +257,7 @@ select lives_ok(
   format(
     $$select public.apply_rolling_plan_change_set(
       0, '7c000000-0000-4000-8000-000000000104', 'owner_manual',
-      '[{"operation":"add","sessionId":"7c000000-0000-4000-8000-000000000013","session":{"localDate":"%s","position":0,"title":"Aerobic run","sport":"Running","isLocked":false,"activities":[]}},{"operation":"set_recovery_day","localDate":"%s","isRecoveryDay":true}]'::jsonb
+      '[{"operation":"add","sessionId":"7c000000-0000-4000-8000-000000000013","session":{"localDate":"%s","position":0,"title":"Aerobic run","sport":"Running","activities":[]}},{"operation":"set_recovery_day","localDate":"%s","isRecoveryDay":true}]'::jsonb
     )$$,
     pg_temp.owner_day(0), pg_temp.owner_day(2)
   ),
@@ -340,7 +340,7 @@ select lives_ok(
         'sessionId', ('7c000000-0000-4000-8000-00000000002' || n)::uuid,
         'session', jsonb_build_object(
           'localDate', '%s', 'position', n + 1, 'title', 'Session ' || n,
-          'sport', 'Running', 'isLocked', false, 'activities', '[]'::jsonb
+          'sport', 'Running', 'activities', '[]'::jsonb
         )
       )) from generate_series(0, 8) n)
     )$$,
@@ -358,7 +358,7 @@ select throws_ok(
   format(
     $$select public.apply_rolling_plan_change_set(
       3, '7c000000-0000-4000-8000-000000000108', 'owner_manual',
-      '[{"operation":"add","sessionId":"7c000000-0000-4000-8000-000000000031","session":{"localDate":"%s","position":11,"title":"Eleventh","sport":"Running","isLocked":false,"activities":[]}}]'::jsonb
+      '[{"operation":"add","sessionId":"7c000000-0000-4000-8000-000000000031","session":{"localDate":"%s","position":11,"title":"Eleventh","sport":"Running","activities":[]}}]'::jsonb
     )$$,
     pg_temp.owner_day(0)
   ),
@@ -373,7 +373,7 @@ select lives_ok(
   format(
     $$select public.apply_rolling_plan_change_set(
       3, '7c000000-0000-4000-8000-000000000109', 'owner_manual',
-      '[{"operation":"cancel","sessionId":"7c000000-0000-4000-8000-000000000020"},{"operation":"add","sessionId":"7c000000-0000-4000-8000-000000000031","session":{"localDate":"%s","position":11,"title":"Eleventh","sport":"Running","isLocked":false,"activities":[]}}]'::jsonb
+      '[{"operation":"cancel","sessionId":"7c000000-0000-4000-8000-000000000020"},{"operation":"add","sessionId":"7c000000-0000-4000-8000-000000000031","session":{"localDate":"%s","position":11,"title":"Eleventh","sport":"Running","activities":[]}}]'::jsonb
     )$$,
     pg_temp.owner_day(0)
   ),

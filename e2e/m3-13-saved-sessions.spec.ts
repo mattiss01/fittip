@@ -290,7 +290,6 @@ async function seedPlannedSessionWithActivities(
               sport: "Running",
               intent: "Threshold work",
               expectedDurationMinutes: 45,
-              isLocked: false,
               activities: [
                 {
                   position: 0,
@@ -299,7 +298,6 @@ async function seedPlannedSessionWithActivities(
                   instructions: "3 x 8 minutes",
                   measurementMode: "duration_intensity",
                   target: { duration_minutes: 24, intensity: "hard" },
-                  isLocked: false,
                 },
                 {
                   position: 1,
@@ -307,7 +305,6 @@ async function seedPlannedSessionWithActivities(
                   sport: "Running",
                   measurementMode: "duration_intensity",
                   target: { duration_minutes: 10, intensity: "easy" },
-                  isLocked: false,
                 },
               ],
             },

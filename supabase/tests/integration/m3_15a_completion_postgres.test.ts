@@ -87,7 +87,7 @@ if (url && publishableKey && serviceRoleKey && isLocalUrl) {
                     localDate,
                     title,
                     activities: CONTRACT_PLANNED_SESSION.activities.map(
-                      (activity) => ({ ...activity, isLocked: false }),
+                      (activity) => ({ ...activity }),
                     ),
                   },
                 },

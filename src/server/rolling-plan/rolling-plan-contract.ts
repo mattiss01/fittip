@@ -579,7 +579,6 @@ export function registerRollingPlanContract(
             session.seriesId === seriesId &&
             session.occurrenceDate === session.localDate &&
             session.hasDiverged === false &&
-            session.isLocked === false &&
             session.title === "Club session" &&
             session.activities.length === 1,
         ),
@@ -1104,7 +1103,6 @@ function add(
       title,
       sport: "Running",
       expectedDurationMinutes: 60,
-      isLocked: false,
       activities: [
         {
           position: 0,
@@ -1112,7 +1110,6 @@ function add(
           sport: "Running",
           measurementMode: "duration_intensity",
           target: { duration_minutes: 60, intensity: "easy" },
-          isLocked: false,
         },
       ],
     },

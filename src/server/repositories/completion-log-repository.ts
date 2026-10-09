@@ -408,7 +408,9 @@ function parseReplacedBy(
  * The stored snapshot is whatever `rolling_plan_session_state` wrote, which is
  * the same shape a `rolling_plan_change_entries.after_state` carries. This
  * projects the part a consumer needs; the row itself keeps every key, and
- * nothing here ever writes it back.
+ * nothing here ever writes it back. A snapshot written before 9 Oct 2026 also
+ * holds `isLocked`, on the session and on each activity; the key went with the
+ * lock and is not read.
  */
 function parsePlannedSnapshot(value: unknown): CompletionPlannedSnapshot {
   const snapshot = readRecord(value);
@@ -423,7 +425,6 @@ function parsePlannedSnapshot(value: unknown): CompletionPlannedSnapshot {
       isInteger(snapshot.expectedDurationMinutes, 1)
     ) ||
     !(snapshot.note === null || typeof snapshot.note === "string") ||
-    typeof snapshot.isLocked !== "boolean" ||
     !(snapshot.status === "active" || snapshot.status === "cancelled") ||
     !(snapshot.seriesId === null || isUuid(snapshot.seriesId)) ||
     !(snapshot.occurrenceDate === null || isIsoDate(snapshot.occurrenceDate)) ||
@@ -441,7 +442,6 @@ function parsePlannedSnapshot(value: unknown): CompletionPlannedSnapshot {
       ? {}
       : { expectedDurationMinutes: snapshot.expectedDurationMinutes }),
     ...(snapshot.note === null ? {} : { note: snapshot.note }),
-    isLocked: snapshot.isLocked,
     status: snapshot.status,
     seriesId: snapshot.seriesId,
     occurrenceDate: snapshot.occurrenceDate,

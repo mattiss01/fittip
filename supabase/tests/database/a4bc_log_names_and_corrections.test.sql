@@ -86,7 +86,7 @@ select ok(public.completion_activity_input_is_valid(
   '{"position":0,"name":"Serve practice","sport":"Tennis","measurementMode":"unmeasured"}'),
   'a logged activity may be unmeasured');
 select ok(public.rolling_plan_activity_input_is_valid(
-  '{"position":0,"name":"Serve practice","sport":"Tennis","measurementMode":"unmeasured","isLocked":false}'),
+  '{"position":0,"name":"Serve practice","sport":"Tennis","measurementMode":"unmeasured"}'),
   'so may a planned one');
 select ok(public.rolling_plan_series_activity_input_is_valid(
   '{"position":0,"name":"Serve practice","sport":"Tennis","measurementMode":"unmeasured"}'),
@@ -119,7 +119,6 @@ select lives_ok(
         'position', 0,
         'title', 'Lower body strength',
         'sport', 'Strength',
-        'isLocked', false,
         'activities', jsonb_build_array(
           jsonb_build_object(
             'position', 0, 'name', 'Back squat', 'sport', 'Strength',
@@ -127,11 +126,10 @@ select lives_ok(
             'target', jsonb_build_object(
               'groups', jsonb_build_array(
                 jsonb_build_object('sets', 5, 'reps', 5, 'load', 82.5)),
-              'load_unit', 'kg'),
-            'isLocked', false),
+              'load_unit', 'kg')),
           jsonb_build_object(
             'position', 1, 'name', 'Serve practice', 'sport', 'Tennis',
-            'measurementMode', 'unmeasured', 'isLocked', false))
+            'measurementMode', 'unmeasured'))
       )
     ))::text) || '::jsonb'),
   'a planned session with two activities exists to log against'

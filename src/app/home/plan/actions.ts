@@ -291,7 +291,6 @@ function buildChanges(
           ...readContent(formData),
           localDate,
           position: nextPlanPosition(slice, localDate),
-          isLocked: false,
           activities: readSubmittedActivities(formData),
         },
       },
@@ -380,7 +379,6 @@ function buildChanges(
           ...(session.note === undefined ? {} : { note: session.note }),
           localDate,
           position: nextPlanPosition(slice, localDate),
-          isLocked: false,
           activities: session.activities.map(({ id, ...activity }) => {
             void id;
             return activity;
@@ -477,7 +475,6 @@ function sessionFingerprint(content: FingerprintableSession): string {
       instructions: activity.instructions ?? null,
       measurementMode: activity.measurementMode,
       target: activity.target ?? null,
-      isLocked: activity.isLocked,
     })),
   });
 }

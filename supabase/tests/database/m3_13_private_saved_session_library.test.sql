@@ -66,7 +66,6 @@ as $$
       'intent', saved.intent,
       'expectedDurationMinutes', saved.expected_duration_minutes,
       'note', saved.note,
-      'isLocked', false,
       'activities', coalesce((
         select jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
           'personalActivityId', activity.personal_activity_id,
@@ -75,8 +74,7 @@ as $$
           'sport', activity.sport,
           'instructions', activity.instructions,
           'measurementMode', activity.measurement_mode,
-          'target', activity.target,
-          'isLocked', false
+          'target', activity.target
         )) order by activity.position)
         from public.saved_session_activities activity
         where activity.saved_session_id = saved.id
@@ -106,16 +104,16 @@ select ok(
   (select count(*) = 0 from pg_attribute
    where attrelid = 'public.saved_sessions'::regclass and not attisdropped
      and attname in (
-       'local_date', 'position', 'is_locked', 'status', 'cancelled_at',
+       'local_date', 'position', 'status', 'cancelled_at',
        'plan_id', 'active_position', 'series_id', 'completed_at', 'proposal_id'
      )),
-  'a saved session carries no date, placement, lock, status, plan or proposal column'
+  'a saved session carries no date, placement, status, plan or proposal column'
 );
 select ok(
   (select count(*) = 0 from pg_attribute
    where attrelid = 'public.saved_session_activities'::regclass and not attisdropped
-     and attname in ('is_locked', 'plan_id', 'session_id')),
-  'a saved activity carries no Plan lock and no Plan identity'
+     and attname in ('plan_id', 'session_id')),
+  'a saved activity carries no Plan identity'
 );
 select ok(
   (select count(*) = 0 from pg_constraint
@@ -376,7 +374,7 @@ select is(
 select ok(
   (select title = 'Tempo run' and sport = 'Running'
      and intent = 'Threshold work' and expected_duration_minutes = 60
-     and note = 'Shoes with the orange laces' and not is_locked
+     and note = 'Shoes with the orange laces'
      and local_date::text = pg_temp.owner_day(1)
    from public.rolling_plan_sessions
    where id = '7e000000-0000-4000-8000-0000000000d1'),
@@ -389,9 +387,9 @@ select is(
   'reuse copies the activities too'
 );
 select ok(
-  (select bool_and(not is_locked) from public.rolling_plan_activities
+  (select count(distinct position) = 2 from public.rolling_plan_activities
    where session_id = '7e000000-0000-4000-8000-0000000000d1'),
-  'a reused activity enters the Plan unlocked'
+  'each reused activity keeps a place of its own in the order'
 );
 
 select throws_ok(
@@ -419,7 +417,7 @@ select lives_ok(
         'sessionId', ('7e000000-0000-4000-8000-0000000000e' || to_hex(offset_index))::uuid,
         'session', jsonb_build_object(
           'localDate', %L, 'position', offset_index, 'title', 'Filler',
-          'sport', 'Running', 'isLocked', false, 'activities', '[]'::jsonb)))
+          'sport', 'Running', 'activities', '[]'::jsonb)))
        from generate_series(1, 9) as offset_index)
     )$$,
     pg_temp.owner_day(1)

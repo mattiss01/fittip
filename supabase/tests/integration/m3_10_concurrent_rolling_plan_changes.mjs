@@ -128,7 +128,6 @@ function addArgs(round, contender) {
           position: contender === "a" ? 0 : 1,
           title: `Round ${round} ${contender}`,
           sport: "Running",
-          isLocked: false,
           activities: [],
         },
       },

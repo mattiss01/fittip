@@ -38,15 +38,9 @@ export function readSubmittedActivities(
   return parseSubmittedActivities(decoded);
 }
 
-/**
- * The same list for a template — a series or a library entry — whose
- * activities have no `isLocked` key.
- */
+/** The same list for a template — a series or a library entry. */
 export function readSubmittedTemplateActivities(
   formData: FormData,
 ): RollingPlanSeriesActivityInput[] {
-  return readSubmittedActivities(formData).map(({ isLocked, ...activity }) => {
-    void isLocked;
-    return activity;
-  });
+  return readSubmittedActivities(formData);
 }

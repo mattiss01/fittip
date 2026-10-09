@@ -25,7 +25,6 @@ const PLANNED_SNAPSHOT = {
   intent: null,
   expectedDurationMinutes: 60,
   note: null,
-  isLocked: false,
   status: "active",
   cancelledAt: null,
   seriesId: null,
@@ -41,7 +40,6 @@ const PLANNED_SNAPSHOT = {
       instructions: null,
       measurementMode: "duration_intensity",
       target: { duration_minutes: 40, intensity: "easy" },
-      isLocked: false,
     },
   ],
 };
@@ -250,7 +248,6 @@ describe("PostgresCompletionLogAdapter", () => {
           title: "Aerobic run",
           sport: "Running",
           expectedDurationMinutes: 60,
-          isLocked: false,
           status: "active",
           seriesId: null,
           occurrenceDate: null,
@@ -266,6 +263,45 @@ describe("PostgresCompletionLogAdapter", () => {
         },
       },
     ]);
+  });
+
+  it("still reads a snapshot written while a session carried a lock", async () => {
+    // A log's planned snapshot is a permanent record. One written before
+    // 9 Oct 2026 holds `isLocked` on the session and on each activity, and
+    // the migration that dropped the flag left those rows as they were.
+    const order = vi.fn();
+    const builder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockReturnThis(),
+      order,
+    };
+    order.mockReturnValueOnce(builder).mockReturnValueOnce({
+      data: [
+        storedRow({
+          planned_snapshot: {
+            ...PLANNED_SNAPSHOT,
+            isLocked: true,
+            activities: PLANNED_SNAPSHOT.activities.map((activity) => ({
+              ...activity,
+              isLocked: false,
+            })),
+          },
+        }),
+      ],
+      error: null,
+    });
+    const completions = new CompletionLog(
+      new PostgresCompletionLogAdapter(
+        client({ from: vi.fn().mockReturnValue(builder) }),
+      ),
+    );
+
+    const [entry] = await completions.list("2026-08-01", "2026-08-31");
+
+    expect(entry.plannedSnapshot).toMatchObject({ title: "Aerobic run" });
+    expect(JSON.stringify(entry.plannedSnapshot)).not.toContain("isLocked");
   });
 
   it("refuses a row whose link and snapshot disagree", async () => {

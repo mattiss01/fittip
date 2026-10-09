@@ -8,10 +8,7 @@ import {
   type TrainingMeasurementMode,
 } from "@/server/training/training-measurements";
 
-/**
- * The reusable half of a planned activity. The `isLocked` key a dated
- * session's activity still carries (always false) is absent here.
- */
+/** The reusable content of a planned activity, without its row identity. */
 export type SavedSessionActivity = {
   personalActivityId?: string;
   position: number;

@@ -206,9 +206,9 @@ export function ActivityEditor({
   // never reaches a server action.
   const serialized = JSON.stringify(
     built.map(({ row, build }) => ({
-      // No `position` and no `isLocked`. The array's order is the position,
-      // and `parseSubmittedActivities` refuses a payload that names either —
-      // a field no surface sets is one no submission should carry.
+      // No `position`. The array's order is the position, and
+      // `parseSubmittedActivities` refuses a payload that names one — a field
+      // no surface sets is one no submission should carry.
       personalActivityId: row.personalActivityId,
       name: row.name.trim(),
       sport: row.sport.trim(),

@@ -1374,7 +1374,6 @@ export type Database = {
           created_at: string;
           id: string;
           instructions: string | null;
-          is_locked: boolean;
           measurement_mode: string;
           name: string;
           personal_activity_id: string | null;
@@ -1390,7 +1389,6 @@ export type Database = {
           created_at?: string;
           id?: string;
           instructions?: string | null;
-          is_locked?: boolean;
           measurement_mode: string;
           name: string;
           personal_activity_id?: string | null;
@@ -1406,7 +1404,6 @@ export type Database = {
           created_at?: string;
           id?: string;
           instructions?: string | null;
-          is_locked?: boolean;
           measurement_mode?: string;
           name?: string;
           personal_activity_id?: string | null;
@@ -1751,7 +1748,6 @@ export type Database = {
           has_diverged: boolean;
           id: string;
           intent: string | null;
-          is_locked: boolean;
           local_date: string;
           note: string | null;
           occurrence_date: string | null;
@@ -1772,7 +1768,6 @@ export type Database = {
           has_diverged?: boolean;
           id: string;
           intent?: string | null;
-          is_locked?: boolean;
           local_date: string;
           note?: string | null;
           occurrence_date?: string | null;
@@ -1793,7 +1788,6 @@ export type Database = {
           has_diverged?: boolean;
           id?: string;
           intent?: string | null;
-          is_locked?: boolean;
           local_date?: string;
           note?: string | null;
           occurrence_date?: string | null;

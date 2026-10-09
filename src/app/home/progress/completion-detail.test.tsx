@@ -55,8 +55,6 @@ describe("one completion", () => {
       '[data-progress-sheet="planned"]',
     ) as HTMLElement;
     expect(within(planned).getByText("What was planned")).toBeTruthy();
-    // The snapshot below was locked; Lock is gone and is not shown.
-    expect(within(planned).queryByText("Locked")).toBeNull();
     expect(within(planned).getByText("Recurring")).toBeTruthy();
     expect(within(planned).getByText("55 min")).toBeTruthy();
     expect(
@@ -215,7 +213,6 @@ function completion() {
       sport: "Running",
       intent: "Six by three minutes, floating the rest.",
       expectedDurationMinutes: 55,
-      isLocked: true,
       status: "active" as const,
       seriesId: "7e150000-0000-4000-8000-000000000002",
       occurrenceDate: "2026-08-03",
