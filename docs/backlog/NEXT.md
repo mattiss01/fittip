@@ -30,11 +30,6 @@ Ordered by dependency. A lane is named where it is not the build lane.
       Open for the owner first: a row picked from the library and then changed keeps its
       `personal_activity_id` until it is saved as a new definition, so grouping history by
       definition would count "picked Latzug, renamed Stabwurf" as Latzug.
-- [~] **A start date for a coach proposal.** Owner, 2 and 9 Oct 2026. "Plan with
-      Coach" and the roadmap always start today; the owner picks the first day, so next
-      week can be planned on a Friday. A plan may start up to 30 days ahead (owner,
-      9 Oct 2026). The server and the database already accept a later start; the
-      screens pin it to today. First of three steps, in this order.
 - [ ] **What a proposal may replace.** Owner, 9 Oct 2026, when Lock was removed. The
       compose screen lists the sessions on the chosen days, each "stays" by default or
       "can be replaced". The coach sees them with minutes and the mark and names which
@@ -42,6 +37,10 @@ Ordered by dependency. A lane is named where it is not the build lane.
       in one step, and nothing changes before it. A session with a log is never
       replaceable. Careful lane: a new proposal format, the accept function, a
       migration. The roadmap writes no sessions, so this is the plan call only.
+- [ ] **The 30-day start limit is the app's alone.** `begin_plan_generation` and
+      `begin_roadmap_generation` refuse a past start and have no upper bound. Only
+      the owner calling the database directly gets past it, on their own data.
+      The owner's to decide; a small migration, so it can ride with the next one.
 
 **App redesign in the Coach's note direction.** The owner chose it on 29 Sep 2026 from three
 Today prototypes (`prototype/today-design`, `/prototype/today?variant=C`): FitTip's pine and
