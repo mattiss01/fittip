@@ -7,7 +7,7 @@ import {
   TRAINING_PLACES_MAX_COUNT,
 } from "@/lib/training/training-setup";
 import {
-  EMPTY_COACH_PROFILE,
+  emptyCoachProfile,
   selectCoachProfileContext,
   type CoachProfileRecords,
 } from "@/server/profile/coach-profile-context";
@@ -68,9 +68,14 @@ describe("what the coach reads of the profile (ADR-023)", () => {
     },
   );
 
-  it("drops a value the app would not have stored", () => {
+  it("drops a value the forms would not have stored", () => {
     const selection = selectCoachProfileContext(
-      records({ gender: "robot", heightCm: 3, latestWeightKg: 9000 }),
+      records({
+        gender: "robot",
+        heightCm: 3,
+        latestWeightKg: 9000,
+        training: { ...records().training, sessionsPerWeek: 15 },
+      }),
       TODAY,
     );
 
@@ -79,6 +84,21 @@ describe("what the coach reads of the profile (ADR-023)", () => {
       heightCm: null,
       weightKg: null,
     });
+    expect(selection.trainingSetup.sessionsPerWeek).toBeNull();
+  });
+
+  it("keeps a value at the edge of what the forms accept", () => {
+    const selection = selectCoachProfileContext(
+      records({
+        heightCm: 272,
+        latestWeightKg: 400,
+        training: { ...records().training, sessionsPerWeek: 14 },
+      }),
+      TODAY,
+    );
+
+    expect(selection.athlete).toMatchObject({ heightCm: 272, weightKg: 400 });
+    expect(selection.trainingSetup.sessionsPerWeek).toBe(14);
   });
 
   it("names the days out as weekdays and tidies the setup's text", () => {
@@ -86,7 +106,8 @@ describe("what the coach reads of the profile (ADR-023)", () => {
 
     expect(trainingSetup).toEqual({
       sessionsPerWeek: 4,
-      unavailableDays: ["Sunday", "Wednesday"],
+      // In the week's own order, whatever order they were stored in.
+      unavailableDays: ["Wednesday", "Sunday"],
       availabilityNote: "Late on Thursdays.",
       trainingPlaces: ["Home", "Gym"],
       homeEquipment: ["Kettlebell", "Pull-up bar"],
@@ -94,7 +115,9 @@ describe("what the coach reads of the profile (ADR-023)", () => {
   });
 
   it("is empty for an owner who has entered nothing", () => {
-    expect(selectCoachProfileContext(null, TODAY)).toEqual(EMPTY_COACH_PROFILE);
+    expect(selectCoachProfileContext(null, TODAY)).toEqual(emptyCoachProfile());
+    // A fresh one each time: no caller can change another's lists.
+    expect(emptyCoachProfile()).not.toBe(emptyCoachProfile());
   });
 
   it("stays inside its allocations at every field limit", () => {
@@ -115,28 +138,39 @@ describe("what the coach reads of the profile (ADR-023)", () => {
             "saturday",
             "sunday",
           ],
-          availabilityNote: "a".repeat(AVAILABILITY_NOTE_MAX_LENGTH + 50),
-          // More than the form allows, to show the count is held here too.
-          trainingPlaces: longest(TRAINING_PLACES_MAX_COUNT + 5),
-          homeEquipment: longest(HOME_EQUIPMENT_MAX_COUNT + 5),
+          availabilityNote: "a".repeat(AVAILABILITY_NOTE_MAX_LENGTH),
+          trainingPlaces: longest(TRAINING_PLACES_MAX_COUNT),
+          homeEquipment: longest(HOME_EQUIPMENT_MAX_COUNT),
         },
       }),
       TODAY,
     );
 
-    expect(selection.trainingSetup.trainingPlaces).toHaveLength(
-      TRAINING_PLACES_MAX_COUNT,
-    );
-    expect(selection.trainingSetup.homeEquipment).toHaveLength(
-      HOME_EQUIPMENT_MAX_COUNT,
-    );
-    expect(selection.trainingSetup.availabilityNote).toHaveLength(
-      AVAILABILITY_NOTE_MAX_LENGTH,
-    );
     // Measured, not trusted: `context.ts` allows 4,600 and 200.
     expect(JSON.stringify(selection.trainingSetup).length).toBeLessThanOrEqual(
       4_600,
     );
     expect(JSON.stringify(selection.athlete).length).toBeLessThanOrEqual(200);
+  });
+
+  it("cuts nothing: a setup past the forms' limits is assembly's to refuse", () => {
+    const tooLong = "n".repeat(TRAINING_NAME_MAX_LENGTH + 20);
+    const selection = selectCoachProfileContext(
+      records({
+        training: {
+          ...records().training,
+          homeEquipment: Array.from(
+            { length: HOME_EQUIPMENT_MAX_COUNT + 1 },
+            () => tooLong,
+          ),
+        },
+      }),
+      TODAY,
+    );
+
+    expect(selection.trainingSetup.homeEquipment).toHaveLength(
+      HOME_EQUIPMENT_MAX_COUNT + 1,
+    );
+    expect(selection.trainingSetup.homeEquipment[0]).toBe(tooLong);
   });
 });

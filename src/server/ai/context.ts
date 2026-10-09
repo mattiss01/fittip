@@ -276,9 +276,15 @@ export type CoachAIContextLimits = {
  * from before that day; this is what holds now, and `context.test.ts` and
  * `openai-prompt.test.ts` assert it:
  *
- *   roadmap  prefix 6,900 + wrapper 64 + context 44,600 = 51,564  12,891 tokens
- *   plan     prefix 8,300 + wrapper 64 + context 44,000 = 52,364  13,091 tokens
- *   fill     prefix 7,000 + wrapper 64 + context 41,300 = 48,364  12,091 tokens
+ *   roadmap  prefix 7,200 + wrapper 64 + context 44,600 = 51,864  12,966 tokens
+ *   plan     prefix 8,600 + wrapper 64 + context 44,000 = 52,664  13,166 tokens
+ *   fill     prefix 7,200 + wrapper 64 + context 41,300 = 48,564  12,141 tokens
+ *
+ * The plan's `total` is below the sum of its parts (47,200), as it was before
+ * this day (38,400 against 35,100): a rejected plan and a reduced roadmap at
+ * their allocations at once is a context no request has come near. If one ever
+ * does, the refusal names `whole_context`, which nobody can act on; the plan's
+ * part of ADR-023 is where that is settled.
  *
  * The room left under 15,000 is for the per-call parts of ADR-023 that follow.
  */

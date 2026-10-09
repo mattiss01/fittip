@@ -1,11 +1,11 @@
 import "server-only";
 
+import { HEIGHT_CM_RANGE, WEIGHT_KG_RANGE } from "@/lib/profile/body-measures";
 import { GENDERS } from "@/lib/profile/profile-contract";
 import {
-  AVAILABILITY_NOTE_MAX_LENGTH,
-  HOME_EQUIPMENT_MAX_COUNT,
-  TRAINING_NAME_MAX_LENGTH,
-  TRAINING_PLACES_MAX_COUNT,
+  SESSIONS_PER_WEEK_RANGE,
+  WEEKDAY_LABELS,
+  WEEKDAYS,
 } from "@/lib/training/training-setup";
 import type {
   CoachAIAthleteReference,
@@ -56,33 +56,28 @@ export type CoachProfileSelection = {
   trainingSetup: CoachAITrainingSetupReference;
 };
 
-const WEEKDAYS: Record<string, CoachAIWeekdayName> = {
-  monday: "Monday",
-  tuesday: "Tuesday",
-  wednesday: "Wednesday",
-  thursday: "Thursday",
-  friday: "Friday",
-  saturday: "Saturday",
-  sunday: "Sunday",
-};
-
-/** An owner with no profile row yet: nothing known, nothing set up. */
-export const EMPTY_COACH_PROFILE: CoachProfileSelection = {
-  athlete: { age: null, gender: null, heightCm: null, weightKg: null },
-  trainingSetup: {
-    sessionsPerWeek: null,
-    unavailableDays: [],
-    availabilityNote: null,
-    trainingPlaces: [],
-    homeEquipment: [],
-  },
-};
+/**
+ * An owner with no profile row yet: nothing known, nothing set up. Built on
+ * each call, so no caller holds lists another one could change.
+ */
+export function emptyCoachProfile(): CoachProfileSelection {
+  return {
+    athlete: { age: null, gender: null, heightCm: null, weightKg: null },
+    trainingSetup: {
+      sessionsPerWeek: null,
+      unavailableDays: [],
+      availabilityNote: null,
+      trainingPlaces: [],
+      homeEquipment: [],
+    },
+  };
+}
 
 export function selectCoachProfileContext(
   records: CoachProfileRecords | null | undefined,
   today: string,
 ): CoachProfileSelection {
-  if (!records) return EMPTY_COACH_PROFILE;
+  if (!records) return emptyCoachProfile();
   const training = records.training;
 
   return {
@@ -90,20 +85,27 @@ export function selectCoachProfileContext(
       age: ageInYears(records.birthDate, today),
       // A stored value outside the ones the app knows is not given.
       gender: GENDERS.find((gender) => gender === records.gender) ?? null,
-      heightCm: plausible(records.heightCm, 50, 260),
-      weightKg: plausible(records.latestWeightKg, 20, 400),
+      // The ranges are the forms' own. The database does not hold the
+      // columns to them, so a value from outside is not given rather than
+      // sent as though the athlete had entered it.
+      heightCm: within(records.heightCm, HEIGHT_CM_RANGE),
+      weightKg: within(records.latestWeightKg, WEIGHT_KG_RANGE),
     },
     trainingSetup: {
-      sessionsPerWeek: plausible(training.sessionsPerWeek, 1, 21),
-      unavailableDays: training.unavailableDays
-        .map((day) => WEEKDAYS[day.toLowerCase()])
-        .filter((day): day is CoachAIWeekdayName => day !== undefined),
-      availabilityNote: bounded(
-        training.availabilityNote,
-        AVAILABILITY_NOTE_MAX_LENGTH,
+      sessionsPerWeek: within(
+        training.sessionsPerWeek,
+        SESSIONS_PER_WEEK_RANGE,
       ),
-      trainingPlaces: names(training.trainingPlaces, TRAINING_PLACES_MAX_COUNT),
-      homeEquipment: names(training.homeEquipment, HOME_EQUIPMENT_MAX_COUNT),
+      unavailableDays: WEEKDAYS.filter((day) =>
+        training.unavailableDays.includes(day),
+      ).map((day): CoachAIWeekdayName => WEEKDAY_LABELS[day]),
+      // Nothing here is cut to fit. The text is the owner's and they curate
+      // it, so a setup too large to send refuses with its name in
+      // `context.ts`, as goals and memory do, rather than losing its end
+      // without a word.
+      availabilityNote: text(training.availabilityNote),
+      trainingPlaces: names(training.trainingPlaces),
+      homeEquipment: names(training.homeEquipment),
     },
   };
 }
@@ -127,28 +129,26 @@ function ageInYears(birthDate: string | null, today: string): number | null {
   return age >= 0 && age <= 120 ? age : null;
 }
 
-function plausible(
+function within(
   value: number | null,
-  min: number,
-  max: number,
+  range: { min: number; max: number },
 ): number | null {
   return typeof value === "number" &&
     Number.isFinite(value) &&
-    value >= min &&
-    value <= max
+    value >= range.min &&
+    value <= range.max
     ? value
     : null;
 }
 
-function bounded(value: string | null, max: number): string | null {
+function text(value: string | null): string | null {
   if (value === null) return null;
   const clean = value.trim();
-  return clean.length === 0 ? null : clean.slice(0, max);
+  return clean.length === 0 ? null : clean;
 }
 
-function names(values: readonly string[], maxCount: number): string[] {
+function names(values: readonly string[]): string[] {
   return values
-    .map((value) => value.trim().slice(0, TRAINING_NAME_MAX_LENGTH))
-    .filter((value) => value.length > 0)
-    .slice(0, maxCount);
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
 }

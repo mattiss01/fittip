@@ -144,6 +144,11 @@ const COPY = {
   failed: "The coach could not suggest activities this time. Nothing changed.",
   noteTooLong: "The note for the coach can be at most 500 characters.",
   session: "Your session ended. Sign in again, then try again.",
+  // ADR-023: the two sources the owner can shorten are named.
+  goalsTooLarge:
+    "Your active goals are too much to send in one request. Pause a few, or shorten their desired outcomes or the sports they name, then try again.",
+  trainingSetupTooLarge:
+    "Your training setup is too much to send in one request. Shorten the places, the equipment or the availability note in Settings, then try again.",
   timezone: "Confirm your time zone on the Plan before asking the coach.",
   dismissed: "Suggestion dismissed. Your activity list is unchanged.",
   alreadyAccepted:
@@ -174,6 +179,16 @@ function fillFailureCopy(error: unknown): string {
   if (error instanceof SessionActivityConflictError) {
     return error.reason === "session-past" ? COPY.past : COPY.unavailable;
   }
-  if (error instanceof CoachAIError) return error.message;
+  if (error instanceof CoachAIError) {
+    // Read off the error rather than its class: the class lives with context
+    // assembly, which this surface has no other reason to import.
+    const source =
+      error.code === "context_too_large" && "source" in error
+        ? error.source
+        : null;
+    if (source === "training_setup") return COPY.trainingSetupTooLarge;
+    if (source === "targetable_goals") return COPY.goalsTooLarge;
+    return error.message;
+  }
   return COPY.failed;
 }

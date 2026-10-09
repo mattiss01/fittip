@@ -188,7 +188,7 @@ export const ROADMAP_CONTROL_COPY = {
     memory:
       "There is too much active memory to send in one request. Disable or shorten a few items, then try again.",
     goals:
-      "Your active goals are too much to send in one request. Pause a few, or shorten the sports they name, then try again.",
+      "Your active goals are too much to send in one request. Pause a few, or shorten their desired outcomes or the sports they name, then try again.",
     // Achieved goals travel as background on a smaller allowance, and pausing
     // is not offered on one, so the way out is named separately.
     achieved_goals:

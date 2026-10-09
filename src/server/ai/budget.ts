@@ -86,9 +86,11 @@ export const COACH_AI_FIXTURE_LIMITS: CoachAILimits = {
  * the daily ceiling admits 312 generations where it admitted 357.
  *
  * And to 15,000 the same day, for ADR-023: the training setup, each goal's
- * desired outcome and the athlete's basics on all three calls, measured at
- * 13,900 to 14,300 tokens. A whole reservation is 6,600 micro-USD and the
- * daily ceiling admits 303 generations.
+ * desired outcome and the athlete's basics on all three calls. Those measure
+ * 12,100 to 13,100 tokens with every source at its allocation; the per-call
+ * parts of ADR-023 still to come were estimated at 13,900 to 14,300, which is
+ * what the ceiling was chosen for. A whole reservation is 6,600 micro-USD and
+ * the daily ceiling admits 303 generations.
  *
  * These numbers are the local fast path. The authoritative ceilings are the
  * database's, in `reserve_ai_spend`, because this process cannot be trusted to

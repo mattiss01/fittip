@@ -207,6 +207,12 @@ export const PLAN_PROPOSAL_COPY = {
       "A proposal is already being built. This did not ask for a second one.",
     generationFailed:
       "The coach could not answer. Nothing was written, and you can ask again.",
+    /* Two sources the owner curates and can shorten, so they are named
+       (ADR-023). Any other oversize stays the general failure above. */
+    goalsTooLarge:
+      "Your active goals are too much to send in one request. Pause a few, or shorten their desired outcomes or the sports they name, then try again.",
+    trainingSetupTooLarge:
+      "Your training setup is too much to send in one request. Shorten the places, the equipment or the availability note in Settings, then try again.",
     /**
      * Not a failure. The plan operation requires an active goal and a confirmed
      * zone, and that is checked before any key is claimed or anything reserved —

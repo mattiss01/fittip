@@ -323,7 +323,7 @@ describe("the per-source context allocation", () => {
     // guard over the whole message set. Measured against the prefix budget
     // `openai-prompt.test.ts` enforces rather than against today's prefix, so
     // this cannot pass only because the prompt happens to be short right now.
-    const staticPrefixBudget = 6_900;
+    const staticPrefixBudget = 7_200;
     const wrapperAllowance = 64;
     const estimatedTokens = Math.ceil(
       (staticPrefixBudget + wrapperAllowance + limits.bytes.total) / 4,
@@ -331,7 +331,7 @@ describe("the per-source context allocation", () => {
 
     // 9,941 until ADR-023 (9 October 2026): the athlete, the training setup
     // and each goal's desired outcome, with a longer shared prompt for them.
-    expect(estimatedTokens).toBe(12_891);
+    expect(estimatedTokens).toBe(12_966);
     expect(estimatedTokens).toBeLessThanOrEqual(
       COACH_AI_LIVE_LIMITS.maxInputTokens,
     );
@@ -1562,6 +1562,40 @@ describe("fill_session_activities assembly", () => {
     };
   }
 
+  it("reads the athlete, the setup and each goal's outcome, as the other calls do", () => {
+    const assembled = fill({
+      profile: {
+        birthDate: "1992-03-14",
+        gender: "male",
+        heightCm: 182,
+        latestWeightKg: 78,
+        training: {
+          sessionsPerWeek: 3,
+          unavailableDays: [],
+          availabilityNote: null,
+          trainingPlaces: ["Home"],
+          homeEquipment: ["Kettlebell", "Pull-up bar"],
+        },
+      },
+    });
+
+    expect(assembled.context.athlete).toMatchObject({
+      gender: "male",
+      heightCm: 182,
+      weightKg: 78,
+    });
+    // What the call that writes exercises most needed and never had.
+    expect(assembled.context.trainingSetup.homeEquipment).toEqual([
+      "Kettlebell",
+      "Pull-up bar",
+    ]);
+    expect(assembled.context.targetableGoals[0].desiredOutcome).toBe(
+      "Finish strong on the climbs.",
+    );
+    expect(assembled.usage.training_setup).toBeGreaterThan(0);
+    expect(assembled.serialized).not.toContain("1992-03-14");
+  });
+
   it("carries the session and none of the long-range sources", () => {
     const assembled = fill({
       goals: [
@@ -1653,6 +1687,8 @@ describe("fill_session_activities assembly", () => {
     // Every part at its allocation: the sum of the parts plus the envelope is
     // what `total` must hold, or the whole-context refusal becomes reachable.
     const sumOfParts =
+      limits.bytes.athlete +
+      limits.bytes.trainingSetup +
       limits.bytes.targetableGoals +
       limits.bytes.memory +
       limits.bytes.trainingHistory +

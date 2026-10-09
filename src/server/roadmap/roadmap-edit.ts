@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { CoachAIContext } from "@/server/ai/contracts";
-import { EMPTY_COACH_PROFILE } from "@/server/profile/coach-profile-context";
+import { emptyCoachProfile } from "@/server/profile/coach-profile-context";
 import { createGoalRepository } from "@/server/repositories/goal-repository";
 import { selectActiveGoalContext } from "@/server/goals/goal-records";
 import type { RoadmapProposalView } from "@/server/roadmap/roadmap-records";
@@ -32,7 +32,7 @@ export async function buildEditValidationContext(
     horizonEndDate: source.endDate,
     // An edit is checked against the goals and the dates. It is never sent to
     // a coach, so the profile is not read for it.
-    ...EMPTY_COACH_PROFILE,
+    ...emptyCoachProfile(),
     targetableGoals: eligible.targetable.map((goal) => ({
       id: goal.id,
       title: goal.title,
