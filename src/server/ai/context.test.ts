@@ -219,6 +219,111 @@ describe("coach AI context assembly", () => {
     }
   });
 
+  it("holds every part of a plan request inside its total (ADR-023 decision 12)", () => {
+    const bytes = COACH_AI_CONTEXT_LIMITS.create_seven_day_plan.bytes;
+    // Until this decision the plan's total was below the sum of its parts,
+    // and a request that filled them all was refused naming no source.
+    const sumOfParts =
+      bytes.athlete +
+      bytes.trainingSetup +
+      bytes.targetableGoals +
+      bytes.historicalGoals +
+      bytes.memory +
+      bytes.trainingHistory +
+      bytes.planCommitments +
+      bytes.planningNote +
+      bytes.regenerationFeedback +
+      bytes.previousProposal +
+      bytes.roadmap;
+    // The envelope: the keys, three dates, a flag, and at most twelve goal
+    // ids outside the horizon.
+    const envelope = 1_000;
+
+    expect(sumOfParts + envelope).toBeLessThanOrEqual(bytes.total);
+  });
+
+  it("gives the roadmap and the plan the minutes of every planned session", () => {
+    const training = {
+      ...EMPTY_TRAINING,
+      plannedSessions: [
+        {
+          localDate: shiftDate(TODAY, 2),
+          title: "Long run",
+          sport: "Running",
+          durationMinutes: 75,
+          hasCompletion: false,
+          ruleSeriesId: null,
+        },
+        {
+          localDate: shiftDate(TODAY, 20),
+          title: "Trail day",
+          sport: "Running",
+          durationMinutes: 180,
+          hasCompletion: false,
+          ruleSeriesId: null,
+        },
+      ],
+    };
+    const roadmap = build({ training });
+    const plan = buildCoachAIContext(
+      "create_seven_day_plan",
+      records({ training, timezoneName: "Europe/Berlin" }),
+      { ...COMPOSE, horizonEndDate: shiftDate(TODAY, 6) },
+    );
+
+    // The roadmap replaces nothing, so no entry of its carries a handle.
+    expect(roadmap.context.planCommitments).toEqual([
+      expect.objectContaining({ title: "Long run", durationMinutes: 75 }),
+      expect.objectContaining({ title: "Trail day", durationMinutes: 180 }),
+    ]);
+    expect(roadmap.serialized).not.toContain("replaceHandle");
+    // The plan: a handle inside the chosen days, minutes everywhere.
+    expect(plan.context.planCommitments).toEqual([
+      {
+        localDate: shiftDate(TODAY, 2),
+        title: "Long run",
+        sport: "Running",
+        durationMinutes: 75,
+        replaceHandle: null,
+      },
+      {
+        localDate: shiftDate(TODAY, 20),
+        title: "Trail day",
+        sport: "Running",
+        durationMinutes: 180,
+      },
+    ]);
+  });
+
+  it("reads a plan's dated sessions 28 days past its last day, and a roadmap's 180", () => {
+    const session = (offset: number, title: string) => ({
+      localDate: shiftDate(TODAY, offset),
+      title,
+      sport: "Running",
+      hasCompletion: false,
+      ruleSeriesId: null,
+    });
+    const training = {
+      ...EMPTY_TRAINING,
+      // The plan ends six days out: 34 is its last day read, 35 is past it.
+      plannedSessions: [session(34, "Race in a month"), session(35, "Later")],
+    };
+    const plan = buildCoachAIContext(
+      "create_seven_day_plan",
+      records({ training, timezoneName: "Europe/Berlin" }),
+      { ...COMPOSE, horizonEndDate: shiftDate(TODAY, 6) },
+    );
+    const roadmap = build({ training });
+
+    expect(plan.context.planCommitments.map((c) => c.title)).toEqual([
+      "Race in a month",
+    ]);
+    expect(roadmap.context.planCommitments.map((c) => c.title)).toEqual([
+      "Race in a month",
+      "Later",
+    ]);
+  });
+
   it("excludes paused and abandoned goals", () => {
     const assembled = build({
       goals: [
@@ -323,7 +428,7 @@ describe("the per-source context allocation", () => {
     // guard over the whole message set. Measured against the prefix budget
     // `openai-prompt.test.ts` enforces rather than against today's prefix, so
     // this cannot pass only because the prompt happens to be short right now.
-    const staticPrefixBudget = 7_300;
+    const staticPrefixBudget = 7_700;
     const wrapperAllowance = 64;
     const estimatedTokens = Math.ceil(
       (staticPrefixBudget + wrapperAllowance + limits.bytes.total) / 4,
@@ -331,7 +436,9 @@ describe("the per-source context allocation", () => {
 
     // 9,941 until ADR-023 (9 October 2026): the athlete, the training setup
     // and each goal's desired outcome, with a longer shared prompt for them.
-    expect(estimatedTokens).toBe(12_991);
+    // 12,991 after ADR-023's shared part; its roadmap part added thirty
+    // planned sessions with minutes and the roadmap in force.
+    expect(estimatedTokens).toBe(14_154);
     expect(estimatedTokens).toBeLessThanOrEqual(
       COACH_AI_LIVE_LIMITS.maxInputTokens,
     );
@@ -662,7 +769,12 @@ describe("the per-source context allocation", () => {
     });
 
     expect(assembled.context.planCommitments).toEqual([
-      { localDate: shiftDate(TODAY, 3), title: "Club run", sport: "Running" },
+      {
+        localDate: shiftDate(TODAY, 3),
+        title: "Club run",
+        sport: "Running",
+        durationMinutes: null,
+      },
     ]);
     expect(assembled.serialized).not.toContain("isLocked");
   });
@@ -708,6 +820,7 @@ describe("the per-source context allocation", () => {
         {
           title: "Club run",
           sport: "Running",
+          durationMinutes: null,
           frequency: "weekly",
           intervalCount: 1,
           weekdays: ["Monday", "Thursday"],
@@ -722,6 +835,7 @@ describe("the per-source context allocation", () => {
           localDate: shiftDate(TODAY, 60),
           title: "Autumn race",
           sport: "Running",
+          durationMinutes: null,
         },
       ]);
       // The series' identity stays behind, as every other id does.
@@ -814,29 +928,31 @@ describe("the per-source context allocation", () => {
         },
       });
 
-      // Rules are fitted first and dated entries take what is left. At the
-      // longest title, sport and weekday list three rules fit and no dated
-      // entry does: as it already was for an unlocked entry, and what ADR-013
-      // records as given up. What is sent never exceeds what the commitments
-      // alone were allowed.
-      expect(assembled.context.recurringSessions).toHaveLength(3);
-      expect(assembled.context.planCommitments).toHaveLength(0);
+      // Rules are fitted first and dated entries take what is left. Until
+      // ADR-023 the allocation was 1,400 bytes, and at the longest title, sport
+      // and weekday list three rules fitted and no dated entry did. At 4,400
+      // all six rules fit and the dated entries share the rest. What is sent
+      // never exceeds what the allocation allows.
+      expect(assembled.context.recurringSessions).toHaveLength(6);
+      expect(assembled.context.planCommitments.length).toBeGreaterThan(0);
+      expect(assembled.context.planCommitments.length).toBeLessThan(12);
       expect(assembled.usage.plan_commitments).toBeLessThanOrEqual(
         limits.bytes.planCommitments + 100,
       );
     });
 
     it("fills with the nearest dated entries, so a full list cuts the furthest", () => {
-      // Six ordinary series and a full fortnight of one-off sessions: more
-      // than the allocation holds. The race is the furthest entry out, and
-      // since Lock was removed (owner, 9 Oct 2026) nothing ranks it above a
-      // nearer session. ADR-013 records this as given up.
+      // Six ordinary series and a month of one-off sessions: more than the
+      // thirty the list holds since ADR-023 (it was twelve, which a fortnight
+      // filled). The race is the furthest entry out, and since Lock was
+      // removed (owner, 9 Oct 2026) nothing ranks it above a nearer session.
+      // ADR-013 records this as given up.
       const series = Array.from({ length: 6 }, (_, index) => ({
         ...weekly,
         id: `series-${index}`,
         title: `Series ${index}`,
       }));
-      const oneOffs = Array.from({ length: 14 }, (_, index) => ({
+      const oneOffs = Array.from({ length: 31 }, (_, index) => ({
         localDate: shiftDate(TODAY, index),
         title: `One-off ${index}`,
         sport: "Running",
@@ -874,6 +990,7 @@ describe("the per-source context allocation", () => {
         {
           title: "Club run",
           sport: "Running",
+          durationMinutes: null,
           frequency: "daily",
           intervalCount: 2,
           weekdays: null,
@@ -964,10 +1081,12 @@ describe("the per-source context allocation", () => {
         durationMinutes: null,
         replaceHandle: null,
       });
+      // Outside them it carries its minutes and no handle (ADR-023).
       expect(plan.context.planCommitments[1]).toEqual({
         localDate: shiftDate(TODAY, 20),
         title: "After 0",
         sport: "Running",
+        durationMinutes: null,
       });
     });
 
@@ -1361,17 +1480,73 @@ describe("the accepted roadmap as plan context", () => {
    * one anyway, so a source that changed its mind could not widen what a
    * roadmap request sends.
    */
-  it("drops a roadmap a source hands to create_roadmap, and records no lineage", () => {
+  it("tells a new roadmap the outline of the one in force, and nothing of what it said", () => {
     const assembled = buildCoachAIContext(
       "create_roadmap",
       records({ roadmapVersion: ROADMAP_VERSION }),
       COMPOSE,
     );
+    const content = ROADMAP_VERSION.content;
 
+    // ADR-023 decision 8: titles and dates, so the next roadmap continues
+    // from where the athlete is.
+    expect(assembled.context.currentRoadmap).toEqual({
+      title: content.title,
+      startDate: content.startDate,
+      endDate: content.endDate,
+      phases: content.phases.map((phase) => ({
+        title: phase.title,
+        startDate: phase.startDate,
+        endDate: phase.endDate,
+      })),
+      phasesWithheld: 0,
+    });
+    // None of its prose: not the summary, a phase's focus or a milestone.
+    expect(assembled.serialized).not.toContain(content.summary);
+    for (const phase of content.phases) {
+      expect(assembled.serialized).not.toContain(phase.focus);
+      for (const milestone of phase.milestones) {
+        expect(assembled.serialized).not.toContain(milestone.title);
+      }
+    }
+    // The plan's reduction stays the plan's, and a roadmap built on another
+    // is not recorded as planned under it.
     expect(assembled.context.roadmap).toBeNull();
     expect(assembled.references.roadmapVersion).toBeNull();
     expect(assembled.usage.roadmap).toBe(0);
-    expect(assembled.serialized).not.toContain("Autumn 10k build");
+    expect(assembled.usage.current_roadmap).toBeLessThanOrEqual(
+      COACH_AI_CONTEXT_LIMITS.create_roadmap.bytes.currentRoadmap,
+    );
+  });
+
+  it("says so when no roadmap is in force, and gives no other call the key", () => {
+    expect(build().context.currentRoadmap).toBeNull();
+    expect(plan().serialized).not.toContain("currentRoadmap");
+  });
+
+  it("counts the phases it leaves out when the outline does not fit", () => {
+    const long = {
+      ...ROADMAP_VERSION,
+      content: {
+        ...ROADMAP_VERSION.content,
+        phases: Array.from({ length: 6 }, (_, index) => ({
+          ...ROADMAP_VERSION.content.phases[0],
+          // Eighty characters at three bytes each.
+          title: `${index}`.padEnd(80, "\u6f22"),
+        })),
+      },
+    };
+    const assembled = buildCoachAIContext(
+      "create_roadmap",
+      records({ roadmapVersion: long }),
+      COMPOSE,
+    );
+    const outline = assembled.context.currentRoadmap;
+
+    expect(outline?.phasesWithheld).toBeGreaterThan(0);
+    expect((outline?.phases.length ?? 0) + (outline?.phasesWithheld ?? 0)).toBe(
+      6,
+    );
   });
 
   it("is the ordinary goals-only path when no roadmap covers the week", () => {

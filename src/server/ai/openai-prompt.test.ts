@@ -13,7 +13,7 @@ import {
   coachAIStaticPrefix,
 } from "@/server/ai/openai-prompt";
 
-const STATIC_PREFIX_BUDGET = 7_300;
+const STATIC_PREFIX_BUDGET = 7_700;
 
 /**
  * The plan prompt gets a larger allowance than the roadmap's, and that is a
@@ -39,7 +39,11 @@ const STATIC_PREFIX_BUDGET = 7_300;
  * paragraphs, each context the athlete, the training setup and goal outcomes,
  * and the ceiling went to 15,000. The plan's line is now
  *
- *   8,700 + 64 + 44,000 = 52,764   ceil(52,764 / 4) = 13,191  vs  15,000
+ *   8,700 + 64 + 51,200 = 59,964   ceil(59,964 / 4) = 14,991  vs  15,000
+ *
+ * 51,200 is the sum of the plan's parts and its envelope since ADR-023
+ * decision 12, so this is the whole ceiling again, by construction this time:
+ * a longer plan prompt has to take its bytes from a source.
  *
  * The assertions below read `bytes.total` rather than a literal, so they bind
  * whatever the allocation becomes; this comment is the one thing that has to
@@ -80,9 +84,9 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
           4,
       );
 
-    expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(12_991);
+    expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(14_154);
     expect(tokens("create_seven_day_plan", PLAN_STATIC_PREFIX_BUDGET)).toBe(
-      13_191,
+      14_991,
     );
     expect(
       tokens(

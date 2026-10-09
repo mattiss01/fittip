@@ -94,7 +94,7 @@ export type TrainingHistoryPlannedSession = {
   localDate: string;
   title: string;
   sport: string;
-  /** Sent only where `planCommitmentDetail` asks for it. */
+  /** Sent only where `commitmentDetail` asks for it. */
   durationMinutes?: number | null;
   /** True when a completion references this planned session. */
   hasCompletion: boolean;
@@ -111,6 +111,8 @@ export type TrainingHistorySeries = {
   id: string;
   title: string;
   sport: string;
+  /** One occurrence's expected minutes (ADR-023 decision 6). */
+  durationMinutes?: number | null;
   frequency: "daily" | "weekly";
   intervalCount: number;
   /** Weekly only: 0 is Sunday through 6 is Saturday. */
@@ -186,11 +188,20 @@ export function selectTrainingHistoryContext(
      */
     maxRecurringSessions?: number;
     /**
-     * ADR-024, the plan operation only. A session inside the days being
-     * planned is sent with its minutes and, when the owner marked it, the
-     * handle the coach may name to replace it. Absent, no entry gains a key.
+     * The roadmap and the plan. Every dated entry is sent with its minutes
+     * (ADR-023 decisions 6 and 11). With `replaceHandles`, which only the
+     * plan passes, an entry inside the days being planned also carries the
+     * handle the coach may name to replace it, or null (ADR-024). Absent, no
+     * entry gains a key.
      */
-    planCommitmentDetail?: { replaceHandles: ReadonlyMap<string, string> };
+    commitmentDetail?: { replaceHandles?: ReadonlyMap<string, string> };
+    /**
+     * ADR-023 decision 13, the plan only: entries past the last planned day
+     * are read this many days further and no more. A race in three weeks
+     * shapes the week; one in five months is the roadmap's to aim at. The
+     * `forwardWindowDays` bound from today still holds as well.
+     */
+    forwardDaysPastHorizon?: number;
   } = {},
 ): TrainingHistorySelection {
   const windowDays = limits.windowDays ?? TRAINING_HISTORY_WINDOW_DAYS;
@@ -247,7 +258,12 @@ export function selectTrainingHistoryContext(
   // and beyond it the entries no series rule describes, within the bounded
   // forward window. An unchanged occurrence out there is one of thirteen weeks
   // of identical lines, and the roadmap already has its series as a rule.
-  const forwardLimit = addDays(records.today, forwardDays);
+  const fromToday = addDays(records.today, forwardDays);
+  const fromHorizon =
+    limits.forwardDaysPastHorizon === undefined
+      ? fromToday
+      : addDays(records.horizonEndDate, limits.forwardDaysPastHorizon);
+  const forwardLimit = fromHorizon < fromToday ? fromHorizon : fromToday;
   const horizonStartDate = records.horizonStartDate ?? records.today;
   const isBeforeHorizon = (entry: TrainingHistoryPlannedSession) =>
     entry.localDate < horizonStartDate;
@@ -271,21 +287,25 @@ export function selectTrainingHistoryContext(
     );
   const byteBudget = limits.maxPlanCommitmentBytes ?? Number.POSITIVE_INFINITY;
   const costOf = (value: unknown) => byteLength(JSON.stringify(value)) + 1;
-  const detail = limits.planCommitmentDetail;
+  const detail = limits.commitmentDetail;
   const toPlanCommitmentReference = (
     entry: TrainingHistoryPlannedSession,
   ): CoachAIPlanCommitmentReference => {
     const reference = toDatedReference(entry);
+    if (detail === undefined) return reference;
+    const timed = {
+      ...reference,
+      durationMinutes: entry.durationMinutes ?? null,
+    };
     if (
-      detail === undefined ||
+      detail.replaceHandles === undefined ||
       entry.localDate < horizonStartDate ||
       entry.localDate > records.horizonEndDate
     ) {
-      return reference;
+      return timed;
     }
     return {
-      ...reference,
-      durationMinutes: entry.durationMinutes ?? null,
+      ...timed,
       replaceHandle:
         (entry.id === undefined
           ? undefined
@@ -459,6 +479,7 @@ function toRecurringSessionReference(
   return {
     title: entry.title.slice(0, 120),
     sport: entry.sport.slice(0, 80),
+    durationMinutes: entry.durationMinutes ?? null,
     frequency: entry.frequency,
     intervalCount: entry.intervalCount,
     weekdays:

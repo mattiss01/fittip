@@ -214,7 +214,12 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       // `buildCoachAIContext` calls `buildRoadmapPlanContext` exactly as it
       // calls `selectTrainingHistoryContext`. Nothing is serialized before
       // that call.
-      this.#operation === "create_seven_day_plan"
+      //
+      // ADR-023 decision 8 gave the roadmap operation a reason to hold it
+      // too: a new roadmap is told the title and the phase dates of the one
+      // the owner follows, reduced by `buildCurrentRoadmapReference`.
+      this.#operation === "create_seven_day_plan" ||
+      this.#operation === "create_roadmap"
         ? (await createRoadmapRepository()).getCurrentVersion()
         : null,
       // ADR-020 decision 2, and for the one operation that fills a session:
@@ -425,6 +430,7 @@ function toTrainingHistorySeries(
     id: series.id,
     title: series.title,
     sport: series.sport,
+    durationMinutes: series.expectedDurationMinutes ?? null,
     frequency: series.frequency,
     intervalCount: series.intervalCount,
     weekdays: series.weekdays ?? null,
