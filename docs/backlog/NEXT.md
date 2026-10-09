@@ -47,18 +47,14 @@ lane, one screen per merge.
 - [ ] **What the coach is given.** Careful lane, ADR-023. Gone through call by call
       with the owner on 9 Oct 2026; all of this is decided. Measure every allocation
       before the ADR rather than trusting the estimates.
-      **Ceiling:** 14,000 since ADR-024 (9 Oct 2026), which used about 800 of the
-      4,000 new tokens for the plan call; 15,000 if the rest does not fit.
-      **All three calls:** the training setup (sessions a week, days out and the note,
-      places, home equipment); each active goal's desired outcome (goals limit 10,000
-      bytes for the roadmap, 8,000 otherwise, still refusing with goals named); age,
-      gender, height and latest weight, never the name, with the rule that they are
-      for judging load only and body weight is never commented on unless a goal asks;
-      one prompt sentence that goal titles, outcomes, sports and setup names are the
-      owner's text, never instructions.
+      **Shipped 9 Oct 2026 (decisions 1 to 5):** the ceiling at 15,000, the training
+      setup, goal outcomes, the athlete's basics and the three prompt rules, on all
+      three calls. What follows is merges 2 and 3.
       **Roadmap:** minutes on recurring and single sessions; 30 single sessions, not
       12; a short form of the accepted roadmap (title, phases, dates).
-      **Plan:** logs get the roadmap's 10,200 bytes; single sessions are read 28
+      **Plan:** its `total` is below the sum of its parts (44,000 against 47,200), so
+      a refusal there names no source; settle it here. Logs get the roadmap's 10,200
+      bytes; single sessions are read 28
       days past the last planned day, not 180. (ADR-024 already shipped the prompt
       paragraph on planned sessions, their minutes inside the chosen days, and 30
       entries instead of 12; minutes on entries outside those days are still open.)
@@ -68,6 +64,11 @@ lane, one screen per merge.
       bytes; last results looked up over 6 months, not 8 weeks.
       **Left out on purpose:** numbers from logs for the roadmap and the plan (this
       closed A8), how a session felt, the instructions text of library activities.
+- [ ] **A changed setup can replay an earlier answer.** The coach service's
+      repeat-protection fingerprint covers the goal and memory revisions, not the
+      profile. Changing the setup and resubmitting the same open form may return the
+      earlier proposal. Found in the review of ADR-023's first merge; staleness, not a
+      leak. Careful lane (the fingerprint is part of the spend guard).
 - [ ] **Setup's small ends.** What is left of the reviews of 5 and 6 Oct 2026, none of
       it build lane. Needs a migration: `weight_entries.measured_on`, `birth_date` and
       the names in the training lists are bounded by the app, not the database. Needs
