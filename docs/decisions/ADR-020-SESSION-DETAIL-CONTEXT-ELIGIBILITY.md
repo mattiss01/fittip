@@ -122,21 +122,26 @@ On 9 October 2026 the product owner decided, in
 things about `fill_session_activities`. They change this ADR in four places:
 
 - **The week names its activities.** Each neighbouring session is sent with the
-  names of its activities, up to twelve of 120 characters, and still without
+  names of its activities, up to eight of sixty characters, and still without
   targets. The week's allocation is 2,400 bytes, where it was 800.
-- **The library gets 7,000 bytes**, where it had 3,500, so all sixty entries
-  fit. Instructions still stay behind.
+- **The library gets 8,000 bytes**, where it had 3,500. Sixty entries with
+  ordinary names fit; with the longest, twenty-six. Instructions still stay
+  behind.
 - **Last results are looked up over six months**, 183 days, where it was
   ADR-013's eight weeks. Three results an activity, twelve activities and 4,000
-  bytes, as before. Only this lookup reads past the eight weeks.
+  bytes, as before. Only this lookup reads past the eight weeks, and a log from
+  there is a recorded source of the suggestion when it supplied a result.
 - **"A flag older than seven days does not reach a fill unless it is in
   memory" is superseded.** A fill is sent the days of the last 28 on which pain,
   illness, injury or severe fatigue was reported, as the date and the four
-  flags, at most twenty with the rest counted. Its history of what was logged
-  stays seven days, and `hasSafetySignal` is true when either carries a flag.
+  flags, one entry a day, at most twenty with the rest counted. Its history of
+  what was logged stays seven days, and `hasSafetySignal` is true when either
+  carries a flag. The logs behind those days are recorded as sources.
 
 Two further things reach a fill that this ADR did not consider: the phase of
 the accepted roadmap its session's day falls in, as title, focus and dates, and
 the training setup with the home equipment (ADR-023 decisions 14 and 1). The
-whole session detail is 21,100 bytes, where it was 16,000, and the fill's
-context at most 14,604 tokens of 15,000.
+whole session detail is 22,100 bytes, where it was 16,000, and the fill's
+context at most 14,929 tokens of 15,000. The estimate under Consequences below
+("about 5,000 to 6,500 tokens, under the shared 10,000 ceiling") was for the
+context this ADR first described and no longer holds.

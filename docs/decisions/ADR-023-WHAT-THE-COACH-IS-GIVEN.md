@@ -93,14 +93,21 @@ than being cut silently.
 14. The roadmap phase the session's day falls in: title, focus and dates, and null when
     no accepted roadmap covers the day. Not its goal attention or milestones, which are
     the plan's to weigh. The fill is not recorded as planned under that roadmap.
-15. The safety flags of the last 28 days, as the date and the four flags, without the
-    rest of those logs: at most twenty, newest first, the rest counted. The call's own
-    history stays seven days, and the safety signal is raised by either.
-16. The activity names of the neighbouring sessions, so "do not load the same thing hard
-    on consecutive days" can be followed. No targets.
-17. The library gets 7,000 bytes, so all sixty entries fit.
-18. Last results are looked up over six months (183 days), not eight weeks. Nothing else
-    reads past ADR-013's eight weeks.
+15. The safety flags of the last 28 days, one entry a day as the date and the four
+    flags, without the rest of those logs: at most twenty days, newest first, the rest
+    counted. The call's own history stays seven days, and the safety signal is raised by
+    either. A log whose flag was sent is recorded as a source of the suggestion, so
+    correcting the flag away conflicts with what was built on it.
+16. The activity names of the neighbouring sessions, up to eight of sixty characters
+    each, so "do not load the same thing hard on consecutive days" can be followed. No
+    targets.
+17. The library gets 8,000 bytes, where it had 3,500. Sixty entries with ordinary names
+    fit; with the longest names twenty-six do, and the rest are counted. The owner named
+    7,000 "so all sixty fit"; measured, that held fifty-three.
+18. Last results are looked up over six months (183 days), not eight weeks, and the
+    prompt says a result more than a few weeks old is where the athlete was: start below
+    it. Nothing else reads past ADR-013's eight weeks. A log that old is recorded as a
+    source when it supplied a result.
 19. The prompt: use only equipment the athlete has for where the session is done; at
     home, what the setup lists.
 
@@ -123,12 +130,13 @@ Characters, at four to a token, with every source at its allocation:
 | --- | --- | --- | --- |
 | Roadmap | 39,764 | 51,964 (12,991 tokens) | 56,714 (14,179), as built |
 | Plan | 39,964 | 52,764 (13,191) | 59,964 (14,991), as built |
-| Fill | 39,464 | 48,664 (12,166) | 58,414 (14,604), as built |
+| Fill | 39,464 | 48,664 (12,166) | 59,714 (14,929), as built |
 
 These are the allocations added up with the prompt's budget, not a recording of a
 request: what a call can be at most. `openai-prompt.test.ts` asserts the figures as built.
-The fill call came out 500 tokens over its estimate: the flags and the phase were sized
-for text of three bytes a character, and its total, like the plan's, holds every part.
+The fill call came out 850 tokens over its estimate: the library needed 8,000 bytes, the
+phase is sized for text of three bytes a character, and its total, like the plan's, holds
+every part.
 
 The plan call's figure is the ceiling by construction. Its `total` used to be below the
 sum of its parts, on the reasoning that no request fills every part at once, and the
