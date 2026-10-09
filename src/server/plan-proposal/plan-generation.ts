@@ -56,7 +56,7 @@ import type {
 
 export type PlanGenerationInput = {
   owner: CoachAIOwner;
-  /** The owner's local today, from their confirmed zone, revalidated server-side. */
+  /** The first day the owner chose: their local today, or up to 30 days on. */
   startDate: string;
   endDate: string;
   dayCount: number;

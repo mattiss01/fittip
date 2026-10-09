@@ -54,7 +54,7 @@ import {
 
 export type RoadmapGenerationInput = {
   owner: CoachAIOwner;
-  /** The owner's local today, from the browser, revalidated server-side. */
+  /** The first day the owner chose: their local today, or up to 30 days on. */
   startDate: string;
   endDate: string;
   expectedHeadRevision: number;
