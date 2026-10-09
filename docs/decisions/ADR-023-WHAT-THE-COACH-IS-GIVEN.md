@@ -103,9 +103,9 @@ Characters, at four to a token, with every source at its allocation:
 
 | Call | Before 9 Oct | After decisions 1 to 5 | After all of it (estimated) |
 | --- | --- | --- | --- |
-| Roadmap | 39,764 | 51,864 (12,966 tokens) | 55,960 (13,990) |
-| Plan | 39,964 | 52,664 (13,166) | 57,610 (14,403) |
-| Fill | 39,464 | 48,564 (12,141) | 56,210 (14,053) |
+| Roadmap | 39,764 | 51,964 (12,991 tokens) | 56,060 (14,015) |
+| Plan | 39,964 | 52,764 (13,191) | 57,710 (14,428) |
+| Fill | 39,464 | 48,664 (12,166) | 56,310 (14,078) |
 
 The middle column is asserted by `openai-prompt.test.ts`. The last is an estimate from
 field limits; the merge that ships each call's part replaces it with a measured figure.
@@ -135,6 +135,9 @@ Three merges, each reviewed and live on its own: decisions 1 to 5; then 6 to 8 a
 - A height, weight or sessions-a-week value outside what the forms accept is sent as not
   given. The database does not hold those columns to the forms' ranges.
 - A goal stored with an empty outcome is sent without one rather than refusing the call.
+- The age is sent beside today's date, which every call already carried, so together
+  they place the birth date within one twelve-month span. That is the cost of sending
+  an age at all.
 
 ## Alternatives considered
 
