@@ -481,7 +481,8 @@ An entry outside those days, and every entry sent to `create_roadmap`, is
 The plan operation's limits move with it: 30 entries in 4,000 bytes, where it
 was 12 in 1,400, because seven days can hold more than twelve sessions and a
 marked one must not be the entry a trim drops. A mark whose session still does
-not fit refuses the request with plan commitments named. The roadmap's limits
+not fit refuses the request with plan commitments named. The plan operation's
+whole context may be 35,100 bytes, where it was 32,500. The roadmap's limits
 are unchanged.
 
 ## Related decision made in the same session
