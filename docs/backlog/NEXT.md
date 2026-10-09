@@ -44,21 +44,16 @@ main action. No week ring. The owner flagged a possible bias toward the look the
 so start with Today and adjust from there rather than committing every screen up front. Build
 lane, one screen per merge.
 
-- [ ] **What the coach is given.** Careful lane, ADR-023. Gone through call by call
-      with the owner on 9 Oct 2026; all of this is decided. Measure every allocation
-      before the ADR rather than trusting the estimates.
-      **Shipped 9 Oct 2026 (decisions 1 to 5):** the ceiling at 15,000, the training
-      setup, goal outcomes, the athlete's basics and the three prompt rules, on all
-      three calls. What follows is the fill call's part, the last merge.
-      **Shipped 9 Oct 2026 (decisions 6 to 8 and 11 to 13):** the roadmap's and the
-      plan's parts. The plan is at the ceiling: its logs have 9,300 bytes where the
-      owner named 10,200, and 15,300 tokens would give them back (owner's to say).
-      **Fill:** only what is listed at the place the session fits; safety flags of the
-      last 28 days as date and flag; the roadmap phase the day falls in (title, focus);
-      activity names of the neighbouring sessions; the library's room doubled to 7,000
-      bytes; last results looked up over 6 months, not 8 weeks.
-      **Left out on purpose:** numbers from logs for the roadmap and the plan (this
-      closed A8), how a session felt, the instructions text of library activities.
+- [ ] **The plan call's logs: 9,300 bytes or the 10,200 the owner named.** The
+      plan call is at the 15,000-token ceiling by construction (ADR-023 decision 12),
+      so its logs got 9,300. Raising `maxInputTokens` to 15,300 gives them 10,200 and
+      the hold per call goes from 6,600 to 6,660 micro-USD. The owner's to say.
+- [ ] **A fill's sources are recorded and never checked.** A suggestion names the
+      logs, library entries and saved sessions it was built from, and since ADR-023
+      the logs whose flags it was sent. `decide_session_activity_proposal` compares
+      none of them, so a flag corrected away, or a log edited, after the suggestion
+      was made does not stop Accept. The roadmap and plan proposals do check theirs.
+      Careful lane: a migration.
 - [ ] **A changed setup can replay an earlier answer.** The coach service's
       repeat-protection fingerprint covers the goal and memory revisions, not the
       profile. Changing the setup and resubmitting the same open form may return the
