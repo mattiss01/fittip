@@ -111,6 +111,9 @@ export const PLAN_PROPOSAL_COPY = {
   proposedBadge: "Proposed",
   stagedBadge: "Will be added",
   replaceBadge: "Will replace",
+  /* On the owner's own session, in place of "Already planned". */
+  canBeReplacedBadge: "Can be replaced",
+  willBeReplacedBadge: "Will be replaced",
   besideBadge: "Will be added beside",
   rejectedBadge: "Rejected",
   cancelledBadge: "Cancelled",

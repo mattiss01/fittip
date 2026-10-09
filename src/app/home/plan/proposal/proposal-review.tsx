@@ -355,11 +355,34 @@ function PlannedSession({
       className={styles.planned}
       data-cancelled={cancelled}
       data-session-id={session.id}
+      // "chosen" once the owner picked Replace: the card is struck through,
+      // so what leaves the plan is plain at a glance (owner, 9 Oct 2026).
+      // "offered" while the choice is still open.
+      data-replaced={
+        replacement === null
+          ? undefined
+          : replacement.isChosen
+            ? "chosen"
+            : "offered"
+      }
     >
       <header className={styles.cardHeader}>
         <h3>{session.title}</h3>
-        <span className={styles.badge} data-kind="planned">
-          {COPY.alreadyPlannedBadge}
+        <span
+          className={styles.badge}
+          data-kind={
+            replacement === null
+              ? "planned"
+              : replacement.isChosen
+                ? "replaced"
+                : "replaceable"
+          }
+        >
+          {replacement === null
+            ? COPY.alreadyPlannedBadge
+            : replacement.isChosen
+              ? COPY.willBeReplacedBadge
+              : COPY.canBeReplacedBadge}
         </span>
       </header>
       <p className={styles.meta}>
@@ -374,7 +397,7 @@ function PlannedSession({
           .join(" · ")}
       </p>
       {replacement === null ? null : (
-        <p className={styles.body} data-replacement={replacement.isChosen}>
+        <p className={styles.replacementNote}>
           {replacement.isChosen
             ? COPY.plannedWillBeReplaced(replacement.title)
             : COPY.plannedMayBeReplaced(replacement.title)}

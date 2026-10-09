@@ -160,6 +160,26 @@ describe("an item that would replace a planned session (ADR-024)", () => {
     expect(
       screen.getByText(COPY.plannedMayBeReplaced("Tempo run")),
     ).toBeVisible();
+    expect(screen.getByText(COPY.canBeReplacedBadge)).toBeVisible();
+  });
+
+  it("strikes the owner's session through once Replace is chosen", () => {
+    const { container } = renderReview({
+      days: [
+        day({
+          items: [{ ...replacing(true), decision: "staged" }],
+          replacements: {
+            [SESSION_ID]: { title: "Tempo run", isChosen: true },
+          },
+        }),
+      ],
+    });
+
+    expect(
+      container.querySelector(`[data-session-id="${SESSION_ID}"]`),
+    ).toHaveAttribute("data-replaced", "chosen");
+    expect(screen.getByText(COPY.willBeReplacedBadge)).toBeVisible();
+    expect(screen.queryByText(COPY.alreadyPlannedBadge)).toBeNull();
   });
 
   it("falls back to a plain add once the session can no longer be replaced", () => {
