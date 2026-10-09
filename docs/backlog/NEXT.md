@@ -49,15 +49,10 @@ lane, one screen per merge.
       before the ADR rather than trusting the estimates.
       **Shipped 9 Oct 2026 (decisions 1 to 5):** the ceiling at 15,000, the training
       setup, goal outcomes, the athlete's basics and the three prompt rules, on all
-      three calls. What follows is merges 2 and 3.
-      **Roadmap:** minutes on recurring and single sessions; 30 single sessions, not
-      12; a short form of the accepted roadmap (title, phases, dates).
-      **Plan:** its `total` is below the sum of its parts (44,000 against 47,200), so
-      a refusal there names no source; settle it here. Logs get the roadmap's 10,200
-      bytes; single sessions are read 28
-      days past the last planned day, not 180. (ADR-024 already shipped the prompt
-      paragraph on planned sessions, their minutes inside the chosen days, and 30
-      entries instead of 12; minutes on entries outside those days are still open.)
+      three calls. What follows is the fill call's part, the last merge.
+      **Shipped 9 Oct 2026 (decisions 6 to 8 and 11 to 13):** the roadmap's and the
+      plan's parts. The plan is at the ceiling: its logs have 9,300 bytes where the
+      owner named 10,200, and 15,300 tokens would give them back (owner's to say).
       **Fill:** only what is listed at the place the session fits; safety flags of the
       last 28 days as date and flag; the roadmap phase the day falls in (title, focus);
       activity names of the neighbouring sessions; the library's room doubled to 7,000
