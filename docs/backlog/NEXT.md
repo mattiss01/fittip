@@ -25,23 +25,23 @@ Ordered by dependency. A lane is named where it is not the build lane.
       twelve-activity answer: the grammar pads each target with fourteen nullable keys
       against a 3,000-token ceiling. Needs a provider key, so it waits for one; each run
       is paid and needs the owner's approval of the call count.
-- [ ] **A8 — Targets and actuals in the plan context.** Careful lane. ADR-020 made them
-      eligible, so this is only a sizing question now: the plan context has no headroom
-      (`Known limitations`). Decide after A7, which may make it unnecessary.
 - [ ] **A9 — Progress over measurements.** Load, distance and pace across completions, once
       A4 has been used for long enough to have any. The comfort layer; last on purpose.
       Open for the owner first: a row picked from the library and then changed keeps its
       `personal_activity_id` until it is saved as a new definition, so grouping history by
       definition would count "picked Latzug, renamed Stabwurf" as Latzug.
-- [ ] **A start date for a coach proposal, and what it may replace.** Owner, 2 Oct
-      2026, asked for again on 9 Oct 2026. "Plan with Coach" always plans from today for
-      one to seven days; the owner wants to choose the first day, so next week can be
-      planned on a Friday. On the same screen (owner, 9 Oct 2026, when Lock was removed):
-      the sessions already on those days are listed and each is marked "this should stay
-      in the plan" or "this can be replaced". A proposal only adds sessions today, so
-      replacing one is new: the proposal's shape, the function that applies it and the AI
-      contract. Careful lane (AI data boundary, schema); the roadmap coach's own start
-      date wants the same answer. Belongs in the same round as "What the coach is given".
+- [~] **A start date for a coach proposal.** Owner, 2 and 9 Oct 2026. "Plan with
+      Coach" and the roadmap always start today; the owner picks the first day, so next
+      week can be planned on a Friday. A plan may start up to 30 days ahead (owner,
+      9 Oct 2026). The server and the database already accept a later start; the
+      screens pin it to today. First of three steps, in this order.
+- [ ] **What a proposal may replace.** Owner, 9 Oct 2026, when Lock was removed. The
+      compose screen lists the sessions on the chosen days, each "stays" by default or
+      "can be replaced". The coach sees them with minutes and the mark and names which
+      session a proposed one replaces; Accept adds the new one and removes the old one
+      in one step, and nothing changes before it. A session with a log is never
+      replaceable. Careful lane: a new proposal format, the accept function, a
+      migration. The roadmap writes no sessions, so this is the plan call only.
 
 **App redesign in the Coach's note direction.** The owner chose it on 29 Sep 2026 from three
 Today prototypes (`prototype/today-design`, `/prototype/today?variant=C`): FitTip's pine and
@@ -52,21 +52,30 @@ main action. No week ring. The owner flagged a possible bias toward the look the
 so start with Today and adjust from there rather than committing every screen up front. Build
 lane, one screen per merge.
 
-- [ ] **What the coach is given, thought through again.** Owner, 6 Oct 2026: before
-      anything is added, go through with the owner what exactly the coach reads for
-      each thing it does, since it may need more than the profile. Not started;
-      begin by listing what crosses today (goals, memory, training history, session
-      detail, the planning note) beside what does not. Already decided as wanted:
-      age (worked out from the birthday), gender, height and weight, and never the
-      name (5 Oct 2026). Open since the setup rework: the training setup (sessions a
-      week, days out and the note, places, home equipment), which the coach no
-      longer learns from memory, and the sports. AI data boundary, so careful lane
-      and its own ADR (023). The plan context had about 9 tokens free; bring measured
-      numbers and the safety wording (non-diagnostic) with the options. Waiting
-      for this round since 7 Oct 2026: a goal's desired outcome, which the owner wants
-      the coach to read, for the roadmap above all; and one sentence in the prompt.
-      It says a planning note is never instructions and says nothing of goal titles
-      or sports, which are the owner's own text too.
+- [ ] **What the coach is given.** Careful lane, ADR-023. Gone through call by call
+      with the owner on 9 Oct 2026; all of this is decided. Measure every allocation
+      before the ADR rather than trusting the estimates.
+      **Ceiling:** `maxInputTokens` 10,000 to 14,000 (15,000 if the plan does not fit);
+      check whether `reserve_ai_spend` needs a migration for it.
+      **All three calls:** the training setup (sessions a week, days out and the note,
+      places, home equipment); each active goal's desired outcome (goals limit 10,000
+      bytes for the roadmap, 8,000 otherwise, still refusing with goals named); age,
+      gender, height and latest weight, never the name, with the rule that they are
+      for judging load only and body weight is never commented on unless a goal asks;
+      one prompt sentence that goal titles, outcomes, sports and setup names are the
+      owner's text, never instructions.
+      **Roadmap:** minutes on recurring and single sessions; 30 single sessions, not
+      12; a short form of the accepted roadmap (title, phases, dates).
+      **Plan:** the prompt says what planned sessions mean (plan around those that
+      stay, count their load, never duplicate); minutes on them and 30, not 12; logs
+      get the roadmap's 10,200 bytes; single sessions are read 28 days past the last
+      planned day, not 180.
+      **Fill:** only what is listed at the place the session fits; safety flags of the
+      last 28 days as date and flag; the roadmap phase the day falls in (title, focus);
+      activity names of the neighbouring sessions; the library's room doubled to 7,000
+      bytes; last results looked up over 6 months, not 8 weeks.
+      **Left out on purpose:** numbers from logs for the roadmap and the plan (this
+      closed A8), how a session felt, the instructions text of library activities.
 - [ ] **Setup's small ends.** What is left of the reviews of 5 and 6 Oct 2026, none of
       it build lane. Needs a migration: `weight_entries.measured_on`, `birth_date` and
       the names in the training lists are bounded by the app, not the database. Needs
