@@ -148,6 +148,30 @@ history, past sessions, or user-locked future content. All three are excluded
 from the sweep by construction, and locked future content is excluded because
 of this decision rather than in spite of it.
 
+## Amendment: a lock keeps nothing
+
+Decided by the product owner on 9 October 2026, when Lock was removed from the
+product (ADR-013, second amendment to decision 5). The removal table loses its
+first row: ending a series, or changing it "from this one on", deletes a locked
+occurrence with the rest. The owner was offered keeping the occurrences they
+had edited instead and declined, for the reason given above: a removed series
+should leave a clean Plan. What is kept is what the table's other rows say — an
+occurrence with training logged against it, and everything before the effective
+date.
+
+`rolling_plan_sweep_series_occurrences` no longer reads `is_locked`
+(`20261009072031_lock_no_longer_read`), and an occurrence that was both locked
+and logged is now counted as kept for its log. The columns, the payload key and
+the `set_lock` operation still exist in the database, unreachable from the
+application, until `apply_rolling_plan_change_set` is next replaced. No row was
+rewritten, so an occurrence locked before that day lost its protection without
+changing.
+
+The invariant quoted above now reads, in `CLAUDE.md`, without "user-locked
+future content": replanning replaces a future session only where the owner
+allowed it for that proposal, and until a proposal can replace anything it
+replaces nothing.
+
 ## Amendment: the window is thirteen weeks
 
 Decided by the product owner on 29 September 2026 and built on 2 October 2026
