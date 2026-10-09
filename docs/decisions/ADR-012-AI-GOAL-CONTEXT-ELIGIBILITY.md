@@ -132,3 +132,13 @@ cannot be paused.
 
 A deleted goal reaches no coach. Any goal may now be deleted at any time,
 whatever its status, and a proposal that read it can no longer be accepted.
+
+## Amendment: the desired outcome is sent
+
+On 9 October 2026 the product owner decided, in
+[ADR-023](ADR-023-WHAT-THE-COACH-IS-GIVEN.md), that each active goal's desired
+outcome is sent to all three coach calls. "The desired outcome is still not
+sent" above is superseded. An achieved goal's outcome is still not sent. The
+targetable-goals allowance is 10,000 bytes for a roadmap and 8,000 for a plan
+or a fill, where it was 4,000; past it the request is refused with goals named,
+as before.
