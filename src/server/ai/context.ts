@@ -26,6 +26,10 @@ import {
   PLANNING_NOTE_MAX_LENGTH,
   REGENERATION_FEEDBACK_MAX_LENGTH,
 } from "@/server/ai/owner-text";
+import {
+  selectCoachProfileContext,
+  type CoachProfileRecords,
+} from "@/server/profile/coach-profile-context";
 import { buildRoadmapPlanContext } from "@/server/roadmap/roadmap-plan-context";
 import {
   buildSessionDetailContext,
@@ -71,6 +75,8 @@ import {
  */
 
 export type CoachAIContextSourceName =
+  | "athlete"
+  | "training_setup"
   | "targetable_goals"
   | "historical_goals"
   | "memory"
@@ -141,6 +147,17 @@ export type CoachAIContextLimits = {
   maxRecurringSessions: number;
   /** Per-source ceilings on the serialized bytes of that source alone. */
   bytes: {
+    /**
+     * ADR-023. Four values of fixed shape, so this can only be exceeded by a
+     * defect in the selection.
+     */
+    athlete: number;
+    /**
+     * ADR-023. Curated by the owner, so exceeding it refuses with the source
+     * named, as goals and memory do. At the field limits and one byte a
+     * character the whole setup is about 4,300 bytes.
+     */
+    trainingSetup: number;
     targetableGoals: number;
     historicalGoals: number;
     memory: number;
@@ -250,6 +267,21 @@ export type CoachAIContextLimits = {
  * fixed — so a whole-source ceiling that did not reserve room for both would
  * turn a full miss list into exactly the denial ADR-013 forbids.
  */
+/*
+ * ADR-023, 9 October 2026. Every operation gained three things: the athlete's
+ * basics (200 bytes), the training setup (4,600) and each active goal's
+ * desired outcome (goals 4,000 to 10,000 for the roadmap, 8,000 otherwise).
+ * The shared prompt grew by the three paragraphs that describe them, and
+ * `maxInputTokens` went to 15,000. The arithmetic the comments below give is
+ * from before that day; this is what holds now, and `context.test.ts` and
+ * `openai-prompt.test.ts` assert it:
+ *
+ *   roadmap  prefix 6,900 + wrapper 64 + context 44,600 = 51,564  12,891 tokens
+ *   plan     prefix 8,300 + wrapper 64 + context 44,000 = 52,364  13,091 tokens
+ *   fill     prefix 7,000 + wrapper 64 + context 41,300 = 48,364  12,091 tokens
+ *
+ * The room left under 15,000 is for the per-call parts of ADR-023 that follow.
+ */
 export const COACH_AI_CONTEXT_LIMITS = {
   create_roadmap: {
     maxTargetableGoals: 12,
@@ -259,7 +291,12 @@ export const COACH_AI_CONTEXT_LIMITS = {
     maxPlanCommitments: 12,
     maxRecurringSessions: MAX_RECURRING_SESSIONS,
     bytes: {
-      targetableGoals: 4_000,
+      athlete: 200,
+      trainingSetup: 4_600,
+      // 4,000 until ADR-023: a goal now carries its desired outcome, up to a
+      // thousand characters. Still a limit, not a worst case: twelve goals
+      // at their longest are past 23,000 bytes, and no real set is.
+      targetableGoals: 10_000,
       historicalGoals: 2_400,
       memory: 5_600,
       trainingHistory: 15_400,
@@ -271,7 +308,9 @@ export const COACH_AI_CONTEXT_LIMITS = {
       // A roadmap is not planned against itself.
       roadmap: 0,
       sessionDetail: 0,
-      total: 33_700,
+      // 33,700 until ADR-023, which added the athlete, the training setup and
+      // 6,000 more for goals, with 100 for the two new keys.
+      total: 44_600,
     },
   },
   // M3-03 kept every number M3-02 provisionally set here, and this comment
@@ -325,7 +364,11 @@ export const COACH_AI_CONTEXT_LIMITS = {
     maxPlanCommitments: 30,
     maxRecurringSessions: 0,
     bytes: {
-      targetableGoals: 4_000,
+      athlete: 200,
+      trainingSetup: 4_600,
+      // 8,000 where the roadmap has 10,000: the roadmap is where a goal's
+      // outcome sets direction, and the plan already reads that roadmap.
+      targetableGoals: 8_000,
       historicalGoals: 1_600,
       memory: 5_600,
       trainingHistory: 11_000,
@@ -348,7 +391,7 @@ export const COACH_AI_CONTEXT_LIMITS = {
       previousProposal: 6_400,
       roadmap: 4_000,
       sessionDetail: 0,
-      total: 35_100,
+      total: 44_000,
     },
   },
   // A7-2, within ADR-020. One session rather than a horizon, so the plan's
@@ -377,7 +420,9 @@ export const COACH_AI_CONTEXT_LIMITS = {
     maxPlanCommitments: 0,
     maxRecurringSessions: 0,
     bytes: {
-      targetableGoals: 4_000,
+      athlete: 200,
+      trainingSetup: 4_600,
+      targetableGoals: 8_000,
       // Always empty here, and an empty list is its two brackets.
       historicalGoals: 2,
       memory: 5_600,
@@ -389,7 +434,7 @@ export const COACH_AI_CONTEXT_LIMITS = {
       previousProposal: 0,
       roadmap: 0,
       sessionDetail: 16_000,
-      total: 32_400,
+      total: 41_300,
     },
   },
 } as const satisfies Record<CoachAIOperation, CoachAIContextLimits>;
@@ -427,6 +472,8 @@ const CANONICAL_UUID_PATTERN =
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_TITLE_LENGTH = 120;
 const MAX_MEMORY_CONTENT_LENGTH = 1000;
+/** The goal form's own limit (`goal-records.ts`). */
+const MAX_DESIRED_OUTCOME_LENGTH = 1000;
 
 /**
  * The goal fields context assembly needs, stated structurally so this module
@@ -435,6 +482,7 @@ const MAX_MEMORY_CONTENT_LENGTH = 1000;
 export type CoachAIGoalRecord = GoalContextCandidate & {
   id: string;
   title: string;
+  desiredOutcome: string;
   sports: string[];
   priorityTier: GoalTier;
   targetDate: string | null;
@@ -452,6 +500,12 @@ export type CoachAIOwnedRecords = {
   goals: CoachAIGoalRecord[];
   memory: MemoryItemView[];
   training: TrainingHistoryRecords;
+  /**
+   * ADR-023. The profile fields the coach may read, already owner-scoped.
+   * Assembly reduces them with `selectCoachProfileContext`; absent means an
+   * owner with nothing entered, not a missing requirement.
+   */
+  profile?: CoachProfileRecords | null;
   /**
    * The IANA zone `today` was derived in. Optional because `create_roadmap`
    * does not require one and M3-02's accepted context source does not supply
@@ -633,8 +687,15 @@ export function buildCoachAIContext(
           targetableGoalIds: new Set(goals.targetable.map((goal) => goal.id)),
         });
 
-  const targetableGoals = goals.targetable.map(toGoalReference);
-  const historicalGoals = goals.historical.map(toGoalReference);
+  // ADR-023: the outcome travels on a goal the athlete is working toward,
+  // not on one already achieved.
+  const targetableGoals = goals.targetable.map((goal) =>
+    toGoalReference(goal, true),
+  );
+  const historicalGoals = goals.historical.map((goal) =>
+    toGoalReference(goal, false),
+  );
+  const profile = selectCoachProfileContext(records.profile, records.today);
 
   // Decision 1: name every active goal whose target lies outside the selected
   // horizon, so the proposal cannot imply that the roadmap reaches it.
@@ -701,6 +762,8 @@ export function buildCoachAIContext(
     today: records.today,
     horizonStartDate: compose.horizonStartDate,
     horizonEndDate: compose.horizonEndDate,
+    athlete: profile.athlete,
+    trainingSetup: profile.trainingSetup,
     targetableGoals,
     historicalGoals,
     goalsOutsideHorizon,
@@ -733,6 +796,8 @@ export function buildCoachAIContext(
   };
 
   const usage = {
+    athlete: jsonBytes(context.athlete),
+    training_setup: jsonBytes(context.trainingSetup),
     targetable_goals: jsonBytes(context.targetableGoals),
     historical_goals: jsonBytes(context.historicalGoals),
     memory: jsonBytes(context.memory),
@@ -753,6 +818,12 @@ export function buildCoachAIContext(
   // Ordered deliberately: the sources that deny are checked before the total,
   // so an owner is told which source to reduce rather than that "there is too
   // much to consider".
+  refuseOver(usage.athlete, limits.bytes.athlete, "athlete");
+  refuseOver(
+    usage.training_setup,
+    limits.bytes.trainingSetup,
+    "training_setup",
+  );
   refuseOver(
     usage.targetable_goals,
     limits.bytes.targetableGoals,
@@ -910,10 +981,18 @@ function assertBounded(
  * Copies exactly the allowlisted fields. A column added to the repository's
  * `Goal` cannot ride along, because nothing here spreads the source record.
  */
-function toGoalReference(goal: CoachAIGoalRecord): CoachAIGoalReference {
+function toGoalReference(
+  goal: CoachAIGoalRecord,
+  withDesiredOutcome: boolean,
+): CoachAIGoalReference {
   if (
     !CANONICAL_UUID_PATTERN.test(goal.id) ||
     !isBounded(goal.title, MAX_TITLE_LENGTH) ||
+    // The form requires an outcome, so an empty one is a row older than
+    // that rule: it is left out below rather than refusing the request.
+    (withDesiredOutcome &&
+      (typeof goal.desiredOutcome !== "string" ||
+        goal.desiredOutcome.length > MAX_DESIRED_OUTCOME_LENGTH)) ||
     goal.sports.length > GOAL_SPORTS_MAX ||
     !goal.sports.every((sport) => isBounded(sport, GOAL_SPORT_MAX_LENGTH)) ||
     (goal.priorityTier !== "core" && goal.priorityTier !== "supporting") ||
@@ -925,6 +1004,9 @@ function toGoalReference(goal: CoachAIGoalRecord): CoachAIGoalReference {
   return {
     id: goal.id,
     title: goal.title,
+    ...(withDesiredOutcome && goal.desiredOutcome.trim().length > 0
+      ? { desiredOutcome: goal.desiredOutcome }
+      : {}),
     sports: [...goal.sports],
     priorityTier: goal.priorityTier,
     targetDate: goal.targetDate,

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
+import type { ProfileDetailsView } from "@/lib/profile/profile-contract";
 import {
   CoachAIContextBelowMinimumError,
   COACH_AI_CONTEXT_LIMITS,
@@ -22,6 +23,7 @@ import { readPlanWindowToppedUp } from "@/server/completions/plan-window-top-up"
 import { createCompletionLog } from "@/server/repositories/completion-log-repository";
 import { createGoalRepository } from "@/server/repositories/goal-repository";
 import { createMemoryRepository } from "@/server/repositories/memory-repository";
+import type { CoachProfileRecords } from "@/server/profile/coach-profile-context";
 import { createPersonalActivityLibrary } from "@/server/repositories/personal-activity-repository";
 import { createProfileRepository } from "@/server/repositories/profile-repository";
 import { createRoadmapRepository } from "@/server/repositories/roadmap-repository";
@@ -166,6 +168,7 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
     // the roadmap read is the only one an operation can skip.
     const fillsSession = this.#operation === "fill_session_activities";
     const [
+      details,
       goals,
       memory,
       completions,
@@ -175,6 +178,10 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       library,
       savedSessions,
     ] = await Promise.all([
+      // ADR-023: the athlete's basics and the training setup. The same row
+      // the identity check above read, asked for again for its other columns;
+      // `toCoachProfileRecords` is what decides which of them go further.
+      (await createProfileRepository()).getDetails(),
       (await createGoalRepository()).list(),
       (await createMemoryRepository()).list(today),
       (await createCompletionLog()).list(windowStartDate, today),
@@ -273,6 +280,7 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       goals: goals.goals,
       memory: memory.items,
       training,
+      profile: details === null ? null : toCoachProfileRecords(details),
       timezoneName,
       // Unreduced on purpose; see the read above. Assembly reduces it against
       // the composed horizon and records which version it used.
@@ -322,6 +330,29 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       };
     });
   }
+}
+
+/**
+ * Copies exactly the profile fields ADR-023 names, one at a time. The display
+ * name, the time zone, the units, the sports list and the setup state are on
+ * the record this reads and are not copied, so assembly never holds them.
+ */
+function toCoachProfileRecords(
+  details: ProfileDetailsView,
+): CoachProfileRecords {
+  return {
+    birthDate: details.birthDate,
+    gender: details.gender,
+    heightCm: details.heightCm,
+    latestWeightKg: details.latestWeightKg,
+    training: {
+      sessionsPerWeek: details.training.sessionsPerWeek,
+      unavailableDays: [...details.training.unavailableDays],
+      availabilityNote: details.training.availabilityNote,
+      trainingPlaces: [...details.training.trainingPlaces],
+      homeEquipment: [...details.training.homeEquipment],
+    },
+  };
 }
 
 /**

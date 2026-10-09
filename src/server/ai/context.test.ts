@@ -35,6 +35,7 @@ function goal(overrides: Partial<CoachAIGoalRecord> = {}): CoachAIGoalRecord {
   return {
     id: "a1000000-0000-4000-8000-000000000001",
     title: "Run a hilly half marathon",
+    desiredOutcome: "Finish strong on the climbs.",
     sports: ["Running"],
     priorityTier: "core",
     targetDate: "2026-10-15",
@@ -97,19 +98,23 @@ function build(
 
 describe("coach AI context assembly", () => {
   it("copies only the allowlisted goal and memory fields", () => {
-    // The repository's goal carries more than the coach may read: the desired
-    // outcome waits for its own decision (ADR-012, amended 7 Oct 2026).
-    const stored = {
-      ...goal(),
-      desiredOutcome: "OUTCOME-THAT-MUST-NOT-TRAVEL",
-      activeRank: 1,
+    // The repository's goal carries more than the coach may read. The
+    // desired outcome is read since ADR-023, on a goal being worked toward.
+    const stored = { ...goal(), activeRank: 1 };
+    const achieved = {
+      ...goal({
+        id: "a1000000-0000-4000-8000-000000000009",
+        status: "achieved",
+        desiredOutcome: "ACHIEVED-OUTCOME-THAT-MUST-NOT-TRAVEL",
+      }),
     };
-    const assembled = build({ goals: [stored] });
+    const assembled = build({ goals: [stored, achieved] });
 
     expect(assembled.context.targetableGoals).toEqual([
       {
         id: "a1000000-0000-4000-8000-000000000001",
         title: "Run a hilly half marathon",
+        desiredOutcome: "Finish strong on the climbs.",
         sports: ["Running"],
         priorityTier: "core",
         targetDate: "2026-10-15",
@@ -123,10 +128,95 @@ describe("coach AI context assembly", () => {
       },
     ]);
     // Nothing spreads the source record, so a column added later stays invisible.
-    expect(assembled.serialized).not.toContain("OUTCOME-THAT-MUST-NOT-TRAVEL");
-    expect(assembled.serialized).not.toContain("desiredOutcome");
+    // An achieved goal is background: its outcome stays behind.
+    expect(assembled.context.historicalGoals[0]).not.toHaveProperty(
+      "desiredOutcome",
+    );
+    expect(assembled.serialized).not.toContain("MUST-NOT-TRAVEL");
     expect(assembled.serialized).not.toContain("activeRank");
     expect(assembled.serialized).not.toContain("provenance");
+  });
+
+  it("sends the athlete's basics and the training setup on every operation", () => {
+    const profile = {
+      birthDate: "1992-03-14",
+      gender: "female",
+      heightCm: 171,
+      latestWeightKg: 64.5,
+      training: {
+        sessionsPerWeek: 4,
+        unavailableDays: ["sunday"],
+        availabilityNote: "Late on Thursdays.",
+        trainingPlaces: ["Home", "Gym"],
+        homeEquipment: ["Kettlebell"],
+      },
+    };
+    const roadmap = build({ profile });
+    const plan = buildCoachAIContext(
+      "create_seven_day_plan",
+      records({ profile, timezoneName: "Europe/Berlin" }),
+      { ...COMPOSE, horizonEndDate: shiftDate(TODAY, 6) },
+    );
+
+    for (const assembled of [roadmap, plan]) {
+      expect(assembled.context.athlete).toEqual({
+        age: expect.any(Number),
+        gender: "female",
+        heightCm: 171,
+        weightKg: 64.5,
+      });
+      expect(assembled.context.trainingSetup).toEqual({
+        sessionsPerWeek: 4,
+        unavailableDays: ["Sunday"],
+        availabilityNote: "Late on Thursdays.",
+        trainingPlaces: ["Home", "Gym"],
+        homeEquipment: ["Kettlebell"],
+      });
+      // An age, not the day it is counted from.
+      expect(assembled.serialized).not.toContain("1992-03-14");
+      expect(assembled.serialized).not.toContain("birthDate");
+    }
+  });
+
+  it("tells the coach nothing is known, rather than refusing, with no profile", () => {
+    const assembled = build({ profile: null });
+
+    expect(assembled.context.athlete).toEqual({
+      age: null,
+      gender: null,
+      heightCm: null,
+      weightKg: null,
+    });
+    expect(assembled.context.trainingSetup.trainingPlaces).toEqual([]);
+  });
+
+  it("names the training setup when it is too large to send", () => {
+    // Forty names of sixty characters, each three bytes: the form allows it,
+    // and it is the owner's to shorten.
+    const profile = {
+      birthDate: null,
+      gender: null,
+      heightCm: null,
+      latestWeightKg: null,
+      training: {
+        sessionsPerWeek: null,
+        unavailableDays: [],
+        availabilityNote: null,
+        trainingPlaces: [],
+        homeEquipment: Array.from({ length: 40 }, (_, index) =>
+          `${index}`.padEnd(60, "\u6f22"),
+        ),
+      },
+    };
+
+    try {
+      build({ profile });
+      expect.unreachable("expected a refusal");
+    } catch (error) {
+      expect((error as CoachAIContextTooLargeError).source).toBe(
+        "training_setup",
+      );
+    }
   });
 
   it("excludes paused and abandoned goals", () => {
@@ -233,17 +323,19 @@ describe("the per-source context allocation", () => {
     // guard over the whole message set. Measured against the prefix budget
     // `openai-prompt.test.ts` enforces rather than against today's prefix, so
     // this cannot pass only because the prompt happens to be short right now.
-    const staticPrefixBudget = 6_000;
+    const staticPrefixBudget = 6_900;
     const wrapperAllowance = 64;
     const estimatedTokens = Math.ceil(
       (staticPrefixBudget + wrapperAllowance + limits.bytes.total) / 4,
     );
 
-    expect(estimatedTokens).toBe(9_941);
+    // 9,941 until ADR-023 (9 October 2026): the athlete, the training setup
+    // and each goal's desired outcome, with a longer shared prompt for them.
+    expect(estimatedTokens).toBe(12_891);
     expect(estimatedTokens).toBeLessThanOrEqual(
       COACH_AI_LIVE_LIMITS.maxInputTokens,
     );
-    expect(COACH_AI_LIVE_LIMITS.maxInputTokens).toBe(14_000);
+    expect(COACH_AI_LIVE_LIMITS.maxInputTokens).toBe(15_000);
   });
 
   it("reserves room in the training-history ceiling for a full miss list", () => {
@@ -332,10 +424,13 @@ describe("the per-source context allocation", () => {
   });
 
   it("names goals when their sports carry them past the allocation", () => {
+    // Each about 1,950 bytes with a full outcome: six pass the 10,000 the
+    // roadmap allows.
     const many = Array.from({ length: 6 }, (_, index) =>
       goal({
         id: `a1000000-0000-4000-8000-0000000000${index + 10}`,
         title: "t".repeat(120),
+        desiredOutcome: "o".repeat(1000),
         sports: Array.from({ length: 10 }, (_, sport) =>
           `${sport}`.padEnd(60, "s"),
         ),

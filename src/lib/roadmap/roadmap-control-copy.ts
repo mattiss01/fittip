@@ -193,6 +193,8 @@ export const ROADMAP_CONTROL_COPY = {
     // is not offered on one, so the way out is named separately.
     achieved_goals:
       "Your achieved goals are too much to send in one request. Delete a few, or shorten the sports they name, then try again.",
+    training_setup:
+      "Your training setup is too much to send in one request. Shorten the places, the equipment or the availability note in Settings, then try again.",
     planning_note:
       "That note is longer than the request allows. Shorten it and try again.",
     regeneration_feedback:

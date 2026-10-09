@@ -121,6 +121,8 @@ describe("generateRoadmapProposal", () => {
       getCurrentProfile: vi
         .fn()
         .mockResolvedValue({ userId: OWNER_ID, timezoneName: TIMEZONE }),
+      // Nothing entered in Settings: the coach is told so, not refused.
+      getDetails: vi.fn().mockResolvedValue(null),
     });
     createGoalMock.mockResolvedValue({
       list: vi.fn().mockResolvedValue({ revision: 4, goals: [goal()] }),
@@ -334,6 +336,7 @@ function goal() {
   return {
     id: GOAL_ID,
     title: "Finish a half marathon",
+    desiredOutcome: "Finish without walking.",
     sports: ["Running"],
     priorityTier: "core" as const,
     targetDate: addDays(TODAY, 70),

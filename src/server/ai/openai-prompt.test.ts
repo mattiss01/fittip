@@ -13,7 +13,7 @@ import {
   coachAIStaticPrefix,
 } from "@/server/ai/openai-prompt";
 
-const STATIC_PREFIX_BUDGET = 6_000;
+const STATIC_PREFIX_BUDGET = 6_900;
 
 /**
  * The plan prompt gets a larger allowance than the roadmap's, and that is a
@@ -39,7 +39,7 @@ const STATIC_PREFIX_BUDGET = 6_000;
  * whatever the allocation becomes; this comment is the one thing that has to
  * be kept honest by hand.
  */
-const PLAN_STATIC_PREFIX_BUDGET = 8_000;
+const PLAN_STATIC_PREFIX_BUDGET = 8_300;
 
 describe("the roadmap prompt", () => {
   it("stays inside the prefix budget the context allocation was derived against", () => {

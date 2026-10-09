@@ -57,9 +57,38 @@ export function isCoachAIOperation(value: unknown): value is CoachAIOperation {
 export type CoachAIGoalReference = {
   id: string;
   title: string;
+  /**
+   * ADR-023: what the athlete wants the goal to achieve, in their own words.
+   * On a goal they may be coached toward only; an achieved goal is background
+   * and its key is absent.
+   */
+  desiredOutcome?: string;
   sports: string[];
   priorityTier: GoalTier;
   targetDate: string | null;
+};
+
+/**
+ * ADR-023: the athlete's basics. Age rather than a birth date, and never a
+ * name. Each is null when the athlete has not entered it.
+ */
+export type CoachAIAthleteReference = {
+  /** Whole years on the athlete's own today. */
+  age: number | null;
+  gender: "female" | "male" | "other" | null;
+  heightCm: number | null;
+  /** The latest entry of the weight history. */
+  weightKg: number | null;
+};
+
+/** ADR-023: how often, when not, where and with what the athlete trains. */
+export type CoachAITrainingSetupReference = {
+  sessionsPerWeek: number | null;
+  /** Weekdays the athlete cannot train; every other day is free. */
+  unavailableDays: CoachAIWeekdayName[];
+  availabilityNote: string | null;
+  trainingPlaces: string[];
+  homeEquipment: string[];
 };
 
 /** The exact memory fields allowed to leave this system. */
@@ -278,6 +307,9 @@ export type CoachAIContext = {
   today: string;
   horizonStartDate: string;
   horizonEndDate: string;
+  /** ADR-023. Sent on every operation. */
+  athlete: CoachAIAthleteReference;
+  trainingSetup: CoachAITrainingSetupReference;
   targetableGoals: CoachAIGoalReference[];
   historicalGoals: CoachAIGoalReference[];
   /**
