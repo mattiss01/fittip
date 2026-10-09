@@ -13,6 +13,7 @@ import {
 } from "@/server/memory/memory-records";
 import type {
   CoachAIContext,
+  CoachAISafetyFlagReference,
   RoadmapProposal,
   CoachAIGoalReference,
   CoachAIMemoryReference,
@@ -32,6 +33,7 @@ import {
 } from "@/server/profile/coach-profile-context";
 import {
   buildCurrentRoadmapReference,
+  buildRoadmapPhaseReference,
   buildRoadmapPlanContext,
 } from "@/server/roadmap/roadmap-plan-context";
 import {
@@ -39,8 +41,10 @@ import {
   type SessionDetailRecords,
 } from "@/server/session-detail/session-detail-context";
 import {
+  addDays,
   MAX_RECURRING_SESSIONS,
   selectTrainingHistoryContext,
+  type TrainingHistoryCompletion,
   type TrainingHistoryRecords,
 } from "@/server/training/training-history-context";
 
@@ -90,6 +94,8 @@ export type CoachAIContextSourceName =
   | "previous_proposal"
   | "roadmap"
   | "current_roadmap"
+  | "roadmap_phase"
+  | "recent_safety_flags"
   | "session_detail"
   | "whole_context";
 
@@ -196,6 +202,13 @@ export type CoachAIContextLimits = {
      */
     currentRoadmap: number;
     /**
+     * ADR-023 decisions 14 and 15, `fill_session_activities` only; zero for
+     * the others. The phase is one title, one focus and two dates, bounded by
+     * what a roadmap may store. The flags trim by count with the loss told.
+     */
+    roadmapPhase: number;
+    recentSafetyFlags: number;
+    /**
      * A7-2. Trims rather than denies, like the roadmap: every list inside it is
      * reduced to its share of `SESSION_DETAIL_BYTES` with the loss counted.
      * Zero for every operation except `fill_session_activities`.
@@ -288,12 +301,11 @@ export type CoachAIContextLimits = {
  *
  *   roadmap  prefix 7,800 + wrapper 64 + context 48,850 = 56,714  14,179 tokens
  *   plan     prefix 8,700 + wrapper 64 + context 51,200 = 59,964  14,991 tokens
- *   fill     prefix 7,300 + wrapper 64 + context 41,300 = 48,664  12,166 tokens
+ *   fill     prefix 8,200 + wrapper 64 + context 51,450 = 59,714  14,929 tokens
  *
- * The roadmap and plan lines include their own parts of ADR-023 (decisions 6
- * to 8 and 11 to 13). The plan's `total` now holds the sum of its parts, which
- * it did not before; the comment on it says what that took. The fill line is
- * still only the shared part, and its own part has the rest of its room.
+ * Each line includes that call's own part of ADR-023. Every `total` holds the
+ * sum of its parts and the envelope; the plan's did not before, and the
+ * comment on it says what that took.
  */
 export const COACH_AI_CONTEXT_LIMITS = {
   create_roadmap: {
@@ -324,6 +336,8 @@ export const COACH_AI_CONTEXT_LIMITS = {
       roadmap: 0,
       // Six phases of 80-character titles with their dates are about 1,020.
       currentRoadmap: 1_200,
+      roadmapPhase: 0,
+      recentSafetyFlags: 0,
       sessionDetail: 0,
       // 33,700 until ADR-023, which added the athlete, the training setup and
       // 6,000 more for goals, with 100 for the two new keys. Then 3,000 more
@@ -419,6 +433,8 @@ export const COACH_AI_CONTEXT_LIMITS = {
       previousProposal: 5_900,
       roadmap: 4_000,
       currentRoadmap: 0,
+      roadmapPhase: 0,
+      recentSafetyFlags: 0,
       sessionDetail: 0,
       // The sum of the parts (50,200) and 1,000 for the envelope (817 at its
       // largest), whose
@@ -434,23 +450,20 @@ export const COACH_AI_CONTEXT_LIMITS = {
     },
   },
   // A7-2, within ADR-020. One session rather than a horizon, so the plan's
-  // long-range sources are absent: no historical goals, no roadmap, no
-  // previous proposal, no plan commitments, and training history is the last
-  // seven days only (`trainingSelectionFor`), kept so a pain, illness,
-  // injury or fatigue flag still steers the coach conservatively. What it adds
-  // is `sessionDetail`, whose parts are sized in `session-detail-context.ts`.
+  // long-range sources are absent: no historical goals, no previous proposal,
+  // no plan commitments, and training history is the last seven days only
+  // (`trainingSelectionFor`). What it adds is `sessionDetail`, whose parts are
+  // sized in `session-detail-context.ts`, and since ADR-023 the one roadmap
+  // phase its day falls in and the flagged days of the last four weeks.
   //
   // The owner's request note is bounded at 500 characters by the action, and
   // 1,600 bytes is what 500 characters can need at three bytes each (CJK) plus
   // the quotes: refusing a note the action accepted would be a refusal the
   // owner could not predict.
   //
-  //   prefix 7,000 + wrapper 64 + context 32,400 = 39,464 characters
-  //   ceil(39,464 / 4) = 9,866  against  maxInputTokens 10,000
-  //
-  // It stays under the shared ceiling, so this operation needs none of the
-  // plan's missing headroom. A ceiling of its own, which would reserve less per
-  // call, is a separate change: `maxInputTokens` is one number today.
+  // The arithmetic is on `total` below. A ceiling of its own, which would
+  // reserve less per call, is a separate change: `maxInputTokens` is one
+  // number today.
   fill_session_activities: {
     maxTargetableGoals: 12,
     maxHistoricalGoals: 0,
@@ -473,8 +486,19 @@ export const COACH_AI_CONTEXT_LIMITS = {
       previousProposal: 0,
       roadmap: 0,
       currentRoadmap: 0,
-      sessionDetail: 16_000,
-      total: 41_300,
+      // An 80-character title and a 300-character focus at three bytes each,
+      // with the dates and keys.
+      roadmapPhase: 1_300,
+      // Twenty days of at most 123 bytes with their separators are 2,481.
+      recentSafetyFlags: 2_600,
+      // 16,000 until ADR-023 decisions 16 and 17 gave the week 1,600 more and
+      // the library 4,500 more.
+      sessionDetail: 22_100,
+      // The sum of the parts (50,402) and about 1,000 for the envelope:
+      //
+      //   prefix 8,200 + wrapper 64 + context 51,450 = 59,714 characters
+      //   ceil(59,714 / 4) = 14,929  against  maxInputTokens 15,000
+      total: 51_450,
     },
   },
 } as const satisfies Record<CoachAIOperation, CoachAIContextLimits>;
@@ -748,6 +772,28 @@ export function buildCoachAIContext(
           )
         : null;
 
+  // ADR-023 decisions 14 and 15, for a fill only. The phase its session's
+  // day falls in, and the days of the last four weeks on which something was
+  // reported. The second is why a fill's seven days of history are no longer
+  // all it knows of a knee flagged ten days ago.
+  const fillExtras =
+    sessionDetailRecords === null
+      ? null
+      : {
+          roadmapPhase: records.roadmapVersion
+            ? buildRoadmapPhaseReference(
+                records.roadmapVersion.content,
+                sessionDetailRecords.session.localDate,
+              )
+            : null,
+          ...toSafetyFlagReferences(
+            selectRecentSafetyFlagDays(
+              records.training.completions,
+              records.today,
+            ),
+          ),
+        };
+
   // ADR-023: the outcome travels on a goal the athlete is working toward,
   // not on one already achieved.
   const targetableGoals = goals.targetable.map((goal) =>
@@ -841,7 +887,17 @@ export function buildCoachAIContext(
       : {}),
     // Keyed off the operation, for the reason the rules above are.
     ...(currentRoadmap === undefined ? {} : { currentRoadmap }),
-    hasSafetySignal: training.hasSafetySignal,
+    ...(fillExtras === null
+      ? {}
+      : {
+          roadmapPhase: fillExtras.roadmapPhase,
+          recentSafetyFlags: fillExtras.flags,
+          recentSafetyFlagsWithheld: fillExtras.withheld,
+        }),
+    // A fill's own history is seven days; a flag from further back in the
+    // four weeks counts too (decision 15).
+    hasSafetySignal:
+      training.hasSafetySignal || (fillExtras?.flags.length ?? 0) > 0,
     planningNote: assertBounded(
       compose.planningNote,
       PLANNING_NOTE_MAX_LENGTH,
@@ -879,6 +935,8 @@ export function buildCoachAIContext(
     previous_proposal: jsonBytes(context.previousProposal),
     roadmap: jsonBytes(context.roadmap),
     current_roadmap: jsonBytes(context.currentRoadmap),
+    roadmap_phase: jsonBytes(context.roadmapPhase),
+    recent_safety_flags: jsonBytes(context.recentSafetyFlags),
     session_detail: jsonBytes(context.sessionDetail),
   };
 
@@ -945,6 +1003,12 @@ export function buildCoachAIContext(
     limits.bytes.currentRoadmap,
     "current_roadmap",
   );
+  refuseOver(usage.roadmap_phase, limits.bytes.roadmapPhase, "roadmap_phase");
+  refuseOver(
+    usage.recent_safety_flags,
+    limits.bytes.recentSafetyFlags,
+    "recent_safety_flags",
+  );
   // The same class again: every list inside was already fitted to its share.
   refuseOver(
     usage.session_detail,
@@ -979,6 +1043,78 @@ export function buildCoachAIContext(
             },
       sessionDetailSources: sessionDetailAssembly?.sources ?? [],
     },
+  };
+}
+
+/** How far back a fill is told of a reported flag (ADR-023 decision 15). */
+export const SESSION_DETAIL_SAFETY_FLAG_DAYS = 28;
+const MAX_RECENT_SAFETY_FLAGS = 20;
+const MAX_SAFETY_FLAG_LOGS_PER_DAY = 7;
+
+/**
+ * The days of the last four weeks on which something was reported, newest
+ * first, each with the logs that reported it. Trimmed by count with the loss
+ * told: twenty flagged days in four weeks is already a picture.
+ *
+ * Shared with the context source, which records those logs as sources of the
+ * proposal, by M3-08's exact-source rule: what was sent is what is named.
+ * That is provenance. Nothing compares a fill's sources when it is accepted,
+ * so correcting a flag away afterwards does not yet stop the suggestion built
+ * around it; `NEXT.md` carries that.
+ *
+ * A day counts at most seven logs. The database stores 256 sources for one
+ * suggestion, and twenty days of seven beside everything else a fill records
+ * stays under it, so no request can be paid for and then fail to save.
+ */
+export function selectRecentSafetyFlagDays(
+  completions: readonly TrainingHistoryCompletion[],
+  today: string,
+): {
+  days: { localDate: string; logs: TrainingHistoryCompletion[] }[];
+  withheld: number;
+} {
+  const since = addDays(today, -(SESSION_DETAIL_SAFETY_FLAG_DAYS - 1));
+  const byDay = new Map<string, TrainingHistoryCompletion[]>();
+  for (const entry of completions) {
+    if (
+      entry.localDate < since ||
+      entry.localDate > today ||
+      !(
+        entry.painReported ||
+        entry.illnessReported ||
+        entry.injuryReported ||
+        entry.severeFatigueReported
+      )
+    ) {
+      continue;
+    }
+    const logs = byDay.get(entry.localDate) ?? [];
+    if (logs.length < MAX_SAFETY_FLAG_LOGS_PER_DAY) {
+      byDay.set(entry.localDate, [...logs, entry]);
+    }
+  }
+  const days = [...byDay.entries()]
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([localDate, logs]) => ({ localDate, logs }));
+  return {
+    days: days.slice(0, MAX_RECENT_SAFETY_FLAGS),
+    withheld: Math.max(0, days.length - MAX_RECENT_SAFETY_FLAGS),
+  };
+}
+
+/** One entry a day: the date, and each flag if any log of that day set it. */
+function toSafetyFlagReferences(
+  selection: ReturnType<typeof selectRecentSafetyFlagDays>,
+): { flags: CoachAISafetyFlagReference[]; withheld: number } {
+  return {
+    flags: selection.days.map(({ localDate, logs }) => ({
+      localDate,
+      painReported: logs.some((log) => log.painReported),
+      illnessReported: logs.some((log) => log.illnessReported),
+      injuryReported: logs.some((log) => log.injuryReported),
+      severeFatigueReported: logs.some((log) => log.severeFatigueReported),
+    })),
+    withheld: selection.withheld,
   };
 }
 

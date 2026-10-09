@@ -4,6 +4,7 @@ import { CoachAIError } from "@/server/ai/errors";
 import type {
   CoachAICurrentRoadmapReference,
   CoachAIRoadmapContext,
+  CoachAIRoadmapPhaseReference,
   CoachAIRoadmapPhase,
   CoachAIRoadmapPhaseSummary,
   CoachAIRoadmapStaleReason,
@@ -423,6 +424,31 @@ export function buildCurrentRoadmapReference(
   }
   // A title alone past the allocation: a configuration defect, not the owner's.
   throw new CoachAIError("context_invalid");
+}
+
+/**
+ * ADR-023 decision 14: the phase a day falls in, as a fill is told of it.
+ *
+ * Title, focus and dates. Not the goal attention or the milestones, which are
+ * the plan's to weigh: a fill is choosing exercises inside a session whose
+ * purpose is already written. Null when the roadmap does not cover the day.
+ */
+export function buildRoadmapPhaseReference(
+  roadmap: RoadmapProposal,
+  localDate: string,
+): CoachAIRoadmapPhaseReference | null {
+  const phase = roadmap.phases.find(
+    (candidate) =>
+      candidate.startDate <= localDate && candidate.endDate >= localDate,
+  );
+  return phase
+    ? {
+        title: phase.title,
+        focus: phase.focus,
+        startDate: phase.startDate,
+        endDate: phase.endDate,
+      }
+    : null;
 }
 
 function fits(context: CoachAIRoadmapContext): boolean {

@@ -199,7 +199,12 @@ describe("the production coaching context source", () => {
 
       expect(listLibrary).toHaveBeenCalledOnce();
       expect(listSavedSessions).toHaveBeenCalledOnce();
-      expect(getCurrentVersion).not.toHaveBeenCalled();
+      // ADR-023 decision 14: a fill reads the roadmap for the phase its day
+      // falls in. Assembly takes that one phase's title, focus and dates.
+      expect(getCurrentVersion).toHaveBeenCalledOnce();
+      // Decision 18: six months of logs are read for last results. What goes
+      // on as training history is still ADR-013's eight weeks of them.
+      expect(listCompletions).toHaveBeenCalledWith(shift(TODAY, -182), TODAY);
       expect(records.sessionDetail?.session.title).toBe("Lower body");
       expect(records.sessionDetail?.library).toEqual([
         {
@@ -208,6 +213,52 @@ describe("the production coaching context source", () => {
           sport: "Strength",
           measurementMode: "sets_reps_load",
         },
+      ]);
+    });
+
+    it("keeps a log older than eight weeks out of the training history it hands on", async () => {
+      // Read for last results (decision 18), but ADR-013's window is still
+      // what the history and the flags are drawn from. A log that old is a
+      // recorded source only if it supplied a result, through the session
+      // detail's own sources.
+      listCompletions.mockResolvedValue([
+        completion(),
+        completion({
+          id: "75000000-0000-4000-8000-0000000000aa",
+          actualLocalDate: shift(TODAY, -100),
+          painReported: true,
+        }),
+      ]);
+
+      const records = await fillSource().load(OWNER);
+
+      expect(
+        records.training.completions.map((entry) => entry.localDate),
+      ).toEqual(["2026-08-03"]);
+    });
+
+    it("records a log whose flag a fill is sent as a source, though it is older than a week", async () => {
+      const flaggedId = "75000000-0000-4000-8000-0000000000bb";
+      listCompletions.mockResolvedValue([
+        completion(),
+        completion({
+          id: flaggedId,
+          actualLocalDate: shift(TODAY, -10),
+          painReported: true,
+        }),
+        // Unflagged and older than a week: neither sent nor a source.
+        completion({
+          id: "75000000-0000-4000-8000-0000000000cc",
+          actualLocalDate: shift(TODAY, -12),
+        }),
+      ]);
+
+      const records = await fillSource().load(OWNER);
+
+      // What was sent is what is named, the flag's log included.
+      expect(records.sources?.map((source) => source.recordId)).toEqual([
+        "75000000-0000-4000-8000-000000000001",
+        flaggedId,
       ]);
     });
 

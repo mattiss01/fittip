@@ -114,3 +114,35 @@ all three:
 - A8 is no longer a privacy question, only a sizing one.
 - Nothing in the context assembly changes with this ADR. Each source still has
   to be added deliberately, with its allocation and its tests.
+
+## Amendment: what a fill reads since ADR-023
+
+On 9 October 2026 the product owner decided, in
+[ADR-023](ADR-023-WHAT-THE-COACH-IS-GIVEN.md) decisions 14 to 19, six more
+things about `fill_session_activities`. They change this ADR in four places:
+
+- **The week names its activities.** Each neighbouring session is sent with the
+  names of its activities, up to eight of sixty characters, and still without
+  targets. The week's allocation is 2,400 bytes, where it was 800.
+- **The library gets 8,000 bytes**, where it had 3,500. Sixty entries with
+  ordinary names fit; with the longest, twenty-six. Instructions still stay
+  behind.
+- **Last results are looked up over six months**, 183 days, where it was
+  ADR-013's eight weeks. Three results an activity, twelve activities and 4,000
+  bytes, as before. Only this lookup reads past the eight weeks, and a log from
+  there is a recorded source of the suggestion when it supplied a result.
+- **"A flag older than seven days does not reach a fill unless it is in
+  memory" is superseded.** A fill is sent the days of the last 28 on which pain,
+  illness, injury or severe fatigue was reported, as the date and the four
+  flags, one entry a day, at most twenty with the rest counted. Its history of
+  what was logged stays seven days, and `hasSafetySignal` is true when either
+  carries a flag. The logs behind those days are recorded as sources, which is
+  provenance: nothing yet compares a fill's sources when it is accepted.
+
+Two further things reach a fill that this ADR did not consider: the phase of
+the accepted roadmap its session's day falls in, as title, focus and dates, and
+the training setup with the home equipment (ADR-023 decisions 14 and 1). The
+whole session detail is 22,100 bytes, where it was 16,000, and the fill's
+context at most 14,929 tokens of 15,000. The estimate under Consequences below
+("about 5,000 to 6,500 tokens, under the shared 10,000 ceiling") was for the
+context this ADR first described and no longer holds.

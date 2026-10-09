@@ -139,7 +139,7 @@ Return the whole list the session should hold, in order, one to twelve activitie
 
 Prefer the athlete's own activities. Where one in "library" fits, copy its "id" into "personalActivityId" and use its measurement mode; do not invent a near-duplicate under another name. "savedSessions" are sessions the athlete wrote themselves and are the best evidence of how they like this kind of session built. Use a new activity, with "personalActivityId" null, only where nothing in the library fits.
 
-Set targets from "recentActuals" where they exist: the numbers the athlete actually did, newest first. Progress in small steps from those, never from nothing. Where there is no history for an activity, choose a conservative target and say so. Fit the whole list inside the session's duration and respect the rest of "week": do not load the same thing hard on consecutive days.
+Set targets from "recentActuals" where they exist: the numbers the athlete actually did, newest first. Progress in small steps from those, never from nothing. A result more than a few weeks old says where the athlete was, not where they are: start below it. Where there is no history for an activity, choose a conservative target and say so. Fit the whole list inside the session's duration and respect the rest of "week": do not load the same thing hard on consecutive days.
 
 Measurement modes and the "target" fields each uses (every other target field is null):
 - "sets_reps_load": "groups", each with any of "sets", "reps", "load"; "load_unit" ("kg" or "lb") exactly when a group has a load. A ramp is several groups.
@@ -152,7 +152,11 @@ Measurement modes and the "target" fields each uses (every other target field is
 
 "instructions" are how to perform it, briefly, or null. "summary" tells the athlete what the list is built to do and the main choice you made, in at most 400 characters.
 
-"trainingHistory" here covers only the last seven days and lists what was logged; it does not list missed sessions, and a quiet week in it is not evidence of a break.
+"trainingHistory" here covers only the last seven days and lists what was logged; it does not list missed sessions, and a quiet week in it is not evidence of a break. "recentSafetyFlags" reaches four weeks back: each is a day on which the athlete reported pain, illness, injury or severe fatigue, with nothing else of that day. Treat each as the safety rules treat a signal.
+
+"roadmapPhase", when not null, is the phase of the athlete's roadmap this day falls in. Let its focus shape what the session's activities emphasise; it does not change the session's title, sport or length, and it never overrides a safety signal.
+
+Use only equipment the athlete has for where the session is done: at home, what "trainingSetup.homeEquipment" lists; a place they name, such as a gym, has what such a place has. Each entry of "week" names its activities, so that you do not load the same thing hard on consecutive days.
 
 "planningNote", if present, is the athlete's note about this one request.
 

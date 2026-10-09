@@ -35,13 +35,21 @@ import type { SavedSession } from "@/server/saved-sessions/saved-sessions";
 
 /** Sessions within this many days either side count as the session's week. */
 export const SESSION_DETAIL_WEEK_RADIUS_DAYS = 3;
-/** Recent actuals are read from this window, which ADR-013 already bounds. */
+/**
+ * How far back a last result is looked up (ADR-023 decision 18). Eight weeks,
+ * ADR-013's window, until then: an exercise last done in July counted as
+ * never done. Three results an activity at most, as before.
+ */
+export const SESSION_DETAIL_ACTUALS_WINDOW_DAYS = 183;
 export const SESSION_DETAIL_MAX_ACTUAL_ENTRIES = 3;
 export const SESSION_DETAIL_MAX_ACTUAL_ACTIVITIES = 12;
 export const SESSION_DETAIL_MAX_SAVED_SESSIONS = 3;
 export const SESSION_DETAIL_MAX_LIBRARY = 60;
 export const SESSION_DETAIL_MAX_SESSION_ACTIVITIES = 20;
 export const SESSION_DETAIL_MAX_WEEK = 14;
+/** ADR-023 decision 16: what a neighbouring session names of its activities. */
+export const SESSION_DETAIL_MAX_WEEK_ACTIVITY_NAMES = 8;
+export const SESSION_DETAIL_WEEK_ACTIVITY_NAME_MAX_LENGTH = 60;
 /**
  * The session's own free text, truncated as ADR-013 decision 4 truncates a
  * log's note. The columns allow 500 and 2,000 characters, and at four bytes a
@@ -60,14 +68,18 @@ export const SESSION_DETAIL_INTENT_MAX_LENGTH = 200;
  * - a session activity with a twenty-group ramp serializes to about 900 bytes
  *   and a plain one to about 150, so 3,500 holds the ordinary session whole and
  *   trims a pathological one with disclosure;
- * - a library entry is about 110 bytes, so 3,500 holds about thirty;
+ * - a library entry is 101 bytes before its name and sport, so about 130
+ *   with ordinary ones: 8,000 holds all sixty of those, and fewer as names
+ *   grow (twenty-six at the longest), with the rest counted;
  * - a saved session is a session's worth, and three of them get 4,000;
  * - an actual is about 110 bytes per entry, three entries per activity.
  */
 export const SESSION_DETAIL_BYTES = {
   session: 3_500,
-  week: 800,
-  library: 3_500,
+  // 800 until ADR-023 decision 16 put the neighbours' activity names in.
+  week: 2_400,
+  // 3_500 until decision 17: fewer than thirty of sixty entries fitted.
+  library: 8_000,
   savedSessions: 4_000,
   recentActuals: 4_000,
 } as const;
@@ -92,6 +104,7 @@ export type SessionDetailRecords = {
     title: string;
     sport: string;
     durationMinutes: number | null;
+    activityNames: string[];
   }[];
   library: {
     id: string;
@@ -183,6 +196,14 @@ export function selectSessionDetailRecords(input: {
       title: other.title,
       sport: other.sport,
       durationMinutes: other.expectedDurationMinutes ?? null,
+      // Names only. Fewer and shorter than a log's own list: a neighbour is
+      // context, and one with a dozen long names would take the whole week's
+      // share and leave the others out.
+      activityNames: other.activities
+        .slice(0, SESSION_DETAIL_MAX_WEEK_ACTIVITY_NAMES)
+        .map((activity) =>
+          activity.name.slice(0, SESSION_DETAIL_WEEK_ACTIVITY_NAME_MAX_LENGTH),
+        ),
     }));
 
   const sportKey = activityNameKey(session.sport);

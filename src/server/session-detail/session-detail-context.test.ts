@@ -140,6 +140,43 @@ describe("selectSessionDetailRecords", () => {
     ]);
   });
 
+  it("names the neighbours' activities, and sends none of their targets", () => {
+    const records = select({
+      planSessions: [
+        planSession(),
+        planSession({
+          id: "w1",
+          localDate: "2026-10-06",
+          title: "Yesterday's legs",
+          activities: [
+            {
+              position: 0,
+              name: "Back squat",
+              sport: "Strength",
+              measurementMode: "sets_reps_load",
+              target: {
+                groups: [{ sets: 5, reps: 5, load: 100 }],
+                load_unit: "kg",
+              },
+            },
+          ] as unknown as RollingPlanSession["activities"],
+        }),
+      ],
+    }) as SessionDetailRecords;
+
+    // ADR-023 decision 16: enough to see that squats were yesterday.
+    expect(records.week).toEqual([
+      {
+        localDate: "2026-10-06",
+        title: "Yesterday's legs",
+        sport: "Strength",
+        durationMinutes: 60,
+        activityNames: ["Back squat"],
+      },
+    ]);
+    expect(JSON.stringify(records.week)).not.toContain("groups");
+  });
+
   it("prefers saved sessions with the same title, then the same sport, at most three", () => {
     const records = select({
       savedSessions: [
@@ -340,6 +377,7 @@ describe("buildSessionDetailContext", () => {
         title: "T".repeat(120),
         sport: "S".repeat(80),
         durationMinutes: 600,
+        activityNames: Array.from({ length: 12 }, () => "A".repeat(120)),
       })),
       library: Array.from({ length: 200 }, (_, index) => ({
         id: activity(index).personalActivityId,
@@ -395,6 +433,24 @@ describe("buildSessionDetailContext", () => {
 });
 
 describe("session detail review follow-ups", () => {
+  it("fits a whole library of sixty ordinary entries (ADR-023 decision 17)", () => {
+    const records = select({
+      planSessions: [planSession()],
+      library: Array.from({ length: 60 }, (_, index) =>
+        libraryEntry({
+          id: `5d000000-0000-4000-8000-0000000001${String(index).padStart(2, "0")}`,
+          // Twenty-one characters, as long as most names get.
+          name: `Bulgarian split sq ${String(index).padStart(2, "0")}`,
+        }),
+      ),
+    }) as SessionDetailRecords;
+
+    const { context } = buildSessionDetailContext(records);
+
+    expect(context.library).toHaveLength(60);
+    expect(context.libraryWithheld).toBe(0);
+  });
+
   it("orders the library so entries the session links survive a trim", () => {
     const linked = "5d000000-0000-4000-8000-0000000000c9";
     const records = select({

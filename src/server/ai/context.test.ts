@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildCoachAIContext,
+  selectRecentSafetyFlagDays,
   byteLength,
   COACH_AI_CONTEXT_LIMITS,
   CoachAIContextBelowMinimumError,
@@ -1818,7 +1819,9 @@ describe("fill_session_activities assembly", () => {
     expect(assembled.serialized).not.toContain("replaceHandle");
   });
 
-  it("reads the last seven days of training only, so an old flag does not steer it", () => {
+  it("reads seven days of training, and the flags of four weeks (ADR-023 decision 15)", () => {
+    // The log of 1 August carries a pain flag and is nine days back: outside
+    // the seven days of history, inside the four weeks of flags.
     const assembled = fill({
       training: {
         ...EMPTY_TRAINING,
@@ -1830,12 +1833,26 @@ describe("fill_session_activities assembly", () => {
       },
     });
 
+    expect(assembled.context.recentSafetyFlags).toEqual([
+      {
+        localDate: "2026-08-01",
+        painReported: true,
+        illnessReported: false,
+        injuryReported: false,
+        severeFatigueReported: false,
+      },
+    ]);
+    expect(assembled.context.recentSafetyFlagsWithheld).toBe(0);
+    // Until this decision the flag did not reach a fill at all.
+    expect(assembled.context.hasSafetySignal).toBe(true);
+    // Only the day and the flags: nothing else of that log is sent.
+    expect(assembled.serialized.match(/2026-08-01/g)).toHaveLength(1);
+
     expect(
       assembled.context.trainingHistory.completions.map(
         (entry) => entry.localDate,
       ),
     ).toEqual(["2026-08-09", "2026-08-04"]);
-    expect(assembled.context.hasSafetySignal).toBe(false);
     // The window the coach is told about is the one it was sent: seven days
     // holding two sessions, not fifty-six days holding two, which would read
     // as a detraining gap nobody had.
@@ -1882,6 +1899,151 @@ describe("fill_session_activities assembly", () => {
       ).toThrow(CoachAIError);
     },
   );
+
+  it("lets a flag older than four weeks go, and tells no other call of any", () => {
+    const flaggedOn = (daysBack: number) => ({
+      ...logged("2026-08-01"),
+      localDate: shiftDate(TODAY, -daysBack),
+    });
+    const assembled = fill({
+      training: { ...EMPTY_TRAINING, completions: [flaggedOn(28)] },
+    });
+    // Twenty-eight days counting today: the twenty-seventh back is the last.
+    const edge = fill({
+      training: { ...EMPTY_TRAINING, completions: [flaggedOn(27)] },
+    });
+
+    expect(edge.context.recentSafetyFlags).toHaveLength(1);
+    expect(assembled.context.recentSafetyFlags).toEqual([]);
+    expect(assembled.context.hasSafetySignal).toBe(false);
+    expect(build().serialized).not.toContain("recentSafetyFlags");
+    expect(build().serialized).not.toContain("roadmapPhase");
+  });
+
+  it("gives one entry a day, however many logs that day reported something", () => {
+    const morning = logged("2026-08-01");
+    const evening = {
+      ...logged("2026-08-01"),
+      painReported: false,
+      severeFatigueReported: true,
+    };
+    const assembled = fill({
+      training: { ...EMPTY_TRAINING, completions: [morning, evening] },
+    });
+
+    expect(assembled.context.recentSafetyFlags).toEqual([
+      {
+        localDate: "2026-08-01",
+        painReported: true,
+        illnessReported: false,
+        injuryReported: false,
+        severeFatigueReported: true,
+      },
+    ]);
+  });
+
+  it("counts at most seven logs for one day, so the sources stay storable", () => {
+    const sameDay = Array.from({ length: 9 }, () => logged("2026-08-01"));
+
+    const selection = selectRecentSafetyFlagDays(sameDay, TODAY);
+
+    expect(selection.days).toHaveLength(1);
+    expect(selection.days[0].logs).toHaveLength(7);
+  });
+
+  it("counts the flagged days it leaves out past twenty", () => {
+    const many = Array.from({ length: 23 }, (_, index) => ({
+      ...logged("2026-08-01"),
+      localDate: shiftDate(TODAY, -index),
+    }));
+    const assembled = fill({
+      training: { ...EMPTY_TRAINING, completions: many },
+    });
+
+    expect(assembled.context.recentSafetyFlags).toHaveLength(20);
+    expect(assembled.context.recentSafetyFlagsWithheld).toBe(3);
+    // Newest first, so what is left out is the oldest.
+    expect(assembled.context.recentSafetyFlags?.[0].localDate).toBe(TODAY);
+    expect(assembled.usage.recent_safety_flags).toBeLessThanOrEqual(
+      COACH_AI_CONTEXT_LIMITS.fill_session_activities.bytes.recentSafetyFlags,
+    );
+  });
+
+  it("names the roadmap phase the session's day falls in, and only what it is for", () => {
+    const phase = {
+      title: "Base",
+      focus: "Easy volume, twice a week of strength.",
+      startDate: shiftDate(SESSION_DATE, -10),
+      endDate: shiftDate(SESSION_DATE, 10),
+      goalAttention: [
+        {
+          goalId: "a1000000-0000-4000-8000-000000000001",
+          level: "primary" as const,
+          reason: "REASON-THAT-MUST-NOT-TRAVEL",
+        },
+      ],
+      milestones: [
+        {
+          title: "MILESTONE-THAT-MUST-NOT-TRAVEL",
+          observableCriterion: "Run 10 km without stopping.",
+          targetDate: SESSION_DATE,
+          goalIds: ["a1000000-0000-4000-8000-000000000001"],
+        },
+      ],
+    };
+    const roadmapVersion = {
+      id: "b1000000-0000-4000-8000-000000000001",
+      versionNumber: 2,
+      content: {
+        schemaVersion: "fittip.roadmap.v2" as const,
+        title: "Autumn build",
+        summary: "SUMMARY-THAT-MUST-NOT-TRAVEL",
+        startDate: phase.startDate,
+        endDate: shiftDate(SESSION_DATE, 60),
+        phases: [
+          phase,
+          {
+            ...phase,
+            title: "Build",
+            focus: "LATER-FOCUS-THAT-MUST-NOT-TRAVEL",
+            startDate: shiftDate(SESSION_DATE, 11),
+            endDate: shiftDate(SESSION_DATE, 60),
+          },
+        ],
+        reviewPoints: [],
+      },
+    };
+    const assembled = fill({ roadmapVersion });
+
+    expect(assembled.context.roadmapPhase).toEqual({
+      title: "Base",
+      focus: "Easy volume, twice a week of strength.",
+      startDate: phase.startDate,
+      endDate: phase.endDate,
+    });
+    expect(assembled.serialized).not.toMatch(/MUST-NOT-TRAVEL/);
+    // The plan's reduction is not a fill's, and nothing is recorded as lineage.
+    expect(assembled.context.roadmap).toBeNull();
+    expect(assembled.references.roadmapVersion).toBeNull();
+    expect(fill().context.roadmapPhase).toBeNull();
+  });
+
+  it("holds every part of a fill request inside its total", () => {
+    const bytes = COACH_AI_CONTEXT_LIMITS.fill_session_activities.bytes;
+    const sumOfParts =
+      bytes.athlete +
+      bytes.trainingSetup +
+      bytes.targetableGoals +
+      bytes.historicalGoals +
+      bytes.memory +
+      bytes.trainingHistory +
+      bytes.planningNote +
+      bytes.roadmapPhase +
+      bytes.recentSafetyFlags +
+      bytes.sessionDetail;
+
+    expect(sumOfParts + 1_000).toBeLessThanOrEqual(bytes.total);
+  });
 
   it("refuses a session id on any other operation", () => {
     expect(() => build({}, { sessionId: SESSION_ID })).toThrow(CoachAIError);
