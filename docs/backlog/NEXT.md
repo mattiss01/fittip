@@ -30,13 +30,6 @@ Ordered by dependency. A lane is named where it is not the build lane.
       Open for the owner first: a row picked from the library and then changed keeps its
       `personal_activity_id` until it is saved as a new definition, so grouping history by
       definition would count "picked Latzug, renamed Stabwurf" as Latzug.
-- [ ] **What a proposal may replace.** Owner, 9 Oct 2026, when Lock was removed. The
-      compose screen lists the sessions on the chosen days, each "stays" by default or
-      "can be replaced". The coach sees them with minutes and the mark and names which
-      session a proposed one replaces; Accept adds the new one and removes the old one
-      in one step, and nothing changes before it. A session with a log is never
-      replaceable. Careful lane: a new proposal format, the accept function, a
-      migration. The roadmap writes no sessions, so this is the plan call only.
 - [ ] **The 30-day start limit is the app's alone.** `begin_plan_generation` and
       `begin_roadmap_generation` refuse a past start and have no upper bound. Only
       the owner calling the database directly gets past it, on their own data.
@@ -54,8 +47,8 @@ lane, one screen per merge.
 - [ ] **What the coach is given.** Careful lane, ADR-023. Gone through call by call
       with the owner on 9 Oct 2026; all of this is decided. Measure every allocation
       before the ADR rather than trusting the estimates.
-      **Ceiling:** `maxInputTokens` 10,000 to 14,000 (15,000 if the plan does not fit);
-      check whether `reserve_ai_spend` needs a migration for it.
+      **Ceiling:** 14,000 since ADR-024 (9 Oct 2026), which used about 800 of the
+      4,000 new tokens for the plan call; 15,000 if the rest does not fit.
       **All three calls:** the training setup (sessions a week, days out and the note,
       places, home equipment); each active goal's desired outcome (goals limit 10,000
       bytes for the roadmap, 8,000 otherwise, still refusing with goals named); age,
@@ -65,10 +58,10 @@ lane, one screen per merge.
       owner's text, never instructions.
       **Roadmap:** minutes on recurring and single sessions; 30 single sessions, not
       12; a short form of the accepted roadmap (title, phases, dates).
-      **Plan:** the prompt says what planned sessions mean (plan around those that
-      stay, count their load, never duplicate); minutes on them and 30, not 12; logs
-      get the roadmap's 10,200 bytes; single sessions are read 28 days past the last
-      planned day, not 180.
+      **Plan:** logs get the roadmap's 10,200 bytes; single sessions are read 28
+      days past the last planned day, not 180. (ADR-024 already shipped the prompt
+      paragraph on planned sessions, their minutes inside the chosen days, and 30
+      entries instead of 12; minutes on entries outside those days are still open.)
       **Fill:** only what is listed at the place the session fits; safety flags of the
       last 28 days as date and flag; the roadmap phase the day falls in (title, focus);
       activity names of the neighbouring sessions; the library's room doubled to 7,000
@@ -275,11 +268,6 @@ Not worth their own slot; do them when work lands nearby.
   series stands (ADR-013, amended 2 Oct 2026): a cancelled or deleted occurrence is not
   listed, and an edited or moved one appears both as its own dated entry and
   inside the rule.
-- **The plan context has no headroom left.** M3-16B spent it: prefix 7,400 + wrapper 64 +
-  context 32,500 estimates 9,991 tokens against a 10,000 ceiling. The next source, or a longer
-  prompt, takes bytes from an existing source or raises `maxInputTokens` — and the second is a
-  standing spend increase, because a reservation charges the ceiling before every live call
-  whether or not the extra room was used.
 - **A superseded roadmap is named only by version.** When the owner accepts a new roadmap after
   a proposal was made, review says which version the proposal was planned under and that it has
   been replaced, but cannot describe it: the content of a superseded version is still stored,
