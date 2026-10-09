@@ -499,15 +499,17 @@ coach reads of the plan:
 - **The roadmap's list holds thirty dated entries**, where it held twelve, in
   4,400 bytes with its rules, where it had 1,400. What the second amendment
   recorded as given up is smaller for it: a race is cut only past thirty nearer
-  single sessions, and six rules at their longest no longer take the whole
-  allocation.
+  single sessions. Thirty fit beside six ordinary rules up to titles of about
+  thirty characters, and fewer as titles grow; six rules at their longest in
+  one-byte characters leave room for seven dated entries, and in a three-byte
+  script the rules can still take the whole allocation.
 - **The plan reads dated entries 28 days past its last planned day**, and no
   further. The second amendment had left it at the roadmap's 180 days and said
   a shorter window was one limit away; this is that limit. Inside the days
   being planned, and from today up to them, nothing changes.
 
-The plan operation's completion sub-budget (decision 1's byte trim) is 9,700
-bytes, where it was 5,800, inside 14,900 for the whole of training history.
+The plan operation's completion sub-budget (decision 1's byte trim) is 9,300
+bytes, where it was 5,800, inside 14,500 for the whole of training history.
 
 ## Related decision made in the same session
 
