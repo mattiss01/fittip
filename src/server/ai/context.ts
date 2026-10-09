@@ -322,7 +322,7 @@ export const COACH_AI_CONTEXT_LIMITS = {
       previousProposal: 2_200,
       // A roadmap is not planned against itself.
       roadmap: 0,
-      // Six phases of 80-character titles with their dates are about 900.
+      // Six phases of 80-character titles with their dates are about 1,020.
       currentRoadmap: 1_200,
       sessionDetail: 0,
       // 33,700 until ADR-023, which added the athlete, the training setup and
@@ -387,15 +387,15 @@ export const COACH_AI_CONTEXT_LIMITS = {
       // 8,000 where the roadmap has 10,000: the roadmap is where a goal's
       // outcome sets direction, and the plan already reads that roadmap.
       targetableGoals: 8_000,
-      // 1,600 until ADR-023 decision 12; see `total` below.
-      historicalGoals: 1_200,
+      historicalGoals: 1_600,
       memory: 5_600,
       // 11,000 and 5,800 until ADR-023 decision 12: about a dozen of the
-      // twenty logs fitted. 9,700 holds twenty at the corpus mean of 392 bytes
-      // and nineteen at its worst of 501; the roadmap's 10,200 would have
-      // put the whole past the ceiling (see `total`).
-      trainingHistory: 14_900,
-      trainingHistoryCompletions: 9_700,
+      // twenty logs fitted. 9,300 holds twenty at the corpus mean of 392 bytes
+      // and eighteen at the corpus worst of 501; a log with a full 400-
+      // character note is about 700, and thirteen of those fit. The roadmap's
+      // 10,200 would have put the whole past the ceiling (see `total`).
+      trainingHistory: 14_500,
+      trainingHistoryCompletions: 9_300,
       planCommitments: 4_000,
       planningNote: 1_200,
       regenerationFeedback: 600,
@@ -412,13 +412,16 @@ export const COACH_AI_CONTEXT_LIMITS = {
       // room many times over. `context.test.ts` measures the legal worst case
       // against this number rather than trusting the arithmetic.
       //
-      // 5,900 since ADR-023: the legal worst case measures under it, and the
-      // 500 it gives back is part of what lets `total` hold every part.
+      // 5,900 since ADR-023: the legal worst case in ASCII measures 5,797,
+      // and the 500 it gives back is part of what lets `total` hold every
+      // part. A rejected plan in a script of three bytes a character can pass
+      // it and is refused with this source named.
       previousProposal: 5_900,
       roadmap: 4_000,
       currentRoadmap: 0,
       sessionDetail: 0,
-      // The sum of the parts (50,200) and 1,000 for the envelope, whose
+      // The sum of the parts (50,200) and 1,000 for the envelope (817 at its
+      // largest), whose
       // largest piece is twelve goal ids outside the horizon. Until ADR-023
       // decision 12 this was below the sum, on the reasoning that no request
       // fills every part at once; the refusal that would then fire named no
@@ -709,9 +712,9 @@ export function buildCoachAIContext(
 
   // M3-16B. The gate on the one record the source hands over whole: what
   // reaches a provider is this reduction and never `records.roadmapVersion`.
-  // Guarded by operation here as well as at the source, so a source that
-  // supplied one for `create_roadmap` still sends nothing — two independent
-  // refusals, because this is the file that decides what a request carries.
+  // Guarded by operation here as well as at the source: the plan gets this
+  // reduction, a new roadmap gets only the outline further down (ADR-023
+  // decision 8), and a fill gets neither whatever a source handed in.
   //
   // The goals it is checked against are the targetable ones, which is the same
   // set `accept_roadmap_proposal` recognizes for a goal source: active or
@@ -735,7 +738,10 @@ export function buildCoachAIContext(
   const currentRoadmap =
     operation !== "create_roadmap"
       ? undefined
-      : records.roadmapVersion
+      : // One that has ended is not what the athlete is following, and the
+        // prompt says "now". The goals and the logs carry on from it.
+        records.roadmapVersion &&
+          records.roadmapVersion.content.endDate >= records.today
         ? buildCurrentRoadmapReference(
             records.roadmapVersion.content,
             limits.bytes.currentRoadmap,

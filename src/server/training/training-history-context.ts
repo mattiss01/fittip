@@ -39,7 +39,8 @@ export const TRAINING_HISTORY_WINDOW_DAYS = 56;
  *   `toCompletionReference` — which drops the id, the timezone and the revision
  *   number, and reduces activities to names — the 24 corpus sessions serialize
  *   to 323-501 bytes, mean 392. The second figure is the one the byte budget
- *   counts, and `context.ts` sizes the completion sub-budget at 20 x 501.
+ *   counts, and `context.ts` sizes the roadmap's completion sub-budget at
+ *   20 x 501. The plan's is smaller; its own comment says why.
  * - The ADR's drafted 2,000-character `note` allowance is 2,000 bytes for one
  *   session. Twenty sessions at that allowance is 40,000 bytes for one field —
  *   more than the entire context ceiling — so the drafted number cannot coexist
@@ -61,6 +62,7 @@ export const REPLACEMENT_DESCRIPTION_MAX_LENGTH = 240;
  * Lock is gone (owner), so nothing marks one entry out there above another.
  */
 export const FORWARD_PLAN_WINDOW_DAYS = 180;
+/** The default; both operations that send any now set their own (30). */
 export const MAX_PLAN_COMMITMENTS = 12;
 /**
  * Decision 5 as amended on 2 October 2026: the most recurring series sent as
@@ -470,8 +472,9 @@ const WEEKDAY_NAMES: readonly CoachAIWeekdayName[] = [
 ];
 
 /**
- * Copies exactly the fields the amendment enumerates. The series' intent,
- * note, expected duration and activities are not eligible and are not read.
+ * Copies exactly the fields the amendments enumerate: the rule, the title, the
+ * sport and, since ADR-023, one occurrence's expected minutes. The series'
+ * intent, note and activities are not eligible and are not read.
  */
 function toRecurringSessionReference(
   entry: TrainingHistorySeries,

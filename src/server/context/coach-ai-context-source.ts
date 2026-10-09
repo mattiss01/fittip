@@ -202,9 +202,9 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       this.#operation === "create_roadmap"
         ? (await createRollingPlan()).listSeries()
         : [],
-      // M3-16B. Only the plan operation: a roadmap is not planned against
-      // itself, and reading one for `create_roadmap` would put owner records
-      // in hand that that operation has no business holding.
+      // M3-16B gave this to the plan operation only, on the reasoning that a
+      // roadmap is not planned against itself. ADR-023 decision 8 below
+      // gives the roadmap operation its own, narrower use of it.
       //
       // This hands over the stored content unreduced, which is the one place
       // this module differs from how it treats completions. Reducing needs
@@ -419,9 +419,10 @@ function toTrainingHistoryPlannedSession(
 }
 
 /**
- * Only the recurrence, the title and the sport cross into the selection. The
- * template's intent, note, duration and activities stay behind here, so the
- * selection cannot send what it was never handed.
+ * Only the recurrence, the title, the sport and, since ADR-023, the expected
+ * minutes cross into the selection. The template's intent, note and
+ * activities stay behind here, so the selection cannot send what it was never
+ * handed.
  */
 function toTrainingHistorySeries(
   series: RollingPlanSeries,

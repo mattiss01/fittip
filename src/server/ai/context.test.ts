@@ -1524,6 +1524,30 @@ describe("the accepted roadmap as plan context", () => {
     expect(plan().serialized).not.toContain("currentRoadmap");
   });
 
+  it("does not call a roadmap that has ended the one being followed", () => {
+    const ended = {
+      ...ROADMAP_VERSION,
+      content: {
+        ...ROADMAP_VERSION.content,
+        startDate: shiftDate(TODAY, -90),
+        endDate: shiftDate(TODAY, -1),
+      },
+    };
+    const lastDay = {
+      ...ended,
+      content: { ...ended.content, endDate: TODAY },
+    };
+    const outline = (roadmapVersion: typeof ended) =>
+      buildCoachAIContext(
+        "create_roadmap",
+        records({ roadmapVersion }),
+        COMPOSE,
+      ).context.currentRoadmap;
+
+    expect(outline(ended)).toBeNull();
+    expect(outline(lastDay)).not.toBeNull();
+  });
+
   it("counts the phases it leaves out when the outline does not fit", () => {
     const long = {
       ...ROADMAP_VERSION,
@@ -1547,6 +1571,8 @@ describe("the accepted roadmap as plan context", () => {
     expect((outline?.phases.length ?? 0) + (outline?.phasesWithheld ?? 0)).toBe(
       6,
     );
+    // The earliest go first: what is kept ends with the last phase.
+    expect(outline?.phases.at(-1)?.title.startsWith("5")).toBe(true);
   });
 
   it("is the ordinary goals-only path when no roadmap covers the week", () => {
@@ -1786,6 +1812,10 @@ describe("fill_session_activities assembly", () => {
     expect(assembled.context.historicalGoals).toEqual([]);
     expect(assembled.context.roadmap).toBeNull();
     expect(assembled.context.planCommitments).toEqual([]);
+    // Nothing of the roadmap's or the plan's part of ADR-023 reaches a fill.
+    expect(assembled.serialized).not.toContain("currentRoadmap");
+    expect(assembled.serialized).not.toContain("recurringSessions");
+    expect(assembled.serialized).not.toContain("replaceHandle");
   });
 
   it("reads the last seven days of training only, so an old flag does not steer it", () => {

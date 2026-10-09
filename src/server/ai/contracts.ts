@@ -176,7 +176,7 @@ export type CoachAICurrentRoadmapReference = {
   startDate: string;
   endDate: string;
   phases: { title: string; startDate: string; endDate: string }[];
-  /** Phases left out to fit, from the end. Zero is the ordinary case. */
+  /** Phases left out to fit, earliest first. Zero is the ordinary case. */
   phasesWithheld: number;
 };
 
