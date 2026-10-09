@@ -485,6 +485,30 @@ not fit refuses the request with plan commitments named. The plan operation's
 whole context may be 35,100 bytes, where it was 32,500. The roadmap's limits
 are unchanged.
 
+## Fifth recorded amendment to decision 5: minutes, thirty entries, and a nearer limit for the plan
+
+On 9 October 2026 the product owner decided, in
+[ADR-023](ADR-023-WHAT-THE-COACH-IS-GIVEN.md), three more things about what a
+coach reads of the plan:
+
+- **Minutes travel with every planned entry** sent to `create_roadmap` and
+  `create_seven_day_plan`: `durationMinutes` on a dated entry and on a
+  recurring rule, or null. The fourth amendment had given them only to a plan
+  entry inside the days being planned. The replace handle stays where that
+  amendment put it.
+- **The roadmap's list holds thirty dated entries**, where it held twelve, in
+  4,400 bytes with its rules, where it had 1,400. What the second amendment
+  recorded as given up is smaller for it: a race is cut only past thirty nearer
+  single sessions, and six rules at their longest no longer take the whole
+  allocation.
+- **The plan reads dated entries 28 days past its last planned day**, and no
+  further. The second amendment had left it at the roadmap's 180 days and said
+  a shorter window was one limit away; this is that limit. Inside the days
+  being planned, and from today up to them, nothing changes.
+
+The plan operation's completion sub-budget (decision 1's byte trim) is 9,700
+bytes, where it was 5,800, inside 14,900 for the whole of training history.
+
 ## Related decision made in the same session
 
 The compose step for a plan proposal introduces a **planning note** — owner
@@ -540,3 +564,7 @@ ahead of the days before them. The third amendment above records it.
 **Fourth amendment, 9 October 2026.** For the plan operation, an entry
 inside the days being planned carries its minutes and a replace handle
 (ADR-024), and the list holds 30 entries. The fourth amendment above records it.
+
+**Fifth amendment, 9 October 2026.** Minutes on every planned entry and rule,
+thirty entries for the roadmap, and the plan's forward reach cut to 28 days
+past its last day (ADR-023). The fifth amendment above records it.
