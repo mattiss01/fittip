@@ -64,6 +64,8 @@ export type PlanProposalView = {
   generationId: string;
   items: PlanProposalItemView[];
   decision: PlanProposalDecision | null;
+  /** When the review was finished or discarded; null while it is open. */
+  decidedAt: string | null;
   createdAt: string;
 };
 

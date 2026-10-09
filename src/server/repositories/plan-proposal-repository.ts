@@ -60,7 +60,7 @@ const PROPOSAL_COLUMNS = `
     expected_duration_minutes, rationale, replaces_session_id
   ),
   plan_proposal_item_decisions ( ordinal, decision ),
-  plan_proposal_decisions ( decision )
+  plan_proposal_decisions ( decision, decided_at )
 ` as const;
 
 export class PlanProposalAuthenticationError extends Error {
@@ -568,7 +568,7 @@ type ProposalRow = {
     replaces_session_id: string | null;
   }[];
   plan_proposal_item_decisions: { ordinal: number; decision: string }[];
-  plan_proposal_decisions: { decision: string } | null;
+  plan_proposal_decisions: { decision: string; decided_at: string } | null;
 };
 
 function parseProposal(row: ProposalRow): PlanProposalView {
@@ -612,6 +612,7 @@ function parseProposal(row: ProposalRow): PlanProposalView {
     items,
     decision:
       (row.plan_proposal_decisions?.decision as PlanProposalDecision) ?? null,
+    decidedAt: row.plan_proposal_decisions?.decided_at ?? null,
     createdAt: row.created_at,
   };
 }

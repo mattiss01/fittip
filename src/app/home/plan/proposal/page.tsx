@@ -117,8 +117,17 @@ export default async function PlanProposalPage() {
           ) : null}
           {/* With no proposal the form above is the whole page: a "No
               proposal open" card under it only pointed back up at it. */}
-          {state.proposal === null ? null : state.proposal.decision !== null ? (
-            <FinishedProposal proposal={state.proposal} />
+          {/* A discarded proposal leaves nothing here (owner, 9 Oct 2026):
+              it changed nothing, and its items kept the tags they had when it
+              was dropped, so one ticked and never added still read "Will be
+              added". A finished review is folded to one line. */}
+          {state.proposal === null ||
+          state.proposal.decision === "discarded" ? null : state.proposal
+              .decision !== null ? (
+            <FinishedProposal
+              proposal={state.proposal}
+              justFinished={state.justFinished}
+            />
           ) : (
             <ProposalReview
               proposalId={state.proposal.id}
@@ -169,6 +178,7 @@ async function loadProposalState() {
     return {
       timezoneName,
       today: "",
+      justFinished: false,
       composable: [],
       hasGoals: false,
       proposal: null,
@@ -220,6 +230,12 @@ async function loadProposalState() {
     return {
       timezoneName,
       today,
+      // The sentence and the way back to the Plan answer a press made a
+      // moment ago. Read from the stored time rather than held in the review
+      // component, which is gone by the time this renders.
+      justFinished:
+        proposal?.decidedAt != null &&
+        Date.now() - Date.parse(proposal.decidedAt) < JUST_FINISHED_MS,
       composable: ahead.sessions
         .filter(
           (session) =>
@@ -274,6 +290,7 @@ async function loadProposalState() {
   return {
     timezoneName,
     today,
+    justFinished: false,
     composable: [],
     hasGoals,
     proposal,
@@ -340,6 +357,9 @@ async function readRoadmapStaleness(
     staleReasons,
   };
 }
+
+/** How long a finished review still counts as the one just finished. */
+const JUST_FINISHED_MS = 10 * 60 * 1000;
 
 /**
  * Which of these planned sessions have training logged against them. One that

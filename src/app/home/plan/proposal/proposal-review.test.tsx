@@ -1,4 +1,10 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
@@ -160,6 +166,26 @@ describe("an item that would replace a planned session (ADR-024)", () => {
     expect(
       screen.getByText(COPY.plannedMayBeReplaced("Tempo run")),
     ).toBeVisible();
+    expect(screen.getByText(COPY.canBeReplacedBadge)).toBeVisible();
+  });
+
+  it("strikes the owner's session through once Replace is chosen", () => {
+    const { container } = renderReview({
+      days: [
+        day({
+          items: [{ ...replacing(true), decision: "staged" }],
+          replacements: {
+            [SESSION_ID]: { title: "Tempo run", isChosen: true },
+          },
+        }),
+      ],
+    });
+
+    expect(
+      container.querySelector(`[data-session-id="${SESSION_ID}"]`),
+    ).toHaveAttribute("data-replaced", "chosen");
+    expect(screen.getByText(COPY.willBeReplacedBadge)).toBeVisible();
+    expect(screen.queryByText(COPY.alreadyPlannedBadge)).toBeNull();
   });
 
   it("falls back to a plain add once the session can no longer be replaced", () => {
@@ -174,6 +200,40 @@ describe("an item that would replace a planned session (ADR-024)", () => {
       }),
     ).toBeNull();
     expect(screen.getByText(COPY.replaceUnavailable("Easy run"))).toBeVisible();
+  });
+});
+
+describe("discarding a proposal", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useActionStateMock.mockImplementation(
+      (_action: unknown, initial: unknown) => [initial, vi.fn(), false],
+    );
+  });
+
+  afterEach(cleanup);
+
+  it("asks first, every time, and can be backed out of", () => {
+    renderReview();
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: COPY.discardAction }));
+
+    const question = screen.getByRole("dialog", {
+      name: COPY.discardConfirmTitle,
+    });
+    // Nothing was chosen, and it still asks.
+    expect(within(question).getByText(COPY.discardConfirm(0))).toBeVisible();
+    expect(
+      within(question).getByRole("button", {
+        name: COPY.discardConfirmAction,
+      }),
+    ).toHaveAttribute("type", "submit");
+
+    fireEvent.click(
+      within(question).getByRole("button", { name: COPY.discardCancel }),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
 
