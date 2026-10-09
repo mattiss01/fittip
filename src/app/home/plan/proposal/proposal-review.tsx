@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
 
 import {
   INITIAL_PLAN_PROPOSAL_ACTION_STATE,
@@ -22,6 +22,7 @@ import type {
 
 import { INITIAL_PLAN_ACTION_STATE } from "../action-state";
 import { changePlanAction } from "../actions";
+import { SheetLayer } from "../plan-sheet";
 import { SessionFields } from "../session-fields";
 
 import { CoachSpark } from "@/components/home/coach-spark";
@@ -87,6 +88,12 @@ export function ProposalReview({
   // field the owner has to scroll past on the way to the other two.
   const [askingAgain, setAskingAgain] = useState(false);
 
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const dialogId = useId();
+  const discardTitle = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (confirmingDiscard) discardTitle.current?.focus();
+  }, [confirmingDiscard]);
   const notice = latest(state, discardState, regenerateState);
   const busy = pending || discarding || regenerating;
 
@@ -217,26 +224,18 @@ export function ProposalReview({
                 {COPY.finishAction}
               </button>
             </form>
-            <form
-              action={discardAction}
-              key={`discard-${discardState.submission}`}
+            {/* Always asked first (owner, 9 Oct 2026): a discarded proposal
+                leaves nothing on the page, so the question is the one place
+                that says what the press does. */}
+            <button
+              className={styles.dangerAction}
+              type="button"
+              aria-haspopup="dialog"
+              disabled={busy}
+              onClick={() => setConfirmingDiscard(true)}
             >
-              <input type="hidden" name="proposalId" value={proposalId} />
-              <button
-                className={styles.dangerAction}
-                type="submit"
-                disabled={busy}
-                // A confirmation only when something would actually be lost, and
-                // it says exactly how much.
-                onClick={(event) => {
-                  if (staged > 0 && !confirm(COPY.discardConfirm(staged))) {
-                    event.preventDefault();
-                  }
-                }}
-              >
-                {COPY.discardAction}
-              </button>
-            </form>
+              {COPY.discardAction}
+            </button>
             <button
               className={styles.quietAction}
               type="button"
@@ -248,6 +247,43 @@ export function ProposalReview({
             </button>
           </div>
         )}
+
+        {confirmingDiscard ? (
+          <SheetLayer
+            view="discard-proposal"
+            placement="center"
+            labelledBy={`${dialogId}-discard`}
+            onClose={() => setConfirmingDiscard(false)}
+          >
+            <div className={styles.goalPrompt}>
+              <h2 id={`${dialogId}-discard`} ref={discardTitle} tabIndex={-1}>
+                {COPY.discardConfirmTitle}
+              </h2>
+              <p>{COPY.discardConfirm(staged)}</p>
+              <form
+                // The question closes as the answer is sent; what comes back
+                // is shown by the dock's own notice.
+                action={(formData) => {
+                  setConfirmingDiscard(false);
+                  discardAction(formData);
+                }}
+                key={`discard-${discardState.submission}`}
+              >
+                <input type="hidden" name="proposalId" value={proposalId} />
+                <button className={styles.dangerAction} type="submit">
+                  {COPY.discardConfirmAction}
+                </button>
+              </form>
+              <button
+                className={styles.quietAction}
+                type="button"
+                onClick={() => setConfirmingDiscard(false)}
+              >
+                {COPY.discardCancel}
+              </button>
+            </div>
+          </SheetLayer>
+        ) : null}
 
         {/*
           The third way a review ends. It says plainly what happens to the two

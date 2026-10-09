@@ -166,10 +166,15 @@ export const PLAN_PROPOSAL_COPY = {
       : `${unresolved} items still need a choice.`,
   discardAction: "Discard proposal",
   discardSupport: "Nothing is added to your plan, and the proposal is kept.",
+  discardConfirmTitle: "Discard this proposal?",
   discardConfirm: (staged: number) =>
-    staged === 1
-      ? "Discard this proposal? One staged item will not be added."
-      : `Discard this proposal? ${staged} staged items will not be added.`,
+    staged === 0
+      ? "Nothing is added to your plan, and the proposal is gone from this page."
+      : staged === 1
+        ? "The one item you chose to add will not be added, and the proposal is gone from this page."
+        : `The ${staged} items you chose to add will not be added, and the proposal is gone from this page.`,
+  discardConfirmAction: "Discard proposal",
+  discardCancel: "Keep reviewing",
 
   /**
    * Where the owner goes once a review is closed: back to the plan, where the
