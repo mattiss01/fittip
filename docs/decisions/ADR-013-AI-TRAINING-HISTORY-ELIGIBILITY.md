@@ -437,9 +437,11 @@ needs saying again for one that does not.
   being planned is still eligible, so the sessions between today and a later
   first day are sent. They are the load the athlete carries into those days.
 - **The fill order changes.** The days being planned and everything after them
-  come first, nearest first; the days before the first day follow, nearest
-  first. Nearest first alone would let the sessions before a later first day
-  fill the twelve entries and cut the very days the coach is asked about.
+  come first, earliest first. The days before the first day follow, latest
+  first, so a trim keeps the sessions nearest to the planned days and cuts the
+  ones nearest to today. Date order alone would let the sessions before a later
+  first day fill the twelve entries and cut the very days the coach is asked
+  about.
 
 With the first day today, which is every request made before this amendment,
 nothing is before it and the order is what it was. No field, limit or window
