@@ -26,8 +26,10 @@ export const ROADMAP_CONTROL_COPY = {
   composeTitle: "Shape your roadmap",
   composeSupport:
     "A roadmap is months of direction. Pick how far ahead it should look, and say anything the coach could not already know.",
+  startDateLabel: "Roadmap starts",
+  startDateHelper: "Between today and 30 days from now.",
   endDateLabel: "Roadmap ends",
-  endDateHelper: "Between four and fifty-two weeks from today.",
+  endDateHelper: "Between four and fifty-two weeks after it starts.",
   planningNoteLabel: "Anything the coach should account for? (optional)",
   planningNoteHelper:
     "Add commitments or constraints that your saved information does not show. Maximum 1,000 characters.",

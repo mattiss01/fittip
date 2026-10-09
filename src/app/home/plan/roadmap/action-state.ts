@@ -28,6 +28,7 @@ export type RoadmapActionStatus =
   | "error";
 
 export type RoadmapActionDraft = {
+  startDate: string;
   endDate: string;
   planningNote: string;
   regenerationFeedback: string;

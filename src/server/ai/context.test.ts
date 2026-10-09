@@ -804,6 +804,62 @@ describe("the per-source context allocation", () => {
       expect(assembled.context.recurringSessions).toEqual([]);
     });
 
+    it("lists the days being planned before the days leading up to them", () => {
+      // A first day ten days out, and a session on every day until then: more
+      // than the list holds. Nearest first alone would fill it before reaching
+      // the one session the coach is asked to plan around.
+      const leadIn = Array.from({ length: 10 }, (_, index) => ({
+        localDate: shiftDate(TODAY, index),
+        title: `Lead-in ${index}`,
+        sport: "Running",
+        hasCompletion: false,
+        ruleSeriesId: null,
+      }));
+      const inHorizon = {
+        localDate: shiftDate(TODAY, 11),
+        title: "Long run",
+        sport: "Running",
+        hasCompletion: false,
+        ruleSeriesId: null,
+      };
+      const after = Array.from({ length: 4 }, (_, index) => ({
+        localDate: shiftDate(TODAY, 20 + index),
+        title: `After ${index}`,
+        sport: "Running",
+        hasCompletion: false,
+        ruleSeriesId: null,
+      }));
+      const plan = buildCoachAIContext(
+        "create_seven_day_plan",
+        records({
+          training: {
+            ...EMPTY_TRAINING,
+            plannedSessions: [...leadIn, inHorizon, ...after],
+          },
+          timezoneName: "Europe/Berlin",
+        }),
+        {
+          ...COMPOSE,
+          horizonStartDate: shiftDate(TODAY, 10),
+          horizonEndDate: shiftDate(TODAY, 16),
+        },
+      );
+
+      const titles = plan.context.planCommitments.map((c) => c.title);
+      expect(titles).toHaveLength(12);
+      expect(titles.slice(0, 5)).toEqual([
+        "Long run",
+        "After 0",
+        "After 1",
+        "After 2",
+        "After 3",
+      ]);
+      // What is left goes to the days before, nearest first.
+      expect(titles.slice(5)).toEqual(
+        leadIn.slice(0, 7).map((entry) => entry.title),
+      );
+    });
+
     it("gives the seven-day plan and a fill no rules and no key for them", () => {
       const training = {
         ...EMPTY_TRAINING,

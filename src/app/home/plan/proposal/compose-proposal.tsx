@@ -16,8 +16,11 @@ import styles from "./proposal.module.css";
 
 import { SheetLayer } from "../plan-sheet";
 
+import { DateField } from "@/components/date-field/date-field";
 import { CoachSpark } from "@/components/home/coach-spark";
+import { shiftIsoDate } from "@/lib/date/local-date";
 import {
+  COACH_START_MAX_DAYS_AHEAD,
   PLAN_PROPOSAL_COPY,
   PLAN_PROPOSAL_DEFAULT_DAYS,
   PLAN_PROPOSAL_MAX_DAYS,
@@ -35,7 +38,14 @@ const COPY = PLAN_PROPOSAL_COPY;
  * returns the running claim instead of buying a second coach call, and on a
  * live binding a second call is a second payment.
  */
-export function ComposeProposal({ hasGoals }: { hasGoals: boolean }) {
+export function ComposeProposal({
+  hasGoals,
+  today,
+}: {
+  hasGoals: boolean;
+  /** The owner's local today: the earliest first day, and the default. */
+  today: string;
+}) {
   const [state, action, pending] = useActionState(
     generatePlanProposalAction,
     INITIAL_PLAN_PROPOSAL_ACTION_STATE,
@@ -71,6 +81,22 @@ export function ComposeProposal({ hasGoals }: { hasGoals: boolean }) {
         }
       >
         <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
+        <div className={styles.field}>
+          {/* The first day is the owner's to choose (9 Oct 2026), so next
+              week can be planned on a Friday. The action holds it to the
+              same range. */}
+          <DateField
+            calendar
+            initial={state.draft?.startDate || today}
+            label={COPY.startDateLabel}
+            max={shiftIsoDate(today, COACH_START_MAX_DAYS_AHEAD)}
+            min={today}
+            name="startDate"
+            rangeMessage={COPY.startDateRange}
+            required
+          />
+        </div>
+
         <div className={styles.field}>
           <label htmlFor={`${fieldId}-days`}>{COPY.dayCountLabel}</label>
           <input

@@ -36,6 +36,7 @@ import { generateRoadmapProposal } from "@/server/roadmap/roadmap-generation";
 import {
   parseExpectedHeadRevision,
   parseRoadmapEndDate,
+  parseRoadmapStartDate,
   parseRoadmapProposalId,
   RoadmapValidationError,
 } from "@/server/roadmap/roadmap-records";
@@ -78,6 +79,7 @@ export async function generateRoadmapAction(
 ): Promise<RoadmapActionState> {
   const submission = previous.submission + 1;
   const draft: RoadmapActionDraft = {
+    startDate: text(formData, "startDate"),
     endDate: text(formData, "endDate"),
     planningNote: text(formData, "planningNote"),
     regenerationFeedback: text(formData, "regenerationFeedback"),
@@ -91,11 +93,16 @@ export async function generateRoadmapAction(
     ]);
 
     const today = await ownerToday(profiles);
-    const endDate = parseRoadmapEndDate(draft.endDate, today);
-    const planningNote = parsePlanningNote(draft.planningNote);
     const previousProposalId = optionalProposalId(
       formData.get("previousProposalId"),
     );
+    const startDate = parseRoadmapStartDate(
+      draft.startDate,
+      today,
+      previousProposalId !== null,
+    );
+    const endDate = parseRoadmapEndDate(draft.endDate, startDate);
+    const planningNote = parsePlanningNote(draft.planningNote);
     const regenerationFeedback = parseRegenerationFeedback(
       draft.regenerationFeedback,
     );
@@ -119,7 +126,7 @@ export async function generateRoadmapAction(
     const result = await generateRoadmapProposal(
       {
         owner,
-        startDate: today,
+        startDate,
         endDate,
         expectedHeadRevision: head.revision,
         planningNote,

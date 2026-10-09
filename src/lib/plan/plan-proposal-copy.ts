@@ -28,6 +28,8 @@ export const PLAN_PROPOSAL_COPY = {
      two fields and a button. What stays is `generateSupport`, the one line
      that says nothing reaches the plan before the review is finished. */
   composeTitle: "Ask for a proposal",
+  startDateLabel: "First day",
+  startDateRange: "Between today and 30 days from now.",
   dayCountLabel: "Days to plan",
   planningNoteLabel: "Anything the coach should account for? (optional)",
   generateAction: "Ask the coach",
@@ -246,3 +248,5 @@ export const PLAN_PROPOSAL_NOTE_MAX_LENGTH = 1000;
 export const PLAN_PROPOSAL_MIN_DAYS = 1;
 export const PLAN_PROPOSAL_MAX_DAYS = 7;
 export const PLAN_PROPOSAL_DEFAULT_DAYS = 7;
+/** How far ahead a proposal may start (owner, 9 Oct 2026). Shared with the roadmap. */
+export const COACH_START_MAX_DAYS_AHEAD = 30;

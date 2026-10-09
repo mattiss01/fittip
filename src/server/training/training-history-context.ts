@@ -114,6 +114,11 @@ export type TrainingHistorySeries = {
 
 export type TrainingHistoryRecords = {
   today: string;
+  /**
+   * The first day being planned, when the owner chose one later than today
+   * (9 Oct 2026). Absent means today, which is what every request was before.
+   */
+  horizonStartDate?: string;
   horizonEndDate: string;
   /**
    * Current revisions only. Decision 2: the coach reads the head and never the
@@ -230,13 +235,23 @@ export function selectTrainingHistoryContext(
   // forward window. An unchanged occurrence out there is one of thirteen weeks
   // of identical lines, and the roadmap already has its series as a rule.
   const forwardLimit = addDays(records.today, forwardDays);
+  const horizonStartDate = records.horizonStartDate ?? records.today;
+  const isBeforeHorizon = (entry: TrainingHistoryPlannedSession) =>
+    entry.localDate < horizonStartDate;
   const eligible = records.plannedSessions
     .filter((entry) => {
       if (entry.localDate < records.today) return false;
       if (entry.localDate <= records.horizonEndDate) return true;
       return entry.ruleSeriesId === null && entry.localDate <= forwardLimit;
     })
-    .sort((a, b) => a.localDate.localeCompare(b.localDate));
+    // The days being planned come first, then everything else nearest first.
+    // With a first day later than today, the sessions before it would
+    // otherwise fill the list and cut the very days the coach is asked about.
+    .sort(
+      (a, b) =>
+        Number(isBeforeHorizon(a)) - Number(isBeforeHorizon(b)) ||
+        a.localDate.localeCompare(b.localDate),
+    );
   const byteBudget = limits.maxPlanCommitmentBytes ?? Number.POSITIVE_INFINITY;
   const costOf = (value: unknown) => byteLength(JSON.stringify(value)) + 1;
 

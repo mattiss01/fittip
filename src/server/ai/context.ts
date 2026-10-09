@@ -628,6 +628,7 @@ export function buildCoachAIContext(
   const training = selectTrainingHistoryContext(
     {
       ...trainingSelection.records,
+      horizonStartDate: compose.horizonStartDate,
       horizonEndDate: compose.horizonEndDate,
     },
     {

@@ -17,6 +17,8 @@ import { generateRoadmapAction } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { DateField } from "@/components/date-field/date-field";
 import { CoachSpark } from "@/components/home/coach-spark";
+import { shiftIsoDate } from "@/lib/date/local-date";
+import { COACH_START_MAX_DAYS_AHEAD } from "@/lib/plan/plan-proposal-copy";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
 /**
@@ -40,17 +42,24 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
  */
 export function RoadmapComposer({
   mode,
+  startDate,
   endDate,
-  minEndDate,
-  maxEndDate,
+  today,
+  minDays,
+  maxDays,
   previousProposalId,
   regenerationsRemaining,
 }: {
   mode: "initial" | "regeneration";
   /** The date the form opens on: the default horizon, or the predecessor's. */
   endDate: string;
-  minEndDate: string;
-  maxEndDate: string;
+  /** The day the form opens on: today, or the predecessor's first day. */
+  startDate: string;
+  /** The owner's local today: the earliest first day. */
+  today: string;
+  /** How long a roadmap may be, counted from its first day. */
+  minDays: number;
+  maxDays: number;
   /** The declined proposal a regeneration carries. Absent on a first request. */
   previousProposalId?: string;
   regenerationsRemaining: number;
@@ -86,6 +95,10 @@ export function RoadmapComposer({
   }
 
   const isRegeneration = mode === "regeneration";
+
+  // The end is counted from the first day, so its range follows the start the
+  // owner has chosen. A start half typed keeps the range it had.
+  const [chosenStart, setChosenStart] = useState(startDate);
 
   function submit(formData: FormData) {
     // A new attempt gets a new key; a retry of one that has not produced a
@@ -136,6 +149,34 @@ export function RoadmapComposer({
         ) : null}
 
         <div className={styles.field}>
+          {/* The owner's to choose (9 Oct 2026). Fixed on a regeneration,
+              as the end is. */}
+          <DateField
+            calendar
+            describedBy={isRegeneration ? undefined : `${fieldId}-start-help`}
+            initial={startDate}
+            label={ROADMAP_CONTROL_COPY.startDateLabel}
+            labelClassName={styles.label}
+            max={shiftIsoDate(today, COACH_START_MAX_DAYS_AHEAD)}
+            min={today}
+            name="startDate"
+            onChange={(date) => {
+              if (date !== "") setChosenStart(date);
+            }}
+            rangeMessage={
+              isRegeneration ? undefined : ROADMAP_CONTROL_COPY.startDateHelper
+            }
+            readOnly={isRegeneration}
+            required
+          />
+          {isRegeneration ? null : (
+            <span className={styles.helper} id={`${fieldId}-start-help`}>
+              {ROADMAP_CONTROL_COPY.startDateHelper}
+            </span>
+          )}
+        </div>
+
+        <div className={styles.field}>
           {/* A regeneration is defined as the same question about the same
               dates, and the database refuses one whose horizon moved. Showing
               the date but refusing to change it is honest about that; hiding
@@ -147,8 +188,8 @@ export function RoadmapComposer({
             initial={endDate}
             label={ROADMAP_CONTROL_COPY.endDateLabel}
             labelClassName={styles.label}
-            max={maxEndDate}
-            min={minEndDate}
+            max={shiftIsoDate(chosenStart, maxDays)}
+            min={shiftIsoDate(chosenStart, minDays)}
             name="endDate"
             // A typed date is held to the range as a picked one is. Not a
             // regeneration's: its date is the earlier proposal's, whatever

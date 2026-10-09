@@ -49,7 +49,10 @@ vi.mock("@/server/plan-proposal/plan-generation", () => ({
   generatePlanProposal: generateMock,
 }));
 
-import { regeneratePlanProposalAction } from "./actions";
+import {
+  generatePlanProposalAction,
+  regeneratePlanProposalAction,
+} from "./actions";
 import { INITIAL_PLAN_PROPOSAL_ACTION_STATE } from "./action-state";
 
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
@@ -191,6 +194,28 @@ describe("regeneratePlanProposalAction", () => {
     });
   });
 
+  it("keeps a first day that is still ahead, rather than moving it to today", async () => {
+    const today = isoDateInTimezone(new Date(), TIMEZONE);
+    const start = shiftIsoDate(today, 5);
+    getProposal.mockResolvedValue({
+      ...openProposal(),
+      startDate: start,
+      endDate: shiftIsoDate(start, 2),
+    });
+
+    await regenerate();
+
+    expect(generateMock.mock.calls[0][0]).toMatchObject({
+      startDate: start,
+      endDate: shiftIsoDate(start, 2),
+      dayCount: 3,
+    });
+    expect(getPlanSlice).toHaveBeenLastCalledWith(
+      start,
+      shiftIsoDate(start, 2),
+    );
+  });
+
   it("refreshes the plan before the coach is asked, so a lost answer leaves it right", async () => {
     await regenerate();
 
@@ -291,6 +316,88 @@ describe("regeneratePlanProposalAction", () => {
     expect(generateMock).not.toHaveBeenCalled();
     expect(revalidatePathMock).not.toHaveBeenCalled();
   });
+});
+
+describe("generatePlanProposalAction", () => {
+  const today = isoDateInTimezone(new Date(), TIMEZONE);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    createServerUserClientMock.mockResolvedValue({});
+    verifyOwnerMock.mockResolvedValue({ id: OWNER_ID });
+    createProposalsMock.mockResolvedValue({});
+    createProfileMock.mockResolvedValue({
+      getCurrentProfile: vi
+        .fn()
+        .mockResolvedValue({ userId: OWNER_ID, timezoneName: TIMEZONE }),
+    });
+    createRollingPlanMock.mockResolvedValue({ getPlanSlice });
+    getPlanSlice.mockResolvedValue({ revision: 5 });
+    generateMock.mockResolvedValue({
+      status: "proposal",
+      proposalId: "7c170000-0000-4000-8000-000000000031",
+      memoryCandidateCount: 0,
+    });
+  });
+
+  function compose(fields: Record<string, string>) {
+    const formData = new FormData();
+    for (const [name, value] of Object.entries({
+      dayCount: "3",
+      planningNote: "",
+      idempotencyKey: "start-date-compose-key-0001",
+      ...fields,
+    })) {
+      formData.set(name, value);
+    }
+    return generatePlanProposalAction(
+      INITIAL_PLAN_PROPOSAL_ACTION_STATE,
+      formData,
+    );
+  }
+
+  it("plans from the first day the owner chose", async () => {
+    const start = shiftIsoDate(today, 4);
+
+    const state = await compose({ startDate: start });
+
+    expect(state.status).toBe("proposal");
+    expect(generateMock.mock.calls[0][0]).toMatchObject({
+      startDate: start,
+      endDate: shiftIsoDate(start, 2),
+      dayCount: 3,
+    });
+    // The plan is read over the days asked about, not from today.
+    expect(getPlanSlice).toHaveBeenCalledExactlyOnceWith(
+      start,
+      shiftIsoDate(start, 2),
+    );
+  });
+
+  it("plans from today when no first day is sent", async () => {
+    await compose({});
+
+    expect(generateMock.mock.calls[0][0]).toMatchObject({
+      startDate: today,
+      endDate: shiftIsoDate(today, 2),
+    });
+  });
+
+  it.each([-1, 31])(
+    "refuses a first day %i days from today, keeping what was typed",
+    async (offset) => {
+      const start = shiftIsoDate(today, offset);
+
+      const state = await compose({ startDate: start });
+
+      expect(state).toMatchObject({
+        status: "validation",
+        message: PLAN_PROPOSAL_COPY.startDateRange,
+        draft: { startDate: start, dayCount: "3" },
+      });
+      expect(generateMock).not.toHaveBeenCalled();
+    },
+  );
 });
 
 function openProposal() {

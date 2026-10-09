@@ -11,7 +11,6 @@ import { RoadmapProposalReview } from "./roadmap-proposal-review";
 import homeStyles from "@/app/home/home.module.css";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import {
-  addDays,
   ROADMAP_COPY,
   ROADMAP_MAX_DAYS,
   ROADMAP_MIN_DAYS,
@@ -82,8 +81,14 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
               ? predecessor.endDate || predecessor.content.endDate
               : state.defaultEndDate
           }
-          minEndDate={addDays(state.today, ROADMAP_MIN_DAYS)}
-          maxEndDate={addDays(state.today, ROADMAP_MAX_DAYS)}
+          startDate={
+            canRegenerate && predecessor
+              ? predecessor.startDate || predecessor.content.startDate
+              : state.today
+          }
+          today={state.today}
+          minDays={ROADMAP_MIN_DAYS}
+          maxDays={ROADMAP_MAX_DAYS}
           {...(canRegenerate && predecessor
             ? { previousProposalId: predecessor.id }
             : {})}

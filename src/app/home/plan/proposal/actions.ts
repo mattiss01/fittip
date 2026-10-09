@@ -28,6 +28,7 @@ import { generatePlanProposal } from "@/server/plan-proposal/plan-generation";
 import {
   parseExpectedPlanRevision,
   parsePlanDayCount,
+  parsePlanStartDate,
   parsePlanProposalId,
   parsePlanProposalItemDecision,
   parsePlanProposalItemOrdinal,
@@ -76,6 +77,7 @@ export async function generatePlanProposalAction(
 ): Promise<PlanProposalActionState> {
   const submission = previous.submission + 1;
   const draft: PlanProposalActionDraft = {
+    startDate: text(formData, "startDate"),
     dayCount: text(formData, "dayCount"),
     planningNote: text(formData, "planningNote"),
   };
@@ -89,6 +91,7 @@ export async function generatePlanProposalAction(
     ]);
 
     const today = await ownerToday(profiles);
+    const startDate = parsePlanStartDate(draft.startDate, today);
     const dayCount = parsePlanDayCount(draft.dayCount);
     const planningNote = parsePlanningNote(draft.planningNote);
 
@@ -97,17 +100,17 @@ export async function generatePlanProposalAction(
       return invalid(OUTCOMES.validation, submission, draft);
     }
 
-    const endDate = shiftIsoDate(today, dayCount - 1);
+    const endDate = shiftIsoDate(startDate, dayCount - 1);
     // The revision the proposal is composed against. It is recorded with the
     // attempt so a later review can say honestly how far the plan has moved,
     // and it is not what the finish revalidates — the owner is allowed to edit
     // their plan while a proposal is open.
-    const slice = await plan.getPlanSlice(today, endDate);
+    const slice = await plan.getPlanSlice(startDate, endDate);
 
     const result = await generatePlanProposal(
       {
         owner,
-        startDate: today,
+        startDate,
         endDate,
         dayCount,
         expectedPlanRevision: slice.revision,
@@ -300,13 +303,17 @@ export async function regeneratePlanProposalAction(
     async function askAgain(): Promise<PlanProposalActionState> {
       const today = await ownerToday(profiles);
       const dayCount = planDayCount(source.startDate, source.endDate);
-      const endDate = shiftIsoDate(today, dayCount - 1);
-      const slice = await plan.getPlanSlice(today, endDate);
+      // The days the owner asked about, unless the first has already passed:
+      // then the same number of days from today, as before a start could be
+      // chosen.
+      const startDate = source.startDate < today ? today : source.startDate;
+      const endDate = shiftIsoDate(startDate, dayCount - 1);
+      const slice = await plan.getPlanSlice(startDate, endDate);
 
       const result = await generatePlanProposal(
         {
           owner,
-          startDate: today,
+          startDate,
           endDate,
           dayCount,
           expectedPlanRevision: slice.revision,

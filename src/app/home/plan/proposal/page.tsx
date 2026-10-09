@@ -100,7 +100,7 @@ export default async function PlanProposalPage() {
             discarded, which are the two ways an open one ends.
           */}
           {state.proposal === null || state.proposal.decision !== null ? (
-            <ComposeProposal hasGoals={state.hasGoals} />
+            <ComposeProposal hasGoals={state.hasGoals} today={state.today} />
           ) : null}
           {/* With no proposal the form above is the whole page: a "No
               proposal open" card under it only pointed back up at it. */}
@@ -155,6 +155,7 @@ async function loadProposalState() {
   if (timezoneName === null) {
     return {
       timezoneName,
+      today: "",
       hasGoals: false,
       proposal: null,
       roadmap: null,
@@ -194,6 +195,7 @@ async function loadProposalState() {
   if (proposal === null || proposal.decision !== null) {
     return {
       timezoneName,
+      today,
       hasGoals,
       proposal,
       roadmap: null,
@@ -235,6 +237,7 @@ async function loadProposalState() {
 
   return {
     timezoneName,
+    today,
     hasGoals,
     proposal,
     roadmap,
