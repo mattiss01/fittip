@@ -111,7 +111,9 @@ describe("regeneratePlanProposalAction", () => {
       listReplaceableSessions,
     });
     listReplaceableSessions.mockResolvedValue([]);
-    createCompletionLogMock.mockResolvedValue({ list: listCompletions });
+    createCompletionLogMock.mockResolvedValue({
+      findByPlanSessions: listCompletions,
+    });
     listCompletions.mockResolvedValue([]);
     createProfileMock.mockResolvedValue({
       getCurrentProfile: vi

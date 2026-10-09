@@ -169,6 +169,31 @@ describe("an item that would replace a planned session (ADR-024)", () => {
     expect(beside[0].replacements).toEqual({});
   });
 
+  it("files the note under the old session's day, not the proposed one's", () => {
+    const days = build({
+      items: [{ ...tempo, localDate: "2026-09-22" }],
+      planned: [longRun],
+    });
+
+    expect(days[0].replacements).toHaveProperty("a");
+    expect(days[1].replacements).toEqual({});
+  });
+
+  it("no longer offers the replace once the old session's day has passed", () => {
+    // Reviewed the day after: the finish cannot change a day behind today.
+    const days = build({
+      items: [{ ...tempo, localDate: "2026-09-22" }],
+      planned: [longRun],
+      today: "2026-09-22",
+    });
+
+    expect(days[1].items[0].replaces).toMatchObject({
+      title: "Long run",
+      available: false,
+    });
+    expect(days[0].replacements).toEqual({});
+  });
+
   it.each([
     ["logged", { logged: ["a"] }, "Long run"],
     ["cancelled", { status: "cancelled" as const }, "Long run"],

@@ -48,7 +48,6 @@ import {
 } from "@/server/repositories/profile-repository";
 import { createCompletionLog } from "@/server/repositories/completion-log-repository";
 import { createRollingPlan } from "@/server/repositories/rolling-plan-repository";
-import { TRAINING_HISTORY_WINDOW_DAYS } from "@/server/training/training-history-context";
 
 /**
  * The plan-proposal Server Actions.
@@ -326,9 +325,8 @@ export async function regeneratePlanProposalAction(
       // refuse the whole request after the review has already closed.
       const [marked, completions] = await Promise.all([
         proposals.listReplaceableSessions(source.generationId),
-        (await createCompletionLog()).list(
-          shiftIsoDate(today, -(TRAINING_HISTORY_WINDOW_DAYS - 1)),
-          today,
+        (await createCompletionLog()).findByPlanSessions(
+          slice.sessions.map((session) => session.id),
         ),
       ]);
       const logged = new Set(

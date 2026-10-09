@@ -495,9 +495,8 @@ begin
 
     -- The marks, written with the claim and only with it: a replay returns
     -- above and never reaches this. Each must be this owner's active session
-    -- on one of the requested days with no training logged against it, the
-    -- same three things `finish_plan_proposal_review` checks again before it
-    -- deletes anything. One that is not is a refusal rather than a mark
+    -- on one of the requested days with no training logged against it, which
+    -- `finish_plan_proposal_review` checks again before it deletes anything. One that is not is a refusal rather than a mark
     -- quietly dropped: the owner was shown a list and chose from it.
     if pg_catalog.cardinality(v_replaceable) > 0 then
       insert into public.plan_generation_replaceable_sessions (
@@ -1192,12 +1191,12 @@ begin
 
   -- The other half of "replace": the owner's session goes in the change set
   -- that adds the one standing in for it, so the swap happens whole or not at
-  -- all. Three things are checked again here, because the mark is as old as
-  -- the request: the session is still active, still on a day that can be
-  -- changed, and has no training logged against it. One that fails any of
-  -- them is left alone and the proposed session is added beside it, which is
-  -- what the review shows for such an item. A session with a log is never
-  -- deleted.
+  -- all. Four things are checked again here, because the mark is as old as
+  -- the request: the session is still active, not behind today, still on one
+  -- of the days asked about, and has no training logged against it. One that
+  -- fails any of them is left alone and the proposed session is added beside
+  -- it, which is what the review shows for such an item. A session with a
+  -- log is never deleted.
   select pg_catalog.jsonb_agg(
     pg_catalog.jsonb_build_object(
       'operation', 'delete',
@@ -1223,16 +1222,24 @@ begin
       from public.profiles profile
       where profile.user_id = v_user_id
     )
-    -- Only a session this owner marked for this very proposal.
+    -- Only a session this owner marked for this very proposal, and only
+    -- while it is still on one of the days that proposal was asked about. A
+    -- session moved elsewhere since is no longer the one the owner offered
+    -- for those days, and the review, which reads those days, cannot show it.
     and exists (
       select 1
       from public.plan_proposals proposal
+      join public.plan_generation_requests request
+        on request.id = proposal.generation_request_id
+        and request.user_id = proposal.user_id
       join public.plan_generation_replaceable_sessions marked
-        on marked.request_id = proposal.generation_request_id
-        and marked.user_id = proposal.user_id
+        on marked.request_id = request.id
+        and marked.user_id = request.user_id
       where proposal.id = p_proposal_id
         and proposal.user_id = v_user_id
         and marked.session_id = target.id
+        and target.local_date between request.requested_start_date
+          and request.requested_end_date
     )
     and not exists (
       select 1 from public.completions completion

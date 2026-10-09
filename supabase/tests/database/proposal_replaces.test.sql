@@ -137,7 +137,7 @@ as $$
   )
 $$;
 
-select plan(39);
+select plan(44);
 
 -- 1. The boundary ------------------------------------------------------------
 
@@ -552,6 +552,79 @@ select ok(
        from public.rolling_plan_series
        where id = '8a000000-0000-4000-8000-0000000000a1'),
   'the next day''s is untouched, and the series will not write the replaced one back'
+);
+
+-- A session moved off the days asked about ------------------------------------------
+--
+-- The review reads the proposal's own days, so it can no longer show a session
+-- that was moved elsewhere. Finish must not delete what the review cannot show.
+
+insert into pg_temp_receipt
+select 'swim', * from public.apply_rolling_plan_change_set(
+  pg_temp.rev('8a000000-0000-4000-8000-000000000001'),
+  '8a000000-0000-4000-8000-00000000e004', 'owner_manual',
+  pg_temp.plan_session('8a000000-0000-4000-8000-0000000000b6', pg_temp.day(2), 5, 'Swim'));
+
+insert into pg_temp_claim
+select 'fourth', * from public.begin_plan_generation(
+  'replace-key-000000000040', 'replace-fingerprint-0040', pg_temp.day(2), 1,
+  pg_temp.rev('8a000000-0000-4000-8000-000000000001'),
+  null, null, null, array['8a000000-0000-4000-8000-0000000000b6']::uuid[]);
+
+select isnt(
+  (select pg_temp.finish_generation('fourth',
+    pg_temp.plan_body(pg_temp.day(2), pg_temp.day(2), jsonb_build_array(
+      pg_temp.proposed(pg_temp.day(2), 'Aqua jog', 'r1'))))),
+  null,
+  'a proposal would replace the Swim'
+);
+
+insert into pg_temp_receipt
+select 'swim-moved', * from public.apply_rolling_plan_change_set(
+  pg_temp.rev('8a000000-0000-4000-8000-000000000001'),
+  '8a000000-0000-4000-8000-00000000e005', 'owner_manual',
+  jsonb_build_array(jsonb_build_object(
+    'operation', 'move',
+    'sessionId', '8a000000-0000-4000-8000-0000000000b6',
+    'localDate', pg_temp.day(6)::text,
+    'position', 5)));
+
+select lives_ok(
+  $$select public.decide_plan_proposal_item(
+    (select proposal_id from public.plan_generation_requests
+     where id = (select generation_id from pg_temp_claim where label = 'fourth')),
+    0, 'staged')$$,
+  'the owner moves the Swim to next week, then chooses the proposed session'
+);
+insert into pg_temp_review
+select 'fourth', * from public.finish_plan_proposal_review(
+  (select proposal_id from public.plan_generation_requests
+   where id = (select generation_id from pg_temp_claim where label = 'fourth')),
+  pg_temp.rev('8a000000-0000-4000-8000-000000000001'),
+  '8a000000-0000-4000-8000-00000000f004');
+
+select is(
+  (select local_date from public.rolling_plan_sessions
+   where id = '8a000000-0000-4000-8000-0000000000b6' and status = 'active'),
+  pg_temp.day(6),
+  'the moved Swim is left where the owner put it'
+);
+select ok(
+  exists (
+    select 1 from public.rolling_plan_sessions
+    where user_id = '8a000000-0000-4000-8000-000000000001'
+      and local_date = pg_temp.day(2) and title = 'Aqua jog'),
+  'and the proposed session is added on its own'
+);
+
+select throws_ok(
+  format($q$select * from public.begin_plan_generation(
+    'replace-key-000000000050', 'replace-fingerprint-0050', %L::date, 7, 0,
+    null, null, null,
+    (select array_agg(gen_random_uuid()) from generate_series(1, 22)))$q$,
+    pg_temp.day(0)),
+  '22023', 'Invalid plan request.',
+  'more marks than seven days could ever use are refused'
 );
 
 -- 7. Not across owners -------------------------------------------------------------

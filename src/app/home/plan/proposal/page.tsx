@@ -26,6 +26,7 @@ import {
 import { selectActiveGoalContext } from "@/server/goals/goal-records";
 import {
   isExampleProposal,
+  isStagedDecision,
   stagedItemCount,
   unresolvedItemCount,
   type ProposalRoadmapView,
@@ -53,7 +54,6 @@ import {
   RollingPlanAuthenticationError,
 } from "@/server/repositories/rolling-plan-repository";
 import { roadmapPlanStaleReasons } from "@/server/roadmap/roadmap-plan-context";
-import { TRAINING_HISTORY_WINDOW_DAYS } from "@/server/training/training-history-context";
 
 export const dynamic = "force-dynamic";
 
@@ -204,19 +204,6 @@ async function loadProposalState() {
   // a goal paused or deleted since is exactly what makes a roadmap stale.
   const targetableGoalIds = new Set(targetable.map((goal) => goal.id));
 
-  // Sessions with training logged against them: one can be neither offered
-  // for replacement nor replaced. A log's date is never after today, so the
-  // window ADR-013 already reads is enough.
-  const loggedSessionIds = new Set(
-    (
-      await (
-        await createCompletionLog()
-      ).list(shiftIsoDate(today, -(TRAINING_HISTORY_WINDOW_DAYS - 1)), today)
-    )
-      .map((completion) => completion.planSessionId)
-      .filter((id): id is string => id !== null),
-  );
-
   // No proposal open means the compose form is shown, and it lists what is
   // already planned on the days it may ask about: the furthest first day plus
   // the longest horizon. A finished proposal is otherwise shown as the record
@@ -229,6 +216,7 @@ async function loadProposalState() {
         COACH_START_MAX_DAYS_AHEAD + PLAN_PROPOSAL_MAX_DAYS - 1,
       ),
     );
+    const loggedSessionIds = await readLoggedSessionIds(ahead.sessions);
     return {
       timezoneName,
       today,
@@ -261,6 +249,7 @@ async function loadProposalState() {
     plan.getPlanSlice(proposal.startDate, proposal.endDate),
     proposals.getRoadmapSource(proposal.id),
   ]);
+  const loggedSessionIds = await readLoggedSessionIds(slice.sessions);
   const planned = slice.sessions.map((session) => ({
     id: session.id,
     localDate: session.localDate,
@@ -353,6 +342,25 @@ async function readRoadmapStaleness(
 }
 
 /**
+ * Which of these planned sessions have training logged against them. One that
+ * has can be neither offered for replacement nor replaced (ADR-024). Asked by
+ * session, so a session logged on another day than it was planned reads as
+ * logged; only the ids are kept.
+ */
+async function readLoggedSessionIds(
+  sessions: readonly { id: string }[],
+): Promise<Set<string>> {
+  const completions = await (
+    await createCompletionLog()
+  ).findByPlanSessions(sessions.map((session) => session.id));
+  return new Set(
+    completions
+      .map((completion) => completion.planSessionId)
+      .filter((id): id is string => id !== null),
+  );
+}
+
+/**
  * The finish's idempotency key, derived rather than random.
  *
  * `apply_rolling_plan_change_set` refuses a reused key whose request differs, so
@@ -366,9 +374,14 @@ function finishKeyFor(
   proposal: PlanProposalView,
   planRevision: number,
 ): string {
+  // Replace and Add beside are different requests about the same item, so
+  // the key says which.
   const staged = proposal.items
-    .filter((item) => item.decision === "staged")
-    .map((item) => item.ordinal)
+    .filter((item) => isStagedDecision(item.decision))
+    .map(
+      (item) =>
+        `${item.ordinal}${item.decision === "staged_beside" ? "b" : ""}`,
+    )
     .join(",");
   return uuidFromSeed(`${proposal.id}:${planRevision}:${staged}`);
 }

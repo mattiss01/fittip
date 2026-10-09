@@ -111,11 +111,26 @@ describe("ComposeProposal", () => {
     expect(screen.queryByText("Far strength")).toBeNull();
 
     // One day only, and nothing is planned today.
+    fireEvent.click(tick);
     fireEvent.change(screen.getByLabelText(COPY.dayCountLabel), {
       target: { value: "1" },
     });
     expect(screen.queryByText("Long run")).toBeNull();
     expect(screen.getByText(COPY.plannedNone)).toBeVisible();
+
+    // Retyping the days does not cost the tick: the field is emptied on the
+    // way, and the session comes back as the owner left it.
+    fireEvent.change(screen.getByLabelText(COPY.dayCountLabel), {
+      target: { value: "" },
+    });
+    fireEvent.change(screen.getByLabelText(COPY.dayCountLabel), {
+      target: { value: "7" },
+    });
+    expect(
+      screen.getByRole("checkbox", {
+        name: COPY.replaceableLabelFor("Long run"),
+      }),
+    ).toBeChecked();
   });
 
   it("opens the same question when the form is sent from the keyboard", () => {
