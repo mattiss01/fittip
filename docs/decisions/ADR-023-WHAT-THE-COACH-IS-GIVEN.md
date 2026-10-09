@@ -83,7 +83,8 @@ than being cut silently.
     under 15,000 tokens, so that no request can be refused without a source being named.
     The rejected plan gives up 500 bytes for the same reason and holds its largest legal
     case in one-byte characters (5,797 of 5,900); one written in a three-byte script can
-    pass it and is refused with that source named.
+    pass it, and "ask again" then says so before it closes the review, where the check
+    used to run only after the proposal was gone.
 13. Dated sessions are read 28 days past the last planned day, not 180. A race in three
     weeks shapes this week; one in five months is the roadmap's job.
 
@@ -115,7 +116,7 @@ Characters, at four to a token, with every source at its allocation:
 
 | Call | Before 9 Oct | After decisions 1 to 5 | After all of it |
 | --- | --- | --- | --- |
-| Roadmap | 39,764 | 51,964 (12,991 tokens) | 56,614 (14,154), as built |
+| Roadmap | 39,764 | 51,964 (12,991 tokens) | 56,714 (14,179), as built |
 | Plan | 39,964 | 52,764 (13,191) | 59,964 (14,991), as built |
 | Fill | 39,464 | 48,664 (12,166) | 56,310 (14,078), estimated |
 
