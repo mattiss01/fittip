@@ -17,6 +17,10 @@ import { generateRoadmapAction } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { DateField } from "@/components/date-field/date-field";
 import { CoachSpark } from "@/components/home/coach-spark";
+import {
+  COACH_START_MAX_DAYS_AHEAD,
+  shiftIsoDate,
+} from "@/lib/date/local-date";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
 /**
@@ -40,17 +44,24 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
  */
 export function RoadmapComposer({
   mode,
+  startDate,
   endDate,
-  minEndDate,
-  maxEndDate,
+  today,
+  minDays,
+  maxDays,
   previousProposalId,
   regenerationsRemaining,
 }: {
   mode: "initial" | "regeneration";
   /** The date the form opens on: the default horizon, or the predecessor's. */
   endDate: string;
-  minEndDate: string;
-  maxEndDate: string;
+  /** The day the form opens on: today, or the predecessor's first day. */
+  startDate: string;
+  /** The owner's local today: the earliest first day. */
+  today: string;
+  /** How long a roadmap may be, counted from its first day. */
+  minDays: number;
+  maxDays: number;
   /** The declined proposal a regeneration carries. Absent on a first request. */
   previousProposalId?: string;
   regenerationsRemaining: number;
@@ -86,6 +97,26 @@ export function RoadmapComposer({
   }
 
   const isRegeneration = mode === "regeneration";
+
+  // The end is counted from the first day, so its range follows the start the
+  // owner has chosen. A start half typed keeps the range it had. An end the
+  // new start leaves too near or too far is moved to the nearest date it
+  // allows, rather than left for the owner to find out why the form stopped.
+  const [chosenStart, setChosenStart] = useState(startDate);
+  const [chosenEnd, setChosenEnd] = useState(endDate);
+  const [endSeed, setEndSeed] = useState(endDate);
+  function chooseStart(date: string) {
+    if (date === "") return;
+    setChosenStart(date);
+    const earliest = shiftIsoDate(date, minDays);
+    const latest = shiftIsoDate(date, maxDays);
+    const kept =
+      chosenEnd < earliest ? earliest : chosenEnd > latest ? latest : chosenEnd;
+    if (kept !== chosenEnd) {
+      setChosenEnd(kept);
+      setEndSeed(kept);
+    }
+  }
 
   function submit(formData: FormData) {
     // A new attempt gets a new key; a retry of one that has not produced a
@@ -136,6 +167,32 @@ export function RoadmapComposer({
         ) : null}
 
         <div className={styles.field}>
+          {/* The owner's to choose (9 Oct 2026). Fixed on a regeneration,
+              as the end is. */}
+          <DateField
+            calendar
+            describedBy={isRegeneration ? undefined : `${fieldId}-start-help`}
+            initial={startDate}
+            label={ROADMAP_CONTROL_COPY.startDateLabel}
+            labelClassName={styles.label}
+            max={shiftIsoDate(today, COACH_START_MAX_DAYS_AHEAD)}
+            min={today}
+            name="startDate"
+            onChange={chooseStart}
+            rangeMessage={
+              isRegeneration ? undefined : ROADMAP_CONTROL_COPY.startDateHelper
+            }
+            readOnly={isRegeneration}
+            required
+          />
+          {isRegeneration ? null : (
+            <span className={styles.helper} id={`${fieldId}-start-help`}>
+              {ROADMAP_CONTROL_COPY.startDateHelper}
+            </span>
+          )}
+        </div>
+
+        <div className={styles.field}>
           {/* A regeneration is defined as the same question about the same
               dates, and the database refuses one whose horizon moved. Showing
               the date but refusing to change it is honest about that; hiding
@@ -144,12 +201,18 @@ export function RoadmapComposer({
           <DateField
             calendar
             describedBy={`${fieldId}-end-help`}
-            initial={endDate}
+            initial={endSeed}
+            // Remounted when the start moved the end, which is the one time
+            // this field's date changes without the owner typing it.
+            key={endSeed}
             label={ROADMAP_CONTROL_COPY.endDateLabel}
             labelClassName={styles.label}
-            max={maxEndDate}
-            min={minEndDate}
+            max={shiftIsoDate(chosenStart, maxDays)}
+            min={shiftIsoDate(chosenStart, minDays)}
             name="endDate"
+            onChange={(date) => {
+              if (date !== "") setChosenEnd(date);
+            }}
             // A typed date is held to the range as a picked one is. Not a
             // regeneration's: its date is the earlier proposal's, whatever
             // today allows.

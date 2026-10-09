@@ -426,6 +426,40 @@ is the dependable way to tell the coach about a race.
 Unchanged: `fill_session_activities` sends no plan commitments, and the 180-day
 window, which is also how far ahead a single session may be placed.
 
+## Third recorded amendment to decision 5: a chosen first day
+
+On 9 October 2026 the product owner decided that a plan and a roadmap may start
+on a day they choose, from today to 30 days ahead, instead of always today.
+Decision 5 was written for a horizon that begins today, and one sentence of it
+needs saying again for one that does not.
+
+- **Eligibility is unchanged.** Every planned entry from today to the last day
+  being planned is still eligible, so the sessions between today and a later
+  first day are sent. They are the load the athlete carries into those days.
+- **The fill order changes.** The days being planned and everything after them
+  come first, earliest first. The days before the first day follow, latest
+  first, so a trim keeps the sessions nearest to the planned days and cuts the
+  ones nearest to today. Date order alone would let the sessions before a later
+  first day fill the twelve entries and cut the very days the coach is asked
+  about.
+
+With the first day today, which is every request made before this amendment,
+nothing is before it and the order is what it was. No field, limit or window
+changes: the 56 days of history still end today, and the 180 days still count
+from today.
+
+A later last day does reach further under the unchanged rules, and that is
+stated here rather than left to be found:
+
+- A plan that starts 30 days out ends up to 36 days out, so the occurrences of
+  a series up to that day arrive as dated entries. The plan operation is sent
+  no rules.
+- A roadmap that starts 30 days out may end 395 days from today, where 365 was
+  the furthest before. A series is sent as a rule when it starts on or before
+  the last day, so one starting in those 30 further days is now sent.
+- A series that ends before a later first day is still sent as a rule. It
+  describes the training between today and that day.
+
 ## Related decision made in the same session
 
 The compose step for a plan proposal introduces a **planning note** — owner
@@ -473,3 +507,7 @@ and what is given up. Decisions 1, 3, 6 and 7 are unchanged.
 removed Lock: the lock state is not sent, single sessions beyond the horizon
 are, and nothing is fitted ahead of the rules. The second amendment above
 records it. Decisions 1, 3, 6 and 7 are unchanged.
+
+**Amended again 9 October 2026.** The owner may choose the first day being
+planned. Decision 5's eligibility stands; its fill order puts the planned days
+ahead of the days before them. The third amendment above records it.

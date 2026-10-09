@@ -1,3 +1,5 @@
+import { COACH_START_MAX_DAYS_AHEAD } from "@/lib/date/local-date";
+
 /**
  * Every plan-proposal wording, in the one module a Client Component may import.
  *
@@ -28,6 +30,8 @@ export const PLAN_PROPOSAL_COPY = {
      two fields and a button. What stays is `generateSupport`, the one line
      that says nothing reaches the plan before the review is finished. */
   composeTitle: "Ask for a proposal",
+  startDateLabel: "First day",
+  startDateRange: `Between today and ${COACH_START_MAX_DAYS_AHEAD} days from now.`,
   dayCountLabel: "Days to plan",
   planningNoteLabel: "Anything the coach should account for? (optional)",
   generateAction: "Ask the coach",

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { COACH_START_MAX_DAYS_AHEAD } from "@/lib/date/local-date";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 import { ROADMAP_ROUTE_STATE_COPY } from "@/lib/roadmap/roadmap-route-state-copy";
 import type {
@@ -102,12 +103,41 @@ export function goalsOutsideHorizon(
   );
 }
 
-export function parseRoadmapEndDate(value: unknown, today: string): string {
+/**
+ * The first day of a roadmap, as the owner chose it (9 Oct 2026).
+ *
+ * Today when the form sent none. A regeneration is the same question about
+ * the same dates, so its start is the earlier proposal's and is not held to
+ * today's range here: the database refuses one that differs from it.
+ */
+export function parseRoadmapStartDate(
+  value: unknown,
+  today: string,
+  isRegeneration: boolean,
+): string {
+  if (value === null || value === undefined || value === "") return today;
+  if (typeof value !== "string" || !isIsoDate(value)) {
+    throw new RoadmapValidationError("startDate");
+  }
+  // The field cannot be set before today, so yesterday is a form left open
+  // over midnight with its default untouched. That request meant today.
+  if (!isRegeneration && value === addDays(today, -1)) return today;
+  if (
+    !isRegeneration &&
+    (value < today || value > addDays(today, COACH_START_MAX_DAYS_AHEAD))
+  ) {
+    throw new RoadmapValidationError("startDate");
+  }
+  return value;
+}
+
+/** Four to fifty-two weeks after the roadmap's first day. */
+export function parseRoadmapEndDate(value: unknown, startDate: string): string {
   if (typeof value !== "string" || !isIsoDate(value)) {
     throw new RoadmapValidationError("endDate");
   }
-  const earliest = addDays(today, ROADMAP_MIN_DAYS);
-  const latest = addDays(today, ROADMAP_MAX_DAYS);
+  const earliest = addDays(startDate, ROADMAP_MIN_DAYS);
+  const latest = addDays(startDate, ROADMAP_MAX_DAYS);
   if (value < earliest || value > latest) {
     throw new RoadmapValidationError("endDate");
   }

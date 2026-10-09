@@ -48,7 +48,7 @@ describe("ComposeProposal", () => {
   afterEach(cleanup);
 
   it("keeps the one line that says nothing reaches the plan before the review", () => {
-    render(<ComposeProposal hasGoals />);
+    render(<ComposeProposal hasGoals today="2026-10-09" />);
 
     expect(screen.getByText(COPY.generateSupport)).toBeVisible();
     expect(
@@ -58,7 +58,7 @@ describe("ComposeProposal", () => {
   });
 
   it("asks nothing without an active goal, and offers the way to Goals instead", () => {
-    render(<ComposeProposal hasGoals={false} />);
+    render(<ComposeProposal hasGoals={false} today="2026-10-09" />);
 
     fireEvent.click(screen.getByRole("button", { name: COPY.generateAction }));
 
@@ -75,7 +75,7 @@ describe("ComposeProposal", () => {
   });
 
   it("opens the same question when the form is sent from the keyboard", () => {
-    render(<ComposeProposal hasGoals={false} />);
+    render(<ComposeProposal hasGoals={false} today="2026-10-09" />);
 
     // Enter in "Days to plan" submits a form whatever its button does.
     fireEvent.submit(

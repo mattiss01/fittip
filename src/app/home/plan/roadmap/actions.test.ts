@@ -313,6 +313,82 @@ describe("roadmap server actions", () => {
       expect(generateMock).not.toHaveBeenCalled();
     });
 
+    it("starts on the day the owner chose, and counts the weeks from it", async () => {
+      const startDate = addDays(today, 30);
+      // Fifty-two weeks from the first day, which is past fifty-two from today.
+      const farEnd = addDays(startDate, 365);
+
+      const result = await generateRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({
+          startDate,
+          endDate: farEnd,
+          idempotencyKey: "m3-15f-generate-key-0001",
+        }),
+      );
+
+      expect(result.status).toBe("proposal");
+      expect(generateMock.mock.calls[0][0]).toMatchObject({
+        startDate,
+        endDate: farEnd,
+      });
+    });
+
+    it.each([-2, 31])(
+      "refuses a first day %i days from today",
+      async (offset) => {
+        const startDate = addDays(today, offset);
+
+        const result = await generateRoadmapAction(
+          INITIAL_ROADMAP_ACTION_STATE,
+          form({
+            startDate,
+            endDate: addDays(startDate, 84),
+            idempotencyKey: "m3-15f-generate-key-0001",
+          }),
+        );
+
+        expect(result.status).toBe("validation");
+        expect(generateMock).not.toHaveBeenCalled();
+      },
+    );
+
+    it("refuses an end under four weeks from a later first day", async () => {
+      const result = await generateRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({
+          startDate: addDays(today, 10),
+          // Four weeks from today, but under three from the first day.
+          endDate: addDays(today, 28),
+          idempotencyKey: "m3-15f-generate-key-0001",
+        }),
+      );
+
+      expect(result.status).toBe("validation");
+      expect(generateMock).not.toHaveBeenCalled();
+    });
+
+    it("says so when a regeneration's first day has passed", async () => {
+      const startDate = addDays(today, -1);
+
+      const result = await generateRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({
+          startDate,
+          endDate: addDays(startDate, 84),
+          previousProposalId: PROPOSAL_ID,
+          regenerationFeedback: "Less running.",
+          idempotencyKey: "m3-15f-generate-key-0001",
+        }),
+      );
+
+      expect(result).toMatchObject({
+        status: "validation",
+        message: OUTCOMES.regenerationDatesPassed,
+      });
+      expect(generateMock).not.toHaveBeenCalled();
+    });
+
     // Decision 1's horizon bounds, checked here as well as in the database.
     it("refuses a horizon outside four to fifty-two weeks", async () => {
       const result = await generateRoadmapAction(
@@ -338,6 +414,7 @@ describe("roadmap server actions", () => {
       );
 
       expect(result.draft).toEqual({
+        startDate: "",
         endDate: addDays(today, 3),
         planningNote: "Tuesdays are impossible.",
         regenerationFeedback: "",

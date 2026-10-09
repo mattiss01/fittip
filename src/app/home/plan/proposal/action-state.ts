@@ -34,6 +34,7 @@ export type PlanProposalActionStatus =
   | "error";
 
 export type PlanProposalActionDraft = {
+  startDate: string;
   dayCount: string;
   planningNote: string;
 };

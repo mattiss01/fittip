@@ -10,6 +10,7 @@ import {
   parseExpectedPlanRevision,
   parsePlanDayCount,
   parsePlanProposalId,
+  parsePlanStartDate,
   parsePlanProposalItemDecision,
   parsePlanProposalItemOrdinal,
   PlanProposalValidationError,
@@ -85,6 +86,34 @@ describe("parseExpectedPlanRevision", () => {
       PlanProposalValidationError,
     );
   });
+});
+
+describe("parsePlanStartDate", () => {
+  const today = "2026-10-09";
+
+  it("is today when the form sent none", () => {
+    expect(parsePlanStartDate("", today)).toBe(today);
+    expect(parsePlanStartDate(null, today)).toBe(today);
+  });
+
+  it.each(["2026-10-09", "2026-10-12", "2026-11-08"])("accepts %s", (value) => {
+    expect(parsePlanStartDate(value, today)).toBe(value);
+  });
+
+  it("reads yesterday as today: a form left open over midnight", () => {
+    expect(parsePlanStartDate("2026-10-08", today)).toBe(today);
+  });
+
+  // Two days ago, thirty-one days out, a day the calendar does not have, and
+  // something that is not a date.
+  it.each(["2026-10-07", "2026-11-09", "2026-10-32", "next week"])(
+    "refuses %s",
+    (value) => {
+      expect(() => parsePlanStartDate(value, today)).toThrow(
+        PlanProposalValidationError,
+      );
+    },
+  );
 });
 
 describe("parsePlanDayCount", () => {

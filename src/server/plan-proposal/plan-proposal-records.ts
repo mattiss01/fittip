@@ -4,6 +4,12 @@ import type {
   PlanProposalDecision,
   PlanProposalItemView,
 } from "@/lib/plan/plan-proposal-view";
+import {
+  COACH_START_MAX_DAYS_AHEAD,
+  isIsoDate,
+  shiftIsoDate,
+} from "@/lib/date/local-date";
+import { PLAN_PROPOSAL_COPY } from "@/lib/plan/plan-proposal-copy";
 import type { SevenDayPlanProposal } from "@/server/ai/contracts";
 
 /**
@@ -123,6 +129,32 @@ export function parseExpectedPlanRevision(
 function integerOrNaN(value: FormDataEntryValue | null): number {
   if (typeof value !== "string" || value.trim() === "") return Number.NaN;
   return Number(value);
+}
+
+/**
+ * The first day a proposal plans, as the owner chose it (9 Oct 2026).
+ *
+ * Today when the form sent none, which is what every request was before the
+ * field existed. Never earlier than the owner's own today, and at most
+ * `COACH_START_MAX_DAYS_AHEAD` after it.
+ */
+export function parsePlanStartDate(
+  value: FormDataEntryValue | null,
+  today: string,
+): string {
+  if (value === null || value === "") return today;
+  // The field cannot be set before today, so yesterday is a form left open
+  // over midnight with its default untouched. That request meant today.
+  if (value === shiftIsoDate(today, -1)) return today;
+  if (
+    typeof value !== "string" ||
+    !isIsoDate(value) ||
+    value < today ||
+    value > shiftIsoDate(today, COACH_START_MAX_DAYS_AHEAD)
+  ) {
+    throw new PlanProposalValidationError(PLAN_PROPOSAL_COPY.startDateRange);
+  }
+  return value;
 }
 
 const DAY_COUNT_MIN = 1;
