@@ -77,12 +77,10 @@ as $$
       'title', p_title,
       'sport', 'Running',
       'expectedDurationMinutes', 60,
-      'isLocked', false,
       'activities', jsonb_build_array(jsonb_build_object(
         'position', 0, 'name', 'Easy running', 'sport', 'Running',
         'measurementMode', 'duration_intensity',
-        'target', jsonb_build_object('duration_minutes', 40, 'intensity', 'easy'),
-        'isLocked', false
+        'target', jsonb_build_object('duration_minutes', 40, 'intensity', 'easy')
       ))
     )
   ))

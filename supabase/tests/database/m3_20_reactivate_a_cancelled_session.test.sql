@@ -71,7 +71,6 @@ as $$
       'position', p_position,
       'title', p_title,
       'sport', 'Running',
-      'isLocked', false,
       'activities', '[]'::jsonb
     )
   )
@@ -601,26 +600,22 @@ select is(
   'a reactivated occurrence the owner never edited reads as the rule''s again'
 );
 
--- Moving and locking leave what it says alone as well.
+-- Moving leaves what it says alone as well.
 insert into change_receipt
-select 'move-lock-occurrence', * from public.apply_rolling_plan_change_set(
+select 'move-occurrence', * from public.apply_rolling_plan_change_set(
   pg_temp.rev('7a200000-0000-4000-8000-000000000001'),
   '7a200000-0000-4000-8000-00000000e046', 'owner_manual',
   jsonb_build_array(
     jsonb_build_object(
       'operation', 'move',
       'sessionId', pg_temp.occurrence('7a200000-0000-4000-8000-0000000000a1', 4),
-      'localDate', pg_temp.owner_day(5), 'position', 5),
-    jsonb_build_object(
-      'operation', 'set_lock',
-      'sessionId', pg_temp.occurrence('7a200000-0000-4000-8000-0000000000a1', 4),
-      'isLocked', true)));
+      'localDate', pg_temp.owner_day(5), 'position', 5)));
 
 select is(
   (select has_diverged from public.rolling_plan_sessions
    where id = pg_temp.occurrence('7a200000-0000-4000-8000-0000000000a1', 4)),
   false,
-  'nor does moving or locking it'
+  'nor does moving it'
 );
 
 -- Only an edit does, and cancelling and reactivating an edited one keeps it.

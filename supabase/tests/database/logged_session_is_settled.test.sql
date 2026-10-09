@@ -2,7 +2,7 @@
 --
 -- Three things are proved here that nothing else proves.
 --
--- First, that every plan verb aimed at one session - edit, move, set_lock,
+-- First, that every plan verb aimed at one session - edit, move,
 -- cancel and reactivate, beside the delete M3-19 already refused - answers
 -- PT425 once a completion names that session, and that a skip logged ahead
 -- settles a session exactly as training that happened does.
@@ -80,12 +80,10 @@ as $$
       'title', p_title,
       'sport', 'Running',
       'expectedDurationMinutes', 60,
-      'isLocked', false,
       'activities', jsonb_build_array(jsonb_build_object(
         'position', 0, 'name', 'Easy running', 'sport', 'Running',
         'measurementMode', 'duration_intensity',
-        'target', jsonb_build_object('duration_minutes', 40, 'intensity', 'easy'),
-        'isLocked', false
+        'target', jsonb_build_object('duration_minutes', 40, 'intensity', 'easy')
       ))
     )
   )
@@ -105,7 +103,6 @@ as $$
         'expectedDurationMinutes', 30, 'activities', '[]'::jsonb))
       when 'move' then jsonb_build_object(
         'localDate', pg_temp.owner_day(3), 'position', 0)
-      when 'set_lock' then jsonb_build_object('isLocked', true)
       else '{}'::jsonb
     end)
 $$;
@@ -146,7 +143,7 @@ create temporary table snapshot (label text primary key, value jsonb);
 
 grant all on change_receipt, logged, snapshot to public;
 
-select plan(28);
+select plan(26);
 
 select is(
   (select count(*)::bigint from settled_zone), 1::bigint,
@@ -271,7 +268,7 @@ select throws_ok(
   'PT425', 'This session has training logged against it, so its plan entry cannot be changed.',
   format('a completed session refuses %s', operation)
 )
-from unnest(array['edit', 'move', 'set_lock', 'cancel', 'delete'])
+from unnest(array['edit', 'move', 'cancel', 'delete'])
   with ordinality as verbs(operation, ordinality);
 
 -- 2. A skip logged ahead settles it too ---------------------------------------
@@ -285,7 +282,7 @@ select throws_ok(
   'PT425', 'This session has training logged against it, so its plan entry cannot be changed.',
   format('a session skipped ahead refuses %s', operation)
 )
-from unnest(array['edit', 'move', 'set_lock', 'cancel', 'delete'])
+from unnest(array['edit', 'move', 'cancel', 'delete'])
   with ordinality as verbs(operation, ordinality);
 
 -- 3. A cancelled session that was trained anyway stays cancelled ---------------
@@ -305,8 +302,8 @@ select throws_ok(
   format($$select public.apply_rolling_plan_change_set(%s,
     '7a000000-0000-4000-8000-00000000e041', 'owner_manual', %L::jsonb)$$,
     (select value #>> '{}' from snapshot where label = 'revision'),
-    pg_temp.verb('set_lock', '7a000000-0000-4000-8000-0000000000b4')
-    || pg_temp.verb('set_lock', '7a000000-0000-4000-8000-0000000000b1')),
+    pg_temp.verb('cancel', '7a000000-0000-4000-8000-0000000000b4')
+    || pg_temp.verb('cancel', '7a000000-0000-4000-8000-0000000000b1')),
   'PT425', 'This session has training logged against it, so its plan entry cannot be changed.',
   'a change set naming a logged session beside an unlogged one is refused whole'
 );
@@ -336,10 +333,10 @@ select is(
   'and none wrote a change entry'
 );
 select is(
-  (select is_locked from public.rolling_plan_sessions
+  (select status from public.rolling_plan_sessions
    where id = '7a000000-0000-4000-8000-0000000000b4'),
-  false,
-  'the unlogged session named beside a logged one was not locked either'
+  'active',
+  'the unlogged session named beside a logged one was not cancelled either'
 );
 
 -- 6. A session without a log is planned as before -------------------------------
@@ -349,16 +346,15 @@ select 'unlogged', * from public.apply_rolling_plan_change_set(
   pg_temp.rev('7a000000-0000-4000-8000-000000000001'),
   '7a000000-0000-4000-8000-00000000e061', 'owner_manual',
   pg_temp.verb('edit', '7a000000-0000-4000-8000-0000000000b4')
-  || pg_temp.verb('set_lock', '7a000000-0000-4000-8000-0000000000b4')
   || pg_temp.verb('move', '7a000000-0000-4000-8000-0000000000b4')
   || pg_temp.verb('reactivate', '7a000000-0000-4000-8000-0000000000b5'));
 
 select is(
-  (select jsonb_build_array(title, is_locked, local_date::text, status)
+  (select jsonb_build_array(title, local_date::text, status)
    from public.rolling_plan_sessions
    where id = '7a000000-0000-4000-8000-0000000000b4'),
-  jsonb_build_array('Rewritten', true, pg_temp.owner_day(3), 'active'),
-  'an unlogged session is still edited, locked and moved'
+  jsonb_build_array('Rewritten', pg_temp.owner_day(3), 'active'),
+  'an unlogged session is still edited and moved'
 );
 select is(
   (select status from public.rolling_plan_sessions

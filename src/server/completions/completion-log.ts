@@ -71,7 +71,6 @@ export type CompletionPlannedSnapshot = {
   intent?: string;
   expectedDurationMinutes?: number;
   note?: string;
-  isLocked: boolean;
   status: "active" | "cancelled";
   seriesId: string | null;
   occurrenceDate: string | null;

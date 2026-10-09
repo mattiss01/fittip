@@ -432,7 +432,6 @@ function occurrence() {
     position: 0,
     title: "Aerobic run",
     sport: "Running",
-    isLocked: true,
     status: "active" as const,
     cancelledAt: null,
     seriesId: SERIES_ID,

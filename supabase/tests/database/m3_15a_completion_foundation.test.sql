@@ -16,8 +16,7 @@
 -- editing, cancelling, or sweeping that session afterwards leaves the stored
 -- snapshot byte-identical. A hard delete of a session carrying a completion is
 -- refused by the database itself, and the one function in this schema that
--- hard deletes occurrences keeps a completed one and reports it. It kept a
--- locked one too until 9 Oct 2026 (`lock_no_longer_read`).
+-- hard deletes occurrences keeps a completed one and reports it.
 --
 -- Dates follow the wall clock for the same reason M3-12's, M3-13's and M3-14's
 -- suites do: every planning rule reached here is defined against owner-local
@@ -83,12 +82,10 @@ as $$
       'title', p_title,
       'sport', 'Running',
       'expectedDurationMinutes', 60,
-      'isLocked', false,
       'activities', jsonb_build_array(jsonb_build_object(
         'position', 0, 'name', 'Easy running', 'sport', 'Running',
         'measurementMode', 'duration_intensity',
-        'target', jsonb_build_object('duration_minutes', 40, 'intensity', 'easy'),
-        'isLocked', false
+        'target', jsonb_build_object('duration_minutes', 40, 'intensity', 'easy')
       ))
     )
   ))
@@ -594,17 +591,6 @@ from public.materialize_rolling_plan_series(
 select is((select result from logged where label = 'materialize'), 'applied',
   'the series fills the owner-local window with occurrences');
 
-insert into change_receipt
-select 'lock', * from public.apply_rolling_plan_change_set(
-  pg_temp.rev('7f000000-0000-4000-8000-000000000001'),
-  '7f000000-0000-4000-8000-00000000e005', 'owner_manual',
-  jsonb_build_array(jsonb_build_object(
-    'operation', 'set_lock',
-    'sessionId', (select id from public.rolling_plan_sessions
-      where series_id = '7f000000-0000-4000-8000-0000000000c1'
-        and occurrence_date = pg_temp.owner_day(6)::date),
-    'isLocked', true)));
-
 insert into logged
 select 'occurrence', * from public.apply_completion_change(
   'create', null, null,
@@ -628,14 +614,12 @@ select 'end', * from public.apply_rolling_plan_change_set(
 select is(
   (select series_effects->0->>'deleted' from change_receipt where label = 'end'),
   -- R3b-2: the window is ninety-one days, so far more occurrences exist to
-  -- delete. Day 6 is locked, and since 9 Oct 2026 (`lock_no_longer_read`) a
-  -- lock keeps nothing, so the completed one alone must survive.
+  -- delete. The completed one alone must survive.
   '30',
   'ending the segment deletes every occurrence it is free to delete');
-select is(
-  (select series_effects->0->>'lockedKept' from change_receipt where label = 'end'),
-  '0',
-  'and leaves no locked one alone');
+select ok(
+  (select not (series_effects->0 ? 'lockedKept') from change_receipt where label = 'end'),
+  'and names no locked count, which went with the flag');
 select is(
   (select series_effects->0->>'completedKept' from change_receipt where label = 'end'),
   '1',
@@ -645,7 +629,7 @@ select is(
   '0',
   'the diverged count is unchanged for occurrences nobody had edited');
 select ok(
-  (select status = 'active' and not is_locked from public.rolling_plan_sessions
+  (select status = 'active' from public.rolling_plan_sessions
    where series_id = '7f000000-0000-4000-8000-0000000000c1'
      and occurrence_date = pg_temp.owner_day(0)::date),
   'the completed occurrence survives the removal and stays active');

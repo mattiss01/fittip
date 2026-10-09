@@ -268,7 +268,6 @@ function completion() {
       position: 0,
       title: "Threshold intervals",
       sport: "Running",
-      isLocked: false,
       status: "active" as const,
       seriesId: null,
       occurrenceDate: null,

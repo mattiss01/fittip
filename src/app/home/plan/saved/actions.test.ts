@@ -171,7 +171,6 @@ describe("saved session actions", () => {
           localDate: today(),
           // Position 0 is taken, so the copy lands in the first free slot.
           position: 1,
-          isLocked: false,
         }),
       }),
     ]);
@@ -429,7 +428,6 @@ function slice() {
         title: "Aerobic run",
         sport: "Running",
         expectedDurationMinutes: 60,
-        isLocked: true,
         status: "active" as const,
         cancelledAt: null,
         activities: [
@@ -439,7 +437,6 @@ function slice() {
             name: "Easy running",
             sport: "Running",
             measurementMode: "duration_intensity" as const,
-            isLocked: true,
           },
         ],
       },

@@ -493,7 +493,7 @@ select is(
 );
 select ok(
   (select bool_and(local_date = occurrence_date and not has_diverged
-     and not is_locked and status = 'active' and title = 'Easy run')
+     and status = 'active' and title = 'Easy run')
    from public.rolling_plan_sessions
    where series_id = '7d000000-0000-4000-8000-0000000000a1'),
   'an occurrence is an ordinary active session placed on its own rule date'
@@ -572,11 +572,7 @@ select 'a-touch', * from public.apply_rolling_plan_change_set(
     (select jsonb_build_object('operation', 'cancel', 'sessionId', id)
      from public.rolling_plan_sessions
      where series_id = '7d000000-0000-4000-8000-0000000000a1'
-       and occurrence_date = pg_temp.owner_day(6)::date),
-    (select jsonb_build_object('operation', 'set_lock', 'sessionId', id, 'isLocked', true)
-     from public.rolling_plan_sessions
-     where series_id = '7d000000-0000-4000-8000-0000000000a1'
-       and occurrence_date = pg_temp.owner_day(8)::date)));
+       and occurrence_date = pg_temp.owner_day(6)::date)));
 
 select ok(
   (select has_diverged from public.rolling_plan_sessions
@@ -634,8 +630,7 @@ select 'a-end', * from public.apply_rolling_plan_change_set(
 
 select is(
   (select series_effects->0->>'deleted' from change_receipt where label = 'a-end'),
-  -- Day 4 to day 90 every second day is 44 occurrences. One is locked, and
-  -- since 9 Oct 2026 (`lock_no_longer_read`) a lock keeps nothing.
+  -- Day 4 to day 90 every second day is 44 occurrences.
   '44',
   'ending the segment deletes every occurrence from the effective date on'
 );
@@ -646,17 +641,16 @@ select is(
   -- diverged (ADR-017 as amended on 22 September 2026).
   'and it reports how many of those the owner had already edited'
 );
-select is(
-  (select series_effects->0->>'lockedKept' from change_receipt where label = 'a-end'),
-  '0',
-  'and no longer leaves a locked one alone'
+select ok(
+  (select not (series_effects->0 ? 'lockedKept') from change_receipt where label = 'a-end'),
+  'and no longer names a locked count, which went with the flag'
 );
 select is(
   (select count(*)::bigint from public.rolling_plan_sessions
    where series_id = '7d000000-0000-4000-8000-0000000000a1'
      and occurrence_date = pg_temp.owner_day(8)::date),
   0::bigint,
-  'a locked occurrence is removed with the rest'
+  'a later occurrence the owner never touched is removed with the rest'
 );
 select is(
   (select array_agg(occurrence_date order by occurrence_date)
@@ -784,7 +778,7 @@ select 'c-fill', * from public.apply_rolling_plan_change_set(
      'operation', 'add', 'sessionId', gen_random_uuid(),
      'session', jsonb_build_object(
        'localDate', pg_temp.owner_day(3), 'position', i,
-       'title', 'Filler', 'sport', 'Running', 'isLocked', false,
+       'title', 'Filler', 'sport', 'Running',
        'activities', '[]'::jsonb)))
    from generate_series(0, 9) i));
 

@@ -577,8 +577,8 @@ select is(
   'it is placed at the first free position on its date'
 );
 select ok(
-  (select not is_locked from public.rolling_plan_sessions),
-  'an applied session is not locked; the owner locks their own content'
+  (select status = 'active' from public.rolling_plan_sessions),
+  'an applied session is active'
 );
 select is(
   (select count(*)::integer from public.rolling_plan_recovery_days),
@@ -874,7 +874,7 @@ select lives_ok(
           'sessionId', '7a000000-0000-4000-8000-0000000000d2',
           'session', jsonb_build_object(
             'localDate', %L, 'position', 99, 'title', 'Late swim',
-            'sport', 'Swimming', 'isLocked', false,
+            'sport', 'Swimming',
             'activities', '[]'::jsonb))))$$,
     pg_temp.day(5)::text, pg_temp.day(4)::text
   ),

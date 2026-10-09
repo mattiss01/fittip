@@ -63,7 +63,6 @@ as $$
       'title', p_title,
       'sport', 'Running',
       'expectedDurationMinutes', 60,
-      'isLocked', false,
       'activities', '[]'::jsonb
     )
   )

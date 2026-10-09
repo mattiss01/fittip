@@ -49,13 +49,11 @@ export function toSavedSessionDraft(
       ? {}
       : { expectedDurationMinutes: session.expectedDurationMinutes }),
     ...(session.note === undefined ? {} : { note: session.note }),
-    // `id`, `localDate`, `position`, `isLocked`, `status` and `cancelledAt`
-    // all belong to the planned session and stop here. So does each activity's
-    // own identity and its `isLocked` key.
+    // `id`, `localDate`, `position`, `status` and `cancelledAt` all belong to
+    // the planned session and stop here. So does each activity's own identity.
     activities: session.activities.map(
-      ({ id, isLocked, ...activity }): SavedSessionActivity => {
+      ({ id, ...activity }): SavedSessionActivity => {
         void id;
-        void isLocked;
         return activity;
       },
     ),
@@ -82,13 +80,9 @@ export function toRollingPlanSessionInput(
     ...(saved.note === undefined ? {} : { note: saved.note }),
     localDate,
     position,
-    isLocked: false,
     // The entry's `name` stays in the library. It is the title again since
     // 2 Oct 2026, and the planned session carries its own.
-    activities: saved.activities.map((activity) => ({
-      ...activity,
-      isLocked: false,
-    })),
+    activities: saved.activities.map((activity) => ({ ...activity })),
   };
 }
 
@@ -116,8 +110,6 @@ export function toRollingPlanSeriesInput(
       ? {}
       : { expectedDurationMinutes: saved.expectedDurationMinutes }),
     ...(saved.note === undefined ? {} : { note: saved.note }),
-    // A template activity has no `isLocked` key, exactly as the library
-    // entry's does not.
     activities: saved.activities.map((activity) => ({ ...activity })),
   };
 }
@@ -141,13 +133,8 @@ export function plannedSessionToRollingPlanSeriesInput(
       : { expectedDurationMinutes: session.expectedDurationMinutes }),
     ...(session.note === undefined ? {} : { note: session.note }),
     activities: session.activities.map(
-      ({
-        id,
-        isLocked,
-        ...activity
-      }): RollingPlanSeriesInput["activities"][number] => {
+      ({ id, ...activity }): RollingPlanSeriesInput["activities"][number] => {
         void id;
-        void isLocked;
         return activity;
       },
     ),

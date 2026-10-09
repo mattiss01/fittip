@@ -201,7 +201,7 @@ a shard in `ci.yml` names it.
   service-role key, then insert its `profiles` row with `docker exec supabase_db_fittip psql` —
   nothing but the app creates one, and service_role has no privileges on that table. `psql`
   needs `docker exec -i` to read a heredoc; without `-i` it silently does nothing. Plan sessions
-  need distinct `position` values per day, and every plan activity needs `isLocked`.
+  need distinct `position` values per day.
 - **A `db reset --local` takes that account with it.** The reset is the first half of the
   schema-change gate, so a session that runs one has no signed-in owner afterwards and has to
   create the user and seed the plan again before it can show anything.

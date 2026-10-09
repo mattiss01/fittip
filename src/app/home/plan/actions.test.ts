@@ -111,7 +111,6 @@ describe("plan actions", () => {
           // Position 0 is taken by the existing session, so the new one lands
           // in the first free slot rather than colliding.
           position: 1,
-          isLocked: false,
           activities: [],
         }),
       }),
@@ -151,7 +150,6 @@ describe("plan actions", () => {
         sport: "Running",
         localDate: shiftIsoDate(today(), 2),
         position: 0,
-        isLocked: false,
       },
     });
     if (change.operation !== "add") throw new Error("unreachable");
@@ -199,7 +197,6 @@ describe("plan actions", () => {
             sport: "Strength",
             measurementMode: "sets_reps_load",
             target: { sets: 5, reps: 5, load: 82.5, load_unit: "kg" },
-            isLocked: false,
           },
         ],
       },
@@ -272,8 +269,8 @@ describe("plan actions", () => {
       });
 
       // Neither is a field any surface sets, so a submission carrying one is
-      // not an honest form. It is refused rather than normalized away, which
-      // is the rule the series template already follows for `isLocked`.
+      // not an honest form. It is refused rather than normalized away. A lock
+      // is no field at all since 9 Oct 2026, and is refused as an unknown key.
       const result = await changePlanAction(
         INITIAL_PLAN_ACTION_STATE,
         form({
@@ -841,7 +838,6 @@ function slice() {
         position: 0,
         title: "Aerobic run",
         sport: "Running",
-        isLocked: false,
         status: "active" as const,
         cancelledAt: null,
         activities: [
@@ -851,7 +847,6 @@ function slice() {
             name: "Easy running",
             sport: "Running",
             measurementMode: "duration_intensity" as const,
-            isLocked: false,
           },
         ],
       },

@@ -208,7 +208,6 @@ function addSession(sessionId, localDate, position) {
       position,
       title: `Session ${position}`,
       sport: "Running",
-      isLocked: false,
       activities: [],
     },
   };

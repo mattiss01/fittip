@@ -106,12 +106,6 @@ lane, one screen per merge.
 
 Not worth their own slot; do them when work lands nearby.
 
-- **Lock's remains in the database.** Since 9 Oct 2026 nothing sets or reads a lock, but
-  `is_locked` is still a column on `rolling_plan_sessions` and `rolling_plan_activities`,
-  every add still sends `isLocked: false` because the payload validators require the
-  key, `apply_rolling_plan_change_set` still has its `set_lock` branch, and a receipt
-  still names `lockedKept`, always 0. Dropping them re-emits that function and seven
-  more, so do it when it is next replaced; a destructive migration, asked about first.
 - **`saveSessionDraftToLibraryAction` has no caller.** The log's own "Save session to
   library" left the activities step (owner, 3 Oct 2026); saving a log goes through the
   receipt, Today and Progress. The action and its tests in `plan/saved` can go.

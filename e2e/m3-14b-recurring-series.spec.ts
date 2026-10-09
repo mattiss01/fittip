@@ -458,7 +458,6 @@ async function seedFullDate(
             position,
             title: "Cap session " + (position + 1),
             sport: "Synthetic",
-            isLocked: false,
             activities: [],
           },
         })),

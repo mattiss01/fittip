@@ -17,13 +17,6 @@ export type RollingPlanActivityInput = {
   instructions?: string;
   measurementMode: TrainingMeasurementMode;
   target?: TrainingMeasurement;
-  /**
-   * Always false, here and on a session. Lock was removed on 9 Oct 2026
-   * (owner): nothing sets the flag and nothing reads it. The key stays because
-   * the database's payload validators still require it; it goes with the
-   * columns (`NEXT.md`).
-   */
-  isLocked: boolean;
 };
 
 export type RollingPlanSessionContent = {
@@ -38,20 +31,13 @@ export type RollingPlanSessionContent = {
 export type RollingPlanSessionInput = RollingPlanSessionContent & {
   localDate: string;
   position: number;
-  isLocked: boolean;
 };
 
 /** How Postgres numbers weekdays: 0 is Sunday through 6 is Saturday. */
 export type RollingPlanWeekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-/**
- * A series template's activity. The stored template never had the `isLocked`
- * key a dated session's activity still carries.
- */
-export type RollingPlanSeriesActivityInput = Omit<
-  RollingPlanActivityInput,
-  "isLocked"
->;
+/** A series template's activity: the same shape a dated session's has. */
+export type RollingPlanSeriesActivityInput = RollingPlanActivityInput;
 
 /**
  * One effective-dated segment: the recurrence rule and the session template it
@@ -179,9 +165,7 @@ export type RollingPlanSlice = {
  * What one series operation did to the occurrences already on the Plan.
  * `completedKept` is the count an occurrence that already carries a completion
  * saved from removal (M3-15A), which the owner has to be told about because
- * nothing else on the Plan will show it. Nothing else is kept: the database's
- * receipt still names `lockedKept`, always 0 since 9 Oct 2026, and it is not
- * read.
+ * nothing else on the Plan will show it. Nothing else is kept.
  */
 export type RollingPlanSeriesEffect = {
   seriesId: string;
@@ -556,12 +540,7 @@ function parseSeries(value: unknown): RollingPlanSeriesInput {
   }
   const positions = new Set<number>();
   const activities = record.activities.map((activity) => {
-    const raw = readRecord(activity);
-    // A template activity has no `isLocked` key, so naming one is a mistake
-    // rather than something to quietly normalize away.
-    if ("isLocked" in raw) throw new RollingPlanValidationError();
-    const { isLocked, ...parsed } = parseActivity({ ...raw, isLocked: false });
-    void isLocked;
+    const parsed = parseActivity(activity);
     if (positions.has(parsed.position)) throw new RollingPlanValidationError();
     positions.add(parsed.position);
     return parsed;
@@ -640,9 +619,7 @@ function parseSession(value: unknown, withPlacement: boolean) {
   ];
   assertOnlyKeys(
     record,
-    withPlacement
-      ? [...contentKeys, "localDate", "position", "isLocked"]
-      : contentKeys,
+    withPlacement ? [...contentKeys, "localDate", "position"] : contentKeys,
   );
   if (!Array.isArray(record.activities) || record.activities.length > 50) {
     throw new RollingPlanValidationError();
@@ -672,14 +649,10 @@ function parseSession(value: unknown, withPlacement: boolean) {
     activities,
   };
   if (!withPlacement) return content;
-  // Lock is gone (owner, 9 Oct 2026): the key is still required by the
-  // database, and a session can only be added with it false.
-  if (record.isLocked !== false) throw new RollingPlanValidationError();
   return {
     ...content,
     localDate: readIsoDate(record.localDate),
     position: readInteger(record.position, 0, 99),
-    isLocked: false,
   };
 }
 
@@ -687,15 +660,13 @@ function parseSession(value: unknown, withPlacement: boolean) {
  * The activity list a session form submitted, from a value that has been
  * through `JSON.parse` and is trusted for nothing else.
  *
- * Two fields a caller may not name, for the same reason the series template
- * refuses `isLocked`: a value the surface does not set is a value a payload
- * has no business carrying, and quietly normalizing it away would make a
- * crafted submission indistinguishable from an honest one.
+ * One field a caller may not name: a value the surface does not set is a
+ * value a payload has no business carrying, and quietly normalizing it away
+ * would make a crafted submission indistinguishable from an honest one.
  *
  * `position` is the array's order. The editor reorders by moving rows, so the
  * order *is* the intent, and a submitted position could only agree with it or
- * lie. `isLocked` is always false — the owner's 24 Sep 2026 decision for an
- * activity, and since 9 Oct 2026 true of a session too.
+ * lie.
  */
 export function parseSubmittedActivities(
   value: unknown,
@@ -705,10 +676,8 @@ export function parseSubmittedActivities(
   }
   return value.map((entry, index) => {
     const record = readRecord(entry);
-    if ("position" in record || "isLocked" in record) {
-      throw new RollingPlanValidationError();
-    }
-    return parseActivity({ ...record, position: index, isLocked: false });
+    if ("position" in record) throw new RollingPlanValidationError();
+    return parseActivity({ ...record, position: index });
   });
 }
 
@@ -722,14 +691,11 @@ function parseActivity(value: unknown): RollingPlanActivityInput {
     "instructions",
     "measurementMode",
     "target",
-    "isLocked",
   ]);
   const measurementMode = readChoice(
     record.measurementMode,
     TRAINING_MEASUREMENT_MODES,
   );
-  if (typeof record.isLocked !== "boolean")
-    throw new RollingPlanValidationError();
   let target: TrainingMeasurement | undefined;
   if (record.target !== undefined && record.target !== null) {
     try {
@@ -751,7 +717,6 @@ function parseActivity(value: unknown): RollingPlanActivityInput {
     ...optionalString("instructions", record.instructions, 2000),
     measurementMode,
     ...(target === undefined ? {} : { target }),
-    isLocked: record.isLocked,
   };
 }
 

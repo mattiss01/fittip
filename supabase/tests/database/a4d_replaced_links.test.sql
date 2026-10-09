@@ -67,7 +67,7 @@ as $$
     'sessionId', p_id,
     'session', jsonb_build_object(
       'localDate', pg_temp.owner_day(0), 'position', p_position,
-      'title', p_title, 'sport', 'Running', 'isLocked', false,
+      'title', p_title, 'sport', 'Running',
       'activities', '[]'::jsonb))
 $$;
 

@@ -10,8 +10,6 @@
 -- Second, that the two rules bounding the new verb are the database's, not a
 -- surface's. A session carrying a completion is refused with PT425 before the
 -- restricting foreign key can fire, so no raw violation ever reaches a client.
--- A lock does not refuse it, because a lock stops a sweep rather than the
--- owner's own deliberate individual act.
 --
 -- Third, that cancel is no longer the fallthrough of the session-operation
 -- chain. An unrecognized operation string now lands nowhere instead of landing
@@ -88,12 +86,10 @@ as $$
       'title', p_title,
       'sport', 'Running',
       'expectedDurationMinutes', 60,
-      'isLocked', false,
       'activities', jsonb_build_array(jsonb_build_object(
         'position', 0, 'name', 'Easy running', 'sport', 'Running',
         'measurementMode', 'duration_intensity',
-        'target', jsonb_build_object('duration_minutes', 40, 'intensity', 'easy'),
-        'isLocked', false
+        'target', jsonb_build_object('duration_minutes', 40, 'intensity', 'easy')
       ))
     )
   ))
@@ -217,7 +213,7 @@ select 'cancelled', * from public.apply_rolling_plan_change_set(
   pg_temp.plan_session(
     '79000000-0000-4000-8000-0000000000b2', pg_temp.owner_day(2), 0, 'Threshold'));
 insert into change_receipt
-select 'locked', * from public.apply_rolling_plan_change_set(
+select 'hills', * from public.apply_rolling_plan_change_set(
   pg_temp.rev('79000000-0000-4000-8000-000000000001'),
   '79000000-0000-4000-8000-00000000e003', 'owner_manual',
   pg_temp.plan_session(
@@ -349,18 +345,10 @@ select is(
   'the cancel entry that named it goes with the row, exactly as its add entry does'
 );
 
--- 3. A lock does not refuse the owner's own deliberate act --------------------
+-- 3. An active session is deleted as readily as a cancelled one ----------------
 
 insert into change_receipt
-select 'lock', * from public.apply_rolling_plan_change_set(
-  pg_temp.rev('79000000-0000-4000-8000-000000000001'),
-  '79000000-0000-4000-8000-00000000e014', 'owner_manual',
-  jsonb_build_array(jsonb_build_object(
-    'operation', 'set_lock', 'sessionId', '79000000-0000-4000-8000-0000000000b3',
-    'isLocked', true)));
-
-insert into change_receipt
-select 'delete-locked', * from public.apply_rolling_plan_change_set(
+select 'delete-active', * from public.apply_rolling_plan_change_set(
   pg_temp.rev('79000000-0000-4000-8000-000000000001'),
   '79000000-0000-4000-8000-00000000e015', 'owner_manual',
   pg_temp.delete_change('79000000-0000-4000-8000-0000000000b3'));
@@ -369,7 +357,7 @@ select is(
   (select count(*)::bigint from public.rolling_plan_sessions
    where id = '79000000-0000-4000-8000-0000000000b3'),
   0::bigint,
-  'a locked session is deleted when the owner asks for it directly'
+  'an active session is deleted when the owner asks for it directly'
 );
 
 -- 4. A session carrying a completion is refused, and both records survive -----

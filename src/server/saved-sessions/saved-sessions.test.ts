@@ -240,7 +240,7 @@ describe("the saved session library", () => {
           activities: [
             {
               position: 0,
-              name: "Locked",
+              name: "Unknown key",
               sport: "Running",
               measurementMode: "custom",
               isLocked: true,

@@ -48,11 +48,11 @@ describe("rolling plan interface validation", () => {
     ).rejects.toThrow(RollingPlanValidationError);
   });
 
-  it("refuses to add a locked session, since nothing sets a lock", async () => {
+  it("refuses a lock as an unknown key and an unknown operation", async () => {
     const plan = new RollingPlan(
       new InMemoryRollingPlanAdapter({ timezoneName: CONTRACT_TIMEZONE }),
     );
-    const add = (isLocked: boolean) =>
+    const add = (extra: Record<string, unknown>) =>
       plan.applyChangeSet(
         {
           idempotencyKey: "75000000-0000-4000-8000-000000000103",
@@ -66,8 +66,8 @@ describe("rolling plan interface validation", () => {
                 position: 0,
                 title: "Long run",
                 sport: "Running",
-                isLocked,
                 activities: [],
+                ...extra,
               },
             },
           ],
@@ -75,7 +75,15 @@ describe("rolling plan interface validation", () => {
         0,
       );
 
-    await expect(add(true)).rejects.toThrow(RollingPlanValidationError);
+    // The flag left the database on 9 Oct 2026, so the key is not one a
+    // session has, whatever its value.
+    await expect(add({ isLocked: false })).rejects.toThrow(
+      RollingPlanValidationError,
+    );
+    await expect(add({ isLocked: true })).rejects.toThrow(
+      RollingPlanValidationError,
+    );
+    await expect(add({})).resolves.toMatchObject({ planRevision: 1 });
     // The retired operation is refused as any unknown one is.
     await expect(
       plan.applyChangeSet(
@@ -90,7 +98,7 @@ describe("rolling plan interface validation", () => {
             },
           ],
         } as never,
-        0,
+        1,
       ),
     ).rejects.toThrow(RollingPlanValidationError);
   });

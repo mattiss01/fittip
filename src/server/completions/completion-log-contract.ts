@@ -72,7 +72,6 @@ export function registerCompletionLogContract(
         title: "Aerobic run",
         sport: "Running",
         status: "active",
-        isLocked: false,
         seriesId: null,
         occurrenceDate: null,
       });
@@ -807,7 +806,6 @@ export const CONTRACT_PLANNED_SESSION = {
   title: "Aerobic run",
   sport: "Running",
   expectedDurationMinutes: 60,
-  isLocked: false,
   activities: [
     {
       position: 0,

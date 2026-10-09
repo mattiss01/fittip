@@ -292,7 +292,6 @@ function parseSession(value: unknown): RollingPlanSession {
       isInteger(session.expectedDurationMinutes, 1)
     ) ||
     !(session.note === null || typeof session.note === "string") ||
-    typeof session.isLocked !== "boolean" ||
     !(session.status === "active" || session.status === "cancelled") ||
     !(
       session.cancelledAt === null || typeof session.cancelledAt === "string"
@@ -319,7 +318,6 @@ function parseSession(value: unknown): RollingPlanSession {
       ? {}
       : { expectedDurationMinutes: session.expectedDurationMinutes }),
     ...(session.note === null ? {} : { note: session.note }),
-    isLocked: session.isLocked,
     status: session.status,
     cancelledAt: session.cancelledAt,
     seriesId: session.seriesId,
@@ -346,8 +344,7 @@ function parseActivity(value: unknown): RollingPlanActivity {
     ) ||
     !TRAINING_MEASUREMENT_MODES.includes(
       activity.measurementMode as (typeof TRAINING_MEASUREMENT_MODES)[number],
-    ) ||
-    typeof activity.isLocked !== "boolean"
+    )
   ) {
     throw new RollingPlanPersistenceError();
   }
@@ -374,7 +371,6 @@ function parseActivity(value: unknown): RollingPlanActivity {
       : { instructions: activity.instructions }),
     measurementMode,
     ...(target === undefined ? {} : { target }),
-    isLocked: activity.isLocked,
   };
 }
 
