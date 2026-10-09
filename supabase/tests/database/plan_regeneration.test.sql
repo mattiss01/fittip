@@ -67,7 +67,8 @@ select plan(28);
 
 select has_function(
   'public', 'begin_plan_generation',
-  array['text', 'text', 'date', 'integer', 'bigint', 'text', 'uuid', 'text'],
+  array['text', 'text', 'date', 'integer', 'bigint', 'text', 'uuid', 'text',
+        'uuid[]'],
   'the claim function takes a previous proposal and feedback'
 );
 select has_function(
@@ -94,7 +95,7 @@ select hasnt_function(
 select ok(
   has_function_privilege(
     'authenticated',
-    'public.begin_plan_generation(text,text,date,integer,bigint,text,uuid,text)',
+    'public.begin_plan_generation(text,text,date,integer,bigint,text,uuid,text,uuid[])',
     'EXECUTE'
   ) and has_function_privilege(
     'authenticated',
@@ -106,7 +107,7 @@ select ok(
 select ok(
   not has_function_privilege(
     'anon',
-    'public.begin_plan_generation(text,text,date,integer,bigint,text,uuid,text)',
+    'public.begin_plan_generation(text,text,date,integer,bigint,text,uuid,text,uuid[])',
     'EXECUTE'
   ) and not has_function_privilege(
     'service_role',

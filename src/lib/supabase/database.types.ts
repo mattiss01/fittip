@@ -615,6 +615,42 @@ export type Database = {
           },
         ];
       };
+      plan_generation_replaceable_sessions: {
+        Row: {
+          handle: string;
+          request_id: string;
+          session_id: string;
+          user_id: string;
+        };
+        Insert: {
+          handle: string;
+          request_id: string;
+          session_id: string;
+          user_id: string;
+        };
+        Update: {
+          handle?: string;
+          request_id?: string;
+          session_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "plan_generation_replaceable_sessions_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "plan_generation_replaceable_sessions_request_fkey";
+            columns: ["request_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "plan_generation_requests";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
       plan_generation_requests: {
         Row: {
           completion_token: string;
@@ -801,6 +837,7 @@ export type Database = {
           ordinal: number;
           proposal_id: string;
           rationale: string | null;
+          replaces_session_id: string | null;
           session_id: string | null;
           sport: string | null;
           title: string | null;
@@ -815,6 +852,7 @@ export type Database = {
           ordinal: number;
           proposal_id: string;
           rationale?: string | null;
+          replaces_session_id?: string | null;
           session_id?: string | null;
           sport?: string | null;
           title?: string | null;
@@ -829,6 +867,7 @@ export type Database = {
           ordinal?: number;
           proposal_id?: string;
           rationale?: string | null;
+          replaces_session_id?: string | null;
           session_id?: string | null;
           sport?: string | null;
           title?: string | null;
@@ -2337,6 +2376,7 @@ export type Database = {
           p_planning_note?: string;
           p_previous_proposal_id?: string;
           p_regeneration_feedback?: string;
+          p_replaceable_session_ids?: string[];
           p_request_fingerprint: string;
           p_start_date: string;
         };
