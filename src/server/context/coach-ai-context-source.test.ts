@@ -283,8 +283,8 @@ describe("the production coaching context source", () => {
     expect(listMemory).toHaveBeenCalledWith(TODAY);
     expect(TRAINING_HISTORY_WINDOW_DAYS).toBe(56);
 
-    // The plan read reaches far enough forward for every locked commitment
-    // ADR-013 decision 5 admits, and back far enough for the miss list.
+    // The plan read reaches far enough forward for every commitment ADR-013
+    // decision 5 admits, and back far enough for the miss list.
     expect(getPlanSlice).toHaveBeenCalledWith(WINDOW_START, "2027-01-31");
   });
 
@@ -407,7 +407,6 @@ describe("the production coaching context source", () => {
         localDate: "2026-08-03",
         title: "Aerobic run",
         sport: "Running",
-        isLocked: false,
         hasCompletion: true,
         ruleSeriesId: null,
       },
@@ -415,7 +414,6 @@ describe("the production coaching context source", () => {
         localDate: "2026-08-02",
         title: "Missed tempo",
         sport: "Running",
-        isLocked: false,
         hasCompletion: false,
         ruleSeriesId: null,
       },

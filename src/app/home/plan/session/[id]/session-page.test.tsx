@@ -71,7 +71,6 @@ function session(overrides: Partial<PlanSessionView> = {}): PlanSessionView {
     intent: null,
     expectedDurationMinutes: 60,
     note: null,
-    isLocked: false,
     status: "active",
     activities: [],
     seriesId: null,
@@ -175,7 +174,6 @@ describe("SessionPage", () => {
       "Log this session",
       "Duplicate",
       "Save to library",
-      "Lock",
       "Cancel session",
       "Delete",
     ]);
@@ -232,19 +230,6 @@ describe("SessionPage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Long run" }),
     ).toBeVisible();
-  });
-
-  it("locks in one tap from the menu", () => {
-    render(page(session()));
-    choose("Lock");
-
-    const [formData] = planDispatch.mock.calls.at(-1) as [FormData];
-    expect(Object.fromEntries(formData)).toEqual({
-      operation: "set_lock",
-      isLocked: "true",
-      sessionId: session().id,
-      expectedRevision: "3",
-    });
   });
 
   it("offers a copy on any date a single session may sit on", () => {
@@ -378,7 +363,7 @@ describe("SessionPage", () => {
       status: "session",
       message: "Your session ended. Sign in again before changing your plan.",
       submission: 1,
-      operation: "set_lock",
+      operation: "cancel",
       sessionId: session().id,
     };
     render(page(session()));
@@ -524,14 +509,15 @@ describe("SessionPage", () => {
     expect(
       future.closest("form")!.querySelector("input[name='operation']"),
     ).toHaveValue("end_series");
-    expect(screen.getByText(/Locked sessions are kept/)).toBeVisible();
+    expect(
+      screen.getByText(/A session with training logged against it is kept/),
+    ).toBeVisible();
+    expect(screen.queryByText(/[Ll]ocked/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Delete session" })).toBeNull();
   });
 
-  it("withholds future scopes from a locked survivor past the segment end", () => {
-    render(
-      page(occurrence({ isLocked: true }), series({ endDate: "2026-08-16" })),
-    );
+  it("withholds future scopes from an occurrence past the segment end", () => {
+    render(page(occurrence(), series({ endDate: "2026-08-16" })));
     choose("Delete");
     expect(
       screen.queryByRole("button", {
@@ -612,7 +598,7 @@ describe("SessionPage", () => {
       screen.getByRole("button", { name: "Save to library" }),
     ).toBeVisible();
     expect(screen.queryByRole("button", { name: "Duplicate" })).toBeNull();
-    for (const verb of ["Lock", "Unlock", "Cancel session", "Delete"]) {
+    for (const verb of ["Cancel session", "Delete"]) {
       expect(screen.queryByRole("button", { name: verb })).toBeNull();
     }
   });
@@ -652,7 +638,7 @@ describe("SessionPage", () => {
   });
 
   it("yields a retained series receipt to a newer ordinary plan action", () => {
-    const { rerender } = render(page(occurrence({ isLocked: true }), series()));
+    const { rerender } = render(page(occurrence(), series()));
     choose("Delete");
     fireEvent.submit(
       screen
@@ -661,31 +647,37 @@ describe("SessionPage", () => {
     );
     expect(seriesDispatch).toHaveBeenCalledOnce();
 
-    // The locked occurrence survives its own series' end.
+    // The receipt arrives while the page still holds the occurrence.
     seriesState = {
       status: "saved",
       message:
-        "Future recurring sessions removed permanently: 1 unchanged removed, 0 changed removed, 1 locked kept, 0 completed kept.",
+        "Future recurring sessions removed permanently: 1 unchanged removed, 0 changed removed, 0 completed kept.",
       submission: 1,
       operation: "end_series",
       sessionId: session().id,
     };
-    rerender(page(occurrence({ isLocked: true }), series()));
+    rerender(page(occurrence(), series()));
     const status = screen.getByRole("status");
     expect(status).toHaveTextContent(/1 unchanged removed/);
     expect(replaceMock).not.toHaveBeenCalled();
 
-    choose("Unlock");
+    // The receipt closed the panel, so the owner opens Delete again.
+    choose("Delete");
+    fireEvent.submit(
+      screen
+        .getByRole("button", { name: "Delete only this session" })
+        .closest("form")!,
+    );
     expect(planDispatch).toHaveBeenCalledOnce();
     planState = {
       status: "conflict",
       message: "Your plan changed somewhere else.",
       submission: 1,
-      operation: "set_lock",
+      operation: "delete",
       sessionId: session().id,
       conflict: "stale",
     };
-    rerender(page(occurrence({ isLocked: true }), series()));
+    rerender(page(occurrence(), series()));
 
     expect(status).toHaveTextContent("Your plan changed somewhere else.");
     expect(status).not.toHaveTextContent(/unchanged removed/);

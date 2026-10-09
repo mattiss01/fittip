@@ -16,8 +16,8 @@
 -- editing, cancelling, or sweeping that session afterwards leaves the stored
 -- snapshot byte-identical. A hard delete of a session carrying a completion is
 -- refused by the database itself, and the one function in this schema that
--- hard deletes occurrences keeps a completed one exactly as it keeps a locked
--- one and reports both separately.
+-- hard deletes occurrences keeps a completed one and reports it. It kept a
+-- locked one too until 9 Oct 2026 (`lock_no_longer_read`).
 --
 -- Dates follow the wall clock for the same reason M3-12's, M3-13's and M3-14's
 -- suites do: every planning rule reached here is defined against owner-local
@@ -628,13 +628,14 @@ select 'end', * from public.apply_rolling_plan_change_set(
 select is(
   (select series_effects->0->>'deleted' from change_receipt where label = 'end'),
   -- R3b-2: the window is ninety-one days, so far more occurrences exist to
-  -- delete. The two that must survive are the same two.
-  '29',
+  -- delete. Day 6 is locked, and since 9 Oct 2026 (`lock_no_longer_read`) a
+  -- lock keeps nothing, so the completed one alone must survive.
+  '30',
   'ending the segment deletes every occurrence it is free to delete');
 select is(
   (select series_effects->0->>'lockedKept' from change_receipt where label = 'end'),
-  '1',
-  'and reports the locked one it left alone, exactly as M3-14 did');
+  '0',
+  'and leaves no locked one alone');
 select is(
   (select series_effects->0->>'completedKept' from change_receipt where label = 'end'),
   '1',
@@ -652,13 +653,13 @@ select is(
   (select array_agg(occurrence_date order by occurrence_date)
    from public.rolling_plan_sessions
    where series_id = '7f000000-0000-4000-8000-0000000000c1'),
-  array[pg_temp.owner_day(0), pg_temp.owner_day(6)]::date[],
-  'only the completed and the locked occurrence remain');
+  array[pg_temp.owner_day(0)]::date[],
+  'only the completed occurrence remains');
 select is(
   (select count(*)::bigint from public.rolling_plan_change_entries
    where user_id = '7f000000-0000-4000-8000-000000000001'
      and change_kind = 'delete'),
-  29::bigint,
+  30::bigint,
   'each deletion still leaves a surviving delete entry, and a kept occurrence leaves none');
 select is(
   (select plan_session_id from public.completions

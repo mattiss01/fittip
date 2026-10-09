@@ -75,7 +75,6 @@ test.describe("M3-14B recurring series surface", () => {
         "Log this session",
         "Duplicate",
         "Save to library",
-        "Lock",
         "Cancel session",
         "Delete",
       ]);
@@ -188,7 +187,10 @@ test.describe("M3-14B recurring series surface", () => {
       const permanent = futureRemoval.getByText(
         /Permanent\. Removes this occurrence/,
       );
-      await expect(permanent).toContainText("Locked sessions are kept");
+      await expect(permanent).toContainText(
+        "A session with training logged against it is kept",
+      );
+      await expect(permanent).not.toContainText(/locked/i);
       await expect(permanent).toContainText("completed training is untouched");
       await expect(permanent).toContainText("no undo");
       await expect(permanent).not.toContainText(/\b\d+\b/);

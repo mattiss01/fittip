@@ -73,18 +73,6 @@ test.describe("M3-15B today and logging", () => {
       await addSeries(page, today, tomorrow, "Aerobic base", "Running");
 
       // Plan verbs live on the session's own page since 29 Sep 2026.
-      await openSession(page, today, "Core circuit");
-      await chooseMore(page, "Lock");
-      await expect(
-        page.locator("article").getByText("Locked", { exact: true }),
-      ).toBeVisible();
-      await backToPlan(page);
-      await expect(
-        (await planCard(page, today, "Core circuit")).getByText("Locked", {
-          exact: true,
-        }),
-      ).toBeVisible();
-
       await openSession(page, today, "Rest swap");
       await chooseMore(page, "Cancel session");
       await page
@@ -126,9 +114,6 @@ test.describe("M3-15B today and logging", () => {
       ]) {
         await expect(todayCard(page, title)).toBeVisible();
       }
-      await expect(
-        todayCard(page, "Core circuit").getByText("Locked", { exact: true }),
-      ).toBeVisible();
       await expect(
         todayCard(page, "Rest swap").getByText("Cancelled, kept on the record"),
       ).toBeVisible();

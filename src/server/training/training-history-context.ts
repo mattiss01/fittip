@@ -53,13 +53,14 @@ export const COMPLETION_NOTE_MAX_LENGTH = 400;
 export const REPLACEMENT_DESCRIPTION_MAX_LENGTH = 240;
 
 /**
- * Decision 5: beyond the horizon the coach reads locked entries only, within a
- * bounded forward window. The ADR requires this to be longer for
- * `create_roadmap` than for `create_seven_day_plan`, because a locked race is
- * what a taper is built toward and a roadmap that cannot see it has nothing to
- * aim at.
+ * Decision 5 as amended on 9 October 2026: beyond the horizon the coach reads
+ * the entries no series rule describes - a single session, or an occurrence
+ * the owner edited or moved - within a bounded forward window. A race months
+ * out is what a taper is built toward, and a roadmap that cannot see it has
+ * nothing to aim at. Until that day the window carried locked entries only;
+ * Lock is gone (owner), so nothing marks one entry out there above another.
  */
-export const ROADMAP_FORWARD_LOCKED_WINDOW_DAYS = 180;
+export const FORWARD_PLAN_WINDOW_DAYS = 180;
 export const MAX_PLAN_COMMITMENTS = 12;
 /**
  * Decision 5 as amended on 2 October 2026: the most recurring series sent as
@@ -88,14 +89,12 @@ export type TrainingHistoryPlannedSession = {
   localDate: string;
   title: string;
   sport: string;
-  isLocked: boolean;
   /** True when a completion references this planned session. */
   hasCompletion: boolean;
   /**
    * The series whose rule still describes this session: an occurrence that is
    * on its rule date and whose content the owner has not edited. `null` for a
-   * one-off, and for an occurrence that was edited or moved. A lock is read
-   * separately, because a locked occurrence stays a dated entry either way.
+   * one-off, and for an occurrence that was edited or moved.
    */
   ruleSeriesId: string | null;
 };
@@ -165,7 +164,7 @@ export function selectTrainingHistoryContext(
      * refusal they could not act on.
      */
     maxBytes?: number;
-    forwardLockedWindowDays?: number;
+    forwardWindowDays?: number;
     maxPlanCommitments?: number;
     /** Shared by the rules and the dated entries, rules first. */
     maxPlanCommitmentBytes?: number;
@@ -178,8 +177,7 @@ export function selectTrainingHistoryContext(
 ): TrainingHistorySelection {
   const windowDays = limits.windowDays ?? TRAINING_HISTORY_WINDOW_DAYS;
   const maxSessions = limits.maxSessions ?? TRAINING_HISTORY_MAX_SESSIONS;
-  const forwardDays =
-    limits.forwardLockedWindowDays ?? ROADMAP_FORWARD_LOCKED_WINDOW_DAYS;
+  const forwardDays = limits.forwardWindowDays ?? FORWARD_PLAN_WINDOW_DAYS;
   const maxCommitments = limits.maxPlanCommitments ?? MAX_PLAN_COMMITMENTS;
   const maxRecurring = limits.maxRecurringSessions ?? 0;
 
@@ -227,14 +225,16 @@ export function selectTrainingHistoryContext(
     .slice(0, maxSessions)
     .map(toMissedReference);
 
-  // Decision 5: every entry inside the horizon with its lock state, and beyond
-  // it locked entries only, within the bounded forward window.
+  // Decision 5 as amended on 9 October 2026: every entry inside the horizon,
+  // and beyond it the entries no series rule describes, within the bounded
+  // forward window. An unchanged occurrence out there is one of thirteen weeks
+  // of identical lines, and the roadmap already has its series as a rule.
   const forwardLimit = addDays(records.today, forwardDays);
   const eligible = records.plannedSessions
     .filter((entry) => {
       if (entry.localDate < records.today) return false;
       if (entry.localDate <= records.horizonEndDate) return true;
-      return entry.isLocked && entry.localDate <= forwardLimit;
+      return entry.ruleSeriesId === null && entry.localDate <= forwardLimit;
     })
     .sort((a, b) => a.localDate.localeCompare(b.localDate));
   const byteBudget = limits.maxPlanCommitmentBytes ?? Number.POSITIVE_INFINITY;
@@ -244,9 +244,7 @@ export function selectTrainingHistoryContext(
   const recurringSessions: CoachAIRecurringSessionReference[] = [];
 
   if (maxRecurring === 0) {
-    // No rules: the nearest entries, then a byte trim. Kept exactly as it was
-    // before rules existed, so an operation that sends none sends what it
-    // always sent.
+    // No rules: the nearest eligible entries, then a byte trim.
     commitments = eligible
       .slice(0, maxCommitments)
       .map(toPlanCommitmentReference)
@@ -257,25 +255,19 @@ export function selectTrainingHistoryContext(
         return used <= byteBudget;
       });
   } else {
-    // Decision 5 as amended on 2 October 2026. One allocation, filled in the
-    // order of what the coach can least afford to lose:
+    // Decision 5 as amended on 2 and 9 October 2026. One allocation, filled
+    // in two steps:
     //
-    // 1. Locked entries. A lock is the owner's statement about a date, and a
-    //    locked race is what the amendment exists to keep in view, so neither
-    //    a rule nor a nearer unlocked session may push one out.
-    // 2. Rules, one per series running inside the horizon.
-    // 3. Unlocked entries no sent rule already describes, nearest first.
+    // 1. Rules, one per series running inside the horizon.
+    // 2. Dated entries no sent rule already describes, nearest first.
+    //
+    // Locked entries were fitted before both until Lock was removed. Without
+    // it the nearest entries win, so more single sessions than the list holds
+    // cut the furthest one, a race included.
     let used = 0;
     const kept: TrainingHistoryPlannedSession[] = [];
-    for (const entry of eligible.filter((candidate) => candidate.isLocked)) {
-      if (kept.length >= maxCommitments) break;
-      const cost = costOf(toPlanCommitmentReference(entry));
-      if (used + cost > byteBudget) continue;
-      used += cost;
-      kept.push(entry);
-    }
 
-    // A series that only starts after the horizon is the unlocked speculation
+    // A series that only starts after the horizon is the speculation
     // decision 5 already calls noise; one that has ended is history; and one
     // ended from its own first day has an end before its start and describes
     // nothing. Earliest first, so a trim keeps what is already running. A rule
@@ -304,7 +296,6 @@ export function selectTrainingHistoryContext(
     }
 
     for (const entry of eligible) {
-      if (entry.isLocked) continue;
       if (kept.length >= maxCommitments) break;
       if (
         entry.ruleSeriesId !== null &&
@@ -318,9 +309,7 @@ export function selectTrainingHistoryContext(
       kept.push(entry);
     }
 
-    commitments = kept
-      .sort((a, b) => a.localDate.localeCompare(b.localDate))
-      .map(toPlanCommitmentReference);
+    commitments = kept.map(toPlanCommitmentReference);
   }
 
   return {
@@ -394,7 +383,6 @@ function toPlanCommitmentReference(
     localDate: entry.localDate,
     title: entry.title.slice(0, 120),
     sport: entry.sport.slice(0, 80),
-    isLocked: entry.isLocked,
   };
 }
 

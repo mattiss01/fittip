@@ -77,8 +77,7 @@ function fromPlan(proposal: FillProposal | undefined): Open | null {
  * the list does not change until the owner decides. In the box they remove
  * coach activities (with Undo) and add any of the currently planned ones.
  * Accept replaces the list with what the box holds; Dismiss closes the box and
- * leaves the list exactly as it is. Either way the list stays editable, and a
- * lock hides none of this (ADR-020 decision 5).
+ * leaves the list exactly as it is. Either way the list stays editable.
  *
  * Decisions follow what reaches the plan. An accepted suggestion travels with
  * the form and is recorded "accepted" once Save has landed; Dismiss records

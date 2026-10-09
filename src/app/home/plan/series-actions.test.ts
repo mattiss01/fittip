@@ -170,7 +170,6 @@ describe("recurring-session actions", () => {
           operation: "end_series",
           deleted: 2,
           divergedDeleted: 1,
-          lockedKept: 1,
           completedKept: 1,
         },
       ],
@@ -196,13 +195,12 @@ describe("recurring-session actions", () => {
       effect: {
         deleted: 2,
         divergedDeleted: 1,
-        lockedKept: 1,
         completedKept: 1,
       },
     });
     expect(result.message).toContain("1 unchanged removed");
     expect(result.message).toContain("1 changed removed");
-    expect(result.message).toContain("1 locked kept");
+    expect(result.message).not.toMatch(/locked/i);
     expect(result.message).toContain("1 completed kept");
     expect(result.message).not.toMatch(/expect|forecast|estimate/i);
   });
@@ -226,7 +224,6 @@ describe("recurring-session actions", () => {
           operation: "end_series",
           deleted: 1,
           divergedDeleted: 0,
-          lockedKept: 0,
           completedKept: 0,
         },
       ],

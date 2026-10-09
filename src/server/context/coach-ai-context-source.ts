@@ -33,7 +33,7 @@ import type {
 } from "@/server/rolling-plan/rolling-plan";
 import { selectSessionDetailRecords } from "@/server/session-detail/session-detail-context";
 import {
-  ROADMAP_FORWARD_LOCKED_WINDOW_DAYS,
+  FORWARD_PLAN_WINDOW_DAYS,
   selectTrainingHistoryContext,
   TRAINING_HISTORY_WINDOW_DAYS,
   type TrainingHistoryCompletion,
@@ -158,11 +158,8 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
     );
     // The widest forward reach ADR-013 decision 5 permits. Assembly narrows it
     // per operation and per horizon; reading it here means the slice always
-    // contains every locked commitment either operation could ask for.
-    const forwardEndDate = shiftIsoDate(
-      today,
-      ROADMAP_FORWARD_LOCKED_WINDOW_DAYS,
-    );
+    // contains every commitment either operation could ask for.
+    const forwardEndDate = shiftIsoDate(today, FORWARD_PLAN_WINDOW_DAYS);
 
     // Independent owner-scoped reads, issued together rather than as a
     // waterfall. The plan read is the only one with a write side effect, and
@@ -370,7 +367,6 @@ function toTrainingHistoryPlannedSession(
     localDate: session.localDate,
     title: session.title,
     sport: session.sport,
-    isLocked: session.isLocked,
     hasCompletion: completedPlanSessionIds.has(session.id),
     // An occurrence its rule still describes: on its rule date, content as the
     // series stamped it. An edited or moved one is its own dated entry.

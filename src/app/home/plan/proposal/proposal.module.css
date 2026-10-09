@@ -492,8 +492,8 @@
  * they have to look the same; a shared stylesheet for four rules would couple
  * the proposal route's styling to the plan route's for the rest of its life.
  */
-/* Edit and Lock as two small pills under the card's title. An open editor
-   takes the whole row, and Lock wraps under it. */
+/* Edit as a small pill under the card's title. An open editor takes the
+   whole row. */
 .plannedActions {
   display: flex;
   flex-wrap: wrap;

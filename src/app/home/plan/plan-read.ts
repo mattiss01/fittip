@@ -28,7 +28,6 @@ export function toSessionView(session: RollingPlanSession): PlanSessionView {
     intent: session.intent ?? null,
     expectedDurationMinutes: session.expectedDurationMinutes ?? null,
     note: session.note ?? null,
-    isLocked: session.isLocked,
     status: session.status,
     activities: session.activities.map(toActivityValue),
     seriesId: session.seriesId,

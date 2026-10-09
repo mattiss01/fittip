@@ -627,7 +627,7 @@ function PlanDay({
 
 /**
  * A card reads the session and opens it (owner, 29 Sep 2026): every verb —
- * Edit, Cancel, Delete, Lock, Duplicate, Save to library — lives on the
+ * Edit, Cancel, Delete, Duplicate, Save to library — lives on the
  * session's own page. R3a made it compact: title, a ↻ for a series, the
  * planned minutes, and a stripe in the sport's tone. The title is the link,
  * stretched over the whole card.
@@ -648,7 +648,6 @@ function PlanSessionCard({
     <li
       className={w.card}
       data-tone={tone}
-      data-locked={session.isLocked}
       data-cancelled={cancelled || undefined}
       data-logged={loggedElsewhere || undefined}
       data-session-card={cancelled || loggedElsewhere ? undefined : true}
@@ -697,9 +696,7 @@ function cardDetail(session: PlanSessionView, cancelled: boolean): string {
       .filter(Boolean)
       .join(" · ");
   }
-  return [planned, session.isLocked ? "Locked" : null]
-    .filter(Boolean)
-    .join(" · ");
+  return planned ?? "";
 }
 
 function DaySheet({

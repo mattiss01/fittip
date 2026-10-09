@@ -39,8 +39,8 @@ export function readSubmittedActivities(
 }
 
 /**
- * The same list for a template — a series or a library entry — which carries
- * no Plan lock, because a lock belongs to a dated session.
+ * The same list for a template — a series or a library entry — whose
+ * activities have no `isLocked` key.
  */
 export function readSubmittedTemplateActivities(
   formData: FormData,

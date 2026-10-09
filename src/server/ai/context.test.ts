@@ -378,7 +378,6 @@ describe("the per-source context allocation", () => {
       localDate: shiftDate(TODAY, -(index + 1)),
       title: "t".repeat(120),
       sport: "s".repeat(80),
-      isLocked: false,
       hasCompletion: false,
       ruleSeriesId: null,
     }));
@@ -504,7 +503,7 @@ describe("the per-source context allocation", () => {
     expect(assembled.serialized).not.toContain("resolved");
   });
 
-  it("sends locked entries beyond the horizon and every entry inside it", () => {
+  it("sends every entry inside the horizon and, beyond it, the ones no rule describes", () => {
     const assembled = build({
       training: {
         ...EMPTY_TRAINING,
@@ -513,23 +512,27 @@ describe("the per-source context allocation", () => {
             localDate: shiftDate(TODAY, 3),
             title: "Club run",
             sport: "Running",
-            isLocked: false,
             hasCompletion: false,
-            ruleSeriesId: null,
+            ruleSeriesId: "77000000-0000-4000-8000-000000000009",
           },
           {
             localDate: shiftDate(TODAY, 150),
             title: "Autumn race",
             sport: "Running",
-            isLocked: true,
             hasCompletion: false,
             ruleSeriesId: null,
           },
           {
             localDate: shiftDate(TODAY, 150),
-            title: "Speculative session",
+            title: "Club run, far out",
             sport: "Running",
-            isLocked: false,
+            hasCompletion: false,
+            ruleSeriesId: "77000000-0000-4000-8000-000000000009",
+          },
+          {
+            localDate: shiftDate(TODAY, 181),
+            title: "Next year's race",
+            sport: "Running",
             hasCompletion: false,
             ruleSeriesId: null,
           },
@@ -537,13 +540,36 @@ describe("the per-source context allocation", () => {
       },
     });
 
-    // ADR-013 decision 5: inside the horizon, every entry with its lock state.
-    // Beyond it, locked entries only — a locked race is what a taper aims at,
-    // and an unlocked one out there is noise.
+    // ADR-013 decision 5 as amended on 9 October 2026: inside the horizon,
+    // every entry. Beyond it, a single session - a race is what a taper aims
+    // at - but not an unchanged occurrence of a series, and nothing past the
+    // forward window.
     expect(assembled.context.planCommitments.map((c) => c.title)).toEqual([
       "Club run",
       "Autumn race",
     ]);
+  });
+
+  it("sends no lock state, which nothing sets any more", () => {
+    const assembled = build({
+      training: {
+        ...EMPTY_TRAINING,
+        plannedSessions: [
+          {
+            localDate: shiftDate(TODAY, 3),
+            title: "Club run",
+            sport: "Running",
+            hasCompletion: false,
+            ruleSeriesId: null,
+          },
+        ],
+      },
+    });
+
+    expect(assembled.context.planCommitments).toEqual([
+      { localDate: shiftDate(TODAY, 3), title: "Club run", sport: "Running" },
+    ]);
+    expect(assembled.serialized).not.toContain("isLocked");
   });
 
   describe("a recurring series (ADR-013 decision 5, amended 2 October 2026)", () => {
@@ -563,7 +589,6 @@ describe("the per-source context allocation", () => {
       localDate: shiftDate(TODAY, 1 + index * 3),
       title: "Club run",
       sport: "Running",
-      isLocked: false,
       hasCompletion: false,
       ruleSeriesId: SERIES_ID,
     }));
@@ -571,12 +596,11 @@ describe("the per-source context allocation", () => {
       localDate: shiftDate(TODAY, 60),
       title: "Autumn race",
       sport: "Running",
-      isLocked: true,
       hasCompletion: false,
       ruleSeriesId: null,
     };
 
-    it("reaches the roadmap once, as a rule, and leaves room for a locked race", () => {
+    it("reaches the roadmap once, as a rule, and leaves room for a race", () => {
       const assembled = build({
         training: {
           ...EMPTY_TRAINING,
@@ -603,19 +627,18 @@ describe("the per-source context allocation", () => {
           localDate: shiftDate(TODAY, 60),
           title: "Autumn race",
           sport: "Running",
-          isLocked: true,
         },
       ]);
       // The series' identity stays behind, as every other id does.
       expect(assembled.serialized).not.toContain(SERIES_ID);
     });
 
-    it("keeps an occurrence dated when it is locked, edited or moved", () => {
+    it("keeps an occurrence dated when it is edited or moved", () => {
       const assembled = build({
         training: {
           ...EMPTY_TRAINING,
           plannedSessions: [
-            { ...occurrences[0], isLocked: true },
+            occurrences[0],
             // Edited or moved: the source hands it over with no rule.
             { ...occurrences[1], title: "Club run, short", ruleSeriesId: null },
             occurrences[2],
@@ -625,10 +648,8 @@ describe("the per-source context allocation", () => {
       });
 
       expect(assembled.context.planCommitments.map((c) => c.title)).toEqual([
-        "Club run",
         "Club run, short",
       ]);
-      expect(assembled.context.planCommitments[0]?.isLocked).toBe(true);
     });
 
     it("sends no rule for a series that has ended or starts after the horizon", () => {
@@ -662,7 +683,6 @@ describe("the per-source context allocation", () => {
             localDate: shiftDate(TODAY, 2),
             title: entry.title,
             sport: "Running",
-            isLocked: false,
             hasCompletion: false,
             ruleSeriesId: `series-${index}`,
           })),
@@ -693,26 +713,29 @@ describe("the per-source context allocation", () => {
             localDate: shiftDate(TODAY, index),
             title: "t".repeat(120),
             sport: "s".repeat(80),
-            isLocked: true,
             hasCompletion: false,
             ruleSeriesId: null,
           })),
         },
       });
 
-      // Locked entries are fitted first, so worst-case rules cannot take the
-      // room they had before rules existed; and what is sent never exceeds
-      // what the commitments alone were allowed.
-      expect(assembled.context.planCommitments).toHaveLength(5);
-      expect(assembled.context.recurringSessions?.length).toBeLessThan(6);
+      // Rules are fitted first and dated entries take what is left. At the
+      // longest title, sport and weekday list three rules fit and no dated
+      // entry does: as it already was for an unlocked entry, and what ADR-013
+      // records as given up. What is sent never exceeds what the commitments
+      // alone were allowed.
+      expect(assembled.context.recurringSessions).toHaveLength(3);
+      expect(assembled.context.planCommitments).toHaveLength(0);
       expect(assembled.usage.plan_commitments).toBeLessThanOrEqual(
         limits.bytes.planCommitments + 100,
       );
     });
 
-    it("fits a locked entry before the rules and before nearer unlocked ones", () => {
+    it("fills with the nearest dated entries, so a full list cuts the furthest", () => {
       // Six ordinary series and a full fortnight of one-off sessions: more
-      // than the allocation holds. The race is the furthest entry out.
+      // than the allocation holds. The race is the furthest entry out, and
+      // since Lock was removed (owner, 9 Oct 2026) nothing ranks it above a
+      // nearer session. ADR-013 records this as given up.
       const series = Array.from({ length: 6 }, (_, index) => ({
         ...weekly,
         id: `series-${index}`,
@@ -722,7 +745,6 @@ describe("the per-source context allocation", () => {
         localDate: shiftDate(TODAY, index),
         title: `One-off ${index}`,
         sport: "Running",
-        isLocked: false,
         hasCompletion: false,
         ruleSeriesId: null,
       }));
@@ -735,14 +757,10 @@ describe("the per-source context allocation", () => {
       });
 
       expect(assembled.context.recurringSessions).toHaveLength(6);
-      expect(assembled.context.planCommitments.at(-1)).toEqual({
-        localDate: shiftDate(TODAY, 60),
-        title: "Autumn race",
-        sport: "Running",
-        isLocked: true,
-      });
-      // Dated entries still leave in date order, whatever order they were
-      // fitted in.
+      const titles = assembled.context.planCommitments.map((c) => c.title);
+      expect(titles[0]).toBe("One-off 0");
+      expect(titles).not.toContain("Autumn race");
+      // Dated entries leave in date order.
       const dates = assembled.context.planCommitments.map((c) => c.localDate);
       expect(dates).toEqual([...dates].sort());
     });

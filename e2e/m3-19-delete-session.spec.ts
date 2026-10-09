@@ -117,13 +117,7 @@ test.describe("M3-19 delete a planned session", () => {
         (await planDay(page, today)).getByText(/work ran late|storm warning/),
       ).toHaveCount(0);
 
-      // A lock defends a session from a sweep, never from the owner asking for
-      // this one session by name.
       await openSession(page, tomorrow, "Delete me");
-      await chooseMore(page, "Lock");
-      await expect(
-        page.locator("article").getByText("Locked", { exact: true }),
-      ).toBeVisible();
 
       // Delete keeps nothing, says the opposite of what cancel says, and
       // returns to the Plan because the page's session is gone.

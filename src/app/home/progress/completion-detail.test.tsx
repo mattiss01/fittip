@@ -55,7 +55,8 @@ describe("one completion", () => {
       '[data-progress-sheet="planned"]',
     ) as HTMLElement;
     expect(within(planned).getByText("What was planned")).toBeTruthy();
-    expect(within(planned).getByText("Locked")).toBeTruthy();
+    // The snapshot below was locked; Lock is gone and is not shown.
+    expect(within(planned).queryByText("Locked")).toBeNull();
     expect(within(planned).getByText("Recurring")).toBeTruthy();
     expect(within(planned).getByText("55 min")).toBeTruthy();
     expect(

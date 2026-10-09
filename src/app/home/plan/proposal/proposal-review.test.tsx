@@ -61,7 +61,6 @@ function planned(
     title: "Easy run",
     sport: "Running",
     expectedDurationMinutes: 45,
-    isLocked: false,
     status: "active",
     intent: "Conversational throughout.",
     note: "Left knee was tight last week.",
@@ -208,18 +207,11 @@ describe("editing a planned session inside review", () => {
     ]);
   });
 
-  it("offers a lock toggle that sends the opposite of the current state", () => {
+  it("offers no lock, which was removed on 9 Oct 2026", () => {
     const { container } = renderReview();
-    const form = container.querySelector(
-      'form:has(input[value="set_lock"])',
-    ) as HTMLFormElement;
 
-    expect(
-      form.querySelector<HTMLInputElement>('input[name="isLocked"]')?.value,
-    ).toBe("true");
-    expect(
-      screen.getByRole("button", { name: `Lock Easy run` }),
-    ).toBeInTheDocument();
+    expect(container.querySelector('input[value="set_lock"]')).toBeNull();
+    expect(screen.queryByRole("button", { name: /lock/i })).toBeNull();
   });
 
   it("names the scope it takes on a recurring occurrence", () => {
@@ -244,9 +236,6 @@ describe("editing a planned session inside review", () => {
 
     expect(
       screen.queryByRole("textbox", { name: "Title" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /^Lock / }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByText(PLAN_PROPOSAL_COPY.plannedPastDay),

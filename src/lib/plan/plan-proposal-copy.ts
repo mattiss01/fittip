@@ -63,10 +63,6 @@ export const PLAN_PROPOSAL_COPY = {
    */
   editPlannedSeriesConsequence:
     "This repeats. Saving changes this occurrence only — it becomes visibly changed and the recurring rule never overwrites it.",
-  lockPlannedAction: "Lock",
-  unlockPlannedAction: "Unlock",
-  lockPlannedActionFor: (title: string) => `Lock ${title}`,
-  unlockPlannedActionFor: (title: string) => `Unlock ${title}`,
 
   /* ---- Staleness --------------------------------------------------------- */
   /**
@@ -103,7 +99,6 @@ export const PLAN_PROPOSAL_COPY = {
   proposedBadge: "Proposed",
   stagedBadge: "Will be added",
   rejectedBadge: "Rejected",
-  lockedBadge: "Locked",
   cancelledBadge: "Cancelled",
   recoveryDayTitle: "Recovery day",
   recoveryDaySupport:

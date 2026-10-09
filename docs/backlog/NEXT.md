@@ -33,16 +33,15 @@ Ordered by dependency. A lane is named where it is not the build lane.
       Open for the owner first: a row picked from the library and then changed keeps its
       `personal_activity_id` until it is saved as a new definition, so grouping history by
       definition would count "picked Latzug, renamed Stabwurf" as Latzug.
-- [ ] **Make Lock understandable.** Owner, 29 Sep 2026: nothing tells the owner what Lock
-      means or why they would use it. Today it means "later planning must not move or
-      replace this" (`CONTEXT.md`): the coach's replanning and a series' "delete this and
-      all future" keep a locked session, and the owner's own edits are never blocked. Open
-      for the owner: say it where Lock is chosen, rename it (e.g. "Keep as planned"), or
-      rethink what it protects. Decide before the coach can replan live, which is when it
-      starts to matter. It already matters in one place (R3b-3, 2 Oct 2026): a session
-      placed months out starts unlocked, and past its own horizon the coach is sent locked
-      sessions only, so a race the owner adds does not reach the roadmap coach until they
-      lock it, and nothing on the far day says so.
+- [ ] **A start date for a coach proposal, and what it may replace.** Owner, 2 Oct
+      2026, asked for again on 9 Oct 2026. "Plan with Coach" always plans from today for
+      one to seven days; the owner wants to choose the first day, so next week can be
+      planned on a Friday. On the same screen (owner, 9 Oct 2026, when Lock was removed):
+      the sessions already on those days are listed and each is marked "this should stay
+      in the plan" or "this can be replaced". A proposal only adds sessions today, so
+      replacing one is new: the proposal's shape, the function that applies it and the AI
+      contract. Careful lane (AI data boundary, schema); the roadmap coach's own start
+      date wants the same answer. Belongs in the same round as "What the coach is given".
 
 **App redesign in the Coach's note direction.** The owner chose it on 29 Sep 2026 from three
 Today prototypes (`prototype/today-design`, `/prototype/today?variant=C`): FitTip's pine and
@@ -107,6 +106,12 @@ lane, one screen per merge.
 
 Not worth their own slot; do them when work lands nearby.
 
+- **Lock's remains in the database.** Since 9 Oct 2026 nothing sets or reads a lock, but
+  `is_locked` is still a column on `rolling_plan_sessions` and `rolling_plan_activities`,
+  every add still sends `isLocked: false` because the payload validators require the
+  key, `apply_rolling_plan_change_set` still has its `set_lock` branch, and a receipt
+  still names `lockedKept`, always 0. Dropping them re-emits that function and seven
+  more, so do it when it is next replaced; a destructive migration, asked about first.
 - **`saveSessionDraftToLibraryAction` has no caller.** The log's own "Save session to
   library" left the activities step (owner, 3 Oct 2026); saving a log goes through the
   receipt, Today and Progress. The action and its tests in `plan/saved` can go.
@@ -186,11 +191,6 @@ Not worth their own slot; do them when work lands nearby.
 
 ## Later
 
-- **A start date for a coach proposal.** Owner, 2 Oct 2026. "Plan with Coach" always plans
-  from today for one to seven days. The idea: choose the first day, so next week can be
-  planned on a Friday. It changes what the coach is asked and what context it is sent,
-  so careful lane (AI data boundary), and the roadmap coach's own start date wants the
-  same answer.
 - **What goes in Settings.** Owner, 2 Oct 2026. The gear on You opens a page that says
   "Nothing to set yet." Meant for it: account details, subscription, language, and light
   or dark mode. None is decided or listed there; Sign out stays on You. Account details
@@ -214,7 +214,7 @@ Not worth their own slot; do them when work lands nearby.
   series later, so today it means creating a new series and deleting the single one. The
   idea: offer the switch when editing a one-off, turning it into the first occurrence of a
   new series from its date. Careful lane (how a series and its occurrences are stored,
-  ADR-017), and it has to say what happens to the session's lock and any log already on it.
+  ADR-017), and it has to say what happens to any log already on the session.
 - **"Why today" — idea.** Owner, 29 Sep 2026. The Today prototype showed one line above the
   sessions saying why the day looks as it does; R2 tried quoting the first open session's
   intent there, and the owner put the intent back on its card. What a real line would need:
@@ -271,7 +271,7 @@ Not worth their own slot; do them when work lands nearby.
   standing spend increase.
 - **The roadmap coach is not told which dates of a series differ.** A rule is sent as the
   series stands (ADR-013, amended 2 Oct 2026): a cancelled or deleted occurrence is not
-  listed, and a locked, edited or moved one appears both as its own dated entry and
+  listed, and an edited or moved one appears both as its own dated entry and
   inside the rule.
 - **The plan context has no headroom left.** M3-16B spent it: prefix 7,400 + wrapper 64 +
   context 32,500 estimates 9,991 tokens against a 10,000 ceiling. The next source, or a longer

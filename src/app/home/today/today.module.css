@@ -236,12 +236,6 @@
   background: var(--ledger-paper);
 }
 
-.session[data-locked="true"] {
-  box-shadow:
-    inset 4px 0 0 #8b341f,
-    var(--shadow-card);
-}
-
 .summary {
   margin: 0;
   overflow-wrap: anywhere;

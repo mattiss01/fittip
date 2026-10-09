@@ -339,21 +339,11 @@ function PlannedSession({
   expectedPlanRevision: number;
   isPast: boolean;
 }) {
-  // Two action states rather than one shared between the editor and the lock.
-  // They share an action, but not a submission counter: the edit form is keyed
-  // on that counter so a rejected save can reset it, and with one state a press
-  // of Lock would remount the editor and throw away whatever was half-typed
-  // in it.
   const [state, action, pending] = useActionState(
     changePlanAction,
     INITIAL_PLAN_ACTION_STATE,
   );
-  const [lockState, lockAction, locking] = useActionState(
-    changePlanAction,
-    INITIAL_PLAN_ACTION_STATE,
-  );
   const cancelled = session.status === "cancelled";
-  const notice = state.submission >= lockState.submission ? state : lockState;
 
   return (
     <article
@@ -373,7 +363,6 @@ function PlannedSession({
           session.expectedDurationMinutes === null
             ? null
             : `${session.expectedDurationMinutes} min`,
-          session.isLocked ? COPY.lockedBadge : null,
           cancelled ? COPY.cancelledBadge : null,
         ]
           .filter(Boolean)
@@ -433,45 +422,16 @@ function PlannedSession({
               </form>
             </div>
           </details>
-
-          <form action={lockAction}>
-            <input type="hidden" name="operation" value="set_lock" />
-            <input type="hidden" name="sessionId" value={session.id} />
-            <input
-              type="hidden"
-              name="isLocked"
-              value={session.isLocked ? "false" : "true"}
-            />
-            <input
-              type="hidden"
-              name="expectedRevision"
-              value={expectedPlanRevision}
-            />
-            <button
-              className={styles.secondary}
-              type="submit"
-              disabled={pending || locking}
-              aria-label={
-                session.isLocked
-                  ? COPY.unlockPlannedActionFor(session.title)
-                  : COPY.lockPlannedActionFor(session.title)
-              }
-            >
-              {session.isLocked
-                ? COPY.unlockPlannedAction
-                : COPY.lockPlannedAction}
-            </button>
-          </form>
         </div>
       )}
 
       <p
-        className={notice.status === "idle" ? styles.srOnly : styles.notice}
-        data-state={pending || locking ? "pending" : notice.status}
+        className={state.status === "idle" ? styles.srOnly : styles.notice}
+        data-state={pending ? "pending" : state.status}
         role="status"
         aria-live="polite"
       >
-        {pending || locking ? "Saving…" : notice.message}
+        {pending ? "Saving…" : state.message}
       </p>
     </article>
   );

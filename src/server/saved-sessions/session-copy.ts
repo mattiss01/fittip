@@ -51,7 +51,7 @@ export function toSavedSessionDraft(
     ...(session.note === undefined ? {} : { note: session.note }),
     // `id`, `localDate`, `position`, `isLocked`, `status` and `cancelledAt`
     // all belong to the planned session and stop here. So does each activity's
-    // own identity and lock.
+    // own identity and its `isLocked` key.
     activities: session.activities.map(
       ({ id, isLocked, ...activity }): SavedSessionActivity => {
         void id;
@@ -64,8 +64,8 @@ export function toSavedSessionDraft(
 
 /**
  * Reuse: a library entry becomes a plain `add` for the Plan's own change set.
- * The new session starts unlocked and carries no history, and the entry it was
- * copied from is not referenced again.
+ * The new session carries no history, and the entry it was copied from is not
+ * referenced again.
  */
 export function toRollingPlanSessionInput(
   saved: SavedSession,
@@ -116,15 +116,15 @@ export function toRollingPlanSeriesInput(
       ? {}
       : { expectedDurationMinutes: saved.expectedDurationMinutes }),
     ...(saved.note === undefined ? {} : { note: saved.note }),
-    // A template activity carries no Plan lock, exactly as the library entry
-    // does not. An occurrence enters the Plan unlocked.
+    // A template activity has no `isLocked` key, exactly as the library
+    // entry's does not.
     activities: saved.activities.map((activity) => ({ ...activity })),
   };
 }
 
 /**
  * Repeat from the Plan: reusable session content becomes a series template.
- * The dated occurrence identity, Plan position, locks, cancellation state and
+ * The dated occurrence identity, Plan position, cancellation state and
  * activity row identities all stop at this copy boundary.
  */
 export function plannedSessionToRollingPlanSeriesInput(

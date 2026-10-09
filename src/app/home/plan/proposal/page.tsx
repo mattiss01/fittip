@@ -218,7 +218,6 @@ async function loadProposalState() {
     title: session.title,
     sport: session.sport,
     expectedDurationMinutes: session.expectedDurationMinutes ?? null,
-    isLocked: session.isLocked,
     status: session.status,
     intent: session.intent ?? null,
     note: session.note ?? null,
