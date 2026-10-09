@@ -128,6 +128,8 @@ describe("generatePlanProposal", () => {
       getCurrentProfile: vi
         .fn()
         .mockResolvedValue({ userId: OWNER_ID, timezoneName: TIMEZONE }),
+      // Nothing entered in Settings: the coach is told so, not refused.
+      getDetails: vi.fn().mockResolvedValue(null),
     });
     createGoalMock.mockResolvedValue({
       list: vi.fn().mockResolvedValue({ revision: 4, goals: [goal()] }),
@@ -484,6 +486,7 @@ function goal() {
   return {
     id: GOAL_ID,
     title: "Run a half marathon",
+    desiredOutcome: "Finish without walking.",
     sports: ["Running"],
     priorityTier: "core" as const,
     status: "active" as const,

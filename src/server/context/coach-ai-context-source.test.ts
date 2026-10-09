@@ -259,6 +259,27 @@ describe("the production coaching context source", () => {
     expect(getPlanSlice).not.toHaveBeenCalled();
   });
 
+  it("hands assembly the profile fields ADR-023 names and no others", async () => {
+    profileIs({ timezoneName: "Europe/Berlin" });
+
+    const records = await source().load(OWNER);
+
+    expect(records.profile).toEqual({
+      birthDate: "1992-03-14",
+      gender: "female",
+      heightCm: 171,
+      latestWeightKg: 64.5,
+      training: {
+        sessionsPerWeek: 4,
+        unavailableDays: ["sunday"],
+        availabilityNote: "Late on Thursdays.",
+        trainingPlaces: ["Home", "Gym"],
+        homeEquipment: ["Kettlebell"],
+      },
+    });
+    expect(JSON.stringify(records.profile)).not.toMatch(/MUST-NOT-TRAVEL/);
+  });
+
   it("refuses an owner with no profile row at all", async () => {
     createProfileMock.mockResolvedValue({
       getCurrentProfile: vi.fn().mockResolvedValue(null),
@@ -624,6 +645,7 @@ describe("the production coaching context source", () => {
       {
         id: goal().id,
         title: goal().title,
+        desiredOutcome: goal().desiredOutcome,
         sports: goal().sports,
         priorityTier: goal().priorityTier,
         targetDate: goal().targetDate,
@@ -655,8 +677,29 @@ function profileIs(profile: { timezoneName: string | null; userId?: string }) {
       createdAt: "2026-01-05T09:00:00.000Z",
       ...profile,
     }),
+    getDetails: vi.fn().mockResolvedValue(PROFILE_DETAILS),
   });
 }
+
+/** Everything the profile read returns, including what must stay behind. */
+const PROFILE_DETAILS = {
+  displayName: "NAME-THAT-MUST-NOT-TRAVEL",
+  birthDate: "1992-03-14",
+  gender: "female",
+  unitsSystem: "metric",
+  heightCm: 171,
+  timezoneName: "Europe/Berlin",
+  sports: ["SPORTS-LIST-THAT-MUST-NOT-TRAVEL"],
+  latestWeightKg: 64.5,
+  training: {
+    sessionsPerWeek: 4,
+    unavailableDays: ["sunday"],
+    availabilityNote: "Late on Thursdays.",
+    trainingPlaces: ["Home", "Gym"],
+    homeEquipment: ["Kettlebell"],
+  },
+  setup: { step: null, finishedAt: "2026-01-05T09:00:00.000Z" },
+};
 
 function completion(overrides: Partial<Completion> = {}): Completion {
   return {
@@ -723,6 +766,7 @@ function goal(): CoachAIGoalRecord {
   return {
     id: "c1000000-0000-4000-8000-000000000001",
     title: "Run a hilly half marathon",
+    desiredOutcome: "Finish strong on the climbs.",
     sports: ["Running"],
     priorityTier: "core",
     targetDate: "2026-11-15",

@@ -74,10 +74,19 @@ export const COACH_AI_FIXTURE_CONTEXT: CoachAIContext = {
   today: COACH_AI_FIXTURE_TODAY,
   horizonStartDate: COACH_AI_FIXTURE_HORIZON_START,
   horizonEndDate: COACH_AI_FIXTURE_HORIZON_END,
+  athlete: { age: 34, gender: null, heightCm: 178, weightKg: 72.5 },
+  trainingSetup: {
+    sessionsPerWeek: 4,
+    unavailableDays: ["Sunday"],
+    availabilityNote: null,
+    trainingPlaces: ["Home", "Outdoors"],
+    homeEquipment: ["Kettlebell"],
+  },
   targetableGoals: [
     {
       id: COACH_AI_FIXTURE_TARGETABLE_GOAL_ID,
       title: "Run a hilly half marathon",
+      desiredOutcome: "Finish strong on the climbs rather than surviving them.",
       sports: ["Running"],
       priorityTier: "core",
       targetDate: "2026-11-15",

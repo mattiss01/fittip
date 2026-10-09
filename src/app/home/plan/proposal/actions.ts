@@ -534,8 +534,19 @@ function toActionState(
       draft,
     );
   }
-  // A context that is too large is the owner's own records being unusable for a
-  // call, and it is reported without any detail about what the context held.
+  // ADR-023: the two sources the owner can shorten are named, so the
+  // refusal is one they can act on.
+  if (error instanceof CoachAIContextTooLargeError) {
+    if (error.source === "training_setup") {
+      return invalid(OUTCOMES.trainingSetupTooLarge, submission, draft);
+    }
+    if (error.source === "targetable_goals") {
+      return invalid(OUTCOMES.goalsTooLarge, submission, draft);
+    }
+  }
+  // Any other context that is too large is the owner's own records being
+  // unusable for a call, and it is reported without any detail about what the
+  // context held.
   if (
     error instanceof CoachAIContextTooLargeError ||
     error instanceof CoachAIError
