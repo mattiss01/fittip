@@ -161,11 +161,16 @@ date.
 
 `rolling_plan_sweep_series_occurrences` no longer reads `is_locked`
 (`20261009072031_lock_no_longer_read`), and an occurrence that was both locked
-and logged is now counted as kept for its log. The columns, the payload key and
-the `set_lock` operation still exist in the database, unreachable from the
-application, until `apply_rolling_plan_change_set` is next replaced. No row was
-rewritten, so an occurrence locked before that day lost its protection without
-changing.
+and logged is now counted as kept for its log. No row was rewritten, so an
+occurrence locked before that day lost its protection without changing.
+
+The same day the owner decided the flag should not be kept at all, and
+`20261009080721_drop_plan_lock` removed it: both `is_locked` columns, the
+`isLocked` key from every payload and every returned state, the `set_lock`
+operation, and the `lockedKept` count. History was left as written. A change
+entry of kind `set_lock`, and an `isLocked` key inside a stored `before_state`,
+`after_state` or a log's planned snapshot, keep what they said, which is why the
+change-entry constraints still list that kind.
 
 The invariant quoted above now reads, in `CLAUDE.md`, without "user-locked
 future content": replanning replaces a future session only where the owner
