@@ -399,6 +399,17 @@ Decision 5 leaned on the lock in three places, and the owner decided each:
 Both operations follow the same eligibility rule. `create_seven_day_plan` still
 receives no rules; its list is the twelve nearest eligible entries.
 
+That includes the window. Decision 5 says the forward window "should be longer
+for `create_roadmap` than for `create_seven_day_plan`", and the tuning table
+gives 180 days for the roadmap only. The code has used 180 days for both since
+M3-02, which mattered little while the window carried locked entries alone. It
+matters now: a plan request for one to seven days is also sent the title, sport
+and date of single sessions up to 180 days out, within the same twelve entries.
+The owner's decision of 9 October was stated for the planning range of either
+operation, so that sentence of decision 5 is superseded rather than left to
+contradict the code. A shorter window for the plan operation is one limit in
+`context.ts` if it is ever wanted.
+
 No limit changes: at most 12 entries and 6 rules inside the 1,400-byte
 plan-commitment allocation, and no byte ceiling or token limit moves. Each
 entry is about 17 bytes shorter for the field it no longer carries.
