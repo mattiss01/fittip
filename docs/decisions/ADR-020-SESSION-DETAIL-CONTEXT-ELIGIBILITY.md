@@ -114,3 +114,29 @@ all three:
 - A8 is no longer a privacy question, only a sizing one.
 - Nothing in the context assembly changes with this ADR. Each source still has
   to be added deliberately, with its allocation and its tests.
+
+## Amendment: what a fill reads since ADR-023
+
+On 9 October 2026 the product owner decided, in
+[ADR-023](ADR-023-WHAT-THE-COACH-IS-GIVEN.md) decisions 14 to 19, six more
+things about `fill_session_activities`. They change this ADR in four places:
+
+- **The week names its activities.** Each neighbouring session is sent with the
+  names of its activities, up to twelve of 120 characters, and still without
+  targets. The week's allocation is 2,400 bytes, where it was 800.
+- **The library gets 7,000 bytes**, where it had 3,500, so all sixty entries
+  fit. Instructions still stay behind.
+- **Last results are looked up over six months**, 183 days, where it was
+  ADR-013's eight weeks. Three results an activity, twelve activities and 4,000
+  bytes, as before. Only this lookup reads past the eight weeks.
+- **"A flag older than seven days does not reach a fill unless it is in
+  memory" is superseded.** A fill is sent the days of the last 28 on which pain,
+  illness, injury or severe fatigue was reported, as the date and the four
+  flags, at most twenty with the rest counted. Its history of what was logged
+  stays seven days, and `hasSafetySignal` is true when either carries a flag.
+
+Two further things reach a fill that this ADR did not consider: the phase of
+the accepted roadmap its session's day falls in, as title, focus and dates, and
+the training setup with the home equipment (ADR-023 decisions 14 and 1). The
+whole session detail is 21,100 bytes, where it was 16,000, and the fill's
+context at most 14,604 tokens of 15,000.

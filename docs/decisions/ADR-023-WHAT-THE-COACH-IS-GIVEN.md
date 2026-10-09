@@ -90,14 +90,19 @@ than being cut silently.
 
 ### The fill call
 
-14. The roadmap phase the session's day falls in: title, focus and dates.
-15. The safety flags of the last 28 days, as date and flag, without the rest of those
-    logs. The call's own history stays seven days.
+14. The roadmap phase the session's day falls in: title, focus and dates, and null when
+    no accepted roadmap covers the day. Not its goal attention or milestones, which are
+    the plan's to weigh. The fill is not recorded as planned under that roadmap.
+15. The safety flags of the last 28 days, as the date and the four flags, without the
+    rest of those logs: at most twenty, newest first, the rest counted. The call's own
+    history stays seven days, and the safety signal is raised by either.
 16. The activity names of the neighbouring sessions, so "do not load the same thing hard
-    on consecutive days" can be followed.
+    on consecutive days" can be followed. No targets.
 17. The library gets 7,000 bytes, so all sixty entries fit.
-18. Last results are looked up over six months, not eight weeks.
-19. The prompt: use only equipment the athlete has for where the session is done.
+18. Last results are looked up over six months (183 days), not eight weeks. Nothing else
+    reads past ADR-013's eight weeks.
+19. The prompt: use only equipment the athlete has for where the session is done; at
+    home, what the setup lists.
 
 ## Left out on purpose
 
@@ -118,11 +123,12 @@ Characters, at four to a token, with every source at its allocation:
 | --- | --- | --- | --- |
 | Roadmap | 39,764 | 51,964 (12,991 tokens) | 56,714 (14,179), as built |
 | Plan | 39,964 | 52,764 (13,191) | 59,964 (14,991), as built |
-| Fill | 39,464 | 48,664 (12,166) | 56,310 (14,078), estimated |
+| Fill | 39,464 | 48,664 (12,166) | 58,414 (14,604), as built |
 
 These are the allocations added up with the prompt's budget, not a recording of a
 request: what a call can be at most. `openai-prompt.test.ts` asserts the figures as built.
-The fill call's last figure is an estimate from field limits until its merge.
+The fill call came out 500 tokens over its estimate: the flags and the phase were sized
+for text of three bytes a character, and its total, like the plan's, holds every part.
 
 The plan call's figure is the ceiling by construction. Its `total` used to be below the
 sum of its parts, on the reasoning that no request fills every part at once, and the
@@ -132,8 +138,9 @@ new plan source takes its bytes from an existing one.
 
 ## Delivery
 
-Three merges, each reviewed and live on its own: decisions 1 to 5; then 6 to 8 and 11 to
-13; then 14 to 19. Decisions 9 and 10 shipped before this ADR was written.
+Three merges on 9 October 2026, each reviewed and live on its own: decisions 1 to 5;
+then 6 to 8 and 11 to 13; then 14 to 19. Decisions 9 and 10 shipped before this ADR was
+written.
 
 ## Consequences
 
