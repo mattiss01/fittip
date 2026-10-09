@@ -93,7 +93,7 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
         "fill_session_activities",
         SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET,
       ),
-    ).toBe(12_166);
+    ).toBe(14_604);
   });
 });
 
@@ -360,8 +360,12 @@ describe("the plan response grammar", () => {
  * Since ADR-023 (9 October 2026):
  *
  *   7,300 + 64 + 41,300 = 48,664   ceil(48,664 / 4) = 12,166  vs  15,000
+ *
+ * and with the fill's own part of it (decisions 14 to 19):
+ *
+ *   8,000 + 64 + 50,350 = 58,414   ceil(58,414 / 4) = 14,604  vs  15,000
  */
-const SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET = 7_300;
+const SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET = 8_000;
 
 describe("the session activities prompt", () => {
   it("stays inside the prefix budget the context allocation was derived against", () => {

@@ -152,7 +152,11 @@ Measurement modes and the "target" fields each uses (every other target field is
 
 "instructions" are how to perform it, briefly, or null. "summary" tells the athlete what the list is built to do and the main choice you made, in at most 400 characters.
 
-"trainingHistory" here covers only the last seven days and lists what was logged; it does not list missed sessions, and a quiet week in it is not evidence of a break.
+"trainingHistory" here covers only the last seven days and lists what was logged; it does not list missed sessions, and a quiet week in it is not evidence of a break. "recentSafetyFlags" reaches four weeks back: each is a day on which the athlete reported pain, illness, injury or severe fatigue, with nothing else of that session. Treat each as the safety rules treat a signal.
+
+"roadmapPhase", when not null, is the phase of the athlete's roadmap this day falls in. Let its focus shape what the session's activities emphasise; it does not change the session's title, sport or length.
+
+Use only equipment the athlete has for where the session is done: at home, what "trainingSetup.homeEquipment" lists; a place they name, such as a gym, has what such a place has. Each entry of "week" names its activities, so that you do not load the same thing hard on consecutive days.
 
 "planningNote", if present, is the athlete's note about this one request.
 

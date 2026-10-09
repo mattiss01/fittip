@@ -180,6 +180,31 @@ export type CoachAICurrentRoadmapReference = {
   phasesWithheld: number;
 };
 
+/**
+ * ADR-023 decision 14: the phase of the accepted roadmap that the day of the
+ * session being filled falls in. The plan call reads that phase in full; a
+ * fill reads what it is for and no more.
+ */
+export type CoachAIRoadmapPhaseReference = {
+  title: string;
+  focus: string;
+  startDate: string;
+  endDate: string;
+};
+
+/**
+ * ADR-023 decision 15: one logged session of the last 28 days on which the
+ * athlete reported something, as the day and which flags. Nothing else of
+ * that log travels: a fill's own history is seven days.
+ */
+export type CoachAISafetyFlagReference = {
+  localDate: string;
+  painReported: boolean;
+  illnessReported: boolean;
+  injuryReported: boolean;
+  severeFatigueReported: boolean;
+};
+
 export type CoachAIWeekdayName =
   | "Sunday"
   | "Monday"
@@ -272,12 +297,17 @@ export type CoachAISessionDetailContext = {
     activities: CoachAIActivityReference[];
     activitiesWithheld: number;
   };
-  /** The other active sessions within three days either side, in brief. */
+  /**
+   * The other active sessions within three days either side, in brief. Their
+   * activities by name (ADR-023 decision 16), so "not the same thing hard on
+   * consecutive days" can be followed; no targets.
+   */
   week: {
     localDate: string;
     title: string;
     sport: string;
     durationMinutes: number | null;
+    activityNames: string[];
   }[];
   weekWithheld: number;
   /** Active personal activities. An id the coach links must be one of these. */
@@ -350,6 +380,14 @@ export type CoachAIContext = {
    * other operation. Null when the owner has accepted no roadmap yet.
    */
   currentRoadmap?: CoachAICurrentRoadmapReference | null;
+  /**
+   * Present for `fill_session_activities` only, and absent for every other
+   * operation. `roadmapPhase` is null when no accepted roadmap covers the day.
+   */
+  roadmapPhase?: CoachAIRoadmapPhaseReference | null;
+  recentSafetyFlags?: CoachAISafetyFlagReference[];
+  /** Flagged logs left out to fit, oldest first. */
+  recentSafetyFlagsWithheld?: number;
   /** True when any eligible completion carries one of the four safety flags. */
   hasSafetySignal: boolean;
   planningNote: string | null;

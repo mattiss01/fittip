@@ -33,7 +33,10 @@ import type {
   RollingPlanSeries,
   RollingPlanSession,
 } from "@/server/rolling-plan/rolling-plan";
-import { selectSessionDetailRecords } from "@/server/session-detail/session-detail-context";
+import {
+  selectSessionDetailRecords,
+  SESSION_DETAIL_ACTUALS_WINDOW_DAYS,
+} from "@/server/session-detail/session-detail-context";
 import {
   FORWARD_PLAN_WINDOW_DAYS,
   selectTrainingHistoryContext,
@@ -171,7 +174,7 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       details,
       goals,
       memory,
-      completions,
+      readCompletions,
       planWindow,
       series,
       roadmapVersion,
@@ -184,7 +187,15 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       (await createProfileRepository()).getDetails(),
       (await createGoalRepository()).list(),
       (await createMemoryRepository()).list(today),
-      (await createCompletionLog()).list(windowStartDate, today),
+      // ADR-023 decision 18: a fill looks up what was last done in an
+      // activity over six months. Only that lookup reads past ADR-013's eight
+      // weeks; everything else is handed the window below.
+      (await createCompletionLog()).list(
+        fillsSession
+          ? shiftIsoDate(today, -(SESSION_DETAIL_ACTUALS_WINDOW_DAYS - 1))
+          : windowStartDate,
+        today,
+      ),
       // ADR-017 consequence 3: an owner who has not opened the Plan has no
       // materialized occurrences past their last visit, so a coach reading the
       // window untopped plans around sessions the owner does have. M3-15D
@@ -218,15 +229,20 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       // ADR-023 decision 8 gave the roadmap operation a reason to hold it
       // too: a new roadmap is told the title and the phase dates of the one
       // the owner follows, reduced by `buildCurrentRoadmapReference`.
-      this.#operation === "create_seven_day_plan" ||
-      this.#operation === "create_roadmap"
-        ? (await createRoadmapRepository()).getCurrentVersion()
-        : null,
+      // Decision 14 gave a fill the narrowest use of all: the phase its
+      // session's day falls in.
+      (await createRoadmapRepository()).getCurrentVersion(),
       // ADR-020 decision 2, and for the one operation that fills a session:
       // the plan and the roadmap stay without the library (decision 4).
       fillsSession ? (await createPersonalActivityLibrary()).list() : [],
       fillsSession ? (await createSavedSessionLibrary()).list() : [],
     ]);
+
+    // What ADR-013's window holds. For every operation but a fill that is
+    // the whole read.
+    const completions = readCompletions.filter(
+      (completion) => completion.actualLocalDate >= windowStartDate,
+    );
 
     const completedPlanSessionIds = new Set(
       completions
@@ -272,7 +288,7 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
             planSessions: planWindow.slice.sessions,
             library,
             savedSessions,
-            completions,
+            completions: readCompletions,
           });
 
     return {

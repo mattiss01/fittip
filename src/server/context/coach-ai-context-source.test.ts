@@ -199,7 +199,12 @@ describe("the production coaching context source", () => {
 
       expect(listLibrary).toHaveBeenCalledOnce();
       expect(listSavedSessions).toHaveBeenCalledOnce();
-      expect(getCurrentVersion).not.toHaveBeenCalled();
+      // ADR-023 decision 14: a fill reads the roadmap for the phase its day
+      // falls in. Assembly takes that one phase's title, focus and dates.
+      expect(getCurrentVersion).toHaveBeenCalledOnce();
+      // Decision 18: six months of logs are read for last results. What goes
+      // on as training history is still ADR-013's eight weeks of them.
+      expect(listCompletions).toHaveBeenCalledWith(shift(TODAY, -182), TODAY);
       expect(records.sessionDetail?.session.title).toBe("Lower body");
       expect(records.sessionDetail?.library).toEqual([
         {
@@ -209,6 +214,25 @@ describe("the production coaching context source", () => {
           measurementMode: "sets_reps_load",
         },
       ]);
+    });
+
+    it("keeps a log older than eight weeks out of the training history it hands on", async () => {
+      // Read for last results (decision 18), but ADR-013's window is still
+      // what the history, the flags and the recorded sources are drawn from.
+      listCompletions.mockResolvedValue([
+        completion(),
+        completion({
+          id: "75000000-0000-4000-8000-0000000000aa",
+          actualLocalDate: shift(TODAY, -100),
+          painReported: true,
+        }),
+      ]);
+
+      const records = await fillSource().load(OWNER);
+
+      expect(
+        records.training.completions.map((entry) => entry.localDate),
+      ).toEqual(["2026-08-03"]);
     });
 
     it("hands assembly no session when the id is not in the owner's window", async () => {

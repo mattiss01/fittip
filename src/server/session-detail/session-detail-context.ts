@@ -35,7 +35,12 @@ import type { SavedSession } from "@/server/saved-sessions/saved-sessions";
 
 /** Sessions within this many days either side count as the session's week. */
 export const SESSION_DETAIL_WEEK_RADIUS_DAYS = 3;
-/** Recent actuals are read from this window, which ADR-013 already bounds. */
+/**
+ * How far back a last result is looked up (ADR-023 decision 18). Eight weeks,
+ * ADR-013's window, until then: an exercise last done in July counted as
+ * never done. Three results an activity at most, as before.
+ */
+export const SESSION_DETAIL_ACTUALS_WINDOW_DAYS = 183;
 export const SESSION_DETAIL_MAX_ACTUAL_ENTRIES = 3;
 export const SESSION_DETAIL_MAX_ACTUAL_ACTIVITIES = 12;
 export const SESSION_DETAIL_MAX_SAVED_SESSIONS = 3;
@@ -60,14 +65,16 @@ export const SESSION_DETAIL_INTENT_MAX_LENGTH = 200;
  * - a session activity with a twenty-group ramp serializes to about 900 bytes
  *   and a plain one to about 150, so 3,500 holds the ordinary session whole and
  *   trims a pathological one with disclosure;
- * - a library entry is about 110 bytes, so 3,500 holds about thirty;
+ * - a library entry is about 110 bytes, so 7,000 holds all sixty;
  * - a saved session is a session's worth, and three of them get 4,000;
  * - an actual is about 110 bytes per entry, three entries per activity.
  */
 export const SESSION_DETAIL_BYTES = {
   session: 3_500,
-  week: 800,
-  library: 3_500,
+  // 800 until ADR-023 decision 16 put the neighbours' activity names in.
+  week: 2_400,
+  // 3_500 until decision 17: about thirty of sixty entries fitted.
+  library: 7_000,
   savedSessions: 4_000,
   recentActuals: 4_000,
 } as const;
@@ -92,6 +99,7 @@ export type SessionDetailRecords = {
     title: string;
     sport: string;
     durationMinutes: number | null;
+    activityNames: string[];
   }[];
   library: {
     id: string;
@@ -183,6 +191,10 @@ export function selectSessionDetailRecords(input: {
       title: other.title,
       sport: other.sport,
       durationMinutes: other.expectedDurationMinutes ?? null,
+      // Names only, bounded as a log's activity names are (ADR-013).
+      activityNames: other.activities
+        .slice(0, 12)
+        .map((activity) => activity.name.slice(0, 120)),
     }));
 
   const sportKey = activityNameKey(session.sport);
