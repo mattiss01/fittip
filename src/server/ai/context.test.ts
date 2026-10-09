@@ -854,9 +854,13 @@ describe("the per-source context allocation", () => {
         "After 2",
         "After 3",
       ]);
-      // What is left goes to the days before, nearest first.
+      // What is left goes to the days before, the nearest to the first day
+      // first: that is the load carried into the planned days.
       expect(titles.slice(5)).toEqual(
-        leadIn.slice(0, 7).map((entry) => entry.title),
+        leadIn
+          .slice(3)
+          .reverse()
+          .map((entry) => entry.title),
       );
     });
 

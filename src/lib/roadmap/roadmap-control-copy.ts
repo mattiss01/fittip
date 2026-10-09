@@ -1,3 +1,5 @@
+import { COACH_START_MAX_DAYS_AHEAD } from "@/lib/date/local-date";
+
 /**
  * Every roadmap wording a Client Component renders, in the one module it may
  * import.
@@ -27,7 +29,7 @@ export const ROADMAP_CONTROL_COPY = {
   composeSupport:
     "A roadmap is months of direction. Pick how far ahead it should look, and say anything the coach could not already know.",
   startDateLabel: "Roadmap starts",
-  startDateHelper: "Between today and 30 days from now.",
+  startDateHelper: `Between today and ${COACH_START_MAX_DAYS_AHEAD} days from now.`,
   endDateLabel: "Roadmap ends",
   endDateHelper: "Between four and fifty-two weeks after it starts.",
   planningNoteLabel: "Anything the coach should account for? (optional)",
@@ -135,6 +137,8 @@ export const ROADMAP_CONTROL_COPY = {
     pendingElsewhere:
       "That request is already running. Reload in a moment to see where it went.",
     feedbackRequired: "Say what the coach should change before asking again.",
+    regenerationDatesPassed:
+      "The first day of that proposal has passed. Start a fresh request for new dates.",
     feedbackWithoutRegeneration:
       "Feedback belongs to a regeneration, not a first request.",
     requestUnidentified: "That request could not be identified. Try again.",

@@ -100,9 +100,13 @@ describe("parsePlanStartDate", () => {
     expect(parsePlanStartDate(value, today)).toBe(value);
   });
 
-  // Yesterday, thirty-one days out, a day the calendar does not have, and
+  it("reads yesterday as today: a form left open over midnight", () => {
+    expect(parsePlanStartDate("2026-10-08", today)).toBe(today);
+  });
+
+  // Two days ago, thirty-one days out, a day the calendar does not have, and
   // something that is not a date.
-  it.each(["2026-10-08", "2026-11-09", "2026-10-32", "next week"])(
+  it.each(["2026-10-07", "2026-11-09", "2026-10-32", "next week"])(
     "refuses %s",
     (value) => {
       expect(() => parsePlanStartDate(value, today)).toThrow(

@@ -318,9 +318,9 @@ export function ProposalReview({
  * of rules to keep true. Reuse is safe on two facts worth stating because
  * neither is local — `slice.revision` is the plan's revision and not a
  * window-scoped one, so the number this form carries is the one the plan
- * surface would carry; and a proposal horizon is at most seven days from today
- * while a session may sit 180 days out, so every session shown here is inside the
- * window that action reads.
+ * surface would carry; and a proposal horizon ends at most 36 days from today
+ * (a first day up to 30 ahead, then seven days) while a session may sit 180
+ * days out, so every session shown here is inside the window that action reads.
  *
  * Staged choices survive the save because they are rows in
  * `plan_proposal_item_decisions`, not component state. The revalidate that

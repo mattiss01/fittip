@@ -17,8 +17,10 @@ import { generateRoadmapAction } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { DateField } from "@/components/date-field/date-field";
 import { CoachSpark } from "@/components/home/coach-spark";
-import { shiftIsoDate } from "@/lib/date/local-date";
-import { COACH_START_MAX_DAYS_AHEAD } from "@/lib/plan/plan-proposal-copy";
+import {
+  COACH_START_MAX_DAYS_AHEAD,
+  shiftIsoDate,
+} from "@/lib/date/local-date";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
 /**
@@ -97,8 +99,24 @@ export function RoadmapComposer({
   const isRegeneration = mode === "regeneration";
 
   // The end is counted from the first day, so its range follows the start the
-  // owner has chosen. A start half typed keeps the range it had.
+  // owner has chosen. A start half typed keeps the range it had. An end the
+  // new start leaves too near or too far is moved to the nearest date it
+  // allows, rather than left for the owner to find out why the form stopped.
   const [chosenStart, setChosenStart] = useState(startDate);
+  const [chosenEnd, setChosenEnd] = useState(endDate);
+  const [endSeed, setEndSeed] = useState(endDate);
+  function chooseStart(date: string) {
+    if (date === "") return;
+    setChosenStart(date);
+    const earliest = shiftIsoDate(date, minDays);
+    const latest = shiftIsoDate(date, maxDays);
+    const kept =
+      chosenEnd < earliest ? earliest : chosenEnd > latest ? latest : chosenEnd;
+    if (kept !== chosenEnd) {
+      setChosenEnd(kept);
+      setEndSeed(kept);
+    }
+  }
 
   function submit(formData: FormData) {
     // A new attempt gets a new key; a retry of one that has not produced a
@@ -160,9 +178,7 @@ export function RoadmapComposer({
             max={shiftIsoDate(today, COACH_START_MAX_DAYS_AHEAD)}
             min={today}
             name="startDate"
-            onChange={(date) => {
-              if (date !== "") setChosenStart(date);
-            }}
+            onChange={chooseStart}
             rangeMessage={
               isRegeneration ? undefined : ROADMAP_CONTROL_COPY.startDateHelper
             }
@@ -185,12 +201,18 @@ export function RoadmapComposer({
           <DateField
             calendar
             describedBy={`${fieldId}-end-help`}
-            initial={endDate}
+            initial={endSeed}
+            // Remounted when the start moved the end, which is the one time
+            // this field's date changes without the owner typing it.
+            key={endSeed}
             label={ROADMAP_CONTROL_COPY.endDateLabel}
             labelClassName={styles.label}
             max={shiftIsoDate(chosenStart, maxDays)}
             min={shiftIsoDate(chosenStart, minDays)}
             name="endDate"
+            onChange={(date) => {
+              if (date !== "") setChosenEnd(date);
+            }}
             // A typed date is held to the range as a picked one is. Not a
             // regeneration's: its date is the earlier proposal's, whatever
             // today allows.

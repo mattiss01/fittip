@@ -383,7 +383,7 @@ describe("generatePlanProposalAction", () => {
     });
   });
 
-  it.each([-1, 31])(
+  it.each([-2, 31])(
     "refuses a first day %i days from today, keeping what was typed",
     async (offset) => {
       const start = shiftIsoDate(today, offset);

@@ -18,9 +18,11 @@ import { SheetLayer } from "../plan-sheet";
 
 import { DateField } from "@/components/date-field/date-field";
 import { CoachSpark } from "@/components/home/coach-spark";
-import { shiftIsoDate } from "@/lib/date/local-date";
 import {
   COACH_START_MAX_DAYS_AHEAD,
+  shiftIsoDate,
+} from "@/lib/date/local-date";
+import {
   PLAN_PROPOSAL_COPY,
   PLAN_PROPOSAL_DEFAULT_DAYS,
   PLAN_PROPOSAL_MAX_DAYS,

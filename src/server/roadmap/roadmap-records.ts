@@ -1,6 +1,6 @@
 import "server-only";
 
-import { COACH_START_MAX_DAYS_AHEAD } from "@/lib/plan/plan-proposal-copy";
+import { COACH_START_MAX_DAYS_AHEAD } from "@/lib/date/local-date";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 import { ROADMAP_ROUTE_STATE_COPY } from "@/lib/roadmap/roadmap-route-state-copy";
 import type {
@@ -119,6 +119,9 @@ export function parseRoadmapStartDate(
   if (typeof value !== "string" || !isIsoDate(value)) {
     throw new RoadmapValidationError("startDate");
   }
+  // The field cannot be set before today, so yesterday is a form left open
+  // over midnight with its default untouched. That request meant today.
+  if (!isRegeneration && value === addDays(today, -1)) return today;
   if (
     !isRegeneration &&
     (value < today || value > addDays(today, COACH_START_MAX_DAYS_AHEAD))

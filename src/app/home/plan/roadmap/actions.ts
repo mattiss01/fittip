@@ -101,6 +101,13 @@ export async function generateRoadmapAction(
       today,
       previousProposalId !== null,
     );
+    // A regeneration is the same question about the same dates, and those
+    // dates are no longer askable once the first has passed. Said here: the
+    // database would refuse it as an invalid request, or, on the one day of
+    // slack it allows for time zones, accept a roadmap that began yesterday.
+    if (previousProposalId !== null && startDate < today) {
+      return invalid(OUTCOMES.regenerationDatesPassed, submission, draft);
+    }
     const endDate = parseRoadmapEndDate(draft.endDate, startDate);
     const planningNote = parsePlanningNote(draft.planningNote);
     const regenerationFeedback = parseRegenerationFeedback(

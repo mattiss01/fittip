@@ -244,13 +244,17 @@ export function selectTrainingHistoryContext(
       if (entry.localDate <= records.horizonEndDate) return true;
       return entry.ruleSeriesId === null && entry.localDate <= forwardLimit;
     })
-    // The days being planned come first, then everything else nearest first.
-    // With a first day later than today, the sessions before it would
-    // otherwise fill the list and cut the very days the coach is asked about.
-    .sort(
-      (a, b) =>
-        Number(isBeforeHorizon(a)) - Number(isBeforeHorizon(b)) ||
-        a.localDate.localeCompare(b.localDate),
+    // The days being planned and those after them first, earliest first.
+    // Then the days before the first day, latest first: what the athlete
+    // carries into the planned days is the training nearest to them. With a
+    // first day later than today, date order alone would let those lead-in
+    // sessions fill the list and cut the very days the coach is asked about.
+    .sort((a, b) =>
+      isBeforeHorizon(a) !== isBeforeHorizon(b)
+        ? Number(isBeforeHorizon(a)) - Number(isBeforeHorizon(b))
+        : isBeforeHorizon(a)
+          ? b.localDate.localeCompare(a.localDate)
+          : a.localDate.localeCompare(b.localDate),
     );
   const byteBudget = limits.maxPlanCommitmentBytes ?? Number.POSITIVE_INFINITY;
   const costOf = (value: unknown) => byteLength(JSON.stringify(value)) + 1;

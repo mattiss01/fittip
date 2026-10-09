@@ -4,11 +4,12 @@ import type {
   PlanProposalDecision,
   PlanProposalItemView,
 } from "@/lib/plan/plan-proposal-view";
-import { shiftIsoDate } from "@/lib/date/local-date";
 import {
   COACH_START_MAX_DAYS_AHEAD,
-  PLAN_PROPOSAL_COPY,
-} from "@/lib/plan/plan-proposal-copy";
+  isIsoDate,
+  shiftIsoDate,
+} from "@/lib/date/local-date";
+import { PLAN_PROPOSAL_COPY } from "@/lib/plan/plan-proposal-copy";
 import type { SevenDayPlanProposal } from "@/server/ai/contracts";
 
 /**
@@ -135,14 +136,16 @@ function integerOrNaN(value: FormDataEntryValue | null): number {
  *
  * Today when the form sent none, which is what every request was before the
  * field existed. Never earlier than the owner's own today, and at most
- * `COACH_START_MAX_DAYS_AHEAD` after it: further out the coach would plan a
- * week from training that has not happened yet.
+ * `COACH_START_MAX_DAYS_AHEAD` after it.
  */
 export function parsePlanStartDate(
   value: FormDataEntryValue | null,
   today: string,
 ): string {
   if (value === null || value === "") return today;
+  // The field cannot be set before today, so yesterday is a form left open
+  // over midnight with its default untouched. That request meant today.
+  if (value === shiftIsoDate(today, -1)) return today;
   if (
     typeof value !== "string" ||
     !isIsoDate(value) ||
@@ -152,15 +155,6 @@ export function parsePlanStartDate(
     throw new PlanProposalValidationError(PLAN_PROPOSAL_COPY.startDateRange);
   }
   return value;
-}
-
-function isIsoDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const parsed = new Date(`${value}T00:00:00.000Z`);
-  return (
-    !Number.isNaN(parsed.getTime()) &&
-    parsed.toISOString().slice(0, 10) === value
-  );
 }
 
 const DAY_COUNT_MIN = 1;

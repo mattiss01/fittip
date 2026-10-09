@@ -334,7 +334,7 @@ describe("roadmap server actions", () => {
       });
     });
 
-    it.each([-1, 31])(
+    it.each([-2, 31])(
       "refuses a first day %i days from today",
       async (offset) => {
         const startDate = addDays(today, offset);
@@ -365,6 +365,27 @@ describe("roadmap server actions", () => {
       );
 
       expect(result.status).toBe("validation");
+      expect(generateMock).not.toHaveBeenCalled();
+    });
+
+    it("says so when a regeneration's first day has passed", async () => {
+      const startDate = addDays(today, -1);
+
+      const result = await generateRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({
+          startDate,
+          endDate: addDays(startDate, 84),
+          previousProposalId: PROPOSAL_ID,
+          regenerationFeedback: "Less running.",
+          idempotencyKey: "m3-15f-generate-key-0001",
+        }),
+      );
+
+      expect(result).toMatchObject({
+        status: "validation",
+        message: OUTCOMES.regenerationDatesPassed,
+      });
       expect(generateMock).not.toHaveBeenCalled();
     });
 
