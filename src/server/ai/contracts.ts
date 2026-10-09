@@ -193,9 +193,9 @@ export type CoachAIRoadmapPhaseReference = {
 };
 
 /**
- * ADR-023 decision 15: one logged session of the last 28 days on which the
- * athlete reported something, as the day and which flags. Nothing else of
- * that log travels: a fill's own history is seven days.
+ * ADR-023 decision 15: one day of the last 28 on which the athlete reported
+ * something, as the date and which flags any log of that day set. Nothing
+ * else of those logs travels: a fill's own history is seven days.
  */
 export type CoachAISafetyFlagReference = {
   localDate: string;

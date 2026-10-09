@@ -344,8 +344,7 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
 
     // ADR-023 decision 15: a fill is also sent the day and the flags of logs
     // up to four weeks back. Those logs are sources too, by the same
-    // selection assembly runs, so correcting a flag away conflicts with a
-    // suggestion built around it.
+    // selection assembly runs: what was sent is what is named.
     const flagged =
       this.#operation === "fill_session_activities"
         ? selectRecentSafetyFlagDays(

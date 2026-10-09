@@ -1049,6 +1049,7 @@ export function buildCoachAIContext(
 /** How far back a fill is told of a reported flag (ADR-023 decision 15). */
 export const SESSION_DETAIL_SAFETY_FLAG_DAYS = 28;
 const MAX_RECENT_SAFETY_FLAGS = 20;
+const MAX_SAFETY_FLAG_LOGS_PER_DAY = 7;
 
 /**
  * The days of the last four weeks on which something was reported, newest
@@ -1056,8 +1057,14 @@ const MAX_RECENT_SAFETY_FLAGS = 20;
  * told: twenty flagged days in four weeks is already a picture.
  *
  * Shared with the context source, which records those logs as sources of the
- * proposal: a correction that takes a flag away must conflict with a
- * suggestion that was built around it (M3-08's exact-source rule).
+ * proposal, by M3-08's exact-source rule: what was sent is what is named.
+ * That is provenance. Nothing compares a fill's sources when it is accepted,
+ * so correcting a flag away afterwards does not yet stop the suggestion built
+ * around it; `NEXT.md` carries that.
+ *
+ * A day counts at most seven logs. The database stores 256 sources for one
+ * suggestion, and twenty days of seven beside everything else a fill records
+ * stays under it, so no request can be paid for and then fail to save.
  */
 export function selectRecentSafetyFlagDays(
   completions: readonly TrainingHistoryCompletion[],
@@ -1081,7 +1088,10 @@ export function selectRecentSafetyFlagDays(
     ) {
       continue;
     }
-    byDay.set(entry.localDate, [...(byDay.get(entry.localDate) ?? []), entry]);
+    const logs = byDay.get(entry.localDate) ?? [];
+    if (logs.length < MAX_SAFETY_FLAG_LOGS_PER_DAY) {
+      byDay.set(entry.localDate, [...logs, entry]);
+    }
   }
   const days = [...byDay.entries()]
     .sort(([a], [b]) => b.localeCompare(a))

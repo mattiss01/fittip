@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildCoachAIContext,
+  selectRecentSafetyFlagDays,
   byteLength,
   COACH_AI_CONTEXT_LIMITS,
   CoachAIContextBelowMinimumError,
@@ -1939,6 +1940,15 @@ describe("fill_session_activities assembly", () => {
         severeFatigueReported: true,
       },
     ]);
+  });
+
+  it("counts at most seven logs for one day, so the sources stay storable", () => {
+    const sameDay = Array.from({ length: 9 }, () => logged("2026-08-01"));
+
+    const selection = selectRecentSafetyFlagDays(sameDay, TODAY);
+
+    expect(selection.days).toHaveLength(1);
+    expect(selection.days[0].logs).toHaveLength(7);
   });
 
   it("counts the flagged days it leaves out past twenty", () => {

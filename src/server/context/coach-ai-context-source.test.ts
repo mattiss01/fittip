@@ -255,7 +255,7 @@ describe("the production coaching context source", () => {
 
       const records = await fillSource().load(OWNER);
 
-      // Correcting that flag away has to conflict with what was built on it.
+      // What was sent is what is named, the flag's log included.
       expect(records.sources?.map((source) => source.recordId)).toEqual([
         "75000000-0000-4000-8000-000000000001",
         flaggedId,
