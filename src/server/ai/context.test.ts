@@ -243,7 +243,7 @@ describe("the per-source context allocation", () => {
     expect(estimatedTokens).toBeLessThanOrEqual(
       COACH_AI_LIVE_LIMITS.maxInputTokens,
     );
-    expect(COACH_AI_LIVE_LIMITS.maxInputTokens).toBe(10_000);
+    expect(COACH_AI_LIVE_LIMITS.maxInputTokens).toBe(14_000);
   });
 
   it("reserves room in the training-history ceiling for a full miss list", () => {
@@ -805,11 +805,11 @@ describe("the per-source context allocation", () => {
     });
 
     it("lists the days being planned before the days leading up to them", () => {
-      // A first day ten days out, and a session on every day until then: more
-      // than the list holds. Nearest first alone would fill it before reaching
-      // the one session the coach is asked to plan around.
-      const leadIn = Array.from({ length: 10 }, (_, index) => ({
-        localDate: shiftDate(TODAY, index),
+      // A first day ten days out, and three sessions on every day until
+      // then: more than the list holds. Nearest first alone would fill it
+      // before reaching the one session the coach is asked to plan around.
+      const leadIn = Array.from({ length: 30 }, (_, index) => ({
+        localDate: shiftDate(TODAY, Math.floor(index / 3)),
         title: `Lead-in ${index}`,
         sport: "Running",
         hasCompletion: false,
@@ -846,7 +846,7 @@ describe("the per-source context allocation", () => {
       );
 
       const titles = plan.context.planCommitments.map((c) => c.title);
-      expect(titles).toHaveLength(12);
+      expect(titles).toHaveLength(30);
       expect(titles.slice(0, 5)).toEqual([
         "Long run",
         "After 0",
@@ -856,12 +856,103 @@ describe("the per-source context allocation", () => {
       ]);
       // What is left goes to the days before, the nearest to the first day
       // first: that is the load carried into the planned days.
-      expect(titles.slice(5)).toEqual(
-        leadIn
-          .slice(3)
-          .reverse()
-          .map((entry) => entry.title),
+      const leadInDates = plan.context.planCommitments
+        .slice(5)
+        .map((c) => c.localDate);
+      expect(leadInDates).toEqual([...leadInDates].sort().reverse());
+      expect(leadInDates[0]).toBe(shiftDate(TODAY, 9));
+      // Only a session inside the chosen days carries minutes and a handle.
+      expect(plan.context.planCommitments[0]).toEqual({
+        localDate: shiftDate(TODAY, 11),
+        title: "Long run",
+        sport: "Running",
+        durationMinutes: null,
+        replaceHandle: null,
+      });
+      expect(plan.context.planCommitments[1]).toEqual({
+        localDate: shiftDate(TODAY, 20),
+        title: "After 0",
+        sport: "Running",
+      });
+    });
+
+    it("gives a marked session its handle and minutes, and never its id", () => {
+      const marked = "77000000-0000-4000-8000-0000000000b1";
+      const training = {
+        ...EMPTY_TRAINING,
+        plannedSessions: [
+          {
+            id: marked,
+            localDate: shiftDate(TODAY, 1),
+            title: "Long run",
+            sport: "Running",
+            durationMinutes: 75,
+            hasCompletion: false,
+            ruleSeriesId: null,
+          },
+          {
+            id: "77000000-0000-4000-8000-0000000000b2",
+            localDate: shiftDate(TODAY, 2),
+            title: "Strength",
+            sport: "Strength",
+            durationMinutes: 45,
+            hasCompletion: false,
+            ruleSeriesId: null,
+          },
+        ],
+      };
+      const plan = buildCoachAIContext(
+        "create_seven_day_plan",
+        records({ training, timezoneName: "Europe/Berlin" }),
+        {
+          ...COMPOSE,
+          horizonEndDate: shiftDate(TODAY, 6),
+          replaceable: [{ sessionId: marked, handle: "r1" }],
+        },
       );
+
+      expect(plan.context.planCommitments).toEqual([
+        {
+          localDate: shiftDate(TODAY, 1),
+          title: "Long run",
+          sport: "Running",
+          durationMinutes: 75,
+          replaceHandle: "r1",
+        },
+        {
+          localDate: shiftDate(TODAY, 2),
+          title: "Strength",
+          sport: "Strength",
+          durationMinutes: 45,
+          replaceHandle: null,
+        },
+      ]);
+      expect(plan.serialized).not.toContain(marked);
+
+      // A mark on a session that is not sent is refused, not dropped.
+      expect(() =>
+        buildCoachAIContext(
+          "create_seven_day_plan",
+          records({ training, timezoneName: "Europe/Berlin" }),
+          {
+            ...COMPOSE,
+            horizonEndDate: shiftDate(TODAY, 6),
+            replaceable: [
+              {
+                sessionId: "77000000-0000-4000-8000-0000000000ff",
+                handle: "r1",
+              },
+            ],
+          },
+        ),
+      ).toThrow(CoachAIContextTooLargeError);
+      // And no other operation takes a mark at all.
+      expect(() =>
+        build(
+          { training },
+          { replaceable: [{ sessionId: marked, handle: "r1" }] },
+        ),
+      ).toThrow(CoachAIError);
     });
 
     it("gives the seven-day plan and a fill no rules and no key for them", () => {

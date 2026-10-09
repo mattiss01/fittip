@@ -14,11 +14,26 @@
 
 import type { RoadmapPlanStaleReason } from "@/lib/roadmap/roadmap-stale-reasons";
 
-/** What the owner has said about one proposed item. */
-export type PlanProposalItemDecision = "proposed" | "staged" | "rejected";
+/**
+ * What the owner has said about one proposed item.
+ *
+ * `staged_beside` exists only for an item that would replace a planned
+ * session (ADR-024): add it and keep the session. On such an item `staged`
+ * means replace; on any other it means add, as it always did.
+ */
+export type PlanProposalItemDecision =
+  | "proposed"
+  | "staged"
+  | "staged_beside"
+  | "rejected";
 
 export const PLAN_PROPOSAL_ITEM_DECISIONS: readonly PlanProposalItemDecision[] =
-  ["proposed", "staged", "rejected"] as const;
+  ["proposed", "staged", "staged_beside", "rejected"] as const;
+
+/** Either way of saying yes: the item enters the plan when the review ends. */
+export function isStagedDecision(decision: PlanProposalItemDecision): boolean {
+  return decision === "staged" || decision === "staged_beside";
+}
 
 /** How a review ended. Absent while it is still open. */
 export type PlanProposalDecision = "applied" | "discarded";
@@ -46,6 +61,11 @@ export type PlanProposalItemView = {
   rationale: string | null;
   /** The item's index into the proposal content, for the parts not copied here. */
   contentIndex: number | null;
+  /**
+   * The planned session this one would stand in for, which the owner marked
+   * "can be replaced" when asking. Null for an item that only adds.
+   */
+  replacesSessionId: string | null;
 };
 
 /**
@@ -60,7 +80,7 @@ export function unresolvedItemCount(items: PlanProposalItemView[]): number {
 }
 
 export function stagedItemCount(items: PlanProposalItemView[]): number {
-  return items.filter((item) => item.decision === "staged").length;
+  return items.filter((item) => isStagedDecision(item.decision)).length;
 }
 
 export const FIXTURE_PROVIDER_CODE = "fixture";

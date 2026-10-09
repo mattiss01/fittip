@@ -48,7 +48,7 @@ describe("ComposeProposal", () => {
   afterEach(cleanup);
 
   it("keeps the one line that says nothing reaches the plan before the review", () => {
-    render(<ComposeProposal hasGoals today="2026-10-09" />);
+    render(<ComposeProposal hasGoals today="2026-10-09" planned={[]} />);
 
     expect(screen.getByText(COPY.generateSupport)).toBeVisible();
     expect(
@@ -58,7 +58,9 @@ describe("ComposeProposal", () => {
   });
 
   it("asks nothing without an active goal, and offers the way to Goals instead", () => {
-    render(<ComposeProposal hasGoals={false} today="2026-10-09" />);
+    render(
+      <ComposeProposal hasGoals={false} today="2026-10-09" planned={[]} />,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: COPY.generateAction }));
 
@@ -74,8 +76,52 @@ describe("ComposeProposal", () => {
     expect(action).not.toHaveBeenCalled();
   });
 
+  it("lists what is planned on the chosen days, each staying unless ticked", () => {
+    render(
+      <ComposeProposal
+        hasGoals
+        today="2026-10-09"
+        planned={[
+          {
+            id: "9c000000-0000-4000-8000-0000000000b1",
+            localDate: "2026-10-10",
+            title: "Long run",
+            expectedDurationMinutes: 75,
+          },
+          {
+            id: "9c000000-0000-4000-8000-0000000000b2",
+            localDate: "2026-10-20",
+            title: "Far strength",
+            expectedDurationMinutes: 45,
+          },
+        ]}
+      />,
+    );
+
+    // Seven days from today by default: the second session is outside them.
+    const tick = screen.getByRole("checkbox", {
+      name: COPY.replaceableLabelFor("Long run"),
+    });
+    expect(tick).not.toBeChecked();
+    expect(tick).toHaveAttribute("name", "replaceable");
+    expect(tick).toHaveAttribute(
+      "value",
+      "9c000000-0000-4000-8000-0000000000b1",
+    );
+    expect(screen.queryByText("Far strength")).toBeNull();
+
+    // One day only, and nothing is planned today.
+    fireEvent.change(screen.getByLabelText(COPY.dayCountLabel), {
+      target: { value: "1" },
+    });
+    expect(screen.queryByText("Long run")).toBeNull();
+    expect(screen.getByText(COPY.plannedNone)).toBeVisible();
+  });
+
   it("opens the same question when the form is sent from the keyboard", () => {
-    render(<ComposeProposal hasGoals={false} today="2026-10-09" />);
+    render(
+      <ComposeProposal hasGoals={false} today="2026-10-09" planned={[]} />,
+    );
 
     // Enter in "Days to plan" submits a form whatever its button does.
     fireEvent.submit(

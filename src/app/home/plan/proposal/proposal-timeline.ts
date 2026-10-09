@@ -43,6 +43,28 @@ export type PlannedSessionSummary = {
   seriesId: string | null;
 };
 
+/**
+ * The planned session a proposed item would stand in for (ADR-024), as it is
+ * now rather than as it was when the owner marked it.
+ *
+ * `available` is false once the session is logged, cancelled or gone. The
+ * finish then adds the proposed session beside it and deletes nothing, so the
+ * surface says that instead of offering a replace that will not happen.
+ */
+export type ProposalReplaceTarget = {
+  /** Null when the session is no longer on the plan at all. */
+  title: string | null;
+  expectedDurationMinutes: number | null;
+  available: boolean;
+};
+
+export type ProposalTimelineItem = PlanProposalItemView & {
+  replaces: ProposalReplaceTarget | null;
+};
+
+/** What a planned session's card says about the item that would replace it. */
+export type ProposalReplacement = { title: string; isChosen: boolean };
+
 export type ProposalTimelineDay = {
   localDate: string;
   isToday: boolean;
@@ -60,7 +82,12 @@ export type ProposalTimelineDay = {
   /** Already labelled a recovery day before this proposal existed. */
   isRecoveryDay: boolean;
   /** Proposed, awaiting or carrying a choice. */
-  items: PlanProposalItemView[];
+  items: ProposalTimelineItem[];
+  /**
+   * By planned session id: the proposed session that would replace it, while
+   * that is still possible and the owner has not chosen otherwise.
+   */
+  replacements: Record<string, ProposalReplacement>;
 };
 
 export function buildProposalTimeline(input: {
@@ -71,12 +98,44 @@ export function buildProposalTimeline(input: {
   plannedSessions: PlannedSessionSummary[];
   plannedByDate: Map<string, PlannedSessionSummary[]>;
   recoveryDates: readonly string[];
+  /** Planned sessions with training logged against them. */
+  loggedSessionIds?: ReadonlySet<string>;
 }): ProposalTimelineDay[] {
   const recovery = new Set(input.recoveryDates);
-  const itemsByDate = new Map<string, PlanProposalItemView[]>();
+  const logged = input.loggedSessionIds ?? new Set<string>();
+  const plannedById = new Map(
+    input.plannedSessions.map((session) => [session.id, session]),
+  );
+  const replacements: Record<string, ProposalReplacement> = {};
+  const itemsByDate = new Map<string, ProposalTimelineItem[]>();
   for (const item of input.items) {
+    const target =
+      item.replacesSessionId === null
+        ? undefined
+        : plannedById.get(item.replacesSessionId);
+    const replaces: ProposalReplaceTarget | null =
+      item.replacesSessionId === null
+        ? null
+        : {
+            title: target?.title ?? null,
+            expectedDurationMinutes: target?.expectedDurationMinutes ?? null,
+            available:
+              target !== undefined &&
+              target.status === "active" &&
+              !logged.has(target.id),
+          };
+    if (
+      target !== undefined &&
+      replaces?.available &&
+      (item.decision === "proposed" || item.decision === "staged")
+    ) {
+      replacements[target.id] = {
+        title: item.title ?? "",
+        isChosen: item.decision === "staged",
+      };
+    }
     const day = itemsByDate.get(item.localDate) ?? [];
-    day.push(item);
+    day.push({ ...item, replaces });
     itemsByDate.set(item.localDate, day);
   }
 
@@ -87,6 +146,7 @@ export function buildProposalTimeline(input: {
     planned: input.plannedByDate.get(localDate) ?? [],
     isRecoveryDay: recovery.has(localDate),
     items: itemsByDate.get(localDate) ?? [],
+    replacements,
   }));
 }
 

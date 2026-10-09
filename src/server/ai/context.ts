@@ -302,12 +302,27 @@ export const COACH_AI_CONTEXT_LIMITS = {
   // takes bytes from another source or raises `maxInputTokens`, and the second
   // is a standing spend increase, because a reservation charges the ceiling
   // before every live call whether or not the source was large.
+  //
+  // ADR-024 and the ceiling of 9 October 2026. `maxInputTokens` is 14,000 now,
+  // and the first thing it buys is this: the planned sessions go from twelve
+  // entries in 1,400 bytes to thirty in 4,000, because an entry inside the
+  // days being planned carries its minutes and its replace handle, and seven
+  // days can hold more than twelve sessions. The total and the prefix budget
+  // grow by the same step:
+  //
+  //   prefix 8,000 + wrapper 64 + context 35,100 = 43,164 characters
+  //   ceil(43,164 / 4) = 10,791  against  maxInputTokens 14,000
+  //
+  // An entry is about 110 bytes with a short title and at most about 290, so
+  // 4,000 holds thirty ordinary ones and fewer of the longest. The days being
+  // planned are fitted first; a marked session that still does not fit refuses
+  // the request with this source named rather than dropping the mark.
   create_seven_day_plan: {
     maxTargetableGoals: 12,
     maxHistoricalGoals: 5,
     maxMemoryItems: 20,
     maxTrainingSessions: 20,
-    maxPlanCommitments: 12,
+    maxPlanCommitments: 30,
     maxRecurringSessions: 0,
     bytes: {
       targetableGoals: 4_000,
@@ -315,7 +330,7 @@ export const COACH_AI_CONTEXT_LIMITS = {
       memory: 5_600,
       trainingHistory: 11_000,
       trainingHistoryCompletions: 5_800,
-      planCommitments: 1_400,
+      planCommitments: 4_000,
       planningNote: 1_200,
       regenerationFeedback: 600,
       // 2,200 until 24 September 2026, which was the roadmap's number adopted
@@ -333,7 +348,7 @@ export const COACH_AI_CONTEXT_LIMITS = {
       previousProposal: 6_400,
       roadmap: 4_000,
       sessionDetail: 0,
-      total: 32_500,
+      total: 35_100,
     },
   },
   // A7-2, within ADR-020. One session rather than a horizon, so the plan's
@@ -491,6 +506,12 @@ export type CoachAIComposeInput = {
     | CoachAIPreviousPlanReference
     | null;
   /**
+   * ADR-024, `create_seven_day_plan` only: the sessions the owner marked "can
+   * be replaced" for this request, each with the handle the database issued.
+   * The id is how a planned session is matched and is never serialized.
+   */
+  replaceable?: readonly { sessionId: string; handle: string }[];
+  /**
    * The planned session `fill_session_activities` fills. The context source is
    * built with the same id and reads that session; assembly refuses when the
    * two disagree.
@@ -640,8 +661,41 @@ export function buildCoachAIContext(
       maxPlanCommitments: limits.maxPlanCommitments,
       maxPlanCommitmentBytes: limits.bytes.planCommitments,
       maxRecurringSessions: limits.maxRecurringSessions,
+      // Keyed off the operation, not off the list being empty, so a plan
+      // context has one shape whether or not anything was marked.
+      ...(operation === "create_seven_day_plan"
+        ? {
+            planCommitmentDetail: {
+              replaceHandles: new Map(
+                (compose.replaceable ?? []).map((mark) => [
+                  mark.sessionId,
+                  mark.handle,
+                ]),
+              ),
+            },
+          }
+        : {}),
     },
   );
+
+  // A mark that matched no session sent would be a handle the database will
+  // accept and the coach was never shown. Refused rather than dropped: the
+  // owner chose from a list, and a proposal that ignores part of the choice
+  // without saying so is the silent reduction this module exists to prevent.
+  if (
+    operation !== "create_seven_day_plan" &&
+    (compose.replaceable?.length ?? 0) > 0
+  ) {
+    throw new CoachAIError("context_invalid");
+  }
+  const sentHandles = new Set(
+    training.planCommitments.map((commitment) => commitment.replaceHandle),
+  );
+  if (
+    (compose.replaceable ?? []).some((mark) => !sentHandles.has(mark.handle))
+  ) {
+    throw new CoachAIContextTooLargeError("plan_commitments");
+  }
 
   const context: CoachAIContext = {
     today: records.today,

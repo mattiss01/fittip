@@ -2,6 +2,7 @@ import "server-only";
 
 import type {
   PlanProposalDecision,
+  PlanProposalItemDecision,
   PlanProposalItemView,
 } from "@/lib/plan/plan-proposal-view";
 import {
@@ -59,6 +60,8 @@ export type PlanProposalView = {
   endDate: string;
   /** The plan revision the proposal was composed against. */
   composedAtPlanRevision: number;
+  /** The request it answers, which is what holds the owner's marks. */
+  generationId: string;
   items: PlanProposalItemView[];
   decision: PlanProposalDecision | null;
   createdAt: string;
@@ -95,8 +98,13 @@ export function parsePlanProposalItemOrdinal(
 
 export function parsePlanProposalItemDecision(
   value: FormDataEntryValue | null,
-): "proposed" | "staged" | "rejected" {
-  if (value !== "proposed" && value !== "staged" && value !== "rejected") {
+): PlanProposalItemDecision {
+  if (
+    value !== "proposed" &&
+    value !== "staged" &&
+    value !== "staged_beside" &&
+    value !== "rejected"
+  ) {
     throw new PlanProposalValidationError("That is not a choice you can make.");
   }
   return value;
@@ -157,6 +165,33 @@ export function parsePlanStartDate(
   return value;
 }
 
+/**
+ * The sessions the owner marked "can be replaced", as the form sent them.
+ *
+ * Only their shape is checked here. Whether each is this owner's active,
+ * unlogged session on one of the chosen days is the database's to decide,
+ * under the lock that stores them.
+ */
+export function parseReplaceableSessionIds(
+  values: readonly FormDataEntryValue[],
+): string[] {
+  const ids = [...new Set(values)];
+  if (
+    ids.length > REPLACEABLE_MAX ||
+    !ids.every(
+      (value): value is string =>
+        typeof value === "string" && UUID_PATTERN.test(value),
+    )
+  ) {
+    throw new PlanProposalValidationError(
+      "Check what you asked for and try again.",
+    );
+  }
+  return ids;
+}
+
+/** Seven days of at most three proposed sessions each. */
+const REPLACEABLE_MAX = 21;
 const DAY_COUNT_MIN = 1;
 const DAY_COUNT_MAX = 7;
 

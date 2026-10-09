@@ -302,6 +302,13 @@ const allowedPlanProposalModules = [
   "@/server/goals/goal-records",
   "@/server/plan-proposal/plan-generation",
   "@/server/plan-proposal/plan-proposal-records",
+  // ADR-024, 9 Oct 2026, read-only. A session with training logged against
+  // it can be neither offered for replacement nor replaced, so the page and
+  // the ask-again action read which planned sessions have a log. They take
+  // the session ids from it and nothing else; no write of the log is reached.
+  // The second entry is only the length of the window that read covers.
+  "@/server/repositories/completion-log-repository",
+  "@/server/training/training-history-context",
   "@/server/repositories/goal-repository",
   "@/server/repositories/plan-proposal-repository",
   "@/server/repositories/profile-repository",

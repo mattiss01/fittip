@@ -402,18 +402,24 @@ describe("the production coaching context source", () => {
 
     const records = await source().load(OWNER);
 
+    // The id and the minutes are for assembly: the id is never sent, and the
+    // minutes only on a session inside a plan's chosen days (ADR-024).
     expect(records.training.plannedSessions).toEqual([
       {
+        id: expect.any(String),
         localDate: "2026-08-03",
         title: "Aerobic run",
         sport: "Running",
+        durationMinutes: expect.toBeOneOf([expect.any(Number), null]),
         hasCompletion: true,
         ruleSeriesId: null,
       },
       {
+        id: expect.any(String),
         localDate: "2026-08-02",
         title: "Missed tempo",
         sport: "Running",
+        durationMinutes: expect.toBeOneOf([expect.any(Number), null]),
         hasCompletion: false,
         ruleSeriesId: null,
       },

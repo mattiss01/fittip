@@ -32,6 +32,25 @@ import {
 
 const COPY = PLAN_PROPOSAL_COPY;
 
+/** What the days field holds, held to the range the action accepts. */
+function clampDays(value: string | undefined): number {
+  const days = Number(value);
+  if (!Number.isInteger(days)) return PLAN_PROPOSAL_DEFAULT_DAYS;
+  return Math.min(
+    PLAN_PROPOSAL_MAX_DAYS,
+    Math.max(PLAN_PROPOSAL_MIN_DAYS, days),
+  );
+}
+
+function formatDay(localDate: string): string {
+  return new Intl.DateTimeFormat("en", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  }).format(new Date(`${localDate}T00:00:00.000Z`));
+}
+
 /**
  * Asking for a proposal.
  *
@@ -40,13 +59,27 @@ const COPY = PLAN_PROPOSAL_COPY;
  * returns the running claim instead of buying a second coach call, and on a
  * live binding a second call is a second payment.
  */
+/** A planned session the owner may offer for replacement. */
+export type ComposablePlannedSession = {
+  id: string;
+  localDate: string;
+  title: string;
+  expectedDurationMinutes: number | null;
+};
+
 export function ComposeProposal({
   hasGoals,
   today,
+  planned,
 }: {
   hasGoals: boolean;
   /** The owner's local today: the earliest first day, and the default. */
   today: string;
+  /**
+   * Active sessions with nothing logged against them, over every day a
+   * proposal could cover. The form shows the ones on the days chosen.
+   */
+  planned: readonly ComposablePlannedSession[];
 }) {
   const [state, action, pending] = useActionState(
     generatePlanProposalAction,
@@ -61,6 +94,22 @@ export function ComposeProposal({
   const idempotencyKey = useMemo(
     () => globalThis.crypto.randomUUID().replaceAll("-", ""),
     [],
+  );
+
+  // The two fields are followed so the list below shows the days they
+  // describe. They are re-seeded from the returned draft when a reply lands,
+  // during render rather than in an effect, as the form itself is re-keyed.
+  const [seenSubmission, setSeenSubmission] = useState(state.submission);
+  const [startDate, setStartDate] = useState(today);
+  const [dayCount, setDayCount] = useState(PLAN_PROPOSAL_DEFAULT_DAYS);
+  if (seenSubmission !== state.submission) {
+    setSeenSubmission(state.submission);
+    setStartDate(state.draft?.startDate || today);
+    setDayCount(clampDays(state.draft?.dayCount));
+  }
+  const endDate = shiftIsoDate(startDate, dayCount - 1);
+  const onChosenDays = planned.filter(
+    (session) => session.localDate >= startDate && session.localDate <= endDate,
   );
 
   return (
@@ -94,6 +143,9 @@ export function ComposeProposal({
             max={shiftIsoDate(today, COACH_START_MAX_DAYS_AHEAD)}
             min={today}
             name="startDate"
+            onChange={(date) => {
+              if (date !== "") setStartDate(date);
+            }}
             rangeMessage={COPY.startDateRange}
             required
           />
@@ -111,8 +163,51 @@ export function ComposeProposal({
             step={1}
             required
             defaultValue={state.draft?.dayCount || PLAN_PROPOSAL_DEFAULT_DAYS}
+            onChange={(event) => setDayCount(clampDays(event.target.value))}
           />
         </div>
+
+        {/* What is already there (owner, 9 Oct 2026). Each session stays
+            unless it is ticked; only a ticked one may be replaced, and
+            nothing is replaced before the review is finished. */}
+        <fieldset className={styles.plannedList}>
+          <legend>{COPY.plannedHeading}</legend>
+          {onChosenDays.length === 0 ? (
+            <p className={styles.consequence}>{COPY.plannedNone}</p>
+          ) : (
+            <>
+              <p className={styles.consequence}>{COPY.plannedSupport}</p>
+              <ul>
+                {onChosenDays.map((session) => (
+                  <li key={session.id}>
+                    <span className={styles.plannedTitle}>
+                      {session.title}
+                      <span className={styles.plannedMeta}>
+                        {[
+                          formatDay(session.localDate),
+                          session.expectedDurationMinutes === null
+                            ? null
+                            : `${session.expectedDurationMinutes} min`,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </span>
+                    <label className={styles.plannedChoice}>
+                      <input
+                        type="checkbox"
+                        name="replaceable"
+                        value={session.id}
+                        aria-label={COPY.replaceableLabelFor(session.title)}
+                      />
+                      {COPY.replaceableLabel}
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </fieldset>
 
         <div className={styles.field}>
           <label htmlFor={`${fieldId}-note`}>{COPY.planningNoteLabel}</label>

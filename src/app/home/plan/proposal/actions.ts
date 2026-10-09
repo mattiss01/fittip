@@ -29,6 +29,7 @@ import {
   parseExpectedPlanRevision,
   parsePlanDayCount,
   parsePlanStartDate,
+  parseReplaceableSessionIds,
   parsePlanProposalId,
   parsePlanProposalItemDecision,
   parsePlanProposalItemOrdinal,
@@ -45,7 +46,9 @@ import {
   ProfileAuthenticationError,
   type ProfileRepository,
 } from "@/server/repositories/profile-repository";
+import { createCompletionLog } from "@/server/repositories/completion-log-repository";
 import { createRollingPlan } from "@/server/repositories/rolling-plan-repository";
+import { TRAINING_HISTORY_WINDOW_DAYS } from "@/server/training/training-history-context";
 
 /**
  * The plan-proposal Server Actions.
@@ -94,6 +97,11 @@ export async function generatePlanProposalAction(
     const startDate = parsePlanStartDate(draft.startDate, today);
     const dayCount = parsePlanDayCount(draft.dayCount);
     const planningNote = parsePlanningNote(draft.planningNote);
+    // What the owner ticked as "can be replaced". Everything else on the
+    // chosen days stays; the database decides whether each tick is allowed.
+    const replaceableSessionIds = parseReplaceableSessionIds(
+      formData.getAll("replaceable"),
+    );
 
     const idempotencyKey = text(formData, "idempotencyKey");
     if (!/^[A-Za-z0-9_-]{16,128}$/.test(idempotencyKey)) {
@@ -116,6 +124,7 @@ export async function generatePlanProposalAction(
         expectedPlanRevision: slice.revision,
         planningNote,
         idempotencyKey,
+        replaceableSessionIds,
       },
       { proposals },
     );
@@ -310,6 +319,32 @@ export async function regeneratePlanProposalAction(
       const endDate = shiftIsoDate(startDate, dayCount - 1);
       const slice = await plan.getPlanSlice(startDate, endDate);
 
+      // The marks travel to the next proposal, as the note does: the owner
+      // said those sessions may go, and asking again does not take that back.
+      // Only the ones that can still be replaced: a session just replaced by
+      // the finish above is gone, and one logged or cancelled since would
+      // refuse the whole request after the review has already closed.
+      const [marked, completions] = await Promise.all([
+        proposals.listReplaceableSessions(source.generationId),
+        (await createCompletionLog()).list(
+          shiftIsoDate(today, -(TRAINING_HISTORY_WINDOW_DAYS - 1)),
+          today,
+        ),
+      ]);
+      const logged = new Set(
+        completions.map((completion) => completion.planSessionId),
+      );
+      const stillReplaceable = new Set(
+        slice.sessions
+          .filter(
+            (session) => session.status === "active" && !logged.has(session.id),
+          )
+          .map((session) => session.id),
+      );
+      const replaceableSessionIds = marked
+        .map((mark) => mark.sessionId)
+        .filter((id) => stillReplaceable.has(id));
+
       const result = await generatePlanProposal(
         {
           owner,
@@ -317,6 +352,7 @@ export async function regeneratePlanProposalAction(
           endDate,
           dayCount,
           expectedPlanRevision: slice.revision,
+          replaceableSessionIds,
           planningNote: source.planningNote,
           idempotencyKey: `${idempotencyKey}-regen`,
           previousProposalId: proposalId,

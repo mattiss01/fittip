@@ -13,9 +13,16 @@ import {
 
 import homeStyles from "../../home.module.css";
 import { SubPageHeader } from "../sub-page-header";
-import { isoDateInTimezone } from "@/lib/date/local-date";
+import {
+  COACH_START_MAX_DAYS_AHEAD,
+  isoDateInTimezone,
+  shiftIsoDate,
+} from "@/lib/date/local-date";
 import { toActivityValue } from "@/lib/training/activity-value";
-import { PLAN_PROPOSAL_COPY } from "@/lib/plan/plan-proposal-copy";
+import {
+  PLAN_PROPOSAL_COPY,
+  PLAN_PROPOSAL_MAX_DAYS,
+} from "@/lib/plan/plan-proposal-copy";
 import { selectActiveGoalContext } from "@/server/goals/goal-records";
 import {
   isExampleProposal,
@@ -24,6 +31,7 @@ import {
   type ProposalRoadmapView,
 } from "@/lib/plan/plan-proposal-view";
 import type { PlanProposalView } from "@/server/plan-proposal/plan-proposal-records";
+import { createCompletionLog } from "@/server/repositories/completion-log-repository";
 import {
   createGoalRepository,
   GoalAuthenticationError,
@@ -45,6 +53,7 @@ import {
   RollingPlanAuthenticationError,
 } from "@/server/repositories/rolling-plan-repository";
 import { roadmapPlanStaleReasons } from "@/server/roadmap/roadmap-plan-context";
+import { TRAINING_HISTORY_WINDOW_DAYS } from "@/server/training/training-history-context";
 
 export const dynamic = "force-dynamic";
 
@@ -100,7 +109,11 @@ export default async function PlanProposalPage() {
             discarded, which are the two ways an open one ends.
           */}
           {state.proposal === null || state.proposal.decision !== null ? (
-            <ComposeProposal hasGoals={state.hasGoals} today={state.today} />
+            <ComposeProposal
+              hasGoals={state.hasGoals}
+              today={state.today}
+              planned={state.composable}
+            />
           ) : null}
           {/* With no proposal the form above is the whole page: a "No
               proposal open" card under it only pointed back up at it. */}
@@ -156,6 +169,7 @@ async function loadProposalState() {
     return {
       timezoneName,
       today: "",
+      composable: [],
       hasGoals: false,
       proposal: null,
       roadmap: null,
@@ -190,12 +204,45 @@ async function loadProposalState() {
   // a goal paused or deleted since is exactly what makes a roadmap stale.
   const targetableGoalIds = new Set(targetable.map((goal) => goal.id));
 
-  // A finished proposal needs no plan read: it is shown as the record of what
-  // was decided, not as a timeline to decide against.
+  // Sessions with training logged against them: one can be neither offered
+  // for replacement nor replaced. A log's date is never after today, so the
+  // window ADR-013 already reads is enough.
+  const loggedSessionIds = new Set(
+    (
+      await (
+        await createCompletionLog()
+      ).list(shiftIsoDate(today, -(TRAINING_HISTORY_WINDOW_DAYS - 1)), today)
+    )
+      .map((completion) => completion.planSessionId)
+      .filter((id): id is string => id !== null),
+  );
+
+  // No proposal open means the compose form is shown, and it lists what is
+  // already planned on the days it may ask about: the furthest first day plus
+  // the longest horizon. A finished proposal is otherwise shown as the record
+  // of what was decided, not as a timeline to decide against.
   if (proposal === null || proposal.decision !== null) {
+    const ahead = await plan.getPlanSlice(
+      today,
+      shiftIsoDate(
+        today,
+        COACH_START_MAX_DAYS_AHEAD + PLAN_PROPOSAL_MAX_DAYS - 1,
+      ),
+    );
     return {
       timezoneName,
       today,
+      composable: ahead.sessions
+        .filter(
+          (session) =>
+            session.status === "active" && !loggedSessionIds.has(session.id),
+        )
+        .map((session) => ({
+          id: session.id,
+          localDate: session.localDate,
+          title: session.title,
+          expectedDurationMinutes: session.expectedDurationMinutes ?? null,
+        })),
       hasGoals,
       proposal,
       roadmap: null,
@@ -238,6 +285,7 @@ async function loadProposalState() {
   return {
     timezoneName,
     today,
+    composable: [],
     hasGoals,
     proposal,
     roadmap,
@@ -256,6 +304,7 @@ async function loadProposalState() {
       plannedSessions: planned,
       plannedByDate: groupPlannedByDate(planned),
       recoveryDates: slice.recoveryDates,
+      loggedSessionIds,
     }),
     openMemoryCandidateCount,
   };

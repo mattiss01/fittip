@@ -51,12 +51,13 @@ type PlanProposalClient = SupabaseClient<Database> | ServerUserClient;
 
 const PROPOSAL_COLUMNS = `
   id, provider_code, planning_note, regeneration_feedback, content, created_at,
+  generation_request_id,
   plan_generation_requests!plan_proposals_request_fkey (
     requested_start_date, requested_end_date, expected_plan_revision
   ),
   plan_proposal_items (
     ordinal, kind, content_index, local_date, title, sport, intent,
-    expected_duration_minutes, rationale
+    expected_duration_minutes, rationale, replaces_session_id
   ),
   plan_proposal_item_decisions ( ordinal, decision ),
   plan_proposal_decisions ( decision )
@@ -228,6 +229,12 @@ export class PlanProposalRepository {
      */
     previousProposalId?: string | null;
     regenerationFeedback?: string | null;
+    /**
+     * ADR-024. The sessions the owner marked "can be replaced". The function
+     * stores them with the claim and refuses one that is not this owner's
+     * active, unlogged session on one of the requested days.
+     */
+    replaceableSessionIds?: readonly string[];
   }): Promise<PlanGenerationClaim> {
     const data = await this.call("begin_plan_generation", {
       p_idempotency_key: input.idempotencyKey,
@@ -244,6 +251,9 @@ export class PlanProposalRepository {
       ...(input.regenerationFeedback
         ? { p_regeneration_feedback: input.regenerationFeedback }
         : {}),
+      ...(input.replaceableSessionIds && input.replaceableSessionIds.length > 0
+        ? { p_replaceable_session_ids: [...input.replaceableSessionIds] }
+        : {}),
     });
 
     return {
@@ -252,6 +262,28 @@ export class PlanProposalRepository {
       state: data.state as PlanGenerationClaim["state"],
       proposalId: data.proposal_id ? String(data.proposal_id) : null,
     };
+  }
+
+  /**
+   * The marks one request carries, with the handles the database issued.
+   *
+   * Read back rather than computed, so the handle the coach is shown is the
+   * one `finish_plan_generation` will resolve.
+   */
+  async listReplaceableSessions(
+    generationId: string,
+  ): Promise<{ sessionId: string; handle: string }[]> {
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("plan_generation_replaceable_sessions")
+      .select("handle, session_id")
+      .eq("user_id", userId)
+      .eq("request_id", generationId);
+    if (error) throw new PlanProposalPersistenceError();
+    return (data ?? []).map((row) => ({
+      sessionId: row.session_id,
+      handle: row.handle,
+    }));
   }
 
   /** Persist a validated proposal with its minimized provenance. */
@@ -517,6 +549,7 @@ type ProposalRow = {
   regeneration_feedback: string | null;
   content: unknown;
   created_at: string;
+  generation_request_id: string;
   plan_generation_requests: {
     requested_start_date: string;
     requested_end_date: string;
@@ -532,6 +565,7 @@ type ProposalRow = {
     intent: string | null;
     expected_duration_minutes: number | null;
     rationale: string | null;
+    replaces_session_id: string | null;
   }[];
   plan_proposal_item_decisions: { ordinal: number; decision: string }[];
   plan_proposal_decisions: { decision: string } | null;
@@ -561,6 +595,7 @@ function parseProposal(row: ProposalRow): PlanProposalView {
       expectedDurationMinutes: item.expected_duration_minutes,
       rationale: item.rationale,
       contentIndex: item.content_index,
+      replacesSessionId: item.replaces_session_id,
     }))
     .sort((left, right) => left.ordinal - right.ordinal);
 
@@ -573,6 +608,7 @@ function parseProposal(row: ProposalRow): PlanProposalView {
     startDate: request?.requested_start_date ?? "",
     endDate: request?.requested_end_date ?? "",
     composedAtPlanRevision: request?.expected_plan_revision ?? 0,
+    generationId: row.generation_request_id,
     items,
     decision:
       (row.plan_proposal_decisions?.decision as PlanProposalDecision) ?? null,

@@ -129,11 +129,88 @@ describe("groupPlannedByDate", () => {
   });
 });
 
+describe("an item that would replace a planned session (ADR-024)", () => {
+  const longRun = planned({ id: "a", localDate: START, title: "Long run" });
+  const tempo = item({
+    ordinal: 0,
+    localDate: START,
+    title: "Tempo run",
+    replacesSessionId: "a",
+  });
+
+  it("names the session, and tells that session's card what would replace it", () => {
+    const [day] = build({ items: [tempo], planned: [longRun] });
+
+    expect(day.items[0].replaces).toEqual({
+      title: "Long run",
+      expectedDurationMinutes: longRun.expectedDurationMinutes,
+      available: true,
+    });
+    expect(day.replacements).toEqual({
+      a: { title: "Tempo run", isChosen: false },
+    });
+  });
+
+  it("marks the replacement chosen only for Replace", () => {
+    const chosen = build({
+      items: [{ ...tempo, decision: "staged" }],
+      planned: [longRun],
+    });
+    const beside = build({
+      items: [{ ...tempo, decision: "staged_beside" }],
+      planned: [longRun],
+    });
+
+    expect(chosen[0].replacements.a).toEqual({
+      title: "Tempo run",
+      isChosen: true,
+    });
+    // Add beside and Reject both leave the session alone.
+    expect(beside[0].replacements).toEqual({});
+  });
+
+  it.each([
+    ["logged", { logged: ["a"] }, "Long run"],
+    ["cancelled", { status: "cancelled" as const }, "Long run"],
+    ["gone", { gone: true }, null],
+  ])(
+    "no longer offers the replace once the session is %s",
+    (_label, change, title) => {
+      const [day] = build({
+        items: [tempo],
+        planned:
+          "gone" in change
+            ? []
+            : [
+                {
+                  ...longRun,
+                  status: "status" in change ? change.status : "active",
+                },
+              ],
+        loggedSessionIds: new Set("logged" in change ? change.logged : []),
+      });
+
+      expect(day.items[0].replaces).toMatchObject({ title, available: false });
+      expect(day.replacements).toEqual({});
+    },
+  );
+
+  it("leaves an item that only adds without a target", () => {
+    const [day] = build({
+      items: [item({ ordinal: 0, localDate: START })],
+      planned: [longRun],
+    });
+
+    expect(day.items[0].replaces).toBeNull();
+  });
+});
+
 function build(input: {
   items: PlanProposalItemView[];
   planned: (PlannedSessionSummary & { localDate: string })[];
   today?: string;
   recoveryDates?: string[];
+  loggedSessionIds?: ReadonlySet<string>;
 }) {
   return buildProposalTimeline({
     startDate: START,
@@ -143,6 +220,7 @@ function build(input: {
     plannedSessions: input.planned,
     plannedByDate: groupPlannedByDate(input.planned),
     recoveryDates: input.recoveryDates ?? [],
+    loggedSessionIds: input.loggedSessionIds,
   });
 }
 
@@ -161,6 +239,7 @@ function item(
     expectedDurationMinutes: 45,
     rationale: "Because.",
     contentIndex: overrides.ordinal,
+    replacesSessionId: null,
     ...overrides,
   };
 }

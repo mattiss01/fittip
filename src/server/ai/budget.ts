@@ -45,7 +45,7 @@ export const COACH_AI_FIXTURE_LIMITS: CoachAILimits = {
   // Tracks the live ceiling so a fixture run cannot accept a context the live
   // path refuses, or refuse one it accepts. The fixture rate card is zero, so
   // this number buys nothing and costs nothing here.
-  maxInputTokens: 10_000,
+  maxInputTokens: 14_000,
   maxOutputTokens: 2_000,
   deadlineMs: 30_000,
   maxAttempts: 1,
@@ -77,6 +77,14 @@ export const COACH_AI_FIXTURE_LIMITS: CoachAILimits = {
  * generation that succeeds costs what it actually used; the reduction applies
  * to the hold, and to calls that never reconcile.
  *
+ * It rose again to 14,000 on the owner's decision of 9 October 2026, when the
+ * three calls were gone through one by one and the plan call had nine tokens
+ * left: a proposal that may replace a session (ADR-024) has to show the coach
+ * the sessions on the chosen days with their minutes, and that did not fit.
+ * The same trade at a larger number: 2,000 micro-USD of held input became
+ * 2,800, a whole reservation 6,400 against the 8,000 per-request ceiling, and
+ * the daily ceiling admits 312 generations where it admitted 357.
+ *
  * These numbers are the local fast path. The authoritative ceilings are the
  * database's, in `reserve_ai_spend`, because this process cannot be trusted to
  * bound its own spending, and above both sits the product owner's provider-side
@@ -88,7 +96,7 @@ export const COACH_AI_LIVE_LIMITS: CoachAILimits = {
   maxRequestsPerOwnerWindow: 6,
   maxRequestsPerOperationWindow: 3,
   maxConcurrentRequests: 1,
-  maxInputTokens: 10_000,
+  maxInputTokens: 14_000,
   maxOutputTokens: 3_000,
   deadlineMs: 30_000,
   // Decision 5: zero automatic retries. A call that fails after the provider

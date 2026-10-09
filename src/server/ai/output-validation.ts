@@ -1138,6 +1138,14 @@ function validateSevenDayPlan(
 
   const sessions: SevenDayPlanSession[] = [];
   const perDay = new Map<string, number>();
+  // ADR-024. The handles this request issued: one per session the owner
+  // marked "can be replaced". The database holds the answer to the same set.
+  const replaceHandles = new Set(
+    context.planCommitments
+      .map((commitment) => commitment.replaceHandle)
+      .filter((handle): handle is string => typeof handle === "string"),
+  );
+  const replaced = new Set<string>();
 
   for (const entry of parsed.sessions) {
     const session = validatePlanSession(entry, { startMs, endMs });
@@ -1162,6 +1170,17 @@ function validateSevenDayPlan(
       secondaries.length + 1
     ) {
       return rejected("business_rule");
+    }
+
+    // A handle the owner never issued is a session they did not offer, and
+    // one named twice would delete one session for two. Either refuses the
+    // whole answer, as an invented goal id does.
+    const replaces = session.session.replaces;
+    if (replaces !== undefined) {
+      if (!replaceHandles.has(replaces) || replaced.has(replaces)) {
+        return rejected("business_rule");
+      }
+      replaced.add(replaces);
     }
 
     const count = (perDay.get(session.session.date) ?? 0) + 1;
@@ -1247,9 +1266,20 @@ function validatePlanSession(
       "secondaryGoalIds",
       "alternatives",
       "rationale",
+      "replaces",
     ])
   ) {
     return rejected("unknown_field");
+  }
+
+  // Null is how the strict grammar says "replaces nothing".
+  if (
+    entry.replaces !== undefined &&
+    entry.replaces !== null &&
+    (typeof entry.replaces !== "string" ||
+      !/^r[1-9][0-9]?$/.test(entry.replaces))
+  ) {
+    return rejected("schema");
   }
 
   if (
@@ -1297,6 +1327,9 @@ function validatePlanSession(
       ...(secondaryGoalIds.length > 0 ? { secondaryGoalIds } : {}),
       ...(alternatives.length > 0 ? { alternatives } : {}),
       rationale: entry.rationale,
+      ...(typeof entry.replaces === "string"
+        ? { replaces: entry.replaces }
+        : {}),
     },
   };
 }

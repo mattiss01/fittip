@@ -77,6 +77,11 @@ export type PlanGenerationInput = {
    */
   previousProposalId?: string | null;
   regenerationFeedback?: string | null;
+  /**
+   * ADR-024. The planned sessions on the chosen days that the owner marked
+   * "can be replaced". Everything else on those days stays.
+   */
+  replaceableSessionIds?: readonly string[];
 };
 
 export type PlanGenerationResult =
@@ -121,6 +126,14 @@ export async function generatePlanProposal(
     // content hash would leak by comparison.
     String(input.regenerationFeedback?.length ?? 0),
     input.previousProposalId ?? "none",
+    // Which sessions were marked is part of the question: the same key with
+    // other marks must conflict, not replay an answer about a different
+    // choice. Their ids are the owner's own and say nothing, so the first
+    // block of each is carried rather than a count that two choices can share.
+    [...(input.replaceableSessionIds ?? [])]
+      .sort()
+      .map((id) => id.slice(0, 8))
+      .join("") || "keep",
   ].join(":");
 
   const claim: PlanGenerationClaim = await proposals.beginGeneration({
@@ -132,6 +145,7 @@ export async function generatePlanProposal(
     planningNote: input.planningNote,
     previousProposalId: input.previousProposalId ?? null,
     regenerationFeedback: input.regenerationFeedback ?? null,
+    replaceableSessionIds: input.replaceableSessionIds ?? [],
   });
 
   // An uncertain same-key retry stops here. Only `claimed` — the state the
@@ -168,6 +182,12 @@ export async function generatePlanProposal(
   let binding;
   let outcome;
   try {
+    // Read back from the claim, not taken from the input: the handle the
+    // coach is shown has to be the one the database will resolve.
+    const replaceable =
+      (input.replaceableSessionIds ?? []).length === 0
+        ? []
+        : await proposals.listReplaceableSessions(claim.generationId);
     const composition = createPlanCoachAIService({
       owner: input.owner,
       spendLedger: await createAISpendRepository(),
@@ -183,6 +203,7 @@ export async function generatePlanProposal(
         planningNote: input.planningNote,
         regenerationFeedback: input.regenerationFeedback ?? null,
         previousProposal: previousPlan,
+        replaceable,
       },
     });
   } catch (error) {

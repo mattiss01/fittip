@@ -364,9 +364,12 @@ function toTrainingHistoryPlannedSession(
   completedPlanSessionIds: ReadonlySet<string>,
 ): TrainingHistoryPlannedSession {
   return {
+    // Not sent. Assembly matches the owner's marks by it (ADR-024).
+    id: session.id,
     localDate: session.localDate,
     title: session.title,
     sport: session.sport,
+    durationMinutes: session.expectedDurationMinutes ?? null,
     hasCompletion: completedPlanSessionIds.has(session.id),
     // An occurrence its rule still describes: on its rule date, content as the
     // series stamped it. An edited or moved one is its own dated entry.
