@@ -51,7 +51,7 @@ export function registerRollingPlanContract(
       subject = undefined;
     });
 
-    it("applies add, edit, move, lock, and cancellation through bounded reads", async () => {
+    it("applies add, edit, move, and cancellation through bounded reads", async () => {
       const { plan, day } = requireSubject(subject);
       const sessionId = randomUUID();
       await plan.applyChangeSet(changeSet([add(sessionId, day(1), 0)]), 0);
@@ -101,30 +101,25 @@ export function registerRollingPlanContract(
         2,
       );
       await plan.applyChangeSet(
-        changeSet([{ operation: "set_lock", sessionId, isLocked: true }]),
-        3,
-      );
-      await plan.applyChangeSet(
         changeSet([{ operation: "cancel", sessionId }]),
-        4,
+        3,
       );
 
       expect(await plan.getPlanSlice(day(1), day(1))).toEqual({
         planId: expect.any(String),
-        revision: 5,
+        revision: 4,
         sessions: [],
         recoveryDates: [],
       });
       expect(await plan.getPlanSlice(day(2), day(2))).toEqual({
         planId: expect.any(String),
-        revision: 5,
+        revision: 4,
         recoveryDates: [],
         sessions: [
           expect.objectContaining({
             id: sessionId,
             title: "Long aerobic run",
             position: 1,
-            isLocked: true,
             status: "cancelled",
             cancelledAt: expect.any(String),
           }),
@@ -159,30 +154,25 @@ export function registerRollingPlanContract(
       ]);
     });
 
-    it("deletes a locked session, and a cancelled one, when asked directly", async () => {
+    it("deletes an active session, and a cancelled one, when asked directly", async () => {
       const { plan, day } = requireSubject(subject);
-      const locked = randomUUID();
+      const active = randomUUID();
       const cancelled = randomUUID();
       await plan.applyChangeSet(
         changeSet([
-          add(locked, day(2), 0, "Locked"),
+          add(active, day(2), 0, "Active"),
           add(cancelled, day(2), 1, "Cancelled"),
         ]),
         0,
       );
       await plan.applyChangeSet(
-        changeSet([
-          { operation: "set_lock", sessionId: locked, isLocked: true },
-          { operation: "cancel", sessionId: cancelled },
-        ]),
+        changeSet([{ operation: "cancel", sessionId: cancelled }]),
         1,
       );
 
-      // A lock defends a session from a sweep, never from the owner asking for
-      // this one session by name.
       await plan.applyChangeSet(
         changeSet([
-          { operation: "delete", sessionId: locked },
+          { operation: "delete", sessionId: active },
           { operation: "delete", sessionId: cancelled },
         ]),
         2,
@@ -239,8 +229,8 @@ export function registerRollingPlanContract(
       await completeSession(cancelledThenLogged);
       const settled = await plan.getPlanSlice(day(0), day(1));
 
-      // A logged session is settled (owner, 7 Oct 2026): the lock and the
-      // cancelled state as much as the content and the day.
+      // A logged session is settled (owner, 7 Oct 2026): the cancelled state
+      // as much as the content and the day.
       const changes = [
         {
           operation: "edit",
@@ -258,7 +248,6 @@ export function registerRollingPlanContract(
           localDate: day(1),
           position: 0,
         },
-        { operation: "set_lock", sessionId: logged, isLocked: true },
         { operation: "cancel", sessionId: logged },
         { operation: "reactivate", sessionId: cancelledThenLogged },
       ];
@@ -832,8 +821,8 @@ export function registerRollingPlanContract(
       const [first, second] = (await plan.getPlanSlice(day(0), day(13)))
         .sessions;
 
-      // ADR-017 as amended on 22 September 2026: moving, locking, cancelling
-      // and reactivating leave what the occurrence says alone.
+      // ADR-017 as amended on 22 September 2026: moving, cancelling and
+      // reactivating leave what the occurrence says alone.
       await plan.applyChangeSet(
         changeSet([
           {
@@ -842,7 +831,6 @@ export function registerRollingPlanContract(
             localDate: day(1),
             position: 0,
           },
-          { operation: "set_lock", sessionId: first.id, isLocked: true },
           { operation: "cancel", sessionId: second.id },
         ]),
         2,
@@ -864,7 +852,7 @@ export function registerRollingPlanContract(
 
       const sessions = (await plan.getPlanSlice(day(0), day(13))).sessions;
       expect(sessions.find((session) => session.id === first.id)).toMatchObject(
-        { hasDiverged: false, isLocked: true, localDate: day(1) },
+        { hasDiverged: false, localDate: day(1) },
       );
       expect(
         sessions.find((session) => session.id === second.id),
@@ -903,15 +891,16 @@ export function registerRollingPlanContract(
       );
     });
 
-    it("ends a series forward, keeps a locked occurrence, and reports both", async () => {
+    it("ends a series forward, edited occurrences included, and reports it", async () => {
       const { plan, day } = requireSubject(subject);
       const seriesId = randomUUID();
       await plan.applyChangeSet(changeSet([addSeries(seriesId, day(0), 3)]), 0);
       await plan.materializeSeries(randomUUID(), 1);
       const before = (await plan.getPlanSlice(day(0), day(13))).sessions;
 
-      // day(3) is edited and day(6) is locked. Ending from day(3) must delete
-      // the edited one with the rest and leave the locked one active.
+      // day(3) is edited. Ending from day(3) must delete it with the rest:
+      // nothing but a logged occurrence is kept (owner, 9 Oct 2026, when Lock
+      // was removed).
       await plan.applyChangeSet(
         changeSet([
           {
@@ -919,7 +908,6 @@ export function registerRollingPlanContract(
             sessionId: before[1].id,
             session: { title: "Edited", sport: "Running", activities: [] },
           },
-          { operation: "set_lock", sessionId: before[2].id, isLocked: true },
         ]),
         2,
       );
@@ -934,10 +922,9 @@ export function registerRollingPlanContract(
         {
           seriesId,
           operation: "end_series",
-          // Thirty occurrences from day 3 to day 90, less the locked one.
-          deleted: 29,
+          // Thirty occurrences from day 3 to day 90.
+          deleted: 30,
           divergedDeleted: 1,
-          lockedKept: 1,
           completedKept: 0,
         },
       ]);
@@ -945,13 +932,7 @@ export function registerRollingPlanContract(
       const after = await plan.getPlanSlice(day(0), day(13));
       expect(after.sessions.map((session) => session.localDate)).toEqual([
         day(0),
-        day(6),
       ]);
-      expect(after.sessions[1]).toMatchObject({
-        id: before[2].id,
-        isLocked: true,
-        status: "active",
-      });
       // The occurrence before the effective date is untouched, field for field.
       expect(after.sessions[0]).toEqual(before[0]);
       expect(await plan.materializeSeries(randomUUID(), 4)).toMatchObject({

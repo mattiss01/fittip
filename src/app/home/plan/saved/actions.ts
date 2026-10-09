@@ -66,7 +66,7 @@ const OPERATIONS: readonly LibraryOperation[] = [
  *
  * The content is read back from the Plan on the server; the browser supplies
  * only which session. The Plan itself is not touched: no session is added,
- * moved, locked, or cancelled by saving one.
+ * moved, or cancelled by saving one.
  */
 export async function saveSessionToLibraryAction(
   previous: LibrarySaveActionState,

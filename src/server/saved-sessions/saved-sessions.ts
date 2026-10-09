@@ -9,8 +9,8 @@ import {
 } from "@/server/training/training-measurements";
 
 /**
- * The reusable half of a planned activity. A Plan lock belongs to a date, not
- * to reusable content, so it is absent here.
+ * The reusable half of a planned activity. The `isLocked` key a dated
+ * session's activity still carries (always false) is absent here.
  */
 export type SavedSessionActivity = {
   personalActivityId?: string;

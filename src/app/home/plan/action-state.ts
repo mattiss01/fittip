@@ -10,10 +10,10 @@ export const PLAN_WINDOW_DAYS = 91;
  * How far ahead a single session may be placed: owner-local today plus 180
  * (R3b-3, owner, 2 Oct 2026 - a race months away is a session, not only a
  * goal). Recurring sessions stop at `PLAN_WINDOW_DAYS`. 180 days is how far
- * the coach already reads locked sessions (ADR-013 decision 5), so a race
- * placed at the far end can reach it once the owner locks it - a new session
- * starts unlocked - and within the coach's own limit on how many entries it
- * is sent. No database function limits this; the bound is this one.
+ * ahead the coach reads single sessions (ADR-013 decision 5, as amended on
+ * 9 Oct 2026), so a race placed at the far end reaches it, within the coach's
+ * own limit on how many entries it is sent. No database function limits this;
+ * the bound is this one.
  */
 export const PLAN_PLACEMENT_DAYS = 181;
 
@@ -30,7 +30,6 @@ export type PlanOperation =
   | "edit"
   | "move"
   | "duplicate"
-  | "set_lock"
   /** Keeps the session on the record as cancelled. */
   | "cancel"
   /** Removes the session outright. Nothing is kept. */

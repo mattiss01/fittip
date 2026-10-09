@@ -59,7 +59,6 @@ export type TodaySessionView = {
   intent: string | null;
   expectedDurationMinutes: number | null;
   note: string | null;
-  isLocked: boolean;
   status: "active" | "cancelled";
   isRecurring: boolean;
   /** In plan order, each with its target in words. */
@@ -303,7 +302,6 @@ function SessionCard({
       className={logged ? styles.receipt : styles.session}
       data-today-session={session.id}
       data-cancelled={showsCancelled}
-      data-locked={session.isLocked}
     >
       <div className={logged ? styles.receiptHead : styles.sessionHead}>
         {session.completion === null ? null : (
@@ -333,10 +331,9 @@ function SessionCard({
       {logged || summary === "" ? null : (
         <p className={styles.summary}>{summary}</p>
       )}
-      {session.isRecurring || session.isLocked || showsCancelled ? (
+      {session.isRecurring || showsCancelled ? (
         <div className={styles.marks}>
           {session.isRecurring ? <span>Recurring</span> : null}
-          {session.isLocked ? <span>Locked</span> : null}
           {showsCancelled ? <span>Cancelled, kept on the record</span> : null}
         </div>
       ) : null}

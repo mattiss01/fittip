@@ -386,8 +386,8 @@ span.arrow {
 }
 
 .cardTitle {
-  /* Narrow enough that a locked card's "45 min, Locked" still sits beside
-     its title; only a longer detail goes underneath. */
+  /* Narrow enough that a card's "45 min" still sits beside its title; only
+     a longer detail goes underneath. */
   flex: 1 1 4.5rem;
   min-width: 0;
   overflow: hidden;
@@ -543,7 +543,6 @@ span.arrow {
   --ledger-wash: var(--sage);
   --plan-today: var(--ember);
   --plan-recovery: var(--recovery);
-  --plan-locked: #8b341f;
   position: fixed;
   z-index: 55;
   inset: 0;

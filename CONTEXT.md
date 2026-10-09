@@ -56,8 +56,10 @@ date but is not itself constrained to a horizon.
 _Avoid_: detailed plan version, short plan, schedule, program
 
 **Planned session**:
-One intended training session on one date in the rolling training plan. It may
-be locked, meaning later planning must not move or replace it.
+One intended training session on one date in the rolling training plan. A
+session the owner placed stays until they change it: a coach's plan proposal
+adds sessions and replaces none. Lock, which once marked a session as not to be
+moved or replaced, was removed on 9 October 2026.
 _Avoid_: workout, event, entry
 
 **Saved session**:
@@ -76,8 +78,8 @@ carry an explicit exception.
 _Avoid_: generated row, recurrence copy, event
 
 **Plan change set**:
-One owner-approved group of Plan additions, edits, moves, cancellations, locks,
-or recurrence changes that succeeds or fails as one action.
+One owner-approved group of Plan additions, edits, moves, cancellations, or
+recurrence changes that succeeds or fails as one action.
 _Avoid_: plan version, save, mutation batch
 
 **Recovery day**:
@@ -142,8 +144,9 @@ _Avoid_: adjusting, correcting, tweaking
 
 **Replanning**:
 Proposing reviewed changes to future content already represented in the rolling
-training plan. Past training, completed sessions, and locked future content are
-never changed by replanning.
+training plan. Past training and completed sessions are never changed by
+replanning, and a future session is replaced only where the owner allowed it
+for that proposal. Not built: a proposal cannot yet replace a session.
 _Avoid_: rescheduling, adapting, re-proposing, replan (as a noun)
 
 **Boundary**:

@@ -50,7 +50,6 @@ const OPERATIONS: readonly PlanOperation[] = [
   "edit",
   "move",
   "duplicate",
-  "set_lock",
   "cancel",
   "delete",
   "reactivate",
@@ -365,7 +364,7 @@ function buildChanges(
   }
   if (operation === "duplicate") {
     const localDate = readPlannableDate(formData.get("localDate"), window);
-    // A copy of the content under a new identity. It carries no lock and no
+    // A copy of the content under a new identity. It carries no
     // history, and the owner chooses its date.
     return [
       {
@@ -387,15 +386,6 @@ function buildChanges(
             return activity;
           }),
         },
-      },
-    ];
-  }
-  if (operation === "set_lock") {
-    return [
-      {
-        operation,
-        sessionId: session.id,
-        isLocked: readBoolean(formData.get("isLocked")),
       },
     ];
   }
@@ -558,11 +548,6 @@ function stringValue(value: FormDataEntryValue | null): string {
 }
 
 function savedCopy(operation: PlanOperation, formData: FormData): string {
-  if (operation === "set_lock") {
-    return formData.get("isLocked") === "true"
-      ? "Session locked."
-      : "Session unlocked.";
-  }
   if (operation === "set_recovery_day") {
     return formData.get("isRecoveryDay") === "true"
       ? "Recovery day set."

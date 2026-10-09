@@ -301,7 +301,6 @@ export function SessionPage({
   const recurringView = {
     id: session.id,
     occurrenceDate: recurring?.occurrenceDate ?? "",
-    isLocked: session.isLocked,
     title: session.title,
     sport: session.sport,
     intent: session.intent,
@@ -355,7 +354,6 @@ export function SessionPage({
 
       <article
         className={page.card}
-        data-locked={session.isLocked}
         data-cancelled={cancelled}
         aria-labelledby="session-title"
       >
@@ -381,7 +379,6 @@ export function SessionPage({
           {session.hasDiverged ? (
             <span data-mark="changed">Changed</span>
           ) : null}
-          {session.isLocked ? <span data-mark="locked">Locked</span> : null}
           {cancelled ? <span>Cancelled</span> : null}
           {session.log ? (
             <span data-mark="logged" data-outcome={session.log.outcome}>
@@ -472,18 +469,6 @@ export function SessionPage({
                     }}
                   >
                     Save to library
-                  </MenuItem>
-                  <MenuItem
-                    disabled={busy}
-                    onSelect={() => {
-                      close();
-                      submit({
-                        operation: "set_lock",
-                        isLocked: session.isLocked ? "false" : "true",
-                      });
-                    }}
-                  >
-                    {session.isLocked ? "Unlock" : "Lock"}
                   </MenuItem>
                   <MenuItem
                     onSelect={() => {
@@ -628,8 +613,8 @@ export function SessionPage({
                 defaultValue={session.localDate}
               />
               <p className={styles.consequenceStandalone}>
-                The copy is a new session. It starts unlocked and carries none
-                of this session&rsquo;s history.
+                The copy is a new session. It carries none of this
+                session&rsquo;s history.
               </p>
               <button className={styles.primary} type="submit" disabled={busy}>
                 Duplicate session

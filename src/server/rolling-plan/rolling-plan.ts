@@ -17,6 +17,12 @@ export type RollingPlanActivityInput = {
   instructions?: string;
   measurementMode: TrainingMeasurementMode;
   target?: TrainingMeasurement;
+  /**
+   * Always false, here and on a session. Lock was removed on 9 Oct 2026
+   * (owner): nothing sets the flag and nothing reads it. The key stays because
+   * the database's payload validators still require it; it goes with the
+   * columns (`NEXT.md`).
+   */
   isLocked: boolean;
 };
 
@@ -39,8 +45,8 @@ export type RollingPlanSessionInput = RollingPlanSessionContent & {
 export type RollingPlanWeekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 /**
- * A series template's activity. It carries no Plan lock for the same reason a
- * saved session's does not: a lock belongs to a dated session, not to a rule.
+ * A series template's activity. The stored template never had the `isLocked`
+ * key a dated session's activity still carries.
  */
 export type RollingPlanSeriesActivityInput = Omit<
   RollingPlanActivityInput,
@@ -105,7 +111,6 @@ export type RollingPlanChange =
       localDate: string;
       position: number;
     }
-  | { operation: "set_lock"; sessionId: string; isLocked: boolean }
   /**
    * Keeps the session on the record as cancelled. It may say why; the reason
    * is written beside the session, never into it (see `session-cancellation`).
@@ -118,9 +123,7 @@ export type RollingPlanChange =
   /**
    * The hard delete beside the cancel. It keeps nothing: the row goes and a
    * dated change entry naming no session is what remains. An already cancelled
-   * session is a legitimate target, and a lock does not refuse it - F-005's
-   * amendment of 19 August 2026 makes a lock a defence against a sweep, not
-   * against the owner's own deliberate individual act.
+   * session is a legitimate target.
    */
   | { operation: "delete"; sessionId: string }
   /**
@@ -174,18 +177,17 @@ export type RollingPlanSlice = {
 
 /**
  * What one series operation did to the occurrences already on the Plan.
- * `lockedKept` is the count a locked occurrence saved from removal, which the
- * owner has to be told about because nothing else on the Plan will show it.
- * `completedKept` is the same for an occurrence that already carries a
- * completion (M3-15A). The two never count the same occurrence: a locked one is
- * reported as locked whether or not it was also completed.
+ * `completedKept` is the count an occurrence that already carries a completion
+ * saved from removal (M3-15A), which the owner has to be told about because
+ * nothing else on the Plan will show it. Nothing else is kept: the database's
+ * receipt still names `lockedKept`, always 0 since 9 Oct 2026, and it is not
+ * read.
  */
 export type RollingPlanSeriesEffect = {
   seriesId: string;
   operation: "edit_series" | "end_series";
   deleted: number;
   divergedDeleted: number;
-  lockedKept: number;
   completedKept: number;
 };
 
@@ -503,11 +505,6 @@ function parseChange(value: unknown): RollingPlanChange {
         localDate: readIsoDate(record.localDate),
         position: readInteger(record.position, 0, 99),
       };
-    case "set_lock":
-      assertOnlyKeys(record, ["operation", "sessionId", "isLocked"]);
-      if (typeof record.isLocked !== "boolean")
-        throw new RollingPlanValidationError();
-      return { operation, sessionId, isLocked: record.isLocked };
     case "cancel": {
       assertOnlyKeys(record, ["operation", "sessionId", "reason"]);
       let reason;
@@ -560,7 +557,7 @@ function parseSeries(value: unknown): RollingPlanSeriesInput {
   const positions = new Set<number>();
   const activities = record.activities.map((activity) => {
     const raw = readRecord(activity);
-    // A template activity carries no Plan lock, so naming one is a mistake
+    // A template activity has no `isLocked` key, so naming one is a mistake
     // rather than something to quietly normalize away.
     if ("isLocked" in raw) throw new RollingPlanValidationError();
     const { isLocked, ...parsed } = parseActivity({ ...raw, isLocked: false });
@@ -675,13 +672,14 @@ function parseSession(value: unknown, withPlacement: boolean) {
     activities,
   };
   if (!withPlacement) return content;
-  if (typeof record.isLocked !== "boolean")
-    throw new RollingPlanValidationError();
+  // Lock is gone (owner, 9 Oct 2026): the key is still required by the
+  // database, and a session can only be added with it false.
+  if (record.isLocked !== false) throw new RollingPlanValidationError();
   return {
     ...content,
     localDate: readIsoDate(record.localDate),
     position: readInteger(record.position, 0, 99),
-    isLocked: record.isLocked,
+    isLocked: false,
   };
 }
 
@@ -696,9 +694,8 @@ function parseSession(value: unknown, withPlacement: boolean) {
  *
  * `position` is the array's order. The editor reorders by moving rows, so the
  * order *is* the intent, and a submitted position could only agree with it or
- * lie. `isLocked` is always false — the owner's 24 Sep 2026 decision, resting
- * on replanning being unable to reach an existing session at all, so a
- * per-activity lock guards nothing and no surface offers one.
+ * lie. `isLocked` is always false — the owner's 24 Sep 2026 decision for an
+ * activity, and since 9 Oct 2026 true of a session too.
  */
 export function parseSubmittedActivities(
   value: unknown,

@@ -23,7 +23,7 @@ const MONTH_CELLS = 42;
  * A month at a time, for reaching a week that is far away (owner, 2 Oct 2026):
  * the week strip shows how full each week is, and this is the way to a race in
  * five months without stepping there. A day says only whether it holds a
- * session. Lock, recovery, cancelled and logged are the week's to show, so
+ * session. Recovery, cancelled and logged are the week's to show, so
  * there is one place that states them and nothing here to keep in step.
  *
  * Choosing a day shows its week and closes the sheet. It does not open the

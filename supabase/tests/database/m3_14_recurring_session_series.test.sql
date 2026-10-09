@@ -634,9 +634,10 @@ select 'a-end', * from public.apply_rolling_plan_change_set(
 
 select is(
   (select series_effects->0->>'deleted' from change_receipt where label = 'a-end'),
-  -- Day 4 to day 90 every second day is 44 occurrences; one is locked.
-  '43',
-  'ending the segment deletes every unlocked occurrence from the effective date on'
+  -- Day 4 to day 90 every second day is 44 occurrences. One is locked, and
+  -- since 9 Oct 2026 (`lock_no_longer_read`) a lock keeps nothing.
+  '44',
+  'ending the segment deletes every occurrence from the effective date on'
 );
 select is(
   (select series_effects->0->>'divergedDeleted' from change_receipt where label = 'a-end'),
@@ -647,23 +648,22 @@ select is(
 );
 select is(
   (select series_effects->0->>'lockedKept' from change_receipt where label = 'a-end'),
-  '1',
-  'and how many locked ones it deliberately left alone'
+  '0',
+  'and no longer leaves a locked one alone'
 );
-select ok(
-  (select is_locked and status = 'active' from public.rolling_plan_sessions
+select is(
+  (select count(*)::bigint from public.rolling_plan_sessions
    where series_id = '7d000000-0000-4000-8000-0000000000a1'
      and occurrence_date = pg_temp.owner_day(8)::date),
-  'a locked occurrence survives the removal and stays active'
+  0::bigint,
+  'a locked occurrence is removed with the rest'
 );
 select is(
   (select array_agg(occurrence_date order by occurrence_date)
    from public.rolling_plan_sessions
    where series_id = '7d000000-0000-4000-8000-0000000000a1'),
-  array[
-    pg_temp.owner_day(0), pg_temp.owner_day(2), pg_temp.owner_day(8)
-  ]::date[],
-  'nothing before the effective date is swept, and nothing after it but the lock survives'
+  array[pg_temp.owner_day(0), pg_temp.owner_day(2)]::date[],
+  'nothing before the effective date is swept, and nothing after it survives'
 );
 select is(
   (select count(*)::bigint from snapshot before
@@ -683,7 +683,7 @@ select is(
 select is(
   (select count(*)::bigint from public.rolling_plan_change_entries
    where change_kind = 'delete' and user_id = '7d000000-0000-4000-8000-000000000001'),
-  43::bigint,
+  44::bigint,
   'each deletion leaves one delete change entry'
 );
 select ok(
@@ -706,7 +706,7 @@ select is(
    where change_kind = 'delete'
      and user_id = '7d000000-0000-4000-8000-000000000001'
      and jsonb_array_length(before_state->'activities') = 1),
-  42::bigint,
+  43::bigint,
   'the untouched occurrences kept their copied activity in the record'
 );
 select is(

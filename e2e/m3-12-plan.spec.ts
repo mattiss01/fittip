@@ -28,7 +28,7 @@ const localEnvironmentReady = Boolean(
 test.describe("M3-12 manual continuous planning", () => {
   test.skip(!localEnvironmentReady, "requires the local Supabase environment");
 
-  test("plans, edits, moves, duplicates, locks and cancels at 390x844", async ({
+  test("plans, edits, moves, duplicates and cancels at 390x844", async ({
     page,
     request,
   }, testInfo) => {
@@ -168,16 +168,11 @@ test.describe("M3-12 manual continuous planning", () => {
       ).toBeVisible();
       await expect(page.getByText("Running · 95 min")).toBeVisible();
 
-      // Lock, then unlock, in one tap each. A lock never blocks the owner's
-      // own edits.
-      await chooseMore(page, "Lock");
+      // Lock was removed on 9 Oct 2026: the session says nothing of one, and
+      // m3-14b asserts the menu's exact entries.
       await expect(
-        sessionSheet(page).getByText("Locked", { exact: true }),
-      ).toBeVisible();
-      await chooseMore(page, "Unlock");
-      await expect(
-        sessionSheet(page).getByText("Locked", { exact: true }),
-      ).toBeHidden();
+        sessionSheet(page).getByText(/\b(un)?lock(ed)?\b/i),
+      ).toHaveCount(0);
 
       // Duplicate to tomorrow, then move the copy on a day. A session's date
       // is a field on the edit form, so moving one is saving an edit.

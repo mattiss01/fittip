@@ -164,7 +164,6 @@ function toPlannedView(completion: Completion): PlannedSnapshotView | null {
     intent: snapshot.intent ?? null,
     expectedDurationMinutes: snapshot.expectedDurationMinutes ?? null,
     note: snapshot.note ?? null,
-    isLocked: snapshot.isLocked,
     status: snapshot.status,
     isRecurring: snapshot.seriesId !== null,
     activities: snapshot.activities.map((activity) => ({

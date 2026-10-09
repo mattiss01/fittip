@@ -17,7 +17,6 @@ export type PlanSessionView = {
   intent: string | null;
   expectedDurationMinutes: number | null;
   note: string | null;
-  isLocked: boolean;
   status: "active" | "cancelled";
   /** The rows the edit form binds, and the list the card prints. */
   activities: ActivityValue[];

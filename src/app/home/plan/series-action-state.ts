@@ -37,7 +37,6 @@ export function summarizeSkippedDates(skipped: SeriesSkippedDate[]): {
 export type SeriesEffectView = {
   deleted: number;
   divergedDeleted: number;
-  lockedKept: number;
   completedKept: number;
 };
 

@@ -175,7 +175,6 @@ function planned(
     title: "Planned",
     sport: "Running",
     expectedDurationMinutes: 60,
-    isLocked: false,
     status: "active",
     intent: null,
     note: null,

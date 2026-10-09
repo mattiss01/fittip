@@ -234,7 +234,6 @@ function parseSeriesEffects(value: unknown): RollingPlanSeriesEffect[] {
       ) ||
       !isInteger(effect.deleted, 0) ||
       !isInteger(effect.divergedDeleted, 0) ||
-      !isInteger(effect.lockedKept, 0) ||
       !isInteger(effect.completedKept, 0)
     ) {
       throw new RollingPlanPersistenceError();
@@ -244,7 +243,6 @@ function parseSeriesEffects(value: unknown): RollingPlanSeriesEffect[] {
       operation: effect.operation,
       deleted: effect.deleted,
       divergedDeleted: effect.divergedDeleted,
-      lockedKept: effect.lockedKept,
       completedKept: effect.completedKept,
     };
   });

@@ -192,8 +192,8 @@ function SavedSessionCard({
                 defaultValue={dateRange.first}
               />
               <p className={styles.consequence}>
-                The plan gets a new session copied from this entry. It starts
-                unlocked, and later changes here will not reach it.
+                The plan gets a new session copied from this entry. Later
+                changes here will not reach it.
               </p>
               <button
                 className={styles.primary}

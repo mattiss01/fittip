@@ -10,7 +10,6 @@
 .page {
   --plan-today: var(--ember);
   --plan-recovery: var(--recovery);
-  --plan-locked: #8b341f;
 }
 
 .manager {
@@ -99,11 +98,9 @@
 }
 
 /*
- * Four controls since M3-19 - Edit, Cancel, Delete and the lock - so they pair
- * off two to a row instead of sharing one. At 390px a four-across row would put
- * every label below the comfortable tap target, and the narrow-screen override
- * that used to give the lock its own full-width row would now leave Delete
- * alone beside a gap, so both are gone and one grid serves every width.
+ * Controls pair off two to a row instead of sharing one. At 390px a
+ * four-across row would put every label below the comfortable tap target, so
+ * one grid serves every width.
  */
 .cardActions {
   display: grid;

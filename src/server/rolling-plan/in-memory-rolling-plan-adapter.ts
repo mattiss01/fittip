@@ -170,9 +170,9 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
       existing !== undefined && existing < closed ? existing : closed;
     /**
      * ADR-017's removal rule in one place, as the database keeps it in one
-     * function: a locked occurrence is kept and left active, a date that has
-     * already passed is never in scope, and everything else of that segment
-     * from the effective date onward goes, edited or not.
+     * function: a date that has already passed is never in scope, and
+     * everything of that segment from the effective date onward goes, edited
+     * or not. A lock kept an occurrence until 9 Oct 2026 and no longer does.
      */
     const sweep = (
       seriesId: string,
@@ -181,7 +181,6 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
     ) => {
       let deleted = 0;
       let divergedDeleted = 0;
-      let lockedKept = 0;
       for (const session of [...next.values()]) {
         if (
           session.seriesId !== seriesId ||
@@ -189,10 +188,6 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
           session.occurrenceDate < fromDate ||
           session.localDate < today
         ) {
-          continue;
-        }
-        if (session.isLocked) {
-          lockedKept += 1;
           continue;
         }
         next.delete(session.id);
@@ -204,7 +199,6 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
         operation,
         deleted,
         divergedDeleted,
-        lockedKept,
         // This plan holds no completions, so nothing here can be kept for
         // carrying one. The Postgres adapter is where that survivor exists.
         completedKept: 0,
@@ -325,7 +319,7 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
         continue;
       }
       // The one operation that removes a row. It takes a cancelled session as
-      // readily as an active one, ignores the lock, and refuses only what
+      // readily as an active one and refuses only what
       // `apply_rolling_plan_change_set` refuses: a past date, then a session
       // whose completion would be left measuring nothing. The order matters,
       // because it is the order the owner sees the two refusals in.
@@ -394,8 +388,6 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
         current.localDate = requirePlannable(change.localDate);
         current.position = change.position;
         touchedDates.add(change.localDate);
-      } else if (change.operation === "set_lock") {
-        current.isLocked = change.isLocked;
       } else {
         current.status = "cancelled";
         current.cancelledAt = "2000-01-01T00:00:00.000Z";

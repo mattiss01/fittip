@@ -97,7 +97,6 @@ function session(overrides: Partial<PlanSessionView> = {}): PlanSessionView {
     intent: null,
     expectedDurationMinutes: 60,
     note: null,
-    isLocked: false,
     status: "active",
     activities: [],
     seriesId: null,

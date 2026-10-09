@@ -172,7 +172,6 @@ function toSessionView(
     intent: session.intent ?? null,
     expectedDurationMinutes: session.expectedDurationMinutes ?? null,
     note: session.note ?? null,
-    isLocked: session.isLocked,
     status: session.status,
     isRecurring: session.seriesId !== null,
     activities: session.activities

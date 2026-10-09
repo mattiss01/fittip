@@ -146,7 +146,7 @@ describe("reusing a library entry in the Plan", () => {
     });
   });
 
-  it("starts unlocked and carries neither the library identity nor its name", () => {
+  it("carries neither the library identity nor its name", () => {
     const input = toRollingPlanSessionInput(
       { ...savedSession, activities: [] },
       "2026-08-21",
@@ -231,7 +231,7 @@ describe("building a series template from a library entry", () => {
     });
   });
 
-  it("takes no date, no position, and no Plan lock from the library entry", () => {
+  it("takes no date, no position, and no `isLocked` key from the library entry", () => {
     const template = toRollingPlanSeriesInput(savedSession, {
       ...rule,
       weekdays: [1, 4],
@@ -239,7 +239,6 @@ describe("building a series template from a library entry", () => {
     for (const key of ["id", "name", "revision", "localDate", "position"]) {
       expect(template).not.toHaveProperty(key);
     }
-    // A lock belongs to a dated session. The rule stamps out unlocked ones.
     expect(template.activities[0]).not.toHaveProperty("isLocked");
   });
 

@@ -48,7 +48,7 @@ import { changePlanAction, confirmPlanTimezoneAction } from "./actions";
 import { INITIAL_TIMEZONE_ACTION_STATE } from "./action-state";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import { ProfileValidationError } from "@/server/repositories/profile-repository";
-import { ROADMAP_FORWARD_LOCKED_WINDOW_DAYS } from "@/server/training/training-history-context";
+import { FORWARD_PLAN_WINDOW_DAYS } from "@/server/training/training-history-context";
 import {
   RollingPlanConflictError,
   RollingPlanRuleError,
@@ -126,7 +126,7 @@ describe("plan actions", () => {
     ]);
   });
 
-  it("duplicates content under a new identity, unlocked and undated by the source", async () => {
+  it("duplicates content under a new identity, undated by the source", async () => {
     const applyChangeSet = vi.fn().mockResolvedValue({ result: "applied" });
     createPlanMock.mockResolvedValue({
       getPlanSlice: vi.fn().mockResolvedValue(slice()),
@@ -369,11 +369,11 @@ describe("plan actions", () => {
     expect(applyChangeSet).not.toHaveBeenCalled();
   });
 
-  it("places a single session exactly as far as the coach reads a locked one", () => {
-    // ADR-013 decision 5 reads locked sessions through today plus this many
+  it("places a single session exactly as far as the coach reads one", () => {
+    // ADR-013 decision 5 reads single sessions through today plus this many
     // days. A race placed on the last day the Plan allows must be one the
     // coach can be sent, so the two numbers move together or not at all.
-    expect(PLAN_PLACEMENT_DAYS - 1).toBe(ROADMAP_FORWARD_LOCKED_WINDOW_DAYS);
+    expect(PLAN_PLACEMENT_DAYS - 1).toBe(FORWARD_PLAN_WINDOW_DAYS);
   });
 
   it.each([

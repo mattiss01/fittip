@@ -21,7 +21,6 @@ export type PlannedSessionSummary = {
   title: string;
   sport: string;
   expectedDurationMinutes: number | null;
-  isLocked: boolean;
   status: "active" | "cancelled";
   /**
    * M3-16B. The edit form inside review is the plan's own, so it needs every

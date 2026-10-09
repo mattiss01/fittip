@@ -31,7 +31,6 @@ export type PlannedSnapshotView = {
   intent: string | null;
   expectedDurationMinutes: number | null;
   note: string | null;
-  isLocked: boolean;
   status: "active" | "cancelled";
   isRecurring: boolean;
   activities: PlannedActivityView[];
@@ -105,7 +104,6 @@ export function CompletionRecord({ completion, planned }: Props) {
           <div className={styles.marks}>
             <span>{planned.sport}</span>
             {planned.isRecurring ? <span>Recurring</span> : null}
-            {planned.isLocked ? <span>Locked</span> : null}
             {planned.status === "cancelled" ? (
               <span>Cancelled, kept on the record</span>
             ) : null}

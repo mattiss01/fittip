@@ -160,7 +160,6 @@ test.describe("M3-13 private saved-session library", () => {
         reuseDate,
         "Longer threshold intervals",
       );
-      await expect(copy.getByText("Locked")).toBeHidden();
       // The copy carries both activities, listed on its own page.
       await copy
         .getByRole("link", { name: "Longer threshold intervals", exact: true })

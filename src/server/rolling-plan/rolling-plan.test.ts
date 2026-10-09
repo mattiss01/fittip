@@ -48,6 +48,53 @@ describe("rolling plan interface validation", () => {
     ).rejects.toThrow(RollingPlanValidationError);
   });
 
+  it("refuses to add a locked session, since nothing sets a lock", async () => {
+    const plan = new RollingPlan(
+      new InMemoryRollingPlanAdapter({ timezoneName: CONTRACT_TIMEZONE }),
+    );
+    const add = (isLocked: boolean) =>
+      plan.applyChangeSet(
+        {
+          idempotencyKey: "75000000-0000-4000-8000-000000000103",
+          provenance: "owner_manual",
+          changes: [
+            {
+              operation: "add",
+              sessionId: "75000000-0000-4000-8000-000000000201",
+              session: {
+                localDate: "2126-08-20",
+                position: 0,
+                title: "Long run",
+                sport: "Running",
+                isLocked,
+                activities: [],
+              },
+            },
+          ],
+        },
+        0,
+      );
+
+    await expect(add(true)).rejects.toThrow(RollingPlanValidationError);
+    // The retired operation is refused as any unknown one is.
+    await expect(
+      plan.applyChangeSet(
+        {
+          idempotencyKey: "75000000-0000-4000-8000-000000000104",
+          provenance: "owner_manual",
+          changes: [
+            {
+              operation: "set_lock",
+              sessionId: "75000000-0000-4000-8000-000000000201",
+              isLocked: true,
+            },
+          ],
+        } as never,
+        0,
+      ),
+    ).rejects.toThrow(RollingPlanValidationError);
+  });
+
   it("refuses every change while the owner has no stored zone", async () => {
     const plan = new RollingPlan(new InMemoryRollingPlanAdapter());
     await expect(

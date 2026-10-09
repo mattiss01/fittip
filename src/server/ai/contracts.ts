@@ -98,12 +98,11 @@ export type CoachAIMissedSessionReference = {
   sport: string;
 };
 
-/** Planned future state under ADR-013 decision 5, with its lock state. */
+/** Planned future state under ADR-013 decision 5. */
 export type CoachAIPlanCommitmentReference = {
   localDate: string;
   title: string;
   sport: string;
-  isLocked: boolean;
 };
 
 /**
