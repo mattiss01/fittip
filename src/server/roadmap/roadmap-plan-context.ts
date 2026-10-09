@@ -2,6 +2,7 @@ import "server-only";
 
 import { CoachAIError } from "@/server/ai/errors";
 import type {
+  CoachAICurrentRoadmapReference,
   CoachAIRoadmapContext,
   CoachAIRoadmapPhase,
   CoachAIRoadmapPhaseSummary,
@@ -385,6 +386,43 @@ function coveredDays(
     return 0;
   }
   return Math.round((endMs - startMs) / 86_400_000) + 1;
+}
+
+/**
+ * ADR-023 decision 8: an accepted roadmap as a *new roadmap* is told of it.
+ *
+ * A different reduction from the one above, for a different reader. The plan
+ * coach is given the phase it is planning inside, in full. A roadmap coach is
+ * planning the months themselves, so it is given only where the athlete is in
+ * the roadmap they follow: its title and dates, and each phase's title and
+ * dates. No focus, no goal attention, no milestone, no summary.
+ *
+ * Trimmed and counted when it does not fit, never refused: the roadmap is not
+ * something the owner shortens in order to ask for another. The earliest
+ * phases go first. What the next roadmap continues from is where the athlete
+ * is and what was still to come, not how the old one began.
+ */
+export function buildCurrentRoadmapReference(
+  roadmap: RoadmapProposal,
+  maxBytes: number,
+): CoachAICurrentRoadmapReference {
+  const phases = roadmap.phases.map((phase) => ({
+    title: phase.title,
+    startDate: phase.startDate,
+    endDate: phase.endDate,
+  }));
+  for (let withheld = 0; withheld <= phases.length; withheld += 1) {
+    const reference: CoachAICurrentRoadmapReference = {
+      title: roadmap.title,
+      startDate: roadmap.startDate,
+      endDate: roadmap.endDate,
+      phases: phases.slice(withheld),
+      phasesWithheld: withheld,
+    };
+    if (byteLength(JSON.stringify(reference)) <= maxBytes) return reference;
+  }
+  // A title alone past the allocation: a configuration defect, not the owner's.
+  throw new CoachAIError("context_invalid");
 }
 
 function fits(context: CoachAIRoadmapContext): boolean {

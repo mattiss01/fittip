@@ -7,6 +7,7 @@ import {
   type CoachAIPreviousPlanReference,
   type SevenDayPlanProposal,
 } from "@/server/ai/contracts";
+import { COACH_AI_CONTEXT_LIMITS } from "@/server/ai/context";
 import { CoachAIError } from "@/server/ai/errors";
 import type { CoachAIOwner } from "@/server/ai/owner";
 import { logMemoryCandidateFailure } from "@/server/proposal-logging/memory-candidate-batch";
@@ -295,6 +296,21 @@ async function recordMemoryCandidates(
  * A seven-day plan reduces to well under it; the ceiling exists for the day
  * that stops being true, and it refuses rather than silently truncates.
  */
+/**
+ * Whether a proposal can travel back to the coach as the one being replaced.
+ *
+ * Asked before a review is closed. Assembly makes the same check, but it runs
+ * after "ask again" has already finished the review, so a proposal too large
+ * to send was found out only once it could no longer be reopened.
+ */
+export function previousPlanFits(content: SevenDayPlanProposal): boolean {
+  return (
+    new TextEncoder().encode(JSON.stringify(reducePreviousPlan(content)))
+      .length <=
+    COACH_AI_CONTEXT_LIMITS.create_seven_day_plan.bytes.previousProposal
+  );
+}
+
 function reducePreviousPlan(
   content: SevenDayPlanProposal,
 ): CoachAIPreviousPlanReference {

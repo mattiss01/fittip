@@ -60,10 +60,15 @@ than being cut silently.
 ### The roadmap call
 
 6. Minutes on recurring rules and on dated sessions.
-7. Thirty dated sessions, not twelve, so a race months out is not cut by nearer sessions.
-8. A short form of the accepted roadmap in force: its title, dates, and each phase's title
-   and dates. No phase prose, by the owner's rule of 20 September 2026. A new roadmap then
-   continues from where the owner is.
+7. Thirty dated sessions, not twelve, in 4,400 bytes with the rules, so a race months out
+   is not cut by nearer sessions.
+8. A short form of the accepted roadmap in force, as `currentRoadmap`: its title, dates,
+   and each phase's title and dates. No phase prose, by the owner's rule of 20 September
+   2026. A new roadmap then continues from where the owner is. 1,200 bytes; the earliest
+   phases are left out and counted when it does not fit, never refused. A roadmap whose
+   last day has passed is not sent: it is not what the owner is following. The new
+   roadmap is not recorded as planned under the old one. A phase title is the coach's
+   own wording, as the titles the plan call already reads of other phases are.
 9. The owner may choose its first day (shipped on 9 October 2026 with the plan's).
 
 ### The plan call
@@ -71,7 +76,15 @@ than being cut silently.
 10. What planned sessions mean, their minutes inside the chosen days, a replace handle for
     one the owner offered, and thirty entries: shipped with ADR-024.
 11. Minutes on dated sessions outside the chosen days too.
-12. Logs get the roadmap's 10,200 bytes, so all twenty fit.
+12. Logs get 9,300 bytes, where they had 5,800. At the test corpus's usual log of 392
+    bytes all twenty fit, and eighteen at its largest of 501; a log with a note as long as
+    a note may be is about 700, and thirteen of those fit. The owner decided "the
+    roadmap's 10,200"; 900 fewer is what lets the plan's total hold the sum of its parts
+    under 15,000 tokens, so that no request can be refused without a source being named.
+    The rejected plan gives up 500 bytes for the same reason and holds its largest legal
+    case in one-byte characters (5,797 of 5,900); one written in a three-byte script can
+    pass it, and "ask again" then says so before it closes the review, where the check
+    used to run only after the proposal was gone.
 13. Dated sessions are read 28 days past the last planned day, not 180. A race in three
     weeks shapes this week; one in five months is the roadmap's job.
 
@@ -101,20 +114,21 @@ than being cut silently.
 
 Characters, at four to a token, with every source at its allocation:
 
-| Call | Before 9 Oct | After decisions 1 to 5 | After all of it (estimated) |
+| Call | Before 9 Oct | After decisions 1 to 5 | After all of it |
 | --- | --- | --- | --- |
-| Roadmap | 39,764 | 51,964 (12,991 tokens) | 56,060 (14,015) |
-| Plan | 39,964 | 52,764 (13,191) | 57,710 (14,428) |
-| Fill | 39,464 | 48,664 (12,166) | 56,310 (14,078) |
+| Roadmap | 39,764 | 51,964 (12,991 tokens) | 56,714 (14,179), as built |
+| Plan | 39,964 | 52,764 (13,191) | 59,964 (14,991), as built |
+| Fill | 39,464 | 48,664 (12,166) | 56,310 (14,078), estimated |
 
-The middle column is asserted by `openai-prompt.test.ts`. The last is an estimate from
-field limits; the merge that ships each call's part replaces it with a measured figure.
+These are the allocations added up with the prompt's budget, not a recording of a
+request: what a call can be at most. `openai-prompt.test.ts` asserts the figures as built.
+The fill call's last figure is an estimate from field limits until its merge.
 
-For the plan call these figures use its `total`, which is below the sum of its parts
-(47,200 bytes against 44,000), as it was before this ADR. Every part at its allocation at
-once would be about 14,100 tokens today and over 15,000 with decision 12. No request has
-come near it, and the refusal it would raise names no source; decision 12's merge settles
-it rather than this one.
+The plan call's figure is the ceiling by construction. Its `total` used to be below the
+sum of its parts, on the reasoning that no request fills every part at once, and the
+refusal that would then fire named no source. Since decision 12's merge the total holds
+every part and the envelope, which leaves the plan nine tokens: a longer plan prompt or a
+new plan source takes its bytes from an existing one.
 
 ## Delivery
 

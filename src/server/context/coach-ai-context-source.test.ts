@@ -487,6 +487,7 @@ describe("the production coaching context source", () => {
           id: SERIES_ID,
           title: "Club run",
           sport: "Running",
+          durationMinutes: expect.toBeOneOf([expect.any(Number), null]),
           frequency: "weekly",
           intervalCount: 1,
           weekdays: [1, 4],
@@ -500,6 +501,7 @@ describe("the production coaching context source", () => {
         {
           title: "Club run",
           sport: "Running",
+          durationMinutes: expect.toBeOneOf([expect.any(Number), null]),
           frequency: "weekly",
           intervalCount: 1,
           weekdays: ["Monday", "Thursday"],
@@ -611,7 +613,9 @@ describe("the production coaching context source", () => {
   });
 
   it("names fewer sources for the plan operation, whose byte budget is smaller", async () => {
-    const long = "x".repeat(390);
+    // 9,700 bytes against the roadmap's 10,200 since ADR-023: one log apart
+    // when each is as long as a note allows.
+    const long = "x".repeat(400);
     const records = Array.from({ length: 20 }, (_, index) =>
       completion({
         id: `75000000-0000-4000-8000-0000000000${(index + 16).toString(16)}`,

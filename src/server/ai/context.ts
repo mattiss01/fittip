@@ -30,7 +30,10 @@ import {
   selectCoachProfileContext,
   type CoachProfileRecords,
 } from "@/server/profile/coach-profile-context";
-import { buildRoadmapPlanContext } from "@/server/roadmap/roadmap-plan-context";
+import {
+  buildCurrentRoadmapReference,
+  buildRoadmapPlanContext,
+} from "@/server/roadmap/roadmap-plan-context";
 import {
   buildSessionDetailContext,
   type SessionDetailRecords,
@@ -86,6 +89,7 @@ export type CoachAIContextSourceName =
   | "regeneration_feedback"
   | "previous_proposal"
   | "roadmap"
+  | "current_roadmap"
   | "session_detail"
   | "whole_context";
 
@@ -186,6 +190,12 @@ export type CoachAIContextLimits = {
      */
     roadmap: number;
     /**
+     * ADR-023 decision 8. The roadmap in force, as a new roadmap is told of
+     * it: trimmed to this with the loss counted, never denied. Zero for every
+     * operation except `create_roadmap`.
+     */
+    currentRoadmap: number;
+    /**
      * A7-2. Trims rather than denies, like the roadmap: every list inside it is
      * reduced to its share of `SESSION_DETAIL_BYTES` with the loss counted.
      * Zero for every operation except `fill_session_activities`.
@@ -276,17 +286,14 @@ export type CoachAIContextLimits = {
  * from before that day; this is what holds now, and `context.test.ts` and
  * `openai-prompt.test.ts` assert it:
  *
- *   roadmap  prefix 7,300 + wrapper 64 + context 44,600 = 51,964  12,991 tokens
- *   plan     prefix 8,700 + wrapper 64 + context 44,000 = 52,764  13,191 tokens
+ *   roadmap  prefix 7,800 + wrapper 64 + context 48,850 = 56,714  14,179 tokens
+ *   plan     prefix 8,700 + wrapper 64 + context 51,200 = 59,964  14,991 tokens
  *   fill     prefix 7,300 + wrapper 64 + context 41,300 = 48,664  12,166 tokens
  *
- * The plan's `total` is below the sum of its parts (47,200), as it was before
- * this day (38,400 against 35,100): a rejected plan and a reduced roadmap at
- * their allocations at once is a context no request has come near. If one ever
- * does, the refusal names `whole_context`, which nobody can act on; the plan's
- * part of ADR-023 is where that is settled.
- *
- * The room left under 15,000 is for the per-call parts of ADR-023 that follow.
+ * The roadmap and plan lines include their own parts of ADR-023 (decisions 6
+ * to 8 and 11 to 13). The plan's `total` now holds the sum of its parts, which
+ * it did not before; the comment on it says what that took. The fill line is
+ * still only the shared part, and its own part has the rest of its room.
  */
 export const COACH_AI_CONTEXT_LIMITS = {
   create_roadmap: {
@@ -294,7 +301,9 @@ export const COACH_AI_CONTEXT_LIMITS = {
     maxHistoricalGoals: 8,
     maxMemoryItems: 20,
     maxTrainingSessions: 20,
-    maxPlanCommitments: 12,
+    // 12 in 1,400 bytes until ADR-023 decisions 6 and 7: a race months out
+    // was cut by a dozen nearer sessions, and each entry now carries minutes.
+    maxPlanCommitments: 30,
     maxRecurringSessions: MAX_RECURRING_SESSIONS,
     bytes: {
       athlete: 200,
@@ -307,16 +316,19 @@ export const COACH_AI_CONTEXT_LIMITS = {
       memory: 5_600,
       trainingHistory: 15_400,
       trainingHistoryCompletions: 10_200,
-      planCommitments: 1_400,
+      planCommitments: 4_400,
       planningNote: 1_200,
       regenerationFeedback: 600,
       previousProposal: 2_200,
       // A roadmap is not planned against itself.
       roadmap: 0,
+      // Six phases of 80-character titles with their dates are about 1,020.
+      currentRoadmap: 1_200,
       sessionDetail: 0,
       // 33,700 until ADR-023, which added the athlete, the training setup and
-      // 6,000 more for goals, with 100 for the two new keys.
-      total: 44_600,
+      // 6,000 more for goals, with 100 for the two new keys. Then 3,000 more
+      // for planned sessions and 1,250 for the roadmap in force and its key.
+      total: 48_850,
     },
   },
   // M3-03 kept every number M3-02 provisionally set here, and this comment
@@ -377,8 +389,13 @@ export const COACH_AI_CONTEXT_LIMITS = {
       targetableGoals: 8_000,
       historicalGoals: 1_600,
       memory: 5_600,
-      trainingHistory: 11_000,
-      trainingHistoryCompletions: 5_800,
+      // 11,000 and 5,800 until ADR-023 decision 12: about a dozen of the
+      // twenty logs fitted. 9,300 holds twenty at the corpus mean of 392 bytes
+      // and eighteen at the corpus worst of 501; a log with a full 400-
+      // character note is about 700, and thirteen of those fit. The roadmap's
+      // 10,200 would have put the whole past the ceiling (see `total`).
+      trainingHistory: 14_500,
+      trainingHistoryCompletions: 9_300,
       planCommitments: 4_000,
       planningNote: 1_200,
       regenerationFeedback: 600,
@@ -394,10 +411,26 @@ export const COACH_AI_CONTEXT_LIMITS = {
       // context is 8,589 bytes of the pool below, so 6,400 here still leaves
       // room many times over. `context.test.ts` measures the legal worst case
       // against this number rather than trusting the arithmetic.
-      previousProposal: 6_400,
+      //
+      // 5,900 since ADR-023: the legal worst case in ASCII measures 5,797,
+      // and the 500 it gives back is part of what lets `total` hold every
+      // part. A rejected plan in a script of three bytes a character can pass
+      // it; `previousPlanFits` says so before "ask again" closes the review.
+      previousProposal: 5_900,
       roadmap: 4_000,
+      currentRoadmap: 0,
       sessionDetail: 0,
-      total: 44_000,
+      // The sum of the parts (50,200) and 1,000 for the envelope (817 at its
+      // largest), whose
+      // largest piece is twelve goal ids outside the horizon. Until ADR-023
+      // decision 12 this was below the sum, on the reasoning that no request
+      // fills every part at once; the refusal that would then fire named no
+      // source. It cannot fire now before a part has named itself, and the
+      // whole is exactly the ceiling:
+      //
+      //   prefix 8,700 + wrapper 64 + context 51,200 = 59,964 characters
+      //   ceil(59,964 / 4) = 14,991  against  maxInputTokens 15,000
+      total: 51_200,
     },
   },
   // A7-2, within ADR-020. One session rather than a horizon, so the plan's
@@ -439,11 +472,18 @@ export const COACH_AI_CONTEXT_LIMITS = {
       regenerationFeedback: 0,
       previousProposal: 0,
       roadmap: 0,
+      currentRoadmap: 0,
       sessionDetail: 16_000,
       total: 41_300,
     },
   },
 } as const satisfies Record<CoachAIOperation, CoachAIContextLimits>;
+
+/**
+ * ADR-023 decision 13: how far past the last planned day the plan operation
+ * reads dated sessions.
+ */
+export const PLAN_FORWARD_DAYS_PAST_HORIZON = 28;
 
 /** The days of training history `fill_session_activities` reads: this week. */
 export const SESSION_DETAIL_HISTORY_DAYS = 7;
@@ -672,9 +712,9 @@ export function buildCoachAIContext(
 
   // M3-16B. The gate on the one record the source hands over whole: what
   // reaches a provider is this reduction and never `records.roadmapVersion`.
-  // Guarded by operation here as well as at the source, so a source that
-  // supplied one for `create_roadmap` still sends nothing — two independent
-  // refusals, because this is the file that decides what a request carries.
+  // Guarded by operation here as well as at the source: the plan gets this
+  // reduction, a new roadmap gets only the outline further down (ADR-023
+  // decision 8), and a fill gets neither whatever a source handed in.
   //
   // The goals it is checked against are the targetable ones, which is the same
   // set `accept_roadmap_proposal` recognizes for a goal source: active or
@@ -692,6 +732,21 @@ export function buildCoachAIContext(
           horizonEndDate: compose.horizonEndDate,
           targetableGoalIds: new Set(goals.targetable.map((goal) => goal.id)),
         });
+
+  // ADR-023 decision 8. Only a new roadmap is told of the one in force, and
+  // only its outline; the plan reads the reduction above instead.
+  const currentRoadmap =
+    operation !== "create_roadmap"
+      ? undefined
+      : // One that has ended is not what the athlete is following, and the
+        // prompt says "now". The goals and the logs carry on from it.
+        records.roadmapVersion &&
+          records.roadmapVersion.content.endDate >= records.today
+        ? buildCurrentRoadmapReference(
+            records.roadmapVersion.content,
+            limits.bytes.currentRoadmap,
+          )
+        : null;
 
   // ADR-023: the outcome travels on a goal the athlete is working toward,
   // not on one already achieved.
@@ -732,7 +787,7 @@ export function buildCoachAIContext(
       // context has one shape whether or not anything was marked.
       ...(operation === "create_seven_day_plan"
         ? {
-            planCommitmentDetail: {
+            commitmentDetail: {
               replaceHandles: new Map(
                 (compose.replaceable ?? []).map((mark) => [
                   mark.sessionId,
@@ -740,8 +795,11 @@ export function buildCoachAIContext(
                 ]),
               ),
             },
+            forwardDaysPastHorizon: PLAN_FORWARD_DAYS_PAST_HORIZON,
           }
-        : {}),
+        : operation === "create_roadmap"
+          ? { commitmentDetail: {} }
+          : {}),
     },
   );
 
@@ -781,6 +839,8 @@ export function buildCoachAIContext(
     ...(limits.maxRecurringSessions > 0
       ? { recurringSessions: training.recurringSessions }
       : {}),
+    // Keyed off the operation, for the reason the rules above are.
+    ...(currentRoadmap === undefined ? {} : { currentRoadmap }),
     hasSafetySignal: training.hasSafetySignal,
     planningNote: assertBounded(
       compose.planningNote,
@@ -818,6 +878,7 @@ export function buildCoachAIContext(
     regeneration_feedback: jsonBytes(context.regenerationFeedback),
     previous_proposal: jsonBytes(context.previousProposal),
     roadmap: jsonBytes(context.roadmap),
+    current_roadmap: jsonBytes(context.currentRoadmap),
     session_detail: jsonBytes(context.sessionDetail),
   };
 
@@ -879,6 +940,11 @@ export function buildCoachAIContext(
   // ladder and the budget disagree. A configuration defect, not something the
   // owner did, and it should fail loudly rather than send more than the budget.
   refuseOver(usage.roadmap, limits.bytes.roadmap, "roadmap");
+  refuseOver(
+    usage.current_roadmap,
+    limits.bytes.currentRoadmap,
+    "current_roadmap",
+  );
   // The same class again: every list inside was already fitted to its share.
   refuseOver(
     usage.session_detail,

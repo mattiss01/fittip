@@ -130,11 +130,11 @@ export type CoachAIMissedSessionReference = {
 /**
  * Planned future state under ADR-013 decision 5.
  *
- * The last two fields travel for `create_seven_day_plan` only, and only on a
- * session inside the days being planned (ADR-024): how long it is, and the
- * handle the coach may name to replace it when the owner marked it "can be
- * replaced". The key is absent rather than null everywhere else, so what the
- * roadmap sends is byte for byte what it sent before.
+ * `durationMinutes` travels on every entry of the roadmap and the plan
+ * (ADR-023 decisions 6 and 11). `replaceHandle` travels for
+ * `create_seven_day_plan` only, and only on a session inside the days being
+ * planned (ADR-024): the handle the coach may name to replace it when the
+ * owner marked it "can be replaced". Elsewhere its key is absent, not null.
  */
 export type CoachAIPlanCommitmentReference = {
   localDate: string;
@@ -154,6 +154,8 @@ export type CoachAIPlanCommitmentReference = {
 export type CoachAIRecurringSessionReference = {
   title: string;
   sport: string;
+  /** ADR-023 decision 6: how long one occurrence is, or null. */
+  durationMinutes: number | null;
   frequency: "daily" | "weekly";
   intervalCount: number;
   /** Weekly only; `null` for a daily rule. */
@@ -161,6 +163,21 @@ export type CoachAIRecurringSessionReference = {
   startDate: string;
   /** `null` when the series has no end. */
   endDate: string | null;
+};
+
+/**
+ * ADR-023 decision 8: the roadmap the owner is following, as a new roadmap is
+ * told of it. Titles and dates only. What a phase was for is model-authored
+ * prose, and by the owner's rule of 20 September 2026 none of that leaves for
+ * a phase the athlete is not being planned in.
+ */
+export type CoachAICurrentRoadmapReference = {
+  title: string;
+  startDate: string;
+  endDate: string;
+  phases: { title: string; startDate: string; endDate: string }[];
+  /** Phases left out to fit, earliest first. Zero is the ordinary case. */
+  phasesWithheld: number;
 };
 
 export type CoachAIWeekdayName =
@@ -328,6 +345,11 @@ export type CoachAIContext = {
    * the field existed.
    */
   recurringSessions?: CoachAIRecurringSessionReference[];
+  /**
+   * Present for `create_roadmap` only, and absent rather than null for every
+   * other operation. Null when the owner has accepted no roadmap yet.
+   */
+  currentRoadmap?: CoachAICurrentRoadmapReference | null;
   /** True when any eligible completion carries one of the four safety flags. */
   hasSafetySignal: boolean;
   planningNote: string | null;

@@ -8,7 +8,9 @@ const {
   createMemoryMock,
   createCompletionLogMock,
   createRollingPlanMock,
+  createRoadmapMock,
 } = vi.hoisted(() => ({
+  createRoadmapMock: vi.fn(),
   createSpendLedgerMock: vi.fn(),
   compositionInputSpy: vi.fn(),
   createProfileMock: vi.fn(),
@@ -48,6 +50,13 @@ vi.mock("@/server/repositories/rolling-plan-repository", async (original) => {
   return { ...actual, createRollingPlan: createRollingPlanMock };
 });
 
+// ADR-023 decision 8: the context source reads the roadmap in force for a new
+// roadmap too. None is accepted yet in these tests.
+vi.mock("@/server/repositories/roadmap-repository", async (original) => {
+  const actual =
+    await original<typeof import("@/server/repositories/roadmap-repository")>();
+  return { ...actual, createRoadmapRepository: createRoadmapMock };
+});
 vi.mock("@/server/repositories/ai-spend-repository", () => ({
   createAISpendRepository: createSpendLedgerMock,
 }));
@@ -132,6 +141,9 @@ describe("generateRoadmapProposal", () => {
     });
     createCompletionLogMock.mockResolvedValue({
       list: vi.fn().mockResolvedValue([]),
+    });
+    createRoadmapMock.mockResolvedValue({
+      getCurrentVersion: vi.fn().mockResolvedValue(null),
     });
     createRollingPlanMock.mockResolvedValue({
       getPlanSlice: vi

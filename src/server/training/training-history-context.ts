@@ -39,7 +39,8 @@ export const TRAINING_HISTORY_WINDOW_DAYS = 56;
  *   `toCompletionReference` — which drops the id, the timezone and the revision
  *   number, and reduces activities to names — the 24 corpus sessions serialize
  *   to 323-501 bytes, mean 392. The second figure is the one the byte budget
- *   counts, and `context.ts` sizes the completion sub-budget at 20 x 501.
+ *   counts, and `context.ts` sizes the roadmap's completion sub-budget at
+ *   20 x 501. The plan's is smaller; its own comment says why.
  * - The ADR's drafted 2,000-character `note` allowance is 2,000 bytes for one
  *   session. Twenty sessions at that allowance is 40,000 bytes for one field —
  *   more than the entire context ceiling — so the drafted number cannot coexist
@@ -61,6 +62,7 @@ export const REPLACEMENT_DESCRIPTION_MAX_LENGTH = 240;
  * Lock is gone (owner), so nothing marks one entry out there above another.
  */
 export const FORWARD_PLAN_WINDOW_DAYS = 180;
+/** The default; both operations that send any now set their own (30). */
 export const MAX_PLAN_COMMITMENTS = 12;
 /**
  * Decision 5 as amended on 2 October 2026: the most recurring series sent as
@@ -94,7 +96,7 @@ export type TrainingHistoryPlannedSession = {
   localDate: string;
   title: string;
   sport: string;
-  /** Sent only where `planCommitmentDetail` asks for it. */
+  /** Sent only where `commitmentDetail` asks for it. */
   durationMinutes?: number | null;
   /** True when a completion references this planned session. */
   hasCompletion: boolean;
@@ -111,6 +113,8 @@ export type TrainingHistorySeries = {
   id: string;
   title: string;
   sport: string;
+  /** One occurrence's expected minutes (ADR-023 decision 6). */
+  durationMinutes?: number | null;
   frequency: "daily" | "weekly";
   intervalCount: number;
   /** Weekly only: 0 is Sunday through 6 is Saturday. */
@@ -186,11 +190,20 @@ export function selectTrainingHistoryContext(
      */
     maxRecurringSessions?: number;
     /**
-     * ADR-024, the plan operation only. A session inside the days being
-     * planned is sent with its minutes and, when the owner marked it, the
-     * handle the coach may name to replace it. Absent, no entry gains a key.
+     * The roadmap and the plan. Every dated entry is sent with its minutes
+     * (ADR-023 decisions 6 and 11). With `replaceHandles`, which only the
+     * plan passes, an entry inside the days being planned also carries the
+     * handle the coach may name to replace it, or null (ADR-024). Absent, no
+     * entry gains a key.
      */
-    planCommitmentDetail?: { replaceHandles: ReadonlyMap<string, string> };
+    commitmentDetail?: { replaceHandles?: ReadonlyMap<string, string> };
+    /**
+     * ADR-023 decision 13, the plan only: entries past the last planned day
+     * are read this many days further and no more. A race in three weeks
+     * shapes the week; one in five months is the roadmap's to aim at. The
+     * `forwardWindowDays` bound from today still holds as well.
+     */
+    forwardDaysPastHorizon?: number;
   } = {},
 ): TrainingHistorySelection {
   const windowDays = limits.windowDays ?? TRAINING_HISTORY_WINDOW_DAYS;
@@ -247,7 +260,12 @@ export function selectTrainingHistoryContext(
   // and beyond it the entries no series rule describes, within the bounded
   // forward window. An unchanged occurrence out there is one of thirteen weeks
   // of identical lines, and the roadmap already has its series as a rule.
-  const forwardLimit = addDays(records.today, forwardDays);
+  const fromToday = addDays(records.today, forwardDays);
+  const fromHorizon =
+    limits.forwardDaysPastHorizon === undefined
+      ? fromToday
+      : addDays(records.horizonEndDate, limits.forwardDaysPastHorizon);
+  const forwardLimit = fromHorizon < fromToday ? fromHorizon : fromToday;
   const horizonStartDate = records.horizonStartDate ?? records.today;
   const isBeforeHorizon = (entry: TrainingHistoryPlannedSession) =>
     entry.localDate < horizonStartDate;
@@ -271,21 +289,25 @@ export function selectTrainingHistoryContext(
     );
   const byteBudget = limits.maxPlanCommitmentBytes ?? Number.POSITIVE_INFINITY;
   const costOf = (value: unknown) => byteLength(JSON.stringify(value)) + 1;
-  const detail = limits.planCommitmentDetail;
+  const detail = limits.commitmentDetail;
   const toPlanCommitmentReference = (
     entry: TrainingHistoryPlannedSession,
   ): CoachAIPlanCommitmentReference => {
     const reference = toDatedReference(entry);
+    if (detail === undefined) return reference;
+    const timed = {
+      ...reference,
+      durationMinutes: entry.durationMinutes ?? null,
+    };
     if (
-      detail === undefined ||
+      detail.replaceHandles === undefined ||
       entry.localDate < horizonStartDate ||
       entry.localDate > records.horizonEndDate
     ) {
-      return reference;
+      return timed;
     }
     return {
-      ...reference,
-      durationMinutes: entry.durationMinutes ?? null,
+      ...timed,
       replaceHandle:
         (entry.id === undefined
           ? undefined
@@ -450,8 +472,9 @@ const WEEKDAY_NAMES: readonly CoachAIWeekdayName[] = [
 ];
 
 /**
- * Copies exactly the fields the amendment enumerates. The series' intent,
- * note, expected duration and activities are not eligible and are not read.
+ * Copies exactly the fields the amendments enumerate: the rule, the title, the
+ * sport and, since ADR-023, one occurrence's expected minutes. The series'
+ * intent, note and activities are not eligible and are not read.
  */
 function toRecurringSessionReference(
   entry: TrainingHistorySeries,
@@ -459,6 +482,7 @@ function toRecurringSessionReference(
   return {
     title: entry.title.slice(0, 120),
     sport: entry.sport.slice(0, 80),
+    durationMinutes: entry.durationMinutes ?? null,
     frequency: entry.frequency,
     intervalCount: entry.intervalCount,
     weekdays:
