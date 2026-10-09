@@ -5,6 +5,7 @@ import styles from "./proposal.module.css";
 import { CoachSpark } from "@/components/home/coach-spark";
 import { PLAN_PROPOSAL_COPY } from "@/lib/plan/plan-proposal-copy";
 import {
+  isStagedDecision,
   isExampleProposal,
   stagedItemCount,
 } from "@/lib/plan/plan-proposal-view";
@@ -60,7 +61,7 @@ export function FinishedProposal({ proposal }: { proposal: PlanProposalView }) {
                   </h3>
                   <span className={styles.badge} data-kind={item.decision}>
                     <CoachSpark size={13} />
-                    {item.decision === "staged"
+                    {isStagedDecision(item.decision)
                       ? COPY.stagedBadge
                       : item.decision === "rejected"
                         ? COPY.rejectedBadge

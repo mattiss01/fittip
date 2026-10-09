@@ -50,6 +50,7 @@ import type { ProposalRoadmapView } from "@/lib/plan/plan-proposal-view";
  * rendered and what a form would submit, not about React's transition.
  */
 
+const COPY = PLAN_PROPOSAL_COPY;
 const PROPOSAL_ID = "9c000000-0000-4000-8000-000000000001";
 const SESSION_ID = "9c000000-0000-4000-8000-000000000010";
 
@@ -80,6 +81,7 @@ function day(
     planned: [planned()],
     isRecoveryDay: false,
     items: [],
+    replacements: {},
     ...overrides,
   };
 }
@@ -106,6 +108,74 @@ function renderReview(
     />,
   );
 }
+
+describe("an item that would replace a planned session (ADR-024)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useActionStateMock.mockImplementation(
+      (_action: unknown, initial: unknown) => [initial, vi.fn(), false],
+    );
+  });
+
+  afterEach(cleanup);
+
+  const replacing = (available: boolean) => ({
+    ordinal: 0,
+    kind: "session" as const,
+    localDate: "2026-09-21",
+    decision: "proposed" as const,
+    title: "Tempo run",
+    sport: "Running",
+    intent: null,
+    expectedDurationMinutes: 50,
+    rationale: null,
+    contentIndex: 0,
+    replacesSessionId: SESSION_ID,
+    replaces: { title: "Easy run", expectedDurationMinutes: 45, available },
+  });
+
+  it("offers Replace and Add beside, and says what it replaces", () => {
+    renderReview({
+      days: [
+        day({
+          items: [replacing(true)],
+          replacements: {
+            [SESSION_ID]: { title: "Tempo run", isChosen: false },
+          },
+        }),
+      ],
+    });
+
+    expect(
+      screen.getByRole("button", {
+        name: COPY.replaceActionFor("Tempo run", "Easy run"),
+      }),
+    ).toHaveAttribute("value", "staged");
+    expect(
+      screen.getByRole("button", {
+        name: COPY.besideActionFor("Tempo run", "Easy run"),
+      }),
+    ).toHaveAttribute("value", "staged_beside");
+    expect(screen.getByText("Easy run, 45 min")).toBeVisible();
+    expect(
+      screen.getByText(COPY.plannedMayBeReplaced("Tempo run")),
+    ).toBeVisible();
+  });
+
+  it("falls back to a plain add once the session can no longer be replaced", () => {
+    renderReview({ days: [day({ items: [replacing(false)] })] });
+
+    expect(
+      screen.getByRole("button", { name: COPY.stageActionFor("Tempo run") }),
+    ).toHaveAttribute("value", "staged");
+    expect(
+      screen.queryByRole("button", {
+        name: COPY.besideActionFor("Tempo run", "Easy run"),
+      }),
+    ).toBeNull();
+    expect(screen.getByText(COPY.replaceUnavailable("Easy run"))).toBeVisible();
+  });
+});
 
 describe("editing a planned session inside review", () => {
   beforeEach(() => {

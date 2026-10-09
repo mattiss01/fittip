@@ -682,3 +682,59 @@
   font-size: 0.85rem;
   line-height: 1.45;
 }
+
+/* The sessions already on the chosen days, each with its "can be replaced"
+   tick (9 Oct 2026). */
+.plannedList {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.plannedList legend {
+  padding: 0;
+  font-weight: 600;
+}
+
+.plannedList ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.plannedList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0;
+  border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.plannedTitle {
+  display: grid;
+  min-width: 0;
+}
+
+.plannedMeta {
+  font-size: 0.8125rem;
+  opacity: 0.72;
+}
+
+.plannedChoice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  flex: none;
+  font-size: 0.875rem;
+}
+
+.plannedChoice input {
+  width: 1.25rem;
+  height: 1.25rem;
+}

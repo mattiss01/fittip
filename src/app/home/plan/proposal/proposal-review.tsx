@@ -15,7 +15,9 @@ import {
 import styles from "./proposal.module.css";
 import type {
   PlannedSessionSummary,
+  ProposalReplacement,
   ProposalTimelineDay,
+  ProposalTimelineItem,
 } from "./proposal-timeline";
 
 import { INITIAL_PLAN_ACTION_STATE } from "../action-state";
@@ -26,7 +28,6 @@ import { CoachSpark } from "@/components/home/coach-spark";
 import { PLAN_PROPOSAL_COPY } from "@/lib/plan/plan-proposal-copy";
 import type {
   PlanProposalItemDecision,
-  PlanProposalItemView,
   ProposalRoadmapView,
 } from "@/lib/plan/plan-proposal-view";
 
@@ -172,6 +173,7 @@ export function ProposalReview({
                   session={session}
                   expectedPlanRevision={expectedPlanRevision}
                   isPast={day.isPast}
+                  replacement={day.replacements[session.id] ?? null}
                 />
               ))}
 
@@ -334,10 +336,13 @@ function PlannedSession({
   session,
   expectedPlanRevision,
   isPast,
+  replacement,
 }: {
   session: PlannedSessionSummary;
   expectedPlanRevision: number;
   isPast: boolean;
+  /** The proposed session that would replace this one, if any still can. */
+  replacement: ProposalReplacement | null;
 }) {
   const [state, action, pending] = useActionState(
     changePlanAction,
@@ -368,6 +373,13 @@ function PlannedSession({
           .filter(Boolean)
           .join(" · ")}
       </p>
+      {replacement === null ? null : (
+        <p className={styles.body} data-replacement={replacement.isChosen}>
+          {replacement.isChosen
+            ? COPY.plannedWillBeReplaced(replacement.title)
+            : COPY.plannedMayBeReplaced(replacement.title)}
+        </p>
+      )}
 
       {cancelled || isPast ? (
         isPast && !cancelled ? (
@@ -449,7 +461,7 @@ function ProposedItem({
   item,
 }: {
   proposalId: string;
-  item: PlanProposalItemView;
+  item: ProposalTimelineItem;
 }) {
   const [state, action, pending] = useActionState(
     decidePlanProposalItemAction,
@@ -458,6 +470,11 @@ function ProposedItem({
 
   const isRecoveryDay = item.kind === "recovery_day";
   const title = isRecoveryDay ? COPY.recoveryDayTitle : (item.title ?? "");
+  // A session it can still stand in for. Once that session is logged,
+  // cancelled or gone, the finish adds this one and deletes nothing, so the
+  // choices fall back to the ordinary two and the card says why.
+  const replaceable = item.replaces?.available ? item.replaces : null;
+  const oldTitle = replaceable?.title ?? "";
 
   return (
     <article className={styles.proposed} data-decision={item.decision}>
@@ -466,10 +483,14 @@ function ProposedItem({
         <span className={styles.badge} data-kind={item.decision}>
           <CoachSpark size={13} />
           {item.decision === "staged"
-            ? COPY.stagedBadge
-            : item.decision === "rejected"
-              ? COPY.rejectedBadge
-              : COPY.proposedBadge}
+            ? replaceable
+              ? COPY.replaceBadge
+              : COPY.stagedBadge
+            : item.decision === "staged_beside"
+              ? COPY.besideBadge
+              : item.decision === "rejected"
+                ? COPY.rejectedBadge
+                : COPY.proposedBadge}
         </span>
       </header>
 
@@ -487,6 +508,23 @@ function ProposedItem({
               .filter(Boolean)
               .join(" · ")}
           </p>
+          {item.replaces === null ? null : replaceable ? (
+            <p className={styles.rationale} data-replaces="available">
+              <span className={styles.sectionLabel}>{COPY.replacesLabel}</span>{" "}
+              {[
+                replaceable.title,
+                replaceable.expectedDurationMinutes === null
+                  ? null
+                  : `${replaceable.expectedDurationMinutes} min`,
+              ]
+                .filter(Boolean)
+                .join(", ")}
+            </p>
+          ) : (
+            <p className={styles.rationale} data-replaces="unavailable">
+              {COPY.replaceUnavailable(item.replaces.title)}
+            </p>
+          )}
           {item.intent === null ? null : (
             <p className={styles.body}>{item.intent}</p>
           )}
@@ -506,13 +544,36 @@ function ProposedItem({
       >
         <input type="hidden" name="proposalId" value={proposalId} />
         <input type="hidden" name="ordinal" value={item.ordinal} />
-        <ChoiceButton
-          decision="staged"
-          current={item.decision}
-          pending={pending}
-          label={COPY.stageAction}
-          accessibleLabel={COPY.stageActionFor(title)}
-        />
+        {replaceable ? (
+          <>
+            <ChoiceButton
+              decision="staged"
+              current={item.decision}
+              pending={pending}
+              label={COPY.replaceAction}
+              accessibleLabel={COPY.replaceActionFor(title, oldTitle)}
+            />
+            <ChoiceButton
+              decision="staged_beside"
+              current={item.decision}
+              pending={pending}
+              label={COPY.besideAction}
+              accessibleLabel={COPY.besideActionFor(title, oldTitle)}
+            />
+          </>
+        ) : (
+          <ChoiceButton
+            decision="staged"
+            // "Add beside" chosen before the session went away is the same
+            // outcome as this button now.
+            current={
+              item.decision === "staged_beside" ? "staged" : item.decision
+            }
+            pending={pending}
+            label={COPY.stageAction}
+            accessibleLabel={COPY.stageActionFor(title)}
+          />
+        )}
         <ChoiceButton
           decision="rejected"
           current={item.decision}

@@ -233,6 +233,96 @@ test.describe("M3-16A plan proposal review", () => {
       await deleteLocalUser(request, account.userId);
     }
   });
+
+  // ADR-024. A session stays unless the owner ticks it, and a ticked one is
+  // swapped for the coach's only when the review is finished.
+  test("replaces a session the owner ticked at 390x844", async ({
+    page,
+    request,
+  }) => {
+    const pageErrors: Error[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+    const consoleErrors = watchConsoleErrors(page);
+    const account = await createConfirmedLocalUser(request);
+
+    try {
+      await signIn(page, account.email, account.password);
+      await page.goto("/home/plan");
+      await page
+        .getByRole("button", { name: `Use ${TIMEZONE}` })
+        .click()
+        .catch(() => {
+          // Already confirmed; nothing to do.
+        });
+      await addGoal(page, "Run a half marathon");
+      await page.goto("/home/plan");
+      await addSession(page, ownerToday(), "Club track night");
+
+      await page.goto("/home/plan/proposal");
+      await page.getByLabel("Days to plan").fill("3");
+      // Listed because it is on the chosen days, and it stays by default.
+      const tick = page.getByRole("checkbox", {
+        name: "Club track night can be replaced",
+      });
+      await expect(tick).not.toBeChecked();
+      await tick.check();
+      await page.getByRole("button", { name: "Ask the coach" }).click();
+
+      await expect(
+        page.getByRole("region", { name: "What the coach proposed" }),
+      ).toBeVisible({ timeout: 30_000 });
+
+      // The example coach stands its first session in for the ticked one, and
+      // both cards say so. Nothing has changed on the plan yet.
+      await expect(page.getByText("Club track night, 75 min")).toBeVisible();
+      await expect(
+        page.getByText(
+          "You said this can be replaced. Easy aerobic session would take its place.",
+        ),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", {
+          name: "Add Easy aerobic session beside Club track night",
+        }),
+      ).toBeVisible();
+
+      await page
+        .getByRole("button", {
+          name: "Replace Club track night with Easy aerobic session",
+        })
+        .click();
+      await expect(
+        page.getByText("Will replace", { exact: true }),
+      ).toBeVisible();
+      const rejects = page.getByRole("button", { name: /^Reject / });
+      await rejects.nth(1).click();
+      await expect(
+        page.getByText(
+          /1 item still needs a choice|One item still needs a choice/,
+        ),
+      ).toBeVisible();
+      await rejects.nth(2).click();
+
+      const finish = page.getByRole("button", { name: "Finish review" });
+      await expect(finish).toBeEnabled();
+      await finish.click();
+      await expect(
+        page.getByText("Review finished. One item was added to your plan."),
+      ).toBeVisible({ timeout: 30_000 });
+
+      // The swap happened whole: the coach's session is there and the owner's
+      // is gone.
+      await page.getByRole("link", { name: "Back to plan" }).last().click();
+      await expect(page).toHaveURL(/\/home\/plan$/);
+      await expect(page.getByText("Easy aerobic session")).toHaveCount(1);
+      await expect(page.getByText("Club track night")).toHaveCount(0);
+
+      expect(pageErrors).toEqual([]);
+      expect(consoleErrors.errors).toEqual([]);
+    } finally {
+      await deleteLocalUser(request, account.userId);
+    }
+  });
 });
 
 /** The same steps `m2-01-goals.spec.ts` uses, because the surface is theirs. */

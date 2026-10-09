@@ -33,6 +33,14 @@ export const PLAN_PROPOSAL_COPY = {
   startDateLabel: "First day",
   startDateRange: `Between today and ${COACH_START_MAX_DAYS_AHEAD} days from now.`,
   dayCountLabel: "Days to plan",
+  /* What is already on the chosen days (owner, 9 Oct 2026). Everything stays
+     unless it is ticked. */
+  plannedHeading: "Already planned on these days",
+  plannedSupport:
+    "Each stays in your plan unless you tick it. The coach may replace a ticked one.",
+  plannedNone: "Nothing is planned on these days yet.",
+  replaceableLabel: "Can be replaced",
+  replaceableLabelFor: (title: string) => `${title} can be replaced`,
   planningNoteLabel: "Anything the coach should account for? (optional)",
   generateAction: "Ask the coach",
   generateSupport: "Nothing enters your plan until you finish the review.",
@@ -102,6 +110,8 @@ export const PLAN_PROPOSAL_COPY = {
   roadmapStaleLead: "Worth knowing:",
   proposedBadge: "Proposed",
   stagedBadge: "Will be added",
+  replaceBadge: "Will replace",
+  besideBadge: "Will be added beside",
   rejectedBadge: "Rejected",
   cancelledBadge: "Cancelled",
   recoveryDayTitle: "Recovery day",
@@ -110,6 +120,23 @@ export const PLAN_PROPOSAL_COPY = {
   recoveryDayAlreadyBadge: "Already a recovery day",
 
   stageAction: "Add to plan",
+  /* A proposed session that stands in for one the owner marked "can be
+     replaced" (9 Oct 2026). Replace swaps the two when the review is
+     finished; Add beside keeps the owner's session. */
+  replaceAction: "Replace",
+  besideAction: "Add beside",
+  replaceActionFor: (title: string, old: string) =>
+    `Replace ${old} with ${title}`,
+  besideActionFor: (title: string, old: string) => `Add ${title} beside ${old}`,
+  replacesLabel: "Replaces:",
+  replaceUnavailable: (old: string | null) =>
+    old === null
+      ? "The session this would have replaced is no longer on your plan. Adding it adds it on its own."
+      : `It can no longer replace ${old}, which has been logged or cancelled since. Adding it keeps ${old}.`,
+  plannedMayBeReplaced: (title: string) =>
+    `You said this can be replaced. ${title} would take its place.`,
+  plannedWillBeReplaced: (title: string) =>
+    `${title} takes its place when you finish the review.`,
   rejectAction: "Reject",
   resetAction: "Undecided",
   stageActionFor: (title: string) => `Add ${title} to plan`,

@@ -98,11 +98,22 @@ export type CoachAIMissedSessionReference = {
   sport: string;
 };
 
-/** Planned future state under ADR-013 decision 5. */
+/**
+ * Planned future state under ADR-013 decision 5.
+ *
+ * The last two fields travel for `create_seven_day_plan` only, and only on a
+ * session inside the days being planned (ADR-024): how long it is, and the
+ * handle the coach may name to replace it when the owner marked it "can be
+ * replaced". The key is absent rather than null everywhere else, so what the
+ * roadmap sends is byte for byte what it sent before.
+ */
 export type CoachAIPlanCommitmentReference = {
   localDate: string;
   title: string;
   sport: string;
+  durationMinutes?: number | null;
+  /** `r1`, `r2`…, or null for a session that stays. Never a session id. */
+  replaceHandle?: string | null;
 };
 
 /**
@@ -595,6 +606,12 @@ export type SevenDayPlanSession = {
   secondaryGoalIds?: string[];
   alternatives?: SevenDayPlanAlternative[];
   rationale: string;
+  /**
+   * ADR-024. The handle of a planned session this one stands in for, which
+   * the owner marked "can be replaced" for this request. Absent when it
+   * replaces nothing, which is the ordinary case.
+   */
+  replaces?: string;
 };
 
 export type SevenDayPlanProposal = {

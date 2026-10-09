@@ -28,14 +28,18 @@ const STATIC_PREFIX_BUDGET = 6_000;
  *
  *   7,400 + 64 + 32,500 = 39,964   ceil(39,964 / 4) = 9,991  vs  10,000
  *
- * That is the whole ceiling. 9 tokens remain, and they are not a budget — the
- * next source or paragraph takes bytes from something else or raises
- * `maxInputTokens`, which charges every live call whether or not it needed the
- * room. The assertions below read `bytes.total` rather than a literal, so they
- * bind whatever the allocation becomes; this comment is the one thing that has
- * to be kept honest by hand.
+ * That was the whole ceiling, with 9 tokens over, until 9 October 2026. The
+ * owner raised `maxInputTokens` to 14,000 that day and ADR-024 took the first
+ * of the room: the paragraph about planned sessions and their replace handles
+ * moved this budget 7,400 to 8,000, and the context 32,500 to 35,100.
+ *
+ *   8,000 + 64 + 35,100 = 43,164   ceil(43,164 / 4) = 10,791  vs  14,000
+ *
+ * The assertions below read `bytes.total` rather than a literal, so they bind
+ * whatever the allocation becomes; this comment is the one thing that has to
+ * be kept honest by hand.
  */
-const PLAN_STATIC_PREFIX_BUDGET = 7_400;
+const PLAN_STATIC_PREFIX_BUDGET = 8_000;
 
 describe("the roadmap prompt", () => {
   it("stays inside the prefix budget the context allocation was derived against", () => {

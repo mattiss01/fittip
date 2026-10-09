@@ -368,6 +368,69 @@ describe("the seven day plan validator", () => {
     ]);
   });
 
+  describe("a session that replaces a planned one (ADR-024)", () => {
+    // The owner marked one session "can be replaced", so the request issued
+    // one handle. The fixture body proposes at least one session.
+    const context = {
+      ...COACH_AI_FIXTURE_PLAN_CONTEXT,
+      planCommitments: [
+        {
+          localDate: COACH_AI_FIXTURE_PLAN_CONTEXT.horizonStartDate,
+          title: "Long run",
+          sport: "Running",
+          durationMinutes: 75,
+          replaceHandle: "r1",
+        },
+        {
+          localDate: COACH_AI_FIXTURE_PLAN_CONTEXT.horizonStartDate,
+          title: "Strength",
+          sport: "Strength",
+          durationMinutes: 45,
+          replaceHandle: null,
+        },
+      ],
+    };
+    const answer = (replaces: unknown[]) => {
+      const body = JSON.parse(
+        findCoachAIFixtureCase("valid_seven_day_plan").body,
+      );
+      body.plan.sessions.forEach(
+        (session: Record<string, unknown>, index: number) => {
+          if (index < replaces.length) session.replaces = replaces[index];
+        },
+      );
+      return validateCoachAICandidate({
+        operation: "create_seven_day_plan",
+        body: JSON.stringify(body),
+        context,
+      });
+    };
+
+    it("keeps a handle the request issued", () => {
+      const result = answer(["r1"]);
+
+      if (result.outcome !== "accepted") throw new Error("expected acceptance");
+      if (!("sessions" in result.proposal)) throw new Error("expected a plan");
+      expect(result.proposal.sessions[0].replaces).toBe("r1");
+    });
+
+    it("drops a null, which is how the grammar says it replaces nothing", () => {
+      const result = answer([null]);
+
+      if (result.outcome !== "accepted") throw new Error("expected acceptance");
+      if (!("sessions" in result.proposal)) throw new Error("expected a plan");
+      expect(result.proposal.sessions[0]).not.toHaveProperty("replaces");
+    });
+
+    it.each([
+      ["a handle the request never issued", ["r2"], "business_rule"],
+      ["one handle named twice", ["r1", "r1"], "business_rule"],
+      ["something that is not a handle", ["Long run"], "schema"],
+    ] as const)("refuses %s", (_label, replaces, reason) => {
+      expect(answer([...replaces])).toEqual({ outcome: "rejected", reason });
+    });
+  });
+
   it("takes the horizon from the server and never from the response", () => {
     const result = validatePlanCandidate({
       body: findCoachAIFixtureCase("valid_seven_day_plan").body,

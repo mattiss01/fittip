@@ -165,7 +165,8 @@ select is(
 
 select has_function(
   'public', 'begin_plan_generation',
-  array['text', 'text', 'date', 'integer', 'bigint', 'text', 'uuid', 'text'],
+  array['text', 'text', 'date', 'integer', 'bigint', 'text', 'uuid', 'text',
+        'uuid[]'],
   'the generation claim function exists'
 );
 select has_function(
@@ -194,7 +195,7 @@ select is(
   (select count(*)::integer
    from pg_proc
    where oid in (
-     'public.begin_plan_generation(text,text,date,integer,bigint,text,uuid,text)'::regprocedure,
+     'public.begin_plan_generation(text,text,date,integer,bigint,text,uuid,text,uuid[])'::regprocedure,
      'public.finish_plan_generation(uuid,text,text,text,text,text,text,uuid,text,jsonb,jsonb,text,text)'::regprocedure,
      'public.decide_plan_proposal_item(uuid,integer,text)'::regprocedure,
      'public.finish_plan_proposal_review(uuid,bigint,uuid)'::regprocedure,
@@ -210,7 +211,7 @@ select is(
    from pg_proc
    cross join lateral unnest(coalesce(proargnames, array[]::text[])) argument
    where oid in (
-     'public.begin_plan_generation(text,text,date,integer,bigint,text,uuid,text)'::regprocedure,
+     'public.begin_plan_generation(text,text,date,integer,bigint,text,uuid,text,uuid[])'::regprocedure,
      'public.finish_plan_generation(uuid,text,text,text,text,text,text,uuid,text,jsonb,jsonb,text,text)'::regprocedure,
      'public.decide_plan_proposal_item(uuid,integer,text)'::regprocedure,
      'public.finish_plan_proposal_review(uuid,bigint,uuid)'::regprocedure,
@@ -223,7 +224,7 @@ select is(
 select is(
   (select count(*)::integer
    from (values
-     ('public.begin_plan_generation(text,text,date,integer,bigint,text,uuid,text)'),
+     ('public.begin_plan_generation(text,text,date,integer,bigint,text,uuid,text,uuid[])'),
      ('public.finish_plan_generation(uuid,text,text,text,text,text,text,uuid,text,jsonb,jsonb,text,text)'),
      ('public.decide_plan_proposal_item(uuid,integer,text)'),
      ('public.finish_plan_proposal_review(uuid,bigint,uuid)'),
@@ -237,7 +238,7 @@ select is(
 select is(
   (select count(*)::integer
    from (values
-     ('public.begin_plan_generation(text,text,date,integer,bigint,text,uuid,text)'),
+     ('public.begin_plan_generation(text,text,date,integer,bigint,text,uuid,text,uuid[])'),
      ('public.finish_plan_generation(uuid,text,text,text,text,text,text,uuid,text,jsonb,jsonb,text,text)'),
      ('public.decide_plan_proposal_item(uuid,integer,text)'),
      ('public.finish_plan_proposal_review(uuid,bigint,uuid)'),

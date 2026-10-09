@@ -86,9 +86,16 @@ export type TrainingHistoryCompletion = {
 };
 
 export type TrainingHistoryPlannedSession = {
+  /**
+   * The plan session's id. Never sent: it is how a mark the owner made is
+   * matched to its handle (ADR-024).
+   */
+  id?: string;
   localDate: string;
   title: string;
   sport: string;
+  /** Sent only where `planCommitmentDetail` asks for it. */
+  durationMinutes?: number | null;
   /** True when a completion references this planned session. */
   hasCompletion: boolean;
   /**
@@ -178,6 +185,12 @@ export function selectTrainingHistoryContext(
      * was never approved to send a recurrence sends none.
      */
     maxRecurringSessions?: number;
+    /**
+     * ADR-024, the plan operation only. A session inside the days being
+     * planned is sent with its minutes and, when the owner marked it, the
+     * handle the coach may name to replace it. Absent, no entry gains a key.
+     */
+    planCommitmentDetail?: { replaceHandles: ReadonlyMap<string, string> };
   } = {},
 ): TrainingHistorySelection {
   const windowDays = limits.windowDays ?? TRAINING_HISTORY_WINDOW_DAYS;
@@ -258,6 +271,27 @@ export function selectTrainingHistoryContext(
     );
   const byteBudget = limits.maxPlanCommitmentBytes ?? Number.POSITIVE_INFINITY;
   const costOf = (value: unknown) => byteLength(JSON.stringify(value)) + 1;
+  const detail = limits.planCommitmentDetail;
+  const toPlanCommitmentReference = (
+    entry: TrainingHistoryPlannedSession,
+  ): CoachAIPlanCommitmentReference => {
+    const reference = toDatedReference(entry);
+    if (
+      detail === undefined ||
+      entry.localDate < horizonStartDate ||
+      entry.localDate > records.horizonEndDate
+    ) {
+      return reference;
+    }
+    return {
+      ...reference,
+      durationMinutes: entry.durationMinutes ?? null,
+      replaceHandle:
+        (entry.id === undefined
+          ? undefined
+          : detail.replaceHandles.get(entry.id)) ?? null,
+    };
+  };
 
   let commitments: CoachAIPlanCommitmentReference[];
   const recurringSessions: CoachAIRecurringSessionReference[] = [];
@@ -395,7 +429,7 @@ function toMissedReference(
   };
 }
 
-function toPlanCommitmentReference(
+function toDatedReference(
   entry: TrainingHistoryPlannedSession,
 ): CoachAIPlanCommitmentReference {
   return {

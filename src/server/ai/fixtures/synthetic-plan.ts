@@ -60,6 +60,24 @@ export function synthesizePlanBody(context: CoachAIContext): string {
   const sessionDates = eligibleDates.filter((_date, index) => index % 2 === 0);
   const sport = constrainedSport(primary, constraints, preferences);
 
+  // ADR-024. A session the owner marked "can be replaced" is replaced by the
+  // proposed session on its own day, and when none falls on one, the first
+  // mark goes to the first session, so the flow can be seen without a
+  // provider. A real coach decides this; the fixture only shows the shape.
+  const marks = context.planCommitments.filter(
+    (commitment) => typeof commitment.replaceHandle === "string",
+  );
+  const handleFor = (date: string, index: number): string | null => {
+    const sameDay = marks.find((mark) => mark.localDate === date);
+    if (sameDay) return sameDay.replaceHandle ?? null;
+    const anySameDay = marks.some((mark) =>
+      sessionDates.includes(mark.localDate),
+    );
+    return !anySameDay && index === 0
+      ? (marks[0]?.replaceHandle ?? null)
+      : null;
+  };
+
   const sessions = sessionDates.map((date, index) => ({
     date,
     title: hasAppliedLimitation
@@ -111,6 +129,7 @@ export function synthesizePlanBody(context: CoachAIContext): string {
         : rationaleFor(primary, context),
       300,
     ),
+    replaces: handleFor(date, index),
   }));
 
   const plan = {

@@ -8,7 +8,9 @@ const {
   createServerUserClientMock,
   verifyOwnerMock,
   generateMock,
+  createCompletionLogMock,
 } = vi.hoisted(() => ({
+  createCompletionLogMock: vi.fn(),
   revalidatePathMock: vi.fn(),
   createProposalsMock: vi.fn(),
   createProfileMock: vi.fn(),
@@ -29,6 +31,9 @@ vi.mock("@/server/repositories/plan-proposal-repository", async (original) => {
     >();
   return { ...actual, createPlanProposalRepository: createProposalsMock };
 });
+vi.mock("@/server/repositories/completion-log-repository", () => ({
+  createCompletionLog: createCompletionLogMock,
+}));
 vi.mock("@/server/repositories/profile-repository", async (original) => {
   const actual =
     await original<typeof import("@/server/repositories/profile-repository")>();
@@ -81,12 +86,18 @@ const OWNER_ID = "7c170000-0000-4000-8000-000000000001";
 const PROPOSAL_ID = "7c170000-0000-4000-8000-000000000030";
 const IDEMPOTENCY_KEY = "7c170000-0000-4000-8000-0000000000aa";
 const TIMEZONE = "Europe/Berlin";
+const GENERATION_ID = "7c170000-0000-4000-8000-000000000040";
 const OUTCOMES = PLAN_PROPOSAL_COPY.outcomes;
 
 const getProposal = vi.fn();
 const decideItem = vi.fn();
 const finishReview = vi.fn();
 const getPlanSlice = vi.fn();
+const listReplaceableSessions = vi.fn();
+const listCompletions = vi.fn();
+const KEPT_ID = "7c170000-0000-4000-8000-0000000000b1";
+const LOGGED_ID = "7c170000-0000-4000-8000-0000000000b2";
+const GONE_ID = "7c170000-0000-4000-8000-0000000000b3";
 
 describe("regeneratePlanProposalAction", () => {
   beforeEach(() => {
@@ -97,7 +108,13 @@ describe("regeneratePlanProposalAction", () => {
       getProposal,
       decideItem,
       finishReview,
+      listReplaceableSessions,
     });
+    listReplaceableSessions.mockResolvedValue([]);
+    createCompletionLogMock.mockResolvedValue({
+      findByPlanSessions: listCompletions,
+    });
+    listCompletions.mockResolvedValue([]);
     createProfileMock.mockResolvedValue({
       getCurrentProfile: vi
         .fn()
@@ -107,11 +124,38 @@ describe("regeneratePlanProposalAction", () => {
     getProposal.mockResolvedValue(openProposal());
     decideItem.mockResolvedValue(undefined);
     finishReview.mockResolvedValue({ appliedCount: 1 });
-    getPlanSlice.mockResolvedValue({ revision: 5 });
+    getPlanSlice.mockResolvedValue({ revision: 5, sessions: [] });
     generateMock.mockResolvedValue({
       status: "proposal",
       proposalId: "7c170000-0000-4000-8000-000000000031",
       memoryCandidateCount: 0,
+    });
+  });
+
+  it("carries over only the marks that can still be replaced", async () => {
+    // Three sessions were marked. One is still planned, one has been logged
+    // since, and one was replaced by the finish that closed the review.
+    listReplaceableSessions.mockResolvedValue([
+      { sessionId: KEPT_ID, handle: "r1" },
+      { sessionId: LOGGED_ID, handle: "r2" },
+      { sessionId: GONE_ID, handle: "r3" },
+    ]);
+    getPlanSlice.mockResolvedValue({
+      revision: 5,
+      sessions: [
+        { id: KEPT_ID, status: "active" },
+        { id: LOGGED_ID, status: "active" },
+      ],
+    });
+    listCompletions.mockResolvedValue([{ planSessionId: LOGGED_ID }]);
+
+    await regenerate();
+
+    expect(listReplaceableSessions).toHaveBeenCalledExactlyOnceWith(
+      GENERATION_ID,
+    );
+    expect(generateMock.mock.calls[0][0]).toMatchObject({
+      replaceableSessionIds: [KEPT_ID],
     });
   });
 
@@ -332,12 +376,49 @@ describe("generatePlanProposalAction", () => {
         .mockResolvedValue({ userId: OWNER_ID, timezoneName: TIMEZONE }),
     });
     createRollingPlanMock.mockResolvedValue({ getPlanSlice });
-    getPlanSlice.mockResolvedValue({ revision: 5 });
+    getPlanSlice.mockResolvedValue({ revision: 5, sessions: [] });
     generateMock.mockResolvedValue({
       status: "proposal",
       proposalId: "7c170000-0000-4000-8000-000000000031",
       memoryCandidateCount: 0,
     });
+  });
+
+  it("sends the sessions ticked as replaceable, and none by default", async () => {
+    const formData = new FormData();
+    formData.set("dayCount", "3");
+    formData.set("planningNote", "");
+    formData.set("idempotencyKey", "start-date-compose-key-0002");
+    formData.append("replaceable", KEPT_ID);
+    formData.append("replaceable", LOGGED_ID);
+
+    await generatePlanProposalAction(
+      INITIAL_PLAN_PROPOSAL_ACTION_STATE,
+      formData,
+    );
+    await compose({});
+
+    expect(generateMock.mock.calls[0][0]).toMatchObject({
+      replaceableSessionIds: [KEPT_ID, LOGGED_ID],
+    });
+    expect(generateMock.mock.calls[1][0]).toMatchObject({
+      replaceableSessionIds: [],
+    });
+  });
+
+  it("refuses a tick that is not a session id", async () => {
+    const formData = new FormData();
+    formData.set("dayCount", "3");
+    formData.set("idempotencyKey", "start-date-compose-key-0003");
+    formData.append("replaceable", "r1");
+
+    const state = await generatePlanProposalAction(
+      INITIAL_PLAN_PROPOSAL_ACTION_STATE,
+      formData,
+    );
+
+    expect(state.status).toBe("validation");
+    expect(generateMock).not.toHaveBeenCalled();
   });
 
   function compose(fields: Record<string, string>) {
@@ -411,6 +492,7 @@ function openProposal() {
     startDate: today,
     endDate: shiftIsoDate(today, 2),
     composedAtPlanRevision: 4,
+    generationId: GENERATION_ID,
     items: [
       { ordinal: 1, decision: "proposed" },
       { ordinal: 2, decision: "staged" },

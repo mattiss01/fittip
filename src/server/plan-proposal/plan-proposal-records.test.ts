@@ -180,5 +180,6 @@ function item(
     expectedDurationMinutes: 45,
     rationale: "Because.",
     contentIndex: ordinal,
+    replacesSessionId: null,
   };
 }

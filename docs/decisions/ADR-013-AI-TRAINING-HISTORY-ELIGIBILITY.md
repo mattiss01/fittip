@@ -460,6 +460,31 @@ stated here rather than left to be found:
 - A series that ends before a later first day is still sent as a rule. It
   describes the training between today and that day.
 
+## Fourth recorded amendment to decision 5: minutes and a replace handle
+
+On 9 October 2026 the product owner decided that a plan proposal may replace a
+session they marked "can be replaced" when asking
+([ADR-024](ADR-024-WHAT-A-PROPOSAL-MAY-REPLACE.md)). The coach cannot plan
+around a session, or stand one of its own in for it, without knowing how long
+it is and whether it may go. So, for `create_seven_day_plan` only, a planned
+entry **inside the days being planned** carries two more fields:
+
+- `durationMinutes`: the session's expected minutes, or null.
+- `replaceHandle`: `r1`, `r2`… for a session the owner marked for this request,
+  null for one that stays. It is never a session id, and it means nothing
+  outside the request that issued it.
+
+An entry outside those days, and every entry sent to `create_roadmap`, is
+`localDate`, `title` and `sport` as before; the keys are absent, not null.
+`fill_session_activities` still sends no plan commitments.
+
+The plan operation's limits move with it: 30 entries in 4,000 bytes, where it
+was 12 in 1,400, because seven days can hold more than twelve sessions and a
+marked one must not be the entry a trim drops. A mark whose session still does
+not fit refuses the request with plan commitments named. The plan operation's
+whole context may be 35,100 bytes, where it was 32,500. The roadmap's limits
+are unchanged.
+
 ## Related decision made in the same session
 
 The compose step for a plan proposal introduces a **planning note** — owner
@@ -511,3 +536,7 @@ records it. Decisions 1, 3, 6 and 7 are unchanged.
 **Amended again 9 October 2026.** The owner may choose the first day being
 planned. Decision 5's eligibility stands; its fill order puts the planned days
 ahead of the days before them. The third amendment above records it.
+
+**Fourth amendment, 9 October 2026.** For the plan operation, an entry
+inside the days being planned carries its minutes and a replace handle
+(ADR-024), and the list holds 30 entries. The fourth amendment above records it.
