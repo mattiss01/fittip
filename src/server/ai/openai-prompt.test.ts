@@ -93,7 +93,7 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
         "fill_session_activities",
         SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET,
       ),
-    ).toBe(14_604);
+    ).toBe(14_929);
   });
 });
 
@@ -363,11 +363,31 @@ describe("the plan response grammar", () => {
  *
  * and with the fill's own part of it (decisions 14 to 19):
  *
- *   8,000 + 64 + 50,350 = 58,414   ceil(58,414 / 4) = 14,604  vs  15,000
+ *   8,200 + 64 + 51,450 = 59,714   ceil(59,714 / 4) = 14,929  vs  15,000
  */
-const SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET = 8_000;
+const SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET = 8_200;
 
 describe("the session activities prompt", () => {
+  it("says what ADR-023 gave a fill to read, and how to read it", () => {
+    const prefix = coachAIStaticPrefix("fill_session_activities");
+
+    // Decision 19, for home and for anywhere else.
+    expect(prefix).toContain(
+      'Use only equipment the athlete has for where the session is done: at home, what "trainingSetup.homeEquipment" lists; a place they name, such as a gym, has what such a place has.',
+    );
+    // Decision 15: four weeks of flags, read as a signal.
+    expect(prefix).toContain('"recentSafetyFlags" reaches four weeks back');
+    expect(prefix).toContain("Treat each as the safety rules treat a signal.");
+    // Decision 14: direction, never above safety.
+    expect(prefix).toContain("it never overrides a safety signal");
+    // Decision 18: an old result is not a starting point.
+    expect(prefix).toContain("start below it");
+    // And none of it is told to the other two calls.
+    expect(coachAIStaticPrefix("create_seven_day_plan")).not.toContain(
+      "recentSafetyFlags",
+    );
+  });
+
   it("stays inside the prefix budget the context allocation was derived against", () => {
     const prefix = coachAIStaticPrefix("fill_session_activities");
 

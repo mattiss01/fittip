@@ -5,6 +5,7 @@ import type { ProfileDetailsView } from "@/lib/profile/profile-contract";
 import {
   CoachAIContextBelowMinimumError,
   COACH_AI_CONTEXT_LIMITS,
+  selectRecentSafetyFlagDays,
   trainingSelectionFor,
   type CoachAIOwnedRecords,
 } from "@/server/ai/context";
@@ -174,7 +175,7 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       details,
       goals,
       memory,
-      readCompletions,
+      completionsForResults,
       planWindow,
       series,
       roadmapVersion,
@@ -240,7 +241,7 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
 
     // What ADR-013's window holds. For every operation but a fill that is
     // the whole read.
-    const completions = readCompletions.filter(
+    const completions = completionsForResults.filter(
       (completion) => completion.actualLocalDate >= windowStartDate,
     );
 
@@ -288,7 +289,7 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
             planSessions: planWindow.slice.sessions,
             library,
             savedSessions,
-            completions: readCompletions,
+            completions: completionsForResults,
           });
 
     return {
@@ -341,15 +342,29 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       maxBytes: limits.bytes.trainingHistoryCompletions,
     });
 
-    return selection.includedCompletions.map((entry) => {
-      const completion = byRecord.get(entry);
-      if (!completion) throw new CoachAIError("context_invalid");
-      return {
-        kind: "completion",
-        recordId: completion.id,
-        revisionNumber: completion.revision,
-      };
-    });
+    // ADR-023 decision 15: a fill is also sent the day and the flags of logs
+    // up to four weeks back. Those logs are sources too, by the same
+    // selection assembly runs, so correcting a flag away conflicts with a
+    // suggestion built around it.
+    const flagged =
+      this.#operation === "fill_session_activities"
+        ? selectRecentSafetyFlagDays(
+            training.completions,
+            training.today,
+          ).days.flatMap((day) => day.logs)
+        : [];
+
+    return [...new Set([...selection.includedCompletions, ...flagged])].map(
+      (entry) => {
+        const completion = byRecord.get(entry);
+        if (!completion) throw new CoachAIError("context_invalid");
+        return {
+          kind: "completion",
+          recordId: completion.id,
+          revisionNumber: completion.revision,
+        };
+      },
+    );
   }
 }
 

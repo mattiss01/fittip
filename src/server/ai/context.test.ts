@@ -1900,18 +1900,45 @@ describe("fill_session_activities assembly", () => {
   );
 
   it("lets a flag older than four weeks go, and tells no other call of any", () => {
-    const old = {
+    const flaggedOn = (daysBack: number) => ({
       ...logged("2026-08-01"),
-      localDate: shiftDate(TODAY, -28),
-    };
+      localDate: shiftDate(TODAY, -daysBack),
+    });
     const assembled = fill({
-      training: { ...EMPTY_TRAINING, completions: [old] },
+      training: { ...EMPTY_TRAINING, completions: [flaggedOn(28)] },
+    });
+    // Twenty-eight days counting today: the twenty-seventh back is the last.
+    const edge = fill({
+      training: { ...EMPTY_TRAINING, completions: [flaggedOn(27)] },
     });
 
+    expect(edge.context.recentSafetyFlags).toHaveLength(1);
     expect(assembled.context.recentSafetyFlags).toEqual([]);
     expect(assembled.context.hasSafetySignal).toBe(false);
     expect(build().serialized).not.toContain("recentSafetyFlags");
     expect(build().serialized).not.toContain("roadmapPhase");
+  });
+
+  it("gives one entry a day, however many logs that day reported something", () => {
+    const morning = logged("2026-08-01");
+    const evening = {
+      ...logged("2026-08-01"),
+      painReported: false,
+      severeFatigueReported: true,
+    };
+    const assembled = fill({
+      training: { ...EMPTY_TRAINING, completions: [morning, evening] },
+    });
+
+    expect(assembled.context.recentSafetyFlags).toEqual([
+      {
+        localDate: "2026-08-01",
+        painReported: true,
+        illnessReported: false,
+        injuryReported: false,
+        severeFatigueReported: true,
+      },
+    ]);
   });
 
   it("counts the flagged days it leaves out past twenty", () => {

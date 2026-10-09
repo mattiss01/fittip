@@ -433,6 +433,24 @@ describe("buildSessionDetailContext", () => {
 });
 
 describe("session detail review follow-ups", () => {
+  it("fits a whole library of sixty ordinary entries (ADR-023 decision 17)", () => {
+    const records = select({
+      planSessions: [planSession()],
+      library: Array.from({ length: 60 }, (_, index) =>
+        libraryEntry({
+          id: `5d000000-0000-4000-8000-0000000001${String(index).padStart(2, "0")}`,
+          // Twenty-one characters, as long as most names get.
+          name: `Bulgarian split sq ${String(index).padStart(2, "0")}`,
+        }),
+      ),
+    }) as SessionDetailRecords;
+
+    const { context } = buildSessionDetailContext(records);
+
+    expect(context.library).toHaveLength(60);
+    expect(context.libraryWithheld).toBe(0);
+  });
+
   it("orders the library so entries the session links survive a trim", () => {
     const linked = "5d000000-0000-4000-8000-0000000000c9";
     const records = select({

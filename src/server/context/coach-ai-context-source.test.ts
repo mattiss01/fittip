@@ -218,7 +218,9 @@ describe("the production coaching context source", () => {
 
     it("keeps a log older than eight weeks out of the training history it hands on", async () => {
       // Read for last results (decision 18), but ADR-013's window is still
-      // what the history, the flags and the recorded sources are drawn from.
+      // what the history and the flags are drawn from. A log that old is a
+      // recorded source only if it supplied a result, through the session
+      // detail's own sources.
       listCompletions.mockResolvedValue([
         completion(),
         completion({
@@ -233,6 +235,31 @@ describe("the production coaching context source", () => {
       expect(
         records.training.completions.map((entry) => entry.localDate),
       ).toEqual(["2026-08-03"]);
+    });
+
+    it("records a log whose flag a fill is sent as a source, though it is older than a week", async () => {
+      const flaggedId = "75000000-0000-4000-8000-0000000000bb";
+      listCompletions.mockResolvedValue([
+        completion(),
+        completion({
+          id: flaggedId,
+          actualLocalDate: shift(TODAY, -10),
+          painReported: true,
+        }),
+        // Unflagged and older than a week: neither sent nor a source.
+        completion({
+          id: "75000000-0000-4000-8000-0000000000cc",
+          actualLocalDate: shift(TODAY, -12),
+        }),
+      ]);
+
+      const records = await fillSource().load(OWNER);
+
+      // Correcting that flag away has to conflict with what was built on it.
+      expect(records.sources?.map((source) => source.recordId)).toEqual([
+        "75000000-0000-4000-8000-000000000001",
+        flaggedId,
+      ]);
     });
 
     it("hands assembly no session when the id is not in the owner's window", async () => {
