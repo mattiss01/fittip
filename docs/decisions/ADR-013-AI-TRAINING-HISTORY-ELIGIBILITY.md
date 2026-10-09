@@ -448,6 +448,18 @@ nothing is before it and the order is what it was. No field, limit or window
 changes: the 56 days of history still end today, and the 180 days still count
 from today.
 
+A later last day does reach further under the unchanged rules, and that is
+stated here rather than left to be found:
+
+- A plan that starts 30 days out ends up to 36 days out, so the occurrences of
+  a series up to that day arrive as dated entries. The plan operation is sent
+  no rules.
+- A roadmap that starts 30 days out may end 395 days from today, where 365 was
+  the furthest before. A series is sent as a rule when it starts on or before
+  the last day, so one starting in those 30 further days is now sent.
+- A series that ends before a later first day is still sent as a rule. It
+  describes the training between today and that day.
+
 ## Related decision made in the same session
 
 The compose step for a plan proposal introduces a **planning note** — owner
