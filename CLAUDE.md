@@ -10,7 +10,8 @@ Background when you need it: `CONTEXT.md` for the domain, `docs/decisions/` for 
 ## Product invariants
 
 - Plans, proposals, and actual completions are separate permanent records.
-- Replanning never changes completed history, past sessions, or user-locked future content.
+- Replanning never changes completed history or past sessions, and replaces a future session
+  only where the owner allowed it for that proposal.
 - Every owned record has a `user_id`; authorization is enforced server-side and in database
   Row Level Security.
 - At most three active goals may be `core`; supporting goals remain distinct.
