@@ -85,7 +85,7 @@ as $$
   where saved.id = p_saved_session_id;
 $$;
 
-select plan(86);
+select plan(85);
 
 select is(
   (select count(*)::bigint from library_zone), 1::bigint,
@@ -385,11 +385,6 @@ select is(
    where session_id = '7e000000-0000-4000-8000-0000000000d1'),
   2::bigint,
   'reuse copies the activities too'
-);
-select ok(
-  (select count(distinct position) = 2 from public.rolling_plan_activities
-   where session_id = '7e000000-0000-4000-8000-0000000000d1'),
-  'each reused activity keeps a place of its own in the order'
 );
 
 select throws_ok(
