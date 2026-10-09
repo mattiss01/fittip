@@ -426,6 +426,26 @@ is the dependable way to tell the coach about a race.
 Unchanged: `fill_session_activities` sends no plan commitments, and the 180-day
 window, which is also how far ahead a single session may be placed.
 
+## Third recorded amendment to decision 5: a chosen first day
+
+On 9 October 2026 the product owner decided that a plan and a roadmap may start
+on a day they choose, from today to 30 days ahead, instead of always today.
+Decision 5 was written for a horizon that begins today, and one sentence of it
+needs saying again for one that does not.
+
+- **Eligibility is unchanged.** Every planned entry from today to the last day
+  being planned is still eligible, so the sessions between today and a later
+  first day are sent. They are the load the athlete carries into those days.
+- **The fill order changes.** The days being planned and everything after them
+  come first, nearest first; the days before the first day follow, nearest
+  first. Nearest first alone would let the sessions before a later first day
+  fill the twelve entries and cut the very days the coach is asked about.
+
+With the first day today, which is every request made before this amendment,
+nothing is before it and the order is what it was. No field, limit or window
+changes: the 56 days of history still end today, and the 180 days still count
+from today.
+
 ## Related decision made in the same session
 
 The compose step for a plan proposal introduces a **planning note** — owner
@@ -473,3 +493,7 @@ and what is given up. Decisions 1, 3, 6 and 7 are unchanged.
 removed Lock: the lock state is not sent, single sessions beyond the horizon
 are, and nothing is fitted ahead of the rules. The second amendment above
 records it. Decisions 1, 3, 6 and 7 are unchanged.
+
+**Amended again 9 October 2026.** The owner may choose the first day being
+planned. Decision 5's eligibility stands; its fill order puts the planned days
+ahead of the days before them. The third amendment above records it.
