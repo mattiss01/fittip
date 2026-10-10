@@ -6,7 +6,7 @@ import {
   ROADMAP_PLAN_CONTEXT_MAX_BYTES,
 } from "@/server/roadmap/roadmap-plan-context";
 
-import type { RoadmapPhase, RoadmapProposal } from "@/server/ai/contracts";
+import type { LegacyRoadmapV2, StoredRoadmap } from "@/server/ai/contracts";
 
 /**
  * The plan-side roadmap boundary.
@@ -16,12 +16,20 @@ import type { RoadmapPhase, RoadmapProposal } from "@/server/ai/contracts";
  * approved, and it would not make any other test fail. The ladder tests say the
  * field fits its budget however large the roadmap is, because `context.ts`
  * refuses rather than trims if this module hands it something too big.
+ *
+ * The roadmap these tests build is a v2 one on purpose. It is the larger
+ * shape, and it holds what v3 dropped (ADR-025): a reason beside every
+ * attention level, assumptions, uncertainties and safety sentences. An
+ * accepted v2 roadmap is still what an owner may be following, so the tests
+ * prove none of that leaves for it either.
  */
+
+type LegacyPhase = LegacyRoadmapV2["phases"][number];
 
 const GOAL_A = "6a000000-0000-4000-8000-000000000001";
 const GOAL_B = "6a000000-0000-4000-8000-000000000002";
 
-function phase(overrides: Partial<RoadmapPhase> = {}): RoadmapPhase {
+function phase(overrides: Partial<LegacyPhase> = {}): LegacyPhase {
   return {
     title: "Base building",
     focus: "Aerobic volume with one quality session a week.",
@@ -46,9 +54,9 @@ function phase(overrides: Partial<RoadmapPhase> = {}): RoadmapPhase {
   };
 }
 
-function roadmap(overrides: Partial<RoadmapProposal> = {}): RoadmapProposal {
+function roadmap(overrides: Partial<LegacyRoadmapV2> = {}): LegacyRoadmapV2 {
   return {
-    schemaVersion: "fittip.roadmap.v1",
+    schemaVersion: "fittip.roadmap.v2",
     title: "Autumn 10k build",
     summary: "Twelve weeks from base to a 10k time trial.",
     startDate: "2026-09-01",
@@ -71,12 +79,12 @@ function roadmap(overrides: Partial<RoadmapProposal> = {}): RoadmapProposal {
     ],
     safetyConsiderations: ["Stop if the hamstring sharpens."],
     ...overrides,
-  } as RoadmapProposal;
+  };
 }
 
 function build(
   input: {
-    roadmap?: RoadmapProposal;
+    roadmap?: StoredRoadmap;
     horizonStartDate?: string;
     horizonEndDate?: string;
     targetableGoalIds?: string[];
@@ -100,13 +108,8 @@ describe("what an accepted roadmap may tell a plan coach", () => {
       focus: "Aerobic volume with one quality session a week.",
       startDate: "2026-09-01",
       endDate: "2026-09-28",
-      goalAttention: [
-        {
-          goalId: GOAL_A,
-          level: "primary",
-          reason: "Everything serves the 10k.",
-        },
-      ],
+      // A level and no reason, though the stored phase has one.
+      goalAttention: [{ goalId: GOAL_A, level: "primary" }],
       milestones: [
         {
           title: "Long run at 90 minutes",
@@ -193,6 +196,26 @@ describe("what an accepted roadmap may tell a plan coach", () => {
     expect(serialized).not.toContain("SENTINEL_OTHER_CRITERION");
   });
 
+  it("never sends the reason a v2 roadmap wrote beside a level", () => {
+    const context = build({
+      roadmap: roadmap({
+        phases: [
+          phase({
+            goalAttention: [
+              {
+                goalId: GOAL_A,
+                level: "primary",
+                reason: "SENTINEL_COVERING_REASON",
+              },
+            ],
+          }),
+        ],
+      }),
+    });
+
+    expect(JSON.stringify(context)).not.toContain("SENTINEL_COVERING_REASON");
+  });
+
   it("never sends the roadmap's assumptions, uncertainties, review points or safety text", () => {
     const serialized = JSON.stringify(build());
 
@@ -209,7 +232,6 @@ describe("what an accepted roadmap may tell a plan coach", () => {
       "coveringPhases",
       "endDate",
       "focusTruncated",
-      "goalAttentionReasonsWithheld",
       "isStale",
       "milestonesWithheld",
       "otherPhases",
@@ -318,9 +340,10 @@ describe("the reduction ladder", () => {
     index: number,
     startDay: number,
     lengthDays: number,
-  ): RoadmapPhase {
+    titleFill = "t",
+  ): LegacyPhase {
     return phase({
-      title: `${"t".repeat(78)}${index}`,
+      title: `${titleFill.repeat(78)}${index}`,
       focus: LONG_FOCUS,
       startDate: isoDay(startDay),
       endDate: isoDay(startDay + lengthDays - 1),
@@ -344,7 +367,7 @@ describe("the reduction ladder", () => {
    * repeated per character, so a three-byte fill triples the byte size while
    * leaving every character-counted validator bound satisfied.
    */
-  function singlePhaseAtEveryLimit(fill: string): RoadmapProposal {
+  function singlePhaseAtEveryLimit(fill: string): LegacyRoadmapV2 {
     const c = (count: number) => fill.repeat(count);
     return roadmap({
       title: c(80),
@@ -378,7 +401,7 @@ describe("the reduction ladder", () => {
   }
 
   /** Six maximal phases, none of which the week straddles. */
-  function maximalRoadmap(): RoadmapProposal {
+  function maximalRoadmap(): LegacyRoadmapV2 {
     return roadmap({
       title: "T".repeat(80),
       summary: "S".repeat(600),
@@ -442,22 +465,17 @@ describe("the reduction ladder", () => {
     expect(context.phaseGoalAttentionWithheld).toBe(5);
   });
 
-  /**
-   * The case every step of the ladder exists for, and the only one that
-   * reaches the last: a week straddling two phases that are both maximal.
-   * Without step 3 the field would not fit, so this is what keeps that branch
-   * from being dead code nobody notices is wrong.
-   */
-  it("falls all the way back for a straddling week between maximal phases", () => {
+  /** A week straddling the first two of six maximal phases. */
+  function straddling(titleFill?: string) {
     const phases = [
-      maximalPhase(0, 1, 4),
-      maximalPhase(1, 5, 14),
-      maximalPhase(2, 19, 14),
-      maximalPhase(3, 33, 14),
-      maximalPhase(4, 47, 14),
-      maximalPhase(5, 61, 24),
+      maximalPhase(0, 1, 4, titleFill),
+      maximalPhase(1, 5, 14, titleFill),
+      maximalPhase(2, 19, 14, titleFill),
+      maximalPhase(3, 33, 14, titleFill),
+      maximalPhase(4, 47, 14, titleFill),
+      maximalPhase(5, 61, 24, titleFill),
     ];
-    const context = buildRoadmapPlanContext({
+    return buildRoadmapPlanContext({
       roadmap: roadmap({
         title: "T".repeat(80),
         summary: "S".repeat(600),
@@ -469,17 +487,48 @@ describe("the reduction ladder", () => {
       horizonEndDate: isoDay(8),
       targetableGoalIds: new Set([GOAL_A, GOAL_B]),
     });
+  }
+
+  /**
+   * A week straddling two phases that are both maximal. Two phases in full do
+   * not fit, so the one holding fewer of the week's days is demoted. Since
+   * ADR-025 took the reasons out of what travels, that is enough: the other
+   * phases keep their titles and dates.
+   */
+  it("demotes the lesser covering phase for a straddling week between maximal phases", () => {
+    const context = straddling();
 
     expect(roadmapPlanContextBytes(context)).toBeLessThanOrEqual(
       ROADMAP_PLAN_CONTEXT_MAX_BYTES,
     );
-    // Every step fired, and each is counted rather than silent. The demoted
-    // covering phase is counted among the phases that lost goal attention,
-    // because it lost it too.
+    // Each step that fired is counted rather than silent. The demoted covering
+    // phase is counted among the phases that lost goal attention, because it
+    // lost it too.
+    expect(context.phaseGoalAttentionWithheld).toBe(5);
+    expect(context.phaseDetailWithheld).toBe(1);
+    expect(context.otherPhasesWithheld).toBe(0);
+    expect(context.otherPhases).toHaveLength(5);
+    // What survives is the phase holding most of the week, undiminished.
+    expect(context.coveringPhases).toHaveLength(1);
+    expect(context.coveringPhases[0].focus).toBe(LONG_FOCUS);
+    expect(context.coveringPhases[0].milestones).toHaveLength(3);
+  });
+
+  /**
+   * The same week with titles in a three-byte script, which is what still
+   * reaches step 3: five other titles alone are then over a kilobyte. This is
+   * what keeps that branch from being dead code nobody notices is wrong.
+   */
+  it("drops the other phases entirely when their titles alone do not fit", () => {
+    const context = straddling("訓");
+
+    expect(roadmapPlanContextBytes(context)).toBeLessThanOrEqual(
+      ROADMAP_PLAN_CONTEXT_MAX_BYTES,
+    );
     expect(context.phaseGoalAttentionWithheld).toBe(5);
     expect(context.phaseDetailWithheld).toBe(1);
     expect(context.otherPhasesWithheld).toBe(5);
-    // What survives is the phase holding most of the week, undiminished.
+    expect(context.otherPhases).toEqual([]);
     expect(context.coveringPhases).toHaveLength(1);
     expect(context.coveringPhases[0].focus).toBe(LONG_FOCUS);
     expect(context.coveringPhases[0].milestones).toHaveLength(3);
@@ -533,19 +582,13 @@ describe("the reduction ladder", () => {
     });
 
     expect(context.milestonesWithheld).toBe(3);
-    expect(context.goalAttentionReasonsWithheld).toBe(4);
-    // Dropping those two is already enough, so the phase keeps its own
+    // Dropping the milestones is already enough, so the phase keeps its own
     // description. Truncating it is the floor below this, and no
     // validator-legal roadmap reaches it — see `truncateFocusToFit`.
     expect(context.focusTruncated).toBe(false);
     expect([...context.coveringPhases[0].focus]).toHaveLength(300);
-    // Reasons are emptied rather than removed, so the coach still sees which
-    // goals the phase attends to and at what level.
-    expect(
-      context.coveringPhases[0].goalAttention.every(
-        (attention) => attention.reason === "",
-      ),
-    ).toBe(true);
+    // The coach still sees which goals the phase attends to and at what level.
+    expect(context.coveringPhases[0].goalAttention).toHaveLength(4);
   });
 
   it("leaves an ordinary roadmap untouched and discloses nothing", () => {

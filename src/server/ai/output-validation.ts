@@ -116,10 +116,8 @@ const MAX_PHASES = 6;
 const MIN_PHASES = 1;
 const MAX_MILESTONES_PER_PHASE = 3;
 const MAX_ATTENTION_PER_PHASE = 4;
-const MAX_ASSUMPTIONS = 4;
 const MAX_UNCERTAINTIES = 4;
 const MAX_REVIEW_POINTS = 4;
-const MAX_SAFETY_CONSIDERATIONS = 3;
 const MAX_MEMORY_CANDIDATES = 4;
 
 /**
@@ -598,17 +596,10 @@ export function validateRoadmapCandidate(input: {
     return rejected("unsafe_content");
   }
 
-  // Decision 7: a present flag never blocks generation, but it does constrain
-  // the output. Without at least one bounded safety consideration the proposal
-  // has not acknowledged what the owner reported.
-  if (input.context.hasSafetySignal) {
-    if (
-      !roadmap.safetyConsiderations ||
-      roadmap.safetyConsiderations.length === 0
-    ) {
-      return rejected("safety_requirement");
-    }
-  }
+  // No safety requirement since v3 (ADR-025): a roadmap holds no safety
+  // sentences, so a present flag constrains nothing here. The coach is still
+  // sent the flag and the safety rules, and the plan and the fill still have
+  // to acknowledge one.
 
   // The two sections validate independently. A memory section that fails is
   // discarded; it never weakens or invalidates a roadmap that passed.
@@ -645,10 +636,7 @@ function validateRoadmap(
       "startDate",
       "endDate",
       "phases",
-      "assumptions",
-      "uncertainties",
       "reviewPoints",
-      "safetyConsiderations",
     ])
   ) {
     return rejected("unknown_field");
@@ -721,25 +709,8 @@ function validateRoadmap(
     return rejected("business_rule");
   }
 
-  const assumptions = validateStringArray(
-    value.assumptions,
-    MAX_ASSUMPTIONS,
-    200,
-  );
-  if (assumptions === null) return rejected("business_rule");
-
-  const uncertainties = validateUncertainties(value.uncertainties);
-  if (uncertainties === null) return rejected("business_rule");
-
   const reviewPoints = validateReviewPoints(value.reviewPoints, horizonEndMs);
   if (reviewPoints === null) return rejected("business_rule");
-
-  const safetyConsiderations = validateStringArray(
-    value.safetyConsiderations,
-    MAX_SAFETY_CONSIDERATIONS,
-    240,
-  );
-  if (safetyConsiderations === null) return rejected("business_rule");
 
   const roadmap: RoadmapProposal = {
     schemaVersion: COACH_AI_SCHEMA_VERSIONS.create_roadmap,
@@ -748,10 +719,7 @@ function validateRoadmap(
     startDate: value.startDate,
     endDate: value.endDate,
     phases,
-    ...(assumptions.length > 0 ? { assumptions } : {}),
-    ...(uncertainties.length > 0 ? { uncertainties } : {}),
     reviewPoints,
-    ...(safetyConsiderations.length > 0 ? { safetyConsiderations } : {}),
   };
 
   // The stored envelope is capped independently of the response body, because
@@ -809,7 +777,7 @@ function validatePhase(
   if (
     entry.goalAttention.length < 1 ||
     entry.goalAttention.length > MAX_ATTENTION_PER_PHASE ||
-    entry.milestones.length < 1 ||
+    // None is allowed since v3: a phase with no honest checkpoint has none.
     entry.milestones.length > MAX_MILESTONES_PER_PHASE
   ) {
     return rejected("business_rule");
@@ -819,12 +787,11 @@ function validatePhase(
   const seenGoalIds = new Set<string>();
   for (const attention of entry.goalAttention) {
     if (!isRecord(attention)) return rejected("schema");
-    if (findUnknownField(attention, ["goalId", "level", "reason"])) {
+    if (findUnknownField(attention, ["goalId", "level"])) {
       return rejected("unknown_field");
     }
     if (
       typeof attention.goalId !== "string" ||
-      !isBounded(attention.reason, 1, 160) ||
       !isAttentionLevel(attention.level)
     ) {
       return rejected("schema");
@@ -840,7 +807,6 @@ function validatePhase(
     goalAttention.push({
       goalId: attention.goalId,
       level: attention.level,
-      reason: attention.reason,
     });
   }
 
@@ -1374,24 +1340,16 @@ function collectRoadmapStrings(roadmap: RoadmapProposal): string[] {
     ...roadmap.phases.flatMap((phase) => [
       phase.title,
       phase.focus,
-      ...phase.goalAttention.map((attention) => attention.reason),
       ...phase.milestones.flatMap((milestone) => [
         milestone.title,
         milestone.observableCriterion,
       ]),
-    ]),
-    ...(roadmap.assumptions ?? []),
-    ...(roadmap.uncertainties ?? []).flatMap((entry) => [
-      entry.statement,
-      entry.whyItMatters,
-      entry.whatToWatch,
     ]),
     ...roadmap.reviewPoints.flatMap((entry) => [
       entry.title,
       entry.question,
       entry.triggerCondition ?? "",
     ]),
-    ...(roadmap.safetyConsiderations ?? []),
   ];
 }
 

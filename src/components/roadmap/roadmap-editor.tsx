@@ -33,7 +33,7 @@ const LEVELS = ["primary", "secondary", "maintenance", "deferred"] as const;
 
 const LABELS = ROADMAP_CONTROL_COPY.editFieldLabels;
 
-type Attention = { goalId: string; level: string; reason: string };
+type Attention = { goalId: string; level: string };
 type Milestone = {
   title: string;
   observableCriterion: string;
@@ -60,15 +60,49 @@ type Draft = {
   startDate: string;
   endDate: string;
   phases: Phase[];
-  assumptions?: string[];
-  uncertainties?: {
-    statement: string;
-    whyItMatters: string;
-    whatToWatch: string;
-  }[];
   reviewPoints: ReviewPoint[];
-  safetyConsiderations?: string[];
 };
+
+/**
+ * The draft an edit starts from, copied field by field.
+ *
+ * A proposal made before v3 also holds assumptions, uncertainties, safety
+ * sentences and a reason beside each attention level. None of them is copied,
+ * so what is saved is a v3 roadmap whichever version was opened (ADR-025); the
+ * proposal being edited keeps them, unchanged, in the history.
+ */
+function toDraft(content: Draft): Draft {
+  return {
+    title: content.title,
+    summary: content.summary,
+    startDate: content.startDate,
+    endDate: content.endDate,
+    phases: content.phases.map((phase) => ({
+      title: phase.title,
+      focus: phase.focus,
+      startDate: phase.startDate,
+      endDate: phase.endDate,
+      goalAttention: phase.goalAttention.map((attention) => ({
+        goalId: attention.goalId,
+        level: attention.level,
+      })),
+      milestones: phase.milestones.map((milestone) => ({
+        title: milestone.title,
+        observableCriterion: milestone.observableCriterion,
+        targetDate: milestone.targetDate,
+        goalIds: [...milestone.goalIds],
+      })),
+    })),
+    reviewPoints: content.reviewPoints.map((point) => ({
+      title: point.title,
+      ...(point.triggerDate ? { triggerDate: point.triggerDate } : {}),
+      ...(point.triggerCondition
+        ? { triggerCondition: point.triggerCondition }
+        : {}),
+      question: point.question,
+    })),
+  };
+}
 
 export function RoadmapEditor({
   proposalId,
@@ -91,9 +125,7 @@ export function RoadmapEditor({
   lostRender: boolean;
   onCancel: () => void;
 }) {
-  const [draft, setDraft] = useState<Draft>(() =>
-    structuredClone(content as Draft),
-  );
+  const [draft, setDraft] = useState<Draft>(() => toDraft(content as Draft));
 
   const update = (mutate: (next: Draft) => void) => {
     setDraft((current) => {
@@ -133,7 +165,7 @@ export function RoadmapEditor({
           name="content"
           value={JSON.stringify({
             ...draft,
-            schemaVersion: "fittip.roadmap.v2",
+            schemaVersion: "fittip.roadmap.v3",
           })}
         />
 
@@ -253,21 +285,6 @@ export function RoadmapEditor({
                     ))}
                   </select>
                 </label>
-                <label className={styles.field}>
-                  <span className={styles.label}>{LABELS.attentionReason}</span>
-                  <input
-                    className={styles.input}
-                    value={attention.reason}
-                    maxLength={160}
-                    onChange={(event) =>
-                      update((next) => {
-                        next.phases[phaseIndex].goalAttention[
-                          attentionIndex
-                        ].reason = event.target.value;
-                      })
-                    }
-                  />
-                </label>
               </div>
             ))}
 
@@ -323,6 +340,21 @@ export function RoadmapEditor({
                     }
                   />
                 </label>
+                {/* A phase may have none since v3, so the last one can go too. */}
+                <button
+                  className={styles.quietAction}
+                  type="button"
+                  onClick={() =>
+                    update((next) => {
+                      next.phases[phaseIndex].milestones.splice(
+                        milestoneIndex,
+                        1,
+                      );
+                    })
+                  }
+                >
+                  {LABELS.milestoneRemove}
+                </button>
               </div>
             ))}
           </fieldset>

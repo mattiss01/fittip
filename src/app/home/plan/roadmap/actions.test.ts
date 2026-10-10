@@ -508,7 +508,7 @@ describe("roadmap server actions", () => {
       expect(editProposal.mock.calls[0][0]).toBe(PROPOSAL_ID);
       expect(editProposal.mock.calls[0][1]).toMatchObject({
         title: "My own wording",
-        schemaVersion: "fittip.roadmap.v2",
+        schemaVersion: "fittip.roadmap.v3",
       });
       expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan/roadmap");
     });
@@ -612,7 +612,7 @@ const SOURCE_END = addDays(SOURCE_START, 84);
 
 function roadmapContent() {
   return {
-    schemaVersion: "fittip.roadmap.v2" as const,
+    schemaVersion: "fittip.roadmap.v3" as const,
     title: "Toward the hilly half",
     summary: "Base first, then sharpen into the event.",
     startDate: SOURCE_START,
@@ -627,7 +627,6 @@ function roadmapContent() {
           {
             goalId: GOAL_ID,
             level: "primary" as const,
-            reason: "The only dated target inside this horizon.",
           },
         ],
         milestones: [

@@ -25,7 +25,8 @@ import { ROADMAP_COPY } from "@/server/roadmap/roadmap-records";
 export type SpineGoalAttention = {
   goalId: string;
   level: "primary" | "secondary" | "maintenance" | "deferred";
-  reason: string;
+  /** A roadmap stored before v3 wrote one beside each level; v3 has none. */
+  reason?: string;
 };
 
 export type SpineMilestone = {
@@ -128,33 +129,39 @@ function PhaseAndFollowingCheckpoints({
               </li>
             ))}
           </ul>
-          {phase.goalAttention.map((attention) => (
-            <p
-              key={`${attention.goalId}-why`}
-              className={styles.attentionReason}
-            >
-              {attention.reason}
-            </p>
-          ))}
+          {phase.goalAttention.map((attention) =>
+            attention.reason ? (
+              <p
+                key={`${attention.goalId}-why`}
+                className={styles.attentionReason}
+              >
+                {attention.reason}
+              </p>
+            ) : null,
+          )}
 
-          <ul className={styles.milestoneList}>
-            {phase.milestones.map((milestone) => (
-              <li key={milestone.title} className={styles.milestone}>
-                <p className={styles.milestoneTitle}>{milestone.title}</p>
-                {/* "Aim for by", never "Due". A milestone is something an
-                    observer could verify, not something the owner owes. The
-                    wording is a product decision, so it is imported rather
-                    than written here. */}
-                <p className={styles.milestoneDate}>
-                  {ROADMAP_COPY.milestonePrefix}{" "}
-                  {formatRoadmapDate(milestone.targetDate)}
-                </p>
-                <p className={styles.milestoneCriterion}>
-                  {milestone.observableCriterion}
-                </p>
-              </li>
-            ))}
-          </ul>
+          {/* A phase may have no milestone since v3, and an empty list is
+              not something to announce. */}
+          {phase.milestones.length === 0 ? null : (
+            <ul className={styles.milestoneList}>
+              {phase.milestones.map((milestone) => (
+                <li key={milestone.title} className={styles.milestone}>
+                  <p className={styles.milestoneTitle}>{milestone.title}</p>
+                  {/* "Aim for by", never "Due". A milestone is something an
+                      observer could verify, not something the owner owes. The
+                      wording is a product decision, so it is imported rather
+                      than written here. */}
+                  <p className={styles.milestoneDate}>
+                    {ROADMAP_COPY.milestonePrefix}{" "}
+                    {formatRoadmapDate(milestone.targetDate)}
+                  </p>
+                  <p className={styles.milestoneCriterion}>
+                    {milestone.observableCriterion}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </li>
       {checkpoints.map((point) => (

@@ -12,6 +12,7 @@ import {
   type CoachAIOwnedRecords,
 } from "@/server/ai/context";
 import { COACH_AI_LIVE_LIMITS } from "@/server/ai/budget";
+import type { LegacyRoadmapV2 } from "@/server/ai/contracts";
 import { CoachAIError } from "@/server/ai/errors";
 import type { MemoryItemView } from "@/server/memory/memory-records";
 import type { SessionDetailRecords } from "@/server/session-detail/session-detail-context";
@@ -1414,7 +1415,13 @@ describe("the accepted roadmap as plan context", () => {
       reviewPoints: [{ title: "WITHHELD", question: "WITHHELD?" }],
       safetyConsiderations: ["WITHHELD"],
     },
-  } as unknown as NonNullable<CoachAIOwnedRecords["roadmapVersion"]>;
+    // A v2 roadmap on purpose: an owner may still be following one, and it is
+    // the shape with the most that must not travel.
+  } as unknown as {
+    id: string;
+    versionNumber: number;
+    content: LegacyRoadmapV2;
+  };
 
   function plan(overrides: Partial<CoachAIOwnedRecords> = {}) {
     return buildCoachAIContext(

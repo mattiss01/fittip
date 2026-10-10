@@ -160,7 +160,18 @@ describe("the roadmap prompt", () => {
 
     expect(prefix).toContain("Never increase load on it");
     expect(prefix).toContain("never state that something is safe");
-    expect(prefix).toContain("safetyConsiderations");
+  });
+
+  it("asks for none of what v3 no longer holds", () => {
+    // ADR-025. The safety rules above still bind the roadmap; what went is the
+    // field the coach explained itself in, and three more only the owner read.
+    const prefix = coachAIStaticPrefix("create_roadmap");
+
+    expect(prefix).not.toContain("safetyConsiderations");
+    expect(prefix).not.toContain('"assumptions"');
+    expect(prefix).not.toContain('"uncertainties"');
+    expect(prefix).not.toContain("with a concise reason");
+    expect(prefix).toContain('"milestones" are zero to three');
   });
 
   it("asks for excerpts rather than paraphrases, and excludes feedback", () => {
@@ -246,14 +257,40 @@ describe("the roadmap response grammar", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       any
     >;
+    const reviewPoint =
+      schema.properties.roadmap.properties.reviewPoints.items.properties;
+
+    expect(reviewPoint.triggerDate.type).toEqual(["string", "null"]);
+    expect(reviewPoint.triggerCondition.type).toEqual(["string", "null"]);
+    expect(schema.properties.memoryCandidates.type).toEqual(["array", "null"]);
+  });
+
+  it("has no property for what v3 no longer holds", () => {
+    const schema = COACH_AI_RESPONSE_SCHEMAS.create_roadmap.schema as Record<
+      string,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      any
+    >;
     const roadmap = schema.properties.roadmap;
 
-    expect(roadmap.properties.assumptions.type).toEqual(["array", "null"]);
-    expect(roadmap.properties.safetyConsiderations.type).toEqual([
-      "array",
-      "null",
+    expect(Object.keys(roadmap.properties).sort()).toEqual([
+      "endDate",
+      "phases",
+      "reviewPoints",
+      "schemaVersion",
+      "startDate",
+      "summary",
+      "title",
     ]);
-    expect(schema.properties.memoryCandidates.type).toEqual(["array", "null"]);
+    expect(roadmap.required.slice().sort()).toEqual(
+      Object.keys(roadmap.properties).sort(),
+    );
+    expect(
+      Object.keys(
+        roadmap.properties.phases.items.properties.goalAttention.items
+          .properties,
+      ).sort(),
+    ).toEqual(["goalId", "level"]);
   });
 
   it("pins the schema version the validator accepts", () => {
@@ -264,7 +301,7 @@ describe("the roadmap response grammar", () => {
     >;
 
     expect(schema.properties.roadmap.properties.schemaVersion.enum).toEqual([
-      "fittip.roadmap.v2",
+      "fittip.roadmap.v3",
     ]);
   });
 });

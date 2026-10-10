@@ -59,7 +59,6 @@ export function synthesizeRoadmapBody(context: CoachAIContext): string {
           ? attention.map((goal, position) => ({
               goalId: goal.id,
               level: attentionLevel(goal, index, position),
-              reason: attentionReason(goal, index),
             }))
           : [],
       milestones: [
@@ -80,22 +79,6 @@ export function synthesizeRoadmapBody(context: CoachAIContext): string {
     startDate: start,
     endDate: end,
     phases,
-    assumptions: [
-      bound(
-        "Your recent training is representative of what you can sustain.",
-        200,
-      ),
-    ],
-    uncertainties: [
-      {
-        statement: bound("The available time each week may vary.", 200),
-        whyItMatters: bound(
-          "Phase length assumes the pattern in your recent weeks holds.",
-          200,
-        ),
-        whatToWatch: bound("Weeks where the planned work does not fit.", 200),
-      },
-    ],
     reviewPoints: [
       {
         title: bound("End of the first phase", 200),
@@ -104,17 +87,6 @@ export function synthesizeRoadmapBody(context: CoachAIContext): string {
         question: bound("Is this workload still the right size for you?", 200),
       },
     ],
-    // Decision 7: a reported flag never blocks generation, and the proposal
-    // must acknowledge it. Absent a flag there is nothing to say, and inventing
-    // a safety note would be its own kind of wrong.
-    safetyConsiderations: context.hasSafetySignal
-      ? [
-          bound(
-            "You recorded pain, illness, injury or heavy fatigue recently, so this holds load flat on the work that involves it rather than building it.",
-            240,
-          ),
-        ]
-      : null,
   };
 
   return JSON.stringify({
@@ -184,17 +156,6 @@ function attentionLevel(
     return position === 0 ? "primary" : "secondary";
   }
   return phaseIndex === 0 ? "maintenance" : "deferred";
-}
-
-function attentionReason(
-  goal: CoachAIGoalReference,
-  phaseIndex: number,
-): string {
-  const base =
-    goal.priorityTier === "core"
-      ? "A core objective, so it shapes this block."
-      : "Kept ticking over rather than pushed in this block.";
-  return bound(phaseIndex === 0 ? base : `${base}`, 160);
 }
 
 function phaseTitle(index: number, total: number): string {

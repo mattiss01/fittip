@@ -14,7 +14,7 @@ import {
 import type {
   CoachAIContext,
   CoachAISafetyFlagReference,
-  RoadmapProposal,
+  StoredRoadmap,
   CoachAIGoalReference,
   CoachAIMemoryReference,
   CoachAIOperation,
@@ -227,10 +227,12 @@ export type CoachAIContextLimits = {
  * The binding constraint is not ADR-013's "roughly 30,000 bytes". It is
  * `maxInputTokens` together with the adapter's refusal guard, which estimates
  * four characters per token over the **whole message set**. The measured static
- * prefix for this operation was 5,810 characters then, and is 5,957 since the
- * recurring-sessions sentence of 2 October 2026 — `openai-prompt.test.ts` caps
- * it at 6,000 — and the user-message wrapper is 32, so the context ceiling is
- * `4 * maxInputTokens` less roughly 6,064.
+ * prefix for this operation was 5,810 characters then and 5,957 after the
+ * recurring-sessions sentence of 2 October 2026, against a cap of 6,000, and
+ * the user-message wrapper is 32, so the context ceiling was
+ * `4 * maxInputTokens` less roughly 6,064. ADR-023 moved the cap to 7,800 with
+ * the ceiling, and roadmap v3 (ADR-025) took 326 characters back out of the
+ * prefix; `openai-prompt.test.ts` holds today's figures.
  *
  * The first derivation sized the context to M3-01B's `maxInputTokens: 8_000`,
  * which left 24,000 bytes and gave training history 5,800 — about 11 sessions
@@ -617,7 +619,7 @@ export type CoachAIOwnedRecords = {
 export type CoachAIRoadmapVersionRecord = {
   id: string;
   versionNumber: number;
-  content: RoadmapProposal;
+  content: StoredRoadmap;
 };
 
 export type CoachAIComposeInput = {

@@ -28,14 +28,14 @@ export type CoachAIOperation = (typeof COACH_AI_OPERATIONS)[number];
 
 /** Bumped whenever an accepted request or response shape changes. */
 export const COACH_AI_SCHEMA_VERSIONS = {
-  create_roadmap: "fittip.roadmap.v2",
+  create_roadmap: "fittip.roadmap.v3",
   create_seven_day_plan: "fittip.seven-day-plan.v2",
   fill_session_activities: "fittip.session-activities.v1",
 } as const satisfies Record<CoachAIOperation, string>;
 
 /** Prompt identifiers. Every operation carries a real, iterated prompt. */
 export const COACH_AI_PROMPT_VERSIONS = {
-  create_roadmap: "roadmap-v2-2026-08-10",
+  create_roadmap: "roadmap-v3-2026-10-10",
   create_seven_day_plan: "seven-day-plan-v2-2026-08-12",
   fill_session_activities: "session-activities-v1-2026-09-28",
 } as const satisfies Record<CoachAIOperation, string>;
@@ -459,14 +459,13 @@ export type CoachAIRoadmapContext = {
   /**
    * The disclosed reductions. A coach that silently receives a subset reasons
    * as though it saw everything, so every trim is counted rather than applied
-   * quietly. All zero and false is the ordinary case, and the last three fire
+   * quietly. All zero and false is the ordinary case, and the last two fire
    * only on a roadmap large enough that the other phases have already gone.
    */
   phaseGoalAttentionWithheld: number;
   phaseDetailWithheld: number;
   otherPhasesWithheld: number;
   milestonesWithheld: number;
-  goalAttentionReasonsWithheld: number;
   focusTruncated: boolean;
 };
 
@@ -518,7 +517,7 @@ export interface CoachAI {
 }
 
 /**
- * `fittip.roadmap.v2`.
+ * `fittip.roadmap.v3`.
  *
  * Attention is ordinal rather than a percentage, because a model-generated
  * "60% / 40%" looks measurable while the roadmap contains no training volume
@@ -535,10 +534,14 @@ export const ROADMAP_GOAL_ATTENTION_LEVELS = [
 export type RoadmapGoalAttentionLevel =
   (typeof ROADMAP_GOAL_ATTENTION_LEVELS)[number];
 
+/**
+ * A level and nothing else. v2 carried a written reason beside it; the owner
+ * removed it on 10 October 2026, the phase's `focus` being where a phase says
+ * what it is for.
+ */
 export type RoadmapGoalAttention = {
   goalId: string;
   level: RoadmapGoalAttentionLevel;
-  reason: string;
 };
 
 export type RoadmapMilestone = {
@@ -559,10 +562,9 @@ export type RoadmapPhase = {
 };
 
 /**
- * Material uncertainty, stated rather than hidden behind false precision. Both
- * operations use the same three fields; the alias keeps `RoadmapUncertainty` as
- * the name M3-02 accepted while the plan schema reuses the shape rather than
- * declaring a second, identical one that could drift.
+ * Material uncertainty, stated rather than hidden behind false precision. The
+ * plan's, and a v2 roadmap's: the alias keeps `RoadmapUncertainty` as the name
+ * M3-02 accepted for what a stored v2 roadmap still holds.
  */
 export type CoachAIUncertainty = {
   statement: string;
@@ -583,6 +585,13 @@ export type RoadmapReviewPoint = {
   question: string;
 };
 
+/**
+ * What a roadmap holds since v3 (ADR-025, owner, 10 October 2026): direction in
+ * phases, the goals each attends to, milestones where a phase has one, and when
+ * to look again. No assumptions, uncertainties or safety sentences; the
+ * stop/professional-help copy on the Roadmap is server-owned and was never part
+ * of this.
+ */
 export type RoadmapProposal = {
   schemaVersion: typeof COACH_AI_SCHEMA_VERSIONS.create_roadmap;
   title: string;
@@ -590,16 +599,34 @@ export type RoadmapProposal = {
   startDate: string;
   endDate: string;
   phases: RoadmapPhase[];
+  reviewPoints: RoadmapReviewPoint[];
+};
+
+export const ROADMAP_LEGACY_SCHEMA_VERSION = "fittip.roadmap.v2";
+
+/**
+ * A roadmap stored before v3. Read and shown, never written: proposals and
+ * accepted versions are permanent records, so the ones made under v2 keep
+ * what they held. Nothing produces this shape any more, and an edit of one is
+ * saved as v3.
+ */
+export type LegacyRoadmapV2 = {
+  schemaVersion: typeof ROADMAP_LEGACY_SCHEMA_VERSION;
+  title: string;
+  summary: string;
+  startDate: string;
+  endDate: string;
+  phases: (Omit<RoadmapPhase, "goalAttention"> & {
+    goalAttention: (RoadmapGoalAttention & { reason: string })[];
+  })[];
   assumptions?: string[];
   uncertainties?: RoadmapUncertainty[];
   reviewPoints: RoadmapReviewPoint[];
-  /**
-   * May explain conservative direction. It may not diagnose, prescribe
-   * treatment, or claim safety; the stop/professional-help copy is
-   * server-owned and never model-authored.
-   */
   safetyConsiderations?: string[];
 };
+
+/** What the database can hand back as a roadmap's content. */
+export type StoredRoadmap = RoadmapProposal | LegacyRoadmapV2;
 
 /**
  * A memory candidate extracted from the planning note.
