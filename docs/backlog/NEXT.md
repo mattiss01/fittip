@@ -79,17 +79,35 @@ lane, one screen per merge.
 - [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only
       "Generate roadmap proposal", and an owner without a subscription may not be able
       to generate one, so a roadmap must also be writable by hand: phases, dates, focus,
-      milestones, review points. Open before it starts: whether a hand-written first
-      version goes through a proposal and its acceptance as a coach one does (ADR-015)
-      or is written directly, which decides whether it needs a migration. Careful lane
-      if it does.
-- [ ] **Roadmap: what it holds, again.** Owner, 3 Oct 2026, as with goals: go through
-      the roadmap's data model together — phases, focus, goal attention, milestones,
-      review points, assumptions, uncertainties, versions and proposals — what each is
-      for, what the owner should be able to set, and how a roadmap screen shows it.
-      Belongs with "Write a roadmap yourself", which writes the same shape by hand. A
-      change to the stored shape is careful lane (`roadmap_versions` content, the AI
-      contract, ADR-015).
+      milestones, review points. After "Roadmap: a slimmer shape", whose shape it
+      writes. Careful lane either way: a proposal without a coach behind it has no
+      origin the database allows, and an accepted version must name a proposal. Open:
+      whether it goes through a proposal and its acceptance as a coach one does
+      (ADR-015) or is written directly, and what the least is that counts as a
+      roadmap.
+- [~] **Roadmap: a slimmer shape.** Owner, 10 Oct 2026, after going through what a
+      roadmap holds: assumptions, uncertainties, the written reason on goal
+      attention and the coach's safety sentences go; the attention levels and review
+      points stay, and a phase may have no milestone. No coach call reads what goes.
+      The safety sentences go entirely, the owner's choice over keeping a required
+      review point: with a flag present nothing checks that a roadmap acknowledges
+      it. The coach is still sent the flags and the safety rules, and the app's own
+      notice on the Roadmap stays. Careful lane (the AI contract and the stored
+      shape): the database checks the stored envelope by name and version
+      (`fittip.roadmap.v2`), so this is a v3 beside it, with a migration, a prompt and
+      schema change, and the editor. Accepted versions and old proposals are
+      permanent and keep rendering what they hold.
+- [ ] **Whether a milestone was reached.** Owner, 10 Oct 2026. One answer, reached;
+      a milestone not ticked is open and nothing ever says missed. A record beside
+      the roadmap, as a log is beside the plan: the accepted version is never
+      rewritten. Careful lane: a new owned table with RLS and its write function.
+      Open: whether a tick can be taken back, what it holds besides the day, and
+      whether the next roadmap call is told (AI data boundary, its own decision).
+- [ ] **Review points that show.** Owner, 10 Oct 2026. A review date passes silently
+      today. From the day it arrives its question is a line at the top of the Plan
+      until dismissed, and it is marked due on the Roadmap; nothing replans and no
+      coach is asked. Open: what a point with a condition instead of a date does, and
+      where a dismissal is kept (a record of its own is a migration).
 - [ ] **Delete a log.** Owner, 7 Oct 2026: it should be possible, which also frees a
       settled session for planning again. Careful lane: `apply_completion_change`
       accepts only create and edit, and completions are permanent records today. Open
