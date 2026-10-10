@@ -602,7 +602,9 @@ begin
 
   -- The edit copies the original's owner text, technical metadata and source
   -- references. It does not rewrite or decide the source proposal, and none of
-  -- those fields is a caller input.
+  -- those fields is a caller input. The schema version is the one exception
+  -- since v3, and it is not free either: it is read from content the check
+  -- above has already held to `fittip.roadmap.v3`.
   insert into public.roadmap_proposals (
     user_id, generation_request_id, source_proposal_id, origin, planning_note,
     regeneration_feedback, schema_version, prompt_version, provider_code,

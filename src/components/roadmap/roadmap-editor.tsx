@@ -157,9 +157,9 @@ export function RoadmapEditor({
 
       <form action={formAction} className={styles.form}>
         <input type="hidden" name="proposalId" value={proposalId} />
-        {/* `schemaVersion` is added back server-side from the accepted
-            contract, never from this form, and the whole draft is revalidated
-            there by the validator the coach's own output goes through. */}
+        {/* The version sent is a claim, not a decision: the whole draft is
+            revalidated server-side by the validator the coach's own output
+            goes through, which refuses any version but the current one. */}
         <input
           type="hidden"
           name="content"
