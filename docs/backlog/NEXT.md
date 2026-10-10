@@ -50,9 +50,16 @@ lane, one screen per merge.
       the hold per call goes from 6,600 to 6,660 micro-USD. The owner's to say.
 - [ ] **A fill's sources are recorded and never checked.** A suggestion names the
       logs, library entries and saved sessions it was built from, and since ADR-023
-      the logs whose flags it was sent. `decide_session_activity_proposal` compares
-      none of them, so a flag corrected away, or a log edited, after the suggestion
-      was made does not stop Accept. The roadmap and plan proposals do check theirs.
+      the logs whose flags it was sent. Nothing compares them, so a flag corrected
+      away, or a log edited, after the suggestion was made changes nothing in the
+      draft box. Not urgent (owner, 10 Oct 2026): the list passes through the editor
+      before it is saved. The check cannot go in `decide_session_activity_proposal`,
+      which runs after the session is saved (`session-activity-acceptance.ts`); it
+      wants a read-only "is this still current" function the draft box asks as it
+      renders, compared per kind as `accept_roadmap_proposal` does. Open: what
+      revision a `plan_session`, `personal_activity` and `saved_session` source
+      stores, and so which kinds can be compared; and the owner's to say, whether a
+      stale suggestion warns or loses Accept, where asking again is a paid call.
       Careful lane: a migration.
 - [ ] **A changed setup can replay an earlier answer.** The coach service's
       repeat-protection fingerprint covers the goal and memory revisions, not the
