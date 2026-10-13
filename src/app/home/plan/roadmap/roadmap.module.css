@@ -429,6 +429,9 @@
 
 .form {
   display: grid;
+  /* One column that is never wider than the form, whatever a field in it
+     asks for: a date field on a phone asked for more than the sheet had. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.1rem;
   margin-top: 1.1rem;
 }
@@ -468,14 +471,25 @@
 /* A roadmap's two dates, side by side. */
 .dateRow {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* `minmax(0, …)`, not `1fr`: a column is otherwise as wide as its field
+     asks to be, and on a phone the two were wider than the sheet. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 0.75rem;
 }
 
-/* The browser's date field keeps a width of its own unless told. */
-.dateRow .input {
+.dateRow .field {
   min-width: 0;
+}
+
+/* The browser's date field keeps a width of its own unless told; iOS Safari
+   keeps it until the field's native appearance is given up. */
+.dateRow .input {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
   padding-inline: 0.6rem;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .input:read-only {
