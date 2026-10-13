@@ -56,13 +56,6 @@
   line-height: 1.15;
 }
 
-.reviewHeader {
-  margin: 1rem 0 0;
-  color: var(--moss);
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
 .proposalTitle {
   margin: 0.2rem 0 0;
   font-size: 1.45rem;
@@ -472,6 +465,19 @@
   resize: vertical;
 }
 
+/* A roadmap's two dates, side by side. */
+.dateRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+/* The browser's date field keeps a width of its own unless told. */
+.dateRow .input {
+  min-width: 0;
+  padding-inline: 0.6rem;
+}
+
 .input:read-only {
   background: var(--roadmap-band);
 }
@@ -536,6 +542,33 @@
   border-color: var(--rule);
   background: transparent;
   color: var(--muted);
+}
+
+/* Beside the page's title: the way to a new roadmap once one is in force. */
+.newAction {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--accent-dark);
+  color: var(--paper);
+  font: 700 0.9rem var(--font-sans);
+  cursor: pointer;
+}
+
+.newAction:focus-visible {
+  outline: 3px solid var(--accent-dark);
+  outline-offset: 2px;
+}
+
+/* The sheet is the form's surface, so the form drops its own box. */
+.sheetBody .card {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .primaryAction:disabled,

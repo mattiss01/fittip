@@ -1,7 +1,8 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useContext, useEffect, useId, useRef, useState } from "react";
 
+import { RoadmapComposeSessionContext } from "./roadmap-compose-session";
 import { RoadmapWatchNotice } from "./roadmap-watch-notice";
 import {
   isRefusal,
@@ -15,7 +16,6 @@ import {
 } from "@/app/home/plan/roadmap/action-state";
 import { generateRoadmapAction } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
-import { DateField } from "@/components/date-field/date-field";
 import { CoachSpark } from "@/components/home/coach-spark";
 import {
   COACH_START_MAX_DAYS_AHEAD,
@@ -51,7 +51,10 @@ export function RoadmapComposer({
   maxDays,
   previousProposalId,
   regenerationsRemaining,
+  headingId,
 }: {
+  /** Set where the heading names something else too: the sheet it is in. */
+  headingId?: string;
   mode: "initial" | "regeneration";
   /** The date the form opens on: the default horizon, or the predecessor's. */
   endDate: string;
@@ -75,11 +78,20 @@ export function RoadmapComposer({
   // Nothing composed in this document yet, so a recovery marker left by the
   // write before the reload is this form's to explain.
   const recovered = useRoadmapRecovered(state.submission === 0);
-  const keyRef = useRef<string | null>(null);
+  // In the "New roadmap" sheet the key is the sheet's, so it outlasts a close;
+  // on the page it is this form's own. The sheet is also told while a request
+  // is under way, and stays open until the reply is in.
+  const session = useContext(RoadmapComposeSessionContext);
+  const ownKey = useRef<string | null>(null);
+  const keyRef = session?.idempotencyKey ?? ownKey;
+  const reportPending = session?.setPending;
+  useEffect(() => {
+    reportPending?.(pending);
+    return () => reportPending?.(false);
+  }, [reportPending, pending]);
   // Explicit ids rather than a wrapping `<label>`. A label that wraps its
-  // control takes its whole text content as the accessible name, so the helper
-  // sentence and the character count would be read out as part of the field's
-  // name; `aria-describedby` says what they actually are.
+  // control takes its whole text content as the accessible name, so the
+  // character count would be read out as part of the field's name.
   const fieldId = useId();
 
   // The two counted fields are controlled so the character count is the value's
@@ -98,24 +110,27 @@ export function RoadmapComposer({
 
   const isRegeneration = mode === "regeneration";
 
+  // Each date is one field, the browser's own (owner, 13 Oct 2026), and the
+  // two stand side by side. Both are held here, so a reply that resets the
+  // form leaves them as chosen.
+  //
   // The end is counted from the first day, so its range follows the start the
-  // owner has chosen. A start half typed keeps the range it had. An end the
-  // new start leaves too near or too far is moved to the nearest date it
+  // owner has chosen. A start half typed, which passes through years like
+  // 0002, or one outside what may be asked for, keeps the range it had. An end
+  // the new start leaves too near or too far is moved to the nearest date it
   // allows, rather than left for the owner to find out why the form stopped.
+  const latestStart = shiftIsoDate(today, COACH_START_MAX_DAYS_AHEAD);
   const [chosenStart, setChosenStart] = useState(startDate);
+  const [rangeStart, setRangeStart] = useState(startDate);
   const [chosenEnd, setChosenEnd] = useState(endDate);
-  const [endSeed, setEndSeed] = useState(endDate);
   function chooseStart(date: string) {
-    if (date === "") return;
     setChosenStart(date);
+    if (date < today || date > latestStart) return;
+    setRangeStart(date);
     const earliest = shiftIsoDate(date, minDays);
     const latest = shiftIsoDate(date, maxDays);
-    const kept =
-      chosenEnd < earliest ? earliest : chosenEnd > latest ? latest : chosenEnd;
-    if (kept !== chosenEnd) {
-      setChosenEnd(kept);
-      setEndSeed(kept);
-    }
+    if (chosenEnd !== "" && chosenEnd < earliest) setChosenEnd(earliest);
+    else if (chosenEnd > latest) setChosenEnd(latest);
   }
 
   function submit(formData: FormData) {
@@ -132,16 +147,18 @@ export function RoadmapComposer({
 
   return (
     <section className={styles.card} data-roadmap-compose={mode}>
-      <h2 className={styles.cardHeading}>
+      <h2 className={styles.cardHeading} id={headingId}>
         {isRegeneration
           ? ROADMAP_CONTROL_COPY.regenerateTitle
           : ROADMAP_CONTROL_COPY.composeTitle}
       </h2>
-      <p className={styles.emptyState}>
-        {isRegeneration
-          ? ROADMAP_CONTROL_COPY.regenerateSupport
-          : ROADMAP_CONTROL_COPY.composeSupport}
-      </p>
+      {/* What a regeneration sends is said; a first request needs no
+          introduction (owner, 13 Oct 2026). */}
+      {isRegeneration ? (
+        <p className={styles.emptyState}>
+          {ROADMAP_CONTROL_COPY.regenerateSupport}
+        </p>
+      ) : null}
 
       <RoadmapWatchNotice lostRender={lostRender} recovered={recovered} />
 
@@ -167,66 +184,64 @@ export function RoadmapComposer({
         ) : null}
 
         <div className={styles.field}>
-          {/* The owner's to choose (9 Oct 2026). Fixed on a regeneration,
-              as the end is. */}
-          <DateField
-            calendar
-            describedBy={isRegeneration ? undefined : `${fieldId}-start-help`}
-            initial={startDate}
-            label={ROADMAP_CONTROL_COPY.startDateLabel}
-            labelClassName={styles.label}
-            max={shiftIsoDate(today, COACH_START_MAX_DAYS_AHEAD)}
-            min={today}
-            name="startDate"
-            onChange={chooseStart}
-            rangeMessage={
-              isRegeneration ? undefined : ROADMAP_CONTROL_COPY.startDateHelper
-            }
-            readOnly={isRegeneration}
-            required
-          />
-          {isRegeneration ? null : (
-            <span className={styles.helper} id={`${fieldId}-start-help`}>
-              {ROADMAP_CONTROL_COPY.startDateHelper}
+          <div className={styles.dateRow}>
+            {/* The start is the owner's to choose (9 Oct 2026). Fixed on a
+                regeneration, as the end is, and then held to no range: the
+                dates are the earlier proposal's, whatever today allows. */}
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor={`${fieldId}-start`}>
+                {ROADMAP_CONTROL_COPY.startDateLabel}
+              </label>
+              <input
+                className={styles.input}
+                id={`${fieldId}-start`}
+                type="date"
+                name="startDate"
+                value={chosenStart}
+                // Fixed means fixed, in a browser that opens its picker on a
+                // read-only field too.
+                onChange={(event) => {
+                  if (!isRegeneration) chooseStart(event.target.value);
+                }}
+                {...(isRegeneration ? {} : { min: today, max: latestStart })}
+                readOnly={isRegeneration}
+                required
+              />
+            </div>
+            {/* A regeneration is defined as the same question about the same
+                dates, and the database refuses one whose horizon moved.
+                Showing the dates but refusing to change them is honest about
+                that; hiding them would leave the owner guessing which dates
+                they are asking about. */}
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor={`${fieldId}-end`}>
+                {ROADMAP_CONTROL_COPY.endDateLabel}
+              </label>
+              <input
+                className={styles.input}
+                id={`${fieldId}-end`}
+                type="date"
+                name="endDate"
+                value={chosenEnd}
+                onChange={(event) => {
+                  if (!isRegeneration) setChosenEnd(event.target.value);
+                }}
+                {...(isRegeneration
+                  ? { "aria-describedby": `${fieldId}-dates-help` }
+                  : {
+                      min: shiftIsoDate(rangeStart, minDays),
+                      max: shiftIsoDate(rangeStart, maxDays),
+                    })}
+                readOnly={isRegeneration}
+                required
+              />
+            </div>
+          </div>
+          {isRegeneration ? (
+            <span className={styles.helper} id={`${fieldId}-dates-help`}>
+              {ROADMAP_CONTROL_COPY.regenerateDatesFixed}
             </span>
-          )}
-        </div>
-
-        <div className={styles.field}>
-          {/* A regeneration is defined as the same question about the same
-              dates, and the database refuses one whose horizon moved. Showing
-              the date but refusing to change it is honest about that; hiding
-              it would leave the owner guessing which dates they are asking
-              about. */}
-          <DateField
-            calendar
-            describedBy={`${fieldId}-end-help`}
-            initial={endSeed}
-            // Remounted when the start moved the end, which is the one time
-            // this field's date changes without the owner typing it.
-            key={endSeed}
-            label={ROADMAP_CONTROL_COPY.endDateLabel}
-            labelClassName={styles.label}
-            max={shiftIsoDate(chosenStart, maxDays)}
-            min={shiftIsoDate(chosenStart, minDays)}
-            name="endDate"
-            onChange={(date) => {
-              if (date !== "") setChosenEnd(date);
-            }}
-            // A typed date is held to the range as a picked one is. Not a
-            // regeneration's: its date is the earlier proposal's, whatever
-            // today allows.
-            rangeMessage={
-              isRegeneration ? undefined : ROADMAP_CONTROL_COPY.endDateHelper
-            }
-            readOnly={isRegeneration}
-            required
-          />
-          <span className={styles.helper} id={`${fieldId}-end-help`}>
-            {isRegeneration
-              ? ROADMAP_CONTROL_COPY.regenerateDatesFixed
-              : ROADMAP_CONTROL_COPY.endDateHelper}
-          </span>
+          ) : null}
         </div>
 
         <div className={styles.field}>
@@ -236,16 +251,12 @@ export function RoadmapComposer({
           <textarea
             className={styles.textarea}
             id={`${fieldId}-note`}
-            aria-describedby={`${fieldId}-note-help`}
             name="planningNote"
             maxLength={ROADMAP_NOTE_MAX_LENGTH}
-            rows={4}
+            rows={3}
             value={note}
             onChange={(event) => setNote(event.target.value)}
           />
-          <span className={styles.helper} id={`${fieldId}-note-help`}>
-            {ROADMAP_CONTROL_COPY.planningNoteHelper}
-          </span>
           <span className={styles.counter}>
             {note.length} / {ROADMAP_NOTE_MAX_LENGTH}
           </span>

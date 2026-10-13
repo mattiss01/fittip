@@ -4,7 +4,11 @@ import styles from "./roadmap.module.css";
 
 import homeStyles from "../../home.module.css";
 import { SubPageHeader } from "../sub-page-header";
-import { RoadmapScreen } from "@/components/roadmap/roadmap-screen";
+import { RoadmapNew } from "@/components/roadmap/roadmap-new";
+import {
+  RoadmapCompose,
+  RoadmapScreen,
+} from "@/components/roadmap/roadmap-screen";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import { selectActiveGoalContext } from "@/server/goals/goal-records";
 import {
@@ -35,6 +39,9 @@ import { TRAINING_HISTORY_WINDOW_DAYS } from "@/server/training/training-history
 
 export const dynamic = "force-dynamic";
 
+/** The compose form's heading, which names the sheet it opens in. */
+const NEW_ROADMAP_TITLE_ID = "roadmap-new-title";
+
 /**
  * The roadmap.
  *
@@ -62,15 +69,18 @@ export default async function RoadmapPage() {
 
   return (
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
-      {/* With no roadmap the page's own empty state says so, so the header
-          names a version only when there is one. */}
+      {/* Once there is a roadmap the page starts with it, and asking for
+          another is this one button (owner, 13 Oct 2026). Not while a proposal
+          awaits a decision: decide, then ask again. The version is on the
+          roadmap's own line. */}
       <SubPageHeader
         title={ROADMAP_COPY.routeTitle}
-        line={ROADMAP_COPY.routeIntro}
-        aside={
-          state.current === null
-            ? undefined
-            : ROADMAP_COPY.versionLabel(state.current.versionNumber)
+        action={
+          state.current === null || state.openProposal !== null ? undefined : (
+            <RoadmapNew labelledBy={NEW_ROADMAP_TITLE_ID}>
+              <RoadmapCompose state={state} headingId={NEW_ROADMAP_TITLE_ID} />
+            </RoadmapNew>
+          )
         }
       />
       <RoadmapScreen state={state} />
@@ -138,7 +148,7 @@ async function loadRoadmapState(): Promise<RoadmapScreenState> {
     targetDate: goal.targetDate,
   }));
 
-  const { open: openProposal, declinedPredecessor, history } = reviewProposals;
+  const { open: openProposal, declinedPredecessor } = reviewProposals;
   // While a proposal is open it is its own predecessor-in-waiting; once it is
   // declined it is the predecessor. The count a regeneration is offered against
   // is derived from the records rather than from whatever the browser
@@ -151,9 +161,7 @@ async function loadRoadmapState(): Promise<RoadmapScreenState> {
     today,
     head,
     current: versions[0] ?? null,
-    history: versions,
     openProposal,
-    proposalHistory: history,
     declinedPredecessor,
     openMemoryCandidateCount,
     goals,

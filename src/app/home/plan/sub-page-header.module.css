@@ -22,6 +22,15 @@
   font-weight: 600;
 }
 
+/* The way back on the left, the page's control in the right corner. */
+.top {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .line {
   width: 100%;
   margin: 0.6rem 0 0;

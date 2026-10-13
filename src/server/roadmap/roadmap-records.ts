@@ -270,22 +270,8 @@ export type RoadmapScreenState = {
   today: string;
   head: RoadmapHeadView;
   current: RoadmapVersionView | null;
-  history: RoadmapVersionView[];
   /** The proposal awaiting a decision, if any. */
   openProposal: RoadmapProposalView | null;
-  /**
-   * Recent proposals, newest first, each carrying its own decision state.
-   *
-   * The open proposal appears here too, but nothing guarantees where: it is the
-   * newest undecided proposal that no other proposal names as its source, so a
-   * newer decided or edited proposal can precede it. Not every undecided entry
-   * is open either — an owner edit supersedes its source without deciding it.
-   * A consumer tells the open proposal apart by comparing ids with
-   * `openProposal`, never by position or by a missing decision. Everything
-   * appears so that a proposal the owner remembers is visibly accounted for
-   * rather than silently missing from the screen.
-   */
-  proposalHistory: RoadmapProposalView[];
   /**
    * The newest proposal when the owner has just declined it.
    *
@@ -311,8 +297,7 @@ export type RoadmapScreenState = {
  *
  * These strings are product decisions from the ticket's decisions 3, 4, 4a and
  * 4b, not suggestions, and several of them are load-bearing: "Aim for by"
- * rather than "Due" because a milestone is observable rather than owed, and
- * "Direction, not a promise." because the whole surface is a proposal. A
+ * rather than "Due" because a milestone is observable rather than owed. A
  * component that inlines its own wording can drift from an approved decision
  * without anyone noticing, so the components import from here.
  *
@@ -338,7 +323,6 @@ export const ROADMAP_COPY = {
   contextEmptyGroup: "None included",
   memoryPanelTitle: "Possible memory updates",
   memoryReviewLink: "Memory updates still need your review",
-  reviewHeader: "Direction, not a promise.",
   assumptionsHeading: "What this assumes",
   uncertaintiesHeading: "What could change the direction",
   /**
@@ -370,7 +354,6 @@ export const ROADMAP_COPY = {
    * "Where this is going.".
    */
   routeTitle: "Roadmap",
-  supersededRoadmapsHeading: "Superseded roadmaps",
   /**
    * What an expired proposal says.
    *
@@ -405,13 +388,9 @@ export const ROADMAP_COPY = {
     ai_regeneration: "Regenerated",
     owner_edit: "Your edit",
   } satisfies Record<RoadmapProposalOrigin, string>,
-  routeIntro: "Months of direction, not a week of sessions.",
   emptyRoadmapTitle: "No roadmap yet",
   emptyRoadmapBody:
-    "A roadmap is months of direction rather than a week of sessions. Once you have one it stays here, with every version before it.",
-  supersededRoadmapsSupport: "Earlier versions stay readable and unchanged.",
-  proposalsHeading: "Proposals",
-  proposalsSupport: "What was proposed, and what became of it.",
+    "A roadmap is months of direction rather than a week of sessions. Once you have one it is what this page shows.",
   /** The open proposal, shown in full above the roadmap it would replace. */
   openProposalHeading: "A proposal is waiting",
   openProposalSupport:

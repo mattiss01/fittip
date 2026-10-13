@@ -48,7 +48,6 @@ export function RoadmapBody({
 
   return (
     <>
-      <p className={styles.reviewHeader}>{ROADMAP_COPY.reviewHeader}</p>
       <ExampleTag providerCode={providerCode} />
       <h2 className={styles.proposalTitle}>{content.title}</h2>
       <p className={styles.horizon}>{meta}</p>

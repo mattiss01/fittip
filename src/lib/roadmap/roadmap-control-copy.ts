@@ -1,5 +1,3 @@
-import { COACH_START_MAX_DAYS_AHEAD } from "@/lib/date/local-date";
-
 /**
  * Every roadmap wording a Client Component renders, in the one module it may
  * import.
@@ -25,16 +23,13 @@ import { COACH_START_MAX_DAYS_AHEAD } from "@/lib/date/local-date";
  */
 export const ROADMAP_CONTROL_COPY = {
   /* ---- Compose ---------------------------------------------------------- */
+  /** Beside the page's title while a roadmap is in force; opens the form. */
+  newRoadmapAction: "New roadmap",
   composeTitle: "Shape your roadmap",
-  composeSupport:
-    "A roadmap is months of direction. Pick how far ahead it should look, and say anything the coach could not already know.",
-  startDateLabel: "Roadmap starts",
-  startDateHelper: `Between today and ${COACH_START_MAX_DAYS_AHEAD} days from now.`,
-  endDateLabel: "Roadmap ends",
-  endDateHelper: "Between four and fifty-two weeks after it starts.",
+  /* Short, for two dates side by side at 390px (owner, 13 Oct 2026). */
+  startDateLabel: "Starts",
+  endDateLabel: "Ends",
   planningNoteLabel: "Anything the coach should account for? (optional)",
-  planningNoteHelper:
-    "Add commitments or constraints that your saved information does not show. Maximum 1,000 characters.",
   generateAction: "Generate roadmap proposal",
   generateSupport: "Nothing changes until you accept a proposal.",
   pending:
