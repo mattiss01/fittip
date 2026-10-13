@@ -147,16 +147,11 @@ Not worth their own slot; do them when work lands nearby.
 - **A phase in the roadmap editor is keyed by its start date** (`roadmap-editor.tsx`),
   so its block is rebuilt, and the field loses focus, as that date changes. Do it with
   "Write a roadmap yourself".
-- **Editing a roadmap proposal made before v3 drops its older sections without saying
-  so.** The saved edit is a v3 proposal without the assumptions, uncertainties, safety
-  sentences and reasons; the proposal edited keeps them (ADR-025). The owner's to
-  say whether the editor states it.
 - **What the Roadmap page left behind** on 13 Oct 2026, when it stopped listing
   earlier versions and decided proposals. `roadmap-proposal-record.tsx`, its test, the
   `.historyList`, `.historyItem` and `.recordTitle` styles and the `proposalExpired` and
   `proposalSuperseded` wordings have no caller; files cannot be deleted by the agent.
-  Four sentences still say a proposal "stays in your history", which no page shows:
-  the owner's to reword. After a decline, "New roadmap" opens the regeneration with
+  After a decline, "New roadmap" opens the regeneration with
   its dates fixed, and other dates can be asked for only once the three are used.
   When a generation lands from the sheet, focus falls to the page's start.
 - **A roadmap's repeat-protection fingerprint is still labelled `"roadmap.v2"`**
@@ -165,9 +160,10 @@ Not worth their own slot; do them when work lands nearby.
 - **A date outside a session's range is refused in the browser's words**, not the
   app's (`plan-date-field.tsx` gives no `rangeMessage`). A goal's calendar still offers
   days before today, which the save then refuses.
-- **One-field dates, not yet seen on a phone.** Since 13 Oct 2026 every date is the
-  browser's own field. Checked at 390px in desktop Chromium only; iOS Safari draws
-  and validates a date field its own way, the read-only one included.
+- **The date fields' width fix has not been seen anywhere.** The owner found the New
+  roadmap sheet scrolling sideways on a phone (13 Oct 2026). The fix gives up the
+  field's native appearance, on every date field, and went in with the dev server
+  stopped: the phone and a desktop browser's calendar mark are both to be looked at.
 - **Dragging a goal does not scroll the page.** Since 5 Oct 2026 a goal is
   reordered by dragging its number. A list taller than the screen cannot be
   dragged end to end; the arrow keys on the number can, which a phone lacks.
