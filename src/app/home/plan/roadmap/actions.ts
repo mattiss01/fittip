@@ -469,7 +469,9 @@ function toActionState(
             ? OUTCOMES.alreadyDecided
             : error.reason === "not-available"
               ? OUTCOMES.notAvailable
-              : OUTCOMES.stale,
+              : error.reason === "roadmap-moved"
+                ? OUTCOMES.roadmapMoved
+                : OUTCOMES.stale,
       submission,
     };
   }

@@ -1080,6 +1080,7 @@ export type Database = {
       };
       roadmap_generation_requests: {
         Row: {
+          changes_roadmap: boolean;
           completion_token: string;
           created_at: string;
           expected_head_revision: number;
@@ -1099,6 +1100,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          changes_roadmap?: boolean;
           completion_token?: string;
           created_at?: string;
           expected_head_revision: number;
@@ -1118,6 +1120,7 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          changes_roadmap?: boolean;
           completion_token?: string;
           created_at?: string;
           expected_head_revision?: number;
@@ -2471,6 +2474,7 @@ export type Database = {
       };
       begin_roadmap_generation: {
         Args: {
+          p_change_roadmap?: boolean;
           p_end_date: string;
           p_expected_head_revision: number;
           p_idempotency_key: string;

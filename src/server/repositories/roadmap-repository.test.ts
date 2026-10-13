@@ -260,6 +260,59 @@ describe("RoadmapRepository", () => {
     expect(eq).toHaveBeenCalledWith("version_id", FIRST_PROPOSAL);
   });
 
+  // ADR-028. Whether a proposal answered a change request is the request's
+  // to say, and asking again reads it from there.
+  it("reads whether a proposal answered a request to change the roadmap", async () => {
+    const row = proposalRow(SECOND_PROPOSAL, { decision: "rejected" });
+    row.roadmap_generation_requests[0].changes_roadmap = true;
+    const { repository } = readingProposals([row]);
+
+    await expect(repository.getReviewProposals()).resolves.toMatchObject({
+      declinedPredecessor: { id: SECOND_PROPOSAL, changesRoadmap: true },
+    });
+  });
+
+  it("says a first request is a change, and leaves a regeneration to the database", async () => {
+    const receipt = {
+      data: {
+        generation_id: "00000000-0000-4000-8000-000000000020",
+        completion_token: "00000000-0000-4000-8000-000000000021",
+        state: "claimed",
+        regeneration_number: 0,
+        proposal_id: null,
+      },
+      error: null,
+    };
+    const request = {
+      idempotencyKey: "rk_0123456789abcdef",
+      requestFingerprint:
+        "roadmap.v2:2026-08-10:2026-11-02:1:initial:5:0:change",
+      startDate: "2026-08-10",
+      endDate: "2026-11-02",
+      expectedHeadRevision: 1,
+      planningNote: "Easier.",
+      regenerationFeedback: null,
+      changeRoadmap: true,
+    };
+
+    const first = vi.fn().mockResolvedValue(receipt);
+    await new RoadmapRepository(client({ rpc: first })).beginGeneration({
+      ...request,
+      previousProposalId: null,
+    });
+    expect(first.mock.calls[0][1]).toMatchObject({ p_change_roadmap: true });
+
+    const again = vi.fn().mockResolvedValue(receipt);
+    await new RoadmapRepository(client({ rpc: again })).beginGeneration({
+      ...request,
+      previousProposalId: FIRST_PROPOSAL,
+      regenerationFeedback: "Start easier.",
+    });
+    expect(Object.keys(again.mock.calls[0][1])).not.toContain(
+      "p_change_roadmap",
+    );
+  });
+
   it("sends no argument for the owner text a request does not carry", async () => {
     const rpc = vi.fn().mockResolvedValue({
       data: {
@@ -301,6 +354,13 @@ describe("RoadmapRepository", () => {
     ["PT409", "That proposal is no longer available.", "not-available"],
     ["PT409", "Your goals changed since this was prepared.", "sources-changed"],
     ["PT409", "Your roadmap changed. Reload and try again.", "stale"],
+    // Another roadmap was accepted since the proposal was made: its own
+    // reason, since reloading cannot help.
+    [
+      "PT409",
+      "Your roadmap changed since this was proposed. Decline it and ask again.",
+      "roadmap-moved",
+    ],
   ])(
     "maps %s to a reason the screen can act on",
     async (code, message, reason) => {
@@ -482,6 +542,7 @@ function proposalRow(
         requested_start_date: "2026-08-10",
         requested_end_date: "2026-11-02",
         regeneration_number: 1,
+        changes_roadmap: false,
       },
     ],
   };
@@ -501,6 +562,7 @@ function proposalView(
     planningNote: "Only 45 minutes on weekdays.",
     regenerationFeedback: null,
     regenerationNumber: 1,
+    changesRoadmap: false,
     startDate: "2026-08-10",
     endDate: "2026-11-02",
     decision,

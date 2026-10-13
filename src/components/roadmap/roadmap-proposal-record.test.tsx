@@ -122,6 +122,7 @@ function proposal(id: string): RoadmapProposalView {
     planningNote: null,
     regenerationFeedback: null,
     regenerationNumber: 0,
+    changesRoadmap: false,
     startDate: "2026-09-14",
     endDate: "2026-12-06",
     decision: null,

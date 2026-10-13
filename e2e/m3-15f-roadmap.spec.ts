@@ -261,6 +261,30 @@ test.describe("M3-15F roadmap generation", () => {
       await expect(
         page.getByRole("button", { name: "Change roadmap" }),
       ).toHaveCount(0);
+      // Declined, and asked again: the sheet's second choice is now another
+      // answer to that proposal, and the request is still a change request,
+      // which the database inherits from the one that was declined.
+      await page
+        .locator("[data-roadmap-open-proposal]")
+        .getByRole("button", { name: "Decline proposal" })
+        .click();
+      await expect(page.locator("[data-roadmap-open-proposal]")).toHaveCount(0);
+      await page.getByRole("button", { name: "Change roadmap" }).click();
+      const again = page
+        .getByRole("dialog", { name: "Change roadmap" })
+        .locator('[data-roadmap-choice="fresh"]');
+      await expect(again).toContainText("Ask again with Coach");
+      await again.click();
+      const askAgain = page
+        .getByRole("dialog", { name: "Ask for another proposal" })
+        .locator('[data-roadmap-compose="regeneration"]');
+      await askAgain
+        .getByLabel("What should the coach change?")
+        .fill("Keep the first phase as it was.");
+      await askAgain
+        .getByRole("button", { name: "Generate another proposal" })
+        .click();
+      await expectOutcome(page, "A proposal is ready below.");
       await page
         .locator("[data-roadmap-open-proposal]")
         .getByRole("button", { name: "Accept roadmap" })

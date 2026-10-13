@@ -89,6 +89,8 @@ export type RoadmapConflictReason =
   | "already-decided"
   | "sources-changed"
   | "regeneration-cap"
+  /** Another roadmap was accepted since this proposal was made. */
+  | "roadmap-moved"
   | "not-available";
 
 export class RoadmapConflictError extends Error {
@@ -226,7 +228,7 @@ export class RoadmapRepository {
     const { data, error } = await this.client
       .from("roadmap_proposals")
       .select(
-        `${PROPOSAL_COLUMNS}, roadmap_proposal_decisions(decision), roadmap_generation_requests(requested_start_date, requested_end_date, regeneration_number)`,
+        `${PROPOSAL_COLUMNS}, roadmap_proposal_decisions(decision), roadmap_generation_requests(requested_start_date, requested_end_date, regeneration_number, changes_roadmap)`,
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
@@ -348,7 +350,7 @@ export class RoadmapRepository {
     const { data, error } = await this.client
       .from("roadmap_proposals")
       .select(
-        `${PROPOSAL_COLUMNS}, roadmap_proposal_decisions(decision), roadmap_generation_requests(requested_start_date, requested_end_date, regeneration_number)`,
+        `${PROPOSAL_COLUMNS}, roadmap_proposal_decisions(decision), roadmap_generation_requests(requested_start_date, requested_end_date, regeneration_number, changes_roadmap)`,
       )
       .eq("user_id", userId)
       .eq("id", proposalId)
@@ -392,6 +394,12 @@ export class RoadmapRepository {
     planningNote: string | null;
     previousProposalId: string | null;
     regenerationFeedback: string | null;
+    /**
+     * ADR-028: a first request that asks for the roadmap in force to be
+     * changed. The database stores it, and refuses it with none in force. On
+     * a regeneration it is not sent: the database inherits the predecessor's.
+     */
+    changeRoadmap?: boolean;
   }): Promise<RoadmapGenerationClaim> {
     const data = await this.call("begin_roadmap_generation", {
       p_idempotency_key: input.idempotencyKey,
@@ -408,6 +416,9 @@ export class RoadmapRepository {
       ...(input.regenerationFeedback === null
         ? {}
         : { p_regeneration_feedback: input.regenerationFeedback }),
+      ...(input.changeRoadmap === true && input.previousProposalId === null
+        ? { p_change_roadmap: true }
+        : {}),
     });
 
     return {
@@ -620,6 +631,11 @@ type RoadmapFunctionArgs<Name extends RoadmapFunctionName> =
  * database text. An unrecognized message is the most conservative reason.
  */
 function conflictReason(message: string): RoadmapConflictReason {
+  // Before the general "Your roadmap changed": this one cannot be reloaded
+  // away, so the screen has to say something else.
+  if (message.startsWith("Your roadmap changed since this was proposed")) {
+    return "roadmap-moved";
+  }
   if (message.startsWith("That proposal has already been decided")) {
     return "already-decided";
   }
@@ -671,6 +687,7 @@ type RequestRow = {
   requested_start_date: string;
   requested_end_date: string;
   regeneration_number: number;
+  changes_roadmap: boolean;
 };
 
 function toRequest(value: unknown): RequestRow | null {
@@ -702,6 +719,7 @@ function toProposalView(row: {
     planningNote: row.planning_note,
     regenerationFeedback: row.regeneration_feedback,
     regenerationNumber: request?.regeneration_number ?? 0,
+    changesRoadmap: request?.changes_roadmap === true,
     startDate: request?.requested_start_date ?? "",
     endDate: request?.requested_end_date ?? "",
     decision: (decisions[0]?.decision as RoadmapDecision) ?? null,
