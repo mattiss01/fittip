@@ -58,9 +58,35 @@ describe("DateField", () => {
 
     type("2026-10-09");
     expect(field().validationMessage).toBe("Choose today or an earlier day.");
+    expect(field().validity.customError).toBe(true);
 
     type("2026-10-07");
     expect(field().validationMessage).toBe("");
+  });
+
+  it("keeps a date to four-digit years from 1900 where the form names no range", () => {
+    const onChange = vi.fn();
+    render(
+      <DateField
+        initial={null}
+        label="Date"
+        max="2026-10-08"
+        onChange={onChange}
+        rangeMessage="Choose today or an earlier day."
+      />,
+    );
+    expect(field().min).toBe("1900-01-01");
+
+    // On the way to 2026 the field reads the year 2: not a date to act on,
+    // and not one the form's sentence is about.
+    type("0002-10-07");
+    expect(onChange).toHaveBeenLastCalledWith("");
+    expect(field().validity.customError).toBe(false);
+    expect(field().validity.rangeUnderflow).toBe(true);
+
+    cleanup();
+    render(<DateField initial={null} label="Date" name="date" />);
+    expect(field().max).toBe("9999-12-31");
   });
 
   it("checks nothing where the form asked it not to", () => {
@@ -77,6 +103,7 @@ describe("DateField", () => {
     );
 
     expect(field().required).toBe(false);
+    expect(field().min).toBe("");
     expect(field().max).toBe("");
 
     type("2026-10-09");

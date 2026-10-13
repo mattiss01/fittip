@@ -10,11 +10,13 @@ import styles from "./date-field.module.css";
  * opens. It was three short fields and a calendar button from 5 Oct 2026.
  *
  * It is sent under `name` as one `YYYY-MM-DD` date, or empty when there is
- * none, which is also what the browser makes of a date half typed. `required`
- * stops the form for one left empty, and a date outside `min` and `max` is
- * stopped in the browser too: with the form's own sentence where it gives
- * `rangeMessage`, otherwise with the browser's. Whether the date is allowed is
- * still checked where it is saved.
+ * none. `required` stops the form for one left empty, the browser stops it
+ * for a date half typed, and a date outside `min` and `max` is stopped in the
+ * browser too: with the form's own sentence where it gives `rangeMessage`,
+ * otherwise with the browser's. A form that gives no range still gets the
+ * years 1900 to 9999, since the field would otherwise take the year 2 on the
+ * way to 2026, or six digits. Whether the date is allowed is still checked
+ * where it is saved.
  *
  * A form that shows something of its own for the date takes `onChange`. It
  * is told at each change, with the date if it is one the form may use and ""
@@ -50,7 +52,9 @@ export function DateField({
    * Held to nothing in the browser, neither `required` nor the range: for a
    * form that must be able to leave with the date as it stands, as setup's
    * "Continue later" does, or that keeps this field out of sight on another
-   * question.
+   * question. The browser would still stop the form for a date half typed,
+   * so one is emptied when the field is left; a form that leaves without
+   * the field losing focus calls `clearUnfinishedDates` first.
    */
   unchecked?: boolean;
   /** Shown and sent, not changed. */
@@ -70,12 +74,18 @@ export function DateField({
   const field = useRef<HTMLInputElement>(null);
   const [date, setDate] = useState(initial ?? "");
   const bounded = !unchecked && !readOnly;
+  const first = min ?? EARLIEST;
+  const last = max ?? LATEST;
   const outOfRange = (value: string) =>
+    bounded && value !== "" && (value < first || value > last);
+  // The form's sentence is about the range the form gave, so a year like
+  // 0002 under a form's `max` is left to the browser's own words.
+  const outOfGivenRange =
     bounded &&
-    value !== "" &&
-    ((min !== undefined && value < min) || (max !== undefined && value > max));
+    date !== "" &&
+    ((min !== undefined && date < min) || (max !== undefined && date > max));
   const problem =
-    rangeMessage !== undefined && outOfRange(date) ? rangeMessage : "";
+    rangeMessage !== undefined && outOfGivenRange ? rangeMessage : "";
   useEffect(() => {
     const input = field.current;
     input?.setCustomValidity(problem);
@@ -94,9 +104,14 @@ export function DateField({
         aria-describedby={describedBy}
         className={styles.date}
         id={fieldId}
-        max={bounded ? max : undefined}
-        min={bounded ? min : undefined}
+        max={bounded ? last : undefined}
+        min={bounded ? first : undefined}
         name={name}
+        onBlur={
+          unchecked
+            ? (event) => clearIfUnfinished(event.currentTarget)
+            : undefined
+        }
         onChange={(event) => {
           // Fixed means fixed, in a browser that opens its picker on a
           // read-only field too.
@@ -113,4 +128,30 @@ export function DateField({
       />
     </div>
   );
+}
+
+/** The years a date may be in where its form names no range. */
+const EARLIEST = "1900-01-01";
+const LATEST = "9999-12-31";
+
+/**
+ * A date half typed has no value, so what is held for it is already empty;
+ * this empties what the field shows as well, which is what the browser
+ * would otherwise stop the form for.
+ */
+function clearIfUnfinished(field: HTMLInputElement) {
+  if (field.validity.badInput) field.value = "";
+}
+
+/**
+ * Empties every half-typed date in a form that is about to leave without
+ * asking the browser's leave: a tap on a button does not take focus from a
+ * field in every browser, so the field may not have been left.
+ */
+export function clearUnfinishedDates(form: HTMLFormElement) {
+  for (const field of form.querySelectorAll<HTMLInputElement>(
+    'input[type="date"]',
+  )) {
+    clearIfUnfinished(field);
+  }
 }
