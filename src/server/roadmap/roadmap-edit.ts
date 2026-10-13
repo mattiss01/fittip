@@ -11,10 +11,9 @@ import type { RoadmapProposalView } from "@/server/roadmap/roadmap-records";
  *
  * An edit goes through `validateRoadmapCandidate`, the same validator the
  * model's own output goes through, which needs a context to check against.
- * That context is not reassembled from scratch: the horizon and the safety
- * requirement belong to the proposal being edited, not to whatever is true
- * right now, or an owner could widen their own horizon by editing rather than
- * by composing.
+ * That context is not reassembled from scratch: the horizon belongs to the
+ * proposal being edited, not to whatever is true right now, or an owner could
+ * widen their own horizon by editing rather than by composing.
  *
  * Goals are the exception and are re-read deliberately. A goal abandoned since
  * the proposal was generated must not survive into an edited version; the
@@ -52,11 +51,9 @@ export async function buildEditValidationContext(
       missedPlannedSessions: [],
     },
     planCommitments: [],
-    // If the proposal carried a safety consideration, the signal that required
-    // it was real, and editing is not how it stops being real. The validator
-    // therefore still demands at least one, so an owner cannot quietly delete
-    // the sentence that acknowledges what they reported.
-    hasSafetySignal: (source.content.safetyConsiderations ?? []).length > 0,
+    // Nothing in a v3 roadmap depends on it (ADR-025): the validator demands no
+    // safety sentence, so an edit has none to keep.
+    hasSafetySignal: false,
     // Not the note itself: an edit produces no memory candidates, and the
     // validator only reads this to check excerpts that will not be present.
     planningNote: null,

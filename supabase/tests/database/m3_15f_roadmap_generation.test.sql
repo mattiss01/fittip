@@ -38,7 +38,7 @@ as $$
   select ((clock_timestamp() at time zone 'utc')::date + p_offset)
 $$;
 
--- One valid `fittip.roadmap.v2` body for the horizon the tests use. Built from
+-- One valid `fittip.roadmap.v3` body for the horizon the tests use. Built from
 -- the same two dates the generation request carries, so content validation is
 -- exercised rather than sidestepped.
 create function pg_temp.roadmap(p_start date, p_end date, p_title text)
@@ -47,7 +47,7 @@ language sql
 stable
 as $$
   select jsonb_build_object(
-    'schemaVersion', 'fittip.roadmap.v2',
+    'schemaVersion', 'fittip.roadmap.v3',
     'title', p_title,
     'summary', 'Build an aerobic base, then sharpen into the target race.',
     'startDate', p_start::text,
@@ -59,8 +59,7 @@ as $$
       'endDate', p_end::text,
       'goalAttention', jsonb_build_array(jsonb_build_object(
         'goalId', '00000000-0000-4000-8000-000000000001',
-        'level', 'primary',
-        'reason', 'It is the only goal with a date inside this horizon.'
+        'level', 'primary'
       )),
       'milestones', jsonb_build_array(jsonb_build_object(
         'title', 'Four steady weeks',
@@ -361,7 +360,7 @@ select throws_ok(
       user_id, generation_request_id, origin, schema_version, prompt_version,
       provider_code, model_code, rate_card_version, content)
     values ('6a000000-0000-4000-8000-000000000001',
-      '6a000000-0000-4000-8000-0000000000ff', 'ai_initial', 'fittip.roadmap.v2',
+      '6a000000-0000-4000-8000-0000000000ff', 'ai_initial', 'fittip.roadmap.v3',
       'p', 'fixture', 'fixture-corpus-v1', 'fixture-no-spend', '{}'::jsonb)$$,
   '42501', 'permission denied for table roadmap_proposals',
   'the owner still cannot write a proposal except through a function'
@@ -423,7 +422,7 @@ insert into finished
 select 'first', * from public.finish_roadmap_generation(
   (select completion_token from claim where label = 'first'),
   'proposal',
-  'fittip.roadmap.v2',
+  'fittip.roadmap.v3',
   'roadmap-2026-08-10',
   'fixture',
   'fixture-corpus-v1',
@@ -482,7 +481,7 @@ insert into finished
 select 'regeneration', * from public.finish_roadmap_generation(
   (select completion_token from claim where label = 'regeneration'),
   'proposal',
-  'fittip.roadmap.v2',
+  'fittip.roadmap.v3',
   'roadmap-2026-08-10',
   'fixture',
   'fixture-corpus-v1',
@@ -590,7 +589,7 @@ insert into finished
 select 'second-roadmap', * from public.finish_roadmap_generation(
   (select completion_token from claim where label = 'second-roadmap'),
   'proposal',
-  'fittip.roadmap.v2',
+  'fittip.roadmap.v3',
   'roadmap-2026-08-10',
   'fixture',
   'fixture-corpus-v1',
@@ -644,7 +643,7 @@ insert into finished
 select 'completion-source', * from public.finish_roadmap_generation(
   (select completion_token from claim where label = 'completion-source'),
   'proposal',
-  'fittip.roadmap.v2',
+  'fittip.roadmap.v3',
   'roadmap-2026-08-10',
   'fixture',
   'fixture-corpus-v1',
@@ -690,7 +689,7 @@ insert into finished
 select 'completion-corrected', * from public.finish_roadmap_generation(
   (select completion_token from claim where label = 'completion-corrected'),
   'proposal',
-  'fittip.roadmap.v2',
+  'fittip.roadmap.v3',
   'roadmap-2026-08-10',
   'fixture',
   'fixture-corpus-v1',
@@ -733,7 +732,7 @@ insert into finished
 select 'completion-outsider', * from public.finish_roadmap_generation(
   (select completion_token from claim where label = 'completion-outsider'),
   'proposal',
-  'fittip.roadmap.v2',
+  'fittip.roadmap.v3',
   'roadmap-2026-08-10',
   'fixture',
   'fixture-corpus-v1',
@@ -793,7 +792,7 @@ select throws_ok(
 select throws_ok(
   format(
     $$select * from public.finish_roadmap_generation(
-      %L::uuid, 'proposal', 'fittip.roadmap.v2', 'roadmap-2026-08-10',
+      %L::uuid, 'proposal', 'fittip.roadmap.v3', 'roadmap-2026-08-10',
       'fixture', 'fixture-corpus-v1', 'fixture-no-spend',
       p_content => %L::jsonb, p_sources => '[]'::jsonb)$$,
     (select completion_token from claim where label = 'second-roadmap'),

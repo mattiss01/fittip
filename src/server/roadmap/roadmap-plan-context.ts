@@ -9,7 +9,7 @@ import type {
   CoachAIRoadmapPhaseSummary,
   CoachAIRoadmapStaleReason,
   RoadmapPhase,
-  RoadmapProposal,
+  StoredRoadmap,
 } from "@/server/ai/contracts";
 
 /**
@@ -24,15 +24,17 @@ import type {
  *
  * - The roadmap's own `title` and `summary`, and its start and end dates.
  * - The phase or phases the horizon falls in, **in full**: `focus`, the whole
- *   `goalAttention` including each `reason`, and every milestone.
+ *   `goalAttention` and every milestone.
  * - Every other phase as `title`, its dates, and `goalAttention` reduced to
  *   `goalId` and `level`.
  *
  * ## What never leaves
  *
- * `assumptions`, `uncertainties`, `reviewPoints` and `safetyConsiderations` —
- * they describe the whole horizon rather than this week. And for a phase the
- * week is not in: `focus`, every `goalAttention.reason`, and every milestone.
+ * `reviewPoints`, which describe the whole horizon rather than this week. And
+ * for a phase the week is not in: `focus` and every milestone. Of a roadmap
+ * stored before v3, also what v3 no longer holds: its `assumptions`,
+ * `uncertainties` and `safetyConsiderations`, and since ADR-025 the `reason`
+ * beside each attention level, which the covering phase used to carry.
  * The product owner decided on 20 September 2026 that no model-authored prose
  * leaves for a phase the athlete is not training in; such a phase says what it
  * is for by naming the goals it attends to, which the coach already holds.
@@ -68,8 +70,8 @@ import type {
 export const ROADMAP_PLAN_CONTEXT_MAX_BYTES = 4_000;
 
 export type RoadmapPlanContextInput = {
-  /** The accepted version's content. */
-  roadmap: RoadmapProposal;
+  /** The accepted version's content, whichever version it was stored under. */
+  roadmap: StoredRoadmap;
   horizonStartDate: string;
   horizonEndDate: string;
   /**
@@ -128,7 +130,6 @@ export function buildRoadmapPlanContext(
     phaseDetailWithheld: 0,
     otherPhasesWithheld: 0,
     milestonesWithheld: 0,
-    goalAttentionReasonsWithheld: 0,
     focusTruncated: false,
   };
   if (fits(context)) return context;
@@ -175,8 +176,8 @@ export function buildRoadmapPlanContext(
   if (fits(context)) return context;
 
   // 4. The covering phase itself, as a last resort and in the order that costs
-  //    the coach least: what the phase is measured by, then why each goal gets
-  //    its attention, then the phase description itself, truncated.
+  //    the coach least: what the phase is measured by, then the phase
+  //    description itself, truncated.
   //
   //    This ticket first claimed the covering phase was never reduced, on the
   //    arithmetic that a maximal phase plus the envelope came to roughly 3,750
@@ -206,27 +207,9 @@ export function buildRoadmapPlanContext(
   };
   if (fits(context)) return context;
 
-  context = {
-    ...context,
-    coveringPhases: context.coveringPhases.map((phase) => ({
-      ...phase,
-      goalAttention: phase.goalAttention.map((attention) => ({
-        goalId: attention.goalId,
-        level: attention.level,
-        reason: "",
-      })),
-    })),
-    goalAttentionReasonsWithheld: context.coveringPhases.reduce(
-      (total, phase) =>
-        total + phase.goalAttention.filter((one) => one.reason !== "").length,
-      0,
-    ),
-  };
-  if (fits(context)) return context;
-
   //    The floor, and it is reachable only in theory. A UTF-16 code unit — the
   //    thing the validator counts — is at most three UTF-8 bytes, so with
-  //    milestones and reasons gone the worst validator-legal roadmap serializes
+  //    milestones gone the worst validator-legal roadmap serializes
   //    to roughly 3,200 bytes: title 80 units and summary 600 at 3 bytes each,
   //    four goal ids, the dates and the envelope. That already fits, which is
   //    why no test can make `focusTruncated` true through the public shape.
@@ -326,7 +309,6 @@ function toFullPhase(phase: RoadmapPhase): CoachAIRoadmapPhase {
     goalAttention: phase.goalAttention.map((attention) => ({
       goalId: attention.goalId,
       level: attention.level,
-      reason: attention.reason,
     })),
     milestones: phase.milestones.map((milestone) => ({
       title: milestone.title,
@@ -339,7 +321,7 @@ function toFullPhase(phase: RoadmapPhase): CoachAIRoadmapPhase {
 
 /**
  * A phase the week is not in: what it is called, when it runs, and which goals
- * it attends to. `reason` is dropped with the rest of the prose.
+ * it attends to.
  */
 function toPhaseSummary(phase: RoadmapPhase): CoachAIRoadmapPhaseSummary {
   return {
@@ -404,7 +386,7 @@ function coveredDays(
  * is and what was still to come, not how the old one began.
  */
 export function buildCurrentRoadmapReference(
-  roadmap: RoadmapProposal,
+  roadmap: StoredRoadmap,
   maxBytes: number,
 ): CoachAICurrentRoadmapReference {
   const phases = roadmap.phases.map((phase) => ({
@@ -434,7 +416,7 @@ export function buildCurrentRoadmapReference(
  * purpose is already written. Null when the roadmap does not cover the day.
  */
 export function buildRoadmapPhaseReference(
-  roadmap: RoadmapProposal,
+  roadmap: StoredRoadmap,
   localDate: string,
 ): CoachAIRoadmapPhaseReference | null {
   const phase = roadmap.phases.find(

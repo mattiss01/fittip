@@ -277,7 +277,6 @@ const PHASE_ONE = {
     {
       goalId: GOAL,
       level: "primary",
-      reason: "The only dated objective inside this horizon.",
     },
   ],
   milestones: [
@@ -300,7 +299,6 @@ const PHASE_TWO = {
     {
       goalId: GOAL,
       level: "primary",
-      reason: "Everything in this block serves the race itself.",
     },
   ],
   milestones: [
@@ -314,21 +312,13 @@ const PHASE_TWO = {
 };
 
 const VALID_ROADMAP = {
-  schemaVersion: "fittip.roadmap.v2",
+  schemaVersion: "fittip.roadmap.v3",
   title: "Fifteen weeks to a hilly half",
   summary:
     "You have one dated objective and just over three months to reach it, so this splits into a long base block and a shorter race-specific one. The weekday limit you described shapes the base block toward shorter, more frequent runs.",
   startDate: COACH_AI_FIXTURE_HORIZON_START,
   endDate: COACH_AI_FIXTURE_HORIZON_END,
   phases: [PHASE_ONE, PHASE_TWO],
-  assumptions: ["Three training days a week are available."],
-  uncertainties: [
-    {
-      statement: "Weekday sessions may stay short for the whole block.",
-      whyItMatters: "Hill work needs time that a 45 minute window limits.",
-      whatToWatch: "Whether the weekend run is carrying the whole load.",
-    },
-  ],
   reviewPoints: [
     {
       title: "End of the base block",
@@ -337,7 +327,6 @@ const VALID_ROADMAP = {
       question: "Is the weekly volume holding up alongside work?",
     },
   ],
-  safetyConsiderations: null,
 };
 
 const envelope = (roadmap: unknown, memoryCandidates: unknown = null): string =>
@@ -621,15 +610,15 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
     note: "Neither has no meaning: the owner is told to reassess at no identifiable moment.",
   },
   {
-    name: "roadmap_missing_safety_consideration",
+    name: "roadmap_under_safety_signal",
     operation: "create_roadmap",
     body: envelope(VALID_ROADMAP),
     context: COACH_AI_FIXTURE_SAFETY_CONTEXT,
-    expected: { outcome: "rejected", reason: "safety_requirement" },
-    note: "Decision 7: a reported flag never blocks generation, but the proposal must acknowledge it.",
+    expected: { outcome: "accepted" },
+    note: "ADR-025: a v3 roadmap holds no safety sentences, so a reported flag neither blocks one nor demands a field of it.",
   },
   {
-    name: "roadmap_conservative_under_safety_signal",
+    name: "roadmap_safety_sentences_returned",
     operation: "create_roadmap",
     body: envelope(
       roadmapWith((roadmap) => {
@@ -639,17 +628,42 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
       }),
     ),
     context: COACH_AI_FIXTURE_SAFETY_CONTEXT,
+    expected: { outcome: "rejected", reason: "unknown_field" },
+    note: "What v2 required is a field v3 does not have: a coach still writing it is refused, not stored.",
+  },
+  {
+    name: "roadmap_attention_reason_returned",
+    operation: "create_roadmap",
+    body: envelope(
+      roadmapWith((roadmap) => {
+        const phases = roadmap.phases as Record<string, unknown>[];
+        (phases[0].goalAttention as Record<string, unknown>[])[0].reason =
+          "The only dated objective inside this horizon.";
+      }),
+    ),
+    expected: { outcome: "rejected", reason: "unknown_field" },
+    note: "Attention is a level since v3; the written reason went with the owner's decision of 10 October 2026.",
+  },
+  {
+    name: "roadmap_phase_without_milestone",
+    operation: "create_roadmap",
+    body: envelope(
+      roadmapWith((roadmap) => {
+        const phases = roadmap.phases as Record<string, unknown>[];
+        phases[0].milestones = [];
+      }),
+    ),
     expected: { outcome: "accepted" },
-    note: "The other half of decision 7: a reported flag does not stop a roadmap being produced.",
+    note: "A phase with no honest checkpoint has none, rather than an invented one.",
   },
   {
     name: "diagnostic_phrasing",
     operation: "create_roadmap",
     body: envelope(
       roadmapWith((roadmap) => {
-        roadmap.safetyConsiderations = [
-          "You probably have a torn meniscus, so avoid loaded knee flexion.",
-        ];
+        const phases = roadmap.phases as Record<string, unknown>[];
+        phases[0].focus =
+          "You probably have a torn meniscus, so avoid loaded knee flexion.";
       }),
     ),
     context: COACH_AI_FIXTURE_SAFETY_CONTEXT,
@@ -661,9 +675,8 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
     operation: "create_roadmap",
     body: envelope(
       roadmapWith((roadmap) => {
-        roadmap.safetyConsiderations = [
-          "Running downhill is completely safe at this volume.",
-        ];
+        const phases = roadmap.phases as Record<string, unknown>[];
+        phases[0].focus = "Running downhill is completely safe at this volume.";
       }),
     ),
     context: COACH_AI_FIXTURE_SAFETY_CONTEXT,
@@ -702,7 +715,18 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
       }),
     ),
     expected: { outcome: "rejected", reason: "schema" },
-    note: "The v1 shape has no milestones, attention, uncertainties, or review points.",
+    note: "The v1 shape has no milestones, attention or review points.",
+  },
+  {
+    name: "legacy_schema_version",
+    operation: "create_roadmap",
+    body: envelope(
+      roadmapWith((roadmap) => {
+        roadmap.schemaVersion = "fittip.roadmap.v2";
+      }),
+    ),
+    expected: { outcome: "rejected", reason: "schema" },
+    note: "v2 is still stored and shown, and is no longer something a coach may answer in.",
   },
   {
     name: "roadmap_envelope_extra_field",
@@ -729,7 +753,7 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
   {
     name: "truncated_json",
     operation: "create_roadmap",
-    body: '{"roadmap":{"schemaVersion":"fittip.roadmap.v2","title":"Fifteen weeks',
+    body: '{"roadmap":{"schemaVersion":"fittip.roadmap.v3","title":"Fifteen weeks',
     expected: { outcome: "rejected", reason: "unparsable" },
     note: "What an output-token ceiling actually produces.",
   },

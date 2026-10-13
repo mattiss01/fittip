@@ -6,6 +6,7 @@ import {
   COACH_AI_SCHEMA_VERSIONS,
   type CoachAIPreviousProposalReference,
   type RoadmapProposal,
+  type StoredRoadmap,
 } from "@/server/ai/contracts";
 import { CoachAIError } from "@/server/ai/errors";
 import type { CoachAIOwner } from "@/server/ai/owner";
@@ -87,7 +88,7 @@ export type RoadmapGenerationDependencies = {
  * focus and dates.
  */
 export function reducePreviousProposal(
-  content: RoadmapProposal,
+  content: StoredRoadmap,
 ): CoachAIPreviousProposalReference {
   return {
     title: content.title,

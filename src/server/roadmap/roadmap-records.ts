@@ -6,6 +6,7 @@ import { ROADMAP_ROUTE_STATE_COPY } from "@/lib/roadmap/roadmap-route-state-copy
 import type {
   RoadmapMemoryCandidate,
   RoadmapProposal,
+  StoredRoadmap,
 } from "@/server/ai/contracts";
 
 /**
@@ -174,7 +175,7 @@ export function parseExpectedHeadRevision(value: unknown): number {
  *
  * Decision 4 fixes what is editable: the roadmap title and summary; phase
  * titles, focus, dates and order; milestone text and dates; goal-attention
- * levels and reasons; assumptions, uncertainties and review points. Owner id,
+ * levels; and review points. Owner id,
  * source ids and versions, schema/prompt/model codes, validation state,
  * idempotency data, and the server-owned safety copy are not, and none of them
  * appears in this shape — an edit that tried to change one would have nowhere
@@ -202,7 +203,8 @@ export type RoadmapProposalView = {
    * already records, and what the label has to reflect.
    */
   providerCode: string;
-  content: RoadmapProposal;
+  /** As stored: a proposal made before v3 keeps the sections v3 dropped. */
+  content: StoredRoadmap;
   planningNote: string | null;
   regenerationFeedback: string | null;
   regenerationNumber: number;
@@ -215,7 +217,7 @@ export type RoadmapProposalView = {
 export type RoadmapVersionView = {
   id: string;
   versionNumber: number;
-  content: RoadmapProposal;
+  content: StoredRoadmap;
   acceptedAt: string;
   /**
    * The provider code of the proposal this version was accepted from.

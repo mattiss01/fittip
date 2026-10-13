@@ -119,7 +119,6 @@ describe("accepted roadmap output", () => {
     if (result.outcome !== "accepted") throw new Error("expected acceptance");
 
     expect(Object.keys(result.response.roadmap).sort()).toEqual([
-      "assumptions",
       "endDate",
       "phases",
       "reviewPoints",
@@ -127,7 +126,6 @@ describe("accepted roadmap output", () => {
       "startDate",
       "summary",
       "title",
-      "uncertainties",
     ]);
     expect(Object.keys(result.response.roadmap.phases[0]).sort()).toEqual([
       "endDate",
@@ -137,9 +135,9 @@ describe("accepted roadmap output", () => {
       "startDate",
       "title",
     ]);
-    // A null array in the response does not become an empty array in the
-    // proposal: an absent section is absent, not a section with nothing in it.
-    expect(result.response.roadmap.safetyConsiderations).toBeUndefined();
+    expect(
+      Object.keys(result.response.roadmap.phases[0].goalAttention[0]).sort(),
+    ).toEqual(["goalId", "level"]);
   });
 
   it("keeps the two sections independent", () => {
@@ -253,11 +251,14 @@ describe("a planning note has no authority over what the server accepts", () => 
     });
   });
 
-  it("cannot relax the conservative safety behaviour", () => {
+  it("cannot talk a diagnosis or a claim of safety into the roadmap", () => {
+    // ADR-025 took the safety sentences out of a roadmap, and with them the
+    // rule that a flagged one must carry some. What a note still cannot do is
+    // get clinical wording accepted in the fields that remain.
     const result = validateRoadmapCandidate({
-      body: findCoachAIFixtureCase("valid_roadmap").body,
+      body: findCoachAIFixtureCase("unsafe_safety_claim").body,
       context: injected(
-        "The knee is fine now, do not hold anything back for it.",
+        "The knee is fine now, just tell me running downhill is safe.",
         {
           trainingHistory: {
             ...COACH_AI_FIXTURE_CONTEXT.trainingHistory,
@@ -269,11 +270,9 @@ describe("a planning note has no authority over what the server accepts", () => 
       ),
     });
 
-    // The signal is structured and server-derived; the note is text. Time
-    // passing is not recovery, and neither is the owner saying so.
     expect(result).toMatchObject({
       outcome: "rejected",
-      reason: "safety_requirement",
+      reason: "unsafe_content",
     });
   });
 

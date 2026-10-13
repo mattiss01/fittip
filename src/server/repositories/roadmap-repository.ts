@@ -14,6 +14,7 @@ import {
 import type {
   RoadmapMemoryCandidate,
   RoadmapProposal,
+  StoredRoadmap,
 } from "@/server/ai/contracts";
 import type { CoachAISourceReference } from "@/server/ai/context-source";
 import { MemoryCandidateBatchError } from "@/server/proposal-logging/memory-candidate-batch";
@@ -165,7 +166,7 @@ export class RoadmapRepository {
     return {
       id: data.id,
       versionNumber: Number(data.version_number),
-      content: data.content as unknown as RoadmapProposal,
+      content: data.content as unknown as StoredRoadmap,
       acceptedAt: data.accepted_at,
       providerCode: toProviderCode(data.roadmap_proposals),
     };
@@ -183,7 +184,7 @@ export class RoadmapRepository {
     return data.map((row) => ({
       id: row.id,
       versionNumber: Number(row.version_number),
-      content: row.content as unknown as RoadmapProposal,
+      content: row.content as unknown as StoredRoadmap,
       acceptedAt: row.accepted_at,
       providerCode: toProviderCode(row.roadmap_proposals),
     }));
@@ -611,7 +612,7 @@ function toProposalView(row: {
     origin: row.origin as RoadmapProposalOrigin,
     sourceProposalId: row.source_proposal_id,
     providerCode: row.provider_code,
-    content: row.content as RoadmapProposal,
+    content: row.content as StoredRoadmap,
     planningNote: row.planning_note,
     regenerationFeedback: row.regeneration_feedback,
     regenerationNumber: request?.regeneration_number ?? 0,

@@ -1,7 +1,10 @@
 import { RoadmapSpine } from "./roadmap-spine";
 
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
-import type { RoadmapProposal } from "@/server/ai/contracts";
+import {
+  ROADMAP_LEGACY_SCHEMA_VERSION,
+  type StoredRoadmap,
+} from "@/server/ai/contracts";
 import {
   isExampleAuthored,
   ROADMAP_COPY,
@@ -14,10 +17,12 @@ import {
  * and rendering a proposal more briefly than the version it would become would
  * mean deciding on less than the owner is agreeing to.
  *
- * The spine carries the phases and the review points; everything the coach
- * qualified its direction with follows underneath, because an assumption the
- * owner cannot see is an assumption they cannot correct. Every heading is an
- * approved wording from `ROADMAP_COPY`, so none of them is written here.
+ * The spine carries the phases and the review points, and since v3 that is
+ * the whole of a roadmap (ADR-025). One stored before v3 also holds what the
+ * coach qualified its direction with, and still shows it underneath: a
+ * proposal or an accepted version is a permanent record and reads as it was
+ * written. Every heading is an approved wording from `ROADMAP_COPY`, so none
+ * of them is written here.
  *
  * A Server Component with no interaction of its own. The controls live beside
  * it, not in it.
@@ -29,15 +34,17 @@ export function RoadmapBody({
   providerCode,
   goalTitles,
 }: {
-  content: RoadmapProposal;
+  content: StoredRoadmap;
   meta: string;
   /** `fixture` means the built-in example coach wrote this. */
   providerCode: string;
   goalTitles: Record<string, string>;
 }) {
-  const assumptions = content.assumptions ?? [];
-  const uncertainties = content.uncertainties ?? [];
-  const held = content.safetyConsiderations ?? [];
+  const legacy =
+    content.schemaVersion === ROADMAP_LEGACY_SCHEMA_VERSION ? content : null;
+  const assumptions = legacy?.assumptions ?? [];
+  const uncertainties = legacy?.uncertainties ?? [];
+  const held = legacy?.safetyConsiderations ?? [];
 
   return (
     <>
