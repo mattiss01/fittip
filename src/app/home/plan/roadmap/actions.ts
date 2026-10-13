@@ -277,6 +277,19 @@ export async function setMilestoneReachedAction(
     revalidatePath("/home/plan/roadmap");
     return { status: "marked", message: "", submission };
   } catch (error) {
+    // Said in the milestone's own words: the shared sentences are about a
+    // proposal, and about details there are none of here to check.
+    if (
+      error instanceof RoadmapConflictError ||
+      error instanceof RoadmapValidationError
+    ) {
+      return {
+        status:
+          error instanceof RoadmapConflictError ? "conflict" : "validation",
+        message: OUTCOMES.milestoneUnavailable,
+        submission,
+      };
+    }
     return toActionState(error, submission);
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { formatRoadmapDate } from "./roadmap-dates";
+import { RoadmapWatchNotice } from "./roadmap-watch-notice";
 import { isRefusal, useRoadmapWrite } from "./use-roadmap-write";
 
 import { setMilestoneReachedAction } from "@/app/home/plan/roadmap/actions";
@@ -18,6 +19,10 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
  *
  * The form says which milestone and which way. Whether that is allowed is the
  * database's to decide, and a refusal is said here, beside the milestone.
+ *
+ * The write is watched as every roadmap write is (`use-roadmap-write.ts`): a
+ * reply that arrives and never renders reloads the page, and this says so
+ * first. After that reload nothing here repeats it; the mark is on screen.
  */
 export function MilestoneTick({
   versionId,
@@ -34,7 +39,9 @@ export function MilestoneTick({
   /** The owner's local day it was marked reached, or null while it is not. */
   reachedOn: string | null;
 }) {
-  const { state, submit, pending } = useRoadmapWrite(setMilestoneReachedAction);
+  const { state, submit, pending, lostRender } = useRoadmapWrite(
+    setMilestoneReachedAction,
+  );
   const reached = reachedOn !== null;
 
   return (
@@ -66,6 +73,7 @@ export function MilestoneTick({
           ? ROADMAP_CONTROL_COPY.milestoneUndoAction
           : ROADMAP_CONTROL_COPY.milestoneReachAction}
       </button>
+      <RoadmapWatchNotice lostRender={lostRender} recovered={false} />
       {isRefusal(state) ? (
         <p
           className={styles.notice}

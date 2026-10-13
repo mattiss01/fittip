@@ -159,7 +159,12 @@ function PhaseAndFollowingCheckpoints({
           {phase.milestones.length === 0 ? null : (
             <ul className={styles.milestoneList}>
               {phase.milestones.map((milestone, milestoneIndex) => (
-                <li key={milestone.title} className={styles.milestone}>
+                <li
+                  // By position, as a mark is addressed: nothing makes two
+                  // titles in one phase differ.
+                  key={milestoneIndex}
+                  className={styles.milestone}
+                >
                   <p className={styles.milestoneTitle}>{milestone.title}</p>
                   {/* "Aim for by", never "Due". A milestone is something an
                       observer could verify, not something the owner owes. The

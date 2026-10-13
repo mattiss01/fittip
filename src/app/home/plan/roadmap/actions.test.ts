@@ -263,14 +263,17 @@ describe("roadmap server actions", () => {
     ])("refuses %s before touching the database", async (_name, values) => {
       const result = await mark(values);
 
-      expect(result.status).toBe("validation");
+      expect(result).toMatchObject({
+        status: "validation",
+        message: OUTCOMES.milestoneUnavailable,
+      });
       expect(setMilestoneReached).not.toHaveBeenCalled();
       expect(revalidatePathMock).not.toHaveBeenCalled();
     });
 
     // The database's one refusal: not this owner's roadmap in force, or no
     // such milestone. The page it was sent from is out of date.
-    it("says a roadmap that moved on is no longer available", async () => {
+    it("says a milestone of a roadmap that moved on could not be changed", async () => {
       setMilestoneReached.mockRejectedValue(
         new RoadmapConflictError("not-available"),
       );
@@ -279,8 +282,9 @@ describe("roadmap server actions", () => {
 
       expect(result).toMatchObject({
         status: "conflict",
-        message: OUTCOMES.notAvailable,
+        message: OUTCOMES.milestoneUnavailable,
       });
+      expect(result.message).not.toMatch(/proposal/i);
       expect(revalidatePathMock).not.toHaveBeenCalled();
     });
 

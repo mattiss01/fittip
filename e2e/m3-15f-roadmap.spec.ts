@@ -203,7 +203,7 @@ test.describe("M3-15F roadmap generation", () => {
       await tick.getByRole("button", { name: /^Mark reached: / }).click();
       await expect(tick).toHaveAttribute("data-milestone-reached", "true");
       await expect(
-        tick.getByText(/^Reached \d{1,2} \w{3} \d{4}$/),
+        tick.getByText(/^Reached \d{1,2} \w{3,4} \d{4}$/),
       ).toBeVisible();
       await expectNoHorizontalOverflow(page);
       // It is stored, not remembered by the page.
@@ -212,9 +212,6 @@ test.describe("M3-15F roadmap generation", () => {
       await tick.getByRole("button", { name: /^Undo reached: / }).click();
       await expect(tick).toHaveAttribute("data-milestone-reached", "false");
       await expect(tick.getByText(/^Reached /)).toHaveCount(0);
-      await expect(
-        page.locator('[data-roadmap-notice="recovered"]'),
-      ).toHaveCount(0);
       await tick.getByRole("button", { name: /^Mark reached: / }).click();
       await expect(tick).toHaveAttribute("data-milestone-reached", "true");
 

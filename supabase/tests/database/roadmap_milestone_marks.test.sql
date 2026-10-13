@@ -88,7 +88,7 @@ $$;
 create temporary table accepted (label text primary key, version_id uuid);
 grant all on accepted to public;
 
-select plan(33);
+select plan(38);
 
 -- The table --------------------------------------------------------------------
 
@@ -162,7 +162,7 @@ select is(
     where n.nspname = 'public'
       and p.proname = 'set_roadmap_milestone_reached'
       and p.prosecdef
-      and pg_catalog.array_to_string(p.proconfig, ',') like 'search_path=%'
+      and pg_catalog.array_to_string(p.proconfig, ',') = 'search_path=""'
   ),
   1,
   'the function runs as definer with an empty search path'
@@ -170,8 +170,8 @@ select is(
 
 -- Two owners -------------------------------------------------------------------
 --
--- The first is fourteen hours ahead of UTC, so for most of a day its date is
--- not the database's own.
+-- The first is fourteen hours ahead of UTC, so for fourteen hours of a day its
+-- date is not UTC's. The second has confirmed no time zone.
 
 insert into auth.users (id, email, raw_app_meta_data, raw_user_meta_data)
 values
@@ -298,6 +298,11 @@ select set_config(
   'request.jwt.claims',
   '{"sub":"6e000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
 
+-- With a roadmap in force of their own, so that what is refused below is the
+-- other owner's version and not the lack of any.
+insert into accepted
+select 'other', pg_temp.accept_roadmap('milestone-marks-other-key-00003', 0);
+
 select is(
   (select count(*)::integer from public.roadmap_milestone_marks),
   0,
@@ -318,6 +323,23 @@ select throws_ok(
   ),
   '22023', 'Invalid milestone mark.',
   'nor mark a milestone of a roadmap that is not theirs'
+);
+select lives_ok(
+  format(
+    'select public.set_roadmap_milestone_reached(%L::uuid, 0, 0, true)',
+    (select version_id from accepted where label = 'other')
+  ),
+  'they mark a milestone of their own roadmap'
+);
+select is(
+  (select array_agg(reached_on) from public.roadmap_milestone_marks),
+  array[(pg_catalog.now() at time zone 'utc')::date],
+  'and with no time zone confirmed, the day is UTC''s; it is the one mark they read'
+);
+select throws_ok(
+  $$update public.roadmap_milestone_marks set reached_on = reached_on - 1$$,
+  '42501', null,
+  'a mark''s day cannot be changed past the function'
 );
 
 set local role anon;
@@ -378,7 +400,21 @@ select throws_ok(
     (select version_id from accepted where label = 'first')
   ),
   '22023', 'Invalid milestone mark.',
-  'a replaced roadmap can no longer be marked, and its marks stay as they were'
+  'a mark on a replaced roadmap can no longer be taken back'
+);
+select throws_ok(
+  format(
+    'select public.set_roadmap_milestone_reached(%L::uuid, 0, 0, true)',
+    (select version_id from accepted where label = 'first')
+  ),
+  '22023', 'Invalid milestone mark.',
+  'nor can a replaced roadmap be marked'
+);
+select is(
+  (select count(*)::integer from public.roadmap_milestone_marks
+   where version_id = (select version_id from accepted where label = 'first')),
+  1,
+  'and the mark it had stays as it was'
 );
 
 select * from finish();

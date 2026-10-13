@@ -167,6 +167,12 @@ export const ROADMAP_CONTROL_COPY = {
     stale: "Your roadmap changed in another tab. Reload before deciding again.",
     notAvailable:
       "That proposal is no longer available. Reload to see where it went.",
+    /**
+     * The database's one refusal for a mark (ADR-026): the roadmap moved on
+     * under the page, or the request was not the page's. Nothing was changed.
+     */
+    milestoneUnavailable:
+      "That milestone could not be changed. Reload to see your roadmap as it is now.",
     sessionEnded: "Your session ended. Sign in again before continuing.",
     /**
      * The one context minimum this surface can hit. The coach reads the
