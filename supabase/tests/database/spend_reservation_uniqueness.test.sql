@@ -65,7 +65,7 @@ language sql
 stable
 as $$
   select jsonb_build_object(
-    'schemaVersion', 'fittip.roadmap.v3',
+    'schemaVersion', 'fittip.roadmap.v4',
     'title', p_title,
     'summary', 'Build an aerobic base, then sharpen into the target race.',
     'startDate', p_start::text,
@@ -85,11 +85,6 @@ as $$
         'targetDate', p_end::text,
         'goalIds', jsonb_build_array('00000000-0000-4000-8000-000000000001')
       ))
-    )),
-    'reviewPoints', jsonb_build_array(jsonb_build_object(
-      'title', 'Halfway check',
-      'triggerDate', p_start::text,
-      'question', 'Is the weekly volume still repeatable without soreness?'
     ))
   )
 $$;
@@ -241,7 +236,7 @@ select 'first', * from public.begin_roadmap_generation(
 select is(
   (select proposal_id is not null from public.finish_roadmap_generation(
     (select completion_token from pg_temp_roadmap_claim where label = 'first'),
-    'proposal', 'fittip.roadmap.v3', 'roadmap-2026-08-10',
+    'proposal', 'fittip.roadmap.v4', 'roadmap-2026-08-10',
     'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10',
     (select reservation_id from pg_temp_spend where label = 'roadmap'),
     p_content => pg_temp.roadmap_body(
@@ -260,7 +255,7 @@ select 'second', * from public.begin_roadmap_generation(
 select throws_ok(
   format(
     $q$select * from public.finish_roadmap_generation(
-      %L::uuid, 'proposal', 'fittip.roadmap.v3', 'roadmap-2026-08-10',
+      %L::uuid, 'proposal', 'fittip.roadmap.v4', 'roadmap-2026-08-10',
       'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10', %L::uuid,
       p_content => %L::jsonb, p_sources => '[]'::jsonb)$q$,
     (select completion_token from pg_temp_roadmap_claim where label = 'second'),

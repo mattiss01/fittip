@@ -58,6 +58,7 @@ import {
   editRoadmapAction,
   generateRoadmapAction,
   setMilestoneReachedAction,
+  setRoadmapReviewedAction,
 } from "./actions";
 import { INITIAL_ROADMAP_ACTION_STATE } from "./action-state";
 
@@ -98,6 +99,7 @@ const getProposal = vi.fn();
 const getHead = vi.fn();
 const listGoals = vi.fn();
 const setMilestoneReached = vi.fn();
+const setReviewed = vi.fn();
 
 describe("roadmap server actions", () => {
   beforeEach(() => {
@@ -128,8 +130,10 @@ describe("roadmap server actions", () => {
       editProposal,
       getProposal,
       setMilestoneReached,
+      setReviewed,
     });
     setMilestoneReached.mockResolvedValue(undefined);
+    setReviewed.mockResolvedValue(undefined);
     generateMock.mockResolvedValue({
       status: "proposal",
       proposalId: PROPOSAL_ID,
@@ -297,6 +301,55 @@ describe("roadmap server actions", () => {
         status: "session",
         message: OUTCOMES.sessionEnded,
       });
+    });
+  });
+
+  // ADR-027. The form says which roadmap and which phase; that the phase has
+  // ended is the database's to decide.
+  describe("review", () => {
+    const review = (values: Record<string, string>) =>
+      setRoadmapReviewedAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({ versionId: VERSION_ID, phaseIndex: "1", ...values }),
+      );
+
+    it("marks the roadmap reviewed and invalidates it and the Plan", async () => {
+      const result = await review({});
+
+      expect(result).toMatchObject({ status: "reviewed", message: "" });
+      expect(setReviewed).toHaveBeenCalledWith({
+        versionId: VERSION_ID,
+        phaseIndex: 1,
+      });
+      expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan/roadmap");
+      // The Plan's Roadmap chip carries the dot this clears.
+      expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan");
+    });
+
+    it.each([
+      ["a malformed version", { versionId: "not-a-uuid" }],
+      ["a seventh phase", { phaseIndex: "6" }],
+      ["a phase that is not a number", { phaseIndex: "first" }],
+    ])("refuses %s before touching the database", async (_name, values) => {
+      const result = await review(values);
+
+      expect(result).toMatchObject({
+        status: "validation",
+        message: OUTCOMES.reviewUnavailable,
+      });
+      expect(setReviewed).not.toHaveBeenCalled();
+    });
+
+    it("says a review the database refuses could not be marked", async () => {
+      setReviewed.mockRejectedValue(new RoadmapConflictError("not-available"));
+
+      const result = await review({});
+
+      expect(result).toMatchObject({
+        status: "conflict",
+        message: OUTCOMES.reviewUnavailable,
+      });
+      expect(revalidatePathMock).not.toHaveBeenCalled();
     });
   });
 
@@ -594,7 +647,7 @@ describe("roadmap server actions", () => {
       expect(editProposal.mock.calls[0][0]).toBe(PROPOSAL_ID);
       expect(editProposal.mock.calls[0][1]).toMatchObject({
         title: "My own wording",
-        schemaVersion: "fittip.roadmap.v3",
+        schemaVersion: "fittip.roadmap.v4",
       });
       expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan/roadmap");
     });
@@ -698,7 +751,7 @@ const SOURCE_END = addDays(SOURCE_START, 84);
 
 function roadmapContent() {
   return {
-    schemaVersion: "fittip.roadmap.v3" as const,
+    schemaVersion: "fittip.roadmap.v4" as const,
     title: "Toward the hilly half",
     summary: "Base first, then sharpen into the event.",
     startDate: SOURCE_START,
@@ -723,13 +776,6 @@ function roadmapContent() {
             goalIds: [GOAL_ID],
           },
         ],
-      },
-    ],
-    reviewPoints: [
-      {
-        title: "Halfway check",
-        triggerDate: SOURCE_END,
-        question: "Is the weekly volume still repeatable?",
       },
     ],
   };

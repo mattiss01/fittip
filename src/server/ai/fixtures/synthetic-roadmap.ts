@@ -79,14 +79,6 @@ export function synthesizeRoadmapBody(context: CoachAIContext): string {
     startDate: start,
     endDate: end,
     phases,
-    reviewPoints: [
-      {
-        title: bound("End of the first phase", 200),
-        triggerDate: phases[0].endDate,
-        triggerCondition: null,
-        question: bound("Is this workload still the right size for you?", 200),
-      },
-    ],
   };
 
   return JSON.stringify({

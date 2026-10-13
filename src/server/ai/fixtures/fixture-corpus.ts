@@ -312,21 +312,13 @@ const PHASE_TWO = {
 };
 
 const VALID_ROADMAP = {
-  schemaVersion: "fittip.roadmap.v3",
+  schemaVersion: "fittip.roadmap.v4",
   title: "Fifteen weeks to a hilly half",
   summary:
     "You have one dated objective and just over three months to reach it, so this splits into a long base block and a shorter race-specific one. The weekday limit you described shapes the base block toward shorter, more frequent runs.",
   startDate: COACH_AI_FIXTURE_HORIZON_START,
   endDate: COACH_AI_FIXTURE_HORIZON_END,
   phases: [PHASE_ONE, PHASE_TWO],
-  reviewPoints: [
-    {
-      title: "End of the base block",
-      triggerDate: PHASE_ONE_END,
-      triggerCondition: null,
-      question: "Is the weekly volume holding up alongside work?",
-    },
-  ],
 };
 
 const envelope = (roadmap: unknown, memoryCandidates: unknown = null): string =>
@@ -586,28 +578,22 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
     note: "Decision 2 rejected percentages: a 60/40 split looks measurable against no volume.",
   },
   {
-    name: "roadmap_review_point_both_triggers",
+    name: "roadmap_review_points_returned",
     operation: "create_roadmap",
     body: envelope(
       roadmapWith((roadmap) => {
-        const points = roadmap.reviewPoints as Record<string, unknown>[];
-        points[0].triggerCondition = "If the knee stays sore for a week";
+        roadmap.reviewPoints = [
+          {
+            title: "End of the base block",
+            triggerDate: PHASE_ONE_END,
+            triggerCondition: null,
+            question: "Is the weekly volume holding up alongside work?",
+          },
+        ];
       }),
     ),
-    expected: { outcome: "rejected", reason: "business_rule" },
-    note: "A review point is a date or a condition. Both at once has no display.",
-  },
-  {
-    name: "roadmap_review_point_neither_trigger",
-    operation: "create_roadmap",
-    body: envelope(
-      roadmapWith((roadmap) => {
-        const points = roadmap.reviewPoints as Record<string, unknown>[];
-        points[0].triggerDate = null;
-      }),
-    ),
-    expected: { outcome: "rejected", reason: "business_rule" },
-    note: "Neither has no meaning: the owner is told to reassess at no identifiable moment.",
+    expected: { outcome: "rejected", reason: "unknown_field" },
+    note: "Since v4 the app asks for a review as each phase ends (ADR-027). A coach that still writes review points is refused, not stored.",
   },
   {
     name: "roadmap_under_safety_signal",
@@ -753,7 +739,7 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
   {
     name: "truncated_json",
     operation: "create_roadmap",
-    body: '{"roadmap":{"schemaVersion":"fittip.roadmap.v3","title":"Fifteen weeks',
+    body: '{"roadmap":{"schemaVersion":"fittip.roadmap.v4","title":"Fifteen weeks',
     expected: { outcome: "rejected", reason: "unparsable" },
     note: "What an output-token ceiling actually produces.",
   },

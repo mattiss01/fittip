@@ -179,6 +179,21 @@ test.describe("M3-15F roadmap generation", () => {
       await expect(page.locator("[data-roadmap-open-proposal]")).toHaveCount(0);
       await expectOutcome(page, "Accepted. This is your roadmap now.");
       await expect(page.locator('[data-roadmap-version="1"]')).toBeVisible();
+      // A review after every phase, the app's own (ADR-027). The example
+      // roadmap starts today, so none has ended and nothing asks yet. A due
+      // review needs a phase in the past, which no flow can make: that half
+      // is proved in the unit and database tests.
+      const reviews = page.locator(
+        "[data-roadmap-current] [data-roadmap-review]",
+      );
+      await expect(reviews.first()).toContainText(/^Review on \d{1,2} \w{3,4}/);
+      await expect(reviews.last()).toContainText("End of the roadmap");
+      await expect(
+        page.locator(
+          '[data-roadmap-review]:not([data-roadmap-review="ahead"])',
+        ),
+      ).toHaveCount(0);
+      await expect(page.locator("[data-roadmap-review-due]")).toHaveCount(0);
       await expect(
         page
           .getByRole("heading", { name: "No roadmap yet" })

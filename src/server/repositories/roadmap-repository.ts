@@ -304,6 +304,44 @@ export class RoadmapRepository {
     throw new RoadmapPersistenceError();
   }
 
+  /**
+   * How far the owner has marked this accepted version reviewed (ADR-027):
+   * the latest phase, from zero, or null when none has been.
+   */
+  async getReviewedThrough(versionId: string): Promise<number | null> {
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("roadmap_review_marks")
+      .select("phase_index")
+      .eq("user_id", userId)
+      .eq("version_id", versionId)
+      .maybeSingle();
+    if (error) throw new RoadmapPersistenceError();
+    return data === null ? null : Number(data.phase_index);
+  }
+
+  /**
+   * Mark the roadmap in force reviewed through a phase that has ended.
+   *
+   * As with a milestone's mark, the database decides whose roadmap it is,
+   * that the version is the one in force, that the phase has ended, and the
+   * day; its one `22023` is reported as "not available". It only moves
+   * forward, so a repeat or an older page changes nothing.
+   */
+  async setReviewed(input: {
+    versionId: string;
+    phaseIndex: number;
+  }): Promise<void> {
+    await this.getVerifiedUserId();
+    const { error } = await this.client.rpc("set_roadmap_reviewed", {
+      p_version_id: input.versionId,
+      p_phase_index: input.phaseIndex,
+    });
+    if (!error) return;
+    if (error.code === "22023") throw new RoadmapConflictError("not-available");
+    throw new RoadmapPersistenceError();
+  }
+
   /** One proposal by id, decided or not, for the decline and edit paths. */
   async getProposal(proposalId: string): Promise<RoadmapProposalView | null> {
     const userId = await this.getVerifiedUserId();

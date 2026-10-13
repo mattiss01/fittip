@@ -1,3 +1,4 @@
+import type { RoadmapReviewDue } from "./roadmap-reviews";
 import "server-only";
 
 import { COACH_START_MAX_DAYS_AHEAD } from "@/lib/date/local-date";
@@ -267,6 +268,8 @@ export type RoadmapMilestoneMark = {
   reachedOn: string;
 };
 
+export type { RoadmapReviewDue };
+
 export type RoadmapHeadView = {
   revision: number;
   currentVersionId: string | null;
@@ -308,6 +311,10 @@ export type RoadmapScreenState = {
   current: RoadmapVersionView | null;
   /** The milestones of `current` marked reached. Empty with no roadmap. */
   reached: RoadmapMilestoneMark[];
+  /** The latest phase of `current` marked reviewed (ADR-027), or null. */
+  reviewedThrough: number | null;
+  /** The review of `current` that is due today, or null. */
+  reviewDue: RoadmapReviewDue | null;
   /** The proposal awaiting a decision, if any. */
   openProposal: RoadmapProposalView | null;
   /**
@@ -361,20 +368,6 @@ export const ROADMAP_COPY = {
   contextEmptyGroup: "None included",
   memoryPanelTitle: "Possible memory updates",
   memoryReviewLink: "Memory updates still need your review",
-  assumptionsHeading: "What this assumes",
-  uncertaintiesHeading: "What could change the direction",
-  /**
-   * The two labels M3-02 set on an uncertainty and M3-15E lost.
-   *
-   * Without them the two lines under a statement are unattributed grey text,
-   * and an owner cannot tell "this is why the direction depends on it" from
-   * "this is the thing to watch for". They are what make an uncertainty
-   * actionable rather than a disclaimer.
-   */
-  uncertaintyWhyItMatters: "Why it matters:",
-  uncertaintyWhatToWatch: "Watch for:",
-  /** M3-02's wording for the safety section of a roadmap the coach held back. */
-  heldBackHeading: "Held back for now",
   milestonePrefix: "Aim for by",
   safetyNotice:
     "FitTip cannot assess or diagnose symptoms. If symptoms are severe, sudden, or getting worse, stop the affected activity and contact a qualified health professional.",
@@ -385,7 +378,11 @@ export const ROADMAP_COPY = {
    */
   phaseIndex: (index: number, total: number) => `Phase ${index} of ${total}`,
   reviewOnDate: (date: string) => `Review on ${date}`,
-  reviewWhenCondition: (condition: string) => `Review when ${condition}`,
+  /** A review the app asks for as a phase ends (ADR-027), in its three states. */
+  reviewDueSince: (date: string) => `Review due since ${date}`,
+  reviewDone: "Reviewed",
+  reviewAfterPhase: (phase: number) => `End of phase ${phase}`,
+  reviewAfterRoadmap: "End of the roadmap",
   /**
    * The route's own frame, moved out of `page.tsx` for the same reason. The
    * title is the name the Plan's chip gives the page (R3); it was M3-02's

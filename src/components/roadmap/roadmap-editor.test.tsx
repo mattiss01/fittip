@@ -14,15 +14,16 @@ const LABELS = ROADMAP_CONTROL_COPY.editFieldLabels;
 describe("RoadmapEditor", () => {
   afterEach(cleanup);
 
-  it("saves a proposal made before v3 as a v3 roadmap", () => {
+  // ADR-027: whatever version was opened, the edit is a v4 roadmap, and what
+  // v4 does not hold is not carried into it.
+  it("saves a proposal stored under an earlier version as a v4 roadmap", () => {
     const { container } = renderEditor(legacyContent());
 
     const sent = submitted(container);
-    expect(sent.schemaVersion).toBe("fittip.roadmap.v3");
+    expect(sent.schemaVersion).toBe("fittip.roadmap.v4");
     expect(Object.keys(sent).sort()).toEqual([
       "endDate",
       "phases",
-      "reviewPoints",
       "schemaVersion",
       "startDate",
       "summary",
@@ -33,31 +34,14 @@ describe("RoadmapEditor", () => {
     ]);
     // What the owner did not touch is carried over as it was.
     expect(sent.phases[0].milestones).toHaveLength(1);
-    expect(sent.reviewPoints).toEqual([
-      {
-        title: "Check the base",
-        triggerDate: "2026-10-25",
-        question: "Is the long run still comfortable?",
-      },
-    ]);
   });
 
-  // Owner, 13 Oct 2026: what an edit of an older proposal leaves out is said
-  // before it is saved, and only there.
-  it("says what an edit of a proposal made before v3 leaves out", () => {
+  it("has no field for a review point", () => {
     renderEditor(legacyContent());
 
+    expect(screen.queryByDisplayValue("Check the base")).toBeNull();
     expect(
-      screen.getByText(ROADMAP_CONTROL_COPY.editOlderProposalNotice),
-    ).toBeTruthy();
-
-    cleanup();
-    const { schemaVersion, ...rest } = legacyContent();
-    expect(schemaVersion).toBe("fittip.roadmap.v2");
-    renderEditor({ ...rest, schemaVersion: "fittip.roadmap.v3" });
-
-    expect(
-      screen.queryByText(ROADMAP_CONTROL_COPY.editOlderProposalNotice),
+      screen.queryByDisplayValue("Is the long run still comfortable?"),
     ).toBeNull();
   });
 

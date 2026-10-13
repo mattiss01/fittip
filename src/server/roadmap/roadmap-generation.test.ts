@@ -195,7 +195,7 @@ describe("generateRoadmapProposal", () => {
     expect(persisted.modelCode).toBe("fixture-corpus-v1");
     expect(persisted.rateCardVersion).toBe("fixture-no-spend");
     expect(persisted.spendReservationId).toBeNull();
-    expect(persisted.schemaVersion).toBe("fittip.roadmap.v3");
+    expect(persisted.schemaVersion).toBe("fittip.roadmap.v4");
     // The horizon the owner composed against, not one the coach chose.
     expect(persisted.content.startDate).toBe(TODAY);
     expect(persisted.content.endDate).toBe(END_DATE);

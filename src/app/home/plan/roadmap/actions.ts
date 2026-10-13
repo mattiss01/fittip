@@ -295,6 +295,47 @@ export async function setMilestoneReachedAction(
 }
 
 /**
+ * Mark a due review of the roadmap in force reviewed (ADR-027).
+ *
+ * The form says which roadmap and which phase. That the phase has ended, that
+ * the roadmap is the caller's and in force, and the day are the database's to
+ * decide. It says nothing on success: the review's card goes.
+ */
+export async function setRoadmapReviewedAction(
+  previous: RoadmapActionState,
+  formData: FormData,
+): Promise<RoadmapActionState> {
+  const submission = previous.submission + 1;
+  try {
+    const roadmaps = await createRoadmapRepository();
+    await roadmaps.setReviewed({
+      versionId: parseRoadmapVersionId(formData.get("versionId")),
+      phaseIndex: parseRoadmapPosition(
+        formData.get("phaseIndex"),
+        "phaseIndex",
+      ),
+    });
+    revalidatePath("/home/plan/roadmap");
+    // The Plan's Roadmap chip carries the dot this clears.
+    revalidatePath("/home/plan");
+    return { status: "reviewed", message: "", submission };
+  } catch (error) {
+    if (
+      error instanceof RoadmapConflictError ||
+      error instanceof RoadmapValidationError
+    ) {
+      return {
+        status:
+          error instanceof RoadmapConflictError ? "conflict" : "validation",
+        message: OUTCOMES.reviewUnavailable,
+        submission,
+      };
+    }
+    return toActionState(error, submission);
+  }
+}
+
+/**
  * What every successful write returns: the status that says it landed, and the
  * approved sentence for it.
  *

@@ -6,7 +6,8 @@ import {
   ROADMAP_PLAN_CONTEXT_MAX_BYTES,
 } from "@/server/roadmap/roadmap-plan-context";
 
-import type { LegacyRoadmapV2, StoredRoadmap } from "@/server/ai/contracts";
+import type { StoredRoadmap } from "@/server/ai/contracts";
+import type { LegacyRoadmapV2 } from "@/test/legacy-roadmap";
 
 /**
  * The plan-side roadmap boundary.

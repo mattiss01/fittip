@@ -12,7 +12,7 @@ import {
   type CoachAIOwnedRecords,
 } from "@/server/ai/context";
 import { COACH_AI_LIVE_LIMITS } from "@/server/ai/budget";
-import type { LegacyRoadmapV2 } from "@/server/ai/contracts";
+import type { LegacyRoadmapV2 } from "@/test/legacy-roadmap";
 import { CoachAIError } from "@/server/ai/errors";
 import type { MemoryItemView } from "@/server/memory/memory-records";
 import type { SessionDetailRecords } from "@/server/session-detail/session-detail-context";
@@ -2017,7 +2017,6 @@ describe("fill_session_activities assembly", () => {
             endDate: shiftDate(SESSION_DATE, 60),
           },
         ],
-        reviewPoints: [],
       },
     };
     const assembled = fill({ roadmapVersion });

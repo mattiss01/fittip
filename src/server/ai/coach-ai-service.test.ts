@@ -271,7 +271,7 @@ describe("a successful proposal", () => {
       outcome: "accepted",
       attemptCount: 1,
       adapterKind: "fixture",
-      schemaVersion: "fittip.roadmap.v3",
+      schemaVersion: "fittip.roadmap.v4",
       contextGoalCount: 2,
       contextMemoryCount: 1,
     });

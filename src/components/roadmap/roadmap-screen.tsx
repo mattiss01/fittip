@@ -3,6 +3,7 @@ import Link from "next/link";
 import { RoadmapComposer } from "./roadmap-composer";
 import { RoadmapDetail } from "./roadmap-detail";
 import { RoadmapOutcomeNotice } from "./roadmap-outcome";
+import { RoadmapReviewDue } from "./roadmap-review-due";
 import { RoadmapProposalReview } from "./roadmap-proposal-review";
 
 import homeStyles from "@/app/home/home.module.css";
@@ -79,6 +80,17 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
         <RoadmapCompose state={state} />
       ) : null}
 
+      {/* A phase has ended, or the roadmap has (ADR-027). Above the roadmap,
+          under a proposal that is waiting: deciding that comes first, and a
+          new roadmap would end the review with the roadmap it is of. */}
+      {state.current !== null && state.reviewDue !== null ? (
+        <RoadmapReviewDue
+          versionId={state.current.id}
+          phaseIndex={state.reviewDue.phaseIndex}
+          roadmapEnded={state.reviewDue.roadmapEnded}
+        />
+      ) : null}
+
       <section className={styles.card} data-roadmap-current>
         {state.current === null ? (
           <>
@@ -91,6 +103,10 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
           <RoadmapDetail
             version={state.current}
             reached={state.reached}
+            review={{
+              duePhaseIndex: state.reviewDue?.phaseIndex ?? null,
+              reviewedThrough: state.reviewedThrough,
+            }}
             goalTitles={goalTitles}
           />
         )}

@@ -22,14 +22,14 @@ as $$
   select ((clock_timestamp() at time zone 'utc')::date + p_offset)
 $$;
 
--- One valid `fittip.roadmap.v3` body: one phase, one milestone.
+-- One valid `fittip.roadmap.v4` body: one phase, one milestone.
 create function pg_temp.roadmap(p_title text)
 returns jsonb
 language sql
 stable
 as $$
   select jsonb_build_object(
-    'schemaVersion', 'fittip.roadmap.v3',
+    'schemaVersion', 'fittip.roadmap.v4',
     'title', p_title,
     'summary', 'Build an aerobic base, then sharpen into the target race.',
     'startDate', pg_temp.day(0)::text,
@@ -49,11 +49,6 @@ as $$
         'targetDate', pg_temp.day(84)::text,
         'goalIds', jsonb_build_array('00000000-0000-4000-8000-000000000001')
       ))
-    )),
-    'reviewPoints', jsonb_build_array(jsonb_build_object(
-      'title', 'Halfway check',
-      'triggerDate', pg_temp.day(42)::text,
-      'question', 'Is the weekly volume still repeatable without soreness?'
     ))
   )
 $$;
@@ -75,7 +70,7 @@ begin
   );
   select proposal_id into v_proposal
   from public.finish_roadmap_generation(
-    v_token, 'proposal', 'fittip.roadmap.v3', 'roadmap-v3-2026-10-10',
+    v_token, 'proposal', 'fittip.roadmap.v4', 'roadmap-v4-2026-10-13',
     'fixture', 'fixture-corpus-v1', 'fixture-no-spend',
     p_content => pg_temp.roadmap(p_key), p_sources => '[]'::jsonb
   );

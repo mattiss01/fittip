@@ -98,6 +98,7 @@ const allowedRoadmapModules = [
   "@/server/roadmap/roadmap-edit",
   "@/server/roadmap/roadmap-generation",
   "@/server/roadmap/roadmap-records",
+  "@/server/roadmap/roadmap-reviews",
   "@/server/roadmap/roadmap-safety",
   "@/server/training/training-history-context",
 ] as const;

@@ -33,7 +33,7 @@ const LEVELS = ["primary", "secondary", "maintenance", "deferred"] as const;
 
 /** The version an edit is saved as; a Client Component cannot import the
     contract's own constant, and the server refuses any other. */
-const ROADMAP_SCHEMA_VERSION = "fittip.roadmap.v3";
+const ROADMAP_SCHEMA_VERSION = "fittip.roadmap.v4";
 
 const LABELS = ROADMAP_CONTROL_COPY.editFieldLabels;
 
@@ -52,28 +52,20 @@ type Phase = {
   goalAttention: Attention[];
   milestones: Milestone[];
 };
-type ReviewPoint = {
-  title: string;
-  triggerDate?: string;
-  triggerCondition?: string;
-  question: string;
-};
 type Draft = {
   title: string;
   summary: string;
   startDate: string;
   endDate: string;
   phases: Phase[];
-  reviewPoints: ReviewPoint[];
 };
 
 /**
  * The draft an edit starts from, copied field by field.
  *
- * A proposal made before v3 also holds assumptions, uncertainties, safety
- * sentences and a reason beside each attention level. None of them is copied,
- * so what is saved is a v3 roadmap whichever version was opened (ADR-025); the
- * proposal being edited keeps them, unchanged, in the history.
+ * A proposal stored under an earlier version holds more than these (review
+ * points, and before v3 assumptions and reasons). None of it is copied, so
+ * what is saved is a v4 roadmap whichever version was opened (ADR-027).
  */
 function toDraft(content: Draft): Draft {
   return {
@@ -96,14 +88,6 @@ function toDraft(content: Draft): Draft {
         targetDate: milestone.targetDate,
         goalIds: [...milestone.goalIds],
       })),
-    })),
-    reviewPoints: content.reviewPoints.map((point) => ({
-      title: point.title,
-      ...(point.triggerDate ? { triggerDate: point.triggerDate } : {}),
-      ...(point.triggerCondition
-        ? { triggerCondition: point.triggerCondition }
-        : {}),
-      question: point.question,
     })),
   };
 }
@@ -130,11 +114,6 @@ export function RoadmapEditor({
   onCancel: () => void;
 }) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(content as Draft));
-  // Anything but the current version: its edit is saved without what the
-  // current shape does not hold, and the owner is told before saving.
-  const olderProposal =
-    (content as { schemaVersion?: unknown }).schemaVersion !==
-    ROADMAP_SCHEMA_VERSION;
 
   const update = (mutate: (next: Draft) => void) => {
     setDraft((current) => {
@@ -151,11 +130,6 @@ export function RoadmapEditor({
     >
       <h2 className={styles.cardHeading}>{ROADMAP_CONTROL_COPY.editTitle}</h2>
       <p className={styles.emptyState}>{ROADMAP_CONTROL_COPY.editSupport}</p>
-      {olderProposal ? (
-        <p className={styles.notice} data-roadmap-notice="older-proposal">
-          {ROADMAP_CONTROL_COPY.editOlderProposalNotice}
-        </p>
-      ) : null}
 
       <RoadmapWatchNotice lostRender={lostRender} recovered={false} />
 
@@ -371,40 +345,6 @@ export function RoadmapEditor({
                 </button>
               </div>
             ))}
-          </fieldset>
-        ))}
-
-        {draft.reviewPoints.map((point, index) => (
-          <fieldset className={styles.editGroup} key={`review-${index}`}>
-            <legend className={styles.editLegend}>
-              {LABELS.reviewPoint(index + 1)}
-            </legend>
-            <label className={styles.field}>
-              <span className={styles.label}>{LABELS.reviewPointTitle}</span>
-              <input
-                className={styles.input}
-                value={point.title}
-                maxLength={200}
-                onChange={(event) =>
-                  update((next) => {
-                    next.reviewPoints[index].title = event.target.value;
-                  })
-                }
-              />
-            </label>
-            <label className={styles.field}>
-              <span className={styles.label}>{LABELS.reviewPointQuestion}</span>
-              <input
-                className={styles.input}
-                value={point.question}
-                maxLength={200}
-                onChange={(event) =>
-                  update((next) => {
-                    next.reviewPoints[index].question = event.target.value;
-                  })
-                }
-              />
-            </label>
           </fieldset>
         ))}
 

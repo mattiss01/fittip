@@ -210,6 +210,56 @@ describe("RoadmapRepository", () => {
     expect(eq).toHaveBeenCalledWith("version_id", FIRST_PROPOSAL);
   });
 
+  // ADR-027. The owner, the day and whether the phase has ended are the
+  // database's; the call carries the version and the phase.
+  it("marks a roadmap reviewed through its function", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    const repository = new RoadmapRepository(client({ rpc }));
+
+    await repository.setReviewed({ versionId: FIRST_PROPOSAL, phaseIndex: 1 });
+
+    expect(rpc).toHaveBeenCalledWith("set_roadmap_reviewed", {
+      p_version_id: FIRST_PROPOSAL,
+      p_phase_index: 1,
+    });
+
+    const refused = new RoadmapRepository(
+      client({
+        rpc: vi.fn().mockResolvedValue({
+          data: null,
+          error: { code: "22023", message: "Invalid roadmap review." },
+        }),
+      }),
+    );
+    await expect(
+      refused.setReviewed({ versionId: FIRST_PROPOSAL, phaseIndex: 4 }),
+    ).rejects.toMatchObject({ reason: "not-available" });
+  });
+
+  it("reads how far a version is marked reviewed, as the owner", async () => {
+    const eq = vi.fn();
+    const reading = (row: { phase_index: number } | null) => {
+      const query = {
+        select: vi.fn(() => query),
+        eq: (column: string, value: string) => {
+          eq(column, value);
+          return query;
+        },
+        maybeSingle: vi.fn().mockResolvedValue({ data: row, error: null }),
+      };
+      return new RoadmapRepository(client({ from: vi.fn(() => query) }));
+    };
+
+    await expect(
+      reading({ phase_index: 2 }).getReviewedThrough(FIRST_PROPOSAL),
+    ).resolves.toBe(2);
+    await expect(
+      reading(null).getReviewedThrough(FIRST_PROPOSAL),
+    ).resolves.toBeNull();
+    expect(eq).toHaveBeenCalledWith("user_id", USER_ID);
+    expect(eq).toHaveBeenCalledWith("version_id", FIRST_PROPOSAL);
+  });
+
   it("sends no argument for the owner text a request does not carry", async () => {
     const rpc = vi.fn().mockResolvedValue({
       data: {

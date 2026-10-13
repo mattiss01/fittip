@@ -37,6 +37,7 @@ vi.mock("@/app/home/plan/roadmap/actions", () => ({
   declineRoadmapAction: vi.fn(),
   editRoadmapAction: vi.fn(),
   setMilestoneReachedAction: vi.fn(),
+  setRoadmapReviewedAction: vi.fn(),
 }));
 vi.mock("@/server/repositories/roadmap-repository", async (original) => {
   const actual =
@@ -81,6 +82,7 @@ const listVersions = vi.fn();
 const getReviewProposals = vi.fn();
 const countOpenMemoryCandidates = vi.fn();
 const listMilestoneMarks = vi.fn();
+const getReviewedThrough = vi.fn();
 const listGoals = vi.fn();
 const listCompletions = vi.fn();
 
@@ -96,6 +98,7 @@ describe("Roadmap", () => {
     });
     countOpenMemoryCandidates.mockResolvedValue(0);
     listMilestoneMarks.mockResolvedValue([]);
+    getReviewedThrough.mockResolvedValue(null);
     listGoals.mockResolvedValue({ revision: 1, goals: [goal()] });
     listCompletions.mockResolvedValue([]);
     createRoadmapMock.mockResolvedValue({
@@ -104,6 +107,7 @@ describe("Roadmap", () => {
       getReviewProposals,
       countOpenMemoryCandidates,
       listMilestoneMarks,
+      getReviewedThrough,
     });
     createGoalMock.mockResolvedValue({ list: listGoals });
     createProfileMock.mockResolvedValue({
@@ -116,7 +120,7 @@ describe("Roadmap", () => {
 
   afterEach(cleanup);
 
-  it("renders the current roadmap, its phases and its review points", async () => {
+  it("renders the current roadmap, its phases and the review after each", async () => {
     listVersions.mockResolvedValue([version(3)]);
 
     render(await RoadmapPage());
@@ -140,11 +144,84 @@ describe("Roadmap", () => {
     expect(
       screen.getByText(`${ROADMAP_COPY.milestonePrefix} 20 Oct 2026`),
     ).toBeTruthy();
-    expect(screen.getByText("Review on 25 Oct 2026")).toBeTruthy();
+    // The app's own review, on the phase's last day (ADR-027). What the row
+    // also holds from an earlier version is not shown.
+    expect(
+      screen.getByText(ROADMAP_COPY.reviewOnDate("26 Oct 2099")),
+    ).toBeTruthy();
+    expect(screen.queryByText("Is the long run still comfortable?")).toBeNull();
+    expect(
+      screen.queryByText("Four training days a week stay available."),
+    ).toBeNull();
     // The goal is named from the goal read, not from the roadmap body.
     expect(screen.getByText(/primary · Finish a half marathon/)).toBeTruthy();
+    // Nothing has ended, so nothing asks to be reviewed.
+    expect(getReviewedThrough).toHaveBeenCalledWith(version(3).id);
+    expect(document.querySelector("[data-roadmap-review-due]")).toBeNull();
+  });
+
+  // ADR-027. A review is due from a phase's last day until it is marked.
+  it("asks for a review above the roadmap once a phase has ended", async () => {
+    listVersions.mockResolvedValue([endedVersion()]);
+
+    render(await RoadmapPage());
+
+    const due = document.querySelector(
+      "[data-roadmap-review-due]",
+    ) as HTMLElement;
+    expect(due.getAttribute("data-roadmap-review-due")).toBe("0");
     expect(
-      screen.getByRole("heading", { name: ROADMAP_COPY.assumptionsHeading }),
+      within(due).getByRole("heading", {
+        name: ROADMAP_COPY.reviewDuePhase(1),
+      }),
+    ).toBeTruthy();
+    expect(new FormData(due.querySelector("form")!).get("phaseIndex")).toBe(
+      "0",
+    );
+    expect(
+      within(due).getByRole("button", { name: ROADMAP_COPY.reviewedAction }),
+    ).toBeTruthy();
+    // Above the roadmap it is of.
+    expect(
+      due.compareDocumentPosition(
+        document.querySelector("[data-roadmap-current]") as HTMLElement,
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      [...document.querySelectorAll("[data-roadmap-review]")].map((entry) =>
+        entry.getAttribute("data-roadmap-review"),
+      ),
+    ).toEqual(["due", "ahead"]);
+  });
+
+  it("asks for nothing once that phase is marked reviewed", async () => {
+    listVersions.mockResolvedValue([endedVersion()]);
+    getReviewedThrough.mockResolvedValue(0);
+
+    render(await RoadmapPage());
+
+    expect(document.querySelector("[data-roadmap-review-due]")).toBeNull();
+    expect(
+      [...document.querySelectorAll("[data-roadmap-review]")].map((entry) =>
+        entry.getAttribute("data-roadmap-review"),
+      ),
+    ).toEqual(["done", "ahead"]);
+  });
+
+  it("says the roadmap has ended when its last phase has", async () => {
+    const ended = endedVersion();
+    ended.content.phases[1].endDate = "2020-12-31";
+    listVersions.mockResolvedValue([ended]);
+    getReviewedThrough.mockResolvedValue(0);
+
+    render(await RoadmapPage());
+
+    const due = document.querySelector(
+      "[data-roadmap-review-due]",
+    ) as HTMLElement;
+    expect(due.getAttribute("data-roadmap-review-due")).toBe("1");
+    expect(
+      within(due).getByRole("heading", { name: ROADMAP_COPY.reviewDueRoadmap }),
     ).toBeTruthy();
   });
 
@@ -644,7 +721,9 @@ function roadmapContent() {
         title: "Aerobic base",
         focus: "Easy volume, one longer run a week.",
         startDate: "2026-09-14",
-        endDate: "2026-10-26",
+        // Far ahead on purpose: a test that does not mean to have a review
+        // due must not grow one as the calendar moves.
+        endDate: "2099-10-26",
         goalAttention: [
           {
             goalId: GOAL_ID,
@@ -678,6 +757,28 @@ function roadmapContent() {
         question: "Is the long run still comfortable?",
       },
     ],
+  };
+}
+
+/** A roadmap in two phases, the first of which ended years ago. */
+function endedVersion() {
+  const base = version(1);
+  const [phase] = base.content.phases;
+  return {
+    ...base,
+    content: {
+      ...base.content,
+      phases: [
+        { ...phase, startDate: "2020-01-01", endDate: "2020-06-30" },
+        {
+          ...phase,
+          title: "Sharpen",
+          startDate: "2020-07-01",
+          endDate: "2099-12-31",
+          milestones: [],
+        },
+      ],
+    },
   };
 }
 
