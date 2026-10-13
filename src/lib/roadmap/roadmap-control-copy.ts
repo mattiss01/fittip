@@ -78,10 +78,8 @@ export const ROADMAP_CONTROL_COPY = {
    * One answer, reached (owner, 13 Oct 2026). A milestone not marked says
    * nothing: not "open", and never "missed", whatever its date.
    */
-  milestoneReachAction: "Mark reached",
   milestoneReached: (date: string) => `Reached ${date}`,
-  milestoneUndoAction: "Undo",
-  /** For a screen reader, where a row of identical buttons says too little. */
+  /** The tick is a circle with no words, so a screen reader is told these. */
   milestoneReachLabel: (title: string) => `Mark reached: ${title}`,
   milestoneUndoLabel: (title: string) => `Undo reached: ${title}`,
 

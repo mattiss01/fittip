@@ -10,8 +10,11 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
 /**
  * Whether a milestone was reached (ADR-026): one answer, and it can be taken
- * back. Not marked, it offers "Mark reached" and says nothing else, whatever
- * its date; nothing here ever says missed.
+ * back. It is the milestone's own mark, a circle to tick where its dot was
+ * (owner, 13 Oct 2026: not a button with words on it). Empty, it says
+ * nothing, whatever the milestone's date; nothing here ever says missed.
+ * Ticked, the day is written under the milestone, and a second tap takes the
+ * tick back.
  *
  * What it shows is the stored mark the page was rendered from, so the write's
  * own refresh is what changes it. Nothing is remembered here about having
@@ -54,25 +57,41 @@ export function MilestoneTick({
       <input type="hidden" name="phaseIndex" value={phaseIndex} />
       <input type="hidden" name="milestoneIndex" value={milestoneIndex} />
       <input type="hidden" name="reached" value={reached ? "false" : "true"} />
-      {reached ? (
-        <p className={styles.milestoneReached}>
-          {ROADMAP_CONTROL_COPY.milestoneReached(formatRoadmapDate(reachedOn))}
-        </p>
-      ) : null}
+      {/* Named for a screen reader by what a press does, with the
+          milestone's title: the circle itself carries no words. */}
       <button
         aria-label={
           reached
             ? ROADMAP_CONTROL_COPY.milestoneUndoLabel(title)
             : ROADMAP_CONTROL_COPY.milestoneReachLabel(title)
         }
+        aria-pressed={reached}
         className={styles.milestoneTickAction}
         disabled={pending}
         type="submit"
       >
-        {reached
-          ? ROADMAP_CONTROL_COPY.milestoneUndoAction
-          : ROADMAP_CONTROL_COPY.milestoneReachAction}
+        <span className={styles.milestoneTickMark} aria-hidden="true">
+          {reached ? (
+            <svg
+              fill="none"
+              height="12"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="3"
+              viewBox="0 0 24 24"
+              width="12"
+            >
+              <path d="M5 12.5l4.5 4.5L19 7.5" />
+            </svg>
+          ) : null}
+        </span>
       </button>
+      {reached ? (
+        <p className={styles.milestoneReached}>
+          {ROADMAP_CONTROL_COPY.milestoneReached(formatRoadmapDate(reachedOn))}
+        </p>
+      ) : null}
       <RoadmapWatchNotice lostRender={lostRender} recovered={false} />
       {isRefusal(state) ? (
         <p

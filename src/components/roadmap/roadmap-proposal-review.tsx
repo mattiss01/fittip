@@ -1,5 +1,4 @@
 import { RoadmapBody } from "./roadmap-body";
-import { formatRoadmapRange } from "./roadmap-dates";
 import { RoadmapDecisionDock } from "./roadmap-decision-dock";
 
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
@@ -59,7 +58,9 @@ export function RoadmapProposalReview({
       <article>
         <RoadmapBody
           content={proposal.content}
-          meta={`${ROADMAP_COPY.proposalOriginLabels[proposal.origin]} · ${formatRoadmapRange(startDate, endDate)}`}
+          startDate={startDate}
+          endDate={endDate}
+          note={ROADMAP_COPY.proposalOriginLabels[proposal.origin]}
           providerCode={proposal.providerCode}
           goalTitles={goalTitles}
         />

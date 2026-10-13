@@ -69,10 +69,50 @@
   line-height: 1.55;
 }
 
+/* When the roadmap runs: its two days, set as the dates they are, and how
+   long that is. A proposal says where it came from first. */
 .horizon {
-  margin: 0.3rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+  margin: 0.55rem 0 0;
   color: var(--muted);
   font-size: 0.85rem;
+}
+
+.horizonNote {
+  flex-basis: 100%;
+}
+
+.horizonDates {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-pill);
+  background: var(--roadmap-band);
+  color: var(--pine);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.horizonArrow {
+  color: var(--moss);
+  font-weight: 400;
+}
+
+.horizonLength {
+  color: var(--muted);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 
 /* ---- The spine ---------------------------------------------------------- */
@@ -143,9 +183,19 @@
 }
 
 .phaseDates {
-  margin: 0.15rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.55rem;
+  margin: 0.4rem 0 0;
   color: var(--muted);
   font-size: 0.82rem;
+}
+
+/* On the phase's own band the pill takes the card's colour, or it would not
+   show. */
+.phaseDates .horizonDates {
+  background: var(--surface);
 }
 
 .phaseFocus {
@@ -248,33 +298,69 @@
   line-height: 1.5;
 }
 
-/* Whether it was reached (ADR-026): the day once marked, and one quiet
-   button either way. Nothing here marks a milestone as late. */
+/* Whether it was reached (ADR-026). On the roadmap in force the milestone's
+   dot is a circle to tick: empty while open, filled with a check once
+   reached, and the day is written under the milestone. Nothing here marks a
+   milestone as late. */
+.milestone[data-markable="true"] {
+  padding-left: 2rem;
+}
+
+.milestone[data-markable="true"]::before {
+  content: none;
+}
+
 .milestoneTick {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem 0.75rem;
-  margin: 0.35rem 0 0;
-}
-
-.milestoneReached {
   margin: 0;
-  color: var(--pine);
-  font-size: 0.88rem;
-  font-weight: 700;
 }
 
+/* The touch target, larger than the circle it shows and centred on the
+   title's first line. */
 .milestoneTickAction {
-  min-height: 2.75rem;
+  position: absolute;
+  top: -0.7rem;
+  left: -0.75rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 0;
+  display: grid;
+  place-items: center;
   margin: 0;
-  padding: 0.4rem 0.9rem;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-control);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
   background: transparent;
-  color: var(--pine);
-  font: 700 0.85rem var(--font-sans);
   cursor: pointer;
+}
+
+.milestoneTickMark {
+  width: 1.35rem;
+  height: 1.35rem;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--pine);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--paper);
+  transition:
+    background-color 150ms ease,
+    transform 150ms var(--ease-out);
+}
+
+.milestoneTickAction[aria-pressed="true"] .milestoneTickMark {
+  background: var(--pine);
+}
+
+.milestoneTickAction:active:not(:disabled) .milestoneTickMark {
+  transform: scale(0.9);
+}
+
+/* The app's buttons fill with the ember when pressed or pointed at; this
+   one is only its circle. */
+.milestoneTickAction:hover,
+.milestoneTickAction:active,
+.milestoneTickAction:disabled {
+  background: transparent;
 }
 
 .milestoneTickAction:disabled {
@@ -283,13 +369,29 @@
 }
 
 .milestoneTickAction:focus-visible {
+  outline: none;
+}
+
+.milestoneTickAction:focus-visible .milestoneTickMark {
   outline: 3px solid var(--accent-dark);
   outline-offset: 2px;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .milestoneTickMark {
+    transition: none;
+  }
+}
+
+.milestoneReached {
+  margin: 0.3rem 0 0;
+  color: var(--pine);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
 .milestoneTick .notice {
-  flex-basis: 100%;
-  margin-top: 0.25rem;
+  margin-top: 0.4rem;
 }
 
 /* A review point opens the rule: the gap is drawn in the card's colour over

@@ -68,7 +68,8 @@ function renderBody(content: RoadmapProposal | LegacyRoadmapV2) {
   return render(
     <RoadmapBody
       content={content}
-      meta="Version 1"
+      startDate={content.startDate}
+      endDate={content.endDate}
       providerCode="openai"
       goalTitles={{ [GOAL_ID]: "Half marathon" }}
     />,

@@ -1,3 +1,4 @@
+import { RoadmapDateRange } from "./roadmap-date-range";
 import { RoadmapSpine, type SpineMarks } from "./roadmap-spine";
 
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
@@ -29,8 +30,9 @@ import {
  */
 export function RoadmapBody({
   content,
-  /** The line under the title: a version stamp, or a proposal's provenance. */
-  meta,
+  startDate,
+  endDate,
+  note,
   providerCode,
   goalTitles,
   marks,
@@ -38,7 +40,11 @@ export function RoadmapBody({
   /** Given for the roadmap in force only; a proposal's milestones take none. */
   marks?: SpineMarks;
   content: StoredRoadmap;
-  meta: string;
+  /** The roadmap's own first and last day, or the days a proposal was asked for. */
+  startDate: string;
+  endDate: string;
+  /** A proposal's provenance, said before its dates. A roadmap has none. */
+  note?: string;
   /** `fixture` means the built-in example coach wrote this. */
   providerCode: string;
   goalTitles: Record<string, string>;
@@ -53,7 +59,14 @@ export function RoadmapBody({
     <>
       <ExampleTag providerCode={providerCode} />
       <h2 className={styles.proposalTitle}>{content.title}</h2>
-      <p className={styles.horizon}>{meta}</p>
+      {/* From, to, and how long (owner, 13 Oct 2026). No version number: the
+          page shows the roadmap in force and nothing to compare it with. */}
+      <p className={styles.horizon}>
+        {note === undefined ? null : (
+          <span className={styles.horizonNote}>{note}</span>
+        )}
+        <RoadmapDateRange startDate={startDate} endDate={endDate} />
+      </p>
       <p className={styles.proposalSummary}>{content.summary}</p>
 
       <RoadmapSpine

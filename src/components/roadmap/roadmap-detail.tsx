@@ -1,8 +1,6 @@
 import { RoadmapBody } from "./roadmap-body";
-import { formatRoadmapRange } from "./roadmap-dates";
 
 import {
-  ROADMAP_COPY,
   type RoadmapMilestoneMark,
   type RoadmapVersionView,
 } from "@/server/roadmap/roadmap-records";
@@ -10,7 +8,7 @@ import {
 /**
  * The accepted roadmap, read end to end.
  *
- * Everything below the version stamp is `RoadmapBody`, which the open proposal
+ * All of it is `RoadmapBody`, which the open proposal
  * renders too: the same document at two moments, shown the same way, so that
  * accepting is agreeing to exactly what was on screen.
  *
@@ -34,7 +32,8 @@ export function RoadmapDetail({
     <article data-roadmap-version={version.versionNumber}>
       <RoadmapBody
         content={roadmap}
-        meta={`${ROADMAP_COPY.versionLabel(version.versionNumber)} · ${formatRoadmapRange(roadmap.startDate, roadmap.endDate)}`}
+        startDate={roadmap.startDate}
+        endDate={roadmap.endDate}
         providerCode={version.providerCode}
         goalTitles={goalTitles}
         marks={{ versionId: version.id, reached }}
