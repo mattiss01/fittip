@@ -189,6 +189,12 @@ export const ROADMAP_CONTROL_COPY = {
     notAvailable:
       "That proposal is no longer available. Reload to see where it went.",
     /**
+     * Another roadmap was accepted after this proposal was made, in another
+     * tab or on another device. Reloading would not help: it has to go.
+     */
+    roadmapMoved:
+      "Your roadmap changed since this was proposed. Decline it and ask again.",
+    /**
      * The database's one refusal for a mark (ADR-026): the roadmap moved on
      * under the page, or the request was not the page's. Nothing was changed.
      */

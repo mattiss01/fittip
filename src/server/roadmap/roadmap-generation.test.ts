@@ -298,6 +298,47 @@ describe("generateRoadmapProposal", () => {
     );
   });
 
+  it("makes asking again a change request when the declined proposal answered one", async () => {
+    roadmaps.getProposal.mockResolvedValue({
+      content: { title: "Before", summary: "Declined.", phases: [] },
+      changesRoadmap: true,
+    });
+
+    await generateRoadmapProposal(
+      {
+        ...input(),
+        previousProposalId: PROPOSAL_ID,
+        regenerationFeedback: "Less volume.",
+      },
+      { roadmaps: roadmaps as unknown as RoadmapRepository },
+    ).catch(() => undefined);
+
+    const claim = roadmaps.beginGeneration.mock.calls[0][0];
+    expect(claim.changeRoadmap).toBe(true);
+    expect(claim.requestFingerprint.endsWith(":change")).toBe(true);
+  });
+
+  it("does not make asking again a change because the form said so", async () => {
+    roadmaps.getProposal.mockResolvedValue({
+      content: { title: "Before", summary: "Declined.", phases: [] },
+      changesRoadmap: false,
+    });
+
+    await generateRoadmapProposal(
+      {
+        ...input(),
+        previousProposalId: PROPOSAL_ID,
+        regenerationFeedback: "Less volume.",
+        changeRoadmap: true,
+      },
+      { roadmaps: roadmaps as unknown as RoadmapRepository },
+    ).catch(() => undefined);
+
+    const claim = roadmaps.beginGeneration.mock.calls[0][0];
+    expect("changeRoadmap" in claim).toBe(false);
+    expect(claim.requestFingerprint.endsWith(":change")).toBe(false);
+  });
+
   // M3-11's reset dropped this argument and live coaching was unreachable for
   // six weeks without a single failing test. A live composition refuses
   // without a ledger, so this is the line that keeps the real coach reachable.

@@ -172,6 +172,26 @@ describe("roadmap server actions", () => {
       expect(revalidatePathMock).not.toHaveBeenCalled();
     });
 
+    // Another roadmap was accepted since this one was proposed. Reloading
+    // would not help, so the sentence says what will.
+    it("tells the owner to decline a proposal made under an earlier roadmap", async () => {
+      acceptProposal.mockRejectedValue(
+        new RoadmapConflictError("roadmap-moved"),
+      );
+
+      const result = await acceptRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({ proposalId: PROPOSAL_ID, expectedHeadRevision: "2" }),
+      );
+
+      expect(result).toMatchObject({
+        status: "conflict",
+        message: OUTCOMES.roadmapMoved,
+      });
+      expect(result.message).toMatch(/Decline it/);
+      expect(revalidatePathMock).not.toHaveBeenCalled();
+    });
+
     it("names a source that changed rather than blaming the owner", async () => {
       acceptProposal.mockRejectedValue(
         new RoadmapConflictError("sources-changed"),

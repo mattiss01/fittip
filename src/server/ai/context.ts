@@ -794,12 +794,10 @@ export function buildCoachAIContext(
   // refused here rather than answered as if it had been for a new one.
   //
   // Refused rather than ignored, as a replaceable session is on the wrong
-  // call: on a plan or a fill it has no meaning, and with a previous proposal
-  // it is a second answer to an earlier question and not a change request.
-  if (
-    compose.changeRoadmap === true &&
-    (operation !== "create_roadmap" || compose.previousProposal !== null)
-  ) {
+  // call: on a plan or a fill it has no meaning. With a previous proposal it
+  // is asking again after a declined change, and is sent all three: the
+  // roadmap, what was declined, and what should be different this time.
+  if (compose.changeRoadmap === true && operation !== "create_roadmap") {
     throw new CoachAIError("context_invalid");
   }
   const changesRoadmap = compose.changeRoadmap === true;

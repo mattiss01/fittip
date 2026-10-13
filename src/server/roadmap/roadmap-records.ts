@@ -235,6 +235,12 @@ export type RoadmapProposalView = {
   planningNote: string | null;
   regenerationFeedback: string | null;
   regenerationNumber: number;
+  /**
+   * Whether the request this proposal answered asked for the roadmap in force
+   * to be changed (ADR-028). Stored on the request; asking again after this
+   * proposal is declined is then a change request too.
+   */
+  changesRoadmap: boolean;
   startDate: string;
   endDate: string;
   decision: RoadmapDecision | null;

@@ -1604,7 +1604,7 @@ describe("the accepted roadmap as plan context", () => {
     ).toBe(0);
   });
 
-  it("refuses a change request on another call, or one that is also a regeneration", () => {
+  it("refuses a change request on another call", () => {
     expect(() =>
       buildCoachAIContext(
         "create_seven_day_plan",
@@ -1612,21 +1612,34 @@ describe("the accepted roadmap as plan context", () => {
         { ...COMPOSE, changeRoadmap: true },
       ),
     ).toThrow(CoachAIError);
-    expect(() =>
-      buildCoachAIContext(
-        "create_roadmap",
-        records({ roadmapVersion: ROADMAP_VERSION }),
-        {
-          ...COMPOSE,
-          changeRoadmap: true,
-          previousProposal: {
-            title: "Before",
-            summary: "What was declined.",
-            phases: [],
-          },
+  });
+
+  // Asking again after a declined change: the roadmap, what was declined, and
+  // what should be different this time, all three.
+  it("sends the whole roadmap again when a declined change is asked again", () => {
+    const assembled = buildCoachAIContext(
+      "create_roadmap",
+      records({ roadmapVersion: ROADMAP_VERSION }),
+      {
+        ...COMPOSE,
+        changeRoadmap: true,
+        regenerationFeedback: "Start easier.",
+        previousProposal: {
+          title: "Before",
+          summary: "What was declined.",
+          phases: [],
         },
-      ),
-    ).toThrow(CoachAIError);
+      },
+    );
+
+    expect(assembled.context.roadmapToChange?.title).toBe(
+      ROADMAP_VERSION.content.title,
+    );
+    expect(assembled.context.previousProposal).toMatchObject({
+      title: "Before",
+    });
+    expect(assembled.context.regenerationFeedback).toBe("Start easier.");
+    expect("currentRoadmap" in assembled.context).toBe(false);
   });
 
   it("refuses a change request when no roadmap is in force", () => {

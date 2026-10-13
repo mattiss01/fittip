@@ -64,8 +64,9 @@ export type RoadmapGenerationInput = {
   previousProposalId: string | null;
   /**
    * ADR-028: ask for the roadmap in force to be changed, `planningNote`
-   * saying how. The coach is then sent the whole of it. Never with a
-   * regeneration, which is a second answer to an earlier question.
+   * saying how. The coach is then sent the whole of it. For a first request
+   * only: asking again is a change when its predecessor was one, which is
+   * read from the stored request and not from this.
    */
   changeRoadmap?: boolean;
   regenerationFeedback: string | null;
@@ -117,10 +118,15 @@ export async function generateRoadmapProposal(
   // The predecessor is read before the claim, because a regeneration that
   // cannot find its predecessor should fail before it consumes a key.
   let previousProposal: CoachAIPreviousProposalReference | null = null;
+  // ADR-028. A first request is a change when it says so. Asking again is one
+  // when the declined proposal answered a change request: read from the stored
+  // request, never from the form, and the database decides the same way.
+  let changeRoadmap = input.changeRoadmap === true;
   if (input.previousProposalId !== null) {
     const previous = await roadmaps.getProposal(input.previousProposalId);
     if (!previous) throw new RoadmapConflictError("not-available");
     previousProposal = reducePreviousProposal(previous.content);
+    changeRoadmap = previous.changesRoadmap;
   }
 
   // The fingerprint is what makes a reused key with different input a conflict
@@ -138,7 +144,7 @@ export async function generateRoadmapProposal(
     // ADR-028. Added only for a change request, so every other request's
     // fingerprint is what it was and a key in flight across a deploy still
     // replays. A key cannot replay a plain request as a change or the reverse.
-    ...(input.changeRoadmap ? ["change"] : []),
+    ...(changeRoadmap ? ["change"] : []),
   ].join(":");
 
   const claim: RoadmapGenerationClaim = await roadmaps.beginGeneration({
@@ -150,6 +156,7 @@ export async function generateRoadmapProposal(
     planningNote: input.planningNote,
     previousProposalId: input.previousProposalId,
     regenerationFeedback: input.regenerationFeedback,
+    ...(changeRoadmap ? { changeRoadmap: true } : {}),
   });
 
   // An uncertain same-key retry stops here. Only `claimed` — the state the
@@ -201,7 +208,7 @@ export async function generateRoadmapProposal(
         planningNote: input.planningNote,
         regenerationFeedback: input.regenerationFeedback,
         previousProposal,
-        ...(input.changeRoadmap ? { changeRoadmap: true } : {}),
+        ...(changeRoadmap ? { changeRoadmap: true } : {}),
       },
     });
   } catch (error) {
@@ -243,7 +250,7 @@ export async function generateRoadmapProposal(
       // ADR-028. A change request's note says what to do to a roadmap ("make
       // phase two easier"), which is not something to remember about the
       // athlete, so none of it is proposed as memory whatever came back.
-      input.changeRoadmap ? [] : outcome.memoryCandidates,
+      changeRoadmap ? [] : outcome.memoryCandidates,
     ),
   };
 }

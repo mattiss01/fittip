@@ -108,7 +108,7 @@ select plan(56);
 select ok(
   has_function_privilege(
     'authenticated',
-    'public.begin_roadmap_generation(text,text,date,date,bigint,text,uuid,text)',
+    'public.begin_roadmap_generation(text,text,date,date,bigint,text,uuid,text,boolean)',
     'EXECUTE'
   ),
   'authenticated may begin roadmap generation again'
@@ -170,7 +170,7 @@ select is(
 select ok(
   not has_function_privilege(
     'anon',
-    'public.begin_roadmap_generation(text,text,date,date,bigint,text,uuid,text)',
+    'public.begin_roadmap_generation(text,text,date,date,bigint,text,uuid,text,boolean)',
     'EXECUTE'
   )
   and not has_function_privilege(
@@ -192,7 +192,7 @@ select ok(
 select ok(
   not has_function_privilege(
     'service_role',
-    'public.begin_roadmap_generation(text,text,date,date,bigint,text,uuid,text)',
+    'public.begin_roadmap_generation(text,text,date,date,bigint,text,uuid,text,boolean)',
     'EXECUTE'
   )
   and not has_function_privilege(
