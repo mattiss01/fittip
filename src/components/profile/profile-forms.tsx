@@ -22,7 +22,10 @@ import {
   saveProfileDetailsAction,
   saveProfileSportsAction,
 } from "@/app/home/you/profile-actions";
-import { DateField } from "@/components/date-field/date-field";
+import {
+  clearUnfinishedDates,
+  DateField,
+} from "@/components/date-field/date-field";
 import { formatRoadmapDate } from "@/components/roadmap/roadmap-dates";
 import {
   cmToFeetAndInches,
@@ -211,6 +214,9 @@ export function LaterButton({
             onLater();
             return;
           }
+          // A birthday half typed would stop the form in the browser, and
+          // leaving is meant to be possible from any screen.
+          clearUnfinishedDates(form);
           leavingRef.current = true;
           form.requestSubmit();
         }}
@@ -329,7 +335,7 @@ export function AboutYouForm({
         required
       />
     </label>,
-    // Typed only: a calendar is a poor way to reach a year decades back.
+    // One date field (owner, 13 Oct 2026); a year decades back is typed.
     <DateField
       centred={paged}
       hideLabel={paged}

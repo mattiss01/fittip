@@ -200,9 +200,10 @@ describe("SessionPage", () => {
     const { rerender } = render(page(session()));
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
 
-    // Typed or picked, and sent as one date.
-    const date = screen.getByRole("group", { name: "Date" });
-    expect(date.querySelector("input[name='localDate']")).toHaveValue(TODAY);
+    // One date field, sent as one date.
+    const date = screen.getByLabelText("Date");
+    expect(date).toHaveAttribute("name", "localDate");
+    expect(date).toHaveValue(TODAY);
     expect(
       date.closest("form")?.querySelector("input[name='operation']"),
     ).toHaveValue("edit");

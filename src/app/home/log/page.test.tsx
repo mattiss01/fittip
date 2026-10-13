@@ -1,10 +1,4 @@
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  within,
-} from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
@@ -79,19 +73,11 @@ const findByPlanSession = vi.fn();
 const listCompletions = vi.fn();
 const listSavedSessions = vi.fn();
 
-/** Types a date into the log's date step, one field for each part. */
+/** Gives the log's date step a date. */
 function typeDate(isoDate: string) {
-  const [year, month, day] = isoDate.split("-");
-  const field = screen.getByRole("group", { name: "Date" });
-  for (const [part, value] of [
-    ["Day", day],
-    ["Month", month],
-    ["Year", year],
-  ] as const) {
-    fireEvent.change(within(field).getByLabelText(part), {
-      target: { value },
-    });
-  }
+  fireEvent.change(screen.getByLabelText("Date"), {
+    target: { value: isoDate },
+  });
 }
 
 describe("Log", () => {

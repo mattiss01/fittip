@@ -198,15 +198,12 @@ describe("GoalManager", () => {
     // Empty and required: there is no "Other" to leave standing.
     expect(screen.getByLabelText("Sports")).toBeRequired();
     expect(screen.getByLabelText("Sports")).toHaveValue("");
-    // Typed, or picked from the calendar beside it; either way optional.
-    expect(
-      screen.getByRole("group", { name: "Target date (optional)" }),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("button", {
-        name: "Pick target date (optional) from a calendar",
-      }),
-    ).toBeVisible();
+    // One date field, and optional.
+    expect(screen.getByLabelText("Target date (optional)")).toHaveAttribute(
+      "type",
+      "date",
+    );
+    expect(screen.getByLabelText("Target date (optional)")).not.toBeRequired();
     // Nothing unasked travels with the form any more.
     for (const gone of ["category", "startDate", "rationale"]) {
       expect(document.querySelector(`input[name="${gone}"]`)).toBeNull();

@@ -545,7 +545,6 @@ function GoalFields({
         />
       </div>
       <DateField
-        calendar
         initial={goal?.targetDate ?? null}
         label="Target date (optional)"
         name={`goalTargetDate:${index}`}

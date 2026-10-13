@@ -143,7 +143,6 @@ export function ComposeProposal({
               week can be planned on a Friday. The action holds it to the
               same range. */}
           <DateField
-            calendar
             initial={state.draft?.startDate || today}
             label={COPY.startDateLabel}
             max={shiftIsoDate(today, COACH_START_MAX_DAYS_AHEAD)}

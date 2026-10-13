@@ -1,8 +1,8 @@
 /*
- * A typed date: three short fields and, where asked for, a calendar button.
- * The fields take their border, height and face from the form they sit in;
- * these rules name the element as well as the class so that they win over a
- * form's own `input` rule whichever stylesheet loads last.
+ * A date in one field, the browser's own. It takes its border, height and
+ * face from the form it sits in; these rules name the element as well as the
+ * class so that they win over a form's own `input` rule whichever stylesheet
+ * loads last.
  */
 .group {
   min-width: 0;
@@ -10,8 +10,18 @@
   gap: 0.3rem;
 }
 
+.group[data-centred="true"] {
+  justify-items: center;
+}
+
+/* A label of the form's own keeps only what that form gave it. */
+.group label {
+  letter-spacing: normal;
+  text-transform: none;
+}
+
 /* Drawn as a field's label is, in guided setup and on Goals alike. */
-.label {
+.group .label {
   color: var(--ledger-muted);
   font: 500 0.62rem var(--font-mono);
   letter-spacing: 0.03em;
@@ -27,67 +37,16 @@
   white-space: nowrap;
 }
 
-.parts {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.parts[data-centred="true"] {
-  justify-content: center;
-}
-
-.parts input.part {
-  width: 4.2rem;
-  padding-inline: 0.4rem;
+/* As wide as a date and its calendar mark need, not the whole row; in a
+   narrow column it takes what there is. */
+.group input.date {
+  width: 100%;
+  max-width: 11.5rem;
+  min-width: 0;
   font-variant-numeric: tabular-nums;
-  text-align: center;
 }
 
 /* A date that is shown and not changed, as a regeneration's is. */
-.parts input.part:read-only {
+.group input.date:read-only {
   background: var(--line);
-}
-
-.parts input.part[data-part="year"] {
-  width: 5.6rem;
-}
-
-.parts button.calendar {
-  flex: none;
-  width: 3rem;
-  min-height: 3rem;
-  display: grid;
-  place-items: center;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-control);
-  background: var(--line);
-  color: var(--ledger-ink);
-}
-
-.parts button.calendar:hover {
-  background: var(--rule);
-}
-
-.parts button.calendar:focus-visible {
-  outline: 3px solid var(--ledger-ink);
-  outline-offset: 2px;
-}
-
-/* There for its picker alone: under the button, out of sight and out of the
-   way of a tap. It is not `display: none`, or its picker could not open. */
-.group .parts input.native {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 1px;
-  min-height: 0;
-  height: 1px;
-  padding: 0;
-  border: 0;
-  opacity: 0;
-  pointer-events: none;
 }

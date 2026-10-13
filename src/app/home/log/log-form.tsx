@@ -733,12 +733,12 @@ export function LogForm({
       {dateOpen ? (
         <section data-log-step="date" hidden={step !== "date"}>
           <div className={styles.field}>
-            {/* Typed or picked (owner, 5 Oct 2026). What the fields hold is
-                kept aside and taken when this step is left (`takeDate`), not
-                at each digit: on the way from the 7th to the 17th they read
-                the 1st. A date half typed or after today stops the step. */}
+            {/* Typed or picked, in one field (owner, 13 Oct 2026). What it
+                holds is kept aside and taken when this step is left
+                (`takeDate`), not at each digit: on the way to 2026 it reads
+                the year 2, which is not handed on. A date half typed or
+                after today stops the step. */}
             <DateField
-              calendar
               describedBy="log-date-hint"
               initial={actualDate}
               label="Date"

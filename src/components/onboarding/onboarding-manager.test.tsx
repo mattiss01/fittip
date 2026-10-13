@@ -156,9 +156,7 @@ describe("OnboardingManager", () => {
     );
     // The question is the heading, so its one field shows no label; the
     // name it has is for a screen reader.
-    expect(
-      screen.getByRole("group", { name: "Birthday (optional)" }),
-    ).toBeVisible();
+    expect(screen.getByLabelText("Birthday (optional)")).toBeVisible();
     expect(screen.getByLabelText("Name")).not.toBeVisible();
 
     back();
@@ -388,19 +386,10 @@ describe("OnboardingManager", () => {
     });
     expect(sports()[2]).toBeRequired();
 
-    // The target date is typed or picked from a calendar, and optional.
-    const target = screen.getAllByRole("group", {
-      name: "Target date (optional)",
-    })[0];
-    fireEvent.change(within(target).getByLabelText("Day"), {
-      target: { value: "15" },
-    });
-    fireEvent.change(within(target).getByLabelText("Month"), {
-      target: { value: "11" },
-    });
-    fireEvent.change(within(target).getByLabelText("Year"), {
-      target: { value: "2026" },
-    });
+    // The target date is one date field, and optional.
+    const target = screen.getAllByLabelText("Target date (optional)")[0];
+    expect(target).not.toBeRequired();
+    fireEvent.change(target, { target: { value: "2026-11-15" } });
     expect(
       container.querySelector('input[name="goalTargetDate:0"]'),
     ).toHaveValue("2026-11-15");
@@ -631,7 +620,7 @@ describe("OnboardingManager", () => {
     ).toBeVisible();
   });
 
-  it("takes a birthday typed as day, month and year, and sends it as one date", () => {
+  it("takes a birthday in one date field, and sends it as one date", () => {
     const { container } = render(
       <AboutYouForm
         profile={justNamedProfile()}
@@ -641,34 +630,28 @@ describe("OnboardingManager", () => {
     );
     const date = () =>
       container.querySelector<HTMLInputElement>('input[name="birthDate"]');
-    const type = (label: string, value: string) =>
-      fireEvent.change(screen.getByLabelText(label), { target: { value } });
 
     // Not answered is sent as no date at all.
     expect(date()).toHaveValue("");
-    type("Day", "7");
-    // A full part moves on to the one after it, so the keyboard alone fills
-    // the date. Which comes after the month depends on the language.
-    type("Month", "05");
-    expect(document.activeElement).toHaveAttribute("data-part");
-    expect(document.activeElement).not.toBe(screen.getByLabelText("Month"));
-    type("Year", "1990");
+    expect(date()).toHaveAttribute("type", "date");
+    // Setup can be left from any screen, so nothing here is held back.
+    expect(date()).not.toBeRequired();
+    fireEvent.change(screen.getByLabelText("Birthday (optional)"), {
+      target: { value: "1990-05-07" },
+    });
     expect(date()).toHaveValue("1990-05-07");
-    // Only digits are kept.
-    type("Day", "1x");
-    expect(screen.getByLabelText("Day")).toHaveValue("1");
   });
 
-  it("shows a saved birthday in its three fields", () => {
+  it("shows a saved birthday in its field", () => {
     render(
       <AboutYouForm
         profile={{ ...justNamedProfile(), birthDate: "1990-05-17" }}
         submitLabel="Save"
       />,
     );
-    expect(screen.getByLabelText("Day")).toHaveValue("17");
-    expect(screen.getByLabelText("Month")).toHaveValue("05");
-    expect(screen.getByLabelText("Year")).toHaveValue("1990");
+    expect(screen.getByLabelText("Birthday (optional)")).toHaveValue(
+      "1990-05-17",
+    );
   });
 
   it("asks a measure as a number with its unit beside it and a step either way", () => {

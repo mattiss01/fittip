@@ -5,65 +5,110 @@ import { DateField } from "./date-field";
 
 afterEach(cleanup);
 
-const part = (name: "Day" | "Month" | "Year") =>
-  screen.getByLabelText<HTMLInputElement>(name);
-const type = (day: string, month: string, year: string) => {
-  fireEvent.change(part("Day"), { target: { value: day } });
-  fireEvent.change(part("Month"), { target: { value: month } });
-  fireEvent.change(part("Year"), { target: { value: year } });
-};
-const problems = () =>
-  (["Day", "Month", "Year"] as const)
-    .map((name) => part(name).validationMessage)
-    .filter(Boolean);
-const sent = (container: HTMLElement) =>
-  container.querySelector<HTMLInputElement>("input[name='date']")?.value;
+const field = () => screen.getByLabelText<HTMLInputElement>("Date");
+const type = (date: string) =>
+  fireEvent.change(field(), { target: { value: date } });
 
 describe("DateField", () => {
-  it("sends a typed date as one value and has nothing to say about it", () => {
-    const { container } = render(
-      <DateField initial={null} label="Date" name="date" />,
-    );
-    expect(problems()).toEqual([]);
+  it("is one date field under its label, sent as one value", () => {
+    render(<DateField initial={null} label="Date" name="date" />);
 
-    type("8", "10", "2026");
+    expect(field().type).toBe("date");
+    expect(field().name).toBe("date");
+    expect(field().value).toBe("");
+    expect(screen.queryByRole("button")).toBeNull();
 
-    expect(sent(container)).toBe("2026-10-08");
-    expect(problems()).toEqual([]);
+    type("2026-10-08");
+
+    expect(field().value).toBe("2026-10-08");
+    expect(field().validationMessage).toBe("");
   });
 
-  it("stops a date half typed or not on the calendar, in the browser", () => {
-    render(<DateField initial="2026-10-08" label="Date" name="date" />);
+  it("opens on the date it was given", () => {
+    render(<DateField initial="1990-05-17" label="Date" name="date" />);
 
-    fireEvent.change(part("Year"), { target: { value: "20" } });
-    expect(problems()).toEqual(["Enter a full date: day, month and year."]);
-
-    type("30", "02", "2026");
-    expect(problems()).toEqual(["Enter a full date: day, month and year."]);
-
-    type("28", "02", "2026");
-    expect(problems()).toEqual([]);
+    expect(field().value).toBe("1990-05-17");
   });
 
   it("lets an optional date be left empty and asks for a required one", () => {
     const { rerender } = render(
       <DateField initial={null} label="Date" name="date" />,
     );
-    expect(problems()).toEqual([]);
+    expect(field().required).toBe(false);
 
     rerender(<DateField initial={null} label="Date" name="date" required />);
-    expect(problems()).toEqual(["Enter a date."]);
+    expect(field().required).toBe(true);
+    expect(field().validity.valueMissing).toBe(true);
+  });
+
+  it("holds a date to its range, in the form's words where it gave them", () => {
+    render(
+      <DateField
+        initial="2026-10-08"
+        label="Date"
+        max="2026-10-08"
+        min="2026-09-01"
+        name="date"
+        rangeMessage="Choose today or an earlier day."
+      />,
+    );
+    expect(field().min).toBe("2026-09-01");
+    expect(field().max).toBe("2026-10-08");
+    expect(field().validationMessage).toBe("");
+
+    type("2026-10-09");
+    expect(field().validationMessage).toBe("Choose today or an earlier day.");
+    expect(field().validity.customError).toBe(true);
+
+    type("2026-10-07");
+    expect(field().validationMessage).toBe("");
+  });
+
+  it("keeps a date to four-digit years from 1900 where the form names no range", () => {
+    const onChange = vi.fn();
+    render(
+      <DateField
+        initial={null}
+        label="Date"
+        max="2026-10-08"
+        onChange={onChange}
+        rangeMessage="Choose today or an earlier day."
+      />,
+    );
+    expect(field().min).toBe("1900-01-01");
+
+    // On the way to 2026 the field reads the year 2: not a date to act on,
+    // and not one the form's sentence is about.
+    type("0002-10-07");
+    expect(onChange).toHaveBeenLastCalledWith("");
+    expect(field().validity.customError).toBe(false);
+    expect(field().validity.rangeUnderflow).toBe(true);
+
+    cleanup();
+    render(<DateField initial={null} label="Date" name="date" />);
+    expect(field().max).toBe("9999-12-31");
   });
 
   it("checks nothing where the form asked it not to", () => {
-    const { container } = render(
-      <DateField initial={null} label="Date" name="date" unchecked />,
+    render(
+      <DateField
+        initial={null}
+        label="Date"
+        max="2026-10-08"
+        name="date"
+        rangeMessage="Choose today or an earlier day."
+        required
+        unchecked
+      />,
     );
 
-    type("8", "", "");
+    expect(field().required).toBe(false);
+    expect(field().min).toBe("");
+    expect(field().max).toBe("");
 
-    expect(problems()).toEqual([]);
-    expect(sent(container)).toBe("-00-08");
+    type("2026-10-09");
+    expect(field().validationMessage).toBe("");
+    expect(field().value).toBe("2026-10-09");
   });
 
   it("hands the form a date it may use, and nothing while there is none", () => {
@@ -78,45 +123,46 @@ describe("DateField", () => {
         required
       />,
     );
+    // The form sends the date itself.
+    expect(field().name).toBe("");
 
-    fireEvent.change(part("Day"), { target: { value: "7" } });
+    type("2026-10-07");
     expect(onChange).toHaveBeenLastCalledWith("2026-10-07");
 
     // After the last day allowed: stopped here, with the form's sentence.
-    fireEvent.change(part("Day"), { target: { value: "9" } });
+    type("2026-10-09");
     expect(onChange).toHaveBeenLastCalledWith("");
-    expect(problems()).toEqual(["Choose today or an earlier day."]);
 
-    fireEvent.change(part("Day"), { target: { value: "" } });
+    type("");
     expect(onChange).toHaveBeenLastCalledWith("");
   });
 
-  it("bounds only the calendar where the form gave no sentence for it", () => {
+  it("shows a date that cannot be changed, and still sends it", () => {
+    const onChange = vi.fn();
     render(
       <DateField
-        initial="2026-10-09"
+        initial="2026-12-06"
         label="Date"
         max="2026-10-08"
         name="date"
-      />,
-    );
-
-    expect(problems()).toEqual([]);
-  });
-
-  it("shows a date that cannot be changed without a calendar, and still sends it", () => {
-    const { container } = render(
-      <DateField
-        calendar
-        initial="2026-12-06"
-        label="Date"
-        name="date"
+        onChange={onChange}
         readOnly
       />,
     );
 
-    expect(part("Day").readOnly).toBe(true);
-    expect(screen.queryByRole("button")).toBeNull();
-    expect(sent(container)).toBe("2026-12-06");
+    expect(field().readOnly).toBe(true);
+    // Its date is not today's to judge.
+    expect(field().max).toBe("");
+
+    type("2026-12-07");
+    expect(onChange).not.toHaveBeenCalled();
+    expect(field().value).toBe("2026-12-06");
+    expect(field().name).toBe("date");
+  });
+
+  it("hides its label from sight where a heading already asks", () => {
+    render(<DateField hideLabel initial={null} label="Date" name="date" />);
+
+    expect(field()).toBeTruthy();
   });
 });

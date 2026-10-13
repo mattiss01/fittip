@@ -126,7 +126,6 @@ export function RecurrenceFields({
         </p>
       ) : (
         <DateField
-          calendar
           initial={initial?.endDate ?? startDate}
           label="End date"
           min={startDate}

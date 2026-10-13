@@ -621,9 +621,8 @@ function GoalForm({
           }
         />
       </div>
-      {/* Typed, or picked from the calendar beside it (owner, 5 Oct 2026). */}
+      {/* Typed or picked, in one field (owner, 13 Oct 2026). */}
       <DateField
-        calendar
         initial={initial("targetDate", goal?.targetDate ?? "") || null}
         label="Target date (optional)"
         name="targetDate"
