@@ -194,6 +194,27 @@ test.describe("M3-15F roadmap generation", () => {
         path: path.join(evidenceDirectory, "M3-15F-accepted-390x844.png"),
       });
 
+      // ---- Whether a milestone was reached (ADR-026): one tick, taken back
+      // ---- as easily, and the day is the one the database set. ----
+      const tick = page
+        .locator("[data-roadmap-current] [data-milestone-reached]")
+        .first();
+      await expect(tick).toHaveAttribute("data-milestone-reached", "false");
+      await tick.getByRole("button", { name: /^Mark reached: / }).click();
+      await expect(tick).toHaveAttribute("data-milestone-reached", "true");
+      await expect(
+        tick.getByText(/^Reached \d{1,2} \w{3,4} \d{4}$/),
+      ).toBeVisible();
+      await expectNoHorizontalOverflow(page);
+      // It is stored, not remembered by the page.
+      await page.reload();
+      await expect(tick).toHaveAttribute("data-milestone-reached", "true");
+      await tick.getByRole("button", { name: /^Undo reached: / }).click();
+      await expect(tick).toHaveAttribute("data-milestone-reached", "false");
+      await expect(tick.getByText(/^Reached /)).toHaveCount(0);
+      await tick.getByRole("button", { name: /^Mark reached: / }).click();
+      await expect(tick).toHaveAttribute("data-milestone-reached", "true");
+
       // ---- A second roadmap. With one in force the page starts with it, and
       // ---- the form is behind "New roadmap", in a sheet. ----
       await expect(page.locator("[data-roadmap-compose]")).toHaveCount(0);
@@ -213,6 +234,14 @@ test.describe("M3-15F roadmap generation", () => {
 
       // Version 2 is the roadmap now. Version 1 is stored and not listed.
       await expect(page.locator('[data-roadmap-version="2"]')).toBeVisible();
+      // A mark belongs to the roadmap it was made on: the new one starts with
+      // none, though version 1's first milestone was left marked.
+      await expect(page.locator('[data-milestone-reached="true"]')).toHaveCount(
+        0,
+      );
+      await expect(
+        page.locator('[data-milestone-reached="false"]').first(),
+      ).toBeVisible();
       await expect(page.locator('[data-roadmap-version="1"]')).toHaveCount(0);
       await expect(page.locator("[data-roadmap-superseded]")).toHaveCount(0);
       await expectNoHorizontalOverflow(page);

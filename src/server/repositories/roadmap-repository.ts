@@ -21,13 +21,15 @@ import { MemoryCandidateBatchError } from "@/server/proposal-logging/memory-cand
 import {
   UNKNOWN_PROVIDER_CODE,
   type RoadmapDecision,
+  type RoadmapMilestoneMark,
   type RoadmapProposalOrigin,
   type RoadmapProposalView,
   type RoadmapVersionView,
 } from "@/server/roadmap/roadmap-records";
 
 /**
- * The only application path to ADR-015's five functions.
+ * The only application path to ADR-015's five functions, and to ADR-026's
+ * one, which marks a milestone reached.
  *
  * Every write goes through a `SECURITY DEFINER` function that derives its own
  * owner from `auth.uid()`. This repository passes no owner id and could not: no
@@ -254,6 +256,52 @@ export class RoadmapRepository {
         newest && newest.decision === "rejected" ? newest : null,
       history: proposals,
     };
+  }
+
+  /**
+   * The milestones of one accepted version the owner has marked reached
+   * (ADR-026). Read under the owner `SELECT` policy; no coach call reads it.
+   */
+  async listMilestoneMarks(versionId: string): Promise<RoadmapMilestoneMark[]> {
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("roadmap_milestone_marks")
+      .select("phase_index, milestone_index, reached_on")
+      .eq("user_id", userId)
+      .eq("version_id", versionId);
+    if (error) throw new RoadmapPersistenceError();
+    return data.map((row) => ({
+      phaseIndex: Number(row.phase_index),
+      milestoneIndex: Number(row.milestone_index),
+      reachedOn: row.reached_on,
+    }));
+  }
+
+  /**
+   * Mark a milestone of the roadmap in force reached, or take the mark back.
+   *
+   * The database decides everything that matters: whose roadmap it is, that
+   * the version is the one in force, that the milestone exists, and the day.
+   * Every refusal is one `22023`, which is reported here as "not available":
+   * the roadmap changed under the page, or the request was not the page's.
+   * Replay-safe both ways, so the default transport retry stays on.
+   */
+  async setMilestoneReached(input: {
+    versionId: string;
+    phaseIndex: number;
+    milestoneIndex: number;
+    reached: boolean;
+  }): Promise<void> {
+    await this.getVerifiedUserId();
+    const { error } = await this.client.rpc("set_roadmap_milestone_reached", {
+      p_version_id: input.versionId,
+      p_phase_index: input.phaseIndex,
+      p_milestone_index: input.milestoneIndex,
+      p_reached: input.reached,
+    });
+    if (!error) return;
+    if (error.code === "22023") throw new RoadmapConflictError("not-available");
+    throw new RoadmapPersistenceError();
   }
 
   /** One proposal by id, decided or not, for the decline and edit paths. */

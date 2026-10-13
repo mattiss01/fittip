@@ -157,6 +157,31 @@ export function parseRoadmapProposalId(value: unknown): string {
   return value;
 }
 
+/** The accepted version a milestone mark names. */
+export function parseRoadmapVersionId(value: unknown): string {
+  if (
+    typeof value !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      value,
+    )
+  ) {
+    throw new RoadmapValidationError("versionId");
+  }
+  return value;
+}
+
+/** A phase's or a milestone's position: a small whole number, from zero. */
+export function parseRoadmapPosition(
+  value: unknown,
+  field: "phaseIndex" | "milestoneIndex",
+): number {
+  const parsed =
+    typeof value === "string" && /^\d{1,2}$/.test(value) ? Number(value) : -1;
+  const last = field === "phaseIndex" ? 5 : 2;
+  if (parsed < 0 || parsed > last) throw new RoadmapValidationError(field);
+  return parsed;
+}
+
 export function parseExpectedHeadRevision(value: unknown): number {
   const parsed =
     typeof value === "string" && value !== "" ? Number(value) : value;
@@ -231,6 +256,17 @@ export type RoadmapVersionView = {
   providerCode: string;
 };
 
+/**
+ * A milestone the owner marked reached (ADR-026), by where it sits in the
+ * accepted version: a milestone has no id of its own, and the version never
+ * changes. `reachedOn` is the owner's local day, set by the database.
+ */
+export type RoadmapMilestoneMark = {
+  phaseIndex: number;
+  milestoneIndex: number;
+  reachedOn: string;
+};
+
 export type RoadmapHeadView = {
   revision: number;
   currentVersionId: string | null;
@@ -270,6 +306,8 @@ export type RoadmapScreenState = {
   today: string;
   head: RoadmapHeadView;
   current: RoadmapVersionView | null;
+  /** The milestones of `current` marked reached. Empty with no roadmap. */
+  reached: RoadmapMilestoneMark[];
   /** The proposal awaiting a decision, if any. */
   openProposal: RoadmapProposalView | null;
   /**

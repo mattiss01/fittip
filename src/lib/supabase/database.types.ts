@@ -1182,6 +1182,48 @@ export type Database = {
           },
         ];
       };
+      roadmap_milestone_marks: {
+        Row: {
+          created_at: string;
+          milestone_index: number;
+          phase_index: number;
+          reached_on: string;
+          user_id: string;
+          version_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          milestone_index: number;
+          phase_index: number;
+          reached_on: string;
+          user_id: string;
+          version_id: string;
+        };
+        Update: {
+          created_at?: string;
+          milestone_index?: number;
+          phase_index?: number;
+          reached_on?: string;
+          user_id?: string;
+          version_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_milestone_marks_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "roadmap_milestone_marks_version_fkey";
+            columns: ["version_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "roadmap_versions";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
       roadmap_proposal_decisions: {
         Row: {
           accepted_version_id: string | null;
@@ -2702,6 +2744,15 @@ export type Database = {
       session_activities_content_is_valid: {
         Args: { p_content: Json; p_user_id: string };
         Returns: boolean;
+      };
+      set_roadmap_milestone_reached: {
+        Args: {
+          p_milestone_index: number;
+          p_phase_index: number;
+          p_reached: boolean;
+          p_version_id: string;
+        };
+        Returns: undefined;
       };
       set_session_cancellation_reason: {
         Args: { p_reason: string; p_session_id: string };

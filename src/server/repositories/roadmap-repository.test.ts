@@ -121,6 +121,95 @@ describe("RoadmapRepository", () => {
     });
   });
 
+  // ADR-026. The owner and the day are the database's; the call carries the
+  // version, the place and which way.
+  it("marks a milestone through its function, with no owner and no day", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    const repository = new RoadmapRepository(client({ rpc }));
+
+    await repository.setMilestoneReached({
+      versionId: FIRST_PROPOSAL,
+      phaseIndex: 1,
+      milestoneIndex: 2,
+      reached: true,
+    });
+
+    expect(rpc).toHaveBeenCalledWith("set_roadmap_milestone_reached", {
+      p_version_id: FIRST_PROPOSAL,
+      p_phase_index: 1,
+      p_milestone_index: 2,
+      p_reached: true,
+    });
+  });
+
+  it("reports a refused mark as a roadmap that is no longer available", async () => {
+    const refused = new RoadmapRepository(
+      client({
+        rpc: vi.fn().mockResolvedValue({
+          data: null,
+          error: { code: "22023", message: "Invalid milestone mark." },
+        }),
+      }),
+    );
+    await expect(
+      refused.setMilestoneReached({
+        versionId: FIRST_PROPOSAL,
+        phaseIndex: 0,
+        milestoneIndex: 0,
+        reached: false,
+      }),
+    ).rejects.toMatchObject({ reason: "not-available" });
+
+    const failed = new RoadmapRepository(
+      client({
+        rpc: vi.fn().mockResolvedValue({
+          data: null,
+          error: {
+            code: "XX000",
+            message: "constraint roadmap_milestone_marks",
+          },
+        }),
+      }),
+    );
+    await expect(
+      failed.setMilestoneReached({
+        versionId: FIRST_PROPOSAL,
+        phaseIndex: 0,
+        milestoneIndex: 0,
+        reached: true,
+      }),
+    ).rejects.toBeInstanceOf(RoadmapPersistenceError);
+  });
+
+  it("reads the marks of one version, as the owner", async () => {
+    const eq = vi.fn();
+    const query = {
+      select: vi.fn(() => query),
+      eq: (column: string, value: string) => {
+        eq(column, value);
+        return query;
+      },
+      then: (resolve: (value: unknown) => void) =>
+        resolve({
+          data: [
+            { phase_index: 0, milestone_index: 1, reached_on: "2026-10-13" },
+          ],
+          error: null,
+        }),
+    };
+    const repository = new RoadmapRepository(
+      client({ from: vi.fn(() => query) }),
+    );
+
+    await expect(
+      repository.listMilestoneMarks(FIRST_PROPOSAL),
+    ).resolves.toEqual([
+      { phaseIndex: 0, milestoneIndex: 1, reachedOn: "2026-10-13" },
+    ]);
+    expect(eq).toHaveBeenCalledWith("user_id", USER_ID);
+    expect(eq).toHaveBeenCalledWith("version_id", FIRST_PROPOSAL);
+  });
+
   it("sends no argument for the owner text a request does not carry", async () => {
     const rpc = vi.fn().mockResolvedValue({
       data: {

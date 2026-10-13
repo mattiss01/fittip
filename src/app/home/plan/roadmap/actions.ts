@@ -36,8 +36,10 @@ import { generateRoadmapProposal } from "@/server/roadmap/roadmap-generation";
 import {
   parseExpectedHeadRevision,
   parseRoadmapEndDate,
+  parseRoadmapPosition,
   parseRoadmapStartDate,
   parseRoadmapProposalId,
+  parseRoadmapVersionId,
   RoadmapValidationError,
 } from "@/server/roadmap/roadmap-records";
 
@@ -240,6 +242,54 @@ export async function editRoadmapAction(
     await roadmaps.editProposal(id, validation.response.roadmap);
     return landed("edited", submission);
   } catch (error) {
+    return toActionState(error, submission);
+  }
+}
+
+/**
+ * Mark a milestone of the roadmap in force reached, or take the mark back
+ * (ADR-026).
+ *
+ * The form says which milestone and which way. Whose roadmap it is, that the
+ * version is the one in force, that the milestone exists, and the day are the
+ * database's to decide; nothing here is trusted for any of them. It says
+ * nothing on success: the milestone itself shows the mark.
+ */
+export async function setMilestoneReachedAction(
+  previous: RoadmapActionState,
+  formData: FormData,
+): Promise<RoadmapActionState> {
+  const submission = previous.submission + 1;
+  try {
+    const roadmaps = await createRoadmapRepository();
+    await roadmaps.setMilestoneReached({
+      versionId: parseRoadmapVersionId(formData.get("versionId")),
+      phaseIndex: parseRoadmapPosition(
+        formData.get("phaseIndex"),
+        "phaseIndex",
+      ),
+      milestoneIndex: parseRoadmapPosition(
+        formData.get("milestoneIndex"),
+        "milestoneIndex",
+      ),
+      reached: text(formData, "reached") === "true",
+    });
+    revalidatePath("/home/plan/roadmap");
+    return { status: "marked", message: "", submission };
+  } catch (error) {
+    // Said in the milestone's own words: the shared sentences are about a
+    // proposal, and about details there are none of here to check.
+    if (
+      error instanceof RoadmapConflictError ||
+      error instanceof RoadmapValidationError
+    ) {
+      return {
+        status:
+          error instanceof RoadmapConflictError ? "conflict" : "validation",
+        message: OUTCOMES.milestoneUnavailable,
+        submission,
+      };
+    }
     return toActionState(error, submission);
   }
 }

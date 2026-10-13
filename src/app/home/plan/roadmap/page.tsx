@@ -135,9 +135,16 @@ async function loadRoadmapState(): Promise<RoadmapScreenState> {
       ? new Date().toISOString().slice(0, 10)
       : isoDateInTimezone(new Date(), profile.timezoneName);
 
-  const completions = await (
-    await createCompletionLog()
-  ).list(shiftIsoDate(today, -(TRAINING_HISTORY_WINDOW_DAYS - 1)), today);
+  const current = versions[0] ?? null;
+  // Two reads wait on the first pass, and not on each other. The marks are
+  // those of the roadmap in force, and of no other: an earlier version's stay
+  // stored and are not shown, as the version itself is not.
+  const [completions, reached] = await Promise.all([
+    createCompletionLog().then((log) =>
+      log.list(shiftIsoDate(today, -(TRAINING_HISTORY_WINDOW_DAYS - 1)), today),
+    ),
+    current === null ? [] : roadmaps.listMilestoneMarks(current.id),
+  ]);
 
   const goals: RoadmapGoalSummary[] = selectActiveGoalContext(
     goalCollection.goals,
@@ -160,7 +167,8 @@ async function loadRoadmapState(): Promise<RoadmapScreenState> {
   return {
     today,
     head,
-    current: versions[0] ?? null,
+    current,
+    reached,
     openProposal,
     declinedPredecessor,
     openMemoryCandidateCount,

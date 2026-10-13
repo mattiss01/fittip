@@ -73,6 +73,18 @@ export const ROADMAP_CONTROL_COPY = {
   declineAction: "Decline proposal",
   declineConfirm: "Decline this proposal? It will not become your roadmap.",
 
+  /* ---- Milestones (ADR-026) ---------------------------------------------- */
+  /**
+   * One answer, reached (owner, 13 Oct 2026). A milestone not marked says
+   * nothing: not "open", and never "missed", whatever its date.
+   */
+  milestoneReachAction: "Mark reached",
+  milestoneReached: (date: string) => `Reached ${date}`,
+  milestoneUndoAction: "Undo",
+  /** For a screen reader, where a row of identical buttons says too little. */
+  milestoneReachLabel: (title: string) => `Mark reached: ${title}`,
+  milestoneUndoLabel: (title: string) => `Undo reached: ${title}`,
+
   /* ---- Edit ------------------------------------------------------------- */
   editTitle: "Edit proposal",
   editSupport: "Saving creates a new proposal to review.",
@@ -155,6 +167,12 @@ export const ROADMAP_CONTROL_COPY = {
     stale: "Your roadmap changed in another tab. Reload before deciding again.",
     notAvailable:
       "That proposal is no longer available. Reload to see where it went.",
+    /**
+     * The database's one refusal for a mark (ADR-026): the roadmap moved on
+     * under the page, or the request was not the page's. Nothing was changed.
+     */
+    milestoneUnavailable:
+      "That milestone could not be changed. Reload to see your roadmap as it is now.",
     sessionEnded: "Your session ended. Sign in again before continuing.",
     /**
      * The one context minimum this surface can hit. The coach reads the

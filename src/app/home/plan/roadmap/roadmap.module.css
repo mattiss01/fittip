@@ -248,6 +248,50 @@
   line-height: 1.5;
 }
 
+/* Whether it was reached (ADR-026): the day once marked, and one quiet
+   button either way. Nothing here marks a milestone as late. */
+.milestoneTick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  margin: 0.35rem 0 0;
+}
+
+.milestoneReached {
+  margin: 0;
+  color: var(--pine);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.milestoneTickAction {
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--pine);
+  font: 700 0.85rem var(--font-sans);
+  cursor: pointer;
+}
+
+.milestoneTickAction:disabled {
+  cursor: progress;
+  opacity: 0.55;
+}
+
+.milestoneTickAction:focus-visible {
+  outline: 3px solid var(--accent-dark);
+  outline-offset: 2px;
+}
+
+.milestoneTick .notice {
+  flex-basis: 100%;
+  margin-top: 0.25rem;
+}
+
 /* A review point opens the rule: the gap is drawn in the card's colour over
    the spine, so the line genuinely stops rather than running behind it. */
 .checkpoint::before {
