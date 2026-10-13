@@ -144,10 +144,9 @@ Not worth their own slot; do them when work lands nearby.
 - **The Plan's series-extension notice is drawn as a heading** (`series-materializer.tsx`)
   though it is a status sentence, sometimes two, so it kept its full stop on 8 Oct 2026.
   It wants to be a paragraph with `role="status"`; m3-14b may find it by its heading.
-- **Three dates are still plain date fields**: a phase's start and end and a milestone's
-  date in the roadmap editor (`roadmap-editor.tsx`). They are held by the editor, and a
-  phase is keyed by its start date, so its block is rebuilt as that date changes. Do
-  them with "Write a roadmap yourself".
+- **A phase in the roadmap editor is keyed by its start date** (`roadmap-editor.tsx`),
+  so its block is rebuilt, and the field loses focus, as that date changes. Do it with
+  "Write a roadmap yourself".
 - **Editing a roadmap proposal made before v3 drops its older sections without saying
   so.** The saved edit is a v3 proposal without the assumptions, uncertainties, safety
   sentences and reasons; the proposal edited keeps them (ADR-025). The owner's to
@@ -163,10 +162,12 @@ Not worth their own slot; do them when work lands nearby.
 - **A roadmap's repeat-protection fingerprint is still labelled `"roadmap.v2"`**
   (`roadmap-generation.ts`). Left on purpose: changing the label only stops one
   earlier answer being replayed.
-- **A typed date outside a session's range gets the general refusal**, since only the
-  calendar is held to it (`plan-date-field.tsx` gives no `rangeMessage`, so that a page
-  left open past midnight is not blocked). A goal's calendar still offers days before
-  today, which the save then refuses.
+- **A date outside a session's range is refused in the browser's words**, not the
+  app's (`plan-date-field.tsx` gives no `rangeMessage`). A goal's calendar still offers
+  days before today, which the save then refuses.
+- **One-field dates, not yet seen on a phone.** Since 13 Oct 2026 every date is the
+  browser's own field. Checked at 390px in desktop Chromium only; iOS Safari draws
+  and validates a date field its own way, the read-only one included.
 - **Dragging a goal does not scroll the page.** Since 5 Oct 2026 a goal is
   reordered by dragging its number. A list taller than the screen cannot be
   dragged end to end; the arrow keys on the number can, which a phone lacks.
