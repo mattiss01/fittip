@@ -77,16 +77,22 @@ lane, one screen per merge.
       memory in bytes, so many long notes can leave the coach refusing to plan. Limits
       as a whole are still to be thought through with the owner, and the coach tidying
       the notes is not built.
-- [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only
-      "Generate roadmap proposal", and an owner without a subscription may not be able
-      to generate one, so a roadmap must also be writable by hand: phases, dates, focus,
-      milestones. It writes the v4 shape (ADR-027), and brings "Add milestone": the
-      editor can remove a phase's milestone and cannot add one.
-      Careful lane either way: a proposal without a coach behind it has no
-      origin the database allows, and an accepted version must name a proposal. Open:
-      whether it goes through a proposal and its acceptance as a coach one does
-      (ADR-015) or is written directly, and what the least is that counts as a
-      roadmap.
+- [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only the
+      coach, and an owner without a subscription may not be able to generate, so a
+      roadmap must also be writable by hand. It writes the v4 shape (ADR-027) and
+      is the third choice under "Change roadmap". Decided by the owner on 13 Oct
+      2026: saving makes it the roadmap in force at once, with nothing to review
+      (stored as a proposal accepted in the same step, so the records keep their
+      shape); the least that counts is a title, the dates, and one phase with a
+      title, what it is for and one goal, with summary and milestones optional
+      and phases covering the dates without gaps; the form always starts empty.
+      Editing the roadmap in force by hand is a different thing and its own item.
+      Careful lane: a proposal without a coach behind it has no origin the
+      database allows. It brings "Add milestone", which the proposal editor lacks.
+- [ ] **Edit your roadmap by hand.** Owner, 13 Oct 2026, as distinct from writing
+      one: open the roadmap in force in a form and save the change. After "Write
+      a roadmap yourself", whose form and save it shares. Open: whether a
+      milestone's tick and a done review survive an edit that keeps them.
 - [ ] **Tell the coach which milestones were reached.** Left out of the tick on
       purpose (owner, 13 Oct 2026; ADR-026), to be decided once ticks have been
       used. It changes what the roadmap call is sent and takes prompt bytes:
