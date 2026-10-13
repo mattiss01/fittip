@@ -79,24 +79,13 @@ lane, one screen per merge.
 - [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only
       "Generate roadmap proposal", and an owner without a subscription may not be able
       to generate one, so a roadmap must also be writable by hand: phases, dates, focus,
-      milestones, review points. After "Roadmap: a slimmer shape", whose shape it
-      writes. Careful lane either way: a proposal without a coach behind it has no
+      milestones, review points. It writes the v3 shape (ADR-025), and brings "Add
+      milestone": the editor can remove a phase's milestone and cannot add one.
+      Careful lane either way: a proposal without a coach behind it has no
       origin the database allows, and an accepted version must name a proposal. Open:
       whether it goes through a proposal and its acceptance as a coach one does
       (ADR-015) or is written directly, and what the least is that counts as a
       roadmap.
-- [~] **Roadmap: a slimmer shape.** Owner, 10 Oct 2026, after going through what a
-      roadmap holds: assumptions, uncertainties, the written reason on goal
-      attention and the coach's safety sentences go; the attention levels and review
-      points stay, and a phase may have no milestone. No coach call reads what goes.
-      The safety sentences go entirely, the owner's choice over keeping a required
-      review point: with a flag present nothing checks that a roadmap acknowledges
-      it. The coach is still sent the flags and the safety rules, and the app's own
-      notice on the Roadmap stays. Careful lane (the AI contract and the stored
-      shape): the database checks the stored envelope by name and version
-      (`fittip.roadmap.v2`), so this is a v3 beside it, with a migration, a prompt and
-      schema change, and the editor. Accepted versions and old proposals are
-      permanent and keep rendering what they hold.
 - [ ] **Whether a milestone was reached.** Owner, 10 Oct 2026. One answer, reached;
       a milestone not ticked is open and nothing ever says missed. A record beside
       the roadmap, as a log is beside the plan: the accepted version is never
@@ -158,7 +147,14 @@ Not worth their own slot; do them when work lands nearby.
 - **Three dates are still plain date fields**: a phase's start and end and a milestone's
   date in the roadmap editor (`roadmap-editor.tsx`). They are held by the editor, and a
   phase is keyed by its start date, so its block is rebuilt as that date changes. Do
-  them with "Roadmap: what it holds, again".
+  them with "Write a roadmap yourself".
+- **Editing a roadmap proposal made before v3 drops its older sections without saying
+  so.** The saved edit is a v3 proposal without the assumptions, uncertainties, safety
+  sentences and reasons; the proposal edited keeps them (ADR-025). The owner's to
+  say whether the editor states it.
+- **A roadmap's repeat-protection fingerprint is still labelled `"roadmap.v2"`**
+  (`roadmap-generation.ts`). Left on purpose: changing the label only stops one
+  earlier answer being replayed.
 - **A typed date outside a session's range gets the general refusal**, since only the
   calendar is held to it (`plan-date-field.tsx` gives no `rangeMessage`, so that a page
   left open past midnight is not blocked). A goal's calendar still offers days before
@@ -276,10 +272,8 @@ Not worth their own slot; do them when work lands nearby.
   pasted in and the Site URL checked (ADR-022). A forgotten hosted password is set
   from the Supabase SQL editor until then.
 
-- **The roadmap prompt has 43 characters left.** Its static prefix is 5,957 of the 6,000
-  `openai-prompt.test.ts` allows, after the sentence naming `recurringSessions`. The next
-  sentence takes them from an existing one or raises the input ceiling, which is a
-  standing spend increase.
+- **The v3 roadmap prompt has never met a provider.** It was checked against the built-in
+  example coach only; there is no provider key, so the first live roadmap is untested.
 - **The roadmap coach is not told which dates of a series differ.** A rule is sent as the
   series stands (ADR-013, amended 2 Oct 2026): a cancelled or deleted occurrence is not
   listed, and an edited or moved one appears both as its own dated entry and
