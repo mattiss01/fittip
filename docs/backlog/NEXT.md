@@ -45,9 +45,10 @@ so start with Today and adjust from there rather than committing every screen up
 lane, one screen per merge.
 
 - [ ] **The plan call's logs: 9,300 bytes or the 10,200 the owner named.** The
-      plan call is at the 15,000-token ceiling by construction (ADR-023 decision 12),
-      so its logs got 9,300. Raising `maxInputTokens` to 15,300 gives them 10,200 and
-      the hold per call goes from 6,600 to 6,660 micro-USD. The owner's to say.
+      plan call was sized to 15,000 tokens (ADR-023 decision 12), so its logs got
+      9,300. Since ADR-028 the ceiling is 18,000 and every call already holds
+      7,200 micro-USD, so 10,200 costs nothing more: it is a byte limit and its
+      tests. The owner named the number; build lane but for the AI boundary.
 - [ ] **A fill's sources are recorded and never checked.** A suggestion names the
       logs, library entries and saved sessions it was built from, and since ADR-023
       the logs whose flags it was sent. Nothing compares them, so a flag corrected
@@ -90,18 +91,20 @@ lane, one screen per merge.
       purpose (owner, 13 Oct 2026; ADR-026), to be decided once ticks have been
       used. It changes what the roadmap call is sent and takes prompt bytes:
       careful lane.
-- [~] **Change with Coach.** Owner, 13 Oct 2026. A roadmap in force can be changed
-      with the coach only by asking for a whole new one, with a note. Wanted: a
-      "Change with Coach" on the accepted roadmap and on a due review, with a field
-      for what should change, returning a proposal to accept, edit or decline as any
-      other. Decided by the owner the same day: the coach is sent the **whole**
-      roadmap in force, milestones and levels included, not the outline a new
-      request sends; both dates can be picked, prefilled with today and the
-      roadmap's end; no limit of its own beyond the spend ceilings; no phase
-      picker, the text says what. Careful lane: it changes what a provider is sent,
-      and the roadmap call's worst case is already 14,179 of 15,000 input tokens, so
-      the whole roadmap has to be paid for in budget or in a higher ceiling, which
-      is the owner's to say with the numbers in front of them.
+- [ ] **A roadmap proposal does not know which roadmap it was made under.** Found
+      in the review of Change with Coach, 13 Oct 2026, and true of every roadmap
+      proposal. One left open while another roadmap is accepted elsewhere (a
+      second tab) can still be accepted, and replaces the newer roadmap: accept
+      checks the head the page read, not the head the proposal was generated
+      against, and `begin_roadmap_generation` does not refuse while a proposal is
+      open. A changed version of roadmap 1 can so replace roadmap 2. Careful
+      lane, a migration: `accept_roadmap_proposal` compares the request's
+      `expected_head_revision` with the head. The agent would do this next.
+- [ ] **Asking again after a declined change does not send the whole roadmap.**
+      A regeneration sends the declined proposal's outline and the feedback
+      (ADR-028). Making it a change again needs the request to record that it was
+      one, so it rides with the item above. Until then "Change with Coach" can
+      simply be asked again, which also starts the three rounds afresh.
 - [ ] **Delete a log.** Owner, 7 Oct 2026: it should be possible, which also frees a
       settled session for planning again. Careful lane: `apply_completion_change`
       accepts only create and edit, and completions are permanent records today. Open
@@ -293,6 +296,9 @@ Not worth their own slot; do them when work lands nearby.
   pasted in and the Site URL checked (ADR-022). A forgotten hosted password is set
   from the Supabase SQL editor until then.
 
+- **A change request has never met a provider.** The example coach ignores what the
+  owner writes, so what "Change with Coach" returns locally is not changed to the
+  note. The first live one is untested until there is a provider key.
 - **The v4 roadmap prompt has never met a provider.** It was checked against the built-in
   example coach only; there is no provider key, so the first live roadmap is untested.
 - **A due review cannot be shown in a browser flow.** The coach starts a roadmap today,
