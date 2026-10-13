@@ -152,6 +152,14 @@ Not worth their own slot; do them when work lands nearby.
   so.** The saved edit is a v3 proposal without the assumptions, uncertainties, safety
   sentences and reasons; the proposal edited keeps them (ADR-025). The owner's to
   say whether the editor states it.
+- **What the Roadmap page left behind** on 13 Oct 2026, when it stopped listing
+  earlier versions and decided proposals. `roadmap-proposal-record.tsx`, its test, the
+  `.historyList`, `.historyItem` and `.recordTitle` styles and the `proposalExpired` and
+  `proposalSuperseded` wordings have no caller; files cannot be deleted by the agent.
+  Four sentences still say a proposal "stays in your history", which no page shows:
+  the owner's to reword. After a decline, "New roadmap" opens the regeneration with
+  its dates fixed, and other dates can be asked for only once the three are used.
+  When a generation lands from the sheet, focus falls to the page's start.
 - **A roadmap's repeat-protection fingerprint is still labelled `"roadmap.v2"`**
   (`roadmap-generation.ts`). Left on purpose: changing the label only stops one
   earlier answer being replayed.
