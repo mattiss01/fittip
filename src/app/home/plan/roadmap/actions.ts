@@ -126,12 +126,29 @@ export async function generateRoadmapAction(
       return invalid(OUTCOMES.feedbackWithoutRegeneration, submission, draft);
     }
 
+    // ADR-028. A change request is a first request that also sends the whole
+    // roadmap in force. It says what should change, it is not a second answer
+    // to an earlier question, and there has to be a roadmap: which one is
+    // read from the owner's records, never named by the form.
+    const changeRoadmap = text(formData, "changeRoadmap") === "true";
+    if (changeRoadmap) {
+      if (previousProposalId !== null) {
+        return invalid(OUTCOMES.checkDetails, submission, draft);
+      }
+      if (planningNote === null) {
+        return invalid(OUTCOMES.changeNoteRequired, submission, draft);
+      }
+    }
+
     const idempotencyKey = text(formData, "idempotencyKey");
     if (!/^[A-Za-z0-9_-]{16,128}$/.test(idempotencyKey)) {
       return invalid(OUTCOMES.requestUnidentified, submission, draft);
     }
 
     const head = await roadmaps.getHead();
+    if (changeRoadmap && head.currentVersionId === null) {
+      return invalid(OUTCOMES.changeNothingToChange, submission, draft);
+    }
     const result = await generateRoadmapProposal(
       {
         owner,
@@ -142,6 +159,7 @@ export async function generateRoadmapAction(
         previousProposalId,
         regenerationFeedback,
         idempotencyKey,
+        ...(changeRoadmap ? { changeRoadmap: true } : {}),
       },
       { roadmaps },
     );
@@ -507,6 +525,8 @@ function contextSourceMessage(source: string): string {
       return tooLarge.training_setup;
     case "planning_note":
       return tooLarge.planning_note;
+    case "roadmap_to_change":
+      return tooLarge.roadmap_to_change;
     case "regeneration_feedback":
       return tooLarge.regeneration_feedback;
     case "previous_proposal":

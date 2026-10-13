@@ -720,6 +720,11 @@
   line-height: 1.5;
 }
 
+.reviewDueActions {
+  display: grid;
+  gap: 0.6rem;
+}
+
 /* In the spine, a review still ahead is a quiet line; the one that is due
    keeps the checkpoint's weight, and one that is done steps back. */
 .checkpoint[data-roadmap-review="ahead"] .checkpointBody,

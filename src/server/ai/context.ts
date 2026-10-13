@@ -33,6 +33,7 @@ import {
 } from "@/server/profile/coach-profile-context";
 import {
   buildCurrentRoadmapReference,
+  buildRoadmapToChange,
   buildRoadmapPhaseReference,
   buildRoadmapPlanContext,
 } from "@/server/roadmap/roadmap-plan-context";
@@ -94,6 +95,7 @@ export type CoachAIContextSourceName =
   | "previous_proposal"
   | "roadmap"
   | "current_roadmap"
+  | "roadmap_to_change"
   | "roadmap_phase"
   | "recent_safety_flags"
   | "session_detail"
@@ -202,6 +204,12 @@ export type CoachAIContextLimits = {
      */
     currentRoadmap: number;
     /**
+     * ADR-028. The whole roadmap in force, on a `create_roadmap` request that
+     * asks for it to be changed: what a stored roadmap may be, so it is never
+     * trimmed. Zero for every other operation.
+     */
+    roadmapToChange: number;
+    /**
      * ADR-023 decisions 14 and 15, `fill_session_activities` only; zero for
      * the others. The phase is one title, one focus and two dates, bounded by
      * what a roadmap may store. The flags trim by count with the loss told.
@@ -297,11 +305,12 @@ export type CoachAIContextLimits = {
  * basics (200 bytes), the training setup (4,600) and each active goal's
  * desired outcome (goals 4,000 to 10,000 for the roadmap, 8,000 otherwise).
  * The shared prompt grew by the three paragraphs that describe them, and
- * `maxInputTokens` went to 15,000. The arithmetic the comments below give is
- * from before that day; this is what holds now, and `context.test.ts` and
+ * `maxInputTokens` went to 15,000, and to 18,000 on 13 October 2026 for the
+ * roadmap call alone (ADR-028). The arithmetic the comments below give is
+ * from before those days; this is what holds now, and `context.test.ts` and
  * `openai-prompt.test.ts` assert it:
  *
- *   roadmap  prefix 7,800 + wrapper 64 + context 48,850 = 56,714  14,179 tokens
+ *   roadmap  prefix 7,800 + wrapper 64 + context 63,700 = 71,564  17,891 tokens
  *   plan     prefix 8,700 + wrapper 64 + context 51,200 = 59,964  14,991 tokens
  *   fill     prefix 8,200 + wrapper 64 + context 51,450 = 59,714  14,929 tokens
  *
@@ -338,13 +347,19 @@ export const COACH_AI_CONTEXT_LIMITS = {
       roadmap: 0,
       // Six phases of 80-character titles with their dates are about 1,020.
       currentRoadmap: 1_200,
+      // ADR-028: the stored cap of a roadmap's content, so the whole of one
+      // always fits. A change request sends this in place of the outline.
+      roadmapToChange: 16_000,
       roadmapPhase: 0,
       recentSafetyFlags: 0,
       sessionDetail: 0,
       // 33,700 until ADR-023, which added the athlete, the training setup and
       // 6,000 more for goals, with 100 for the two new keys. Then 3,000 more
       // for planned sessions and 1,250 for the roadmap in force and its key.
-      total: 48_850,
+      // 48,850 until ADR-028: a change request swaps the outline's 1,200 for
+      // the whole roadmap's 16,000 and a longer key, and the input ceiling
+      // went to 18,000 tokens for it.
+      total: 63_700,
     },
   },
   // M3-03 kept every number M3-02 provisionally set here, and this comment
@@ -435,6 +450,7 @@ export const COACH_AI_CONTEXT_LIMITS = {
       previousProposal: 5_900,
       roadmap: 4_000,
       currentRoadmap: 0,
+      roadmapToChange: 0,
       roadmapPhase: 0,
       recentSafetyFlags: 0,
       sessionDetail: 0,
@@ -447,7 +463,8 @@ export const COACH_AI_CONTEXT_LIMITS = {
       // whole is exactly the ceiling:
       //
       //   prefix 8,700 + wrapper 64 + context 51,200 = 59,964 characters
-      //   ceil(59,964 / 4) = 14,991  against  maxInputTokens 15,000
+      //   ceil(59,964 / 4) = 14,991  against the 15,000 this was sized to;
+      //   maxInputTokens is 18,000 since ADR-028, for the roadmap call.
       total: 51_200,
     },
   },
@@ -488,6 +505,7 @@ export const COACH_AI_CONTEXT_LIMITS = {
       previousProposal: 0,
       roadmap: 0,
       currentRoadmap: 0,
+      roadmapToChange: 0,
       // An 80-character title and a 300-character focus at three bytes each,
       // with the dates and keys.
       roadmapPhase: 1_300,
@@ -499,7 +517,8 @@ export const COACH_AI_CONTEXT_LIMITS = {
       // The sum of the parts (50,402) and about 1,000 for the envelope:
       //
       //   prefix 8,200 + wrapper 64 + context 51,450 = 59,714 characters
-      //   ceil(59,714 / 4) = 14,929  against  maxInputTokens 15,000
+      //   ceil(59,714 / 4) = 14,929  against the 15,000 this was sized to;
+      //   maxInputTokens is 18,000 since ADR-028, for the roadmap call.
       total: 51_450,
     },
   },
@@ -632,6 +651,13 @@ export type CoachAIComposeInput = {
     | CoachAIPreviousPlanReference
     | null;
   /**
+   * ADR-028, `create_roadmap` only: the owner asks for the roadmap in force
+   * to be changed, and `planningNote` says how. The whole of that roadmap is
+   * then sent, where a new roadmap is told an outline. It is read here, from
+   * the owner's own records; nothing a request carries names a roadmap.
+   */
+  changeRoadmap?: boolean;
+  /**
    * ADR-024, `create_seven_day_plan` only: the sessions the owner marked "can
    * be replaced" for this request, each with the handle the database issued.
    * The id is how a planned session is matched and is never serialized.
@@ -761,8 +787,31 @@ export function buildCoachAIContext(
 
   // ADR-023 decision 8. Only a new roadmap is told of the one in force, and
   // only its outline; the plan reads the reduction above instead.
+  //
+  // ADR-028. A request to change the roadmap in force sends the whole of it
+  // in place of that outline, ended or not: it is the thing being changed.
+  // Without a roadmap in force there is nothing to change, and the request is
+  // refused here rather than answered as if it had been for a new one.
+  //
+  // Refused rather than ignored, as a replaceable session is on the wrong
+  // call: on a plan or a fill it has no meaning, and with a previous proposal
+  // it is a second answer to an earlier question and not a change request.
+  if (
+    compose.changeRoadmap === true &&
+    (operation !== "create_roadmap" || compose.previousProposal !== null)
+  ) {
+    throw new CoachAIError("context_invalid");
+  }
+  const changesRoadmap = compose.changeRoadmap === true;
+  if (changesRoadmap && !records.roadmapVersion) {
+    throw new CoachAIError("context_invalid");
+  }
+  const roadmapToChange =
+    changesRoadmap && records.roadmapVersion
+      ? buildRoadmapToChange(records.roadmapVersion.content)
+      : undefined;
   const currentRoadmap =
-    operation !== "create_roadmap"
+    operation !== "create_roadmap" || roadmapToChange !== undefined
       ? undefined
       : // One that has ended is not what the athlete is following, and the
         // prompt says "now". The goals and the logs carry on from it.
@@ -889,6 +938,7 @@ export function buildCoachAIContext(
       : {}),
     // Keyed off the operation, for the reason the rules above are.
     ...(currentRoadmap === undefined ? {} : { currentRoadmap }),
+    ...(roadmapToChange === undefined ? {} : { roadmapToChange }),
     ...(fillExtras === null
       ? {}
       : {
@@ -937,6 +987,7 @@ export function buildCoachAIContext(
     previous_proposal: jsonBytes(context.previousProposal),
     roadmap: jsonBytes(context.roadmap),
     current_roadmap: jsonBytes(context.currentRoadmap),
+    roadmap_to_change: jsonBytes(context.roadmapToChange),
     roadmap_phase: jsonBytes(context.roadmapPhase),
     recent_safety_flags: jsonBytes(context.recentSafetyFlags),
     session_detail: jsonBytes(context.sessionDetail),
@@ -1004,6 +1055,13 @@ export function buildCoachAIContext(
     usage.current_roadmap,
     limits.bytes.currentRoadmap,
     "current_roadmap",
+  );
+  // A stored roadmap cannot be larger than this, so reaching the refusal is a
+  // configuration defect and not something the owner did.
+  refuseOver(
+    usage.roadmap_to_change,
+    limits.bytes.roadmapToChange,
+    "roadmap_to_change",
   );
   refuseOver(usage.roadmap_phase, limits.bytes.roadmapPhase, "roadmap_phase");
   refuseOver(

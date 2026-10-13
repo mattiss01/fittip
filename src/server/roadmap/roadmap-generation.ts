@@ -62,6 +62,12 @@ export type RoadmapGenerationInput = {
   planningNote: string | null;
   /** Both present together, or both absent. A regeneration needs both. */
   previousProposalId: string | null;
+  /**
+   * ADR-028: ask for the roadmap in force to be changed, `planningNote`
+   * saying how. The coach is then sent the whole of it. Never with a
+   * regeneration, which is a second answer to an earlier question.
+   */
+  changeRoadmap?: boolean;
   regenerationFeedback: string | null;
   /** Stable across an uncertain retry of the same compose submission. */
   idempotencyKey: string;
@@ -129,6 +135,10 @@ export async function generateRoadmapProposal(
     input.previousProposalId ?? "initial",
     String(input.planningNote?.length ?? 0),
     String(input.regenerationFeedback?.length ?? 0),
+    // ADR-028. Added only for a change request, so every other request's
+    // fingerprint is what it was and a key in flight across a deploy still
+    // replays. A key cannot replay a plain request as a change or the reverse.
+    ...(input.changeRoadmap ? ["change"] : []),
   ].join(":");
 
   const claim: RoadmapGenerationClaim = await roadmaps.beginGeneration({
@@ -191,6 +201,7 @@ export async function generateRoadmapProposal(
         planningNote: input.planningNote,
         regenerationFeedback: input.regenerationFeedback,
         previousProposal,
+        ...(input.changeRoadmap ? { changeRoadmap: true } : {}),
       },
     });
   } catch (error) {
@@ -229,7 +240,10 @@ export async function generateRoadmapProposal(
       roadmaps,
       claim.completionToken,
       input.startDate,
-      outcome.memoryCandidates,
+      // ADR-028. A change request's note says what to do to a roadmap ("make
+      // phase two easier"), which is not something to remember about the
+      // athlete, so none of it is proposed as memory whatever came back.
+      input.changeRoadmap ? [] : outcome.memoryCandidates,
     ),
   };
 }

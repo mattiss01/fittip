@@ -304,6 +304,77 @@ describe("roadmap server actions", () => {
     });
   });
 
+  // ADR-028. A change request is a first request that says so, with a note.
+  describe("change with coach", () => {
+    const today = isoDateInTimezone(new Date(), TIMEZONE);
+    const change = (values: Record<string, string>) =>
+      generateRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({
+          startDate: today,
+          endDate: addDays(today, 84),
+          planningNote: "Make the second phase easier.",
+          idempotencyKey: "m3-15f-generate-key-0001",
+          changeRoadmap: "true",
+          ...values,
+        }),
+      );
+
+    it("asks for the roadmap in force to be changed, naming none", async () => {
+      const result = await change({});
+
+      expect(result.status).toBe("proposal");
+      const [input] = generateMock.mock.calls[0] as [Record<string, unknown>];
+      expect(input).toMatchObject({
+        changeRoadmap: true,
+        planningNote: "Make the second phase easier.",
+        previousProposalId: null,
+      });
+      expect(Object.keys(input).filter((key) => /version/i.test(key))).toEqual(
+        [],
+      );
+    });
+
+    it("sends no flag on an ordinary request", async () => {
+      await change({ changeRoadmap: "" });
+
+      const [input] = generateMock.mock.calls[0] as [Record<string, unknown>];
+      expect("changeRoadmap" in input).toBe(false);
+    });
+
+    it("refuses a change that does not say what should change", async () => {
+      const result = await change({ planningNote: "   " });
+
+      expect(result).toMatchObject({
+        status: "validation",
+        message: OUTCOMES.changeNoteRequired,
+      });
+      expect(generateMock).not.toHaveBeenCalled();
+    });
+
+    it("refuses a change when no roadmap is in force", async () => {
+      getHead.mockResolvedValue({ revision: 0, currentVersionId: null });
+
+      const result = await change({});
+
+      expect(result).toMatchObject({
+        status: "validation",
+        message: OUTCOMES.changeNothingToChange,
+      });
+      expect(generateMock).not.toHaveBeenCalled();
+    });
+
+    it("refuses a change that is also a regeneration", async () => {
+      const result = await change({
+        previousProposalId: PROPOSAL_ID,
+        regenerationFeedback: "Start easier.",
+      });
+
+      expect(result.status).toBe("validation");
+      expect(generateMock).not.toHaveBeenCalled();
+    });
+  });
+
   // ADR-027. The form says which roadmap and which phase; that the phase has
   // ended is the database's to decide.
   describe("review", () => {

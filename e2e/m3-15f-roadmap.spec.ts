@@ -231,14 +231,52 @@ test.describe("M3-15F roadmap generation", () => {
       await expect(tick).toHaveAttribute("data-milestone-reached", "true");
 
       // ---- A second roadmap. With one in force the page starts with it, and
-      // ---- the form is behind "New roadmap", in a sheet. ----
+      // ---- changing it is behind "Change roadmap": a sheet that asks which
+      // ---- way (ADR-028). ----
       await expect(page.locator("[data-roadmap-compose]")).toHaveCount(0);
-      await page.getByRole("button", { name: "New roadmap" }).click();
+      await page.getByRole("button", { name: "Change roadmap" }).click();
+      const menu = page.getByRole("dialog", { name: "Change roadmap" });
+      await expect(menu.locator("[data-roadmap-choice]")).toHaveCount(2);
+      await expectNoHorizontalOverflow(page);
+      await menu.locator('[data-roadmap-choice="change"]').click();
+
+      // Change with Coach: what should be different, and the dates it opens
+      // on are today and the day the roadmap ends.
+      const change = page
+        .getByRole("dialog", { name: "Change with Coach" })
+        .locator('[data-roadmap-compose="change"]');
+      await expect(change).toBeVisible();
+      await expect(change.getByLabel("Ends")).not.toHaveValue("");
+      await expectNoHorizontalOverflow(page);
+      // It says what should change, or it is not sent.
+      await change.getByRole("button", { name: "Ask the coach" }).click();
+      await expect(page.locator("[data-roadmap-open-proposal]")).toHaveCount(0);
+      await change
+        .getByLabel("What should change?")
+        .fill("Make the second phase easier.");
+      await change.getByRole("button", { name: "Ask the coach" }).click();
+      await expectOutcome(page, "A proposal is ready below.");
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      // Decide, then ask again: no way to change it while one is waiting.
+      await expect(
+        page.getByRole("button", { name: "Change roadmap" }),
+      ).toHaveCount(0);
+      await page
+        .locator("[data-roadmap-open-proposal]")
+        .getByRole("button", { name: "Accept roadmap" })
+        .click();
+      await expect(page.locator('[data-roadmap-version="2"]')).toBeVisible();
+
+      // And a new one, the other choice.
+      await page.getByRole("button", { name: "Change roadmap" }).click();
+      await page
+        .getByRole("dialog", { name: "Change roadmap" })
+        .locator('[data-roadmap-choice="fresh"]')
+        .click();
       const second = page
         .getByRole("dialog", { name: "Shape your roadmap" })
         .locator('[data-roadmap-compose="initial"]');
       await expect(second).toBeVisible();
-      await expectNoHorizontalOverflow(page);
       await second
         .getByRole("button", { name: "Generate roadmap proposal" })
         .click();
@@ -247,8 +285,9 @@ test.describe("M3-15F roadmap generation", () => {
         .getByRole("button", { name: "Accept roadmap" })
         .click();
 
-      // Version 2 is the roadmap now. Version 1 is stored and not listed.
-      await expect(page.locator('[data-roadmap-version="2"]')).toBeVisible();
+      // Version 3 is the roadmap now. The earlier two are stored, not listed.
+      await expect(page.locator('[data-roadmap-version="3"]')).toBeVisible();
+      await expect(page.locator('[data-roadmap-version="2"]')).toHaveCount(0);
       // A mark belongs to the roadmap it was made on: the new one starts with
       // none, though version 1's first milestone was left marked.
       await expect(page.locator('[data-milestone-reached="true"]')).toHaveCount(
