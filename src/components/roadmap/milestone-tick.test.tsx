@@ -17,15 +17,15 @@ const VERSION_ID = "7e180000-0000-4000-8000-000000000001";
 describe("MilestoneTick", () => {
   afterEach(cleanup);
 
-  it("offers to mark an open milestone, and says nothing else about it", () => {
+  it("offers an empty tick on an open milestone, and says nothing about it", () => {
     const { container } = renderTick(null);
 
-    expect(
-      screen.getByRole("button", {
-        name: ROADMAP_CONTROL_COPY.milestoneReachLabel("Ninety minutes easy"),
-      }),
-    ).toHaveTextContent(ROADMAP_CONTROL_COPY.milestoneReachAction);
-    expect(container.querySelector("p")).toBeNull();
+    const tick = screen.getByRole("button", {
+      name: ROADMAP_CONTROL_COPY.milestoneReachLabel("Ninety minutes easy"),
+    });
+    expect(tick).toHaveAttribute("aria-pressed", "false");
+    expect(tick.querySelector("svg")).toBeNull();
+    expect(container).toHaveTextContent("");
     expect(sent(container)).toEqual({
       versionId: VERSION_ID,
       phaseIndex: "1",
@@ -40,11 +40,11 @@ describe("MilestoneTick", () => {
     expect(
       screen.getByText(ROADMAP_CONTROL_COPY.milestoneReached("18 Oct 2026")),
     ).toBeVisible();
-    expect(
-      screen.getByRole("button", {
-        name: ROADMAP_CONTROL_COPY.milestoneUndoLabel("Ninety minutes easy"),
-      }),
-    ).toHaveTextContent(ROADMAP_CONTROL_COPY.milestoneUndoAction);
+    const tick = screen.getByRole("button", {
+      name: ROADMAP_CONTROL_COPY.milestoneUndoLabel("Ninety minutes easy"),
+    });
+    expect(tick).toHaveAttribute("aria-pressed", "true");
+    expect(tick.querySelector("svg")).not.toBeNull();
     expect(sent(container)).toMatchObject({ reached: "false" });
   });
 });

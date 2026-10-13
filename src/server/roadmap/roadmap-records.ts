@@ -438,11 +438,6 @@ export const ROADMAP_COPY = {
     count === 1
       ? "1 item from a planning note is waiting for you. It is not used for coaching until you accept it."
       : `${count} items from a planning note are waiting for you. They are not used for coaching until you accept them.`,
-  /**
-   * "Version 3": the M3-02 masthead stamp's wording, which M3-15E also uses on
-   * the current roadmap's horizon line and on each superseded version.
-   */
-  versionLabel: (versionNumber: number) => `Version ${versionNumber}`,
   /** Every wording a Client Component renders; see that module for why. */
   ...ROADMAP_CONTROL_COPY,
   /** `error.tsx` and `loading.tsx`; see that module for why it lives apart. */

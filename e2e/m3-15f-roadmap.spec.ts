@@ -239,8 +239,12 @@ test.describe("M3-15F roadmap generation", () => {
       await expect(page.locator('[data-milestone-reached="true"]')).toHaveCount(
         0,
       );
+      // The tick is its circle; the form around an open one has no size.
       await expect(
-        page.locator('[data-milestone-reached="false"]').first(),
+        page
+          .locator('[data-milestone-reached="false"]')
+          .first()
+          .getByRole("button"),
       ).toBeVisible();
       await expect(page.locator('[data-roadmap-version="1"]')).toHaveCount(0);
       await expect(page.locator("[data-roadmap-superseded]")).toHaveCount(0);

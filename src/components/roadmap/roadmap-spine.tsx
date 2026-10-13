@@ -1,5 +1,6 @@
 import { MilestoneTick } from "./milestone-tick";
-import { formatRoadmapDate, formatRoadmapRange } from "./roadmap-dates";
+import { RoadmapDateRange } from "./roadmap-date-range";
+import { formatRoadmapDate } from "./roadmap-dates";
 
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { ROADMAP_COPY } from "@/server/roadmap/roadmap-records";
@@ -125,8 +126,12 @@ function PhaseAndFollowingCheckpoints({
             {ROADMAP_COPY.phaseIndex(index + 1, total)}
           </p>
           <h3 className={styles.phaseTitle}>{phase.title}</h3>
+          {/* Drawn as the roadmap's own dates are (owner, 13 Oct 2026). */}
           <p className={styles.phaseDates}>
-            {formatRoadmapRange(phase.startDate, phase.endDate)}
+            <RoadmapDateRange
+              startDate={phase.startDate}
+              endDate={phase.endDate}
+            />
           </p>
           <p className={styles.phaseFocus}>{phase.focus}</p>
 
@@ -164,6 +169,8 @@ function PhaseAndFollowingCheckpoints({
                   // titles in one phase differ.
                   key={milestoneIndex}
                   className={styles.milestone}
+                  // Where it can be ticked, the tick stands where the dot was.
+                  data-markable={marks === undefined ? undefined : "true"}
                 >
                   <p className={styles.milestoneTitle}>{milestone.title}</p>
                   {/* "Aim for by", never "Due". A milestone is something an
