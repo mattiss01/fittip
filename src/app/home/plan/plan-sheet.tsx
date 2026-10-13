@@ -69,9 +69,15 @@ export function SheetLayer({
   view,
   placement = "bottom",
   labelledBy,
+  locked = false,
   onClose,
   children,
 }: {
+  /**
+   * Escape, the scrim and a close button do nothing while this is set: what
+   * is inside is waiting for a reply it must be there to receive.
+   */
+  locked?: boolean;
   /** Which sheet this is, for tests and styles (`data-plan-sheet`). */
   view: string;
   /**
@@ -94,7 +100,12 @@ export function SheetLayer({
   // Leaving: the sheet slides down, then its owner is told. Without motion,
   // or if the animation never reports its end, it is told at once or soon.
   const [closing, setClosing] = useState(false);
+  const lock = useRef(locked);
+  useEffect(() => {
+    lock.current = locked;
+  });
   const requestClose = useCallback(() => {
+    if (lock.current) return;
     if (
       typeof window === "undefined" ||
       typeof window.matchMedia !== "function" ||

@@ -1,7 +1,8 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useContext, useEffect, useId, useRef, useState } from "react";
 
+import { RoadmapComposeSessionContext } from "./roadmap-compose-session";
 import { RoadmapWatchNotice } from "./roadmap-watch-notice";
 import {
   isRefusal,
@@ -77,11 +78,20 @@ export function RoadmapComposer({
   // Nothing composed in this document yet, so a recovery marker left by the
   // write before the reload is this form's to explain.
   const recovered = useRoadmapRecovered(state.submission === 0);
-  const keyRef = useRef<string | null>(null);
+  // In the "New roadmap" sheet the key is the sheet's, so it outlasts a close;
+  // on the page it is this form's own. The sheet is also told while a request
+  // is under way, and stays open until the reply is in.
+  const session = useContext(RoadmapComposeSessionContext);
+  const ownKey = useRef<string | null>(null);
+  const keyRef = session?.idempotencyKey ?? ownKey;
+  const reportPending = session?.setPending;
+  useEffect(() => {
+    reportPending?.(pending);
+    return () => reportPending?.(false);
+  }, [reportPending, pending]);
   // Explicit ids rather than a wrapping `<label>`. A label that wraps its
-  // control takes its whole text content as the accessible name, so the helper
-  // sentence and the character count would be read out as part of the field's
-  // name; `aria-describedby` says what they actually are.
+  // control takes its whole text content as the accessible name, so the
+  // character count would be read out as part of the field's name.
   const fieldId = useId();
 
   // The two counted fields are controlled so the character count is the value's
@@ -188,7 +198,11 @@ export function RoadmapComposer({
                 type="date"
                 name="startDate"
                 value={chosenStart}
-                onChange={(event) => chooseStart(event.target.value)}
+                // Fixed means fixed, in a browser that opens its picker on a
+                // read-only field too.
+                onChange={(event) => {
+                  if (!isRegeneration) chooseStart(event.target.value);
+                }}
                 {...(isRegeneration ? {} : { min: today, max: latestStart })}
                 readOnly={isRegeneration}
                 required
@@ -209,7 +223,9 @@ export function RoadmapComposer({
                 type="date"
                 name="endDate"
                 value={chosenEnd}
-                onChange={(event) => setChosenEnd(event.target.value)}
+                onChange={(event) => {
+                  if (!isRegeneration) setChosenEnd(event.target.value);
+                }}
                 {...(isRegeneration
                   ? { "aria-describedby": `${fieldId}-dates-help` }
                   : {

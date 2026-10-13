@@ -61,10 +61,15 @@ vi.mock("@/server/repositories/completion-log-repository", async (original) => {
 });
 
 import RoadmapPage from "./page";
+import { shiftIsoDate } from "@/lib/date/local-date";
 import type { Completion } from "@/server/completions/completion-log";
 import { GoalAuthenticationError } from "@/server/repositories/goal-repository";
 import { RoadmapAuthenticationError } from "@/server/repositories/roadmap-repository";
-import { ROADMAP_COPY } from "@/server/roadmap/roadmap-records";
+import {
+  ROADMAP_COPY,
+  ROADMAP_MAX_DAYS,
+  ROADMAP_MIN_DAYS,
+} from "@/server/roadmap/roadmap-records";
 
 const FIRST_PROPOSAL = "7e150000-0000-4000-8000-000000000010";
 const EDIT_PROPOSAL = "7e150000-0000-4000-8000-000000000011";
@@ -292,6 +297,33 @@ describe("Roadmap", () => {
     expect(
       within(compose).queryByLabelText(ROADMAP_COPY.feedbackLabel),
     ).toBeNull();
+  });
+
+  // The end is counted from the start: four to fifty-two weeks after it.
+  it("moves the end with a start that leaves it too near, and keeps a half-typed start out of it", async () => {
+    render(await RoadmapPage());
+
+    const start = screen.getByLabelText<HTMLInputElement>(
+      ROADMAP_COPY.startDateLabel,
+    );
+    const end = screen.getByLabelText<HTMLInputElement>(
+      ROADMAP_COPY.endDateLabel,
+    );
+    const today = start.min;
+    const nearest = shiftIsoDate(today, ROADMAP_MIN_DAYS);
+    expect(end.min).toBe(nearest);
+    fireEvent.change(end, { target: { value: nearest } });
+
+    // On the way to a year, the field passes through ones like 0002.
+    fireEvent.change(start, { target: { value: "0002-10-20" } });
+    expect(end.value).toBe(nearest);
+    expect(end.min).toBe(nearest);
+
+    const later = shiftIsoDate(today, 10);
+    fireEvent.change(start, { target: { value: later } });
+    expect(end.value).toBe(shiftIsoDate(later, ROADMAP_MIN_DAYS));
+    expect(end.min).toBe(shiftIsoDate(later, ROADMAP_MIN_DAYS));
+    expect(end.max).toBe(shiftIsoDate(later, ROADMAP_MAX_DAYS));
   });
 
   // Decision 4: a regeneration needs a declined predecessor, the same dates,

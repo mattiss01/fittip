@@ -1,6 +1,11 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
+
+import {
+  RoadmapComposeSessionContext,
+  type RoadmapComposeSession,
+} from "./roadmap-compose-session";
 
 import { SheetCloseButton, SheetLayer } from "@/app/home/plan/plan-sheet";
 import w from "@/app/home/plan/plan-week.module.css";
@@ -10,12 +15,15 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
 /**
  * Asking for a new roadmap while one is in force (owner, 13 Oct 2026): a
- * button beside the page's title, and the compose form in a sheet. The page
- * itself starts with the roadmap.
+ * button in the page's top right corner, and the compose form in a sheet. The
+ * page itself starts with the roadmap.
  *
  * Whether the sheet is open is held here and nowhere else. The page renders
  * this only while nothing awaits a decision, so a generation that lands
  * unmounts it, sheet and all, and the next one starts closed.
+ *
+ * Closing the sheet unmounts the form, so what must outlast a close is held
+ * here: see `roadmap-compose-session.ts`.
  */
 export function RoadmapNew({
   labelledBy,
@@ -26,6 +34,12 @@ export function RoadmapNew({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const idempotencyKey = useRef<string | null>(null);
+  const session = useMemo<RoadmapComposeSession>(
+    () => ({ idempotencyKey, setPending }),
+    [],
+  );
 
   return (
     <>
@@ -42,15 +56,22 @@ export function RoadmapNew({
         <SheetLayer
           view="roadmap-new"
           labelledBy={labelledBy}
+          locked={pending}
           onClose={() => setOpen(false)}
         >
           <header className={w.sheetHead}>
             <span />
-            <SheetCloseButton className={w.sheetClose}>Close</SheetCloseButton>
+            <SheetCloseButton className={w.sheetClose} disabled={pending}>
+              Close
+            </SheetCloseButton>
           </header>
           {/* The sheet is portalled out of the page, so the roadmap's own
               colours are named again here. */}
-          <div className={`${styles.page} ${styles.sheetBody}`}>{children}</div>
+          <div className={`${styles.page} ${styles.sheetBody}`}>
+            <RoadmapComposeSessionContext.Provider value={session}>
+              {children}
+            </RoadmapComposeSessionContext.Provider>
+          </div>
         </SheetLayer>
       ) : null}
     </>
