@@ -86,18 +86,10 @@ lane, one screen per merge.
       whether it goes through a proposal and its acceptance as a coach one does
       (ADR-015) or is written directly, and what the least is that counts as a
       roadmap.
-- [~] **Whether a milestone was reached.** Owner, 10 Oct 2026. One answer, reached;
-      a milestone not ticked is open and nothing ever says missed. A record beside
-      the roadmap, as a log is beside the plan: the accepted version is never
-      rewritten. Careful lane: a new owned table with RLS and its write function.
-      Decided by the owner on 13 Oct 2026: a tick beside each milestone of the
-      roadmap in force, on the Roadmap page; it can be taken back, which removes
-      the mark and keeps no history of it; it holds the owner's local day and
-      nothing else; no coach call is told. A tick belongs to one accepted roadmap,
-      so a new roadmap's milestones start unticked.
 - [ ] **Tell the coach which milestones were reached.** Left out of the tick on
-      purpose (owner, 13 Oct 2026), to be decided once ticks have been used. It
-      changes what the roadmap call is sent and takes prompt bytes: careful lane.
+      purpose (owner, 13 Oct 2026; ADR-026), to be decided once ticks have been
+      used. It changes what the roadmap call is sent and takes prompt bytes:
+      careful lane.
 - [ ] **Change with Coach.** Owner, 13 Oct 2026. A roadmap in force can be changed
       with the coach only by asking for a whole new one, with a note. Wanted: a
       "Change with Coach" on the accepted roadmap, with a field for what should
@@ -168,6 +160,12 @@ Not worth their own slot; do them when work lands nearby.
   After a decline, "New roadmap" opens the regeneration with
   its dates fixed, and other dates can be asked for only once the three are used.
   When a generation lands from the sheet, focus falls to the page's start.
+- **Two milestones ticked within a second can reload the page for nothing.** Each
+  tick watches for a reply that never rendered, on the one address all roadmap
+  writes share, so it can take another tick's reply for its own. No data is
+  affected. A control that stays mounted wants a lighter watch than
+  `useRoadmapWrite`; and after such a reload the explanation appears only when
+  "New roadmap" is next opened.
 - **A roadmap's repeat-protection fingerprint is still labelled `"roadmap.v2"`**
   (`roadmap-generation.ts`). Left on purpose: changing the label only stops one
   earlier answer being replayed.
