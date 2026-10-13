@@ -35,7 +35,7 @@ export const COACH_AI_SCHEMA_VERSIONS = {
 
 /** Prompt identifiers. Every operation carries a real, iterated prompt. */
 export const COACH_AI_PROMPT_VERSIONS = {
-  create_roadmap: "roadmap-v4-2026-10-13",
+  create_roadmap: "roadmap-v4.1-2026-10-13",
   create_seven_day_plan: "seven-day-plan-v2-2026-08-12",
   fill_session_activities: "session-activities-v1-2026-09-28",
 } as const satisfies Record<CoachAIOperation, string>;
@@ -178,6 +178,24 @@ export type CoachAICurrentRoadmapReference = {
   phases: { title: string; startDate: string; endDate: string }[];
   /** Phases left out to fit, earliest first. Zero is the ordinary case. */
   phasesWithheld: number;
+};
+
+/**
+ * ADR-028: the roadmap in force, whole, as a request to change it sends it.
+ *
+ * Every phase's focus, goal levels and milestones, where
+ * `CoachAICurrentRoadmapReference` sends titles and dates. A phase's focus is
+ * model-authored prose, which the owner's rule of 20 September 2026 kept to
+ * the phase being planned; the owner made this one exception on 13 October
+ * 2026, because a roadmap cannot be changed by a coach that has not read it.
+ * Copied field by field from the accepted version, never spread.
+ */
+export type CoachAIRoadmapToChange = {
+  title: string;
+  summary: string;
+  startDate: string;
+  endDate: string;
+  phases: RoadmapPhase[];
 };
 
 /**
@@ -380,6 +398,12 @@ export type CoachAIContext = {
    * other operation. Null when the owner has accepted no roadmap yet.
    */
   currentRoadmap?: CoachAICurrentRoadmapReference | null;
+  /**
+   * ADR-028. Present only on a `create_roadmap` request that asks for the
+   * roadmap in force to be changed, and then in place of `currentRoadmap`:
+   * the whole of it, where a new roadmap is told an outline.
+   */
+  roadmapToChange?: CoachAIRoadmapToChange;
   /**
    * Present for `fill_session_activities` only, and absent for every other
    * operation. `roadmapPhase` is null when no accepted roadmap covers the day.

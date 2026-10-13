@@ -278,6 +278,26 @@ describe("generateRoadmapProposal", () => {
     expect(requestFingerprint).not.toContain("Tuesdays");
   });
 
+  // ADR-028. A change is a different question from a new roadmap on the same
+  // dates with a note of the same length, so the same key cannot answer both.
+  it("fingerprints a change request apart from an ordinary one", async () => {
+    await generateRoadmapProposal(
+      {
+        ...input(),
+        planningNote: "Tuesdays are impossible.",
+        changeRoadmap: true,
+      },
+      { roadmaps: roadmaps as unknown as RoadmapRepository },
+      // How the request ends is not what is asked here: the claim is made
+      // before the coach is composed, and the fingerprint is the claim's.
+    ).catch(() => undefined);
+
+    const { requestFingerprint } = roadmaps.beginGeneration.mock.calls[0][0];
+    expect(requestFingerprint).toBe(
+      `roadmap.v2:${TODAY}:${END_DATE}:0:initial:24:0:change`,
+    );
+  });
+
   // M3-11's reset dropped this argument and live coaching was unreachable for
   // six weeks without a single failing test. A live composition refuses
   // without a ledger, so this is the line that keeps the real coach reachable.

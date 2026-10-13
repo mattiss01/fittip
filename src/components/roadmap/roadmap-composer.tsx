@@ -55,7 +55,12 @@ export function RoadmapComposer({
 }: {
   /** Set where the heading names something else too: the sheet it is in. */
   headingId?: string;
-  mode: "initial" | "regeneration";
+  /**
+   * `change` (ADR-028) is a first request about the roadmap in force: the
+   * coach is sent the whole of it, and the note, which is then required,
+   * says what should be different.
+   */
+  mode: "initial" | "regeneration" | "change";
   /** The date the form opens on: the default horizon, or the predecessor's. */
   endDate: string;
   /** The day the form opens on: today, or the predecessor's first day. */
@@ -109,6 +114,7 @@ export function RoadmapComposer({
   }
 
   const isRegeneration = mode === "regeneration";
+  const isChange = mode === "change";
 
   // Each date is one field, the browser's own (owner, 13 Oct 2026), and the
   // two stand side by side. Both are held here, so a reply that resets the
@@ -150,7 +156,9 @@ export function RoadmapComposer({
       <h2 className={styles.cardHeading} id={headingId}>
         {isRegeneration
           ? ROADMAP_CONTROL_COPY.regenerateTitle
-          : ROADMAP_CONTROL_COPY.composeTitle}
+          : isChange
+            ? ROADMAP_CONTROL_COPY.changeTitle
+            : ROADMAP_CONTROL_COPY.composeTitle}
       </h2>
       {/* What a regeneration sends is said; a first request needs no
           introduction (owner, 13 Oct 2026). */}
@@ -175,6 +183,9 @@ export function RoadmapComposer({
       ) : null}
 
       <form action={submit} className={styles.form}>
+        {isChange ? (
+          <input type="hidden" name="changeRoadmap" value="true" />
+        ) : null}
         {isRegeneration && previousProposalId ? (
           <input
             type="hidden"
@@ -246,13 +257,16 @@ export function RoadmapComposer({
 
         <div className={styles.field}>
           <label className={styles.label} htmlFor={`${fieldId}-note`}>
-            {ROADMAP_CONTROL_COPY.planningNoteLabel}
+            {isChange
+              ? ROADMAP_CONTROL_COPY.changeNoteLabel
+              : ROADMAP_CONTROL_COPY.planningNoteLabel}
           </label>
           <textarea
             className={styles.textarea}
             id={`${fieldId}-note`}
             name="planningNote"
             maxLength={ROADMAP_NOTE_MAX_LENGTH}
+            required={isChange}
             rows={3}
             value={note}
             onChange={(event) => setNote(event.target.value)}
@@ -298,10 +312,16 @@ export function RoadmapComposer({
             <CoachSpark size={16} />
             {isRegeneration
               ? ROADMAP_CONTROL_COPY.regenerateConfirm
-              : ROADMAP_CONTROL_COPY.generateAction}
+              : isChange
+                ? ROADMAP_CONTROL_COPY.changeConfirm
+                : ROADMAP_CONTROL_COPY.generateAction}
           </button>
+          {/* A change says what it sends, which is more than a new roadmap
+              does; the sentence ends as the other one does. */}
           <p className={styles.helper}>
-            {ROADMAP_CONTROL_COPY.generateSupport}
+            {isChange
+              ? ROADMAP_CONTROL_COPY.changeSupport
+              : ROADMAP_CONTROL_COPY.generateSupport}
           </p>
         </div>
       </form>

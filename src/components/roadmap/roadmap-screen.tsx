@@ -3,12 +3,14 @@ import Link from "next/link";
 import { RoadmapComposer } from "./roadmap-composer";
 import { RoadmapDetail } from "./roadmap-detail";
 import { RoadmapOutcomeNotice } from "./roadmap-outcome";
+import { RoadmapNew } from "./roadmap-new";
 import { RoadmapReviewDue } from "./roadmap-review-due";
 import { RoadmapProposalReview } from "./roadmap-proposal-review";
 
 import homeStyles from "@/app/home/home.module.css";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import {
+  addDays,
   ROADMAP_COPY,
   ROADMAP_MAX_DAYS,
   ROADMAP_MIN_DAYS,
@@ -50,6 +52,13 @@ import {
  * planning note is not part of that body and never leaves the server, and the
  * outcome notice carries no content at all — only the sentence a write earned.
  */
+/** The headings that name the sheet a due review opens. */
+const REVIEW_SHEET_TITLE_IDS = {
+  menu: "roadmap-review-sheet-title",
+  change: "roadmap-review-change-title",
+  fresh: "roadmap-review-sheet-title",
+};
+
 export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
   const goalTitles = Object.fromEntries(
     state.goals.map((goal) => [goal.id, goal.title]),
@@ -88,7 +97,23 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
           versionId={state.current.id}
           phaseIndex={state.reviewDue.phaseIndex}
           roadmapEnded={state.reviewDue.roadmapEnded}
-        />
+        >
+          {/* What a review may lead to (ADR-028). Not while a proposal is
+              waiting: decide that first. */}
+          {state.openProposal === null ? (
+            <RoadmapNew
+              opensOn="change"
+              titleIds={REVIEW_SHEET_TITLE_IDS}
+              change={
+                <RoadmapChangeCompose
+                  state={state}
+                  headingId={REVIEW_SHEET_TITLE_IDS.change}
+                />
+              }
+              fresh={null}
+            />
+          ) : null}
+        </RoadmapReviewDue>
       ) : null}
 
       <section className={styles.card} data-roadmap-current>
@@ -142,6 +167,39 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
  * After a decline it is a regeneration carrying the declined proposal,
  * otherwise a first request.
  */
+/**
+ * The form that asks for the roadmap in force to be changed (ADR-028).
+ *
+ * Both dates are the owner's to pick. They open on today and on the day the
+ * roadmap ends, where that is a length a roadmap may have; a roadmap that is
+ * nearly over, or already is, opens on the usual default end.
+ */
+export function RoadmapChangeCompose({
+  state,
+  headingId,
+}: {
+  state: RoadmapScreenState;
+  headingId: string;
+}) {
+  const roadmapEnd = state.current?.content.endDate ?? "";
+  const usable =
+    roadmapEnd >= addDays(state.today, ROADMAP_MIN_DAYS) &&
+    roadmapEnd <= addDays(state.today, ROADMAP_MAX_DAYS);
+
+  return (
+    <RoadmapComposer
+      mode="change"
+      startDate={state.today}
+      endDate={usable ? roadmapEnd : state.defaultEndDate}
+      today={state.today}
+      minDays={ROADMAP_MIN_DAYS}
+      maxDays={ROADMAP_MAX_DAYS}
+      regenerationsRemaining={state.regenerationsRemaining}
+      headingId={headingId}
+    />
+  );
+}
+
 export function RoadmapCompose({
   state,
   headingId,

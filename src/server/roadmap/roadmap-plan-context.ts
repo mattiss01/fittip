@@ -3,6 +3,7 @@ import "server-only";
 import { CoachAIError } from "@/server/ai/errors";
 import type {
   CoachAICurrentRoadmapReference,
+  CoachAIRoadmapToChange,
   CoachAIRoadmapContext,
   CoachAIRoadmapPhaseReference,
   CoachAIRoadmapPhase,
@@ -406,6 +407,42 @@ export function buildCurrentRoadmapReference(
   }
   // A title alone past the allocation: a configuration defect, not the owner's.
   throw new CoachAIError("context_invalid");
+}
+
+/**
+ * ADR-028: the whole roadmap in force, for a request to change it.
+ *
+ * Nothing is left out to fit. A stored roadmap is capped at 16,000 bytes and
+ * this source's allocation is the same, so there is no ladder here and no
+ * count of what was withheld; one that did not fit would be a configuration
+ * defect, refused by the context's own check. Every field is copied by name,
+ * so what a row stored under an earlier version also holds does not travel.
+ */
+export function buildRoadmapToChange(
+  roadmap: StoredRoadmap,
+): CoachAIRoadmapToChange {
+  return {
+    title: roadmap.title,
+    summary: roadmap.summary,
+    startDate: roadmap.startDate,
+    endDate: roadmap.endDate,
+    phases: roadmap.phases.map((phase) => ({
+      title: phase.title,
+      focus: phase.focus,
+      startDate: phase.startDate,
+      endDate: phase.endDate,
+      goalAttention: phase.goalAttention.map((attention) => ({
+        goalId: attention.goalId,
+        level: attention.level,
+      })),
+      milestones: phase.milestones.map((milestone) => ({
+        title: milestone.title,
+        observableCriterion: milestone.observableCriterion,
+        targetDate: milestone.targetDate,
+        goalIds: [...milestone.goalIds],
+      })),
+    })),
+  };
 }
 
 /**

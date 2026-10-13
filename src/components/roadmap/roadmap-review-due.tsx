@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import { RoadmapWatchNotice } from "./roadmap-watch-notice";
 import { isRefusal, useRoadmapWrite } from "./use-roadmap-write";
 
@@ -20,7 +22,10 @@ export function RoadmapReviewDue({
   versionId,
   phaseIndex,
   roadmapEnded,
+  children,
 }: {
+  /** What the review may lead to, beside "Reviewed": Change with Coach. */
+  children?: ReactNode;
   versionId: string;
   /** The phase that ended, from zero. */
   phaseIndex: number;
@@ -42,17 +47,20 @@ export function RoadmapReviewDue({
           ? ROADMAP_CONTROL_COPY.reviewDueRoadmapBody
           : ROADMAP_CONTROL_COPY.reviewDuePhaseBody}
       </p>
-      <form action={submit}>
-        <input type="hidden" name="versionId" value={versionId} />
-        <input type="hidden" name="phaseIndex" value={phaseIndex} />
-        <button
-          className={styles.secondaryAction}
-          disabled={pending}
-          type="submit"
-        >
-          {ROADMAP_CONTROL_COPY.reviewedAction}
-        </button>
-      </form>
+      <div className={styles.reviewDueActions}>
+        {children}
+        <form action={submit}>
+          <input type="hidden" name="versionId" value={versionId} />
+          <input type="hidden" name="phaseIndex" value={phaseIndex} />
+          <button
+            className={styles.secondaryAction}
+            disabled={pending}
+            type="submit"
+          >
+            {ROADMAP_CONTROL_COPY.reviewedAction}
+          </button>
+        </form>
+      </div>
       <RoadmapWatchNotice lostRender={lostRender} recovered={false} />
       {isRefusal(state) ? (
         <p

@@ -63,7 +63,7 @@ vi.mock("@/server/repositories/completion-log-repository", async (original) => {
 });
 
 import RoadmapPage from "./page";
-import { shiftIsoDate } from "@/lib/date/local-date";
+import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import type { Completion } from "@/server/completions/completion-log";
 import { GoalAuthenticationError } from "@/server/repositories/goal-repository";
 import { RoadmapAuthenticationError } from "@/server/repositories/roadmap-repository";
@@ -323,9 +323,21 @@ describe("Roadmap", () => {
     expect(screen.queryByText("Expired")).toBeNull();
   });
 
-  // With a roadmap the page starts with it. Asking for another is the button
-  // beside the title, and the form is in the sheet it opens.
-  it("starts with the roadmap and keeps the compose form behind New roadmap", async () => {
+  // With a roadmap the page starts with it. Changing it is the button in the
+  // corner, which asks which way (ADR-028); each form is in the sheet.
+  const openChoice = (choice: "change" | "fresh") => {
+    fireEvent.click(
+      screen.getByRole("button", { name: ROADMAP_COPY.changeRoadmapAction }),
+    );
+    const menu = screen.getByRole("dialog", {
+      name: ROADMAP_COPY.changeRoadmapAction,
+    });
+    fireEvent.click(
+      menu.querySelector(`[data-roadmap-choice="${choice}"]`) as HTMLElement,
+    );
+  };
+
+  it("starts with the roadmap and offers two ways to change it", async () => {
     listVersions.mockResolvedValue([version(1)]);
 
     render(await RoadmapPage());
@@ -333,8 +345,28 @@ describe("Roadmap", () => {
     expect(document.querySelector("[data-roadmap-compose]")).toBeNull();
 
     fireEvent.click(
-      screen.getByRole("button", { name: ROADMAP_COPY.newRoadmapAction }),
+      screen.getByRole("button", { name: ROADMAP_COPY.changeRoadmapAction }),
     );
+    const menu = screen.getByRole("dialog", {
+      name: ROADMAP_COPY.changeRoadmapAction,
+    });
+    expect(
+      [...menu.querySelectorAll("[data-roadmap-choice]")].map(
+        (choice) => choice.querySelector("strong")?.textContent,
+      ),
+    ).toEqual([
+      ROADMAP_COPY.changeWithCoachAction,
+      ROADMAP_COPY.newWithCoachAction,
+    ]);
+    // Nothing is asked for until a way is chosen.
+    expect(document.querySelector("[data-roadmap-compose]")).toBeNull();
+  });
+
+  it("asks for a new roadmap from the corner's sheet", async () => {
+    listVersions.mockResolvedValue([version(1)]);
+
+    render(await RoadmapPage());
+    openChoice("fresh");
 
     const sheet = screen.getByRole("dialog", {
       name: ROADMAP_COPY.composeTitle,
@@ -347,6 +379,72 @@ describe("Roadmap", () => {
     expect(
       within(sheet).getByRole("button", { name: ROADMAP_COPY.generateAction }),
     ).toBeTruthy();
+    expect(sheet.querySelector('input[name="changeRoadmap"]')).toBeNull();
+    // And the way back to the choice.
+    fireEvent.click(within(sheet).getByRole("button", { name: "‹ Back" }));
+    expect(
+      screen.getByRole("dialog", { name: ROADMAP_COPY.changeRoadmapAction }),
+    ).toBeTruthy();
+  });
+
+  // ADR-028. The form says it is a change, asks what should change, and says
+  // what the coach is sent; it names no roadmap, which the server reads.
+  it("asks for the roadmap to be changed, from today to the day it ends", async () => {
+    const current = version(1);
+    current.content.endDate = shiftIsoDate(today(), 70);
+    listVersions.mockResolvedValue([current]);
+
+    render(await RoadmapPage());
+    openChoice("change");
+
+    const sheet = screen.getByRole("dialog", {
+      name: ROADMAP_COPY.changeTitle,
+    });
+    const form = sheet.querySelector("form") as HTMLFormElement;
+    expect(
+      sheet
+        .querySelector("[data-roadmap-compose]")
+        ?.getAttribute("data-roadmap-compose"),
+    ).toBe("change");
+    expect(new FormData(form).get("changeRoadmap")).toBe("true");
+    expect(
+      [...new FormData(form).keys()].filter((key) =>
+        /version|roadmapId/i.test(key),
+      ),
+    ).toEqual([]);
+    expect(
+      within(sheet).getByLabelText(ROADMAP_COPY.changeNoteLabel),
+    ).toBeRequired();
+    expect(within(sheet).getByText(ROADMAP_COPY.changeSupport)).toBeTruthy();
+    expect(
+      within(sheet).getByRole("button", { name: ROADMAP_COPY.changeConfirm }),
+    ).toBeTruthy();
+
+    const start = within(sheet).getByLabelText<HTMLInputElement>(
+      ROADMAP_COPY.startDateLabel,
+    );
+    const end = within(sheet).getByLabelText<HTMLInputElement>(
+      ROADMAP_COPY.endDateLabel,
+    );
+    expect(start.value).toBe(today());
+    expect(end.value).toBe(current.content.endDate);
+    // Both are the owner's to pick.
+    expect(start.readOnly).toBe(false);
+    expect(end.readOnly).toBe(false);
+  });
+
+  it("opens the change form on the usual end when the roadmap is nearly over", async () => {
+    const current = version(1);
+    current.content.endDate = shiftIsoDate(today(), 10);
+    listVersions.mockResolvedValue([current]);
+
+    render(await RoadmapPage());
+    openChoice("change");
+
+    const end = within(
+      screen.getByRole("dialog", { name: ROADMAP_COPY.changeTitle }),
+    ).getByLabelText<HTMLInputElement>(ROADMAP_COPY.endDateLabel);
+    expect(end.value >= shiftIsoDate(today(), ROADMAP_MIN_DAYS)).toBe(true);
   });
 
   it("offers a regeneration in the sheet after a decline", async () => {
@@ -359,9 +457,7 @@ describe("Roadmap", () => {
     });
 
     render(await RoadmapPage());
-    fireEvent.click(
-      screen.getByRole("button", { name: ROADMAP_COPY.newRoadmapAction }),
-    );
+    openChoice("fresh");
 
     expect(
       screen.getByRole("dialog", { name: ROADMAP_COPY.regenerateTitle }),
@@ -369,8 +465,8 @@ describe("Roadmap", () => {
   });
 
   // Decide, then ask again: nothing offers a second proposal beside an open one.
-  it("offers no new roadmap while a proposal awaits a decision", async () => {
-    listVersions.mockResolvedValue([version(1)]);
+  it("offers no way to change the roadmap while a proposal awaits a decision", async () => {
+    listVersions.mockResolvedValue([endedVersion()]);
     const open = proposal({ decision: null });
     getReviewProposals.mockResolvedValue({
       open,
@@ -381,8 +477,42 @@ describe("Roadmap", () => {
     render(await RoadmapPage());
 
     expect(
-      screen.queryByRole("button", { name: ROADMAP_COPY.newRoadmapAction }),
+      screen.queryByRole("button", { name: ROADMAP_COPY.changeRoadmapAction }),
     ).toBeNull();
+    // The review is still due and can be marked; it leads nowhere else yet.
+    const due = document.querySelector(
+      "[data-roadmap-review-due]",
+    ) as HTMLElement;
+    expect(
+      within(due).getByRole("button", { name: ROADMAP_COPY.reviewedAction }),
+    ).toBeTruthy();
+    expect(due.querySelector("[data-roadmap-change]")).toBeNull();
+  });
+
+  it("offers Change with Coach from a due review, straight to its form", async () => {
+    listVersions.mockResolvedValue([endedVersion()]);
+
+    render(await RoadmapPage());
+
+    const due = document.querySelector(
+      "[data-roadmap-review-due]",
+    ) as HTMLElement;
+    fireEvent.click(
+      within(due).getByRole("button", {
+        name: ROADMAP_COPY.changeWithCoachAction,
+      }),
+    );
+
+    const sheet = screen.getByRole("dialog", {
+      name: ROADMAP_COPY.changeTitle,
+    });
+    expect(
+      new FormData(sheet.querySelector("form") as HTMLFormElement).get(
+        "changeRoadmap",
+      ),
+    ).toBe("true");
+    // It did not come by way of the choice, so there is none to go back to.
+    expect(within(sheet).queryByRole("button", { name: "‹ Back" })).toBeNull();
   });
 
   // The proposal is shown in full above the roadmap it would replace, because
@@ -692,6 +822,11 @@ describe("Roadmap", () => {
     await expect(RoadmapPage()).rejects.toThrow("redirect:/auth/denied");
   });
 });
+
+/** Today as the page works it out for the mocked profile's time zone. */
+function today(): string {
+  return isoDateInTimezone(new Date(), "Europe/Berlin");
+}
 
 function daysBetween(startDate: string, endDate: string): number {
   const start = new Date(`${startDate}T00:00:00.000Z`).getTime();

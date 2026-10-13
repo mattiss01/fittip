@@ -6,6 +6,7 @@ import homeStyles from "../../home.module.css";
 import { SubPageHeader } from "../sub-page-header";
 import { RoadmapNew } from "@/components/roadmap/roadmap-new";
 import {
+  RoadmapChangeCompose,
   RoadmapCompose,
   RoadmapScreen,
 } from "@/components/roadmap/roadmap-screen";
@@ -40,8 +41,12 @@ import { TRAINING_HISTORY_WINDOW_DAYS } from "@/server/training/training-history
 
 export const dynamic = "force-dynamic";
 
-/** The compose form's heading, which names the sheet it opens in. */
-const NEW_ROADMAP_TITLE_ID = "roadmap-new-title";
+/** The headings that name the corner's sheet, one for each thing it shows. */
+const SHEET_TITLE_IDS = {
+  menu: "roadmap-change-menu-title",
+  change: "roadmap-change-title",
+  fresh: "roadmap-new-title",
+};
 
 /**
  * The roadmap.
@@ -78,9 +83,21 @@ export default async function RoadmapPage() {
         title={ROADMAP_COPY.routeTitle}
         action={
           state.current === null || state.openProposal !== null ? undefined : (
-            <RoadmapNew labelledBy={NEW_ROADMAP_TITLE_ID}>
-              <RoadmapCompose state={state} headingId={NEW_ROADMAP_TITLE_ID} />
-            </RoadmapNew>
+            <RoadmapNew
+              titleIds={SHEET_TITLE_IDS}
+              change={
+                <RoadmapChangeCompose
+                  state={state}
+                  headingId={SHEET_TITLE_IDS.change}
+                />
+              }
+              fresh={
+                <RoadmapCompose
+                  state={state}
+                  headingId={SHEET_TITLE_IDS.fresh}
+                />
+              }
+            />
           )
         }
       />

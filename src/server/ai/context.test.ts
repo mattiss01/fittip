@@ -439,12 +439,14 @@ describe("the per-source context allocation", () => {
     // 9,941 until ADR-023 (9 October 2026): the athlete, the training setup
     // and each goal's desired outcome, with a longer shared prompt for them.
     // 12,991 after ADR-023's shared part; its roadmap part added thirty
-    // planned sessions with minutes and the roadmap in force.
-    expect(estimatedTokens).toBe(14_179);
+    // planned sessions with minutes and the roadmap in force: 14,179. ADR-028
+    // (13 October 2026) lets a change request send the whole roadmap in place
+    // of its outline, and raised the ceiling to 18,000 for it.
+    expect(estimatedTokens).toBe(17_891);
     expect(estimatedTokens).toBeLessThanOrEqual(
       COACH_AI_LIVE_LIMITS.maxInputTokens,
     );
-    expect(COACH_AI_LIVE_LIMITS.maxInputTokens).toBe(15_000);
+    expect(COACH_AI_LIVE_LIMITS.maxInputTokens).toBe(18_000);
   });
 
   it("reserves room in the training-history ceiling for a full miss list", () => {
@@ -1524,6 +1526,112 @@ describe("the accepted roadmap as plan context", () => {
     expect(assembled.usage.roadmap).toBe(0);
     expect(assembled.usage.current_roadmap).toBeLessThanOrEqual(
       COACH_AI_CONTEXT_LIMITS.create_roadmap.bytes.currentRoadmap,
+    );
+  });
+
+  // ADR-028. A request to change the roadmap sends the whole of it, in place
+  // of the outline; nothing else does.
+  it("sends the whole roadmap, copied by name, when asked to change it", () => {
+    const assembled = buildCoachAIContext(
+      "create_roadmap",
+      records({ roadmapVersion: ROADMAP_VERSION }),
+      { ...COMPOSE, changeRoadmap: true },
+    );
+    const content = ROADMAP_VERSION.content;
+
+    expect(assembled.context.roadmapToChange).toEqual({
+      title: content.title,
+      summary: content.summary,
+      startDate: content.startDate,
+      endDate: content.endDate,
+      phases: content.phases.map((phase) => ({
+        title: phase.title,
+        focus: phase.focus,
+        startDate: phase.startDate,
+        endDate: phase.endDate,
+        goalAttention: phase.goalAttention.map((attention) => ({
+          goalId: attention.goalId,
+          level: attention.level,
+        })),
+        milestones: phase.milestones.map((milestone) => ({
+          title: milestone.title,
+          observableCriterion: milestone.observableCriterion,
+          targetDate: milestone.targetDate,
+          goalIds: milestone.goalIds,
+        })),
+      })),
+    });
+    // The outline would only repeat it.
+    expect("currentRoadmap" in assembled.context).toBe(false);
+    // What the stored row also holds from an earlier version stays behind:
+    // by key, since a later phase's own focus and milestone are sent here.
+    for (const gone of [
+      '"reason"',
+      "assumptions",
+      "four sessions a week",
+      "uncertainties",
+      "whyItMatters",
+      "reviewPoints",
+      "WITHHELD?",
+      "safetyConsiderations",
+      "schemaVersion",
+    ]) {
+      expect(assembled.serialized, gone).not.toContain(gone);
+    }
+    expect(assembled.usage.roadmap_to_change).toBeLessThanOrEqual(
+      COACH_AI_CONTEXT_LIMITS.create_roadmap.bytes.roadmapToChange,
+    );
+    // Still not planned under it: a roadmap built on another records none.
+    expect(assembled.context.roadmap).toBeNull();
+  });
+
+  it("sends the whole roadmap to no request that did not ask to change it", () => {
+    const ordinary = buildCoachAIContext(
+      "create_roadmap",
+      records({ roadmapVersion: ROADMAP_VERSION }),
+      COMPOSE,
+    );
+    expect(ordinary.serialized).not.toContain("roadmapToChange");
+    expect(ordinary.usage.roadmap_to_change).toBe(0);
+
+    // The flag is the roadmap call's; a plan that carried it sends nothing more.
+    expect(plan().serialized).not.toContain("roadmapToChange");
+    expect(
+      COACH_AI_CONTEXT_LIMITS.create_seven_day_plan.bytes.roadmapToChange,
+    ).toBe(0);
+    expect(
+      COACH_AI_CONTEXT_LIMITS.fill_session_activities.bytes.roadmapToChange,
+    ).toBe(0);
+  });
+
+  it("refuses a change request when no roadmap is in force", () => {
+    expect(() =>
+      buildCoachAIContext("create_roadmap", records({}), {
+        ...COMPOSE,
+        changeRoadmap: true,
+      }),
+    ).toThrow(CoachAIError);
+  });
+
+  it("sends a roadmap that has ended whole too: it is the one being changed", () => {
+    const ended = {
+      ...ROADMAP_VERSION,
+      content: { ...ROADMAP_VERSION.content, endDate: "2000-01-01" },
+    };
+    const assembled = buildCoachAIContext(
+      "create_roadmap",
+      records({ roadmapVersion: ended }),
+      { ...COMPOSE, changeRoadmap: true },
+    );
+
+    expect(assembled.context.roadmapToChange?.endDate).toBe("2000-01-01");
+  });
+
+  it("holds a roadmap at its stored cap inside the allocation", () => {
+    // A stored roadmap's content is capped at 16,000 bytes by the database
+    // and the validator; what is sent of it is that less its version name.
+    expect(COACH_AI_CONTEXT_LIMITS.create_roadmap.bytes.roadmapToChange).toBe(
+      16_000,
     );
   });
 

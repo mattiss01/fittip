@@ -23,8 +23,23 @@
  */
 export const ROADMAP_CONTROL_COPY = {
   /* ---- Compose ---------------------------------------------------------- */
-  /** Beside the page's title while a roadmap is in force; opens the form. */
-  newRoadmapAction: "New roadmap",
+  /**
+   * In the page's corner while a roadmap is in force (ADR-028). It opens a
+   * choice of two ways to a new proposal; writing one by hand will be the
+   * third.
+   */
+  changeRoadmapAction: "Change roadmap",
+  changeWithCoachAction: "Change with Coach",
+  changeWithCoachDetail: "Say what should be different",
+  newWithCoachAction: "New roadmap with Coach",
+  newWithCoachDetail: "Start over from your goals",
+  /* The change form. What is sent is said, because it is more than a new
+     roadmap sends: the whole roadmap, where that sends an outline. */
+  changeTitle: "Change with Coach",
+  changeNoteLabel: "What should change?",
+  changeSupport:
+    "The coach is sent your whole roadmap and what you write here. Nothing changes until you accept a proposal.",
+  changeConfirm: "Ask the coach",
   composeTitle: "Shape your roadmap",
   /* Short, for two dates side by side at 390px (owner, 13 Oct 2026). */
   startDateLabel: "Starts",
@@ -173,6 +188,10 @@ export const ROADMAP_CONTROL_COPY = {
      * The database's one refusal for a mark (ADR-026): the roadmap moved on
      * under the page, or the request was not the page's. Nothing was changed.
      */
+    /** ADR-028: a change request with nothing in it, or nothing to change. */
+    changeNoteRequired: "Say what should change.",
+    changeNothingToChange:
+      "There is no roadmap to change. Ask for a new one instead.",
     milestoneUnavailable:
       "That milestone could not be changed. Reload to see your roadmap as it is now.",
     /** The same, for a review (ADR-027). */

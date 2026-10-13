@@ -45,7 +45,7 @@ export const COACH_AI_FIXTURE_LIMITS: CoachAILimits = {
   // Tracks the live ceiling so a fixture run cannot accept a context the live
   // path refuses, or refuse one it accepts. The fixture rate card is zero, so
   // this number buys nothing and costs nothing here.
-  maxInputTokens: 15_000,
+  maxInputTokens: 18_000,
   maxOutputTokens: 2_000,
   deadlineMs: 30_000,
   maxAttempts: 1,
@@ -89,8 +89,16 @@ export const COACH_AI_FIXTURE_LIMITS: CoachAILimits = {
  * desired outcome and the athlete's basics on all three calls. Those measure
  * 12,100 to 13,100 tokens with every source at its allocation; the per-call
  * parts of ADR-023 still to come were estimated at 13,900 to 14,300, which is
- * what the ceiling was chosen for. A whole reservation is 6,600 micro-USD and
- * the daily ceiling admits 303 generations.
+ * what the ceiling was chosen for. A whole reservation was 6,600 micro-USD and
+ * the daily ceiling admitted 303 generations.
+ *
+ * And to 18,000 on 13 October 2026, for ADR-028: a request to change the
+ * roadmap in force sends the whole of it, up to the 16,000 bytes a stored
+ * roadmap may be. The roadmap call's worst case is 17,891 tokens. The plan
+ * and fill calls are bounded by their own byte limits and stay under 15,000,
+ * but a reservation is taken at the ceiling whatever the call: 7,200
+ * micro-USD, and the daily ceiling admits 277 generations. A call is charged
+ * for what it used.
  *
  * These numbers are the local fast path. The authoritative ceilings are the
  * database's, in `reserve_ai_spend`, because this process cannot be trusted to
@@ -103,7 +111,7 @@ export const COACH_AI_LIVE_LIMITS: CoachAILimits = {
   maxRequestsPerOwnerWindow: 6,
   maxRequestsPerOperationWindow: 3,
   maxConcurrentRequests: 1,
-  maxInputTokens: 15_000,
+  maxInputTokens: 18_000,
   maxOutputTokens: 3_000,
   deadlineMs: 30_000,
   // Decision 5: zero automatic retries. A call that fails after the provider
