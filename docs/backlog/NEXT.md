@@ -86,12 +86,26 @@ lane, one screen per merge.
       whether it goes through a proposal and its acceptance as a coach one does
       (ADR-015) or is written directly, and what the least is that counts as a
       roadmap.
-- [ ] **Whether a milestone was reached.** Owner, 10 Oct 2026. One answer, reached;
+- [~] **Whether a milestone was reached.** Owner, 10 Oct 2026. One answer, reached;
       a milestone not ticked is open and nothing ever says missed. A record beside
       the roadmap, as a log is beside the plan: the accepted version is never
       rewritten. Careful lane: a new owned table with RLS and its write function.
-      Open: whether a tick can be taken back, what it holds besides the day, and
-      whether the next roadmap call is told (AI data boundary, its own decision).
+      Decided by the owner on 13 Oct 2026: a tick beside each milestone of the
+      roadmap in force, on the Roadmap page; it can be taken back, which removes
+      the mark and keeps no history of it; it holds the owner's local day and
+      nothing else; no coach call is told. A tick belongs to one accepted roadmap,
+      so a new roadmap's milestones start unticked.
+- [ ] **Tell the coach which milestones were reached.** Left out of the tick on
+      purpose (owner, 13 Oct 2026), to be decided once ticks have been used. It
+      changes what the roadmap call is sent and takes prompt bytes: careful lane.
+- [ ] **Change with Coach.** Owner, 13 Oct 2026. A roadmap in force can be changed
+      with the coach only by asking for a whole new one, with a note. Wanted: a
+      "Change with Coach" on the accepted roadmap, with a field for what should
+      change, sending the full roadmap in force and that feedback and returning a
+      proposal to accept, edit or decline as any other. Careful lane: it changes
+      what a provider is sent, and each use is a paid call. Open: whether it keeps
+      the dates as a regeneration does, how many are allowed, and whether it can be
+      asked about one phase.
 - [ ] **Review points that show.** Owner, 10 Oct 2026. A review date passes silently
       today. From the day it arrives its question is a line at the top of the Plan
       until dismissed, and it is marked due on the Roadmap; nothing replans and no
