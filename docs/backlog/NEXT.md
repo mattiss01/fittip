@@ -97,20 +97,6 @@ lane, one screen per merge.
       purpose (owner, 13 Oct 2026; ADR-026), to be decided once ticks have been
       used. It changes what the roadmap call is sent and takes prompt bytes:
       careful lane.
-- [ ] **A roadmap proposal does not know which roadmap it was made under.** Found
-      in the review of Change with Coach, 13 Oct 2026, and true of every roadmap
-      proposal. One left open while another roadmap is accepted elsewhere (a
-      second tab) can still be accepted, and replaces the newer roadmap: accept
-      checks the head the page read, not the head the proposal was generated
-      against, and `begin_roadmap_generation` does not refuse while a proposal is
-      open. A changed version of roadmap 1 can so replace roadmap 2. Careful
-      lane, a migration: `accept_roadmap_proposal` compares the request's
-      `expected_head_revision` with the head. The agent would do this next.
-- [ ] **Asking again after a declined change does not send the whole roadmap.**
-      A regeneration sends the declined proposal's outline and the feedback
-      (ADR-028). Making it a change again needs the request to record that it was
-      one, so it rides with the item above. Until then "Change with Coach" can
-      simply be asked again, which also starts the three rounds afresh.
 - [ ] **Delete a log.** Owner, 7 Oct 2026: it should be possible, which also frees a
       settled session for planning again. Careful lane: `apply_completion_change`
       accepts only create and edit, and completions are permanent records today. Open
@@ -179,6 +165,15 @@ Not worth their own slot; do them when work lands nearby.
 - **An open proposal's whole stored row reaches the owner's browser** as the editor's
   input, fields no longer read included. Its own data, and so before v4 too; copying
   the v4 fields server-side before handing it to the dock would end it.
+- **Asking again is not tied to the roadmap its predecessor was made under.** A
+  declined change of one roadmap, asked again after another was accepted, would be
+  sent the newer roadmap whole beside an outline made from the older. The page does
+  not offer it (it offers "ask again" for the newest proposal only); a hand-made
+  request could. Change requests made on 13 Oct 2026 before
+  `20261013202639` are stored as ordinary ones.
+- **The roadmap prompt has about thirteen characters left** of the 7,800 its token
+  arithmetic is derived against (`openai-prompt.test.ts`). The next sentence takes
+  them from an existing one.
 - **A roadmap's repeat-protection fingerprint is still labelled `"roadmap.v2"`**
   (`roadmap-generation.ts`). Left on purpose: changing the label only stops one
   earlier answer being replayed.
