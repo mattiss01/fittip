@@ -152,7 +152,7 @@ test.describe("M3-15F roadmap generation", () => {
         .getByRole("button", { name: "Decline proposal" })
         .click();
       await expect(page.locator("[data-roadmap-open-proposal]")).toHaveCount(0);
-      await expectOutcome(page, "Declined. It stays in your history.");
+      await expectOutcome(page, "Declined.");
 
       const regenerate = page.locator('[data-roadmap-compose="regeneration"]');
       await expect(regenerate).toBeVisible();

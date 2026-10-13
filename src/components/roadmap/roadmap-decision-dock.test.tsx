@@ -39,7 +39,7 @@ vi.mock("@/app/home/plan/roadmap/actions", () => ({
   declineRoadmapAction: (previous: RoadmapActionState) =>
     Promise.resolve({
       status: "declined" as const,
-      message: "Declined. It stays in your history.",
+      message: "Declined.",
       submission: previous.submission + 1,
     }),
   editRoadmapAction: (previous: RoadmapActionState) =>

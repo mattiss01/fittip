@@ -31,6 +31,10 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
 const LEVELS = ["primary", "secondary", "maintenance", "deferred"] as const;
 
+/** The version an edit is saved as; a Client Component cannot import the
+    contract's own constant, and the server refuses any other. */
+const ROADMAP_SCHEMA_VERSION = "fittip.roadmap.v3";
+
 const LABELS = ROADMAP_CONTROL_COPY.editFieldLabels;
 
 type Attention = { goalId: string; level: string };
@@ -126,6 +130,11 @@ export function RoadmapEditor({
   onCancel: () => void;
 }) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(content as Draft));
+  // Anything but the current version: its edit is saved without what the
+  // current shape does not hold, and the owner is told before saving.
+  const olderProposal =
+    (content as { schemaVersion?: unknown }).schemaVersion !==
+    ROADMAP_SCHEMA_VERSION;
 
   const update = (mutate: (next: Draft) => void) => {
     setDraft((current) => {
@@ -142,6 +151,11 @@ export function RoadmapEditor({
     >
       <h2 className={styles.cardHeading}>{ROADMAP_CONTROL_COPY.editTitle}</h2>
       <p className={styles.emptyState}>{ROADMAP_CONTROL_COPY.editSupport}</p>
+      {olderProposal ? (
+        <p className={styles.notice} data-roadmap-notice="older-proposal">
+          {ROADMAP_CONTROL_COPY.editOlderProposalNotice}
+        </p>
+      ) : null}
 
       <RoadmapWatchNotice lostRender={lostRender} recovered={false} />
 
@@ -165,7 +179,7 @@ export function RoadmapEditor({
           name="content"
           value={JSON.stringify({
             ...draft,
-            schemaVersion: "fittip.roadmap.v3",
+            schemaVersion: ROADMAP_SCHEMA_VERSION,
           })}
         />
 

@@ -42,6 +42,25 @@ describe("RoadmapEditor", () => {
     ]);
   });
 
+  // Owner, 13 Oct 2026: what an edit of an older proposal leaves out is said
+  // before it is saved, and only there.
+  it("says what an edit of a proposal made before v3 leaves out", () => {
+    renderEditor(legacyContent());
+
+    expect(
+      screen.getByText(ROADMAP_CONTROL_COPY.editOlderProposalNotice),
+    ).toBeTruthy();
+
+    cleanup();
+    const { schemaVersion, ...rest } = legacyContent();
+    expect(schemaVersion).toBe("fittip.roadmap.v2");
+    renderEditor({ ...rest, schemaVersion: "fittip.roadmap.v3" });
+
+    expect(
+      screen.queryByText(ROADMAP_CONTROL_COPY.editOlderProposalNotice),
+    ).toBeNull();
+  });
+
   it("offers a level for each goal and no reason to write", () => {
     renderEditor(legacyContent());
 

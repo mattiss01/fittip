@@ -67,17 +67,23 @@ export const ROADMAP_CONTROL_COPY = {
   /* ---- Decide ----------------------------------------------------------- */
   decideTitle: "Your decision",
   decideSupport:
-    "Accepting makes this your current roadmap and keeps every earlier version. Declining keeps it in your history and changes nothing.",
+    "Accepting makes this your roadmap. Declining changes nothing.",
   acceptAction: "Accept roadmap",
   editAction: "Edit proposal",
   declineAction: "Decline proposal",
-  declineConfirm:
-    "Decline this proposal? It will stay in your roadmap history and will not become current.",
+  declineConfirm: "Decline this proposal? It will not become your roadmap.",
 
   /* ---- Edit ------------------------------------------------------------- */
   editTitle: "Edit proposal",
-  editSupport:
-    "Saving creates a new proposal to review. The one you are editing stays in your history exactly as the coach wrote it.",
+  editSupport: "Saving creates a new proposal to review.",
+  /**
+   * Shown in the editor for a proposal made before v3 (owner, 13 Oct 2026).
+   * Its edit is saved in the current shape, which has none of these four
+   * (ADR-025), and that used to happen without a word. The names are the
+   * headings those sections have on the page.
+   */
+  editOlderProposalNotice:
+    "This proposal is in an older format. Your edit will leave out what it assumes, what could change the direction, what was held back and the reason beside each goal.",
   editSaveAction: "Save as a new proposal",
   editCancelAction: "Cancel",
   editFieldLabels: {
@@ -109,7 +115,7 @@ export const ROADMAP_CONTROL_COPY = {
    */
   exampleLabel: "Example",
   exampleNotice:
-    "Written by the built-in example coach, not by a coaching model. It is real in your history and you can accept, edit or decline it; the wording is an example.",
+    "Written by the built-in example coach, not by a coaching model. You can accept, edit or decline it; the wording is an example.",
 
   /**
    * What every action says when it comes back.
@@ -121,7 +127,7 @@ export const ROADMAP_CONTROL_COPY = {
   outcomes: {
     proposalReady: "A proposal is ready below.",
     accepted: "Accepted. This is your roadmap now.",
-    declined: "Declined. It stays in your history.",
+    declined: "Declined.",
     edited: "Saved as a new proposal. Review it below.",
     /**
      * An attempt under this key is already running, so no second one was made

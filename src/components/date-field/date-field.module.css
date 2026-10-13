@@ -40,10 +40,15 @@
 /* As wide as a date and its calendar mark need, not the whole row; in a
    narrow column it takes what there is. */
 .group input.date {
+  box-sizing: border-box;
   width: 100%;
-  max-width: 11.5rem;
+  max-width: min(11.5rem, 100%);
   min-width: 0;
   font-variant-numeric: tabular-nums;
+  /* iOS Safari keeps a date field at a width of its own until its native
+     appearance is given up, and can push the page wider than the screen. */
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 /* A date that is shown and not changed, as a regeneration's is. */
