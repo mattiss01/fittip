@@ -90,8 +90,6 @@ For each phase:
 
 "title" names the roadmap. "summary" is two to four sentences about the shape of the roadmap and why it is shaped that way, referencing this athlete's actual situation.
 
-"reviewPoints" say when to reconsider: give either a "triggerDate" or a "triggerCondition", never both, with one focused question.
-
 Where "goalsOutsideHorizon" is non-empty, it lists goal ids whose target dates fall after this roadmap ends. You may build toward them, but do not imply the roadmap reaches them.
 
 "recurringSessions" are sessions the athlete repeats by rule, each given once; "planCommitments" are single dated ones. Both are already planned, and "durationMinutes" says how long one is where the athlete gave it.
@@ -176,7 +174,6 @@ const ROADMAP_SCHEMA = {
         "startDate",
         "endDate",
         "phases",
-        "reviewPoints",
       ],
       properties: {
         schemaVersion: {
@@ -273,31 +270,6 @@ const ROADMAP_SCHEMA = {
                     },
                   },
                 },
-              },
-            },
-          },
-        },
-        reviewPoints: {
-          type: "array",
-          description: "One to four.",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["title", "triggerDate", "triggerCondition", "question"],
-            properties: {
-              title: { type: "string" },
-              triggerDate: {
-                type: ["string", "null"],
-                description:
-                  "YYYY-MM-DD, or null when a condition is given instead.",
-              },
-              triggerCondition: {
-                type: ["string", "null"],
-                description: "Null when a date is given instead.",
-              },
-              question: {
-                type: "string",
-                description: "One focused question, at most 200 characters.",
               },
             },
           },

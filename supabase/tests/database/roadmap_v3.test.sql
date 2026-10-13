@@ -1,5 +1,6 @@
--- Roadmap v3 (ADR-025): what may be stored from now on, and what happens to
--- what already is.
+-- Roadmap v3 (ADR-025) and v4 (ADR-027): what may be stored from now on, and
+-- what happens to what already is. The file keeps its name; what it proves
+-- was moved to v4 on 13 Oct 2026, when review points left the roadmap.
 --
 -- Three things are proved here.
 --
@@ -33,14 +34,14 @@ as $$
   select ((clock_timestamp() at time zone 'utc')::date + p_offset)
 $$;
 
--- One valid `fittip.roadmap.v3` body for the horizon the tests use.
+-- One valid `fittip.roadmap.v4` body for the horizon the tests use.
 create function pg_temp.roadmap(p_title text)
 returns jsonb
 language sql
 stable
 as $$
   select jsonb_build_object(
-    'schemaVersion', 'fittip.roadmap.v3',
+    'schemaVersion', 'fittip.roadmap.v4',
     'title', p_title,
     'summary', 'Build an aerobic base, then sharpen into the target race.',
     'startDate', pg_temp.day(0)::text,
@@ -60,11 +61,6 @@ as $$
         'targetDate', pg_temp.day(84)::text,
         'goalIds', jsonb_build_array('00000000-0000-4000-8000-000000000001')
       ))
-    )),
-    'reviewPoints', jsonb_build_array(jsonb_build_object(
-      'title', 'Halfway check',
-      'triggerDate', pg_temp.day(42)::text,
-      'question', 'Is the weekly volume still repeatable without soreness?'
     ))
   )
 $$;
@@ -130,7 +126,7 @@ create temporary table acceptance (
 
 grant all on claim, finished, change, acceptance to public;
 
-select plan(33);
+select plan(34);
 
 -- The envelope ---------------------------------------------------------------
 
@@ -208,7 +204,20 @@ select ok(
 );
 select ok(
   not pg_temp.valid(pg_temp.roadmap('No review') || '{"reviewPoints":[]}'::jsonb),
-  'a roadmap still needs a review point'
+  'review points are refused since v4, even empty (ADR-027)'
+);
+select ok(
+  not pg_temp.valid(
+    pg_temp.roadmap('Named v3') || jsonb_build_object(
+      'schemaVersion', 'fittip.roadmap.v3',
+      'reviewPoints', jsonb_build_array(jsonb_build_object(
+        'title', 'Halfway check',
+        'triggerDate', pg_temp.day(42)::text,
+        'question', 'Is the weekly volume still repeatable without soreness?'
+      ))
+    )
+  ),
+  'a whole v3 roadmap, review point and name included, may no longer be written'
 );
 
 -- The privilege boundary -----------------------------------------------------
@@ -272,8 +281,8 @@ select ok(
     select pg_catalog.pg_get_constraintdef(oid)
     from pg_catalog.pg_constraint
     where conname = 'roadmap_proposals_schema_check'
-  ) like '%fittip.roadmap.v2%fittip.roadmap.v3%',
-  'the stored schema version may be v2 or v3 and nothing else'
+  ) like '%fittip.roadmap.v2%fittip.roadmap.v3%fittip.roadmap.v4%',
+  'the stored schema version may be v2, v3 or v4 and nothing else'
 );
 
 -- Owner ----------------------------------------------------------------------
@@ -303,7 +312,7 @@ select 'first', * from public.begin_roadmap_generation(
 select throws_ok(
   format(
     $$select * from public.finish_roadmap_generation(
-      %L::uuid, 'proposal', 'fittip.roadmap.v2', 'roadmap-v3-2026-10-10',
+      %L::uuid, 'proposal', 'fittip.roadmap.v2', 'roadmap-v4-2026-10-13',
       'fixture', 'fixture-corpus-v1', 'fixture-no-spend',
       p_content => pg_temp.legacy_roadmap('Legacy'), p_sources => '[]'::jsonb)$$,
     (select completion_token from claim where label = 'first')
@@ -314,7 +323,7 @@ select throws_ok(
 select throws_ok(
   format(
     $$select * from public.finish_roadmap_generation(
-      %L::uuid, 'proposal', 'fittip.roadmap.v3', 'roadmap-v3-2026-10-10',
+      %L::uuid, 'proposal', 'fittip.roadmap.v4', 'roadmap-v4-2026-10-13',
       'fixture', 'fixture-corpus-v1', 'fixture-no-spend',
       p_content => pg_temp.roadmap('Held back')
         || '{"safetyConsiderations":["Held flat."]}'::jsonb,
@@ -329,8 +338,8 @@ insert into finished
 select 'first', * from public.finish_roadmap_generation(
   (select completion_token from claim where label = 'first'),
   'proposal',
-  'fittip.roadmap.v3',
-  'roadmap-v3-2026-10-10',
+  'fittip.roadmap.v4',
+  'roadmap-v4-2026-10-13',
   'fixture',
   'fixture-corpus-v1',
   'fixture-no-spend',
@@ -345,8 +354,8 @@ select is(
 select is(
   (select schema_version from public.roadmap_proposals
    where id = (select proposal_id from finished where label = 'first')),
-  'fittip.roadmap.v3',
-  'and is stored as v3'
+  'fittip.roadmap.v4',
+  'and is stored as v4'
 );
 
 -- What was stored before ------------------------------------------------------
@@ -390,7 +399,7 @@ select is(
 select is(
   (select schema_version from public.roadmap_proposals
    where id = (select proposal_id from change where label = 'edit')),
-  'fittip.roadmap.v3',
+  'fittip.roadmap.v4',
   'the edit is stored under the version of its own content'
 );
 select is(

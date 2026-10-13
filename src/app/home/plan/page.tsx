@@ -19,6 +19,8 @@ import { TimezoneConfirmation } from "./timezone-confirmation";
 
 import homeStyles from "../home.module.css";
 import { CoachSpark } from "@/components/home/coach-spark";
+import { isoDateInTimezone } from "@/lib/date/local-date";
+import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 import {
   ActivityLibraryProvider,
   type LibraryActivityOption,
@@ -27,7 +29,10 @@ import type { SavedSessionOption } from "@/components/training/saved-session-pic
 import { createCompletionLog } from "@/server/repositories/completion-log-repository";
 import { createProfileRepository } from "@/server/repositories/profile-repository";
 import { createRollingPlan } from "@/server/repositories/rolling-plan-repository";
-import { readCurrentRoadmapPhases } from "@/server/roadmap/roadmap-phases";
+import {
+  readCurrentRoadmapPhases,
+  readRoadmapReviewDue,
+} from "@/server/roadmap/roadmap-phases";
 import { readOpenSessionActivityProposals } from "@/server/session-detail/open-session-activity-proposals";
 
 export const dynamic = "force-dynamic";
@@ -43,10 +48,20 @@ export default async function PlanPage({ searchParams }: Props) {
       ? requested
       : null;
   let timezoneName: string | null;
+  // A phase of the roadmap has ended and the owner has not looked yet
+  // (ADR-027). The Plan says so with a dot on the Roadmap chip and nothing
+  // else. Without a confirmed zone "today" is UTC's, as it is for the Roadmap
+  // page and for the database when the review is marked.
+  let reviewDue = false;
   try {
     timezoneName =
       (await (await createProfileRepository()).getCurrentProfile())
         ?.timezoneName ?? null;
+    reviewDue = await readRoadmapReviewDue(
+      timezoneName === null
+        ? new Date().toISOString().slice(0, 10)
+        : isoDateInTimezone(new Date(), timezoneName),
+    );
   } catch (error) {
     redirectOnAuthError(error);
     throw error;
@@ -65,10 +80,29 @@ export default async function PlanPage({ searchParams }: Props) {
           </Link>
         </div>
         <nav className={w.chips} aria-label="Plan surfaces">
-          <Link href="/home/plan/roadmap">Roadmap</Link>
+          <Link
+            aria-describedby={reviewDue ? "roadmap-review-due-note" : undefined}
+            href="/home/plan/roadmap"
+          >
+            Roadmap
+            {reviewDue ? (
+              <span
+                aria-hidden="true"
+                className={w.chipDot}
+                data-roadmap-review-due
+              />
+            ) : null}
+          </Link>
           <Link href="/home/plan/saved">Session Library</Link>
           <Link href="/home/plan/activities">Activity Library</Link>
         </nav>
+        {/* Said as well as shown, as a description: the link is still named
+            "Roadmap", which is what it is looked for by. */}
+        {reviewDue ? (
+          <span className={w.srOnly} id="roadmap-review-due-note">
+            {ROADMAP_CONTROL_COPY.reviewDueNote}
+          </span>
+        ) : null}
       </header>
       {timezoneName === null ? (
         <TimezoneConfirmation />

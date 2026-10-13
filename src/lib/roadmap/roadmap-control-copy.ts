@@ -83,17 +83,24 @@ export const ROADMAP_CONTROL_COPY = {
   milestoneReachLabel: (title: string) => `Mark reached: ${title}`,
   milestoneUndoLabel: (title: string) => `Undo reached: ${title}`,
 
+  /* ---- Reviews (ADR-027) -------------------------------------------------- */
+  /**
+   * A phase of the roadmap in force has ended, or the roadmap has. The app
+   * asks the owner to look; it does not say what to conclude.
+   */
+  reviewDuePhase: (phase: number) => `Phase ${phase} has ended`,
+  reviewDuePhaseBody:
+    "A good moment to look at your roadmap again. Does what comes next still fit?",
+  reviewDueRoadmap: "Your roadmap has ended",
+  reviewDueRoadmapBody:
+    "Nothing is planned beyond it. Ask for a new roadmap when you are ready.",
+  reviewedAction: "Reviewed",
+  /** On the Plan's Roadmap chip, for a screen reader: the dot has no words. */
+  reviewDueNote: "A roadmap review is due.",
+
   /* ---- Edit ------------------------------------------------------------- */
   editTitle: "Edit proposal",
   editSupport: "Saving creates a new proposal to review.",
-  /**
-   * Shown in the editor for a proposal made before v3 (owner, 13 Oct 2026).
-   * Its edit is saved in the current shape, which has none of these four
-   * (ADR-025), and that used to happen without a word. The names are the
-   * headings those sections have on the page.
-   */
-  editOlderProposalNotice:
-    "This proposal is in an older format. Your edit will leave out what it assumes, what could change the direction, what was held back and the reason beside each goal.",
   editSaveAction: "Save as a new proposal",
   editCancelAction: "Cancel",
   editFieldLabels: {
@@ -109,9 +116,6 @@ export const ROADMAP_CONTROL_COPY = {
     milestoneCriterion: "What would be observed",
     milestoneDate: "Aim for by",
     milestoneRemove: "Remove milestone",
-    reviewPoint: (index: number) => `Review point ${index}`,
-    reviewPointTitle: "Title",
-    reviewPointQuestion: "Question to reconsider",
   },
 
   /**
@@ -171,6 +175,9 @@ export const ROADMAP_CONTROL_COPY = {
      */
     milestoneUnavailable:
       "That milestone could not be changed. Reload to see your roadmap as it is now.",
+    /** The same, for a review (ADR-027). */
+    reviewUnavailable:
+      "That review could not be marked. Reload to see your roadmap as it is now.",
     sessionEnded: "Your session ended. Sign in again before continuing.",
     /**
      * The one context minimum this surface can hit. The coach reads the

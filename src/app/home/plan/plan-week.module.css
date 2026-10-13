@@ -85,6 +85,25 @@
   text-decoration: none;
 }
 
+/* Something on that page is waiting: the dot the navigation uses for
+   unfinished setup, on a chip. */
+.chipDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-left: 0.4rem;
+  border-radius: 50%;
+  background: var(--ember);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
 .chips a:focus-visible,
 .coach:focus-visible,
 .phase:focus-visible,

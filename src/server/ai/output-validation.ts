@@ -14,7 +14,6 @@ import {
   type RoadmapPhase,
   type RoadmapProposal,
   type RoadmapResponse,
-  type RoadmapReviewPoint,
   type ProposedSessionActivity,
   type SessionActivitiesProposal,
   type SevenDayPlanAlternative,
@@ -117,7 +116,6 @@ const MIN_PHASES = 1;
 const MAX_MILESTONES_PER_PHASE = 3;
 const MAX_ATTENTION_PER_PHASE = 4;
 const MAX_UNCERTAINTIES = 4;
-const MAX_REVIEW_POINTS = 4;
 const MAX_MEMORY_CANDIDATES = 4;
 
 /**
@@ -636,7 +634,6 @@ function validateRoadmap(
       "startDate",
       "endDate",
       "phases",
-      "reviewPoints",
     ])
   ) {
     return rejected("unknown_field");
@@ -646,8 +643,7 @@ function validateRoadmap(
     value.schemaVersion !== COACH_AI_SCHEMA_VERSIONS.create_roadmap ||
     !isBounded(value.title, 1, 80) ||
     !isBounded(value.summary, 1, 600) ||
-    !Array.isArray(value.phases) ||
-    !Array.isArray(value.reviewPoints)
+    !Array.isArray(value.phases)
   ) {
     return rejected("schema");
   }
@@ -709,9 +705,6 @@ function validateRoadmap(
     return rejected("business_rule");
   }
 
-  const reviewPoints = validateReviewPoints(value.reviewPoints, horizonEndMs);
-  if (reviewPoints === null) return rejected("business_rule");
-
   const roadmap: RoadmapProposal = {
     schemaVersion: COACH_AI_SCHEMA_VERSIONS.create_roadmap,
     title: value.title,
@@ -719,7 +712,6 @@ function validateRoadmap(
     startDate: value.startDate,
     endDate: value.endDate,
     phases,
-    reviewPoints,
   };
 
   // The stored envelope is capped independently of the response body, because
@@ -911,58 +903,6 @@ function validateUncertainties(
     });
   }
   return uncertainties;
-}
-
-function validateReviewPoints(
-  value: unknown,
-  horizonEndMs: number,
-): RoadmapReviewPoint[] | null {
-  if (!Array.isArray(value) || value.length < 1) return null;
-  if (value.length > MAX_REVIEW_POINTS) return null;
-
-  const reviewPoints: RoadmapReviewPoint[] = [];
-  for (const entry of value) {
-    if (!isRecord(entry)) return null;
-    if (
-      findUnknownField(entry, [
-        "title",
-        "triggerDate",
-        "triggerCondition",
-        "question",
-      ])
-    ) {
-      return null;
-    }
-    if (!isBounded(entry.title, 1, 200) || !isBounded(entry.question, 1, 200)) {
-      return null;
-    }
-
-    const hasDate =
-      entry.triggerDate !== undefined && entry.triggerDate !== null;
-    const hasCondition =
-      entry.triggerCondition !== undefined && entry.triggerCondition !== null;
-    // Decision 3: a review point says either "Review on _date_" or "Review when
-    // _condition_". Both at once has no display, and neither has no meaning.
-    if (hasDate === hasCondition) return null;
-
-    if (hasDate) {
-      const triggerMs = parseIsoDate(entry.triggerDate);
-      if (triggerMs === null || triggerMs > horizonEndMs) return null;
-      reviewPoints.push({
-        title: entry.title,
-        triggerDate: entry.triggerDate as string,
-        question: entry.question,
-      });
-    } else {
-      if (!isBounded(entry.triggerCondition, 1, 200)) return null;
-      reviewPoints.push({
-        title: entry.title,
-        triggerCondition: entry.triggerCondition,
-        question: entry.question,
-      });
-    }
-  }
-  return reviewPoints;
 }
 
 type MemorySectionResult =
@@ -1344,11 +1284,6 @@ function collectRoadmapStrings(roadmap: RoadmapProposal): string[] {
         milestone.title,
         milestone.observableCriterion,
       ]),
-    ]),
-    ...roadmap.reviewPoints.flatMap((entry) => [
-      entry.title,
-      entry.question,
-      entry.triggerCondition ?? "",
     ]),
   ];
 }

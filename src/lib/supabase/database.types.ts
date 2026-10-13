@@ -1398,6 +1398,45 @@ export type Database = {
           },
         ];
       };
+      roadmap_review_marks: {
+        Row: {
+          phase_index: number;
+          reviewed_on: string;
+          updated_at: string;
+          user_id: string;
+          version_id: string;
+        };
+        Insert: {
+          phase_index: number;
+          reviewed_on: string;
+          updated_at?: string;
+          user_id: string;
+          version_id: string;
+        };
+        Update: {
+          phase_index?: number;
+          reviewed_on?: string;
+          updated_at?: string;
+          user_id?: string;
+          version_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_review_marks_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "roadmap_review_marks_version_fkey";
+            columns: ["version_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "roadmap_versions";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
       roadmap_versions: {
         Row: {
           accepted_at: string;
@@ -2752,6 +2791,10 @@ export type Database = {
           p_reached: boolean;
           p_version_id: string;
         };
+        Returns: undefined;
+      };
+      set_roadmap_reviewed: {
+        Args: { p_phase_index: number; p_version_id: string };
         Returns: undefined;
       };
       set_session_cancellation_reason: {

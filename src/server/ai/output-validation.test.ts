@@ -121,7 +121,6 @@ describe("accepted roadmap output", () => {
     expect(Object.keys(result.response.roadmap).sort()).toEqual([
       "endDate",
       "phases",
-      "reviewPoints",
       "schemaVersion",
       "startDate",
       "summary",

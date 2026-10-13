@@ -698,6 +698,41 @@
   color: var(--pine);
 }
 
+/* A review that is due (ADR-027): above the roadmap, in the checkpoint's
+   colours, since it is the same thing arrived. */
+.reviewDue {
+  padding: 1rem 1.1rem 1.1rem;
+  border-radius: var(--radius-card);
+  background: #fff4ec;
+  box-shadow: inset 4px 0 0 var(--ember);
+}
+
+.reviewDueHeading {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.reviewDueBody {
+  margin: 0.35rem 0 0.85rem;
+  line-height: 1.5;
+}
+
+/* In the spine, a review still ahead is a quiet line; the one that is due
+   keeps the checkpoint's weight, and one that is done steps back. */
+.checkpoint[data-roadmap-review="ahead"] .checkpointBody,
+.checkpoint[data-roadmap-review="done"] .checkpointBody {
+  background: transparent;
+  box-shadow: inset 4px 0 0 var(--fern);
+}
+
+.checkpoint[data-roadmap-review="ahead"] .checkpointKind,
+.checkpoint[data-roadmap-review="done"] .checkpointKind {
+  color: var(--muted);
+}
+
 .quietAction {
   border-color: var(--rule);
   background: transparent;

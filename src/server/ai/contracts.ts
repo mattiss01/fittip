@@ -28,14 +28,14 @@ export type CoachAIOperation = (typeof COACH_AI_OPERATIONS)[number];
 
 /** Bumped whenever an accepted request or response shape changes. */
 export const COACH_AI_SCHEMA_VERSIONS = {
-  create_roadmap: "fittip.roadmap.v3",
+  create_roadmap: "fittip.roadmap.v4",
   create_seven_day_plan: "fittip.seven-day-plan.v2",
   fill_session_activities: "fittip.session-activities.v1",
 } as const satisfies Record<CoachAIOperation, string>;
 
 /** Prompt identifiers. Every operation carries a real, iterated prompt. */
 export const COACH_AI_PROMPT_VERSIONS = {
-  create_roadmap: "roadmap-v3-2026-10-10",
+  create_roadmap: "roadmap-v4-2026-10-13",
   create_seven_day_plan: "seven-day-plan-v2-2026-08-12",
   fill_session_activities: "session-activities-v1-2026-09-28",
 } as const satisfies Record<CoachAIOperation, string>;
@@ -517,7 +517,7 @@ export interface CoachAI {
 }
 
 /**
- * `fittip.roadmap.v3`.
+ * `fittip.roadmap.v4`.
  *
  * Attention is ordinal rather than a percentage, because a model-generated
  * "60% / 40%" looks measurable while the roadmap contains no training volume
@@ -561,36 +561,20 @@ export type RoadmapPhase = {
   milestones: RoadmapMilestone[];
 };
 
-/**
- * Material uncertainty, stated rather than hidden behind false precision. The
- * plan's, and a v2 roadmap's: the alias keeps `RoadmapUncertainty` as the name
- * M3-02 accepted for what a stored v2 roadmap still holds.
- */
+/** Material uncertainty, stated rather than hidden behind false precision. */
 export type CoachAIUncertainty = {
   statement: string;
   whyItMatters: string;
   whatToWatch: string;
 };
 
-export type RoadmapUncertainty = CoachAIUncertainty;
-
 /**
- * Either a date or a condition, never both. A review point states when the
- * direction should be reconsidered; it never replans, notifies, or mutates.
- */
-export type RoadmapReviewPoint = {
-  title: string;
-  triggerDate?: string;
-  triggerCondition?: string;
-  question: string;
-};
-
-/**
- * What a roadmap holds since v3 (ADR-025, owner, 10 October 2026): direction in
- * phases, the goals each attends to, milestones where a phase has one, and when
- * to look again. No assumptions, uncertainties or safety sentences; the
- * stop/professional-help copy on the Roadmap is server-owned and was never part
- * of this.
+ * What a roadmap holds since v4 (ADR-027, owner, 13 October 2026): direction in
+ * phases, the goals each attends to, and milestones where a phase has one.
+ * When to look again is no longer the coach's to write: the app asks for a
+ * review as each phase ends. v3 (ADR-025) had already taken out assumptions,
+ * uncertainties and safety sentences; the stop/professional-help copy on the
+ * Roadmap is server-owned and was never part of this.
  */
 export type RoadmapProposal = {
   schemaVersion: typeof COACH_AI_SCHEMA_VERSIONS.create_roadmap;
@@ -599,34 +583,23 @@ export type RoadmapProposal = {
   startDate: string;
   endDate: string;
   phases: RoadmapPhase[];
-  reviewPoints: RoadmapReviewPoint[];
 };
-
-export const ROADMAP_LEGACY_SCHEMA_VERSION = "fittip.roadmap.v2";
 
 /**
- * A roadmap stored before v3. Read and shown, never written: proposals and
- * accepted versions are permanent records, so the ones made under v2 keep
- * what they held. Nothing produces this shape any more, and an edit of one is
- * saved as v3.
+ * What the database can hand back as a roadmap's content.
+ *
+ * A row written under an earlier version also holds fields v4 does not have:
+ * review points, and before v3 assumptions, uncertainties, safety sentences
+ * and a reason beside each attention level. None of them is read (owner,
+ * 13 October 2026: nothing stored has to survive a change), so the type names
+ * only what is. Whatever builds something for a provider, or the JSON an edit
+ * submits, copies these fields by name and never spreads the row, which is
+ * what keeps the rest from travelling there. The row itself still reaches the
+ * owner's own browser whole where a proposal is open, as the editor's input.
  */
-export type LegacyRoadmapV2 = {
-  schemaVersion: typeof ROADMAP_LEGACY_SCHEMA_VERSION;
-  title: string;
-  summary: string;
-  startDate: string;
-  endDate: string;
-  phases: (Omit<RoadmapPhase, "goalAttention"> & {
-    goalAttention: (RoadmapGoalAttention & { reason: string })[];
-  })[];
-  assumptions?: string[];
-  uncertainties?: RoadmapUncertainty[];
-  reviewPoints: RoadmapReviewPoint[];
-  safetyConsiderations?: string[];
+export type StoredRoadmap = Omit<RoadmapProposal, "schemaVersion"> & {
+  schemaVersion: string;
 };
-
-/** What the database can hand back as a roadmap's content. */
-export type StoredRoadmap = RoadmapProposal | LegacyRoadmapV2;
 
 /**
  * A memory candidate extracted from the planning note.

@@ -1,11 +1,12 @@
 import { RoadmapDateRange } from "./roadmap-date-range";
-import { RoadmapSpine, type SpineMarks } from "./roadmap-spine";
+import {
+  RoadmapSpine,
+  type SpineMarks,
+  type SpineReview,
+} from "./roadmap-spine";
 
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
-import {
-  ROADMAP_LEGACY_SCHEMA_VERSION,
-  type StoredRoadmap,
-} from "@/server/ai/contracts";
+import type { StoredRoadmap } from "@/server/ai/contracts";
 import {
   isExampleAuthored,
   ROADMAP_COPY,
@@ -18,12 +19,10 @@ import {
  * and rendering a proposal more briefly than the version it would become would
  * mean deciding on less than the owner is agreeing to.
  *
- * The spine carries the phases and the review points, and since v3 that is
- * the whole of a roadmap (ADR-025). One stored before v3 also holds what the
- * coach qualified its direction with, and still shows it underneath: a
- * proposal or an accepted version is a permanent record and reads as it was
- * written. Every heading is an approved wording from `ROADMAP_COPY`, so none
- * of them is written here.
+ * The spine is the whole of a roadmap: its phases, with a review as each one
+ * ends (ADR-027). A row stored under an earlier version holds more, review
+ * points the coach wrote and before that assumptions and uncertainties; none
+ * of it is read or shown (owner, 13 October 2026).
  *
  * A Server Component with no interaction of its own. The controls live beside
  * it, not in it.
@@ -36,9 +35,12 @@ export function RoadmapBody({
   providerCode,
   goalTitles,
   marks,
+  review,
 }: {
   /** Given for the roadmap in force only; a proposal's milestones take none. */
   marks?: SpineMarks;
+  /** Likewise: a proposal's reviews are neither due nor done. */
+  review?: SpineReview;
   content: StoredRoadmap;
   /** The roadmap's own first and last day, or the days a proposal was asked for. */
   startDate: string;
@@ -49,12 +51,6 @@ export function RoadmapBody({
   providerCode: string;
   goalTitles: Record<string, string>;
 }) {
-  const legacy =
-    content.schemaVersion === ROADMAP_LEGACY_SCHEMA_VERSION ? content : null;
-  const assumptions = legacy?.assumptions ?? [];
-  const uncertainties = legacy?.uncertainties ?? [];
-  const held = legacy?.safetyConsiderations ?? [];
-
   return (
     <>
       <ExampleTag providerCode={providerCode} />
@@ -71,65 +67,10 @@ export function RoadmapBody({
 
       <RoadmapSpine
         phases={content.phases}
-        reviewPoints={content.reviewPoints}
         goalTitles={goalTitles}
         {...(marks === undefined ? {} : { marks })}
+        {...(review === undefined ? {} : { review })}
       />
-
-      {assumptions.length > 0 ? (
-        <section className={styles.section}>
-          <h3 className={styles.sectionHeading}>
-            {ROADMAP_COPY.assumptionsHeading}
-          </h3>
-          <ul className={styles.plainList}>
-            {assumptions.map((entry) => (
-              <li key={entry}>{entry}</li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {uncertainties.length > 0 ? (
-        <section className={styles.section}>
-          <h3 className={styles.sectionHeading}>
-            {ROADMAP_COPY.uncertaintiesHeading}
-          </h3>
-          {uncertainties.map((entry) => (
-            <div className={styles.uncertainty} key={entry.statement}>
-              <p>{entry.statement}</p>
-              {/* The two labels are what make an uncertainty actionable: without
-                  them these are two unattributed grey lines, and the owner
-                  cannot tell why the direction depends on it from what to watch
-                  for. M3-02's wording, restored here after M3-15E dropped it. */}
-              <p className={styles.uncertaintyMeta}>
-                <span className={styles.uncertaintyLabel}>
-                  {ROADMAP_COPY.uncertaintyWhyItMatters}
-                </span>{" "}
-                {entry.whyItMatters}
-              </p>
-              <p className={styles.uncertaintyMeta}>
-                <span className={styles.uncertaintyLabel}>
-                  {ROADMAP_COPY.uncertaintyWhatToWatch}
-                </span>{" "}
-                {entry.whatToWatch}
-              </p>
-            </div>
-          ))}
-        </section>
-      ) : null}
-
-      {held.length > 0 ? (
-        <section className={styles.section}>
-          <h3 className={styles.sectionHeading}>
-            {ROADMAP_COPY.heldBackHeading}
-          </h3>
-          <ul className={styles.plainList}>
-            {held.map((entry) => (
-              <li key={entry}>{entry}</li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
     </>
   );
 }

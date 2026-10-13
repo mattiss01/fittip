@@ -1,4 +1,5 @@
 import { RoadmapBody } from "./roadmap-body";
+import type { SpineReview } from "./roadmap-spine";
 
 import {
   type RoadmapMilestoneMark,
@@ -19,8 +20,11 @@ import {
 export function RoadmapDetail({
   version,
   reached,
+  review,
   goalTitles,
 }: {
+  /** Which review is due and how far the owner has marked reviewed. */
+  review: SpineReview;
   version: RoadmapVersionView;
   /** The milestones of this version the owner marked reached. */
   reached: RoadmapMilestoneMark[];
@@ -37,6 +41,7 @@ export function RoadmapDetail({
         providerCode={version.providerCode}
         goalTitles={goalTitles}
         marks={{ versionId: version.id, reached }}
+        review={review}
       />
     </article>
   );

@@ -10,10 +10,10 @@ import { ROADMAP_COPY } from "@/server/roadmap/roadmap-records";
  * restored unchanged in shape by M3-15E.
  *
  * It is a semantic ordered list, not a decorated stack, because the order is
- * real information — phase two follows phase one in time, and a review point
- * sits between them. That is also why review points are entries in the same
- * list rather than a separate section: they interleave with the phases, and
- * pulling them out would lose where they fall.
+ * real information — phase two follows phase one in time, and a review sits
+ * between them. A review is the app's (ADR-027): one as each phase ends, the
+ * last of them the end of the roadmap, dated the phase's last day. Nobody
+ * writes them, so there is nothing to show but when, and whether it is due.
  *
  * What it deliberately is not: a progress meter. There is no percentage, no
  * star rating, no confidence score, and no red/amber/green badge anywhere in
@@ -23,8 +23,16 @@ import { ROADMAP_COPY } from "@/server/roadmap/roadmap-records";
  * date, and nothing is counted.
  *
  * A Server Component. The mark is the one interaction, a client island per
- * milestone, and only where `marks` is given: the roadmap in force.
+ * milestone, and only where `marks` is given: the roadmap in force. The same
+ * goes for `review`: a proposal's reviews are neither due nor done.
  */
+
+/** For the roadmap in force: the phase whose review is due, and how far the
+    owner has marked reviewed. Either may be none. */
+export type SpineReview = {
+  duePhaseIndex: number | null;
+  reviewedThrough: number | null;
+};
 
 /** Which accepted version this is, and which of its milestones are marked. */
 export type SpineMarks = {
@@ -35,8 +43,6 @@ export type SpineMarks = {
 export type SpineGoalAttention = {
   goalId: string;
   level: "primary" | "secondary" | "maintenance" | "deferred";
-  /** A roadmap stored before v3 wrote one beside each level; v3 has none. */
-  reason?: string;
 };
 
 export type SpineMilestone = {
@@ -55,69 +61,60 @@ export type SpinePhase = {
   milestones: SpineMilestone[];
 };
 
-export type SpineReviewPoint = {
-  title: string;
-  triggerDate?: string;
-  triggerCondition?: string;
-  question: string;
-};
-
 export function RoadmapSpine({
   phases,
-  reviewPoints,
   goalTitles,
   marks,
+  review,
 }: {
   marks?: SpineMarks;
+  review?: SpineReview;
   phases: SpinePhase[];
-  reviewPoints: SpineReviewPoint[];
   /** Goal id to title, so the spine can name a goal without re-reading one. */
   goalTitles: Record<string, string>;
 }) {
-  // Dated review points fall between the phases they interrupt; conditional
-  // ones have no place on the calendar and follow at the end.
-  const dated = reviewPoints.filter((point) => Boolean(point.triggerDate));
-  const conditional = reviewPoints.filter((point) => !point.triggerDate);
-
   return (
     <ol className={styles.spine}>
       {phases.map((phase, index) => (
-        <PhaseAndFollowingCheckpoints
+        <PhaseAndItsReview
           key={`${phase.startDate}-${phase.title}`}
           phase={phase}
           index={index}
           total={phases.length}
           goalTitles={goalTitles}
           {...(marks === undefined ? {} : { marks })}
-          checkpoints={dated.filter(
-            (point) =>
-              (point.triggerDate as string) >= phase.startDate &&
-              (point.triggerDate as string) <= phase.endDate,
-          )}
+          {...(review === undefined ? {} : { review })}
         />
-      ))}
-      {conditional.map((point) => (
-        <Checkpoint key={`condition-${point.title}`} point={point} />
       ))}
     </ol>
   );
 }
 
-function PhaseAndFollowingCheckpoints({
+function PhaseAndItsReview({
   phase,
   index,
   total,
   goalTitles,
-  checkpoints,
   marks,
+  review,
 }: {
   marks?: SpineMarks;
+  review?: SpineReview;
   phase: SpinePhase;
   index: number;
   total: number;
   goalTitles: Record<string, string>;
-  checkpoints: SpineReviewPoint[];
 }) {
+  const state =
+    review === undefined
+      ? "ahead"
+      : review.duePhaseIndex === index
+        ? "due"
+        : review.reviewedThrough !== null && index <= review.reviewedThrough
+          ? "done"
+          : "ahead";
+  const lastDay = formatRoadmapDate(phase.endDate);
+
   return (
     <>
       <li className={styles.phase}>
@@ -148,16 +145,6 @@ function PhaseAndFollowingCheckpoints({
               </li>
             ))}
           </ul>
-          {phase.goalAttention.map((attention) =>
-            attention.reason ? (
-              <p
-                key={`${attention.goalId}-why`}
-                className={styles.attentionReason}
-              >
-                {attention.reason}
-              </p>
-            ) : null,
-          )}
 
           {/* A phase may have no milestone since v3, and an empty list is
               not something to announce. */}
@@ -205,25 +192,22 @@ function PhaseAndFollowingCheckpoints({
           )}
         </div>
       </li>
-      {checkpoints.map((point) => (
-        <Checkpoint key={`${point.triggerDate}-${point.title}`} point={point} />
-      ))}
+      <li className={styles.checkpoint} data-roadmap-review={state}>
+        <div className={styles.checkpointBody}>
+          <p className={styles.checkpointKind}>
+            {state === "due"
+              ? ROADMAP_COPY.reviewDueSince(lastDay)
+              : state === "done"
+                ? ROADMAP_COPY.reviewDone
+                : ROADMAP_COPY.reviewOnDate(lastDay)}
+          </p>
+          <p className={styles.checkpointTitle}>
+            {index + 1 === total
+              ? ROADMAP_COPY.reviewAfterRoadmap
+              : ROADMAP_COPY.reviewAfterPhase(index + 1)}
+          </p>
+        </div>
+      </li>
     </>
-  );
-}
-
-function Checkpoint({ point }: { point: SpineReviewPoint }) {
-  return (
-    <li className={styles.checkpoint}>
-      <div className={styles.checkpointBody}>
-        <p className={styles.checkpointKind}>
-          {point.triggerDate
-            ? ROADMAP_COPY.reviewOnDate(formatRoadmapDate(point.triggerDate))
-            : ROADMAP_COPY.reviewWhenCondition(point.triggerCondition ?? "")}
-        </p>
-        <h3 className={styles.checkpointTitle}>{point.title}</h3>
-        <p className={styles.checkpointQuestion}>{point.question}</p>
-      </div>
-    </li>
   );
 }

@@ -174,6 +174,15 @@ describe("the roadmap prompt", () => {
     expect(prefix).toContain('"milestones" are zero to three');
   });
 
+  it("no longer asks the coach for review points", () => {
+    // ADR-027. The app asks for a review as each phase ends.
+    const prefix = coachAIStaticPrefix("create_roadmap");
+
+    expect(prefix).not.toContain("reviewPoints");
+    expect(prefix).not.toContain("triggerDate");
+    expect(prefix).not.toContain("triggerCondition");
+  });
+
   it("asks for excerpts rather than paraphrases, and excludes feedback", () => {
     const prefix = coachAIStaticPrefix("create_roadmap");
 
@@ -257,15 +266,11 @@ describe("the roadmap response grammar", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       any
     >;
-    const reviewPoint =
-      schema.properties.roadmap.properties.reviewPoints.items.properties;
 
-    expect(reviewPoint.triggerDate.type).toEqual(["string", "null"]);
-    expect(reviewPoint.triggerCondition.type).toEqual(["string", "null"]);
     expect(schema.properties.memoryCandidates.type).toEqual(["array", "null"]);
   });
 
-  it("has no property for what v3 no longer holds", () => {
+  it("has no property for what a roadmap no longer holds", () => {
     const schema = COACH_AI_RESPONSE_SCHEMAS.create_roadmap.schema as Record<
       string,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -276,7 +281,6 @@ describe("the roadmap response grammar", () => {
     expect(Object.keys(roadmap.properties).sort()).toEqual([
       "endDate",
       "phases",
-      "reviewPoints",
       "schemaVersion",
       "startDate",
       "summary",
@@ -301,7 +305,7 @@ describe("the roadmap response grammar", () => {
     >;
 
     expect(schema.properties.roadmap.properties.schemaVersion.enum).toEqual([
-      "fittip.roadmap.v3",
+      "fittip.roadmap.v4",
     ]);
   });
 });

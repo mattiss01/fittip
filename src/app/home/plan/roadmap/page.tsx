@@ -34,6 +34,7 @@ import {
   type RoadmapGoalSummary,
   type RoadmapScreenState,
 } from "@/server/roadmap/roadmap-records";
+import { roadmapReviewDue } from "@/server/roadmap/roadmap-reviews";
 import { hasRecentSafetySignal } from "@/server/roadmap/roadmap-safety";
 import { TRAINING_HISTORY_WINDOW_DAYS } from "@/server/training/training-history-context";
 
@@ -139,11 +140,12 @@ async function loadRoadmapState(): Promise<RoadmapScreenState> {
   // Two reads wait on the first pass, and not on each other. The marks are
   // those of the roadmap in force, and of no other: an earlier version's stay
   // stored and are not shown, as the version itself is not.
-  const [completions, reached] = await Promise.all([
+  const [completions, reached, reviewedThrough] = await Promise.all([
     createCompletionLog().then((log) =>
       log.list(shiftIsoDate(today, -(TRAINING_HISTORY_WINDOW_DAYS - 1)), today),
     ),
     current === null ? [] : roadmaps.listMilestoneMarks(current.id),
+    current === null ? null : roadmaps.getReviewedThrough(current.id),
   ]);
 
   const goals: RoadmapGoalSummary[] = selectActiveGoalContext(
@@ -169,6 +171,12 @@ async function loadRoadmapState(): Promise<RoadmapScreenState> {
     head,
     current,
     reached,
+    reviewedThrough,
+    // A review is due from a phase's last day, by the owner's own calendar.
+    reviewDue:
+      current === null
+        ? null
+        : roadmapReviewDue(current.content.phases, today, reviewedThrough),
     openProposal,
     declinedPredecessor,
     openMemoryCandidateCount,
