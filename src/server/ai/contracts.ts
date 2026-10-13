@@ -592,8 +592,10 @@ export type RoadmapProposal = {
  * review points, and before v3 assumptions, uncertainties, safety sentences
  * and a reason beside each attention level. None of them is read (owner,
  * 13 October 2026: nothing stored has to survive a change), so the type names
- * only what is. Whatever reads a stored roadmap copies these fields by name
- * and never spreads the row, which is what keeps the rest from travelling.
+ * only what is. Whatever builds something for a provider, or the JSON an edit
+ * submits, copies these fields by name and never spreads the row, which is
+ * what keeps the rest from travelling there. The row itself still reaches the
+ * owner's own browser whole where a proposal is open, as the editor's input.
  */
 export type StoredRoadmap = Omit<RoadmapProposal, "schemaVersion"> & {
   schemaVersion: string;

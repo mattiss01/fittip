@@ -50,17 +50,18 @@ export default async function PlanPage({ searchParams }: Props) {
   let timezoneName: string | null;
   // A phase of the roadmap has ended and the owner has not looked yet
   // (ADR-027). The Plan says so with a dot on the Roadmap chip and nothing
-  // else. Without a confirmed zone there is no "today" to measure it by.
+  // else. Without a confirmed zone "today" is UTC's, as it is for the Roadmap
+  // page and for the database when the review is marked.
   let reviewDue = false;
   try {
     timezoneName =
       (await (await createProfileRepository()).getCurrentProfile())
         ?.timezoneName ?? null;
-    if (timezoneName !== null) {
-      reviewDue = await readRoadmapReviewDue(
-        isoDateInTimezone(new Date(), timezoneName),
-      );
-    }
+    reviewDue = await readRoadmapReviewDue(
+      timezoneName === null
+        ? new Date().toISOString().slice(0, 10)
+        : isoDateInTimezone(new Date(), timezoneName),
+    );
   } catch (error) {
     redirectOnAuthError(error);
     throw error;

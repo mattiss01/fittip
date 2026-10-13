@@ -331,9 +331,11 @@ select is(
   0,
   'another owner reads none of these marks'
 );
+-- The phase the first owner already marked: it has ended, so only whose
+-- roadmap it is can refuse this.
 select throws_ok(
   format(
-    'select public.set_roadmap_reviewed(%L::uuid, 2)',
+    'select public.set_roadmap_reviewed(%L::uuid, 1)',
     (select version_id from accepted where label = 'first')
   ),
   '22023', 'Invalid roadmap review.',

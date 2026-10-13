@@ -355,7 +355,7 @@ select is(
   (select schema_version from public.roadmap_proposals
    where id = (select proposal_id from finished where label = 'first')),
   'fittip.roadmap.v4',
-  'and is stored as v3'
+  'and is stored as v4'
 );
 
 -- What was stored before ------------------------------------------------------
