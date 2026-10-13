@@ -1,6 +1,6 @@
 # ADR-028: Change with Coach
 
-**Status:** accepted — the product owner decided it on 13 October 2026.
+**Status:** accepted — the product owner decided it on 13 October 2026. Amended the same day; see the end.
 
 **Date:** 13 October 2026
 
@@ -9,7 +9,7 @@
 **Builds on:** [ADR-023](ADR-023-WHAT-THE-COACH-IS-GIVEN.md) (what each coach call reads,
 and the input ceiling) and [ADR-027](ADR-027-A-REVIEW-AFTER-EVERY-PHASE.md) (a due review,
 from which this is offered). It changes what one coach call is sent and raises the input
-ceiling, which is why it is recorded. No migration.
+ceiling, which is why it is recorded. No migration as first merged; the amendment has one.
 
 ## Context
 
@@ -75,3 +75,29 @@ none of this has been spent.
   question: the plan call has 3,000 tokens of room under the new ceiling.
 - The prompt was verified against the built-in example coach only, which ignores the
   note. The first live change request is untested until there is a provider key.
+
+## Amended, 13 October 2026: a proposal knows which roadmap it was made under
+
+The review of this ADR's first merge found that no roadmap proposal recorded which roadmap
+it was written against. One left open in one tab while a different roadmap was accepted in
+another could still be accepted, and replaced the newer roadmap; for a change request, a
+changed version of roadmap 1 replaced roadmap 2. That was so for every roadmap proposal
+since ADR-015, and a request to change a roadmap made it matter. The owner chose to close
+it before the next feature.
+
+- **`accept_roadmap_proposal` refuses a proposal made under another roadmap than the one in
+  force.** `begin_roadmap_generation` had always stored the head it checked on the request;
+  acceptance now compares it. An owner's edit shares its source's request, so it is held
+  to the same roadmap. The refusal says to decline and ask again, since reloading cannot
+  help.
+- **A request records that it asked for a change** (`changes_roadmap`). A first request
+  stores what it was given, and is refused with no roadmap in force. Asking again inherits
+  it from the declined proposal's request, whatever the caller sends.
+- **Asking again after a declined change is a change request**, which closes the first
+  consequence above: the coach is sent the whole roadmap, what was declined, and what
+  should be different. The three fit the roadmap call's existing limits.
+
+Migration `20261013202639_roadmap_proposal_lineage`. No row is rewritten.
+`begin_roadmap_generation` has a new parameter and so a new signature; the old one is
+dropped in the same migration. Still open: a second request may be made while a proposal
+is waiting. It can no longer replace a newer roadmap, so it is left as it is.
