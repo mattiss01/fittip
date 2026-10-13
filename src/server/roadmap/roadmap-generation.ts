@@ -240,7 +240,10 @@ export async function generateRoadmapProposal(
       roadmaps,
       claim.completionToken,
       input.startDate,
-      outcome.memoryCandidates,
+      // ADR-028. A change request's note says what to do to a roadmap ("make
+      // phase two easier"), which is not something to remember about the
+      // athlete, so none of it is proposed as memory whatever came back.
+      input.changeRoadmap ? [] : outcome.memoryCandidates,
     ),
   };
 }

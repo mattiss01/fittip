@@ -525,6 +525,8 @@ function contextSourceMessage(source: string): string {
       return tooLarge.training_setup;
     case "planning_note":
       return tooLarge.planning_note;
+    case "roadmap_to_change":
+      return tooLarge.roadmap_to_change;
     case "regeneration_feedback":
       return tooLarge.regeneration_feedback;
     case "previous_proposal":

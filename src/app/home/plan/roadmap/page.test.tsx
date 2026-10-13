@@ -457,7 +457,17 @@ describe("Roadmap", () => {
     });
 
     render(await RoadmapPage());
-    openChoice("fresh");
+    fireEvent.click(
+      screen.getByRole("button", { name: ROADMAP_COPY.changeRoadmapAction }),
+    );
+    // The choice is named for what it opens: not a new roadmap.
+    expect(
+      document.querySelector('[data-roadmap-choice="fresh"] strong')
+        ?.textContent,
+    ).toBe(ROADMAP_COPY.askAgainAction);
+    fireEvent.click(
+      document.querySelector('[data-roadmap-choice="fresh"]') as HTMLElement,
+    );
 
     expect(
       screen.getByRole("dialog", { name: ROADMAP_COPY.regenerateTitle }),

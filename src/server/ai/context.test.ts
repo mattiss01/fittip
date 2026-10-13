@@ -1604,6 +1604,31 @@ describe("the accepted roadmap as plan context", () => {
     ).toBe(0);
   });
 
+  it("refuses a change request on another call, or one that is also a regeneration", () => {
+    expect(() =>
+      buildCoachAIContext(
+        "create_seven_day_plan",
+        records({ roadmapVersion: ROADMAP_VERSION }),
+        { ...COMPOSE, changeRoadmap: true },
+      ),
+    ).toThrow(CoachAIError);
+    expect(() =>
+      buildCoachAIContext(
+        "create_roadmap",
+        records({ roadmapVersion: ROADMAP_VERSION }),
+        {
+          ...COMPOSE,
+          changeRoadmap: true,
+          previousProposal: {
+            title: "Before",
+            summary: "What was declined.",
+            phases: [],
+          },
+        },
+      ),
+    ).toThrow(CoachAIError);
+  });
+
   it("refuses a change request when no roadmap is in force", () => {
     expect(() =>
       buildCoachAIContext("create_roadmap", records({}), {

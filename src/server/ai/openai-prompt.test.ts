@@ -37,7 +37,8 @@ const STATIC_PREFIX_BUDGET = 7_800;
  *
  * ADR-023 moved all three the same day: the shared prompt gained three
  * paragraphs, each context the athlete, the training setup and goal outcomes,
- * and the ceiling went to 15,000. The plan's line is now
+ * and the ceiling went to 15,000 (18,000 since ADR-028, for the roadmap call;
+ * the plan is still sized to 15,000 by its bytes). The plan's line is now
  *
  *   8,700 + 64 + 51,200 = 59,964   ceil(59,964 / 4) = 14,991  vs  15,000
  *

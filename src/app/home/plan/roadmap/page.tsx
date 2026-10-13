@@ -97,6 +97,11 @@ export default async function RoadmapPage() {
                   headingId={SHEET_TITLE_IDS.fresh}
                 />
               }
+              // The same rule `RoadmapCompose` picks its form by.
+              freshAsksAgain={
+                state.declinedPredecessor !== null &&
+                state.regenerationsRemaining > 0
+              }
             />
           )
         }

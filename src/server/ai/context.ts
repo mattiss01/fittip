@@ -463,7 +463,8 @@ export const COACH_AI_CONTEXT_LIMITS = {
       // whole is exactly the ceiling:
       //
       //   prefix 8,700 + wrapper 64 + context 51,200 = 59,964 characters
-      //   ceil(59,964 / 4) = 14,991  against  maxInputTokens 15,000
+      //   ceil(59,964 / 4) = 14,991  against the 15,000 this was sized to;
+      //   maxInputTokens is 18,000 since ADR-028, for the roadmap call.
       total: 51_200,
     },
   },
@@ -516,7 +517,8 @@ export const COACH_AI_CONTEXT_LIMITS = {
       // The sum of the parts (50,402) and about 1,000 for the envelope:
       //
       //   prefix 8,200 + wrapper 64 + context 51,450 = 59,714 characters
-      //   ceil(59,714 / 4) = 14,929  against  maxInputTokens 15,000
+      //   ceil(59,714 / 4) = 14,929  against the 15,000 this was sized to;
+      //   maxInputTokens is 18,000 since ADR-028, for the roadmap call.
       total: 51_450,
     },
   },
@@ -790,8 +792,17 @@ export function buildCoachAIContext(
   // in place of that outline, ended or not: it is the thing being changed.
   // Without a roadmap in force there is nothing to change, and the request is
   // refused here rather than answered as if it had been for a new one.
-  const changesRoadmap =
-    operation === "create_roadmap" && compose.changeRoadmap === true;
+  //
+  // Refused rather than ignored, as a replaceable session is on the wrong
+  // call: on a plan or a fill it has no meaning, and with a previous proposal
+  // it is a second answer to an earlier question and not a change request.
+  if (
+    compose.changeRoadmap === true &&
+    (operation !== "create_roadmap" || compose.previousProposal !== null)
+  ) {
+    throw new CoachAIError("context_invalid");
+  }
+  const changesRoadmap = compose.changeRoadmap === true;
   if (changesRoadmap && !records.roadmapVersion) {
     throw new CoachAIError("context_invalid");
   }

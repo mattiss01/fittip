@@ -33,6 +33,10 @@ export const ROADMAP_CONTROL_COPY = {
   changeWithCoachDetail: "Say what should be different",
   newWithCoachAction: "New roadmap with Coach",
   newWithCoachDetail: "Start over from your goals",
+  /* After a decline the same choice is another answer to the declined
+     proposal, on its dates, and says so. */
+  askAgainAction: "Ask again with Coach",
+  askAgainDetail: "Another answer to the proposal you declined",
   /* The change form. What is sent is said, because it is more than a new
      roadmap sends: the whole roadmap, where that sends an outline. */
   changeTitle: "Change with Coach",
@@ -240,6 +244,11 @@ export const ROADMAP_CONTROL_COPY = {
       "Your training setup is too much to send in one request. Shorten the places, the equipment or the availability note in Settings, then try again.",
     planning_note:
       "That note is longer than the request allows. Shorten it and try again.",
+    // ADR-028. A stored roadmap cannot be larger than what a change request
+    // may send, so this is not expected; it must still not advise a shorter
+    // horizon, which would not help.
+    roadmap_to_change:
+      "Your roadmap is too large to send whole. Ask for a new roadmap instead.",
     regeneration_feedback:
       "That feedback is longer than the request allows. Shorten it and try again.",
     previous_proposal:

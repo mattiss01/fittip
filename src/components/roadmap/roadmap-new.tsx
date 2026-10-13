@@ -39,7 +39,13 @@ export function RoadmapNew({
   titleIds,
   change,
   fresh,
+  freshAsksAgain = false,
 }: {
+  /**
+   * After a decline the "fresh" form is another answer to the declined
+   * proposal, not a new roadmap, and the choice is named for what it opens.
+   */
+  freshAsksAgain?: boolean;
   /** The corner opens on the choice; a due review opens the change form. */
   opensOn?: "menu" | "change";
   /** The ids of the headings that name the sheet, one for each view. */
@@ -130,9 +136,15 @@ export function RoadmapNew({
                   data-roadmap-choice="fresh"
                   onClick={() => setView("fresh")}
                 >
-                  <strong>{ROADMAP_CONTROL_COPY.newWithCoachAction}</strong>
+                  <strong>
+                    {freshAsksAgain
+                      ? ROADMAP_CONTROL_COPY.askAgainAction
+                      : ROADMAP_CONTROL_COPY.newWithCoachAction}
+                  </strong>
                   <span className={w.sheetChoiceDetail}>
-                    {ROADMAP_CONTROL_COPY.newWithCoachDetail}
+                    {freshAsksAgain
+                      ? ROADMAP_CONTROL_COPY.askAgainDetail
+                      : ROADMAP_CONTROL_COPY.newWithCoachDetail}
                   </span>
                 </button>
               </div>
