@@ -738,7 +738,6 @@ export function LogForm({
                 at each digit: on the way from the 7th to the 17th they read
                 the 1st. A date half typed or after today stops the step. */}
             <DateField
-              calendar
               describedBy="log-date-hint"
               initial={actualDate}
               label="Date"

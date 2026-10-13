@@ -434,7 +434,6 @@ function MemoryCard({
                   value={expectedRevision}
                 />
                 <DateField
-                  calendar
                   initial={item.expiresOn ?? null}
                   label="New review date"
                   name="reviewDate"
@@ -501,7 +500,6 @@ function MemoryForm({
         />
       </label>
       <DateField
-        calendar
         initial={draft?.reviewDate ?? reviewDate ?? null}
         label="Review date (optional)"
         name="reviewDate"
