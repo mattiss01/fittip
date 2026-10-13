@@ -1,4 +1,4 @@
-import { RoadmapSpine } from "./roadmap-spine";
+import { RoadmapSpine, type SpineMarks } from "./roadmap-spine";
 
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import {
@@ -33,7 +33,10 @@ export function RoadmapBody({
   meta,
   providerCode,
   goalTitles,
+  marks,
 }: {
+  /** Given for the roadmap in force only; a proposal's milestones take none. */
+  marks?: SpineMarks;
   content: StoredRoadmap;
   meta: string;
   /** `fixture` means the built-in example coach wrote this. */
@@ -57,6 +60,7 @@ export function RoadmapBody({
         phases={content.phases}
         reviewPoints={content.reviewPoints}
         goalTitles={goalTitles}
+        {...(marks === undefined ? {} : { marks })}
       />
 
       {assumptions.length > 0 ? (

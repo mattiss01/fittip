@@ -88,7 +88,11 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
             <p className={styles.emptyState}>{ROADMAP_COPY.emptyRoadmapBody}</p>
           </>
         ) : (
-          <RoadmapDetail version={state.current} goalTitles={goalTitles} />
+          <RoadmapDetail
+            version={state.current}
+            reached={state.reached}
+            goalTitles={goalTitles}
+          />
         )}
       </section>
 

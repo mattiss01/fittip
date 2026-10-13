@@ -57,6 +57,7 @@ import {
   declineRoadmapAction,
   editRoadmapAction,
   generateRoadmapAction,
+  setMilestoneReachedAction,
 } from "./actions";
 import { INITIAL_ROADMAP_ACTION_STATE } from "./action-state";
 
@@ -96,6 +97,7 @@ const editProposal = vi.fn();
 const getProposal = vi.fn();
 const getHead = vi.fn();
 const listGoals = vi.fn();
+const setMilestoneReached = vi.fn();
 
 describe("roadmap server actions", () => {
   beforeEach(() => {
@@ -125,7 +127,9 @@ describe("roadmap server actions", () => {
       declineProposal,
       editProposal,
       getProposal,
+      setMilestoneReached,
     });
+    setMilestoneReached.mockResolvedValue(undefined);
     generateMock.mockResolvedValue({
       status: "proposal",
       proposalId: PROPOSAL_ID,
@@ -206,6 +210,84 @@ describe("roadmap server actions", () => {
         INITIAL_ROADMAP_ACTION_STATE,
         form({ proposalId: PROPOSAL_ID, expectedHeadRevision: "2" }),
       );
+
+      expect(result).toMatchObject({
+        status: "session",
+        message: OUTCOMES.sessionEnded,
+      });
+    });
+  });
+
+  // ADR-026. The form says which milestone and which way; nothing else.
+  describe("milestone", () => {
+    const mark = (values: Record<string, string>) =>
+      setMilestoneReachedAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({
+          versionId: VERSION_ID,
+          phaseIndex: "0",
+          milestoneIndex: "1",
+          reached: "true",
+          ...values,
+        }),
+      );
+
+    it("marks a milestone reached, says nothing, and invalidates the route", async () => {
+      const result = await mark({});
+
+      expect(result).toMatchObject({ status: "marked", message: "" });
+      expect(setMilestoneReached).toHaveBeenCalledWith({
+        versionId: VERSION_ID,
+        phaseIndex: 0,
+        milestoneIndex: 1,
+        reached: true,
+      });
+      expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan/roadmap");
+    });
+
+    it("takes a mark back for anything but the word true", async () => {
+      await mark({ reached: "false" });
+      await mark({ reached: "" });
+
+      expect(
+        setMilestoneReached.mock.calls.map(([input]) => input.reached),
+      ).toEqual([false, false]);
+    });
+
+    it.each([
+      ["a malformed version", { versionId: "not-a-uuid" }],
+      ["a seventh phase", { phaseIndex: "6" }],
+      ["a fourth milestone", { milestoneIndex: "3" }],
+      ["a negative place", { phaseIndex: "-1" }],
+      ["a place that is not a number", { milestoneIndex: "1.5" }],
+    ])("refuses %s before touching the database", async (_name, values) => {
+      const result = await mark(values);
+
+      expect(result.status).toBe("validation");
+      expect(setMilestoneReached).not.toHaveBeenCalled();
+      expect(revalidatePathMock).not.toHaveBeenCalled();
+    });
+
+    // The database's one refusal: not this owner's roadmap in force, or no
+    // such milestone. The page it was sent from is out of date.
+    it("says a roadmap that moved on is no longer available", async () => {
+      setMilestoneReached.mockRejectedValue(
+        new RoadmapConflictError("not-available"),
+      );
+
+      const result = await mark({});
+
+      expect(result).toMatchObject({
+        status: "conflict",
+        message: OUTCOMES.notAvailable,
+      });
+      expect(revalidatePathMock).not.toHaveBeenCalled();
+    });
+
+    it("sends an expired session to sign in", async () => {
+      setMilestoneReached.mockRejectedValue(new RoadmapAuthenticationError());
+
+      const result = await mark({});
 
       expect(result).toMatchObject({
         status: "session",

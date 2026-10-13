@@ -149,6 +149,11 @@ async function loadRoadmapState(): Promise<RoadmapScreenState> {
   }));
 
   const { open: openProposal, declinedPredecessor } = reviewProposals;
+  const current = versions[0] ?? null;
+  // The marks of the roadmap in force, and of no other: an earlier version's
+  // stay stored and are not shown, as the version itself is not.
+  const reached =
+    current === null ? [] : await roadmaps.listMilestoneMarks(current.id);
   // While a proposal is open it is its own predecessor-in-waiting; once it is
   // declined it is the predecessor. The count a regeneration is offered against
   // is derived from the records rather than from whatever the browser
@@ -160,7 +165,8 @@ async function loadRoadmapState(): Promise<RoadmapScreenState> {
   return {
     today,
     head,
-    current: versions[0] ?? null,
+    current,
+    reached,
     openProposal,
     declinedPredecessor,
     openMemoryCandidateCount,

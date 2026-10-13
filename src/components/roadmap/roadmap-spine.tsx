@@ -1,3 +1,4 @@
+import { MilestoneTick } from "./milestone-tick";
 import { formatRoadmapDate, formatRoadmapRange } from "./roadmap-dates";
 
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
@@ -16,11 +17,19 @@ import { ROADMAP_COPY } from "@/server/roadmap/roadmap-records";
  * What it deliberately is not: a progress meter. There is no percentage, no
  * star rating, no confidence score, and no red/amber/green badge anywhere in
  * this file. A roadmap contains no training volume, so anything that looked
- * measurable would be measuring nothing.
+ * measurable would be measuring nothing. A milestone the owner marked reached
+ * says so, with its day (ADR-026); one not marked says nothing, whatever its
+ * date, and nothing is counted.
  *
- * A Server Component. It holds no state and takes no interaction, so shipping
- * it to the browser would be paying for JavaScript that renders the same bytes.
+ * A Server Component. The mark is the one interaction, a client island per
+ * milestone, and only where `marks` is given: the roadmap in force.
  */
+
+/** Which accepted version this is, and which of its milestones are marked. */
+export type SpineMarks = {
+  versionId: string;
+  reached: { phaseIndex: number; milestoneIndex: number; reachedOn: string }[];
+};
 
 export type SpineGoalAttention = {
   goalId: string;
@@ -56,7 +65,9 @@ export function RoadmapSpine({
   phases,
   reviewPoints,
   goalTitles,
+  marks,
 }: {
+  marks?: SpineMarks;
   phases: SpinePhase[];
   reviewPoints: SpineReviewPoint[];
   /** Goal id to title, so the spine can name a goal without re-reading one. */
@@ -76,6 +87,7 @@ export function RoadmapSpine({
           index={index}
           total={phases.length}
           goalTitles={goalTitles}
+          {...(marks === undefined ? {} : { marks })}
           checkpoints={dated.filter(
             (point) =>
               (point.triggerDate as string) >= phase.startDate &&
@@ -96,7 +108,9 @@ function PhaseAndFollowingCheckpoints({
   total,
   goalTitles,
   checkpoints,
+  marks,
 }: {
+  marks?: SpineMarks;
   phase: SpinePhase;
   index: number;
   total: number;
@@ -144,7 +158,7 @@ function PhaseAndFollowingCheckpoints({
               not something to announce. */}
           {phase.milestones.length === 0 ? null : (
             <ul className={styles.milestoneList}>
-              {phase.milestones.map((milestone) => (
+              {phase.milestones.map((milestone, milestoneIndex) => (
                 <li key={milestone.title} className={styles.milestone}>
                   <p className={styles.milestoneTitle}>{milestone.title}</p>
                   {/* "Aim for by", never "Due". A milestone is something an
@@ -158,6 +172,21 @@ function PhaseAndFollowingCheckpoints({
                   <p className={styles.milestoneCriterion}>
                     {milestone.observableCriterion}
                   </p>
+                  {marks === undefined ? null : (
+                    <MilestoneTick
+                      versionId={marks.versionId}
+                      phaseIndex={index}
+                      milestoneIndex={milestoneIndex}
+                      title={milestone.title}
+                      reachedOn={
+                        marks.reached.find(
+                          (mark) =>
+                            mark.phaseIndex === index &&
+                            mark.milestoneIndex === milestoneIndex,
+                        )?.reachedOn ?? null
+                      }
+                    />
+                  )}
                 </li>
               ))}
             </ul>

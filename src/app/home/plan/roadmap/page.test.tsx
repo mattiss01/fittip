@@ -36,6 +36,7 @@ vi.mock("@/app/home/plan/roadmap/actions", () => ({
   acceptRoadmapAction: vi.fn(),
   declineRoadmapAction: vi.fn(),
   editRoadmapAction: vi.fn(),
+  setMilestoneReachedAction: vi.fn(),
 }));
 vi.mock("@/server/repositories/roadmap-repository", async (original) => {
   const actual =
@@ -79,6 +80,7 @@ const getHead = vi.fn();
 const listVersions = vi.fn();
 const getReviewProposals = vi.fn();
 const countOpenMemoryCandidates = vi.fn();
+const listMilestoneMarks = vi.fn();
 const listGoals = vi.fn();
 const listCompletions = vi.fn();
 
@@ -93,6 +95,7 @@ describe("Roadmap", () => {
       history: [],
     });
     countOpenMemoryCandidates.mockResolvedValue(0);
+    listMilestoneMarks.mockResolvedValue([]);
     listGoals.mockResolvedValue({ revision: 1, goals: [goal()] });
     listCompletions.mockResolvedValue([]);
     createRoadmapMock.mockResolvedValue({
@@ -100,6 +103,7 @@ describe("Roadmap", () => {
       listVersions,
       getReviewProposals,
       countOpenMemoryCandidates,
+      listMilestoneMarks,
     });
     createGoalMock.mockResolvedValue({ list: listGoals });
     createProfileMock.mockResolvedValue({
@@ -151,6 +155,68 @@ describe("Roadmap", () => {
     ).toBeTruthy();
     expect(document.querySelector("[data-roadmap-proposals]")).toBeNull();
     expect(document.querySelector("[data-roadmap-superseded]")).toBeNull();
+  });
+
+  // ADR-026. One answer, reached, on the roadmap in force. The fixture's
+  // milestone was to be reached by 20 Oct 2026, which is long past.
+  it("offers to mark a milestone of the roadmap in force, and never says missed", async () => {
+    listVersions.mockResolvedValue([version(3)]);
+
+    render(await RoadmapPage());
+
+    expect(listMilestoneMarks).toHaveBeenCalledWith(version(3).id);
+    const tick = document.querySelector(
+      "[data-roadmap-current] [data-milestone-reached]",
+    ) as HTMLFormElement;
+    expect(tick.getAttribute("data-milestone-reached")).toBe("false");
+    expect(
+      within(tick).getByRole("button", {
+        name: ROADMAP_COPY.milestoneReachLabel("Ninety minutes easy"),
+      }),
+    ).toBeTruthy();
+    expect(new FormData(tick).get("versionId")).toBe(version(3).id);
+    expect(new FormData(tick).get("reached")).toBe("true");
+    expect(screen.queryByText(/missed|overdue|late|behind/i)).toBeNull();
+    expect(screen.queryByText(/^Reached/)).toBeNull();
+  });
+
+  it("shows the day a milestone was marked reached, and the way to take it back", async () => {
+    listVersions.mockResolvedValue([version(3)]);
+    listMilestoneMarks.mockResolvedValue([
+      { phaseIndex: 0, milestoneIndex: 0, reachedOn: "2026-10-18" },
+    ]);
+
+    render(await RoadmapPage());
+
+    const tick = document.querySelector(
+      "[data-milestone-reached]",
+    ) as HTMLFormElement;
+    expect(tick.getAttribute("data-milestone-reached")).toBe("true");
+    expect(
+      within(tick).getByText(ROADMAP_COPY.milestoneReached("18 Oct 2026")),
+    ).toBeTruthy();
+    expect(
+      within(tick).getByRole("button", {
+        name: ROADMAP_COPY.milestoneUndoLabel("Ninety minutes easy"),
+      }),
+    ).toBeTruthy();
+    expect(new FormData(tick).get("reached")).toBe("false");
+  });
+
+  // A proposal is not the roadmap: nothing in it can be marked, and no marks
+  // are read without a roadmap in force.
+  it("offers no mark on a proposal, and reads none without a roadmap", async () => {
+    const open = proposal({ decision: null });
+    getReviewProposals.mockResolvedValue({
+      open,
+      declinedPredecessor: null,
+      history: [open],
+    });
+
+    render(await RoadmapPage());
+
+    expect(document.querySelector("[data-milestone-reached]")).toBeNull();
+    expect(listMilestoneMarks).not.toHaveBeenCalled();
   });
 
   // Owner, 13 Oct 2026: the page is the roadmap in force. Earlier versions and

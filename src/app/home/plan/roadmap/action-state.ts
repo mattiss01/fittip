@@ -17,6 +17,8 @@ export type RoadmapActionStatus =
   | "accepted"
   | "declined"
   | "edited"
+  /** A milestone was marked reached, or its mark taken back. */
+  | "marked"
   /** The owner's input is wrong and nothing was written. */
   | "validation"
   /** Something changed underneath; the owner must look again. */

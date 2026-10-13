@@ -138,7 +138,8 @@ export function isRefusal(state: RoadmapActionState): boolean {
     state.status !== "proposal" &&
     state.status !== "accepted" &&
     state.status !== "declined" &&
-    state.status !== "edited"
+    state.status !== "edited" &&
+    state.status !== "marked"
   );
 }
 
