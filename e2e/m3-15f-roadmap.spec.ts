@@ -137,14 +137,14 @@ test.describe("M3-15F roadmap generation", () => {
           .getByRole("heading", { name: "My own wording" }),
       ).toBeVisible();
       await expectOutcome(page, "Saved as a new proposal. Review it below.");
-      // The proposal the edit came from is still in the history, unchanged and
-      // no longer awaiting anything.
-      const proposals = page.locator("[data-roadmap-proposals]");
+      // The proposal the edit came from is stored and no longer shown (owner,
+      // 13 Oct 2026): one proposal awaits a decision, and it is the edit.
+      expect(originalTitle).not.toBe("My own wording");
       await expect(
-        proposals.getByRole("heading", { name: originalTitle }),
-      ).toBeVisible();
-      await expect(proposals.getByText("Superseded")).toBeVisible();
-      await expect(proposals.getByText("Your edit")).toBeVisible();
+        page.getByRole("heading", { name: originalTitle }),
+      ).toHaveCount(0);
+      await expect(page.getByText("Awaiting your decision")).toHaveCount(1);
+      await expect(page.locator("[data-roadmap-proposals]")).toHaveCount(0);
 
       // ---- Decline, then regenerate against it. ----
       await page
@@ -153,7 +153,6 @@ test.describe("M3-15F roadmap generation", () => {
         .click();
       await expect(page.locator("[data-roadmap-open-proposal]")).toHaveCount(0);
       await expectOutcome(page, "Declined. It stays in your history.");
-      await expect(proposals.getByText("Declined")).toBeVisible();
 
       const regenerate = page.locator('[data-roadmap-compose="regeneration"]');
       await expect(regenerate).toBeVisible();
@@ -185,10 +184,6 @@ test.describe("M3-15F roadmap generation", () => {
           .getByRole("heading", { name: "No roadmap yet" })
           .or(page.getByText("No roadmap yet", { exact: true })),
       ).toHaveCount(0);
-      const acceptedTitle = await page
-        .locator('[data-roadmap-version="1"] h2')
-        .first()
-        .innerText();
       // An accepted example is still an example.
       await expect(
         page.locator("[data-roadmap-current] [data-roadmap-example]"),
@@ -199,9 +194,15 @@ test.describe("M3-15F roadmap generation", () => {
         path: path.join(evidenceDirectory, "M3-15F-accepted-390x844.png"),
       });
 
-      // ---- A second roadmap: the first one is preserved, not replaced. ----
-      const second = page.locator('[data-roadmap-compose="initial"]');
+      // ---- A second roadmap. With one in force the page starts with it, and
+      // ---- the form is behind "New roadmap", in a sheet. ----
+      await expect(page.locator("[data-roadmap-compose]")).toHaveCount(0);
+      await page.getByRole("button", { name: "New roadmap" }).click();
+      const second = page
+        .getByRole("dialog", { name: "Shape your roadmap" })
+        .locator('[data-roadmap-compose="initial"]');
       await expect(second).toBeVisible();
+      await expectNoHorizontalOverflow(page);
       await second
         .getByRole("button", { name: "Generate roadmap proposal" })
         .click();
@@ -210,14 +211,10 @@ test.describe("M3-15F roadmap generation", () => {
         .getByRole("button", { name: "Accept roadmap" })
         .click();
 
+      // Version 2 is the roadmap now. Version 1 is stored and not listed.
       await expect(page.locator('[data-roadmap-version="2"]')).toBeVisible();
-      const superseded = page.locator("[data-roadmap-superseded]");
-      await expect(
-        superseded.locator('[data-roadmap-superseded-version="1"]'),
-      ).toBeVisible();
-      await expect(
-        superseded.getByRole("heading", { name: acceptedTitle }),
-      ).toBeVisible();
+      await expect(page.locator('[data-roadmap-version="1"]')).toHaveCount(0);
+      await expect(page.locator("[data-roadmap-superseded]")).toHaveCount(0);
       await expectNoHorizontalOverflow(page);
       await page.screenshot({
         fullPage: true,

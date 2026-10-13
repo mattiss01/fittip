@@ -14,15 +14,28 @@ export function SubPageHeader({
   title,
   line,
   aside,
+  action,
 }: {
   title: string;
   line?: string;
   /** A short fact beside the title: a count, a version. */
   aside?: ReactNode;
+  /**
+   * The page's one control, in the top right corner on the row of the way
+   * back (owner, 13 Oct 2026).
+   */
+  action?: ReactNode;
 }) {
   return (
     <>
-      <BackLink href="/home/plan" label="Plan" />
+      {action === undefined ? (
+        <BackLink href="/home/plan" label="Plan" />
+      ) : (
+        <div className={styles.top}>
+          <BackLink href="/home/plan" label="Plan" />
+          {action}
+        </div>
+      )}
       <header className={styles.header}>
         <h1>{title}</h1>
         {aside === undefined ? null : <p className={styles.aside}>{aside}</p>}

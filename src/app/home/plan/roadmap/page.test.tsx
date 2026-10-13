@@ -1,4 +1,10 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { redirectMock } = vi.hoisted(() => ({
@@ -109,8 +115,7 @@ describe("Roadmap", () => {
     expect(
       screen.getByRole("heading", { name: "Base and build." }),
     ).toBeTruthy();
-    expect(screen.getByText("Version 3")).toBeTruthy();
-    expect(screen.getByText(ROADMAP_COPY.reviewHeader)).toBeTruthy();
+    expect(screen.getByText(/^Version 3 · /)).toBeTruthy();
 
     const phase = screen.getByRole("heading", { name: "Aerobic base" });
     expect(phase).toBeTruthy();
@@ -143,22 +148,10 @@ describe("Roadmap", () => {
     expect(document.querySelector("[data-roadmap-superseded]")).toBeNull();
   });
 
-  it("keeps every superseded version readable under the current one", async () => {
+  // Owner, 13 Oct 2026: the page is the roadmap in force. Earlier versions and
+  // decided proposals stay stored and are not listed.
+  it("lists no earlier version and no decided proposal", async () => {
     listVersions.mockResolvedValue([version(2), version(1)]);
-
-    render(await RoadmapPage());
-
-    const superseded = document.querySelector(
-      "[data-roadmap-superseded]",
-    ) as HTMLElement;
-    expect(within(superseded).getByText("Version 1")).toBeTruthy();
-    expect(within(superseded).queryByText("Version 2")).toBeNull();
-  });
-
-  // M3-11 marked proposals built on deleted training records `expired`. The
-  // state is the point of showing them: expired is neither missing nor still
-  // waiting, and an owner cannot tell those apart from an absent record.
-  it("shows an expired proposal with its state and nothing to act on", async () => {
     getReviewProposals.mockResolvedValue({
       open: null,
       declinedPredecessor: null,
@@ -167,19 +160,74 @@ describe("Roadmap", () => {
 
     render(await RoadmapPage());
 
-    const record = document.querySelector(
-      `[data-roadmap-proposal="${FIRST_PROPOSAL}"]`,
-    ) as HTMLElement;
-    expect(record.getAttribute("data-roadmap-proposal-state")).toBe("expired");
-    expect(within(record).getByText("Expired")).toBeTruthy();
-    expect(within(record).getByText(ROADMAP_COPY.proposalExpired)).toBeTruthy();
+    expect(document.querySelector('[data-roadmap-version="2"]')).toBeTruthy();
+    expect(screen.queryByText(/Version 1/)).toBeNull();
+    expect(document.querySelector("[data-roadmap-superseded]")).toBeNull();
+    expect(document.querySelector("[data-roadmap-proposals]")).toBeNull();
+    expect(document.querySelector("[data-roadmap-proposal]")).toBeNull();
+    expect(screen.queryByText("Expired")).toBeNull();
+  });
 
-    const proposals = document.querySelector(
-      "[data-roadmap-proposals]",
-    ) as HTMLElement;
-    expect(within(proposals).queryAllByRole("button")).toHaveLength(0);
-    expect(within(proposals).queryAllByRole("link")).toHaveLength(0);
-    expect(proposals.querySelector("form")).toBeNull();
+  // With a roadmap the page starts with it. Asking for another is the button
+  // beside the title, and the form is in the sheet it opens.
+  it("starts with the roadmap and keeps the compose form behind New roadmap", async () => {
+    listVersions.mockResolvedValue([version(1)]);
+
+    render(await RoadmapPage());
+
+    expect(document.querySelector("[data-roadmap-compose]")).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: ROADMAP_COPY.newRoadmapAction }),
+    );
+
+    const sheet = screen.getByRole("dialog", {
+      name: ROADMAP_COPY.composeTitle,
+    });
+    expect(
+      sheet
+        .querySelector("[data-roadmap-compose]")
+        ?.getAttribute("data-roadmap-compose"),
+    ).toBe("initial");
+    expect(
+      within(sheet).getByRole("button", { name: ROADMAP_COPY.generateAction }),
+    ).toBeTruthy();
+  });
+
+  it("offers a regeneration in the sheet after a decline", async () => {
+    listVersions.mockResolvedValue([version(1)]);
+    const declined = proposal({ decision: "rejected" });
+    getReviewProposals.mockResolvedValue({
+      open: null,
+      declinedPredecessor: declined,
+      history: [declined],
+    });
+
+    render(await RoadmapPage());
+    fireEvent.click(
+      screen.getByRole("button", { name: ROADMAP_COPY.newRoadmapAction }),
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: ROADMAP_COPY.regenerateTitle }),
+    ).toBeTruthy();
+  });
+
+  // Decide, then ask again: nothing offers a second proposal beside an open one.
+  it("offers no new roadmap while a proposal awaits a decision", async () => {
+    listVersions.mockResolvedValue([version(1)]);
+    const open = proposal({ decision: null });
+    getReviewProposals.mockResolvedValue({
+      open,
+      declinedPredecessor: null,
+      history: [open],
+    });
+
+    render(await RoadmapPage());
+
+    expect(
+      screen.queryByRole("button", { name: ROADMAP_COPY.newRoadmapAction }),
+    ).toBeNull();
   });
 
   // The proposal is shown in full above the roadmap it would replace, because
@@ -199,7 +247,6 @@ describe("Roadmap", () => {
       `[data-roadmap-open-proposal="${FIRST_PROPOSAL}"]`,
     ) as HTMLElement;
     expect(within(review).getByText("Awaiting your decision")).toBeTruthy();
-    expect(within(review).getByText(ROADMAP_COPY.reviewHeader)).toBeTruthy();
     expect(
       within(review).getByRole("heading", { name: "Aerobic base" }),
     ).toBeTruthy();
@@ -275,19 +322,25 @@ describe("Roadmap", () => {
     ).toBe(FIRST_PROPOSAL);
     // The horizon is the predecessor's and cannot be moved: the database
     // refuses a regeneration whose dates changed.
-    const endDate = within(compose).getByRole("group", {
-      name: ROADMAP_COPY.endDateLabel,
-    });
-    for (const part of ["Day", "Month", "Year"]) {
-      expect(
-        within(endDate).getByLabelText<HTMLInputElement>(part).readOnly,
-      ).toBe(true);
+    // Each date is one field. Fixed, and still sent.
+    const startDate = within(compose).getByLabelText<HTMLInputElement>(
+      ROADMAP_COPY.startDateLabel,
+    );
+    const endDate = within(compose).getByLabelText<HTMLInputElement>(
+      ROADMAP_COPY.endDateLabel,
+    );
+    for (const [field, name, value] of [
+      [startDate, "startDate", "2026-09-14"],
+      [endDate, "endDate", "2026-12-06"],
+    ] as const) {
+      expect(field.type).toBe("date");
+      expect(field.readOnly).toBe(true);
+      expect(field.name).toBe(name);
+      expect(field.value).toBe(value);
     }
-    // No calendar to pick another day from, and the date is still sent.
-    expect(within(endDate).queryByRole("button")).toBeNull();
     expect(
-      endDate.querySelector<HTMLInputElement>('input[name="endDate"]')?.value,
-    ).toBe("2026-12-06");
+      within(compose).getByText(ROADMAP_COPY.regenerateDatesFixed),
+    ).toBeTruthy();
   });
 
   // The ceiling is a fact about these dates, not a missing control.
@@ -332,17 +385,10 @@ describe("Roadmap", () => {
 
     render(await RoadmapPage());
 
-    const states = [
-      ...document.querySelectorAll("[data-roadmap-proposal-state]"),
-    ].map((record) => record.getAttribute("data-roadmap-proposal-state"));
-    expect(states).toEqual(["open", "superseded"]);
-    const proposals = document.querySelector(
-      "[data-roadmap-proposals]",
-    ) as HTMLElement;
     expect(
-      within(proposals).getAllByText("Awaiting your decision"),
-    ).toHaveLength(1);
-    expect(screen.getByText(ROADMAP_COPY.proposalSuperseded)).toBeTruthy();
+      document.querySelector(`[data-roadmap-open-proposal="${EDIT_PROPOSAL}"]`),
+    ).toBeTruthy();
+    expect(screen.getAllByText("Awaiting your decision")).toHaveLength(1);
   });
 
   // The one mitigation the product owner chose over hiding the controls: a
@@ -350,7 +396,7 @@ describe("Roadmap", () => {
   // surface that shows one says where the words came from. The history entries
   // are covered as well as the proposal, because an accepted example is still
   // an example.
-  it("labels every fixture-authored record an example, history included", async () => {
+  it("labels every fixture-authored record an example, accepted included", async () => {
     listVersions.mockResolvedValue([version(2), version(1)]);
     const open = proposal({ decision: null });
     getReviewProposals.mockResolvedValue({
@@ -364,8 +410,6 @@ describe("Roadmap", () => {
     for (const container of [
       "[data-roadmap-open-proposal]",
       "[data-roadmap-current]",
-      "[data-roadmap-superseded]",
-      "[data-roadmap-proposals]",
     ]) {
       expect(
         (document.querySelector(container) as HTMLElement).querySelector(
