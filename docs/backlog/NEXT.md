@@ -79,8 +79,8 @@ lane, one screen per merge.
 - [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only
       "Generate roadmap proposal", and an owner without a subscription may not be able
       to generate one, so a roadmap must also be writable by hand: phases, dates, focus,
-      milestones, review points. It writes the v3 shape (ADR-025), and brings "Add
-      milestone": the editor can remove a phase's milestone and cannot add one.
+      milestones. It writes the v4 shape (ADR-027), and brings "Add milestone": the
+      editor can remove a phase's milestone and cannot add one.
       Careful lane either way: a proposal without a coach behind it has no
       origin the database allows, and an accepted version must name a proposal. Open:
       whether it goes through a proposal and its acceptance as a coach one does
@@ -90,19 +90,18 @@ lane, one screen per merge.
       purpose (owner, 13 Oct 2026; ADR-026), to be decided once ticks have been
       used. It changes what the roadmap call is sent and takes prompt bytes:
       careful lane.
-- [ ] **Change with Coach.** Owner, 13 Oct 2026. A roadmap in force can be changed
+- [~] **Change with Coach.** Owner, 13 Oct 2026. A roadmap in force can be changed
       with the coach only by asking for a whole new one, with a note. Wanted: a
-      "Change with Coach" on the accepted roadmap, with a field for what should
-      change, sending the full roadmap in force and that feedback and returning a
-      proposal to accept, edit or decline as any other. Careful lane: it changes
-      what a provider is sent, and each use is a paid call. Open: whether it keeps
-      the dates as a regeneration does, how many are allowed, and whether it can be
-      asked about one phase.
-- [ ] **Review points that show.** Owner, 10 Oct 2026. A review date passes silently
-      today. From the day it arrives its question is a line at the top of the Plan
-      until dismissed, and it is marked due on the Roadmap; nothing replans and no
-      coach is asked. Open: what a point with a condition instead of a date does, and
-      where a dismissal is kept (a record of its own is a migration).
+      "Change with Coach" on the accepted roadmap and on a due review, with a field
+      for what should change, returning a proposal to accept, edit or decline as any
+      other. Decided by the owner the same day: the coach is sent the **whole**
+      roadmap in force, milestones and levels included, not the outline a new
+      request sends; both dates can be picked, prefilled with today and the
+      roadmap's end; no limit of its own beyond the spend ceilings; no phase
+      picker, the text says what. Careful lane: it changes what a provider is sent,
+      and the roadmap call's worst case is already 14,179 of 15,000 input tokens, so
+      the whole roadmap has to be paid for in budget or in a higher ceiling, which
+      is the owner's to say with the numbers in front of them.
 - [ ] **Delete a log.** Owner, 7 Oct 2026: it should be possible, which also frees a
       settled session for planning again. Careful lane: `apply_completion_change`
       accepts only create and edit, and completions are permanent records today. Open
@@ -166,6 +165,11 @@ Not worth their own slot; do them when work lands nearby.
   affected. A control that stays mounted wants a lighter watch than
   `useRoadmapWrite`; and after such a reload the explanation appears only when
   "New roadmap" is next opened.
+- **`src/server/roadmap/roadmap-records.ts.tmp` is an empty file the agent left behind**
+  on 13 Oct 2026, untracked. It cannot delete files; the owner can.
+- **An open proposal's whole stored row reaches the owner's browser** as the editor's
+  input, fields no longer read included. Its own data, and so before v4 too; copying
+  the v4 fields server-side before handing it to the dock would end it.
 - **A roadmap's repeat-protection fingerprint is still labelled `"roadmap.v2"`**
   (`roadmap-generation.ts`). Left on purpose: changing the label only stops one
   earlier answer being replayed.
@@ -289,8 +293,11 @@ Not worth their own slot; do them when work lands nearby.
   pasted in and the Site URL checked (ADR-022). A forgotten hosted password is set
   from the Supabase SQL editor until then.
 
-- **The v3 roadmap prompt has never met a provider.** It was checked against the built-in
+- **The v4 roadmap prompt has never met a provider.** It was checked against the built-in
   example coach only; there is no provider key, so the first live roadmap is untested.
+- **A due review cannot be shown in a browser flow.** The coach starts a roadmap today,
+  so no phase has ended; the card and the Plan's dot are proved in unit and database
+  tests and were looked at on a local database with a phase moved into the past.
 - **The roadmap coach is not told which dates of a series differ.** A rule is sent as the
   series stands (ADR-013, amended 2 Oct 2026): a cancelled or deleted occurrence is not
   listed, and an edited or moved one appears both as its own dated entry and
