@@ -128,13 +128,14 @@ describe("Roadmap", () => {
     expect(
       screen.getByRole("heading", { name: "Base and build." }),
     ).toBeTruthy();
-    // When it runs, and for how long. No version number (owner, 13 Oct 2026).
+    // When it runs. No version number (owner, 13 Oct 2026), and no length
+    // beside the dates (owner, 14 Oct 2026).
     const horizon = document.querySelector(
       "[data-roadmap-current] h2 + p",
     ) as HTMLElement;
     expect(horizon).toHaveTextContent("14 Sept");
     expect(horizon).toHaveTextContent("6 Dec 2026");
-    expect(horizon).toHaveTextContent("12 weeks");
+    expect(horizon).not.toHaveTextContent("weeks");
     expect(screen.queryByText(/Version \d/)).toBeNull();
 
     const phase = screen.getByRole("heading", { name: "Aerobic base" });
