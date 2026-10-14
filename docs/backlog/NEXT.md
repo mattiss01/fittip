@@ -77,22 +77,11 @@ lane, one screen per merge.
       memory in bytes, so many long notes can leave the coach refusing to plan. Limits
       as a whole are still to be thought through with the owner, and the coach tidying
       the notes is not built.
-- [~] **Write a roadmap yourself.** Owner, 2 Oct 2026. Careful lane, on
-      `ticket/write-roadmap-yourself`. Outcome: a roadmap written by hand is in
-      force on save, the third choice under "Change roadmap" and offered beside
-      the coach when there is none. Constraints: a new origin `owner_written`
-      with no request, provider codes, spend or source; one RPC, `write_roadmap`,
-      that stores the proposal and accepts it through `accept_roadmap_proposal`.
-      Owner, 13 Oct: nothing to review; a title, the dates and one phase with a
-      title, its purpose and one goal; summary and milestones optional; no gaps;
-      the form starts empty. Owner, 14 Oct: the rule that every core goal gets a
-      phase is deleted for the coach too; no "written by you" label; a milestone
-      needs a title, a date and a goal, and its criterion is optional and named
-      "Details".
 - [ ] **Edit your roadmap by hand.** Owner, 13 Oct 2026, as distinct from writing
-      one: open the roadmap in force in a form and save the change. After "Write
-      a roadmap yourself", whose form and save it shares. Open: whether a
-      milestone's tick and a done review survive an edit that keeps them.
+      one: open the roadmap in force in a form and save the change. It can start
+      from the writer (`roadmap-writer.tsx`) and `write_roadmap` (ADR-029).
+      Open: whether a milestone's tick and a done review survive an edit that
+      keeps them.
 - [ ] **Tell the coach which milestones were reached.** Left out of the tick on
       purpose (owner, 13 Oct 2026; ADR-026), to be decided once ticks have been
       used. It changes what the roadmap call is sent and takes prompt bytes:
@@ -144,9 +133,6 @@ Not worth their own slot; do them when work lands nearby.
 - **The Plan's series-extension notice is drawn as a heading** (`series-materializer.tsx`)
   though it is a status sentence, sometimes two, so it kept its full stop on 8 Oct 2026.
   It wants to be a paragraph with `role="status"`; m3-14b may find it by its heading.
-- **A phase in the roadmap editor is keyed by its start date** (`roadmap-editor.tsx`),
-  so its block is rebuilt, and the field loses focus, as that date changes. Do it with
-  "Write a roadmap yourself".
 - **What the Roadmap page left behind** on 13 Oct 2026, when it stopped listing
   earlier versions and decided proposals. `roadmap-proposal-record.tsx`, its test, the
   `.historyList`, `.historyItem` and `.recordTitle` styles and the `proposalExpired` and
@@ -171,9 +157,9 @@ Not worth their own slot; do them when work lands nearby.
   not offer it (it offers "ask again" for the newest proposal only); a hand-made
   request could. Change requests made on 13 Oct 2026 before
   `20261013202639` are stored as ordinary ones.
-- **The roadmap prompt has about thirteen characters left** of the 7,800 its token
-  arithmetic is derived against (`openai-prompt.test.ts`). The next sentence takes
-  them from an existing one.
+- **The roadmap prompt has about eighty-five characters left** of the 7,800 its token
+  arithmetic is derived against (`openai-prompt.test.ts`), since the core-goal sentence
+  went on 14 Oct 2026. A longer sentence takes its room from an existing one.
 - **A roadmap's repeat-protection fingerprint is still labelled `"roadmap.v2"`**
   (`roadmap-generation.ts`). Left on purpose: changing the label only stops one
   earlier answer being replayed.
