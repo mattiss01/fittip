@@ -55,4 +55,9 @@ without help every tick and review would be lost.
   lineage check of 13 Oct). The page does not offer an edit while a proposal waits.
 - Marks of earlier versions stay where they are; nothing is moved or deleted.
 - A locked phase may name a goal achieved or archived since; the application's validation
-  of an edit accepts the owner's goals named in locked phases.
+  of an edit accepts the owner's goals named in locked phases, and only there. A phase
+  that can still change loses such a goal when the form opens, since there is no chip to
+  remove it with; a phase left with none is said on save.
+- A roadmap whose phases have all ended is not edited; a new one replaces it. A phase
+  that ends while the form is open refuses the save with a sentence, rather than the
+  change typed into it being dropped.
