@@ -59,6 +59,7 @@ import {
   generateRoadmapAction,
   setMilestoneReachedAction,
   setRoadmapReviewedAction,
+  writeRoadmapAction,
 } from "./actions";
 import { INITIAL_ROADMAP_ACTION_STATE } from "./action-state";
 
@@ -100,6 +101,7 @@ const getHead = vi.fn();
 const listGoals = vi.fn();
 const setMilestoneReached = vi.fn();
 const setReviewed = vi.fn();
+const writeRoadmap = vi.fn();
 
 describe("roadmap server actions", () => {
   beforeEach(() => {
@@ -131,6 +133,13 @@ describe("roadmap server actions", () => {
       getProposal,
       setMilestoneReached,
       setReviewed,
+      writeRoadmap,
+    });
+    writeRoadmap.mockResolvedValue({
+      proposalId: PROPOSAL_ID,
+      versionId: VERSION_ID,
+      headRevision: 3,
+      result: "accepted",
     });
     setMilestoneReached.mockResolvedValue(undefined);
     setReviewed.mockResolvedValue(undefined);
@@ -785,6 +794,139 @@ describe("roadmap server actions", () => {
       expect(result).toMatchObject({
         status: "conflict",
         message: OUTCOMES.notAvailable,
+      });
+    });
+  });
+
+  // ADR-029. The owner's today is the confirmed zone's; the head is the page's.
+  describe("write by hand", () => {
+    const today = isoDateInTimezone(new Date(), TIMEZONE);
+    const written = (overrides: Record<string, unknown> = {}) => {
+      const content = roadmapContent();
+      const start = (overrides.startDate as string | undefined) ?? today;
+      const end =
+        (overrides.endDate as string | undefined) ?? addDays(start, 84);
+      return JSON.stringify({
+        ...content,
+        startDate: start,
+        endDate: end,
+        phases: [
+          {
+            ...content.phases[0],
+            startDate: start,
+            endDate: end,
+            milestones: [],
+          },
+        ],
+        ...overrides,
+      });
+    };
+
+    it("puts a valid roadmap in force against the page's head", async () => {
+      const result = await writeRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({ content: written(), expectedHeadRevision: "2" }),
+      );
+
+      expect(result).toMatchObject({
+        status: "written",
+        message: OUTCOMES.written,
+      });
+      expect(writeRoadmap.mock.calls[0][1]).toBe(2);
+      expect(writeRoadmap.mock.calls[0][0]).toMatchObject({
+        schemaVersion: "fittip.roadmap.v4",
+        startDate: today,
+      });
+      expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan/roadmap");
+      expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan");
+    });
+
+    it("needs no summary", async () => {
+      const content = JSON.parse(written());
+      delete content.summary;
+
+      const result = await writeRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({ content: JSON.stringify(content), expectedHeadRevision: "0" }),
+      );
+
+      expect(result.status).toBe("written");
+      expect("summary" in writeRoadmap.mock.calls[0][0]).toBe(false);
+    });
+
+    it.each([
+      ["starts in the past", { startDate: addDays(today, -3) }],
+      ["starts more than 30 days ahead", { startDate: addDays(today, 31) }],
+      ["is shorter than four weeks", { endDate: addDays(today, 20) }],
+      ["is longer than fifty-two weeks", { endDate: addDays(today, 400) }],
+      ["names no start", { startDate: "", endDate: addDays(today, 84) }],
+    ])(
+      "refuses a roadmap that %s, and writes nothing",
+      async (_name, dates) => {
+        const result = await writeRoadmapAction(
+          INITIAL_ROADMAP_ACTION_STATE,
+          form({ content: written(dates), expectedHeadRevision: "0" }),
+        );
+
+        expect(result).toMatchObject({
+          status: "validation",
+          message: ROADMAP_CONTROL_COPY.writeRejections.dates,
+        });
+        expect(writeRoadmap).not.toHaveBeenCalled();
+      },
+    );
+
+    it("refuses a phase with no goal in the writer's own words", async () => {
+      const content = JSON.parse(written());
+      content.phases[0].goalAttention = [];
+
+      const result = await writeRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({ content: JSON.stringify(content), expectedHeadRevision: "0" }),
+      );
+
+      expect(result.message).toBe(
+        ROADMAP_CONTROL_COPY.writeRejections.business_rule,
+      );
+      expect(writeRoadmap).not.toHaveBeenCalled();
+    });
+
+    it("refuses a goal that is not one of the owner's active goals", async () => {
+      const content = JSON.parse(written());
+      content.phases[0].goalAttention[0].goalId =
+        "9f150000-0000-4000-8000-0000000000ff";
+
+      const result = await writeRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({ content: JSON.stringify(content), expectedHeadRevision: "0" }),
+      );
+
+      expect(result.message).toBe(
+        ROADMAP_CONTROL_COPY.writeRejections.unowned_goal_reference,
+      );
+    });
+
+    it("refuses a missing head rather than guessing one", async () => {
+      const result = await writeRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({ content: written() }),
+      );
+
+      expect(result.status).toBe("validation");
+      expect(writeRoadmap).not.toHaveBeenCalled();
+    });
+
+    it("says a roadmap accepted elsewhere moved the page on", async () => {
+      writeRoadmap.mockRejectedValue(new RoadmapConflictError("stale"));
+
+      const result = await writeRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({ content: written(), expectedHeadRevision: "1" }),
+      );
+
+      expect(result).toMatchObject({
+        status: "conflict",
+        message: OUTCOMES.stale,
       });
     });
   });

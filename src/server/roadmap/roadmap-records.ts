@@ -32,7 +32,9 @@ export const ROADMAP_MAX_REGENERATIONS = 3;
 export type RoadmapProposalOrigin =
   | "ai_initial"
   | "ai_regeneration"
-  | "owner_edit";
+  | "owner_edit"
+  /** Written by hand and in force at once (ADR-029). */
+  | "owner_written";
 
 /**
  * The three terminal states a proposal can carry.
@@ -293,6 +295,14 @@ export type RoadmapHeadView = {
 export const UNKNOWN_PROVIDER_CODE = "unknown";
 
 /**
+ * What a roadmap written by hand reads as (ADR-029). It stores no provider
+ * code, because no call made it; the read gives it this one so that the
+ * missing code is not taken for an unreadable one, and labelled an example.
+ * Never stored: the database holds a null, tied to the origin.
+ */
+export const OWNER_PROVIDER_CODE = "owner";
+
+/**
  * Whether a record was written by something other than a coaching model, and
  * therefore has to be labelled an example wherever it appears.
  *
@@ -429,6 +439,9 @@ export const ROADMAP_COPY = {
     ai_initial: "From the coach",
     ai_regeneration: "Regenerated",
     owner_edit: "Your edit",
+    // Never awaiting a decision, so never shown, and no label in any case:
+    // the owner asked for none on a roadmap they wrote (ADR-029).
+    owner_written: "Your roadmap",
   } satisfies Record<RoadmapProposalOrigin, string>,
   emptyRoadmapTitle: "No roadmap yet",
   emptyRoadmapBody:

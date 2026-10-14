@@ -47,7 +47,8 @@ export type SpineGoalAttention = {
 
 export type SpineMilestone = {
   title: string;
-  observableCriterion: string;
+  /** "Details", which may be left out (owner, 14 Oct 2026). */
+  observableCriterion?: string;
   targetDate: string;
   goalIds: string[];
 };
@@ -168,9 +169,11 @@ function PhaseAndItsReview({
                     {ROADMAP_COPY.milestonePrefix}{" "}
                     {formatRoadmapDate(milestone.targetDate)}
                   </p>
-                  <p className={styles.milestoneCriterion}>
-                    {milestone.observableCriterion}
-                  </p>
+                  {milestone.observableCriterion === undefined ? null : (
+                    <p className={styles.milestoneCriterion}>
+                      {milestone.observableCriterion}
+                    </p>
+                  )}
                   {marks === undefined ? null : (
                     <MilestoneTick
                       versionId={marks.versionId}

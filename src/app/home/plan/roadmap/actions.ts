@@ -31,7 +31,7 @@ import {
   RoadmapAuthenticationError,
   RoadmapConflictError,
 } from "@/server/repositories/roadmap-repository";
-import { buildEditValidationContext } from "@/server/roadmap/roadmap-edit";
+import { buildOwnerRoadmapValidationContext } from "@/server/roadmap/roadmap-edit";
 import { generateRoadmapProposal } from "@/server/roadmap/roadmap-generation";
 import {
   parseExpectedHeadRevision,
@@ -250,15 +250,104 @@ export async function editRoadmapAction(
       // itself and rejects anything that is not a valid roadmap. Parsing here
       // first would only move the same refusal earlier under a vaguer message.
       body: `{"roadmap":${text(formData, "content") || "null"},"memoryCandidates":null}`,
-      context: await buildEditValidationContext(source),
+      context: await buildOwnerRoadmapValidationContext(source),
     });
 
     if (validation.outcome === "rejected") {
-      return invalid(editRejectionMessage(validation.reason), submission);
+      return invalid(
+        rejectionMessage(
+          ROADMAP_CONTROL_COPY.editRejections,
+          validation.reason,
+        ),
+        submission,
+      );
     }
 
     await roadmaps.editProposal(id, validation.response.roadmap);
     return landed("edited", submission);
+  } catch (error) {
+    return toActionState(error, submission);
+  }
+}
+
+/**
+ * A roadmap written by hand, in force on save (ADR-029).
+ *
+ * The draft arrives as one JSON field, as an edit's does, and goes through the
+ * same validator the coach's output goes through. Its dates are held to the
+ * range a coach request has first: from today to thirty days ahead, four to
+ * fifty-two weeks long. The owner's today is read from their confirmed zone,
+ * never from the form.
+ *
+ * The expected head is the one the page read, so a roadmap accepted in another
+ * tab since then refuses the write rather than being replaced by it.
+ */
+export async function writeRoadmapAction(
+  previous: RoadmapActionState,
+  formData: FormData,
+): Promise<RoadmapActionState> {
+  const submission = previous.submission + 1;
+  try {
+    const [roadmaps, profiles] = await Promise.all([
+      createRoadmapRepository(),
+      createProfileRepository(),
+    ]);
+    const today = await ownerToday(profiles);
+    const expectedHeadRevision = parseExpectedHeadRevision(
+      formData.get("expectedHeadRevision"),
+    );
+
+    const body = text(formData, "content") || "null";
+    let dates: { startDate: unknown; endDate: unknown } = {
+      startDate: undefined,
+      endDate: undefined,
+    };
+    try {
+      const parsed: unknown = JSON.parse(body);
+      if (typeof parsed === "object" && parsed !== null) {
+        dates = parsed as typeof dates;
+      }
+    } catch {
+      // Left to the validator below, which refuses it as unparsable.
+    }
+    let startDate: string;
+    let endDate: string;
+    try {
+      // An empty start would be read as today; a roadmap written by hand
+      // always names its own.
+      if (dates.startDate === "" || dates.startDate === undefined) {
+        throw new RoadmapValidationError("startDate");
+      }
+      startDate = parseRoadmapStartDate(dates.startDate, today, false);
+      endDate = parseRoadmapEndDate(dates.endDate, startDate);
+    } catch (error) {
+      if (error instanceof RoadmapValidationError) {
+        return invalid(WRITE_REJECTIONS.dates, submission);
+      }
+      throw error;
+    }
+    // `parseRoadmapStartDate` reads a start of yesterday as today, a form left
+    // open over midnight. The roadmap's own date has to agree with it.
+    if (startDate !== dates.startDate) {
+      return invalid(WRITE_REJECTIONS.dates, submission);
+    }
+
+    const validation = validateRoadmapCandidate({
+      body: `{"roadmap":${body},"memoryCandidates":null}`,
+      context: await buildOwnerRoadmapValidationContext({ startDate, endDate }),
+    });
+    if (validation.outcome === "rejected") {
+      return invalid(
+        rejectionMessage(WRITE_REJECTIONS, validation.reason),
+        submission,
+      );
+    }
+
+    await roadmaps.writeRoadmap(
+      validation.response.roadmap,
+      expectedHeadRevision,
+    );
+    return landed("written", submission);
   } catch (error) {
     return toActionState(error, submission);
   }
@@ -362,21 +451,22 @@ export async function setRoadmapReviewedAction(
  * is what makes a success sentence worth returning: the screen the owner reads
  * it on is already the screen the write produced.
  */
-function landed(
-  status: "proposal" | "accepted" | "declined" | "edited",
-  submission: number,
-): RoadmapActionState {
+type Landed = "proposal" | "accepted" | "declined" | "edited" | "written";
+
+function landed(status: Landed, submission: number): RoadmapActionState {
   revalidatePath("/home/plan/roadmap");
+  // A roadmap written by hand is in force at once, and the Plan reads it.
+  if (status === "written") revalidatePath("/home/plan");
   return { status, message: SUCCESS[status], submission };
 }
 
-const SUCCESS: Record<"proposal" | "accepted" | "declined" | "edited", string> =
-  {
-    proposal: OUTCOMES.proposalReady,
-    accepted: OUTCOMES.accepted,
-    declined: OUTCOMES.declined,
-    edited: OUTCOMES.edited,
-  };
+const SUCCESS: Record<Landed, string> = {
+  proposal: OUTCOMES.proposalReady,
+  accepted: OUTCOMES.accepted,
+  declined: OUTCOMES.declined,
+  edited: OUTCOMES.edited,
+  written: OUTCOMES.written,
+};
 
 /**
  * The owner's own calendar date.
@@ -397,9 +487,13 @@ async function ownerToday(
     : isoDateInTimezone(new Date(), profile.timezoneName);
 }
 
-function editRejectionMessage(reason: string): string {
-  const rejections: Record<string, string> =
-    ROADMAP_CONTROL_COPY.editRejections;
+const WRITE_REJECTIONS = ROADMAP_CONTROL_COPY.writeRejections;
+
+/** A validator's reason in the form's own words, or the general refusal. */
+function rejectionMessage(
+  rejections: Readonly<Record<string, string>>,
+  reason: string,
+): string {
   return rejections[reason] ?? OUTCOMES.checkDetails;
 }
 

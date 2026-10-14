@@ -192,7 +192,8 @@ export type CoachAICurrentRoadmapReference = {
  */
 export type CoachAIRoadmapToChange = {
   title: string;
-  summary: string;
+  /** Left out where the owner wrote none (14 October 2026). */
+  summary?: string;
   startDate: string;
   endDate: string;
   phases: RoadmapPhase[];
@@ -253,7 +254,8 @@ export type CoachAITrainingHistory = {
  */
 export type CoachAIPreviousProposalReference = {
   title: string;
-  summary: string;
+  /** Left out where the owner wrote none (14 October 2026). */
+  summary?: string;
   phases: {
     title: string;
     focus: string;
@@ -473,7 +475,8 @@ export type CoachAIRoadmapPhaseSummary = {
 
 export type CoachAIRoadmapContext = {
   title: string;
-  summary: string;
+  /** Left out where the owner wrote none (14 October 2026). */
+  summary?: string;
   startDate: string;
   endDate: string;
   isStale: boolean;
@@ -570,8 +573,11 @@ export type RoadmapGoalAttention = {
 
 export type RoadmapMilestone = {
   title: string;
-  /** Observable without promising an outcome. The UI says "Aim for by". */
-  observableCriterion: string;
+  /**
+   * Observable without promising an outcome. "Details" on screen, and
+   * optional since 14 October 2026 (owner).
+   */
+  observableCriterion?: string;
   targetDate: string;
   goalIds: string[];
 };
@@ -603,7 +609,8 @@ export type CoachAIUncertainty = {
 export type RoadmapProposal = {
   schemaVersion: typeof COACH_AI_SCHEMA_VERSIONS.create_roadmap;
   title: string;
-  summary: string;
+  /** Left out where the owner wrote none (14 October 2026). */
+  summary?: string;
   startDate: string;
   endDate: string;
   phases: RoadmapPhase[];

@@ -13,18 +13,23 @@ import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { CoachSpark } from "@/components/home/coach-spark";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
-/** The two ways to a new proposal while a roadmap is in force (ADR-028). */
-type View = "menu" | "change" | "fresh";
+/**
+ * The two ways to a new proposal while a roadmap is in force (ADR-028), and
+ * writing one by hand (ADR-029).
+ */
+type View = "menu" | "change" | "fresh" | "write";
 
 /**
  * Changing the roadmap in force (owner, 13 Oct 2026): a button, and a sheet
  * that asks which way. "Change with Coach" sends the coach the whole roadmap
  * and what should be different; "New roadmap with Coach" starts over from the
- * owner's goals. Writing one by hand will be the third choice when it exists.
- * The page itself starts with the roadmap.
+ * owner's goals; "Write it yourself" is a roadmap of the owner's own, in force
+ * on save (ADR-029). The page itself starts with the roadmap.
  *
- * It is drawn in two places. In the page's corner it opens on the choice; on
- * a due review it is "Change with Coach" and opens that form directly.
+ * It is drawn in three places. In the page's corner it opens on the choice;
+ * on a due review it is "Change with Coach" and opens that form directly; and
+ * while there is no roadmap, beside the coach's form, it is "Write it
+ * yourself" and opens the writer.
  *
  * Whether the sheet is open, and on what, is held here and nowhere else. The
  * page renders this only while nothing awaits a decision, so a generation
@@ -39,6 +44,7 @@ export function RoadmapNew({
   titleIds,
   change,
   fresh,
+  write = null,
   freshAsksAgain = false,
 }: {
   /**
@@ -46,26 +52,37 @@ export function RoadmapNew({
    * proposal, not a new roadmap, and the choice is named for what it opens.
    */
   freshAsksAgain?: boolean;
-  /** The corner opens on the choice; a due review opens the change form. */
-  opensOn?: "menu" | "change";
+  /**
+   * The corner opens on the choice; a due review opens the change form; with
+   * no roadmap yet, the writer.
+   */
+  opensOn?: "menu" | "change" | "write";
   /** The ids of the headings that name the sheet, one for each view. */
   titleIds: Record<View, string>;
   /** The form that asks for the roadmap in force to be changed. */
   change: ReactNode;
   /** The form that asks for a new roadmap, or another after a decline. */
   fresh: ReactNode;
+  /** The form that writes one by hand; offered only where it is given. */
+  write?: ReactNode;
 }) {
   const [view, setView] = useState<View | null>(null);
   const [pending, setPending] = useState(false);
   const changeKey = useRef<string | null>(null);
   const freshKey = useRef<string | null>(null);
-  const sessions = useMemo<Record<"change" | "fresh", RoadmapComposeSession>>(
-    () => ({
-      change: { idempotencyKey: changeKey, setPending },
-      fresh: { idempotencyKey: freshKey, setPending },
-    }),
-    [],
-  );
+  const writeKey = useRef<string | null>(null);
+  const sessions = useMemo<
+    Record<"change" | "fresh" | "write", RoadmapComposeSession>
+  >(() => {
+    const close = () => setView(null);
+    return {
+      change: { idempotencyKey: changeKey, setPending, close },
+      fresh: { idempotencyKey: freshKey, setPending, close },
+      // A hand-written roadmap is replay-safe by its expected head, and uses
+      // no key; the session is for the pending lock and the close.
+      write: { idempotencyKey: writeKey, setPending, close },
+    };
+  }, []);
 
   return (
     <>
@@ -78,7 +95,7 @@ export function RoadmapNew({
         >
           {ROADMAP_CONTROL_COPY.changeRoadmapAction}
         </button>
-      ) : (
+      ) : opensOn === "change" ? (
         <button
           className={styles.primaryAction}
           type="button"
@@ -87,6 +104,15 @@ export function RoadmapNew({
         >
           <CoachSpark size={16} />
           {ROADMAP_CONTROL_COPY.changeWithCoachAction}
+        </button>
+      ) : (
+        <button
+          className={styles.quietAction}
+          type="button"
+          data-roadmap-write-open
+          onClick={() => setView("write")}
+        >
+          {ROADMAP_CONTROL_COPY.writeAction}
         </button>
       )}
       {view === null ? null : (
@@ -147,6 +173,19 @@ export function RoadmapNew({
                       : ROADMAP_CONTROL_COPY.newWithCoachDetail}
                   </span>
                 </button>
+                {write === null ? null : (
+                  <button
+                    type="button"
+                    className={w.sheetChoice}
+                    data-roadmap-choice="write"
+                    onClick={() => setView("write")}
+                  >
+                    <strong>{ROADMAP_CONTROL_COPY.writeAction}</strong>
+                    <span className={w.sheetChoiceDetail}>
+                      {ROADMAP_CONTROL_COPY.writeDetail}
+                    </span>
+                  </button>
+                )}
               </div>
             </>
           ) : (
@@ -154,7 +193,7 @@ export function RoadmapNew({
             // colours are named again here.
             <div className={`${styles.page} ${styles.sheetBody}`}>
               <RoadmapComposeSessionContext.Provider value={sessions[view]}>
-                {view === "change" ? change : fresh}
+                {view === "change" ? change : view === "write" ? write : fresh}
               </RoadmapComposeSessionContext.Provider>
             </div>
           )}

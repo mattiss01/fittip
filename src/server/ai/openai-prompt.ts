@@ -85,7 +85,7 @@ Cover exactly "horizonStartDate" to "horizonEndDate". Break that span into one t
 
 For each phase:
 - "focus" says what the phase is for, in one or two sentences.
-- "goalAttention" gives each relevant goal one of "primary", "secondary", "maintenance" or "deferred". "deferred" describes this roadmap only; it does not abandon the goal. Every core goal in "targetableGoals" must appear in at least one phase.
+- "goalAttention" gives each relevant goal one of "primary", "secondary", "maintenance" or "deferred". "deferred" describes this roadmap only; it does not abandon the goal.
 - "milestones" are zero to three checkpoints an observer could verify — a repeatable session completed, a distance held, a movement performed — dated inside the phase. State what would be observed, never that it will happen. A phase with no honest checkpoint has none.
 
 "title" names the roadmap. "summary" is two to four sentences about the shape of the roadmap and why it is shaped that way, referencing this athlete's actual situation.

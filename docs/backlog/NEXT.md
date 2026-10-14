@@ -77,18 +77,18 @@ lane, one screen per merge.
       memory in bytes, so many long notes can leave the coach refusing to plan. Limits
       as a whole are still to be thought through with the owner, and the coach tidying
       the notes is not built.
-- [ ] **Write a roadmap yourself.** Owner, 2 Oct 2026. The Roadmap offers only the
-      coach, and an owner without a subscription may not be able to generate, so a
-      roadmap must also be writable by hand. It writes the v4 shape (ADR-027) and
-      is the third choice under "Change roadmap". Decided by the owner on 13 Oct
-      2026: saving makes it the roadmap in force at once, with nothing to review
-      (stored as a proposal accepted in the same step, so the records keep their
-      shape); the least that counts is a title, the dates, and one phase with a
-      title, what it is for and one goal, with summary and milestones optional
-      and phases covering the dates without gaps; the form always starts empty.
-      Editing the roadmap in force by hand is a different thing and its own item.
-      Careful lane: a proposal without a coach behind it has no origin the
-      database allows. It brings "Add milestone", which the proposal editor lacks.
+- [~] **Write a roadmap yourself.** Owner, 2 Oct 2026. Careful lane, on
+      `ticket/write-roadmap-yourself`. Outcome: a roadmap written by hand is in
+      force on save, the third choice under "Change roadmap" and offered beside
+      the coach when there is none. Constraints: a new origin `owner_written`
+      with no request, provider codes, spend or source; one RPC, `write_roadmap`,
+      that stores the proposal and accepts it through `accept_roadmap_proposal`.
+      Owner, 13 Oct: nothing to review; a title, the dates and one phase with a
+      title, its purpose and one goal; summary and milestones optional; no gaps;
+      the form starts empty. Owner, 14 Oct: the rule that every core goal gets a
+      phase is deleted for the coach too; no "written by you" label; a milestone
+      needs a title, a date and a goal, and its criterion is optional and named
+      "Details".
 - [ ] **Edit your roadmap by hand.** Owner, 13 Oct 2026, as distinct from writing
       one: open the roadmap in force in a form and save the change. After "Write
       a roadmap yourself", whose form and save it shares. Open: whether a

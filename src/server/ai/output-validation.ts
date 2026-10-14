@@ -642,7 +642,9 @@ function validateRoadmap(
   if (
     value.schemaVersion !== COACH_AI_SCHEMA_VERSIONS.create_roadmap ||
     !isBounded(value.title, 1, 80) ||
-    !isBounded(value.summary, 1, 600) ||
+    // Optional since 14 October 2026 (owner): a roadmap written by hand may
+    // have none. The coach's grammar still asks for one.
+    !isOptionalBounded(value.summary, 1, 600) ||
     !Array.isArray(value.phases)
   ) {
     return rejected("schema");
@@ -668,10 +670,6 @@ function validateRoadmap(
   }
 
   const targetableGoalIds = new Set(context.targetableGoals.map((g) => g.id));
-  const coreGoalIds = context.targetableGoals
-    .filter((goal) => goal.priorityTier === "core")
-    .map((goal) => goal.id);
-  const attendedGoalIds = new Set<string>();
 
   const phases: RoadmapPhase[] = [];
   let expectedStartMs = horizonStartMs;
@@ -683,10 +681,6 @@ function validateRoadmap(
       expectedStartMs,
     });
     if (phase.outcome === "rejected") return phase;
-
-    for (const attention of phase.phase.goalAttention) {
-      attendedGoalIds.add(attention.goalId);
-    }
     phases.push(phase.phase);
     // Contiguous and non-overlapping: the next phase starts the day after this
     // one ends. Gaps and overlaps are both business-rule failures rather than
@@ -699,16 +693,14 @@ function validateRoadmap(
     return rejected("business_rule");
   }
 
-  // Decision 2: every active core goal appears in at least one phase. A core
-  // goal the roadmap never mentions is a roadmap that quietly dropped it.
-  if (!coreGoalIds.every((id) => attendedGoalIds.has(id))) {
-    return rejected("business_rule");
-  }
+  // ADR-014 decision 2 asked that every active core goal appear in a phase.
+  // The owner deleted that rule on 14 October 2026, for the coach and for a
+  // roadmap written by hand alike: a roadmap may leave a goal out.
 
   const roadmap: RoadmapProposal = {
     schemaVersion: COACH_AI_SCHEMA_VERSIONS.create_roadmap,
     title: value.title,
-    summary: value.summary,
+    ...(value.summary === undefined ? {} : { summary: value.summary }),
     startDate: value.startDate,
     endDate: value.endDate,
     phases,
@@ -817,7 +809,8 @@ function validatePhase(
     }
     if (
       !isBounded(milestone.title, 1, 80) ||
-      !isBounded(milestone.observableCriterion, 1, 200) ||
+      // "Details", optional since 14 October 2026 (owner).
+      !isOptionalBounded(milestone.observableCriterion, 1, 200) ||
       !Array.isArray(milestone.goalIds)
     ) {
       return rejected("schema");
@@ -845,7 +838,9 @@ function validatePhase(
 
     milestones.push({
       title: milestone.title,
-      observableCriterion: milestone.observableCriterion,
+      ...(milestone.observableCriterion === undefined
+        ? {}
+        : { observableCriterion: milestone.observableCriterion }),
       targetDate: milestone.targetDate as string,
       goalIds: [...(milestone.goalIds as string[])],
     });
@@ -1276,13 +1271,13 @@ function validatePlanAlternatives(
 function collectRoadmapStrings(roadmap: RoadmapProposal): string[] {
   return [
     roadmap.title,
-    roadmap.summary,
+    roadmap.summary ?? "",
     ...roadmap.phases.flatMap((phase) => [
       phase.title,
       phase.focus,
       ...phase.milestones.flatMap((milestone) => [
         milestone.title,
-        milestone.observableCriterion,
+        milestone.observableCriterion ?? "",
       ]),
     ]),
   ];
@@ -1340,6 +1335,15 @@ function isBounded(value: unknown, min: number, max: number): value is string {
   return (
     typeof value === "string" && value.length >= min && value.length <= max
   );
+}
+
+/** Absent, or bounded text. A null is not absent: JSON says so on purpose. */
+function isOptionalBounded(
+  value: unknown,
+  min: number,
+  max: number,
+): value is string | undefined {
+  return value === undefined || isBounded(value, min, max);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

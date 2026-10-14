@@ -9,6 +9,7 @@ import {
   RoadmapChangeCompose,
   RoadmapCompose,
   RoadmapScreen,
+  RoadmapWrite,
 } from "@/components/roadmap/roadmap-screen";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import { selectActiveGoalContext } from "@/server/goals/goal-records";
@@ -46,6 +47,7 @@ const SHEET_TITLE_IDS = {
   menu: "roadmap-change-menu-title",
   change: "roadmap-change-title",
   fresh: "roadmap-new-title",
+  write: "roadmap-write-title",
 };
 
 /**
@@ -96,6 +98,9 @@ export default async function RoadmapPage() {
                   state={state}
                   headingId={SHEET_TITLE_IDS.fresh}
                 />
+              }
+              write={
+                <RoadmapWrite state={state} headingId={SHEET_TITLE_IDS.write} />
               }
               // The same rule `RoadmapCompose` picks its form by.
               freshAsksAgain={

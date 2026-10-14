@@ -865,3 +865,9 @@
   padding-left: 0.8rem;
   border-left: 2px solid var(--fern);
 }
+
+/* "Write it yourself" under the coach's form, while there is no roadmap. */
+.writeOffer {
+  display: flex;
+  justify-content: center;
+}

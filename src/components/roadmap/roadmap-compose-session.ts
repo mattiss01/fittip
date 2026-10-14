@@ -17,6 +17,11 @@ import { createContext, type RefObject } from "react";
 export type RoadmapComposeSession = {
   idempotencyKey: RefObject<string | null>;
   setPending: (pending: boolean) => void;
+  /**
+   * Closes the sheet. A roadmap written by hand calls it once it is in force:
+   * the sheet is still mounted then, where a generation that lands unmounts it.
+   */
+  close: () => void;
 };
 
 export const RoadmapComposeSessionContext =
