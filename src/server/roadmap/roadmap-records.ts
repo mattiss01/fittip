@@ -443,9 +443,6 @@ export const ROADMAP_COPY = {
     // the owner asked for none on a roadmap they wrote (ADR-029).
     owner_written: "Your roadmap",
   } satisfies Record<RoadmapProposalOrigin, string>,
-  emptyRoadmapTitle: "No roadmap yet",
-  emptyRoadmapBody:
-    "A roadmap is months of direction rather than a week of sessions. Once you have one it is what this page shows.",
   /** The open proposal, shown in full above the roadmap it would replace. */
   openProposalHeading: "A proposal is waiting",
   openProposalSupport:

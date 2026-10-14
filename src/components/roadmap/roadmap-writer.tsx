@@ -11,7 +11,10 @@ import {
   useRoadmapWrite,
 } from "./use-roadmap-write";
 
-import { writeRoadmapAction } from "@/app/home/plan/roadmap/actions";
+import {
+  editRoadmapAction,
+  writeRoadmapAction,
+} from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import {
   COACH_START_MAX_DAYS_AHEAD,
@@ -20,28 +23,29 @@ import {
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
 /**
- * A roadmap written by hand (ADR-029), in force on save.
+ * A roadmap in a form: written by hand (ADR-029), or a coach proposal being
+ * edited. One form for both (owner, 14 Oct 2026), so an edit looks like
+ * writing and shows nothing beside it.
  *
- * The form always starts empty (owner, 13 Oct 2026): a title, the dates, and
- * one phase with nothing in it. What counts as a roadmap is a title, the
- * dates, and one phase with a title, what it is for and one goal; a summary
- * and milestones are optional, and a milestone's details are too.
+ * Written by hand, it starts empty (owner, 13 Oct 2026) and is in force on
+ * save. Edited, it opens on the proposal, its two dates fixed because they
+ * belong to the request, and saving makes a new proposal to review.
  *
- * A phase's start is shown, never typed. The first starts with the roadmap,
- * each next one the day after the one before it ends, and the last ends with
- * the roadmap, so a gap or an overlap cannot be entered at all. What the form
- * cannot stop, a goal left out or a date outside its phase, the server's
- * validator refuses in words of its own, as it refuses the coach's.
+ * Every phase has its own end, typed in any order. A phase's start is shown,
+ * not typed: the roadmap's for the first, the day after the one before ends
+ * for each next one. Whether the ends add up — each after its start, none past
+ * the roadmap, the last on the roadmap's own end — is checked when the owner
+ * saves (owner, 14 Oct 2026), and the first thing that does not is said in
+ * words naming the phase. The server's validator checks it all again.
+ *
+ * Goals are chips, with no level (owner, 14 Oct 2026). A goal added here is
+ * saved as primary; one the coach gave a level keeps it through an edit. A
+ * milestone's goals are chips too, "Counts toward", and may be none.
  *
  * Every block is keyed by an id minted when it is added, so typing a date
- * never rebuilds the block it is in.
- *
- * The draft travels as one JSON field, the encoding an edit uses too, so the
- * server never reassembles a nested shape from flattened field names.
+ * never rebuilds the block it is in. The draft travels as one JSON field, the
+ * encoding an edit has always used.
  */
-
-const LEVELS = ["primary", "secondary", "maintenance", "deferred"] as const;
-type Level = (typeof LEVELS)[number];
 
 /** The version a roadmap is written as; the server refuses any other. */
 const ROADMAP_SCHEMA_VERSION = "fittip.roadmap.v4";
@@ -53,8 +57,9 @@ const MIN_DAYS = 28;
 const MAX_DAYS = 365;
 
 const LABELS = ROADMAP_CONTROL_COPY.writeFieldLabels;
+const CHECKS = ROADMAP_CONTROL_COPY.writeChecks;
 
-type Attention = { key: string; goalId: string; level: Level };
+type Level = "primary" | "secondary" | "maintenance" | "deferred";
 type Milestone = {
   key: string;
   title: string;
@@ -66,12 +71,12 @@ type Phase = {
   key: string;
   title: string;
   focus: string;
-  /** Unused on the last phase, which ends with the roadmap. */
   endDate: string;
-  goalAttention: Attention[];
+  /** The phase's goals in order, each with the level it is saved with. */
+  goals: { goalId: string; level: Level }[];
   milestones: Milestone[];
 };
-type Draft = {
+export type WriterDraft = {
   title: string;
   summary: string;
   startDate: string;
@@ -81,12 +86,33 @@ type Draft = {
 
 export type RoadmapWriterGoal = { id: string; title: string };
 
+/** What an edit opens on: a stored roadmap, which may lack the optional. */
+type StoredRoadmap = {
+  title: string;
+  summary?: string;
+  startDate: string;
+  endDate: string;
+  phases: {
+    title: string;
+    focus: string;
+    endDate: string;
+    goalAttention: { goalId: string; level: string }[];
+    milestones: {
+      title: string;
+      observableCriterion?: string;
+      targetDate: string;
+      goalIds: string[];
+    }[];
+  }[];
+};
+
 export function RoadmapWriter({
   today,
   goals,
   expectedHeadRevision,
   replaces,
   headingId,
+  edit,
 }: {
   today: string;
   /** The owner's active goals, the only ones a phase may be for. */
@@ -96,38 +122,53 @@ export function RoadmapWriter({
   /** Whether a roadmap is in force, which this one would replace. */
   replaces: boolean;
   headingId?: string;
+  /** Present when a coach proposal is being edited rather than written. */
+  edit?: {
+    proposalId: string;
+    content: unknown;
+    onCancel: () => void;
+    onSaved: () => void;
+  };
 }) {
-  const { state, submit, pending, lostRender } =
-    useRoadmapWrite(writeRoadmapAction);
+  const { state, submit, pending, lostRender } = useRoadmapWrite(
+    edit === undefined ? writeRoadmapAction : editRoadmapAction,
+  );
   const recovered = useRoadmapRecovered(state.submission === 0);
   const fieldId = useId();
 
   // In the sheet: held open while the save is under way, and closed once it
-  // has landed, because the sheet outlives a write that leaves a roadmap in
-  // force before and after.
+  // has landed. An edit tells the dock instead, which shows the new proposal.
   const session = useContext(RoadmapComposeSessionContext);
   const reportPending = session?.setPending;
   const close = session?.close;
+  const onSaved = edit?.onSaved;
   useEffect(() => {
     reportPending?.(pending);
     return () => reportPending?.(false);
   }, [reportPending, pending]);
   useEffect(() => {
     if (state.status === "written") close?.();
-  }, [close, state.status]);
+    if (state.status === "edited") onSaved?.();
+  }, [close, onSaved, state.status]);
 
   const nextKey = useRef(0);
   const mint = () => `k${(nextKey.current += 1)}`;
 
-  const [draft, setDraft] = useState<Draft>(() => ({
-    title: "",
-    summary: "",
-    startDate: today,
-    endDate: "",
-    phases: [emptyPhase("k0")],
-  }));
+  const [draft, setDraft] = useState<WriterDraft>(() =>
+    edit === undefined
+      ? {
+          title: "",
+          summary: "",
+          startDate: today,
+          endDate: "",
+          phases: [emptyPhase("k0")],
+        }
+      : fromStored(edit.content as StoredRoadmap),
+  );
+  // What the last attempt to save found wrong, before anything was sent.
+  const [problem, setProblem] = useState("");
 
-  const update = (mutate: (next: Draft) => void) => {
+  const update = (mutate: (next: WriterDraft) => void) => {
     setDraft((current) => {
       const next = structuredClone(current);
       mutate(next);
@@ -135,11 +176,16 @@ export function RoadmapWriter({
     });
   };
 
+  const heading =
+    edit === undefined
+      ? ROADMAP_CONTROL_COPY.writeTitle
+      : ROADMAP_CONTROL_COPY.editTitle;
+
   if (goals.length === 0) {
     return (
       <section className={styles.card} data-roadmap-write>
         <h2 className={styles.cardHeading} id={headingId}>
-          {ROADMAP_CONTROL_COPY.writeTitle}
+          {heading}
         </h2>
         <p className={styles.emptyState}>{ROADMAP_CONTROL_COPY.writeNoGoals}</p>
       </section>
@@ -149,31 +195,50 @@ export function RoadmapWriter({
   const goalTitles = new Map(goals.map((goal) => [goal.id, goal.title]));
   const starts = phaseStarts(draft);
   const latestStart = shiftIsoDate(today, COACH_START_MAX_DAYS_AHEAD);
+  const datesFixed = edit !== undefined;
+  const message =
+    problem !== "" ? problem : isRefusal(state) ? state.message : "";
 
   return (
-    <section className={styles.card} data-roadmap-write>
+    // An edit sits in the proposal's own card, so it draws none of its own.
+    <section
+      className={edit === undefined ? styles.card : undefined}
+      data-roadmap-write={edit === undefined ? "write" : "edit"}
+    >
       <h2 className={styles.cardHeading} id={headingId}>
-        {ROADMAP_CONTROL_COPY.writeTitle}
+        {heading}
       </h2>
 
       <RoadmapWatchNotice lostRender={lostRender} recovered={recovered} />
 
-      {isRefusal(state) ? (
+      {message === "" ? null : (
         <p
           className={styles.notice}
-          data-roadmap-notice={state.status}
-          role="status"
+          data-roadmap-notice={problem !== "" ? "validation" : state.status}
+          role="alert"
         >
-          {state.message}
+          {message}
         </p>
-      ) : null}
+      )}
 
-      <form action={submit} className={styles.form}>
-        <input
-          type="hidden"
-          name="expectedHeadRevision"
-          value={expectedHeadRevision}
-        />
+      <form
+        action={submit}
+        className={styles.form}
+        onSubmit={(event) => {
+          const found = checkDraft(draft, starts);
+          setProblem(found ?? "");
+          if (found !== null) event.preventDefault();
+        }}
+      >
+        {edit === undefined ? (
+          <input
+            type="hidden"
+            name="expectedHeadRevision"
+            value={expectedHeadRevision}
+          />
+        ) : (
+          <input type="hidden" name="proposalId" value={edit.proposalId} />
+        )}
         <input
           type="hidden"
           name="content"
@@ -198,52 +263,56 @@ export function RoadmapWriter({
           />
         </div>
 
-        <div className={styles.field}>
-          <div className={styles.dateRow}>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor={`${fieldId}-start`}>
-                {ROADMAP_CONTROL_COPY.startDateLabel}
-              </label>
-              <input
-                className={styles.input}
-                id={`${fieldId}-start`}
-                type="date"
-                value={draft.startDate}
-                min={today}
-                max={latestStart}
-                required
-                onChange={(event) =>
-                  update((next) => {
-                    next.startDate = event.target.value;
-                  })
-                }
-              />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor={`${fieldId}-end`}>
-                {ROADMAP_CONTROL_COPY.endDateLabel}
-              </label>
-              <input
-                className={styles.input}
-                id={`${fieldId}-end`}
-                type="date"
-                value={draft.endDate}
-                {...(isDate(draft.startDate)
-                  ? {
-                      min: shiftIsoDate(draft.startDate, MIN_DAYS),
-                      max: shiftIsoDate(draft.startDate, MAX_DAYS),
-                    }
-                  : {})}
-                required
-                onChange={(event) =>
-                  update((next) => {
-                    next.endDate = event.target.value;
-                  })
-                }
-              />
-            </div>
+        <div className={styles.dateRow}>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor={`${fieldId}-start`}>
+              {ROADMAP_CONTROL_COPY.startDateLabel}
+            </label>
+            <input
+              className={styles.input}
+              id={`${fieldId}-start`}
+              type="date"
+              value={draft.startDate}
+              readOnly={datesFixed}
+              {...(datesFixed ? {} : { min: today, max: latestStart })}
+              required
+              onChange={(event) => {
+                if (datesFixed) return;
+                update((next) => {
+                  next.startDate = event.target.value;
+                });
+              }}
+            />
+          </div>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor={`${fieldId}-end`}>
+              {ROADMAP_CONTROL_COPY.endDateLabel}
+            </label>
+            <input
+              className={styles.input}
+              id={`${fieldId}-end`}
+              type="date"
+              value={draft.endDate}
+              readOnly={datesFixed}
+              {...(!datesFixed && isDate(draft.startDate)
+                ? {
+                    min: shiftIsoDate(draft.startDate, MIN_DAYS),
+                    max: shiftIsoDate(draft.startDate, MAX_DAYS),
+                  }
+                : {})}
+              required
+              onChange={(event) => {
+                if (datesFixed) return;
+                update((next) => {
+                  next.endDate = event.target.value;
+                });
+              }}
+            />
           </div>
         </div>
+        {datesFixed ? (
+          <p className={styles.helper}>{ROADMAP_CONTROL_COPY.editDatesFixed}</p>
+        ) : null}
 
         <div className={styles.field}>
           <label className={styles.label} htmlFor={`${fieldId}-summary`}>
@@ -264,14 +333,9 @@ export function RoadmapWriter({
         </div>
 
         {draft.phases.map((phase, phaseIndex) => {
-          const isLast = phaseIndex === draft.phases.length - 1;
           const start = starts[phaseIndex] ?? "";
-          const end = isLast ? draft.endDate : phase.endDate;
-          const unusedGoals = goals.filter(
-            (goal) =>
-              !phase.goalAttention.some((entry) => entry.goalId === goal.id),
-          );
           const id = `${fieldId}-${phase.key}`;
+          const chosen = new Set(phase.goals.map((goal) => goal.goalId));
 
           return (
             <fieldset
@@ -282,11 +346,6 @@ export function RoadmapWriter({
               <legend className={styles.editLegend}>
                 {LABELS.phase(phaseIndex + 1)}
               </legend>
-              {isDate(start) ? (
-                <p className={styles.helper}>
-                  {LABELS.phaseStarts(formatRoadmapDate(start))}
-                </p>
-              ) : null}
 
               <div className={styles.field}>
                 <label className={styles.label} htmlFor={`${id}-title`}>
@@ -323,15 +382,23 @@ export function RoadmapWriter({
                   }
                 />
               </div>
-              {isLast ? (
-                isDate(draft.endDate) ? (
-                  <p className={styles.helper}>
-                    {LABELS.phaseEndsWithRoadmap(
-                      formatRoadmapDate(draft.endDate),
-                    )}
-                  </p>
-                ) : null
-              ) : (
+
+              <div className={styles.dateRow}>
+                <div className={styles.field}>
+                  <label className={styles.label} htmlFor={`${id}-start`}>
+                    {LABELS.phaseStart}
+                  </label>
+                  {/* Shown, not chosen: it follows from the phase before. */}
+                  <input
+                    className={styles.input}
+                    id={`${id}-start`}
+                    type="date"
+                    value={start}
+                    readOnly
+                    tabIndex={-1}
+                    aria-describedby={`${id}-start-help`}
+                  />
+                </div>
                 <div className={styles.field}>
                   <label className={styles.label} htmlFor={`${id}-end`}>
                     {LABELS.phaseEnd}
@@ -341,8 +408,6 @@ export function RoadmapWriter({
                     id={`${id}-end`}
                     type="date"
                     value={phase.endDate}
-                    {...(isDate(start) ? { min: start } : {})}
-                    {...(isDate(draft.endDate) ? { max: draft.endDate } : {})}
                     required
                     onChange={(event) =>
                       update((next) => {
@@ -351,123 +416,64 @@ export function RoadmapWriter({
                     }
                   />
                 </div>
-              )}
+              </div>
+              <p className={styles.helper} id={`${id}-start-help`}>
+                {phaseIndex === 0
+                  ? LABELS.phaseStartsWithRoadmap
+                  : LABELS.phaseStartsAfter(phaseIndex)}
+              </p>
 
-              {phase.goalAttention.map((attention, attentionIndex) => (
-                <div className={styles.editRow} key={attention.key}>
-                  <div className={styles.dateRow}>
-                    <div className={styles.field}>
-                      <label
-                        className={styles.label}
-                        htmlFor={`${id}-${attention.key}-goal`}
-                      >
-                        {LABELS.goal}
-                      </label>
-                      <select
-                        className={styles.input}
-                        id={`${id}-${attention.key}-goal`}
-                        value={attention.goalId}
-                        onChange={(event) =>
+              <fieldset className={styles.chipField}>
+                <legend className={styles.label}>{LABELS.goals}</legend>
+                <div className={styles.chips}>
+                  {goals.map((goal) => {
+                    const on = chosen.has(goal.id);
+                    return (
+                      <button
+                        key={goal.id}
+                        type="button"
+                        className={styles.chip}
+                        aria-pressed={on}
+                        disabled={
+                          !on && phase.goals.length >= MAX_GOALS_PER_PHASE
+                        }
+                        onClick={() =>
                           update((next) => {
                             const target = next.phases[phaseIndex]!;
-                            const previous =
-                              target.goalAttention[attentionIndex]!.goalId;
-                            const chosen = event.target.value;
-                            target.goalAttention[attentionIndex]!.goalId =
-                              chosen;
-                            // A milestone for the goal this row named is for
-                            // the goal it names now: a milestone is for goals
-                            // of its own phase.
-                            for (const milestone of target.milestones) {
-                              milestone.goalIds = milestone.goalIds.map(
-                                (goalId) =>
-                                  goalId === previous ? chosen : goalId,
+                            if (on) {
+                              target.goals = target.goals.filter(
+                                (entry) => entry.goalId !== goal.id,
                               );
+                              // A milestone counts toward goals of its phase.
+                              for (const milestone of target.milestones) {
+                                milestone.goalIds = milestone.goalIds.filter(
+                                  (goalId) => goalId !== goal.id,
+                                );
+                              }
+                            } else {
+                              target.goals.push({
+                                goalId: goal.id,
+                                level: "primary",
+                              });
                             }
                           })
                         }
                       >
-                        {[
-                          { id: attention.goalId, title: "" },
-                          ...unusedGoals,
-                        ].map((goal) => (
-                          <option key={goal.id} value={goal.id}>
-                            {goalTitles.get(goal.id) ?? goal.title}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className={styles.field}>
-                      <label
-                        className={styles.label}
-                        htmlFor={`${id}-${attention.key}-level`}
-                      >
-                        {LABELS.level}
-                      </label>
-                      <select
-                        className={styles.input}
-                        id={`${id}-${attention.key}-level`}
-                        value={attention.level}
-                        onChange={(event) =>
-                          update((next) => {
-                            next.phases[phaseIndex]!.goalAttention[
-                              attentionIndex
-                            ]!.level = event.target.value as Level;
-                          })
-                        }
-                      >
-                        {LEVELS.map((level) => (
-                          <option key={level} value={level}>
-                            {ROADMAP_CONTROL_COPY.levelLabels[level]}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <button
-                    className={styles.quietAction}
-                    type="button"
-                    onClick={() =>
-                      update((next) => {
-                        const target = next.phases[phaseIndex]!;
-                        target.goalAttention.splice(attentionIndex, 1);
-                        // A milestone is for goals of its own phase.
-                        for (const milestone of target.milestones) {
-                          milestone.goalIds = milestone.goalIds.filter(
-                            (goalId) => goalId !== attention.goalId,
-                          );
-                        }
-                      })
-                    }
-                  >
-                    {LABELS.removeGoal}
-                  </button>
+                        {goal.title}
+                      </button>
+                    );
+                  })}
                 </div>
-              ))}
-              {unusedGoals.length > 0 &&
-              phase.goalAttention.length < MAX_GOALS_PER_PHASE ? (
-                <button
-                  className={styles.quietAction}
-                  type="button"
-                  onClick={() =>
-                    update((next) => {
-                      next.phases[phaseIndex]!.goalAttention.push({
-                        key: mint(),
-                        goalId: unusedGoals[0]!.id,
-                        level: "primary",
-                      });
-                    })
-                  }
-                >
-                  {LABELS.addGoal}
-                </button>
-              ) : null}
+              </fieldset>
 
               {phase.milestones.map((milestone, milestoneIndex) => {
                 const mid = `${id}-${milestone.key}`;
                 return (
-                  <fieldset className={styles.editRow} key={milestone.key}>
-                    <legend className={styles.label}>
+                  <fieldset
+                    className={styles.milestoneEdit}
+                    key={milestone.key}
+                  >
+                    <legend className={styles.editLegend}>
                       {LABELS.milestone(milestoneIndex + 1)}
                     </legend>
                     <div className={styles.field}>
@@ -498,8 +504,6 @@ export function RoadmapWriter({
                         id={`${mid}-date`}
                         type="date"
                         value={milestone.targetDate}
-                        {...(isDate(start) ? { min: start } : {})}
-                        {...(isDate(end) ? { max: end } : {})}
                         required
                         onChange={(event) =>
                           update((next) => {
@@ -510,35 +514,39 @@ export function RoadmapWriter({
                         }
                       />
                     </div>
-                    {phase.goalAttention.length === 0 ? null : (
-                      <fieldset className={styles.field}>
+                    {phase.goals.length === 0 ? null : (
+                      <fieldset className={styles.chipField}>
                         <legend className={styles.label}>
                           {LABELS.milestoneGoals}
                         </legend>
-                        {phase.goalAttention.map((attention) => (
-                          <label key={attention.key}>
-                            <input
-                              type="checkbox"
-                              checked={milestone.goalIds.includes(
-                                attention.goalId,
-                              )}
-                              onChange={(event) =>
-                                update((next) => {
-                                  const target =
-                                    next.phases[phaseIndex]!.milestones[
-                                      milestoneIndex
-                                    ]!;
-                                  target.goalIds = event.target.checked
-                                    ? [...target.goalIds, attention.goalId]
-                                    : target.goalIds.filter(
-                                        (goalId) => goalId !== attention.goalId,
-                                      );
-                                })
-                              }
-                            />{" "}
-                            {goalTitles.get(attention.goalId) ?? ""}
-                          </label>
-                        ))}
+                        <div className={styles.chips}>
+                          {phase.goals.map(({ goalId }) => {
+                            const on = milestone.goalIds.includes(goalId);
+                            return (
+                              <button
+                                key={goalId}
+                                type="button"
+                                className={styles.chip}
+                                aria-pressed={on}
+                                onClick={() =>
+                                  update((next) => {
+                                    const target =
+                                      next.phases[phaseIndex]!.milestones[
+                                        milestoneIndex
+                                      ]!;
+                                    target.goalIds = on
+                                      ? target.goalIds.filter(
+                                          (entry) => entry !== goalId,
+                                        )
+                                      : [...target.goalIds, goalId];
+                                  })
+                                }
+                              >
+                                {goalTitles.get(goalId) ?? ""}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </fieldset>
                     )}
                     <div className={styles.field}>
@@ -563,7 +571,7 @@ export function RoadmapWriter({
                       />
                     </div>
                     <button
-                      className={styles.quietAction}
+                      className={styles.linkAction}
                       type="button"
                       onClick={() =>
                         update((next) => {
@@ -579,44 +587,41 @@ export function RoadmapWriter({
                   </fieldset>
                 );
               })}
-              {phase.milestones.length < MAX_MILESTONES_PER_PHASE ? (
-                <button
-                  className={styles.quietAction}
-                  type="button"
-                  onClick={() =>
-                    update((next) => {
-                      const target = next.phases[phaseIndex]!;
-                      target.milestones.push({
-                        key: mint(),
-                        title: "",
-                        targetDate: "",
-                        // A phase for one goal has a milestone for that goal.
-                        goalIds:
-                          target.goalAttention.length === 1
-                            ? [target.goalAttention[0]!.goalId]
-                            : [],
-                        details: "",
-                      });
-                    })
-                  }
-                >
-                  {LABELS.addMilestone}
-                </button>
-              ) : null}
 
-              {draft.phases.length > 1 ? (
-                <button
-                  className={styles.quietAction}
-                  type="button"
-                  onClick={() =>
-                    update((next) => {
-                      next.phases.splice(phaseIndex, 1);
-                    })
-                  }
-                >
-                  {LABELS.removePhase}
-                </button>
-              ) : null}
+              <div className={styles.inlineActions}>
+                {phase.milestones.length < MAX_MILESTONES_PER_PHASE ? (
+                  <button
+                    className={styles.linkAction}
+                    type="button"
+                    onClick={() =>
+                      update((next) => {
+                        next.phases[phaseIndex]!.milestones.push({
+                          key: mint(),
+                          title: "",
+                          targetDate: "",
+                          goalIds: [],
+                          details: "",
+                        });
+                      })
+                    }
+                  >
+                    {LABELS.addMilestone}
+                  </button>
+                ) : null}
+                {draft.phases.length > 1 ? (
+                  <button
+                    className={styles.linkAction}
+                    type="button"
+                    onClick={() =>
+                      update((next) => {
+                        next.phases.splice(phaseIndex, 1);
+                      })
+                    }
+                  >
+                    {LABELS.removePhase}
+                  </button>
+                ) : null}
+              </div>
             </fieldset>
           );
         })}
@@ -641,13 +646,31 @@ export function RoadmapWriter({
             type="submit"
             disabled={pending}
           >
-            {ROADMAP_CONTROL_COPY.writeSaveAction}
+            {edit === undefined
+              ? ROADMAP_CONTROL_COPY.writeSaveAction
+              : ROADMAP_CONTROL_COPY.editSaveAction}
           </button>
-          <p className={styles.helper}>
-            {replaces
-              ? ROADMAP_CONTROL_COPY.writeSupportReplaces
-              : ROADMAP_CONTROL_COPY.writeSupport}
-          </p>
+          {edit === undefined ? (
+            <p className={styles.helper}>
+              {replaces
+                ? ROADMAP_CONTROL_COPY.writeSupportReplaces
+                : ROADMAP_CONTROL_COPY.writeSupport}
+            </p>
+          ) : (
+            <>
+              <button
+                className={styles.quietAction}
+                type="button"
+                onClick={edit.onCancel}
+                disabled={pending}
+              >
+                {ROADMAP_CONTROL_COPY.editCancelAction}
+              </button>
+              <p className={styles.helper}>
+                {ROADMAP_CONTROL_COPY.editSupport}
+              </p>
+            </>
+          )}
         </div>
       </form>
     </section>
@@ -660,8 +683,49 @@ function emptyPhase(key: string): Phase {
     title: "",
     focus: "",
     endDate: "",
-    goalAttention: [],
+    goals: [],
     milestones: [],
+  };
+}
+
+const LEVELS: readonly Level[] = [
+  "primary",
+  "secondary",
+  "maintenance",
+  "deferred",
+];
+
+/**
+ * The draft an edit opens on, copied field by field. Whatever a stored row
+ * holds beyond v4 is left behind, so what is saved is v4 (ADR-027).
+ */
+function fromStored(content: StoredRoadmap): WriterDraft {
+  let key = 0;
+  const mint = () => `s${(key += 1)}`;
+  return {
+    title: content.title,
+    summary: content.summary ?? "",
+    startDate: content.startDate,
+    endDate: content.endDate,
+    phases: content.phases.map((phase) => ({
+      key: mint(),
+      title: phase.title,
+      focus: phase.focus,
+      endDate: phase.endDate,
+      goals: phase.goalAttention.map((attention) => ({
+        goalId: attention.goalId,
+        level: (LEVELS as readonly string[]).includes(attention.level)
+          ? (attention.level as Level)
+          : "primary",
+      })),
+      milestones: phase.milestones.map((milestone) => ({
+        key: mint(),
+        title: milestone.title,
+        targetDate: milestone.targetDate,
+        goalIds: [...milestone.goalIds],
+        details: milestone.observableCriterion ?? "",
+      })),
+    })),
   };
 }
 
@@ -686,11 +750,55 @@ export function phaseStarts(draft: {
 }
 
 /**
- * The roadmap as it is sent: a v4 roadmap with each phase's dates filled in,
- * the last ending with the roadmap, and a blank summary or blank details left
- * out, which is how a roadmap says it has none.
+ * The first thing about the phases and their dates that would stop the save,
+ * in words naming the phase, or null when they add up. Fields the browser
+ * itself requires are left to it.
  */
-function toContent(draft: Draft, starts: string[]) {
+export function checkDraft(
+  draft: WriterDraft,
+  starts: string[] = phaseStarts(draft),
+): string | null {
+  for (const [index, phase] of draft.phases.entries()) {
+    const number = index + 1;
+    const start = starts[index] ?? "";
+    if (!isDate(phase.endDate)) return CHECKS.phaseNoEnd(number);
+    if (isDate(start) && phase.endDate < start) {
+      return CHECKS.phaseEndsBeforeStart(number);
+    }
+    if (isDate(draft.endDate) && phase.endDate > draft.endDate) {
+      return CHECKS.phaseEndsAfterRoadmap(number);
+    }
+    if (phase.goals.length === 0) return CHECKS.phaseNoGoal(number);
+    for (const milestone of phase.milestones) {
+      if (
+        isDate(milestone.targetDate) &&
+        isDate(start) &&
+        (milestone.targetDate < start || milestone.targetDate > phase.endDate)
+      ) {
+        return CHECKS.milestoneOutsidePhase(number);
+      }
+    }
+  }
+  const last = draft.phases.at(-1);
+  if (
+    last !== undefined &&
+    isDate(draft.endDate) &&
+    last.endDate !== draft.endDate
+  ) {
+    return CHECKS.lastPhaseEnd(
+      draft.phases.length,
+      formatRoadmapDate(draft.endDate),
+    );
+  }
+  return null;
+}
+
+/**
+ * The roadmap as it is sent: a v4 roadmap with each phase's start filled in,
+ * and a blank summary or blank details left out, which is how a roadmap says
+ * it has none.
+ */
+function toContent(draft: WriterDraft, starts: string[]) {
   return {
     schemaVersion: ROADMAP_SCHEMA_VERSION,
     title: draft.title,
@@ -701,11 +809,10 @@ function toContent(draft: Draft, starts: string[]) {
       title: phase.title,
       focus: phase.focus,
       startDate: starts[index] ?? "",
-      endDate:
-        index === draft.phases.length - 1 ? draft.endDate : phase.endDate,
-      goalAttention: phase.goalAttention.map((attention) => ({
-        goalId: attention.goalId,
-        level: attention.level,
+      endDate: phase.endDate,
+      goalAttention: phase.goals.map((goal) => ({
+        goalId: goal.goalId,
+        level: goal.level,
       })),
       milestones: phase.milestones.map((milestone) => ({
         title: milestone.title,

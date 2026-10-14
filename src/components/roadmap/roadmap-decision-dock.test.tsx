@@ -28,6 +28,7 @@ import type { RoadmapProposalView } from "@/server/roadmap/roadmap-records";
 const CONFLICT = "Your training history changed. Review the proposal again.";
 const FIRST = "7e150000-0000-4000-8000-000000000020";
 const SECOND = "7e150000-0000-4000-8000-000000000021";
+const GOAL = "7e150000-0000-4000-8000-000000000030";
 
 vi.mock("@/app/home/plan/roadmap/actions", () => ({
   acceptRoadmapAction: (previous: RoadmapActionState) =>
@@ -42,6 +43,8 @@ vi.mock("@/app/home/plan/roadmap/actions", () => ({
       message: "Declined.",
       submission: previous.submission + 1,
     }),
+  askAgainRoadmapAction: vi.fn(),
+  writeRoadmapAction: vi.fn(),
   editRoadmapAction: (previous: RoadmapActionState) =>
     Promise.resolve({
       status: "edited" as const,
@@ -80,6 +83,70 @@ describe("RoadmapDecisionDock", () => {
   });
 });
 
+describe("what the dock shows (owner, 14 Oct 2026)", () => {
+  afterEach(cleanup);
+
+  it("shows the form and nothing of the proposal while it is edited", () => {
+    render(review(FIRST));
+    expect(screen.getByText("Base and build.")).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: ROADMAP_CONTROL_COPY.editAction }),
+    );
+
+    expect(
+      screen.getByRole("heading", { name: ROADMAP_CONTROL_COPY.editTitle }),
+    ).toBeTruthy();
+    expect(screen.queryByText("A proposal is waiting")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: ROADMAP_CONTROL_COPY.acceptAction }),
+    ).toBeNull();
+    // The form opens on the proposal, its dates fixed.
+    expect(
+      (screen.getAllByLabelText("Title")[0] as HTMLInputElement).value,
+    ).toBe("Base and build.");
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: ROADMAP_CONTROL_COPY.editCancelAction,
+      }),
+    );
+    expect(screen.getByText("Base and build.")).toBeTruthy();
+  });
+
+  it("asks what should change only after Ask for another is pressed", () => {
+    render(review(FIRST));
+    expect(
+      screen.queryByLabelText(ROADMAP_CONTROL_COPY.askAgainLabel),
+    ).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: ROADMAP_CONTROL_COPY.askAgainAction }),
+    );
+
+    expect(
+      screen.getByLabelText(ROADMAP_CONTROL_COPY.askAgainLabel),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: ROADMAP_CONTROL_COPY.askAgainConfirm,
+      }),
+    ).toBeTruthy();
+    // The proposal stays readable above it.
+    expect(screen.getByText("Base and build.")).toBeTruthy();
+  });
+
+  it("offers no Ask for another once the asks on these dates are used", () => {
+    render(review(FIRST, 3, 0));
+
+    expect(
+      screen.queryByRole("button", {
+        name: ROADMAP_CONTROL_COPY.askAgainAction,
+      }),
+    ).toBeNull();
+  });
+});
+
 async function refuseAccept() {
   await act(async () => {
     fireEvent.click(
@@ -88,12 +155,18 @@ async function refuseAccept() {
   });
 }
 
-function review(id: string, expectedHeadRevision = 3) {
+function review(
+  id: string,
+  expectedHeadRevision = 3,
+  regenerationsRemaining = 3,
+) {
   return (
     <RoadmapProposalReview
       proposal={proposal(id)}
       expectedHeadRevision={expectedHeadRevision}
-      goalTitles={{}}
+      goalTitles={{ [GOAL]: "Half marathon" }}
+      today="2026-09-14"
+      regenerationsRemaining={regenerationsRemaining}
     />
   );
 }
@@ -110,7 +183,16 @@ function proposal(id: string): RoadmapProposalView {
       summary: "Twelve weeks of aerobic work before any sharpening.",
       startDate: "2026-09-14",
       endDate: "2026-12-06",
-      phases: [],
+      phases: [
+        {
+          title: "Aerobic base",
+          focus: "Easy volume.",
+          startDate: "2026-09-14",
+          endDate: "2026-12-06",
+          goalAttention: [{ goalId: GOAL, level: "primary" }],
+          milestones: [],
+        },
+      ],
       assumptions: [],
       uncertainties: [],
       reviewPoints: [],

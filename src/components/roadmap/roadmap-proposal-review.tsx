@@ -29,10 +29,14 @@ export function RoadmapProposalReview({
   proposal,
   expectedHeadRevision,
   goalTitles,
+  today,
+  regenerationsRemaining,
 }: {
   proposal: RoadmapProposalView;
   expectedHeadRevision: number;
   goalTitles: Record<string, string>;
+  today: string;
+  regenerationsRemaining: number;
 }) {
   // A generation request is what carries the horizon the owner asked for. If
   // that row is unreadable the view reports empty strings rather than a wrong
@@ -42,30 +46,6 @@ export function RoadmapProposalReview({
 
   return (
     <section className={styles.card} data-roadmap-open-proposal={proposal.id}>
-      <p className={styles.state} data-state="open">
-        <CoachSpark size={14} />
-        {ROADMAP_COPY.proposalStateLabels.open}
-      </p>
-      <h2 className={styles.cardHeading}>{ROADMAP_COPY.openProposalHeading}</h2>
-      <p className={styles.emptyState}>{ROADMAP_COPY.openProposalSupport}</p>
-
-      {isExampleAuthored(proposal.providerCode) ? (
-        <p className={styles.recordNote} data-roadmap-example-notice>
-          {ROADMAP_COPY.exampleNotice}
-        </p>
-      ) : null}
-
-      <article>
-        <RoadmapBody
-          content={proposal.content}
-          startDate={startDate}
-          endDate={endDate}
-          note={ROADMAP_COPY.proposalOriginLabels[proposal.origin]}
-          providerCode={proposal.providerCode}
-          goalTitles={goalTitles}
-        />
-      </article>
-
       {/* Keyed by the proposal, because the dock's state is about one proposal
           and nothing in it should outlive the proposal it described. An edit
           replaces the open proposal at this exact position, and without the key
@@ -80,7 +60,37 @@ export function RoadmapProposalReview({
         content={proposal.content}
         expectedHeadRevision={expectedHeadRevision}
         goalTitles={goalTitles}
-      />
+        today={today}
+        regenerationsRemaining={regenerationsRemaining}
+      >
+        {/* Server-rendered, and handed to the dock so that editing can put
+            the form in its place, heading and all (owner, 14 Oct 2026). */}
+        <p className={styles.state} data-state="open">
+          <CoachSpark size={14} />
+          {ROADMAP_COPY.proposalStateLabels.open}
+        </p>
+        <h2 className={styles.cardHeading}>
+          {ROADMAP_COPY.openProposalHeading}
+        </h2>
+        <p className={styles.emptyState}>{ROADMAP_COPY.openProposalSupport}</p>
+
+        {isExampleAuthored(proposal.providerCode) ? (
+          <p className={styles.recordNote} data-roadmap-example-notice>
+            {ROADMAP_COPY.exampleNotice}
+          </p>
+        ) : null}
+
+        <article>
+          <RoadmapBody
+            content={proposal.content}
+            startDate={startDate}
+            endDate={endDate}
+            note={ROADMAP_COPY.proposalOriginLabels[proposal.origin]}
+            providerCode={proposal.providerCode}
+            goalTitles={goalTitles}
+          />
+        </article>
+      </RoadmapDecisionDock>
     </section>
   );
 }

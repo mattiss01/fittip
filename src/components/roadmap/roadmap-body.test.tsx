@@ -25,7 +25,7 @@ describe("RoadmapBody", () => {
     expect(
       screen.getByText("Easy volume, one longer run a week."),
     ).toBeTruthy();
-    expect(screen.getAllByText("primary · Half marathon")).toHaveLength(2);
+    expect(screen.getAllByText("Half marathon")).toHaveLength(2);
     expect(screen.getByText("Ninety minutes easy")).toBeTruthy();
 
     const reviews = [...container.querySelectorAll("[data-roadmap-review]")];

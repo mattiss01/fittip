@@ -37,6 +37,7 @@ vi.mock("@/app/home/plan/roadmap/actions", () => ({
   declineRoadmapAction: vi.fn(),
   editRoadmapAction: vi.fn(),
   writeRoadmapAction: vi.fn(),
+  askAgainRoadmapAction: vi.fn(),
   setMilestoneReachedAction: vi.fn(),
   setRoadmapReviewedAction: vi.fn(),
 }));
@@ -156,7 +157,7 @@ describe("Roadmap", () => {
       screen.queryByText("Four training days a week stay available."),
     ).toBeNull();
     // The goal is named from the goal read, not from the roadmap body.
-    expect(screen.getByText(/primary · Finish a half marathon/)).toBeTruthy();
+    expect(screen.getByText("Finish a half marathon")).toBeTruthy();
     // Nothing has ended, so nothing asks to be reviewed.
     expect(getReviewedThrough).toHaveBeenCalledWith(version(3).id);
     expect(document.querySelector("[data-roadmap-review-due]")).toBeNull();
@@ -227,20 +228,18 @@ describe("Roadmap", () => {
     ).toBeTruthy();
   });
 
-  it("says so honestly when the owner has no roadmap and no proposal", async () => {
+  it("starts with the coach's form when the owner has no roadmap and no proposal", async () => {
     render(await RoadmapPage());
 
+    // No card saying so (owner, 14 Oct 2026): the form is the page.
+    expect(screen.queryByText("No roadmap yet")).toBeNull();
+    expect(document.querySelector("[data-roadmap-current]")).toBeNull();
     expect(
-      screen.getByRole("heading", { name: "No roadmap yet" }),
+      document.querySelector('[data-roadmap-compose="initial"]'),
     ).toBeTruthy();
-    // The empty state says it once: the header names a version only when
-    // there is one, and is otherwise the page's plain name.
-    expect(screen.getAllByText("No roadmap yet")).toHaveLength(1);
     expect(
       screen.getByRole("heading", { level: 1, name: "Roadmap" }),
     ).toBeTruthy();
-    expect(document.querySelector("[data-roadmap-proposals]")).toBeNull();
-    expect(document.querySelector("[data-roadmap-superseded]")).toBeNull();
   });
 
   // ADR-026. One answer, reached, on the roadmap in force. The fixture's
@@ -508,7 +507,9 @@ describe("Roadmap", () => {
     expect(end.value >= shiftIsoDate(today(), ROADMAP_MIN_DAYS)).toBe(true);
   });
 
-  it("offers a regeneration in the sheet after a decline", async () => {
+  // Owner, 14 Oct 2026: a declined proposal is gone from the page, so the
+  // sheet's second choice is a new roadmap, not another answer to it.
+  it("offers a new roadmap in the sheet after a decline", async () => {
     listVersions.mockResolvedValue([version(1)]);
     const declined = proposal({ decision: "rejected" });
     getReviewProposals.mockResolvedValue({
@@ -518,21 +519,16 @@ describe("Roadmap", () => {
     });
 
     render(await RoadmapPage());
-    fireEvent.click(
-      screen.getByRole("button", { name: ROADMAP_COPY.changeRoadmapAction }),
-    );
-    // The choice is named for what it opens: not a new roadmap.
-    expect(
-      document.querySelector('[data-roadmap-choice="fresh"] strong')
-        ?.textContent,
-    ).toBe(ROADMAP_COPY.askAgainAction);
-    fireEvent.click(
-      document.querySelector('[data-roadmap-choice="fresh"]') as HTMLElement,
-    );
+    openChoice("fresh");
 
+    const sheet = screen.getByRole("dialog", {
+      name: ROADMAP_COPY.composeTitle,
+    });
     expect(
-      screen.getByRole("dialog", { name: ROADMAP_COPY.regenerateTitle }),
-    ).toBeTruthy();
+      sheet
+        .querySelector("[data-roadmap-compose]")
+        ?.getAttribute("data-roadmap-compose"),
+    ).toBe("initial");
   });
 
   // Decide, then ask again: nothing offers a second proposal beside an open one.
@@ -679,7 +675,7 @@ describe("Roadmap", () => {
 
   // Decision 4: a regeneration needs a declined predecessor, the same dates,
   // and feedback. The form offers exactly that and nothing else.
-  it("offers a regeneration against a declined predecessor", async () => {
+  it("asks afresh after a decline, with nothing carried from the declined one", async () => {
     const declined = proposal({ decision: "rejected" });
     getReviewProposals.mockResolvedValue({
       open: null,
@@ -692,63 +688,51 @@ describe("Roadmap", () => {
     const compose = document.querySelector(
       "[data-roadmap-compose]",
     ) as HTMLElement;
-    expect(compose.getAttribute("data-roadmap-compose")).toBe("regeneration");
+    expect(compose.getAttribute("data-roadmap-compose")).toBe("initial");
     expect(
-      within(compose).getByLabelText(ROADMAP_COPY.feedbackLabel),
-    ).toBeTruthy();
+      compose.querySelector('input[name="previousProposalId"]'),
+    ).toBeNull();
     expect(
-      (
-        compose.querySelector(
-          'input[name="previousProposalId"]',
-        ) as HTMLInputElement
-      ).value,
-    ).toBe(FIRST_PROPOSAL);
-    // The horizon is the predecessor's and cannot be moved: the database
-    // refuses a regeneration whose dates changed.
-    // Each date is one field. Fixed, and still sent.
-    const startDate = within(compose).getByLabelText<HTMLInputElement>(
-      ROADMAP_COPY.startDateLabel,
-    );
-    const endDate = within(compose).getByLabelText<HTMLInputElement>(
-      ROADMAP_COPY.endDateLabel,
-    );
-    for (const [field, name, value] of [
-      [startDate, "startDate", "2026-09-14"],
-      [endDate, "endDate", "2026-12-06"],
-    ] as const) {
-      expect(field.type).toBe("date");
-      expect(field.readOnly).toBe(true);
-      expect(field.name).toBe(name);
-      expect(field.value).toBe(value);
-    }
-    expect(
-      within(compose).getByText(ROADMAP_COPY.regenerateDatesFixed),
-    ).toBeTruthy();
+      within(compose).queryByLabelText(ROADMAP_COPY.feedbackLabel),
+    ).toBeNull();
   });
 
-  // The ceiling is a fact about these dates, not a missing control.
-  it("states the regeneration ceiling instead of offering a fourth round", async () => {
-    const declined = {
-      ...proposal({ decision: "rejected" }),
-      regenerationNumber: 3,
-    };
+  // "Ask for another" is on the proposal, where it can be read (owner).
+  it("offers Ask for another on the open proposal", async () => {
+    const open = proposal({ decision: null });
     getReviewProposals.mockResolvedValue({
-      open: null,
-      declinedPredecessor: declined,
-      history: [declined],
+      open,
+      declinedPredecessor: null,
+      history: [open],
     });
 
     render(await RoadmapPage());
 
-    expect(screen.getByText(ROADMAP_COPY.regenerationCapReached)).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("button", { name: ROADMAP_COPY.askAgainAction }),
+    );
+    expect(screen.getByLabelText(ROADMAP_COPY.askAgainLabel)).toBeTruthy();
+  });
+
+  // The ceiling is a fact about these dates, not a missing control.
+  it("offers no fourth ask on a proposal that is the third", async () => {
+    const open = { ...proposal({ decision: null }), regenerationNumber: 3 };
+    getReviewProposals.mockResolvedValue({
+      open,
+      declinedPredecessor: null,
+      history: [open],
+    });
+
+    render(await RoadmapPage());
+
     expect(
-      document.querySelector('[data-roadmap-compose="regeneration"]'),
-    ).toBeNull();
-    // A first request on different dates is still possible, so the compose form
-    // stays.
-    expect(
-      document.querySelector('[data-roadmap-compose="initial"]'),
+      screen.getByRole("button", { name: ROADMAP_COPY.acceptAction }),
     ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: ROADMAP_COPY.askAgainAction }),
+    ).toBeNull();
+    // Said, not just gone.
+    expect(screen.getByText(ROADMAP_COPY.outcomes.askAgainUsedUp)).toBeTruthy();
   });
 
   // An owner edit supersedes its source without deciding it. Only the

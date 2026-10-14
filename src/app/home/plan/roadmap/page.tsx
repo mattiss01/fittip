@@ -102,11 +102,6 @@ export default async function RoadmapPage() {
               write={
                 <RoadmapWrite state={state} headingId={SHEET_TITLE_IDS.write} />
               }
-              // The same rule `RoadmapCompose` picks its form by.
-              freshAsksAgain={
-                state.declinedPredecessor !== null &&
-                state.regenerationsRemaining > 0
-              }
             />
           )
         }

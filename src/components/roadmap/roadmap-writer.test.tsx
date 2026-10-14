@@ -1,16 +1,23 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-// The action is rendered, not run: what it does is `actions.test.ts`'s.
+// The actions are rendered, not run: what they do is `actions.test.ts`'s.
 vi.mock("@/app/home/plan/roadmap/actions", () => ({
   writeRoadmapAction: vi.fn(),
+  editRoadmapAction: vi.fn(),
 }));
 
-import { phaseStarts, RoadmapWriter } from "./roadmap-writer";
+import {
+  checkDraft,
+  phaseStarts,
+  RoadmapWriter,
+  type WriterDraft,
+} from "./roadmap-writer";
 
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
 const LABELS = ROADMAP_CONTROL_COPY.writeFieldLabels;
+const CHECKS = ROADMAP_CONTROL_COPY.writeChecks;
 const TODAY = "2026-10-14";
 const GOALS = [
   { id: "a1000000-0000-4000-8000-000000000001", title: "Half marathon" },
@@ -32,6 +39,11 @@ function renderWriter(goals = GOALS) {
       replaces={false}
     />,
   );
+}
+
+/** The roadmap's own "Ends" comes first, then each phase's. */
+function phaseEnd(phase: number) {
+  return screen.getAllByLabelText(LABELS.phaseEnd)[phase]!;
 }
 
 describe("RoadmapWriter", () => {
@@ -59,21 +71,13 @@ describe("RoadmapWriter", () => {
     expect(screen.getByText(ROADMAP_CONTROL_COPY.writeSupport)).toBeTruthy();
   });
 
-  it("starts each phase the day after the one before it ends, and ends the last with the roadmap", () => {
+  it("takes every phase's end, in any order, and starts each after the one before", () => {
     renderWriter();
-
-    fireEvent.change(
-      screen.getAllByLabelText(ROADMAP_CONTROL_COPY.endDateLabel)[0]!,
-      {
-        target: { value: "2027-01-05" },
-      },
-    );
     fireEvent.click(screen.getByRole("button", { name: LABELS.addPhase }));
-    // Only the first phase asks for its end; the second ends with the roadmap.
-    // The roadmap's end comes first, then the first phase's.
-    fireEvent.change(screen.getAllByLabelText(LABELS.phaseEnd)[1]!, {
-      target: { value: "2026-11-10" },
-    });
+
+    // The second phase's end before the first's.
+    fireEvent.change(phaseEnd(2), { target: { value: "2027-01-05" } });
+    fireEvent.change(phaseEnd(1), { target: { value: "2026-11-10" } });
 
     const phases = content().phases;
     expect(
@@ -83,18 +87,15 @@ describe("RoadmapWriter", () => {
       "2026-11-10",
       "2027-01-05",
     ]);
-    expect(screen.getByText(LABELS.phaseStarts("11 Nov 2026"))).toBeTruthy();
-    expect(
-      screen.getByText(LABELS.phaseEndsWithRoadmap("5 Jan 2027")),
-    ).toBeTruthy();
   });
 
   it("keeps what was typed in a phase when the one before it is removed", () => {
     renderWriter();
     fireEvent.click(screen.getByRole("button", { name: LABELS.addPhase }));
     // The roadmap's own title comes first, then each phase's.
-    const titles = screen.getAllByLabelText(LABELS.phaseTitle);
-    fireEvent.change(titles[2]!, { target: { value: "Build" } });
+    fireEvent.change(screen.getAllByLabelText(LABELS.phaseTitle)[2]!, {
+      target: { value: "Build" },
+    });
 
     fireEvent.click(
       screen.getAllByRole("button", { name: LABELS.removePhase })[0]!,
@@ -107,19 +108,47 @@ describe("RoadmapWriter", () => {
     });
   });
 
-  it("adds a goal and a milestone, leaving blank details out", () => {
+  it("picks a phase's goals as chips, with no level to choose", () => {
     renderWriter();
-    fireEvent.click(screen.getByRole("button", { name: LABELS.addGoal }));
-    fireEvent.click(screen.getByRole("button", { name: LABELS.addMilestone }));
+    const chip = screen.getByRole("button", { name: "Half marathon" });
+    expect(chip.getAttribute("aria-pressed")).toBe("false");
 
-    const phase = content().phases[0];
-    expect(phase.goalAttention).toEqual([
+    fireEvent.click(chip);
+
+    expect(chip.getAttribute("aria-pressed")).toBe("true");
+    expect(content().phases[0].goalAttention).toEqual([
       { goalId: GOALS[0]!.id, level: "primary" },
     ]);
-    // A phase for one goal gives its milestone that goal.
-    expect(phase.milestones).toEqual([
-      { title: "", targetDate: "", goalIds: [GOALS[0]!.id] },
+    expect(screen.queryByLabelText("Attention")).toBeNull();
+  });
+
+  it("lets a milestone count toward none of its phase's goals, or some", () => {
+    renderWriter();
+    fireEvent.click(screen.getByRole("button", { name: "Half marathon" }));
+    fireEvent.click(screen.getByRole("button", { name: LABELS.addMilestone }));
+
+    expect(content().phases[0].milestones).toEqual([
+      { title: "", targetDate: "", goalIds: [] },
     ]);
+    // Two "Half marathon" chips now: the phase's, then the milestone's.
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Half marathon" })[1]!,
+    );
+    expect(content().phases[0].milestones[0].goalIds).toEqual([GOALS[0]!.id]);
+
+    // Taking the goal off the phase takes it off its milestones.
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Half marathon" })[0]!,
+    );
+    expect(content().phases[0].milestones[0].goalIds).toEqual([]);
+  });
+
+  it("sends a milestone's details only when written", () => {
+    renderWriter();
+    fireEvent.click(screen.getByRole("button", { name: LABELS.addMilestone }));
+    expect("observableCriterion" in content().phases[0].milestones[0]).toBe(
+      false,
+    );
 
     fireEvent.change(screen.getByLabelText(LABELS.milestoneDetails), {
       target: { value: "Under 1:50" },
@@ -139,27 +168,17 @@ describe("RoadmapWriter", () => {
     expect(content().summary).toBe("Base, then speed.");
   });
 
-  it("moves a milestone to the goal its phase's row is changed to", () => {
+  it("says what does not add up when saved", () => {
     renderWriter();
-    fireEvent.click(screen.getByRole("button", { name: LABELS.addGoal }));
-    fireEvent.click(screen.getByRole("button", { name: LABELS.addMilestone }));
+    fireEvent.change(phaseEnd(0), { target: { value: "2027-01-05" } });
+    fireEvent.change(phaseEnd(1), { target: { value: "2026-12-01" } });
+    fireEvent.click(screen.getByRole("button", { name: "Half marathon" }));
 
-    fireEvent.change(screen.getByLabelText(LABELS.goal), {
-      target: { value: GOALS[1]!.id },
-    });
+    fireEvent.submit(document.querySelector("form")!);
 
-    const phase = content().phases[0];
-    expect(phase.goalAttention[0].goalId).toBe(GOALS[1]!.id);
-    expect(phase.milestones[0].goalIds).toEqual([GOALS[1]!.id]);
-  });
-
-  it("offers no more goals than the owner has", () => {
-    renderWriter();
-    fireEvent.click(screen.getByRole("button", { name: LABELS.addGoal }));
-    fireEvent.click(screen.getByRole("button", { name: LABELS.addGoal }));
-
-    expect(screen.queryByRole("button", { name: LABELS.addGoal })).toBeNull();
-    expect(content().phases[0].goalAttention).toHaveLength(2);
+    expect(screen.getByRole("alert").textContent).toBe(
+      CHECKS.lastPhaseEnd(1, "5 Jan 2027"),
+    );
   });
 
   it("says what is missing when there is no goal to write for", () => {
@@ -167,6 +186,143 @@ describe("RoadmapWriter", () => {
 
     expect(screen.getByText(ROADMAP_CONTROL_COPY.writeNoGoals)).toBeTruthy();
     expect(document.querySelector("form")).toBeNull();
+  });
+});
+
+describe("RoadmapWriter editing a proposal", () => {
+  afterEach(cleanup);
+
+  it("opens on the proposal, its dates fixed and the coach's levels kept", () => {
+    render(
+      <RoadmapWriter
+        today={TODAY}
+        goals={GOALS}
+        expectedHeadRevision={2}
+        replaces={false}
+        edit={{
+          proposalId: "p1000000-0000-4000-8000-000000000001",
+          content: {
+            title: "Coach's",
+            startDate: TODAY,
+            endDate: "2026-12-31",
+            phases: [
+              {
+                title: "Base",
+                focus: "Easy.",
+                startDate: TODAY,
+                endDate: "2026-12-31",
+                goalAttention: [
+                  { goalId: GOALS[0]!.id, level: "maintenance" },
+                  { goalId: GOALS[1]!.id, level: "not-a-level" },
+                ],
+                milestones: [
+                  {
+                    title: "M",
+                    targetDate: "2026-11-01",
+                    goalIds: [GOALS[0]!.id],
+                  },
+                ],
+              },
+            ],
+          },
+          onCancel: vi.fn(),
+          onSaved: vi.fn(),
+        }}
+      />,
+    );
+
+    expect(
+      (document.querySelector('input[name="proposalId"]') as HTMLInputElement)
+        .value,
+    ).toBe("p1000000-0000-4000-8000-000000000001");
+    expect(
+      document.querySelector('input[name="expectedHeadRevision"]'),
+    ).toBeNull();
+    expect(
+      screen.getAllByLabelText<HTMLInputElement>(
+        ROADMAP_CONTROL_COPY.endDateLabel,
+      )[0]!.readOnly,
+    ).toBe(true);
+    const phase = content().phases[0];
+    // A level the coach gave is kept; one that is not a level becomes primary.
+    expect(phase.goalAttention).toEqual([
+      { goalId: GOALS[0]!.id, level: "maintenance" },
+      { goalId: GOALS[1]!.id, level: "primary" },
+    ]);
+    // No details stored, none sent; no summary stored, none sent.
+    expect("observableCriterion" in phase.milestones[0]).toBe(false);
+    expect("summary" in content()).toBe(false);
+  });
+});
+
+describe("checkDraft", () => {
+  const goal = { goalId: GOALS[0]!.id, level: "primary" as const };
+  const phase = (
+    endDate: string,
+    extra: Partial<WriterDraft["phases"][number]> = {},
+  ): WriterDraft["phases"][number] => ({
+    key: endDate,
+    title: "P",
+    focus: "F",
+    endDate,
+    goals: [goal],
+    milestones: [],
+    ...extra,
+  });
+  const draft = (phases: WriterDraft["phases"]): WriterDraft => ({
+    title: "R",
+    summary: "",
+    startDate: TODAY,
+    endDate: "2026-12-31",
+    phases,
+  });
+
+  it("passes phases that run back to back to the roadmap's end", () => {
+    expect(
+      checkDraft(draft([phase("2026-11-15"), phase("2026-12-31")])),
+    ).toBeNull();
+  });
+
+  it.each([
+    [
+      "a phase with no end",
+      [phase(""), phase("2026-12-31")],
+      CHECKS.phaseNoEnd(1),
+    ],
+    [
+      "a phase that ends before it starts",
+      [phase("2026-11-15"), phase("2026-11-01"), phase("2026-12-31")],
+      CHECKS.phaseEndsBeforeStart(2),
+    ],
+    [
+      "a phase past the roadmap",
+      [phase("2027-01-10")],
+      CHECKS.phaseEndsAfterRoadmap(1),
+    ],
+    [
+      "a phase with no goal",
+      [phase("2026-12-31", { goals: [] })],
+      CHECKS.phaseNoGoal(1),
+    ],
+    [
+      "a milestone outside its phase",
+      [
+        phase("2026-12-31", {
+          milestones: [
+            {
+              key: "m",
+              title: "M",
+              targetDate: "2027-02-01",
+              goalIds: [],
+              details: "",
+            },
+          ],
+        }),
+      ],
+      CHECKS.milestoneOutsidePhase(1),
+    ],
+  ])("names %s", (_name, phases, expected) => {
+    expect(checkDraft(draft(phases))).toBe(expected);
   });
 });
 

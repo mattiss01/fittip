@@ -163,6 +163,33 @@ describe("accepted roadmap output", () => {
     expect(result.outcome).toBe("accepted");
   });
 
+  // Owner, 14 Oct 2026: "Counts toward" is optional, so a milestone may name
+  // no goal. The ceiling on how many it names is unchanged.
+  it("accepts a milestone that counts toward no goal, and still bounds how many", () => {
+    const body = JSON.parse(findCoachAIFixtureCase("valid_roadmap").body);
+    const milestone = body.roadmap.phases.find(
+      (phase: { milestones: unknown[] }) => phase.milestones.length > 0,
+    ).milestones[0];
+
+    milestone.goalIds = [];
+    expect(
+      validateRoadmapCandidate({
+        body: JSON.stringify(body),
+        context: COACH_AI_FIXTURE_CONTEXT,
+      }).outcome,
+    ).toBe("accepted");
+
+    milestone.goalIds = Array(5).fill(
+      COACH_AI_FIXTURE_CONTEXT.targetableGoals[0]!.id,
+    );
+    expect(
+      validateRoadmapCandidate({
+        body: JSON.stringify(body),
+        context: COACH_AI_FIXTURE_CONTEXT,
+      }),
+    ).toEqual({ outcome: "rejected", reason: "business_rule" });
+  });
+
   it("accepts a roadmap with no summary and a milestone with no details", () => {
     const valid = JSON.parse(findCoachAIFixtureCase("valid_roadmap").body);
     delete valid.roadmap.summary;

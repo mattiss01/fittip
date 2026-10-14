@@ -66,8 +66,8 @@ test.describe("M3-15F roadmap generation", () => {
       await page.goto("/home/you/goals");
       await createGoal(page, "Hilly half marathon");
 
-      // ---- An owner with no roadmap is told so, and is offered the one
-      // ---- control that can change it. ----
+      // ---- An owner with no roadmap is offered the coach's form, and
+      // ---- nothing else is on the page (owner, 14 Oct 2026). ----
       const first = await page.goto("/home/plan/roadmap");
       expect(first?.status()).toBe(200);
       expect(first?.headers()["cache-control"]).toContain("private");
@@ -75,9 +75,7 @@ test.describe("M3-15F roadmap generation", () => {
       await expect(
         page.getByRole("heading", { level: 1, name: "Roadmap", exact: true }),
       ).toBeVisible();
-      await expect(
-        page.getByRole("heading", { name: "No roadmap yet" }),
-      ).toBeVisible();
+      await expect(page.locator("[data-roadmap-current]")).toHaveCount(0);
 
       const compose = page.locator('[data-roadmap-compose="initial"]');
       await expect(compose).toBeVisible();
@@ -108,11 +106,7 @@ test.describe("M3-15F roadmap generation", () => {
       ).toBeVisible();
       await expect(page.locator("[data-roadmap-example-notice]")).toBeVisible();
       // Nothing has been written to the roadmap itself yet.
-      await expect(
-        page
-          .locator("[data-roadmap-current]")
-          .getByRole("heading", { name: "No roadmap yet" }),
-      ).toBeVisible();
+      await expect(page.locator("[data-roadmap-current]")).toHaveCount(0);
       // While a proposal is open there is nothing to compose.
       await expect(page.locator("[data-roadmap-compose]")).toHaveCount(0);
       await expectNoHorizontalOverflow(page);
@@ -127,8 +121,17 @@ test.describe("M3-15F roadmap generation", () => {
         .first()
         .innerText();
       await review.getByRole("button", { name: "Edit proposal" }).click();
-      await page.getByLabel("Roadmap title").fill("My own wording");
-      await page
+      // The form and nothing of the proposal beside it (owner, 14 Oct 2026).
+      const editor = page.locator('[data-roadmap-write="edit"]');
+      await expect(editor).toBeVisible();
+      await expect(page.getByText("Awaiting your decision")).toHaveCount(0);
+      await expectNoHorizontalOverflow(page);
+      // The roadmap's title comes before each phase's.
+      await editor
+        .getByLabel("Title", { exact: true })
+        .first()
+        .fill("My own wording");
+      await editor
         .getByRole("button", { name: "Save as a new proposal" })
         .click();
 
@@ -147,33 +150,36 @@ test.describe("M3-15F roadmap generation", () => {
       await expect(page.getByText("Awaiting your decision")).toHaveCount(1);
       await expect(page.locator("[data-roadmap-proposals]")).toHaveCount(0);
 
-      // ---- Decline, then regenerate against it. ----
+      // ---- Ask for another, on the proposal (owner, 14 Oct 2026): the button
+      // ---- first, then what should change; it is declined and asked again
+      // ---- in one step. ----
       await page
         .locator("[data-roadmap-open-proposal]")
-        .getByRole("button", { name: "Decline proposal" })
+        .getByRole("button", { name: "Ask for another" })
         .click();
-      await expect(page.locator("[data-roadmap-open-proposal]")).toHaveCount(0);
-      await expectOutcome(page, "Declined.");
-
-      const regenerate = page.locator('[data-roadmap-compose="regeneration"]');
-      await expect(regenerate).toBeVisible();
-      // Three, not two: what was declined is the owner's edit, and an edit
+      const askAgain = page.locator("[data-roadmap-ask-again]");
+      // Three, not two: what is declined is the owner's edit, and an edit
       // shares the generation request of the proposal it came from, so no
       // regeneration has been spent on these dates yet.
       await expect(
-        regenerate.getByText("3 regenerations left on these dates."),
+        askAgain.getByText("3 regenerations left on these dates."),
       ).toBeVisible();
-      await regenerate
-        .getByLabel("What should the coach change?")
+      // The proposal is still there to read while the note is written.
+      await expect(
+        page
+          .locator("[data-roadmap-open-proposal]")
+          .getByRole("heading", { name: "My own wording" }),
+      ).toBeVisible();
+      await askAgain
+        .getByLabel("What should change?")
         .fill("Start easier and build later.");
-      await regenerate
-        .getByRole("button", { name: "Generate another proposal" })
+      await askAgain
+        .getByRole("button", { name: "Decline and ask again" })
         .click();
 
       const regenerated = page.locator("[data-roadmap-open-proposal]");
-      await expect(regenerated).toBeVisible();
-      await expectOutcome(page, "A proposal is ready below.");
       await expect(regenerated.getByText("Regenerated")).toBeVisible();
+      await expectOutcome(page, "A proposal is ready below.");
 
       // ---- Accept: it becomes the roadmap. ----
       await regenerated.getByRole("button", { name: "Accept roadmap" }).click();
@@ -195,11 +201,6 @@ test.describe("M3-15F roadmap generation", () => {
         ),
       ).toHaveCount(0);
       await expect(page.locator("[data-roadmap-review-due]")).toHaveCount(0);
-      await expect(
-        page
-          .getByRole("heading", { name: "No roadmap yet" })
-          .or(page.getByText("No roadmap yet", { exact: true })),
-      ).toHaveCount(0);
       // An accepted example is still an example.
       await expect(
         page.locator("[data-roadmap-current] [data-roadmap-example]"),
@@ -262,9 +263,8 @@ test.describe("M3-15F roadmap generation", () => {
       await expect(
         page.getByRole("button", { name: "Change roadmap" }),
       ).toHaveCount(0);
-      // Declined, and asked again: the sheet's second choice is now another
-      // answer to that proposal, and the request is still a change request,
-      // which the database inherits from the one that was declined.
+      // Declined: the proposal is gone, so the sheet's second choice is a
+      // new roadmap, asked afresh (owner, 14 Oct 2026).
       await page
         .locator("[data-roadmap-open-proposal]")
         .getByRole("button", { name: "Decline proposal" })
@@ -274,16 +274,13 @@ test.describe("M3-15F roadmap generation", () => {
       const again = page
         .getByRole("dialog", { name: "Change roadmap" })
         .locator('[data-roadmap-choice="fresh"]');
-      await expect(again).toContainText("Ask again with Coach");
+      await expect(again).toContainText("New roadmap with Coach");
       await again.click();
-      const askAgain = page
-        .getByRole("dialog", { name: "Ask for another proposal" })
-        .locator('[data-roadmap-compose="regeneration"]');
-      await askAgain
-        .getByLabel("What should the coach change?")
-        .fill("Keep the first phase as it was.");
-      await askAgain
-        .getByRole("button", { name: "Generate another proposal" })
+      const afresh = page
+        .getByRole("dialog", { name: "Shape your roadmap" })
+        .locator('[data-roadmap-compose="initial"]');
+      await afresh
+        .getByRole("button", { name: "Generate roadmap proposal" })
         .click();
       await expectOutcome(page, "A proposal is ready below.");
       await page
@@ -346,14 +343,17 @@ test.describe("M3-15F roadmap generation", () => {
         .getByLabel("Title", { exact: true })
         .first()
         .fill("My own way to the half");
-      // One phase, which ends with the roadmap: the only "Ends" is its own.
-      await fillDate(writer, "Ends", shiftDays(ownerToday(), 56));
+      // The roadmap's own "Ends" comes first; its one phase ends with it.
+      const roadmapEnd = shiftDays(ownerToday(), 56);
+      await writer.getByLabel("Ends", { exact: true }).first().fill(roadmapEnd);
       const phase = writer.locator('[data-roadmap-write-phase="1"]');
+      await fillDate(phase, "Ends", roadmapEnd);
       await phase.getByLabel("Title", { exact: true }).fill("Steady base");
       await phase
         .getByLabel("What it's for")
         .fill("Easy running, three times a week.");
-      await phase.getByRole("button", { name: "Add goal" }).click();
+      // Goals are chips, with no level to choose (owner, 14 Oct 2026).
+      await phase.getByRole("button", { name: "Hilly half marathon" }).click();
       await writer.getByRole("button", { name: "Save roadmap" }).click();
       await expectOutcome(page, "Saved. This is your roadmap now.");
       await expect(page.getByRole("dialog")).toHaveCount(0);

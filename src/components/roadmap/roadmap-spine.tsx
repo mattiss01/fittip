@@ -135,14 +135,10 @@ function PhaseAndItsReview({
 
           <ul className={styles.attentionList}>
             {phase.goalAttention.map((attention) => (
-              <li
-                key={attention.goalId}
-                className={styles.attention}
-                data-level={attention.level}
-              >
-                {/* The level is the whole claim: ordinal attention, never a
-                    share of anything. */}
-                {attention.level} · {goalTitles[attention.goalId] ?? "Goal"}
+              // The goal and no level (owner, 14 Oct 2026). The coach still
+              // writes and reads one; the roadmap does not show it.
+              <li key={attention.goalId} className={styles.attention}>
+                {goalTitles[attention.goalId] ?? "Goal"}
               </li>
             ))}
           </ul>
