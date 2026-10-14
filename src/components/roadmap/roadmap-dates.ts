@@ -30,23 +30,6 @@ export function formatRoadmapDate(localDate: string): string {
   return date === null ? localDate : DAY_MONTH_YEAR.format(date);
 }
 
-/**
- * How long a roadmap runs, first day to last inclusive, as the owner would
- * say it: whole weeks from two weeks up, days below that. Empty when either
- * date does not parse or they are the wrong way round.
- */
-export function formatRoadmapLength(
-  startDate: string,
-  endDate: string,
-): string {
-  const start = parse(startDate);
-  const end = parse(endDate);
-  if (start === null || end === null || end < start) return "";
-  const days = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
-  if (days < 14) return `${days} day${days === 1 ? "" : "s"}`;
-  return `${Math.round(days / 7)} weeks`;
-}
-
 export function formatRoadmapRange(startDate: string, endDate: string): string {
   const start = parse(startDate);
   const end = parse(endDate);
