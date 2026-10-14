@@ -112,7 +112,7 @@ $$;
 create temporary table made (label text primary key, id uuid);
 grant all on made to public;
 
-select plan(20);
+select plan(21);
 
 -- The function ----------------------------------------------------------------------
 
@@ -221,6 +221,16 @@ select throws_ok(
       pg_temp.phase('Build', -12, 44)))),
   '22023', 'Invalid roadmap.',
   'and keeps its start'
+);
+select throws_ok(
+  format('select * from public.edit_roadmap(%L::jsonb, 1)',
+    pg_temp.roadmap('Overlapping', -40, 44, jsonb_build_array(
+      pg_temp.phase('Base', -40, -15,
+        jsonb_build_array(pg_temp.milestone('A', -20))),
+      pg_temp.phase('Build', -14, 20),
+      pg_temp.phase('Back over the past', -30, 44)))),
+  '22023', 'Invalid roadmap.',
+  'nor may a later phase reach back over what has passed'
 );
 select throws_ok(
   format('select * from public.edit_roadmap(%L::jsonb, 2)', pg_temp.edited()),

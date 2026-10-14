@@ -192,10 +192,20 @@ begin
       errcode = '22023',
       message = 'Invalid roadmap.';
   end if;
+  -- Each phase after it starts the day after the one before ends, so none
+  -- reaches back over what has passed: the content check alone holds the
+  -- dates inside the roadmap, not their order.
   for v_index in
     v_locked .. pg_catalog.jsonb_array_length(p_content->'phases') - 1
   loop
-    if ((p_content->'phases'->v_index->>'endDate')::date) < v_today then
+    if ((p_content->'phases'->v_index->>'endDate')::date) < v_today
+      or (
+        v_index > v_locked
+        and ((p_content->'phases'->v_index->>'startDate')::date)
+          is distinct from
+          ((p_content->'phases'->(v_index - 1)->>'endDate')::date) + 1
+      )
+    then
       raise exception using
         errcode = '22023',
         message = 'Invalid roadmap.';
