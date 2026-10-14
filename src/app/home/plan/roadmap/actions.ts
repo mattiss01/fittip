@@ -40,6 +40,7 @@ import {
   parseRoadmapStartDate,
   parseRoadmapProposalId,
   parseRoadmapVersionId,
+  ROADMAP_MAX_REGENERATIONS,
   RoadmapValidationError,
 } from "@/server/roadmap/roadmap-records";
 
@@ -217,6 +218,68 @@ export async function declineRoadmapAction(
       parseRoadmapProposalId(formData.get("proposalId")),
     );
     return landed("declined", submission);
+  } catch (error) {
+    return toActionState(error, submission);
+  }
+}
+
+/**
+ * "Ask again" on a coach proposal (owner, 14 Oct 2026): what should change,
+ * written while the proposal is on screen, then the proposal is declined and
+ * another asked for, in one step.
+ *
+ * The decline comes first because the database asks a regeneration for a
+ * declined predecessor. Everything that can be known before it is checked
+ * before it — the note, the ceiling, the dates — so a request that could never
+ * run does not cost the owner the proposal. If the coach then fails, the
+ * proposal stays declined and the page offers a new request, as a decline
+ * would; the route is refreshed so it says so.
+ */
+export async function askAgainRoadmapAction(
+  previous: RoadmapActionState,
+  formData: FormData,
+): Promise<RoadmapActionState> {
+  const submission = previous.submission + 1;
+  const regenerationFeedback = text(formData, "regenerationFeedback");
+  try {
+    const [roadmaps, profiles] = await Promise.all([
+      createRoadmapRepository(),
+      createProfileRepository(),
+    ]);
+    const id = parseRoadmapProposalId(formData.get("proposalId"));
+    if (parseRegenerationFeedback(regenerationFeedback) === null) {
+      return invalid(OUTCOMES.feedbackRequired, submission);
+    }
+    if (!/^[A-Za-z0-9_-]{16,128}$/.test(text(formData, "idempotencyKey"))) {
+      return invalid(OUTCOMES.requestUnidentified, submission);
+    }
+    const proposal = await roadmaps.getProposal(id);
+    if (!proposal || proposal.decision !== null) {
+      throw new RoadmapConflictError("not-available");
+    }
+    if (proposal.regenerationNumber >= ROADMAP_MAX_REGENERATIONS) {
+      return {
+        status: "cap-reached",
+        message: ROADMAP_CONTROL_COPY.regenerationCapReached,
+        submission,
+      };
+    }
+    const startDate = proposal.startDate || proposal.content.startDate;
+    const endDate = proposal.endDate || proposal.content.endDate;
+    if (startDate < (await ownerToday(profiles))) {
+      return invalid(OUTCOMES.regenerationDatesPassed, submission);
+    }
+
+    await roadmaps.declineProposal(id);
+    revalidatePath("/home/plan/roadmap");
+
+    const request = new FormData();
+    request.set("previousProposalId", id);
+    request.set("startDate", startDate);
+    request.set("endDate", endDate);
+    request.set("regenerationFeedback", regenerationFeedback);
+    request.set("idempotencyKey", text(formData, "idempotencyKey"));
+    return await generateRoadmapAction(previous, request);
   } catch (error) {
     return toActionState(error, submission);
   }

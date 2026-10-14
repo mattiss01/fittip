@@ -94,6 +94,8 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
           proposal={state.openProposal}
           expectedHeadRevision={state.head.revision}
           goalTitles={goalTitles}
+          today={state.today}
+          regenerationsRemaining={state.regenerationsRemaining}
         />
       ) : state.current === null ? (
         <>
@@ -144,15 +146,10 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
         </RoadmapReviewDue>
       ) : null}
 
-      <section className={styles.card} data-roadmap-current>
-        {state.current === null ? (
-          <>
-            <h2 className={styles.cardHeading}>
-              {ROADMAP_COPY.emptyRoadmapTitle}
-            </h2>
-            <p className={styles.emptyState}>{ROADMAP_COPY.emptyRoadmapBody}</p>
-          </>
-        ) : (
+      {/* With no roadmap there is nothing to show here: the coach's form
+          above is the page (owner, 14 Oct 2026). */}
+      {state.current === null ? null : (
+        <section className={styles.card} data-roadmap-current>
           <RoadmapDetail
             version={state.current}
             reached={state.reached}
@@ -162,8 +159,8 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
             }}
             goalTitles={goalTitles}
           />
-        )}
-      </section>
+        </section>
+      )}
 
       {/* Separate from the roadmap, as M3-02 decision 4b requires: a memory
           candidate is decided on the memory surface that owns it, and nothing
@@ -257,42 +254,20 @@ export function RoadmapCompose({
   state: RoadmapScreenState;
   headingId?: string;
 }) {
-  const predecessor = state.declinedPredecessor;
-  const canRegenerate =
-    predecessor !== null && state.regenerationsRemaining > 0;
-
+  // Always a first request (owner, 14 Oct 2026). After a decline the
+  // proposal is gone from the page, so there is nothing left to say what
+  // should change about; asking again with a note is offered on the
+  // proposal itself, where it can be read.
   return (
-    <>
-      <RoadmapComposer
-        mode={canRegenerate ? "regeneration" : "initial"}
-        endDate={
-          canRegenerate && predecessor
-            ? predecessor.endDate || predecessor.content.endDate
-            : state.defaultEndDate
-        }
-        startDate={
-          canRegenerate && predecessor
-            ? predecessor.startDate || predecessor.content.startDate
-            : state.today
-        }
-        today={state.today}
-        minDays={ROADMAP_MIN_DAYS}
-        maxDays={ROADMAP_MAX_DAYS}
-        {...(canRegenerate && predecessor
-          ? { previousProposalId: predecessor.id }
-          : {})}
-        regenerationsRemaining={state.regenerationsRemaining}
-        {...(headingId === undefined ? {} : { headingId })}
-      />
-
-      {/* The ceiling is a fact about these dates, not a control. Saying so
-          where the regeneration form would have been is the difference between
-          "there is nothing here" and "you have used all three". */}
-      {predecessor !== null && state.regenerationsRemaining === 0 ? (
-        <p className={styles.notice} data-roadmap-notice="cap-reached">
-          {ROADMAP_COPY.regenerationCapReached}
-        </p>
-      ) : null}
-    </>
+    <RoadmapComposer
+      mode="initial"
+      endDate={state.defaultEndDate}
+      startDate={state.today}
+      today={state.today}
+      minDays={ROADMAP_MIN_DAYS}
+      maxDays={ROADMAP_MAX_DAYS}
+      regenerationsRemaining={state.regenerationsRemaining}
+      {...(headingId === undefined ? {} : { headingId })}
+    />
   );
 }

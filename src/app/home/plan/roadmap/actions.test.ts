@@ -54,6 +54,7 @@ vi.mock("@/server/roadmap/roadmap-generation", () => ({
 
 import {
   acceptRoadmapAction,
+  askAgainRoadmapAction,
   declineRoadmapAction,
   editRoadmapAction,
   generateRoadmapAction,
@@ -796,6 +797,71 @@ describe("roadmap server actions", () => {
         message: OUTCOMES.notAvailable,
       });
     });
+  });
+
+  // Owner, 14 Oct 2026: asked on the proposal, then declined and asked again.
+  describe("ask again", () => {
+    const today = isoDateInTimezone(new Date(), TIMEZONE);
+    const KEY = "ask-again-key-0000000001";
+    const open = (overrides: Record<string, unknown> = {}) => ({
+      ...sourceProposal(),
+      startDate: today,
+      endDate: addDays(today, 84),
+      ...overrides,
+    });
+
+    it("declines the proposal, then asks for another on its dates", async () => {
+      getProposal.mockResolvedValue(open());
+
+      const result = await askAgainRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({
+          proposalId: PROPOSAL_ID,
+          regenerationFeedback: "Less volume.",
+          idempotencyKey: KEY,
+        }),
+      );
+
+      expect(result.status).toBe("proposal");
+      expect(declineProposal).toHaveBeenCalledWith(PROPOSAL_ID);
+      expect(generateMock.mock.calls[0][0]).toMatchObject({
+        previousProposalId: PROPOSAL_ID,
+        startDate: today,
+        endDate: addDays(today, 84),
+        regenerationFeedback: "Less volume.",
+        idempotencyKey: KEY,
+      });
+      expect(declineProposal.mock.invocationCallOrder[0]).toBeLessThan(
+        generateMock.mock.invocationCallOrder[0],
+      );
+    });
+
+    it.each([
+      ["no note", { regenerationFeedback: "" }, undefined],
+      ["no request key", { idempotencyKey: "" }, undefined],
+      ["the last of three asks", {}, { regenerationNumber: 3 }],
+      ["dates that have passed", {}, { startDate: addDays(today, -1) }],
+      ["a proposal already decided", {}, { decision: "rejected" }],
+    ])(
+      "keeps the proposal open for %s",
+      async (_name, fields, proposalOverrides) => {
+        getProposal.mockResolvedValue(open(proposalOverrides));
+
+        const result = await askAgainRoadmapAction(
+          INITIAL_ROADMAP_ACTION_STATE,
+          form({
+            proposalId: PROPOSAL_ID,
+            regenerationFeedback: "Less volume.",
+            idempotencyKey: KEY,
+            ...fields,
+          }),
+        );
+
+        expect(result.status).not.toBe("proposal");
+        expect(declineProposal).not.toHaveBeenCalled();
+        expect(generateMock).not.toHaveBeenCalled();
+      },
+    );
   });
 
   // ADR-029. The owner's today is the confirmed zone's; the head is the page's.

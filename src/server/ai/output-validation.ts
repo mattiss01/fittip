@@ -823,10 +823,9 @@ function validatePhase(
       return rejected("impossible_date");
     }
 
-    if (
-      milestone.goalIds.length < 1 ||
-      milestone.goalIds.length > MAX_ATTENTION_PER_PHASE
-    ) {
+    // A milestone may name no goal (owner, 14 Oct 2026): "Counts toward" is
+    // optional on the form, and the coach's grammar still asks for one.
+    if (milestone.goalIds.length > MAX_ATTENTION_PER_PHASE) {
       return rejected("business_rule");
     }
     for (const goalId of milestone.goalIds) {

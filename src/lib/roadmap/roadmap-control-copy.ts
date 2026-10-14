@@ -33,10 +33,6 @@ export const ROADMAP_CONTROL_COPY = {
   changeWithCoachDetail: "Say what should be different",
   newWithCoachAction: "New roadmap with Coach",
   newWithCoachDetail: "Start over from your goals",
-  /* After a decline the same choice is another answer to the declined
-     proposal, on its dates, and says so. */
-  askAgainAction: "Ask again with Coach",
-  askAgainDetail: "Another answer to the proposal you declined",
   /* Writing one by hand (ADR-029): in force on save, nothing to review. */
   writeAction: "Write it yourself",
   writeDetail: "Your own phases and milestones",
@@ -53,29 +49,38 @@ export const ROADMAP_CONTROL_COPY = {
     phase: (index: number) => `Phase ${index}`,
     phaseTitle: "Title",
     phaseFocus: "What it's for",
-    phaseStarts: (date: string) => `Starts ${date}`,
+    phaseStart: "Starts",
     phaseEnd: "Ends",
-    phaseEndsWithRoadmap: (date: string) => `Ends ${date}, with the roadmap`,
+    phaseStartsWithRoadmap: "Starts with the roadmap.",
+    phaseStartsAfter: (previous: number) =>
+      `Starts the day after phase ${previous} ends.`,
+    goals: "Goals",
     addPhase: "Add phase",
     removePhase: "Remove phase",
-    goal: "Goal",
-    level: "Attention",
-    addGoal: "Add goal",
-    removeGoal: "Remove goal",
     milestone: (index: number) => `Milestone ${index}`,
     milestoneTitle: "Title",
     milestoneDate: "Aim for by",
-    milestoneGoals: "For",
+    /* Renamed from "For" (owner, 14 Oct 2026), and optional. */
+    milestoneGoals: "Counts toward (optional)",
     milestoneDetails: "Details (optional)",
     addMilestone: "Add milestone",
     removeMilestone: "Remove milestone",
   },
-  /** How the four attention levels read on the writer's choice. */
-  levelLabels: {
-    primary: "Primary",
-    secondary: "Secondary",
-    maintenance: "Maintenance",
-    deferred: "Deferred",
+  /**
+   * What is checked when the owner saves (owner, 14 Oct 2026): phase ends may
+   * be typed in any order, and whether they add up is said here, by phase.
+   */
+  writeChecks: {
+    phaseNoEnd: (phase: number) => `Phase ${phase} needs an end date.`,
+    phaseEndsBeforeStart: (phase: number) =>
+      `Phase ${phase} ends before it starts. Its start follows from the phase before.`,
+    phaseEndsAfterRoadmap: (phase: number) =>
+      `Phase ${phase} ends after the roadmap does.`,
+    phaseNoGoal: (phase: number) => `Phase ${phase} needs at least one goal.`,
+    milestoneOutsidePhase: (phase: number) =>
+      `A milestone in phase ${phase} falls outside that phase's dates.`,
+    lastPhaseEnd: (phase: number, roadmapEnd: string) =>
+      `Phase ${phase} is the last, so it has to end with the roadmap, on ${roadmapEnd}.`,
   },
   /* The change form. What is sent is said, because it is more than a new
      roadmap sends: the whole roadmap, where that sends an outline. */
@@ -131,6 +136,14 @@ export const ROADMAP_CONTROL_COPY = {
   editAction: "Edit proposal",
   declineAction: "Decline proposal",
   declineConfirm: "Decline this proposal? It will not become your roadmap.",
+  /* "Ask again" on the proposal itself (owner, 14 Oct 2026): the note is
+     written while the proposal can still be read. */
+  askAgainAction: "Ask for another",
+  askAgainLabel: "What should change?",
+  askAgainConfirm: "Decline and ask again",
+  askAgainSupport:
+    "This proposal is declined and the coach is sent it with what you write.",
+  askAgainCancel: "Cancel",
 
   /* ---- Milestones (ADR-026) ---------------------------------------------- */
   /**
@@ -160,6 +173,7 @@ export const ROADMAP_CONTROL_COPY = {
   /* ---- Edit ------------------------------------------------------------- */
   editTitle: "Edit proposal",
   editSupport: "Saving creates a new proposal to review.",
+  editDatesFixed: "The dates are the ones you asked the coach for.",
   editSaveAction: "Save as a new proposal",
   editCancelAction: "Cancel",
   editFieldLabels: {

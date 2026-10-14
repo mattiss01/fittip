@@ -1,31 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 
-import { RoadmapEditor } from "./roadmap-editor";
 import { RoadmapWatchNotice } from "./roadmap-watch-notice";
+import { RoadmapWriter } from "./roadmap-writer";
 import {
   isRefusal,
   useRoadmapRecovered,
   useRoadmapWrite,
 } from "./use-roadmap-write";
 
+import { ROADMAP_FEEDBACK_MAX_LENGTH } from "@/app/home/plan/roadmap/action-state";
 import {
   acceptRoadmapAction,
+  askAgainRoadmapAction,
   declineRoadmapAction,
-  editRoadmapAction,
 } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
+import { CoachSpark } from "@/components/home/coach-spark";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
 /**
- * The three things an owner can do with the proposal that is waiting.
+ * The four things an owner can do with the proposal that is waiting: accept,
+ * edit, ask for another, decline.
  *
  * No action is preselected and none is destructive by default: accepting keeps
  * every earlier version, declining keeps the proposal in history, and editing
  * creates a new proposal rather than rewriting this one. Declining is the only
  * one that asks first, because it is the only one that closes a proposal
- * without producing anything to look at.
+ * without producing anything to look at. Asking for another (owner, 14 Oct
+ * 2026) asks what should change first, below the proposal it is about, then
+ * declines it and asks the coach again in one step.
+ *
+ * While the proposal is edited, the form is all there is: the proposal comes
+ * in as `children`, server-rendered, and is not drawn beside its own edit.
+ *
+ * Some of what follows predates the form: the edit is `RoadmapWriter` now,
+ * with its own reply, and closes itself through `onSaved`.
  *
  * ## Why all three are form actions, watched
  *
@@ -75,121 +86,221 @@ export function RoadmapDecisionDock({
   content,
   expectedHeadRevision,
   goalTitles,
+  today,
+  regenerationsRemaining,
+  children,
 }: {
   proposalId: string;
   /** The proposal body, needed only so the editor can open on it. */
   content: unknown;
   expectedHeadRevision: number;
   goalTitles: Record<string, string>;
+  today: string;
+  /** Asks left on these dates; "Ask for another" goes when none are. */
+  regenerationsRemaining: number;
+  /** The proposal as the server rendered it, hidden while it is edited. */
+  children: ReactNode;
 }) {
   const accept = useRoadmapWrite(acceptRoadmapAction);
   const decline = useRoadmapWrite(declineRoadmapAction);
-  const edit = useRoadmapWrite(editRoadmapAction);
+  const askAgain = useRoadmapWrite(askAgainRoadmapAction);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [askOpen, setAskOpen] = useState(false);
+  const [note, setNote] = useState("");
+  // One key per attempt, so a retry after a dropped reply replays the first
+  // request instead of paying for a second.
+  const askKey = useRef<string | null>(null);
+  const fieldId = useId();
 
-  // The editor closes when its own submission comes back edited, decided
-  // during render rather than in an effect: an effect would paint the editor
-  // once more over content that is already superseded. A rejected edit keeps
-  // the editor open, because the draft is the thing that needs correcting.
-  const [seenEdit, setSeenEdit] = useState(edit.state.submission);
-  if (seenEdit !== edit.state.submission) {
-    setSeenEdit(edit.state.submission);
-    if (edit.state.status === "edited") setEditorOpen(false);
-  }
-
-  const busy = accept.pending || decline.pending || edit.pending;
-  const lostRender = accept.lostRender || decline.lostRender || edit.lostRender;
+  const busy = accept.pending || decline.pending || askAgain.pending;
+  const lostRender =
+    accept.lostRender || decline.lostRender || askAgain.lostRender;
   const untouched =
     accept.state.submission === 0 &&
     decline.state.submission === 0 &&
-    edit.state.submission === 0;
+    askAgain.state.submission === 0;
   // Explained once for the whole dock, not once per control.
   const recovered = useRoadmapRecovered(untouched);
 
   // Whichever control last refused, and why. A write that landed says so in
-  // `RoadmapOutcomeNotice`, which survives the two of these three that remove
-  // this dock.
-  const latest = [accept.state, decline.state, edit.state]
+  // `RoadmapOutcomeNotice`, which survives the writes that remove this dock.
+  const latest = [accept.state, decline.state, askAgain.state]
     .filter(isRefusal)
     .sort((a, b) => a.submission - b.submission)
     .at(-1);
 
+  // Editing shows the form and nothing else (owner, 14 Oct 2026): the
+  // proposal it starts from is in the form.
   if (editorOpen) {
     return (
-      <RoadmapEditor
-        proposalId={proposalId}
-        content={content}
-        goalTitles={goalTitles}
-        formAction={edit.submit}
-        // A landed edit closes this editor, so the only message it ever shows
-        // is the one the owner has to act on.
-        message={isRefusal(edit.state) ? edit.state.message : ""}
-        saving={edit.pending}
-        lostRender={edit.lostRender}
-        onCancel={() => setEditorOpen(false)}
+      <RoadmapWriter
+        today={today}
+        goals={Object.entries(goalTitles).map(([id, title]) => ({
+          id,
+          title,
+        }))}
+        expectedHeadRevision={expectedHeadRevision}
+        replaces={false}
+        edit={{
+          proposalId,
+          content,
+          onCancel: () => setEditorOpen(false),
+          onSaved: () => setEditorOpen(false),
+        }}
       />
     );
   }
 
+  function submitAskAgain(formData: FormData) {
+    if (askKey.current === null) {
+      askKey.current = globalThis.crypto.randomUUID();
+    }
+    formData.set("idempotencyKey", askKey.current);
+    askAgain.submit(formData);
+  }
+
   return (
-    <div className={styles.dock} data-roadmap-dock={proposalId}>
-      <h3 className={styles.sectionHeading}>
-        {ROADMAP_CONTROL_COPY.decideTitle}
-      </h3>
-      <p className={styles.emptyState}>{ROADMAP_CONTROL_COPY.decideSupport}</p>
-
-      <RoadmapWatchNotice lostRender={lostRender} recovered={recovered} />
-
-      {latest === undefined ? null : (
-        <p
-          className={styles.notice}
-          data-roadmap-notice={latest.status}
-          role="status"
-        >
-          {latest.message}
+    <>
+      {children}
+      <div className={styles.dock} data-roadmap-dock={proposalId}>
+        <h3 className={styles.sectionHeading}>
+          {ROADMAP_CONTROL_COPY.decideTitle}
+        </h3>
+        <p className={styles.emptyState}>
+          {ROADMAP_CONTROL_COPY.decideSupport}
         </p>
-      )}
 
-      <div className={styles.actions}>
-        <form action={accept.submit}>
-          <input type="hidden" name="proposalId" value={proposalId} />
-          <input
-            type="hidden"
-            name="expectedHeadRevision"
-            value={expectedHeadRevision}
-          />
-          <button
-            className={styles.primaryAction}
-            type="submit"
-            disabled={busy}
+        <RoadmapWatchNotice lostRender={lostRender} recovered={recovered} />
+
+        {latest === undefined ? null : (
+          <p
+            className={styles.notice}
+            data-roadmap-notice={latest.status}
+            role="status"
           >
-            {ROADMAP_CONTROL_COPY.acceptAction}
-          </button>
-        </form>
+            {latest.message}
+          </p>
+        )}
 
-        <button
-          className={styles.secondaryAction}
-          type="button"
-          onClick={() => setEditorOpen(true)}
-          disabled={busy}
-        >
-          {ROADMAP_CONTROL_COPY.editAction}
-        </button>
+        {askOpen ? (
+          // "Ask for another" (owner, 14 Oct 2026): the button first, then
+          // what should change, written with the proposal still above it.
+          <form
+            action={submitAskAgain}
+            className={styles.form}
+            data-roadmap-ask-again
+          >
+            <input type="hidden" name="proposalId" value={proposalId} />
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor={`${fieldId}-note`}>
+                {ROADMAP_CONTROL_COPY.askAgainLabel}
+              </label>
+              <textarea
+                className={styles.textarea}
+                id={`${fieldId}-note`}
+                name="regenerationFeedback"
+                maxLength={ROADMAP_FEEDBACK_MAX_LENGTH}
+                rows={3}
+                required
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+              />
+              <span className={styles.counter}>
+                {note.length} / {ROADMAP_FEEDBACK_MAX_LENGTH}
+              </span>
+              <span className={styles.helper}>
+                {ROADMAP_CONTROL_COPY.regenerationsRemaining(
+                  regenerationsRemaining,
+                )}
+              </span>
+            </div>
+            <div className={styles.actions}>
+              <button
+                className={styles.primaryAction}
+                type="submit"
+                disabled={busy}
+              >
+                <CoachSpark size={16} />
+                {ROADMAP_CONTROL_COPY.askAgainConfirm}
+              </button>
+              <button
+                className={styles.quietAction}
+                type="button"
+                disabled={busy}
+                onClick={() => setAskOpen(false)}
+              >
+                {ROADMAP_CONTROL_COPY.askAgainCancel}
+              </button>
+              <p className={styles.helper}>
+                {ROADMAP_CONTROL_COPY.askAgainSupport}
+              </p>
+            </div>
+            {askAgain.pending ? (
+              <p className={styles.pending} role="status">
+                {ROADMAP_CONTROL_COPY.pending}
+              </p>
+            ) : null}
+          </form>
+        ) : (
+          <div className={styles.actions}>
+            <form action={accept.submit}>
+              <input type="hidden" name="proposalId" value={proposalId} />
+              <input
+                type="hidden"
+                name="expectedHeadRevision"
+                value={expectedHeadRevision}
+              />
+              <button
+                className={styles.primaryAction}
+                type="submit"
+                disabled={busy}
+              >
+                {ROADMAP_CONTROL_COPY.acceptAction}
+              </button>
+            </form>
 
-        <form
-          action={decline.submit}
-          onSubmit={(event) => {
-            if (!globalThis.confirm(ROADMAP_CONTROL_COPY.declineConfirm)) {
-              event.preventDefault();
-            }
-          }}
-        >
-          <input type="hidden" name="proposalId" value={proposalId} />
-          <button className={styles.quietAction} type="submit" disabled={busy}>
-            {ROADMAP_CONTROL_COPY.declineAction}
-          </button>
-        </form>
+            <button
+              className={styles.secondaryAction}
+              type="button"
+              onClick={() => setEditorOpen(true)}
+              disabled={busy}
+            >
+              {ROADMAP_CONTROL_COPY.editAction}
+            </button>
+
+            {regenerationsRemaining > 0 ? (
+              <button
+                className={styles.secondaryAction}
+                type="button"
+                data-roadmap-ask-again-open
+                onClick={() => setAskOpen(true)}
+                disabled={busy}
+              >
+                <CoachSpark size={16} />
+                {ROADMAP_CONTROL_COPY.askAgainAction}
+              </button>
+            ) : null}
+
+            <form
+              action={decline.submit}
+              onSubmit={(event) => {
+                if (!globalThis.confirm(ROADMAP_CONTROL_COPY.declineConfirm)) {
+                  event.preventDefault();
+                }
+              }}
+            >
+              <input type="hidden" name="proposalId" value={proposalId} />
+              <button
+                className={styles.quietAction}
+                type="submit"
+                disabled={busy}
+              >
+                {ROADMAP_CONTROL_COPY.declineAction}
+              </button>
+            </form>
+          </div>
+        )}
       </div>
-    </div>
+    </>
   );
 }

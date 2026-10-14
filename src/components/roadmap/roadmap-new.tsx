@@ -45,13 +45,7 @@ export function RoadmapNew({
   change,
   fresh,
   write = null,
-  freshAsksAgain = false,
 }: {
-  /**
-   * After a decline the "fresh" form is another answer to the declined
-   * proposal, not a new roadmap, and the choice is named for what it opens.
-   */
-  freshAsksAgain?: boolean;
   /**
    * The corner opens on the choice; a due review opens the change form; with
    * no roadmap yet, the writer.
@@ -162,15 +156,9 @@ export function RoadmapNew({
                   data-roadmap-choice="fresh"
                   onClick={() => setView("fresh")}
                 >
-                  <strong>
-                    {freshAsksAgain
-                      ? ROADMAP_CONTROL_COPY.askAgainAction
-                      : ROADMAP_CONTROL_COPY.newWithCoachAction}
-                  </strong>
+                  <strong>{ROADMAP_CONTROL_COPY.newWithCoachAction}</strong>
                   <span className={w.sheetChoiceDetail}>
-                    {freshAsksAgain
-                      ? ROADMAP_CONTROL_COPY.askAgainDetail
-                      : ROADMAP_CONTROL_COPY.newWithCoachDetail}
+                    {ROADMAP_CONTROL_COPY.newWithCoachDetail}
                   </span>
                 </button>
                 {write === null ? null : (
