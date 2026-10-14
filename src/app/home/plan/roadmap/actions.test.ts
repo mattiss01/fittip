@@ -1110,6 +1110,7 @@ describe("roadmap server actions", () => {
             content.phases[1]!.focus = "Longer intervals.";
           }),
           expectedHeadRevision: "2",
+          lockedPhases: "1",
         }),
       );
 
@@ -1137,6 +1138,7 @@ describe("roadmap server actions", () => {
             content.phases.push(phase("Rest", 0, 44));
           }),
           expectedHeadRevision: "2",
+          lockedPhases: "1",
         }),
       );
 
@@ -1158,10 +1160,46 @@ describe("roadmap server actions", () => {
             content.phases[1]!.endDate = addDays(today, end);
           }),
           expectedHeadRevision: "2",
+          lockedPhases: "1",
         }),
       );
 
       expect(result.message).toBe(ROADMAP_CONTROL_COPY.rewriteRejections.dates);
+      expect(editRoadmap).not.toHaveBeenCalled();
+    });
+
+    it("refuses when a phase has ended since the form was opened", async () => {
+      const result = await rewriteRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({
+          content: sent(() => {}),
+          expectedHeadRevision: "2",
+          lockedPhases: "0",
+        }),
+      );
+
+      expect(result.message).toBe(
+        ROADMAP_CONTROL_COPY.rewriteRejections.phaseEnded,
+      );
+      expect(editRoadmap).not.toHaveBeenCalled();
+    });
+
+    it("refuses a roadmap that has ended", async () => {
+      const over = stored();
+      over.endDate = addDays(today, -1);
+      over.phases[1]!.endDate = addDays(today, -1);
+      getCurrentVersion.mockResolvedValue({ id: VERSION_ID, content: over });
+
+      const result = await rewriteRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({
+          content: sent(() => {}),
+          expectedHeadRevision: "2",
+          lockedPhases: "2",
+        }),
+      );
+
+      expect(result.message).toBe(ROADMAP_CONTROL_COPY.rewriteRejections.ended);
       expect(editRoadmap).not.toHaveBeenCalled();
     });
 
@@ -1170,7 +1208,11 @@ describe("roadmap server actions", () => {
 
       const result = await rewriteRoadmapAction(
         INITIAL_ROADMAP_ACTION_STATE,
-        form({ content: sent(() => {}), expectedHeadRevision: "2" }),
+        form({
+          content: sent(() => {}),
+          expectedHeadRevision: "2",
+          lockedPhases: "1",
+        }),
       );
 
       expect(result.message).toBe(
@@ -1189,6 +1231,7 @@ describe("roadmap server actions", () => {
             ];
           }),
           expectedHeadRevision: "2",
+          lockedPhases: "1",
         }),
       );
 

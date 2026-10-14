@@ -37,6 +37,7 @@ vi.mock("@/app/home/plan/roadmap/actions", () => ({
   declineRoadmapAction: vi.fn(),
   editRoadmapAction: vi.fn(),
   writeRoadmapAction: vi.fn(),
+  rewriteRoadmapAction: vi.fn(),
   askAgainRoadmapAction: vi.fn(),
   setMilestoneReachedAction: vi.fn(),
   setRoadmapReviewedAction: vi.fn(),

@@ -7,7 +7,8 @@
 --     accepted in the same step, as a roadmap written by hand is (ADR-029);
 --   * the past stays fixed: the start does not move, a phase whose last day is
 --     before the owner's today comes back identical, and nothing that is not
---     locked may end before today;
+--     locked may end before today; a roadmap whose phases have all ended is
+--     not edited;
 --   * a milestone's tick stays only where the milestone is unchanged, the same
 --     title and the same date, in whatever phase it now sits;
 --   * a done review stays with its phase.
@@ -173,6 +174,13 @@ begin
     end if;
     v_locked := v_locked + 1;
   end loop;
+
+  -- A roadmap that has ended is over, not edited: a new one replaces it.
+  if v_locked = v_count then
+    raise exception using
+      errcode = '22023',
+      message = 'Invalid roadmap.';
+  end if;
 
   -- The phase after them keeps its start, and nothing not locked ends before
   -- today: either would rewrite days that have passed.

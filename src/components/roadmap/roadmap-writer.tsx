@@ -62,6 +62,30 @@ const MAX_MILESTONES_PER_PHASE = 3;
 const MIN_DAYS = 28;
 const MAX_DAYS = 365;
 
+/**
+ * What the form is doing: writing a roadmap from empty, editing a coach
+ * proposal, or editing the roadmap in force. Each saves through its own
+ * action and is named in its own words.
+ */
+type Mode = "write" | "edit" | "rewrite";
+const MODES = {
+  write: {
+    action: writeRoadmapAction,
+    heading: ROADMAP_CONTROL_COPY.writeTitle,
+    save: ROADMAP_CONTROL_COPY.writeSaveAction,
+  },
+  edit: {
+    action: editRoadmapAction,
+    heading: ROADMAP_CONTROL_COPY.editTitle,
+    save: ROADMAP_CONTROL_COPY.editSaveAction,
+  },
+  rewrite: {
+    action: rewriteRoadmapAction,
+    heading: ROADMAP_CONTROL_COPY.rewriteTitle,
+    save: ROADMAP_CONTROL_COPY.rewriteSaveAction,
+  },
+} as const satisfies Record<Mode, unknown>;
+
 const LABELS = ROADMAP_CONTROL_COPY.writeFieldLabels;
 const CHECKS = ROADMAP_CONTROL_COPY.writeChecks;
 
@@ -145,12 +169,10 @@ export function RoadmapWriter({
     lockedPhases: number;
   };
 }) {
+  const mode: Mode =
+    edit !== undefined ? "edit" : inForce !== undefined ? "rewrite" : "write";
   const { state, submit, pending, lostRender } = useRoadmapWrite(
-    edit !== undefined
-      ? editRoadmapAction
-      : inForce !== undefined
-        ? rewriteRoadmapAction
-        : writeRoadmapAction,
+    MODES[mode].action,
   );
   const recovered = useRoadmapRecovered(state.submission === 0);
   const fieldId = useId();
@@ -202,12 +224,7 @@ export function RoadmapWriter({
     });
   };
 
-  const heading =
-    edit !== undefined
-      ? ROADMAP_CONTROL_COPY.editTitle
-      : inForce !== undefined
-        ? ROADMAP_CONTROL_COPY.rewriteTitle
-        : ROADMAP_CONTROL_COPY.writeTitle;
+  const heading = MODES[mode].heading;
 
   if (goals.length === 0) {
     return (
@@ -231,7 +248,7 @@ export function RoadmapWriter({
     ? shiftIsoDate(draft.startDate, MIN_DAYS)
     : "";
   const earliestEnd =
-    inForce !== undefined && today > shortestEnd ? today : shortestEnd;
+    mode === "rewrite" && today > shortestEnd ? today : shortestEnd;
   const message =
     problem !== "" ? problem : isRefusal(state) ? state.message : "";
 
@@ -239,13 +256,7 @@ export function RoadmapWriter({
     // An edit sits in the proposal's own card, so it draws none of its own.
     <section
       className={edit === undefined ? styles.card : undefined}
-      data-roadmap-write={
-        edit !== undefined
-          ? "edit"
-          : inForce !== undefined
-            ? "rewrite"
-            : "write"
-      }
+      data-roadmap-write={mode}
     >
       <h2 className={styles.cardHeading} id={headingId}>
         {heading}
@@ -285,6 +296,9 @@ export function RoadmapWriter({
         ) : (
           <input type="hidden" name="proposalId" value={edit.proposalId} />
         )}
+        {mode === "rewrite" ? (
+          <input type="hidden" name="lockedPhases" value={locked} />
+        ) : null}
         <input
           type="hidden"
           name="content"
@@ -708,11 +722,7 @@ export function RoadmapWriter({
             type="submit"
             disabled={pending}
           >
-            {edit !== undefined
-              ? ROADMAP_CONTROL_COPY.editSaveAction
-              : inForce !== undefined
-                ? ROADMAP_CONTROL_COPY.rewriteSaveAction
-                : ROADMAP_CONTROL_COPY.writeSaveAction}
+            {MODES[mode].save}
           </button>
           {edit === undefined ? (
             <p className={styles.helper}>

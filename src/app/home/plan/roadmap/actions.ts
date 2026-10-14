@@ -500,6 +500,15 @@ export async function rewriteRoadmapAction(
     if (endDate < today) return invalid(REWRITE_REJECTIONS.dates, submission);
 
     const locked = lockedPhaseCount(stored.phases, today);
+    if (locked === stored.phases.length) {
+      return invalid(REWRITE_REJECTIONS.ended, submission);
+    }
+    // A phase that ended while the form was open was editable on it. What
+    // was typed there is not dropped without a word: the owner reloads.
+    const shownLocked = Number(text(formData, "lockedPhases"));
+    if (!Number.isInteger(shownLocked) || shownLocked < locked) {
+      return invalid(REWRITE_REJECTIONS.phaseEnded, submission);
+    }
     const sentPhases = Array.isArray(sent.phases) ? [...sent.phases] : [];
     if (sentPhases.length < locked) {
       return invalid(REWRITE_REJECTIONS.schema, submission);
@@ -543,8 +552,17 @@ export async function rewriteRoadmapAction(
       return invalid(REWRITE_REJECTIONS.unowned_goal_reference, submission);
     }
 
+    // The ended phases go back exactly as stored, not as the validator
+    // rebuilt them: `edit_roadmap` compares them with the stored ones.
+    const roadmap = validation.response.roadmap;
     await roadmaps.editRoadmap(
-      validation.response.roadmap,
+      {
+        ...roadmap,
+        phases: [
+          ...stored.phases.slice(0, locked),
+          ...roadmap.phases.slice(locked),
+        ],
+      },
       expectedHeadRevision,
     );
     return landed("rewritten", submission);

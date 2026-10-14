@@ -112,7 +112,7 @@ $$;
 create temporary table made (label text primary key, id uuid);
 grant all on made to public;
 
-select plan(19);
+select plan(20);
 
 -- The function ----------------------------------------------------------------------
 
@@ -374,6 +374,41 @@ select is(
    join public.roadmap_heads head on head.current_version_id = mark.version_id),
   0,
   'and its review falls back to the phase before, which has ended'
+);
+
+-- A roadmap that has ended ---------------------------------------------------------
+
+reset role;
+with stored as (
+  insert into public.roadmap_proposals (user_id, origin, schema_version, content)
+  values (
+    '73000000-0000-4000-8000-000000000002', 'owner_written', 'fittip.roadmap.v4',
+    pg_temp.roadmap('Over', -60, -2, jsonb_build_array(
+      pg_temp.phase('Only', -60, -2)))
+  )
+  returning id
+)
+insert into made select 'over', id from stored;
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"73000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
+do $$
+begin
+  perform public.accept_roadmap_proposal(
+    (select id from made where label = 'over'), 2
+  );
+end;
+$$;
+
+select throws_ok(
+  format('select * from public.edit_roadmap(%L::jsonb, 3)',
+    pg_temp.roadmap('Over', -60, 20, jsonb_build_array(
+      pg_temp.phase('Only', -60, -2),
+      pg_temp.phase('More', -1, 20)))),
+  '22023', 'Invalid roadmap.',
+  'a roadmap that has ended is not extended'
 );
 
 select * from finish();
