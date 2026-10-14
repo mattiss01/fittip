@@ -137,9 +137,11 @@ Not worth their own slot; do them when work lands nearby.
   earlier versions and decided proposals. `roadmap-proposal-record.tsx`, its test, the
   `.historyList`, `.historyItem` and `.recordTitle` styles and the `proposalExpired` and
   `proposalSuperseded` wordings have no caller; files cannot be deleted by the agent.
-  After a decline, "New roadmap" opens the regeneration with
-  its dates fixed, and other dates can be asked for only once the three are used.
-  When a generation lands from the sheet, focus falls to the page's start.
+  Since 14 Oct 2026 so do `roadmap-editor.tsx` and its test, the `"regeneration"` mode
+  of `RoadmapComposer`, `regenerationCapReached`, `editFieldLabels`, the
+  `--attention-*` colours, `.attentionReason`, and `declinedPredecessor` on the
+  screen state. When a generation lands from the sheet, focus falls to the page's
+  start.
 - **Two milestones ticked within a second can reload the page for nothing.** Each
   tick watches for a reply that never rendered, on the one address all roadmap
   writes share, so it can take another tick's reply for its own. No data is
