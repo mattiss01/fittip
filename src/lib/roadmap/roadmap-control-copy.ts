@@ -21,6 +21,23 @@
  * the module that held them and they came back as strings inlined in a Server
  * Action, which is the drift this module exists to prevent.
  */
+/** A hand-written roadmap's refusals, which an edit of the one in force
+ * shares (ADR-029, ADR-030). */
+const WRITE_REJECTIONS = {
+  schema: "Fill in every field that is not marked optional.",
+  business_rule:
+    "Every phase and every milestone needs a goal, and a phase names a goal once.",
+  impossible_date:
+    "Each phase must end after it starts, and each milestone fall inside its phase.",
+  unowned_goal_reference:
+    "One of the goals is no longer active. Reload and try again.",
+  unsafe_content:
+    "That wording cannot be saved. FitTip does not diagnose, prescribe, or call training safe.",
+  too_large: "That roadmap is too long to save. Shorten some of its text.",
+  dates:
+    "A roadmap starts between today and 30 days from now, and runs four to fifty-two weeks.",
+};
+
 export const ROADMAP_CONTROL_COPY = {
   /* ---- Compose ---------------------------------------------------------- */
   /**
@@ -43,6 +60,15 @@ export const ROADMAP_CONTROL_COPY = {
   writeNoGoals:
     "Every phase is for at least one goal. Add an active goal first.",
   writeSaveAction: "Save roadmap",
+  /* Editing the roadmap in force (ADR-030): the writer's form, opened on it,
+     with what has ended locked. */
+  rewriteAction: "Edit roadmap",
+  rewriteTitle: "Edit your roadmap",
+  rewriteSupport:
+    "Saving changes your roadmap now. Ticks stay on milestones whose title and date you keep.",
+  rewriteSaveAction: "Save changes",
+  rewriteStartFixed: "Your roadmap has started, so its start stays.",
+  rewriteLocked: "Ended, so it stays as it was.",
   writeFieldLabels: {
     title: "Title",
     summary: "Summary (optional)",
@@ -79,6 +105,8 @@ export const ROADMAP_CONTROL_COPY = {
     phaseNoGoal: (phase: number) => `Phase ${phase} needs at least one goal.`,
     milestoneOutsidePhase: (phase: number) =>
       `A milestone in phase ${phase} falls outside that phase's dates.`,
+    phaseEndsBeforeToday: (phase: number) =>
+      `Phase ${phase} has not ended yet, so it cannot end before today.`,
     lastPhaseEnd: (phase: number, roadmapEnd: string) =>
       `Phase ${phase} is the last, so it has to end with the roadmap, on ${roadmapEnd}.`,
   },
@@ -218,6 +246,7 @@ export const ROADMAP_CONTROL_COPY = {
     declined: "Declined.",
     edited: "Saved as a new proposal. Review it below.",
     written: "Saved. This is your roadmap now.",
+    rewritten: "Saved. Your roadmap is changed.",
     /* "Ask for another" after its decline (owner, 14 Oct 2026). */
     askAgainFailed:
       "The proposal was declined, but the coach could not prepare another. Ask for a new roadmap below.",
@@ -303,19 +332,22 @@ export const ROADMAP_CONTROL_COPY = {
    * A hand-written roadmap's rejections (ADR-029). Gaps and overlaps cannot
    * be entered on that form, so what is left is a field, a goal or a date.
    */
-  writeRejections: {
-    schema: "Fill in every field that is not marked optional.",
-    business_rule:
-      "Every phase and every milestone needs a goal, and a phase names a goal once.",
-    impossible_date:
-      "Each phase must end after it starts, and each milestone fall inside its phase.",
-    unowned_goal_reference:
-      "One of the goals is no longer active. Reload and try again.",
-    unsafe_content:
-      "That wording cannot be saved. FitTip does not diagnose, prescribe, or call training safe.",
-    too_large: "That roadmap is too long to save. Shorten some of its text.",
+  writeRejections: WRITE_REJECTIONS,
+
+  /**
+   * Editing the roadmap in force (ADR-030): a hand-written roadmap's
+   * rejections, with its own dates and the two things only an edit can get
+   * wrong.
+   */
+  rewriteRejections: {
+    ...WRITE_REJECTIONS,
     dates:
-      "A roadmap starts between today and 30 days from now, and runs four to fifty-two weeks.",
+      "A roadmap runs four to fifty-two weeks from its start, and cannot end before today.",
+    endsBeforeToday: "A phase that has not ended yet cannot end before today.",
+    noRoadmap: "There is no roadmap to edit any more. Reload the page.",
+    ended: "This roadmap has ended. Write a new one, or ask the coach for one.",
+    phaseEnded:
+      "A phase has ended since you opened this, so it stays as it was. Reload and edit again.",
   },
 
   /** Decision 4a: an over-large context names its source. */

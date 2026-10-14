@@ -371,6 +371,70 @@ test.describe("M3-15F roadmap generation", () => {
         path: path.join(evidenceDirectory, "M3-15F-history-390x844.png"),
       });
 
+      // ---- Edited by hand (ADR-030): in force on save. A tick stays on a
+      // ---- milestone kept as it was, and goes from one renamed. ----
+      const rewrite = async () => {
+        await page.getByRole("button", { name: "Edit roadmap" }).click();
+        const form = page
+          .getByRole("dialog", { name: "Edit your roadmap" })
+          .locator('[data-roadmap-write="rewrite"]');
+        await expect(form).toBeVisible();
+        return form;
+      };
+      let edit = await rewrite();
+      await expectNoHorizontalOverflow(page);
+      // It opens on the roadmap in force, its start fixed.
+      await expect(
+        edit.getByLabel("Title", { exact: true }).first(),
+      ).toHaveValue("My own way to the half");
+      await expect(
+        edit.getByLabel("Starts", { exact: true }).first(),
+      ).toHaveAttribute("readonly", "");
+      const editPhase = edit.locator('[data-roadmap-write-phase="1"]');
+      await editPhase.getByRole("button", { name: "Add milestone" }).click();
+      const added = editPhase.getByRole("group", { name: "Milestone 1" });
+      await added.getByLabel("Title", { exact: true }).fill("Ten km test");
+      await fillDate(added, "Aim for by", shiftDays(ownerToday(), 20));
+      await edit.getByRole("button", { name: "Save changes" }).click();
+      await expectOutcome(page, "Saved. Your roadmap is changed.");
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(page.locator('[data-roadmap-version="5"]')).toBeVisible();
+
+      const tenKm = page
+        .locator("[data-roadmap-current] [data-milestone-reached]")
+        .first();
+      await tenKm.getByRole("button", { name: /^Mark reached: / }).click();
+      await expect(tenKm).toHaveAttribute("data-milestone-reached", "true");
+
+      // Something else changes: the milestone, as it was, keeps its tick.
+      edit = await rewrite();
+      await edit
+        .locator('[data-roadmap-write-phase="1"]')
+        .getByLabel("What it's for")
+        .fill("Easy running, four times a week.");
+      await edit.getByRole("button", { name: "Save changes" }).click();
+      await expectOutcome(page, "Saved. Your roadmap is changed.");
+      await expect(page.locator('[data-roadmap-version="6"]')).toBeVisible();
+      await expect(page.locator("[data-roadmap-current]")).toContainText(
+        "four times a week",
+      );
+      await expect(tenKm).toHaveAttribute("data-milestone-reached", "true");
+
+      // The milestone renamed: it starts unticked (owner, 14 Oct 2026).
+      edit = await rewrite();
+      await edit
+        .getByRole("group", { name: "Milestone 1" })
+        .getByLabel("Title", { exact: true })
+        .fill("Ten km time trial");
+      await edit.getByRole("button", { name: "Save changes" }).click();
+      await expectOutcome(page, "Saved. Your roadmap is changed.");
+      await expect(page.locator('[data-roadmap-version="7"]')).toBeVisible();
+      await expect(page.locator("[data-roadmap-current]")).toContainText(
+        "Ten km time trial",
+      );
+      await expect(tenKm).toHaveAttribute("data-milestone-reached", "false");
+      await expectNoHorizontalOverflow(page);
+
       expect(pageErrors, pageErrors.map(String).join("\n")).toHaveLength(0);
       await testInfo.attach("roadmap-final", {
         body: await page.screenshot({ fullPage: true }),

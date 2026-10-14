@@ -20,22 +20,46 @@ import { selectActiveGoalContext } from "@/server/goals/goal-records";
  * generated must not survive into an edited version, and a hand-written
  * roadmap may name only the owner's active goals; the validator rejects any
  * other.
+ *
+ * The one exception is the roadmap in force being edited (ADR-030): its ended
+ * phases are locked and come back as they were, so a goal one of them names
+ * may have been achieved or archived since. `keepGoalIds` are those goals,
+ * accepted when they are still the owner's. `activeGoalIds` says which goals
+ * are active, so the caller can hold every phase that can still change to
+ * them.
  */
 export async function buildOwnerRoadmapValidationContext(source: {
   startDate: string;
   endDate: string;
 }): Promise<CoachAIContext> {
+  return (await buildOwnerRoadmapValidation(source)).context;
+}
+
+export async function buildOwnerRoadmapValidation(source: {
+  startDate: string;
+  endDate: string;
+  keepGoalIds?: readonly string[];
+}): Promise<{ context: CoachAIContext; activeGoalIds: Set<string> }> {
   const goals = await (await createGoalRepository()).list();
   const eligible = selectActiveGoalContext(goals.goals);
+  const keep = new Set(source.keepGoalIds ?? []);
+  const targetable = [
+    ...eligible.targetable,
+    ...goals.goals.filter(
+      (goal) =>
+        keep.has(goal.id) &&
+        !eligible.targetable.some((active) => active.id === goal.id),
+    ),
+  ];
 
-  return {
+  const context: CoachAIContext = {
     today: source.startDate,
     horizonStartDate: source.startDate,
     horizonEndDate: source.endDate,
     // An owner's roadmap is checked against the goals and the dates. It is
     // never sent to a coach, so the profile is not read for it.
     ...emptyCoachProfile(),
-    targetableGoals: eligible.targetable.map((goal) => ({
+    targetableGoals: targetable.map((goal) => ({
       id: goal.id,
       title: goal.title,
       sports: goal.sports,
@@ -66,5 +90,9 @@ export async function buildOwnerRoadmapValidationContext(source: {
     // nothing, so it carries no roadmap context.
     roadmap: null,
     sessionDetail: null,
+  };
+  return {
+    context,
+    activeGoalIds: new Set(eligible.targetable.map((goal) => goal.id)),
   };
 }

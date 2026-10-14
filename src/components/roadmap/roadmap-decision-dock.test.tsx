@@ -45,6 +45,7 @@ vi.mock("@/app/home/plan/roadmap/actions", () => ({
     }),
   askAgainRoadmapAction: vi.fn(),
   writeRoadmapAction: vi.fn(),
+  rewriteRoadmapAction: vi.fn(),
   editRoadmapAction: (previous: RoadmapActionState) =>
     Promise.resolve({
       status: "edited" as const,

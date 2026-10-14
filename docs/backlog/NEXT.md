@@ -77,11 +77,13 @@ lane, one screen per merge.
       memory in bytes, so many long notes can leave the coach refusing to plan. Limits
       as a whole are still to be thought through with the owner, and the coach tidying
       the notes is not built.
-- [ ] **Edit your roadmap by hand.** Owner, 13 Oct 2026, as distinct from writing
-      one: open the roadmap in force in a form and save the change. It can start
-      from the writer (`roadmap-writer.tsx`) and `write_roadmap` (ADR-029).
-      Open: whether a milestone's tick and a done review survive an edit that
-      keeps them.
+- [~] **Edit your roadmap by hand.** Careful lane (ADR-030). Outcome: open the
+      roadmap in force in the writer form, save, and the change is in force at
+      once. Constraints: one atomic `edit_roadmap` function that copies the marks
+      onto the new version, stored as an `owner_written` proposal; the database
+      checks the past again. Owner, 14 Oct 2026: the start and ended phases are
+      locked, the current phase keeps its start; a tick stays only on a milestone
+      with the same title and date; a done review stays with its phase.
 - [ ] **Tell the coach which milestones were reached.** Left out of the tick on
       purpose (owner, 13 Oct 2026; ADR-026), to be decided once ticks have been
       used. It changes what the roadmap call is sent and takes prompt bytes:
