@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/app/home/plan/roadmap/actions", () => ({
   writeRoadmapAction: vi.fn(),
   editRoadmapAction: vi.fn(),
+  rewriteRoadmapAction: vi.fn(),
 }));
 
 import {
@@ -252,6 +253,99 @@ describe("RoadmapWriter editing a proposal", () => {
     // No details stored, none sent; no summary stored, none sent.
     expect("observableCriterion" in phase.milestones[0]).toBe(false);
     expect("summary" in content()).toBe(false);
+  });
+});
+
+describe("RoadmapWriter editing the roadmap in force", () => {
+  afterEach(cleanup);
+
+  // Started in September; its first phase ended before today.
+  const IN_FORCE = {
+    schemaVersion: "fittip.roadmap.v4",
+    title: "Autumn",
+    startDate: "2026-09-01",
+    endDate: "2026-12-31",
+    phases: [
+      {
+        title: "Base",
+        focus: "Easy.",
+        startDate: "2026-09-01",
+        endDate: "2026-10-01",
+        goalAttention: [{ goalId: GOALS[0]!.id, level: "primary" }],
+        milestones: [
+          { title: "Long run", targetDate: "2026-09-20", goalIds: [] },
+        ],
+      },
+      {
+        title: "Build",
+        focus: "Harder.",
+        startDate: "2026-10-02",
+        endDate: "2026-12-31",
+        goalAttention: [{ goalId: GOALS[1]!.id, level: "primary" }],
+        milestones: [],
+      },
+    ],
+  };
+
+  function renderInForce() {
+    render(
+      <RoadmapWriter
+        today={TODAY}
+        goals={GOALS}
+        expectedHeadRevision={3}
+        replaces
+        inForce={{ content: IN_FORCE, lockedPhases: 1 }}
+      />,
+    );
+  }
+
+  it("opens on the roadmap, its start fixed and the phase that ended drawn as text", () => {
+    renderInForce();
+
+    expect(
+      screen.getByRole("heading", { name: ROADMAP_CONTROL_COPY.rewriteTitle }),
+    ).toBeTruthy();
+    expect(
+      (
+        document.querySelector(
+          'input[name="expectedHeadRevision"]',
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("3");
+    expect(
+      screen.getAllByLabelText<HTMLInputElement>(
+        ROADMAP_CONTROL_COPY.startDateLabel,
+      )[0]!.readOnly,
+    ).toBe(true);
+    // The ended phase has no field of its own: the roadmap's title and
+    // Build's are the only ones.
+    const locked = document.querySelector('[data-roadmap-write-locked="1"]')!;
+    expect(locked.textContent).toContain("Base");
+    expect(locked.textContent).toContain(ROADMAP_CONTROL_COPY.rewriteLocked);
+    expect(locked.querySelector("input, textarea")).toBeNull();
+    expect(
+      screen
+        .getAllByLabelText<HTMLInputElement>(LABELS.phaseTitle)
+        .map((input) => input.value),
+    ).toEqual(["Autumn", "Build"]);
+    // Build is the only phase that can go, and it is the last one left.
+    expect(
+      screen.queryByRole("button", { name: LABELS.removePhase }),
+    ).toBeNull();
+    expect(content().phases[0]).toEqual(IN_FORCE.phases[0]);
+    expect(screen.getByText(ROADMAP_CONTROL_COPY.rewriteSupport)).toBeTruthy();
+  });
+
+  it("refuses, on save, a phase not yet over that now ends before today", () => {
+    renderInForce();
+    fireEvent.click(screen.getByRole("button", { name: LABELS.addPhase }));
+    // Build is the first phase with an "Ends" of its own, after the roadmap's.
+    fireEvent.change(phaseEnd(1), { target: { value: "2026-10-10" } });
+    fireEvent.submit(document.querySelector("form")!);
+
+    expect(screen.getByRole("alert").textContent).toBe(
+      CHECKS.phaseEndsBeforeToday(2),
+    );
   });
 });
 

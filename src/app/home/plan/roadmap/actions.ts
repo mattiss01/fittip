@@ -9,6 +9,7 @@ import type { RoadmapActionDraft, RoadmapActionState } from "./action-state";
 
 import { isoDateInTimezone } from "@/lib/date/local-date";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
+import { lockedPhaseCount } from "@/lib/roadmap/roadmap-locked-phases";
 import { createServerUserClient } from "@/lib/supabase/server-user-client";
 import {
   CoachAIContextBelowMinimumError,
@@ -31,7 +32,10 @@ import {
   RoadmapAuthenticationError,
   RoadmapConflictError,
 } from "@/server/repositories/roadmap-repository";
-import { buildOwnerRoadmapValidationContext } from "@/server/roadmap/roadmap-edit";
+import {
+  buildOwnerRoadmapValidation,
+  buildOwnerRoadmapValidationContext,
+} from "@/server/roadmap/roadmap-edit";
 import { generateRoadmapProposal } from "@/server/roadmap/roadmap-generation";
 import {
   parseExpectedHeadRevision,
@@ -441,6 +445,115 @@ export async function writeRoadmapAction(
 }
 
 /**
+ * The roadmap in force, edited by hand and in force at once (ADR-030).
+ *
+ * What the form may not change is not taken from it. The start is the stored
+ * one, and the phases that have ended (owner, 14 Oct 2026: the past stays
+ * fixed) are put back from the stored roadmap whatever the form sent, so a
+ * stale or tampered form cannot rewrite them; `edit_roadmap` refuses a change
+ * to them on its own. Which version is in force is the database's to say: the
+ * head the page read is compared under the lock.
+ *
+ * The goals of a locked phase may have been achieved since, so the validation
+ * context keeps them, as long as they are still the owner's.
+ */
+export async function rewriteRoadmapAction(
+  previous: RoadmapActionState,
+  formData: FormData,
+): Promise<RoadmapActionState> {
+  const submission = previous.submission + 1;
+  try {
+    const [roadmaps, profiles] = await Promise.all([
+      createRoadmapRepository(),
+      createProfileRepository(),
+    ]);
+    const today = await ownerToday(profiles);
+    const expectedHeadRevision = parseExpectedHeadRevision(
+      formData.get("expectedHeadRevision"),
+    );
+    const current = await roadmaps.getCurrentVersion();
+    if (current === null) {
+      return invalid(REWRITE_REJECTIONS.noRoadmap, submission);
+    }
+    const stored = current.content;
+
+    let sent: Record<string, unknown> = {};
+    try {
+      const parsed: unknown = JSON.parse(text(formData, "content") || "null");
+      if (typeof parsed === "object" && parsed !== null) {
+        sent = parsed as Record<string, unknown>;
+      }
+    } catch {
+      // Left to the validator below, which refuses an empty roadmap.
+    }
+
+    const startDate = stored.startDate;
+    let endDate: string;
+    try {
+      endDate = parseRoadmapEndDate(sent.endDate, startDate);
+    } catch (error) {
+      if (error instanceof RoadmapValidationError) {
+        return invalid(REWRITE_REJECTIONS.dates, submission);
+      }
+      throw error;
+    }
+    if (endDate < today) return invalid(REWRITE_REJECTIONS.dates, submission);
+
+    const locked = lockedPhaseCount(stored.phases, today);
+    const sentPhases = Array.isArray(sent.phases) ? [...sent.phases] : [];
+    if (sentPhases.length < locked) {
+      return invalid(REWRITE_REJECTIONS.schema, submission);
+    }
+    const phases = [
+      ...stored.phases.slice(0, locked),
+      ...sentPhases.slice(locked),
+    ];
+    for (const phase of phases.slice(locked)) {
+      const end = (phase as { endDate?: unknown } | null)?.endDate;
+      if (typeof end === "string" && end < today) {
+        return invalid(REWRITE_REJECTIONS.endsBeforeToday, submission);
+      }
+    }
+
+    const { context, activeGoalIds } = await buildOwnerRoadmapValidation({
+      startDate,
+      endDate,
+      keepGoalIds: stored.phases.slice(0, locked).flatMap(goalIdsOf),
+    });
+    const validation = validateRoadmapCandidate({
+      body: JSON.stringify({
+        roadmap: { ...sent, startDate, phases },
+        memoryCandidates: null,
+      }),
+      context,
+    });
+    if (validation.outcome === "rejected") {
+      return invalid(
+        rejectionMessage(REWRITE_REJECTIONS, validation.reason),
+        submission,
+      );
+    }
+    // A goal kept for an ended phase is not one a phase that can still
+    // change may take up.
+    if (
+      validation.response.roadmap.phases
+        .slice(locked)
+        .some((phase) => goalIdsOf(phase).some((id) => !activeGoalIds.has(id)))
+    ) {
+      return invalid(REWRITE_REJECTIONS.unowned_goal_reference, submission);
+    }
+
+    await roadmaps.editRoadmap(
+      validation.response.roadmap,
+      expectedHeadRevision,
+    );
+    return landed("rewritten", submission);
+  } catch (error) {
+    return toActionState(error, submission);
+  }
+}
+
+/**
  * Mark a milestone of the roadmap in force reached, or take the mark back
  * (ADR-026).
  *
@@ -538,12 +651,21 @@ export async function setRoadmapReviewedAction(
  * is what makes a success sentence worth returning: the screen the owner reads
  * it on is already the screen the write produced.
  */
-type Landed = "proposal" | "accepted" | "declined" | "edited" | "written";
+type Landed =
+  | "proposal"
+  | "accepted"
+  | "declined"
+  | "edited"
+  | "written"
+  | "rewritten";
 
 function landed(status: Landed, submission: number): RoadmapActionState {
   revalidatePath("/home/plan/roadmap");
-  // A roadmap written by hand is in force at once, and the Plan reads it.
-  if (status === "written") revalidatePath("/home/plan");
+  // A roadmap written or edited by hand is in force at once, and the Plan
+  // reads it.
+  if (status === "written" || status === "rewritten") {
+    revalidatePath("/home/plan");
+  }
   return { status, message: SUCCESS[status], submission };
 }
 
@@ -553,6 +675,7 @@ const SUCCESS: Record<Landed, string> = {
   declined: OUTCOMES.declined,
   edited: OUTCOMES.edited,
   written: OUTCOMES.written,
+  rewritten: OUTCOMES.rewritten,
 };
 
 /**
@@ -574,7 +697,19 @@ async function ownerToday(
     : isoDateInTimezone(new Date(), profile.timezoneName);
 }
 
+/** Every goal a phase names, for itself or for one of its milestones. */
+function goalIdsOf(phase: {
+  goalAttention: { goalId: string }[];
+  milestones: { goalIds: string[] }[];
+}): string[] {
+  return [
+    ...phase.goalAttention.map((entry) => entry.goalId),
+    ...phase.milestones.flatMap((milestone) => milestone.goalIds),
+  ];
+}
+
 const WRITE_REJECTIONS = ROADMAP_CONTROL_COPY.writeRejections;
+const REWRITE_REJECTIONS = ROADMAP_CONTROL_COPY.rewriteRejections;
 
 /** A validator's reason in the form's own words, or the general refusal. */
 function rejectionMessage(

@@ -58,6 +58,7 @@ import {
   declineRoadmapAction,
   editRoadmapAction,
   generateRoadmapAction,
+  rewriteRoadmapAction,
   setMilestoneReachedAction,
   setRoadmapReviewedAction,
   writeRoadmapAction,
@@ -103,6 +104,8 @@ const listGoals = vi.fn();
 const setMilestoneReached = vi.fn();
 const setReviewed = vi.fn();
 const writeRoadmap = vi.fn();
+const editRoadmap = vi.fn();
+const getCurrentVersion = vi.fn();
 
 describe("roadmap server actions", () => {
   beforeEach(() => {
@@ -135,6 +138,8 @@ describe("roadmap server actions", () => {
       setMilestoneReached,
       setReviewed,
       writeRoadmap,
+      editRoadmap,
+      getCurrentVersion,
     });
     writeRoadmap.mockResolvedValue({
       proposalId: PROPOSAL_ID,
@@ -1037,6 +1042,158 @@ describe("roadmap server actions", () => {
         status: "conflict",
         message: OUTCOMES.stale,
       });
+    });
+  });
+
+  // ADR-030. The start and what has ended are the stored roadmap's, whatever
+  // the form sent; the head is the page's.
+  describe("edit the roadmap in force", () => {
+    const today = isoDateInTimezone(new Date(), TIMEZONE);
+    const ACHIEVED_GOAL_ID = "9f150000-0000-4000-8000-000000000021";
+    const phase = (
+      title: string,
+      start: number,
+      end: number,
+      goalId = GOAL_ID,
+    ) => ({
+      ...roadmapContent().phases[0],
+      title,
+      startDate: addDays(today, start),
+      endDate: addDays(today, end),
+      goalAttention: [{ goalId, level: "primary" }],
+      milestones: [],
+    });
+    // Started forty days ago; Base, for a goal achieved since, has ended.
+    const stored = () => ({
+      ...roadmapContent(),
+      startDate: addDays(today, -40),
+      endDate: addDays(today, 44),
+      phases: [
+        phase("Base", -40, -15, ACHIEVED_GOAL_ID),
+        phase("Build", -14, 44),
+      ],
+    });
+    const sent = (change: (content: ReturnType<typeof stored>) => void) => {
+      const content = stored();
+      change(content);
+      return JSON.stringify(content);
+    };
+
+    beforeEach(() => {
+      getCurrentVersion.mockResolvedValue({
+        id: VERSION_ID,
+        content: stored(),
+      });
+      listGoals.mockResolvedValue({
+        revision: 4,
+        goals: [
+          goal(),
+          { ...goal(), id: ACHIEVED_GOAL_ID, status: "achieved" },
+        ],
+      });
+      editRoadmap.mockResolvedValue({
+        proposalId: PROPOSAL_ID,
+        versionId: VERSION_ID,
+        headRevision: 3,
+        result: "accepted",
+      });
+    });
+
+    it("puts the change in force, with the start and the ended phase as stored", async () => {
+      const result = await rewriteRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({
+          content: sent((content) => {
+            content.title = "Changed";
+            content.startDate = today;
+            content.phases[0]!.title = "Base, rewritten";
+            content.phases[1]!.focus = "Longer intervals.";
+          }),
+          expectedHeadRevision: "2",
+        }),
+      );
+
+      expect(result).toMatchObject({
+        status: "rewritten",
+        message: OUTCOMES.rewritten,
+      });
+      const [saved, head] = editRoadmap.mock.calls[0]!;
+      expect(head).toBe(2);
+      expect(saved).toMatchObject({
+        title: "Changed",
+        startDate: addDays(today, -40),
+      });
+      expect(saved.phases[0]).toEqual(stored().phases[0]);
+      expect(saved.phases[1].focus).toBe("Longer intervals.");
+      expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan");
+    });
+
+    it("refuses a phase not over yet that now ends before today", async () => {
+      const result = await rewriteRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({
+          content: sent((content) => {
+            content.phases[1]!.endDate = addDays(today, -1);
+            content.phases.push(phase("Rest", 0, 44));
+          }),
+          expectedHeadRevision: "2",
+        }),
+      );
+
+      expect(result.message).toBe(
+        ROADMAP_CONTROL_COPY.rewriteRejections.endsBeforeToday,
+      );
+      expect(editRoadmap).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["ends before today", -1],
+      ["runs past fifty-two weeks from its start", 330],
+    ])("refuses a roadmap that %s", async (_name, end) => {
+      const result = await rewriteRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({
+          content: sent((content) => {
+            content.endDate = addDays(today, end);
+            content.phases[1]!.endDate = addDays(today, end);
+          }),
+          expectedHeadRevision: "2",
+        }),
+      );
+
+      expect(result.message).toBe(ROADMAP_CONTROL_COPY.rewriteRejections.dates);
+      expect(editRoadmap).not.toHaveBeenCalled();
+    });
+
+    it("says so when there is no roadmap left to edit", async () => {
+      getCurrentVersion.mockResolvedValue(null);
+
+      const result = await rewriteRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({ content: sent(() => {}), expectedHeadRevision: "2" }),
+      );
+
+      expect(result.message).toBe(
+        ROADMAP_CONTROL_COPY.rewriteRejections.noRoadmap,
+      );
+      expect(editRoadmap).not.toHaveBeenCalled();
+    });
+
+    it("still refuses a goal that is not active in a phase that can change", async () => {
+      const result = await rewriteRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({
+          content: sent((content) => {
+            content.phases[1]!.goalAttention = [
+              { goalId: ACHIEVED_GOAL_ID, level: "primary" },
+            ];
+          }),
+          expectedHeadRevision: "2",
+        }),
+      );
+
+      expect(result.status).toBe("validation");
+      expect(editRoadmap).not.toHaveBeenCalled();
     });
   });
 

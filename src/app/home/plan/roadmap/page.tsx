@@ -48,6 +48,7 @@ const SHEET_TITLE_IDS = {
   change: "roadmap-change-title",
   fresh: "roadmap-new-title",
   write: "roadmap-write-title",
+  rewrite: "roadmap-write-title",
 };
 
 /**

@@ -2534,6 +2534,16 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      edit_roadmap: {
+        Args: { p_content: Json; p_expected_head_revision: number };
+        Returns: Database["public"]["CompositeTypes"]["roadmap_acceptance_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "roadmap_acceptance_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       finish_plan_generation: {
         Args: {
           p_completion_token: string;

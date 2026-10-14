@@ -13,6 +13,7 @@ import {
 
 import {
   editRoadmapAction,
+  rewriteRoadmapAction,
   writeRoadmapAction,
 } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
@@ -41,6 +42,11 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
  * Goals are chips, with no level (owner, 14 Oct 2026). A goal added here is
  * saved as primary; one the coach gave a level keeps it through an edit. A
  * milestone's goals are chips too, "Counts toward", and may be none.
+ *
+ * Opened on the roadmap in force (ADR-030), it is that roadmap's edit and is
+ * in force on save. What has passed stays as it was (owner, 14 Oct 2026): the
+ * start is shown, not typed, and the phases that have ended are drawn as text
+ * with nothing to change. The server puts the stored ones back regardless.
  *
  * Every block is keyed by an id minted when it is added, so typing a date
  * never rebuilds the block it is in. The draft travels as one JSON field, the
@@ -113,6 +119,7 @@ export function RoadmapWriter({
   replaces,
   headingId,
   edit,
+  inForce,
 }: {
   today: string;
   /** The owner's active goals, the only ones a phase may be for. */
@@ -129,9 +136,21 @@ export function RoadmapWriter({
     onCancel: () => void;
     onSaved: () => void;
   };
+  /**
+   * Present when the roadmap in force is being edited (ADR-030): its content,
+   * and how many of its phases have ended and are locked.
+   */
+  inForce?: {
+    content: unknown;
+    lockedPhases: number;
+  };
 }) {
   const { state, submit, pending, lostRender } = useRoadmapWrite(
-    edit === undefined ? writeRoadmapAction : editRoadmapAction,
+    edit !== undefined
+      ? editRoadmapAction
+      : inForce !== undefined
+        ? rewriteRoadmapAction
+        : writeRoadmapAction,
   );
   const recovered = useRoadmapRecovered(state.submission === 0);
   const fieldId = useId();
@@ -147,7 +166,7 @@ export function RoadmapWriter({
     return () => reportPending?.(false);
   }, [reportPending, pending]);
   useEffect(() => {
-    if (state.status === "written") close?.();
+    if (state.status === "written" || state.status === "rewritten") close?.();
     if (state.status === "edited") onSaved?.();
   }, [close, onSaved, state.status]);
 
@@ -155,16 +174,23 @@ export function RoadmapWriter({
   const mint = () => `k${(nextKey.current += 1)}`;
 
   const [draft, setDraft] = useState<WriterDraft>(() =>
-    edit === undefined
-      ? {
-          title: "",
-          summary: "",
-          startDate: today,
-          endDate: "",
-          phases: [emptyPhase("k0")],
-        }
-      : fromStored(edit.content as StoredRoadmap),
+    edit !== undefined
+      ? fromStored(edit.content as StoredRoadmap)
+      : inForce !== undefined
+        ? withActiveGoals(
+            fromStored(inForce.content as StoredRoadmap),
+            inForce.lockedPhases,
+            new Set(goals.map((goal) => goal.id)),
+          )
+        : {
+            title: "",
+            summary: "",
+            startDate: today,
+            endDate: "",
+            phases: [emptyPhase("k0")],
+          },
   );
+  const locked = inForce?.lockedPhases ?? 0;
   // What the last attempt to save found wrong, before anything was sent.
   const [problem, setProblem] = useState("");
 
@@ -177,9 +203,11 @@ export function RoadmapWriter({
   };
 
   const heading =
-    edit === undefined
-      ? ROADMAP_CONTROL_COPY.writeTitle
-      : ROADMAP_CONTROL_COPY.editTitle;
+    edit !== undefined
+      ? ROADMAP_CONTROL_COPY.editTitle
+      : inForce !== undefined
+        ? ROADMAP_CONTROL_COPY.rewriteTitle
+        : ROADMAP_CONTROL_COPY.writeTitle;
 
   if (goals.length === 0) {
     return (
@@ -195,7 +223,15 @@ export function RoadmapWriter({
   const goalTitles = new Map(goals.map((goal) => [goal.id, goal.title]));
   const starts = phaseStarts(draft);
   const latestStart = shiftIsoDate(today, COACH_START_MAX_DAYS_AHEAD);
+  // A proposal's dates are its request's; the roadmap in force keeps its
+  // start and may move its end, but not before today.
   const datesFixed = edit !== undefined;
+  const startFixed = datesFixed || inForce !== undefined;
+  const shortestEnd = isDate(draft.startDate)
+    ? shiftIsoDate(draft.startDate, MIN_DAYS)
+    : "";
+  const earliestEnd =
+    inForce !== undefined && today > shortestEnd ? today : shortestEnd;
   const message =
     problem !== "" ? problem : isRefusal(state) ? state.message : "";
 
@@ -203,7 +239,13 @@ export function RoadmapWriter({
     // An edit sits in the proposal's own card, so it draws none of its own.
     <section
       className={edit === undefined ? styles.card : undefined}
-      data-roadmap-write={edit === undefined ? "write" : "edit"}
+      data-roadmap-write={
+        edit !== undefined
+          ? "edit"
+          : inForce !== undefined
+            ? "rewrite"
+            : "write"
+      }
     >
       <h2 className={styles.cardHeading} id={headingId}>
         {heading}
@@ -225,7 +267,11 @@ export function RoadmapWriter({
         action={submit}
         className={styles.form}
         onSubmit={(event) => {
-          const found = checkDraft(draft, starts);
+          const found = checkDraft(
+            draft,
+            starts,
+            inForce === undefined ? undefined : { today, locked },
+          );
           setProblem(found ?? "");
           if (found !== null) event.preventDefault();
         }}
@@ -273,11 +319,11 @@ export function RoadmapWriter({
               id={`${fieldId}-start`}
               type="date"
               value={draft.startDate}
-              readOnly={datesFixed}
-              {...(datesFixed ? {} : { min: today, max: latestStart })}
+              readOnly={startFixed}
+              {...(startFixed ? {} : { min: today, max: latestStart })}
               required
               onChange={(event) => {
-                if (datesFixed) return;
+                if (startFixed) return;
                 update((next) => {
                   next.startDate = event.target.value;
                 });
@@ -296,7 +342,7 @@ export function RoadmapWriter({
               readOnly={datesFixed}
               {...(!datesFixed && isDate(draft.startDate)
                 ? {
-                    min: shiftIsoDate(draft.startDate, MIN_DAYS),
+                    min: earliestEnd,
                     max: shiftIsoDate(draft.startDate, MAX_DAYS),
                   }
                 : {})}
@@ -312,6 +358,10 @@ export function RoadmapWriter({
         </div>
         {datesFixed ? (
           <p className={styles.helper}>{ROADMAP_CONTROL_COPY.editDatesFixed}</p>
+        ) : inForce !== undefined ? (
+          <p className={styles.helper}>
+            {ROADMAP_CONTROL_COPY.rewriteStartFixed}
+          </p>
         ) : null}
 
         <div className={styles.field}>
@@ -336,6 +386,18 @@ export function RoadmapWriter({
           const start = starts[phaseIndex] ?? "";
           const id = `${fieldId}-${phase.key}`;
           const chosen = new Set(phase.goals.map((goal) => goal.goalId));
+
+          if (phaseIndex < locked) {
+            return (
+              <LockedPhase
+                key={phase.key}
+                number={phaseIndex + 1}
+                phase={phase}
+                start={start}
+                goalTitles={goalTitles}
+              />
+            );
+          }
 
           return (
             <fieldset
@@ -608,7 +670,7 @@ export function RoadmapWriter({
                     {LABELS.addMilestone}
                   </button>
                 ) : null}
-                {draft.phases.length > 1 ? (
+                {draft.phases.length > Math.max(1, locked + 1) ? (
                   <button
                     className={styles.linkAction}
                     type="button"
@@ -646,15 +708,19 @@ export function RoadmapWriter({
             type="submit"
             disabled={pending}
           >
-            {edit === undefined
-              ? ROADMAP_CONTROL_COPY.writeSaveAction
-              : ROADMAP_CONTROL_COPY.editSaveAction}
+            {edit !== undefined
+              ? ROADMAP_CONTROL_COPY.editSaveAction
+              : inForce !== undefined
+                ? ROADMAP_CONTROL_COPY.rewriteSaveAction
+                : ROADMAP_CONTROL_COPY.writeSaveAction}
           </button>
           {edit === undefined ? (
             <p className={styles.helper}>
-              {replaces
-                ? ROADMAP_CONTROL_COPY.writeSupportReplaces
-                : ROADMAP_CONTROL_COPY.writeSupport}
+              {inForce !== undefined
+                ? ROADMAP_CONTROL_COPY.rewriteSupport
+                : replaces
+                  ? ROADMAP_CONTROL_COPY.writeSupportReplaces
+                  : ROADMAP_CONTROL_COPY.writeSupport}
             </p>
           ) : (
             <>
@@ -673,6 +739,48 @@ export function RoadmapWriter({
           )}
         </div>
       </form>
+    </section>
+  );
+}
+
+/**
+ * A phase that has ended, in an edit of the roadmap in force: what it was,
+ * as text, and nothing to change (owner, 14 Oct 2026).
+ */
+function LockedPhase({
+  number,
+  phase,
+  start,
+  goalTitles,
+}: {
+  number: number;
+  phase: Phase;
+  start: string;
+  goalTitles: Map<string, string>;
+}) {
+  const goals = phase.goals
+    .map(({ goalId }) => goalTitles.get(goalId))
+    .filter((title) => title !== undefined);
+  return (
+    <section className={styles.editGroup} data-roadmap-write-locked={number}>
+      <h3 className={styles.editLegend}>{LABELS.phase(number)}</h3>
+      <p className={styles.helper}>{ROADMAP_CONTROL_COPY.rewriteLocked}</p>
+      <p>
+        <strong>{phase.title}</strong>
+      </p>
+      <p className={styles.helper}>
+        {formatRoadmapDate(start)} – {formatRoadmapDate(phase.endDate)}
+      </p>
+      {goals.length === 0 ? null : (
+        <p className={styles.helper}>{goals.join(", ")}</p>
+      )}
+      {phase.milestones.length === 0 ? null : (
+        <ul className={styles.helper}>
+          {phase.milestones.map((milestone) => (
+            <li key={milestone.key}>{milestone.title}</li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
@@ -729,6 +837,34 @@ function fromStored(content: StoredRoadmap): WriterDraft {
   };
 }
 
+/**
+ * The roadmap in force as its edit opens: a goal no longer active is taken
+ * out of every phase that can still change, which has no chip to take it out
+ * with and could not be saved with it. A phase left with none is said on
+ * save. The ended phases keep theirs: they are not changed.
+ */
+function withActiveGoals(
+  draft: WriterDraft,
+  locked: number,
+  active: Set<string>,
+): WriterDraft {
+  return {
+    ...draft,
+    phases: draft.phases.map((phase, index) =>
+      index < locked
+        ? phase
+        : {
+            ...phase,
+            goals: phase.goals.filter((goal) => active.has(goal.goalId)),
+            milestones: phase.milestones.map((milestone) => ({
+              ...milestone,
+              goalIds: milestone.goalIds.filter((id) => active.has(id)),
+            })),
+          },
+    ),
+  };
+}
+
 function isDate(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
@@ -757,11 +893,18 @@ export function phaseStarts(draft: {
 export function checkDraft(
   draft: WriterDraft,
   starts: string[] = phaseStarts(draft),
+  /** An edit of the roadmap in force: its today and its locked phases. */
+  inForce?: { today: string; locked: number },
 ): string | null {
   for (const [index, phase] of draft.phases.entries()) {
     const number = index + 1;
     const start = starts[index] ?? "";
+    // What has ended is the stored roadmap's, and is not checked again here.
+    if (inForce !== undefined && index < inForce.locked) continue;
     if (!isDate(phase.endDate)) return CHECKS.phaseNoEnd(number);
+    if (inForce !== undefined && phase.endDate < inForce.today) {
+      return CHECKS.phaseEndsBeforeToday(number);
+    }
     if (isDate(start) && phase.endDate < start) {
       return CHECKS.phaseEndsBeforeStart(number);
     }

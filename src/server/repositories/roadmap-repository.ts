@@ -586,6 +586,29 @@ export class RoadmapRepository {
   }
 
   /**
+   * The roadmap in force, changed by hand and in force from this call
+   * (ADR-030). The database refuses a change to what has ended and copies the
+   * ticks and the review that the change keeps. A repeat of an edit that
+   * landed returns its receipt as a replay.
+   */
+  async editRoadmap(
+    content: RoadmapProposal,
+    expectedHeadRevision: number,
+  ): Promise<RoadmapAcceptance> {
+    const data = await this.call("edit_roadmap", {
+      p_content: content as unknown as Json,
+      p_expected_head_revision: expectedHeadRevision,
+    });
+
+    return {
+      proposalId: String(data.proposal_id),
+      versionId: String(data.version_id),
+      headRevision: Number(data.head_revision ?? 0),
+      result: data.result as RoadmapAcceptance["result"],
+    };
+  }
+
+  /**
    * One place that runs an ADR-015 function and maps its failure.
    *
    * These five deliberately keep the client's default transport retry, unlike
@@ -645,7 +668,8 @@ type RoadmapFunctionName =
   | "record_roadmap_memory_candidates"
   | "apply_roadmap_proposal_change"
   | "accept_roadmap_proposal"
-  | "write_roadmap";
+  | "write_roadmap"
+  | "edit_roadmap";
 
 type RoadmapFunctionArgs<Name extends RoadmapFunctionName> =
   Database["public"]["Functions"][Name]["Args"];

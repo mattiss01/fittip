@@ -17,7 +17,7 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
  * The two ways to a new proposal while a roadmap is in force (ADR-028), and
  * writing one by hand (ADR-029).
  */
-type View = "menu" | "change" | "fresh" | "write";
+type View = "menu" | "change" | "fresh" | "write" | "rewrite";
 
 /**
  * Changing the roadmap in force (owner, 13 Oct 2026): a button, and a sheet
@@ -29,7 +29,8 @@ type View = "menu" | "change" | "fresh" | "write";
  * It is drawn in three places. In the page's corner it opens on the choice;
  * on a due review it is "Change with Coach" and opens that form directly; and
  * while there is no roadmap, beside the coach's form, it is "Write it
- * yourself" and opens the writer.
+ * yourself" and opens the writer. Under the roadmap in force it is "Edit
+ * roadmap" and opens the writer on it (ADR-030).
  *
  * Whether the sheet is open, and on what, is held here and nowhere else. The
  * page renders this only while nothing awaits a decision, so a generation
@@ -45,12 +46,13 @@ export function RoadmapNew({
   change,
   fresh,
   write = null,
+  rewrite = null,
 }: {
   /**
    * The corner opens on the choice; a due review opens the change form; with
-   * no roadmap yet, the writer.
+   * no roadmap yet, the writer; under the roadmap in force, its edit.
    */
-  opensOn?: "menu" | "change" | "write";
+  opensOn?: "menu" | "change" | "write" | "rewrite";
   /** The ids of the headings that name the sheet, one for each view. */
   titleIds: Record<View, string>;
   /** The form that asks for the roadmap in force to be changed. */
@@ -59,6 +61,8 @@ export function RoadmapNew({
   fresh: ReactNode;
   /** The form that writes one by hand; offered only where it is given. */
   write?: ReactNode;
+  /** The form that edits the roadmap in force (ADR-030). */
+  rewrite?: ReactNode;
 }) {
   const [view, setView] = useState<View | null>(null);
   const [pending, setPending] = useState(false);
@@ -66,7 +70,7 @@ export function RoadmapNew({
   const freshKey = useRef<string | null>(null);
   const writeKey = useRef<string | null>(null);
   const sessions = useMemo<
-    Record<"change" | "fresh" | "write", RoadmapComposeSession>
+    Record<"change" | "fresh" | "write" | "rewrite", RoadmapComposeSession>
   >(() => {
     const close = () => setView(null);
     return {
@@ -75,6 +79,7 @@ export function RoadmapNew({
       // A hand-written roadmap is replay-safe by its expected head, and uses
       // no key; the session is for the pending lock and the close.
       write: { idempotencyKey: writeKey, setPending, close },
+      rewrite: { idempotencyKey: writeKey, setPending, close },
     };
   }, []);
 
@@ -98,6 +103,15 @@ export function RoadmapNew({
         >
           <CoachSpark size={16} />
           {ROADMAP_CONTROL_COPY.changeWithCoachAction}
+        </button>
+      ) : opensOn === "rewrite" ? (
+        <button
+          className={styles.quietAction}
+          type="button"
+          data-roadmap-rewrite-open
+          onClick={() => setView("rewrite")}
+        >
+          {ROADMAP_CONTROL_COPY.rewriteAction}
         </button>
       ) : (
         <button
@@ -181,7 +195,13 @@ export function RoadmapNew({
             // colours are named again here.
             <div className={`${styles.page} ${styles.sheetBody}`}>
               <RoadmapComposeSessionContext.Provider value={sessions[view]}>
-                {view === "change" ? change : view === "write" ? write : fresh}
+                {view === "change"
+                  ? change
+                  : view === "write"
+                    ? write
+                    : view === "rewrite"
+                      ? rewrite
+                      : fresh}
               </RoadmapComposeSessionContext.Provider>
             </div>
           )}

@@ -10,6 +10,7 @@ import { RoadmapWriter } from "./roadmap-writer";
 
 import homeStyles from "@/app/home/home.module.css";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
+import { lockedPhaseCount } from "@/lib/roadmap/roadmap-locked-phases";
 import {
   addDays,
   ROADMAP_COPY,
@@ -59,6 +60,16 @@ const REVIEW_SHEET_TITLE_IDS = {
   change: "roadmap-review-change-title",
   fresh: "roadmap-review-sheet-title",
   write: "roadmap-review-sheet-title",
+  rewrite: "roadmap-review-sheet-title",
+};
+
+/** The sheet that edits the roadmap in force: it opens on nothing else. */
+const REWRITE_SHEET_TITLE_IDS = {
+  menu: "roadmap-rewrite-title",
+  change: "roadmap-rewrite-title",
+  fresh: "roadmap-rewrite-title",
+  write: "roadmap-rewrite-title",
+  rewrite: "roadmap-rewrite-title",
 };
 
 /** The writer's sheet while there is no roadmap: it opens on nothing else. */
@@ -67,6 +78,7 @@ const FIRST_WRITE_SHEET_TITLE_IDS = {
   change: "roadmap-first-write-title",
   fresh: "roadmap-first-write-title",
   write: "roadmap-first-write-title",
+  rewrite: "roadmap-first-write-title",
 };
 
 export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
@@ -159,6 +171,38 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
             }}
             goalTitles={goalTitles}
           />
+          {/* Editing it by hand (ADR-030). Not while a proposal waits, which
+              was made under this roadmap, and not once it has ended. */}
+          {state.openProposal === null &&
+          state.current.content.endDate >= state.today ? (
+            <div className={styles.writeOffer}>
+              <RoadmapNew
+                opensOn="rewrite"
+                titleIds={REWRITE_SHEET_TITLE_IDS}
+                change={null}
+                fresh={null}
+                rewrite={
+                  <RoadmapWriter
+                    today={state.today}
+                    goals={state.goals.map((goal) => ({
+                      id: goal.id,
+                      title: goal.title,
+                    }))}
+                    expectedHeadRevision={state.head.revision}
+                    replaces
+                    headingId={REWRITE_SHEET_TITLE_IDS.rewrite}
+                    inForce={{
+                      content: state.current.content,
+                      lockedPhases: lockedPhaseCount(
+                        state.current.content.phases,
+                        state.today,
+                      ),
+                    }}
+                  />
+                }
+              />
+            </div>
+          ) : null}
         </section>
       )}
 
