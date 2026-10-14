@@ -43,8 +43,9 @@ without help every tick and review would be lost.
    first such milestone not already matched. A renamed or moved-in-time milestone starts
    unticked.
 5. **A done review stays with its phase** (owner, 14 Oct). The review row is copied when
-   its phase is still there and still ends on the same day; a phase reviewed on its last
-   day and then lengthened is no longer over, so its review is not copied.
+   its phase is still there and still ends on the same day. A phase reviewed on its last
+   day and then lengthened is no longer over, so the review falls back to the phase
+   before it, which has ended and is locked.
 6. **The application checks the same rules first** so it can say what is wrong in words.
    The database's checks are the independent ones.
 
