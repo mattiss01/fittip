@@ -6,6 +6,7 @@ import { RoadmapOutcomeNotice } from "./roadmap-outcome";
 import { RoadmapNew } from "./roadmap-new";
 import { RoadmapReviewDue } from "./roadmap-review-due";
 import { RoadmapProposalReview } from "./roadmap-proposal-review";
+import { RoadmapWriter } from "./roadmap-writer";
 
 import homeStyles from "@/app/home/home.module.css";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
@@ -57,6 +58,15 @@ const REVIEW_SHEET_TITLE_IDS = {
   menu: "roadmap-review-sheet-title",
   change: "roadmap-review-change-title",
   fresh: "roadmap-review-sheet-title",
+  write: "roadmap-review-sheet-title",
+};
+
+/** The writer's sheet while there is no roadmap: it opens on nothing else. */
+const FIRST_WRITE_SHEET_TITLE_IDS = {
+  menu: "roadmap-first-write-title",
+  change: "roadmap-first-write-title",
+  fresh: "roadmap-first-write-title",
+  write: "roadmap-first-write-title",
 };
 
 export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
@@ -86,7 +96,25 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
           goalTitles={goalTitles}
         />
       ) : state.current === null ? (
-        <RoadmapCompose state={state} />
+        <>
+          <RoadmapCompose state={state} />
+          {/* The case writing by hand exists for (owner, 2 Oct 2026): no
+              roadmap, and perhaps no coach to ask for one. */}
+          <div className={styles.writeOffer}>
+            <RoadmapNew
+              opensOn="write"
+              titleIds={FIRST_WRITE_SHEET_TITLE_IDS}
+              change={null}
+              fresh={null}
+              write={
+                <RoadmapWrite
+                  state={state}
+                  headingId={FIRST_WRITE_SHEET_TITLE_IDS.write}
+                />
+              }
+            />
+          </div>
+        </>
       ) : null}
 
       {/* A phase has ended, or the roadmap has (ADR-027). Above the roadmap,
@@ -156,6 +184,28 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
         </section>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * A roadmap written by hand (ADR-029), against the head this page read and
+ * the owner's active goals.
+ */
+export function RoadmapWrite({
+  state,
+  headingId,
+}: {
+  state: RoadmapScreenState;
+  headingId: string;
+}) {
+  return (
+    <RoadmapWriter
+      today={state.today}
+      goals={state.goals.map((goal) => ({ id: goal.id, title: goal.title }))}
+      expectedHeadRevision={state.head.revision}
+      replaces={state.current !== null}
+      headingId={headingId}
+    />
   );
 }
 

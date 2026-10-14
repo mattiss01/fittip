@@ -4,24 +4,27 @@ import type { CoachAIContext } from "@/server/ai/contracts";
 import { emptyCoachProfile } from "@/server/profile/coach-profile-context";
 import { createGoalRepository } from "@/server/repositories/goal-repository";
 import { selectActiveGoalContext } from "@/server/goals/goal-records";
-import type { RoadmapProposalView } from "@/server/roadmap/roadmap-records";
 
 /**
- * The context an owner's edit is revalidated against.
+ * The context an owner's own roadmap is validated against: an edit of a
+ * proposal, or a roadmap written by hand (ADR-029).
  *
- * An edit goes through `validateRoadmapCandidate`, the same validator the
+ * Either goes through `validateRoadmapCandidate`, the same validator the
  * model's own output goes through, which needs a context to check against.
- * That context is not reassembled from scratch: the horizon belongs to the
- * proposal being edited, not to whatever is true right now, or an owner could
- * widen their own horizon by editing rather than by composing.
+ * That context is not reassembled from scratch. For an edit the horizon is the
+ * proposal's, not whatever is true right now, or an owner could widen their
+ * own horizon by editing rather than by composing. For a roadmap written by
+ * hand it is the one the action has already held to a coach request's range.
  *
- * Goals are the exception and are re-read deliberately. A goal abandoned since
- * the proposal was generated must not survive into an edited version; the
- * validator rejects it here, and acceptance would reject it again.
+ * Goals are re-read deliberately. A goal abandoned since the proposal was
+ * generated must not survive into an edited version, and a hand-written
+ * roadmap may name only the owner's active goals; the validator rejects any
+ * other.
  */
-export async function buildEditValidationContext(
-  source: RoadmapProposalView,
-): Promise<CoachAIContext> {
+export async function buildOwnerRoadmapValidationContext(source: {
+  startDate: string;
+  endDate: string;
+}): Promise<CoachAIContext> {
   const goals = await (await createGoalRepository()).list();
   const eligible = selectActiveGoalContext(goals.goals);
 
@@ -29,8 +32,8 @@ export async function buildEditValidationContext(
     today: source.startDate,
     horizonStartDate: source.startDate,
     horizonEndDate: source.endDate,
-    // An edit is checked against the goals and the dates. It is never sent to
-    // a coach, so the profile is not read for it.
+    // An owner's roadmap is checked against the goals and the dates. It is
+    // never sent to a coach, so the profile is not read for it.
     ...emptyCoachProfile(),
     targetableGoals: eligible.targetable.map((goal) => ({
       id: goal.id,
@@ -59,8 +62,8 @@ export async function buildEditValidationContext(
     planningNote: null,
     regenerationFeedback: null,
     previousProposal: null,
-    // Edit validation re-checks an owner-edited roadmap against the same
-    // validator; it plans nothing, so it carries no roadmap context.
+    // This re-checks an owner's roadmap against the same validator; it plans
+    // nothing, so it carries no roadmap context.
     roadmap: null,
     sessionDetail: null,
   };

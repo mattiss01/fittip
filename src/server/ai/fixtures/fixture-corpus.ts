@@ -525,7 +525,7 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
     note: "A roadmap that stops three weeks early has not covered what it claims to. The milestone moves with the phase so the date rule cannot mask the coverage rule.",
   },
   {
-    name: "roadmap_missing_core_goal",
+    name: "roadmap_invented_goal_everywhere",
     operation: "create_roadmap",
     body: envelope(
       roadmapWith((roadmap) => {
@@ -537,7 +537,7 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
       }),
     ),
     expected: { outcome: "rejected", reason: "unowned_goal_reference" },
-    note: "An invented goal id is caught before the missing-core-goal rule can see it.",
+    note: "An invented goal id in every phase is refused as unowned. Leaving the real core goal out is not itself a fault since 14 Oct 2026.",
   },
   {
     name: "historical_goal_reference",

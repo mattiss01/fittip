@@ -139,6 +139,82 @@ describe("accepted roadmap output", () => {
     ).toEqual(["goalId", "level"]);
   });
 
+  // Owner, 14 October 2026: a roadmap may leave a core goal out, and may have
+  // no summary and milestones with no details. Absent is not null.
+  it("accepts a roadmap that leaves a core goal out", () => {
+    const valid = JSON.parse(findCoachAIFixtureCase("valid_roadmap").body);
+    const result = validateRoadmapCandidate({
+      body: JSON.stringify(valid),
+      context: {
+        ...COACH_AI_FIXTURE_CONTEXT,
+        targetableGoals: [
+          ...COACH_AI_FIXTURE_CONTEXT.targetableGoals,
+          {
+            id: "c1000000-0000-4000-8000-0000000000ff",
+            title: "Ten strict pull-ups",
+            sports: ["Calisthenics"],
+            priorityTier: "core",
+            targetDate: null,
+          },
+        ],
+      },
+    });
+
+    expect(result.outcome).toBe("accepted");
+  });
+
+  it("accepts a roadmap with no summary and a milestone with no details", () => {
+    const valid = JSON.parse(findCoachAIFixtureCase("valid_roadmap").body);
+    delete valid.roadmap.summary;
+    for (const phase of valid.roadmap.phases) {
+      for (const milestone of phase.milestones) {
+        delete milestone.observableCriterion;
+      }
+    }
+    const result = validateRoadmapCandidate({
+      body: JSON.stringify(valid),
+      context: COACH_AI_FIXTURE_CONTEXT,
+    });
+    if (result.outcome !== "accepted") throw new Error("expected acceptance");
+
+    expect("summary" in result.response.roadmap).toBe(false);
+    expect(
+      result.response.roadmap.phases
+        .flatMap((phase) => phase.milestones)
+        .some((milestone) => "observableCriterion" in milestone),
+    ).toBe(false);
+  });
+
+  type Body = {
+    roadmap: {
+      summary?: unknown;
+      phases: { milestones: { observableCriterion?: unknown }[] }[];
+    };
+  };
+  it.each([
+    ["a null summary", (body: Body) => (body.roadmap.summary = null)],
+    ["an empty summary", (body: Body) => (body.roadmap.summary = "")],
+    [
+      "empty details",
+      (body: Body) =>
+        (body.roadmap.phases.find(
+          (phase) => phase.milestones.length > 0,
+        )!.milestones[0]!.observableCriterion = ""),
+    ],
+  ])("refuses %s, which is not one left out", (_name, mutate) => {
+    const body = JSON.parse(
+      findCoachAIFixtureCase("valid_roadmap").body,
+    ) as Body;
+    mutate(body);
+
+    expect(
+      validateRoadmapCandidate({
+        body: JSON.stringify(body),
+        context: COACH_AI_FIXTURE_CONTEXT,
+      }),
+    ).toEqual({ outcome: "rejected", reason: "schema" });
+  });
+
   it("keeps the two sections independent", () => {
     // Decision 4b. The roadmap and the memory candidates are decided
     // separately, and an unusable memory section never costs the owner a valid

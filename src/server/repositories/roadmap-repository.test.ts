@@ -8,6 +8,7 @@ import {
 } from "@/server/repositories/roadmap-repository";
 import {
   isExampleAuthored,
+  OWNER_PROVIDER_CODE,
   UNKNOWN_PROVIDER_CODE,
 } from "@/server/roadmap/roadmap-records";
 
@@ -455,6 +456,29 @@ describe("RoadmapRepository", () => {
 
     expect(versions[0].providerCode).toBe(UNKNOWN_PROVIDER_CODE);
     expect(isExampleAuthored(versions[0].providerCode)).toBe(true);
+  });
+
+  // ADR-029. A roadmap written by hand stores no provider code, and that is
+  // not an unreadable one: it is the owner's, and no example.
+  it("reads a hand-written roadmap as the owner's, not an example", async () => {
+    const versions = await readingVersions([
+      versionRow(1, {
+        roadmap_proposals: { provider_code: null, origin: "owner_written" },
+      }),
+    ]).listVersions();
+
+    expect(versions[0].providerCode).toBe(OWNER_PROVIDER_CODE);
+    expect(isExampleAuthored(versions[0].providerCode)).toBe(false);
+  });
+
+  it("still fails closed on a missing code from any other origin", async () => {
+    const versions = await readingVersions([
+      versionRow(1, {
+        roadmap_proposals: { provider_code: null, origin: "ai_initial" },
+      }),
+    ]).listVersions();
+
+    expect(versions[0].providerCode).toBe(UNKNOWN_PROVIDER_CODE);
   });
 
   it("does not reach a transaction function for an anonymous session", async () => {

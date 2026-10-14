@@ -55,7 +55,7 @@ export function RoadmapBody({
     <>
       <ExampleTag providerCode={providerCode} />
       <h2 className={styles.proposalTitle}>{content.title}</h2>
-      {/* From, to, and how long (owner, 13 Oct 2026). No version number: the
+      {/* From and to (owner, 13 and 14 Oct 2026). No version number: the
           page shows the roadmap in force and nothing to compare it with. */}
       <p className={styles.horizon}>
         {note === undefined ? null : (
@@ -63,7 +63,10 @@ export function RoadmapBody({
         )}
         <RoadmapDateRange startDate={startDate} endDate={endDate} />
       </p>
-      <p className={styles.proposalSummary}>{content.summary}</p>
+      {/* A roadmap written by hand may have none (owner, 14 Oct 2026). */}
+      {content.summary === undefined ? null : (
+        <p className={styles.proposalSummary}>{content.summary}</p>
+      )}
 
       <RoadmapSpine
         phases={content.phases}

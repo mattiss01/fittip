@@ -5,6 +5,7 @@ import {
   type Page,
 } from "@playwright/test";
 import path from "node:path";
+import { fillDate } from "./support/date-field";
 import { openAddGoalForm } from "./support/goal-form";
 
 const evidenceDirectory = path.join(
@@ -236,7 +237,7 @@ test.describe("M3-15F roadmap generation", () => {
       await expect(page.locator("[data-roadmap-compose]")).toHaveCount(0);
       await page.getByRole("button", { name: "Change roadmap" }).click();
       const menu = page.getByRole("dialog", { name: "Change roadmap" });
-      await expect(menu.locator("[data-roadmap-choice]")).toHaveCount(2);
+      await expect(menu.locator("[data-roadmap-choice]")).toHaveCount(3);
       await expectNoHorizontalOverflow(page);
       await menu.locator('[data-roadmap-choice="change"]').click();
 
@@ -327,6 +328,44 @@ test.describe("M3-15F roadmap generation", () => {
       await expect(page.locator('[data-roadmap-version="1"]')).toHaveCount(0);
       await expect(page.locator("[data-roadmap-superseded]")).toHaveCount(0);
       await expectNoHorizontalOverflow(page);
+
+      // ---- Written by hand (ADR-029): the third choice, in force on save,
+      // ---- with nothing to review and no example label. ----
+      await page.getByRole("button", { name: "Change roadmap" }).click();
+      await page
+        .getByRole("dialog", { name: "Change roadmap" })
+        .locator('[data-roadmap-choice="write"]')
+        .click();
+      const writer = page
+        .getByRole("dialog", { name: "Write your roadmap" })
+        .locator("[data-roadmap-write]");
+      await expect(writer).toBeVisible();
+      await expectNoHorizontalOverflow(page);
+      // The roadmap's title comes before the phase's.
+      await writer
+        .getByLabel("Title", { exact: true })
+        .first()
+        .fill("My own way to the half");
+      // One phase, which ends with the roadmap: the only "Ends" is its own.
+      await fillDate(writer, "Ends", shiftDays(ownerToday(), 56));
+      const phase = writer.locator('[data-roadmap-write-phase="1"]');
+      await phase.getByLabel("Title", { exact: true }).fill("Steady base");
+      await phase
+        .getByLabel("What it's for")
+        .fill("Easy running, three times a week.");
+      await phase.getByRole("button", { name: "Add goal" }).click();
+      await writer.getByRole("button", { name: "Save roadmap" }).click();
+      await expectOutcome(page, "Saved. This is your roadmap now.");
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(page.locator('[data-roadmap-version="4"]')).toBeVisible();
+      await expect(page.locator("[data-roadmap-current]")).toContainText(
+        "My own way to the half",
+      );
+      await expect(
+        page.locator("[data-roadmap-current] [data-roadmap-example]"),
+      ).toHaveCount(0);
+      await expect(page.locator("[data-roadmap-open-proposal]")).toHaveCount(0);
+      await expectNoHorizontalOverflow(page);
       await page.screenshot({
         fullPage: true,
         path: path.join(evidenceDirectory, "M3-15F-history-390x844.png"),
@@ -365,6 +404,19 @@ async function expectOutcome(page: Page, sentence: string) {
   await expect(page.locator('[data-roadmap-notice="recovered"]')).toHaveCount(
     0,
   );
+}
+
+/** The owner's today, in the zone this flow confirms. */
+function ownerToday(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: TIMEZONE }).format(
+    new Date(),
+  );
+}
+
+function shiftDays(isoDate: string, days: number): string {
+  const date = new Date(`${isoDate}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 async function expectNoHorizontalOverflow(page: Page) {

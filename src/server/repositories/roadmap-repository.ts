@@ -19,6 +19,7 @@ import type {
 import type { CoachAISourceReference } from "@/server/ai/context-source";
 import { MemoryCandidateBatchError } from "@/server/proposal-logging/memory-candidate-batch";
 import {
+  OWNER_PROVIDER_CODE,
   UNKNOWN_PROVIDER_CODE,
   type RoadmapDecision,
   type RoadmapMilestoneMark,
@@ -58,7 +59,7 @@ const PROPOSAL_COLUMNS =
  * if it did.
  */
 const VERSION_COLUMNS =
-  "id, version_number, content, accepted_at, roadmap_proposals!roadmap_versions_proposal_fkey(provider_code)" as const;
+  "id, version_number, content, accepted_at, roadmap_proposals!roadmap_versions_proposal_fkey(provider_code, origin)" as const;
 
 export class RoadmapAuthenticationError extends Error {
   constructor(readonly accessError?: VerifiedUserAccessError) {
@@ -562,6 +563,29 @@ export class RoadmapRepository {
   }
 
   /**
+   * A roadmap written by hand, in force from this call (ADR-029): stored as a
+   * proposal and accepted in the same transaction. The head is the one the
+   * page read; a roadmap accepted since then refuses it, and a repeat of a
+   * write that landed returns its receipt as a replay.
+   */
+  async writeRoadmap(
+    content: RoadmapProposal,
+    expectedHeadRevision: number,
+  ): Promise<RoadmapAcceptance> {
+    const data = await this.call("write_roadmap", {
+      p_content: content as unknown as Json,
+      p_expected_head_revision: expectedHeadRevision,
+    });
+
+    return {
+      proposalId: String(data.proposal_id),
+      versionId: String(data.version_id),
+      headRevision: Number(data.head_revision ?? 0),
+      result: data.result as RoadmapAcceptance["result"],
+    };
+  }
+
+  /**
    * One place that runs an ADR-015 function and maps its failure.
    *
    * These five deliberately keep the client's default transport retry, unlike
@@ -620,7 +644,8 @@ type RoadmapFunctionName =
   | "finish_roadmap_generation"
   | "record_roadmap_memory_candidates"
   | "apply_roadmap_proposal_change"
-  | "accept_roadmap_proposal";
+  | "accept_roadmap_proposal"
+  | "write_roadmap";
 
 type RoadmapFunctionArgs<Name extends RoadmapFunctionName> =
   Database["public"]["Functions"][Name]["Args"];
@@ -671,8 +696,19 @@ function conflictReason(message: string): RoadmapConflictReason {
  * which is the one direction the example-labelling invariant cannot afford.
  */
 function toProviderCode(value: unknown): string {
-  const row = Array.isArray(value) ? value[0] : value;
-  const code = (row as { provider_code?: unknown } | null)?.provider_code;
+  const row = (Array.isArray(value) ? value[0] : value) as {
+    provider_code?: unknown;
+    origin?: unknown;
+  } | null;
+  return providerCodeOf(row?.provider_code, row?.origin);
+}
+
+/**
+ * A hand-written roadmap has no provider code, and reads as written by its
+ * owner (ADR-029). Any other missing code is an unreadable one.
+ */
+function providerCodeOf(code: unknown, origin: unknown): string {
+  if (origin === "owner_written") return OWNER_PROVIDER_CODE;
   return typeof code === "string" && code !== "" ? code : UNKNOWN_PROVIDER_CODE;
 }
 
@@ -701,7 +737,7 @@ function toProposalView(row: {
   source_proposal_id: string | null;
   planning_note: string | null;
   regeneration_feedback: string | null;
-  provider_code: string;
+  provider_code: string | null;
   content: unknown;
   created_at: string;
   roadmap_proposal_decisions: unknown;
@@ -714,7 +750,7 @@ function toProposalView(row: {
     id: row.id,
     origin: row.origin as RoadmapProposalOrigin,
     sourceProposalId: row.source_proposal_id,
-    providerCode: row.provider_code,
+    providerCode: providerCodeOf(row.provider_code, row.origin),
     content: row.content as StoredRoadmap,
     planningNote: row.planning_note,
     regenerationFeedback: row.regeneration_feedback,

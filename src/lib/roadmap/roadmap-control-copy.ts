@@ -25,8 +25,8 @@ export const ROADMAP_CONTROL_COPY = {
   /* ---- Compose ---------------------------------------------------------- */
   /**
    * In the page's corner while a roadmap is in force (ADR-028). It opens a
-   * choice of two ways to a new proposal; writing one by hand will be the
-   * third.
+   * choice of three: two ways to a new proposal, and writing one by hand
+   * (ADR-029).
    */
   changeRoadmapAction: "Change roadmap",
   changeWithCoachAction: "Change with Coach",
@@ -37,6 +37,46 @@ export const ROADMAP_CONTROL_COPY = {
      proposal, on its dates, and says so. */
   askAgainAction: "Ask again with Coach",
   askAgainDetail: "Another answer to the proposal you declined",
+  /* Writing one by hand (ADR-029): in force on save, nothing to review. */
+  writeAction: "Write it yourself",
+  writeDetail: "Your own phases and milestones",
+  writeTitle: "Write your roadmap",
+  writeSupport: "Saving makes it your roadmap. Nothing is sent to the coach.",
+  writeSupportReplaces:
+    "Saving makes it your roadmap in place of the one you have. Nothing is sent to the coach.",
+  writeNoGoals:
+    "Every phase is for at least one goal. Add an active goal first.",
+  writeSaveAction: "Save roadmap",
+  writeFieldLabels: {
+    title: "Title",
+    summary: "Summary (optional)",
+    phase: (index: number) => `Phase ${index}`,
+    phaseTitle: "Title",
+    phaseFocus: "What it's for",
+    phaseStarts: (date: string) => `Starts ${date}`,
+    phaseEnd: "Ends",
+    phaseEndsWithRoadmap: (date: string) => `Ends ${date}, with the roadmap`,
+    addPhase: "Add phase",
+    removePhase: "Remove phase",
+    goal: "Goal",
+    level: "Attention",
+    addGoal: "Add goal",
+    removeGoal: "Remove goal",
+    milestone: (index: number) => `Milestone ${index}`,
+    milestoneTitle: "Title",
+    milestoneDate: "Aim for by",
+    milestoneGoals: "For",
+    milestoneDetails: "Details (optional)",
+    addMilestone: "Add milestone",
+    removeMilestone: "Remove milestone",
+  },
+  /** How the four attention levels read on the writer's choice. */
+  levelLabels: {
+    primary: "Primary",
+    secondary: "Secondary",
+    maintenance: "Maintenance",
+    deferred: "Deferred",
+  },
   /* The change form. What is sent is said, because it is more than a new
      roadmap sends: the whole roadmap, where that sends an outline. */
   changeTitle: "Change with Coach",
@@ -132,7 +172,8 @@ export const ROADMAP_CONTROL_COPY = {
     phaseEnd: "Ends",
     attention: "Attention",
     milestone: "Milestone",
-    milestoneCriterion: "What would be observed",
+    /* Renamed by the owner on 14 Oct 2026, and optional since. */
+    milestoneCriterion: "Details (optional)",
     milestoneDate: "Aim for by",
     milestoneRemove: "Remove milestone",
   },
@@ -162,6 +203,7 @@ export const ROADMAP_CONTROL_COPY = {
     accepted: "Accepted. This is your roadmap now.",
     declined: "Declined.",
     edited: "Saved as a new proposal. Review it below.",
+    written: "Saved. This is your roadmap now.",
     /**
      * An attempt under this key is already running, so no second one was made
      * and this screen will never be told how the first ended. Reloading is the
@@ -234,6 +276,25 @@ export const ROADMAP_CONTROL_COPY = {
       "That wording cannot be saved. FitTip does not diagnose, prescribe, or call training safe.",
     safety_requirement:
       "You recorded a symptom recently, so the roadmap needs at least one note about how it holds load back.",
+  },
+
+  /**
+   * A hand-written roadmap's rejections (ADR-029). Gaps and overlaps cannot
+   * be entered on that form, so what is left is a field, a goal or a date.
+   */
+  writeRejections: {
+    schema: "Fill in every field that is not marked optional.",
+    business_rule:
+      "Every phase and every milestone needs a goal, and a phase names a goal once.",
+    impossible_date:
+      "Each phase must end after it starts, and each milestone fall inside its phase.",
+    unowned_goal_reference:
+      "One of the goals is no longer active. Reload and try again.",
+    unsafe_content:
+      "That wording cannot be saved. FitTip does not diagnose, prescribe, or call training safe.",
+    too_large: "That roadmap is too long to save. Shorten some of its text.",
+    dates:
+      "A roadmap starts between today and 30 days from now, and runs four to fifty-two weeks.",
   },
 
   /** Decision 4a: an over-large context names its source. */

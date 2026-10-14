@@ -54,11 +54,44 @@ type Phase = {
 };
 type Draft = {
   title: string;
+  /** Empty when left out; not sent then (owner, 14 Oct 2026). */
   summary: string;
   startDate: string;
   endDate: string;
   phases: Phase[];
 };
+
+/** What is stored: a summary and a milestone's details may be left out. */
+type Stored = Omit<Draft, "summary" | "phases"> & {
+  summary?: string;
+  phases: (Omit<Phase, "milestones"> & {
+    milestones: (Omit<Milestone, "observableCriterion"> & {
+      observableCriterion?: string;
+    })[];
+  })[];
+};
+
+/**
+ * What is sent: the draft with a blank summary or blank details left out,
+ * which is how a roadmap says it has none.
+ */
+function toContent(draft: Draft) {
+  const { summary, phases, ...rest } = draft;
+  return {
+    ...rest,
+    ...(summary.trim() === "" ? {} : { summary }),
+    phases: phases.map((phase) => ({
+      ...phase,
+      milestones: phase.milestones.map(
+        ({ observableCriterion, ...milestone }) => ({
+          ...milestone,
+          ...(observableCriterion.trim() === "" ? {} : { observableCriterion }),
+        }),
+      ),
+    })),
+    schemaVersion: ROADMAP_SCHEMA_VERSION,
+  };
+}
 
 /**
  * The draft an edit starts from, copied field by field.
@@ -67,10 +100,10 @@ type Draft = {
  * points, and before v3 assumptions and reasons). None of it is copied, so
  * what is saved is a v4 roadmap whichever version was opened (ADR-027).
  */
-function toDraft(content: Draft): Draft {
+function toDraft(content: Stored): Draft {
   return {
     title: content.title,
-    summary: content.summary,
+    summary: content.summary ?? "",
     startDate: content.startDate,
     endDate: content.endDate,
     phases: content.phases.map((phase) => ({
@@ -84,7 +117,7 @@ function toDraft(content: Draft): Draft {
       })),
       milestones: phase.milestones.map((milestone) => ({
         title: milestone.title,
-        observableCriterion: milestone.observableCriterion,
+        observableCriterion: milestone.observableCriterion ?? "",
         targetDate: milestone.targetDate,
         goalIds: [...milestone.goalIds],
       })),
@@ -113,7 +146,7 @@ export function RoadmapEditor({
   lostRender: boolean;
   onCancel: () => void;
 }) {
-  const [draft, setDraft] = useState<Draft>(() => toDraft(content as Draft));
+  const [draft, setDraft] = useState<Draft>(() => toDraft(content as Stored));
 
   const update = (mutate: (next: Draft) => void) => {
     setDraft((current) => {
@@ -151,10 +184,7 @@ export function RoadmapEditor({
         <input
           type="hidden"
           name="content"
-          value={JSON.stringify({
-            ...draft,
-            schemaVersion: ROADMAP_SCHEMA_VERSION,
-          })}
+          value={JSON.stringify(toContent(draft))}
         />
 
         <label className={styles.field}>
@@ -187,10 +217,10 @@ export function RoadmapEditor({
         </label>
 
         {draft.phases.map((phase, phaseIndex) => (
-          <fieldset
-            className={styles.editGroup}
-            key={`${phase.startDate}-${phaseIndex}`}
-          >
+          // Keyed by position: an edit never adds or removes a phase, and a
+          // key that held the start date rebuilt the block, and lost the
+          // field's focus, as that date was typed.
+          <fieldset className={styles.editGroup} key={phaseIndex}>
             <legend className={styles.editLegend}>
               {LABELS.phase(phaseIndex + 1)}
             </legend>

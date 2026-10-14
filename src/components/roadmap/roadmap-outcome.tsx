@@ -30,7 +30,13 @@ import styles from "@/app/home/plan/roadmap/roadmap.module.css";
  */
 
 /** The statuses that mean the write landed. Only these are reported here. */
-const LANDED = new Set(["proposal", "accepted", "declined", "edited"]);
+const LANDED = new Set([
+  "proposal",
+  "accepted",
+  "declined",
+  "edited",
+  "written",
+]);
 
 let outcome: RoadmapActionState | null = null;
 const listeners = new Set<() => void>();

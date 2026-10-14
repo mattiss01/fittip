@@ -37,9 +37,9 @@ export function synthesizeRoadmapBody(context: CoachAIContext): string {
   const end = context.horizonEndDate;
   const goals = context.targetableGoals;
 
-  // Every core goal must appear in at least one phase, and a phase carries at
-  // most four attention entries, so the goal set decides the minimum phase
-  // count before the calendar does.
+  // The example gives every goal a phase, though no rule asks it to since
+  // 14 October 2026, and a phase carries at most four attention entries, so
+  // the goal set decides the minimum phase count before the calendar does.
   const groups = chunk(goals, MAX_ATTENTION_PER_PHASE);
   const phaseCount = Math.min(
     MAX_PHASES,

@@ -36,6 +36,7 @@ vi.mock("@/app/home/plan/roadmap/actions", () => ({
   acceptRoadmapAction: vi.fn(),
   declineRoadmapAction: vi.fn(),
   editRoadmapAction: vi.fn(),
+  writeRoadmapAction: vi.fn(),
   setMilestoneReachedAction: vi.fn(),
   setRoadmapReviewedAction: vi.fn(),
 }));
@@ -326,7 +327,7 @@ describe("Roadmap", () => {
 
   // With a roadmap the page starts with it. Changing it is the button in the
   // corner, which asks which way (ADR-028); each form is in the sheet.
-  const openChoice = (choice: "change" | "fresh") => {
+  const openChoice = (choice: "change" | "fresh" | "write") => {
     fireEvent.click(
       screen.getByRole("button", { name: ROADMAP_COPY.changeRoadmapAction }),
     );
@@ -338,7 +339,7 @@ describe("Roadmap", () => {
     );
   };
 
-  it("starts with the roadmap and offers two ways to change it", async () => {
+  it("starts with the roadmap and offers three ways to change it", async () => {
     listVersions.mockResolvedValue([version(1)]);
 
     render(await RoadmapPage());
@@ -358,9 +359,68 @@ describe("Roadmap", () => {
     ).toEqual([
       ROADMAP_COPY.changeWithCoachAction,
       ROADMAP_COPY.newWithCoachAction,
+      ROADMAP_COPY.writeAction,
     ]);
     // Nothing is asked for until a way is chosen.
     expect(document.querySelector("[data-roadmap-compose]")).toBeNull();
+    expect(document.querySelector("[data-roadmap-write]")).toBeNull();
+  });
+
+  // ADR-029: the third choice is a roadmap of the owner's own, empty to
+  // start, saved against the head this page read.
+  it("writes a roadmap by hand from the corner's sheet", async () => {
+    getHead.mockResolvedValue({ revision: 3, currentVersionId: "v" });
+    listVersions.mockResolvedValue([version(3)]);
+
+    render(await RoadmapPage());
+    openChoice("write");
+
+    const sheet = screen.getByRole("dialog", {
+      name: ROADMAP_COPY.writeTitle,
+    });
+    expect(
+      (
+        sheet.querySelector(
+          'input[name="expectedHeadRevision"]',
+        ) as HTMLInputElement | null
+      )?.value,
+    ).toBe("3");
+    const content = JSON.parse(
+      (sheet.querySelector('input[name="content"]') as HTMLInputElement).value,
+    );
+    expect(content).toMatchObject({ title: "", endDate: "", phases: [{}] });
+    expect(content.phases[0].goalAttention).toEqual([]);
+    expect(
+      within(sheet).getByText(ROADMAP_COPY.writeSupportReplaces),
+    ).toBeTruthy();
+  });
+
+  it("offers to write one by hand while there is no roadmap", async () => {
+    render(await RoadmapPage());
+
+    // The coach's form is on the page, and writing is beside it.
+    expect(document.querySelector("[data-roadmap-compose]")).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("button", { name: ROADMAP_COPY.writeAction }),
+    );
+    const sheet = screen.getByRole("dialog", {
+      name: ROADMAP_COPY.writeTitle,
+    });
+    expect(within(sheet).getByText(ROADMAP_COPY.writeSupport)).toBeTruthy();
+  });
+
+  it("does not offer writing while a proposal awaits a decision", async () => {
+    getReviewProposals.mockResolvedValue({
+      open: proposal({ decision: null }),
+      declinedPredecessor: null,
+      history: [],
+    });
+
+    render(await RoadmapPage());
+
+    expect(
+      screen.queryByRole("button", { name: ROADMAP_COPY.writeAction }),
+    ).toBeNull();
   });
 
   it("asks for a new roadmap from the corner's sheet", async () => {

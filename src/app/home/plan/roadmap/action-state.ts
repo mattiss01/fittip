@@ -17,6 +17,8 @@ export type RoadmapActionStatus =
   | "accepted"
   | "declined"
   | "edited"
+  /** A roadmap written by hand is in force (ADR-029). */
+  | "written"
   /** A milestone was marked reached, or its mark taken back. */
   | "marked"
   /** A due review was marked reviewed. */

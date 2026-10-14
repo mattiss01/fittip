@@ -1322,14 +1322,14 @@ export type Database = {
         Row: {
           content: Json;
           created_at: string;
-          generation_request_id: string;
+          generation_request_id: string | null;
           id: string;
-          model_code: string;
+          model_code: string | null;
           origin: string;
           planning_note: string | null;
-          prompt_version: string;
-          provider_code: string;
-          rate_card_version: string;
+          prompt_version: string | null;
+          provider_code: string | null;
+          rate_card_version: string | null;
           regeneration_feedback: string | null;
           schema_version: string;
           source_proposal_id: string | null;
@@ -1339,14 +1339,14 @@ export type Database = {
         Insert: {
           content: Json;
           created_at?: string;
-          generation_request_id: string;
+          generation_request_id?: string | null;
           id?: string;
-          model_code: string;
+          model_code?: string | null;
           origin: string;
           planning_note?: string | null;
-          prompt_version: string;
-          provider_code: string;
-          rate_card_version: string;
+          prompt_version?: string | null;
+          provider_code?: string | null;
+          rate_card_version?: string | null;
           regeneration_feedback?: string | null;
           schema_version: string;
           source_proposal_id?: string | null;
@@ -1356,14 +1356,14 @@ export type Database = {
         Update: {
           content?: Json;
           created_at?: string;
-          generation_request_id?: string;
+          generation_request_id?: string | null;
           id?: string;
-          model_code?: string;
+          model_code?: string | null;
           origin?: string;
           planning_note?: string | null;
-          prompt_version?: string;
-          provider_code?: string;
-          rate_card_version?: string;
+          prompt_version?: string | null;
+          provider_code?: string | null;
+          rate_card_version?: string | null;
           regeneration_feedback?: string | null;
           schema_version?: string;
           source_proposal_id?: string | null;
@@ -2811,6 +2811,16 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "ai_spend_settlement_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      write_roadmap: {
+        Args: { p_content: Json; p_expected_head_revision: number };
+        Returns: Database["public"]["CompositeTypes"]["roadmap_acceptance_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "roadmap_acceptance_receipt";
           isOneToOne: true;
           isSetofReturn: false;
         };
