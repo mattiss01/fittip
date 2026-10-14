@@ -836,12 +836,55 @@ describe("roadmap server actions", () => {
       );
     });
 
+    // A reply that never arrived, sent again: already declined, so it goes on
+    // to the coach under the same key, which replays the first attempt.
+    it("replays a request whose decline already landed", async () => {
+      getProposal.mockResolvedValue(open({ decision: "rejected" }));
+
+      const result = await askAgainRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({
+          proposalId: PROPOSAL_ID,
+          regenerationFeedback: "Less volume.",
+          idempotencyKey: KEY,
+        }),
+      );
+
+      expect(result.status).toBe("proposal");
+      expect(declineProposal).not.toHaveBeenCalled();
+      expect(generateMock.mock.calls[0][0]).toMatchObject({
+        idempotencyKey: KEY,
+      });
+    });
+
+    // The dock goes with the declined proposal, so a failure is said as a
+    // landed decline, which the page keeps.
+    it("says the proposal was declined when the coach then fails", async () => {
+      getProposal.mockResolvedValue(open());
+      generateMock.mockResolvedValue({ status: "failed" });
+
+      const result = await askAgainRoadmapAction(
+        INITIAL_ROADMAP_ACTION_STATE,
+        form({
+          proposalId: PROPOSAL_ID,
+          regenerationFeedback: "Less volume.",
+          idempotencyKey: KEY,
+        }),
+      );
+
+      expect(result).toMatchObject({
+        status: "declined",
+        message: OUTCOMES.askAgainFailed,
+      });
+      expect(declineProposal).toHaveBeenCalledWith(PROPOSAL_ID);
+    });
+
     it.each([
       ["no note", { regenerationFeedback: "" }, undefined],
       ["no request key", { idempotencyKey: "" }, undefined],
       ["the last of three asks", {}, { regenerationNumber: 3 }],
       ["dates that have passed", {}, { startDate: addDays(today, -1) }],
-      ["a proposal already decided", {}, { decision: "rejected" }],
+      ["a proposal already accepted", {}, { decision: "accepted" }],
     ])(
       "keeps the proposal open for %s",
       async (_name, fields, proposalOverrides) => {

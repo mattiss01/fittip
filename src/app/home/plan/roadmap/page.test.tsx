@@ -731,6 +731,8 @@ describe("Roadmap", () => {
     expect(
       screen.queryByRole("button", { name: ROADMAP_COPY.askAgainAction }),
     ).toBeNull();
+    // Said, not just gone.
+    expect(screen.getByText(ROADMAP_COPY.outcomes.askAgainUsedUp)).toBeTruthy();
   });
 
   // An owner edit supersedes its source without deciding it. Only the

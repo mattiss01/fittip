@@ -35,10 +35,10 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
  * While the proposal is edited, the form is all there is: the proposal comes
  * in as `children`, server-rendered, and is not drawn beside its own edit.
  *
- * Some of what follows predates the form: the edit is `RoadmapWriter` now,
- * with its own reply, and closes itself through `onSaved`.
+ * The edit is `RoadmapWriter`, with its own reply, and closes itself through
+ * `onSaved`; the sections below about the edit describe it.
  *
- * ## Why all three are form actions, watched
+ * ## Why every control is a form action, watched
  *
  * Including the edit, whose payload is a nested draft rather than a set of
  * fields. A form action gets the revalidated tree back with the action's own
@@ -279,7 +279,12 @@ export function RoadmapDecisionDock({
                 <CoachSpark size={16} />
                 {ROADMAP_CONTROL_COPY.askAgainAction}
               </button>
-            ) : null}
+            ) : (
+              // Said, not just gone: the three asks on these dates are used.
+              <p className={styles.helper} data-roadmap-ask-again-used>
+                {ROADMAP_CONTROL_COPY.outcomes.askAgainUsedUp}
+              </p>
+            )}
 
             <form
               action={decline.submit}

@@ -189,6 +189,72 @@ describe("RoadmapWriter", () => {
   });
 });
 
+describe("RoadmapWriter editing a proposal", () => {
+  afterEach(cleanup);
+
+  it("opens on the proposal, its dates fixed and the coach's levels kept", () => {
+    render(
+      <RoadmapWriter
+        today={TODAY}
+        goals={GOALS}
+        expectedHeadRevision={2}
+        replaces={false}
+        edit={{
+          proposalId: "p1000000-0000-4000-8000-000000000001",
+          content: {
+            title: "Coach's",
+            startDate: TODAY,
+            endDate: "2026-12-31",
+            phases: [
+              {
+                title: "Base",
+                focus: "Easy.",
+                startDate: TODAY,
+                endDate: "2026-12-31",
+                goalAttention: [
+                  { goalId: GOALS[0]!.id, level: "maintenance" },
+                  { goalId: GOALS[1]!.id, level: "not-a-level" },
+                ],
+                milestones: [
+                  {
+                    title: "M",
+                    targetDate: "2026-11-01",
+                    goalIds: [GOALS[0]!.id],
+                  },
+                ],
+              },
+            ],
+          },
+          onCancel: vi.fn(),
+          onSaved: vi.fn(),
+        }}
+      />,
+    );
+
+    expect(
+      (document.querySelector('input[name="proposalId"]') as HTMLInputElement)
+        .value,
+    ).toBe("p1000000-0000-4000-8000-000000000001");
+    expect(
+      document.querySelector('input[name="expectedHeadRevision"]'),
+    ).toBeNull();
+    expect(
+      screen.getAllByLabelText<HTMLInputElement>(
+        ROADMAP_CONTROL_COPY.endDateLabel,
+      )[0]!.readOnly,
+    ).toBe(true);
+    const phase = content().phases[0];
+    // A level the coach gave is kept; one that is not a level becomes primary.
+    expect(phase.goalAttention).toEqual([
+      { goalId: GOALS[0]!.id, level: "maintenance" },
+      { goalId: GOALS[1]!.id, level: "primary" },
+    ]);
+    // No details stored, none sent; no summary stored, none sent.
+    expect("observableCriterion" in phase.milestones[0]).toBe(false);
+    expect("summary" in content()).toBe(false);
+  });
+});
+
 describe("checkDraft", () => {
   const goal = { goalId: GOALS[0]!.id, level: "primary" as const };
   const phase = (

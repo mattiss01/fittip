@@ -218,6 +218,13 @@ export const ROADMAP_CONTROL_COPY = {
     declined: "Declined.",
     edited: "Saved as a new proposal. Review it below.",
     written: "Saved. This is your roadmap now.",
+    /* "Ask for another" after its decline (owner, 14 Oct 2026). */
+    askAgainFailed:
+      "The proposal was declined, but the coach could not prepare another. Ask for a new roadmap below.",
+    askAgainPending:
+      "The proposal was declined and another is being prepared. Reload in a moment to see it.",
+    askAgainUsedUp:
+      "You have asked for another three times on these dates. Edit this proposal, or decline it and ask for a new roadmap.",
     /**
      * An attempt under this key is already running, so no second one was made
      * and this screen will never be told how the first ended. Reloading is the
