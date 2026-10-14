@@ -254,7 +254,13 @@ export async function editRoadmapAction(
     });
 
     if (validation.outcome === "rejected") {
-      return invalid(editRejectionMessage(validation.reason), submission);
+      return invalid(
+        rejectionMessage(
+          ROADMAP_CONTROL_COPY.editRejections,
+          validation.reason,
+        ),
+        submission,
+      );
     }
 
     await roadmaps.editProposal(id, validation.response.roadmap);
@@ -331,7 +337,10 @@ export async function writeRoadmapAction(
       context: await buildOwnerRoadmapValidationContext({ startDate, endDate }),
     });
     if (validation.outcome === "rejected") {
-      return invalid(writeRejectionMessage(validation.reason), submission);
+      return invalid(
+        rejectionMessage(WRITE_REJECTIONS, validation.reason),
+        submission,
+      );
     }
 
     await roadmaps.writeRoadmap(
@@ -480,14 +489,11 @@ async function ownerToday(
 
 const WRITE_REJECTIONS = ROADMAP_CONTROL_COPY.writeRejections;
 
-function writeRejectionMessage(reason: string): string {
-  const rejections: Record<string, string> = WRITE_REJECTIONS;
-  return rejections[reason] ?? OUTCOMES.checkDetails;
-}
-
-function editRejectionMessage(reason: string): string {
-  const rejections: Record<string, string> =
-    ROADMAP_CONTROL_COPY.editRejections;
+/** A validator's reason in the form's own words, or the general refusal. */
+function rejectionMessage(
+  rejections: Readonly<Record<string, string>>,
+  reason: string,
+): string {
   return rejections[reason] ?? OUTCOMES.checkDetails;
 }
 

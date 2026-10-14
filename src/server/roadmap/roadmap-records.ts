@@ -439,8 +439,9 @@ export const ROADMAP_COPY = {
     ai_initial: "From the coach",
     ai_regeneration: "Regenerated",
     owner_edit: "Your edit",
-    // Never awaiting a decision, so never shown on the roadmap (ADR-029).
-    owner_written: "Written by you",
+    // Never awaiting a decision, so never shown, and no label in any case:
+    // the owner asked for none on a roadmap they wrote (ADR-029).
+    owner_written: "Your roadmap",
   } satisfies Record<RoadmapProposalOrigin, string>,
   emptyRoadmapTitle: "No roadmap yet",
   emptyRoadmapBody:

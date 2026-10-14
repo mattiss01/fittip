@@ -139,6 +139,20 @@ describe("RoadmapWriter", () => {
     expect(content().summary).toBe("Base, then speed.");
   });
 
+  it("moves a milestone to the goal its phase's row is changed to", () => {
+    renderWriter();
+    fireEvent.click(screen.getByRole("button", { name: LABELS.addGoal }));
+    fireEvent.click(screen.getByRole("button", { name: LABELS.addMilestone }));
+
+    fireEvent.change(screen.getByLabelText(LABELS.goal), {
+      target: { value: GOALS[1]!.id },
+    });
+
+    const phase = content().phases[0];
+    expect(phase.goalAttention[0].goalId).toBe(GOALS[1]!.id);
+    expect(phase.milestones[0].goalIds).toEqual([GOALS[1]!.id]);
+  });
+
   it("offers no more goals than the owner has", () => {
     renderWriter();
     fireEvent.click(screen.getByRole("button", { name: LABELS.addGoal }));

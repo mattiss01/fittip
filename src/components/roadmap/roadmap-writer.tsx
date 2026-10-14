@@ -369,9 +369,21 @@ export function RoadmapWriter({
                         value={attention.goalId}
                         onChange={(event) =>
                           update((next) => {
-                            next.phases[phaseIndex]!.goalAttention[
-                              attentionIndex
-                            ]!.goalId = event.target.value;
+                            const target = next.phases[phaseIndex]!;
+                            const previous =
+                              target.goalAttention[attentionIndex]!.goalId;
+                            const chosen = event.target.value;
+                            target.goalAttention[attentionIndex]!.goalId =
+                              chosen;
+                            // A milestone for the goal this row named is for
+                            // the goal it names now: a milestone is for goals
+                            // of its own phase.
+                            for (const milestone of target.milestones) {
+                              milestone.goalIds = milestone.goalIds.map(
+                                (goalId) =>
+                                  goalId === previous ? chosen : goalId,
+                              );
+                            }
                           })
                         }
                       >
