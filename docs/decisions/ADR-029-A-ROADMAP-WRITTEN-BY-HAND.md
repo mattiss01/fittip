@@ -61,3 +61,6 @@ roadmap has none of these.
 - The goals a hand-written roadmap names are checked by the application against the
   owner's active goals, as an edit's are. The database checks only the envelope.
 - A milestone may have no details, and the Roadmap shows none then.
+- A hand-written roadmap is the owner's own words, and a later "Change with Coach" sends
+  them to the provider as the roadmap in force (ADR-028), as it would an edited one. Its
+  text passes the same content check as the coach's.
