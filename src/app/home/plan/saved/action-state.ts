@@ -35,9 +35,21 @@ export const INITIAL_LIBRARY_ACTION_STATE: LibraryActionState = {
 
 /** The save-from-the-Plan control, which lives on the Plan surface. */
 export type LibrarySaveActionState = {
-  status: "idle" | "saved" | "validation" | "conflict" | "session" | "error";
+  status:
+    | "idle"
+    | "saved"
+    | "exists"
+    | "validation"
+    | "conflict"
+    | "session"
+    | "error";
   message: string;
   submission: number;
+  /**
+   * With `exists`: the next free title, which "Keep both" opens on (owner,
+   * 15 Oct 2026: "Intervals (2)").
+   */
+  suggestedTitle?: string;
 };
 
 export const INITIAL_LIBRARY_SAVE_ACTION_STATE: LibrarySaveActionState = {

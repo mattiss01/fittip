@@ -14,3 +14,21 @@
 export function activityNameKey(name: string): string {
   return name.replace(/\s+/g, " ").trim().toLowerCase();
 }
+
+/**
+ * A saved session's title in the same form, for `saved_sessions_title_key`
+ * (15 Oct 2026). The database holds the rule; this finds the entry it meant.
+ */
+export const savedSessionTitleKey = activityNameKey;
+
+/**
+ * "Intervals (2)", or the first number after it whose title is not among
+ * `taken` (keys from `savedSessionTitleKey`). What "Keep both" opens on.
+ */
+export function nextFreeTitle(title: string, taken: ReadonlySet<string>) {
+  const base = title.trim().replace(/ \(\d+\)$/, "");
+  for (let copy = 2; ; copy += 1) {
+    const candidate = `${base} (${copy})`;
+    if (!taken.has(savedSessionTitleKey(candidate))) return candidate;
+  }
+}

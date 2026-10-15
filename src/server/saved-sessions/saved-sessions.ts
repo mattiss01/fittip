@@ -82,6 +82,17 @@ export class SavedSessionValidationError extends Error {
   }
 }
 
+/**
+ * Another entry in the owner's library already has this title. One entry per
+ * title (owner, 15 Oct 2026), held by `saved_sessions_title_key`.
+ */
+export class SavedSessionTitleTakenError extends Error {
+  constructor() {
+    super("A saved session with that title already exists.");
+    this.name = "SavedSessionTitleTakenError";
+  }
+}
+
 /** The record changed, or no longer exists, since the owner read it. */
 export class SavedSessionConflictError extends Error {
   constructor() {

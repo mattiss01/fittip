@@ -27,7 +27,10 @@ import { INITIAL_LIBRARY_SAVE_ACTION_STATE } from "./action-state";
 import { saveLogToLibraryAction } from "./actions";
 
 import type { Completion } from "@/server/completions/completion-log";
-import { parseSavedSessionChange } from "@/server/saved-sessions/saved-sessions";
+import {
+  parseSavedSessionChange,
+  SavedSessionTitleTakenError,
+} from "@/server/saved-sessions/saved-sessions";
 
 const COMPLETION_ID = "7e000000-0000-4000-8000-000000000011";
 
@@ -103,6 +106,81 @@ describe("saving a log to the session library", () => {
 
     expect(state.status).toBe("validation");
     expect(applyChange).not.toHaveBeenCalled();
+  });
+});
+
+describe("a title already in the library (owner, 15 Oct 2026)", () => {
+  const EXISTING = {
+    id: "7e000000-0000-4000-8000-000000000021",
+    revision: 3,
+    title: "upper  body",
+  };
+  const applyChange = vi.fn();
+  const list = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    createLibraryMock.mockResolvedValue({ applyChange, list });
+    list.mockResolvedValue([EXISTING]);
+    createCompletionLogMock.mockResolvedValue({
+      get: vi.fn().mockResolvedValue(completion()),
+    });
+  });
+
+  it("asks first, with the next free title to keep both under", async () => {
+    applyChange.mockRejectedValue(new SavedSessionTitleTakenError());
+
+    const state = await saveLogToLibraryAction(
+      INITIAL_LIBRARY_SAVE_ACTION_STATE,
+      form({ completionId: COMPLETION_ID }),
+    );
+
+    expect(state).toMatchObject({
+      status: "exists",
+      message: "Already in your library.",
+      suggestedTitle: "Upper body (2)",
+    });
+  });
+
+  it("updates the entry with that title when asked to", async () => {
+    applyChange.mockResolvedValue({ result: "updated" });
+
+    const state = await saveLogToLibraryAction(
+      INITIAL_LIBRARY_SAVE_ACTION_STATE,
+      form({ completionId: COMPLETION_ID, onExisting: "update" }),
+    );
+
+    expect(state.status).toBe("saved");
+    expect(applyChange).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        operation: "edit",
+        savedSessionId: EXISTING.id,
+        expectedRevision: EXISTING.revision,
+      }),
+    );
+  });
+
+  it("keeps both under the title the owner gave", async () => {
+    applyChange.mockResolvedValue({ result: "created" });
+
+    await saveLogToLibraryAction(
+      INITIAL_LIBRARY_SAVE_ACTION_STATE,
+      form({
+        completionId: COMPLETION_ID,
+        onExisting: "new",
+        title: " Upper body (2) ",
+      }),
+    );
+
+    expect(applyChange).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        operation: "create",
+        session: expect.objectContaining({
+          name: "Upper body (2)",
+          title: "Upper body (2)",
+        }),
+      }),
+    );
   });
 });
 

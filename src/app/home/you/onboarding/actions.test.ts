@@ -57,6 +57,7 @@ describe("guided setup actions", () => {
   const profiles = {
     getDetails: vi.fn(),
     saveSports: vi.fn(),
+    keepSports: vi.fn(),
     saveSetupStep: vi.fn(),
     skipSetup: vi.fn(),
     finishSetup: vi.fn(),
@@ -193,8 +194,9 @@ describe("guided setup actions", () => {
 
     expect(state.goalIds).toEqual([GOAL_ID, null, NEW_ID]);
     expect(goals.create.mock.calls.map((call) => call[1])).toEqual([0, 1]);
-    // A sport made up on the goals screen joins the owner's sports.
-    expect(profiles.saveSports).toHaveBeenCalledExactlyOnceWith([
+    // A sport made up on the goals screen joins the owner's sports, in one
+    // write the database deduplicates (15 Oct 2026).
+    expect(profiles.keepSports).toHaveBeenCalledExactlyOnceWith([
       "Running",
       "Latzug",
     ]);

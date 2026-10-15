@@ -2,57 +2,37 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { keepSports, sportOf, submittedSports } from "./keep-sports";
 
-const { getDetails, saveSports } = vi.hoisted(() => ({
-  getDetails: vi.fn(),
-  saveSports: vi.fn(),
-}));
+const { keepOwned } = vi.hoisted(() => ({ keepOwned: vi.fn() }));
 
 vi.mock("@/server/repositories/profile-repository", () => ({
-  createProfileRepository: async () => ({ getDetails, saveSports }),
+  createProfileRepository: async () => ({ keepSports: keepOwned }),
 }));
 
+// Which names are new to the owner, and the list's limit, are the database's
+// (`keep_sports`, proved in careful_fix_in_passing.test.sql).
 describe("keepSports", () => {
   beforeEach(() => {
-    getDetails.mockReset().mockResolvedValue({ sports: ["Running"] });
-    saveSports.mockReset().mockResolvedValue(undefined);
+    keepOwned.mockReset().mockResolvedValue(undefined);
   });
 
-  it("adds a sport the owner does not have yet, once, after theirs", async () => {
-    await keepSports([" Padel ", "padel", "RUNNING", "Yoga"]);
+  it("hands the database every name it could keep, trimmed, in one call", async () => {
+    await keepSports([" Padel ", "padel", "Yoga", "", null, undefined, 3]);
 
-    expect(saveSports).toHaveBeenCalledExactlyOnceWith([
-      "Running",
+    expect(keepOwned).toHaveBeenCalledExactlyOnceWith([
       "Padel",
+      "padel",
       "Yoga",
     ]);
   });
 
-  it("writes nothing when every sport is already theirs", async () => {
-    await keepSports(["running", "", null, undefined, 3]);
-
-    expect(saveSports).not.toHaveBeenCalled();
-  });
-
-  it("leaves out a name the list could not hold", async () => {
+  it("leaves out a name the list could not hold, and then calls nothing", async () => {
     await keepSports(["Run, bike", "x".repeat(61)]);
 
-    expect(getDetails).not.toHaveBeenCalled();
-    expect(saveSports).not.toHaveBeenCalled();
-  });
-
-  it("stops at the list's limit", async () => {
-    getDetails.mockResolvedValue({
-      sports: Array.from({ length: 99 }, (_, index) => `Sport ${index}`),
-    });
-
-    await keepSports(["Padel", "Yoga"]);
-
-    expect(saveSports.mock.calls[0][0]).toHaveLength(100);
-    expect(saveSports.mock.calls[0][0].at(-1)).toBe("Padel");
+    expect(keepOwned).not.toHaveBeenCalled();
   });
 
   it("never fails the save it follows", async () => {
-    saveSports.mockRejectedValue(new Error("no"));
+    keepOwned.mockRejectedValue(new Error("no"));
 
     await expect(keepSports(["Padel"])).resolves.toBeUndefined();
   });
