@@ -314,7 +314,9 @@ export async function regeneratePlanProposalAction(
             ? OUTCOMES.regenerationConflict
             : mapped.message === OUTCOMES.regenerationCap
               ? `${OUTCOMES.regenerationCap} ${OUTCOMES.regenerationKept}`
-              : OUTCOMES.regenerationLost,
+              : mapped.status === "rule"
+                ? OUTCOMES.regenerationRefused
+                : OUTCOMES.regenerationLost,
         submission,
       };
     }

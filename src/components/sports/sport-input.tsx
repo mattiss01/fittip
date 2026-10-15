@@ -200,7 +200,7 @@ export function SportsInput({
         onPick={(sport) => add([sport])}
       />
       {/* Not a status: a form's own notice is the page's status. */}
-      <span className={styles.srOnly} aria-live="polite">
+      <span className="sr-only" aria-live="polite">
         {announced}
       </span>
       <input
@@ -238,7 +238,7 @@ function SportChips({
           ))}
         </div>
       )}
-      <span className={styles.srOnly} aria-live="polite">
+      <span className="sr-only" aria-live="polite">
         {offered.length === 0
           ? ""
           : offered.length === 1

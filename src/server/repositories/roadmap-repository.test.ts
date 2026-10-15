@@ -287,7 +287,7 @@ describe("RoadmapRepository", () => {
     const request = {
       idempotencyKey: "rk_0123456789abcdef",
       requestFingerprint:
-        "roadmap.v4:2026-08-10:2026-11-02:1:initial:5:0:change",
+        "roadmap.v2:2026-08-10:2026-11-02:1:initial:5:0:change",
       startDate: "2026-08-10",
       endDate: "2026-11-02",
       expectedHeadRevision: 1,
@@ -329,7 +329,7 @@ describe("RoadmapRepository", () => {
 
     await repository.beginGeneration({
       idempotencyKey: "rk_0123456789abcdef",
-      requestFingerprint: "roadmap.v4:2026-08-10:2026-11-02:0:initial:0:0",
+      requestFingerprint: "roadmap.v2:2026-08-10:2026-11-02:0:initial:0:0",
       startDate: "2026-08-10",
       endDate: "2026-11-02",
       expectedHeadRevision: 0,

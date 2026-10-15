@@ -85,14 +85,16 @@ Ordered by dependency. A lane is named where it is not the build lane.
       carries every week to the browser — 13 behind, 13 of recurring sessions and 13
       more of single ones — and re-reads all of it for every change, though it shows one.
       Fine for one athlete's plan; a longer history than a quarter would need it first.
-- [~] **Four database fixes in one migration.** Careful lane, owner 15 Oct 2026.
+- [~] **Database and spend-guard fixes, one migration.** Careful lane, owner 15 Oct 2026.
       (1) One library entry per title: a repeat save asks "update it or keep both", and
       keeping both needs a new title; a uniqueness rule in the database as the activity
       library has (`16118fb`). (2) A typed sport joins the owner's sports in one write,
-      not a read then a write. (3) Asking again is tied to the roadmap its predecessor
+      not a read then a write; `keepSports` keeps its ten one-line callers. (3) Asking again is tied to the roadmap its predecessor
       was made under, so a hand-made request cannot pair a newer roadmap with an older
-      outline. (4) `apply_completion_change` maps `22P02` to `22023`. Destructive DDL, if
-      existing duplicate titles need it, is asked first.
+      outline. (4) `apply_completion_change` maps `22P02` to `22023`. (5) The roadmap
+      generation fingerprint is labelled `"roadmap.v4"`, not `"roadmap.v2"`: no migration,
+      but the spend guard's. Destructive DDL, if existing duplicate titles need it, is
+      asked first.
 
 ## Fix in passing
 
@@ -107,6 +109,13 @@ Not worth their own slot; do them when work lands nearby.
   on a phone or in a desktop browser's calendar mark. And with this week at the week
   strip's left edge, a sliver of last week's tile shows in the page inset: a hint that the
   strip scrolls, or a flaw.
+- **The week strip still jumps on a first load in Safari.** Since 15 Oct 2026 the strip
+  is placed before paint and the server's HTML asks for this week's tile with
+  `scroll-initial-target`, which Chrome honours and Safari does not, so there the strip
+  shows its oldest week until the page is interactive.
+- **After a milestone tick's recovery reload, nothing says why.** The tick passes no
+  recovered notice; the explanation appears only when "New roadmap" is next opened. Rarer
+  since 15 Oct 2026, when ticks stopped taking each other's replies for their own.
 
 ## Later
 

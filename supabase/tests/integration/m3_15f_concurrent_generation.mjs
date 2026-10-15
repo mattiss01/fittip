@@ -83,7 +83,7 @@ try {
     // what each round proves.
     const owner = await createOwner(`round-${round}`);
     const key = `m3-15f-${randomUUID()}`.slice(0, 64);
-    const fingerprint = `roadmap.v4:${today}:${endDate}:0:initial:0:0`;
+    const fingerprint = `roadmap.v2:${today}:${endDate}:0:initial:0:0`;
 
     const receipts = await Promise.all(
       Array.from({ length: CALLERS }, () =>

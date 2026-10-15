@@ -204,6 +204,9 @@ export const PLAN_PROPOSAL_COPY = {
     /** Said when the plan moved between the finish and the new request. */
     regenerationConflict:
       "What you added is in your plan and the old proposal is closed, but your plan changed before the coach was asked again. Ask for a new plan above.",
+    /** Any other refusal of the new request, on that same path. */
+    regenerationRefused:
+      "What you added is in your plan and the old proposal is closed, but the new request could not be made. Ask for a new plan above.",
     /** Appended to the regeneration ceiling's message on that same path. */
     regenerationKept: "What you added is in your plan.",
     regenerationCap:

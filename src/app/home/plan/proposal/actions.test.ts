@@ -327,6 +327,17 @@ describe("regeneratePlanProposalAction", () => {
     });
   });
 
+  it("says the accepted days were kept when a rule refuses the new request", async () => {
+    generateMock.mockRejectedValue(new PlanProposalRuleError("past-date"));
+
+    const state = await regenerate();
+
+    expect(state).toMatchObject({
+      status: "error",
+      message: OUTCOMES.regenerationRefused,
+    });
+  });
+
   it("says the accepted days were kept when the plan moves before the coach answers", async () => {
     generateMock.mockRejectedValue(new PlanProposalConflictError("stale"));
 

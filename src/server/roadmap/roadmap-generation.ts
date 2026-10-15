@@ -134,7 +134,7 @@ export async function generateRoadmapProposal(
   // horizon, the lineage and the *lengths* of the owner text — lengths rather
   // than content, because a content hash leaks by comparison.
   const requestFingerprint = [
-    "roadmap.v4",
+    "roadmap.v2",
     input.startDate,
     input.endDate,
     String(input.expectedHeadRevision),

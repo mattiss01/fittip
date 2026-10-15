@@ -79,14 +79,22 @@ const RECOVERY_FLAG = "fittip.roadmap.recovered:v1";
  * posts to the one page address, so a response on the timeline cannot be told
  * apart from another write's: two milestones ticked within a second each saw
  * the other's reply as their own and reloaded the page for nothing. A write is
- * only judged lost once as many replies have arrived since it was sent as
- * writes were sent since then, its own included.
+ * only judged lost once the page has had a reply for every write it sent.
+ *
+ * The replies are gathered here for the document, by every control's
+ * observer, so a control that mounts later does not depend on the timeline's
+ * buffer to replay them. Both are forgotten whenever no write is waiting, so
+ * a long visit neither grows them nor carries an old miscount forward.
  */
 const submittedInstants: number[] = [];
+const replies = new Set<number>();
+let waitingWrites = 0;
 
 /** Forgets every write submitted so far; for tests, which share the module. */
 export function forgetRoadmapWrites() {
   submittedInstants.length = 0;
+  replies.clear();
+  waitingWrites = 0;
 }
 
 export type RoadmapWrite = {
@@ -171,7 +179,6 @@ function useLostRenderRecovery(
   // Keyed by the submission it describes, so a later write never inherits an
   // earlier one's verdict and no effect has to reset state.
   const [lostFor, setLostFor] = useState<string | null>(null);
-  const responses = useRef(new Set<number>());
   const key = `${submission}:${pending}`;
 
   useEffect(() => {
@@ -183,7 +190,7 @@ function useLostRenderRecovery(
         list.getEntries() as PerformanceResourceTiming[],
         actionUrl,
       )) {
-        responses.current.add(seen);
+        replies.add(seen);
       }
     });
     observer.observe({ type: "resource", buffered: true });
@@ -198,6 +205,7 @@ function useLostRenderRecovery(
     // that set it, and the reloaded page would have nothing to explain itself
     // with.
     markRecovered(false);
+    waitingWrites += 1;
     // The submit's own instant, not this effect's. Everything the resource
     // timeline held at that moment answered an earlier write, so it is
     // accounted for and cannot be read as this one's reply; everything after it
@@ -211,7 +219,7 @@ function useLostRenderRecovery(
       // not answered yet keeps waiting.
       const verdict = watchTransition({
         submittedAt: startedAt,
-        respondedAt: replyForWrite(submittedInstants, responses.current),
+        respondedAt: replyForWrite(submittedInstants, replies),
         consumedAt: startedAt,
         now: performance.now(),
       });
@@ -238,6 +246,12 @@ function useLostRenderRecovery(
       // was not. Only a reload that actually fired leaves it standing, and that
       // path replaces the document rather than running this cleanup.
       if (reload !== 0 && !reloading) markRecovered(false);
+      waitingWrites -= 1;
+      if (waitingWrites <= 0) {
+        waitingWrites = 0;
+        submittedInstants.length = 0;
+        replies.clear();
+      }
     };
   }, [key, pending, submittedAt]);
 
