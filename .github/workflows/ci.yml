@@ -148,7 +148,7 @@ jobs:
           - shard: b
             flows: m2-01 m3-12 m3-19
           - shard: c
-            flows: auth m3-13 m3-14b m3-15c
+            flows: plain m3-13 m3-14b m3-15c
     steps:
       - uses: actions/checkout@v7
 

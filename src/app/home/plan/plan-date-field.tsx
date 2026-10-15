@@ -1,4 +1,5 @@
 import { DateField } from "@/components/date-field/date-field";
+import { formatRoadmapDate } from "@/components/roadmap/roadmap-dates";
 
 /** The owner-local dates a single session may be placed on, inclusive. */
 export type PlanDateRange = { first: string; last: string };
@@ -28,6 +29,7 @@ export function PlanDateInput({
       max={range.last}
       min={defaultValue < range.first ? defaultValue : range.first}
       name="localDate"
+      rangeMessage={`Choose a day from ${formatRoadmapDate(range.first)} to ${formatRoadmapDate(range.last)}.`}
       required
     />
   );

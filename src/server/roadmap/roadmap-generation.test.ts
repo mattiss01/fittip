@@ -273,7 +273,7 @@ describe("generateRoadmapProposal", () => {
 
     const { requestFingerprint } = roadmaps.beginGeneration.mock.calls[0][0];
     expect(requestFingerprint).toBe(
-      `roadmap.v2:${TODAY}:${END_DATE}:0:initial:24:0`,
+      `roadmap.v4:${TODAY}:${END_DATE}:0:initial:24:0`,
     );
     expect(requestFingerprint).not.toContain("Tuesdays");
   });
@@ -294,7 +294,7 @@ describe("generateRoadmapProposal", () => {
 
     const { requestFingerprint } = roadmaps.beginGeneration.mock.calls[0][0];
     expect(requestFingerprint).toBe(
-      `roadmap.v2:${TODAY}:${END_DATE}:0:initial:24:0:change`,
+      `roadmap.v4:${TODAY}:${END_DATE}:0:initial:24:0:change`,
     );
   });
 

@@ -231,6 +231,17 @@ describe("PlanManager", () => {
           },
         }),
         session({
+          id: "7f000000-0000-4000-8000-0000000000a3",
+          localDate: "2026-08-13",
+          title: "Hill run",
+          log: {
+            completionId: "7f000000-0000-4000-8000-0000000000ca",
+            outcome: "completed",
+            actualLocalDate: "2026-08-13",
+            durationMinutes: 55,
+          },
+        }),
+        session({
           id: "7f000000-0000-4000-8000-0000000000a2",
           localDate: "2026-08-04",
           title: "Long ride",
@@ -258,6 +269,9 @@ describe("PlanManager", () => {
     expect(logged.getAttribute("data-past")).toBe("true");
     // The planned minutes stay beside how it went.
     expect(logged.textContent).toContain("60 min planned · Completed");
+    // A log that gives its minutes shows them instead.
+    expect(day("2026-08-13").textContent).toContain("55 min · Completed");
+    expect(day("2026-08-13").textContent).not.toContain("planned");
     expect(
       within(logged)
         .getByRole("link", { name: "Tempo run" })

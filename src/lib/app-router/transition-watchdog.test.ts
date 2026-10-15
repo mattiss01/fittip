@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   CONFIRMATION_BUDGET_MS,
+  actionResponseTimes,
   latestActionResponseAt,
   RENDER_GRACE_MS,
+  replyForWrite,
   watchTransition,
 } from "./transition-watchdog";
 
@@ -131,5 +133,32 @@ describe("latestActionResponseAt", () => {
     expect(
       latestActionResponseAt([{ name: actionUrl, responseEnd: 0 }], actionUrl),
     ).toBeNull();
+  });
+});
+
+describe("the reply to one of several writes to one address", () => {
+  it("waits while any write sent has not answered", () => {
+    // Two ticks a moment apart: one reply in is as likely either's.
+    expect(replyForWrite([100, 300], [900])).toBeNull();
+  });
+
+  it("is the newest reply once every write has answered", () => {
+    expect(replyForWrite([100, 300], [1_200, 900])).toBe(1_200);
+  });
+
+  it("names this page's mutation responses only", () => {
+    expect(
+      actionResponseTimes(
+        [
+          { name: "https://app.test/home/plan/roadmap", responseEnd: 10 },
+          {
+            name: "https://app.test/home/plan/roadmap?_rsc=1",
+            responseEnd: 20,
+          },
+          { name: "https://app.test/home/plan/roadmap", responseEnd: 0 },
+        ],
+        "https://app.test/home/plan/roadmap",
+      ),
+    ).toEqual([10]);
   });
 });

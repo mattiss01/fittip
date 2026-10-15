@@ -157,7 +157,9 @@ describe("one completion", () => {
     );
 
     expect(
-      screen.getByRole("link", { name: "August 2026" }).getAttribute("href"),
+      screen
+        .getByRole("link", { name: "Back to August 2026" })
+        .getAttribute("href"),
     ).toBe("/home/progress?month=2026-08");
   });
 

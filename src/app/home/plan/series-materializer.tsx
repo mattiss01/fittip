@@ -68,19 +68,21 @@ export function SeriesMaterializer({
     <section
       className={styles.extensionCard}
       data-state={noticeState}
-      aria-labelledby="series-extension-title"
+      aria-labelledby="series-extension-label"
     >
-      <p className={styles.sectionLabel}>Recurring sessions</p>
-      <h2 id="series-extension-title">{notice}</h2>
+      <p id="series-extension-label" className={styles.sectionLabel}>
+        Recurring sessions
+      </p>
+      {/* A status sentence, sometimes two, so it is not a heading. */}
+      <p className={styles.extensionNotice} role="status" aria-live="polite">
+        {notice}
+      </p>
       {extending && uncoveredDates.length > 0 ? (
         <p>
           Checking {checkingLabel(uncoveredDates)}. The Plan remains usable
           while these owner-local dates are filled.
         </p>
       ) : null}
-      <p className={styles.srOnly} role="status" aria-live="polite">
-        {notice}
-      </p>
       <SkippedDates skipped={state.skipped ?? []} />
       {state.status === "conflict" ||
       state.status === "session" ||

@@ -1,11 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type RefObject } from "react";
 
-import { useOwnedSports } from "./owned-sports";
+import { useOwnedSports, useRememberSports } from "./owned-sports";
 import styles from "./sport-input.module.css";
 
+import {
+  keepsAsSport,
+  SPORT_NAME_MAX_LENGTH,
+} from "@/lib/sports/sport-presets";
 import { suggestSports } from "@/lib/sports/sport-suggestions";
+
+const NOT_KEPT = `Kept here only: a sport on your list has no comma and up to ${SPORT_NAME_MAX_LENGTH} characters.`;
 
 type SportInputProps = {
   id: string;
@@ -45,6 +51,10 @@ export function SportInput({
     onChange?.(sport);
   };
   const offered = typed === shown ? suggestSports(sports, shown) : [];
+  const hintId = useId();
+  const notKept =
+    shown.trim() !== "" && !keepsAsSport(shown) && !owns(sports, shown);
+  useSentSports(field, () => [shown]);
 
   return (
     <div className={styles.wrap}>
@@ -57,11 +67,17 @@ export function SportInput({
         maxLength={80}
         autoComplete="off"
         value={shown}
+        aria-describedby={notKept ? hintId : undefined}
         onChange={(event) => {
           setTyped(event.target.value);
           set(event.target.value);
         }}
       />
+      {notKept ? (
+        <span className={styles.hint} id={hintId}>
+          {NOT_KEPT}
+        </span>
+      ) : null}
       <SportChips
         offered={offered}
         onPick={(sport) => {
@@ -102,7 +118,10 @@ export function SportsInput({
   const sports = given ?? owned;
   const [chosen, setChosen] = useState<readonly string[]>(defaultValue);
   const [typed, setTyped] = useState("");
+  // Said to a screen reader as a chip comes or goes.
+  const [announced, setAnnounced] = useState("");
   const field = useRef<HTMLInputElement>(null);
+  const hintId = useId();
   const has = (list: readonly string[], sport: string) =>
     list.some(
       (other) => other.toLocaleLowerCase() === sport.toLocaleLowerCase(),
@@ -114,10 +133,15 @@ export function SportsInput({
         current,
       ),
     );
+    setAnnounced(`Added ${names.join(", ")}`);
     setTyped("");
     field.current?.focus();
   };
   const pending = namesIn(typed).filter((sport) => !has(chosen, sport));
+  const notKept = [...chosen, ...pending].filter(
+    (sport) => !keepsAsSport(sport) && !owns(sports, sport),
+  );
+  useSentSports(field, () => [...chosen, ...pending]);
 
   return (
     <div className={styles.wrap}>
@@ -133,6 +157,7 @@ export function SportsInput({
                 setChosen((current) =>
                   current.filter((other) => other !== sport),
                 );
+                setAnnounced(`Removed ${sport}`);
                 field.current?.focus();
               }}
               type="button"
@@ -154,6 +179,7 @@ export function SportsInput({
         maxLength={600}
         autoComplete="off"
         placeholder={chosen.length === 0 ? "Running" : "Add another sport"}
+        aria-describedby={notKept.length > 0 ? hintId : undefined}
         value={typed}
         onChange={(event) => setTyped(event.target.value)}
         onKeyDown={(event) => {
@@ -164,10 +190,19 @@ export function SportsInput({
           add(pending);
         }}
       />
+      {notKept.length > 0 ? (
+        <span className={styles.hint} id={hintId}>
+          {NOT_KEPT}
+        </span>
+      ) : null}
       <SportChips
         offered={suggestSports(sports, typed, chosen)}
         onPick={(sport) => add([sport])}
       />
+      {/* Not a status: a form's own notice is the page's status. */}
+      <span className={styles.srOnly} aria-live="polite">
+        {announced}
+      </span>
       <input
         name={name}
         type="hidden"
@@ -184,23 +219,61 @@ function SportChips({
   offered: readonly string[];
   onPick: (sport: string) => void;
 }) {
-  if (offered.length === 0) return null;
   // Not named after the field: a group called "…sports" would answer to the
-  // field's own label wherever a field is looked up by it.
+  // field's own label wherever a field is looked up by it. The count is said
+  // as suggestions appear, which a screen reader otherwise would not know.
   return (
-    <div aria-label="Suggestions" className={styles.chips} role="group">
-      {offered.map((sport) => (
-        <button
-          className={styles.chip}
-          key={sport}
-          onClick={() => onPick(sport)}
-          type="button"
-        >
-          {sport}
-        </button>
-      ))}
-    </div>
+    <>
+      {offered.length === 0 ? null : (
+        <div aria-label="Suggestions" className={styles.chips} role="group">
+          {offered.map((sport) => (
+            <button
+              className={styles.chip}
+              key={sport}
+              onClick={() => onPick(sport)}
+              type="button"
+            >
+              {sport}
+            </button>
+          ))}
+        </div>
+      )}
+      <span className={styles.srOnly} aria-live="polite">
+        {offered.length === 0
+          ? ""
+          : offered.length === 1
+            ? "1 sport suggested"
+            : `${offered.length} sports suggested`}
+      </span>
+    </>
   );
+}
+
+function owns(sports: readonly string[], name: string) {
+  const key = name.trim().toLocaleLowerCase();
+  return sports.some((sport) => sport.toLocaleLowerCase() === key);
+}
+
+/**
+ * Tells the owner's list, as the field's form is sent, which sports it
+ * sends, so they are offered at once rather than from the next load.
+ */
+function useSentSports(
+  field: RefObject<HTMLInputElement | null>,
+  read: () => readonly string[],
+) {
+  const remember = useRememberSports();
+  const latest = useRef(read);
+  useEffect(() => {
+    latest.current = read;
+  });
+  useEffect(() => {
+    const form = field.current?.form;
+    if (!form) return;
+    const sent = () => remember(latest.current());
+    form.addEventListener("submit", sent);
+    return () => form.removeEventListener("submit", sent);
+  }, [field, remember]);
 }
 
 /** A comma separates sports where they are sent as a list. */

@@ -38,6 +38,8 @@ export type PlanSessionLog = {
   completionId: string;
   outcome: CompletionOutcome;
   actualLocalDate: string;
+  /** How long the log says it took, where the owner gave it. */
+  durationMinutes?: number;
 };
 
 /**

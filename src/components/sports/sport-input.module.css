@@ -45,3 +45,22 @@
   background: var(--ember);
   color: var(--paper);
 }
+
+/* Why a sport typed here will not join the owner's list. */
+.hint {
+  color: var(--ledger-muted, var(--muted));
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

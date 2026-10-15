@@ -16,8 +16,9 @@ import {
   type RoadmapActionState,
 } from "@/app/home/plan/roadmap/action-state";
 import {
-  latestActionResponseAt,
+  actionResponseTimes,
   RECOVERY_NOTICE_MS,
+  replyForWrite,
   watchTransition,
   WATCH_INTERVAL_MS,
 } from "@/lib/app-router/transition-watchdog";
@@ -73,6 +74,21 @@ import {
  */
 const RECOVERY_FLAG = "fittip.roadmap.recovered:v1";
 
+/**
+ * When each roadmap write in this document was submitted. Every roadmap write
+ * posts to the one page address, so a response on the timeline cannot be told
+ * apart from another write's: two milestones ticked within a second each saw
+ * the other's reply as their own and reloaded the page for nothing. A write is
+ * only judged lost once as many replies have arrived since it was sent as
+ * writes were sent since then, its own included.
+ */
+const submittedInstants: number[] = [];
+
+/** Forgets every write submitted so far; for tests, which share the module. */
+export function forgetRoadmapWrites() {
+  submittedInstants.length = 0;
+}
+
 export type RoadmapWrite = {
   /** The last reply, or the initial idle state. */
   state: RoadmapActionState;
@@ -113,6 +129,7 @@ export function useRoadmapWrite(
     formData: FormData,
   ): Promise<RoadmapActionState> {
     submittedAt.current = performance.now();
+    submittedInstants.push(submittedAt.current);
     reportRoadmapOutcome(null);
     const result = await action(previous, formData);
     reportRoadmapOutcome(result);
@@ -154,7 +171,7 @@ function useLostRenderRecovery(
   // Keyed by the submission it describes, so a later write never inherits an
   // earlier one's verdict and no effect has to reset state.
   const [lostFor, setLostFor] = useState<string | null>(null);
-  const respondedAt = useRef<number | null>(null);
+  const responses = useRef(new Set<number>());
   const key = `${submission}:${pending}`;
 
   useEffect(() => {
@@ -162,13 +179,11 @@ function useLostRenderRecovery(
     const { origin, pathname, search } = window.location;
     const actionUrl = `${origin}${pathname}${search}`;
     const observer = new PerformanceObserver((list) => {
-      const seen = latestActionResponseAt(
+      for (const seen of actionResponseTimes(
         list.getEntries() as PerformanceResourceTiming[],
         actionUrl,
-      );
-      if (seen === null) return;
-      if (respondedAt.current === null || seen > respondedAt.current) {
-        respondedAt.current = seen;
+      )) {
+        responses.current.add(seen);
       }
     });
     observer.observe({ type: "resource", buffered: true });
@@ -196,7 +211,7 @@ function useLostRenderRecovery(
       // not answered yet keeps waiting.
       const verdict = watchTransition({
         submittedAt: startedAt,
-        respondedAt: respondedAt.current,
+        respondedAt: replyForWrite(submittedInstants, responses.current),
         consumedAt: startedAt,
         now: performance.now(),
       });

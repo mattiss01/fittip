@@ -201,7 +201,10 @@ export const PLAN_PROPOSAL_COPY = {
       "This proposal is too large to send back to the coach with your feedback. Finish or discard it, then ask for a new plan.",
     regenerationLost:
       "What you added is in your plan and the old proposal is closed, but the coach could not answer. Ask for a new plan above.",
-    /** Appended to a conflict or rule message on that same path. */
+    /** Said when the plan moved between the finish and the new request. */
+    regenerationConflict:
+      "What you added is in your plan and the old proposal is closed, but your plan changed before the coach was asked again. Ask for a new plan above.",
+    /** Appended to the regeneration ceiling's message on that same path. */
     regenerationKept: "What you added is in your plan.",
     regenerationCap:
       "This plan has been asked again as many times as it can be. Ask for a fresh plan above.",

@@ -29,7 +29,7 @@ import {
   RENDER_GRACE_MS,
   WATCH_INTERVAL_MS,
 } from "@/lib/app-router/transition-watchdog";
-import { GoalManager, type GoalView } from "./goal-manager";
+import { edgeScrollSpeed, GoalManager, type GoalView } from "./goal-manager";
 
 const RECOVERY_FLAG = "fittip.goals.recovered:v1";
 const PAGE_ORIGIN = "http://localhost";
@@ -150,6 +150,24 @@ describe("GoalManager", () => {
     expect(screen.getByText("Trail event")).toBeVisible();
     expect(screen.getByText("Mobility habit")).toBeVisible();
     expect(screen.getByLabelText("2 core slots open")).toBeVisible();
+  });
+
+  it("offers no target date before today, in the form's own words", () => {
+    render(
+      <GoalManager
+        expectedRevision={1}
+        today="2026-10-15"
+        initialGoals={[
+          goal({ id: "1", title: "Trail event", priorityTier: "core" }),
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Add goal/ }));
+    expect(screen.getByLabelText("Target date (optional)")).toHaveAttribute(
+      "min",
+      "2026-10-15",
+    );
   });
 
   it("keeps paused and terminal records outside active ranks", () => {
@@ -590,3 +608,15 @@ function goal(overrides: Partial<GoalView>): GoalView {
     ...overrides,
   };
 }
+
+describe("scrolling the page under a dragged goal", () => {
+  it("scrolls up near the top, down near the bottom, and not between", () => {
+    expect(edgeScrollSpeed(10, 844)).toBeLessThan(0);
+    expect(edgeScrollSpeed(400, 844)).toBe(0);
+    expect(edgeScrollSpeed(830, 844)).toBeGreaterThan(0);
+    // Faster the nearer the edge.
+    expect(edgeScrollSpeed(830, 844)).toBeGreaterThan(
+      edgeScrollSpeed(760, 844),
+    );
+  });
+});

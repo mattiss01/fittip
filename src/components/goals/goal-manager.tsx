@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  createContext,
   useActionState,
+  useContext,
   useEffect,
   useId,
   useOptimistic,
@@ -52,7 +54,15 @@ export type GoalView = {
 type Props = {
   initialGoals: GoalView[];
   expectedRevision: number;
+  /**
+   * The owner's local today: the earliest target date a goal may be given.
+   * Without it the field is held to no day.
+   */
+  today?: string;
 };
+
+/** The owner's local today, for the target date of every goal form. */
+const TodayContext = createContext<string | null>(null);
 
 /**
  * Session-scoped, non-personal, versioned marker that survives the recovery
@@ -64,7 +74,7 @@ const RECOVERY_FLAG = "fittip.goals.recovered:v1";
 const RECOVERED_NOTICE =
   "Your last goal change did not appear, so these goals were reloaded. The list below is what is saved.";
 
-export function GoalManager({ initialGoals, expectedRevision }: Props) {
+export function GoalManager({ initialGoals, expectedRevision, today }: Props) {
   const [state, action, pending] = useActionState(
     changeGoalAction,
     INITIAL_GOAL_ACTION_STATE,
@@ -98,112 +108,114 @@ export function GoalManager({ initialGoals, expectedRevision }: Props) {
   );
 
   return (
-    <div className={styles.manager}>
-      <p
-        className={noticeState === "idle" ? styles.srOnly : styles.notice}
-        data-state={noticeState}
-        role="status"
-        aria-live="polite"
-      >
-        {notice ?? state.message}
-      </p>
-      {state.conflict === "stale" || stall === "unconfirmed" ? (
-        <a className={styles.reload} href="/home/you/goals">
-          Reload current goals
-        </a>
-      ) : null}
-
-      {/* First on the page, not under both lists (owner, 2 Oct 2026), and a
-          button of its own width that opens the form (owner, 5 Oct 2026). */}
-      {adding ? (
-        <section className={styles.addPanel} aria-label="Add goal">
-          <GoalForm
-            // Remounted by its own result only: a reorder sent while this
-            // is open must not empty what has been typed.
-            key={`create-${state.operation === "create" ? state.submission : 0}`}
-            action={action}
-            expectedRevision={expectedRevision}
-            pending={pending}
-            draft={state.operation === "create" ? state.draft : undefined}
-            newGoalTier={core.length < 3 ? "core" : "supporting"}
-            onCancel={() => setAdding(false)}
-          />
-        </section>
-      ) : (
-        <button
-          className={styles.add}
-          onClick={() => setAdding(true)}
-          type="button"
+    <TodayContext value={today ?? null}>
+      <div className={styles.manager}>
+        <p
+          className={noticeState === "idle" ? styles.srOnly : styles.notice}
+          data-state={noticeState}
+          role="status"
+          aria-live="polite"
         >
-          Add goal
-        </button>
-      )}
+          {notice ?? state.message}
+        </p>
+        {state.conflict === "stale" || stall === "unconfirmed" ? (
+          <a className={styles.reload} href="/home/you/goals">
+            Reload current goals
+          </a>
+        ) : null}
 
-      <section className={styles.attention} aria-labelledby="core-heading">
-        <div className={styles.sectionHeading}>
-          <h2 id="core-heading">Core goals</h2>
-          <span
-            className={styles.slotSignal}
-            aria-label={`${3 - core.length} core slots open`}
+        {/* First on the page, not under both lists (owner, 2 Oct 2026), and a
+          button of its own width that opens the form (owner, 5 Oct 2026). */}
+        {adding ? (
+          <section className={styles.addPanel} aria-label="Add goal">
+            <GoalForm
+              // Remounted by its own result only: a reorder sent while this
+              // is open must not empty what has been typed.
+              key={`create-${state.operation === "create" ? state.submission : 0}`}
+              action={action}
+              expectedRevision={expectedRevision}
+              pending={pending}
+              draft={state.operation === "create" ? state.draft : undefined}
+              newGoalTier={core.length < 3 ? "core" : "supporting"}
+              onCancel={() => setAdding(false)}
+            />
+          </section>
+        ) : (
+          <button
+            className={styles.add}
+            onClick={() => setAdding(true)}
+            type="button"
           >
-            {Array.from({ length: 3 }, (_, index) => (
-              <i key={index} data-filled={index < core.length} />
-            ))}
-          </span>
-        </div>
-        {core.length ? (
-          <GoalList
-            goals={core}
-            tier="core"
-            expectedRevision={expectedRevision}
-            action={action}
-            actionState={state}
-            pending={pending}
-          />
-        ) : (
-          <p className={styles.empty}>
-            No core goal yet. Choose up to three outcomes that deserve primary
-            training attention.
-          </p>
+            Add goal
+          </button>
         )}
-      </section>
 
-      <section
-        className={styles.supporting}
-        aria-labelledby="supporting-heading"
-      >
-        <div className={styles.sectionHeading}>
-          <h2 id="supporting-heading">Supporting goals</h2>
-        </div>
-        {supporting.length ? (
-          <GoalList
-            goals={supporting}
-            tier="supporting"
-            expectedRevision={expectedRevision}
-            action={action}
-            actionState={state}
-            pending={pending}
-          />
-        ) : (
-          <p className={styles.empty}>None yet.</p>
-        )}
-      </section>
+        <section className={styles.attention} aria-labelledby="core-heading">
+          <div className={styles.sectionHeading}>
+            <h2 id="core-heading">Core goals</h2>
+            <span
+              className={styles.slotSignal}
+              aria-label={`${3 - core.length} core slots open`}
+            >
+              {Array.from({ length: 3 }, (_, index) => (
+                <i key={index} data-filled={index < core.length} />
+              ))}
+            </span>
+          </div>
+          {core.length ? (
+            <GoalList
+              goals={core}
+              tier="core"
+              expectedRevision={expectedRevision}
+              action={action}
+              actionState={state}
+              pending={pending}
+            />
+          ) : (
+            <p className={styles.empty}>
+              No core goal yet. Choose up to three outcomes that deserve primary
+              training attention.
+            </p>
+          )}
+        </section>
 
-      <HistorySection
-        title="Paused"
-        goals={paused}
-        expectedRevision={expectedRevision}
-        action={action}
-        pending={pending}
-      />
-      <HistorySection
-        title="History"
-        goals={historical}
-        expectedRevision={expectedRevision}
-        action={action}
-        pending={pending}
-      />
-    </div>
+        <section
+          className={styles.supporting}
+          aria-labelledby="supporting-heading"
+        >
+          <div className={styles.sectionHeading}>
+            <h2 id="supporting-heading">Supporting goals</h2>
+          </div>
+          {supporting.length ? (
+            <GoalList
+              goals={supporting}
+              tier="supporting"
+              expectedRevision={expectedRevision}
+              action={action}
+              actionState={state}
+              pending={pending}
+            />
+          ) : (
+            <p className={styles.empty}>None yet.</p>
+          )}
+        </section>
+
+        <HistorySection
+          title="Paused"
+          goals={paused}
+          expectedRevision={expectedRevision}
+          action={action}
+          pending={pending}
+        />
+        <HistorySection
+          title="History"
+          goals={historical}
+          expectedRevision={expectedRevision}
+          action={action}
+          pending={pending}
+        />
+      </div>
+    </TodayContext>
   );
 }
 
@@ -212,8 +224,12 @@ type Drag = {
   from: number;
   to: number;
   dy: number;
+  /** Where the drag began, on the page rather than the screen. */
   startY: number;
-  /** Each card's vertical centre and the dragged card's height, at the start. */
+  /**
+   * Each card's vertical centre on the page and the dragged card's height, at
+   * the start. On the page, because the page scrolls under a long drag.
+   */
   centres: number[];
   height: number;
 };
@@ -245,6 +261,32 @@ function GoalList({
     (_saved, next: GoalView[]) => next,
   );
   const [drag, setDrag] = useState<Drag | null>(null);
+  // Where the finger is on the screen, for the edge scroll below.
+  const pointerY = useRef(0);
+  const dragging = drag !== null;
+  // A list taller than the screen is dragged end to end by holding the card
+  // near the top or bottom edge, which scrolls the page under it.
+  useEffect(() => {
+    if (!dragging) return;
+    let frame = 0;
+    const step = () => {
+      const speed = edgeScrollSpeed(pointerY.current, window.innerHeight);
+      if (speed !== 0) {
+        window.scrollBy(0, speed);
+        setDrag((current) =>
+          current
+            ? {
+                ...current,
+                ...dragTarget(current, pointerY.current + window.scrollY),
+              }
+            : current,
+        );
+      }
+      frame = window.requestAnimationFrame(step);
+    };
+    frame = window.requestAnimationFrame(step);
+    return () => window.cancelAnimationFrame(frame);
+  }, [dragging]);
   // One editor at a time in a list. It closes on its own goal's save and
   // stays open on a refusal, so what was typed is still there to correct.
   // While it is open the list is not reordered and shows no grips (owner,
@@ -290,19 +332,25 @@ function GoalList({
     const own = rects[from];
     if (!own || rects.some((rect) => !rect)) return;
     event.currentTarget.setPointerCapture(event.pointerId);
+    pointerY.current = event.clientY;
     setDrag({
       id,
       from,
       to: from,
       dy: 0,
-      startY: event.clientY,
-      centres: rects.map((rect) => (rect ? rect.top + rect.height / 2 : 0)),
+      startY: event.clientY + window.scrollY,
+      centres: rects.map((rect) =>
+        rect ? rect.top + window.scrollY + rect.height / 2 : 0,
+      ),
       height: own.height,
     });
   };
 
   const follow = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (drag) setDrag({ ...drag, ...dragTarget(drag, event.clientY) });
+    pointerY.current = event.clientY;
+    if (drag) {
+      setDrag({ ...drag, ...dragTarget(drag, event.clientY + window.scrollY) });
+    }
   };
 
   // Where the card lands is read from the release itself, not from the last
@@ -310,7 +358,7 @@ function GoalList({
   const drop = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (!drag) return;
     setDrag(null);
-    move(drag.from, dragTarget(drag, event.clientY).to);
+    move(drag.from, dragTarget(drag, event.clientY + window.scrollY).to);
   };
 
   return (
@@ -375,9 +423,26 @@ function GoalList({
   );
 }
 
+/**
+ * How fast the page scrolls under a drag, in pixels a frame: faster the nearer
+ * the finger is to the top or bottom edge, nothing away from them. The bottom
+ * band is deeper, since the navigation sits over the screen's foot.
+ */
+export function edgeScrollSpeed(clientY: number, viewportHeight: number) {
+  const top = 72;
+  const bottom = 120;
+  const fastest = 14;
+  if (clientY < top) return -Math.ceil(((top - clientY) / top) * fastest);
+  const fromBottom = viewportHeight - clientY;
+  if (fromBottom < bottom) {
+    return Math.ceil(((bottom - fromBottom) / bottom) * fastest);
+  }
+  return 0;
+}
+
 /** How far the card has been dragged and the place that puts it in. */
-function dragTarget(drag: Drag, clientY: number) {
-  const dy = clientY - drag.startY;
+function dragTarget(drag: Drag, pageY: number) {
+  const dy = pageY - drag.startY;
   const centre = drag.centres[drag.from] + dy;
   let to = drag.from;
   while (to < drag.centres.length - 1 && centre > drag.centres[to + 1]) to += 1;
@@ -571,6 +636,9 @@ function GoalForm({
   const initial = (field: keyof GoalActionDraft, fallback = "") =>
     draft?.[field] ?? fallback;
   const sportsId = useId();
+  const today = useContext(TodayContext);
+  const storedTarget = goal?.targetDate ?? "";
+  const targetDate = initial("targetDate", storedTarget);
 
   return (
     <form action={action} className={styles.form}>
@@ -621,11 +689,22 @@ function GoalForm({
           }
         />
       </div>
-      {/* Typed or picked, in one field (owner, 13 Oct 2026). */}
+      {/* Typed or picked, in one field (owner, 13 Oct 2026). Not before
+          today, which the save refuses; a goal whose date has passed opens
+          on it and can keep it. */}
       <DateField
-        initial={initial("targetDate", goal?.targetDate ?? "") || null}
+        initial={targetDate || null}
         label="Target date (optional)"
         name="targetDate"
+        {...(today === null
+          ? {}
+          : {
+              min:
+                storedTarget !== "" && storedTarget < today
+                  ? storedTarget
+                  : today,
+              rangeMessage: "Choose today or a later day.",
+            })}
       />
       {/* Chosen when adding and changed here when editing (owner, 5 Oct
           2026). A new goal starts on core while a core slot is free. */}

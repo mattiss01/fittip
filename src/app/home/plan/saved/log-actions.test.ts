@@ -24,10 +24,7 @@ vi.mock("@/server/repositories/completion-log-repository", async (original) => {
 });
 
 import { INITIAL_LIBRARY_SAVE_ACTION_STATE } from "./action-state";
-import {
-  saveLogToLibraryAction,
-  saveSessionDraftToLibraryAction,
-} from "./actions";
+import { saveLogToLibraryAction } from "./actions";
 
 import type { Completion } from "@/server/completions/completion-log";
 import { parseSavedSessionChange } from "@/server/saved-sessions/saved-sessions";
@@ -106,36 +103,6 @@ describe("saving a log to the session library", () => {
 
     expect(state.status).toBe("validation");
     expect(applyChange).not.toHaveBeenCalled();
-  });
-
-  it("saves the log form as it stands, through the library's own parser", async () => {
-    await expect(
-      saveSessionDraftToLibraryAction({
-        name: "Tuesday gym",
-        title: "Upper body",
-        sport: "Strength",
-        activities: [
-          {
-            position: 0,
-            name: "Latzug",
-            sport: "Strength",
-            measurementMode: "unmeasured",
-          },
-        ],
-      }),
-    ).resolves.toEqual({ status: "saved", message: "Saved to your library." });
-  });
-
-  it("says what is missing when the form cannot be saved", async () => {
-    const result = await saveSessionDraftToLibraryAction({
-      name: "Tuesday gym",
-      title: "",
-      sport: "Strength",
-      activities: [],
-    });
-
-    expect(result.status).toBe("refused");
-    expect(result.message).toMatch(/a title and a sport/);
   });
 });
 

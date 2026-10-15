@@ -70,6 +70,21 @@ test.describe("M3-12 manual continuous planning", () => {
         "data-plan-date",
         mondayOf(today),
       );
+      // The week strip opens with this week at its left inset, not on its
+      // oldest week thirteen weeks back.
+      await expect
+        .poll(() =>
+          page.evaluate(() => {
+            const strip = document.querySelector('nav[aria-label="Weeks"]');
+            const tile = strip?.querySelector('[aria-current="true"]');
+            if (!strip || !tile) return null;
+            return Math.round(
+              tile.getBoundingClientRect().left -
+                strip.getBoundingClientRect().left,
+            );
+          }),
+        )
+        .toBe(16);
       await expect(
         (await planDay(page, today)).getByText("—", { exact: true }),
       ).toBeVisible();
