@@ -20,6 +20,16 @@ test.use({ locale: "de-DE", timezoneId: "Europe/Berlin" });
 test.describe("public account authentication", () => {
   test.skip(!localEnvironmentReady, "requires the local Supabase environment");
 
+  // The accounts are made through sign-up, as the owner would, so their ids
+  // are only known to Auth. Each is found by address and deleted afterwards,
+  // pass or fail; without the service-role key they are left behind, which is
+  // harmless on CI's throwaway stack.
+  const createdEmails: string[] = [];
+  test.afterEach(async ({ request }) => {
+    const emails = createdEmails.splice(0);
+    for (const email of emails) await deleteLocalUserByEmail(request, email);
+  });
+
   test("creates an account, confirms it through Mailpit, signs out, and signs in", async ({
     page,
     request,
@@ -27,6 +37,7 @@ test.describe("public account authentication", () => {
     const pageErrors: Error[] = [];
     page.on("pageerror", (error) => pageErrors.push(error));
     const email = `fittip-e2e-${Date.now()}@example.test`;
+    createdEmails.push(email);
     const password = `Local-${crypto.randomUUID()}-9`;
 
     await page.goto("/");
@@ -100,6 +111,7 @@ test.describe("public account authentication", () => {
     browser,
   }) => {
     const email = `fittip-reset-${Date.now()}@example.test`;
+    createdEmails.push(email);
     const password = `Local-${crypto.randomUUID()}-9`;
     const newPassword = `Reset-${crypto.randomUUID()}-7`;
 
@@ -461,6 +473,40 @@ async function expectPrivateSessionHeaders(
   expect(headers.filter(({ name }) => name === "pragma")).toEqual([
     { name: "pragma", value: "no-cache" },
   ]);
+}
+
+/** Deletes the local account with this address, if the key to do so is set. */
+async function deleteLocalUserByEmail(
+  request: import("@playwright/test").APIRequestContext,
+  email: string,
+) {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) return;
+  const headers = {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+  };
+  const admin = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users`;
+  for (let page = 1; page <= 50; page += 1) {
+    const response = await request.get(`${admin}?page=${page}&per_page=100`, {
+      headers,
+    });
+    if (!response.ok()) {
+      throw new Error(`Local Auth lookup failed: ${response.status()}`);
+    }
+    const { users = [] } = (await response.json()) as {
+      users?: Array<{ id: string; email?: string }>;
+    };
+    const user = users.find((candidate) => candidate.email === email);
+    if (user) {
+      const deleted = await request.delete(`${admin}/${user.id}`, { headers });
+      if (!deleted.ok()) {
+        throw new Error(`Local Auth cleanup failed: ${deleted.status()}`);
+      }
+      return;
+    }
+    if (users.length < 100) return;
+  }
 }
 
 const CONFIRMATION_LINK = /https?:\/\/[^"'\s<]+\/auth\/callback[^"'\s<]*/;

@@ -327,17 +327,29 @@ describe("regeneratePlanProposalAction", () => {
     });
   });
 
+  it("says the accepted days were kept when a rule refuses the new request", async () => {
+    generateMock.mockRejectedValue(new PlanProposalRuleError("past-date"));
+
+    const state = await regenerate();
+
+    expect(state).toMatchObject({
+      status: "error",
+      message: OUTCOMES.regenerationRefused,
+    });
+  });
+
   it("says the accepted days were kept when the plan moves before the coach answers", async () => {
     generateMock.mockRejectedValue(new PlanProposalConflictError("stale"));
 
     const state = await regenerate();
 
-    // The conflict copy's own "nothing was added" then contradicts this suffix;
-    // NEXT.md carries that wording as a follow-up. What is pinned is the half
-    // that must hold: the owner is told their accepted days stayed.
-    expect(state.status).toBe("error");
-    expect(state.message).toContain(OUTCOMES.regenerationKept);
-    expect(state.message).not.toBe(OUTCOMES.generationFailed);
+    // One sentence for this path: the general conflict copy says nothing was
+    // added, which after the finish is untrue.
+    expect(state).toMatchObject({
+      status: "error",
+      message: OUTCOMES.regenerationConflict,
+    });
+    expect(state.message).not.toMatch(/nothing was added/i);
   });
 
   it("reports a generation already under way without claiming a new one", async () => {

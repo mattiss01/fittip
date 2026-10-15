@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { RoadmapComposer } from "./roadmap-composer";
 import { RoadmapDetail } from "./roadmap-detail";
+import { RoadmapLandingFocus } from "./roadmap-landing-focus";
 import { RoadmapOutcomeNotice } from "./roadmap-outcome";
 import { RoadmapNew } from "./roadmap-new";
 import { RoadmapReviewDue } from "./roadmap-review-due";
@@ -16,6 +17,7 @@ import {
   ROADMAP_COPY,
   ROADMAP_MAX_DAYS,
   ROADMAP_MIN_DAYS,
+  roadmapForEditor,
   type RoadmapScreenState,
 } from "@/server/roadmap/roadmap-records";
 
@@ -162,6 +164,7 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
           above is the page (owner, 14 Oct 2026). */}
       {state.current === null ? null : (
         <section className={styles.card} data-roadmap-current>
+          <RoadmapLandingFocus />
           <RoadmapDetail
             version={state.current}
             reached={state.reached}
@@ -192,7 +195,7 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
                     replaces
                     headingId={REWRITE_SHEET_TITLE_IDS.rewrite}
                     inForce={{
-                      content: state.current.content,
+                      content: roadmapForEditor(state.current.content),
                       lockedPhases: lockedPhaseCount(
                         state.current.content.phases,
                         state.today,
@@ -285,7 +288,6 @@ export function RoadmapChangeCompose({
       today={state.today}
       minDays={ROADMAP_MIN_DAYS}
       maxDays={ROADMAP_MAX_DAYS}
-      regenerationsRemaining={state.regenerationsRemaining}
       headingId={headingId}
     />
   );
@@ -310,7 +312,6 @@ export function RoadmapCompose({
       today={state.today}
       minDays={ROADMAP_MIN_DAYS}
       maxDays={ROADMAP_MAX_DAYS}
-      regenerationsRemaining={state.regenerationsRemaining}
       {...(headingId === undefined ? {} : { headingId })}
     />
   );

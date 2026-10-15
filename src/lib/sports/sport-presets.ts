@@ -116,6 +116,20 @@ export const SPORT_NAME_MAX_LENGTH = 60;
 /** More than the presets, so ticking every one still leaves room to add. */
 export const SPORTS_MAX_COUNT = 100;
 
+/**
+ * Whether a typed name can join the owner's sports. The list is sent with
+ * commas between its names, so a name with one stays where it was typed, as
+ * does one longer than a sport on the list may be.
+ */
+export function keepsAsSport(name: string): boolean {
+  const trimmed = name.trim();
+  return (
+    trimmed !== "" &&
+    trimmed.length <= SPORT_NAME_MAX_LENGTH &&
+    !trimmed.includes(",")
+  );
+}
+
 const PRESET_NAMES: ReadonlySet<string> = new Set(
   SPORT_PRESET_GROUPS.flatMap((group) =>
     group.sports.map((sport) => sport.toLocaleLowerCase()),

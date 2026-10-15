@@ -13,10 +13,6 @@
   --roadmap-checkpoint: var(--ember-dark);
   --roadmap-rule: 2px;
   --roadmap-gutter: 1.35rem;
-  --attention-primary: var(--pine);
-  --attention-secondary: var(--pine-soft);
-  --attention-maintenance: var(--moss);
-  --attention-deferred: #8a8f88;
 }
 
 /* The shell centres its children and lets each shrink, so this takes the row. */
@@ -219,13 +215,6 @@
   color: var(--pine);
   font-size: 0.78rem;
   font-weight: 700;
-}
-
-.attentionReason {
-  margin: 0.4rem 0 0;
-  color: var(--muted);
-  font-size: 0.85rem;
-  line-height: 1.5;
 }
 
 .milestoneList {
@@ -457,12 +446,6 @@
 
 /* ---- Records ------------------------------------------------------------ */
 
-.historyList {
-  margin: 0.6rem 0 0;
-  padding: 0;
-  list-style: none;
-}
-
 .historyItem {
   padding: 0.75rem 0;
   border-top: 1px solid var(--border);
@@ -480,7 +463,7 @@
   align-items: center;
   gap: 0.3rem;
   margin: 0 0.5rem 0 0;
-  color: var(--attention-maintenance);
+  color: var(--moss);
   font-size: 0.8rem;
   font-weight: 700;
 }

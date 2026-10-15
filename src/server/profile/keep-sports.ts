@@ -1,9 +1,6 @@
 import "server-only";
 
-import {
-  SPORT_NAME_MAX_LENGTH,
-  SPORTS_MAX_COUNT,
-} from "@/lib/sports/sport-presets";
+import { keepsAsSport, SPORTS_MAX_COUNT } from "@/lib/sports/sport-presets";
 import { createProfileRepository } from "@/server/repositories/profile-repository";
 
 /**
@@ -13,19 +10,14 @@ import { createProfileRepository } from "@/server/repositories/profile-repositor
  * through; if this cannot be done that record keeps its sport and the
  * owner's list is simply not longer, which is why nothing is thrown.
  *
- * A name with a comma or longer than a sport on the list may be is left
- * where it was typed: the list is sent with commas between its names.
+ * A name `keepsAsSport` refuses is left where it was typed; the field says
+ * so as it is typed (`sport-input.tsx`).
  */
 export async function keepSports(names: readonly unknown[]): Promise<void> {
   const typed = names
     .filter((name): name is string => typeof name === "string")
     .map((name) => name.trim())
-    .filter(
-      (name) =>
-        name !== "" &&
-        name.length <= SPORT_NAME_MAX_LENGTH &&
-        !name.includes(","),
-    );
+    .filter(keepsAsSport);
   if (typed.length === 0) return;
   try {
     const profiles = await createProfileRepository();

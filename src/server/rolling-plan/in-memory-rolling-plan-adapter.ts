@@ -112,7 +112,13 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
       .toSorted((left, right) => left.sequence - right.sequence)
       .map(({ sequence, ...segment }) => {
         void sequence;
-        return cloneSeries(segment);
+        return {
+          ...cloneSeries(segment),
+          skippedOccurrenceDates: [...this.skippedOccurrences]
+            .filter((key) => key.startsWith(`${segment.id}|`))
+            .map((key) => key.slice(segment.id.length + 1))
+            .toSorted(),
+        };
       });
   }
 

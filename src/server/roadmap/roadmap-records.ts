@@ -334,16 +334,6 @@ export type RoadmapScreenState = {
   reviewDue: RoadmapReviewDue | null;
   /** The proposal awaiting a decision, if any. */
   openProposal: RoadmapProposalView | null;
-  /**
-   * The newest proposal when the owner has just declined it.
-   *
-   * It is the only proposal a regeneration may carry:
-   * `begin_roadmap_generation` refuses a predecessor that is not owned,
-   * rejected, and on the same horizon. The surface needs it because the
-   * regeneration control sends it, and because a regeneration runs against the
-   * predecessor's horizon rather than against whatever the compose form shows.
-   */
-  declinedPredecessor: RoadmapProposalView | null;
   /** Undecided candidates extracted from a planning note. */
   openMemoryCandidateCount: number;
   goals: RoadmapGoalSummary[];
@@ -475,4 +465,38 @@ export function isIsoDate(value: string): boolean {
     !Number.isNaN(parsed.getTime()) &&
     parsed.toISOString().slice(0, 10) === value
   );
+}
+
+/**
+ * A stored roadmap as the editor in the owner's browser opens it, copied field
+ * by field. Whatever a row written under an earlier version holds beyond v4
+ * stays on the server, as it does for every provider call.
+ */
+export function roadmapForEditor(
+  content: StoredRoadmap,
+): Omit<RoadmapProposal, "schemaVersion"> {
+  return {
+    title: content.title,
+    ...(content.summary === undefined ? {} : { summary: content.summary }),
+    startDate: content.startDate,
+    endDate: content.endDate,
+    phases: content.phases.map((phase) => ({
+      title: phase.title,
+      focus: phase.focus,
+      startDate: phase.startDate,
+      endDate: phase.endDate,
+      goalAttention: phase.goalAttention.map((attention) => ({
+        goalId: attention.goalId,
+        level: attention.level,
+      })),
+      milestones: phase.milestones.map((milestone) => ({
+        title: milestone.title,
+        ...(milestone.observableCriterion === undefined
+          ? {}
+          : { observableCriterion: milestone.observableCriterion }),
+        targetDate: milestone.targetDate,
+        goalIds: [...milestone.goalIds],
+      })),
+    })),
+  };
 }

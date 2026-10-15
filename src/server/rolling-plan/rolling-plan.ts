@@ -63,6 +63,11 @@ export type RollingPlanSeriesInput = {
 export type RollingPlanSeries = RollingPlanSeriesInput & {
   id: string;
   predecessorSeriesId: string | null;
+  /**
+   * Rule dates whose occurrence the owner deleted, which the window never
+   * fills again. Read so a surface does not count them as missing.
+   */
+  skippedOccurrenceDates?: string[];
 };
 
 export type RollingPlanChange =

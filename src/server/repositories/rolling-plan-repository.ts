@@ -41,6 +41,7 @@ type RollingPlanClient = SupabaseClient<Database> | ServerUserClient;
 const ROLLING_PLAN_SERIES_COLUMNS = `
   id, predecessor_series_id, frequency, interval_count, weekdays, start_date,
   end_date, title, sport, intent, expected_duration_minutes, note, created_at,
+  skipped_occurrence_dates,
   rolling_plan_series_activities (
     personal_activity_id, position, name, sport, instructions,
     measurement_mode, target
@@ -400,6 +401,8 @@ function parseSeries(value: unknown): RollingPlanSeries {
       isInteger(series.expected_duration_minutes, 1)
     ) ||
     !(series.note === null || typeof series.note === "string") ||
+    !Array.isArray(series.skipped_occurrence_dates) ||
+    !series.skipped_occurrence_dates.every(isIsoDate) ||
     !Array.isArray(activities)
   ) {
     throw new RollingPlanPersistenceError();
@@ -428,6 +431,7 @@ function parseSeries(value: unknown): RollingPlanSeries {
       ? {}
       : { expectedDurationMinutes: series.expected_duration_minutes }),
     ...(series.note === null ? {} : { note: series.note }),
+    skippedOccurrenceDates: [...series.skipped_occurrence_dates].toSorted(),
     activities: activities
       .map(parseSeriesActivity)
       .toSorted((left, right) => left.position - right.position),

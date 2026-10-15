@@ -45,3 +45,10 @@
   background: var(--ember);
   color: var(--paper);
 }
+
+/* Why a sport typed here will not join the owner's list. */
+.hint {
+  color: var(--ledger-muted, var(--muted));
+  font-size: 0.85rem;
+  line-height: 1.4;
+}

@@ -135,6 +135,7 @@ describe("PostgresRollingPlanAdapter", () => {
           expected_duration_minutes: 45,
           note: null,
           created_at: "2026-08-16T10:00:00.000Z",
+          skipped_occurrence_dates: ["2026-08-31", "2026-08-20"],
           rolling_plan_series_activities: [
             {
               personal_activity_id: null,
@@ -164,6 +165,7 @@ describe("PostgresRollingPlanAdapter", () => {
         frequency: "weekly",
         intervalCount: 2,
         weekdays: [1, 4],
+        skippedOccurrenceDates: ["2026-08-20", "2026-08-31"],
         activities: [
           expect.objectContaining({
             position: 0,

@@ -11,6 +11,7 @@ import type { ProgressCompletionView } from "../progress-record";
 import styles from "../progress.module.css";
 
 import homeStyles from "../../home.module.css";
+import { BackLink } from "../../you/back-link";
 import { recordsTraining } from "../../log/log-action-state";
 import { SaveToLibrary } from "../../plan/saved/save-to-library";
 import {
@@ -61,33 +62,18 @@ export default async function CompletionPage({ params }: Props) {
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
       {/* The way back is at the top, as on a planned session's page (R3);
           the session's own name is the page's heading. */}
-      <Link
-        className={styles.backLink}
-        data-back-link
+      <BackLink
         href={
           completion === null
             ? "/home/progress"
             : `/home/progress?month=${monthOf(completion.actualLocalDate)}`
         }
-      >
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path d="M15 5l-7 7 7 7" />
-        </svg>
-        {completion === null
-          ? "Progress"
-          : formatMonth(monthOf(completion.actualLocalDate))}
-      </Link>
+        label={
+          completion === null
+            ? "Progress"
+            : formatMonth(monthOf(completion.actualLocalDate))
+        }
+      />
 
       {completion === null ? (
         <section

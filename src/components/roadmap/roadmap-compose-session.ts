@@ -26,3 +26,24 @@ export type RoadmapComposeSession = {
 
 export const RoadmapComposeSessionContext =
   createContext<RoadmapComposeSession | null>(null);
+
+/**
+ * When a request from the sheet lands, the page swaps the form, the sheet and
+ * the button that opened it for what was made, and focus has nowhere to go
+ * but the page's start. The sheet notes that it was unmounted while open, and
+ * the first `RoadmapLandingFocus` to mount moves focus to its heading. A note
+ * nobody takes in a moment is stale: the page was left instead.
+ */
+let landedAt: number | null = null;
+const LANDING_WINDOW_MS = 2_000;
+
+export function noteRoadmapLanding() {
+  landedAt = performance.now();
+}
+
+export function takeRoadmapLanding(): boolean {
+  const fresh =
+    landedAt !== null && performance.now() - landedAt < LANDING_WINDOW_MS;
+  landedAt = null;
+  return fresh;
+}

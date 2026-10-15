@@ -159,3 +159,60 @@ describe("SportsInput", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 });
+
+describe("a sport typed and sent", () => {
+  it("is offered at once, without waiting for the next load", () => {
+    render(
+      <OwnedSportsProvider sports={SPORTS}>
+        <form aria-label="first" onSubmit={(event) => event.preventDefault()}>
+          <label htmlFor="first">First</label>
+          <SportInput id="first" name="sport" />
+        </form>
+        <form aria-label="second">
+          <label htmlFor="second">Second</label>
+          <SportInput id="second" name="sport" />
+        </form>
+      </OwnedSportsProvider>,
+    );
+
+    fireEvent.change(screen.getByLabelText("First"), {
+      target: { value: "Stabwurf" },
+    });
+    fireEvent.submit(screen.getByRole("form", { name: "first" }));
+    fireEvent.change(screen.getByLabelText("Second"), {
+      target: { value: "sta" },
+    });
+
+    expect(screen.getByRole("button", { name: "Stabwurf" })).toBeVisible();
+  });
+
+  it("says when it cannot join the owner's sports", () => {
+    renderWithSports(<SportInput id="sport" name="sport" />);
+
+    fireEvent.change(screen.getByLabelText("Sport"), {
+      target: { value: "Running, cycling" },
+    });
+
+    expect(screen.getByLabelText("Sport")).toHaveAccessibleDescription(
+      /Kept here only/,
+    );
+  });
+});
+
+describe("a goal's sports, to a screen reader", () => {
+  it("says what was added and what was taken away", () => {
+    renderWithSports(
+      <SportsInput id="sport" name="sports" defaultValue={["Running"]} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove Running" }));
+    expect(screen.getByText("Removed Running")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Sport"), {
+      target: { value: "cy" },
+    });
+    expect(screen.getByText("1 sport suggested")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cycling" }));
+    expect(screen.getByText("Added Cycling")).toBeInTheDocument();
+  });
+});

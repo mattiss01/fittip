@@ -63,4 +63,21 @@ describe("recurring-session dates", () => {
       findUncoveredSeriesDates(series, sessions, "2026-08-20", "2026-08-22"),
     ).toEqual(["2026-08-22"]);
   });
+
+  it("does not count an occurrence the owner deleted as missing", () => {
+    const series = [
+      {
+        id: "series-a",
+        frequency: "daily" as const,
+        intervalCount: 1,
+        startDate: "2026-08-20",
+        endDate: "2026-08-22",
+        skippedOccurrenceDates: ["2026-08-21"],
+      },
+    ];
+
+    expect(
+      findUncoveredSeriesDates(series, [], "2026-08-20", "2026-08-22"),
+    ).toEqual(["2026-08-20", "2026-08-22"]);
+  });
 });

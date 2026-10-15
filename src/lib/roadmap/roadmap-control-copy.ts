@@ -143,14 +143,6 @@ export const ROADMAP_CONTROL_COPY = {
     "Your last roadmap step did not appear, so this page was reloaded. What you see below is what is saved.",
 
   /* ---- Regenerate ------------------------------------------------------- */
-  regenerateTitle: "Ask for another proposal",
-  regenerateAction: "Regenerate proposal",
-  feedbackLabel: "What should the coach change?",
-  regenerateSupport:
-    "The previous proposal will be shared with the coach. Nothing changes until you accept.",
-  regenerateConfirm: "Generate another proposal",
-  regenerateDatesFixed:
-    "A regeneration keeps the same dates. Start a fresh request to change them.",
   regenerationsRemaining: (remaining: number) =>
     `${remaining} regeneration${remaining === 1 ? "" : "s"} left on these dates.`,
   regenerationCapReached:

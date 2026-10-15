@@ -128,3 +128,31 @@ export function latestActionResponseAt(
   }
   return latest;
 }
+
+/** Every response to this page's mutations on the timeline, by its end. */
+export function actionResponseTimes(
+  entries: readonly { name: string; responseEnd: number }[],
+  actionUrl: string,
+): number[] {
+  return entries
+    .filter((entry) => entry.name === actionUrl && entry.responseEnd > 0)
+    .map((entry) => entry.responseEnd);
+}
+
+/**
+ * When a reply to the page's writes can be taken to be this write's, where
+ * several writes post to one address and cannot be told apart: only once the
+ * page has had as many replies as it sent writes, so that every write, this
+ * one included, has answered. Then the newest reply; until then null, because
+ * a reply that came is as likely another write's.
+ */
+export function replyForWrite(
+  submittedInstants: readonly number[],
+  responseTimes: Iterable<number>,
+): number | null {
+  const replies = [...responseTimes];
+  if (replies.length === 0 || replies.length < submittedInstants.length) {
+    return null;
+  }
+  return Math.max(...replies);
+}

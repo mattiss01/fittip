@@ -48,9 +48,8 @@ describe("SeriesMaterializer", () => {
     expect(notice).toHaveTextContent(
       "The Plan was reloaded after the extension response was lost. What you see is what is saved.",
     );
-    expect(
-      screen.getByRole("heading", { name: notice.textContent! }),
-    ).toBeVisible();
+    expect(notice).toBeVisible();
+    expect(screen.queryByRole("heading")).toBeNull();
     expect(screen.queryByText(/Extending your recurring sessions/)).toBeNull();
   });
 

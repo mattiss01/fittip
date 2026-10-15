@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import {
+  noteRoadmapLanding,
   RoadmapComposeSessionContext,
   type RoadmapComposeSession,
 } from "./roadmap-compose-session";
@@ -65,6 +66,20 @@ export function RoadmapNew({
   rewrite?: ReactNode;
 }) {
   const [view, setView] = useState<View | null>(null);
+  // Unmounted with a form open is a request that landed: the page has
+  // replaced this with what was made, so focus is sent there.
+  const openView = useRef<View | null>(null);
+  useEffect(() => {
+    openView.current = view;
+  }, [view]);
+  useEffect(
+    () => () => {
+      if (openView.current !== null && openView.current !== "menu") {
+        noteRoadmapLanding();
+      }
+    },
+    [],
+  );
   const [pending, setPending] = useState(false);
   const changeKey = useRef<string | null>(null);
   const freshKey = useRef<string | null>(null);
@@ -78,7 +93,16 @@ export function RoadmapNew({
       fresh: { idempotencyKey: freshKey, setPending, close },
       // A hand-written roadmap is replay-safe by its expected head, and uses
       // no key; the session is for the pending lock and the close.
-      write: { idempotencyKey: writeKey, setPending, close },
+      // The first roadmap written by hand closes the sheet itself, and then
+      // this button goes with it.
+      write: {
+        idempotencyKey: writeKey,
+        setPending,
+        close: () => {
+          noteRoadmapLanding();
+          close();
+        },
+      },
       rewrite: { idempotencyKey: writeKey, setPending, close },
     };
   }, []);

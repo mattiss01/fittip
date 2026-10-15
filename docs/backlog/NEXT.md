@@ -35,14 +35,7 @@ Ordered by dependency. A lane is named where it is not the build lane.
       the owner calling the database directly gets past it, on their own data.
       The owner's to decide; a small migration, so it can ride with the next one.
 
-**App redesign in the Coach's note direction.** The owner chose it on 29 Sep 2026 from three
-Today prototypes (`prototype/today-design`, `/prototype/today?variant=C`): FitTip's pine and
-ember with a modern sans (Schibsted Grotesk, Chivo Mono for small labels), icon nav, a scrollable
-day strip, the coach's one-line reason, session cards that fold into a receipt once logged, and
-bottom sheets instead of new pages. Less text: each screen is a heading, the content and one
-main action. No week ring. The owner flagged a possible bias toward the look they already know,
-so start with Today and adjust from there rather than committing every screen up front. Build
-lane, one screen per merge.
+**Coach and records.**
 
 - [ ] **The plan call's logs: 9,300 bytes or the 10,200 the owner named.** The
       plan call was sized to 15,000 tokens (ADR-023 decision 12), so its logs got
@@ -88,121 +81,41 @@ lane, one screen per merge.
       session's link to the log that replaced it; the coach's proposals record which
       logs they read; ADR-013 decision 3 already says a deleted record reaches no
       provider and no summary.
-- Cost to expect: many unit and browser tests assert the current copy, so cutting text means
-      rewriting those assertions in the same merge.
-
+- [ ] **The Plan reads one week at a time.** Owner, 15 Oct 2026: its own item. Today it
+      carries every week to the browser — 13 behind, 13 of recurring sessions and 13
+      more of single ones — and re-reads all of it for every change, though it shows one.
+      Fine for one athlete's plan; a longer history than a quarter would need it first.
+- [~] **Database and spend-guard fixes, one migration.** Careful lane, owner 15 Oct 2026.
+      (1) One library entry per title: a repeat save asks "update it or keep both", and
+      keeping both needs a new title; a uniqueness rule in the database as the activity
+      library has (`16118fb`). (2) A typed sport joins the owner's sports in one write,
+      not a read then a write; `keepSports` keeps its ten one-line callers. (3) Asking again is tied to the roadmap its predecessor
+      was made under, so a hand-made request cannot pair a newer roadmap with an older
+      outline. (4) `apply_completion_change` maps `22P02` to `22023`. (5) The roadmap
+      generation fingerprint is labelled `"roadmap.v4"`, not `"roadmap.v2"`: no migration,
+      but the spend guard's. Destructive DDL, if existing duplicate titles need it, is
+      asked first.
 
 ## Fix in passing
 
 Not worth their own slot; do them when work lands nearby.
 
-- **`saveSessionDraftToLibraryAction` has no caller.** The log's own "Save session to
-  library" left the activities step (owner, 3 Oct 2026); saving a log goes through the
-  receipt, Today and Progress. The action and its tests in `plan/saved` can go.
-- **A plain new browser spec has no way into CI.** `.github/scripts/browser-flows.sh` runs
-  `auth` or a flow with its own `e2e/<flow>.playwright.config.ts`, and `.claude/rules/tests.md`
-  says not to add such configs. A new spec under the root config would pass review and
-  never run. Older than the shards (2 Oct 2026); the fix is one shard entry that runs the
-  root config over every spec no per-ticket config claims.
-- **A deleted occurrence makes the Plan re-run its top-up on every visit.** The page works
-  out which rule dates have no session (`findUncoveredSeriesDates`) without knowing the
-  dates a series was told to skip, so it fires the extension, which then writes nothing
-  and costs no revision. Since M3-20; a deleted occurrence now stays in the window for 13
-  weeks rather than two. `listSeries` would have to read `skipped_occurrence_dates`.
-- **The Plan carries every week to the browser** — 13 behind today, 13 of recurring
-  sessions and 13 more of single ones — and re-reads all of it for every change, though
-  it shows one week. Fine for one athlete's plan; a read per week is the fix if it ever
-  is not, and is what a longer history than a quarter would need first.
-- **A logged card on the Plan shows the planned minutes, not the logged ones.** "40 min
-  planned · Completed" (owner, 2 Oct 2026); the Plan reads a log's outcome and date and
-  not its duration. Progress shows what was done.
-- **The week strip jumps once as the Plan loads.** The server's HTML has the strip at its
-  oldest week, thirteen weeks back, and it moves to the shown week when the page becomes
-  interactive. Where it lands has no automated check either: unit tests have no layout.
-  With this week at the left edge, a sliver of last week's tile shows in the page inset.
-- **The sports field's loose ends.** Since 8 Oct 2026 a typed sport joins the owner's
-  sports after a save (`keepSports`). It is offered from the next page load, not at once;
-  it is read-then-write, so a sport removed on Settings at that moment comes back; a
-  name over 60 characters or with a comma is not added and nothing says so; the call is
-  repeated in eight actions; and the chips are not announced to a screen reader.
-- **The Plan's series-extension notice is drawn as a heading** (`series-materializer.tsx`)
-  though it is a status sentence, sometimes two, so it kept its full stop on 8 Oct 2026.
-  It wants to be a paragraph with `role="status"`; m3-14b may find it by its heading.
-- **What the Roadmap page left behind** on 13 Oct 2026, when it stopped listing
-  earlier versions and decided proposals. `roadmap-proposal-record.tsx`, its test, the
-  `.historyList`, `.historyItem` and `.recordTitle` styles and the `proposalExpired` and
-  `proposalSuperseded` wordings have no caller; files cannot be deleted by the agent.
-  Since 14 Oct 2026 so do `roadmap-editor.tsx` and its test, the `"regeneration"` mode
-  of `RoadmapComposer`, `regenerationCapReached`, `editFieldLabels`, the
-  `--attention-*` colours, `.attentionReason`, and `declinedPredecessor` on the
-  screen state. When a generation lands from the sheet, focus falls to the page's
-  start.
-- **Two milestones ticked within a second can reload the page for nothing.** Each
-  tick watches for a reply that never rendered, on the one address all roadmap
-  writes share, so it can take another tick's reply for its own. No data is
-  affected. A control that stays mounted wants a lighter watch than
-  `useRoadmapWrite`; and after such a reload the explanation appears only when
-  "New roadmap" is next opened.
-- **`src/server/roadmap/roadmap-records.ts.tmp` is an empty file the agent left behind**
-  on 13 Oct 2026, untracked. It cannot delete files; the owner can.
-- **An open proposal's whole stored row reaches the owner's browser** as the editor's
-  input, fields no longer read included. Its own data, and so before v4 too; copying
-  the v4 fields server-side before handing it to the dock would end it.
-- **Asking again is not tied to the roadmap its predecessor was made under.** A
-  declined change of one roadmap, asked again after another was accepted, would be
-  sent the newer roadmap whole beside an outline made from the older. The page does
-  not offer it (it offers "ask again" for the newest proposal only); a hand-made
-  request could. Change requests made on 13 Oct 2026 before
-  `20261013202639` are stored as ordinary ones.
-- **The roadmap prompt has about eighty-five characters left** of the 7,800 its token
-  arithmetic is derived against (`openai-prompt.test.ts`), since the core-goal sentence
-  went on 14 Oct 2026. A longer sentence takes its room from an existing one.
-- **A roadmap's repeat-protection fingerprint is still labelled `"roadmap.v2"`**
-  (`roadmap-generation.ts`). Left on purpose: changing the label only stops one
-  earlier answer being replayed.
-- **A date outside a session's range is refused in the browser's words**, not the
-  app's (`plan-date-field.tsx` gives no `rangeMessage`). A goal's calendar still offers
-  days before today, which the save then refuses.
-- **The date fields' width fix has not been seen anywhere.** The owner found the New
-  roadmap sheet scrolling sideways on a phone (13 Oct 2026). The fix gives up the
-  field's native appearance, on every date field, and went in with the dev server
-  stopped: the phone and a desktop browser's calendar mark are both to be looked at.
-- **Dragging a goal does not scroll the page.** Since 5 Oct 2026 a goal is
-  reordered by dragging its number. A list taller than the screen cannot be
-  dragged end to end; the arrow keys on the number can, which a phone lacks.
-- **`e2e/auth.spec.ts` leaves its accounts behind**, two a run, against the rule in
-  `.claude/rules/tests.md`. Harmless in CI, whose stack is thrown away; on a laptop
-  they stay in the local database. It needs the service-role key the spec does not use.
-- **A confirmation link opened in another browser does not start setup.** Only
-  the browser that signed up can be confirmed into a session; elsewhere the
-  link fails, the sign-in that follows goes to Today, and setup is reached
-  from You. `OnboardingHomeInvitation` is unrendered and could cover it.
-- **Two back links drawn the same way.** `src/app/home/you/back-link.tsx` copies the one on
-  a Progress record, markup and style. Progress could use the component; it would have to
-  carry `data-back-link`, which m3-15c clicks.
-- **Two links named "You" on the pages under You**, the back link and the navigation. A
-  spec that clicks `{ name: "You", exact: true }` from one of them fails as ambiguous; the
-  four that exist start from Today.
-- **The same session can be saved to the library twice.** Owner, 29 Sep 2026: saving a
-  session that is already in the library creates a second entry. Decide what "the same"
-  means (same title, or same title and activities) and whether a repeat save should update
-  the existing entry, be refused, or ask. Since 2 Oct 2026 an entry has one title and no
-  name of its own, so two saves of one session, and two older entries once told apart
-  only by name, look identical in the library and in every picker. A uniqueness rule in the database would be
-  careful lane; the activity library already requires unique names among active entries
-  (`16118fb`), which is the precedent.
-- A hand-made RPC payload with `position` or `plannedPosition` of `1.0` reaches
-  `apply_completion_change` as a raw `22P02` rather than `22023`: the validators compare with
-  `trunc`, the inserts cast the text. Unreachable from the app, whose parser emits integers.
-  Map `invalid_text_representation` in the handler next time the function is replaced.
-- "Only what you did not take" is a prompt-level expectation, not an enforced one. Accepted
-  days reach the coach as plan commitments, but nothing stops it proposing on a day the
-  owner already took — they would simply see it and decide again. Worth either enforcing or
-  softening the copy, which currently states it as fact.
-- A conflict after a regeneration has closed the review contradicts itself: the action
-  appends "What you added is in your plan." to the generic conflict copy, which ends
-  "nothing was added". Reached when the plan moves between the finish and the new
-  generation. Needs one wording for that path; `actions.test.ts` pins the rule-error half.
+- **For the owner to delete; the agent cannot.** What the Roadmap page left behind on
+  13 and 14 Oct 2026 and nothing renders: `src/components/roadmap/roadmap-proposal-record.tsx`,
+  `roadmap-editor.tsx` and both their tests. With them go the `.historyItem` and
+  `.recordTitle` styles in `roadmap.module.css` and the `proposalExpired` and
+  `proposalSuperseded` wordings in `roadmap-records.ts`, which only those files use.
+- **For the owner to look at.** The date fields' width fix (13 Oct 2026) has not been seen
+  on a phone or in a desktop browser's calendar mark. And with this week at the week
+  strip's left edge, a sliver of last week's tile shows in the page inset: a hint that the
+  strip scrolls, or a flaw.
+- **The week strip still jumps on a first load in Safari.** Since 15 Oct 2026 the strip
+  is placed before paint and the server's HTML asks for this week's tile with
+  `scroll-initial-target`, which Chrome honours and Safari does not, so there the strip
+  shows its oldest week until the page is interactive.
+- **After a milestone tick's recovery reload, nothing says why.** The tick passes no
+  recovered notice; the explanation appears only when "New roadmap" is next opened. Rarer
+  since 15 Oct 2026, when ticks stopped taking each other's replies for their own.
 
 ## Later
 
@@ -261,6 +174,10 @@ Not worth their own slot; do them when work lands nearby.
   that were already marked "rewrite before dispatch". They stay as ideas, not commitments.
 
 ## Known limitations
+
+- **The roadmap prompt has about eighty-five characters left** of the 7,800 its token
+  arithmetic is derived against (`openai-prompt.test.ts`), since the core-goal sentence
+  went on 14 Oct 2026. A longer sentence takes its room from an existing one.
 
 - **An unsettled reservation holds its budget for good, and nothing reports one.** ADR-019
   stopped expiry forgiving a charge we failed to record, which is the right direction for a

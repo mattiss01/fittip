@@ -643,7 +643,7 @@ describe("Roadmap", () => {
       within(compose).getByLabelText(ROADMAP_COPY.endDateLabel),
     ).toBeTruthy();
     expect(
-      within(compose).queryByLabelText(ROADMAP_COPY.feedbackLabel),
+      within(compose).queryByLabelText(/What should the coach change/),
     ).toBeNull();
   });
 
@@ -694,7 +694,7 @@ describe("Roadmap", () => {
       compose.querySelector('input[name="previousProposalId"]'),
     ).toBeNull();
     expect(
-      within(compose).queryByLabelText(ROADMAP_COPY.feedbackLabel),
+      within(compose).queryByLabelText(/What should the coach change/),
     ).toBeNull();
   });
 

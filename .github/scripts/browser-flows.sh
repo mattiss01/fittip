@@ -21,7 +21,7 @@ set -uo pipefail
 # The port each flow's config pins as its baseURL.
 port_for() {
   case "$1" in
-    auth) echo 3000 ;;
+    plain) echo 3000 ;;
     m2-01) echo 3015 ;;
     m2-02) echo 3016 ;;
     m3-16a) echo 3019 ;;
@@ -50,11 +50,12 @@ for flow in "$@"; do
     continue
   fi
 
-  if [ "$flow" = "auth" ]; then
-    # The root config's 60s test timeout is raised here because the runner is
+  if [ "$flow" = "plain" ]; then
+    # The root config: every spec no per-ticket config claims (auth.spec.ts
+    # among them). Its 60s test timeout is raised here because the runner is
     # shared. The per-ticket configs already set their own longer timeouts and
     # are deliberately left alone.
-    target=(e2e/auth.spec.ts --timeout=180000)
+    target=(--timeout=180000)
   else
     target=("--config=e2e/${flow}.playwright.config.ts")
   fi

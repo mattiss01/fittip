@@ -10,10 +10,7 @@ import {
   useRoadmapWrite,
 } from "./use-roadmap-write";
 
-import {
-  ROADMAP_FEEDBACK_MAX_LENGTH,
-  ROADMAP_NOTE_MAX_LENGTH,
-} from "@/app/home/plan/roadmap/action-state";
+import { ROADMAP_NOTE_MAX_LENGTH } from "@/app/home/plan/roadmap/action-state";
 import { generateRoadmapAction } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { CoachSpark } from "@/components/home/coach-spark";
@@ -24,13 +21,9 @@ import {
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
 /**
- * Asking the coach for a roadmap: the first request and every regeneration.
- *
- * One component for both, because they are one operation. What separates them
- * is a predecessor, and the database re-derives that independently — a claimed
- * regeneration with no declined, same-horizon predecessor is refused before the
- * coach is called. So the mode below changes labels, prefills and which fields
- * are editable; it does not change what is trusted.
+ * Asking the coach for a roadmap: a new one, or a change to the one in force.
+ * Asking again after a decline is not here: it is offered on the proposal
+ * itself (`roadmap-decision-dock.tsx`), where it can be read.
  *
  * ## The idempotency key
  *
@@ -49,8 +42,6 @@ export function RoadmapComposer({
   today,
   minDays,
   maxDays,
-  previousProposalId,
-  regenerationsRemaining,
   headingId,
 }: {
   /** Set where the heading names something else too: the sheet it is in. */
@@ -60,19 +51,16 @@ export function RoadmapComposer({
    * coach is sent the whole of it, and the note, which is then required,
    * says what should be different.
    */
-  mode: "initial" | "regeneration" | "change";
-  /** The date the form opens on: the default horizon, or the predecessor's. */
+  mode: "initial" | "change";
+  /** The date the form opens on. */
   endDate: string;
-  /** The day the form opens on: today, or the predecessor's first day. */
+  /** The day the form opens on. */
   startDate: string;
   /** The owner's local today: the earliest first day. */
   today: string;
   /** How long a roadmap may be, counted from its first day. */
   minDays: number;
   maxDays: number;
-  /** The declined proposal a regeneration carries. Absent on a first request. */
-  previousProposalId?: string;
-  regenerationsRemaining: number;
 }) {
   const {
     state,
@@ -99,21 +87,18 @@ export function RoadmapComposer({
   // character count would be read out as part of the field's name.
   const fieldId = useId();
 
-  // The two counted fields are controlled so the character count is the value's
-  // own length rather than a second source of truth. A form action resets an
-  // uncontrolled form when its reply commits, so they are re-seeded from the
+  // The counted field is controlled so the character count is the value's own
+  // length rather than a second source of truth. A form action resets an
+  // uncontrolled form when its reply commits, so it is re-seeded from the
   // returned draft during render rather than in an effect: an effect would
   // paint the emptied field first and then refill it.
   const [seenSubmission, setSeenSubmission] = useState(state.submission);
   const [note, setNote] = useState("");
-  const [feedback, setFeedback] = useState("");
   if (seenSubmission !== state.submission) {
     setSeenSubmission(state.submission);
     setNote(state.draft?.planningNote ?? "");
-    setFeedback(state.draft?.regenerationFeedback ?? "");
   }
 
-  const isRegeneration = mode === "regeneration";
   const isChange = mode === "change";
 
   // Each date is one field, the browser's own (owner, 13 Oct 2026), and the
@@ -154,19 +139,10 @@ export function RoadmapComposer({
   return (
     <section className={styles.card} data-roadmap-compose={mode}>
       <h2 className={styles.cardHeading} id={headingId}>
-        {isRegeneration
-          ? ROADMAP_CONTROL_COPY.regenerateTitle
-          : isChange
-            ? ROADMAP_CONTROL_COPY.changeTitle
-            : ROADMAP_CONTROL_COPY.composeTitle}
+        {isChange
+          ? ROADMAP_CONTROL_COPY.changeTitle
+          : ROADMAP_CONTROL_COPY.composeTitle}
       </h2>
-      {/* What a regeneration sends is said; a first request needs no
-          introduction (owner, 13 Oct 2026). */}
-      {isRegeneration ? (
-        <p className={styles.emptyState}>
-          {ROADMAP_CONTROL_COPY.regenerateSupport}
-        </p>
-      ) : null}
 
       <RoadmapWatchNotice lostRender={lostRender} recovered={recovered} />
 
@@ -186,19 +162,10 @@ export function RoadmapComposer({
         {isChange ? (
           <input type="hidden" name="changeRoadmap" value="true" />
         ) : null}
-        {isRegeneration && previousProposalId ? (
-          <input
-            type="hidden"
-            name="previousProposalId"
-            value={previousProposalId}
-          />
-        ) : null}
 
         <div className={styles.field}>
           <div className={styles.dateRow}>
-            {/* The start is the owner's to choose (9 Oct 2026). Fixed on a
-                regeneration, as the end is, and then held to no range: the
-                dates are the earlier proposal's, whatever today allows. */}
+            {/* The start is the owner's to choose (9 Oct 2026). */}
             <div className={styles.field}>
               <label className={styles.label} htmlFor={`${fieldId}-start`}>
                 {ROADMAP_CONTROL_COPY.startDateLabel}
@@ -209,21 +176,12 @@ export function RoadmapComposer({
                 type="date"
                 name="startDate"
                 value={chosenStart}
-                // Fixed means fixed, in a browser that opens its picker on a
-                // read-only field too.
-                onChange={(event) => {
-                  if (!isRegeneration) chooseStart(event.target.value);
-                }}
-                {...(isRegeneration ? {} : { min: today, max: latestStart })}
-                readOnly={isRegeneration}
+                onChange={(event) => chooseStart(event.target.value)}
+                min={today}
+                max={latestStart}
                 required
               />
             </div>
-            {/* A regeneration is defined as the same question about the same
-                dates, and the database refuses one whose horizon moved.
-                Showing the dates but refusing to change them is honest about
-                that; hiding them would leave the owner guessing which dates
-                they are asking about. */}
             <div className={styles.field}>
               <label className={styles.label} htmlFor={`${fieldId}-end`}>
                 {ROADMAP_CONTROL_COPY.endDateLabel}
@@ -234,25 +192,13 @@ export function RoadmapComposer({
                 type="date"
                 name="endDate"
                 value={chosenEnd}
-                onChange={(event) => {
-                  if (!isRegeneration) setChosenEnd(event.target.value);
-                }}
-                {...(isRegeneration
-                  ? { "aria-describedby": `${fieldId}-dates-help` }
-                  : {
-                      min: shiftIsoDate(rangeStart, minDays),
-                      max: shiftIsoDate(rangeStart, maxDays),
-                    })}
-                readOnly={isRegeneration}
+                onChange={(event) => setChosenEnd(event.target.value)}
+                min={shiftIsoDate(rangeStart, minDays)}
+                max={shiftIsoDate(rangeStart, maxDays)}
                 required
               />
             </div>
           </div>
-          {isRegeneration ? (
-            <span className={styles.helper} id={`${fieldId}-dates-help`}>
-              {ROADMAP_CONTROL_COPY.regenerateDatesFixed}
-            </span>
-          ) : null}
         </div>
 
         <div className={styles.field}>
@@ -276,33 +222,6 @@ export function RoadmapComposer({
           </span>
         </div>
 
-        {isRegeneration ? (
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor={`${fieldId}-feedback`}>
-              {ROADMAP_CONTROL_COPY.feedbackLabel}
-            </label>
-            <textarea
-              className={styles.textarea}
-              id={`${fieldId}-feedback`}
-              aria-describedby={`${fieldId}-feedback-help`}
-              name="regenerationFeedback"
-              maxLength={ROADMAP_FEEDBACK_MAX_LENGTH}
-              rows={3}
-              required
-              value={feedback}
-              onChange={(event) => setFeedback(event.target.value)}
-            />
-            <span className={styles.counter}>
-              {feedback.length} / {ROADMAP_FEEDBACK_MAX_LENGTH}
-            </span>
-            <span className={styles.helper} id={`${fieldId}-feedback-help`}>
-              {ROADMAP_CONTROL_COPY.regenerationsRemaining(
-                regenerationsRemaining,
-              )}
-            </span>
-          </div>
-        ) : null}
-
         <div className={styles.actions}>
           <button
             className={styles.primaryAction}
@@ -310,11 +229,9 @@ export function RoadmapComposer({
             disabled={pending}
           >
             <CoachSpark size={16} />
-            {isRegeneration
-              ? ROADMAP_CONTROL_COPY.regenerateConfirm
-              : isChange
-                ? ROADMAP_CONTROL_COPY.changeConfirm
-                : ROADMAP_CONTROL_COPY.generateAction}
+            {isChange
+              ? ROADMAP_CONTROL_COPY.changeConfirm
+              : ROADMAP_CONTROL_COPY.generateAction}
           </button>
           {/* A change says what it sends, which is more than a new roadmap
               does; the sentence ends as the other one does. */}

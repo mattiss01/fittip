@@ -134,40 +134,6 @@ export async function saveLogToLibraryAction(
   }
 }
 
-/** What saving the log form's current values answers. */
-export type SaveDraftToLibraryResult = {
-  status: "saved" | "refused";
-  message: string;
-};
-
-/**
- * Save the log form as it stands, before or without writing the log. Called
- * directly rather than through a form, because the button sits inside the
- * log's own form and forms do not nest. The draft comes from the browser, so
- * it is parsed by the library under the same suspicion as any other write;
- * nothing but a new saved session is created.
- */
-export async function saveSessionDraftToLibraryAction(
-  draft: unknown,
-): Promise<SaveDraftToLibraryResult> {
-  try {
-    await (
-      await createSavedSessionLibrary()
-    ).applyChange({ operation: "create", session: namedByTitle(draft) });
-    revalidatePath("/home/plan/saved");
-    return { status: "saved", message: "Saved to your library." };
-  } catch (error) {
-    if (error instanceof SavedSessionValidationError) {
-      return {
-        status: "refused",
-        message:
-          "Give the log a title and a sport before saving it. Every activity needs a name too.",
-      };
-    }
-    return { status: "refused", message: saveFailure(error)[1] };
-  }
-}
-
 /** Create a library entry, or edit, delete, or reuse one. */
 export async function changeLibraryAction(
   previous: LibraryActionState,
@@ -447,16 +413,4 @@ function draftFrom(formData: FormData): LibraryDraft {
 
 function stringValue(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value : "";
-}
-
-/**
- * The log form sends its draft from the browser, so it is not trusted to have
- * left the name alone: whatever arrives, the entry is named by its title. The
- * library parses the rest under its usual suspicion.
- */
-function namedByTitle(draft: unknown): unknown {
-  if (typeof draft !== "object" || draft === null || Array.isArray(draft)) {
-    return draft;
-  }
-  return { ...draft, name: (draft as { title?: unknown }).title };
 }

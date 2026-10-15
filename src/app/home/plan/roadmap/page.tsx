@@ -184,9 +184,8 @@ async function loadRoadmapState(): Promise<RoadmapScreenState> {
   // While a proposal is open it is its own predecessor-in-waiting; once it is
   // declined it is the predecessor. The count a regeneration is offered against
   // is derived from the records rather than from whatever the browser
-  // remembers, which is also why the predecessor itself is carried down: the
-  // compose form sends it, and the database refuses a regeneration whose
-  // predecessor is not owned, declined, and on the same horizon.
+  // remembers; the database refuses a regeneration whose predecessor is not
+  // owned, declined, and on the same horizon.
   const regenerationSource = openProposal ?? declinedPredecessor;
 
   return {
@@ -201,7 +200,6 @@ async function loadRoadmapState(): Promise<RoadmapScreenState> {
         ? null
         : roadmapReviewDue(current.content.phases, today, reviewedThrough),
     openProposal,
-    declinedPredecessor,
     openMemoryCandidateCount,
     goals,
     defaultEndDate: defaultRoadmapEndDate(today, goals),

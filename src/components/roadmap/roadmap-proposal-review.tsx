@@ -1,11 +1,13 @@
 import { RoadmapBody } from "./roadmap-body";
 import { RoadmapDecisionDock } from "./roadmap-decision-dock";
+import { RoadmapLandingFocus } from "./roadmap-landing-focus";
 
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { CoachSpark } from "@/components/home/coach-spark";
 import {
   isExampleAuthored,
   ROADMAP_COPY,
+  roadmapForEditor,
   type RoadmapProposalView,
 } from "@/server/roadmap/roadmap-records";
 
@@ -57,7 +59,7 @@ export function RoadmapProposalReview({
       <RoadmapDecisionDock
         key={proposal.id}
         proposalId={proposal.id}
-        content={proposal.content}
+        content={roadmapForEditor(proposal.content)}
         expectedHeadRevision={expectedHeadRevision}
         goalTitles={goalTitles}
         today={today}
@@ -65,6 +67,7 @@ export function RoadmapProposalReview({
       >
         {/* Server-rendered, and handed to the dock so that editing can put
             the form in its place, heading and all (owner, 14 Oct 2026). */}
+        <RoadmapLandingFocus />
         <p className={styles.state} data-state="open">
           <CoachSpark size={14} />
           {ROADMAP_COPY.proposalStateLabels.open}

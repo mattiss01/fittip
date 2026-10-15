@@ -331,25 +331,6 @@
 
 /* ---- One completion, and the copy it was measured against ---- */
 
-.backLink {
-  width: fit-content;
-  min-height: 2.75rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  margin: 0.25rem 0 0 -0.35rem;
-  padding: 0 0.7rem 0 0.35rem;
-  border-radius: var(--radius-pill);
-  color: var(--ledger-ink);
-  font-size: 0.95rem;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.backLink:active {
-  background: var(--line);
-}
-
 .sheets {
   display: grid;
   gap: 0.75rem;

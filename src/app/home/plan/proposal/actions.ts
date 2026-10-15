@@ -302,16 +302,21 @@ export async function regeneratePlanProposalAction(
     try {
       return await askAgain();
     } catch (error) {
-      // The cause is worth keeping for the codes the repository maps, but the
-      // message has to be the one that is true: their choices were applied and
-      // the proposal is gone.
+      // The cause is worth keeping where it is true alongside what happened,
+      // but the message has to be the one that is true: their choices were
+      // applied and the proposal is gone. The general conflict and rule copy
+      // ends "nothing was added", so only the ceiling keeps its own words.
       const mapped = toActionState(error, submission);
       return {
         status: "error",
         message:
-          mapped.status === "conflict" || mapped.status === "rule"
-            ? `${mapped.message} ${OUTCOMES.regenerationKept}`
-            : OUTCOMES.regenerationLost,
+          mapped.status === "conflict"
+            ? OUTCOMES.regenerationConflict
+            : mapped.message === OUTCOMES.regenerationCap
+              ? `${OUTCOMES.regenerationCap} ${OUTCOMES.regenerationKept}`
+              : mapped.status === "rule"
+                ? OUTCOMES.regenerationRefused
+                : OUTCOMES.regenerationLost,
         submission,
       };
     }

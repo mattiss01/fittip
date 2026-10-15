@@ -166,6 +166,9 @@ async function PlanWindow({
           completionId: completion.id,
           outcome: completion.status,
           actualLocalDate: completion.actualLocalDate,
+          ...(completion.durationMinutes === undefined
+            ? {}
+            : { durationMinutes: completion.durationMinutes }),
         });
       }
     }

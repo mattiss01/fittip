@@ -64,6 +64,7 @@ export default async function GoalsPage() {
       </header>
       <GoalManager
         expectedRevision={collection.revision}
+        today={isoDateInTimezone(new Date(), timezoneName)}
         initialGoals={collection.goals.map((goal) =>
           withStatusDate(goal, changes, timezoneName),
         )}

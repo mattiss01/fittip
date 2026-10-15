@@ -6,6 +6,7 @@ import {
   useActionState,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -182,9 +183,10 @@ export function PlanManager({
   // 2026), so "this week" is no longer the first: the Plan opens on it, and
   // a week is named by how far it is from it.
   const thisWeekIndex = weekIndexOf(weeks, today);
-  const [weekIndex, setWeekIndex] = useState(() =>
+  const [initialWeekIndex] = useState(() =>
     weekIndexOf(weeks, initialDate, thisWeekIndex),
   );
+  const [weekIndex, setWeekIndex] = useState(initialWeekIndex);
   const week = weeks[Math.min(weekIndex, weeks.length - 1)];
   const weekOffset = weekIndex - thisWeekIndex;
   // R4 (owner, 3 Oct 2026): the week's days slide in from the side they come
@@ -212,8 +214,13 @@ export function PlanManager({
   // Only the strip moves. `scrollIntoView` also scrolls the page until the
   // tile is on screen, and the strip sits below the week, so a tap on a week
   // arrow threw the owner to the bottom of the page (owner, 2 Oct 2026).
+  //
+  // Placed before the browser paints, so the strip never shows its oldest
+  // week first. The server's HTML cannot run this; the shown week's tile
+  // carries `data-initial`, which a browser with `scroll-initial-target`
+  // scrolls to before any script.
   const tilesRef = useRef<HTMLElement>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const strip = tilesRef.current;
     const tiles = strip?.children;
     const current = tiles?.[weekIndex];
@@ -364,6 +371,7 @@ export function PlanManager({
             type="button"
             className={w.tile}
             aria-current={index === weekIndex ? "true" : undefined}
+            data-initial={index === initialWeekIndex ? "" : undefined}
             aria-label={`Week of ${dayLabel(candidate.start)}, ${formatPlannedTime(
               plannedMinutes(candidate, sessions),
             )} planned`}
@@ -685,10 +693,14 @@ function cardDetail(session: PlanSessionView, cancelled: boolean): string {
   if (session.log) {
     const outcome = COMPLETION_OUTCOME_LABELS[session.log.outcome];
     return [
-      // The planned minutes stay on a logged card (owner, 2 Oct 2026), and
-      // say that they are the plan's: beside "Completed" a bare "40 min"
-      // reads as time trained, which the Plan does not know.
-      planned === null ? null : `${planned} planned`,
+      // A log that gives its minutes shows them: beside "Completed" a bare
+      // "55 min" reads as time trained, and it is. Without them the planned
+      // minutes stay (owner, 2 Oct 2026), saying that they are the plan's.
+      session.log.durationMinutes !== undefined
+        ? `${session.log.durationMinutes} min`
+        : planned === null
+          ? null
+          : `${planned} planned`,
       session.log.actualLocalDate === session.localDate
         ? outcome
         : `${outcome} on ${dayLabel(session.log.actualLocalDate)}`,

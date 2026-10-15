@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useRoadmapWrite } from "./use-roadmap-write";
+import { forgetRoadmapWrites, useRoadmapWrite } from "./use-roadmap-write";
 
 import type { RoadmapActionState } from "@/app/home/plan/roadmap/action-state";
 import { WATCH_INTERVAL_MS } from "@/lib/app-router/transition-watchdog";
@@ -67,6 +67,7 @@ let live: ((entries: ResourceEntry[]) => void)[] = [];
 describe("useRoadmapWrite lost-render recovery", () => {
   beforeEach(() => {
     watch.calls.length = 0;
+    forgetRoadmapWrites();
     buffered = [];
     live = [];
     clock = 20_000;
@@ -127,6 +128,34 @@ describe("useRoadmapWrite lost-render recovery", () => {
 
     expect(screen.getByTestId("watch").textContent).toBe("lost");
     expect(window.sessionStorage.getItem(RECOVERY_FLAG)).toBe("1");
+  });
+
+  // Two milestones ticked a moment apart post to one address: the second's
+  // reply is not the first's, and nothing is reloaded while either is out.
+  it("does not take another write's reply for its own", async () => {
+    render(
+      <>
+        <Probe />
+        <Probe />
+      </>,
+    );
+
+    const [first, second] = screen.getAllByRole("button", { name: "Write" });
+    await act(async () => {
+      fireEvent.click(first);
+    });
+    clock = 20_200;
+    await act(async () => {
+      fireEvent.click(second);
+    });
+    clock = 20_600;
+    await deliver([{ name: actionUrl, responseEnd: clock }]);
+    for (let index = 0; index < 6; index += 1) await tick(WATCH_INTERVAL_MS);
+
+    for (const state of screen.getAllByTestId("watch")) {
+      expect(state.textContent).toBe("watching");
+    }
+    expect(window.sessionStorage.getItem(RECOVERY_FLAG)).toBeNull();
   });
 
   // A control mounts, watches nothing, and is unmounted: an owner who opened

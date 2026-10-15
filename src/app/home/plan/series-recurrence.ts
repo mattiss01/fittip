@@ -8,7 +8,10 @@ export type SeriesRuleShape = {
   endDate?: string;
 };
 
-type CoverageSeries = SeriesRuleShape & { id: string };
+type CoverageSeries = SeriesRuleShape & {
+  id: string;
+  skippedOccurrenceDates?: string[];
+};
 
 type CoverageSession = {
   localDate: string;
@@ -56,6 +59,8 @@ export function seriesOccurrenceDates(
 
 /**
  * Dates for which a Plan visit has an occurrence it can still materialize.
+ * An occurrence the owner deleted is not missing: the window never fills it
+ * again, so counting it would run the top-up on every visit for nothing.
  * A date already at the ten-session cap is not called incomplete: the write
  * cannot fill it, and the creation receipt is where that skipped date is
  * named. Counts are used only to decide whether work exists, never forecast to
@@ -85,12 +90,14 @@ export function findUncoveredSeriesDates(
 
   const uncovered = new Set<string>();
   for (const segment of series) {
+    const skipped = new Set(segment.skippedOccurrenceDates);
     for (const occurrenceDate of seriesOccurrenceDates(
       segment,
       fromDate,
       toDate,
     )) {
       if (covered.has(`${segment.id}|${occurrenceDate}`)) continue;
+      if (skipped.has(occurrenceDate)) continue;
       const count = activeCounts.get(occurrenceDate) ?? 0;
       if (count >= 10) continue;
       uncovered.add(occurrenceDate);
