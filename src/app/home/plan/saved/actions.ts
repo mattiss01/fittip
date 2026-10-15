@@ -171,6 +171,19 @@ async function saveDraft(
     onExisting === "new"
       ? String(formData.get("title") ?? "").trim()
       : draft.title;
+  // "Keep both" stays open on its own question rather than starting over.
+  const askAgain = async (message: string): Promise<LibrarySaveActionState> => {
+    const taken = new Set(
+      (await library.list()).map((entry) => savedSessionTitleKey(entry.title)),
+    );
+    return {
+      status: "exists",
+      message,
+      submission,
+      suggestedTitle: nextFreeTitle(title || draft.title, taken),
+    };
+  };
+  if (title === "") return await askAgain("Give the new entry a title.");
   try {
     await library.applyChange({
       operation: "create",
@@ -178,18 +191,11 @@ async function saveDraft(
     });
   } catch (error) {
     if (!(error instanceof SavedSessionTitleTakenError)) throw error;
-    const taken = new Set(
-      (await library.list()).map((entry) => savedSessionTitleKey(entry.title)),
+    return await askAgain(
+      onExisting === "new"
+        ? "That title is in your library too. Choose another."
+        : "Already in your library.",
     );
-    return {
-      status: "exists",
-      message:
-        onExisting === "new"
-          ? "That title is in your library too. Choose another."
-          : "Already in your library.",
-      submission,
-      suggestedTitle: nextFreeTitle(draft.title, taken),
-    };
   }
   revalidatePath("/home/plan/saved");
   return { status: "saved", message: "Saved to your library.", submission };

@@ -20,4 +20,11 @@ describe("the title Keep both opens on", () => {
       nextFreeTitle("Intervals (2)", taken("Intervals", "Intervals (2)")),
     ).toBe("Intervals (3)");
   });
+
+  it("stays within a title's 120 characters", () => {
+    const long = "x".repeat(120);
+    const next = nextFreeTitle(long, taken(long));
+    expect(next).toHaveLength(120);
+    expect(next.endsWith(" (2)")).toBe(true);
+  });
 });

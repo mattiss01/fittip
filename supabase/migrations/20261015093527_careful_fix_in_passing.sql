@@ -22,38 +22,58 @@
 
 -- ---- 1. One saved session per title: existing entries --------------------
 
-with ranked as (
-  select
-    id,
-    title,
-    pg_catalog.row_number() over (
-      partition by
-        user_id,
-        pg_catalog.lower(
-          pg_catalog.btrim(pg_catalog.regexp_replace(title, '\s+', ' ', 'g'))
-        )
-      order by created_at, id
-    ) as copy_number
-  from public.saved_sessions
-),
-renamed as (
-  select
-    id,
-    pg_catalog.left(
-      pg_catalog.btrim(title),
-      120 - pg_catalog.char_length(' (' || copy_number || ')')
-    ) || ' (' || copy_number || ')' as title
-  from ranked
-  where copy_number > 1
-)
-update public.saved_sessions as entry
-set
-  title = renamed.title,
-  name = renamed.title,
-  revision = entry.revision + 1,
-  updated_at = pg_catalog.clock_timestamp()
-from renamed
-where entry.id = renamed.id;
+-- Entry by entry, oldest first, so each later copy takes the first number
+-- whose title no entry of that owner holds yet, a "Title (2)" written by the
+-- owner included. A title holds 120 characters, so the base gives way to the
+-- number.
+do $$
+declare
+  v_entry record;
+  v_copy integer;
+  v_candidate text;
+begin
+  for v_entry in
+    select entry.id, entry.user_id, entry.title
+    from public.saved_sessions as entry
+    where exists (
+      select 1
+      from public.saved_sessions as earlier
+      where earlier.user_id = entry.user_id
+        and pg_catalog.lower(pg_catalog.btrim(
+          pg_catalog.regexp_replace(earlier.title, '\s+', ' ', 'g')))
+          = pg_catalog.lower(pg_catalog.btrim(
+            pg_catalog.regexp_replace(entry.title, '\s+', ' ', 'g')))
+        and (earlier.created_at, earlier.id) < (entry.created_at, entry.id)
+    )
+    order by entry.created_at, entry.id
+  loop
+    v_copy := 2;
+    loop
+      v_candidate := pg_catalog.rtrim(pg_catalog.left(
+        pg_catalog.btrim(v_entry.title),
+        120 - pg_catalog.char_length(' (' || v_copy || ')')
+      )) || ' (' || v_copy || ')';
+      exit when not exists (
+        select 1
+        from public.saved_sessions as other
+        where other.user_id = v_entry.user_id
+          and pg_catalog.lower(pg_catalog.btrim(
+            pg_catalog.regexp_replace(other.title, '\s+', ' ', 'g')))
+            = pg_catalog.lower(pg_catalog.btrim(
+              pg_catalog.regexp_replace(v_candidate, '\s+', ' ', 'g')))
+      );
+      v_copy := v_copy + 1;
+    end loop;
+    update public.saved_sessions
+    set
+      title = v_candidate,
+      name = v_candidate,
+      revision = revision + 1,
+      updated_at = pg_catalog.clock_timestamp()
+    where id = v_entry.id;
+  end loop;
+end;
+$$;
 
 create unique index saved_sessions_title_key
   on public.saved_sessions (

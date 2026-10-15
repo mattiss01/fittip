@@ -28,7 +28,9 @@ export const savedSessionTitleKey = activityNameKey;
 export function nextFreeTitle(title: string, taken: ReadonlySet<string>) {
   const base = title.trim().replace(/ \(\d+\)$/, "");
   for (let copy = 2; ; copy += 1) {
-    const candidate = `${base} (${copy})`;
+    // A title holds 120 characters, so the base gives way to the number.
+    const suffix = ` (${copy})`;
+    const candidate = `${base.slice(0, 120 - suffix.length).trimEnd()}${suffix}`;
     if (!taken.has(savedSessionTitleKey(candidate))) return candidate;
   }
 }

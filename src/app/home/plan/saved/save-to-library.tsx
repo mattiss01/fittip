@@ -73,7 +73,10 @@ export function SaveToLibrary({
         keepBoth ? (
           <>
             <label htmlFor={titleId}>Title for the new entry</label>
+            {/* Opened by a tap on "Keep both", so it takes the focus. */}
+            {/* eslint-disable-next-line jsx-a11y/no-autofocus */}
             <input
+              autoFocus
               defaultValue={state.suggestedTitle}
               id={titleId}
               maxLength={120}
