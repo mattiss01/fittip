@@ -85,17 +85,6 @@ Ordered by dependency. A lane is named where it is not the build lane.
       carries every week to the browser — 13 behind, 13 of recurring sessions and 13
       more of single ones — and re-reads all of it for every change, though it shows one.
       Fine for one athlete's plan; a longer history than a quarter would need it first.
-- [~] **Database and spend-guard fixes, one migration.** Careful lane, owner 15 Oct 2026.
-      (1) One library entry per title: a repeat save asks "update it or keep both", and
-      keeping both needs a new title; a uniqueness rule in the database as the activity
-      library has (`16118fb`). (2) A typed sport joins the owner's sports in one write,
-      not a read then a write; `keepSports` keeps its ten one-line callers. (3) Asking again is tied to the roadmap its predecessor
-      was made under, so a hand-made request cannot pair a newer roadmap with an older
-      outline. (4) `apply_completion_change` maps `22P02` to `22023`. (5) The roadmap
-      generation fingerprint is labelled `"roadmap.v4"`, not `"roadmap.v2"`: no migration,
-      but the spend guard's. Existing duplicate titles are renamed "Title (2)", the
-      oldest keeping its title, nothing deleted; "Keep both" opens on the next free
-      title (owner).
 
 ## Fix in passing
 
