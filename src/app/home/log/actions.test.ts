@@ -666,7 +666,7 @@ describe("deleteLogAction (ADR-031)", () => {
       form({
         completionId: COMPLETION_ID,
         expectedRevision: "4",
-        returnDate: DAY,
+        leaveTo: `/home/today?date=${DAY}`,
       }),
     );
 
@@ -680,14 +680,30 @@ describe("deleteLogAction (ADR-031)", () => {
     );
   });
 
-  it("puts nothing but a date into the address it leaves for", async () => {
+  it.each([
+    ["/home/progress", "/home/progress?log=deleted"],
+    [
+      "/home/plan/session/7e15b000-0000-4000-8000-000000000001",
+      "/home/plan/session/7e15b000-0000-4000-8000-000000000001?log=deleted",
+    ],
+  ])("goes back to %s, where it was opened from", async (leaveTo, expected) => {
     await deleteLogAction(
       INITIAL_DELETE_LOG_STATE,
-      form({
-        completionId: COMPLETION_ID,
-        expectedRevision: "4",
-        returnDate: "https://example.test",
-      }),
+      form({ completionId: COMPLETION_ID, expectedRevision: "4", leaveTo }),
+    );
+
+    expect(redirectMock).toHaveBeenCalledWith(expected);
+  });
+
+  it.each([
+    "https://example.test",
+    "//example.test/home/progress",
+    "/home/progress/completion-7e15b000-0000-4000-8000-000000000002",
+    "/home/today?date=2026-08-30&next=https://example.test",
+  ])("goes to Today for anything else: %s", async (leaveTo) => {
+    await deleteLogAction(
+      INITIAL_DELETE_LOG_STATE,
+      form({ completionId: COMPLETION_ID, expectedRevision: "4", leaveTo }),
     );
 
     expect(redirectMock).toHaveBeenCalledWith("/home/today?log=deleted");
@@ -701,7 +717,7 @@ describe("deleteLogAction (ADR-031)", () => {
       form({
         completionId: COMPLETION_ID,
         expectedRevision: "4",
-        returnDate: DAY,
+        leaveTo: `/home/today?date=${DAY}`,
       }),
     );
 
@@ -718,7 +734,7 @@ describe("deleteLogAction (ADR-031)", () => {
       form({
         completionId: COMPLETION_ID,
         expectedRevision: "4",
-        returnDate: DAY,
+        leaveTo: `/home/today?date=${DAY}`,
       }),
     );
 

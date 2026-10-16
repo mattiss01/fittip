@@ -28,6 +28,7 @@ import {
   ActivityLibraryProvider,
   type LibraryActivityOption,
 } from "@/components/training/activity-editor";
+import { LogDeletedNote } from "@/components/home/log-deleted-note";
 import type { ModeBySport } from "@/lib/training/measurement-default";
 import { createCompletionLog } from "@/server/repositories/completion-log-repository";
 import { createProfileRepository } from "@/server/repositories/profile-repository";
@@ -48,6 +49,8 @@ type Props = {
     from?: string | string[];
     /** The day Today was showing, which finds a session before the window. */
     date?: string | string[];
+    /** "deleted" after this session's log was deleted here (ADR-031). */
+    log?: string | string[];
   }>;
 };
 
@@ -83,6 +86,7 @@ export default async function PlanSessionPage({ params, searchParams }: Props) {
           shrink to its content; one full-width column keeps the sheet, its
           notice and its panels the same width, as the Plan's manager does. */}
       <div className={sessionStyles.page}>
+        <LogDeletedNote flag={query.log} />
         {timezoneName === null ? (
           <section className={homeStyles.stateCard}>
             <p className={homeStyles.kicker}>Plan</p>

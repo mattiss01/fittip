@@ -463,7 +463,7 @@ test.describe("M3-15B today and logging", () => {
       await page.locator("[data-log-delete]").click();
       await dialog.getByRole("button", { name: "Delete log" }).click();
       await expect(page).toHaveURL(/\/home\/today\?date=[\d-]+&log=deleted$/);
-      await expect(page.locator("[data-today-log-note]")).toHaveText(
+      await expect(page.locator("[data-log-deleted-note]")).toHaveText(
         "Log deleted.",
       );
       await expect(unplanned).toHaveCount(0);

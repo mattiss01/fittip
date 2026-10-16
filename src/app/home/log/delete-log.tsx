@@ -21,7 +21,7 @@ export function DeleteLog({
   revision,
   name,
   day,
-  returnDate,
+  leaveTo,
   planned,
   replaces,
 }: {
@@ -31,8 +31,8 @@ export function DeleteLog({
   name: string;
   /** The log's day, as the form writes it. */
   day: string;
-  /** Where Today opens afterwards: the day the log was on. */
-  returnDate: string;
+  /** Where it leaves for: back where the log was opened from. */
+  leaveTo: string;
   /** The planned session the log answers, which it frees; null if none. */
   planned: string | null;
   /** The planned sessions logged "Replaced" by this one, by name. */
@@ -156,7 +156,7 @@ export function DeleteLog({
             <form action={action}>
               <input type="hidden" name="completionId" value={completionId} />
               <input type="hidden" name="expectedRevision" value={revision} />
-              <input type="hidden" name="returnDate" value={returnDate} />
+              <input type="hidden" name="leaveTo" value={leaveTo} />
               <button
                 autoFocus
                 className={styles.secondary}

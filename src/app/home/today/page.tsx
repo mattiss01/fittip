@@ -10,6 +10,7 @@ import styles from "./today.module.css";
 
 import homeStyles from "../home.module.css";
 import { planWindowFor } from "../plan/plan-window";
+import { LogDeletedNote } from "@/components/home/log-deleted-note";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
 import {
   replacedByLabel,
@@ -41,14 +42,6 @@ type Props = {
 };
 
 /**
- * Where a deleted log lands (ADR-031). The flag only chooses which fixed
- * sentence is shown; nothing else is read from it.
- */
-const LOG_NOTES: Record<string, string> = {
-  deleted: "Log deleted.",
-};
-
-/**
  * One owner-local day of plan content, and the completions the owner wrote on
  * it. The day is a URL search parameter so the view is addressable and the
  * back button steps through the days the owner actually visited. An absent or
@@ -60,10 +53,6 @@ const LOG_NOTES: Record<string, string> = {
 export default async function TodayPage({ searchParams }: Props) {
   const query = await searchParams;
   const requested = readRequestedDate(query.date);
-  const logNote =
-    typeof query.log === "string" && Object.hasOwn(LOG_NOTES, query.log)
-      ? LOG_NOTES[query.log]
-      : null;
 
   let timezoneName: string | null;
   try {
@@ -80,11 +69,7 @@ export default async function TodayPage({ searchParams }: Props) {
       <header className={styles.header}>
         <h1>Today</h1>
       </header>
-      {logNote === null ? null : (
-        <p className={styles.logNote} role="status" data-today-log-note>
-          {logNote}
-        </p>
-      )}
+      <LogDeletedNote flag={query.log} />
       {timezoneName === null ? (
         <section className={homeStyles.stateCard} data-today-state="no-zone">
           <h2>Confirm your time zone first</h2>

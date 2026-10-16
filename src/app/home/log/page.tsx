@@ -187,8 +187,14 @@ async function renderForm(
                     href: `/home/progress/${completion.id}`,
                     label: "Back to the record",
                   }
-                : undefined
+                : params.from === "session" && completion.planSessionId !== null
+                  ? {
+                      href: `/home/plan/session/${completion.planSessionId}`,
+                      label: "Back to the session",
+                    }
+                  : undefined
             }
+            afterDelete={afterDelete(params.from, completion)}
           />
         </>
       );
@@ -362,6 +368,23 @@ function Unavailable({
       </div>
     </section>
   );
+}
+
+/**
+ * Where a delete leaves for: back where the log was opened from (owner,
+ * 16 Oct 2026). From Progress that is the list, since the record's own page
+ * goes with the log; from a Plan session, the session, which is free again;
+ * otherwise the day on Today. `deleteLogAction` admits only these shapes.
+ */
+function afterDelete(
+  from: string | string[] | undefined,
+  completion: Completion,
+): string {
+  if (from === "progress") return "/home/progress";
+  if (from === "session" && completion.planSessionId !== null) {
+    return `/home/plan/session/${completion.planSessionId}`;
+  }
+  return `/home/today?date=${completion.actualLocalDate}`;
 }
 
 function toExistingView(completion: Completion): LogExistingView {

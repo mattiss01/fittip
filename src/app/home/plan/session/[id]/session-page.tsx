@@ -295,7 +295,8 @@ export function SessionPage({
       ? { series, occurrenceDate: session.occurrenceDate }
       : null;
   const logHref = session.log
-    ? `/home/log?completion=${session.log.completionId}`
+    ? // Opened from here, a delete comes back here (owner, 16 Oct 2026).
+      `/home/log?completion=${session.log.completionId}&from=session`
     : `/home/log?plannedSession=${session.id}&date=${session.localDate}`;
   const busy = pending || seriesPending;
   const recurringView = {

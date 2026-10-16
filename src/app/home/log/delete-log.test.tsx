@@ -16,7 +16,7 @@ const BASE = {
   revision: 2,
   name: "Hill ride",
   day: "Fri 16 Oct",
-  returnDate: "2026-10-16",
+  leaveTo: "/home/today?date=2026-10-16",
 };
 
 function open(props: Partial<Parameters<typeof DeleteLog>[0]> = {}) {
@@ -65,7 +65,7 @@ describe("DeleteLog (ADR-031)", () => {
     expect(Object.fromEntries(new FormData(form))).toEqual({
       completionId: BASE.completionId,
       expectedRevision: "2",
-      returnDate: BASE.returnDate,
+      leaveTo: BASE.leaveTo,
     });
   });
 });

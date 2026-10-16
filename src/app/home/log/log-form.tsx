@@ -120,6 +120,8 @@ type Props = {
    * list, never from a URL the request carried.
    */
   returnTo?: { href: string; label: string };
+  /** Where deleting the log being edited leaves for (ADR-031). */
+  afterDelete?: string;
   /**
    * Unplanned training a replaced log may point at: this owner's, from a
    * week before the planned day to today, most recent first.
@@ -209,6 +211,7 @@ export function LogForm({
   today,
   returnDate,
   returnTo,
+  afterDelete,
   unplannedOptions = [],
   savedSessions = [],
   library = [],
@@ -1138,7 +1141,7 @@ export function LogForm({
         revision={existing.revision}
         name={existing.title ?? "unplanned training"}
         day={dayLabel(existing.actualLocalDate)}
-        returnDate={existing.actualLocalDate}
+        leaveTo={afterDelete ?? `/home/today?date=${existing.actualLocalDate}`}
         planned={existing.planned}
         replaces={existing.replaces}
       />
