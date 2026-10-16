@@ -9,7 +9,8 @@ Background when you need it: `CONTEXT.md` for the domain, `docs/decisions/` for 
 
 ## Product invariants
 
-- Plans, proposals, and actual completions are separate permanent records.
+- Plans, proposals, and actual completions are separate records. A log is removed only
+  when the owner deletes it (ADR-031), never as a side effect of anything else.
 - Replanning never changes completed history or past sessions, and replaces a future session
   only where the owner allowed it for that proposal.
 - Every owned record has a `user_id`; authorization is enforced server-side and in database

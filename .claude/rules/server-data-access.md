@@ -26,6 +26,6 @@ paths:
   deliberate architectural change.
 - Map constraint and conflict errors to stable domain results (e.g. the `PT409` conflict path)
   instead of letting a Postgres error surface to the UI.
-- Plans, proposals, and completions are separate permanent records. A read or write for one
-  never rewrites another, and correction revisions stay append-only behind
-  `completion_heads.current_completion_id`.
+- Plans, proposals, and completions are separate records. A read or write for one never
+  rewrites another. A log is corrected in place under its `revision` and removed only by
+  the owner's own delete (ADR-031).
