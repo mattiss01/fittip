@@ -267,8 +267,10 @@ export const ROADMAP_CONTROL_COPY = {
     feedbackTooLong:
       "That feedback is longer than 500 characters. Shorten it and try again.",
     checkDetails: "Check the highlighted details. Nothing has been saved yet.",
+    // Since 16 Oct 2026 the only source that still refuses (owner): what
+    // changed in logs or memory after asking never does.
     sourcesChanged:
-      "Your goals, memory or training changed after this was prepared. Review it again.",
+      "A goal this proposal names is no longer active, so it cannot be put in force. Decline it and ask again.",
     alreadyDecided:
       "That proposal has already been decided. Reload to see where it went.",
     stale: "Your roadmap changed in another tab. Reload before deciding again.",

@@ -693,15 +693,9 @@ function conflictReason(message: string): RoadmapConflictReason {
     return "not-available";
   }
   if (message.startsWith("That coaching request")) return "not-available";
-  if (
-    message.startsWith("Your goals changed") ||
-    message.startsWith("Your memory changed") ||
-    message.startsWith("Your plan changed") ||
-    message.startsWith("Your training history changed") ||
-    message.startsWith("Memory changed")
-  ) {
-    return "sources-changed";
-  }
+  // A named goal no longer active: the one source check acceptance still
+  // makes (16 Oct 2026). Logs and memory changed since never refuse.
+  if (message.startsWith("Your goals changed")) return "sources-changed";
   return "stale";
 }
 
