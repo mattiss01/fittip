@@ -189,6 +189,8 @@ export const ROADMAP_CONTROL_COPY = {
   reviewedAction: "Reviewed",
   /** On the Plan's Roadmap chip, for a screen reader: the dot has no words. */
   reviewDueNote: "A roadmap review is due.",
+  /** The same, when there is no roadmap yet. */
+  missingNote: "No roadmap yet. Create one to plan toward your goals.",
 
   /* ---- Edit ------------------------------------------------------------- */
   editTitle: "Edit proposal",

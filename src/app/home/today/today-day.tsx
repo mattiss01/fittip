@@ -192,10 +192,54 @@ export function TodayDay({
           the day lies on. The strip and the day's own header stay put. */}
       <Slide key={date}>
         <div className={styles.dayBody}>
-          {sessions.length > 0 ? (
+          {sessions.length > 0 || unattached.length > 0 ? (
+            // One list (owner, 16 Oct 2026): what was logged without a plan
+            // card here sits after the planned sessions, not under a heading
+            // of its own.
             <ol className={styles.sessions}>
               {sessions.map((session) => (
                 <SessionCard key={session.id} date={date} session={session} />
+              ))}
+              {unattached.map((completion) => (
+                <li
+                  key={completion.id}
+                  className={styles.receipt}
+                  data-today-completion={completion.id}
+                >
+                  <div className={styles.receiptHead}>
+                    <OutcomeMark outcome={completion.outcome} />
+                    <h4>{completion.title ?? "Unplanned training"}</h4>
+                    <span
+                      className={styles.stamp}
+                      data-outcome={completion.outcome}
+                    >
+                      {COMPLETION_OUTCOME_LABELS[completion.outcome]}
+                    </span>
+                  </div>
+                  {completion.sport === null &&
+                  completion.plannedLocalDate === null ? null : (
+                    <div className={styles.marks}>
+                      {completion.sport === null ? null : (
+                        <span>{completion.sport}</span>
+                      )}
+                      {completion.plannedLocalDate === null ? null : (
+                        <span>
+                          Planned for {longDay(completion.plannedLocalDate)}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <CompletionFacts completion={completion} date={date} />
+                  <div className={styles.receiptActions}>
+                    <Link
+                      className={styles.textAction}
+                      href={`/home/log?completion=${completion.id}`}
+                    >
+                      Edit log
+                    </Link>
+                    <SaveLoggedSession completion={completion} />
+                  </div>
+                </li>
               ))}
             </ol>
           ) : toppedUp && !beyondWindow ? (
@@ -210,60 +254,6 @@ export function TodayDay({
                 : "Nothing is planned on this day."}
             </p>
           ) : null}
-
-          {unattached.length === 0 ? null : (
-            <section
-              className={styles.unplanned}
-              aria-labelledby="today-unplanned"
-            >
-              <h3 id="today-unplanned" className={styles.sectionLabel}>
-                Also logged
-              </h3>
-              <ol className={styles.sessions}>
-                {unattached.map((completion) => (
-                  <li
-                    key={completion.id}
-                    className={styles.receipt}
-                    data-today-completion={completion.id}
-                  >
-                    <div className={styles.receiptHead}>
-                      <OutcomeMark outcome={completion.outcome} />
-                      <h4>{completion.title ?? "Unplanned training"}</h4>
-                      <span
-                        className={styles.stamp}
-                        data-outcome={completion.outcome}
-                      >
-                        {COMPLETION_OUTCOME_LABELS[completion.outcome]}
-                      </span>
-                    </div>
-                    {completion.sport === null &&
-                    completion.plannedLocalDate === null ? null : (
-                      <div className={styles.marks}>
-                        {completion.sport === null ? null : (
-                          <span>{completion.sport}</span>
-                        )}
-                        {completion.plannedLocalDate === null ? null : (
-                          <span>
-                            Planned for {longDay(completion.plannedLocalDate)}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <CompletionFacts completion={completion} date={date} />
-                    <div className={styles.receiptActions}>
-                      <Link
-                        className={styles.textAction}
-                        href={`/home/log?completion=${completion.id}`}
-                      >
-                        Edit log
-                      </Link>
-                      <SaveLoggedSession completion={completion} />
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )}
         </div>
       </Slide>
 

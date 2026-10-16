@@ -30,6 +30,17 @@ Ordered by dependency. A lane is named where it is not the build lane.
       Open for the owner first: a row picked from the library and then changed keeps its
       `personal_activity_id` until it is saved as a new definition, so grouping history by
       definition would count "picked Latzug, renamed Stabwurf" as Latzug.
+- [ ] **A session's own measurement — to talk through with the owner first.** Owner,
+      16 Oct 2026: a run should be measured without adding an activity. Hiding a single
+      activity behind the session (stored as one row) was considered and fails the owner's
+      own case: a 50 min, 8 km run that then gets intervals makes the total a sibling of
+      its own parts, and progress would add them. The likelier shape is the session (and
+      its log) holding the totals and activities holding the parts. Careful lane: schema,
+      the AI contracts and what A9 sums.
+- [ ] **More ways to measure — to talk through with the owner first.** Candidates named
+      on 16 Oct 2026: intervals (repeats of distance and time), heart rate or RPE beside
+      time and distance, elevation, laps or lengths. Each is a mode or field in the schema
+      and the AI contracts, so careful lane; only the ones the owner misses.
 - [ ] **The 30-day start limit is the app's alone.** `begin_plan_generation` and
       `begin_roadmap_generation` refuse a past start and have no upper bound. Only
       the owner calling the database directly gets past it, on their own data.

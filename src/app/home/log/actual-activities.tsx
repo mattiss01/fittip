@@ -24,6 +24,10 @@ import type { ActivityValue } from "@/lib/training/activity-value";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
 import { ACTIVITY_COPY } from "@/lib/training/measurement-copy";
 import {
+  startingMode,
+  type ModeBySport,
+} from "@/lib/training/measurement-default";
+import {
   type TrainingMeasurement,
   type TrainingMeasurementMode,
 } from "@/lib/training/measurement";
@@ -101,6 +105,7 @@ export function ActualActivities({
   recorded,
   starting = [],
   library = [],
+  modes = {},
   saveToLibrary,
   updateInLibrary,
   sessionSport,
@@ -124,6 +129,8 @@ export function ActualActivities({
   starting?: readonly ActivityValue[];
   /** The owner's activity library; a row may start as a copy of one. */
   library?: readonly LibraryActivityOption[];
+  /** How each sport was last measured, which an added activity starts as. */
+  modes?: ModeBySport;
   /** Absent where a row may not be saved into the library. */
   saveToLibrary?: SaveToLibrary;
   /** Absent where a row may not update the definition it came from. */
@@ -294,20 +301,28 @@ export function ActualActivities({
           type="button"
           disabled={atLimit}
           onClick={() =>
-            setRows((current) => [
-              ...current,
-              {
-                key: `added-${nextKey++}`,
-                planned: null,
-                personalActivityId: null,
-                fresh: true,
-                name: "",
-                sport: sessionSport.trim(),
-                done: true,
-                measurementMode: "unmeasured",
-                draft: emptyDraft("unmeasured"),
-              },
-            ])
+            setRows((current) => {
+              const sport = sessionSport.trim();
+              const mode = startingMode(
+                sport,
+                modes,
+                current.at(-1)?.measurementMode ?? null,
+              );
+              return [
+                ...current,
+                {
+                  key: `added-${nextKey++}`,
+                  planned: null,
+                  personalActivityId: null,
+                  fresh: true,
+                  name: "",
+                  sport,
+                  done: true,
+                  measurementMode: mode,
+                  draft: emptyDraft(mode),
+                },
+              ];
+            })
           }
         >
           Add activity

@@ -148,3 +148,42 @@
 .signOut button:hover {
   background: var(--sage);
 }
+
+/* After setup, while there is no roadmap: the one next step, as a card. */
+.nextStep {
+  width: 100%;
+  display: grid;
+  gap: 0.5rem;
+  margin: 1rem 0 0;
+  padding: 1.1rem 1rem;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+.nextStep h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.nextStep p {
+  margin: 0;
+  color: var(--moss);
+  line-height: 1.45;
+}
+
+.nextStep a {
+  min-height: 3.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-control);
+  background: var(--ember-dark);
+  color: var(--paper);
+  font-weight: 700;
+  text-decoration: none;
+}

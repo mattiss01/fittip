@@ -446,19 +446,7 @@
   text-underline-offset: 0.2rem;
 }
 
-/* ---- Also logged, and adding unplanned training ---- */
-
-.unplanned {
-  display: grid;
-  gap: 0.6rem;
-}
-
-.sectionLabel {
-  margin: 0.4rem 0 0;
-  color: var(--ledger-muted);
-  font: 500 0.66rem var(--font-mono);
-  text-transform: uppercase;
-}
+/* ---- Adding unplanned training ---- */
 
 .addAction {
   min-height: 3.4rem;

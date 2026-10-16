@@ -15,6 +15,7 @@ import {
   updateActivityInLibraryAction,
 } from "../plan/activities/actions";
 import { readLibraryOptions } from "../plan/activities/library-options";
+import { readMeasurementHistory } from "../plan/activities/measurement-history";
 import { readSavedSessionOptions } from "../plan/saved/session-options";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import type { LogPlannedActivityView } from "./actual-activities";
@@ -162,6 +163,7 @@ async function renderForm(
             }
             existing={existing}
             library={await readLibraryOptions()}
+            modes={await readMeasurementHistory()}
             saveActivityToLibrary={saveActivityToLibraryAction}
             updateActivityInLibrary={updateActivityInLibraryAction}
             unplannedOptions={
@@ -251,6 +253,7 @@ async function renderForm(
             planned={planned}
             existing={null}
             library={await readLibraryOptions()}
+            modes={await readMeasurementHistory()}
             saveActivityToLibrary={saveActivityToLibraryAction}
             updateActivityInLibrary={updateActivityInLibraryAction}
             unplannedOptions={await unplannedOptions(planned.localDate, today)}
@@ -270,9 +273,10 @@ async function renderForm(
       );
     }
 
-    const [savedSessions, library] = await Promise.all([
+    const [savedSessions, library, modes] = await Promise.all([
       readSavedSessionOptions(),
       readLibraryOptions(),
+      readMeasurementHistory(),
     ]);
     return (
       <>
@@ -286,6 +290,7 @@ async function renderForm(
           existing={null}
           savedSessions={savedSessions}
           library={library}
+          modes={modes}
           saveActivityToLibrary={saveActivityToLibraryAction}
           updateActivityInLibrary={updateActivityInLibraryAction}
           defaultDate={date > today ? today : date}
