@@ -80,6 +80,11 @@ Ordered by dependency. A lane is named where it is not the build lane.
       purpose (owner, 13 Oct 2026; ADR-026), to be decided once ticks have been
       used. It changes what the roadmap call is sent and takes prompt bytes:
       careful lane.
+- [~] **A roadmap proposal stays acceptable.** Careful lane (ADR-032). Owner,
+      16 Oct 2026: a proposal should always stay acceptable. Logs, memory and goals
+      changed after asking no longer refuse Accept; their sources stay recorded and are
+      not compared. Kept: a goal the roadmap names that is no longer active or achieved
+      (deleted, paused, abandoned), the page's head revision, and the lineage check.
 - [ ] **The Plan reads one week at a time.** Owner, 15 Oct 2026: its own item. Today it
       carries every week to the browser — 13 behind, 13 of recurring sessions and 13
       more of single ones — and re-reads all of it for every change, though it shows one.
