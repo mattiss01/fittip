@@ -13,29 +13,34 @@ proposal that read it impossible to accept.
 
 ## Context
 
-A roadmap proposal records the goals, memory items and logs the coach was given. Accepting
-it compared every one: a log edited or deleted since, a memory item edited or turned off,
-a goal archived, and the proposal was refused with "Review the proposal again". Reviewing
-again meant declining and asking again, which is a paid coach call, for a proposal the
-owner had read and wanted.
+A roadmap proposal records the sources the coach was given, and accepting it compared
+each with the record as it is now. The function had branches for goals, memory and logs,
+but the application records only the logs the coach was sent, so in practice one rule
+applied: a log edited or deleted after asking made the proposal impossible to accept. The
+owner was told to review it again, which meant declining and asking again, a paid coach
+call, for a proposal they had read and wanted.
 
 ## Decision
 
-1. **Nothing the owner changes after asking stops a proposal being accepted.** Logs,
-   memory items and goals the coach read are no longer compared at acceptance. They stay
-   recorded with the proposal as provenance.
-2. **One refusal is kept, on what the proposal names.** A goal the coach was given that a
-   phase or a milestone names, and that is no longer the owner's active or achieved goal
-   (deleted, paused or abandoned), refuses: a roadmap in force cannot point at it. The
-   owner is told so and declines it to ask again. Achieved stays allowed, as it was.
-3. **The roadmap checks stay**: the page's head revision, and that the roadmap the
-   proposal was made under is still the one in force.
+1. **A proposal stays acceptable.** Nothing the owner changes after asking (logs, memory,
+   goals) is compared at acceptance. The sources stay recorded with the proposal as
+   provenance.
+2. **A goal the proposal names that is no longer active does not refuse either; the
+   proposal says so.** Above the proposal, before Accept: "This roadmap names a goal no
+   longer active: Swim a mile. Accepting puts it in force as it is; you can edit it
+   afterwards." Paused, abandoned and achieved goals are named by title, deleted ones
+   counted. (The owner was first offered a refusal for this case; reading that the goal
+   branch had never fired, they chose to accept and be told.)
+3. **The roadmap checks stay**: the page's head revision, and that the roadmap the proposal
+   was made under is still the one in force.
 
 ## Consequences
 
-- A proposal accepted after an edit describes what the coach was told, not what is true
+- A proposal accepted after a change describes what the coach was told, not what is true
   now. The owner reads it before accepting; Edit roadmap (ADR-030) changes it after.
-- A source naming a record that is not the owner's is never read, so it neither verifies
-  nor blocks; nothing of another owner's is reached.
-- A hand-written or edited proposal's goals are checked when it is written, not here,
-  since only goals the coach was given are recorded as sources.
+- A roadmap in force may name a goal no longer active. The Plan's coach is already told
+  of such a phase (`goal_missing` in `roadmap-stale-reasons.ts`), as it is when a goal is
+  paused under a roadmap accepted earlier.
+- The refusal "Your goals, memory or training changed…" is gone from the app, with the
+  reason that carried it: nothing raises it any more.
+- A source naming a record that is not the owner's is never read, so it reaches nothing.
