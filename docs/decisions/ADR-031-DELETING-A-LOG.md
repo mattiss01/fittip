@@ -52,6 +52,10 @@ The owner asked on 7 October 2026 for a log to be deletable, which frees its ses
   answers "Your training history changed. Review the proposal again.", as it does when
   such a log is edited. Plan and fill proposals compare nothing (the open "A fill's
   sources are recorded and never checked" item).
+- What a proposal already holds stays as it was. Its rationale or suggested sessions may
+  reflect a log since deleted; nothing rewrites them, and a plan or fill proposal built
+  from one can still be accepted. Only the log's own content is gone, and from then on
+  no coach call reads it.
 - A deletion cannot be undone, by the owner or by us. The confirmation is the only guard,
   so it names every log that goes.
 - The names are those read when the edit page opened. Linking another planned session to
