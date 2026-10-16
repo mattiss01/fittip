@@ -1,9 +1,9 @@
 -- A roadmap proposal stays acceptable (owner, 16 Oct 2026).
 --
--- Proved here: sources changed after they travelled no longer block
--- acceptance, whatever their kind, and a goal the coach was given but the
--- roadmap does not name may go too; the one refusal left is a named goal that
--- is no longer the owner's active or achieved goal, and it changes nothing.
+-- Proved here: nothing changed after asking blocks acceptance, whatever the
+-- source's kind and even a goal the roadmap names that has since been
+-- deleted; the roadmap checks stay (the page's head revision, and the head the
+-- proposal was made under).
 
 begin;
 
@@ -95,73 +95,57 @@ insert into auth.users (id, email, raw_app_meta_data, raw_user_meta_data)
 values ('7e000000-0000-4000-8000-000000000001', 'stays-open@example.test', '{}', '{}');
 insert into public.profiles (user_id, timezone_name)
 values ('7e000000-0000-4000-8000-000000000001', 'UTC');
--- g1 is named and stays; g2 is named and is deleted; g3 is given to the coach
--- but named by nothing, and is deleted.
+-- g1 stays; g2 is named by the first proposal and then deleted.
 insert into public.goals (id, user_id, title, desired_outcome, sports, priority_tier, active_rank)
 values
   ('7e000000-0000-4000-8000-0000000000a1', '7e000000-0000-4000-8000-000000000001',
    'Run a 10k', 'Under 48 minutes.', array['Running'], 'core', 1),
   ('7e000000-0000-4000-8000-0000000000a2', '7e000000-0000-4000-8000-000000000001',
-   'Swim a mile', 'Without stopping.', array['Swimming'], 'core', 2),
-  ('7e000000-0000-4000-8000-0000000000a3', '7e000000-0000-4000-8000-000000000001',
-   'Stretch daily', 'Ten minutes a day.', array['Mobility'], 'supporting', 3);
+   'Swim a mile', 'Without stopping.', array['Swimming'], 'core', 2);
 
 set local role authenticated;
 select set_config(
   'request.jwt.claims',
   '{"sub":"7e000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 
--- Sources that no longer match anything: a log at a revision it never had, a
--- memory item that does not exist, and the goal named by nothing.
-select pg_temp.propose('changed-sources', 0,
-  '7e000000-0000-4000-8000-0000000000a1',
-  '[{"kind":"goal","recordId":"7e000000-0000-4000-8000-0000000000a1"},
-    {"kind":"goal","recordId":"7e000000-0000-4000-8000-0000000000a3"},
-    {"kind":"completion","recordId":"7e000000-0000-4000-8000-0000000000c1","revisionNumber":9},
-    {"kind":"memory","recordId":"7e000000-0000-4000-8000-0000000000d1","revisionNumber":2}]'::jsonb);
--- The same goal and no other change, but read under the roadmap before the
--- acceptance below: its page is stale.
-select pg_temp.propose('old-page', 0,
-  '7e000000-0000-4000-8000-0000000000a1',
-  '[{"kind":"goal","recordId":"7e000000-0000-4000-8000-0000000000a1"}]'::jsonb);
+-- Both under the empty roadmap: the first is accepted, which leaves the
+-- second read under a roadmap no longer in force.
 select pg_temp.propose('named-goal-gone', 0,
   '7e000000-0000-4000-8000-0000000000a2',
   '[{"kind":"goal","recordId":"7e000000-0000-4000-8000-0000000000a2"}]'::jsonb);
+select pg_temp.propose('made-under-empty', 0,
+  '7e000000-0000-4000-8000-0000000000a1', '[]'::jsonb);
 
 reset role;
-delete from public.goals where id in (
-  '7e000000-0000-4000-8000-0000000000a2', '7e000000-0000-4000-8000-0000000000a3');
+delete from public.goals where id = '7e000000-0000-4000-8000-0000000000a2';
 set local role authenticated;
 
+insert into acceptance
+select 'named-goal-gone', * from public.accept_roadmap_proposal(
+  (select proposal_id from finished where label = 'named-goal-gone'), 0);
+select is(
+  (select result from acceptance where label = 'named-goal-gone'), 'accepted',
+  'a proposal naming a goal since deleted is still accepted'
+);
+
+-- Sources that no longer match anything: a log at a revision it never had, a
+-- memory item and a goal that do not exist.
+select pg_temp.propose('changed-sources', 1,
+  '7e000000-0000-4000-8000-0000000000a1',
+  '[{"kind":"goal","recordId":"7e000000-0000-4000-8000-0000000000a2"},
+    {"kind":"completion","recordId":"7e000000-0000-4000-8000-0000000000c1","revisionNumber":9},
+    {"kind":"memory","recordId":"7e000000-0000-4000-8000-0000000000d1","revisionNumber":2}]'::jsonb);
 select ok(
   (select count(*) from public.roadmap_proposal_sources
-   where proposal_id = (select proposal_id from finished where label = 'changed-sources')) = 4,
-  'the proposal carries all four sources, so acceptance has them to ignore'
+   where proposal_id = (select proposal_id from finished where label = 'changed-sources')) = 3,
+  'the proposal carries all three sources, so acceptance has them to ignore'
 );
-
--- The one refusal left -------------------------------------------------------
-
-select throws_ok(
-  format($$select * from public.accept_roadmap_proposal(%L::uuid, 0)$$,
-    (select proposal_id from finished where label = 'named-goal-gone')),
-  'PT409', 'Your goals changed. A goal this proposal names is no longer active.',
-  'a proposal naming a goal since deleted cannot be put in force'
-);
-select is(
-  (select count(*)::integer from public.roadmap_versions
-   where user_id = '7e000000-0000-4000-8000-000000000001'),
-  0,
-  'and the refusal put nothing in force'
-);
-
--- Everything else stays acceptable --------------------------------------------
-
 insert into acceptance
 select 'changed-sources', * from public.accept_roadmap_proposal(
-  (select proposal_id from finished where label = 'changed-sources'), 0);
+  (select proposal_id from finished where label = 'changed-sources'), 1);
 select is(
   (select result from acceptance where label = 'changed-sources'), 'accepted',
-  'changed logs and memory, and a deleted goal it does not name, do not block'
+  'changed logs, memory and goals do not block'
 );
 select is(
   (select current_version_id from public.roadmap_heads
@@ -170,13 +154,19 @@ select is(
   'the accepted proposal is the roadmap in force'
 );
 
--- The kept checks still hold ---------------------------------------------------
+-- The roadmap checks stay ----------------------------------------------------
 
 select throws_ok(
   format($$select * from public.accept_roadmap_proposal(%L::uuid, 0)$$,
-    (select proposal_id from finished where label = 'old-page')),
+    (select proposal_id from finished where label = 'made-under-empty')),
   'PT409', 'Your roadmap changed. Review the proposal again.',
   'a page that read an older roadmap is still refused'
+);
+select throws_ok(
+  format($$select * from public.accept_roadmap_proposal(%L::uuid, 2)$$,
+    (select proposal_id from finished where label = 'made-under-empty')),
+  'PT409', 'Your roadmap changed since this was proposed. Decline it and ask again.',
+  'a proposal made under a roadmap no longer in force is still refused'
 );
 select ok(
   (select prosecdef and proconfig @> array['search_path=""']

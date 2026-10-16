@@ -1,24 +1,24 @@
 -- A roadmap proposal stays acceptable (owner, 16 Oct 2026).
 --
--- `accept_roadmap_proposal` refused a proposal whose sources had changed since
--- the coach read them: a log edited or deleted (ADR-031), a memory item
--- edited or disabled, a goal archived. The owner decided that a proposal
--- should stay acceptable whatever changed after it was asked for. The sources
--- stay recorded and are no longer compared.
+-- `accept_roadmap_proposal` compared every source a proposal recorded with the
+-- record as it is now. The application records only the logs the coach was
+-- sent, so in practice a log edited or deleted (ADR-031) after asking made the
+-- proposal impossible to accept; the goal and memory branches never ran. The
+-- owner decided that a proposal stays acceptable whatever changed after it was
+-- asked for: the sources stay recorded and are no longer compared.
 --
--- One refusal is kept, on what the proposal names rather than what it read: a
--- goal the coach was given and a phase or milestone names, which is no longer
--- the owner's active or achieved goal (deleted, paused or abandoned), since a
--- roadmap in force cannot point at it. Achieved stays allowed, as it was; it
--- is the rule the source loop applied to goals.
+-- Goals are no exception, on the owner's word: one the proposal names that has
+-- since been paused, abandoned or deleted does not refuse. The proposal says
+-- so before Accept (the roadmap page), and the Plan's coach is already told of
+-- a phase whose goal is missing (`roadmap-stale-reasons.ts`).
 --
 -- Unchanged: the head revision the page read, and the lineage check that the
 -- roadmap the proposal was made under is still in force (ADR-028 amendment).
 --
 -- Structurally: re-emitted from `20261013202639_roadmap_proposal_lineage`
--- (the latest migration to define it) with the source loop replaced by the
--- goal check above and its loop variable removed. Same signature, so the
--- grants below restate what `create or replace` keeps.
+-- (the latest migration to define it) with the source loop and its loop
+-- variable removed. Same signature, so the grants below restate what
+-- `create or replace` keeps.
 
 CREATE OR REPLACE FUNCTION public.accept_roadmap_proposal(p_proposal_id uuid, p_expected_head_revision bigint)
  RETURNS public.roadmap_acceptance_receipt
@@ -100,47 +100,10 @@ begin
       message = 'That proposal has already been decided.';
   end if;
 
-  -- What the proposal names, not what it was made from (owner, 16 Oct 2026).
-  -- A log, memory item or goal edited or deleted since the coach read it no
-  -- longer blocks: the sources stay recorded as provenance and are not
-  -- compared. The one refusal left is a goal the roadmap itself names, in a
-  -- phase's attention or a milestone's "Counts toward", that is no longer the
-  -- owner's active or achieved goal: a roadmap in force cannot point at one
-  -- deleted, paused or abandoned.
-  if exists (
-    select 1
-    from pg_catalog.jsonb_array_elements(
-      coalesce(v_proposal.content->'phases', '[]'::jsonb)) as phase(value)
-    cross join lateral (
-      select attention.value->>'goalId' as goal_id
-      from pg_catalog.jsonb_array_elements(
-        coalesce(phase.value->'goalAttention', '[]'::jsonb)) as attention(value)
-      union all
-      select named.value #>> '{}'
-      from pg_catalog.jsonb_array_elements(
-        coalesce(phase.value->'milestones', '[]'::jsonb)) as milestone(value)
-      cross join lateral pg_catalog.jsonb_array_elements(
-        coalesce(milestone.value->'goalIds', '[]'::jsonb)) as named(value)
-    ) as named_goal
-    -- Among the goals the coach was given, which a proposal's goals are by
-    -- construction (the validator admits only those); a hand-written roadmap
-    -- checks its goals when it is written.
-    join public.roadmap_proposal_sources source
-      on source.proposal_id = v_proposal.id
-     and source.user_id = v_user_id
-     and source.source_kind = 'goal'
-     and source.record_id::text = pg_catalog.lower(named_goal.goal_id)
-    where not exists (
-      select 1 from public.goals goal
-      where goal.id::text = pg_catalog.lower(named_goal.goal_id)
-        and goal.user_id = v_user_id
-        and goal.status in ('active', 'achieved')
-    )
-  ) then
-    raise exception using
-      errcode = 'PT409',
-      message = 'Your goals changed. A goal this proposal names is no longer active.';
-  end if;
+  -- A proposal stays acceptable (owner, 16 Oct 2026): nothing the owner
+  -- changed after asking is compared. Its sources stay recorded as
+  -- provenance. A goal it names that is no longer active is shown on the
+  -- proposal before Accept, and accepting puts the roadmap in force as it is.
 
   select * into v_head
   from public.roadmap_heads
