@@ -182,3 +182,14 @@ written.
 - **Keep writing the setup as memory notes.** That is what stopped on 6 October: a note
   the owner never wrote appeared in their memory. A field with its own allocation is read
   without pretending to be something they said.
+
+## Amended, 16 October 2026: the plan's logs at 10,200 bytes
+
+Decision 12 gave the plan's logs 9,300 bytes where the owner had named 10,200, because the
+900 would have taken the plan past the 15,000 tokens of the day. Since ADR-028 the ceiling is
+18,000 and every call already holds it, so the owner's number costs nothing more: the logs
+get 10,200 and the whole training history 15,400, as the roadmap's do, so the miss list keeps
+its room. The plan's total is 52,100 bytes, still the sum of its parts and the envelope, and
+its worst case 15,216 tokens of 18,000. Twenty logs fit at the corpus's largest of 501 bytes,
+and fourteen, not thirteen, as long as a note may be. The plan is no longer sized to 15,000
+tokens; nothing else about it changes.

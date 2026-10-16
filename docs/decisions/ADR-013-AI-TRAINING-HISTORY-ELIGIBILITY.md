@@ -510,6 +510,8 @@ coach reads of the plan:
 
 The plan operation's completion sub-budget (decision 1's byte trim) is 9,300
 bytes, where it was 5,800, inside 14,500 for the whole of training history.
+Since 16 October 2026 it is 10,200 inside 15,400, as the roadmap's is (ADR-023,
+amended that day).
 
 ## Related decision made in the same session
 
