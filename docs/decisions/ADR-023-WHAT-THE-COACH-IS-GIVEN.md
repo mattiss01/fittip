@@ -134,7 +134,7 @@ Characters, at four to a token, with every source at its allocation:
 | Call | Before 9 Oct | After decisions 1 to 5 | After all of it |
 | --- | --- | --- | --- |
 | Roadmap | 39,764 | 51,964 (12,991 tokens) | 56,714 (14,179), as built |
-| Plan | 39,964 | 52,764 (13,191) | 59,964 (14,991), as built |
+| Plan | 39,964 | 52,764 (13,191) | 59,964 (14,991), as built until 16 Oct (see the amendment) |
 | Fill | 39,464 | 48,664 (12,166) | 59,714 (14,929), as built |
 
 These are the allocations added up with the prompt's budget, not a recording of a

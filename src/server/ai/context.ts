@@ -305,8 +305,8 @@ export type CoachAIContextLimits = {
  * basics (200 bytes), the training setup (4,600) and each active goal's
  * desired outcome (goals 4,000 to 10,000 for the roadmap, 8,000 otherwise).
  * The shared prompt grew by the three paragraphs that describe them, and
- * `maxInputTokens` went to 15,000, and to 18,000 on 13 October 2026 for the
- * roadmap call alone (ADR-028). The arithmetic the comments below give is
+ * `maxInputTokens` went to 15,000, and to 18,000 on 13 October 2026 (ADR-028):
+ * one ceiling for every call, raised for the roadmap call's sake. The arithmetic the comments below give is
  * from before those days; this is what holds now, and `context.test.ts` and
  * `openai-prompt.test.ts` assert it:
  *
