@@ -87,7 +87,8 @@ Ordered by dependency. A lane is named where it is not the build lane.
       training that planned sessions were logged "Replaced" by deletes those logs too,
       and deleting a Replaced log alone leaves what it pointed at. One more operation of
       `apply_completion_change`, answering to the revision read; no grant changes.
-      Coach proposals keep the deleted log's id among their sources and nothing more.
+      Coach proposals keep the deleted log's id among their sources; an open roadmap
+      proposal that read it can then no longer be accepted, as after an edit.
 - [ ] **The Plan reads one week at a time.** Owner, 15 Oct 2026: its own item. Today it
       carries every week to the browser — 13 behind, 13 of recurring sessions and 13
       more of single ones — and re-reads all of it for every change, though it shows one.

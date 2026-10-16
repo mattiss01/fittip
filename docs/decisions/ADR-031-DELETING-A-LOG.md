@@ -47,10 +47,18 @@ The owner asked on 7 October 2026 for a log to be deletable, which frees its ses
 - The product invariant reads: plans, proposals and completions are separate records,
   and a log is removed only when the owner deletes it, never as a side effect.
 - Coach proposals record the logs they read by id (`*_proposal_sources`). Those ids stay
-  and point at nothing; nothing reads them back as content, and no check compares them
-  (the open "A fill's sources are recorded and never checked" item).
+  and point at nothing; nothing reads them back as content. A roadmap proposal still open
+  when a log it read is deleted can no longer be accepted: `accept_roadmap_proposal`
+  answers "Your training history changed. Review the proposal again.", as it does when
+  such a log is edited. Plan and fill proposals compare nothing (the open "A fill's
+  sources are recorded and never checked" item).
 - A deletion cannot be undone, by the owner or by us. The confirmation is the only guard,
   so it names every log that goes.
+- The names are those read when the edit page opened. Linking another planned session to
+  the same training does not change that log's revision, so a Replaced log linked in a
+  second tab after the dialog was read is deleted with it unnamed. It needs the same owner
+  in two tabs at once; making the link bump the revision would close it, at the cost of
+  an edit of that training open elsewhere being refused.
 
 ## Alternatives considered
 
