@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { SignOutButton } from "@/components/sign-out-button";
 import { createServerUserClient } from "@/lib/supabase/server-user-client";
+import { readRoadmapMissing } from "@/server/roadmap/roadmap-phases";
 import {
   ProfileAuthenticationError,
   ProfileRepository,
@@ -48,6 +49,8 @@ export default async function YouPage({
     throw error;
   }
   if (!profile) redirect("/");
+  // Only straight after setup, and only while there is none to look at.
+  const offerRoadmap = setupNote !== null && (await readRoadmapMissing());
 
   return (
     <main className={homeStyles.shell} id="main-content">
@@ -66,6 +69,21 @@ export default async function YouPage({
           {setupNote}
         </p>
       )}
+      {/* The step after setup, offered rather than made part of it (owner,
+          16 Oct 2026): a roadmap is asked of the coach or written by hand on
+          its own page, and until there is one the Plan's Roadmap chip keeps
+          a dot. */}
+      {offerRoadmap ? (
+        <section className={styles.nextStep} aria-labelledby="next-roadmap">
+          <h2 id="next-roadmap">Next: your roadmap</h2>
+          <p>
+            A roadmap sets out the phases toward your goals, and Plan with Coach
+            plans your weeks from it. Ask the coach for one, or write it
+            yourself.
+          </p>
+          <Link href="/home/plan/roadmap">Create your roadmap</Link>
+        </section>
+      ) : null}
       <ul className={styles.places}>
         {/* Guided setup is listed while it is still to be done, first and
             with the dot the navigation shows for it; once finished it is

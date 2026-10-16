@@ -730,6 +730,35 @@
   margin-top: 0.6rem;
 }
 
+/*
+ * Once saved, the receipt stands alone in the middle of the screen (owner,
+ * 16 Oct 2026). The line naming what was being logged has done its job, so
+ * it is hidden from sight, and the shell's own padding keeps the card clear
+ * of the navigation below.
+ */
+.page:has(> [data-log-receipt]) {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100dvh;
+}
+
+/* Out of sight, not out of the page: it holds the page's only h1. */
+.page:has(> [data-log-receipt]) > .sourceCard {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.page > .receipt {
+  width: 100%;
+  margin-top: 0;
+  text-align: center;
+}
+
 .backLink {
   width: fit-content;
   min-height: 2.75rem;

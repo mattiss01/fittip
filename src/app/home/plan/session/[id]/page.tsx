@@ -7,6 +7,7 @@ import {
   updateActivityInLibraryAction,
 } from "../../activities/actions";
 import { readLibraryOptions } from "../../activities/library-options";
+import { readMeasurementHistory } from "../../activities/measurement-history";
 import { toFillProposal } from "../../fill/open-proposals";
 import styles from "../../plan.module.css";
 import {
@@ -27,6 +28,7 @@ import {
   ActivityLibraryProvider,
   type LibraryActivityOption,
 } from "@/components/training/activity-editor";
+import type { ModeBySport } from "@/lib/training/measurement-default";
 import { createCompletionLog } from "@/server/repositories/completion-log-repository";
 import { createProfileRepository } from "@/server/repositories/profile-repository";
 import { createRollingPlan } from "@/server/repositories/rolling-plan-repository";
@@ -120,17 +122,20 @@ async function SessionRead({
   let revision = 0;
   let series: RollingPlanSeries[] = [];
   let library: LibraryActivityOption[] = [];
+  let modes: ModeBySport = {};
   let cancellation: SessionCancellationView | null = null;
   try {
     const plan = await createRollingPlan();
-    const [slice, allSeries, options] = await Promise.all([
+    const [slice, allSeries, options, history] = await Promise.all([
       plan.getPlanSlice(today, lastPlaceableDate),
       plan.listSeries(),
       readLibraryOptions(),
+      readMeasurementHistory(),
     ]);
     revision = slice.revision;
     series = allSeries;
     library = options;
+    modes = history;
     let found = slice.sessions.find((candidate) => candidate.id === id);
     // Today can open a session from a day behind the window. That one is
     // history: it is read here to be shown and logged, and every plan verb
@@ -187,6 +192,7 @@ async function SessionRead({
   return (
     <ActivityLibraryProvider
       activities={library}
+      modes={modes}
       saveToLibrary={saveActivityToLibraryAction}
       updateInLibrary={updateActivityInLibraryAction}
     >

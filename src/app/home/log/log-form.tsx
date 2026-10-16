@@ -41,6 +41,7 @@ import {
   SavedSessionPicker,
   type SavedSessionOption,
 } from "@/components/training/saved-session-picker";
+import type { ModeBySport } from "@/lib/training/measurement-default";
 
 /** The planned session this log answers to, when there is one. */
 export type LogPlannedView = {
@@ -123,6 +124,8 @@ type Props = {
   savedSessions?: SavedSessionOption[];
   /** The owner's activity library, for "Add activity from library" on any row list. */
   library?: LibraryActivityOption[];
+  /** How each sport was last measured, which an added activity starts as. */
+  modes?: ModeBySport;
   /** Saves one row as a library definition; absent, no row offers it. */
   saveActivityToLibrary?: SaveActivityToLibrary;
   /** Updates the definition a row came from; absent, no row offers it. */
@@ -201,6 +204,7 @@ export function LogForm({
   unplannedOptions = [],
   savedSessions = [],
   library = [],
+  modes = {},
   saveActivityToLibrary,
   updateActivityInLibrary,
 }: Props) {
@@ -817,8 +821,8 @@ export function LogForm({
             options={unplannedOptions}
             linkedId={existing?.replacedById ?? null}
             legacyText={existing?.replacementDescription ?? null}
-            sessionSport={planned?.sport ?? ""}
             library={library}
+            modes={modes}
             saveToLibrary={saveActivityToLibrary}
             updateInLibrary={updateActivityInLibrary}
           />
@@ -985,11 +989,12 @@ export function LogForm({
           recorded={existing?.activities}
           starting={startingSession?.activities}
           library={library}
+          modes={modes}
           saveToLibrary={saveActivityToLibrary}
           updateInLibrary={updateActivityInLibrary}
-          sessionSport={
-            startingSession?.sport ?? planned?.sport ?? existing?.sport ?? ""
-          }
+          // The log's own Sport, answered on the first question: an unplanned
+          // log has no plan or saved session to take one from.
+          sessionSport={sport}
           inactive={!activitiesHappened}
         />
         <button className={styles.primary} type="button" onClick={next}>
@@ -1239,16 +1244,16 @@ function ReplacedBy({
   options,
   linkedId,
   legacyText,
-  sessionSport,
   library,
+  modes,
   saveToLibrary,
   updateInLibrary,
 }: {
   options: LogUnplannedOption[];
   linkedId: string | null;
   legacyText: string | null;
-  sessionSport: string;
   library: LibraryActivityOption[];
+  modes: ModeBySport;
   saveToLibrary?: SaveActivityToLibrary;
   updateInLibrary?: UpdateInLibrary;
 }) {
@@ -1257,6 +1262,9 @@ function ReplacedBy({
       ? "existing"
       : "new",
   );
+  // What was done instead is its own training, so its activities take its
+  // sport, not the planned session's.
+  const [sport, setSport] = useState("");
   return (
     <fieldset className={styles.activities} data-log-replaced-by>
       <legend>What you did instead</legend>
@@ -1335,6 +1343,8 @@ function ReplacedBy({
               id="log-replacement-sport"
               name="replacement.sport"
               required
+              value={sport}
+              onChange={setSport}
             />
           </div>
           <div className={styles.fieldPair}>
@@ -1369,9 +1379,10 @@ function ReplacedBy({
             name="replacement.activities"
             activities={[]}
             library={library}
+            modes={modes}
             saveToLibrary={saveToLibrary}
             updateInLibrary={updateInLibrary}
-            sessionSport={sessionSport}
+            sessionSport={sport}
           />
         </>
       )}

@@ -124,12 +124,36 @@ describe("ActualActivities", () => {
         position: 1,
         name: "Farmer carry",
         sport: "Strength",
-        measurementMode: "unmeasured",
+        // Measured like the row above it, with nothing in the history.
+        measurementMode: "sets_reps_load",
       }),
     ]);
     expect(
       within(row("Farmer carry")).getByText("Not on the plan"),
     ).toBeTruthy();
+  });
+
+  it("starts an added activity as its sport was last measured", () => {
+    render(
+      <ActualActivities
+        activities={[SQUAT]}
+        sessionSport="Running"
+        modes={{ running: "time_distance_pace" }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Add activity" }));
+    fireEvent.change(screen.getByLabelText("Activity name"), {
+      target: { value: "Cool-down jog" },
+    });
+
+    expect(submitted()[1]).toEqual(
+      expect.objectContaining({
+        name: "Cool-down jog",
+        sport: "Running",
+        measurementMode: "time_distance_pace",
+      }),
+    );
   });
 
   it("sends nothing while inactive, and keeps every change for when it is not", () => {

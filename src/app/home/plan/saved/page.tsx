@@ -10,12 +10,14 @@ import {
   updateActivityInLibraryAction,
 } from "../activities/actions";
 import { readLibraryOptions } from "../activities/library-options";
+import { readMeasurementHistory } from "../activities/measurement-history";
 import homeStyles from "../../home.module.css";
 import {
   ActivityLibraryProvider,
   type LibraryActivityOption,
 } from "@/components/training/activity-editor";
 import { toActivityValue } from "@/lib/training/activity-value";
+import type { ModeBySport } from "@/lib/training/measurement-default";
 import { PersonalActivityAuthenticationError } from "@/server/repositories/personal-activity-repository";
 import {
   createProfileRepository,
@@ -37,16 +39,19 @@ export default async function SavedSessionsPage() {
   let timezoneName: string | null;
   let saved: SavedSession[];
   let activities: LibraryActivityOption[];
+  let modes: ModeBySport;
   try {
     // The reads are independent, so none waits on another.
-    const [profile, library, options] = await Promise.all([
+    const [profile, library, options, history] = await Promise.all([
       (await createProfileRepository()).getCurrentProfile(),
       (await createSavedSessionLibrary()).list(),
       readLibraryOptions(),
+      readMeasurementHistory(),
     ]);
     timezoneName = profile?.timezoneName ?? null;
     saved = byTitle(library);
     activities = options;
+    modes = history;
   } catch (error) {
     redirectOnAuthError(error);
     throw error;
@@ -68,6 +73,7 @@ export default async function SavedSessionsPage() {
       />
       <ActivityLibraryProvider
         activities={activities}
+        modes={modes}
         saveToLibrary={saveActivityToLibraryAction}
         updateInLibrary={updateActivityInLibraryAction}
       >

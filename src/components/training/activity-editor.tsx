@@ -29,6 +29,10 @@ import {
 } from "@/lib/training/measurement";
 import { ACTIVITY_COPY } from "@/lib/training/measurement-copy";
 import {
+  startingMode,
+  type ModeBySport,
+} from "@/lib/training/measurement-default";
+import {
   buildMeasurement,
   draftFromMeasurement,
   emptyDraft,
@@ -88,6 +92,8 @@ export type UpdateInLibrary = (
 
 type ActivityLibrary = {
   activities: readonly LibraryActivityOption[];
+  /** How each sport was last measured, which an added row starts as. */
+  modes?: ModeBySport;
   saveToLibrary?: SaveToLibrary;
   updateInLibrary?: UpdateInLibrary;
 };
@@ -104,11 +110,13 @@ const ActivityLibraryContext = createContext<ActivityLibrary>({
  */
 export function ActivityLibraryProvider({
   activities,
+  modes,
   saveToLibrary,
   updateInLibrary,
   children,
 }: {
   activities: readonly LibraryActivityOption[];
+  modes?: ModeBySport;
   /** Absent where a surface offers no way to save a row into the library. */
   saveToLibrary?: SaveToLibrary;
   /** Absent where a surface offers no way to update a library definition. */
@@ -117,7 +125,7 @@ export function ActivityLibraryProvider({
 }) {
   return (
     <ActivityLibraryContext
-      value={{ activities, saveToLibrary, updateInLibrary }}
+      value={{ activities, modes, saveToLibrary, updateInLibrary }}
     >
       {children}
     </ActivityLibraryContext>
@@ -182,6 +190,7 @@ export function ActivityEditor({
   const [dragging, setDragging] = useState<string | null>(null);
   const {
     activities: library,
+    modes,
     saveToLibrary,
     updateInLibrary,
   } = useContext(ActivityLibraryContext);
@@ -339,19 +348,27 @@ export function ActivityEditor({
           type="button"
           disabled={atLimit}
           onClick={() =>
-            setRows((current) => [
-              ...current,
-              {
-                key: `added-${nextKey++}`,
-                personalActivityId: null,
-                name: "",
-                sport: (sessionSport ?? "").trim(),
-                instructions: null,
-                measurementMode: "unmeasured",
-                target: null,
-                draft: emptyDraft("unmeasured"),
-              },
-            ])
+            setRows((current) => {
+              const sport = (sessionSport ?? "").trim();
+              const mode = startingMode(
+                sport,
+                modes ?? {},
+                current.at(-1)?.measurementMode ?? null,
+              );
+              return [
+                ...current,
+                {
+                  key: `added-${nextKey++}`,
+                  personalActivityId: null,
+                  name: "",
+                  sport,
+                  instructions: null,
+                  measurementMode: mode,
+                  target: null,
+                  draft: emptyDraft(mode),
+                },
+              ];
+            })
           }
         >
           {ACTIVITY_COPY.add}

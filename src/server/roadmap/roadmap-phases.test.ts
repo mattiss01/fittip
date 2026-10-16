@@ -21,7 +21,7 @@ vi.mock("@/server/repositories/roadmap-repository", async () => {
 
 import {
   readCurrentRoadmapPhases,
-  readRoadmapReviewDue,
+  readRoadmapAttention,
 } from "./roadmap-phases";
 
 import {
@@ -77,7 +77,7 @@ describe("readCurrentRoadmapPhases", () => {
 });
 
 // ADR-027: the one thing the Plan says about a review, as a dot.
-describe("readRoadmapReviewDue", () => {
+describe("readRoadmapAttention", () => {
   const version = {
     id: "7e190000-0000-4000-8000-000000000001",
     content: {
@@ -92,31 +92,35 @@ describe("readRoadmapReviewDue", () => {
   });
 
   it("is due from a phase's last day, and not the day before", async () => {
-    await expect(readRoadmapReviewDue("2026-10-30")).resolves.toBe(false);
-    await expect(readRoadmapReviewDue("2026-10-31")).resolves.toBe(true);
+    await expect(readRoadmapAttention("2026-10-30")).resolves.toBe(null);
+    await expect(readRoadmapAttention("2026-10-31")).resolves.toBe(
+      "review_due",
+    );
     expect(getReviewedThroughMock).toHaveBeenCalledWith(version.id);
   });
 
   it("is not due once that phase is marked reviewed, until the next ends", async () => {
     getReviewedThroughMock.mockResolvedValue(0);
 
-    await expect(readRoadmapReviewDue("2026-11-15")).resolves.toBe(false);
-    await expect(readRoadmapReviewDue("2026-12-31")).resolves.toBe(true);
+    await expect(readRoadmapAttention("2026-11-15")).resolves.toBe(null);
+    await expect(readRoadmapAttention("2026-12-31")).resolves.toBe(
+      "review_due",
+    );
   });
 
-  it("is not due with no roadmap, and asks for no mark", async () => {
+  it("says a roadmap is missing when there is none, and asks for no mark", async () => {
     getCurrentVersionMock.mockResolvedValue(null);
 
-    await expect(readRoadmapReviewDue("2026-12-31")).resolves.toBe(false);
+    await expect(readRoadmapAttention("2026-12-31")).resolves.toBe("missing");
     expect(getReviewedThroughMock).not.toHaveBeenCalled();
   });
 
   it("leaves the dot off when the roadmap cannot be read, and lets a lost sign-in through", async () => {
     getReviewedThroughMock.mockRejectedValue(new RoadmapPersistenceError());
-    await expect(readRoadmapReviewDue("2026-12-31")).resolves.toBe(false);
+    await expect(readRoadmapAttention("2026-12-31")).resolves.toBe(null);
 
     getCurrentVersionMock.mockRejectedValue(new RoadmapAuthenticationError());
-    await expect(readRoadmapReviewDue("2026-12-31")).rejects.toBeInstanceOf(
+    await expect(readRoadmapAttention("2026-12-31")).rejects.toBeInstanceOf(
       RoadmapAuthenticationError,
     );
   });
