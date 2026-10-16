@@ -663,9 +663,9 @@ describe("the production coaching context source", () => {
     ).not.toContain(records[20]?.actualLocalDate);
   });
 
-  it("names fewer sources for the plan operation, whose byte budget is smaller", async () => {
-    // 9,700 bytes against the roadmap's 10,200 since ADR-023: one log apart
-    // when each is as long as a note allows.
+  it("names as many sources for the plan operation as for the roadmap, whose log budget it shares", async () => {
+    // 10,200 bytes for both since 16 Oct 2026; the plan's 9,300 before that
+    // left it a log short when each was as long as a note allows.
     const long = "x".repeat(400);
     const records = Array.from({ length: 20 }, (_, index) =>
       completion({
@@ -679,7 +679,8 @@ describe("the production coaching context source", () => {
     const roadmap = await source("create_roadmap").load(OWNER);
     const plan = await source("create_seven_day_plan").load(OWNER);
 
-    expect(roadmap.sources?.length).toBeGreaterThan(plan.sources?.length ?? 0);
+    expect(plan.sources?.length).toBe(roadmap.sources?.length);
+    expect(plan.sources?.length).toBeLessThan(records.length);
     // Each still matches what its own operation's assembly transmits.
     for (const [operation, loaded] of [
       ["create_roadmap", roadmap],

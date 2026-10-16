@@ -72,7 +72,8 @@ none of this has been spent.
   the declined proposal's outline and the feedback, as for any proposal. Whether it should
   is its own question, and would need the request to record that it was a change.
 - "The plan call's logs: 9,300 bytes or the 10,200 the owner named" is no longer a spend
-  question: the plan call has 3,000 tokens of room under the new ceiling.
+  question: the plan call has 3,000 tokens of room under the new ceiling. Done on
+  16 October 2026 (ADR-023, amended that day).
 - The prompt was verified against the built-in example coach only, which ignores the
   note. The first live change request is untested until there is a provider key.
 

@@ -46,6 +46,11 @@ const STATIC_PREFIX_BUDGET = 7_800;
  * decision 12, so this is the whole ceiling again, by construction this time:
  * a longer plan prompt has to take its bytes from a source.
  *
+ * On 16 October 2026 the plan's logs took the 10,200 bytes the owner had
+ * named, under the 18,000 every call already holds since ADR-028:
+ *
+ *   8,700 + 64 + 52,100 = 60,864   ceil(60,864 / 4) = 15,216  vs  18,000
+ *
  * The assertions below read `bytes.total` rather than a literal, so they bind
  * whatever the allocation becomes; this comment is the one thing that has to
  * be kept honest by hand.
@@ -87,8 +92,9 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
 
     // 14,179 until ADR-028: a request to change the roadmap sends it whole.
     expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(17_891);
+    // 14,991 until the plan's logs took 10,200 bytes (16 Oct 2026).
     expect(tokens("create_seven_day_plan", PLAN_STATIC_PREFIX_BUDGET)).toBe(
-      14_991,
+      15_216,
     );
     expect(
       tokens(

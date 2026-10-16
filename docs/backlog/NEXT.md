@@ -48,11 +48,6 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 **Coach and records.**
 
-- [ ] **The plan call's logs: 9,300 bytes or the 10,200 the owner named.** The
-      plan call was sized to 15,000 tokens (ADR-023 decision 12), so its logs got
-      9,300. Since ADR-028 the ceiling is 18,000 and every call already holds
-      7,200 micro-USD, so 10,200 costs nothing more: it is a byte limit and its
-      tests. The owner named the number; build lane but for the AI boundary.
 - [ ] **A fill's sources are recorded and never checked.** A suggestion names the
       logs, library entries and saved sessions it was built from, and since ADR-023
       the logs whose flags it was sent. Nothing compares them, so a flag corrected
