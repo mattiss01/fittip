@@ -564,7 +564,7 @@ describe("SessionPage", () => {
 
     expect(screen.getByRole("link", { name: "Edit log" })).toHaveAttribute(
       "href",
-      "/home/log?completion=7f000000-0000-4000-8000-0000000000c2",
+      "/home/log?completion=7f000000-0000-4000-8000-0000000000c2&from=session",
     );
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
     openMenu();
@@ -591,7 +591,7 @@ describe("SessionPage", () => {
 
     expect(screen.getByRole("link", { name: "Edit log" })).toHaveAttribute(
       "href",
-      "/home/log?completion=7f000000-0000-4000-8000-0000000000c3",
+      "/home/log?completion=7f000000-0000-4000-8000-0000000000c3&from=session",
     );
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
     openMenu();

@@ -201,8 +201,8 @@ export async function logCompletionAction(
  * Deletes a log for good (ADR-031): its activities, and any planned log
  * "Replaced" by it, go with it. It answers to the revision the owner read
  * before confirming, so a log changed or deleted elsewhere since is refused
- * rather than deleted unseen. On success it leaves for the day the log was on,
- * which says it was deleted; there is nothing left here to show.
+ * rather than deleted unseen. On success it leaves for where the log was
+ * opened from, which says it was deleted; there is nothing left here to show.
  */
 export async function deleteLogAction(
   previous: DeleteLogState,
@@ -216,10 +216,7 @@ export async function deleteLogAction(
     message,
     submission: previous.submission + 1,
   });
-  const day = formData.get("returnDate");
-  // Only a date goes into the address it leaves for; anything else is today.
-  const date =
-    typeof day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
+  const leaveTo = deleteDestination(formData.get("leaveTo"));
   try {
     await (
       await createCompletionLog()
@@ -252,11 +249,25 @@ export async function deleteLogAction(
   revalidatePath("/home/today");
   revalidatePath("/home/plan", "layout");
   revalidatePath("/home/progress", "layout");
-  redirect(
-    date === null
-      ? "/home/today?log=deleted"
-      : `/home/today?date=${date}&log=deleted`,
-  );
+  redirect(`${leaveTo}${leaveTo.includes("?") ? "&" : "?"}log=deleted`);
+}
+
+const DELETE_DESTINATIONS = [
+  /^\/home\/today\?date=\d{4}-\d{2}-\d{2}$/,
+  /^\/home\/progress$/,
+  /^\/home\/plan\/session\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+];
+
+/**
+ * Back where the log was opened from (owner, 16 Oct 2026), and only to one of
+ * these three shapes: the day on Today, Progress, or a Plan session. Anything
+ * else, or nothing, is Today.
+ */
+function deleteDestination(value: FormDataEntryValue | null): string {
+  return typeof value === "string" &&
+    DELETE_DESTINATIONS.some((shape) => shape.test(value))
+    ? value
+    : "/home/today";
 }
 
 /**

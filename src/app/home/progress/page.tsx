@@ -7,6 +7,7 @@ import type { ProgressCompletionView } from "./progress-record";
 import styles from "./progress.module.css";
 
 import homeStyles from "../home.module.css";
+import { LogDeletedNote } from "@/components/home/log-deleted-note";
 import { isoDateInTimezone } from "@/lib/date/local-date";
 import {
   replacedByLabel,
@@ -25,7 +26,11 @@ import {
 export const dynamic = "force-dynamic";
 
 type Props = {
-  searchParams: Promise<{ month?: string | string[] }>;
+  searchParams: Promise<{
+    month?: string | string[];
+    /** "deleted" after a log opened from here was deleted (ADR-031). */
+    log?: string | string[];
+  }>;
 };
 
 /**
@@ -43,7 +48,8 @@ type Props = {
  * completion's own stored snapshot instead.
  */
 export default async function ProgressPage({ searchParams }: Props) {
-  const requested = readRequestedMonth((await searchParams).month);
+  const query = await searchParams;
+  const requested = readRequestedMonth(query.month);
 
   let profile;
   try {
@@ -65,6 +71,7 @@ export default async function ProgressPage({ searchParams }: Props) {
       <header className={styles.header}>
         <h1>Progress</h1>
       </header>
+      <LogDeletedNote flag={query.log} />
       {timezoneName === null || month === null || currentMonth === null ? (
         <section className={homeStyles.stateCard} data-progress-state="no-zone">
           <p className={homeStyles.sectionLabel}>Time zone needed</p>
