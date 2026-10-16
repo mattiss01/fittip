@@ -81,10 +81,10 @@ Ordered by dependency. A lane is named where it is not the build lane.
       used. It changes what the roadmap call is sent and takes prompt bytes:
       careful lane.
 - [~] **A roadmap proposal stays acceptable.** Careful lane (ADR-032). Owner,
-      16 Oct 2026: a proposal should always stay acceptable. Logs, memory and goals
-      changed after asking no longer refuse Accept; their sources stay recorded and are
-      not compared. Kept: a goal the roadmap names that is no longer active or achieved
-      (deleted, paused, abandoned), the page's head revision, and the lineage check.
+      16 Oct 2026: a proposal should always stay acceptable. Nothing changed after asking
+      is compared at Accept; the sources stay recorded. A named goal no longer active
+      does not refuse: the proposal says so above Accept. Kept: the page's head revision
+      and the lineage check.
 - [ ] **The Plan reads one week at a time.** Owner, 15 Oct 2026: its own item. Today it
       carries every week to the browser — 13 behind, 13 of recurring sessions and 13
       more of single ones — and re-reads all of it for every change, though it shows one.
@@ -94,6 +94,10 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 Not worth their own slot; do them when work lands nearby.
 
+- **`plan-month-sheet.test.tsx` times out under a full local run.** Three times on
+  16 Oct 2026 ("steps between the months…", over 5,000 ms), passing alone each time;
+  `onboarding-manager.test.tsx` once. CI has not shown it. Likely a slow render under
+  load rather than a fault; a longer timeout on that one test, or less work in it.
 - **For the owner to delete; the agent cannot.** What the Roadmap page left behind on
   13 and 14 Oct 2026 and nothing renders: `src/components/roadmap/roadmap-proposal-record.tsx`,
   `roadmap-editor.tsx` and both their tests. With them go the `.historyItem` and
