@@ -12,7 +12,9 @@ import {
 } from "./proposal-timeline";
 
 import homeStyles from "../../home.module.css";
+import { readMeasurementHistory } from "../activities/measurement-history";
 import { SubPageHeader } from "../sub-page-header";
+import { ActivityLibraryProvider } from "@/components/training/activity-editor";
 import {
   COACH_START_MAX_DAYS_AHEAD,
   isoDateInTimezone,
@@ -129,18 +131,25 @@ export default async function PlanProposalPage() {
               justFinished={state.justFinished}
             />
           ) : (
-            <ProposalReview
-              proposalId={state.proposal.id}
-              regenerationFeedback={state.proposal.regenerationFeedback}
-              expectedPlanRevision={state.planRevision}
-              finishKey={state.finishKey}
-              days={state.days}
-              roadmap={state.roadmap}
-              planChangedSinceComposed={state.planChangedSinceComposed}
-              unresolved={unresolvedItemCount(state.proposal.items)}
-              staged={stagedItemCount(state.proposal.items)}
-              isExample={isExampleProposal(state.proposal.providerCode)}
-            />
+            // No library here, as before; only how each sport was last
+            // measured, for a row added while reviewing.
+            <ActivityLibraryProvider
+              activities={[]}
+              modes={await readMeasurementHistory()}
+            >
+              <ProposalReview
+                proposalId={state.proposal.id}
+                regenerationFeedback={state.proposal.regenerationFeedback}
+                expectedPlanRevision={state.planRevision}
+                finishKey={state.finishKey}
+                days={state.days}
+                roadmap={state.roadmap}
+                planChangedSinceComposed={state.planChangedSinceComposed}
+                unresolved={unresolvedItemCount(state.proposal.items)}
+                staged={stagedItemCount(state.proposal.items)}
+                isExample={isExampleProposal(state.proposal.providerCode)}
+              />
+            </ActivityLibraryProvider>
           )}
           {state.openMemoryCandidateCount > 0 ? (
             <section className={styles.memoryPanel} id="memory-candidates">

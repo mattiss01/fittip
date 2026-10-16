@@ -16,9 +16,9 @@ import {
 const RECENT_ROWS = 200;
 
 /**
- * How the owner last measured each sport, from what they logged and what they
- * planned, newest first across both. An added activity starts from it
- * (`startingMode`).
+ * How the owner last measured each sport: what they logged first, since that
+ * is what they actually did, and what they planned only for a sport never
+ * logged with a measure. An added activity starts from it (`startingMode`).
  *
  * Only a starting point, so a read that fails costs nothing but the
  * prefill: every row then starts as "Not measured", as it did before. An
@@ -33,25 +33,26 @@ export async function readMeasurementHistory(): Promise<ModeBySport> {
     const [logged, planned] = await Promise.all([
       client
         .from("completion_activities")
-        .select("sport, measurement_mode, updated_at")
+        .select("sport, measurement_mode")
         .eq("user_id", userId)
         .order("updated_at", { ascending: false })
         .limit(RECENT_ROWS),
       client
         .from("rolling_plan_activities")
-        .select("sport, measurement_mode, updated_at")
+        .select("sport, measurement_mode")
         .eq("user_id", userId)
         .order("updated_at", { ascending: false })
         .limit(RECENT_ROWS),
     ]);
     if (logged.error || planned.error) return {};
-    const rows = [...(logged.data ?? []), ...(planned.data ?? [])]
-      .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
-      .flatMap((row): MeasuredActivity[] =>
+    // Each list is newest first; logged rows go first, so the first mode
+    // seen for a sport, which `latestModeBySport` keeps, is a logged one.
+    const rows = [...(logged.data ?? []), ...(planned.data ?? [])].flatMap(
+      (row): MeasuredActivity[] =>
         isMode(row.measurement_mode)
           ? [{ sport: row.sport, measurementMode: row.measurement_mode }]
           : [],
-      );
+    );
     return latestModeBySport(rows);
   } catch {
     return {};

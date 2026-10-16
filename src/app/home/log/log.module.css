@@ -732,8 +732,9 @@
 
 /*
  * Once saved, the receipt stands alone in the middle of the screen (owner,
- * 16 Oct 2026). The line naming what was being logged has done its job, and
- * the shell's own padding keeps the card clear of the navigation below.
+ * 16 Oct 2026). The line naming what was being logged has done its job, so
+ * it is hidden from sight, and the shell's own padding keeps the card clear
+ * of the navigation below.
  */
 .page:has(> [data-log-receipt]) {
   display: flex;
@@ -742,8 +743,14 @@
   min-height: 100dvh;
 }
 
+/* Out of sight, not out of the page: it holds the page's only h1. */
 .page:has(> [data-log-receipt]) > .sourceCard {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .page > .receipt {
