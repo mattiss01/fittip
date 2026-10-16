@@ -642,6 +642,102 @@ export function registerCompletionLogContract(
       expect(await completions.get(ride!.completionId)).not.toBe(null);
     });
 
+    it("deletes a log for good at the revision read, and frees its session", async () => {
+      const { completions, addPlanSession, day } = requireSubject(subject);
+      const planSessionId = await addPlanSession(day(0), "Aerobic run");
+      const logged = await completions.applyChange(
+        create(planSessionId, day(0)),
+      );
+
+      await expect(
+        completions.applyChange({
+          operation: "delete",
+          completionId: logged.completionId,
+          expectedRevision: logged.revision + 1,
+        }),
+      ).rejects.toThrow(CompletionConflictError);
+      expect(await completions.get(logged.completionId)).not.toBe(null);
+
+      const receipt = await completions.applyChange({
+        operation: "delete",
+        completionId: logged.completionId,
+        expectedRevision: logged.revision,
+      });
+      expect(receipt).toMatchObject({
+        completionId: logged.completionId,
+        result: "deleted",
+      });
+      expect(await completions.get(logged.completionId)).toBe(null);
+      expect(await completions.findByPlanSession(planSessionId)).toBe(null);
+
+      // Gone means gone: a second delete is answered as a change, and the
+      // session can be logged again.
+      await expect(
+        completions.applyChange({
+          operation: "delete",
+          completionId: logged.completionId,
+          expectedRevision: logged.revision,
+        }),
+      ).rejects.toThrow(CompletionConflictError);
+      await expect(
+        completions.applyChange(create(planSessionId, day(0))),
+      ).resolves.toMatchObject({ result: "created" });
+    });
+
+    it("deletes the Replaced logs with the training that replaced them, and not the reverse", async () => {
+      const { completions, addPlanSession, day } = requireSubject(subject);
+      const tempo = await addPlanSession(day(0), "Tempo run");
+      const easy = await addPlanSession(day(1), "Easy run");
+      const first = await completions.applyChange({
+        operation: "create",
+        completion: {
+          planSessionId: tempo,
+          status: "replaced",
+          actualLocalDate: day(0),
+          activities: [],
+          replacement: {
+            title: "Hill ride",
+            sport: "Cycling",
+            durationMinutes: 70,
+            activities: [],
+          },
+        },
+      });
+      const ride = (await completions.get(first.completionId))!.replacedBy!;
+      const second = await completions.applyChange({
+        operation: "create",
+        completion: {
+          planSessionId: easy,
+          status: "replaced",
+          actualLocalDate: day(0),
+          activities: [],
+          replacedByCompletionId: ride.completionId,
+        },
+      });
+
+      // A Replaced log alone goes alone; the ride still stands for the other.
+      await completions.applyChange({
+        operation: "delete",
+        completionId: second.completionId,
+        expectedRevision: second.revision,
+      });
+      expect(await completions.get(second.completionId)).toBe(null);
+      expect((await completions.get(ride.completionId))?.replaces).toEqual([
+        { completionId: first.completionId, title: "Tempo run" },
+      ]);
+
+      // The ride takes the Replaced log that points at it.
+      const stored = (await completions.get(ride.completionId))!;
+      await completions.applyChange({
+        operation: "delete",
+        completionId: ride.completionId,
+        expectedRevision: stored.revision,
+      });
+      expect(await completions.get(ride.completionId)).toBe(null);
+      expect(await completions.get(first.completionId)).toBe(null);
+      expect(await completions.findByPlanSession(tempo)).toBe(null);
+    });
+
     it("points only at unplanned training, and writes both logs or neither", async () => {
       const { completions, addPlanSession, day } = requireSubject(subject);
       const tempo = await addPlanSession(day(0), "Tempo run");

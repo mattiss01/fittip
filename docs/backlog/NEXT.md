@@ -80,13 +80,15 @@ Ordered by dependency. A lane is named where it is not the build lane.
       purpose (owner, 13 Oct 2026; ADR-026), to be decided once ticks have been
       used. It changes what the roadmap call is sent and takes prompt bytes:
       careful lane.
-- [ ] **Delete a log.** Owner, 7 Oct 2026: it should be possible, which also frees a
-      settled session for planning again. Careful lane: `apply_completion_change`
-      accepts only create and edit, and completions are permanent records today. Open
-      for the owner: any log or only a skip logged ahead; what happens to a replaced
-      session's link to the log that replaced it; the coach's proposals record which
-      logs they read; ADR-013 decision 3 already says a deleted record reaches no
-      provider and no summary.
+- [~] **Delete a log.** Careful lane (ADR-031). Outcome: "Delete log" on the edit page,
+      after a dialog that says what goes; the log and its activities are gone for good and
+      its planned session is free again. Owner, 16 Oct 2026: any log, planned or
+      unplanned, any date; really deleted, no undo, no hidden row; deleting unplanned
+      training that planned sessions were logged "Replaced" by deletes those logs too,
+      and deleting a Replaced log alone leaves what it pointed at. One more operation of
+      `apply_completion_change`, answering to the revision read; no grant changes.
+      Coach proposals keep the deleted log's id among their sources; an open roadmap
+      proposal that read it can then no longer be accepted, as after an edit.
 - [ ] **The Plan reads one week at a time.** Owner, 15 Oct 2026: its own item. Today it
       carries every week to the browser — 13 behind, 13 of recurring sessions and 13
       more of single ones — and re-reads all of it for every change, though it shows one.

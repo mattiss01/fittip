@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import {
   TRAINED_OUTCOMES,
   recordsTraining,
   type CompletionOutcome,
+  type DeleteLogState,
   type LogActionState,
 } from "./log-action-state";
 
@@ -193,6 +195,68 @@ export async function logCompletionAction(
     }
     return result("error", "The log could not be saved.");
   }
+}
+
+/**
+ * Deletes a log for good (ADR-031): its activities, and any planned log
+ * "Replaced" by it, go with it. It answers to the revision the owner read
+ * before confirming, so a log changed or deleted elsewhere since is refused
+ * rather than deleted unseen. On success it leaves for the day the log was on,
+ * which says it was deleted; there is nothing left here to show.
+ */
+export async function deleteLogAction(
+  previous: DeleteLogState,
+  formData: FormData,
+): Promise<DeleteLogState> {
+  const answer = (
+    status: DeleteLogState["status"],
+    message: string,
+  ): DeleteLogState => ({
+    status,
+    message,
+    submission: previous.submission + 1,
+  });
+  const day = formData.get("returnDate");
+  // Only a date goes into the address it leaves for; anything else is today.
+  const date =
+    typeof day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
+  try {
+    await (
+      await createCompletionLog()
+    ).applyChange({
+      operation: "delete",
+      completionId: formData.get("completionId"),
+      expectedRevision: readInteger(formData.get("expectedRevision")),
+    });
+  } catch (error) {
+    if (error instanceof CompletionConflictError) {
+      return answer(
+        "conflict",
+        "This log changed somewhere else, or is already gone. Reload to see it as it is now.",
+      );
+    }
+    if (error instanceof CompletionAuthenticationError) {
+      return answer(
+        "session",
+        "Your session ended. Sign in again before deleting a log.",
+      );
+    }
+    if (error instanceof CompletionPersistenceError) {
+      return answer(
+        "error",
+        "The delete could not be confirmed. Reload the day to see whether the log is still there.",
+      );
+    }
+    return answer("error", "The log could not be deleted.");
+  }
+  revalidatePath("/home/today");
+  revalidatePath("/home/plan", "layout");
+  revalidatePath("/home/progress", "layout");
+  redirect(
+    date === null
+      ? "/home/today?log=deleted"
+      : `/home/today?date=${date}&log=deleted`,
+  );
 }
 
 /**

@@ -193,12 +193,17 @@ export type CompletionChange =
       completionId: string;
       expectedRevision: number;
       completion: CompletionEdit;
-    };
+    }
+  /**
+   * ADR-031: the log goes for good, with its activities and any planned log
+   * "Replaced" by it. The revision is the one the owner read before deciding.
+   */
+  | { operation: "delete"; completionId: string; expectedRevision: number };
 
 export type CompletionReceipt = {
   completionId: string;
   revision: number;
-  result: "created" | "updated";
+  result: "created" | "updated" | "deleted";
 };
 
 /** The owner-local date range one read covers, both ends inclusive. */
@@ -384,6 +389,17 @@ export function parseCompletionChange(value: unknown): CompletionChange {
           Number.MAX_SAFE_INTEGER,
         ),
         completion: parseEdit(record.completion),
+      };
+    case "delete":
+      assertOnlyKeys(record, ["operation", "completionId", "expectedRevision"]);
+      return {
+        operation: "delete",
+        completionId: readUuid(record.completionId),
+        expectedRevision: readInteger(
+          record.expectedRevision,
+          0,
+          Number.MAX_SAFE_INTEGER,
+        ),
       };
     default:
       throw new CompletionValidationError();

@@ -132,7 +132,7 @@ export type LogActionState = {
    * the tests. It is recorded as a known limitation rather than implied here.
    */
   submission: number;
-  result?: "created" | "updated";
+  result?: "created" | "updated" | "deleted";
   /** The day the owner returns to on Today once the write landed. */
   returnDate?: string;
   /** The log the write landed on, so its receipt can save it to the library. */
@@ -146,6 +146,22 @@ export type LogActionState = {
 };
 
 export const INITIAL_LOG_ACTION_STATE: LogActionState = {
+  status: "idle",
+  message: "",
+  submission: 0,
+};
+
+/**
+ * What a delete answers when it does not land (ADR-031). A delete that lands
+ * answers nothing: it leaves for the day the log was on, which says so.
+ */
+export type DeleteLogState = {
+  status: "idle" | "conflict" | "session" | "error";
+  message: string;
+  submission: number;
+};
+
+export const INITIAL_DELETE_LOG_STATE: DeleteLogState = {
   status: "idle",
   message: "",
   submission: 0,

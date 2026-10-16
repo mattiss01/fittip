@@ -23,7 +23,10 @@ vi.mock("react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react")>();
   return { ...actual, useActionState: useActionStateMock };
 });
-vi.mock("./actions", () => ({ logCompletionAction: logCompletionActionMock }));
+vi.mock("./actions", () => ({
+  logCompletionAction: logCompletionActionMock,
+  deleteLogAction: vi.fn(),
+}));
 vi.mock("@/server/repositories/profile-repository", async (original) => {
   const actual =
     await original<typeof import("@/server/repositories/profile-repository")>();

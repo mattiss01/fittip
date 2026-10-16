@@ -1,13 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createCompletionLogMock, createPlanMock, revalidatePathMock } =
-  vi.hoisted(() => ({
-    createCompletionLogMock: vi.fn(),
-    createPlanMock: vi.fn(),
-    revalidatePathMock: vi.fn(),
-  }));
+const {
+  createCompletionLogMock,
+  createPlanMock,
+  revalidatePathMock,
+  redirectMock,
+} = vi.hoisted(() => ({
+  createCompletionLogMock: vi.fn(),
+  createPlanMock: vi.fn(),
+  revalidatePathMock: vi.fn(),
+  redirectMock: vi.fn(),
+}));
 
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
+vi.mock("next/navigation", () => ({ redirect: redirectMock }));
 vi.mock("@/server/repositories/completion-log-repository", async (original) => {
   const actual =
     await original<
@@ -23,8 +29,11 @@ vi.mock("@/server/repositories/rolling-plan-repository", async (original) => {
   return { ...actual, createRollingPlan: createPlanMock };
 });
 
-import { logCompletionAction } from "./actions";
-import { INITIAL_LOG_ACTION_STATE } from "./log-action-state";
+import { deleteLogAction, logCompletionAction } from "./actions";
+import {
+  INITIAL_DELETE_LOG_STATE,
+  INITIAL_LOG_ACTION_STATE,
+} from "./log-action-state";
 import {
   CompletionConflictError,
   CompletionTimezoneRequiredError,
@@ -639,3 +648,81 @@ function form(values: Record<string, string>): FormData {
   }
   return formData;
 }
+
+describe("deleteLogAction (ADR-031)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    applyChange.mockResolvedValue({
+      completionId: COMPLETION_ID,
+      revision: 4,
+      result: "deleted",
+    });
+    createCompletionLogMock.mockResolvedValue({ applyChange });
+  });
+
+  it("deletes at the revision read and leaves for the day the log was on", async () => {
+    await deleteLogAction(
+      INITIAL_DELETE_LOG_STATE,
+      form({
+        completionId: COMPLETION_ID,
+        expectedRevision: "4",
+        returnDate: DAY,
+      }),
+    );
+
+    expect(applyChange).toHaveBeenCalledWith({
+      operation: "delete",
+      completionId: COMPLETION_ID,
+      expectedRevision: 4,
+    });
+    expect(redirectMock).toHaveBeenCalledWith(
+      `/home/today?date=${DAY}&log=deleted`,
+    );
+  });
+
+  it("puts nothing but a date into the address it leaves for", async () => {
+    await deleteLogAction(
+      INITIAL_DELETE_LOG_STATE,
+      form({
+        completionId: COMPLETION_ID,
+        expectedRevision: "4",
+        returnDate: "https://example.test",
+      }),
+    );
+
+    expect(redirectMock).toHaveBeenCalledWith("/home/today?log=deleted");
+  });
+
+  it("says so when the log changed or is already gone, and stays", async () => {
+    applyChange.mockRejectedValue(new CompletionConflictError());
+
+    const state = await deleteLogAction(
+      INITIAL_DELETE_LOG_STATE,
+      form({
+        completionId: COMPLETION_ID,
+        expectedRevision: "4",
+        returnDate: DAY,
+      }),
+    );
+
+    expect(state).toMatchObject({ status: "conflict", submission: 1 });
+    expect(state.message).toContain("Reload");
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it("asks for a sign-in when the session ended", async () => {
+    applyChange.mockRejectedValue(new CompletionAuthenticationError());
+
+    const state = await deleteLogAction(
+      INITIAL_DELETE_LOG_STATE,
+      form({
+        completionId: COMPLETION_ID,
+        expectedRevision: "4",
+        returnDate: DAY,
+      }),
+    );
+
+    expect(state.status).toBe("session");
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+});

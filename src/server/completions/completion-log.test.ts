@@ -49,6 +49,31 @@ function plannedSession(
   };
 }
 
+describe("a delete (ADR-031)", () => {
+  const ID = "7e15b000-0000-4000-8000-000000000031";
+
+  it("names a log and the revision read, and nothing else", () => {
+    expect(
+      parseCompletionChange({
+        operation: "delete",
+        completionId: ID,
+        expectedRevision: 2,
+      }),
+    ).toEqual({ operation: "delete", completionId: ID, expectedRevision: 2 });
+    expect(() =>
+      parseCompletionChange({
+        operation: "delete",
+        completionId: ID,
+        expectedRevision: 2,
+        completion: { status: "completed" },
+      }),
+    ).toThrow(CompletionValidationError);
+    expect(() =>
+      parseCompletionChange({ operation: "delete", completionId: ID }),
+    ).toThrow(CompletionValidationError);
+  });
+});
+
 describe("completion log interface validation", () => {
   const log = () =>
     new CompletionLog(

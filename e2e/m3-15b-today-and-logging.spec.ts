@@ -448,6 +448,53 @@ test.describe("M3-15B today and logging", () => {
         unplanned.getByText("Open water", { exact: true }),
       ).toBeVisible();
 
+      // ADR-031: a log can be deleted, after a dialog that says what goes.
+      // "Keep it" deletes nothing; "Delete log" removes it for good.
+      await unplanned.getByRole("link", { name: "Edit log" }).click();
+      await page.locator("[data-log-delete]").click();
+      const dialog = page.getByRole("alertdialog", {
+        name: "Delete this log?",
+      });
+      await expect(dialog).toContainText(
+        "This deletes the log of Sunrise lake swim",
+      );
+      await dialog.getByRole("button", { name: "Keep it" }).click();
+      await expect(dialog).toHaveCount(0);
+      await page.locator("[data-log-delete]").click();
+      await dialog.getByRole("button", { name: "Delete log" }).click();
+      await expect(page).toHaveURL(/\/home\/today\?date=[\d-]+&log=deleted$/);
+      await expect(page.locator("[data-today-log-note]")).toHaveText(
+        "Log deleted.",
+      );
+      await expect(unplanned).toHaveCount(0);
+
+      // The ride that replaced two sessions takes their Replaced logs with
+      // it, and says so first; both sessions can then be logged again.
+      await page
+        .locator("[data-today-completion]")
+        .filter({ hasText: "Hill ride" })
+        .getByRole("link", { name: "Edit log" })
+        .click();
+      await page.locator("[data-log-delete]").click();
+      const replacedNote = dialog.locator("[data-log-delete-replaces]");
+      await expect(replacedNote).toContainText("Replaced logs of");
+      await expect(replacedNote).toContainText("Core circuit");
+      await expect(replacedNote).toContainText("Easy jog");
+      await dialog.getByRole("button", { name: "Delete log" }).click();
+      await expect(page).toHaveURL(/log=deleted$/);
+      await expect(
+        page
+          .locator("[data-today-completion]")
+          .filter({ hasText: "Hill ride" }),
+      ).toHaveCount(0);
+      for (const session of ["Core circuit", "Easy jog"]) {
+        await expect(
+          todayCard(page, session).getByRole("link", {
+            name: "Log this session",
+          }),
+        ).toBeVisible();
+      }
+
       // ---- A mistaken log is corrected, including to skipped. ----
       await todayCard(page, "Tempo run")
         .getByRole("link", { name: "Edit log" })
