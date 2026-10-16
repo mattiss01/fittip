@@ -80,8 +80,11 @@ export type LogExistingView = {
   activities: LogRecordedActivityView[];
   /** The unplanned log a replaced one points at, if it points anywhere. */
   replacedById: string | null;
-  /** True when it answers a planned session, which deleting it frees. */
-  planned: boolean;
+  /**
+   * The planned session it answers, by the plan's name, which deleting it
+   * frees; null for unplanned training.
+   */
+  planned: string | null;
   /** The planned sessions logged "Replaced" by this one, by name. */
   replaces: string[];
   pain: boolean;

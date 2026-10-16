@@ -964,6 +964,11 @@
 }
 
 .dialogPanel .dialogError {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.dialogPanel .dialogError p {
   color: var(--danger);
 }
 

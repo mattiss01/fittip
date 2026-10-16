@@ -375,7 +375,10 @@ function toExistingView(completion: Completion): LogExistingView {
     note: completion.note ?? null,
     replacementDescription: completion.replacementDescription ?? null,
     replacedById: completion.replacedBy?.completionId ?? null,
-    planned: completion.planSessionId !== null,
+    planned:
+      completion.planSessionId === null
+        ? null
+        : (completion.plannedSnapshot?.title ?? "it answers"),
     replaces: replacesLabels(completion).map((replaced) => replaced.label),
     title: completion.title ?? completion.plannedSnapshot?.title ?? null,
     sport: completion.sport ?? completion.plannedSnapshot?.sport ?? null,

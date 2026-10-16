@@ -20,7 +20,7 @@ const BASE = {
 };
 
 function open(props: Partial<Parameters<typeof DeleteLog>[0]> = {}) {
-  render(<DeleteLog {...BASE} planned={false} replaces={[]} {...props} />);
+  render(<DeleteLog {...BASE} planned={null} replaces={[]} {...props} />);
   fireEvent.click(screen.getByRole("button", { name: "Delete log" }));
   return screen.getByRole("alertdialog", { name: "Delete this log?" });
 }
@@ -43,8 +43,8 @@ describe("DeleteLog (ADR-031)", () => {
   });
 
   it("says a planned session is freed", () => {
-    expect(open({ planned: true }).textContent).toContain(
-      "The planned session is no longer logged",
+    expect(open({ planned: "Tempo run" }).textContent).toContain(
+      "The planned session Tempo run is no longer logged",
     );
   });
 

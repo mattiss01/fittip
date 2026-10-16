@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 
 import { deleteLogAction } from "./actions";
@@ -32,8 +33,8 @@ export function DeleteLog({
   day: string;
   /** Where Today opens afterwards: the day the log was on. */
   returnDate: string;
-  /** True when the log answers a planned session, which it frees. */
-  planned: boolean;
+  /** The planned session the log answers, which it frees; null if none. */
+  planned: string | null;
   /** The planned sessions logged "Replaced" by this one, by name. */
   replaces: readonly string[];
 }) {
@@ -117,12 +118,12 @@ export function DeleteLog({
               <p>
                 This deletes the log of {name} on {day}. It cannot be undone.
               </p>
-              {planned ? (
+              {planned === null ? null : (
                 <p>
-                  The planned session is no longer logged, and can be changed or
-                  planned over again.
+                  The planned session {planned} is no longer logged, and can be
+                  changed or planned over again.
                 </p>
-              ) : null}
+              )}
               {replaces.length === 0 ? null : (
                 <p data-log-delete-replaces>
                   It also deletes the Replaced{" "}
@@ -135,9 +136,22 @@ export function DeleteLog({
               )}
             </div>
             {state.status === "idle" ? null : (
-              <p className={styles.dialogError} role="alert">
-                {state.message}
-              </p>
+              <div className={styles.dialogError} role="alert">
+                <p>{state.message}</p>
+                {/* The recovery the message asks for, here rather than only
+                    named: a reload reads the log as it is now. */}
+                {state.status === "session" ? (
+                  <Link href="/">Sign in</Link>
+                ) : (
+                  <button
+                    className={styles.secondary}
+                    onClick={() => window.location.reload()}
+                    type="button"
+                  >
+                    Reload
+                  </button>
+                )}
+              </div>
             )}
             <form action={action}>
               <input type="hidden" name="completionId" value={completionId} />
