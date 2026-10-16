@@ -189,6 +189,11 @@ test.describe("M3-13 private saved-session library", () => {
         doomed.getByText(/removes this entry permanently/i),
       ).toBeVisible();
       await doomed.getByRole("button", { name: "Delete permanently" }).click();
+      await expect(doomed).toHaveCount(0);
+      // And the copy kept beside it when it was saved twice.
+      const kept = savedCard(page, "Threshold intervals (2)");
+      await openDisclosure(kept, "Delete");
+      await kept.getByRole("button", { name: "Delete permanently" }).click();
       await expect(
         page.getByRole("heading", { name: "Nothing saved yet" }),
       ).toBeVisible();
