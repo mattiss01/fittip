@@ -235,11 +235,13 @@ select ok(
   ) !~ '(detailed_plan|completion_heads)',
   'the restored acceptance names no relation M3-11 dropped'
 );
+-- Since 16 Oct 2026 (owner) acceptance reads no source but the goals a
+-- proposal names; a log is never compared, so a deleted one cannot block.
 select ok(
   pg_get_functiondef(
     'public.accept_roadmap_proposal(uuid,bigint)'::regprocedure
-  ) ~ 'public\.completions',
-  'the restored acceptance rechecks a completion source against M3-15A''s record'
+  ) !~ 'public\.completions',
+  'acceptance no longer reads the training history a proposal was made from'
 );
 select ok(
   pg_get_functiondef(
@@ -611,20 +613,13 @@ select is(
   'the new version links back to the one it superseded'
 );
 
--- The source recheck, on a proposal that carries a real source ---------------
+-- Proposals that carry a real source ----------------------------------------
 --
--- Every acceptance above travelled with no sources at all, so the loop in
--- `accept_roadmap_proposal` never ran. It is the substantive thing this
--- migration rewrote — M3-11 dropped `completion_heads`, and the recheck now
--- reads M3-15A's `public.completions` instead — and it is the live path: the
--- context source emits a `completion` source per session in the owner's
--- training window, so any owner with logged training accepts through this loop.
---
--- A wrong predicate here fails in one of two directions, and both are the
--- failure the function exists to prevent: an owner who can never accept their
--- roadmap, or one who accepts a proposal built on training data that has since
--- been corrected. The three cases below pin both directions and the ownership
--- half.
+-- Since 16 Oct 2026 (owner) sources are provenance: a source changed after it
+-- travelled no longer blocks acceptance, and the cases below pin that a
+-- recorded completion source, a corrected one and another owner's are all
+-- accepted. What still refuses, a named goal no longer active, is proved in
+-- `roadmap_proposal_stays_acceptable.test.sql`.
 
 insert into claim
 select 'completion-source', * from public.begin_roadmap_generation(
@@ -659,7 +654,7 @@ select is(
      select proposal_id from finished where label = 'completion-source')
      and source_kind = 'completion'),
   1,
-  'the completion source is recorded, so the acceptance has one to recheck'
+  'the completion source is recorded with the proposal'
 );
 
 insert into acceptance
@@ -704,24 +699,26 @@ set revision = 1
 where id = '6c000000-0000-4000-8000-000000000002';
 set local role authenticated;
 
-select throws_ok(
-  format(
-    $$select * from public.accept_roadmap_proposal(%L::uuid, 3)$$,
-    (select proposal_id from finished where label = 'completion-corrected')
-  ),
-  'PT409', 'Your training history changed. Review the proposal again.',
-  'a completion corrected after it travelled refuses the acceptance'
+-- Since 16 Oct 2026 (owner) a source changed after it travelled no longer
+-- blocks: the proposal stays acceptable.
+insert into acceptance
+select 'completion-corrected', * from public.accept_roadmap_proposal(
+  (select proposal_id from finished where label = 'completion-corrected'), 3
+);
+select is(
+  (select result from acceptance where label = 'completion-corrected'),
+  'accepted',
+  'a completion corrected after it travelled no longer refuses the acceptance'
 );
 
--- The ownership half: a source naming a completion owned by somebody else
--- verifies against nothing, whatever revision it claims.
+-- The ownership half: a source naming a completion owned by somebody else.
 insert into claim
 select 'completion-outsider', * from public.begin_roadmap_generation(
   'owner-outsider-key-00000000001',
   'owner-outsider-fingerprint-00000000001',
   pg_temp.day(0),
   pg_temp.day(84),
-  3
+  4
 );
 insert into finished
 select 'completion-outsider', * from public.finish_roadmap_generation(
@@ -739,13 +736,17 @@ select 'completion-outsider', * from public.finish_roadmap_generation(
                   "revisionNumber":0}]'::jsonb
 );
 
-select throws_ok(
-  format(
-    $$select * from public.accept_roadmap_proposal(%L::uuid, 3)$$,
-    (select proposal_id from finished where label = 'completion-outsider')
-  ),
-  'PT409', 'Your training history changed. Review the proposal again.',
-  'a source naming another owner''s completion never verifies'
+-- A source is provenance and nothing reads it at acceptance, so one naming
+-- another owner's completion neither verifies nor blocks: nothing of theirs is
+-- read or reached.
+insert into acceptance
+select 'completion-outsider', * from public.accept_roadmap_proposal(
+  (select proposal_id from finished where label = 'completion-outsider'), 4
+);
+select is(
+  (select result from acceptance where label = 'completion-outsider'),
+  'accepted',
+  'a source naming another owner''s completion is not read at acceptance'
 );
 
 -- Cross-owner ----------------------------------------------------------------
@@ -833,13 +834,13 @@ select set_config(
 
 select is(
   (select count(*)::integer from public.roadmap_versions),
-  3,
+  5,
   'and nothing they attempted changed the owner''s history'
 );
 select is(
   (select array_agg(decision order by decided_at)
    from public.roadmap_proposal_decisions),
-  array['rejected', 'accepted', 'accepted', 'accepted'],
+  array['rejected', 'accepted', 'accepted', 'accepted', 'accepted', 'accepted'],
   'every decision on the owner''s record is still one the owner made'
 );
 
