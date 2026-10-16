@@ -2644,6 +2644,7 @@ export type Database = {
         Args: { p_mode: string; p_value: Json };
         Returns: boolean;
       };
+      keep_sports: { Args: { p_names: string[] }; Returns: undefined };
       materialize_rolling_plan_series: {
         Args: { p_expected_plan_revision: number; p_idempotency_key: string };
         Returns: Database["public"]["CompositeTypes"]["rolling_plan_materialization_receipt"];

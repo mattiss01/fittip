@@ -26,6 +26,10 @@ import {
   CompletionAuthenticationError,
   createCompletionLog,
 } from "@/server/repositories/completion-log-repository";
+import {
+  nextFreeTitle,
+  savedSessionTitleKey,
+} from "@/lib/training/activity-name";
 import { keepSports, submittedSports } from "@/server/profile/keep-sports";
 import { ProfileAuthenticationError } from "@/server/repositories/profile-repository";
 import {
@@ -46,7 +50,9 @@ import {
 import {
   SavedSessionConflictError,
   SavedSessionPersistenceError,
+  SavedSessionTitleTakenError,
   SavedSessionValidationError,
+  type SavedSessionDraft,
 } from "@/server/saved-sessions/saved-sessions";
 import {
   completionToSavedSessionDraft,
@@ -90,14 +96,7 @@ export async function saveSessionToLibraryAction(
     );
     if (!session) throw new SavedSessionValidationError();
 
-    await (
-      await createSavedSessionLibrary()
-    ).applyChange({
-      operation: "create",
-      session: toSavedSessionDraft(session),
-    });
-    revalidatePath("/home/plan/saved");
-    return { status: "saved", message: "Saved to your library.", submission };
+    return await saveDraft(toSavedSessionDraft(session), formData, submission);
   } catch (error) {
     return failure(...saveFailure(error));
   }
@@ -120,18 +119,86 @@ export async function saveLogToLibraryAction(
     if (completion === null || !recordsTraining(completion.status)) {
       throw new SavedSessionValidationError();
     }
-    await (
-      await createSavedSessionLibrary()
-    ).applyChange({
-      operation: "create",
-      session: completionToSavedSessionDraft(completion),
-    });
-    revalidatePath("/home/plan/saved");
-    return { status: "saved", message: "Saved to your library.", submission };
+    return await saveDraft(
+      completionToSavedSessionDraft(completion),
+      formData,
+      submission,
+    );
   } catch (error) {
     const [status, message] = saveFailure(error);
     return { status, message, submission };
   }
+}
+
+/**
+ * One entry per title (owner, 15 Oct 2026). A save whose title is taken asks
+ * first: the form comes back `exists`, with the next free title, and is sent
+ * again with `onExisting` set. "update" replaces the entry with that title by
+ * this copy; "new" saves it under the title the owner gave.
+ */
+async function saveDraft(
+  draft: SavedSessionDraft,
+  formData: FormData,
+  submission: number,
+): Promise<LibrarySaveActionState> {
+  const library = await createSavedSessionLibrary();
+  const onExisting = formData.get("onExisting");
+
+  if (onExisting === "update") {
+    const key = savedSessionTitleKey(draft.title);
+    const existing = (await library.list()).find(
+      (entry) => savedSessionTitleKey(entry.title) === key,
+    );
+    // Renamed or deleted since the question was asked: then there is nothing
+    // to update, and it is saved as asked the first time.
+    if (existing) {
+      await library.applyChange({
+        operation: "edit",
+        savedSessionId: existing.id,
+        expectedRevision: existing.revision,
+        session: draft,
+      });
+      revalidatePath("/home/plan/saved");
+      return {
+        status: "saved",
+        message: "Updated in your library.",
+        submission,
+      };
+    }
+  }
+
+  const title =
+    onExisting === "new"
+      ? String(formData.get("title") ?? "").trim()
+      : draft.title;
+  // "Keep both" stays open on its own question rather than starting over.
+  const askAgain = async (message: string): Promise<LibrarySaveActionState> => {
+    const taken = new Set(
+      (await library.list()).map((entry) => savedSessionTitleKey(entry.title)),
+    );
+    return {
+      status: "exists",
+      message,
+      submission,
+      suggestedTitle: nextFreeTitle(title || draft.title, taken),
+    };
+  };
+  if (title === "") return await askAgain("Give the new entry a title.");
+  try {
+    await library.applyChange({
+      operation: "create",
+      session: { ...draft, name: title, title },
+    });
+  } catch (error) {
+    if (!(error instanceof SavedSessionTitleTakenError)) throw error;
+    return await askAgain(
+      onExisting === "new"
+        ? "That title is in your library too. Choose another."
+        : "Already in your library.",
+    );
+  }
+  revalidatePath("/home/plan/saved");
+  return { status: "saved", message: "Saved to your library.", submission };
 }
 
 /** Create a library entry, or edit, delete, or reuse one. */
@@ -239,6 +306,14 @@ export async function changeLibraryAction(
         "conflict",
         "Confirm your time zone on the plan before adding a session.",
         "timezone",
+      );
+    }
+    // One entry per title (owner, 15 Oct 2026). Here the owner is typing the
+    // title, so it is theirs to change; the form keeps what they wrote.
+    if (error instanceof SavedSessionTitleTakenError) {
+      return result(
+        "validation",
+        "An entry with this title is already in your library. Choose another title.",
       );
     }
     if (

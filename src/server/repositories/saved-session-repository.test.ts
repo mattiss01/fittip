@@ -6,6 +6,7 @@ import {
 } from "./saved-session-repository";
 import {
   SavedSessionConflictError,
+  SavedSessionTitleTakenError,
   SavedSessionLibrary,
   SavedSessionPersistenceError,
   SavedSessionValidationError,
@@ -92,6 +93,7 @@ describe("PostgresSavedSessionAdapter", () => {
 
   it.each([
     ["PT409", SavedSessionConflictError],
+    ["PT434", SavedSessionTitleTakenError],
     ["22023", SavedSessionValidationError],
     ["23514", SavedSessionPersistenceError],
   ])(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useId, useState } from "react";
 
 import { INITIAL_LIBRARY_SAVE_ACTION_STATE } from "./action-state";
 import { saveLogToLibraryAction, saveSessionToLibraryAction } from "./actions";
@@ -32,6 +32,14 @@ export function SaveToLibrary({
     INITIAL_LIBRARY_SAVE_ACTION_STATE,
   );
   const id = completionId ?? sessionId;
+  // A title already in the library asks first (owner, 15 Oct 2026): update
+  // that entry, or keep both under another title.
+  const exists = state.status === "exists";
+  // Once chosen, "Keep both" stays open while its title is taken too, and
+  // closes with any other answer.
+  const [keepBoth, setKeepBoth] = useState(false);
+  if (keepBoth && !exists && !pending) setKeepBoth(false);
+  const titleId = useId();
 
   const form = (
     <form
@@ -51,9 +59,6 @@ export function SaveToLibrary({
           ? "A copy goes to your saved sessions, with what you did as its targets. This log stays as it is, and the copy will not follow later edits."
           : "A copy goes to your saved sessions. This session stays on your plan, unchanged, and the copy will not follow later edits."}
       </p>
-      <button className={styles.primary} type="submit" disabled={pending}>
-        Save to library
-      </button>
       <p
         className={
           state.status === "idle" ? styles.srOnly : styles.inlineNotice
@@ -64,6 +69,56 @@ export function SaveToLibrary({
       >
         {pending ? "Saving to your library…" : state.message}
       </p>
+      {exists ? (
+        keepBoth ? (
+          <>
+            <label htmlFor={titleId}>Title for the new entry</label>
+            {/* Opened by a tap on "Keep both", so it takes the focus. */}
+            <input
+              autoFocus
+              defaultValue={state.suggestedTitle}
+              id={titleId}
+              maxLength={120}
+              name="title"
+              required
+              type="text"
+            />
+            <button
+              className={styles.primary}
+              type="submit"
+              name="onExisting"
+              value="new"
+              disabled={pending}
+            >
+              Save as new entry
+            </button>
+          </>
+        ) : (
+          <div className={styles.existsChoices}>
+            <button
+              className={styles.primary}
+              type="submit"
+              name="onExisting"
+              value="update"
+              disabled={pending}
+            >
+              Update it
+            </button>
+            <button
+              className={styles.action}
+              type="button"
+              disabled={pending}
+              onClick={() => setKeepBoth(true)}
+            >
+              Keep both
+            </button>
+          </div>
+        )
+      ) : (
+        <button className={styles.primary} type="submit" disabled={pending}>
+          Save to library
+        </button>
+      )}
     </form>
   );
 

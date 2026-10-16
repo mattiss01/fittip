@@ -79,6 +79,16 @@ test.describe("M3-13 private saved-session library", () => {
       await expect(save.locator("input[name='name']")).toHaveCount(0);
       await save.getByRole("button", { name: "Save to library" }).click();
       await expect(save.getByText("Saved to your library.")).toBeVisible();
+      // One entry per title (owner, 15 Oct 2026): saving it again asks, and
+      // keeping both opens on the next free title.
+      await save.getByRole("button", { name: "Save to library" }).click();
+      await expect(save.getByText("Already in your library.")).toBeVisible();
+      await save.getByRole("button", { name: "Keep both" }).click();
+      await expect(save.getByLabel("Title for the new entry")).toHaveValue(
+        "Threshold intervals (2)",
+      );
+      await save.getByRole("button", { name: "Save as new entry" }).click();
+      await expect(save.getByText("Saved to your library.")).toBeVisible();
       await page.screenshot({
         fullPage: true,
         path: path.join(evidenceDirectory, "M3-13-save-to-library-390x844.png"),
@@ -179,6 +189,11 @@ test.describe("M3-13 private saved-session library", () => {
         doomed.getByText(/removes this entry permanently/i),
       ).toBeVisible();
       await doomed.getByRole("button", { name: "Delete permanently" }).click();
+      await expect(doomed).toHaveCount(0);
+      // And the copy kept beside it when it was saved twice.
+      const kept = savedCard(page, "Threshold intervals (2)");
+      await openDisclosure(kept, "Delete");
+      await kept.getByRole("button", { name: "Delete permanently" }).click();
       await expect(
         page.getByRole("heading", { name: "Nothing saved yet" }),
       ).toBeVisible();

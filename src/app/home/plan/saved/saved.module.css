@@ -286,6 +286,13 @@
   opacity: 0.45;
 }
 
+/* "Update it" and "Keep both", side by side (15 Oct 2026). */
+.existsChoices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
 .srOnly {
   position: absolute;
   width: 1px;

@@ -93,8 +93,9 @@ Ordered by dependency. A lane is named where it is not the build lane.
       was made under, so a hand-made request cannot pair a newer roadmap with an older
       outline. (4) `apply_completion_change` maps `22P02` to `22023`. (5) The roadmap
       generation fingerprint is labelled `"roadmap.v4"`, not `"roadmap.v2"`: no migration,
-      but the spend guard's. Destructive DDL, if existing duplicate titles need it, is
-      asked first.
+      but the spend guard's. Existing duplicate titles are renamed "Title (2)", the
+      oldest keeping its title, nothing deleted; "Keep both" opens on the next free
+      title (owner).
 
 ## Fix in passing
 

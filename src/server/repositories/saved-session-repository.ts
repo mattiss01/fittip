@@ -13,6 +13,7 @@ import {
 } from "@/lib/supabase/server-user-client";
 import {
   SavedSessionConflictError,
+  SavedSessionTitleTakenError,
   SavedSessionLibrary,
   SavedSessionPersistenceError,
   SavedSessionValidationError,
@@ -82,6 +83,7 @@ export class PostgresSavedSessionAdapter implements SavedSessionAdapter {
       .retry(false);
     if (error) {
       if (error.code === "PT409") throw new SavedSessionConflictError();
+      if (error.code === "PT434") throw new SavedSessionTitleTakenError();
       if (error.code === "22023") throw new SavedSessionValidationError();
       throw new SavedSessionPersistenceError();
     }

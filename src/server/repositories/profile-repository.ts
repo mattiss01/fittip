@@ -374,6 +374,18 @@ export class ProfileRepository {
     if (!data) throw new ProfilePersistenceError();
   }
 
+  /**
+   * Appends sports the owner typed to their list, in one statement under the
+   * row's lock (`keep_sports`), so a sport removed in Settings meanwhile is not
+   * written back. The database passes over names it would not keep.
+   */
+  async keepSports(names: string[]): Promise<void> {
+    await this.ensureCurrentProfile();
+    await this.getVerifiedUserId();
+    const { error } = await this.client.rpc("keep_sports", { p_names: names });
+    if (error) throw new ProfilePersistenceError();
+  }
+
   /** Newest first. */
   async listWeightEntries(
     limit: number = WEIGHT_HISTORY_LIMIT,
