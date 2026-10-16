@@ -231,8 +231,10 @@ a shard in `ci.yml` names it.
   The build still succeeds.
 - Next.js 16: middleware is `src/proxy.ts`, route params are async, and private response
   headers come from `next.config.ts` (covered by `next.config.test.ts`).
-- Deleting files is blocked by the permission layer. Leave leftovers (run artifacts, stray
-  screenshots) to the owner and say what they are rather than working around it.
+- Delete a tracked file with `git rm <path>` (owner, 16 Oct 2026): it stays in history, so
+  it can be brought back. `rm`, recursive and forced deletes are still blocked; leave
+  untracked leftovers (run artifacts, stray screenshots) to the owner and say what they are
+  rather than working around it.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
