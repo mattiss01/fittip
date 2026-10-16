@@ -10,7 +10,7 @@
 -- `20261015093527_careful_fix_in_passing` (the latest migration to define
 -- it), with three changes: the operation check admits `delete` with no
 -- content, the revision comment names it, and the delete branch follows the
--- revision check. No table, policy or grant changes: `authenticated` still has
+-- revision check, locking the Replaced logs as the log itself is locked. No table, policy or grant changes: `authenticated` still has
 -- no DELETE on `completions`, and this definer function is the only path.
 
 create or replace function public.apply_completion_change(
@@ -264,6 +264,18 @@ begin
   -- own when it is written, and the predicate repeats it. A freed session is
   -- simply not logged; the settled rule tests for a log naming it.
   if p_operation = 'delete' then
+    -- The Replaced logs are locked as the log was, under the same bounded
+    -- wait, so a save holding one is answered as a change and not as an
+    -- unexplained failure.
+    begin
+      perform 1 from public.completions replaced
+      where replaced.replaced_by_completion_id = p_completion_id
+        and replaced.user_id = v_user_id
+      for update;
+    exception when lock_not_available then
+      raise exception using errcode = 'PT409',
+        message = 'That completion changed. Reload and try again.';
+    end;
     delete from public.completions replaced
     where replaced.replaced_by_completion_id = p_completion_id
       and replaced.user_id = v_user_id;
