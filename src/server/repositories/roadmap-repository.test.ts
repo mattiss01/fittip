@@ -353,7 +353,6 @@ describe("RoadmapRepository", () => {
       "already-decided",
     ],
     ["PT409", "That proposal is no longer available.", "not-available"],
-    ["PT409", "Your goals changed since this was prepared.", "sources-changed"],
     ["PT409", "Your roadmap changed. Reload and try again.", "stale"],
     // Another roadmap was accepted since the proposal was made: its own
     // reason, since reloading cannot help.

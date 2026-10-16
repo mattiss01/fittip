@@ -180,6 +180,13 @@ async function loadRoadmapState(): Promise<RoadmapScreenState> {
     targetDate: goal.targetDate,
   }));
 
+  // ADR-032: a proposal naming one of these is accepted as it is, and says so.
+  const otherGoalTitles = Object.fromEntries(
+    goalCollection.goals
+      .filter((goal) => goal.status !== "active")
+      .map((goal) => [goal.id, goal.title]),
+  );
+
   const { open: openProposal, declinedPredecessor } = reviewProposals;
   // While a proposal is open it is its own predecessor-in-waiting; once it is
   // declined it is the predecessor. The count a regeneration is offered against
@@ -202,6 +209,7 @@ async function loadRoadmapState(): Promise<RoadmapScreenState> {
     openProposal,
     openMemoryCandidateCount,
     goals,
+    otherGoalTitles,
     defaultEndDate: defaultRoadmapEndDate(today, goals),
     hasSafetySignal: hasRecentSafetySignal(completions, today),
     regenerationsRemaining: regenerationSource

@@ -87,6 +87,22 @@ describe("RoadmapDecisionDock", () => {
 describe("what the dock shows (owner, 14 Oct 2026)", () => {
   afterEach(cleanup);
 
+  // ADR-032: a proposal naming a goal no longer active is accepted as it is,
+  // and says so before Accept.
+  it("names a goal the proposal still names that is no longer active", () => {
+    render(review(FIRST, 3, 3, false));
+    expect(
+      document.querySelector("[data-roadmap-inactive-goals]")?.textContent,
+    ).toBe(
+      "This roadmap names a goal no longer active: Half marathon. Accepting puts it in force as it is; you can edit it afterwards.",
+    );
+  });
+
+  it("says nothing of goals while every one it names is active", () => {
+    render(review(FIRST));
+    expect(document.querySelector("[data-roadmap-inactive-goals]")).toBe(null);
+  });
+
   it("shows the form and nothing of the proposal while it is edited", () => {
     render(review(FIRST));
     expect(screen.getByText("Base and build.")).toBeTruthy();
@@ -160,12 +176,14 @@ function review(
   id: string,
   expectedHeadRevision = 3,
   regenerationsRemaining = 3,
+  active = true,
 ) {
   return (
     <RoadmapProposalReview
       proposal={proposal(id)}
       expectedHeadRevision={expectedHeadRevision}
-      goalTitles={{ [GOAL]: "Half marathon" }}
+      goalTitles={active ? { [GOAL]: "Half marathon" } : {}}
+      otherGoalTitles={active ? {} : { [GOAL]: "Half marathon" }}
       today="2026-09-14"
       regenerationsRemaining={regenerationsRemaining}
     />

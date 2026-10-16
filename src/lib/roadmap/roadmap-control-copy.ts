@@ -267,8 +267,6 @@ export const ROADMAP_CONTROL_COPY = {
     feedbackTooLong:
       "That feedback is longer than 500 characters. Shorten it and try again.",
     checkDetails: "Check the highlighted details. Nothing has been saved yet.",
-    sourcesChanged:
-      "Your goals, memory or training changed after this was prepared. Review it again.",
     alreadyDecided:
       "That proposal has already been decided. Reload to see where it went.",
     stale: "Your roadmap changed in another tab. Reload before deciding again.",

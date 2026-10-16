@@ -48,9 +48,8 @@ The owner asked on 7 October 2026 for a log to be deletable, which frees its ses
   and a log is removed only when the owner deletes it, never as a side effect.
 - Coach proposals record the logs they read by id (`*_proposal_sources`). Those ids stay
   and point at nothing; nothing reads them back as content. A roadmap proposal still open
-  when a log it read is deleted can no longer be accepted: `accept_roadmap_proposal`
-  answers "Your training history changed. Review the proposal again.", as it does when
-  such a log is edited. Plan and fill proposals compare nothing (the open "A fill's
+  when a log it read is deleted stays acceptable since ADR-032; from this decision until
+  that one, the same day, it was refused as after an edit. Plan and fill proposals compare nothing (the open "A fill's
   sources are recorded and never checked" item).
 - What a proposal already holds stays as it was. Its rationale or suggested sessions may
   reflect a log since deleted; nothing rewrites them, and a plan or fill proposal built

@@ -337,12 +337,72 @@ export type RoadmapScreenState = {
   /** Undecided candidates extracted from a planning note. */
   openMemoryCandidateCount: number;
   goals: RoadmapGoalSummary[];
+  /**
+   * The owner's goals that are not active (paused, abandoned, achieved), by
+   * id, so a proposal naming one can say which (ADR-032).
+   */
+  otherGoalTitles: Record<string, string>;
   defaultEndDate: string;
   /** True when an eligible completion carries one of the four safety flags. */
   hasSafetySignal: boolean;
   /** How many regenerations remain on the open proposal's horizon. */
   regenerationsRemaining: number;
 };
+
+/**
+ * The goals a roadmap names, in a phase's attention or a milestone's "Counts
+ * toward", that are not active (ADR-032; owner, 16 Oct 2026): by title where
+ * the goal is only paused, abandoned or achieved, and those that are gone
+ * counted together at the end. Accepting puts the roadmap in force as it
+ * is, so the proposal says so before Accept.
+ */
+export function inactiveNamedGoals(
+  content: Pick<RoadmapProposal, "phases">,
+  activeTitles: Record<string, string>,
+  otherTitles: Record<string, string>,
+): { count: number; labels: string[] } {
+  const named = new Set<string>();
+  for (const phase of content.phases) {
+    for (const attention of phase.goalAttention) named.add(attention.goalId);
+    for (const milestone of phase.milestones) {
+      for (const goalId of milestone.goalIds) named.add(goalId);
+    }
+  }
+  const inactive = [...named].filter(
+    (goalId) => !Object.hasOwn(activeTitles, goalId),
+  );
+  const titled = inactive
+    .filter((goalId) => Object.hasOwn(otherTitles, goalId))
+    .map((goalId) => otherTitles[goalId]);
+  const deleted = inactive.length - titled.length;
+  return {
+    count: inactive.length,
+    labels:
+      deleted === 0
+        ? titled
+        : [
+            ...titled,
+            deleted === 1
+              ? "a goal since deleted"
+              : `${deleted} goals since deleted`,
+          ],
+  };
+}
+
+/** The sentence over a proposal that names goals no longer active. */
+export function inactiveGoalsNote({
+  count,
+  labels,
+}: {
+  count: number;
+  labels: readonly string[];
+}): string {
+  const list =
+    labels.length === 1
+      ? labels[0]
+      : `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+  return `This roadmap names ${count === 1 ? "a goal" : "goals"} no longer active: ${list}. Accepting puts it in force as it is; you can edit it afterwards.`;
+}
 
 /**
  * The approved copy, in one place.

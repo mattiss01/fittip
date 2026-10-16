@@ -5,6 +5,8 @@ import { RoadmapLandingFocus } from "./roadmap-landing-focus";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { CoachSpark } from "@/components/home/coach-spark";
 import {
+  inactiveGoalsNote,
+  inactiveNamedGoals,
   isExampleAuthored,
   ROADMAP_COPY,
   roadmapForEditor,
@@ -31,12 +33,15 @@ export function RoadmapProposalReview({
   proposal,
   expectedHeadRevision,
   goalTitles,
+  otherGoalTitles,
   today,
   regenerationsRemaining,
 }: {
   proposal: RoadmapProposalView;
   expectedHeadRevision: number;
   goalTitles: Record<string, string>;
+  /** Goals not active, by id, to name one the proposal still names. */
+  otherGoalTitles: Record<string, string>;
   today: string;
   regenerationsRemaining: number;
 }) {
@@ -45,6 +50,12 @@ export function RoadmapProposalReview({
   // date, so the roadmap's own dates stand in.
   const startDate = proposal.startDate || proposal.content.startDate;
   const endDate = proposal.endDate || proposal.content.endDate;
+  // ADR-032: accepted as it is all the same, so said before Accept.
+  const inactive = inactiveNamedGoals(
+    proposal.content,
+    goalTitles,
+    otherGoalTitles,
+  );
 
   return (
     <section className={styles.card} data-roadmap-open-proposal={proposal.id}>
@@ -82,6 +93,12 @@ export function RoadmapProposalReview({
             {ROADMAP_COPY.exampleNotice}
           </p>
         ) : null}
+
+        {inactive.count === 0 ? null : (
+          <p className={styles.recordNote} data-roadmap-inactive-goals>
+            {inactiveGoalsNote(inactive)}
+          </p>
+        )}
 
         <article>
           <RoadmapBody

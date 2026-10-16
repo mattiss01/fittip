@@ -88,7 +88,6 @@ export class RoadmapPersistenceError extends Error {
 export type RoadmapConflictReason =
   | "stale"
   | "already-decided"
-  | "sources-changed"
   | "regeneration-cap"
   /** Another roadmap was accepted since this proposal was made. */
   | "roadmap-moved"
@@ -693,15 +692,6 @@ function conflictReason(message: string): RoadmapConflictReason {
     return "not-available";
   }
   if (message.startsWith("That coaching request")) return "not-available";
-  if (
-    message.startsWith("Your goals changed") ||
-    message.startsWith("Your memory changed") ||
-    message.startsWith("Your plan changed") ||
-    message.startsWith("Your training history changed") ||
-    message.startsWith("Memory changed")
-  ) {
-    return "sources-changed";
-  }
   return "stale";
 }
 

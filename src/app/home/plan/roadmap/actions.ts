@@ -797,15 +797,13 @@ function toActionState(
     return {
       status: "conflict",
       message:
-        error.reason === "sources-changed"
-          ? OUTCOMES.sourcesChanged
-          : error.reason === "already-decided"
-            ? OUTCOMES.alreadyDecided
-            : error.reason === "not-available"
-              ? OUTCOMES.notAvailable
-              : error.reason === "roadmap-moved"
-                ? OUTCOMES.roadmapMoved
-                : OUTCOMES.stale,
+        error.reason === "already-decided"
+          ? OUTCOMES.alreadyDecided
+          : error.reason === "not-available"
+            ? OUTCOMES.notAvailable
+            : error.reason === "roadmap-moved"
+              ? OUTCOMES.roadmapMoved
+              : OUTCOMES.stale,
       submission,
     };
   }
