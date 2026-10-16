@@ -207,19 +207,6 @@ describe("roadmap server actions", () => {
       expect(revalidatePathMock).not.toHaveBeenCalled();
     });
 
-    it("names a source that changed rather than blaming the owner", async () => {
-      acceptProposal.mockRejectedValue(
-        new RoadmapConflictError("sources-changed"),
-      );
-
-      const result = await acceptRoadmapAction(
-        INITIAL_ROADMAP_ACTION_STATE,
-        form({ proposalId: PROPOSAL_ID, expectedHeadRevision: "2" }),
-      );
-
-      expect(result.message).toBe(OUTCOMES.sourcesChanged);
-    });
-
     // The id is a form field, so it is parsed rather than trusted. A malformed
     // one never reaches the database.
     it("refuses a malformed proposal id before touching the database", async () => {

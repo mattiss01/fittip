@@ -108,6 +108,7 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
           proposal={state.openProposal}
           expectedHeadRevision={state.head.revision}
           goalTitles={goalTitles}
+          otherGoalTitles={state.otherGoalTitles}
           today={state.today}
           regenerationsRemaining={state.regenerationsRemaining}
         />

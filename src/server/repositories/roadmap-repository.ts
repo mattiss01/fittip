@@ -88,7 +88,6 @@ export class RoadmapPersistenceError extends Error {
 export type RoadmapConflictReason =
   | "stale"
   | "already-decided"
-  | "sources-changed"
   | "regeneration-cap"
   /** Another roadmap was accepted since this proposal was made. */
   | "roadmap-moved"
@@ -693,9 +692,6 @@ function conflictReason(message: string): RoadmapConflictReason {
     return "not-available";
   }
   if (message.startsWith("That coaching request")) return "not-available";
-  // A named goal no longer active: the one source check acceptance still
-  // makes (16 Oct 2026). Logs and memory changed since never refuse.
-  if (message.startsWith("Your goals changed")) return "sources-changed";
   return "stale";
 }
 
