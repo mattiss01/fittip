@@ -895,3 +895,90 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* ---- Delete log (ADR-031) ---- */
+
+/* Quiet under Save: deleting is offered, never invited. */
+.deleteLink {
+  min-height: 2.75rem;
+  width: fit-content;
+  margin: 0.5rem auto 0;
+  padding: 0 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--danger);
+  font: 700 0.92rem var(--font-sans);
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+  cursor: pointer;
+}
+
+/* Above the save dock and the navigation, as the setup popup is. */
+.dialogBackdrop {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgb(23 51 46 / 0.5);
+}
+
+.dialogPanel {
+  width: min(100%, 24rem);
+  display: grid;
+  gap: 0.6rem;
+  padding: 1.25rem;
+  border-radius: var(--radius-card);
+  background: var(--ledger-paper);
+  box-shadow: var(--shadow-raised);
+  color: var(--ledger-ink);
+}
+
+.dialogPanel:focus {
+  outline: none;
+}
+
+.dialogPanel strong {
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.dialogPanel p {
+  margin: 0;
+  color: var(--ledger-muted);
+  line-height: 1.5;
+}
+
+.dialogPanel > div {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.dialogPanel form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+  padding-top: 0.4rem;
+}
+
+.dialogPanel .dialogError {
+  color: var(--danger);
+}
+
+.danger {
+  min-height: 3.2rem;
+  padding: 0.6rem 1rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--danger);
+  color: var(--paper);
+  font: 700 1rem var(--font-sans);
+  cursor: pointer;
+}
+
+.danger:disabled {
+  cursor: default;
+  opacity: 0.6;
+}

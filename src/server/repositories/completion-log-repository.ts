@@ -203,9 +203,9 @@ export class PostgresCompletionLogAdapter implements CompletionLogAdapter {
 
   /**
    * The one atomic completion mutation. Retries are disabled because a create
-   * is not idempotent and an edit answers to a revision: replaying a dropped
-   * response would either write a second record or reapply a change the owner
-   * was told to review.
+   * is not idempotent and an edit or a delete answers to a revision: replaying
+   * a dropped response would either write a second record or reapply a change
+   * the owner was told to review.
    */
   async applyChange(change: CompletionChange): Promise<CompletionReceipt> {
     await this.getVerifiedUserId();
@@ -225,7 +225,7 @@ export class PostgresCompletionLogAdapter implements CompletionLogAdapter {
       !data ||
       data.completion_id === null ||
       data.revision === null ||
-      (result !== "created" && result !== "updated")
+      (result !== "created" && result !== "updated" && result !== "deleted")
     ) {
       throw new CompletionPersistenceError();
     }
@@ -263,6 +263,15 @@ export async function createCompletionLog(): Promise<CompletionLog> {
  * so no caller can compose or forge one.
  */
 function toArguments(change: CompletionChange) {
+  // ADR-031: a delete names the log and the revision read, and carries no
+  // content; the function refuses one that does.
+  if (change.operation === "delete") {
+    return {
+      p_operation: "delete",
+      p_completion_id: change.completionId,
+      p_expected_revision: change.expectedRevision,
+    };
+  }
   if (change.operation === "edit") {
     return {
       p_operation: "edit",

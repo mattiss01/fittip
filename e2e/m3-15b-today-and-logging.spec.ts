@@ -448,6 +448,26 @@ test.describe("M3-15B today and logging", () => {
         unplanned.getByText("Open water", { exact: true }),
       ).toBeVisible();
 
+      // ADR-031: a log can be deleted, after a dialog that says what goes.
+      // "Keep it" deletes nothing; "Delete log" removes it for good.
+      await unplanned.getByRole("link", { name: "Edit log" }).click();
+      await page.locator("[data-log-delete]").click();
+      const dialog = page.getByRole("alertdialog", {
+        name: "Delete this log?",
+      });
+      await expect(dialog).toContainText(
+        "This deletes the log of Sunrise lake swim",
+      );
+      await dialog.getByRole("button", { name: "Keep it" }).click();
+      await expect(dialog).toHaveCount(0);
+      await page.locator("[data-log-delete]").click();
+      await dialog.getByRole("button", { name: "Delete log" }).click();
+      await expect(page).toHaveURL(/\/home\/today\?date=[\d-]+&log=deleted$/);
+      await expect(page.locator("[data-today-log-note]")).toHaveText(
+        "Log deleted.",
+      );
+      await expect(unplanned).toHaveCount(0);
+
       // ---- A mistaken log is corrected, including to skipped. ----
       await todayCard(page, "Tempo run")
         .getByRole("link", { name: "Edit log" })

@@ -34,7 +34,18 @@ import type { RollingPlanSession } from "@/server/rolling-plan/rolling-plan";
 export const dynamic = "force-dynamic";
 
 type Props = {
-  searchParams: Promise<{ date?: string | string[] }>;
+  searchParams: Promise<{
+    date?: string | string[];
+    log?: string | string[];
+  }>;
+};
+
+/**
+ * Where a deleted log lands (ADR-031). The flag only chooses which fixed
+ * sentence is shown; nothing else is read from it.
+ */
+const LOG_NOTES: Record<string, string> = {
+  deleted: "Log deleted.",
 };
 
 /**
@@ -47,7 +58,12 @@ type Props = {
  * Today reads. Every write on this surface is a link to `/home/log`.
  */
 export default async function TodayPage({ searchParams }: Props) {
-  const requested = readRequestedDate((await searchParams).date);
+  const query = await searchParams;
+  const requested = readRequestedDate(query.date);
+  const logNote =
+    typeof query.log === "string" && Object.hasOwn(LOG_NOTES, query.log)
+      ? LOG_NOTES[query.log]
+      : null;
 
   let timezoneName: string | null;
   try {
@@ -64,6 +80,11 @@ export default async function TodayPage({ searchParams }: Props) {
       <header className={styles.header}>
         <h1>Today</h1>
       </header>
+      {logNote === null ? null : (
+        <p className={styles.logNote} role="status" data-today-log-note>
+          {logNote}
+        </p>
+      )}
       {timezoneName === null ? (
         <section className={homeStyles.stateCard} data-today-state="no-zone">
           <h2>Confirm your time zone first</h2>

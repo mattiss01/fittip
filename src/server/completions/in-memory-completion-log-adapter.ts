@@ -143,6 +143,22 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
     if (!existing || existing.revision !== change.expectedRevision) {
       throw new CompletionConflictError();
     }
+    // ADR-031: the log goes with its activities, and every planned log
+    // "Replaced" by it goes first, as the write function deletes them.
+    if (change.operation === "delete") {
+      for (const [replaced, target] of [...this.links]) {
+        if (target !== existing.id) continue;
+        this.completions.delete(replaced);
+        this.links.delete(replaced);
+      }
+      this.completions.delete(existing.id);
+      this.links.delete(existing.id);
+      return {
+        completionId: existing.id,
+        revision: existing.revision,
+        result: "deleted",
+      };
+    }
     // The planned link is immutable, so an edit can never cross the boundary
     // between a planned completion and an unplanned one.
     if (

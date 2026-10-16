@@ -19,7 +19,10 @@ import { readMeasurementHistory } from "../plan/activities/measurement-history";
 import { readSavedSessionOptions } from "../plan/saved/session-options";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import type { LogPlannedActivityView } from "./actual-activities";
-import type { Completion } from "@/server/completions/completion-log";
+import {
+  replacesLabels,
+  type Completion,
+} from "@/server/completions/completion-log";
 import {
   CompletionAuthenticationError,
   createCompletionLog,
@@ -372,6 +375,8 @@ function toExistingView(completion: Completion): LogExistingView {
     note: completion.note ?? null,
     replacementDescription: completion.replacementDescription ?? null,
     replacedById: completion.replacedBy?.completionId ?? null,
+    planned: completion.planSessionId !== null,
+    replaces: replacesLabels(completion).map((replaced) => replaced.label),
     title: completion.title ?? completion.plannedSnapshot?.title ?? null,
     sport: completion.sport ?? completion.plannedSnapshot?.sport ?? null,
     activities: completion.activities.map((activity) => ({

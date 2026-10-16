@@ -488,3 +488,12 @@
     transform: none;
   }
 }
+
+/* Said once, on arriving from a deleted log (ADR-031). */
+.logNote {
+  margin: 0 0 0.75rem;
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius-control);
+  background: #e7f0dc;
+  line-height: 1.45;
+}
