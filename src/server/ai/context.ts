@@ -311,7 +311,7 @@ export type CoachAIContextLimits = {
  * `openai-prompt.test.ts` assert it:
  *
  *   roadmap  prefix 7,800 + wrapper 64 + context 63,700 = 71,564  17,891 tokens
- *   plan     prefix 8,700 + wrapper 64 + context 51,200 = 59,964  14,991 tokens
+ *   plan     prefix 8,700 + wrapper 64 + context 52,100 = 60,864  15,216 tokens
  *   fill     prefix 8,200 + wrapper 64 + context 51,450 = 59,714  14,929 tokens
  *
  * Each line includes that call's own part of ADR-023. Every `total` holds the
@@ -420,13 +420,16 @@ export const COACH_AI_CONTEXT_LIMITS = {
       targetableGoals: 8_000,
       historicalGoals: 1_600,
       memory: 5_600,
-      // 11,000 and 5,800 until ADR-023 decision 12: about a dozen of the
-      // twenty logs fitted. 9,300 holds twenty at the corpus mean of 392 bytes
-      // and eighteen at the corpus worst of 501; a log with a full 400-
-      // character note is about 700, and thirteen of those fit. The roadmap's
-      // 10,200 would have put the whole past the ceiling (see `total`).
-      trainingHistory: 14_500,
-      trainingHistoryCompletions: 9_300,
+      // 11,000 and 5,800 until ADR-023 decision 12, then 14,500 and 9,300,
+      // which was what the 15,000-token ceiling of the day left. The owner
+      // had named the roadmap's 10,200, and since ADR-028 the ceiling is
+      // 18,000 and every call already holds it, so the plan has it now
+      // (16 Oct 2026) at no extra spend: twenty logs at the corpus worst of
+      // 501 bytes, and fourteen with a full 400-character note at about 700.
+      // The whole history moves by the same 900, so the miss list keeps its
+      // room (`context.test.ts`).
+      trainingHistory: 15_400,
+      trainingHistoryCompletions: 10_200,
       planCommitments: 4_000,
       planningNote: 1_200,
       regenerationFeedback: 600,
@@ -454,18 +457,19 @@ export const COACH_AI_CONTEXT_LIMITS = {
       roadmapPhase: 0,
       recentSafetyFlags: 0,
       sessionDetail: 0,
-      // The sum of the parts (50,200) and 1,000 for the envelope (817 at its
+      // The sum of the parts (51,100) and 1,000 for the envelope (817 at its
       // largest), whose
       // largest piece is twelve goal ids outside the horizon. Until ADR-023
       // decision 12 this was below the sum, on the reasoning that no request
       // fills every part at once; the refusal that would then fire named no
-      // source. It cannot fire now before a part has named itself, and the
-      // whole is exactly the ceiling:
+      // source. It cannot fire now before a part has named itself:
       //
-      //   prefix 8,700 + wrapper 64 + context 51,200 = 59,964 characters
-      //   ceil(59,964 / 4) = 14,991  against the 15,000 this was sized to;
-      //   maxInputTokens is 18,000 since ADR-028, for the roadmap call.
-      total: 51_200,
+      //   prefix 8,700 + wrapper 64 + context 52,100 = 60,864 characters
+      //   ceil(60,864 / 4) = 15,216  against maxInputTokens 18,000.
+      //
+      // 51,200 and 14,991 tokens until 16 Oct 2026, sized to the 15,000 of
+      // ADR-023; the logs' 900 bytes are what took it past.
+      total: 52_100,
     },
   },
   // A7-2, within ADR-020. One session rather than a horizon, so the plan's
