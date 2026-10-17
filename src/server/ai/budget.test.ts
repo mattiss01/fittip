@@ -265,12 +265,12 @@ describe("the approved live caps", () => {
       operation: "create_roadmap",
       now: new Date("2026-08-10T09:00:00.000Z"),
       limits: COACH_AI_LIVE_LIMITS,
-      rateCard: requireApprovedCoachAIModel("openai", "gpt-5.6-luna").rateCard,
+      rateCard: requireApprovedCoachAIModel("openai", "gpt-6-luna").rateCard,
     });
 
-    // 18,000 input at $0.20/M plus 3,000 output at $1.20/M. The per-request
-    // ceiling is 8,000, so the reservation clears it with headroom — the
-    // fixture ceiling of 250,000 would have admitted a request costing 45 times
+    // 18,000 input at $0.125/M plus 3,000 output at $0.50/M (`gpt-6-luna`,
+    // input at its cache-write rate). The per-request ceiling is 8,000, so the
+    // reservation clears it with headroom — the fixture ceiling of 250,000 would have admitted a request costing 45 times
     // what a real proposal costs, which is not a ceiling.
     //
     // This figure is what the two input-ceiling decisions cost. It was 5,200
@@ -278,15 +278,17 @@ describe("the approved live caps", () => {
     // 15,000 (9 October 2026, by way of 14,000 that morning) it was 6,600, and
     // the 2,000,000 micro-USD daily ceiling admitted 303 generations a day,
     // where it had admitted 384 and then 357. At 18,000 (13 October 2026,
-    // ADR-028: a change request sends the whole roadmap) it admits 277.
-    expect(reservation.reservedMicroUsd).toBe(7_200);
+    // ADR-028: a change request sends the whole roadmap) it admitted 277. All
+    // of those were at `gpt-5.6-luna`'s $0.20 / $1.20; on 17 October 2026 the
+    // model became `gpt-6-luna` and a reservation 3,750, which admits 533.
+    expect(reservation.reservedMicroUsd).toBe(3_750);
     expect(COACH_AI_LIVE_LIMITS.perRequestCostCeilingMicroUsd).toBe(8_000);
     expect(
       Math.floor(
         COACH_AI_LIVE_LIMITS.dailyCostCeilingMicroUsd /
           reservation.reservedMicroUsd,
       ),
-    ).toBe(277);
+    ).toBe(533);
   });
 
   it("permits no automatic retry", () => {
@@ -303,10 +305,9 @@ describe("the approved live caps", () => {
         ownerId: "53000000-0000-4000-8000-000000000001",
         operation: "create_roadmap",
         // One day after the card's validUntil.
-        now: new Date("2027-02-02T00:00:00.000Z"),
+        now: new Date("2027-04-18T00:00:00.000Z"),
         limits: COACH_AI_LIVE_LIMITS,
-        rateCard: requireApprovedCoachAIModel("openai", "gpt-5.6-luna")
-          .rateCard,
+        rateCard: requireApprovedCoachAIModel("openai", "gpt-6-luna").rateCard,
       }),
     ).toThrow(CoachAIError);
   });

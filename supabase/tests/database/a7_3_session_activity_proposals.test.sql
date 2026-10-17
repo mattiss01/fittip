@@ -76,7 +76,7 @@ insert into public.ai_spend_reservations (
 ) values (
   'a7300000-0000-4000-8000-0000000000c9',
   'a7300000-0000-4000-8000-000000000002', 'fill_session_activities',
-  (now() at time zone 'utc')::date, 5600, 'openai-gpt-5.6-luna-2026-08-10',
+  (now() at time zone 'utc')::date, 5600, 'openai-gpt-6-luna-2026-10-17',
   now() + interval '15 minutes'
 );
 
@@ -388,14 +388,14 @@ select throws_ok(
 
 insert into spend
 select 'fill', * from public.reserve_ai_spend(
-  'fill_session_activities', 5600, 'openai-gpt-5.6-luna-2026-08-10', 'USD');
+  'fill_session_activities', 5600, 'openai-gpt-6-luna-2026-10-17', 'USD');
 
 select is((select count(*)::integer from spend where label = 'fill'), 1,
   'reserve_ai_spend accepts the new operation');
 
 insert into spend
 select 'plan', * from public.reserve_ai_spend(
-  'create_seven_day_plan', 5600, 'openai-gpt-5.6-luna-2026-08-10', 'USD');
+  'create_seven_day_plan', 5600, 'openai-gpt-6-luna-2026-10-17', 'USD');
 
 insert into claim
 select 'live', * from public.begin_session_activity_generation(
@@ -406,7 +406,7 @@ select throws_ok(
   $$ select * from public.finish_session_activity_generation(
     (select completion_token from claim where label = 'live'), 'proposal',
     'fittip.session-activities.v1', 'session-activities-v1-2026-09-28',
-    'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10',
+    'openai', 'gpt-6-luna', 'openai-gpt-6-luna-2026-10-17',
     (select reservation_id from spend where label = 'plan'),
     null, pg_temp.body(), null, null) $$,
   '22023', null,
@@ -424,7 +424,7 @@ select throws_ok(
   $$ select * from public.finish_session_activity_generation(
     (select completion_token from claim where label = 'live'), 'proposal',
     'fittip.session-activities.v1', 'session-activities-v1-2026-09-28',
-    'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10',
+    'openai', 'gpt-6-luna', 'openai-gpt-6-luna-2026-10-17',
     'a7300000-0000-4000-8000-0000000000c9',
     null, pg_temp.body(), null, null) $$,
   '22023', null,
@@ -435,7 +435,7 @@ select throws_ok(
   $$ select * from public.finish_session_activity_generation(
     (select completion_token from claim where label = 'live'), 'proposal',
     'fittip.session-activities.v1', 'session-activities-v1-2026-09-28',
-    'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10',
+    'openai', 'gpt-6-luna', 'openai-gpt-6-luna-2026-10-17',
     (select reservation_id from spend where label = 'fill'),
     null, pg_temp.body(), '[{"kind":"x","recordId":"a7300000-0000-4000-8000-0000000000f1"}]',
     null) $$,
@@ -454,7 +454,7 @@ select is(
   (select state from public.finish_session_activity_generation(
     (select completion_token from claim where label = 'live'), 'proposal',
     'fittip.session-activities.v1', 'session-activities-v1-2026-09-28',
-    'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10',
+    'openai', 'gpt-6-luna', 'openai-gpt-6-luna-2026-10-17',
     (select reservation_id from spend where label = 'fill'),
     null, pg_temp.body(), null, null)),
   'completed',
@@ -477,7 +477,7 @@ select throws_ok(
   $$ select * from public.finish_session_activity_generation(
     (select completion_token from claim where label = 'reuse'), 'proposal',
     'fittip.session-activities.v1', 'session-activities-v1-2026-09-28',
-    'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10',
+    'openai', 'gpt-6-luna', 'openai-gpt-6-luna-2026-10-17',
     (select reservation_id from spend where label = 'fill'),
     null, pg_temp.body(), null, null) $$,
   '23505', null,

@@ -21,6 +21,14 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
+- [~] **The coach runs on `gpt-6-luna`.** Careful lane (spend, database). Owner, 17 Oct 2026:
+      replace `gpt-5.6-luna` before the first live call, so the prompts are judged on the
+      model that stays. Price from OpenAI's page that day: $0.10 / $0.50 per million input /
+      output, cache writes $0.125. Owner's decision: the card charges input at $0.125, the
+      upper bound, because a reply reports only total input tokens. 5.6 Luna is removed, not
+      kept beside it; no live row ever named it. The database's approved-pair check moves
+      with it in a forward migration. Caps unchanged; a reservation falls from 7,200 to 3,750
+      micro-USD.
 - [ ] **A7-5 — Size the fill before its first live run.** Measure output tokens on a
       twelve-activity answer: the grammar pads each target with fourteen nullable keys
       against a 3,000-token ceiling. Needs a provider key, so it waits for one; each run

@@ -837,8 +837,8 @@ select throws_ok(
   format(
     $$select * from public.finish_plan_generation(
       %L::uuid, 'proposal', 'fittip.seven-day-plan.v2',
-      'seven-day-plan-v2-2026-08-12', 'openai', 'gpt-5.6-luna',
-      'openai-gpt-5.6-luna-2026-08-10',
+      'seven-day-plan-v2-2026-08-12', 'openai', 'gpt-6-luna',
+      'openai-gpt-6-luna-2026-10-17',
       '7a000000-0000-4000-8000-0000000000e2'::uuid,
       null, %L::jsonb, null, null)$$,
     (select completion_token from pg_temp_claim_four),

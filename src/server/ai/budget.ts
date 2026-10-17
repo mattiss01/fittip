@@ -100,6 +100,12 @@ export const COACH_AI_FIXTURE_LIMITS: CoachAILimits = {
  * micro-USD, and the daily ceiling admits 277 generations. A call is charged
  * for what it used.
  *
+ * On 17 October 2026 the model became `gpt-6-luna`, before any live call, and
+ * the caps stayed as they were. At its card a reservation is 3,750 micro-USD
+ * and the daily ceiling admits 533 generations. The output ceiling and the
+ * deadline were sized against 5.6 Luna and are unmeasured for 6 until its
+ * first live runs (A7-5).
+ *
  * These numbers are the local fast path. The authoritative ceilings are the
  * database's, in `reserve_ai_spend`, because this process cannot be trusted to
  * bound its own spending, and above both sits the product owner's provider-side

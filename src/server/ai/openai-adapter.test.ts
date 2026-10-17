@@ -142,7 +142,7 @@ function adapter(
 ): OpenAICoachAI {
   return new OpenAICoachAI({
     apiKey: CREDENTIAL,
-    modelCode: "gpt-5.6-luna",
+    modelCode: "gpt-6-luna",
     baseUrl,
     onTruncated,
   });
@@ -226,7 +226,7 @@ describe("OpenAI coaching adapter", () => {
     expect(sent.response_format.type).toBe("json_schema");
     expect(sent.response_format.json_schema.strict).toBe(true);
     expect(sent.max_completion_tokens).toBe(3_000);
-    expect(sent.model).toBe("gpt-5.6-luna");
+    expect(sent.model).toBe("gpt-6-luna");
   });
 
   it.each<[string, number, string]>([
@@ -421,7 +421,7 @@ describe("OpenAI coaching adapter", () => {
 
     it("refuses to construct without one", () => {
       expect(
-        () => new OpenAICoachAI({ apiKey: "   ", modelCode: "gpt-5.6-luna" }),
+        () => new OpenAICoachAI({ apiKey: "   ", modelCode: "gpt-6-luna" }),
       ).toThrow(CoachAIError);
       expect(
         () => new OpenAICoachAI({ apiKey: CREDENTIAL, modelCode: "" }),
