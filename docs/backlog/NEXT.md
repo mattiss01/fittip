@@ -21,13 +21,6 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [~] **The plan sees the days after it.** Careful lane (what the provider is sent).
-      Mia's live plan (17 Oct 2026) put a run on Fri 23 before a repeating Sat 24
-      run/walk the coach never saw: the plan reads no series rules, and past the
-      horizon only one-offs were sent. Owner, 17 Oct 2026: account for the days after.
-      The three days after the horizon are sent dated in full, repeating occurrences
-      included (`PLAN_DATED_DAYS_PAST_HORIZON`), and the prompt says so; same fields
-      as any commitment, inside the existing 30-entry and 4,000-byte bounds (ADR-013, sixth amendment).
 - [ ] **A7-5 — Size the fill before its first live run.** Measure output tokens on a
       twelve-activity answer: the grammar pads each target with fourteen nullable keys
       against a 3,000-token ceiling. Needs a provider key, so it waits for one; each run
