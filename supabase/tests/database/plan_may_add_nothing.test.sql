@@ -6,7 +6,8 @@
 --   1. The content check accepts an empty list, and nothing else loosened:
 --      too many sessions, a missing description and wrong dates still fail.
 --   2. Such an answer is recorded as a proposal with no items at all: its
---      free days are not offered as recovery days (owner, 17 Oct 2026).
+--      free days are not offered as recovery days, and since the owner's
+--      later decision that day no proposal offers them.
 --   3. Finishing its review closes it as applied with a count of 0, with no
 --      change set, and the plan's revision does not move.
 
@@ -220,7 +221,7 @@ select is(
   'and the plan''s revision has not moved'
 );
 
--- 4. Beside a proposed session, free days are still offered -----------------
+-- 4. Beside a proposed session, free days are not offered either -------------
 
 insert into pg_temp_claim
 select 'one', * from public.begin_plan_generation(
@@ -246,8 +247,8 @@ select is(
    join public.plan_generation_requests request
      on request.id = proposal.generation_request_id
    where request.idempotency_key = 'empty-week-key-0000000002'),
-  array['recovery_day@0', 'session@1', 'recovery_day@2'],
-  'beside one proposed session the free days are offered as before'
+  array['session@1'],
+  'beside a proposed session the free days are not offered either (17 Oct 2026)'
 );
 
 select * from finish();

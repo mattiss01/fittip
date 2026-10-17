@@ -95,8 +95,8 @@ test.describe("M3-16A plan proposal review", () => {
       ).toBeVisible();
 
       // Ask for three days: the example coach puts a session on the first and
-      // third and leaves the middle one empty, which is what makes a
-      // recovery-day choice exist.
+      // third and leaves the middle one empty, which offers nothing since
+      // 17 Oct 2026 (it used to be a recovery-day choice).
       await page.getByLabel("Days to plan").fill("3");
       await page.getByRole("button", { name: "Ask the coach" }).click();
 
@@ -114,9 +114,9 @@ test.describe("M3-16A plan proposal review", () => {
         page.getByText("Already planned", { exact: true }),
       ).toBeVisible();
       await expect(page.getByText("Club track night")).toBeVisible();
-      await expect(
-        page.getByText("Recovery day", { exact: true }),
-      ).toBeVisible();
+      await expect(page.getByText("Recovery day", { exact: true })).toHaveCount(
+        0,
+      );
 
       // Nothing is decided yet, so the finish is refused before it is offered.
       const finish = page.getByRole("button", { name: "Finish review" });
@@ -125,22 +125,21 @@ test.describe("M3-16A plan proposal review", () => {
 
       const choices = page.getByRole("button", { name: /^Add .* to plan$/ });
       const proposedCount = await choices.count();
-      expect(proposedCount).toBe(3);
+      expect(proposedCount).toBe(2);
 
-      // Stage the first, reject the rest.
+      // Stage the first, reject the other.
       await choices.first().click();
       await expect(
         page.getByText("Will be added", { exact: true }),
       ).toBeVisible();
-
-      const rejects = page.getByRole("button", { name: /^Reject / });
-      await rejects.nth(1).click();
       await expect(
         page.getByText(
           /1 item still needs a choice|One item still needs a choice/,
         ),
       ).toBeVisible();
-      await rejects.nth(2).click();
+
+      const rejects = page.getByRole("button", { name: /^Reject / });
+      await rejects.nth(1).click();
 
       await expect(finish).toBeEnabled();
       await expect(
@@ -296,14 +295,13 @@ test.describe("M3-16A plan proposal review", () => {
       await expect(
         page.getByText("Will replace", { exact: true }),
       ).toBeVisible();
-      const rejects = page.getByRole("button", { name: /^Reject / });
-      await rejects.nth(1).click();
       await expect(
         page.getByText(
           /1 item still needs a choice|One item still needs a choice/,
         ),
       ).toBeVisible();
-      await rejects.nth(2).click();
+      const rejects = page.getByRole("button", { name: /^Reject / });
+      await rejects.nth(1).click();
 
       const finish = page.getByRole("button", { name: "Finish review" });
       await expect(finish).toBeEnabled();

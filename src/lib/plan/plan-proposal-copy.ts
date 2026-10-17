@@ -9,12 +9,7 @@ import { COACH_START_MAX_DAYS_AHEAD } from "@/lib/date/local-date";
  * the strings live here, no control's label is written inside a component, and
  * nothing is serialized into the client payload as props on every render.
  *
- * Two wordings are worth reading twice.
- *
- * The **recovery-day** strings are the surface's own, not the coach's. A
- * recovery-day item exists because the coach left a date empty, and it carries
- * no rationale, so these say what the proposal means by an empty day without
- * putting words in the coach's mouth.
+ * One wording is worth reading twice.
  *
  * The **example** label rests on the stored `provider_code`, never on `origin`.
  * A proposal the built-in fixture coach wrote is an example, and it says so
@@ -132,9 +127,6 @@ export const PLAN_PROPOSAL_COPY = {
   besideBadge: "Will be added beside",
   rejectedBadge: "Rejected",
   cancelledBadge: "Cancelled",
-  recoveryDayTitle: "Recovery day",
-  recoveryDaySupport:
-    "The coach put no session on this day. Accepting it marks the day as rest you meant to take, rather than a day you happened to leave empty.",
   recoveryDayAlreadyBadge: "Already a recovery day",
 
   stageAction: "Add to plan",

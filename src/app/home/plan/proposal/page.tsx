@@ -134,7 +134,7 @@ export default async function PlanProposalPage() {
                 regenerationFeedback={state.proposal.regenerationFeedback}
                 weekDescription={state.proposal.content.weekDescription}
                 // No proposed session; such a proposal has no items at all,
-                // since free days are offered as rest only beside one.
+                // since proposals offer only sessions (17 Oct 2026).
                 nothingAdded={state.proposal.items.every(
                   (item) => item.kind !== "session",
                 )}

@@ -40,8 +40,8 @@ as $$
 $$;
 
 -- A valid `fittip.seven-day-plan.v2` body over a three-day horizon with sessions
--- on the first and third day. The middle day is left empty on purpose: it is
--- what makes a recovery-day item exist to be decided.
+-- on the first and third day. The middle day is left empty on purpose: since
+-- 17 October 2026 it is offered as nothing, where it used to be a recovery day.
 create function pg_temp.plan_body(p_start date, p_end date)
 returns jsonb
 language sql
@@ -389,18 +389,18 @@ where idempotency_key = 'owner-plan-key-000000001';
 
 select is(
   (select count(*)::integer from public.plan_proposal_items),
-  3,
-  'two proposed sessions and the one empty date between them are decidable'
+  2,
+  'two proposed sessions are decidable, and the empty date between them is not'
 );
 select is(
   (select array_agg(kind order by ordinal) from public.plan_proposal_items),
-  array['session', 'recovery_day', 'session'],
-  'items are ordered by date, and the empty middle day is offered as recovery'
+  array['session', 'session'],
+  'items are the sessions in date order; the empty middle day offers no rest (17 Oct 2026)'
 );
 select is(
   (select array_agg(local_date order by ordinal) from public.plan_proposal_items),
-  array[pg_temp.day(0), pg_temp.day(1), pg_temp.day(2)],
-  'every date in the horizon carries exactly one decision'
+  array[pg_temp.day(0), pg_temp.day(2)],
+  'each item sits on its session''s date'
 );
 select is(
   (select array_agg(content_index order by ordinal)
@@ -413,11 +413,10 @@ select ok(
    from public.plan_proposal_items where kind = 'session'),
   'a session item owns the plan session id it will be applied under'
 );
-select ok(
-  (select bool_and(
-     session_id is null and title is null and rationale is null)
-   from public.plan_proposal_items where kind = 'recovery_day'),
-  'a recovery-day item carries no coach-authored text, because the coach wrote none'
+select is(
+  (select count(*)::integer from public.plan_proposal_items where kind = 'recovery_day'),
+  0,
+  'no item is a recovery day'
 );
 select is(
   (select expected_duration_minutes from public.plan_proposal_items where ordinal = 0),
@@ -486,31 +485,29 @@ select throws_ok(
 select lives_ok(
   format(
     $$select public.decide_plan_proposal_item(%L::uuid, 0, 'staged'),
-             public.decide_plan_proposal_item(%L::uuid, 1, 'staged'),
-             public.decide_plan_proposal_item(%L::uuid, 2, 'rejected')$$,
-    (select id from pg_temp_proposal),
+             public.decide_plan_proposal_item(%L::uuid, 1, 'rejected')$$,
     (select id from pg_temp_proposal),
     (select id from pg_temp_proposal)
   ),
-  'the owner stages the first session and the rest day, and rejects the second'
+  'the owner stages the first session and rejects the second'
 );
 
 select is(
-  (select decision from public.plan_proposal_item_decisions where ordinal = 2),
+  (select decision from public.plan_proposal_item_decisions where ordinal = 1),
   'rejected',
   'a rejection is a recorded choice, not an absence'
 );
 
 select lives_ok(
   format(
-    $$select public.decide_plan_proposal_item(%L::uuid, 2, 'proposed')$$,
+    $$select public.decide_plan_proposal_item(%L::uuid, 1, 'proposed')$$,
     (select id from pg_temp_proposal)
   ),
   'a decision can be taken back to proposed'
 );
 select is(
   (select count(*)::integer from public.plan_proposal_item_decisions),
-  2,
+  1,
   'and taking it back removes the row rather than storing a third value'
 );
 select throws_ok(
@@ -525,7 +522,7 @@ select throws_ok(
 
 select lives_ok(
   format(
-    $$select public.decide_plan_proposal_item(%L::uuid, 2, 'rejected')$$,
+    $$select public.decide_plan_proposal_item(%L::uuid, 1, 'rejected')$$,
     (select id from pg_temp_proposal)
   ),
   'the owner rejects it again'
@@ -551,8 +548,8 @@ select is(
   'the finish applies'
 );
 select is(
-  (select applied_count from pg_temp_receipt), 2::smallint,
-  'applying exactly the two items that were staged: one session and one rest day'
+  (select applied_count from pg_temp_receipt), 1::smallint,
+  'applying exactly the one session that was staged'
 );
 
 -- What reached the plan ------------------------------------------------------
@@ -583,12 +580,14 @@ select ok(
 );
 select is(
   (select count(*)::integer from public.rolling_plan_recovery_days),
-  1,
-  'the staged rest day was applied as a recovery-day label'
+  0,
+  'no recovery day reached the plan'
 );
 select is(
-  (select local_date from public.rolling_plan_recovery_days), pg_temp.day(1),
-  'on the date the coach left empty'
+  (select count(*)::integer from public.rolling_plan_sessions
+   where local_date = pg_temp.day(1)),
+  0,
+  'and the date the coach left empty stays empty'
 );
 select is(
   (select provenance from public.rolling_plan_change_sets),
@@ -614,7 +613,7 @@ select is(
 );
 select is(
   (select count(*)::integer from public.plan_proposal_items),
-  3,
+  2,
   'nor delete the items that were rejected'
 );
 select is(
@@ -644,7 +643,7 @@ select is(
 );
 select throws_ok(
   format(
-    $$select public.decide_plan_proposal_item(%L::uuid, 2, 'staged')$$,
+    $$select public.decide_plan_proposal_item(%L::uuid, 1, 'staged')$$,
     (select id from pg_temp_proposal)
   ),
   'PT433', 'That review is already finished.',
@@ -711,7 +710,7 @@ select is(
 );
 select is(
   (select count(*)::integer from public.plan_proposal_items),
-  6,
+  4,
   'the discarded proposal''s items are kept; discarding is a decision, not an erasure'
 );
 select throws_ok(
@@ -753,10 +752,7 @@ select is(
 select lives_ok(
   format(
     $$select public.decide_plan_proposal_item(%L::uuid, 0, 'staged'),
-             public.decide_plan_proposal_item(%L::uuid, 1, 'rejected'),
-             public.decide_plan_proposal_item(%L::uuid, 2, 'rejected')$$,
-    (select proposal_id from public.plan_generation_requests
-     where idempotency_key = 'owner-plan-key-000000003'),
+             public.decide_plan_proposal_item(%L::uuid, 1, 'rejected')$$,
     (select proposal_id from public.plan_generation_requests
      where idempotency_key = 'owner-plan-key-000000003'),
     (select proposal_id from public.plan_generation_requests
@@ -885,12 +881,11 @@ select lives_ok(
 select lives_ok(
   format(
     $$select public.decide_plan_proposal_item(%1$L::uuid, 0, 'staged'),
-             public.decide_plan_proposal_item(%1$L::uuid, 1, 'staged'),
-             public.decide_plan_proposal_item(%1$L::uuid, 2, 'rejected')$$,
+             public.decide_plan_proposal_item(%1$L::uuid, 1, 'rejected')$$,
     (select proposal_id from public.plan_generation_requests
      where idempotency_key = 'owner-plan-key-000000004')
   ),
-  'the owner stages the first session and the rest day that already holds'
+  'the owner stages the first session beside their own and rejects the second'
 );
 
 create temporary table pg_temp_receipt_four (
@@ -911,17 +906,17 @@ select * from public.finish_plan_proposal_review(
 
 select is(
   (select state from pg_temp_receipt_four), 'applied',
-  'a staged rest day that already holds does not take the rest of the finish down'
+  'the finish applies'
 );
 select is(
   (select applied_count from pg_temp_receipt_four), 1::smallint,
-  'and it is not counted as applied, because nothing was'
+  'with the one staged session'
 );
 select is(
   (select count(*)::integer from public.rolling_plan_recovery_days
    where local_date = pg_temp.day(5)),
   1,
-  'the rest day is still exactly one label'
+  'the owner''s own rest day is untouched, still exactly one label'
 );
 select is(
   (select position from public.rolling_plan_sessions
@@ -940,7 +935,8 @@ select is(
 --
 -- The owner's decision of 19 September 2026: a date that already holds their
 -- own session, or is already labelled rest, is not offered as a recovery day,
--- whatever the coach left off it.
+-- whatever the coach left off it. Since 17 October 2026 no date is, so these
+-- hold trivially; they stay as the guard that none comes back.
 
 create function pg_temp.propose(p_key text, p_start integer)
 returns uuid
