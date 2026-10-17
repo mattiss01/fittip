@@ -46,8 +46,9 @@ import { readRuntimePolicy } from "@/lib/auth/runtime-policy";
  * values that can disagree. This module is the only place permitted to choose
  * them, and it chooses all three from one binding.
  *
- * The failure it closes: `FITTIP_AI_MODEL=gpt-5.5` — $5.00/$30.00 per million —
- * priced by luna's $0.20/$1.20 card computes a 5,200 micro-USD reservation
+ * The failure it closes, as M3-01B found it: `FITTIP_AI_MODEL=gpt-5.5` —
+ * $5.00/$30.00 per million — priced by `gpt-5.6-luna`'s $0.20/$1.20 card
+ * computed a 5,200 micro-USD reservation
  * against a true cost near 130,000. The 2,000,000 daily ceiling would then
  * admit roughly $50 of real spend while recording $2. `requireLiveCoachAIModel`
  * refuses that pairing before an adapter is constructed, so no credential is

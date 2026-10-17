@@ -9,7 +9,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(8);
+select plan(9);
 
 select ok(
   public.roadmap_technical_codes_are_accepted(
@@ -69,6 +69,15 @@ select ok(
     'execute'
   ),
   'anon cannot call the check directly'
+);
+
+select ok(
+  not has_function_privilege(
+    'service_role',
+    'public.roadmap_technical_codes_are_accepted(text, text, text, boolean)',
+    'execute'
+  ),
+  'service_role cannot call the check directly'
 );
 
 select * from finish();
