@@ -21,7 +21,13 @@
    different plan", measured about 14.8rem to its top edge at 390px in the R1
    type (CI run 36600705825). */
 .appShell > main:has(:global(.save-dock)) {
-  padding-bottom: calc(16rem + env(safe-area-inset-bottom));
+  /* A dock that measures itself (proposal review, 17 Oct 2026) sets
+     --save-dock-reserve to its own height; a taller one than measured here
+     then still clears. */
+  padding-bottom: max(
+    calc(16rem + env(safe-area-inset-bottom)),
+    calc(var(--save-dock-reserve, 0px) + 1rem)
+  );
 }
 
 .appShell :global(.save-dock) {

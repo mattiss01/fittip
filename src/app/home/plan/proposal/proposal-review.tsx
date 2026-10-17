@@ -100,6 +100,7 @@ export function ProposalReview({
   useEffect(() => {
     if (confirmingDiscard) discardTitle.current?.focus();
   }, [confirmingDiscard]);
+  const dock = useDockReserve();
   const notice = latest(state, discardState, regenerateState);
   const busy = pending || discarding || regenerating;
 
@@ -217,7 +218,7 @@ export function ProposalReview({
         ))}
       </ol>
 
-      <div className={`${styles.dock} save-dock`}>
+      <div className={`${styles.dock} save-dock`} ref={dock}>
         <p className={styles.dockSupport}>
           {unresolved > 0
             ? COPY.unresolvedSupport(unresolved)
@@ -736,4 +737,37 @@ function formatDay(localDate: string): string {
   return Number.isFinite(parsed)
     ? DAY_FORMAT.format(new Date(parsed))
     : localDate;
+}
+
+/**
+ * Reserves exactly the room the dock takes, from its top edge to the bottom of
+ * the viewport, so the last day can always be scrolled clear of it.
+ *
+ * The shell's fixed 16rem was measured for the dock's shortest text; a longer
+ * support line ("Nothing is staged, …") or the open "ask again" box made it
+ * taller, and the last day stayed underneath (owner, 17 Oct 2026). The height
+ * goes to `--save-dock-reserve` on the document, which the shell reads, and
+ * is removed with the review, so other docks keep the fixed reserve.
+ */
+function useDockReserve() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const dock = ref.current;
+    if (!dock || typeof ResizeObserver === "undefined") return;
+    const root = document.documentElement;
+    const measure = () => {
+      const reserve = window.innerHeight - dock.getBoundingClientRect().top;
+      root.style.setProperty("--save-dock-reserve", `${Math.ceil(reserve)}px`);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(dock);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+      root.style.removeProperty("--save-dock-reserve");
+    };
+  }, []);
+  return ref;
 }
