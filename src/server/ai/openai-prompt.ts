@@ -183,11 +183,11 @@ const ROADMAP_SCHEMA = {
           type: "string",
           enum: [COACH_AI_SCHEMA_VERSIONS.create_roadmap],
         },
-        title: { type: "string", description: "At most 80 characters." },
+        title: { type: "string", description: "At most 65 characters." },
         summary: {
           type: "string",
           description:
-            "Two or three short sentences to the athlete. At most 600 characters.",
+            "Two or three short sentences to the athlete. At most 500 characters.",
         },
         startDate: {
           type: "string",
@@ -213,11 +213,11 @@ const ROADMAP_SCHEMA = {
               "milestones",
             ],
             properties: {
-              title: { type: "string", description: "At most 80 characters." },
+              title: { type: "string", description: "At most 65 characters." },
               focus: {
                 type: "string",
                 description:
-                  "What this phase is for, in one or two sentences. At most 300 characters.",
+                  "What this phase is for, in one or two sentences. At most 250 characters.",
               },
               startDate: { type: "string", description: "YYYY-MM-DD." },
               endDate: {
@@ -258,12 +258,12 @@ const ROADMAP_SCHEMA = {
                   properties: {
                     title: {
                       type: "string",
-                      description: "At most 80 characters.",
+                      description: "At most 65 characters.",
                     },
                     observableCriterion: {
                       type: "string",
                       description:
-                        "What an observer could verify. At most 200 characters. Never promise an outcome.",
+                        "What an observer could verify. At most 160 characters. Never promise an outcome.",
                     },
                     targetDate: { type: "string", description: "YYYY-MM-DD." },
                     goalIds: {
@@ -300,7 +300,7 @@ const ROADMAP_SCHEMA = {
           sourceExcerpt: {
             type: "string",
             description:
-              "An exact substring of planningNote, at most 200 characters, copied character for character.",
+              "An exact substring of planningNote, at most 160 characters, copied character for character.",
           },
           confidence: {
             type: ["integer", "null"],
@@ -347,7 +347,7 @@ const PLAN_SCHEMA = {
         weekDescription: {
           type: "string",
           description:
-            "Two or three short sentences to the athlete about the horizon as a whole. At most 600 characters.",
+            "Two or three short sentences to the athlete about the horizon as a whole. At most 500 characters.",
         },
         startDate: {
           type: "string",
@@ -379,21 +379,21 @@ const PLAN_SCHEMA = {
             ],
             properties: {
               date: { type: "string", description: "YYYY-MM-DD." },
-              title: { type: "string", description: "At most 120 characters." },
+              title: { type: "string", description: "At most 100 characters." },
               sport: {
                 type: "string",
                 description:
-                  "The sport or movement domain. At most 60 characters.",
+                  "The sport or movement domain. At most 50 characters.",
               },
               focus: {
                 type: "string",
                 description:
-                  "What this session trains. At most 300 characters.",
+                  "What this session trains. At most 250 characters.",
               },
               intent: {
                 type: "string",
                 description:
-                  "How it should feel and how hard to go. At most 300 characters.",
+                  "How it should feel and how hard to go. At most 250 characters.",
               },
               durationMinutes: {
                 type: "integer",
@@ -422,12 +422,12 @@ const PLAN_SCHEMA = {
                   properties: {
                     title: {
                       type: "string",
-                      description: "At most 120 characters.",
+                      description: "At most 100 characters.",
                     },
                     whenToChoose: {
                       type: "string",
                       description:
-                        "The condition under which to take it instead. At most 200 characters.",
+                        "The condition under which to take it instead. At most 160 characters.",
                     },
                   },
                 },
@@ -435,7 +435,7 @@ const PLAN_SCHEMA = {
               rationale: {
                 type: "string",
                 description:
-                  "Why this session, on this day, for this athlete. At most 300 characters.",
+                  "Why this session, on this day, for this athlete. At most 250 characters.",
               },
               replaces: {
                 type: ["string", "null"],
@@ -447,12 +447,12 @@ const PLAN_SCHEMA = {
         },
         assumptions: {
           type: ["array", "null"],
-          description: "Zero to four, each at most 200 characters.",
+          description: "Zero to four, each at most 160 characters.",
           items: { type: "string" },
         },
         uncertainties: {
           type: ["array", "null"],
-          description: "Zero to three.",
+          description: "Zero to three, each field at most 160 characters.",
           items: {
             type: "object",
             additionalProperties: false,
@@ -467,7 +467,7 @@ const PLAN_SCHEMA = {
         safetyConsiderations: {
           type: ["array", "null"],
           description:
-            "Zero to three, each at most 240 characters. Describe conservative training direction. Never diagnose, prescribe, or claim safety.",
+            "Zero to three, each at most 200 characters. Describe conservative training direction. Never diagnose, prescribe, or claim safety.",
           items: { type: "string" },
         },
       },
@@ -492,7 +492,7 @@ const PLAN_SCHEMA = {
           sourceExcerpt: {
             type: "string",
             description:
-              "An exact substring of planningNote, at most 200 characters, copied character for character.",
+              "An exact substring of planningNote, at most 160 characters, copied character for character.",
           },
           confidence: {
             type: ["integer", "null"],
@@ -587,7 +587,7 @@ const SESSION_ACTIVITIES_SCHEMA = {
     summary: {
       type: "string",
       description:
-        "What the list is built to do and the main choice made. At most 400 characters.",
+        "What the list is built to do and the main choice made. At most 320 characters.",
     },
     activities: {
       type: "array",
@@ -610,11 +610,11 @@ const SESSION_ACTIVITIES_SCHEMA = {
             description:
               "An id copied exactly from library, or null for a new activity.",
           },
-          name: { type: "string", description: "At most 120 characters." },
-          sport: { type: "string", description: "At most 80 characters." },
+          name: { type: "string", description: "At most 100 characters." },
+          sport: { type: "string", description: "At most 65 characters." },
           instructions: {
             type: ["string", "null"],
-            description: "How to perform it, briefly. At most 500 characters.",
+            description: "How to perform it, briefly. At most 400 characters.",
           },
           measurementMode: {
             type: "string",
@@ -631,7 +631,7 @@ const SESSION_ACTIVITIES_SCHEMA = {
           rationale: {
             type: "string",
             description:
-              "Why this activity and this target. At most 300 characters.",
+              "Why this activity and this target. At most 250 characters.",
           },
         },
       },
@@ -639,7 +639,7 @@ const SESSION_ACTIVITIES_SCHEMA = {
     safetyConsiderations: {
       type: ["array", "null"],
       description:
-        "Zero to three, each at most 240 characters. Describe conservative training direction. Never diagnose, prescribe, or claim safety.",
+        "Zero to three, each at most 200 characters. Describe conservative training direction. Never diagnose, prescribe, or claim safety.",
       items: { type: "string" },
     },
   },

@@ -21,6 +21,14 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
+- [~] **The coach's text always fits (careful lane: AI output boundary).** Lena's live plan
+      (17 Oct 2026) was thrown away, and paid for, because one safety note was 241
+      characters against 240. Owner's decision: both fixes, on every field. The prompt
+      states about 80% of each real limit, and text over the real limit is cut to fit
+      (at a sentence end where one is close, else a word, with "…") instead of refusing
+      the answer. Over-long prose lists (assumptions, uncertainties, safety notes,
+      alternatives, milestones, memory) keep their first entries. Structural counts stay
+      refusals: phases, sessions per day, activities. Stored limits do not change.
 - [ ] **A7-5 — Size the fill before its first live run.** Measure output tokens on a
       twelve-activity answer: the grammar pads each target with fourteen nullable keys
       against a 3,000-token ceiling. Needs a provider key, so it waits for one; each run

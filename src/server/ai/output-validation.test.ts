@@ -18,6 +18,7 @@ import {
 import {
   COACH_AI_MAX_OUTPUT_BYTES,
   COACH_AI_REJECTION_REASONS,
+  fitText,
   validateCoachAICandidate,
   validatePlanCandidate,
   validateRoadmapCandidate,
@@ -165,7 +166,7 @@ describe("accepted roadmap output", () => {
 
   // Owner, 14 Oct 2026: "Counts toward" is optional, so a milestone may name
   // no goal. The ceiling on how many it names is unchanged.
-  it("accepts a milestone that counts toward no goal, and still bounds how many", () => {
+  it("accepts a milestone that counts toward no goal, and keeps at most four", () => {
     const body = JSON.parse(findCoachAIFixtureCase("valid_roadmap").body);
     const milestone = body.roadmap.phases.find(
       (phase: { milestones: unknown[] }) => phase.milestones.length > 0,
@@ -182,12 +183,15 @@ describe("accepted roadmap output", () => {
     milestone.goalIds = Array(5).fill(
       COACH_AI_FIXTURE_CONTEXT.targetableGoals[0]!.id,
     );
-    expect(
-      validateRoadmapCandidate({
-        body: JSON.stringify(body),
-        context: COACH_AI_FIXTURE_CONTEXT,
-      }),
-    ).toEqual({ outcome: "rejected", reason: "business_rule" });
+    const result = validateRoadmapCandidate({
+      body: JSON.stringify(body),
+      context: COACH_AI_FIXTURE_CONTEXT,
+    });
+    if (result.outcome !== "accepted") throw new Error("expected acceptance");
+    const kept = result.response.roadmap.phases.find(
+      (phase) => phase.milestones.length > 0,
+    )!.milestones[0]!;
+    expect(kept.goalIds).toHaveLength(4);
   });
 
   it("accepts a roadmap with no summary and a milestone with no details", () => {
@@ -402,10 +406,9 @@ describe("a planning note has no authority over what the server accepts", () => 
     });
     if (result.outcome !== "accepted") throw new Error("expected acceptance");
 
-    // The roadmap is untouched by the attempt; only the section that broke its
-    // own bound is discarded.
-    expect(result.response.memoryCandidates).toEqual([]);
-    expect(result.memoryRejectionReason).toBe("business_rule");
+    // The bound holds whatever the note asks: four are kept, the rest dropped.
+    expect(result.response.memoryCandidates).toHaveLength(4);
+    expect(result.memoryRejectionReason).toBeNull();
   });
 });
 
@@ -854,18 +857,167 @@ describe("session activities review follow-ups", () => {
   });
 });
 
-describe("session activities agree with the database on blank safety text", () => {
-  it("refuses a whitespace-only safety consideration", () => {
+describe("blank safety text never reaches the database", () => {
+  it("drops a whitespace-only safety consideration from a fill", () => {
     const body = JSON.parse(
       findCoachAIFixtureCase("valid_session_activities").body,
     );
-    body.safetyConsiderations = ["   "];
+    body.safetyConsiderations = ["   ", "Keep the load light today."];
+
+    const result = validateSessionActivitiesCandidate({
+      body: JSON.stringify(body),
+      context: COACH_AI_FIXTURE_SESSION_CONTEXT,
+    });
+    if (result.outcome !== "accepted") throw new Error("expected acceptance");
+    expect(result.proposal.safetyConsiderations).toEqual([
+      "Keep the load light today.",
+    ]);
+  });
+
+  it("does not count a blank note as the one a reported signal requires", () => {
+    const body = JSON.parse(
+      findCoachAIFixtureCase("valid_seven_day_plan").body,
+    );
+    body.plan.safetyConsiderations = [" ".repeat(300)];
 
     expect(
-      validateSessionActivitiesCandidate({
+      validatePlanCandidate({
         body: JSON.stringify(body),
-        context: COACH_AI_FIXTURE_SESSION_CONTEXT,
+        context: COACH_AI_FIXTURE_PLAN_SAFETY_CONTEXT,
       }),
-    ).toEqual({ outcome: "rejected", reason: "business_rule" });
+    ).toEqual({ outcome: "rejected", reason: "safety_requirement" });
+  });
+});
+
+describe("the coach's text is cut to fit, never refused for length (owner, 17 Oct 2026)", () => {
+  it("leaves text inside the limit alone", () => {
+    expect(fitText("Short and fine.", 240)).toBe("Short and fine.");
+    expect(fitText("x".repeat(240), 240)).toBe("x".repeat(240));
+  });
+
+  it("stops at a sentence end in the last fifth, without a mark", () => {
+    const text = "First sentence goes here. Second one on and on.";
+    expect(fitText(text, 30)).toBe("First sentence goes here.");
+  });
+
+  it("does not take an abbreviation for a sentence end", () => {
+    // "km." sits in the last fifth; a word cut keeps more of the sentence.
+    expect(fitText("Laufe heute nur 9 km. Danach locker", 25)).toBe(
+      "Laufe heute nur 9 km.…",
+    );
+    expect(fitText("Zum Beispiel z. B. ruhig und langsam", 22)).toBe(
+      "Zum Beispiel z. B.…",
+    );
+  });
+
+  it("keeps whitespace as whitespace, so blank text is still refused", () => {
+    expect(fitText(" ".repeat(300), 240).trim()).toBe("");
+  });
+
+  it("otherwise stops at the last whole word and marks the cut", () => {
+    const fitted = fitText("one two three four five six seven", 20);
+    expect(fitted).toBe("one two three four…");
+    // A word that ends exactly at the room is kept whole.
+    expect(fitText("one two three fourteen five", 23)).toBe(
+      "one two three fourteen…",
+    );
+    expect(fitted.length).toBeLessThanOrEqual(20);
+  });
+
+  it("can leave the mark off, so an excerpt stays part of its source", () => {
+    const source = "I only have 45 minutes on weekdays";
+    const fitted = fitText(source, 20, false);
+    expect(source.startsWith(fitted)).toBe(true);
+    expect(fitted).toBe("I only have 45");
+  });
+
+  it("never splits a character in two", () => {
+    const fitted = fitText(`${"a".repeat(18)}💪💪💪`, 20);
+    expect(fitted.length).toBeLessThanOrEqual(20);
+    expect(fitted).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
+  });
+
+  it("keeps Lena's plan whose safety note ran one character over", () => {
+    // The live answer of 17 Oct 2026, reduced to its shape: 241 against 240.
+    const note =
+      "Deine letzten beiden flachen Läufe endeten nach 9 km mit leichtem " +
+      "Knieschmerz. Ich ergänze deshalb keinen Lauf und keine Bergabbelastung. " +
+      "Der wiederkehrende Knieschmerz ist es wert, beim anstehenden Termin " +
+      "professionell besprochen zu werden.";
+    expect(note).toHaveLength(241);
+    const body = JSON.parse(
+      findCoachAIFixtureCase("valid_seven_day_plan").body,
+    );
+    body.plan.safetyConsiderations = [note];
+
+    const result = validatePlanCandidate({
+      body: JSON.stringify(body),
+      context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    });
+    if (result.outcome !== "accepted") throw new Error("expected acceptance");
+    const [kept] = result.response.plan.safetyConsiderations ?? [];
+    // One word goes, not the referral: the cut stays close to the limit.
+    expect(kept).toBe(
+      "Deine letzten beiden flachen Läufe endeten nach 9 km mit leichtem " +
+        "Knieschmerz. Ich ergänze deshalb keinen Lauf und keine " +
+        "Bergabbelastung. Der wiederkehrende Knieschmerz ist es wert, beim " +
+        "anstehenden Termin professionell besprochen zu…",
+    );
+  });
+
+  it("cuts a plan's session text and keeps the first of too many notes", () => {
+    const body = JSON.parse(
+      findCoachAIFixtureCase("valid_seven_day_plan").body,
+    );
+    body.plan.sessions[0].rationale = "word ".repeat(80);
+    body.plan.assumptions = ["a", "b", "c", "d", "e"];
+
+    const result = validatePlanCandidate({
+      body: JSON.stringify(body),
+      context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    });
+    if (result.outcome !== "accepted") throw new Error("expected acceptance");
+    expect(
+      result.response.plan.sessions[0]!.rationale.length,
+    ).toBeLessThanOrEqual(300);
+    expect(result.response.plan.assumptions).toEqual(["a", "b", "c", "d"]);
+  });
+
+  it("cuts a fill's summary and a roadmap's phase focus", () => {
+    const fill = JSON.parse(
+      findCoachAIFixtureCase("valid_session_activities").body,
+    );
+    fill.summary = "Build it up. ".repeat(60);
+    const filled = validateSessionActivitiesCandidate({
+      body: JSON.stringify(fill),
+      context: COACH_AI_FIXTURE_SESSION_CONTEXT,
+    });
+    if (filled.outcome !== "accepted") throw new Error("expected acceptance");
+    expect(filled.proposal.summary.length).toBeLessThanOrEqual(400);
+
+    const roadmap = JSON.parse(findCoachAIFixtureCase("valid_roadmap").body);
+    roadmap.roadmap.phases[0].focus = "Steady base. ".repeat(40);
+    const planned = validateRoadmapCandidate({
+      body: JSON.stringify(roadmap),
+      context: COACH_AI_FIXTURE_CONTEXT,
+    });
+    if (planned.outcome !== "accepted") throw new Error("expected acceptance");
+    expect(
+      planned.response.roadmap.phases[0]!.focus.length,
+    ).toBeLessThanOrEqual(300);
+  });
+
+  it("still refuses an empty field: cutting is for length only", () => {
+    const body = JSON.parse(
+      findCoachAIFixtureCase("valid_seven_day_plan").body,
+    );
+    body.plan.sessions[0].title = "";
+
+    expect(
+      validatePlanCandidate({
+        body: JSON.stringify(body),
+        context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+      }),
+    ).toEqual({ outcome: "rejected", reason: "schema" });
   });
 });

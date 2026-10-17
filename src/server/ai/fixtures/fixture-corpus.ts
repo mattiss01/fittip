@@ -470,8 +470,8 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
         confidence: null,
       })),
     ),
-    expected: { outcome: "accepted", memoryRejected: true },
-    note: "Decision 4b caps the section at four; a fifth rejects the batch, not the roadmap.",
+    expected: { outcome: "accepted", memoryCandidates: 4 },
+    note: "Decision 4b caps the section at four; past four the first four are kept (owner, 17 Oct 2026).",
   },
   {
     name: "roadmap_horizon_widened",
@@ -1061,8 +1061,8 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
       }),
     ),
     context: COACH_AI_FIXTURE_PLAN_CONTEXT,
-    expected: { outcome: "rejected", reason: "schema" },
-    note: "One character past the bound rejects, so 600 means 600.",
+    expected: { outcome: "accepted" },
+    note: "Past the bound the text is cut to 600 rather than refused (owner, 17 Oct 2026).",
   },
   {
     name: "plan_ignores_a_reported_signal",

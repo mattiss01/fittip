@@ -33,6 +33,7 @@ import {
 import { MEMORY_TYPES, type MemoryType } from "@/server/memory/memory-records";
 import {
   parseTrainingMeasurement,
+  TARGET_TEXT_MAX,
   TRAINING_MEASUREMENT_MODES,
   type TrainingMeasurement,
   type TrainingMeasurementMode,
@@ -43,7 +44,10 @@ import {
  * before parsing, parsed only as strict JSON, and accepted only if every field
  * matches the operation schema exactly. Partial validity is not partial
  * acceptance — one bad field rejects the whole candidate, and a rejected
- * candidate creates no proposal and writes nothing.
+ * candidate creates no proposal and writes nothing. Length is the exception
+ * (owner, 17 Oct 2026): text over its limit is cut to fit, and a prose list
+ * longer than allowed keeps its first entries, because the model counts badly
+ * and a paid answer refused over one character helps nobody.
  *
  * Prose is never salvaged into a plan. A model that answers in sentences has
  * failed the contract, and guessing at its intent is how an unchecked plan
@@ -260,10 +264,11 @@ export function validateSessionActivitiesCandidate(input: {
   }
 
   const detail = input.context.sessionDetail;
+  const summary = readProse(parsed.summary, SESSION_ACTIVITIES_SUMMARY_MAX);
   if (
     detail === null ||
     parsed.schemaVersion !== COACH_AI_SCHEMA_VERSIONS.fill_session_activities ||
-    !isText(parsed.summary, SESSION_ACTIVITIES_SUMMARY_MAX) ||
+    summary === null ||
     !Array.isArray(parsed.activities)
   ) {
     return rejected("schema");
@@ -302,19 +307,13 @@ export function validateSessionActivitiesCandidate(input: {
     SESSION_ACTIVITIES_SAFETY_MAX,
     240,
   );
-  // Blank entries are refused here as `finish_session_activity_generation`
-  // refuses them: a list this accepts and the database refuses is a paid
-  // result thrown away after the fact (A7-3 review).
-  if (
-    safetyConsiderations === null ||
-    safetyConsiderations.some((entry) => entry.trim().length === 0)
-  ) {
-    return rejected("business_rule");
-  }
+  // Blank entries never reach `finish_session_activity_generation`, which
+  // refuses them: `validateStringArray` drops them (A7-3 review).
+  if (safetyConsiderations === null) return rejected("business_rule");
 
   const proposal: SessionActivitiesProposal = {
     schemaVersion: COACH_AI_SCHEMA_VERSIONS.fill_session_activities,
-    summary: parsed.summary,
+    summary,
     activities,
     ...(safetyConsiderations.length > 0 ? { safetyConsiderations } : {}),
   };
@@ -377,14 +376,17 @@ function validateProposedActivity(
   ) {
     return rejected("unknown_field");
   }
+  const rationale = readProse(entry.rationale, SESSION_ACTIVITY_RATIONALE_MAX);
+  const instructions =
+    entry.instructions === null || entry.instructions === undefined
+      ? null
+      : readProse(entry.instructions, SESSION_ACTIVITY_INSTRUCTIONS_MAX);
   if (
     !isMeasurementMode(entry.measurementMode) ||
-    !isText(entry.rationale, SESSION_ACTIVITY_RATIONALE_MAX) ||
-    !(
-      entry.instructions === null ||
-      entry.instructions === undefined ||
-      isText(entry.instructions, SESSION_ACTIVITY_INSTRUCTIONS_MAX)
-    ) ||
+    rationale === null ||
+    (instructions === null &&
+      entry.instructions !== null &&
+      entry.instructions !== undefined) ||
     !(
       entry.personalActivityId === null ||
       entry.personalActivityId === undefined ||
@@ -414,14 +416,11 @@ function validateProposedActivity(
     name = linked.name;
     sport = linked.sport;
   } else {
-    if (
-      !isText(entry.name, SESSION_ACTIVITY_NAME_MAX) ||
-      !isText(entry.sport, SESSION_ACTIVITY_SPORT_MAX)
-    ) {
-      return rejected("schema");
-    }
-    name = entry.name.trim();
-    sport = entry.sport.trim();
+    const ownName = readProse(entry.name, SESSION_ACTIVITY_NAME_MAX);
+    const ownSport = readProse(entry.sport, SESSION_ACTIVITY_SPORT_MAX);
+    if (ownName === null || ownSport === null) return rejected("schema");
+    name = ownName.trim();
+    sport = ownSport.trim();
   }
 
   const target = readTarget(entry.measurementMode, entry.target);
@@ -433,11 +432,10 @@ function validateProposedActivity(
       personalActivityId,
       name,
       sport,
-      instructions:
-        typeof entry.instructions === "string" ? entry.instructions : null,
+      instructions,
       measurementMode: entry.measurementMode,
       target,
-      rationale: entry.rationale,
+      rationale,
     },
   };
 }
@@ -467,7 +465,13 @@ function readTarget(
       );
       continue;
     }
-    present[key] = field;
+    // A target's own words are cut to the editor's limits, as the coach's
+    // other text is, rather than refusing the list.
+    const textMax = (TARGET_TEXT_MAX as Readonly<Record<string, number>>)[key];
+    present[key] =
+      typeof field === "string" && textMax !== undefined
+        ? fitText(field, textMax)
+        : field;
   }
   if (Object.keys(present).length === 0) return null;
   // The flat form is readable history, not something to write; the grammar
@@ -479,11 +483,6 @@ function readTarget(
   } catch {
     return undefined;
   }
-}
-
-/** Bounded, and more than whitespace: a blank rationale explains nothing. */
-function isText(value: unknown, max: number): value is string {
-  return isBounded(value, 1, max) && value.trim().length > 0;
 }
 
 /** The free text a target can carry, for the content check. */
@@ -639,12 +638,14 @@ function validateRoadmap(
     return rejected("unknown_field");
   }
 
+  const title = readText(value.title, 80);
+  // Optional since 14 October 2026 (owner): a roadmap written by hand may
+  // have none. The coach's grammar still asks for one.
+  const summary = readOptionalText(value.summary, 600);
   if (
     value.schemaVersion !== COACH_AI_SCHEMA_VERSIONS.create_roadmap ||
-    !isBounded(value.title, 1, 80) ||
-    // Optional since 14 October 2026 (owner): a roadmap written by hand may
-    // have none. The coach's grammar still asks for one.
-    !isOptionalBounded(value.summary, 1, 600) ||
+    title === null ||
+    summary === null ||
     !Array.isArray(value.phases)
   ) {
     return rejected("schema");
@@ -699,8 +700,8 @@ function validateRoadmap(
 
   const roadmap: RoadmapProposal = {
     schemaVersion: COACH_AI_SCHEMA_VERSIONS.create_roadmap,
-    title: value.title,
-    ...(value.summary === undefined ? {} : { summary: value.summary }),
+    title,
+    ...(summary === undefined ? {} : { summary }),
     startDate: value.startDate,
     endDate: value.endDate,
     phases,
@@ -741,9 +742,11 @@ function validatePhase(
   ) {
     return rejected("unknown_field");
   }
+  const title = readText(entry.title, 80);
+  const focus = readText(entry.focus, 300);
   if (
-    !isBounded(entry.title, 1, 80) ||
-    !isBounded(entry.focus, 1, 300) ||
+    title === null ||
+    focus === null ||
     !Array.isArray(entry.goalAttention) ||
     !Array.isArray(entry.milestones)
   ) {
@@ -758,11 +761,11 @@ function validatePhase(
   }
   if (startMs !== bounds.expectedStartMs) return rejected("business_rule");
 
+  // None is allowed since v3: a phase with no honest checkpoint has none. Past
+  // three, the first three are kept rather than the roadmap refused.
   if (
     entry.goalAttention.length < 1 ||
-    entry.goalAttention.length > MAX_ATTENTION_PER_PHASE ||
-    // None is allowed since v3: a phase with no honest checkpoint has none.
-    entry.milestones.length > MAX_MILESTONES_PER_PHASE
+    entry.goalAttention.length > MAX_ATTENTION_PER_PHASE
   ) {
     return rejected("business_rule");
   }
@@ -795,7 +798,7 @@ function validatePhase(
   }
 
   const milestones: RoadmapMilestone[] = [];
-  for (const milestone of entry.milestones) {
+  for (const milestone of entry.milestones.slice(0, MAX_MILESTONES_PER_PHASE)) {
     if (!isRecord(milestone)) return rejected("schema");
     if (
       findUnknownField(milestone, [
@@ -807,10 +810,15 @@ function validatePhase(
     ) {
       return rejected("unknown_field");
     }
+    const milestoneTitle = readText(milestone.title, 80);
+    // "Details", optional since 14 October 2026 (owner).
+    const observableCriterion = readOptionalText(
+      milestone.observableCriterion,
+      200,
+    );
     if (
-      !isBounded(milestone.title, 1, 80) ||
-      // "Details", optional since 14 October 2026 (owner).
-      !isOptionalBounded(milestone.observableCriterion, 1, 200) ||
+      milestoneTitle === null ||
+      observableCriterion === null ||
       !Array.isArray(milestone.goalIds)
     ) {
       return rejected("schema");
@@ -824,11 +832,10 @@ function validatePhase(
     }
 
     // A milestone may name no goal (owner, 14 Oct 2026): "Counts toward" is
-    // optional on the form, and the coach's grammar still asks for one.
-    if (milestone.goalIds.length > MAX_ATTENTION_PER_PHASE) {
-      return rejected("business_rule");
-    }
-    for (const goalId of milestone.goalIds) {
+    // optional on the form, and the coach's grammar still asks for one. Past
+    // four, the first four are kept.
+    const goalIds = milestone.goalIds.slice(0, MAX_ATTENTION_PER_PHASE);
+    for (const goalId of goalIds) {
       if (typeof goalId !== "string") return rejected("schema");
       if (!bounds.targetableGoalIds.has(goalId)) {
         return rejected("unowned_goal_reference");
@@ -836,20 +843,18 @@ function validatePhase(
     }
 
     milestones.push({
-      title: milestone.title,
-      ...(milestone.observableCriterion === undefined
-        ? {}
-        : { observableCriterion: milestone.observableCriterion }),
+      title: milestoneTitle,
+      ...(observableCriterion === undefined ? {} : { observableCriterion }),
       targetDate: milestone.targetDate as string,
-      goalIds: [...(milestone.goalIds as string[])],
+      goalIds: [...(goalIds as string[])],
     });
   }
 
   return {
     outcome: "accepted",
     phase: {
-      title: entry.title,
-      focus: entry.focus,
+      title,
+      focus,
       startDate: entry.startDate as string,
       endDate: entry.endDate as string,
       goalAttention,
@@ -858,16 +863,24 @@ function validatePhase(
   };
 }
 
-/** Returns `null` on any failure, so the caller rejects the whole candidate. */
+/**
+ * Returns `null` on any failure, so the caller rejects the whole candidate.
+ * Past `maxItems` the first ones are kept, and each is cut to fit.
+ */
 function validateStringArray(
   value: unknown,
   maxItems: number,
   maxLength: number,
 ): string[] | null {
   if (value === undefined || value === null) return [];
-  if (!Array.isArray(value) || value.length > maxItems) return null;
-  if (!value.every((entry) => isBounded(entry, 1, maxLength))) return null;
-  return [...(value as string[])];
+  if (!Array.isArray(value)) return null;
+  const entries = value.slice(0, maxItems);
+  if (!entries.every((entry) => typeof entry === "string")) return null;
+  // A blank entry says nothing, so it is dropped rather than refused, and
+  // never counts as the safety note a reported signal requires.
+  return entries
+    .filter((entry) => entry.trim().length > 0)
+    .map((entry) => fitText(entry, maxLength));
 }
 
 function validateUncertainties(
@@ -875,26 +888,21 @@ function validateUncertainties(
   maxItems: number = MAX_UNCERTAINTIES,
 ): CoachAIUncertainty[] | null {
   if (value === undefined || value === null) return [];
-  if (!Array.isArray(value) || value.length > maxItems) return null;
+  if (!Array.isArray(value)) return null;
 
   const uncertainties: CoachAIUncertainty[] = [];
-  for (const entry of value) {
+  for (const entry of value.slice(0, maxItems)) {
     if (!isRecord(entry)) return null;
     if (findUnknownField(entry, ["statement", "whyItMatters", "whatToWatch"])) {
       return null;
     }
-    if (
-      !isBounded(entry.statement, 1, 200) ||
-      !isBounded(entry.whyItMatters, 1, 200) ||
-      !isBounded(entry.whatToWatch, 1, 200)
-    ) {
+    const statement = readText(entry.statement, 200);
+    const whyItMatters = readText(entry.whyItMatters, 200);
+    const whatToWatch = readText(entry.whatToWatch, 200);
+    if (statement === null || whyItMatters === null || whatToWatch === null) {
       return null;
     }
-    uncertainties.push({
-      statement: entry.statement,
-      whyItMatters: entry.whyItMatters,
-      whatToWatch: entry.whatToWatch,
-    });
+    uncertainties.push({ statement, whyItMatters, whatToWatch });
   }
   return uncertainties;
 }
@@ -925,14 +933,14 @@ export function validateMemoryCandidates(
   }
   if (!Array.isArray(value)) return rejected("schema");
   if (value.length === 0) return { outcome: "accepted", candidates: [] };
-  if (value.length > MAX_MEMORY_CANDIDATES) return rejected("business_rule");
 
   // With no planning note there is nothing a candidate could legitimately cite.
   if (planningNote === null) return rejected("business_rule");
   const normalizedNote = normalizeOwnerText(planningNote);
 
+  // Past four, the first four are kept (owner, 17 Oct 2026).
   const candidates: RoadmapMemoryCandidate[] = [];
-  for (const entry of value) {
+  for (const entry of value.slice(0, MAX_MEMORY_CANDIDATES)) {
     if (!isRecord(entry)) return rejected("schema");
     if (
       findUnknownField(entry, ["memoryType", "sourceExcerpt", "confidence"])
@@ -942,10 +950,14 @@ export function validateMemoryCandidates(
     if (!isMemoryType(entry.memoryType)) return rejected("schema");
     if (typeof entry.sourceExcerpt !== "string") return rejected("schema");
 
-    const excerpt = normalizeOwnerText(entry.sourceExcerpt);
-    if (excerpt.length < 1 || excerpt.length > MEMORY_EXCERPT_MAX_LENGTH) {
-      return rejected("business_rule");
-    }
+    // Cut without a mark: the start of an exact excerpt is still an exact
+    // excerpt, and a mark would make it one the note does not contain.
+    const excerpt = fitText(
+      normalizeOwnerText(entry.sourceExcerpt),
+      MEMORY_EXCERPT_MAX_LENGTH,
+      false,
+    );
+    if (excerpt.length < 1) return rejected("business_rule");
     if (!normalizedNote.includes(excerpt)) {
       return rejected("business_rule");
     }
@@ -1003,9 +1015,10 @@ function validateSevenDayPlan(
     return rejected("unknown_field");
   }
 
+  const weekDescription = readText(parsed.weekDescription, 600);
   if (
     parsed.schemaVersion !== COACH_AI_SCHEMA_VERSIONS.create_seven_day_plan ||
-    !isBounded(parsed.weekDescription, 1, 600) ||
+    weekDescription === null ||
     !Array.isArray(parsed.sessions)
   ) {
     return rejected("schema");
@@ -1118,7 +1131,7 @@ function validateSevenDayPlan(
 
   const proposal: SevenDayPlanProposal = {
     schemaVersion: COACH_AI_SCHEMA_VERSIONS.create_seven_day_plan,
-    weekDescription: parsed.weekDescription,
+    weekDescription,
     startDate: context.horizonStartDate,
     endDate: context.horizonEndDate,
     sessions,
@@ -1181,12 +1194,17 @@ function validatePlanSession(
     return rejected("schema");
   }
 
+  const title = readText(entry.title, 120);
+  const sport = readText(entry.sport, 60);
+  const focus = readText(entry.focus, 300);
+  const intent = readText(entry.intent, 300);
+  const rationale = readText(entry.rationale, 300);
   if (
-    !isBounded(entry.title, 1, 120) ||
-    !isBounded(entry.sport, 1, 60) ||
-    !isBounded(entry.focus, 1, 300) ||
-    !isBounded(entry.intent, 1, 300) ||
-    !isBounded(entry.rationale, 1, 300) ||
+    title === null ||
+    sport === null ||
+    focus === null ||
+    intent === null ||
+    rationale === null ||
     typeof entry.primaryGoalId !== "string" ||
     entry.primaryGoalId.length === 0
   ) {
@@ -1217,15 +1235,15 @@ function validatePlanSession(
     outcome: "accepted",
     session: {
       date: entry.date as string,
-      title: entry.title,
-      sport: entry.sport,
-      focus: entry.focus,
-      intent: entry.intent,
+      title,
+      sport,
+      focus,
+      intent,
       durationMinutes: entry.durationMinutes,
       primaryGoalId: entry.primaryGoalId,
       ...(secondaryGoalIds.length > 0 ? { secondaryGoalIds } : {}),
       ...(alternatives.length > 0 ? { alternatives } : {}),
-      rationale: entry.rationale,
+      rationale,
       ...(typeof entry.replaces === "string"
         ? { replaces: entry.replaces }
         : {}),
@@ -1233,35 +1251,30 @@ function validatePlanSession(
   };
 }
 
+/** Past six, the first six are kept. */
 function validateSecondaryGoalIds(value: unknown): string[] | null {
   if (value === undefined || value === null) return [];
-  if (!Array.isArray(value) || value.length > MAX_SECONDARY_GOALS_PER_SESSION) {
-    return null;
-  }
-  if (!value.every((id) => typeof id === "string" && id.length > 0))
-    return null;
-  return [...(value as string[])];
+  if (!Array.isArray(value)) return null;
+  const ids = value.slice(0, MAX_SECONDARY_GOALS_PER_SESSION);
+  if (!ids.every((id) => typeof id === "string" && id.length > 0)) return null;
+  return [...(ids as string[])];
 }
 
+/** Past two, the first two are kept, each cut to fit. */
 function validatePlanAlternatives(
   value: unknown,
 ): SevenDayPlanAlternative[] | null {
   if (value === undefined || value === null) return [];
-  if (!Array.isArray(value) || value.length > MAX_ALTERNATIVES_PER_SESSION) {
-    return null;
-  }
+  if (!Array.isArray(value)) return null;
 
   const alternatives: SevenDayPlanAlternative[] = [];
-  for (const entry of value) {
+  for (const entry of value.slice(0, MAX_ALTERNATIVES_PER_SESSION)) {
     if (!isRecord(entry)) return null;
     if (findUnknownField(entry, ["title", "whenToChoose"])) return null;
-    if (
-      !isBounded(entry.title, 1, 120) ||
-      !isBounded(entry.whenToChoose, 1, 200)
-    ) {
-      return null;
-    }
-    alternatives.push({ title: entry.title, whenToChoose: entry.whenToChoose });
+    const title = readText(entry.title, 120);
+    const whenToChoose = readText(entry.whenToChoose, 200);
+    if (title === null || whenToChoose === null) return null;
+    alternatives.push({ title, whenToChoose });
   }
   return alternatives;
 }
@@ -1329,20 +1342,69 @@ function parseIsoDate(value: unknown): number | null {
   return parsed.toISOString().slice(0, 10) === value ? time : null;
 }
 
-function isBounded(value: unknown, min: number, max: number): value is string {
-  return (
-    typeof value === "string" && value.length >= min && value.length <= max
-  );
+/**
+ * Text the coach wrote, cut to fit rather than refused (owner, 17 Oct 2026).
+ * A 241-character safety note threw away a whole paid plan; models count
+ * characters badly, so the prompt states about 80% of each limit and this
+ * catches what still runs over. `null` is refused: not a string, or empty.
+ */
+function readText(value: unknown, max: number): string | null {
+  if (typeof value !== "string" || value.length === 0) return null;
+  return fitText(value, max);
 }
 
-/** Absent, or bounded text. A null is not absent: JSON says so on purpose. */
-function isOptionalBounded(
-  value: unknown,
-  min: number,
-  max: number,
-): value is string | undefined {
-  return value === undefined || isBounded(value, min, max);
+/** As `readText`, and more than whitespace: a blank rationale explains nothing. */
+function readProse(value: unknown, max: number): string | null {
+  const text = readText(value, max);
+  return text !== null && text.trim().length > 0 ? text : null;
 }
+
+/** Absent, or text cut to fit. A null is not absent: JSON says so on purpose. */
+function readOptionalText(
+  value: unknown,
+  max: number,
+): string | undefined | null {
+  return value === undefined ? undefined : readText(value, max);
+}
+
+/**
+ * At most `max` UTF-16 units, so at most `max` characters for the database's
+ * `char_length` too. A sentence end in the last fifth is where it stops, so
+ * little is lost; otherwise the last whole word, marked with "…" (unless
+ * `mark` is false, for an excerpt that must stay an exact part of the
+ * owner's note). A wider window could drop half a safety note.
+ */
+export function fitText(value: string, max: number, mark = true): string {
+  if (value.length <= max) return value;
+
+  // Nothing but whitespace stays whitespace, so the blank checks still bite.
+  if (value.trim().length === 0) return value.slice(0, max);
+  // Trailing spaces are not text worth a cut.
+  if (value.trimEnd().length <= max) return value.trimEnd();
+
+  const head = value.slice(0, max + 1);
+  let sentenceEnd = -1;
+  for (const match of head.matchAll(SENTENCE_END)) sentenceEnd = match.index;
+  if (sentenceEnd + 1 >= max * 0.8) return value.slice(0, sentenceEnd + 1);
+
+  const ellipsis = mark ? "…" : "";
+  let room = value.slice(0, max - ellipsis.length);
+  // Never half a character: drop a high surrogate left without its pair.
+  if (/[\uD800-\uDBFF]$/.test(room)) room = room.slice(0, -1);
+  // A word that ends exactly where the room does is whole; keep it.
+  const endsOnWord = /\s/.test(value.charAt(room.length));
+  const lastSpace = room.search(/\s\S*$/);
+  const cut =
+    endsOnWord || lastSpace < max / 2 ? room : room.slice(0, lastSpace);
+  return cut.trimEnd() + ellipsis;
+}
+
+/**
+ * ".", "!" or "?" before a space, after a word of three letters or more or a
+ * closing quote or bracket: "z. B.", "ca.", "e.g." and "9 km." are not ends.
+ */
+const SENTENCE_END =
+  /(?<=(?:^|[^\p{L}.])\p{L}{3,}|[\p{L}\d][)"'”»])[.!?](?=\s)/gu;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
