@@ -517,3 +517,52 @@ describe("the coach's note", () => {
     expect(screen.getByText(WEEK_DESCRIPTION)).toBeVisible();
   });
 });
+
+describe("cancelling one of the owner's sessions from the review", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useActionStateMock.mockImplementation(
+      (_action: unknown, initial: unknown) => [initial, vi.fn(), false],
+    );
+  });
+  afterEach(cleanup);
+
+  const cancelForm = (container: HTMLElement) =>
+    container
+      .querySelector('input[name="operation"][value="cancel"]')
+      ?.closest("form") ?? null;
+
+  it("offers Cancel beside Edit, as a plan change outside the proposal", () => {
+    const { container } = renderReview();
+
+    expect(screen.getByText(COPY.cancelPlannedAction)).toBeVisible();
+    const form = cancelForm(container);
+    expect(form).not.toBeNull();
+    expect(form?.querySelector('input[name="sessionId"]')).toHaveAttribute(
+      "value",
+      SESSION_ID,
+    );
+    expect(
+      form?.querySelector('input[name="expectedRevision"]'),
+    ).toHaveAttribute("value", "12");
+    expect(screen.getByText(COPY.cancelPlannedConsequence)).toBeInTheDocument();
+  });
+
+  it("says only the day is cancelled for a repeating session", () => {
+    renderReview({
+      days: [day({ planned: [planned({ seriesId: "series-1" })] })],
+    });
+
+    expect(
+      screen.getByText(COPY.cancelPlannedSeriesConsequence, { exact: false }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers nothing on a session already cancelled", () => {
+    const { container } = renderReview({
+      days: [day({ planned: [planned({ status: "cancelled" })] })],
+    });
+
+    expect(cancelForm(container)).toBeNull();
+  });
+});

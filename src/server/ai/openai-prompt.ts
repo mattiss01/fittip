@@ -110,7 +110,7 @@ If "roadmap" is present it is the direction the athlete has accepted, and this w
 
 "isStale" means it may not describe this week — "out_of_window" if these dates fall outside it, "goal_missing" if it attends to a goal the athlete no longer holds. Where it and the goals disagree, follow the goals and say so in "assumptions". A "Withheld" count means part of it was left out to fit: unknown, not absent.
 
-"planCommitments" are sessions already on the athlete's plan. Plan around them: count their load, and never propose the same session again. One with a "replaceHandle" is one the athlete has said may be replaced. If a session of yours should stand in for it, put that handle in "replaces"; use each handle at most once, and leave "replaces" null otherwise. A session with no handle stays, whatever else you propose.
+"planCommitments" are sessions already on the athlete's plan. Plan around them: count their load, and never propose the same session again. One with a "replaceHandle" is one the athlete has said may be replaced. If a session of yours should stand in for it, put that handle in "replaces"; use each handle at most once, and leave "replaces" null otherwise. A session with no handle stays, whatever else you propose. Asked to replace one, put yours beside it and say in "weekDescription" that the athlete can cancel theirs.
 
 This is a session-level plan. Say what a session is, what it is for, and how long it takes. Do not break it into exercises, sets, reps, loads, distances, paces, or any other target: that is a separate step the athlete asks for per session, and inventing it here produces numbers nobody checked.
 
