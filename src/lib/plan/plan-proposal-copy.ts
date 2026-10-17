@@ -227,12 +227,6 @@ export const PLAN_PROPOSAL_COPY = {
     needsGoalAndTimezone:
       "Add an active goal and confirm your time zone before asking for a plan. Nothing was written.",
     itemDecided: "Choice saved.",
-    applied: (applied: number) =>
-      applied === 0
-        ? "Review finished. Nothing was added, which is what you chose."
-        : applied === 1
-          ? "Review finished. One item was added to your plan."
-          : `Review finished. ${applied} items were added to your plan.`,
     discarded: "Proposal discarded. Your plan is unchanged.",
     unresolved: "Every proposed item needs a choice before you can finish.",
     alreadyFinished:
