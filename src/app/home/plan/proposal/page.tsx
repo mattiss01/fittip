@@ -32,6 +32,7 @@ import {
   unresolvedItemCount,
   type ProposalRoadmapView,
 } from "@/lib/plan/plan-proposal-view";
+import { uuidFromSeed } from "@/lib/plan/seeded-uuid";
 import type { PlanProposalView } from "@/server/plan-proposal/plan-proposal-records";
 import { createCompletionLog } from "@/server/repositories/completion-log-repository";
 import {
@@ -399,33 +400,6 @@ function finishKeyFor(
     )
     .join(",");
   return uuidFromSeed(`${proposal.id}:${planRevision}:${staged}`);
-}
-
-/**
- * A stable RFC-4122-shaped id from a seed string.
- *
- * It needs to be deterministic and well distributed across the seeds one owner
- * produces in one review, not unguessable: the key is scoped to the owner's own
- * rows by `auth.uid()`, and a collision between two owners is meaningless
- * because the uniqueness constraint is per user.
- */
-function uuidFromSeed(seed: string): string {
-  let h1 = 0x9e3779b9;
-  let h2 = 0x85ebca6b;
-  for (let index = 0; index < seed.length; index += 1) {
-    const code = seed.charCodeAt(index);
-    h1 = Math.imul(h1 ^ code, 0x01000193) >>> 0;
-    h2 = Math.imul(h2 ^ (code + index), 0x85ebca6b) >>> 0;
-  }
-  const hex = (value: number) => value.toString(16).padStart(8, "0");
-  const digits = `${hex(h1)}${hex(h2)}${hex(h1 ^ h2)}${hex((h1 + h2) >>> 0)}`;
-  return [
-    digits.slice(0, 8),
-    digits.slice(8, 12),
-    `4${digits.slice(13, 16)}`,
-    `8${digits.slice(17, 20)}`,
-    digits.slice(20, 32),
-  ].join("-");
 }
 
 /**
