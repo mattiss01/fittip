@@ -140,8 +140,9 @@ export type TrainingHistoryRecords = {
   completions: TrainingHistoryCompletion[];
   plannedSessions: TrainingHistoryPlannedSession[];
   /**
-   * Empty unless the operation sends rules. A source that reads no series
-   * simply gets every occurrence as the dated entry it always was.
+   * Empty unless the operation sends rules. A source that reads no series gets
+   * the occurrences in the horizon, and in `datedDaysPastHorizon` after it, as
+   * dated entries; one further out reaches the coach nowhere.
    */
   series: TrainingHistorySeries[];
 };
@@ -204,6 +205,13 @@ export function selectTrainingHistoryContext(
      * `forwardWindowDays` bound from today still holds as well.
      */
     forwardDaysPastHorizon?: number;
+    /**
+     * Days after the last planned day whose every entry is sent dated, a
+     * repeating session's occurrence included, when no series rule is sent to
+     * describe it (owner, 17 Oct 2026). Without it such an occurrence past the
+     * horizon reaches the coach nowhere.
+     */
+    datedDaysPastHorizon?: number;
   } = {},
 ): TrainingHistorySelection {
   const windowDays = limits.windowDays ?? TRAINING_HISTORY_WINDOW_DAYS;
@@ -269,11 +277,18 @@ export function selectTrainingHistoryContext(
   const horizonStartDate = records.horizonStartDate ?? records.today;
   const isBeforeHorizon = (entry: TrainingHistoryPlannedSession) =>
     entry.localDate < horizonStartDate;
+  // With no rules sent, an occurrence just after the horizon is sent dated:
+  // nothing else would tell the coach it is there.
+  const datedLimit =
+    maxRecurring === 0 && limits.datedDaysPastHorizon !== undefined
+      ? addDays(records.horizonEndDate, limits.datedDaysPastHorizon)
+      : records.horizonEndDate;
   const eligible = records.plannedSessions
     .filter((entry) => {
       if (entry.localDate < records.today) return false;
       if (entry.localDate <= records.horizonEndDate) return true;
-      return entry.ruleSeriesId === null && entry.localDate <= forwardLimit;
+      if (entry.localDate > forwardLimit) return false;
+      return entry.ruleSeriesId === null || entry.localDate <= datedLimit;
     })
     // The days being planned and those after them first, earliest first.
     // Then the days before the first day, latest first: what the athlete

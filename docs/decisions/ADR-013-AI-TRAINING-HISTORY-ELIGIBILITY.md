@@ -513,6 +513,25 @@ bytes, where it was 5,800, inside 14,500 for the whole of training history.
 Since 16 October 2026 it is 10,200 inside 15,400, as the roadmap's is (ADR-023,
 amended that day).
 
+## Sixth recorded amendment to decision 5: the days after the plan
+
+On 17 October 2026 the first live seven-day plan put a run on the Friday before
+a Saturday run/walk the athlete repeats weekly. The plan operation receives no
+series rules, and past its last day only entries no rule describes were sent,
+so the Saturday reached the coach nowhere. The product owner decided the plan
+must account for the days after it.
+
+- **The three days after the last planned day are sent in full**, an unchanged
+  series occurrence included, as a dated entry with the same fields as any
+  other: date, title, sport and minutes, never a replace handle. Only where no
+  rule is sent, which is the plan operation; the roadmap keeps its rules.
+- **Further out is unchanged:** entries no rule describes, up to 28 days past
+  the last planned day.
+- **The fill order is unchanged.** Those three days follow the planned days and
+  come before the days ahead of a later first day, so on a very full plan they
+  can take list places those days held before. The 30 entries and the plan's
+  4,000-byte allocation do not move.
+
 ## Related decision made in the same session
 
 The compose step for a plan proposal introduces a **planning note** — owner
@@ -572,3 +591,7 @@ inside the days being planned carries its minutes and a replace handle
 **Fifth amendment, 9 October 2026.** Minutes on every planned entry and rule,
 thirty entries for the roadmap, and the plan's forward reach cut to 28 days
 past its last day (ADR-023). The fifth amendment above records it.
+
+**Sixth amendment, 17 October 2026.** The plan operation receives the three days
+after its last day in full, series occurrences included. The sixth amendment
+above records it.
