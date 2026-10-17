@@ -579,8 +579,9 @@ function ProposedItem({
     INITIAL_PLAN_PROPOSAL_ACTION_STATE,
   );
 
-  const isRecoveryDay = item.kind === "recovery_day";
-  const title = isRecoveryDay ? COPY.recoveryDayTitle : (item.title ?? "");
+  // Every item is a proposed session since 17 Oct 2026; free days are no
+  // longer offered as recovery days (owner).
+  const title = item.title ?? "";
   // A session it can still stand in for. Once that session is logged,
   // cancelled or gone, the finish adds this one and deletes nothing, so the
   // choices fall back to the ordinary two and the card says why.
@@ -605,48 +606,44 @@ function ProposedItem({
         </span>
       </header>
 
-      {isRecoveryDay ? (
-        <p className={styles.body}>{COPY.recoveryDaySupport}</p>
-      ) : (
-        <>
-          <p className={styles.meta}>
+      <>
+        <p className={styles.meta}>
+          {[
+            item.sport,
+            item.expectedDurationMinutes === null
+              ? null
+              : `${item.expectedDurationMinutes} min`,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+        {item.replaces === null ? null : replaceable ? (
+          <p className={styles.rationale} data-replaces="available">
+            <span className={styles.sectionLabel}>{COPY.replacesLabel}</span>{" "}
             {[
-              item.sport,
-              item.expectedDurationMinutes === null
+              replaceable.title,
+              replaceable.expectedDurationMinutes === null
                 ? null
-                : `${item.expectedDurationMinutes} min`,
+                : `${replaceable.expectedDurationMinutes} min`,
             ]
               .filter(Boolean)
-              .join(" · ")}
+              .join(", ")}
           </p>
-          {item.replaces === null ? null : replaceable ? (
-            <p className={styles.rationale} data-replaces="available">
-              <span className={styles.sectionLabel}>{COPY.replacesLabel}</span>{" "}
-              {[
-                replaceable.title,
-                replaceable.expectedDurationMinutes === null
-                  ? null
-                  : `${replaceable.expectedDurationMinutes} min`,
-              ]
-                .filter(Boolean)
-                .join(", ")}
-            </p>
-          ) : (
-            <p className={styles.rationale} data-replaces="unavailable">
-              {COPY.replaceUnavailable(item.replaces.title)}
-            </p>
-          )}
-          {item.intent === null ? null : (
-            <p className={styles.body}>{item.intent}</p>
-          )}
-          {item.rationale === null ? null : (
-            <p className={styles.rationale}>
-              <span className={styles.sectionLabel}>{COPY.rationaleLabel}</span>{" "}
-              {item.rationale}
-            </p>
-          )}
-        </>
-      )}
+        ) : (
+          <p className={styles.rationale} data-replaces="unavailable">
+            {COPY.replaceUnavailable(item.replaces.title)}
+          </p>
+        )}
+        {item.intent === null ? null : (
+          <p className={styles.body}>{item.intent}</p>
+        )}
+        {item.rationale === null ? null : (
+          <p className={styles.rationale}>
+            <span className={styles.sectionLabel}>{COPY.rationaleLabel}</span>{" "}
+            {item.rationale}
+          </p>
+        )}
+      </>
 
       <form
         className={styles.choices}
