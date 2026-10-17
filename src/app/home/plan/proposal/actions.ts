@@ -570,8 +570,14 @@ function toActionState(
       message: OUTCOMES.generationFailed,
       submission,
       draft,
-      attemptEnded: true,
+      // Past the deadline the provider call may still be running, so a
+      // resend stays a replay of this key rather than a second charge.
+      ...(isPastDeadline(error) ? {} : { attemptEnded: true as const }),
     };
   }
   return { status: "error", message: OUTCOMES.error, submission, draft };
+}
+
+function isPastDeadline(error: unknown): boolean {
+  return error instanceof CoachAIError && error.code === "deadline_exceeded";
 }

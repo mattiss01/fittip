@@ -831,7 +831,11 @@ function toActionState(
       message: OUTCOMES.generationFailed,
       submission,
       ...(draft ? { draft } : {}),
-      attemptEnded: true,
+      // Past the deadline the provider call may still be running, so a
+      // resend stays a replay of this key rather than a second charge.
+      ...(error.code === "deadline_exceeded"
+        ? {}
+        : { attemptEnded: true as const }),
     };
   }
   if (

@@ -136,7 +136,7 @@ select ok(
   'the content check stays internal'
 );
 
--- 2. An empty answer becomes a proposal with no items ---------------------------
+-- 2. An empty answer becomes a proposal with no proposed session ---------------
 
 insert into auth.users (id, email, raw_app_meta_data, raw_user_meta_data)
 values ('8b000000-0000-4000-8000-000000000001', 'empty-week@example.test', '{}', '{}');
