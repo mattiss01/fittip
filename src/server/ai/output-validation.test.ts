@@ -547,6 +547,39 @@ describe("the seven day plan validator", () => {
     );
   });
 
+  describe("a week the coach leaves as it is (owner, 17 Oct 2026)", () => {
+    const emptied = () => {
+      const body = JSON.parse(
+        findCoachAIFixtureCase("valid_seven_day_plan").body,
+      ) as { plan: { sessions: unknown[]; safetyConsiderations: unknown } };
+      body.plan.sessions = [];
+      return body;
+    };
+
+    it("accepts no sessions, with the description as the answer", () => {
+      const result = validatePlanCandidate({
+        body: JSON.stringify(emptied()),
+        context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+      });
+
+      if (result.outcome !== "accepted") throw new Error("expected acceptance");
+      expect(result.response.plan.sessions).toEqual([]);
+      expect(result.response.plan.weekDescription.length).toBeGreaterThan(0);
+    });
+
+    it("still owes a safety consideration when a signal is present", () => {
+      const body = emptied();
+      body.plan.safetyConsiderations = [];
+
+      expect(
+        validatePlanCandidate({
+          body: JSON.stringify(body),
+          context: COACH_AI_FIXTURE_PLAN_SAFETY_CONTEXT,
+        }),
+      ).toEqual({ outcome: "rejected", reason: "safety_requirement" });
+    });
+  });
+
   it("accepts a very long positive integer session without a minutes cap", () => {
     const result = validatePlanCandidate({
       body: findCoachAIFixtureCase("very_long_session_allowed").body,

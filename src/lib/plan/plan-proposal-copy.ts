@@ -49,6 +49,10 @@ export const PLAN_PROPOSAL_COPY = {
 
   /* ---- Review ------------------------------------------------------------ */
   reviewTitle: "What the coach proposed",
+  coachNoteLabel: "The coach's note",
+  /** A proposal with no sessions: the coach left these days as they were. */
+  nothingAdded:
+    "The coach added no session to these days. Its reason is below.",
   coachReasoningHeading: "Why this shape",
   assumptionsHeading: "What it assumed",
   uncertaintiesHeading: "What it was unsure about",

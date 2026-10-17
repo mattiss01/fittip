@@ -1029,10 +1029,9 @@ function validateSevenDayPlan(
     return rejected("impossible_date");
   }
 
-  if (
-    parsed.sessions.length < 1 ||
-    parsed.sessions.length > maxSessionsForHorizon(dayCount)
-  ) {
+  // No sessions is an answer (owner, 17 October 2026): a week that already
+  // holds what it should is left as it is, and the week description says why.
+  if (parsed.sessions.length > maxSessionsForHorizon(dayCount)) {
     return rejected("business_rule");
   }
 

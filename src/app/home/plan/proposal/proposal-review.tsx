@@ -50,6 +50,8 @@ const COPY = PLAN_PROPOSAL_COPY;
 export function ProposalReview({
   proposalId,
   regenerationFeedback,
+  weekDescription,
+  nothingAdded,
   expectedPlanRevision,
   finishKey,
   days,
@@ -62,6 +64,10 @@ export function ProposalReview({
   proposalId: string;
   /** Present only on a proposal that replaced another one. */
   regenerationFeedback: string | null;
+  /** The coach's overview of the days, in its own words. */
+  weekDescription: string;
+  /** The coach proposed no session; free days may still be offered as rest. */
+  nothingAdded: boolean;
   expectedPlanRevision: number;
   /** Stable per render of the open proposal, so a retried finish replays. */
   finishKey: string;
@@ -115,6 +121,17 @@ export function ProposalReview({
           {COPY.regeneratedFrom(regenerationFeedback)}
         </p>
       )}
+
+      {/*
+        The coach's reason for the days below, before them. With nothing
+        added it is the whole answer, so it says that first.
+      */}
+      <section className={styles.coachNote} aria-label={COPY.coachNoteLabel}>
+        {nothingAdded ? (
+          <p className={styles.nothingAdded}>{COPY.nothingAdded}</p>
+        ) : null}
+        <p className={styles.weekDescription}>{weekDescription}</p>
+      </section>
 
       {/*
         Both notices are statements, not warnings with an action. The timeline
