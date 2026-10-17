@@ -101,12 +101,22 @@ function renderReview(
     roadmap?: ProposalRoadmapView | null;
     planChangedSinceComposed?: boolean;
     nothingAdded?: boolean;
+    safetyConsiderations?: string[];
+    assumptions?: string[];
+    uncertainties?: {
+      statement: string;
+      whyItMatters: string;
+      whatToWatch: string;
+    }[];
   } = {},
 ) {
   return render(
     <ProposalReview
       regenerationFeedback={null}
       weekDescription={WEEK_DESCRIPTION}
+      safetyConsiderations={overrides.safetyConsiderations ?? []}
+      assumptions={overrides.assumptions ?? []}
+      uncertainties={overrides.uncertainties ?? []}
       nothingAdded={overrides.nothingAdded ?? false}
       proposalId={PROPOSAL_ID}
       expectedPlanRevision={12}
@@ -515,6 +525,43 @@ describe("the coach's note", () => {
 
     expect(screen.getByText(COPY.nothingAdded)).toBeVisible();
     expect(screen.getByText(WEEK_DESCRIPTION)).toBeVisible();
+  });
+
+  it("shows a safety note open, never folded away", () => {
+    // Tom's test, 17 Oct 2026: the coach pointed to the physio and the page
+    // never said so.
+    const note =
+      "Raise this change in symptoms at your physio appointment in five days.";
+    renderReview({ safetyConsiderations: [note] });
+
+    expect(screen.getByText(COPY.safetyHeading)).toBeVisible();
+    expect(screen.getByText(note)).toBeVisible();
+    expect(screen.getByText(note).closest("details")).toBeNull();
+  });
+
+  it("folds what the coach assumed and was unsure about under one summary", () => {
+    renderReview({
+      assumptions: ["The Sunday session is at home."],
+      uncertainties: [
+        {
+          statement: "Wednesday's intervals are already planned.",
+          whyItMatters: "They decide how much running fits.",
+          whatToWatch: "How the knee answers afterwards.",
+        },
+      ],
+    });
+
+    const more = screen.getByText(COPY.coachMoreSummary).closest("details");
+    expect(more).not.toBeNull();
+    expect(more).toHaveTextContent("The Sunday session is at home.");
+    expect(more).toHaveTextContent("How the knee answers afterwards.");
+  });
+
+  it("shows neither part when the coach wrote neither", () => {
+    renderReview();
+
+    expect(screen.queryByText(COPY.safetyHeading)).toBeNull();
+    expect(screen.queryByText(COPY.coachMoreSummary)).toBeNull();
   });
 });
 
