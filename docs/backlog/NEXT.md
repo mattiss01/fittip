@@ -123,6 +123,17 @@ Not worth their own slot; do them when work lands nearby.
 
 ## Later
 
+- **Waiting for the coach, animated.** Owner, 17 Oct 2026: a coach request takes 15 to 60
+  seconds on `gpt-6-luna`, and the wait should be "really cool and changing" animations,
+  to be built with Claude's motion feature when it is used here. Constraints from the
+  UI rules: no invented steps ("Analysing your goals…") the app cannot know, and a
+  reduced-motion path. A running timer and "this can take up to a minute" after 30 s
+  were offered as the honest base.
+- **How much the coach thinks — idea.** Owner, 17 Oct 2026: keep the default for now.
+  `gpt-6-luna` takes `reasoning_effort` (none … max; FitTip sends none, so "medium");
+  lower is faster and cheaper, and weighs less at once (knee, pain rule, the days after).
+  Per operation is possible (plan and fill low, roadmap medium). Needs one paid test call
+  each, and the parameter confirmed against OpenAI's own reference first.
 - **What goes in Settings.** Owner, 2 Oct 2026. The gear on You opens a page that says
   "Nothing to set yet." Meant for it: account details, subscription, language, and light
   or dark mode. None is decided or listed there; Sign out stays on You. Account details
