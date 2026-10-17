@@ -21,12 +21,6 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [~] **Proposals stop offering recovery days.** Careful lane (database). Owner,
-      17 Oct 2026: every free day turned into a "Recovery day?" item to decide, which
-      filled the review with text, and the coach never reads recovery days anyway (an
-      empty day is rest to it). `finish_plan_generation` creates session items only;
-      the review stops rendering recovery-day items. The manual marker on the Plan,
-      its stamps and the table stay (option B, removing the concept, was not chosen).
 - [ ] **A7-5 — Size the fill before its first live run.** Measure output tokens on a
       twelve-activity answer: the grammar pads each target with fourteen nullable keys
       against a 3,000-token ceiling. Needs a provider key, so it waits for one; each run
