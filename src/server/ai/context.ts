@@ -534,6 +534,15 @@ export const COACH_AI_CONTEXT_LIMITS = {
  */
 export const PLAN_FORWARD_DAYS_PAST_HORIZON = 28;
 
+/**
+ * The days right after the last planned day that the plan operation sends in
+ * full, a repeating session's occurrences included (owner, 17 Oct 2026). The
+ * plan reads no series rules, so past the horizon an occurrence was sent
+ * nowhere: Mia's coach put a run on the Friday before a Saturday run/walk it
+ * never saw. Three days is what the last planned days lead into.
+ */
+export const PLAN_DATED_DAYS_PAST_HORIZON = 3;
+
 /** The days of training history `fill_session_activities` reads: this week. */
 export const SESSION_DETAIL_HISTORY_DAYS = 7;
 
@@ -895,6 +904,7 @@ export function buildCoachAIContext(
               ),
             },
             forwardDaysPastHorizon: PLAN_FORWARD_DAYS_PAST_HORIZON,
+            datedDaysPastHorizon: PLAN_DATED_DAYS_PAST_HORIZON,
           }
         : operation === "create_roadmap"
           ? { commitmentDetail: {} }
