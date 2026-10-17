@@ -22,6 +22,7 @@ import type {
 
 import { INITIAL_PLAN_ACTION_STATE } from "../action-state";
 import { changePlanAction } from "../actions";
+import { CancelReasonFields } from "../cancel-reason-fields";
 import { SheetLayer } from "../plan-sheet";
 import { SessionFields } from "../session-fields";
 
@@ -508,6 +509,39 @@ function PlannedSession({
                   {COPY.editPlannedSave}
                 </button>
                 <p className={styles.support}>{COPY.editPlannedSupport}</p>
+              </form>
+            </div>
+          </details>
+          <details className={styles.disclosure}>
+            <summary>{COPY.cancelPlannedAction}</summary>
+            <div className={styles.editorPanel}>
+              <p className={styles.support} data-state="rule">
+                {session.seriesId === null
+                  ? COPY.cancelPlannedConsequence
+                  : `${COPY.cancelPlannedConsequence} ${COPY.cancelPlannedSeriesConsequence}`}
+              </p>
+              <form
+                className={styles.form}
+                action={action}
+                key={`cancel-${session.id}-${state.submission}`}
+              >
+                <input type="hidden" name="operation" value="cancel" />
+                <input type="hidden" name="sessionId" value={session.id} />
+                <input
+                  type="hidden"
+                  name="expectedRevision"
+                  value={expectedPlanRevision}
+                />
+                <CancelReasonFields
+                  idPrefix={`proposal-cancel-${session.id}`}
+                />
+                <button
+                  className={styles.dangerAction}
+                  type="submit"
+                  disabled={pending}
+                >
+                  {COPY.cancelPlannedSubmit}
+                </button>
               </form>
             </div>
           </details>

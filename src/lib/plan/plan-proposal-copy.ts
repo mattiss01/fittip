@@ -79,6 +79,17 @@ export const PLAN_PROPOSAL_COPY = {
    */
   editPlannedSeriesConsequence:
     "This repeats. Saving changes this occurrence only — it becomes visibly changed and the recurring rule never overwrites it.",
+  /**
+   * Cancelling one of the owner's own sessions from inside the review (owner,
+   * 17 Oct 2026): how a coach session proposed beside it can take its place
+   * when it was not ticked "can be replaced". Like Edit, outside the proposal.
+   */
+  cancelPlannedAction: "Cancel session",
+  cancelPlannedConsequence:
+    "Cancelled on your plan straight away, not as part of this proposal. It stays on the record as cancelled, and you can reactivate it from the Plan.",
+  cancelPlannedSeriesConsequence:
+    "This repeats. Only this day is cancelled; the rest stays as it is.",
+  cancelPlannedSubmit: "Cancel this session",
 
   /* ---- Staleness --------------------------------------------------------- */
   /**
