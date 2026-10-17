@@ -131,6 +131,9 @@ export default async function PlanProposalPage() {
               modes={await readMeasurementHistory()}
             >
               <ProposalReview
+                // Keyed on the proposal: a new one after "ask for a different
+                // plan" starts with that box closed (17 Oct 2026).
+                key={state.proposal.id}
                 proposalId={state.proposal.id}
                 regenerationFeedback={state.proposal.regenerationFeedback}
                 weekDescription={state.proposal.content.weekDescription}

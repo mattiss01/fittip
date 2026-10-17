@@ -185,15 +185,10 @@ test.describe("M3-16A plan proposal review", () => {
       ).toBe(true);
 
       await finish.click();
-      // A finished review leaves nothing on the page (owner, 17 Oct 2026);
-      // the review closing is the answer.
-      await expect(
-        page.getByRole("button", { name: "Finish review" }),
-      ).toHaveCount(0, { timeout: 30_000 });
-
-      // On the plan exactly one session arrived — the one that was staged.
-      // The rejected ones left no trace.
-      await page.goto("/home/plan");
+      // A finished review goes to the Plan (owner, 17 Oct 2026), where
+      // exactly one session arrived — the one that was staged. The rejected
+      // ones left no trace.
+      await expect(page).toHaveURL(/\/home\/plan$/, { timeout: 30_000 });
       await expect(page.getByText("Easy aerobic session")).toHaveCount(1);
       await expect(page.getByText("Steadier session")).toHaveCount(0);
       // Renamed from inside the review, and the rename reached the plan.
@@ -306,13 +301,10 @@ test.describe("M3-16A plan proposal review", () => {
       const finish = page.getByRole("button", { name: "Finish review" });
       await expect(finish).toBeEnabled();
       await finish.click();
-      await expect(
-        page.getByRole("button", { name: "Finish review" }),
-      ).toHaveCount(0, { timeout: 30_000 });
+      await expect(page).toHaveURL(/\/home\/plan$/, { timeout: 30_000 });
 
       // The swap happened whole: the coach's session is there and the owner's
       // is gone.
-      await page.goto("/home/plan");
       await expect(page.getByText("Easy aerobic session")).toHaveCount(1);
       await expect(page.getByText("Club track night")).toHaveCount(0);
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 // A `"use server"` module may export nothing but async functions, so the state
 // type and its initial value live in `action-state.ts` and the client imports
@@ -201,7 +202,7 @@ export async function finishPlanReviewAction(
       return invalid(OUTCOMES.validation, submission);
     }
 
-    const receipt = await proposals.finishReview({
+    await proposals.finishReview({
       proposalId: parsePlanProposalId(formData.get("proposalId")),
       expectedPlanRevision: parseExpectedPlanRevision(
         formData.get("expectedPlanRevision"),
@@ -211,14 +212,13 @@ export async function finishPlanReviewAction(
 
     revalidatePath("/home/plan/proposal");
     revalidatePath("/home/plan");
-    return {
-      status: "applied",
-      message: OUTCOMES.applied(receipt.appliedCount),
-      submission,
-    };
   } catch (error) {
     return toActionState(error, submission);
   }
+  // A finished review goes to the Plan, where what it added now is (owner,
+  // 17 Oct 2026). Outside the try: `redirect` throws, and the catch above
+  // would turn it into an error.
+  redirect("/home/plan");
 }
 
 /**
