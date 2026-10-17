@@ -115,12 +115,6 @@ export const PLAN_PROPOSAL_COPY = {
   proposedBadge: "Proposed",
   stagedBadge: "Will be added",
   replaceBadge: "Will replace",
-  /* The last finished review, folded under the form (owner, 9 Oct 2026). Its
-     tags say what happened, not what will. */
-  addedBadge: "Added",
-  lastReviewTitle: "Your last review",
-  lastReviewSummary: (day: string, added: number, rejected: number) =>
-    `Last review, ${day}: ${added} added, ${rejected} rejected`,
   /* On the owner's own session, in place of "Already planned". */
   canBeReplacedBadge: "Can be replaced",
   willBeReplacedBadge: "Will be replaced",
@@ -179,12 +173,6 @@ export const PLAN_PROPOSAL_COPY = {
         : `The ${staged} items you chose to add will not be added, and the proposal is gone from this page.`,
   discardConfirmAction: "Discard proposal",
   discardCancel: "Keep reviewing",
-
-  /**
-   * Where the owner goes once a review is closed: back to the plan, where the
-   * sessions they just added now sit among the ones they already had.
-   */
-  finishedPlanLink: "Back to plan",
 
   /* ---- Provenance -------------------------------------------------------- */
   exampleBadge: "Example",
