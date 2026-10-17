@@ -857,19 +857,35 @@ describe("session activities review follow-ups", () => {
   });
 });
 
-describe("session activities agree with the database on blank safety text", () => {
-  it("refuses a whitespace-only safety consideration", () => {
+describe("blank safety text never reaches the database", () => {
+  it("drops a whitespace-only safety consideration from a fill", () => {
     const body = JSON.parse(
       findCoachAIFixtureCase("valid_session_activities").body,
     );
-    body.safetyConsiderations = ["   "];
+    body.safetyConsiderations = ["   ", "Keep the load light today."];
+
+    const result = validateSessionActivitiesCandidate({
+      body: JSON.stringify(body),
+      context: COACH_AI_FIXTURE_SESSION_CONTEXT,
+    });
+    if (result.outcome !== "accepted") throw new Error("expected acceptance");
+    expect(result.proposal.safetyConsiderations).toEqual([
+      "Keep the load light today.",
+    ]);
+  });
+
+  it("does not count a blank note as the one a reported signal requires", () => {
+    const body = JSON.parse(
+      findCoachAIFixtureCase("valid_seven_day_plan").body,
+    );
+    body.plan.safetyConsiderations = [" ".repeat(300)];
 
     expect(
-      validateSessionActivitiesCandidate({
+      validatePlanCandidate({
         body: JSON.stringify(body),
-        context: COACH_AI_FIXTURE_SESSION_CONTEXT,
+        context: COACH_AI_FIXTURE_PLAN_SAFETY_CONTEXT,
       }),
-    ).toEqual({ outcome: "rejected", reason: "business_rule" });
+    ).toEqual({ outcome: "rejected", reason: "safety_requirement" });
   });
 });
 

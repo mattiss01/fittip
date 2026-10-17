@@ -307,15 +307,9 @@ export function validateSessionActivitiesCandidate(input: {
     SESSION_ACTIVITIES_SAFETY_MAX,
     240,
   );
-  // Blank entries are refused here as `finish_session_activity_generation`
-  // refuses them: a list this accepts and the database refuses is a paid
-  // result thrown away after the fact (A7-3 review).
-  if (
-    safetyConsiderations === null ||
-    safetyConsiderations.some((entry) => entry.trim().length === 0)
-  ) {
-    return rejected("business_rule");
-  }
+  // Blank entries never reach `finish_session_activity_generation`, which
+  // refuses them: `validateStringArray` drops them (A7-3 review).
+  if (safetyConsiderations === null) return rejected("business_rule");
 
   const proposal: SessionActivitiesProposal = {
     schemaVersion: COACH_AI_SCHEMA_VERSIONS.fill_session_activities,
@@ -880,10 +874,13 @@ function validateStringArray(
 ): string[] | null {
   if (value === undefined || value === null) return [];
   if (!Array.isArray(value)) return null;
-  const entries = value
-    .slice(0, maxItems)
-    .map((entry) => readText(entry, maxLength));
-  return entries.every((entry) => entry !== null) ? entries : null;
+  const entries = value.slice(0, maxItems);
+  if (!entries.every((entry) => typeof entry === "string")) return null;
+  // A blank entry says nothing, so it is dropped rather than refused, and
+  // never counts as the safety note a reported signal requires.
+  return entries
+    .filter((entry) => entry.trim().length > 0)
+    .map((entry) => fitText(entry, maxLength));
 }
 
 function validateUncertainties(
@@ -1382,6 +1379,8 @@ export function fitText(value: string, max: number, mark = true): string {
 
   // Nothing but whitespace stays whitespace, so the blank checks still bite.
   if (value.trim().length === 0) return value.slice(0, max);
+  // Trailing spaces are not text worth a cut.
+  if (value.trimEnd().length <= max) return value.trimEnd();
 
   const head = value.slice(0, max + 1);
   let sentenceEnd = -1;
