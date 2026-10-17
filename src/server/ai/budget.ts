@@ -103,8 +103,9 @@ export const COACH_AI_FIXTURE_LIMITS: CoachAILimits = {
  * On 17 October 2026 the model became `gpt-6-luna`, before any live call, and
  * the caps stayed as they were. At its card a reservation is 3,750 micro-USD
  * and the daily ceiling admits 533 generations. The output ceiling and the
- * deadline were sized against 5.6 Luna and are unmeasured for 6 until its
- * first live runs (A7-5).
+ * deadline were sized against 5.6 Luna; the deadline went to 90 s after the
+ * first live "ask again" took over 30 s. The output ceiling is still
+ * unmeasured for 6 (A7-5).
  *
  * These numbers are the local fast path. The authoritative ceilings are the
  * database's, in `reserve_ai_spend`, because this process cannot be trusted to
@@ -119,7 +120,10 @@ export const COACH_AI_LIVE_LIMITS: CoachAILimits = {
   maxConcurrentRequests: 1,
   maxInputTokens: 18_000,
   maxOutputTokens: 3_000,
-  deadlineMs: 30_000,
+  // 90 s since 17 Oct 2026 (owner). 30 s was sized against 5.6 Luna; on 6
+  // Luna a plan took 17 s and an "ask again" over 30 s, which timed out and
+  // was charged its whole reservation. Waiting longer costs nothing more.
+  deadlineMs: 90_000,
   // Decision 5: zero automatic retries. A call that fails after the provider
   // generated a response has already been charged.
   maxAttempts: 1,

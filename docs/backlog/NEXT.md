@@ -21,6 +21,11 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
+- [~] **The coach waits 90 seconds.** Careful lane (spend limits). Owner, 17 Oct 2026:
+      the first live "ask again" on `gpt-6-luna` took over 30 s, timed out, was charged its
+      whole reservation (3,750 micro-USD) and closed the old proposal with nothing in its
+      place. `COACH_AI_LIVE_LIMITS.deadlineMs` 30,000 → 90,000; costs nothing more. No
+      route sets `maxDuration`, so Vercel's 300 s default covers it.
 - [ ] **A7-5 — Size the fill before its first live run.** Measure output tokens on a
       twelve-activity answer: the grammar pads each target with fourteen nullable keys
       against a 3,000-token ceiling. Needs a provider key, so it waits for one; each run
