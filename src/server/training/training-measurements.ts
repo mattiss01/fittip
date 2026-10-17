@@ -31,6 +31,9 @@ export class TrainingMeasurementValidationError extends Error {
   }
 }
 
+/** A target's own words, by key: what `parseTrainingMeasurement` accepts. */
+export const TARGET_TEXT_MAX = { unit: 32, label: 80, value: 500 } as const;
+
 export function parseTrainingMeasurement(
   mode: TrainingMeasurementMode,
   value: unknown,
@@ -145,7 +148,7 @@ export function parseTrainingMeasurement(
       assertOnlyKeys(record, ["repetitions", "unit"]);
       return {
         repetitions: readInteger(record.repetitions, 1, 1000000),
-        unit: readString(record.unit, 32),
+        unit: readString(record.unit, TARGET_TEXT_MAX.unit),
       };
     case "custom": {
       assertOnlyKeys(record, ["label", "value", "unit"]);
@@ -153,13 +156,13 @@ export function parseTrainingMeasurement(
       if (
         !["string", "number", "boolean"].includes(typeof customValue) ||
         (typeof customValue === "number" && !Number.isFinite(customValue)) ||
-        String(customValue).length > 500
+        String(customValue).length > TARGET_TEXT_MAX.value
       )
         invalid();
       return {
-        label: readString(record.label, 80),
+        label: readString(record.label, TARGET_TEXT_MAX.label),
         value: customValue as string | number | boolean,
-        unit: readString(record.unit, 32),
+        unit: readString(record.unit, TARGET_TEXT_MAX.unit),
       };
     }
   }
