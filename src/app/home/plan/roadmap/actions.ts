@@ -191,6 +191,7 @@ export async function generateRoadmapAction(
       message: OUTCOMES.generationFailed,
       submission,
       draft,
+      attemptEnded: true,
     };
   } catch (error) {
     return toActionState(error, submission, draft);
@@ -830,6 +831,7 @@ function toActionState(
       message: OUTCOMES.generationFailed,
       submission,
       ...(draft ? { draft } : {}),
+      attemptEnded: true,
     };
   }
   if (

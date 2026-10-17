@@ -153,6 +153,7 @@ export async function generatePlanProposalAction(
       message: OUTCOMES.generationFailed,
       submission,
       draft,
+      attemptEnded: true,
     };
   } catch (error) {
     return toActionState(error, submission, draft);
@@ -569,6 +570,7 @@ function toActionState(
       message: OUTCOMES.generationFailed,
       submission,
       draft,
+      attemptEnded: true,
     };
   }
   return { status: "error", message: OUTCOMES.error, submission, draft };

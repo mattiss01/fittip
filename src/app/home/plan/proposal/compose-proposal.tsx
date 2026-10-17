@@ -91,9 +91,13 @@ export function ComposeProposal({
   useEffect(() => {
     if (goalPrompt) promptTitle.current?.focus();
   }, [goalPrompt]);
+  // A new key only once an attempt has ended without a proposal; until
+  // then a resend under the old one stays a replay (17 Oct 2026).
+  const [keyGeneration, setKeyGeneration] = useState(0);
   const idempotencyKey = useMemo(
     () => globalThis.crypto.randomUUID().replaceAll("-", ""),
-    [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the generation is the trigger
+    [keyGeneration],
   );
 
   // The two fields are followed so the list below shows the days they
@@ -106,6 +110,7 @@ export function ComposeProposal({
     setSeenSubmission(state.submission);
     setStartDate(state.draft?.startDate || today);
     setDayCount(clampDays(state.draft?.dayCount));
+    if (state.attemptEnded) setKeyGeneration((generation) => generation + 1);
   }
   // The ticks are held here, not in the checkboxes. A box exists only while
   // its session is listed and the form is re-keyed on every reply, so an

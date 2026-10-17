@@ -129,7 +129,11 @@ export function RoadmapComposer({
     // proposal reuses it, which is what makes the retry cheap rather than a
     // second charge on a live binding. `state` here is the latest rendered
     // result, which is exactly the attempt being retried.
-    if (keyRef.current === null || state.status === "proposal") {
+    if (
+      keyRef.current === null ||
+      state.status === "proposal" ||
+      state.attemptEnded
+    ) {
       keyRef.current = globalThis.crypto.randomUUID();
     }
     formData.set("idempotencyKey", keyRef.current);

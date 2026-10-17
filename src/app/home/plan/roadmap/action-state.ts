@@ -58,6 +58,13 @@ export type RoadmapActionState = {
    * refusal the owner has to act on.
    */
   draft?: RoadmapActionDraft;
+  /**
+   * Set when the coach was asked and the attempt has ended without a proposal.
+   * The form then asks again under a new key: the old one would only replay
+   * the failure (owner's first live test, 17 Oct 2026). Never set where the
+   * attempt may still be running, so a retry there stays a replay.
+   */
+  attemptEnded?: true;
 };
 
 export const INITIAL_ROADMAP_ACTION_STATE: RoadmapActionState = {
