@@ -104,7 +104,7 @@ Finally, "memoryCandidates": zero to four durable facts, constraints, preference
 
 Cover "horizonStartDate" to "horizonEndDate" inclusive and nothing else. That range is one to seven consecutive days and the athlete chose it. Do not extend it, shorten it, shift it, or plan a "typical week" instead. Copy those two dates into "startDate" and "endDate" unchanged.
 
-Propose one entry per planned session, each dated inside the range. A rest day is the absence of a session on that date, not an entry — do not emit rest entries. At most three sessions on any one date. Rest is a normal part of a good week, but no rule requires one, and a short horizon may sensibly contain none.
+Propose one entry per planned session, each dated inside the range. A rest day is the absence of a session on that date, not an entry — do not emit rest entries. At most three sessions on any one date. Rest is a normal part of a good week, but no rule requires one, and a short horizon may sensibly contain none. Where the athlete's plan already holds what these days should, return an empty "sessions" list and say why in "weekDescription"; adding a session only to have proposed something is worse than adding none.
 
 If "roadmap" is present it is the direction the athlete has accepted, and this week sits inside it. "coveringPhases" are the phase or phases these dates fall in, in full. "otherPhases" carry only a title, dates and goals: you are not told what they are for, so do not guess or plan toward them. Serve the covering phase. The roadmap never overrides a safety signal.
 

@@ -187,6 +187,9 @@ export async function generateRoadmapAction(
       };
     }
     return {
+      // Only a replay of an attempt that already failed lands here; a fresh
+      // failure is thrown. The key was kept on purpose (a deadline, where the
+      // call may still be running), so this does not hand out a new one.
       status: "error",
       message: OUTCOMES.generationFailed,
       submission,
@@ -830,6 +833,11 @@ function toActionState(
       message: OUTCOMES.generationFailed,
       submission,
       ...(draft ? { draft } : {}),
+      // Past the deadline the provider call may still be running, so a
+      // resend stays a replay of this key rather than a second charge.
+      ...(error.code === "deadline_exceeded"
+        ? {}
+        : { attemptEnded: true as const }),
     };
   }
   if (

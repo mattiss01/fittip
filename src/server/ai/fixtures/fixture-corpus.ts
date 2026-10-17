@@ -1127,8 +1127,8 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
       }),
     ),
     context: COACH_AI_FIXTURE_PLAN_CONTEXT,
-    expected: { outcome: "rejected", reason: "business_rule" },
-    note: "A horizon with no session at all is a refusal dressed as a plan.",
+    expected: { outcome: "accepted" },
+    note: "A week the coach leaves as it is, with its reason in the week description, is an answer (owner, 17 Oct 2026).",
   },
   {
     name: "plan_envelope_extra_field",

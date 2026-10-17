@@ -92,16 +92,22 @@ function day(
   };
 }
 
+const WEEK_DESCRIPTION =
+  "Two easy runs around the long one, with Thursday left free for recovery.";
+
 function renderReview(
   overrides: {
     days?: ProposalTimelineDay[];
     roadmap?: ProposalRoadmapView | null;
     planChangedSinceComposed?: boolean;
+    nothingAdded?: boolean;
   } = {},
 ) {
   return render(
     <ProposalReview
       regenerationFeedback={null}
+      weekDescription={WEEK_DESCRIPTION}
+      nothingAdded={overrides.nothingAdded ?? false}
       proposalId={PROPOSAL_ID}
       expectedPlanRevision={12}
       finishKey="9c000000-0000-4000-8000-0000000000ff"
@@ -483,5 +489,31 @@ describe("what the review says about staleness", () => {
 
     expect(screen.getByText(/Version 2/)).toBeInTheDocument();
     expect(screen.getByText(/since replaced/)).toBeInTheDocument();
+  });
+});
+
+describe("the coach's note", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useActionStateMock.mockImplementation(
+      (_action: unknown, initial: unknown) => [initial, vi.fn(), false],
+    );
+  });
+  afterEach(cleanup);
+
+  it("shows the week description above the days", () => {
+    renderReview();
+
+    expect(
+      screen.getByRole("region", { name: COPY.coachNoteLabel }),
+    ).toHaveTextContent(WEEK_DESCRIPTION);
+    expect(screen.queryByText(COPY.nothingAdded)).toBeNull();
+  });
+
+  it("says the coach added nothing when the proposal has no sessions", () => {
+    renderReview({ nothingAdded: true });
+
+    expect(screen.getByText(COPY.nothingAdded)).toBeVisible();
+    expect(screen.getByText(WEEK_DESCRIPTION)).toBeVisible();
   });
 });

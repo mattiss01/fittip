@@ -77,6 +77,14 @@ export function RoadmapComposer({
   const session = useContext(RoadmapComposeSessionContext);
   const ownKey = useRef<string | null>(null);
   const keyRef = session?.idempotencyKey ?? ownKey;
+  // A reply whose attempt ended without a proposal clears the key once, so
+  // the next tap asks again under a new one. Cleared here rather than in
+  // `submit`, where two taps before `pending` lands would see the same
+  // reply and take a key each: two paid calls (17 Oct 2026).
+  const attemptEnded = state.attemptEnded === true;
+  useEffect(() => {
+    if (attemptEnded) keyRef.current = null;
+  }, [attemptEnded, state.submission, keyRef]);
   const reportPending = session?.setPending;
   useEffect(() => {
     reportPending?.(pending);

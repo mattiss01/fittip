@@ -715,6 +715,31 @@
   line-height: 1.45;
 }
 
+/* The coach's overview of the days, above them (back on 17 Oct 2026; the
+   M3-11 rebuild had left it out). */
+.coachNote {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-control);
+  background: var(--ledger-paper);
+  box-shadow: var(--shadow-card);
+}
+
+.weekDescription {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.nothingAdded {
+  margin: 0;
+  color: var(--pine);
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
 /* The sessions already on the chosen days, each with its "can be replaced"
    tick (9 Oct 2026). */
 .plannedList {

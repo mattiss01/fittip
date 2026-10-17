@@ -190,6 +190,7 @@ Decision 12 gave the plan's logs 9,300 bytes where the owner had named 10,200, b
 18,000 and every call already holds it, so the owner's number costs nothing more: the logs
 get 10,200 and the whole training history 15,400, as the roadmap's do, so the miss list keeps
 its room. The plan's total is 52,100 bytes, still the sum of its parts and the envelope, and
-its worst case 15,216 tokens of 18,000. Twenty logs fit at the corpus's largest of 501 bytes,
-and fourteen, not thirteen, as long as a note may be. The plan is no longer sized to 15,000
-tokens; nothing else about it changes.
+its worst case 15,216 tokens of 18,000 (15,291 since 17 October 2026, when the plan prompt
+learned that a week left as it is is an answer and its budget went to 9,000). Twenty logs
+fit at the corpus's largest of 501 bytes, and fourteen, not thirteen, as long as a note may
+be. The plan is no longer sized to 15,000 tokens; nothing else about it changes.

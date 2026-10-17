@@ -47,6 +47,45 @@ describe("ComposeProposal", () => {
 
   afterEach(cleanup);
 
+  describe("the request key (17 Oct 2026)", () => {
+    const keyOf = (container: HTMLElement) =>
+      (
+        container.querySelector(
+          'input[name="idempotencyKey"]',
+        ) as HTMLInputElement
+      ).value;
+    const replied = (submission: number, attemptEnded: boolean) => ({
+      status: "error" as const,
+      message: COPY.outcomes.generationFailed,
+      submission,
+      ...(attemptEnded ? { attemptEnded: true as const } : {}),
+    });
+
+    it("is new once an attempt has ended without a proposal", () => {
+      const { container, rerender } = render(
+        <ComposeProposal hasGoals today="2026-10-09" planned={[]} />,
+      );
+      const first = keyOf(container);
+
+      useActionStateMock.mockReturnValue([replied(1, true), action, false]);
+      rerender(<ComposeProposal hasGoals today="2026-10-09" planned={[]} />);
+
+      expect(keyOf(container)).not.toBe(first);
+    });
+
+    it("stays the same where the attempt may still be running", () => {
+      const { container, rerender } = render(
+        <ComposeProposal hasGoals today="2026-10-09" planned={[]} />,
+      );
+      const first = keyOf(container);
+
+      useActionStateMock.mockReturnValue([replied(1, false), action, false]);
+      rerender(<ComposeProposal hasGoals today="2026-10-09" planned={[]} />);
+
+      expect(keyOf(container)).toBe(first);
+    });
+  });
+
   it("keeps the one line that says nothing reaches the plan before the review", () => {
     render(<ComposeProposal hasGoals today="2026-10-09" planned={[]} />);
 

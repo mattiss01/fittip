@@ -140,6 +140,12 @@ export default async function PlanProposalPage() {
               <ProposalReview
                 proposalId={state.proposal.id}
                 regenerationFeedback={state.proposal.regenerationFeedback}
+                weekDescription={state.proposal.content.weekDescription}
+                // No proposed session; such a proposal has no items at all,
+                // since free days are offered as rest only beside one.
+                nothingAdded={state.proposal.items.every(
+                  (item) => item.kind !== "session",
+                )}
                 expectedPlanRevision={state.planRevision}
                 finishKey={state.finishKey}
                 days={state.days}
