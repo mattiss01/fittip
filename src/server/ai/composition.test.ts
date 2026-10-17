@@ -64,7 +64,7 @@ function liveEnvironment(
     FITTIP_AI_OWNER_ALLOWLIST: OWNER_ID,
     FITTIP_AI_OPERATIONS: "create_roadmap",
     FITTIP_AI_PROVIDER: "openai",
-    FITTIP_AI_MODEL: "gpt-5.6-luna",
+    FITTIP_AI_MODEL: "gpt-6-luna",
     FITTIP_AI_API_KEY: "not-a-real-key-000000000000000000",
     ...overrides,
   };
@@ -81,13 +81,13 @@ function compose(environment: Record<string, string | undefined>) {
 
 describe("the model is bound to the card that prices it", () => {
   it("resolves an approved pair to one indivisible binding", () => {
-    const binding = requireApprovedCoachAIModel("openai", "gpt-5.6-luna");
+    const binding = requireApprovedCoachAIModel("openai", "gpt-6-luna");
 
     // The card cannot be obtained without naming the model, which is the whole
     // of the fix: there is no second constant to drift from this one.
-    expect(binding.rateCard.version).toBe("openai-gpt-5.6-luna-2026-08-10");
-    expect(binding.rateCard.inputMicroUsdPerMillionTokens).toBe(200_000);
-    expect(binding.rateCard.outputMicroUsdPerMillionTokens).toBe(1_200_000);
+    expect(binding.rateCard.version).toBe("openai-gpt-6-luna-2026-10-17");
+    expect(binding.rateCard.inputMicroUsdPerMillionTokens).toBe(125_000);
+    expect(binding.rateCard.outputMicroUsdPerMillionTokens).toBe(500_000);
     expect(binding.limits.maxInputTokens).toBe(18_000);
   });
 
@@ -100,7 +100,7 @@ describe("the model is bound to the card that prices it", () => {
       CoachAIError,
     );
     expect(() =>
-      requireApprovedCoachAIModel("anthropic", "gpt-5.6-luna"),
+      requireApprovedCoachAIModel("anthropic", "gpt-6-luna"),
     ).toThrow(CoachAIError);
   });
 
@@ -132,9 +132,9 @@ describe("the live composition root", () => {
     const composition = compose(liveEnvironment());
 
     expect(composition.mode).toBe("live");
-    expect(composition.binding.modelCode).toBe("gpt-5.6-luna");
+    expect(composition.binding.modelCode).toBe("gpt-6-luna");
     expect(composition.binding.rateCard.version).toBe(
-      "openai-gpt-5.6-luna-2026-08-10",
+      "openai-gpt-6-luna-2026-10-17",
     );
   });
 

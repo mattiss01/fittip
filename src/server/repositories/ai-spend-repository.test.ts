@@ -27,7 +27,7 @@ const HANDLE: CoachAISpendHandle = {
 const RESERVATION = {
   operation: "create_roadmap",
   reservedMicroUsd: 5200,
-  rateCardVersion: "openai-gpt-5.6-luna-2026-08-10",
+  rateCardVersion: "openai-gpt-6-luna-2026-10-17",
   currency: "USD",
 } as const;
 
@@ -57,7 +57,7 @@ describe("reserving durable spend", () => {
     expect(rpc).toHaveBeenCalledWith("reserve_ai_spend", {
       p_operation: "create_roadmap",
       p_reserved_micro_usd: 5200,
-      p_rate_card_version: "openai-gpt-5.6-luna-2026-08-10",
+      p_rate_card_version: "openai-gpt-6-luna-2026-10-17",
       p_currency: "USD",
     });
   });

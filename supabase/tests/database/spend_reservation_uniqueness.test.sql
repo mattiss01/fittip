@@ -153,10 +153,10 @@ create temporary table pg_temp_spend (
 
 insert into pg_temp_spend
 select 'plan', * from public.reserve_ai_spend(
-  'create_seven_day_plan', 5000, 'openai-gpt-5.6-luna-2026-08-10', 'USD');
+  'create_seven_day_plan', 5000, 'openai-gpt-6-luna-2026-10-17', 'USD');
 insert into pg_temp_spend
 select 'roadmap', * from public.reserve_ai_spend(
-  'create_roadmap', 5000, 'openai-gpt-5.6-luna-2026-08-10', 'USD');
+  'create_roadmap', 5000, 'openai-gpt-6-luna-2026-10-17', 'USD');
 
 select public.settle_ai_spend(
   (select settlement_token from pg_temp_spend where label = 'plan'), 4000);
@@ -186,7 +186,7 @@ select is(
   (select proposal_id is not null from public.finish_plan_generation(
     (select completion_token from pg_temp_plan_claim where label = 'first'),
     'proposal', 'fittip.seven-day-plan.v2', 'seven-day-plan-v2-2026-08-12',
-    'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10',
+    'openai', 'gpt-6-luna', 'openai-gpt-6-luna-2026-10-17',
     (select reservation_id from pg_temp_spend where label = 'plan'),
     null, pg_temp.plan_body(pg_temp.day(0), pg_temp.day(2)), null, null
   )),
@@ -198,8 +198,8 @@ select throws_ok(
   format(
     $q$select * from public.finish_plan_generation(
       %L::uuid, 'proposal', 'fittip.seven-day-plan.v2',
-      'seven-day-plan-v2-2026-08-12', 'openai', 'gpt-5.6-luna',
-      'openai-gpt-5.6-luna-2026-08-10', %L::uuid, null, %L::jsonb, null, null)$q$,
+      'seven-day-plan-v2-2026-08-12', 'openai', 'gpt-6-luna',
+      'openai-gpt-6-luna-2026-10-17', %L::uuid, null, %L::jsonb, null, null)$q$,
     (select completion_token from pg_temp_plan_claim where label = 'second'),
     (select reservation_id from pg_temp_spend where label = 'plan'),
     pg_temp.plan_body(pg_temp.day(4), pg_temp.day(6))
@@ -237,7 +237,7 @@ select is(
   (select proposal_id is not null from public.finish_roadmap_generation(
     (select completion_token from pg_temp_roadmap_claim where label = 'first'),
     'proposal', 'fittip.roadmap.v4', 'roadmap-2026-08-10',
-    'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10',
+    'openai', 'gpt-6-luna', 'openai-gpt-6-luna-2026-10-17',
     (select reservation_id from pg_temp_spend where label = 'roadmap'),
     p_content => pg_temp.roadmap_body(
       pg_temp.day(0), pg_temp.day(84), 'Paid for once'),
@@ -256,7 +256,7 @@ select throws_ok(
   format(
     $q$select * from public.finish_roadmap_generation(
       %L::uuid, 'proposal', 'fittip.roadmap.v4', 'roadmap-2026-08-10',
-      'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10', %L::uuid,
+      'openai', 'gpt-6-luna', 'openai-gpt-6-luna-2026-10-17', %L::uuid,
       p_content => %L::jsonb, p_sources => '[]'::jsonb)$q$,
     (select completion_token from pg_temp_roadmap_claim where label = 'second'),
     (select reservation_id from pg_temp_spend where label = 'roadmap'),

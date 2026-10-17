@@ -30,9 +30,10 @@ import { CoachAIError } from "@/server/ai/errors";
  * except by naming a provider and model that this file pairs it with, and
  * `requireApprovedCoachAIModel` refuses anything not in the list — failing
  * closed exactly as a missing credential or a stale rate card does. The list is
- * mirrored by `public.roadmap_technical_codes_are_accepted` in the M3-02
- * migration, so a proposal recorded against an unapproved pair is refused a
- * second time at the database boundary, where the application cannot reach it.
+ * mirrored by `public.roadmap_technical_codes_are_accepted` (last replaced by
+ * `20261017080131_coach_runs_on_gpt_6_luna`), so a proposal recorded against
+ * an unapproved pair is refused a second time at the database boundary, where
+ * the application cannot reach it.
  */
 
 export type CoachAIModelBinding = {
@@ -45,8 +46,15 @@ export type CoachAIModelBinding = {
 };
 
 /**
- * `gpt-5.6-luna` at $0.20 / $1.20 per million input / output tokens, read on
- * 10 August 2026 (M3-01B decision 1 and decision 6).
+ * `gpt-6-luna`, priced from OpenAI's page on 17 October 2026: $0.10 / $0.50 per
+ * million input / output tokens, $0.125 for a cache write. It replaced
+ * `gpt-5.6-luna` ($0.20 / $1.20, M3-01B decision 1) on the product owner's
+ * decision that day, before any live call had been made with either.
+ *
+ * Input is charged at the cache-write rate, not the list price (owner, 17
+ * October 2026). A response reports one input count and does not say how much
+ * of it was written to the cache, so the list price could record up to a
+ * quarter less input than was billed; the upper bound can only overcount.
  *
  * The rate card is a constant in this repository, versioned and updated by
  * deploy, never fetched at runtime — a price lookup that can fail is one more
@@ -54,19 +62,19 @@ export type CoachAIModelBinding = {
  * stale is unknown, and unknown denies, because a wrong price near a hard
  * ceiling is worse than no proposal.
  *
- * Against `COACH_AI_LIVE_LIMITS` a reservation charges 18,000 x 200,000/1e6
- * plus 3,000 x 1,200,000/1e6 = 7,200 micro-USD, inside the 8,000 per-request
+ * Against `COACH_AI_LIVE_LIMITS` a reservation charges 18,000 x 125,000/1e6
+ * plus 3,000 x 500,000/1e6 = 3,750 micro-USD, inside the 8,000 per-request
  * ceiling.
  */
-const OPENAI_GPT_5_6_LUNA: CoachAIModelBinding = {
+const OPENAI_GPT_6_LUNA: CoachAIModelBinding = {
   providerCode: "openai",
-  modelCode: "gpt-5.6-luna",
+  modelCode: "gpt-6-luna",
   rateCard: {
-    version: "openai-gpt-5.6-luna-2026-08-10",
+    version: "openai-gpt-6-luna-2026-10-17",
     currency: "USD",
-    inputMicroUsdPerMillionTokens: 200_000,
-    outputMicroUsdPerMillionTokens: 1_200_000,
-    validUntil: "2027-02-01T00:00:00.000Z",
+    inputMicroUsdPerMillionTokens: 125_000,
+    outputMicroUsdPerMillionTokens: 500_000,
+    validUntil: "2027-04-17T00:00:00.000Z",
   },
   limits: COACH_AI_LIVE_LIMITS,
   reachesNetwork: true,
@@ -98,7 +106,7 @@ export const FIXTURE_COACH_AI_BINDING: CoachAIModelBinding = {
  * product-owner decision about spend, not a convenience.
  */
 export const APPROVED_COACH_AI_MODELS: readonly CoachAIModelBinding[] = [
-  OPENAI_GPT_5_6_LUNA,
+  OPENAI_GPT_6_LUNA,
   FIXTURE_COACH_AI_BINDING,
 ];
 

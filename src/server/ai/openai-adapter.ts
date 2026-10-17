@@ -14,7 +14,7 @@ import {
 
 /**
  * The one approved real-provider adapter (M3-01B decision 1: OpenAI,
- * `gpt-5.6-luna`).
+ * `gpt-6-luna`, which replaced `gpt-5.6-luna` on 17 October 2026).
  *
  * It is the only module in `src/server/ai` permitted to reach the network, and
  * `src/architecture/coach-ai-network-gate.test.ts` fails if that stops being

@@ -150,7 +150,7 @@ create temporary table pg_temp_roadmap_claim (
 
 insert into pg_temp_spend
 select 'plan-open', * from public.reserve_ai_spend(
-  'create_seven_day_plan', 5000, 'openai-gpt-5.6-luna-2026-08-10', 'USD');
+  'create_seven_day_plan', 5000, 'openai-gpt-6-luna-2026-10-17', 'USD');
 
 insert into pg_temp_claim
 select 'plan-open', * from public.begin_plan_generation(
@@ -161,7 +161,7 @@ select is(
   (select proposal_id is not null from public.finish_plan_generation(
     (select completion_token from pg_temp_claim where label = 'plan-open'),
     'proposal', 'fittip.seven-day-plan.v2', 'seven-day-plan-v2-2026-08-12',
-    'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10',
+    'openai', 'gpt-6-luna', 'openai-gpt-6-luna-2026-10-17',
     (select reservation_id from pg_temp_spend where label = 'plan-open'),
     null, pg_temp.plan_body(pg_temp.day(0), pg_temp.day(2)), null, null
   )),
@@ -187,7 +187,7 @@ select is(
 
 insert into pg_temp_spend
 select 'plan-settled', * from public.reserve_ai_spend(
-  'create_seven_day_plan', 5000, 'openai-gpt-5.6-luna-2026-08-10', 'USD');
+  'create_seven_day_plan', 5000, 'openai-gpt-6-luna-2026-10-17', 'USD');
 select public.settle_ai_spend(
   (select settlement_token from pg_temp_spend where label = 'plan-settled'), 1200);
 
@@ -200,7 +200,7 @@ select is(
   (select proposal_id is not null from public.finish_plan_generation(
     (select completion_token from pg_temp_claim where label = 'plan-settled'),
     'proposal', 'fittip.seven-day-plan.v2', 'seven-day-plan-v2-2026-08-12',
-    'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10',
+    'openai', 'gpt-6-luna', 'openai-gpt-6-luna-2026-10-17',
     (select reservation_id from pg_temp_spend where label = 'plan-settled'),
     null, pg_temp.plan_body(pg_temp.day(4), pg_temp.day(6)), null, null
   )),
@@ -227,14 +227,14 @@ select 'plan-refused', * from public.begin_plan_generation(
 -- something else.
 insert into pg_temp_spend
 select 'wrong-operation', * from public.reserve_ai_spend(
-  'create_roadmap', 5000, 'openai-gpt-5.6-luna-2026-08-10', 'USD');
+  'create_roadmap', 5000, 'openai-gpt-6-luna-2026-10-17', 'USD');
 
 select throws_ok(
   format(
     $q$select * from public.finish_plan_generation(
       %L::uuid, 'proposal', 'fittip.seven-day-plan.v2',
-      'seven-day-plan-v2-2026-08-12', 'openai', 'gpt-5.6-luna',
-      'openai-gpt-5.6-luna-2026-08-10', %L::uuid, null, %L::jsonb, null, null)$q$,
+      'seven-day-plan-v2-2026-08-12', 'openai', 'gpt-6-luna',
+      'openai-gpt-6-luna-2026-10-17', %L::uuid, null, %L::jsonb, null, null)$q$,
     (select completion_token from pg_temp_claim where label = 'plan-refused'),
     (select reservation_id from pg_temp_spend where label = 'wrong-operation'),
     pg_temp.plan_body(pg_temp.day(8), pg_temp.day(10))
@@ -254,7 +254,7 @@ select throws_ok(
   format(
     $q$select * from public.finish_plan_generation(
       %L::uuid, 'proposal', 'fittip.seven-day-plan.v2',
-      'seven-day-plan-v2-2026-08-12', 'openai', 'gpt-5.6-luna',
+      'seven-day-plan-v2-2026-08-12', 'openai', 'gpt-6-luna',
       'a-rate-card-that-was-never-approved', %L::uuid, null, %L::jsonb,
       null, null)$q$,
     (select completion_token from pg_temp_claim where label = 'plan-refused'),
@@ -289,7 +289,7 @@ select throws_ok(
 
 insert into pg_temp_spend
 select 'post-settle', * from public.reserve_ai_spend(
-  'create_seven_day_plan', 5000, 'openai-gpt-5.6-luna-2026-08-10', 'USD');
+  'create_seven_day_plan', 5000, 'openai-gpt-6-luna-2026-10-17', 'USD');
 
 insert into pg_temp_claim
 select 'post-settle', * from public.begin_plan_generation(
@@ -300,8 +300,8 @@ select throws_ok(
   format(
     $q$select * from public.finish_plan_generation(
       %L::uuid, 'proposal', 'fittip.seven-day-plan.v2',
-      'seven-day-plan-v2-2026-08-12', 'openai', 'gpt-5.6-luna',
-      'openai-gpt-5.6-luna-2026-08-10', %L::uuid, null, %L::jsonb,
+      'seven-day-plan-v2-2026-08-12', 'openai', 'gpt-6-luna',
+      'openai-gpt-6-luna-2026-10-17', %L::uuid, null, %L::jsonb,
       '[{"kind":"not-a-source-kind","recordId":"7d000000-0000-4000-8000-0000000000aa"}]'::jsonb,
       null)$q$,
     (select completion_token from pg_temp_claim where label = 'post-settle'),
@@ -323,7 +323,7 @@ select is(
 
 insert into pg_temp_spend
 select 'roadmap-open', * from public.reserve_ai_spend(
-  'create_roadmap', 5000, 'openai-gpt-5.6-luna-2026-08-10', 'USD');
+  'create_roadmap', 5000, 'openai-gpt-6-luna-2026-10-17', 'USD');
 
 insert into pg_temp_roadmap_claim
 select 'roadmap-open', * from public.begin_roadmap_generation(
@@ -334,7 +334,7 @@ select is(
   (select proposal_id is not null from public.finish_roadmap_generation(
     (select completion_token from pg_temp_roadmap_claim where label = 'roadmap-open'),
     'proposal', 'fittip.roadmap.v4', 'roadmap-2026-08-10',
-    'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10',
+    'openai', 'gpt-6-luna', 'openai-gpt-6-luna-2026-10-17',
     (select reservation_id from pg_temp_spend where label = 'roadmap-open'),
     p_content => pg_temp.roadmap_body(
       pg_temp.day(0), pg_temp.day(84), 'Settled by the finish'),
@@ -360,7 +360,7 @@ select is(
 
 insert into pg_temp_spend
 select 'roadmap-settled', * from public.reserve_ai_spend(
-  'create_roadmap', 5000, 'openai-gpt-5.6-luna-2026-08-10', 'USD');
+  'create_roadmap', 5000, 'openai-gpt-6-luna-2026-10-17', 'USD');
 select public.settle_ai_spend(
   (select settlement_token from pg_temp_spend where label = 'roadmap-settled'), 900);
 
@@ -373,7 +373,7 @@ select is(
   (select proposal_id is not null from public.finish_roadmap_generation(
     (select completion_token from pg_temp_roadmap_claim where label = 'roadmap-settled'),
     'proposal', 'fittip.roadmap.v4', 'roadmap-2026-08-10',
-    'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10',
+    'openai', 'gpt-6-luna', 'openai-gpt-6-luna-2026-10-17',
     (select reservation_id from pg_temp_spend where label = 'roadmap-settled'),
     p_content => pg_temp.roadmap_body(
       pg_temp.day(0), pg_temp.day(84), 'Settled by the application'),
@@ -405,7 +405,7 @@ select throws_ok(
   format(
     $q$select * from public.finish_roadmap_generation(
       %L::uuid, 'proposal', 'fittip.roadmap.v4', 'roadmap-2026-08-10',
-      'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10', %L::uuid,
+      'openai', 'gpt-6-luna', 'openai-gpt-6-luna-2026-10-17', %L::uuid,
       p_content => %L::jsonb, p_sources => '[]'::jsonb)$q$,
     (select completion_token from pg_temp_roadmap_claim where label = 'roadmap-refused'),
     (select reservation_id from pg_temp_spend where label = 'plan-settled'),
@@ -417,7 +417,7 @@ select throws_ok(
 
 insert into pg_temp_spend
 select 'roadmap-post-settle', * from public.reserve_ai_spend(
-  'create_roadmap', 5000, 'openai-gpt-5.6-luna-2026-08-10', 'USD');
+  'create_roadmap', 5000, 'openai-gpt-6-luna-2026-10-17', 'USD');
 
 -- The roadmap function's post-settle refusals are bare raises with no
 -- enclosing handler, unlike the plan side's. Same outcome, different mechanism,
@@ -426,7 +426,7 @@ select throws_ok(
   format(
     $q$select * from public.finish_roadmap_generation(
       %L::uuid, 'proposal', 'fittip.roadmap.v4', 'roadmap-2026-08-10',
-      'openai', 'gpt-5.6-luna', 'openai-gpt-5.6-luna-2026-08-10', %L::uuid,
+      'openai', 'gpt-6-luna', 'openai-gpt-6-luna-2026-10-17', %L::uuid,
       p_content => %L::jsonb,
       p_sources => '[{"kind":"not-a-source-kind","recordId":"7d000000-0000-4000-8000-0000000000bb"}]'::jsonb)$q$,
     (select completion_token from pg_temp_roadmap_claim where label = 'roadmap-refused'),
@@ -452,7 +452,7 @@ select set_config(
 
 insert into pg_temp_spend
 select 'outsider', * from public.reserve_ai_spend(
-  'create_seven_day_plan', 5000, 'openai-gpt-5.6-luna-2026-08-10', 'USD');
+  'create_seven_day_plan', 5000, 'openai-gpt-6-luna-2026-10-17', 'USD');
 
 select set_config(
   'request.jwt.claims',
@@ -462,8 +462,8 @@ select throws_ok(
   format(
     $q$select * from public.finish_plan_generation(
       %L::uuid, 'proposal', 'fittip.seven-day-plan.v2',
-      'seven-day-plan-v2-2026-08-12', 'openai', 'gpt-5.6-luna',
-      'openai-gpt-5.6-luna-2026-08-10', %L::uuid, null, %L::jsonb, null, null)$q$,
+      'seven-day-plan-v2-2026-08-12', 'openai', 'gpt-6-luna',
+      'openai-gpt-6-luna-2026-10-17', %L::uuid, null, %L::jsonb, null, null)$q$,
     (select completion_token from pg_temp_claim where label = 'plan-refused'),
     (select reservation_id from pg_temp_spend where label = 'outsider'),
     pg_temp.plan_body(pg_temp.day(8), pg_temp.day(10))
