@@ -155,7 +155,8 @@ test.describe("M3-16A plan proposal review", () => {
       const plannedCard = page
         .locator("article")
         .filter({ hasText: "Club track night" });
-      await plannedCard.locator("summary").click();
+      // Edit, not Cancel: the card has both since 17 Oct 2026.
+      await plannedCard.locator("summary", { hasText: /^Edit$/ }).click();
       await plannedCard.getByLabel("Title").fill("Club track night (short)");
       await plannedCard.getByRole("button", { name: "Save session" }).click();
 
