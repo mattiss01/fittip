@@ -144,6 +144,7 @@ PowerShell here blocks `npm.ps1`, so always use `npm.cmd` and `npx.cmd`.
 | Production build     | `npm.cmd run build`                             |
 | Dev server           | `npm.cmd run dev`                               |
 | Production server    | `npm.cmd run start -- -p <port>`                |
+| Local test athletes  | `npm.cmd run athletes:seed`                     |
 
 - **Never run `npm run test`** — that is Vitest watch mode and it will hang the session.
 - Run Prettier over files you **create**, not only ones you edit. A new file is the usual way
@@ -206,6 +207,12 @@ a shard in `ci.yml` names it.
 - **A `db reset --local` takes that account with it.** The reset is the first half of the
   schema-change gate, so a session that runs one has no signed-in owner afterwards and has to
   create the user and seed the plan again before it can show anything.
+- **Five test athletes** (`mia`, `lena`, `tom`, `sarah`, `chris` `@fittip.local`, password
+  `fittip-local`) are full local accounts with history, memory and roadmaps, for judging the
+  coach and the app on someone other than the owner. `npm.cmd run athletes:seed` recreates
+  them after a reset (`-- lena tom` for some); `scripts/test-athletes/README.md` says who
+  each is and what a good coach answer for them looks like. Local only; the script refuses
+  any other URL.
 - `npm.cmd run test:e2e` needs the app serving on port 3000 plus
   `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Some specs also need
   `SUPABASE_SERVICE_ROLE_KEY` and **skip silently without it** — read the skipped count before
@@ -225,6 +232,10 @@ a shard in `ci.yml` names it.
 
 ## Pitfalls
 
+- **This Windows is German.** `netstat` prints `ABHÖREN`, not `LISTENING`, so
+  `netstat -ano | grep LISTEN` finds nothing and reports a busy port as free. Check a port
+  with `netstat -ano | grep ':3000 '` and read the PID. An earlier `node` often still holds
+  3000 after its dev task was killed; a second `dev` then fails with `EADDRINUSE`.
 - `src/architecture/*.test.ts` are repo-wide invariants, not unit tests. They fail if a
   `"use client"` file imports from `@/server/**` or a repository, or if `.retry(false)` appears
   outside the atomic `apply_*_change` RPC calls. Changing a pattern there is a deliberate decision.
