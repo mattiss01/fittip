@@ -701,6 +701,9 @@
   border: 1px solid var(--rule);
   border-radius: var(--radius-control);
   background: white;
+  /* Stated for the same reason as above: the dark dock's light text colour
+     reached the field, so what was typed was white on white (17 Oct 2026). */
+  color: var(--ledger-ink);
   font: 400 1rem/1.35 var(--font-sans);
 }
 
