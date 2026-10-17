@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit",
     "types:gen": "node scripts/generate-database-types.mjs",
     "types:patch": "node scripts/patch-database-types.mjs",
+    "athletes:seed": "node scripts/test-athletes/seed.mjs",
     "test": "vitest",
     "test:run": "vitest run",
     "test:m2-01-concurrency": "node supabase/tests/integration/m2_01_concurrent_goal_mutations.mjs",
