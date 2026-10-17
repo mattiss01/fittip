@@ -187,11 +187,13 @@ export async function generateRoadmapAction(
       };
     }
     return {
+      // Only a replay of an attempt that already failed lands here; a fresh
+      // failure is thrown. The key was kept on purpose (a deadline, where the
+      // call may still be running), so this does not hand out a new one.
       status: "error",
       message: OUTCOMES.generationFailed,
       submission,
       draft,
-      attemptEnded: true,
     };
   } catch (error) {
     return toActionState(error, submission, draft);

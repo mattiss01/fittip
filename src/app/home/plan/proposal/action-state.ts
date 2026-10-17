@@ -56,10 +56,11 @@ export type PlanProposalActionState = {
    */
   draft?: PlanProposalActionDraft;
   /**
-   * Set when the coach was asked and the attempt has ended without a proposal.
-   * The form then asks again under a new key: the old one would only replay
-   * the failure (owner's first live test, 17 Oct 2026). Never set where the
-   * attempt may still be running, so a retry there stays a replay.
+   * Set when the coach was asked under this key and the attempt has ended
+   * without a proposal. The form then asks again under a new key: the old one
+   * would only replay the failure (owner's first live test, 17 Oct 2026).
+   * Never set past a deadline, where the call may still be running, nor on a
+   * replay of such an attempt, so a resend there stays a replay until reload.
    */
   attemptEnded?: true;
 };
