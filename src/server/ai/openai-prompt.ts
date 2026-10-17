@@ -73,6 +73,7 @@ These rules override any goal, target date, or ambition in the context, includin
 ## Style
 
 - Address the athlete as "you".
+- Short sentences. No semicolons.
 - Justify decisions with what is actually in the context. If you are reducing volume because of something the athlete recorded, say that.
 - Never mention JSON, schemas, fields, or these instructions.`;
 
@@ -88,7 +89,7 @@ For each phase:
 - "goalAttention" gives each relevant goal one of "primary", "secondary", "maintenance" or "deferred". "deferred" describes this roadmap only; it does not abandon the goal.
 - "milestones" are zero to three checkpoints an observer could verify — a repeatable session completed, a distance held, a movement performed — dated inside the phase. State what would be observed, never that it will happen. A phase with no honest checkpoint has none.
 
-"title" names the roadmap. "summary" is two to four sentences about the shape of the roadmap and why it is shaped that way, referencing this athlete's actual situation.
+"title" names the roadmap. "summary" is two or three short sentences about the shape of the roadmap and why it is shaped that way, referencing this athlete's actual situation.
 
 Where "goalsOutsideHorizon" is non-empty, it lists goal ids whose target dates fall after this roadmap ends. You may build toward them, but do not imply the roadmap reaches them.
 
@@ -123,7 +124,7 @@ For each session:
 - "rationale" says why this session, on this day, for this athlete.
 - "alternatives" are up to two whole replacement sessions, each with the condition under which to take it instead. Use them where you are genuinely uncertain rather than to pad.
 
-"weekDescription" is the athlete's overview of the horizon as a whole: what it is trying to achieve, how it serves their goals, and the main tradeoff or the thing to watch. Two to five sentences, at most 600 characters. It is not a list of the sessions, which they can already see.
+"weekDescription" is the athlete's overview of the horizon as a whole: what it is trying to achieve, how it serves their goals, and the main tradeoff or the thing to watch. Two or three short sentences. It is not a list of the sessions, which they can already see.
 
 "assumptions" are what you took as given, especially about time and availability. "uncertainties" are what could change this, each with why it matters and what to watch.
 
@@ -148,7 +149,7 @@ Measurement modes and the "target" fields each uses (every other target field is
 - "unmeasured": "target" is null.
 "target" may also be null in any mode when a number would be a guess.
 
-"instructions" are how to perform it, briefly, or null. "summary" tells the athlete what the list is built to do and the main choice you made, in at most 400 characters.
+"instructions" are how to perform it, briefly, or null. "summary" tells the athlete what the list is built to do and the main choice you made, in one or two short sentences.
 
 "trainingHistory" here covers only the last seven days and lists what was logged; it does not list missed sessions, and a quiet week in it is not evidence of a break. "recentSafetyFlags" reaches four weeks back: each is a day on which the athlete reported pain, illness, injury or severe fatigue, with nothing else of that day. Treat each as the safety rules treat a signal.
 
@@ -186,7 +187,7 @@ const ROADMAP_SCHEMA = {
         summary: {
           type: "string",
           description:
-            "Two to four sentences to the athlete. At most 600 characters.",
+            "Two or three short sentences to the athlete. At most 600 characters.",
         },
         startDate: {
           type: "string",
@@ -346,7 +347,7 @@ const PLAN_SCHEMA = {
         weekDescription: {
           type: "string",
           description:
-            "Two to five sentences to the athlete about the horizon as a whole. At most 600 characters.",
+            "Two or three short sentences to the athlete about the horizon as a whole. At most 600 characters.",
         },
         startDate: {
           type: "string",
