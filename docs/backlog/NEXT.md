@@ -66,6 +66,12 @@ Ordered by dependency. A lane is named where it is not the build lane.
       profile. Changing the setup and resubmitting the same open form may return the
       earlier proposal. Found in the review of ADR-023's first merge; staleness, not a
       leak. Careful lane (the fingerprint is part of the spend guard).
+- [ ] **An account with logs cannot be deleted.** Found seeding the test athletes,
+      16 Oct 2026: deleting the auth user fails, because a log restricts the deletion of
+      its planned session (`completions` → `rolling_plan_sessions`) and plan,
+      saved-session and log activities hold their library entry with no action. Nothing
+      deletes an account today, but it blocks "delete my account" before anyone else is
+      invited. Careful lane: a migration, and the owner's to say what a deletion takes.
 - [ ] **Setup's small ends.** What is left of the reviews of 5 and 6 Oct 2026, none of
       it build lane. Needs a migration: `weight_entries.measured_on`, `birth_date` and
       the names in the training lists are bounded by the app, not the database. Needs
