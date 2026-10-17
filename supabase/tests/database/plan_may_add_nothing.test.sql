@@ -5,10 +5,10 @@
 --
 --   1. The content check accepts an empty list, and nothing else loosened:
 --      too many sessions, a missing description and wrong dates still fail.
---   2. Such an answer is recorded as a proposal with no proposed sessions.
---      Its free days are still offered as recovery days, as on any proposal.
---   3. With those declined, finishing its review closes it as applied with a
---      count of 0, with no change set, and the plan's revision does not move.
+--   2. Such an answer is recorded as a proposal with no items at all: its
+--      free days are not offered as recovery days (owner, 17 Oct 2026).
+--   3. Finishing its review closes it as applied with a count of 0, with no
+--      change set, and the plan's revision does not move.
 
 begin;
 
@@ -61,8 +61,10 @@ as $$
     'title', 'Easy run',
     'sport', 'Running',
     'focus', 'Repeatable easy work you could do again tomorrow.',
+    'intent', 'Conversational the whole way.',
     'durationMinutes', 30,
-    'primaryGoalId', 'goal-1'
+    'primaryGoalId', 'goal-1',
+    'rationale', 'Most of this horizon stays easy so the work is repeatable.'
   )
 $$;
 
@@ -92,7 +94,7 @@ create temporary table pg_temp_review (
 );
 grant all on pg_temp_claim, pg_temp_receipt, pg_temp_review to public;
 
-select plan(11);
+select plan(12);
 
 -- 1. The content check ----------------------------------------------------------
 
@@ -136,7 +138,7 @@ select ok(
   'the content check stays internal'
 );
 
--- 2. An empty answer becomes a proposal with no proposed session ---------------
+-- 2. An empty answer becomes a proposal with no items -------------------------
 
 insert into auth.users (id, email, raw_app_meta_data, raw_user_meta_data)
 values ('8b000000-0000-4000-8000-000000000001', 'empty-week@example.test', '{}', '{}');
@@ -187,17 +189,11 @@ select is(
   'with no proposed session'
 );
 select is(
-  (select array_agg(local_date order by local_date) from public.plan_proposal_items
+  (select count(*)::integer from public.plan_proposal_items
    where user_id = '8b000000-0000-4000-8000-000000000001' and kind = 'recovery_day'),
-  array[pg_temp.day(0), pg_temp.day(2)],
-  'and the two free days offered as recovery days, as on any proposal'
+  0,
+  'and its two free days are not offered as recovery days'
 );
-
-select public.decide_plan_proposal_item(
-  (select id from public.plan_proposals
-   where user_id = '8b000000-0000-4000-8000-000000000001'), ordinal, 'rejected')
-from public.plan_proposal_items
-where user_id = '8b000000-0000-4000-8000-000000000001';
 
 -- 3. Finishing it changes nothing -----------------------------------------------
 
@@ -222,6 +218,36 @@ select is(
   pg_temp.rev('8b000000-0000-4000-8000-000000000001'),
   (select plan_revision from pg_temp_receipt where label = 'seed'),
   'and the plan''s revision has not moved'
+);
+
+-- 4. Beside a proposed session, free days are still offered -----------------
+
+insert into pg_temp_claim
+select 'one', * from public.begin_plan_generation(
+  'empty-week-key-0000000002', 'empty-week-fingerprint-02', pg_temp.day(3), 3,
+  pg_temp.rev('8b000000-0000-4000-8000-000000000001'),
+  null, null, null, array[]::uuid[]);
+
+select public.finish_plan_generation(
+  (select completion_token from pg_temp_claim where label = 'one'),
+  'proposal', 'fittip.seven-day-plan.v2', 'seven-day-plan-v2-2026-08-12',
+  'fixture', 'fixture-corpus-v1', 'fixture-no-spend', null,
+  null,
+  pg_temp.plan_body(pg_temp.day(3), pg_temp.day(5),
+    jsonb_build_array(pg_temp.proposed(pg_temp.day(4))),
+    'One easy run in the middle of three days.'),
+  null, null, null);
+
+select is(
+  (select array_agg(item.kind || '@' || (item.local_date - pg_temp.day(3))
+     order by item.local_date)
+   from public.plan_proposal_items item
+   join public.plan_proposals proposal on proposal.id = item.proposal_id
+   join public.plan_generation_requests request
+     on request.id = proposal.generation_request_id
+   where request.idempotency_key = 'empty-week-key-0000000002'),
+  array['recovery_day@0', 'session@1', 'recovery_day@2'],
+  'beside one proposed session the free days are offered as before'
 );
 
 select * from finish();

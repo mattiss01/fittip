@@ -66,7 +66,7 @@ export function ProposalReview({
   regenerationFeedback: string | null;
   /** The coach's overview of the days, in its own words. */
   weekDescription: string;
-  /** The coach proposed no session; free days may still be offered as rest. */
+  /** The coach proposed no session, so there is nothing to decide. */
   nothingAdded: boolean;
   expectedPlanRevision: number;
   /** Stable per render of the open proposal, so a retried finish replays. */

@@ -27,7 +27,7 @@ Ordered by dependency. A lane is named where it is not the build lane.
       17 Oct 2026: "nothing to add" is an answer: show the coach's note, write nothing.
       Zero sessions allowed in the validator and the database check; the prompt says so;
       the review shows `weekDescription` again (lost in the M3-11 rebuild) and a line when
-      nothing was added. Free days are still offered as recovery days, as on any proposal.
+      nothing was added; it then offers no recovery days either (owner), so there is no item.
       Also: a failed request gets a new key, so "ask again" asks rather than replays.
 - [ ] **A7-5 — Size the fill before its first live run.** Measure output tokens on a
       twelve-activity answer: the grammar pads each target with fourteen nullable keys
