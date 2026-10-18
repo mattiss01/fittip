@@ -27,7 +27,8 @@ import {
  * SDK's own retry policy explicitly off, and SDKs commonly retry by default, so
  * leaving that unset is a decision made by omission. Calling `fetch` directly
  * is the strongest available form of "off": there is no retry policy to
- * misconfigure, and this module issues exactly one request per call. It also
+ * misconfigure, and this module issues one request per call, a second only
+ * where the first never connected (owner, 18 Oct 2026). It also
  * avoids adding a dependency, which would be a supply-chain change.
  */
 
@@ -37,6 +38,29 @@ const DEFAULT_BASE_URL = "https://api.openai.com/v1";
  * refusal guard — the authoritative ceiling is the byte budget the context
  * assembly already enforces. */
 const CHARACTERS_PER_TOKEN = 4;
+
+/**
+ * Failures before a connection existed: the request never left this machine.
+ * A reset or a closed socket is not here, since it can come after the body
+ * was sent and the provider began, and billed, its answer. Nor is an
+ * unreachable host or network: an open socket can report one late, after
+ * the body went out.
+ */
+const NEVER_CONNECTED_CODES: ReadonlySet<string> = new Set([
+  "UND_ERR_CONNECT_TIMEOUT",
+  "ECONNREFUSED",
+  "ENOTFOUND",
+  "EAI_AGAIN",
+]);
+
+function neverConnected(error: unknown): boolean {
+  const cause = error instanceof Error ? error.cause : undefined;
+  const code =
+    typeof cause === "object" && cause !== null && "code" in cause
+      ? cause.code
+      : undefined;
+  return typeof code === "string" && NEVER_CONNECTED_CODES.has(code);
+}
 
 type FetchLike = (
   input: string,
@@ -159,11 +183,8 @@ export class OpenAICoachAI implements CoachAI {
     const timer = setTimeout(() => controller.abort(), request.deadlineMs);
     let raw: string;
     let status: number;
-    try {
-      // Exactly one request. There is no retry here and no SDK to retry for us:
-      // a call that fails after the provider generated a response has already
-      // been billed, and a retry buys a second charge for one proposal.
-      const response = await this.#fetch(`${this.#baseUrl}/chat/completions`, {
+    const send = () =>
+      this.#fetch(`${this.#baseUrl}/chat/completions`, {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -172,6 +193,21 @@ export class OpenAICoachAI implements CoachAI {
         body,
         signal: controller.signal,
       });
+    try {
+      // One request, and no SDK to retry for us: a call that fails after the
+      // provider generated a response has already been billed, and a retry
+      // buys a second charge for one proposal. The one exception (owner,
+      // 18 Oct 2026): a connection that never opened sent the provider
+      // nothing, so it is tried once more, inside the same deadline. Two live
+      // requests failed that way on a flaky network, each after Node's ten
+      // second connect timeout.
+      let response: Response;
+      try {
+        response = await send();
+      } catch (error) {
+        if (controller.signal.aborted || !neverConnected(error)) throw error;
+        response = await send();
+      }
       status = response.status;
       // Read inside the same deadline. Clearing the timer before the body
       // arrives would leave a slow-body response able to hang indefinitely.

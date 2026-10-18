@@ -393,6 +393,104 @@ describe("OpenAI coaching adapter", () => {
     });
   });
 
+  describe("a connection that never opened (owner, 18 Oct 2026)", () => {
+    const failure = (code: string) =>
+      Object.assign(new TypeError("fetch failed"), { cause: { code } });
+
+    function counting(results: (Error | Response)[]) {
+      const calls: string[] = [];
+      const fetchImpl = async (input: string) => {
+        calls.push(input);
+        const next = results.shift();
+        if (next instanceof Error) throw next;
+        return next as Response;
+      };
+      return {
+        calls,
+        coach: new OpenAICoachAI({
+          apiKey: CREDENTIAL,
+          modelCode: "gpt-6-luna",
+          baseUrl: "https://provider.invalid/v1",
+          fetchImpl,
+        }),
+      };
+    }
+
+    it("is tried once more, and the second answer is the answer", async () => {
+      const { calls, coach } = counting([
+        failure("UND_ERR_CONNECT_TIMEOUT"),
+        new Response(jsonResponse(PLAN_BODY), { status: 200 }),
+      ]);
+
+      await expect(
+        coach.createSevenDayPlan(buildRequest()),
+      ).resolves.toMatchObject({ body: PLAN_BODY });
+      expect(calls).toHaveLength(2);
+    });
+
+    it("is tried twice at most", async () => {
+      const { calls, coach } = counting([
+        failure("ENOTFOUND"),
+        failure("ENOTFOUND"),
+        new Response(jsonResponse(PLAN_BODY), { status: 200 }),
+      ]);
+
+      expect(await codeFor(coach.createSevenDayPlan(buildRequest()))).toBe(
+        "provider_unavailable",
+      );
+      expect(calls).toHaveLength(2);
+    });
+
+    it("stays inside the one deadline", async () => {
+      const calls: string[] = [];
+      const coach = new OpenAICoachAI({
+        apiKey: CREDENTIAL,
+        modelCode: "gpt-6-luna",
+        baseUrl: "https://provider.invalid/v1",
+        fetchImpl: async (input, init) => {
+          calls.push(input);
+          if (calls.length === 1) throw failure("UND_ERR_CONNECT_TIMEOUT");
+          return new Promise<Response>((_resolve, reject) =>
+            init.signal.addEventListener("abort", () =>
+              reject(new Error("aborted")),
+            ),
+          );
+        },
+      });
+
+      expect(
+        await codeFor(
+          coach.createSevenDayPlan(buildRequest({ deadlineMs: 50 })),
+        ),
+      ).toBe("deadline_exceeded");
+      expect(calls).toHaveLength(2);
+    });
+
+    it("is not an error without a cause it can read", async () => {
+      const { calls, coach } = counting([
+        new TypeError("fetch failed"),
+        new Response(jsonResponse(PLAN_BODY), { status: 200 }),
+      ]);
+
+      expect(await codeFor(coach.createSevenDayPlan(buildRequest()))).toBe(
+        "provider_unavailable",
+      );
+      expect(calls).toHaveLength(1);
+    });
+
+    it("is not a reset: the provider may already have answered, and billed", async () => {
+      const { calls, coach } = counting([
+        failure("ECONNRESET"),
+        new Response(jsonResponse(PLAN_BODY), { status: 200 }),
+      ]);
+
+      expect(await codeFor(coach.createSevenDayPlan(buildRequest()))).toBe(
+        "provider_unavailable",
+      );
+      expect(calls).toHaveLength(1);
+    });
+  });
+
   describe("the credential", () => {
     it("is sent to the provider and to nowhere else", async () => {
       const baseUrl = await startStub((_request, respond) =>

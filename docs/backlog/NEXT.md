@@ -21,6 +21,11 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
+- [~] **One more try when the connection never opened (careful lane: provider, spend).**
+      Owner, 18 Oct 2026: two live requests failed on a flaky network after the
+      ten-second connect timeout, unbilled. The adapter retries once, inside the same
+      deadline, only for a connection that never existed; any other failure still never
+      retries, since the provider may already have answered and billed.
 - [ ] **A failed "ask again" keeps the old proposal (careful lane: schema).** Owner,
       17 Oct 2026, after a regeneration failed (`provider_unavailable`) and left nothing:
       the old proposal stays open and on screen until the new one has arrived; on failure
