@@ -42,15 +42,15 @@ const CHARACTERS_PER_TOKEN = 4;
 /**
  * Failures before a connection existed: the request never left this machine.
  * A reset or a closed socket is not here, since it can come after the body
- * was sent and the provider began, and billed, its answer.
+ * was sent and the provider began, and billed, its answer. Nor is an
+ * unreachable host or network: an open socket can report one late, after
+ * the body went out.
  */
 const NEVER_CONNECTED_CODES: ReadonlySet<string> = new Set([
   "UND_ERR_CONNECT_TIMEOUT",
   "ECONNREFUSED",
   "ENOTFOUND",
   "EAI_AGAIN",
-  "ENETUNREACH",
-  "EHOSTUNREACH",
 ]);
 
 function neverConnected(error: unknown): boolean {

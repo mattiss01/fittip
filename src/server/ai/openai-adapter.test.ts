@@ -436,6 +436,43 @@ describe("OpenAI coaching adapter", () => {
       expect(calls).toHaveLength(2);
     });
 
+    it("stays inside the one deadline", async () => {
+      const calls: string[] = [];
+      const coach = new OpenAICoachAI({
+        apiKey: CREDENTIAL,
+        modelCode: "gpt-6-luna",
+        baseUrl: "https://provider.invalid/v1",
+        fetchImpl: async (input, init) => {
+          calls.push(input);
+          if (calls.length === 1) throw failure("UND_ERR_CONNECT_TIMEOUT");
+          return new Promise<Response>((_resolve, reject) =>
+            init.signal.addEventListener("abort", () =>
+              reject(new Error("aborted")),
+            ),
+          );
+        },
+      });
+
+      expect(
+        await codeFor(
+          coach.createSevenDayPlan(buildRequest({ deadlineMs: 50 })),
+        ),
+      ).toBe("deadline_exceeded");
+      expect(calls).toHaveLength(2);
+    });
+
+    it("is not an error without a cause it can read", async () => {
+      const { calls, coach } = counting([
+        new TypeError("fetch failed"),
+        new Response(jsonResponse(PLAN_BODY), { status: 200 }),
+      ]);
+
+      expect(await codeFor(coach.createSevenDayPlan(buildRequest()))).toBe(
+        "provider_unavailable",
+      );
+      expect(calls).toHaveLength(1);
+    });
+
     it("is not a reset: the provider may already have answered, and billed", async () => {
       const { calls, coach } = counting([
         failure("ECONNRESET"),

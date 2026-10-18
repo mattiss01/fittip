@@ -423,10 +423,10 @@ export class CoachAIService {
       return settled;
     };
 
-    // Exactly one attempt. An automatic retry would need approved idempotency
-    // and billing behavior, and decision 5 settled that there is none: a call
-    // that fails after the provider generated a response has already been
-    // charged.
+    // One billable attempt. A call that fails after the provider generated a
+    // response has already been charged, so nothing here retries. The adapter
+    // sends a second request only where the first never connected (owner,
+    // 18 Oct 2026), which reached no provider and is not counted here.
     draft.attemptCount = 1;
     const call = dispatch(this.deps.adapter, operation, request);
 
