@@ -21,14 +21,6 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [~] **A failed "ask again" keeps the old proposal (careful lane: schema).** Owner,
-      17 Oct 2026: a failed regeneration left nothing. Migration
-      `failed_ask_again_keeps_proposal`: `begin_plan_generation` accepts an open source
-      and refuses a second pending one; `finish_plan_generation` closes the source with its
-      replacement (undecided declined, accepted applied by the review's own finish). The
-      action writes nothing before the coach answers; a failure keeps the proposal and the
-      owner's choices, with a fresh key for the next press. The coach is told which
-      sessions were kept, as positions inside the existing 5,900-byte allocation.
 - [ ] **A7-5 — Size the fill before its first live run.** Measure output tokens on a
       twelve-activity answer: the grammar pads each target with fourteen nullable keys
       against a 3,000-token ceiling. Needs a provider key, so it waits for one; each run
