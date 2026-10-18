@@ -81,8 +81,8 @@ export type CoachAIProposalOutcome = {
    */
   spendReservationId: string | null;
   /**
-   * Memory candidates extracted from the planning note, already validated as
-   * exact excerpts. Empty when the model returned none or when the section
+   * Memory candidates drawn from the planning note, in the coach's own words,
+   * already validated. Empty when the model returned none or when the section
    * failed its own validation — which never invalidates the roadmap.
    */
   memoryCandidates: CoachAIMemoryCandidate[];

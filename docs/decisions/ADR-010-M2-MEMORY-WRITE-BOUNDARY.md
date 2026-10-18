@@ -34,8 +34,16 @@ every route that holds it, so the rule and the code no longer contradict each
 other. No route gained a capability in this amendment; what changed is where the
 boundary is written down.
 
+**Decision 16 amended 18 October 2026 by the product owner.** A candidate had
+to quote the planning note word for word, and so the coach's suggestions almost
+never appeared. The owner chose to let the coach word each one itself, with no
+quote required, for plan and roadmap alike. Every other limit of decision 16
+stands. The one given up is the database's proof that a candidate came from
+the owner's own text; what replaces it is the prompt and the owner's review of
+every proposal.
+
 **Date:** 1 August 2026, decision 7 amended 2 August 2026, decision 16 added
-23 September 2026
+23 September 2026 and amended 18 October 2026
 
 **Ticket:** [M2-02](../backlog/M2/M2-02-MEMORY-MODEL-MANAGEMENT.md)
 
@@ -162,11 +170,19 @@ looking at a form that silently did nothing.
     Two limits are what give the rule its force, and neither is optional for a
     new route. A `proposed` item is never eligible coaching context, so a route
     that can propose still cannot feed its own output back to the coach as fact.
-    And every candidate must quote text the owner themselves wrote in the
-    planning note that produced it, checked inside the function, so the coach
-    cannot invent a durable claim about the owner out of its own prose.
-    Regeneration feedback does not count as such text: it is a critique of one
-    rejected proposal, not durable context about the person.
+    And a candidate exists only for a proposal whose owner wrote a planning
+    note: it is one sentence of at most 200 characters in the coach's own
+    words, drawn from that note alone. Regeneration feedback is not a source:
+    it is a critique of one rejected proposal, not durable context about the
+    person.
+
+    *(Amended 18 October 2026. Until then a candidate had to be an exact
+    excerpt of the note, checked inside the function. The owner gave that up
+    so suggestions could be worded usefully. The function can no longer prove
+    the note was the source. A candidate can restate anything in the coach's
+    context as a claim about the owner: the feedback, training history, other
+    memory, a safety signal. The prompt says to draw on the note alone, and
+    the owner accepting or rejecting each proposal is the check.)*
 
     This is the whole of the exception. A route that needs more than it does not
     belong in this decision and is a new one for the owner to make.
@@ -194,8 +210,8 @@ looking at a form that silently did nothing.
 - Memory content is absent from logs, analytics, error messages, and receipts.
 - For every route permitted by decision 16: that it creates only `proposed`
   items carrying system author class and inferred provenance, that it cannot
-  move an item out of `proposed`, that a candidate quoting text absent from the
-  owner's planning note is refused, and that a replayed batch returns the
+  move an item out of `proposed`, that a candidate is refused without a
+  planning note or past 200 characters, and that a replayed batch returns the
   existing items rather than duplicating them.
 
 ## Alternatives considered

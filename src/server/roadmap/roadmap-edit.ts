@@ -82,7 +82,7 @@ export async function buildOwnerRoadmapValidation(source: {
     // safety sentence, so an edit has none to keep.
     hasSafetySignal: false,
     // Not the note itself: an edit produces no memory candidates, and the
-    // validator only reads this to check excerpts that will not be present.
+    // validator only reads this to allow candidates that will not be present.
     planningNote: null,
     regenerationFeedback: null,
     previousProposal: null,

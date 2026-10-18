@@ -4,12 +4,10 @@ import "server-only";
  * The two owner-authored text fields ADR-014 admits to the coaching boundary,
  * and the one normalization everything downstream depends on.
  *
- * Normalization matters more than it looks. A memory candidate must cite an
- * exact substring of the planning note, and that check runs twice — here,
- * before the candidate is offered, and again inside
- * `record_roadmap_memory_candidates` against the stored note. If the two
- * normalizations disagree by one collapsed newline, a candidate the
- * application accepted is rejected by the database for a reason no owner can
+ * Normalization matters more than it looks. The stored planning note and every
+ * memory candidate are normalized twice — here, and again inside the database
+ * functions that store them. If the two disagree by one collapsed newline, the
+ * 200-character bound can pass here and fail there for a reason no owner can
  * see. `public.roadmap_normalize_owner_text` in the M3-02 migration is the
  * other half of this pair and must change with it.
  *
@@ -31,8 +29,8 @@ export const REGENERATION_FEEDBACK_MAX_LENGTH = 500;
  */
 export const SESSION_FILL_NOTE_MAX_LENGTH = 500;
 
-/** Decision 4b: a candidate cites at most this much of the note. */
-export const MEMORY_EXCERPT_MAX_LENGTH = 200;
+/** ADR-010 decision 16: a candidate is one sentence of at most this length. */
+export const MEMORY_CANDIDATE_MAX_LENGTH = 200;
 
 const ASCII_WHITESPACE_EDGES = /^[ \t\n\v\f\r]+|[ \t\n\v\f\r]+$/g;
 

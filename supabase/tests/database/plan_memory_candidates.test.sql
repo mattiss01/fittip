@@ -3,11 +3,12 @@
 -- ADR-010 decision 16 permits this route and names what it must prove: that it
 -- creates only `proposed` items carrying system author class and inferred
 -- provenance, that it cannot move an item out of `proposed`, that a candidate
--- quoting text absent from the owner's planning note is refused, and that a
--- replayed batch returns the existing items rather than duplicating them. Those
--- four are the spine of this file; the privilege boundary and the owner scoping
--- are asserted alongside them because a definer function is only as narrow as
--- its grants.
+-- is refused without a planning note or past 200 characters (since 18 Oct 2026
+-- it is the coach's own sentence and no longer has to quote the note), and that
+-- a replayed batch returns the existing items rather than duplicating them.
+-- Those four are the spine of this file; the privilege boundary and the owner
+-- scoping are asserted alongside them because a definer function is only as
+-- narrow as its grants.
 --
 -- "Cannot move an item out of `proposed`" is proved the only way a function with
 -- no operation parameter can be: an item the owner has already accepted is left
@@ -62,7 +63,7 @@ as $$
   )
 $$;
 
-select plan(25);
+select plan(27);
 
 -- The function and its privilege boundary ------------------------------------
 
@@ -129,7 +130,7 @@ select set_config('request.jwt.claims', '{"role":"authenticated"}', true);
 select throws_ok(
   $$select * from public.record_plan_memory_candidates(
     '7c000000-0000-4000-8000-0000000000ff'::uuid, 0,
-    '[{"memoryType":"constraint","sourceExcerpt":"anything"}]'::jsonb)$$,
+    '[{"memoryType":"constraint","content":"anything"}]'::jsonb)$$,
   '42501', 'An authenticated FitTip user is required.',
   'proposing without an owner claim is refused before anything is written'
 );
@@ -167,20 +168,33 @@ select is(
   'the generation closes with a proposal the candidates can cite'
 );
 
--- A candidate the coach invented ---------------------------------------------
+-- Candidates the route refuses ---------------------------------------------
 --
--- This is the limit decision 16 calls non-optional, so it is asserted before the
--- happy path: text that is not in the owner's planning note cannot become a
--- durable claim about them, however confident the coach is.
+-- Asserted before the happy path. The old excerpt key is an unknown key now,
+-- so a caller still sending it fails loudly rather than storing nothing, and
+-- the coach's sentence stays inside the 200 characters the memory surface
+-- shows.
 
 select throws_ok(
   $$select * from public.record_plan_memory_candidates(
     (select completion_token from pg_temp_claim where label = 'noted'), 0,
     '[{"memoryType":"constraint",
-       "sourceExcerpt":"trains best in the early morning",
+       "sourceExcerpt":"only have 45 minutes on weekdays",
        "confidence":95}]'::jsonb)$$,
   '22023', 'Invalid memory candidates.',
-  'a candidate quoting text absent from the planning note is refused'
+  'a candidate under the retired excerpt key is refused'
+);
+
+select throws_ok(
+  format(
+    $$select * from public.record_plan_memory_candidates(
+      (select completion_token from pg_temp_claim where label = 'noted'), 0,
+      jsonb_build_array(jsonb_build_object(
+        'memoryType', 'constraint', 'content', %L)))$$,
+    repeat('a', 201)
+  ),
+  '22023', 'Invalid memory candidates.',
+  'a candidate over 200 characters is refused'
 );
 
 select is(
@@ -196,7 +210,7 @@ select throws_ok(
   $$select * from public.record_plan_memory_candidates(
     (select completion_token from pg_temp_claim where label = 'noted'), 7,
     '[{"memoryType":"constraint",
-       "sourceExcerpt":"only have 45 minutes on weekdays"}]'::jsonb)$$,
+       "content":"Has only 45 minutes on weekdays."}]'::jsonb)$$,
   'PT409', 'Memory changed. Reload and try again.',
   'a caller holding a stale memory revision is told to reload rather than silently merged'
 );
@@ -212,16 +226,16 @@ insert into pg_temp_receipt
 select * from public.record_plan_memory_candidates(
   (select completion_token from pg_temp_claim where label = 'noted'), 0,
   '[{"memoryType":"constraint",
-     "sourceExcerpt":"only have 45 minutes on weekdays",
+     "content":"Has only 45 minutes on weekdays.",
      "confidence":80},
     {"memoryType":"observed_pattern",
-     "sourceExcerpt":"left knee complains on hills"}]'::jsonb
+     "content":"Left knee complains on hills."}]'::jsonb
 );
 
 select is(
   (select pg_catalog.array_length(item_ids, 1) from pg_temp_receipt),
   2,
-  'both candidates quoting the planning note become items'
+  'both candidates become items'
 );
 
 select is(
@@ -276,19 +290,15 @@ select is(
   'nothing it creates is marked as confirmed by the owner'
 );
 
--- The content is the owner's own words, not the coach's ----------------------
+-- The content is the coach's own sentence -----------------------------------
 
--- Counted positively on purpose. "No revision fails to quote the note" also
--- passes when there are no revisions at all, which is exactly the state a
--- broken route would leave behind.
+-- Neither is a substring of the note, which the route refused until 18 Oct 2026.
 select is(
-  (select count(*)::integer from public.memory_revisions
-   where user_id = '7c000000-0000-4000-8000-000000000001'
-     and strpos(
-       'I only have 45 minutes on weekdays and my left knee complains on hills',
-       content) > 0),
-  2,
-  'both stored revisions quote the planning note the owner wrote'
+  (select array_agg(content order by content)
+   from public.memory_revisions
+   where user_id = '7c000000-0000-4000-8000-000000000001'),
+  array['Has only 45 minutes on weekdays.', 'Left knee complains on hills.'],
+  'both stored revisions are the sentences the coach wrote'
 );
 
 -- Replay ---------------------------------------------------------------------
@@ -302,10 +312,10 @@ insert into pg_temp_replay
 select * from public.record_plan_memory_candidates(
   (select completion_token from pg_temp_claim where label = 'noted'), 0,
   '[{"memoryType":"constraint",
-     "sourceExcerpt":"only have 45 minutes on weekdays",
+     "content":"Has only 45 minutes on weekdays.",
      "confidence":80},
     {"memoryType":"observed_pattern",
-     "sourceExcerpt":"left knee complains on hills"}]'::jsonb
+     "content":"Left knee complains on hills."}]'::jsonb
 );
 
 select is(
@@ -348,7 +358,7 @@ select lives_ok(
   $$select * from public.record_plan_memory_candidates(
     (select completion_token from pg_temp_claim where label = 'noted'), 0,
     '[{"memoryType":"constraint",
-       "sourceExcerpt":"only have 45 minutes on weekdays"}]'::jsonb)$$,
+       "content":"Has only 45 minutes on weekdays."}]'::jsonb)$$,
   'the route runs again against a proposal whose candidate has since been accepted'
 );
 
@@ -370,7 +380,7 @@ select throws_ok(
   $$select * from public.record_plan_memory_candidates(
     (select completion_token from pg_temp_claim where label = 'noted'), 0,
     '[{"memoryType":"constraint",
-       "sourceExcerpt":"only have 45 minutes on weekdays"}]'::jsonb)$$,
+       "content":"Has only 45 minutes on weekdays."}]'::jsonb)$$,
   'PT409', 'That coaching request is no longer open.',
   'a stolen completion token proposes nothing against another owner''s plan'
 );
@@ -383,6 +393,33 @@ select is(
   (select count(*)::integer from public.memory_items),
   0,
   'and the outsider can see no memory whatever, their own or the owner''s'
+);
+
+-- A plan without a planning note -------------------------------------------
+--
+-- The outsider's own proposal, written with no note: there is nothing for a
+-- candidate to be drawn from, so the route refuses it before taking a lock.
+
+insert into pg_temp_claim
+select 'noteless', * from public.begin_plan_generation(
+  'plan-memory-key-0000000009', 'plan-memory-fingerprint-0009',
+  pg_temp.day(0), 3, 0, null
+);
+
+select public.finish_plan_generation(
+  (select completion_token from pg_temp_claim where label = 'noteless'),
+  'proposal', 'fittip.seven-day-plan.v2', 'seven-day-plan-v2-2026-08-12',
+  'fixture', 'fixture-corpus-v1', 'fixture-no-spend', null, null,
+  pg_temp.plan_body(pg_temp.day(0), pg_temp.day(2)), null, null
+);
+
+select throws_ok(
+  $$select * from public.record_plan_memory_candidates(
+    (select completion_token from pg_temp_claim where label = 'noteless'), 0,
+    '[{"memoryType":"constraint",
+       "content":"Has only 45 minutes on weekdays."}]'::jsonb)$$,
+  '22023', 'Invalid memory candidates.',
+  'a proposal without a planning note gets no candidates'
 );
 
 select set_config('request.jwt.claims', null, true);
