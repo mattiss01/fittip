@@ -147,17 +147,20 @@ This is the only new route that can create `author_class = 'system'`,
 `provenance = 'inferred_proposed'`, and `status = 'proposed'`. It requires the
 token of an owned, completed AI roadmap generation, accepts at most the approved
 zero-to-four candidate count, and accepts only memory type, a 1-to-200-character
-`sourceExcerpt`, and bounded optional confidence. It verifies each normalized
-excerpt is an exact substring of the stored planning note and uses that excerpt
-as the memory content; there is no separate model-authored content field. Owner,
+`content`, and bounded optional confidence. The content is the coach's own
+sentence and becomes the memory content. *(Amended 18 October 2026, ADR-010
+decision 16: until then it was a `sourceExcerpt` that had to be an exact
+substring of the stored planning note.)* Owner,
 provenance, author, status, source reference, revision ids, and timestamps are
 derived inside the function. Source reference is the roadmap proposal plus
 candidate ordinal; a unique constraint makes a retry return the existing
 candidates rather than duplicate them.
 
-For a regeneration, the same exact-excerpt check applies only to the planning
-note. Text present solely in regeneration feedback cannot pass; that field is a
-critique of one rejected proposal, not durable coaching context. If one
+A proposal with no planning note gets no candidates. For a regeneration the
+coach is told to draw on the planning note alone, never on the feedback, which is
+a critique of one rejected proposal and not durable coaching context; since 18
+October 2026 that is the prompt's rule and the owner's review, not a check the
+function can make. If one
 candidate fails, the function rejects the whole candidate batch, and the
 already committed roadmap remains valid.
 
