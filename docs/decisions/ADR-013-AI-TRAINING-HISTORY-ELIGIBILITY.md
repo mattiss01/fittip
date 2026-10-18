@@ -532,6 +532,27 @@ must account for the days after it.
   can take list places those days held before. The 30 entries and the plan's
   4,000-byte allocation do not move.
 
+## Seventh recorded amendment: cancelled sessions and the date of a memory
+
+On 17 October 2026 a live plan for a test athlete refilled the two days she had
+cancelled for a business trip, and did not know which week the trip was: her memory
+said "starting in 10 days" and the coach could not tell from when. The product owner
+decided both, and that the first supersedes the 29 September 2026 decision that a
+cancellation reason is stored only.
+
+- **A session called off from today on is sent** as a dated plan commitment with
+  date, title and sport, plus `cancelledBecause`: the owner's reason, cut to 200
+  characters, or null when none was given. It never carries minutes or a replace
+  handle, and is never a missed session. A cancelled occurrence is always dated,
+  never left to its rule. Cancelled sessions in the past are not sent. The reason is
+  the owner's free text going to the provider, as a log note already does; the owner
+  accepted that knowingly. Only the coach's context source reads it, besides the
+  session's page (`session-cancellation-boundary.test.ts`).
+- **Each memory item carries `writtenOn`**, the day it was last edited, and nothing
+  else of its history, so a relative time in it can be placed.
+- **Limits are unchanged.** A cancelled entry counts inside the same 30 entries and
+  byte allocation as any commitment.
+
 ## Related decision made in the same session
 
 The compose step for a plan proposal introduces a **planning note** — owner
@@ -594,4 +615,8 @@ past its last day (ADR-023). The fifth amendment above records it.
 
 **Sixth amendment, 17 October 2026.** The plan operation receives the three days
 after its last day in full, series occurrences included. The sixth amendment
+above records it.
+
+**Seventh amendment, 17 October 2026.** Cancelled sessions ahead are sent with the
+owner's reason, and each memory with the day it was written. The seventh amendment
 above records it.
