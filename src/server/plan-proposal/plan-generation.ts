@@ -112,7 +112,7 @@ export async function generatePlanProposal(
     if (previous === null) {
       throw new CoachAIError("context_invalid");
     }
-    previousPlan = reducePreviousPlan(previous.content);
+    previousPlan = reducePreviousPlan(previous);
   }
 
   const requestFingerprint = [
@@ -221,19 +221,33 @@ export async function generatePlanProposal(
     throw error;
   }
 
-  const proposalId = await proposals.finishGenerationWithProposal({
-    completionToken: claim.completionToken,
-    schemaVersion: COACH_AI_SCHEMA_VERSIONS.create_seven_day_plan,
-    promptVersion: COACH_AI_PROMPT_VERSIONS.create_seven_day_plan,
-    providerCode: binding.providerCode,
-    modelCode: binding.modelCode,
-    rateCardVersion: binding.rateCard.version,
-    spendReservationId: outcome.spendReservationId,
-    planningNote: input.planningNote,
-    regenerationFeedback: input.regenerationFeedback ?? null,
-    content: outcome.proposal as SevenDayPlanProposal,
-    sources: outcome.sources,
-  });
+  let proposalId: string;
+  try {
+    proposalId = await proposals.finishGenerationWithProposal({
+      completionToken: claim.completionToken,
+      schemaVersion: COACH_AI_SCHEMA_VERSIONS.create_seven_day_plan,
+      promptVersion: COACH_AI_PROMPT_VERSIONS.create_seven_day_plan,
+      providerCode: binding.providerCode,
+      modelCode: binding.modelCode,
+      rateCardVersion: binding.rateCard.version,
+      spendReservationId: outcome.spendReservationId,
+      planningNote: input.planningNote,
+      regenerationFeedback: input.regenerationFeedback ?? null,
+      content: outcome.proposal as SevenDayPlanProposal,
+      sources: outcome.sources,
+    });
+  } catch (error) {
+    // The record was refused: since 18 Oct 2026 that includes the replaced
+    // proposal's accepted days no longer fitting the plan. The claim is
+    // closed as failed so it cannot hold up the next "ask again"; the
+    // replaced proposal is untouched, since the refusal rolled back with it.
+    await proposals
+      .finishGenerationAsFailed(claim.completionToken, "record_refused")
+      .catch(() => {
+        // As above: an honest pending attempt, never the original cause.
+      });
+    throw error;
+  }
 
   return {
     status: "proposal",
@@ -303,24 +317,44 @@ async function recordMemoryCandidates(
  * after "ask again" has already finished the review, so a proposal too large
  * to send was found out only once it could no longer be reopened.
  */
-export function previousPlanFits(content: SevenDayPlanProposal): boolean {
+export function previousPlanFits(proposal: PreviousProposal): boolean {
   return (
-    new TextEncoder().encode(JSON.stringify(reducePreviousPlan(content)))
+    new TextEncoder().encode(JSON.stringify(reducePreviousPlan(proposal)))
       .length <=
     COACH_AI_CONTEXT_LIMITS.create_seven_day_plan.bytes.previousProposal
   );
 }
 
-function reducePreviousPlan(
-  content: SevenDayPlanProposal,
+/** What of a proposal the coach is sent back: its content and the choices. */
+type PreviousProposal = {
+  content: SevenDayPlanProposal;
+  items: readonly {
+    decision: string;
+    contentIndex: number | null;
+  }[];
+};
+
+export function reducePreviousPlan(
+  proposal: PreviousProposal,
 ): CoachAIPreviousPlanReference {
+  // A session the owner accepted stays open with the proposal while the coach
+  // is asked, and reaches the plan with the replacement (owner, 17 Oct 2026).
+  const kept = proposal.items
+    .filter(
+      (item) =>
+        (item.decision === "staged" || item.decision === "staged_beside") &&
+        item.contentIndex !== null,
+    )
+    .map((item) => item.contentIndex as number)
+    .sort((a, b) => a - b);
   return {
-    weekDescription: content.weekDescription,
-    days: content.sessions.map((session) => ({
+    weekDescription: proposal.content.weekDescription,
+    days: proposal.content.sessions.map((session) => ({
       date: session.date,
       title: session.title,
       sport: session.sport,
       durationMinutes: session.durationMinutes,
     })),
+    ...(kept.length > 0 ? { kept } : {}),
   };
 }

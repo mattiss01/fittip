@@ -105,6 +105,17 @@ export function ProposalReview({
   // Closed until asked for. The box is the third ending of a review, not a
   // field the owner has to scroll past on the way to the other two.
   const [askingAgain, setAskingAgain] = useState(false);
+  // One key per attempt. A failed one gets a new key, so pressing again asks
+  // the coach rather than replaying the failure; past the deadline the call
+  // may still be running, and the same key keeps it one charge.
+  const [askKey, setAskKey] = useState(newAskKey);
+  const [seenAskSubmission, setSeenAskSubmission] = useState(
+    regenerateState.submission,
+  );
+  if (seenAskSubmission !== regenerateState.submission) {
+    setSeenAskSubmission(regenerateState.submission);
+    if (regenerateState.attemptEnded) setAskKey(newAskKey());
+  }
 
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const dialogId = useId();
@@ -375,20 +386,13 @@ export function ProposalReview({
           the owner that what they added is safe and the rest is not.
         */}
         {askingAgain ? (
-          <form
-            className={styles.regenerate}
-            action={regenerateAction}
-            key={`regenerate-${regenerateState.submission}`}
-          >
+          // Not re-keyed per reply: after a failure the proposal is still
+          // here (owner, 17 Oct 2026), and so is what the owner typed.
+          <form className={styles.regenerate} action={regenerateAction}>
             <h3>{COPY.regenerateHeading}</h3>
             <p className={styles.support}>{COPY.regenerateSupport}</p>
             <input type="hidden" name="proposalId" value={proposalId} />
-            <input
-              type="hidden"
-              name="expectedPlanRevision"
-              value={expectedPlanRevision}
-            />
-            <input type="hidden" name="idempotencyKey" value={finishKey} />
+            <input type="hidden" name="idempotencyKey" value={askKey} />
             <label htmlFor="regenerationFeedback">{COPY.regenerateLabel}</label>
             <textarea
               id="regenerationFeedback"
@@ -424,7 +428,9 @@ export function ProposalReview({
             ? "Applying your choices…"
             : discarding
               ? "Discarding…"
-              : notice.message}
+              : regenerating
+                ? COPY.regeneratePending
+                : notice.message}
         </p>
       </div>
     </section>
@@ -866,4 +872,8 @@ function useDockReserve() {
     };
   }, []);
   return ref;
+}
+
+function newAskKey(): string {
+  return globalThis.crypto.randomUUID();
 }

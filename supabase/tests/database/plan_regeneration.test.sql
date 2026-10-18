@@ -61,7 +61,7 @@ as $$
   )
 $$;
 
-select plan(28);
+select plan(31);
 
 -- 1. The boundary ------------------------------------------------------------
 
@@ -200,32 +200,72 @@ select is(
   'which the shape constraint requires of it'
 );
 
--- 3. It cannot be regenerated while it is still open --------------------------
+-- 3. It is asked again while it is still open --------------------------------
 --
--- This is what keeps the owner's accepted days: the proposal is closed by the
--- review, which applies whatever they staged, or by the discard when they
--- staged nothing. Regeneration never ends a review itself.
+-- Owner, 17 Oct 2026: the proposal stays open until its replacement exists, so
+-- a failed answer costs the owner nothing. One request at a time per source.
+
+insert into pg_temp_claim
+select 'pending-regen', * from public.begin_plan_generation(
+  'regen-key-00000000000011', 'regen-fingerprint-000011',
+  pg_temp.day(0), 3, 0, null,
+  (select id from public.plan_proposals
+   where user_id = '7e000000-0000-4000-8000-000000000001'),
+  'Too much running, not enough rest.');
+
+select is(
+  (select state from pg_temp_claim where label = 'pending-regen'),
+  'claimed',
+  'an open proposal can be asked again'
+);
 
 select throws_ok(
   format(
     $q$select * from public.begin_plan_generation(
-      'regen-key-00000000000011', 'regen-fingerprint-000011',
-      %L::date, 3, 0, null, %L::uuid, 'Too much running, not enough rest.')$q$,
+      'regen-key-0000000000011b', 'regen-fingerprint-00011b',
+      %L::date, 3, 0, null, %L::uuid, 'Asking twice at once.')$q$,
     pg_temp.day(0),
     (select id from public.plan_proposals
      where user_id = '7e000000-0000-4000-8000-000000000001')
   ),
-  'PT409', 'Finish or discard that proposal before asking again.',
-  'an open proposal cannot be regenerated out from under its own review'
+  'PT409', 'The coach is already being asked again about that proposal.',
+  'but not twice at once'
 );
 
-select lives_ok(
-  format(
-    $q$select * from public.discard_plan_proposal(%L::uuid)$q$,
-    (select id from public.plan_proposals
-     where user_id = '7e000000-0000-4000-8000-000000000001')
-  ),
-  'the owner closes it themselves'
+-- A request pending far longer than any call can wait is a dead server's.
+-- Run as the table owner: the owner cannot write `created_at` themselves.
+reset role;
+update public.plan_generation_requests
+set created_at = pg_catalog.now() - interval '11 minutes'
+where id = (select generation_id from pg_temp_claim where label = 'pending-regen');
+set local role authenticated;
+
+insert into pg_temp_claim
+select 'after-stale', * from public.begin_plan_generation(
+  'regen-key-0000000000011c', 'regen-fingerprint-00011c',
+  pg_temp.day(0), 3, 0, null,
+  (select id from public.plan_proposals
+   where user_id = '7e000000-0000-4000-8000-000000000001'),
+  'Too much running, not enough rest.');
+
+select is(
+  (select state from pg_temp_claim where label = 'after-stale'),
+  'claimed',
+  'a request pending longer than any call can wait blocks nothing'
+);
+
+select public.finish_plan_generation(
+  completion_token,
+  'failed', null, null, null, null, null, null, null, null, null,
+  'provider_unavailable', null)
+from pg_temp_claim
+where label in ('pending-regen', 'after-stale');
+
+select is(
+  (select count(*)::integer from public.plan_proposal_decisions
+   where user_id = '7e000000-0000-4000-8000-000000000001'),
+  0,
+  'a failed answer leaves the proposal open, as the owner left it'
 );
 
 -- 4. The regeneration ---------------------------------------------------------
@@ -241,7 +281,7 @@ select 'regen', * from public.begin_plan_generation(
 select is(
   (select state from pg_temp_claim where label = 'regen'),
   'claimed',
-  'a closed proposal can be regenerated'
+  'and after a failed answer it can be asked again'
 );
 
 select is(
@@ -305,6 +345,13 @@ select is(
   'and naming the proposal it replaced, which is still a permanent record'
 );
 
+select is(
+  (select decision || ':' || applied_count from public.plan_proposal_decisions
+   where user_id = '7e000000-0000-4000-8000-000000000001'),
+  'applied:0',
+  'which closed in the same step, with nothing accepted and nothing applied'
+);
+
 -- 5b. One proposal, one replacement -------------------------------------------
 --
 -- Without this the chain cap is not a cap. It reads the count from whichever
@@ -363,12 +410,11 @@ select is(
   'and the refusal claimed nothing on their behalf'
 );
 
--- 6b. What the owner accepted survives the regeneration ----------------------
+-- 6b. What the owner accepted arrives with the replacement --------------------
 --
--- The owner's third decision, and the one with the most moving parts: staged
--- items are applied into the plan before the coach is asked anything, so a
--- regeneration cannot cost the owner the days they chose to keep. Nothing
--- proved it until now, which made it the least covered of the four.
+-- The owner keeps one day and leaves the rest undecided, then asks again.
+-- Nothing reaches the plan while the coach is asked; the kept day is applied,
+-- and the undecided ones declined, in the step that records the new proposal.
 
 select set_config(
   'request.jwt.claims',
@@ -385,41 +431,12 @@ select public.finish_plan_generation(
   'fixture', 'fixture-corpus-v1', 'fixture-no-spend', null, 'note',
   pg_temp.plan_body(pg_temp.day(0), pg_temp.day(2)), null, null, null);
 
--- Keep the first session and reject the rest, which is what the surface does
--- when the owner asks for a different plan with something already added.
 select public.decide_plan_proposal_item(
   (select id from public.plan_proposals
    where user_id = '7e000000-0000-4000-8000-000000000003'),
   (select min(ordinal) from public.plan_proposal_items
    where user_id = '7e000000-0000-4000-8000-000000000003' and kind = 'session'),
   'staged');
-
-select public.decide_plan_proposal_item(
-  (select id from public.plan_proposals
-   where user_id = '7e000000-0000-4000-8000-000000000003'),
-  item.ordinal, 'rejected')
-from public.plan_proposal_items item
-where item.user_id = '7e000000-0000-4000-8000-000000000003'
-  and item.ordinal <> (
-    select min(ordinal) from public.plan_proposal_items
-    where user_id = '7e000000-0000-4000-8000-000000000003' and kind = 'session');
-
-select lives_ok(
-  format(
-    $q$select * from public.finish_plan_proposal_review(%L::uuid, 0, %L::uuid)$q$,
-    (select id from public.plan_proposals
-     where user_id = '7e000000-0000-4000-8000-000000000003'),
-    '7e000000-0000-4000-8000-0000000000aa'
-  ),
-  'the review is finished, which is what applies the day the owner kept'
-);
-
-select is(
-  (select count(*)::integer from public.rolling_plan_sessions
-   where user_id = '7e000000-0000-4000-8000-000000000003'),
-  1,
-  'and the accepted session is in the plan before the coach is asked anything'
-);
 
 insert into pg_temp_claim
 select 'keep-regen', * from public.begin_plan_generation(
@@ -432,8 +449,35 @@ select 'keep-regen', * from public.begin_plan_generation(
 select is(
   (select count(*)::integer from public.rolling_plan_sessions
    where user_id = '7e000000-0000-4000-8000-000000000003'),
+  0,
+  'nothing reaches the plan while the coach is asked'
+);
+
+select public.finish_plan_generation(
+  (select completion_token from pg_temp_claim where label = 'keep-regen'),
+  'proposal', 'fittip.seven-day-plan.v2', 'seven-day-plan-v2-2026-08-12',
+  'fixture', 'fixture-corpus-v1', 'fixture-no-spend', null, 'note',
+  pg_temp.plan_body(pg_temp.day(0), pg_temp.day(2)), null, null,
+  'Too much running.');
+
+select is(
+  (select count(*)::integer from public.rolling_plan_sessions
+   where user_id = '7e000000-0000-4000-8000-000000000003'),
   1,
-  'and asking again leaves it exactly where it is'
+  'the kept day arrives with the replacement'
+);
+
+select is(
+  (select count(*)::integer from public.plan_proposal_item_decisions d
+   join public.plan_proposals source on source.id = d.proposal_id
+   where d.user_id = '7e000000-0000-4000-8000-000000000003'
+     and source.origin = 'ai_initial'
+     and d.decision = 'rejected'),
+  (select count(*)::integer - 1 from public.plan_proposal_items item
+   join public.plan_proposals source on source.id = item.proposal_id
+   where item.user_id = '7e000000-0000-4000-8000-000000000003'
+     and source.origin = 'ai_initial'),
+  'and every day the owner left undecided is declined'
 );
 
 select set_config('request.jwt.claims', null, true);

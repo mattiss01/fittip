@@ -293,6 +293,13 @@ export type CoachAIPreviousPlanReference = {
     sport: string;
     durationMinutes: number;
   }[];
+  /**
+   * The positions in `days` of the sessions the owner accepted. Their choice,
+   * not their words: those reach the plan with the replacement, so the coach
+   * counts them and does not propose them again (owner, 17 Oct 2026). A list
+   * rather than a mark per day, to stay inside the 5,900-byte allocation.
+   */
+  kept?: number[];
 };
 
 /**
