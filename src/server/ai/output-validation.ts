@@ -948,11 +948,7 @@ export function validateMemoryCandidates(
     if (!isMemoryType(entry.memoryType)) return rejected("schema");
     if (typeof entry.content !== "string") return rejected("schema");
 
-    // Normalized the way the database normalizes it, then cut to fit.
-    const content = readProse(
-      normalizeOwnerText(entry.content),
-      MEMORY_CANDIDATE_MAX_LENGTH,
-    );
+    const content = readMemoryContent(entry.content);
     if (content === null) return rejected("business_rule");
 
     let confidence: number | undefined;
@@ -976,6 +972,32 @@ export function validateMemoryCandidates(
   }
 
   return { outcome: "accepted", candidates };
+}
+
+/**
+ * A candidate's sentence exactly as the database will store it.
+ *
+ * The database normalizes it again and refuses past 200, and a refusal drops
+ * the whole batch. Rewriting a semicolon can leave text that NFC changes, so
+ * the cut is normalized and checked once more, and cut shorter until the
+ * text is one the database keeps as it is. Code points never outnumber
+ * UTF-16 units, so a fit here is a fit for `char_length` there.
+ */
+export function readMemoryContent(value: string): string | null {
+  const text = normalizeOwnerText(value);
+  for (let max = MEMORY_CANDIDATE_MAX_LENGTH; max > 0; max -= 1) {
+    const fitted = readProse(text, max);
+    if (fitted === null) return null;
+    const settled = normalizeOwnerText(fitted);
+    if (
+      settled === normalizeOwnerText(settled) &&
+      settled.trim().length > 0 &&
+      settled.length <= MEMORY_CANDIDATE_MAX_LENGTH
+    ) {
+      return settled;
+    }
+  }
+  return null;
 }
 
 /**

@@ -19,6 +19,7 @@ import {
   COACH_AI_MAX_OUTPUT_BYTES,
   COACH_AI_REJECTION_REASONS,
   fitText,
+  readMemoryContent,
   validateMemoryCandidates,
   withoutSemicolons,
   validateCoachAICandidate,
@@ -1080,6 +1081,24 @@ describe("the coach writes no semicolons (owner, 17 Oct 2026)", () => {
       outcome: "accepted",
       candidates: [{ content: "Trains in the morning. Never late" }],
     });
+  });
+
+  it("hands the database only text it stores unchanged", () => {
+    // Decomposed accents, a semicolon before a letter whose capital is
+    // decomposed, CRLF and edge whitespace, at and past the bound.
+    const awkward = [
+      `  ${"e\u0301".repeat(120)}; \u01f0 more\r\n`,
+      `${"a".repeat(197)}; \u01f0${"b".repeat(10)}`,
+      `${"x".repeat(195)}; \u1e96 after`,
+      "Easy days\r\nfirst; \u0390 then more",
+    ];
+    for (const value of awkward) {
+      const content = readMemoryContent(value);
+      if (content === null) throw new Error("expected text");
+      expect(content).toBe(content.normalize("NFC").trim());
+      expect([...content].length).toBeLessThanOrEqual(200);
+      expect(content.length).toBeLessThanOrEqual(200);
+    }
   });
 
   it("cuts a memory candidate to fit instead of refusing it", () => {
