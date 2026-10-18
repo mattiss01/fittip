@@ -212,25 +212,13 @@ describe("regeneratePlanProposalAction", () => {
     expect(finishReview).not.toHaveBeenCalled();
   });
 
-  it("rejects only the undecided items, closes the review, then asks again", async () => {
+  it("writes nothing before the coach answers (owner, 17 Oct 2026)", async () => {
     const state = await regenerate();
 
-    // A staged (accepted) day is left alone, so the finish applies it.
-    expect(decideItem.mock.calls).toEqual([
-      [PROPOSAL_ID, 1, "rejected"],
-      [PROPOSAL_ID, 3, "rejected"],
-    ]);
-    expect(finishReview).toHaveBeenCalledExactlyOnceWith({
-      proposalId: PROPOSAL_ID,
-      expectedPlanRevision: 4,
-      idempotencyKey: IDEMPOTENCY_KEY,
-    });
-    expect(decideItem.mock.invocationCallOrder.at(-1)).toBeLessThan(
-      finishReview.mock.invocationCallOrder[0],
-    );
-    expect(finishReview.mock.invocationCallOrder[0]).toBeLessThan(
-      generateMock.mock.invocationCallOrder[0],
-    );
+    // The database closes the proposal with its replacement; here nothing
+    // is decided and no review is finished.
+    expect(decideItem).not.toHaveBeenCalled();
+    expect(finishReview).not.toHaveBeenCalled();
     expect(state).toMatchObject({
       status: "proposal",
       message: OUTCOMES.regenerated,
@@ -247,12 +235,11 @@ describe("regeneratePlanProposalAction", () => {
       startDate: today,
       endDate: shiftIsoDate(today, 2),
       dayCount: 3,
-      // The revision after the finish applied, not the one the form carried.
+      // The plan as it is now, not the revision the form carried.
       expectedPlanRevision: 5,
       planningNote: "Short on Thursdays.",
       previousProposalId: PROPOSAL_ID,
       regenerationFeedback: "Less running.",
-      // Distinct from the finish's key, which the same RPC family has spent.
       idempotencyKey: `${IDEMPOTENCY_KEY}-regen`,
     });
   });
@@ -279,7 +266,7 @@ describe("regeneratePlanProposalAction", () => {
     );
   });
 
-  it("refreshes the plan before the coach is asked, so a lost answer leaves it right", async () => {
+  it("refreshes the plan once the coach has answered, since accepted days arrive then", async () => {
     await regenerate();
 
     const planRefresh = revalidatePathMock.mock.calls.findIndex(
@@ -288,22 +275,32 @@ describe("regeneratePlanProposalAction", () => {
     expect(planRefresh).toBeGreaterThanOrEqual(0);
     expect(
       revalidatePathMock.mock.invocationCallOrder[planRefresh],
-    ).toBeLessThan(generateMock.mock.invocationCallOrder[0]);
+    ).toBeGreaterThan(generateMock.mock.invocationCallOrder[0]);
   });
 
-  it("says the review was applied when the coach fails afterwards", async () => {
+  it("keeps the proposal when the coach fails, and the next press is a new attempt", async () => {
     generateMock.mockRejectedValue(new CoachAIError("provider_unavailable"));
 
     const state = await regenerate();
 
-    // Never `generationFailed`, whose copy says nothing was written.
     expect(state).toMatchObject({
       status: "error",
       message: OUTCOMES.regenerationLost,
+      attemptEnded: true,
     });
+    expect(finishReview).not.toHaveBeenCalled();
   });
 
-  it("says the review was applied when generation comes back failed", async () => {
+  it("keeps the same key past the deadline, when the call may still be running", async () => {
+    generateMock.mockRejectedValue(new CoachAIError("deadline_exceeded"));
+
+    const state = await regenerate();
+
+    expect(state.status).toBe("error");
+    expect(state).not.toHaveProperty("attemptEnded");
+  });
+
+  it("keeps the proposal when generation comes back failed", async () => {
     generateMock.mockResolvedValue({ status: "failed" });
 
     const state = await regenerate();
@@ -311,10 +308,11 @@ describe("regeneratePlanProposalAction", () => {
     expect(state).toMatchObject({
       status: "error",
       message: OUTCOMES.regenerationLost,
+      attemptEnded: true,
     });
   });
 
-  it("names the regeneration ceiling and that the accepted days were kept", async () => {
+  it("names the regeneration ceiling", async () => {
     generateMock.mockRejectedValue(
       new PlanProposalRuleError("regeneration-cap"),
     );
@@ -322,34 +320,21 @@ describe("regeneratePlanProposalAction", () => {
     const state = await regenerate();
 
     expect(state).toMatchObject({
-      status: "error",
-      message: `${OUTCOMES.regenerationCap} ${OUTCOMES.regenerationKept}`,
+      status: "rule",
+      message: OUTCOMES.regenerationCap,
     });
   });
 
-  it("says the accepted days were kept when a rule refuses the new request", async () => {
-    generateMock.mockRejectedValue(new PlanProposalRuleError("past-date"));
-
-    const state = await regenerate();
-
-    expect(state).toMatchObject({
-      status: "error",
-      message: OUTCOMES.regenerationRefused,
-    });
-  });
-
-  it("says the accepted days were kept when the plan moves before the coach answers", async () => {
+  it("says nothing was added when the plan moves before the coach answers", async () => {
     generateMock.mockRejectedValue(new PlanProposalConflictError("stale"));
 
     const state = await regenerate();
 
-    // One sentence for this path: the general conflict copy says nothing was
-    // added, which after the finish is untrue.
+    // True now: the proposal was never closed.
     expect(state).toMatchObject({
-      status: "error",
-      message: OUTCOMES.regenerationConflict,
+      status: "conflict",
+      message: OUTCOMES.conflict,
     });
-    expect(state.message).not.toMatch(/nothing was added/i);
   });
 
   it("reports a generation already under way without claiming a new one", async () => {
@@ -361,35 +346,6 @@ describe("regeneratePlanProposalAction", () => {
       status: "pending",
       message: OUTCOMES.generationPending,
     });
-  });
-
-  it("stops before the finish when rejecting an undecided item fails", async () => {
-    decideItem
-      .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new PlanProposalConflictError("already-finished"));
-
-    const state = await regenerate();
-
-    expect(state).toMatchObject({
-      status: "conflict",
-      message: OUTCOMES.alreadyFinished,
-    });
-    expect(finishReview).not.toHaveBeenCalled();
-    expect(generateMock).not.toHaveBeenCalled();
-    expect(revalidatePathMock).not.toHaveBeenCalled();
-  });
-
-  it("reports a refused finish as its own conflict, and never asks again", async () => {
-    finishReview.mockRejectedValue(new PlanProposalConflictError("stale"));
-
-    const state = await regenerate();
-
-    expect(state).toMatchObject({
-      status: "conflict",
-      message: OUTCOMES.conflict,
-    });
-    expect(generateMock).not.toHaveBeenCalled();
-    expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 });
 

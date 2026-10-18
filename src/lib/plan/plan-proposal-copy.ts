@@ -187,27 +187,18 @@ export const PLAN_PROPOSAL_COPY = {
   /* ---- Outcomes ---------------------------------------------------------- */
   outcomes: {
     regenerated:
-      "Asked again. What you added to your plan stayed; the rest was dropped.",
-    /**
-     * Reached only after the review has been applied and the proposal closed,
-     * so it must not say nothing was written. Both of those are true and
-     * permanent by the time the coach fails to answer.
-     */
+      "Asked again. What you added to your plan is in it now, and the rest was dropped.",
     /* Said before anything is closed, so the proposal is still there. */
     regenerationTooLarge:
       "This proposal is too large to send back to the coach with your feedback. Finish or discard it, then ask for a new plan.",
+    /**
+     * The coach did not answer. Nothing was closed or applied (owner, 17 Oct
+     * 2026): the proposal and the owner's choices on it are as they were.
+     */
     regenerationLost:
-      "What you added is in your plan and the old proposal is closed, but the coach could not answer. Ask for a new plan above.",
-    /** Said when the plan moved between the finish and the new request. */
-    regenerationConflict:
-      "What you added is in your plan and the old proposal is closed, but your plan changed before the coach was asked again. Ask for a new plan above.",
-    /** Any other refusal of the new request, on that same path. */
-    regenerationRefused:
-      "What you added is in your plan and the old proposal is closed, but the new request could not be made. Ask for a new plan above.",
-    /** Appended to the regeneration ceiling's message on that same path. */
-    regenerationKept: "What you added is in your plan.",
+      "The coach could not answer. This proposal and your choices are still here, so you can ask again.",
     regenerationCap:
-      "This plan has been asked again as many times as it can be. Ask for a fresh plan above.",
+      "This plan has been asked again as many times as it can be. Finish or discard this proposal, then ask for a fresh plan.",
     proposalReady: "Your proposal is ready. Decide each day below.",
     generationPending:
       "A proposal is already being built. This did not ask for a second one.",
@@ -272,12 +263,14 @@ export const PLAN_PROPOSAL_COPY = {
   /* ---- Regeneration -------------------------------------------------------- */
   regenerateHeading: "Not what you wanted?",
   regenerateSupport:
-    "Say what is wrong and the coach will plan the week again. Anything you already added to your plan stays; the rest is dropped.",
+    "Say what is wrong and the coach will plan the week again. This proposal stays until the new one arrives. Then what you added goes into your plan, and the rest is dropped.",
   regenerateLabel: "What should be different?",
   regenerateHelper: "Up to 500 characters.",
   regenerateSubmit: "Ask for a different plan",
   regenerateOpen: "Ask for a different plan",
   regenerateCancel: "Never mind",
+  regeneratePending:
+    "Asking the coach again… This proposal stays until the new one arrives.",
   /** Shown above a regenerated proposal, so the owner can judge the answer. */
   regeneratedFrom: (feedback: string) => `You asked for: ${feedback}`,
 

@@ -112,7 +112,7 @@ export async function generatePlanProposal(
     if (previous === null) {
       throw new CoachAIError("context_invalid");
     }
-    previousPlan = reducePreviousPlan(previous.content);
+    previousPlan = reducePreviousPlan(previous);
   }
 
   const requestFingerprint = [
@@ -303,24 +303,44 @@ async function recordMemoryCandidates(
  * after "ask again" has already finished the review, so a proposal too large
  * to send was found out only once it could no longer be reopened.
  */
-export function previousPlanFits(content: SevenDayPlanProposal): boolean {
+export function previousPlanFits(proposal: PreviousProposal): boolean {
   return (
-    new TextEncoder().encode(JSON.stringify(reducePreviousPlan(content)))
+    new TextEncoder().encode(JSON.stringify(reducePreviousPlan(proposal)))
       .length <=
     COACH_AI_CONTEXT_LIMITS.create_seven_day_plan.bytes.previousProposal
   );
 }
 
-function reducePreviousPlan(
-  content: SevenDayPlanProposal,
+/** What of a proposal the coach is sent back: its content and the choices. */
+type PreviousProposal = {
+  content: SevenDayPlanProposal;
+  items: readonly {
+    decision: string;
+    contentIndex: number | null;
+  }[];
+};
+
+export function reducePreviousPlan(
+  proposal: PreviousProposal,
 ): CoachAIPreviousPlanReference {
+  // A session the owner accepted stays open with the proposal while the coach
+  // is asked, and reaches the plan with the replacement (owner, 17 Oct 2026).
+  const kept = proposal.items
+    .filter(
+      (item) =>
+        (item.decision === "staged" || item.decision === "staged_beside") &&
+        item.contentIndex !== null,
+    )
+    .map((item) => item.contentIndex as number)
+    .sort((a, b) => a - b);
   return {
-    weekDescription: content.weekDescription,
-    days: content.sessions.map((session) => ({
+    weekDescription: proposal.content.weekDescription,
+    days: proposal.content.sessions.map((session) => ({
       date: session.date,
       title: session.title,
       sport: session.sport,
       durationMinutes: session.durationMinutes,
     })),
+    ...(kept.length > 0 ? { kept } : {}),
   };
 }

@@ -222,23 +222,15 @@ export async function finishPlanReviewAction(
 }
 
 /**
- * Keep what was accepted, then ask again with what was wrong.
+ * Ask again with what was wrong, keeping this proposal until the new one exists.
  *
- * Three steps in one action, because the database will not let them be fewer.
- * A regeneration refuses a proposal that is still open, so the review has to
- * end first — and ending it through `finishReview` is exactly what keeps the
- * owner's accepted days, applying the staged items into the plan before the
- * coach is asked anything.
- *
- * Undecided items are rejected on the way. An owner who asks for a different
- * plan has said what they wanted from this one; leaving the rest pending would
- * block the finish on a choice they have already made by not making it.
- *
- * The steps are not atomic and cannot be: the coach call sits between two
- * database writes and holds no lock. What that costs is bounded — if the
- * generation fails after the review has been applied, the owner keeps the days
- * they accepted and is told the coach could not be reached, which is the same
- * place a failed first generation leaves them.
+ * Owner, 17 Oct 2026: a failed answer used to leave nothing, because the
+ * review was closed before the coach was asked. Now nothing is written here.
+ * The coach is asked with this proposal still open, and the database closes it
+ * in the step that records the replacement: what the owner accepted is applied
+ * then, and what they left undecided is declined, in the database.
+ * When the coach fails, the owner is still on this proposal, with their
+ * choices, and is told why.
  */
 export async function regeneratePlanProposalAction(
   previous: PlanProposalActionState,
@@ -257,12 +249,9 @@ export async function regeneratePlanProposalAction(
     const feedback = parseRegenerationFeedback(
       text(formData, "regenerationFeedback"),
     );
+    // A UUID made in the browser per attempt; a failed attempt gets a new one
+    // (`attemptEnded`), so asking again is a new question, not a replay.
     const idempotencyKey = text(formData, "idempotencyKey");
-    // The same UUID pattern `finishPlanReviewAction` requires, because this key
-    // reaches the same RPC and its parameter is a `uuid`. The looser generation
-    // pattern would let a crafted 16-character key through the item rejections
-    // below and die on the cast afterwards — writes made on the way to a
-    // failure that says nothing was written.
     if (feedback === null || !UUID_PATTERN.test(idempotencyKey)) {
       return invalid(OUTCOMES.validation, submission);
     }
@@ -273,56 +262,12 @@ export async function regeneratePlanProposalAction(
     }
     // Bound to a const so the narrowing survives into `askAgain` below.
     const source = rejected;
-    // The one refusal assembly would otherwise make only after the review
-    // below has closed for good: a proposal too large to send back.
-    if (!previousPlanFits(source.content)) {
+    // Refused here, before anything is reserved or paid for.
+    if (!previousPlanFits(source)) {
       return invalid(OUTCOMES.regenerationTooLarge, submission);
     }
 
-    for (const item of rejected.items) {
-      if (item.decision === "proposed") {
-        await proposals.decideItem(proposalId, item.ordinal, "rejected");
-      }
-    }
-
-    await proposals.finishReview({
-      proposalId,
-      expectedPlanRevision: parseExpectedPlanRevision(
-        formData.get("expectedPlanRevision"),
-      ),
-      idempotencyKey,
-    });
-
-    // From here the owner's plan has already changed and the proposal is
-    // permanently closed. Everything below can still fail — the provider, the
-    // spend ceiling, the regeneration limit — and none of those failures may
-    // be reported as "nothing was written", which is what the generic copy
-    // says. Revalidating here rather than after the coach answers means the
-    // screens are right about the plan even when the answer never comes.
-    revalidatePath("/home/plan/proposal");
-    revalidatePath("/home/plan");
-
-    try {
-      return await askAgain();
-    } catch (error) {
-      // The cause is worth keeping where it is true alongside what happened,
-      // but the message has to be the one that is true: their choices were
-      // applied and the proposal is gone. The general conflict and rule copy
-      // ends "nothing was added", so only the ceiling keeps its own words.
-      const mapped = toActionState(error, submission);
-      return {
-        status: "error",
-        message:
-          mapped.status === "conflict"
-            ? OUTCOMES.regenerationConflict
-            : mapped.message === OUTCOMES.regenerationCap
-              ? `${OUTCOMES.regenerationCap} ${OUTCOMES.regenerationKept}`
-              : mapped.status === "rule"
-                ? OUTCOMES.regenerationRefused
-                : OUTCOMES.regenerationLost,
-        submission,
-      };
-    }
+    return await askAgain();
 
     async function askAgain(): Promise<PlanProposalActionState> {
       const today = await ownerToday(profiles);
@@ -376,6 +321,7 @@ export async function regeneratePlanProposalAction(
       );
 
       revalidatePath("/home/plan/proposal");
+      revalidatePath("/home/plan");
 
       if (result.status === "proposal") {
         return {
@@ -395,10 +341,17 @@ export async function regeneratePlanProposalAction(
         status: "error",
         message: OUTCOMES.regenerationLost,
         submission,
+        attemptEnded: true,
       };
     }
   } catch (error) {
-    return toActionState(error, submission);
+    // The proposal is untouched, so the general copy is true for a conflict
+    // or a rule. A coach that did not answer says so, and that the proposal
+    // is still here; the state keeps whether the next press is a new attempt.
+    const mapped = toActionState(error, submission);
+    return mapped.message === OUTCOMES.generationFailed
+      ? { ...mapped, message: OUTCOMES.regenerationLost }
+      : mapped;
   }
 }
 

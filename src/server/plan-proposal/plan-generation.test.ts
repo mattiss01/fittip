@@ -79,6 +79,7 @@ import { MemoryCandidateBatchError } from "@/server/proposal-logging/memory-cand
 import {
   generatePlanProposal,
   previousPlanFits,
+  reducePreviousPlan,
 } from "@/server/plan-proposal/plan-generation";
 import type { PlanProposalRepository } from "@/server/repositories/plan-proposal-repository";
 
@@ -119,22 +120,29 @@ const proposals = {
 describe("previousPlanFits", () => {
   // The largest plan the database stores: three sessions on each of seven
   // days, with the longest title and sport.
+  // Every session kept, the most a "kept" mark can add.
   const largest = (letter: string) =>
     ({
-      schemaVersion: "fittip.seven-day-plan.v2",
-      weekDescription: letter.repeat(600),
-      startDate: "2026-10-09",
-      endDate: "2026-10-15",
-      sessions: Array.from({ length: 21 }, (_, index) => ({
-        date: `2026-10-${String(9 + (index % 7)).padStart(2, "0")}`,
-        title: letter.repeat(120),
-        sport: letter.repeat(60),
-        focus: "f",
-        intent: "i",
-        durationMinutes: 180,
-        primaryGoalId: GOAL_ID,
-        rationale: "r",
+      items: Array.from({ length: 21 }, (_, index) => ({
+        decision: "staged",
+        contentIndex: index,
       })),
+      content: {
+        schemaVersion: "fittip.seven-day-plan.v2",
+        weekDescription: letter.repeat(600),
+        startDate: "2026-10-09",
+        endDate: "2026-10-15",
+        sessions: Array.from({ length: 21 }, (_, index) => ({
+          date: `2026-10-${String(9 + (index % 7)).padStart(2, "0")}`,
+          title: letter.repeat(120),
+          sport: letter.repeat(60),
+          focus: "f",
+          intent: "i",
+          durationMinutes: 180,
+          primaryGoalId: GOAL_ID,
+          rationale: "r",
+        })),
+      },
     }) as Parameters<typeof previousPlanFits>[0];
 
   it("admits the largest plan in one-byte characters", () => {
@@ -143,6 +151,55 @@ describe("previousPlanFits", () => {
 
   it("says no to the same plan in a three-byte script, before a review is closed over it", () => {
     expect(previousPlanFits(largest("漢"))).toBe(false);
+  });
+});
+
+describe("what the coach is sent back of a declined proposal", () => {
+  it("names the sessions the owner kept, by position, and nothing else of the choices", () => {
+    const session = (title: string) => ({
+      date: TODAY,
+      title,
+      sport: "Running",
+      focus: "f",
+      intent: "i",
+      durationMinutes: 40,
+      primaryGoalId: GOAL_ID,
+      rationale: "r",
+    });
+    const reduced = reducePreviousPlan({
+      content: {
+        schemaVersion: "fittip.seven-day-plan.v2",
+        weekDescription: "Two runs.",
+        startDate: TODAY,
+        endDate: TODAY,
+        sessions: [session("Kept"), session("Declined"), session("Beside")],
+      },
+      items: [
+        { decision: "rejected", contentIndex: 1 },
+        { decision: "staged_beside", contentIndex: 2 },
+        { decision: "staged", contentIndex: 0 },
+      ],
+    } as Parameters<typeof reducePreviousPlan>[0]);
+
+    expect(reduced.kept).toEqual([0, 2]);
+    expect(reduced.days.map((day) => Object.keys(day))).toEqual(
+      Array(3).fill(["date", "title", "sport", "durationMinutes"]),
+    );
+  });
+
+  it("sends no list when nothing was kept", () => {
+    const reduced = reducePreviousPlan({
+      content: {
+        schemaVersion: "fittip.seven-day-plan.v2",
+        weekDescription: "Rest.",
+        startDate: TODAY,
+        endDate: TODAY,
+        sessions: [],
+      },
+      items: [],
+    } as Parameters<typeof reducePreviousPlan>[0]);
+
+    expect(reduced).not.toHaveProperty("kept");
   });
 });
 
@@ -358,6 +415,7 @@ describe("generatePlanProposal", () => {
   it("carries the rejected proposal and the feedback into the claim", async () => {
     proposals.getProposal.mockResolvedValue({
       id: PREVIOUS_ID,
+      items: [{ decision: "staged", contentIndex: 0 }],
       content: {
         schemaVersion: "fittip.seven-day-plan.v2",
         weekDescription: "Three easy days and a longer weekend run.",
