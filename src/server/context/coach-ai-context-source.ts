@@ -29,6 +29,7 @@ import { createPersonalActivityLibrary } from "@/server/repositories/personal-ac
 import { createProfileRepository } from "@/server/repositories/profile-repository";
 import { createRoadmapRepository } from "@/server/repositories/roadmap-repository";
 import { createRollingPlan } from "@/server/repositories/rolling-plan-repository";
+import { createSessionCancellations } from "@/server/repositories/session-cancellation-repository";
 import { createSavedSessionLibrary } from "@/server/repositories/saved-session-repository";
 import type {
   RollingPlanSeries,
@@ -245,6 +246,23 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       (completion) => completion.actualLocalDate >= windowStartDate,
     );
 
+    // The reasons for sessions called off from today on, read only for an
+    // operation that sends them; a fill sends no commitments.
+    const cancelledAhead = fillsSession
+      ? []
+      : planWindow.slice.sessions
+          .filter(
+            (session) =>
+              session.status === "cancelled" && session.localDate >= today,
+          )
+          .map((session) => session.id);
+    const cancellationReasons =
+      cancelledAhead.length === 0
+        ? new Map<string, string>()
+        : await (
+            await createSessionCancellations()
+          ).listReasons(cancelledAhead);
+
     const completedPlanSessionIds = new Set(
       completions
         .map((completion) => completion.planSessionId)
@@ -268,12 +286,22 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       horizonEndDate: today,
       completions: trainingCompletions,
       plannedSessions: planWindow.slice.sessions
-        // A cancelled entry is neither a commitment nor a missed session: it is
-        // training the owner called off, and reporting it as either would be a
-        // claim about adherence nobody made.
-        .filter((session) => session.status === "active")
+        // A cancelled entry ahead is sent as called off, with the owner's
+        // reason (owner, 17 Oct 2026, ADR-013 seventh amendment): Sarah's
+        // trip days were refilled because the coach saw them empty. One in
+        // the past stays out, never a missed session: that would be a claim
+        // about adherence nobody made.
+        .filter(
+          (session) =>
+            session.status === "active" ||
+            (!fillsSession && session.localDate >= today),
+        )
         .map((session) =>
-          toTrainingHistoryPlannedSession(session, completedPlanSessionIds),
+          toTrainingHistoryPlannedSession(
+            session,
+            completedPlanSessionIds,
+            cancellationReasons,
+          ),
         ),
       series: series.map(toTrainingHistorySeries),
     };
@@ -428,7 +456,9 @@ function toTrainingHistoryCompletion(
 function toTrainingHistoryPlannedSession(
   session: RollingPlanSession,
   completedPlanSessionIds: ReadonlySet<string>,
+  cancellationReasons: ReadonlyMap<string, string>,
 ): TrainingHistoryPlannedSession {
+  const cancelled = session.status === "cancelled";
   return {
     // Not sent. Assembly matches the owner's marks by it (ADR-024).
     id: session.id,
@@ -439,12 +469,18 @@ function toTrainingHistoryPlannedSession(
     hasCompletion: completedPlanSessionIds.has(session.id),
     // An occurrence its rule still describes: on its rule date, content as the
     // series stamped it. An edited or moved one is its own dated entry.
+    // A cancelled occurrence is always its own dated entry: the rule would
+    // say it happens.
     ruleSeriesId:
+      !cancelled &&
       session.seriesId !== null &&
       !session.hasDiverged &&
       session.occurrenceDate === session.localDate
         ? session.seriesId
         : null,
+    ...(cancelled
+      ? { cancelled: { reason: cancellationReasons.get(session.id) ?? null } }
+      : {}),
   };
 }
 

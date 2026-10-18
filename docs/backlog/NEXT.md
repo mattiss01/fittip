@@ -28,6 +28,12 @@ Ordered by dependency. A lane is named where it is not the build lane.
       it out, the coach names the rule and proposes the closest session allowed. The
       app turns "; " into ". " in the coach's text (owner's choice), never in an excerpt
       of the owner's note. The plan prefix stays inside its 9,000 budget by trimming.
+- [~] **The coach sees cancelled days and when a memory was written (careful lane:
+      prompt data boundary, ADR-013 seventh amendment).** Owner, 17 Oct 2026: Sarah's
+      trip days were refilled. Cancelled sessions from today on go as commitments with
+      the owner's reason (owner chose date, title and reason); each memory carries the
+      day it was last edited. Supersedes the 29 Sep decision that the reason is stored
+      only. No new limits; the prompt prefixes stay inside their budgets.
 - [ ] **A failed "ask again" keeps the old proposal (careful lane: schema).** Owner,
       17 Oct 2026, after a regeneration failed (`provider_unavailable`) and left nothing:
       the old proposal stays open and on screen until the new one has arrived; on failure

@@ -197,7 +197,12 @@ describe("OpenAI coaching adapter", () => {
       buildRequest({
         context: context({
           memory: [
-            { id: "m1", memoryType: "constraint", content: "No gym Tuesdays." },
+            {
+              id: "m1",
+              memoryType: "constraint",
+              content: "No gym Tuesdays.",
+              writtenOn: "2026-07-01",
+            },
           ],
         }),
       }),
@@ -444,6 +449,7 @@ describe("OpenAI coaching adapter", () => {
                 id: "m1",
                 memoryType: "preference",
                 content: "x".repeat(5_000),
+                writtenOn: "2026-07-01",
               },
             ],
           }),

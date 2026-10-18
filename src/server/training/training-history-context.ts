@@ -106,6 +106,11 @@ export type TrainingHistoryPlannedSession = {
    * one-off, and for an occurrence that was edited or moved.
    */
   ruleSeriesId: string | null;
+  /**
+   * Present on a session the owner called off, with their reason or null
+   * (ADR-013 seventh amendment). Never a missed session, never replaceable.
+   */
+  cancelled?: { reason: string | null };
 };
 
 /** One effective-dated series segment, already owner-scoped. */
@@ -256,6 +261,7 @@ export function selectTrainingHistoryContext(
   const missed = records.plannedSessions
     .filter(
       (entry) =>
+        entry.cancelled === undefined &&
         !entry.hasCompletion &&
         entry.localDate >= windowStartDate &&
         entry.localDate < records.today,
@@ -309,7 +315,9 @@ export function selectTrainingHistoryContext(
     entry: TrainingHistoryPlannedSession,
   ): CoachAIPlanCommitmentReference => {
     const reference = toDatedReference(entry);
-    if (detail === undefined) return reference;
+    if (detail === undefined || entry.cancelled !== undefined) {
+      return reference;
+    }
     const timed = {
       ...reference,
       durationMinutes: entry.durationMinutes ?? null,
@@ -473,8 +481,19 @@ function toDatedReference(
     localDate: entry.localDate,
     title: entry.title.slice(0, 120),
     sport: entry.sport.slice(0, 80),
+    ...(entry.cancelled === undefined
+      ? {}
+      : {
+          cancelledBecause:
+            entry.cancelled.reason === null
+              ? null
+              : entry.cancelled.reason.slice(0, CANCELLED_REASON_MAX_LENGTH),
+        }),
   };
 }
+
+/** A cancellation reason as sent: the owner's words, shortened to fit. */
+export const CANCELLED_REASON_MAX_LENGTH = 200;
 
 const WEEKDAY_NAMES: readonly CoachAIWeekdayName[] = [
   "Sunday",

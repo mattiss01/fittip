@@ -1305,6 +1305,7 @@ function toMemoryReference(item: MemoryItemView): CoachAIMemoryReference {
     id: item.id,
     memoryType: item.memoryType,
     content: item.content,
+    writtenOn: item.updatedAt.slice(0, 10),
   };
 }
 

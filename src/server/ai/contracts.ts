@@ -96,6 +96,11 @@ export type CoachAIMemoryReference = {
   id: string;
   memoryType: MemoryType;
   content: string;
+  /**
+   * The day it was last written, so "in ten days" can be placed (owner,
+   * 17 Oct 2026, ADR-013 seventh amendment).
+   */
+  writtenOn: string;
 };
 
 /**
@@ -143,6 +148,11 @@ export type CoachAIPlanCommitmentReference = {
   durationMinutes?: number | null;
   /** `r1`, `r2`…, or null for a session that stays. Never a session id. */
   replaceHandle?: string | null;
+  /**
+   * Present only on a session the athlete called off: their reason, or null
+   * when they gave none (ADR-013 seventh amendment, 17 Oct 2026).
+   */
+  cancelledBecause?: string | null;
 };
 
 /**

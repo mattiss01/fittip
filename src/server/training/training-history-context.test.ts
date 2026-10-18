@@ -78,3 +78,72 @@ describe("the days right after a plan's horizon (owner, 17 Oct 2026)", () => {
     ]);
   });
 });
+
+describe("a session the athlete called off (owner, 17 Oct 2026)", () => {
+  // Sarah: Mon 26 cancelled for the Hamburg trip, with her reason, and an
+  // earlier one called off without a reason.
+  const trip = {
+    today: "2026-10-18",
+    horizonEndDate: "2026-11-01",
+    completions: [],
+    plannedSessions: [
+      {
+        ...planned("2026-10-26", "Home strength"),
+        id: "88000000-0000-4000-8000-000000000001",
+        cancelled: { reason: "Business trip to Hamburg." },
+      },
+      {
+        ...planned("2026-10-29", "Home strength"),
+        cancelled: { reason: null },
+      },
+      planned("2026-11-01", "Sunday run"),
+    ],
+    series: [],
+  };
+
+  it("is sent dated, with the reason, and never with a replace handle", () => {
+    const selection = selectTrainingHistoryContext(trip, {
+      forwardDaysPastHorizon: 28,
+      commitmentDetail: {
+        replaceHandles: new Map([
+          ["88000000-0000-4000-8000-000000000001", "r1"],
+        ]),
+      },
+    });
+
+    expect(selection.planCommitments).toEqual([
+      {
+        localDate: "2026-10-26",
+        title: "Home strength",
+        sport: "Running",
+        cancelledBecause: "Business trip to Hamburg.",
+      },
+      {
+        localDate: "2026-10-29",
+        title: "Home strength",
+        sport: "Running",
+        cancelledBecause: null,
+      },
+      {
+        localDate: "2026-11-01",
+        title: "Sunday run",
+        sport: "Running",
+        durationMinutes: null,
+        replaceHandle: null,
+      },
+    ]);
+  });
+
+  it("is never reported as a missed session", () => {
+    const selection = selectTrainingHistoryContext(
+      {
+        ...trip,
+        today: "2026-11-05",
+        horizonEndDate: "2026-11-05",
+      },
+      {},
+    );
+
+    expect(JSON.stringify(selection.history)).not.toContain("Home strength");
+  });
+});

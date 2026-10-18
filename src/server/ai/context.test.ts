@@ -127,6 +127,8 @@ describe("coach AI context assembly", () => {
         id: "c3000000-0000-4000-8000-000000000001",
         memoryType: "constraint",
         content: "Trains before work on weekdays.",
+        // ADR-013 seventh amendment: the day it was last written, no more.
+        writtenOn: "2026-07-01",
       },
     ]);
     // Nothing spreads the source record, so a column added later stays invisible.
