@@ -606,6 +606,7 @@
 
 .staleReasons {
   margin: 0.5rem 0 0;
+  font-size: 0.85rem;
   padding-left: 1.1rem;
   display: grid;
   gap: 0.35rem;
@@ -733,6 +734,32 @@
   margin: 0;
   font-size: 0.95rem;
   line-height: 1.55;
+}
+
+/* The coach's safety notes, open under its note: never folded away. */
+.safetyNotes {
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--ember);
+}
+
+.safetyNotes ul,
+.coachMore ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.safetyNotes h3,
+.coachMore h3 {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+}
+
+.coachMore summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .nothingAdded {

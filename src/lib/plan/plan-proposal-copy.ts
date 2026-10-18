@@ -52,6 +52,8 @@ export const PLAN_PROPOSAL_COPY = {
   assumptionsHeading: "What it assumed",
   uncertaintiesHeading: "What it was unsure about",
   safetyHeading: "Worth being careful about",
+  /** The folded part of the coach's note: its assumptions and doubts. */
+  coachMoreSummary: "What the coach assumed and was unsure about",
   alternativesHeading: "Instead of this, if you need to",
   whyItMattersLabel: "Why it matters:",
   whatToWatchLabel: "Watch for:",

@@ -21,13 +21,6 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [~] **The coach honours a request, and writes no semicolons (careful lane: prompt).**
-      Owner, 17 Oct 2026, from the live round: Sarah asked again for two more sessions
-      and got none and no alternative. A request in the note or feedback now outranks
-      "add nothing", within the athlete's limits and the safety rules; where those rule
-      it out, the coach names the rule and proposes the closest session allowed. The
-      app turns "; " into ". " in the coach's text (owner's choice), never in an excerpt
-      of the owner's note. The plan prefix stays inside its 9,000 budget by trimming.
 - [~] **The coach sees cancelled days and when a memory was written (careful lane:
       prompt data boundary, ADR-013 seventh amendment).** Owner, 17 Oct 2026: Sarah's
       trip days were refilled. Cancelled sessions from today on go as commitments with

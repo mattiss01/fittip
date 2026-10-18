@@ -52,6 +52,9 @@ export function ProposalReview({
   proposalId,
   regenerationFeedback,
   weekDescription,
+  safetyConsiderations,
+  assumptions,
+  uncertainties,
   nothingAdded,
   expectedPlanRevision,
   finishKey,
@@ -67,6 +70,14 @@ export function ProposalReview({
   regenerationFeedback: string | null;
   /** The coach's overview of the days, in its own words. */
   weekDescription: string;
+  /** What it held back on and why; shown open, never folded away. */
+  safetyConsiderations: readonly string[];
+  assumptions: readonly string[];
+  uncertainties: readonly {
+    statement: string;
+    whyItMatters: string;
+    whatToWatch: string;
+  }[];
   /** The coach proposed no session, so there is nothing to decide. */
   nothingAdded: boolean;
   expectedPlanRevision: number;
@@ -133,6 +144,60 @@ export function ProposalReview({
           <p className={styles.nothingAdded}>{COPY.nothingAdded}</p>
         ) : null}
         <p className={styles.weekDescription}>{weekDescription}</p>
+        {/*
+          Open, under the note: a referral to a physio folded away is one the
+          owner never reads (17 Oct 2026, Tom's test). The M3-11 rebuild had
+          left all three lists out.
+        */}
+        {safetyConsiderations.length === 0 ? null : (
+          <div className={styles.safetyNotes}>
+            <h3 className={styles.sectionLabel}>{COPY.safetyHeading}</h3>
+            <ul>
+              {safetyConsiderations.map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {assumptions.length === 0 && uncertainties.length === 0 ? null : (
+          <details className={styles.coachMore}>
+            <summary>{COPY.coachMoreSummary}</summary>
+            {assumptions.length === 0 ? null : (
+              <>
+                <h3 className={styles.sectionLabel}>
+                  {COPY.assumptionsHeading}
+                </h3>
+                <ul>
+                  {assumptions.map((assumption) => (
+                    <li key={assumption}>{assumption}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {uncertainties.length === 0 ? null : (
+              <>
+                <h3 className={styles.sectionLabel}>
+                  {COPY.uncertaintiesHeading}
+                </h3>
+                <ul>
+                  {uncertainties.map((entry) => (
+                    <li key={entry.statement}>
+                      {entry.statement}{" "}
+                      <span className={styles.sectionLabel}>
+                        {COPY.whyItMattersLabel}
+                      </span>{" "}
+                      {entry.whyItMatters}{" "}
+                      <span className={styles.sectionLabel}>
+                        {COPY.whatToWatchLabel}
+                      </span>{" "}
+                      {entry.whatToWatch}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </details>
+        )}
       </section>
 
       {/*
