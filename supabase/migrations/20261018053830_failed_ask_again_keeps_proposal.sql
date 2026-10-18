@@ -7,7 +7,8 @@
 --
 -- Now the source stays open while the coach is asked. `begin_plan_generation`
 -- accepts an open source, and refuses a second pending request from the same
--- one. `finish_plan_generation` closes the source in the transaction that
+-- one (one older than ten minutes is a dead server's and is ignored); both
+-- checks on the source now run under the lock, and after a same-key replay. `finish_plan_generation` closes the source in the transaction that
 -- records its replacement: undecided items are declined, and
 -- `finish_plan_proposal_review` applies what the owner accepted, keyed by the
 -- request's completion token. A source the owner finished or discarded while
@@ -130,48 +131,6 @@ begin
         message = 'That proposal is no longer open.';
     end if;
 
-    -- The proposal being regenerated stays open while the coach is asked
-    -- (owner, 17 Oct 2026): a failed answer used to leave the owner with
-    -- nothing, since the review had already been closed. It is closed by
-    -- `finish_plan_generation`, in the transaction that records its
-    -- replacement. One request at a time per source: a second "ask again"
-    -- while one is pending would race it to the same replacement.
-    if exists (
-      select 1
-      from public.plan_generation_requests
-      where previous_proposal_id = p_previous_proposal_id
-        and user_id = v_user_id
-        and status = 'pending'
-        and idempotency_key <> p_idempotency_key
-    ) then
-      raise exception using
-        errcode = 'PT409',
-        message = 'The coach is already being asked again about that proposal.';
-    end if;
-
-    -- One proposal, one replacement.
-    --
-    -- Without this the count below is not a chain at all. It reads the number
-    -- from whichever predecessor the caller *names*, and a closed proposal
-    -- stays closed forever, so pointing at the first proposal of a lineage
-    -- yields 1 every time and the ceiling never arrives. Measured against a
-    -- local database before adding this: two regenerations from one source,
-    -- both numbered 1.
-    --
-    -- It is also what the owner's decision already implies. Regenerating
-    -- discards the proposal being rejected; asking a second time from that
-    -- same rejected proposal is a second bite at something already replaced.
-    if exists (
-      select 1
-      from public.plan_proposals
-      where source_proposal_id = p_previous_proposal_id
-        and user_id = v_user_id
-    ) then
-      raise exception using
-        errcode = 'PT409',
-        message = 'That proposal has already been replaced.';
-    end if;
-
     select * into v_previous_request
     from public.plan_generation_requests
     where id = v_previous.generation_request_id and user_id = v_user_id;
@@ -224,6 +183,49 @@ begin
         errcode = 'PT409',
         message = 'Your plan changed. Reload and try again.';
   end;
+
+  -- The checks on the source run under the lock, so two "ask again" presses
+  -- at once cannot both pass them: the second sees the first's request.
+  if p_previous_proposal_id is not null then
+    -- The proposal being regenerated stays open while the coach is asked
+    -- (owner, 17 Oct 2026): a failed answer used to leave the owner with
+    -- nothing, since the review had already been closed. It is closed by
+    -- `finish_plan_generation`, in the transaction that records its
+    -- replacement. One request at a time per source. A request pending for
+    -- more than ten minutes is one whose server died after the call, since
+    -- no call waits longer than ninety seconds; it blocks nothing.
+    if exists (
+      select 1
+      from public.plan_generation_requests
+      where previous_proposal_id = p_previous_proposal_id
+        and user_id = v_user_id
+        and status = 'pending'
+        and created_at > pg_catalog.now() - interval '10 minutes'
+    ) then
+      raise exception using
+        errcode = 'PT409',
+        message = 'The coach is already being asked again about that proposal.';
+    end if;
+
+    -- One proposal, one replacement.
+    --
+    -- Without this the count above is not a chain at all. It reads the number
+    -- from whichever predecessor the caller *names*, and a closed proposal
+    -- stays closed forever, so pointing at the first proposal of a lineage
+    -- yields 1 every time and the ceiling never arrives. Measured against a
+    -- local database before adding this: two regenerations from one source,
+    -- both numbered 1.
+    if exists (
+      select 1
+      from public.plan_proposals
+      where source_proposal_id = p_previous_proposal_id
+        and user_id = v_user_id
+    ) then
+      raise exception using
+        errcode = 'PT409',
+        message = 'That proposal has already been replaced.';
+    end if;
+  end if;
 
   begin
     insert into public.plan_generation_requests (

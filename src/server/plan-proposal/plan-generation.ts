@@ -221,19 +221,33 @@ export async function generatePlanProposal(
     throw error;
   }
 
-  const proposalId = await proposals.finishGenerationWithProposal({
-    completionToken: claim.completionToken,
-    schemaVersion: COACH_AI_SCHEMA_VERSIONS.create_seven_day_plan,
-    promptVersion: COACH_AI_PROMPT_VERSIONS.create_seven_day_plan,
-    providerCode: binding.providerCode,
-    modelCode: binding.modelCode,
-    rateCardVersion: binding.rateCard.version,
-    spendReservationId: outcome.spendReservationId,
-    planningNote: input.planningNote,
-    regenerationFeedback: input.regenerationFeedback ?? null,
-    content: outcome.proposal as SevenDayPlanProposal,
-    sources: outcome.sources,
-  });
+  let proposalId: string;
+  try {
+    proposalId = await proposals.finishGenerationWithProposal({
+      completionToken: claim.completionToken,
+      schemaVersion: COACH_AI_SCHEMA_VERSIONS.create_seven_day_plan,
+      promptVersion: COACH_AI_PROMPT_VERSIONS.create_seven_day_plan,
+      providerCode: binding.providerCode,
+      modelCode: binding.modelCode,
+      rateCardVersion: binding.rateCard.version,
+      spendReservationId: outcome.spendReservationId,
+      planningNote: input.planningNote,
+      regenerationFeedback: input.regenerationFeedback ?? null,
+      content: outcome.proposal as SevenDayPlanProposal,
+      sources: outcome.sources,
+    });
+  } catch (error) {
+    // The record was refused: since 18 Oct 2026 that includes the replaced
+    // proposal's accepted days no longer fitting the plan. The claim is
+    // closed as failed so it cannot hold up the next "ask again"; the
+    // replaced proposal is untouched, since the refusal rolled back with it.
+    await proposals
+      .finishGenerationAsFailed(claim.completionToken, "record_refused")
+      .catch(() => {
+        // As above: an honest pending attempt, never the original cause.
+      });
+    throw error;
+  }
 
   return {
     status: "proposal",

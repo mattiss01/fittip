@@ -212,6 +212,28 @@ describe("regeneratePlanProposalAction", () => {
     expect(finishReview).not.toHaveBeenCalled();
   });
 
+  it("refuses before asking when a day the owner accepted has passed", async () => {
+    const today = isoDateInTimezone(new Date(), TIMEZONE);
+    getProposal.mockResolvedValue({
+      ...openProposal(),
+      items: [
+        {
+          ordinal: 0,
+          decision: "staged",
+          localDate: shiftIsoDate(today, -1),
+        },
+      ],
+    });
+
+    const state = await regenerate();
+
+    expect(state).toMatchObject({
+      status: "validation",
+      message: OUTCOMES.regenerationPastKept,
+    });
+    expect(generateMock).not.toHaveBeenCalled();
+  });
+
   it("writes nothing before the coach answers (owner, 17 Oct 2026)", async () => {
     const state = await regenerate();
 

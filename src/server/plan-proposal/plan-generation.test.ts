@@ -380,6 +380,25 @@ describe("generatePlanProposal", () => {
     expect(proposals.finishGenerationWithProposal).not.toHaveBeenCalled();
   });
 
+  it("closes the claim when the answer cannot be recorded, so it holds nothing up", async () => {
+    // Since 18 Oct 2026 the record also applies the replaced proposal's
+    // accepted days, and a day that no longer fits refuses the whole record.
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("no network"));
+    const refused = new Error("refused");
+    proposals.finishGenerationWithProposal.mockRejectedValue(refused);
+    proposals.finishGenerationAsFailed.mockResolvedValue(undefined);
+
+    await expect(
+      generatePlanProposal(input(), {
+        proposals: proposals as unknown as PlanProposalRepository,
+      }),
+    ).rejects.toBe(refused);
+    expect(proposals.finishGenerationAsFailed).toHaveBeenCalledExactlyOnceWith(
+      "t1",
+      "record_refused",
+    );
+  });
+
   it("keeps a valid proposal when the memory batch fails", async () => {
     proposals.recordMemoryCandidates.mockRejectedValue(
       new MemoryCandidateBatchError("22023"),

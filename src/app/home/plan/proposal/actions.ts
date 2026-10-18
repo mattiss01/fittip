@@ -267,10 +267,23 @@ export async function regeneratePlanProposalAction(
       return invalid(OUTCOMES.regenerationTooLarge, submission);
     }
 
+    // A day the owner accepted is applied only when the new proposal is
+    // recorded, and a past one would be refused there, after the coach has
+    // been paid. Said now instead, while nothing has been spent.
+    const today = await ownerToday(profiles);
+    if (
+      source.items.some(
+        (item) =>
+          (item.decision === "staged" || item.decision === "staged_beside") &&
+          item.localDate < today,
+      )
+    ) {
+      return invalid(OUTCOMES.regenerationPastKept, submission);
+    }
+
     return await askAgain();
 
     async function askAgain(): Promise<PlanProposalActionState> {
-      const today = await ownerToday(profiles);
       const dayCount = planDayCount(source.startDate, source.endDate);
       // The days the owner asked about, unless the first has already passed:
       // then the same number of days from today, as before a start could be

@@ -61,7 +61,7 @@ as $$
   )
 $$;
 
-select plan(30);
+select plan(31);
 
 -- 1. The boundary ------------------------------------------------------------
 
@@ -232,10 +232,34 @@ select throws_ok(
   'but not twice at once'
 );
 
+-- A request pending far longer than any call can wait is a dead server's.
+-- Run as the table owner: the owner cannot write `created_at` themselves.
+reset role;
+update public.plan_generation_requests
+set created_at = pg_catalog.now() - interval '11 minutes'
+where id = (select generation_id from pg_temp_claim where label = 'pending-regen');
+set local role authenticated;
+
+insert into pg_temp_claim
+select 'after-stale', * from public.begin_plan_generation(
+  'regen-key-0000000000011c', 'regen-fingerprint-00011c',
+  pg_temp.day(0), 3, 0, null,
+  (select id from public.plan_proposals
+   where user_id = '7e000000-0000-4000-8000-000000000001'),
+  'Too much running, not enough rest.');
+
+select is(
+  (select state from pg_temp_claim where label = 'after-stale'),
+  'claimed',
+  'a request pending longer than any call can wait blocks nothing'
+);
+
 select public.finish_plan_generation(
-  (select completion_token from pg_temp_claim where label = 'pending-regen'),
+  completion_token,
   'failed', null, null, null, null, null, null, null, null, null,
-  'provider_unavailable', null);
+  'provider_unavailable', null)
+from pg_temp_claim
+where label in ('pending-regen', 'after-stale');
 
 select is(
   (select count(*)::integer from public.plan_proposal_decisions

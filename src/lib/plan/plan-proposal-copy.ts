@@ -197,6 +197,9 @@ export const PLAN_PROPOSAL_COPY = {
      */
     regenerationLost:
       "The coach could not answer. This proposal and your choices are still here, so you can ask again.",
+    /* Said before anything is asked, so the proposal is still there. */
+    regenerationPastKept:
+      "A day you added has already passed, so it can no longer go into your plan. Change that choice, or finish this proposal, then ask again.",
     regenerationCap:
       "This plan has been asked again as many times as it can be. Finish or discard this proposal, then ask for a fresh plan.",
     proposalReady: "Your proposal is ready. Decide each day below.",
