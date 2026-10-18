@@ -21,6 +21,12 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
+- [ ] **The coach words its own memory suggestions (careful lane: memory boundary,
+      ADR-015).** Owner, 18 Oct 2026: today a suggestion must be an exact excerpt of the
+      planning note, so it almost never appears. The coach may phrase it itself, still
+      drawn mostly (or only) from the owner's note. It stays a proposal the owner accepts
+      or rejects. Needs an ADR-015 amendment and the excerpt check in the validator and in
+      `record_plan_memory_candidates` replaced. Not started; owner asked to wait.
 - [ ] **A7-5 — Size the fill before its first live run.** Measure output tokens on a
       twelve-activity answer: the grammar pads each target with fourteen nullable keys
       against a 3,000-token ceiling. Needs a provider key, so it waits for one; each run
