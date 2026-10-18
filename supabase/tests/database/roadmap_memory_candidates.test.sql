@@ -65,7 +65,7 @@ create temporary table receipt (
 );
 grant all on claim, receipt to public;
 
-select plan(9);
+select plan(10);
 
 insert into auth.users (id, email, raw_app_meta_data, raw_user_meta_data)
 values
@@ -127,6 +127,15 @@ select throws_ok(
   ),
   '22023', 'Invalid memory candidates.',
   'a candidate over 200 characters is refused'
+);
+
+select throws_ok(
+  $$select * from public.record_roadmap_memory_candidates(
+    (select completion_token from claim where label = 'noted'), 7,
+    '[{"memoryType":"constraint",
+       "content":"Has only 45 minutes on weekdays."}]'::jsonb)$$,
+  'PT409', 'Memory changed. Reload and try again.',
+  'a caller holding a stale memory revision is told to reload'
 );
 
 -- The batch: neither sentence is a substring of the note.
