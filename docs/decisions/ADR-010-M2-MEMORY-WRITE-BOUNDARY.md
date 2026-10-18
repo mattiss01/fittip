@@ -179,8 +179,10 @@ looking at a form that silently did nothing.
     *(Amended 18 October 2026. Until then a candidate had to be an exact
     excerpt of the note, checked inside the function. The owner gave that up
     so suggestions could be worded usefully. The function can no longer prove
-    the note was the source, or that the feedback was not. The prompt says so,
-    and the owner accepting or rejecting each proposal is the check.)*
+    the note was the source. A candidate can restate anything in the coach's
+    context as a claim about the owner: the feedback, training history, other
+    memory, a safety signal. The prompt says to draw on the note alone, and
+    the owner accepting or rejecting each proposal is the check.)*
 
     This is the whole of the exception. A route that needs more than it does not
     belong in this decision and is a new one for the owner to make.
