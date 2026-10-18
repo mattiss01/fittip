@@ -99,6 +99,19 @@ function build(
 }
 
 describe("coach AI context assembly", () => {
+  it("dates a memory by the owner's calendar, not UTC (ADR-013 seventh amendment)", () => {
+    // 22:30 UTC on 30 June is 00:30 on 1 July in Berlin.
+    const late = memoryItem({ updatedAt: "2026-06-30T22:30:00.000Z" });
+
+    expect(
+      build({ memory: [late], timezoneName: "Europe/Berlin" }).context.memory[0]
+        ?.writtenOn,
+    ).toBe("2026-07-01");
+    expect(build({ memory: [late] }).context.memory[0]?.writtenOn).toBe(
+      "2026-06-30",
+    );
+  });
+
   it("copies only the allowlisted goal and memory fields", () => {
     // The repository's goal carries more than the coach may read. The
     // desired outcome is read since ADR-023, on a goal being worked toward.
@@ -127,6 +140,8 @@ describe("coach AI context assembly", () => {
         id: "c3000000-0000-4000-8000-000000000001",
         memoryType: "constraint",
         content: "Trains before work on weekdays.",
+        // ADR-013 seventh amendment: the day it was last written, no more.
+        writtenOn: "2026-07-01",
       },
     ]);
     // Nothing spreads the source record, so a column added later stays invisible.

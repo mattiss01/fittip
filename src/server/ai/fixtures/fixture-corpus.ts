@@ -107,6 +107,7 @@ export const COACH_AI_FIXTURE_CONTEXT: CoachAIContext = {
       id: "c3000000-0000-4000-8000-000000000001",
       memoryType: "constraint",
       content: "Trains before work on weekdays.",
+      writtenOn: "2026-07-01",
     },
   ],
   trainingHistory: EMPTY_HISTORY,

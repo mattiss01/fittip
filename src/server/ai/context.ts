@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isoDateInTimezone } from "@/lib/date/local-date";
 import {
   GOAL_SPORT_MAX_LENGTH,
   GOAL_SPORTS_MAX,
@@ -940,7 +941,9 @@ export function buildCoachAIContext(
     targetableGoals,
     historicalGoals,
     goalsOutsideHorizon,
-    memory: memoryItems.map(toMemoryReference),
+    memory: memoryItems.map((item) =>
+      toMemoryReference(item, records.timezoneName ?? null),
+    ),
     trainingHistory: training.history,
     planCommitments: training.planCommitments,
     // Keyed off the limit, not off the list being empty: an operation that
@@ -1293,7 +1296,10 @@ function toGoalReference(
   };
 }
 
-function toMemoryReference(item: MemoryItemView): CoachAIMemoryReference {
+function toMemoryReference(
+  item: MemoryItemView,
+  timezoneName: string | null,
+): CoachAIMemoryReference {
   if (
     !CANONICAL_UUID_PATTERN.test(item.id) ||
     !isBounded(item.content, MAX_MEMORY_CONTENT_LENGTH)
@@ -1305,6 +1311,11 @@ function toMemoryReference(item: MemoryItemView): CoachAIMemoryReference {
     id: item.id,
     memoryType: item.memoryType,
     content: item.content,
+    // The owner's calendar day where the zone is known: an edit at 00:30 in
+    // Berlin is that day, not the UTC one before it.
+    writtenOn: isResolvedTimezone(timezoneName)
+      ? isoDateInTimezone(new Date(item.updatedAt), timezoneName)
+      : item.updatedAt.slice(0, 10),
   };
 }
 

@@ -9,7 +9,9 @@ const {
   createRoadmapMock,
   createLibraryMock,
   createSavedSessionsMock,
+  createCancellationsMock,
 } = vi.hoisted(() => ({
+  createCancellationsMock: vi.fn(),
   createLibraryMock: vi.fn(),
   createSavedSessionsMock: vi.fn(),
   createProfileMock: vi.fn(),
@@ -72,6 +74,16 @@ vi.mock("@/server/repositories/saved-session-repository", async (original) => {
     >();
   return { ...actual, createSavedSessionLibrary: createSavedSessionsMock };
 });
+vi.mock(
+  "@/server/repositories/session-cancellation-repository",
+  async (original) => {
+    const actual =
+      await original<
+        typeof import("@/server/repositories/session-cancellation-repository")
+      >();
+    return { ...actual, createSessionCancellations: createCancellationsMock };
+  },
+);
 
 import {
   buildCoachAIContext,
@@ -104,6 +116,7 @@ const materializeSeries = vi.fn();
 const listSeries = vi.fn();
 const listLibrary = vi.fn();
 const listSavedSessions = vi.fn();
+const listReasons = vi.fn();
 
 const COMPOSE = {
   horizonStartDate: TODAY,
@@ -132,6 +145,8 @@ describe("the production coaching context source", () => {
     });
     materializeSeries.mockResolvedValue({ createdCount: 0, skipped: [] });
     listSeries.mockResolvedValue([]);
+    listReasons.mockResolvedValue(new Map());
+    createCancellationsMock.mockResolvedValue({ listReasons });
     createGoalMock.mockResolvedValue({ list: listGoals });
     createMemoryMock.mockResolvedValue({ list: listMemory });
     createCompletionLogMock.mockResolvedValue({ list: listCompletions });
@@ -712,8 +727,75 @@ describe("the production coaching context source", () => {
         id: memoryItem().id,
         memoryType: "constraint",
         content: memoryItem().content,
+        writtenOn: "2026-08-01",
       },
     ]);
+  });
+
+  it("hands over a session called off ahead with its reason, and none from the past", async () => {
+    // ADR-013 seventh amendment (owner, 17 Oct 2026).
+    getPlanSlice.mockResolvedValue({
+      planId: "44000000-0000-4000-8000-000000000001",
+      revision: 12,
+      sessions: [
+        planSession({
+          id: "66000000-0000-4000-8000-0000000000c1",
+          localDate: shift(TODAY, 5),
+          status: "cancelled",
+          cancelledAt: "2026-08-01T09:00:00.000Z",
+        }),
+        planSession({
+          id: "66000000-0000-4000-8000-0000000000c2",
+          localDate: shift(TODAY, -2),
+          status: "cancelled",
+          cancelledAt: "2026-08-01T09:00:00.000Z",
+        }),
+      ],
+      recoveryDates: [],
+    });
+    listReasons.mockResolvedValue(
+      new Map([["66000000-0000-4000-8000-0000000000c1", "Away for work."]]),
+    );
+
+    const records = await source("create_seven_day_plan").load(OWNER);
+
+    expect(listReasons).toHaveBeenCalledWith([
+      "66000000-0000-4000-8000-0000000000c1",
+    ]);
+    expect(records.training.plannedSessions).toEqual([
+      expect.objectContaining({
+        localDate: shift(TODAY, 5),
+        ruleSeriesId: null,
+        cancelled: { reason: "Away for work." },
+      }),
+    ]);
+  });
+
+  it("sends a roadmap no cancelled session, whose prompt would count it as load", async () => {
+    getPlanSlice.mockResolvedValue({
+      planId: "44000000-0000-4000-8000-000000000001",
+      revision: 12,
+      sessions: [
+        planSession({
+          id: "66000000-0000-4000-8000-0000000000c1",
+          localDate: shift(TODAY, 5),
+          status: "cancelled",
+          cancelledAt: "2026-08-01T09:00:00.000Z",
+        }),
+      ],
+      recoveryDates: [],
+    });
+
+    const records = await source("create_roadmap").load(OWNER);
+
+    expect(records.training.plannedSessions).toEqual([]);
+    expect(createCancellationsMock).not.toHaveBeenCalled();
+  });
+
+  it("reads no reason when nothing ahead is cancelled", async () => {
+    await source("create_seven_day_plan").load(OWNER);
+
+    expect(createCancellationsMock).not.toHaveBeenCalled();
   });
 });
 

@@ -70,6 +70,7 @@ describe("the synthetic plan body", () => {
           id: "c3000000-0000-4000-8000-000000000001",
           memoryType: "constraint",
           content: "Avoid running while the knee settles.",
+          writtenOn: "2026-07-01",
         },
       ],
     };
@@ -306,6 +307,7 @@ function withMemory(
     ),
     memory: items.map((item, index) => ({
       id: `c3000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+      writtenOn: "2026-07-01",
       ...item,
     })),
   };

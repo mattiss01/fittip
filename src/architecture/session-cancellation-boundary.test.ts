@@ -4,15 +4,18 @@ import { extname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * Why a session was cancelled is stored only (owner, 29 Sep 2026): no coach
- * reads it, and letting one would be its own ADR-013 step. The migration keeps
- * it in its own table, out of the plan read and out of every snapshot; this
- * keeps the code's reach to it as narrow as the data's.
+ * Why a session was cancelled was stored only (owner, 29 Sep 2026), and
+ * letting a coach read it would be its own ADR-013 step. On 17 Oct 2026 the
+ * owner took that step: the coach's context reads the reasons of sessions
+ * called off ahead (ADR-013 seventh amendment), after Sarah's trip days were
+ * refilled. The migration still keeps the reason in its own table, out of the
+ * plan read and out of every snapshot; this keeps the code's reach to it as
+ * narrow as the data's.
  *
- * One repository names the table, and only the session's own page and the
- * action that edits the reason import that repository. A coach context, a
- * proposal, or any other read that wanted the reason would have to change
- * this list first — which is the point at which the ADR question is asked.
+ * One repository names the table, and only the session's own page, the
+ * action that edits the reason, and the coach's context source import that
+ * repository. Any other read that wanted the reason would have to change this
+ * list first — which is the point at which the ADR question is asked.
  */
 
 const SRC = join(process.cwd(), "src");
@@ -38,7 +41,7 @@ describe("the cancellation reason", () => {
     );
   });
 
-  it("is read only by the session's page and edited only by its action", () => {
+  it("is read only by the session's page and the coach's context, and edited only by its action", () => {
     const importing = sourceFiles(SRC).filter((path) =>
       readFileSync(path, "utf8").includes(REPOSITORY),
     );
@@ -47,6 +50,7 @@ describe("the cancellation reason", () => {
       [
         join(SRC, "app", "home", "plan", "cancellation-actions.ts"),
         join(SRC, "app", "home", "plan", "session", "[id]", "page.tsx"),
+        join(SRC, "server", "context", "coach-ai-context-source.ts"),
       ].sort(),
     );
   });
