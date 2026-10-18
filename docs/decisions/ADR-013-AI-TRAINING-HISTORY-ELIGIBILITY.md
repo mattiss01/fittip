@@ -540,7 +540,8 @@ said "starting in 10 days" and the coach could not tell from when. The product o
 decided both, and that the first supersedes the 29 September 2026 decision that a
 cancellation reason is stored only.
 
-- **A session called off from today on is sent** as a dated plan commitment with
+- **A session called off from today on is sent to the plan operation** as a dated
+  commitment with
   date, title and sport, plus `cancelledBecause`: the owner's reason, cut to 200
   characters, or null when none was given. It never carries minutes or a replace
   handle, and is never a missed session. A cancelled occurrence is always dated,
@@ -548,8 +549,12 @@ cancellation reason is stored only.
   the owner's free text going to the provider, as a log note already does; the owner
   accepted that knowingly. Only the coach's context source reads it, besides the
   session's page (`session-cancellation-boundary.test.ts`).
+  The roadmap does not receive cancelled sessions: its prompt counts every commitment
+  as planned load. The prompt lists the reason among the athlete's own words, which are
+  information and never instructions, and only `planningNote` may reopen the day.
 - **Each memory item carries `writtenOn`**, the day it was last edited, and nothing
-  else of its history, so a relative time in it can be placed.
+  else of its history, so a relative time in it can be placed. It is the owner's
+  calendar day where their time zone is known.
 - **Limits are unchanged.** A cancelled entry counts inside the same 30 entries and
   byte allocation as any commitment.
 
