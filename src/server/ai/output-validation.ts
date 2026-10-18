@@ -880,7 +880,7 @@ function validateStringArray(
   // never counts as the safety note a reported signal requires.
   return entries
     .filter((entry) => entry.trim().length > 0)
-    .map((entry) => fitText(entry, maxLength));
+    .map((entry) => fitText(withoutSemicolons(entry), maxLength));
 }
 
 function validateUncertainties(
@@ -1350,7 +1350,20 @@ function parseIsoDate(value: unknown): number | null {
  */
 function readText(value: unknown, max: number): string | null {
   if (typeof value !== "string" || value.length === 0) return null;
-  return fitText(value, max);
+  return fitText(withoutSemicolons(value), max);
+}
+
+/**
+ * "; " becomes ". " and the next word starts with a capital (owner, 17 Oct
+ * 2026): the prompt forbids semicolons and the model still writes them. Only
+ * the coach's own words come through here; an excerpt of the owner's note
+ * never does, since it must stay exactly what they wrote.
+ */
+export function withoutSemicolons(value: string): string {
+  return value.replace(
+    /\s*;\s+(\S)/gu,
+    (_match, next: string) => `. ${next.toLocaleUpperCase()}`,
+  );
 }
 
 /** As `readText`, and more than whitespace: a blank rationale explains nothing. */

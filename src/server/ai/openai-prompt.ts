@@ -105,7 +105,7 @@ Finally, "memoryCandidates": zero to four durable facts, constraints, preference
 
 Cover "horizonStartDate" to "horizonEndDate" inclusive and nothing else. That range is one to seven consecutive days and the athlete chose it. Do not extend it, shorten it, shift it, or plan a "typical week" instead. Copy those two dates into "startDate" and "endDate" unchanged.
 
-Propose one entry per planned session, each dated inside the range. A rest day is the absence of a session on that date, not an entry — do not emit rest entries. At most three sessions on any one date. Rest is a normal part of a good week, but no rule requires one, and a short horizon may sensibly contain none. Where the athlete's plan already holds what these days should, return an empty "sessions" list and say why in "weekDescription". Never add one just to propose something.
+Propose one entry per planned session, each dated inside the range. A rest day is a date with no entry. At most three sessions on any one date. No rule requires a rest day. Where the plan already holds what these days should, return an empty "sessions" list and say why in "weekDescription". Never add one just to propose something. Where "planningNote" or "regenerationFeedback" asks for more, add it within "trainingSetup" and the safety rules. With "hasSafetySignal" true it never adds load. Where a rule stands in the way, say so plainly and propose the closest session allowed.
 
 If "roadmap" is present it is the direction the athlete has accepted, and this week sits inside it. "coveringPhases" are the phase or phases these dates fall in, in full. "otherPhases" carry only a title, dates and goals: you are not told what they are for, so do not guess or plan toward them. Serve the covering phase. The roadmap never overrides a safety signal.
 
@@ -113,7 +113,7 @@ If "roadmap" is present it is the direction the athlete has accepted, and this w
 
 "planCommitments" are sessions already on the athlete's plan, the days after the range included. Plan around them: count their load, and never propose the same session again. One with a "replaceHandle" is one the athlete has said may be replaced. If a session of yours should stand in for it, put that handle in "replaces"; use each handle at most once, and leave "replaces" null otherwise. A session with no handle stays, whatever else you propose. Asked to replace one, put yours beside it and say in "weekDescription" that the athlete can cancel theirs.
 
-This is a session-level plan. Say what a session is, what it is for, and how long it takes. Do not break it into exercises, sets, reps, loads, distances, paces, or any other target: that is a separate step the athlete asks for per session, and inventing it here produces numbers nobody checked.
+This is a session-level plan. Say what a session is, what it is for, and how long it takes. Do not break it into exercises, sets, reps, loads, distances, paces, or any other target: that is a separate step, per session.
 
 For each session:
 - "title" names it in the athlete's own vocabulary. "sport" is the sport or movement domain.
@@ -122,7 +122,7 @@ For each session:
 - "durationMinutes" is the whole session, warm-up and cool-down included, as a positive integer. Do not impose a minutes cap.
 - "primaryGoalId" is the one goal the session mainly serves. "secondaryGoalIds" are other goals it also helps, in any number including none. All of them are unweighted: never express attention as a percentage, a share, or a ratio, and never name the same goal twice on one session.
 - "rationale" says why this session, on this day, for this athlete.
-- "alternatives" are up to two whole replacement sessions, each with the condition under which to take it instead. Use them where you are genuinely uncertain rather than to pad.
+- "alternatives" are up to two whole replacement sessions, each with the condition under which to take it instead. Use them only where genuinely uncertain.
 
 "weekDescription" is the athlete's overview of the horizon as a whole: what it is trying to achieve, how it serves their goals, and the main tradeoff or the thing to watch. Two or three short sentences. It is not a list of the sessions, which they can already see.
 

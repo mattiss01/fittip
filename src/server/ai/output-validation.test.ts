@@ -19,6 +19,8 @@ import {
   COACH_AI_MAX_OUTPUT_BYTES,
   COACH_AI_REJECTION_REASONS,
   fitText,
+  validateMemoryCandidates,
+  withoutSemicolons,
   validateCoachAICandidate,
   validatePlanCandidate,
   validateRoadmapCandidate,
@@ -1019,5 +1021,56 @@ describe("the coach's text is cut to fit, never refused for length (owner, 17 Oc
         context: COACH_AI_FIXTURE_PLAN_CONTEXT,
       }),
     ).toEqual({ outcome: "rejected", reason: "schema" });
+  });
+});
+
+describe("the coach writes no semicolons (owner, 17 Oct 2026)", () => {
+  it("turns one into a full stop and starts the next sentence", () => {
+    expect(
+      withoutSemicolons(
+        "You reported chest pain yesterday; seek professional advice first.",
+      ),
+    ).toBe(
+      "You reported chest pain yesterday. Seek professional advice first.",
+    );
+    expect(withoutSemicolons("Ruhig bleiben; wegen des Knies.")).toBe(
+      "Ruhig bleiben. Wegen des Knies.",
+    );
+  });
+
+  it("applies to the plan's notes as well as its description", () => {
+    const body = JSON.parse(
+      findCoachAIFixtureCase("valid_seven_day_plan").body,
+    );
+    body.plan.weekDescription = "Easy days first; the long run stays.";
+    body.plan.safetyConsiderations = ["Keep it light; stop if it hurts."];
+
+    const result = validatePlanCandidate({
+      body: JSON.stringify(body),
+      context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    });
+    if (result.outcome !== "accepted") throw new Error("expected acceptance");
+    expect(result.response.plan.weekDescription).toBe(
+      "Easy days first. The long run stays.",
+    );
+    expect(result.response.plan.safetyConsiderations).toEqual([
+      "Keep it light. Stop if it hurts.",
+    ]);
+  });
+
+  it("leaves an excerpt of the owner's own note exactly as written", () => {
+    const result = validateMemoryCandidates(
+      [
+        {
+          memoryType: "constraint",
+          sourceExcerpt: "mornings only; never late",
+        },
+      ],
+      "I train mornings only; never late in the evening.",
+    );
+    expect(result).toMatchObject({
+      outcome: "accepted",
+      candidates: [{ sourceExcerpt: "mornings only; never late" }],
+    });
   });
 });
