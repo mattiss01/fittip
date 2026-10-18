@@ -275,7 +275,7 @@ describe("the synthetic plan body", () => {
     ]);
   });
 
-  it("quotes the planning note exactly when it proposes memory", () => {
+  it("proposes memory from the planning note, as its first sentence", () => {
     const result = validatePlanCandidate({
       body: synthesizePlanBody(COACH_AI_FIXTURE_PLAN_CONTEXT),
       context: COACH_AI_FIXTURE_PLAN_CONTEXT,
@@ -285,7 +285,7 @@ describe("the synthetic plan body", () => {
     expect(result.memoryRejectionReason).toBeNull();
     for (const candidate of result.response.memoryCandidates) {
       expect(COACH_AI_FIXTURE_PLAN_CONTEXT.planningNote).toContain(
-        candidate.sourceExcerpt,
+        candidate.content,
       );
     }
   });

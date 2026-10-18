@@ -650,16 +650,15 @@ export type StoredRoadmap = Omit<RoadmapProposal, "schemaVersion"> & {
 };
 
 /**
- * A memory candidate extracted from the planning note.
+ * A memory candidate drawn from the planning note.
  *
- * It carries no model-authored text: `sourceExcerpt` must be an exact
- * normalized substring of the planning note, and that excerpt becomes the
- * proposed memory content. Text present only in regeneration feedback
- * therefore cannot become memory.
+ * `content` is one sentence in the coach's own words and becomes the
+ * proposed memory content (ADR-010 decision 16, amended 18 Oct 2026). It is
+ * only ever proposed: the owner accepts or rejects it on the memory surface.
  */
 export type CoachAIMemoryCandidate = {
   memoryType: MemoryType;
-  sourceExcerpt: string;
+  content: string;
   confidence?: number;
 };
 

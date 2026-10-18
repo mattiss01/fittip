@@ -271,13 +271,13 @@ export async function generatePlanProposal(
  * either way.
  *
  * Swallowed, not silent: the refusal's code — never its content — is logged,
- * so a coach that invented an excerpt can be told apart from a conflict.
+ * so a malformed candidate can be told apart from a conflict.
  */
 async function recordMemoryCandidates(
   proposals: PlanProposalRepository,
   completionToken: string,
   today: string,
-  candidates: readonly { memoryType: string; sourceExcerpt: string }[],
+  candidates: readonly { memoryType: string; content: string }[],
 ): Promise<number> {
   if (candidates.length === 0) return 0;
 

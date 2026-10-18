@@ -803,7 +803,7 @@ select throws_ok(
   format(
     $$select * from public.record_roadmap_memory_candidates(
       %L::uuid, 0,
-      '[{"memoryType":"constraint","sourceExcerpt":"Tuesdays are impossible."}]'::jsonb)$$,
+      '[{"memoryType":"constraint","content":"Tuesdays are impossible."}]'::jsonb)$$,
     (select completion_token from claim where label = 'second-roadmap')
   ),
   'PT409', 'That coaching request is no longer open.',

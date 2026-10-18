@@ -422,43 +422,43 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
     body: envelope(VALID_ROADMAP, [
       {
         memoryType: "constraint",
-        sourceExcerpt: "I only have 45 minutes on weekdays",
+        content: "I only have 45 minutes on weekdays",
         confidence: 70,
       },
       {
         memoryType: "constraint",
-        sourceExcerpt: "I am away the first weekend of every month",
+        content: "I am away the first weekend of every month",
         confidence: null,
       },
     ]),
     expected: { outcome: "accepted", memoryCandidates: 2 },
-    note: "Both excerpts are exact substrings of the planning note.",
+    note: "Two candidates drawn from the planning note.",
   },
   {
-    name: "memory_candidate_paraphrased",
+    name: "memory_candidate_in_own_words",
     operation: "create_roadmap",
     body: envelope(VALID_ROADMAP, [
       {
         memoryType: "constraint",
-        sourceExcerpt: "Only has forty-five minutes on weekdays",
+        content: "Only has forty-five minutes on weekdays",
         confidence: 90,
       },
     ]),
-    expected: { outcome: "accepted", memoryRejected: true },
-    note: "A plausible paraphrase is not an excerpt. The roadmap survives; the section does not.",
+    expected: { outcome: "accepted", memoryCandidates: 1 },
+    note: "The coach words a candidate itself (owner, 18 Oct 2026).",
   },
   {
-    name: "memory_candidate_from_feedback_only",
+    name: "memory_candidate_blank",
     operation: "create_roadmap",
     body: envelope(VALID_ROADMAP, [
       {
         memoryType: "preference",
-        sourceExcerpt: "The base phase is far too long",
+        content: "   ",
         confidence: null,
       },
     ]),
     expected: { outcome: "accepted", memoryRejected: true },
-    note: "Text present only in regeneration feedback must never become durable memory.",
+    note: "A blank candidate has nothing to propose. The roadmap survives; the section does not.",
   },
   {
     name: "memory_candidates_over_limit",
@@ -467,7 +467,7 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
       VALID_ROADMAP,
       Array.from({ length: 5 }, () => ({
         memoryType: "constraint",
-        sourceExcerpt: "I only have 45 minutes on weekdays",
+        content: "I only have 45 minutes on weekdays",
         confidence: null,
       })),
     ),
@@ -772,12 +772,12 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
     body: planEnvelope(VALID_PLAN, [
       {
         memoryType: "constraint",
-        sourceExcerpt: "I only have 45 minutes on weekdays",
+        content: "I only have 45 minutes on weekdays",
         confidence: 70,
       },
       {
         memoryType: "constraint",
-        sourceExcerpt: "I am away the first weekend of every month",
+        content: "I am away the first weekend of every month",
         confidence: null,
       },
     ]),
@@ -786,18 +786,18 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
     note: "The plan carries the same two-section envelope the roadmap does.",
   },
   {
-    name: "plan_memory_candidate_paraphrased",
+    name: "plan_memory_candidate_in_own_words",
     operation: "create_seven_day_plan",
     body: planEnvelope(VALID_PLAN, [
       {
         memoryType: "constraint",
-        sourceExcerpt: "Only has forty-five minutes on weekdays",
+        content: "Only has forty-five minutes on weekdays",
         confidence: 90,
       },
     ]),
     context: COACH_AI_FIXTURE_PLAN_CONTEXT,
-    expected: { outcome: "accepted", memoryRejected: true },
-    note: "A paraphrase is not an excerpt. The plan survives; the section does not.",
+    expected: { outcome: "accepted", memoryCandidates: 1 },
+    note: "The coach words a candidate itself (owner, 18 Oct 2026).",
   },
   {
     name: "plan_one_day_horizon",

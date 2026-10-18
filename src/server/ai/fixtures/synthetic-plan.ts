@@ -489,20 +489,19 @@ function constrainedSport(
 }
 
 /**
- * At most one candidate, quoting the note's first sentence exactly. Quoting
- * rather than summarizing is the point: the excerpt must survive the substring
- * check in both the validator and `record_plan_memory_candidates`.
+ * At most one candidate: the note's first sentence. A live coach words its
+ * own; the fixture repeats the owner's so a test can predict the content.
  */
 function memoryCandidates(
   context: CoachAIContext,
-): { memoryType: string; sourceExcerpt: string; confidence: number | null }[] {
+): { memoryType: string; content: string; confidence: number | null }[] {
   if (context.planningNote === null) return [];
   const note = normalizeOwnerText(context.planningNote);
   const firstSentence = note.split(/(?<=\.)\s+/)[0] ?? note;
-  const excerpt = firstSentence.slice(0, 200).trim();
-  if (excerpt.length === 0 || !note.includes(excerpt)) return [];
+  const sentence = firstSentence.slice(0, 200).trim();
+  if (sentence.length === 0) return [];
 
-  return [{ memoryType: "constraint", sourceExcerpt: excerpt, confidence: 50 }];
+  return [{ memoryType: "constraint", content: sentence, confidence: 50 }];
 }
 
 function horizonDates(context: CoachAIContext): string[] {

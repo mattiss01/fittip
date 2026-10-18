@@ -5,14 +5,14 @@ import "server-only";
  *
  * Both generation paths swallow the batch's failure on purpose (ADR-015: one
  * memory conflict must not roll back a valid proposal). Swallowed silently,
- * though, a coach that invented an excerpt (`22023`) looks exactly like a
+ * though, a malformed candidate (`22023`) looks exactly like a
  * genuine conflict (`PT409`), and that code is the only signal there would be
  * if the TypeScript and SQL owner-text normalizers ever skew
  * (`src/server/ai/owner-text.ts`).
  *
  * ADR-010 decision 15 keeps memory content out of logs, so nothing but a
  * SQLSTATE or an error class name ever reaches one. The database message is
- * never read: it can quote the excerpt.
+ * never read: it can quote the candidate.
  *
  * It lives in its own directory on purpose. `src/server/memory` and
  * `src/server/ai` forbid the console outright (`memory-privacy.test.ts`,

@@ -246,7 +246,7 @@ export const PLAN_PROPOSAL_COPY = {
   // The plan route's own wording, deliberately close to the roadmap's: the same
   // thing is waiting in the same place, and two phrasings for one idea would
   // read as two different things. What differs is only where it came from.
-  memoryPanelTitle: "From your planning note",
+  memoryPanelTitle: "Suggested from your planning note",
   memoryCandidatesWaiting: (count: number) =>
     count === 1
       ? "1 item from a planning note is waiting for you. It is not used for coaching until you accept it."

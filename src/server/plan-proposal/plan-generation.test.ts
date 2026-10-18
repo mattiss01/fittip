@@ -334,10 +334,10 @@ describe("generatePlanProposal", () => {
     expect(batch.expectedMemoryRevision).toBe(7);
     expect(batch.completionToken).toBe("t1");
     expect(batch.candidates).toHaveLength(1);
-    // Every candidate quotes the note the owner wrote. ADR-010 decision 16
-    // makes that non-optional, and the database enforces it too.
-    expect("I only have 45 minutes on weekdays.").toContain(
-      batch.candidates[0].sourceExcerpt,
+    // The fixture coach repeats the note's first sentence; a live coach words
+    // its own (ADR-010 decision 16, amended 18 Oct 2026).
+    expect(batch.candidates[0].content).toBe(
+      "I only have 45 minutes on weekdays.",
     );
 
     // Order matters: the proposal is committed before any memory is touched.

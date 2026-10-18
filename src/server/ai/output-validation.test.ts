@@ -253,7 +253,7 @@ describe("accepted roadmap output", () => {
     // separately, and an unusable memory section never costs the owner a valid
     // roadmap they would otherwise have been able to review.
     const result = validateRoadmapCandidate({
-      body: findCoachAIFixtureCase("memory_candidate_paraphrased").body,
+      body: findCoachAIFixtureCase("memory_candidate_blank").body,
       context: COACH_AI_FIXTURE_CONTEXT,
     });
     if (result.outcome !== "accepted") throw new Error("expected acceptance");
@@ -263,31 +263,42 @@ describe("accepted roadmap output", () => {
     expect(result.memoryRejectionReason).toBe("business_rule");
   });
 
-  it("uses the excerpt itself as the proposed memory text", () => {
+  it("keeps the coach's own sentence as the proposed memory text", () => {
+    // ADR-010 decision 16, amended 18 Oct 2026: the coach words a candidate
+    // itself, and that sentence is what the owner reviews.
+    const result = validateRoadmapCandidate({
+      body: findCoachAIFixtureCase("memory_candidate_in_own_words").body,
+      context: COACH_AI_FIXTURE_CONTEXT,
+    });
+    if (result.outcome !== "accepted") throw new Error("expected acceptance");
+
+    expect(result.response.memoryCandidates).toEqual([
+      {
+        memoryType: "constraint",
+        content: "Only has forty-five minutes on weekdays",
+        confidence: 90,
+      },
+    ]);
+  });
+
+  it("keeps candidates in their order with their confidence", () => {
     const result = validateRoadmapCandidate({
       body: findCoachAIFixtureCase("valid_roadmap_with_memory_candidates").body,
       context: COACH_AI_FIXTURE_CONTEXT,
     });
     if (result.outcome !== "accepted") throw new Error("expected acceptance");
 
-    // There is no second, model-authored version of the memory text. What the
-    // owner reviews is their own sentence.
     expect(result.response.memoryCandidates).toEqual([
       {
         memoryType: "constraint",
-        sourceExcerpt: "I only have 45 minutes on weekdays",
+        content: "I only have 45 minutes on weekdays",
         confidence: 70,
       },
       {
         memoryType: "constraint",
-        sourceExcerpt: "I am away the first weekend of every month",
+        content: "I am away the first weekend of every month",
       },
     ]);
-    for (const candidate of result.response.memoryCandidates) {
-      expect(COACH_AI_FIXTURE_CONTEXT.planningNote).toContain(
-        candidate.sourceExcerpt,
-      );
-    }
   });
 
   it("discards every candidate when the note is absent", () => {
@@ -596,8 +607,12 @@ describe("the seven day plan validator", () => {
   });
 
   it("keeps the plan and the memory section independent", () => {
+    const body = JSON.parse(
+      findCoachAIFixtureCase("plan_memory_candidate_in_own_words").body,
+    ) as { memoryCandidates: { content: string }[] };
+    body.memoryCandidates[0]!.content = " ";
     const result = validatePlanCandidate({
-      body: findCoachAIFixtureCase("plan_memory_candidate_paraphrased").body,
+      body: JSON.stringify(body),
       context: COACH_AI_FIXTURE_PLAN_CONTEXT,
     });
     if (result.outcome !== "accepted") throw new Error("expected acceptance");
@@ -926,13 +941,6 @@ describe("the coach's text is cut to fit, never refused for length (owner, 17 Oc
     expect(fitted.length).toBeLessThanOrEqual(20);
   });
 
-  it("can leave the mark off, so an excerpt stays part of its source", () => {
-    const source = "I only have 45 minutes on weekdays";
-    const fitted = fitText(source, 20, false);
-    expect(source.startsWith(fitted)).toBe(true);
-    expect(fitted).toBe("I only have 45");
-  });
-
   it("never splits a character in two", () => {
     const fitted = fitText(`${"a".repeat(18)}💪💪💪`, 20);
     expect(fitted.length).toBeLessThanOrEqual(20);
@@ -1058,19 +1066,29 @@ describe("the coach writes no semicolons (owner, 17 Oct 2026)", () => {
     ]);
   });
 
-  it("leaves an excerpt of the owner's own note exactly as written", () => {
+  it("words a memory candidate like the rest of the coach's text", () => {
     const result = validateMemoryCandidates(
       [
         {
           memoryType: "constraint",
-          sourceExcerpt: "mornings only; never late",
+          content: "Trains in the morning; never late",
         },
       ],
       "I train mornings only; never late in the evening.",
     );
     expect(result).toMatchObject({
       outcome: "accepted",
-      candidates: [{ sourceExcerpt: "mornings only; never late" }],
+      candidates: [{ content: "Trains in the morning. Never late" }],
     });
+  });
+
+  it("cuts a memory candidate to fit instead of refusing it", () => {
+    const result = validateMemoryCandidates(
+      [{ memoryType: "preference", content: "Likes long runs ".repeat(20) }],
+      "I like long runs.",
+    );
+    if (result.outcome !== "accepted") throw new Error("expected acceptance");
+    expect(result.candidates[0]!.content.length).toBeLessThanOrEqual(200);
+    expect(result.candidates[0]!.content.endsWith("…")).toBe(true);
   });
 });

@@ -76,10 +76,12 @@ This feature is strategic direction, not a detailed training plan.
   with its proposal, and never produces a memory candidate. The prefilled
   planning note remains the only owner-text source for memory extraction.
 - A response may return at most four memory candidates. Each identifies a
-  memory type and an exact excerpt of at most 200 characters from the planning
-  note; that excerpt becomes the proposed memory text. The server rejects the
-  whole memory section if an excerpt is absent from the note, so feedback cannot
-  silently become memory. The roadmap section remains independently valid.
+  memory type and one sentence of at most 200 characters in the coach's own
+  words, drawn from the planning note alone; that sentence becomes the proposed
+  memory text. Until 18 October 2026 it had to be an exact excerpt of the note;
+  the owner gave that up (ADR-010 decision 16), so keeping feedback out of
+  memory is now the prompt's rule and the owner's review. The roadmap section
+  remains independently valid.
 - No pain, illness, injury, or severe-fatigue flag automatically blocks roadmap
   generation. A present flag requires the approved static non-diagnostic copy,
   conservative direction, at least one safety consideration, and a relevant
@@ -108,8 +110,8 @@ This feature is strategic direction, not a detailed training plan.
    no active roadmap.
 5. Extracted memory candidates are `inferred_proposed` / `proposed`, never enter
   coaching context before explicit review, and do not share a decision with
-  the roadmap. Every candidate is an exact bounded planning-note excerpt;
-  feedback-only text is rejected. Invalid or failed candidate persistence does
+  the roadmap. Every candidate is a bounded sentence drawn from the planning
+  note, and only a proposal with a note gets any. Invalid or failed candidate persistence does
   not invalidate a valid roadmap.
 6. Same-key retries do not make a second provider call or duplicate a proposal.
    Each regeneration has a new key, request, reservation, and charge; it carries

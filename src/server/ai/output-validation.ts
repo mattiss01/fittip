@@ -23,7 +23,7 @@ import {
 } from "@/server/ai/contracts";
 import { byteLength } from "@/server/ai/context";
 import {
-  MEMORY_EXCERPT_MAX_LENGTH,
+  MEMORY_CANDIDATE_MAX_LENGTH,
   normalizeOwnerText,
 } from "@/server/ai/owner-text";
 import {
@@ -912,13 +912,14 @@ type MemorySectionResult =
   | { outcome: "rejected"; reason: CoachAIRejectionReason };
 
 /**
- * Decision 4b and ADR-015 function 3.
+ * Decision 4b and ADR-015 function 3, as ADR-010 decision 16 now reads.
  *
- * A candidate carries no model-authored text. It names a memory type and an
- * exact excerpt of the planning note, and that excerpt becomes the proposed
- * memory content. The substring check is what makes "feedback never becomes
- * memory" mechanical rather than a rule someone has to remember: the feedback
- * is simply not part of the string being searched.
+ * A candidate is one sentence in the coach's own words (owner, 18 Oct 2026):
+ * the exact-excerpt rule meant suggestions almost never appeared. It still
+ * needs a planning note to exist, because the note is the only thing the
+ * coach is told to draw on, and it stays a proposal the owner decides on.
+ * Nothing here can prove the sentence came from the note rather than the
+ * feedback; the prompt says so and the owner's review is the check.
  *
  * One bad candidate rejects the whole batch, matching the database, so the
  * application and `record_roadmap_memory_candidates` never disagree about which
@@ -934,33 +935,25 @@ export function validateMemoryCandidates(
   if (!Array.isArray(value)) return rejected("schema");
   if (value.length === 0) return { outcome: "accepted", candidates: [] };
 
-  // With no planning note there is nothing a candidate could legitimately cite.
+  // With no planning note there is nothing a candidate could be drawn from.
   if (planningNote === null) return rejected("business_rule");
-  const normalizedNote = normalizeOwnerText(planningNote);
 
   // Past four, the first four are kept (owner, 17 Oct 2026).
   const candidates: RoadmapMemoryCandidate[] = [];
   for (const entry of value.slice(0, MAX_MEMORY_CANDIDATES)) {
     if (!isRecord(entry)) return rejected("schema");
-    if (
-      findUnknownField(entry, ["memoryType", "sourceExcerpt", "confidence"])
-    ) {
+    if (findUnknownField(entry, ["memoryType", "content", "confidence"])) {
       return rejected("unknown_field");
     }
     if (!isMemoryType(entry.memoryType)) return rejected("schema");
-    if (typeof entry.sourceExcerpt !== "string") return rejected("schema");
+    if (typeof entry.content !== "string") return rejected("schema");
 
-    // Cut without a mark: the start of an exact excerpt is still an exact
-    // excerpt, and a mark would make it one the note does not contain.
-    const excerpt = fitText(
-      normalizeOwnerText(entry.sourceExcerpt),
-      MEMORY_EXCERPT_MAX_LENGTH,
-      false,
+    // Normalized the way the database normalizes it, then cut to fit.
+    const content = readProse(
+      normalizeOwnerText(entry.content),
+      MEMORY_CANDIDATE_MAX_LENGTH,
     );
-    if (excerpt.length < 1) return rejected("business_rule");
-    if (!normalizedNote.includes(excerpt)) {
-      return rejected("business_rule");
-    }
+    if (content === null) return rejected("business_rule");
 
     let confidence: number | undefined;
     if (entry.confidence !== undefined && entry.confidence !== null) {
@@ -977,7 +970,7 @@ export function validateMemoryCandidates(
 
     candidates.push({
       memoryType: entry.memoryType,
-      sourceExcerpt: excerpt,
+      content,
       ...(confidence === undefined ? {} : { confidence }),
     });
   }
@@ -1356,8 +1349,8 @@ function readText(value: unknown, max: number): string | null {
 /**
  * "; " becomes ". " and the next word starts with a capital (owner, 17 Oct
  * 2026): the prompt forbids semicolons and the model still writes them. Only
- * the coach's own words come through here; an excerpt of the owner's note
- * never does, since it must stay exactly what they wrote.
+ * the coach's own words come through here, its memory candidates included;
+ * the owner's own text never does.
  */
 export function withoutSemicolons(value: string): string {
   return value.replace(
@@ -1383,11 +1376,10 @@ function readOptionalText(
 /**
  * At most `max` UTF-16 units, so at most `max` characters for the database's
  * `char_length` too. A sentence end in the last fifth is where it stops, so
- * little is lost; otherwise the last whole word, marked with "…" (unless
- * `mark` is false, for an excerpt that must stay an exact part of the
- * owner's note). A wider window could drop half a safety note.
+ * little is lost; otherwise the last whole word, marked with "…". A wider
+ * window could drop half a safety note.
  */
-export function fitText(value: string, max: number, mark = true): string {
+export function fitText(value: string, max: number): string {
   if (value.length <= max) return value;
 
   // Nothing but whitespace stays whitespace, so the blank checks still bite.
@@ -1400,7 +1392,7 @@ export function fitText(value: string, max: number, mark = true): string {
   for (const match of head.matchAll(SENTENCE_END)) sentenceEnd = match.index;
   if (sentenceEnd + 1 >= max * 0.8) return value.slice(0, sentenceEnd + 1);
 
-  const ellipsis = mark ? "…" : "";
+  const ellipsis = "…";
   let room = value.slice(0, max - ellipsis.length);
   // Never half a character: drop a high surrogate left without its pair.
   if (/[\uD800-\uDBFF]$/.test(room)) room = room.slice(0, -1);

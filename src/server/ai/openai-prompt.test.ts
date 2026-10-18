@@ -218,12 +218,15 @@ describe("the roadmap prompt", () => {
     expect(prefix).not.toContain("triggerCondition");
   });
 
-  it("asks for excerpts rather than paraphrases, and excludes feedback", () => {
+  it("has the coach word candidates from the note alone, never the feedback", () => {
     const prefix = coachAIStaticPrefix("create_roadmap");
 
-    expect(prefix).toContain("exact substring");
-    expect(prefix).toContain("do not paraphrase it");
+    expect(prefix).toContain("in your own words");
+    expect(prefix).toContain('Draw only on "planningNote"');
     expect(prefix).toContain("must never appear here");
+    expect(coachAIStaticPrefix("create_seven_day_plan")).toContain(
+      'drawn only from "planningNote"',
+    );
   });
 
   it("serializes the context compactly", () => {
