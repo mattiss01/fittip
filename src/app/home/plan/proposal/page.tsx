@@ -137,6 +137,11 @@ export default async function PlanProposalPage() {
                 proposalId={state.proposal.id}
                 regenerationFeedback={state.proposal.regenerationFeedback}
                 weekDescription={state.proposal.content.weekDescription}
+                safetyConsiderations={
+                  state.proposal.content.safetyConsiderations ?? []
+                }
+                assumptions={state.proposal.content.assumptions ?? []}
+                uncertainties={state.proposal.content.uncertainties ?? []}
                 // No proposed session; such a proposal has no items at all,
                 // since proposals offer only sessions (17 Oct 2026).
                 nothingAdded={state.proposal.items.every(
