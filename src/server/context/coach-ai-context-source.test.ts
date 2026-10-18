@@ -771,6 +771,27 @@ describe("the production coaching context source", () => {
     ]);
   });
 
+  it("sends a roadmap no cancelled session, whose prompt would count it as load", async () => {
+    getPlanSlice.mockResolvedValue({
+      planId: "44000000-0000-4000-8000-000000000001",
+      revision: 12,
+      sessions: [
+        planSession({
+          id: "66000000-0000-4000-8000-0000000000c1",
+          localDate: shift(TODAY, 5),
+          status: "cancelled",
+          cancelledAt: "2026-08-01T09:00:00.000Z",
+        }),
+      ],
+      recoveryDates: [],
+    });
+
+    const records = await source("create_roadmap").load(OWNER);
+
+    expect(records.training.plannedSessions).toEqual([]);
+    expect(createCancellationsMock).not.toHaveBeenCalled();
+  });
+
   it("reads no reason when nothing ahead is cancelled", async () => {
     await source("create_seven_day_plan").load(OWNER);
 

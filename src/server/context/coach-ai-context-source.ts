@@ -246,9 +246,11 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       (completion) => completion.actualLocalDate >= windowStartDate,
     );
 
-    // The reasons for sessions called off from today on, read only for an
-    // operation that sends them; a fill sends no commitments.
-    const cancelledAhead = fillsSession
+    // The reasons for sessions called off from today on, for the plan only:
+    // a fill sends no commitments, and the roadmap's prompt counts every
+    // commitment as planned load, which a called-off day is not.
+    const plansDays = this.#operation === "create_seven_day_plan";
+    const cancelledAhead = !plansDays
       ? []
       : planWindow.slice.sessions
           .filter(
@@ -294,7 +296,7 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
         .filter(
           (session) =>
             session.status === "active" ||
-            (!fillsSession && session.localDate >= today),
+            (plansDays && session.localDate >= today),
         )
         .map((session) =>
           toTrainingHistoryPlannedSession(
