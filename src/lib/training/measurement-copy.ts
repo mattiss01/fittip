@@ -77,13 +77,14 @@ export const PACE_UNIT_COPY: Record<PaceUnit, string> = {
 
 export const ACTIVITY_COPY = {
   /**
-   * The surface designs for ten a session, decided by the owner on 24 Sep
-   * 2026. The contract's own bound is fifty and stays there; this is the point
-   * at which the form stops offering to add another, not a second rule about
-   * what a session may hold.
+   * The surface designs for thirty a session: ten, decided by the owner on
+   * 24 Sep 2026, was raised on 19 Oct 2026. The contract's own bound is fifty
+   * and stays there; this is the point at which the form stops offering to add
+   * another, not a second rule about what a session may hold. It is said only
+   * once reached: the running count was removed the same day (owner).
    */
-  softLimit: 10,
-  atLimit: "Ten activities is as many as this form builds.",
+  softLimit: 30,
+  atLimit: "Thirty activities is as many as this form builds.",
   empty: "No activities yet. The session is just a heading until you add one.",
   add: "Add activity",
   addFromLibrary: "Add activity from library",
