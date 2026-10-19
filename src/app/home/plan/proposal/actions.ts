@@ -335,6 +335,11 @@ export async function regeneratePlanProposalAction(
           { localDate: session.localDate, title: session.title },
         ]),
       );
+      // Checked again with the names, still before anything is paid for:
+      // a title in a wide script can take the reduction past its bytes.
+      if (!previousPlanFits(source, replacedSessions)) {
+        return invalid(OUTCOMES.regenerationTooLarge, submission);
+      }
 
       const result = await generatePlanProposal(
         {

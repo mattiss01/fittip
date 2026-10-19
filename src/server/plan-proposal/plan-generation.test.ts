@@ -149,12 +149,25 @@ describe("previousPlanFits", () => {
       },
     }) as Parameters<typeof previousPlanFits>[0];
 
-  it("admits the largest plan in one-byte characters", () => {
-    expect(previousPlanFits(largest("t"))).toBe(true);
+  const names = (letter: string) =>
+    new Map(
+      Array.from({ length: 21 }, (_, index) => [
+        `replaced-${index}`,
+        { localDate: "2026-10-09", title: letter.repeat(120) },
+      ]),
+    );
+
+  it("admits the largest plan in one-byte characters, its replaced sessions named", () => {
+    expect(previousPlanFits(largest("t"), names("t"))).toBe(true);
   });
 
-  it("says no to the same plan in a three-byte script, before a review is closed over it", () => {
+  it("says no to the same plan in a three-byte script, before anything is paid for", () => {
     expect(previousPlanFits(largest("漢"))).toBe(false);
+  });
+
+  it("measures the names it will send: an ASCII plan whose replaced sessions are named in a wide script does not fit", () => {
+    expect(previousPlanFits(largest("t"))).toBe(true);
+    expect(previousPlanFits(largest("t"), names("漢"))).toBe(false);
   });
 });
 
@@ -169,9 +182,8 @@ describe("what the coach is sent back of a declined proposal (owner, 19 Oct 2026
     primaryGoalId: GOAL_ID,
     rationale: "Why the coach thought so.",
   });
-  const item = (
-    overrides: Partial<Parameters<typeof reducePreviousPlan>[0]["items"][0]>,
-  ) => ({
+  type Item = Parameters<typeof reducePreviousPlan>[0]["items"][number];
+  const item = (overrides: Partial<Item>): Item => ({
     kind: "session",
     decision: "proposed",
     contentIndex: null,

@@ -215,6 +215,64 @@ describe("regeneratePlanProposalAction", () => {
     });
   });
 
+  it("keeps offering a session the last answer was added beside, and not one it replaces", async () => {
+    listReplaceableSessions.mockResolvedValue([
+      { sessionId: KEPT_ID, handle: "r1" },
+      { sessionId: GONE_ID, handle: "r2" },
+    ]);
+    getProposal.mockResolvedValue({
+      ...openProposal(),
+      items: [
+        {
+          ordinal: 0,
+          kind: "session",
+          decision: "staged_beside",
+          replacesSessionId: KEPT_ID,
+        },
+        {
+          ordinal: 1,
+          kind: "session",
+          decision: "staged",
+          replacesSessionId: GONE_ID,
+        },
+      ],
+    });
+    getPlanSlice.mockResolvedValue({
+      revision: 5,
+      sessions: [
+        {
+          id: KEPT_ID,
+          status: "active",
+          localDate: "2026-10-20",
+          title: "Long run",
+        },
+        {
+          id: GONE_ID,
+          status: "active",
+          localDate: "2026-10-21",
+          title: "Intervals",
+        },
+      ],
+    });
+
+    await regenerate();
+
+    expect(generateMock.mock.calls[0][0].replaceableSessionIds).toEqual([
+      KEPT_ID,
+    ]);
+  });
+
+  it("refuses before asking when the named sessions take the last answer past its size", async () => {
+    previousPlanFitsMock.mockReturnValueOnce(true).mockReturnValueOnce(false);
+
+    const state = await regenerate();
+
+    expect(state).toMatchObject({
+      message: PLAN_PROPOSAL_COPY.outcomes.regenerationTooLarge,
+    });
+    expect(generateMock).not.toHaveBeenCalled();
+  });
+
   it("refuses a proposal too large to send back, while it is still open", async () => {
     previousPlanFitsMock.mockReturnValue(false);
 

@@ -10,6 +10,10 @@ import {
   type SevenDayPlanProposal,
 } from "@/server/ai/contracts";
 import { COACH_AI_CONTEXT_LIMITS } from "@/server/ai/context";
+import type {
+  PlanProposalItemDecision,
+  PlanProposalItemKind,
+} from "@/lib/plan/plan-proposal-view";
 import { CoachAIError } from "@/server/ai/errors";
 import type { CoachAIOwner } from "@/server/ai/owner";
 import { logMemoryCandidateFailure } from "@/server/proposal-logging/memory-candidate-batch";
@@ -323,20 +327,18 @@ async function recordMemoryCandidates(
  *
  * Asked before a review is closed. Assembly makes the same check, but it runs
  * after "ask again" has already finished the review, so a proposal too large
- * to send was found out only once it could no longer be reopened. Measured as
- * if every session it replaced were still on the plan under the longest title
- * a session may carry, so it never admits what assembly would then refuse.
+ * to send was found out only once it could no longer be reopened. Measured
+ * on the reduction the coach would receive, so pass the names of the owner's
+ * replaced sessions once they are known: "ask again" checks without them
+ * first, and again with them, both before anything is paid for.
  */
-export function previousPlanFits(proposal: PreviousProposal): boolean {
-  const longest = { localDate: "0000-00-00", title: "x".repeat(120) };
-  const worstCase = new Map(
-    proposal.items
-      .filter((item) => item.replacesSessionId !== null)
-      .map((item) => [item.replacesSessionId as string, longest]),
-  );
+export function previousPlanFits(
+  proposal: PreviousProposal,
+  replacedSessions?: ReadonlyMap<string, PlannedSessionName>,
+): boolean {
   return (
     new TextEncoder().encode(
-      JSON.stringify(reducePreviousPlan(proposal, worstCase)),
+      JSON.stringify(reducePreviousPlan(proposal, replacedSessions)),
     ).length <=
     COACH_AI_CONTEXT_LIMITS.create_seven_day_plan.bytes.previousProposal
   );
@@ -346,8 +348,8 @@ export function previousPlanFits(proposal: PreviousProposal): boolean {
 type PreviousProposal = {
   content: SevenDayPlanProposal;
   items: readonly {
-    kind: string;
-    decision: string;
+    kind: PlanProposalItemKind;
+    decision: PlanProposalItemDecision;
     contentIndex: number | null;
     localDate: string;
     title: string | null;
@@ -361,8 +363,9 @@ export type PlannedSessionName = { localDate: string; title: string };
 /**
  * Every decision the owner made on the proposal (owner, 19 Oct 2026), and
  * nothing of the coach's own reasoning. `replacedSessions` names the owner's
- * sessions a replacing item stood in for; one missing from it is no longer on
- * the plan and is left unnamed.
+ * sessions a replacing item stood in for, as "ask again" read them over the
+ * days it asks about; one missing from it (gone, or on a day behind those)
+ * is left unnamed.
  */
 export function reducePreviousPlan(
   proposal: PreviousProposal,
@@ -404,7 +407,7 @@ export function reducePreviousPlan(
 }
 
 function sessionDecision(
-  decision: string | undefined,
+  decision: PlanProposalItemDecision | undefined,
   replacing: boolean,
 ): PreviousPlanSessionDecision {
   if (decision === "staged") return replacing ? "replaced" : "accepted";
@@ -413,7 +416,9 @@ function sessionDecision(
   return "undecided";
 }
 
-function cancelDecision(decision: string): PreviousPlanCancelDecision {
+function cancelDecision(
+  decision: PlanProposalItemDecision,
+): PreviousPlanCancelDecision {
   if (decision === "staged") return "cancelled";
   if (decision === "rejected") return "kept";
   return "undecided";
