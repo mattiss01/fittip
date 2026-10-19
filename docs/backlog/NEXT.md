@@ -48,13 +48,6 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 **Coach and records.**
 
-- [~] **The coach's output ceiling is 11,500 tokens.** Owner, 19 Oct 2026: Sarah's live
-      roadmap (R4) came back empty twice, each charged 2,106 micro-USD, which is 3,000
-      output tokens exactly: `gpt-6-luna` reasons inside `max_completion_tokens`, and the
-      3,000 sized for 5.6 Luna left no room for the answer. All calls go to 11,500, the
-      most the database's 8,000 micro-USD per-request ceiling admits (no migration); the
-      daily ceiling admits 250 calls instead of 533. The coach's deadline goes 90 s to
-      180 s with it, inside the platform's 300 s. Unmeasured whether either is enough.
 - [ ] **A fill's sources are recorded and never checked.** A suggestion names the
       logs, library entries and saved sessions it was built from, and since ADR-023
       the logs whose flags it was sent. Nothing compares them, so a flag corrected
