@@ -8,7 +8,6 @@ import {
   useCallback,
   useEffect,
   useId,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -46,6 +45,7 @@ import { SessionFields } from "../../session-fields";
 import {
   draftOf,
   planDayHref,
+  sessionEditHref,
   sessionHref,
   stampDate,
   type PlanSessionView,
@@ -62,11 +62,10 @@ import { describeMeasurement } from "@/lib/training/describe-measurement";
 
 export type SessionPageOrigin = "plan" | "today";
 
-type Panel = "edit" | "duplicate" | "save" | "cancel" | "delete" | "reason";
+type Panel = "duplicate" | "save" | "cancel" | "delete" | "reason";
 type Channel = "plan" | "series";
 
 const PANEL_HEADINGS: Record<Panel, string> = {
-  edit: "Edit session",
   duplicate: "Duplicate",
   save: "Save to library",
   reason: "Why it was cancelled",
@@ -96,7 +95,13 @@ export function SessionPage({
   cancellation = null,
   coachCancellation = null,
   standsInFor = null,
+  editing = false,
 }: {
+  /**
+   * The session's edit page (owner, 19 Oct 2026): the form on a page of its
+   * own, which goes back to the session once saved.
+   */
+  editing?: boolean;
   session: PlanSessionView | null;
   series?: PlanSeriesView;
   today: string;
@@ -159,9 +164,11 @@ export function SessionPage({
   // submission it answered, as the Plan's edit disclosure did: an effect would
   // cost a render and could close a panel the owner has since reopened.
   const [settled, setSettled] = useState({ plan: 0, series: 0 });
+  const [saved, setSaved] = useState(false);
   if (state.status === "saved" && state.submission !== settled.plan) {
     setSettled((current) => ({ ...current, plan: state.submission }));
     setPanel(null);
+    if (editing) setSaved(true);
   }
   if (
     seriesState.status === "saved" &&
@@ -172,6 +179,7 @@ export function SessionPage({
       series: seriesState.submission,
     }));
     setPanel(null);
+    if (editing) setSaved(true);
   }
 
   // The day to return to once this session is gone. Kept from the last read
@@ -328,9 +336,19 @@ export function SessionPage({
     startTransition(() => planAction(formData));
   };
 
+  // The session as opened, and its edit page, which keeps the same way back.
+  const opened =
+    origin === "today"
+      ? { from: "today" as const, date: originDate ?? session.localDate }
+      : past
+        ? { date: session.localDate }
+        : null;
+  const viewHref = sessionHref(session.id, opened);
+  const editHref = sessionEditHref(session.id, opened);
+
   // The page's one status line. While a pop-up is open it is said there,
   // where the owner is looking; the page behind is inert.
-  const inDialog = panel !== null && panel !== "edit";
+  const inDialog = panel !== null;
   const status = (
     <p
       className={quiet ? styles.srOnly : styles.notice}
@@ -341,6 +359,84 @@ export function SessionPage({
       {notice}
     </p>
   );
+
+  // Only a session the plan may still change has an edit page; any other
+  // opened there is shown as it is.
+  if (editing && plannable) {
+    return (
+      <>
+        <SavedLeave saved={saved} href={viewHref} />
+        <Link className={page.back} href={viewHref} data-back-link>
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
+          {session.title}
+        </Link>
+        {status}
+        <section className={page.panel} data-session-panel="Edit session">
+          <h1 className={page.editTitle}>Edit session</h1>
+          {recurring === null ? (
+            <form
+              className={styles.form}
+              action={planAction}
+              key={`edit-${state.submission}`}
+            >
+              <input type="hidden" name="operation" value="edit" />
+              <input type="hidden" name="sessionId" value={session.id} />
+              <input
+                type="hidden"
+                name="expectedRevision"
+                value={expectedRevision}
+              />
+              <SessionFields
+                idPrefix={`edit-${session.id}`}
+                draft={
+                  state.operation === "edit" && state.draft
+                    ? state.draft
+                    : draftOf(session)
+                }
+                activities={session.activities}
+                fill={{ sessionId: session.id, open: session.openFill }}
+                dateField={
+                  <PlanDateInput
+                    label="Date"
+                    range={dateRange}
+                    defaultValue={session.localDate}
+                  />
+                }
+              />
+              <button className={styles.primary} type="submit" disabled={busy}>
+                Save session
+              </button>
+            </form>
+          ) : (
+            <RecurringSessionControls
+              mode="edit"
+              today={today}
+              session={recurringView}
+              series={recurring.series}
+              expectedRevision={expectedRevision}
+              planAction={planAction}
+              planPending={pending}
+              seriesAction={trackedSeriesAction}
+              seriesPending={seriesPending}
+            />
+          )}
+        </section>
+      </>
+    );
+  }
 
   return (
     <>
@@ -466,15 +562,9 @@ export function SessionPage({
 
         <div className={page.actions} data-session-actions>
           {plannable ? (
-            <button
-              className={page.main}
-              type="button"
-              aria-expanded={panel === "edit"}
-              onClick={() => setPanel(panel === "edit" ? null : "edit")}
-              disabled={busy}
-            >
+            <Link className={page.main} href={editHref}>
               Edit
-            </button>
+            </Link>
           ) : cancelled && !past ? (
             <button
               className={page.main}
@@ -585,64 +675,9 @@ export function SessionPage({
         </div>
       </article>
 
-      {panel === "edit" ? (
-        <ActionPanel
-          heading={PANEL_HEADINGS[panel]}
-          onClose={() => setPanel(null)}
-        >
-          {recurring === null ? (
-            <form
-              className={styles.form}
-              action={planAction}
-              key={`edit-${state.submission}`}
-            >
-              <input type="hidden" name="operation" value="edit" />
-              <input type="hidden" name="sessionId" value={session.id} />
-              <input
-                type="hidden"
-                name="expectedRevision"
-                value={expectedRevision}
-              />
-              <SessionFields
-                idPrefix={`edit-${session.id}`}
-                draft={
-                  state.operation === "edit" && state.draft
-                    ? state.draft
-                    : draftOf(session)
-                }
-                activities={session.activities}
-                fill={{ sessionId: session.id, open: session.openFill }}
-                dateField={
-                  <PlanDateInput
-                    label="Date"
-                    range={dateRange}
-                    defaultValue={session.localDate}
-                  />
-                }
-              />
-              <button className={styles.primary} type="submit" disabled={busy}>
-                Save session
-              </button>
-            </form>
-          ) : (
-            <RecurringSessionControls
-              mode="edit"
-              today={today}
-              session={recurringView}
-              series={recurring.series}
-              expectedRevision={expectedRevision}
-              planAction={planAction}
-              planPending={pending}
-              seriesAction={trackedSeriesAction}
-              seriesPending={seriesPending}
-            />
-          )}
-        </ActionPanel>
-      ) : null}
-
       {/* Everything ⋯ offers is a pop-up over the page, short and to the
-          point (owner, 19 Oct 2026); only Edit opens below the session. */}
-      {panel === null || panel === "edit" ? null : (
+          point (owner, 19 Oct 2026); Edit has a page of its own. */}
+      {panel === null ? null : (
         <ActionDialog
           heading={PANEL_HEADINGS[panel]}
           onClose={() => setPanel(null)}
@@ -857,40 +892,11 @@ function ActionDialog({
   );
 }
 
-/**
- * The panel a verb opens below the session. Its heading takes focus when it
- * opens, so a screen reader and a keyboard both land where the choice is.
- */
-function ActionPanel({
-  heading,
-  onClose,
-  children,
-}: {
-  heading: string;
-  onClose: () => void;
-  children: ReactNode;
-}) {
-  const headingRef = useRef<HTMLHeadingElement>(null);
-  const headingId = useId();
+/** Goes back to the session once its edit is saved. */
+function SavedLeave({ saved, href }: { saved: boolean; href: string }) {
+  const router = useRouter();
   useEffect(() => {
-    headingRef.current?.focus();
-  }, [heading]);
-
-  return (
-    <section
-      className={page.panel}
-      aria-labelledby={headingId}
-      data-session-panel={heading}
-    >
-      <div className={page.panelHead}>
-        <h2 id={headingId} ref={headingRef} tabIndex={-1}>
-          {heading}
-        </h2>
-        <button className={page.close} type="button" onClick={onClose}>
-          Close
-        </button>
-      </div>
-      {children}
-    </section>
-  );
+    if (saved) router.replace(href);
+  }, [saved, href, router]);
+  return null;
 }

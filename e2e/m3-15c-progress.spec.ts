@@ -196,7 +196,7 @@ test.describe("M3-15C progress", () => {
           .getByRole("link", { name: "Edit log" }),
       ).toBeVisible();
       await expect(
-        page.getByRole("button", { name: "Edit", exact: true }),
+        page.getByRole("link", { name: "Edit", exact: true }),
       ).toHaveCount(0);
 
       await page.goto(recordUrl);

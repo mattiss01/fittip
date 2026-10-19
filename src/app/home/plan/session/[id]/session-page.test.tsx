@@ -103,6 +103,11 @@ function series(overrides: Partial<PlanSeriesView> = {}): PlanSeriesView {
   };
 }
 
+/** The session's edit page (owner, 19 Oct 2026). */
+function editPage(value: PlanSessionView | null, segment?: PlanSeriesView) {
+  return page(value, segment, "plan", null, {}, true);
+}
+
 function occurrence(overrides: Partial<PlanSessionView> = {}) {
   return session({ seriesId: SERIES_ID, occurrenceDate: TODAY, ...overrides });
 }
@@ -116,9 +121,11 @@ function page(
     coachCancellation?: CoachCancellationView | null;
     standsInFor?: StandsInForView | null;
   } = {},
+  editing = false,
 ) {
   return (
     <SessionPage
+      editing={editing}
       session={value}
       series={segment}
       today={TODAY}
@@ -168,9 +175,12 @@ describe("SessionPage", () => {
       "href",
       `/home/plan?day=${TODAY}#plan-day-${TODAY}`,
     );
-    // Nothing edits until Edit is chosen.
+    // Nothing edits here: Edit is a page of its own (owner, 19 Oct 2026).
     expect(document.querySelector("form")).toBeNull();
-    expect(screen.getByRole("button", { name: "Edit" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Edit" })).toHaveAttribute(
+      "href",
+      `/home/plan/session/${session().id}/edit`,
+    );
 
     const more = screen.getByRole("button", { name: "More actions" });
     expect(more).toHaveAttribute("aria-expanded", "false");
@@ -208,9 +218,15 @@ describe("SessionPage", () => {
     );
   });
 
-  it("asks for the date on the edit form, and closes it once the save lands", () => {
-    const { rerender } = render(page(session()));
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  it("asks for the date on the edit page, and goes back once the save lands", () => {
+    const { rerender } = render(editPage(session()));
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Edit session" }),
+    ).toBeVisible();
+    expect(screen.getByRole("link", { name: /Aerobic run/ })).toHaveAttribute(
+      "href",
+      `/home/plan/session/${session().id}`,
+    );
 
     // One date field, sent as one date.
     const date = screen.getByLabelText("Date");
@@ -227,8 +243,9 @@ describe("SessionPage", () => {
       operation: "edit",
       sessionId: session().id,
     };
-    rerender(page(session()));
+    rerender(editPage(session()));
     expect(screen.getByRole("button", { name: "Save session" })).toBeVisible();
+    expect(replaceMock).not.toHaveBeenCalled();
 
     planState = {
       status: "saved",
@@ -237,12 +254,10 @@ describe("SessionPage", () => {
       operation: "edit",
       sessionId: session().id,
     };
-    rerender(page(session({ title: "Long run" })));
-    expect(screen.queryByRole("button", { name: "Save session" })).toBeNull();
-    expect(screen.getByRole("status")).toHaveTextContent("Session updated.");
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Long run" }),
-    ).toBeVisible();
+    rerender(editPage(session({ title: "Long run" })));
+    expect(replaceMock).toHaveBeenCalledWith(
+      `/home/plan/session/${session().id}`,
+    );
   });
 
   it("offers a copy on any date a single session may sit on", () => {
@@ -453,8 +468,7 @@ describe("SessionPage", () => {
   });
 
   it("calls a this-and-future edit that replaced the occurrence a save", () => {
-    const { rerender } = render(page(occurrence(), series()));
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    const { rerender } = render(editPage(occurrence(), series()));
     act(() => {
       fireEvent.click(
         screen.getByRole("button", { name: "Change this and future sessions" }),
@@ -467,7 +481,7 @@ describe("SessionPage", () => {
       operation: "edit_series",
       sessionId: session().id,
     };
-    rerender(page(null));
+    rerender(editPage(null));
 
     expect(screen.getByText("Change saved")).toBeVisible();
     expect(screen.queryByText("Session removed")).toBeNull();
@@ -485,27 +499,24 @@ describe("SessionPage", () => {
   });
 
   it("edits a recurring session in one form whose two buttons choose the scope", async () => {
-    render(
-      page(
-        occurrence({
-          hasDiverged: true,
-          activities: [
-            {
-              personalActivityId: null,
-              name: "Strides",
-              sport: "Running",
-              instructions: null,
-              measurementMode: "unmeasured",
-              target: null,
-            },
-          ],
-        }),
-        series(),
-      ),
-    );
+    const diverged = occurrence({
+      hasDiverged: true,
+      activities: [
+        {
+          personalActivityId: null,
+          name: "Strides",
+          sport: "Running",
+          instructions: null,
+          measurementMode: "unmeasured",
+          target: null,
+        },
+      ],
+    });
+    render(page(diverged, series()));
     expect(screen.getByText("Recurring")).toBeVisible();
     expect(screen.getByText("Changed")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    cleanup();
+    render(editPage(diverged, series()));
 
     const only = screen.getByRole("button", {
       name: "Change only this session",

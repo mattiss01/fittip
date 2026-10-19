@@ -49,7 +49,15 @@ describe("the cancellation reason", () => {
     expect(importing.sort()).toEqual(
       [
         join(SRC, "app", "home", "plan", "cancellation-actions.ts"),
-        join(SRC, "app", "home", "plan", "session", "[id]", "page.tsx"),
+        join(
+          SRC,
+          "app",
+          "home",
+          "plan",
+          "session",
+          "[id]",
+          "session-route.tsx",
+        ),
         join(SRC, "server", "context", "coach-ai-context-source.ts"),
       ].sort(),
     );
