@@ -176,6 +176,51 @@ describe("PlanManager", () => {
     Reflect.deleteProperty(document, "elementFromPoint");
   });
 
+  // Owner, 19 Oct 2026: a card swiped left offers Cancel and Delete.
+  it("swipes a card open to cancel it, or to delete it after asking", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [session()]);
+    const card = day(TODAY).querySelector<HTMLElement>("[data-session-card]")!;
+    // At rest a card carries no verbs.
+    expect(within(card).queryByRole("button")).toBeNull();
+
+    const swipeLeft = () => {
+      fireEvent.touchStart(card, { touches: [{ clientX: 300, clientY: 10 }] });
+      fireEvent.touchMove(card, { touches: [{ clientX: 120, clientY: 14 }] });
+      fireEvent.touchEnd(card, { touches: [] });
+    };
+    swipeLeft();
+    expect(card.getAttribute("data-swiped")).toBe("true");
+    fireEvent.click(within(card).getByRole("button", { name: "Cancel" }));
+    expect(Object.fromEntries(action.mock.calls[0][0] as FormData)).toEqual({
+      operation: "cancel",
+      sessionId: session().id,
+      expectedRevision: "3",
+    });
+    expect(card.getAttribute("data-swiped")).toBeNull();
+
+    swipeLeft();
+    fireEvent.click(within(card).getByRole("button", { name: "Delete" }));
+    // Asked first: a delete keeps nothing.
+    expect(action).toHaveBeenCalledOnce();
+    const ask = screen.getByRole("dialog", { name: "Delete Aerobic run?" });
+    fireEvent.click(within(ask).getByRole("button", { name: "Delete" }));
+    expect(Object.fromEntries(action.mock.calls[1][0] as FormData)).toEqual({
+      operation: "delete",
+      sessionId: session().id,
+      expectedRevision: "3",
+    });
+  });
+
+  it("leaves a mostly vertical move to the scroll", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [session()]);
+    const card = day(TODAY).querySelector<HTMLElement>("[data-session-card]")!;
+    fireEvent.touchStart(card, { touches: [{ clientX: 200, clientY: 10 }] });
+    fireEvent.touchMove(card, { touches: [{ clientX: 170, clientY: 120 }] });
+    fireEvent.touchEnd(card, { touches: [] });
+    expect(card.getAttribute("data-swiped")).toBeNull();
+    expect(within(card).queryByRole("button")).toBeNull();
+  });
+
   it("offers no drag on a logged session", () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [
       session({

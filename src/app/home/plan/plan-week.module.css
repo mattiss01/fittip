@@ -892,3 +892,88 @@ span.arrow {
   pointer-events: none;
   transform: translate(-50%, calc(-100% - 0.75rem));
 }
+
+/* ---- Swiping a card open to Cancel and Delete (owner, 19 Oct 2026) ---- */
+
+.card {
+  touch-action: pan-y;
+  transition: transform 180ms var(--ease-out);
+}
+
+.card[data-swiping] {
+  transition: none;
+}
+
+/* In the room the card slid out of, so they move with it. */
+.swipeActions {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  left: calc(100% + 0.4rem);
+  display: flex;
+  gap: 0.35rem;
+}
+
+.swipeCancel,
+.swipeDelete {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0 0.5rem;
+  border: 0;
+  border-radius: 0.85rem;
+  font: 700 0.85rem var(--font-sans);
+}
+
+.swipeCancel {
+  background: var(--fern);
+  color: var(--pine);
+}
+
+.swipeDelete {
+  background: var(--danger);
+  color: var(--paper);
+}
+
+/* Confirming a delete from a swipe: a short question in the middle. */
+.confirm {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.confirm h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  overflow-wrap: anywhere;
+}
+
+.confirm p {
+  margin: 0;
+  color: var(--moss);
+}
+
+.confirmDanger,
+.confirmKeep {
+  min-height: 2.9rem;
+  margin: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  font: 700 0.95rem var(--font-sans);
+}
+
+.confirmDanger {
+  background: var(--danger);
+  color: var(--paper);
+}
+
+.confirmKeep {
+  background: var(--sage);
+  color: var(--pine);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+}

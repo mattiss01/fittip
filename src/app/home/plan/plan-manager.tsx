@@ -18,6 +18,7 @@ import {
 } from "./action-state";
 import { changePlanAction } from "./actions";
 import { usePlanDrag, type PlanDragSession } from "./plan-drag";
+import { SWIPE_OPEN_PX, useSwipe } from "./plan-swipe";
 import { COMPLETION_OUTCOME_LABELS } from "../log/log-action-state";
 import { CreateSession, SkippedDates } from "./create-session";
 import { MonthSheet } from "./plan-month-sheet";
@@ -178,6 +179,30 @@ export function PlanManager({
     : state.conflict === "stale" ||
       state.conflict === "timezone" ||
       stall === "unconfirmed";
+
+  // A card swiped open to Cancel and Delete (owner, 19 Oct 2026): one at a
+  // time, and the session whose delete waits to be confirmed.
+  const [swiped, setSwiped] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<PlanSessionView | null>(null);
+  const sendSessionChange = (operation: "cancel" | "delete", id: string) => {
+    const formData = new FormData();
+    formData.set("operation", operation);
+    formData.set("sessionId", id);
+    formData.set("expectedRevision", String(expectedRevision));
+    setSwiped(null);
+    startTransition(() => trackedPlanAction(formData));
+  };
+  const swipe = {
+    openId: swiped,
+    enabled: !(pending || seriesPending),
+    onOpen: setSwiped,
+    onClose: () => setSwiped(null),
+    onCancel: (id: string) => sendSessionChange("cancel", id),
+    onDelete: (session: PlanSessionView) => {
+      setSwiped(null);
+      setDeleting(session);
+    },
+  };
 
   // Dropping a card on another day moves it there (owner, 19 Oct 2026).
   const drag = usePlanDrag((sessionId, localDate) => {
@@ -366,6 +391,7 @@ export function PlanManager({
                 sessions={onDate(day.date)}
                 tones={tones}
                 dropTarget={drag.overDate === day.date}
+                swipe={swipe}
                 dragHandle={pending || seriesPending ? null : drag.handle}
                 onAdd={() => {
                   setSheetSince(state.submission);
@@ -377,6 +403,35 @@ export function PlanManager({
         </Slide>
       </section>
       {drag.ghost}
+      {deleting === null ? null : (
+        <SheetLayer
+          view="plan-swipe-delete"
+          placement="center"
+          labelledBy="plan-swipe-delete-title"
+          onClose={() => setDeleting(null)}
+        >
+          <div className={w.confirm}>
+            <h2 id="plan-swipe-delete-title">Delete {deleting.title}?</h2>
+            <p>
+              {deleting.seriesId === null
+                ? "Gone for good. There is no undo."
+                : "Only this session, gone for good. Its series stays."}
+            </p>
+            <button
+              type="button"
+              className={w.confirmDanger}
+              onClick={() => {
+                const id = deleting.id;
+                setDeleting(null);
+                sendSessionChange("delete", id);
+              }}
+            >
+              Delete
+            </button>
+            <SheetCloseButton className={w.confirmKeep}>Keep</SheetCloseButton>
+          </div>
+        </SheetLayer>
+      )}
 
       <nav className={w.tiles} aria-label="Weeks" ref={tilesRef}>
         {weeks.map((candidate, index) => (
@@ -569,8 +624,11 @@ function PlanDay({
   tones,
   dropTarget,
   dragHandle,
+  swipe,
   onAdd,
 }: {
+  /** Swiping a card open to Cancel and Delete, shared by every day. */
+  swipe: SwipeControls;
   /** A lifted card is over this day, and letting go moves it here. */
   dropTarget: boolean;
   /** Makes a card draggable; none while a change is saving. */
@@ -638,6 +696,7 @@ function PlanDay({
                         localDate: session.localDate,
                       })
                 }
+                swipe={day.past || session.log ? null : swipe}
               />
             ))}
             {cancelled.map((session) => (
@@ -646,6 +705,7 @@ function PlanDay({
                 session={session}
                 past={day.past}
                 tone={tones.get(sportKey(session.sport)) ?? 0}
+                swipe={day.past ? null : swipe}
               />
             ))}
           </ol>
@@ -677,9 +737,12 @@ function PlanSessionCard({
   past,
   tone,
   drag = null,
+  swipe = null,
 }: {
   /** What makes the card draggable to another day, where it may move. */
   drag?: object | null;
+  /** Swiping it open to Cancel and Delete; none in the past or once logged. */
+  swipe?: SwipeControls | null;
   session: PlanSessionView;
   /** Before today: the session's page finds it by its day, not the window. */
   past: boolean;
@@ -687,6 +750,13 @@ function PlanSessionCard({
 }) {
   const loggedElsewhere = readsAsLogged(session);
   const cancelled = session.status === "cancelled" && !session.log;
+  const open = swipe?.openId === session.id;
+  const { offset, moving, handlers } = useSwipe({
+    enabled: swipe !== null && swipe.enabled,
+    open,
+    onOpen: () => swipe?.onOpen(session.id),
+    onClose: () => swipe?.onClose(),
+  });
   return (
     <li
       className={w.card}
@@ -694,7 +764,26 @@ function PlanSessionCard({
       data-cancelled={cancelled || undefined}
       data-logged={loggedElsewhere || undefined}
       data-session-card={cancelled || loggedElsewhere ? undefined : true}
+      data-swiped={open || undefined}
+      data-swiping={moving || undefined}
+      style={
+        offset === 0 ? undefined : { transform: `translateX(${offset}px)` }
+      }
       {...drag}
+      {...handlers}
+      // Open, a tap on the card closes it rather than opening the session.
+      onClickCapture={
+        open
+          ? (event) => {
+              if ((event.target as Element).closest("[data-swipe-actions]")) {
+                return;
+              }
+              event.preventDefault();
+              event.stopPropagation();
+              swipe?.onClose();
+            }
+          : undefined
+      }
     >
       <h3 className={w.cardTitle}>
         <Link
@@ -716,9 +805,43 @@ function PlanSessionCard({
         )}
         {cardDetail(session, cancelled)}
       </span>
+      {swipe !== null && (open || moving) ? (
+        <div
+          className={w.swipeActions}
+          style={{ width: SWIPE_OPEN_PX }}
+          data-swipe-actions
+        >
+          {cancelled ? null : (
+            <button
+              type="button"
+              className={w.swipeCancel}
+              onClick={() => swipe.onCancel(session.id)}
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            type="button"
+            className={w.swipeDelete}
+            onClick={() => swipe.onDelete(session)}
+          >
+            Delete
+          </button>
+        </div>
+      ) : null}
     </li>
   );
 }
+
+/** What a day's cards share for swiping one open (owner, 19 Oct 2026). */
+type SwipeControls = {
+  openId: string | null;
+  enabled: boolean;
+  onOpen: (sessionId: string) => void;
+  onClose: () => void;
+  onCancel: (sessionId: string) => void;
+  onDelete: (session: PlanSessionView) => void;
+};
 
 function cardDetail(session: PlanSessionView, cancelled: boolean): string {
   if (cancelled) return "Cancelled";
