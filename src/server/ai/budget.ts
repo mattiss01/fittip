@@ -58,7 +58,7 @@ export const COACH_AI_FIXTURE_LIMITS: CoachAILimits = {
  * The approved live caps (M3-01B decision 4, 10 August 2026), sized against
  * `gpt-5.6-luna`'s measured behaviour rather than against a guess.
  *
- * `maxOutputTokens` was 3,000 (8,000 since 19 October 2026, below) for a
+ * `maxOutputTokens` was 3,000 (11,500 since 19 October 2026, below) for a
  * forward-looking reason rather than a
  * measured one: luna peaked at 1,513, but M3-03 adds a coach-authored week
  * description to the plan schema, and a ceiling that fits today's schema but
@@ -107,15 +107,14 @@ export const COACH_AI_FIXTURE_LIMITS: CoachAILimits = {
  * deadline were sized against 5.6 Luna; the deadline went to 90 s after the
  * first live "ask again" took over 30 s.
  *
- * The output ceiling went from 3,000 to 8,000 on 19 October 2026 (owner):
+ * The output ceiling went from 3,000 to 11,500 on 19 October 2026 (owner):
  * `gpt-6-luna` reasons inside `max_completion_tokens`, and Sarah's roadmap
- * came back empty twice, each charged for exactly 3,000 output tokens. 8,000
- * is the owner's choice, not the arithmetic limit: up to 11,500 would still
- * fit the database's 8,000 micro-USD per-request ceiling. A reservation is
- * 6,250, the daily ceiling admits 320 generations, and a call that times out
- * is charged that whole 6,250. Whether
- * it is enough is still unmeasured; a roadmap charged about 4,750 would say
- * it is not.
+ * came back empty twice, each charged for exactly 3,000 output tokens. 11,500
+ * is the most the database's 8,000 micro-USD per-request ceiling admits: a
+ * reservation is exactly 8,000 (18,000 x 0.125 + 11,500 x 0.5), the daily
+ * ceiling admits 250 generations, and a call that times out is charged that
+ * whole 8,000. Room is not a guarantee; whether the model ever needs more,
+ * or more than the 90 s deadline to write it, is still unmeasured.
  *
  * These numbers are the local fast path. The authoritative ceilings are the
  * database's, in `reserve_ai_spend`, because this process cannot be trusted to
@@ -129,7 +128,7 @@ export const COACH_AI_LIVE_LIMITS: CoachAILimits = {
   maxRequestsPerOperationWindow: 3,
   maxConcurrentRequests: 1,
   maxInputTokens: 18_000,
-  maxOutputTokens: 8_000,
+  maxOutputTokens: 11_500,
   // 90 s since 17 Oct 2026 (owner). 30 s was sized against 5.6 Luna; on 6
   // Luna a plan took 17 s and an "ask again" over 30 s, which timed out and
   // was charged its whole reservation. Waiting longer costs nothing more.

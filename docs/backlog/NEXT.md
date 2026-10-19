@@ -23,7 +23,7 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 - [ ] **A7-5 — Size the fill before its first live run.** Measure output tokens on a
       twelve-activity answer: the grammar pads each target with fourteen nullable keys
-      against an 8,000-token ceiling. Needs a provider key, so it waits for one; each run
+      against an 11,500-token ceiling. Needs a provider key, so it waits for one; each run
       is paid and needs the owner's approval of the call count.
 - [ ] **A9 — Progress over measurements.** Load, distance and pace across completions, once
       A4 has been used for long enough to have any. The comfort layer; last on purpose.
@@ -48,13 +48,13 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 **Coach and records.**
 
-- [~] **The coach's output ceiling is 8,000 tokens.** Owner, 19 Oct 2026: Sarah's live
+- [~] **The coach's output ceiling is 11,500 tokens.** Owner, 19 Oct 2026: Sarah's live
       roadmap (R4) came back empty twice, each charged 2,106 micro-USD, which is 3,000
       output tokens exactly: `gpt-6-luna` reasons inside `max_completion_tokens`, and the
-      3,000 sized for 5.6 Luna left no room for the answer. All calls go to 8,000; a
-      reservation becomes 6,250 micro-USD, under the database's 8,000 per-request
-      ceiling (no migration), and the daily ceiling admits 320 calls instead of 533.
-      Unmeasured whether 8,000 is enough; a roadmap charged about 4,750 would say not.
+      3,000 sized for 5.6 Luna left no room for the answer. All calls go to 11,500, the
+      most the database's 8,000 micro-USD per-request ceiling admits (no migration); the
+      daily ceiling admits 250 calls instead of 533. Unmeasured whether it is enough, or
+      whether 90 s is long enough to write it.
 - [ ] **A fill's sources are recorded and never checked.** A suggestion names the
       logs, library entries and saved sessions it was built from, and since ADR-023
       the logs whose flags it was sent. Nothing compares them, so a flag corrected

@@ -268,7 +268,7 @@ describe("the approved live caps", () => {
       rateCard: requireApprovedCoachAIModel("openai", "gpt-6-luna").rateCard,
     });
 
-    // 18,000 input at $0.125/M plus 8,000 output at $0.50/M (`gpt-6-luna`,
+    // 18,000 input at $0.125/M plus 11,500 output at $0.50/M (`gpt-6-luna`,
     // input at its cache-write rate). The per-request ceiling is 8,000, so the
     // reservation clears it with headroom — the fixture ceiling of 250,000 would have admitted a request costing 45 times
     // what a real proposal costs, which is not a ceiling.
@@ -281,16 +281,17 @@ describe("the approved live caps", () => {
     // ADR-028: a change request sends the whole roadmap) it admitted 277. All
     // of those were at `gpt-5.6-luna`'s $0.20 / $1.20; on 17 October 2026 the
     // model became `gpt-6-luna` and a reservation 3,750, which admits 533;
-    // on 19 October 2026 the output ceiling went to 8,000 (a reasoning model
-    // spent all 3,000 thinking), and a reservation is 6,250, which admits 320.
-    expect(reservation.reservedMicroUsd).toBe(6_250);
+    // on 19 October 2026 the output ceiling went to 11,500 (a reasoning model
+    // spent all 3,000 thinking), and a reservation is exactly the 8,000
+    // per-request ceiling, which admits 250.
+    expect(reservation.reservedMicroUsd).toBe(8_000);
     expect(COACH_AI_LIVE_LIMITS.perRequestCostCeilingMicroUsd).toBe(8_000);
     expect(
       Math.floor(
         COACH_AI_LIVE_LIMITS.dailyCostCeilingMicroUsd /
           reservation.reservedMicroUsd,
       ),
-    ).toBe(320);
+    ).toBe(250);
   });
 
   it("permits no automatic retry", () => {
