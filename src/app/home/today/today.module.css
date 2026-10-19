@@ -226,14 +226,26 @@
   box-shadow: var(--shadow-card);
 }
 
+/* Cancelled (owner, 19 Oct 2026): a small dashed box, set apart from the
+   sessions still to do, its title struck through. */
 .session[data-cancelled="true"] {
-  background: var(--ledger-wash);
+  gap: 0.4rem;
+  padding: 0.75rem 0.95rem;
+  border: 1.5px dashed var(--line);
+  background: transparent;
   box-shadow: none;
 }
 
-/* An activity's box is the wash colour, so on a washed card it takes paper. */
-.session[data-cancelled="true"] [data-activity-list] li {
-  background: var(--ledger-paper);
+.session[data-cancelled="true"] .sessionHead h4 {
+  color: var(--ledger-muted);
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
+.session[data-cancelled="true"] .summary {
+  font-size: 0.85rem;
 }
 
 .summary {

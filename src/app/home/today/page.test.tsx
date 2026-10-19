@@ -391,6 +391,11 @@ describe("Today", () => {
     expect(
       within(unlogged).getByText("Cancelled, kept on the record"),
     ).toBeTruthy();
+    // Small (owner, 19 Oct 2026): nothing to log and no planned list.
+    expect(
+      within(unlogged).queryByRole("link", { name: /Log this session/ }),
+    ).toBeNull();
+    expect(unlogged.querySelector("[data-activity-list]")).toBeNull();
   });
 
   it("leaves out a session the coach's replacement stands in for (ADR-033)", async () => {
