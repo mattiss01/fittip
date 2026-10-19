@@ -252,11 +252,15 @@ export async function generateRoadmapProposal(
   );
   // ADR-034. A change request may still state a new objective ("a half
   // marathon in spring"), which is exactly a goal, so it is not excluded.
-  await recordGoalSuggestion(
-    "roadmap",
-    claim.completionToken,
-    outcome.goalSuggestion,
-  );
+  // Not on "ask again", as on the plan: the first answer to a note made any
+  // suggestion it holds.
+  if (input.previousProposalId === null) {
+    await recordGoalSuggestion(
+      "roadmap",
+      claim.completionToken,
+      outcome.goalSuggestion,
+    );
+  }
   return { status: "proposal", proposalId, memoryCandidateCount };
 }
 

@@ -305,6 +305,7 @@ declare
   v_suggestion public.goal_suggestions;
   v_receipt public.goal_change_receipt;
   v_now timestamptz := pg_catalog.clock_timestamp();
+  v_today date;
 begin
   if v_user_id is null then
     raise exception using
@@ -346,10 +347,22 @@ begin
       ::public.goal_suggestion_receipt;
   end if;
 
+  -- A target date that has passed while the suggestion waited is no target:
+  -- the goal is created without one rather than with a date already gone.
+  select coalesce(
+    (pg_catalog.timezone(profile.timezone_name, v_now))::date,
+    (v_now at time zone 'utc')::date
+  )
+  into v_today
+  from public.profiles profile
+  where profile.user_id = v_user_id;
+
   v_receipt := public.apply_goal_change(
     p_expected_goal_revision, 'create', null,
     v_suggestion.title, v_suggestion.desired_outcome, v_suggestion.sports,
-    v_suggestion.target_date, p_priority_tier, null, null
+    case when v_suggestion.target_date >= v_today
+      then v_suggestion.target_date end,
+    p_priority_tier, null, null
   );
 
   update public.goal_suggestions

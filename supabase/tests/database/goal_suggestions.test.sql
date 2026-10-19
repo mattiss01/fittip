@@ -94,7 +94,7 @@ as $$
   ))
 $$;
 
-select plan(20);
+select plan(21);
 
 -- 1. The boundary -------------------------------------------------------------
 
@@ -315,6 +315,35 @@ select is(
    where id = (select id from pg_temp_suggestion where label = 'second')),
   'rejected:true:true',
   'Reject marks it and creates nothing'
+);
+
+-- A suggestion left open past its target date becomes a goal without one.
+insert into pg_temp_claim
+select 'fourth', * from public.begin_plan_generation(
+  'goal-key-00000000000004', 'goal-fingerprint-000004', pg_temp.day(0), 3, 0,
+  'And a 10 km race next month.', null, null, null);
+select pg_temp.finish('fourth', 'And a 10 km race next month.');
+insert into pg_temp_suggestion
+select 'third', public.record_goal_suggestion('plan',
+  (select completion_token from pg_temp_claim where label = 'fourth'),
+  pg_temp.suggestion('Race 10 km', '["Running"]', pg_temp.day(20)::text));
+
+reset role;
+update public.goal_suggestions set target_date = pg_temp.day(-1)
+where id = (select id from pg_temp_suggestion where label = 'third');
+set local role authenticated;
+
+insert into pg_temp_decided
+select 'third', * from public.decide_goal_suggestion(
+  (select id from pg_temp_suggestion where label = 'third'), 'accept',
+  'supporting', pg_temp.goal_revision('8c000000-0000-4000-8000-000000000001'));
+select is(
+  (select goal.title || ':' || coalesce(goal.target_date::text, 'none')
+   from pg_temp_decided decided
+   join public.goals goal on goal.id = decided.goal_id
+   where decided.label = 'third'),
+  'Race 10 km:none',
+  'a target date that passed while it waited is not carried into the goal'
 );
 
 -- 5. Spend -----------------------------------------------------------------------

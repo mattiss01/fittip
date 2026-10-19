@@ -268,12 +268,17 @@ export async function generatePlanProposal(
     input.startDate,
     outcome.memoryCandidates,
   );
-  // ADR-034, after the proposal has committed and on the same terms.
-  await recordGoalSuggestion(
-    "plan",
-    claim.completionToken,
-    outcome.goalSuggestion,
-  );
+  // ADR-034, after the proposal has committed and on the same terms. Not on
+  // "ask again": the note is the same, so whatever it suggests was suggested
+  // the first time, and recording it again would offer the owner the same
+  // goal twice (review of 19 Oct 2026).
+  if (!input.previousProposalId) {
+    await recordGoalSuggestion(
+      "plan",
+      claim.completionToken,
+      outcome.goalSuggestion,
+    );
+  }
   return { status: "proposal", proposalId, memoryCandidateCount };
 }
 
