@@ -612,6 +612,38 @@ describe("generatePlanProposal", () => {
     );
   });
 
+  it("proposes memory from the planning note on ask again too (ADR-035)", async () => {
+    proposals.recordMemoryCandidates.mockResolvedValue({
+      collectionRevision: 8,
+      itemIds: ["item-1"],
+    });
+    proposals.getProposal.mockResolvedValue({
+      id: PREVIOUS_ID,
+      items: [],
+      content: {
+        schemaVersion: "fittip.seven-day-plan.v2",
+        weekDescription: "Rest.",
+        startDate: TODAY,
+        endDate: END_DATE,
+        sessions: [],
+      },
+    });
+
+    const result = await generatePlanProposal(
+      {
+        ...input(),
+        planningNote: "I only have 45 minutes on weekdays.",
+        previousProposalId: PREVIOUS_ID,
+        regenerationFeedback: "Less running.",
+        idempotencyKey: "plan-generation-key-regen-memory",
+      },
+      { proposals: proposals as unknown as PlanProposalRepository },
+    );
+
+    expect(proposals.recordMemoryCandidates).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({ memoryCandidateCount: 1 });
+  });
+
   it("claims nothing when the proposal being replaced cannot be read", async () => {
     proposals.getProposal.mockResolvedValue(null);
 

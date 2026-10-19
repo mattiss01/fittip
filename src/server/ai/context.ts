@@ -1310,25 +1310,28 @@ export function selectAlreadySuggested(
   maxBytes: number,
 ): CoachAIAlreadySuggested {
   const cutoff = shiftIsoDate(today, -ALREADY_SUGGESTED_REJECTED_DAYS);
-  const stillCounts = (status: string, decidedAt: string | null): boolean =>
+  const isOpenOrRecentlyRejected = (
+    status: string,
+    decidedOn: string | null,
+  ): boolean =>
     status === "proposed" ||
     (status === "rejected" &&
-      decidedAt !== null &&
-      decidedAt.slice(0, 10) >= cutoff);
+      decidedOn !== null &&
+      decidedOn.slice(0, 10) >= cutoff);
 
   const listed: CoachAIAlreadySuggested = {
     memory: memory
       .filter(
         (item) =>
           item.provenance === "inferred_proposed" &&
-          stillCounts(item.status, item.updatedAt),
+          isOpenOrRecentlyRejected(item.status, item.updatedAt),
       )
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       .slice(0, ALREADY_SUGGESTED_MAX_MEMORY)
       .map((item) => cutText(item.content)),
     goals: goalSuggestions
       .filter((suggestion) =>
-        stillCounts(suggestion.status, suggestion.decidedAt),
+        isOpenOrRecentlyRejected(suggestion.status, suggestion.decidedAt),
       )
       .sort((a, b) =>
         (b.decidedAt ?? b.createdAt).localeCompare(a.decidedAt ?? a.createdAt),
