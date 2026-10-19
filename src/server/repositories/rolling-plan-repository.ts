@@ -61,10 +61,20 @@ export class PostgresRollingPlanAdapter implements RollingPlanAdapter {
 
   async getPlanSlice({ startDate, endDate }: ParsedPlanSlice) {
     await this.getVerifiedUserId();
-    const { data, error } = await this.client.rpc("get_rolling_plan_slice", {
-      p_start_date: startDate,
-      p_end_date: endDate,
-    });
+    const read = () =>
+      this.client.rpc("get_rolling_plan_slice", {
+        p_start_date: startDate,
+        p_end_date: endDate,
+      });
+    let { data, error, status } = await read();
+    // The gateway answers 502 to 504 when the database API behind it drops a
+    // connection ("An invalid response was received from the upstream
+    // server", seen in CI on 19 Oct 2026). The read changes nothing, so it is
+    // asked once more; postgrest-js retries only GETs answered 503 or 520,
+    // and this is a POST.
+    if (error && status >= 502 && status <= 504) {
+      ({ data, error, status } = await read());
+    }
     if (error) {
       throw new RollingPlanPersistenceError(
         error.code || error.message.slice(0, 80),
