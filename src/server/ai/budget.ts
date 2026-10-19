@@ -114,7 +114,8 @@ export const COACH_AI_FIXTURE_LIMITS: CoachAILimits = {
  * reservation is exactly 8,000 (18,000 x 0.125 + 11,500 x 0.5), the daily
  * ceiling admits 250 generations, and a call that times out is charged that
  * whole 8,000. Room is not a guarantee; whether the model ever needs more,
- * or more than the 90 s deadline to write it, is still unmeasured.
+ * or more than the 180 s deadline (90 s until the same day) to write it, is
+ * still unmeasured.
  *
  * These numbers are the local fast path. The authoritative ceilings are the
  * database's, in `reserve_ai_spend`, because this process cannot be trusted to
@@ -132,7 +133,11 @@ export const COACH_AI_LIVE_LIMITS: CoachAILimits = {
   // 90 s since 17 Oct 2026 (owner). 30 s was sized against 5.6 Luna; on 6
   // Luna a plan took 17 s and an "ask again" over 30 s, which timed out and
   // was charged its whole reservation. Waiting longer costs nothing more.
-  deadlineMs: 90_000,
+  // 180 s since 19 Oct 2026 (owner), with the 11,500-token output ceiling: a
+  // long answer after long reasoning may need more than 90 s. It stays well
+  // inside the platform's 300 s function limit, which also has to hold the
+  // context read before the call and the writes after it.
+  deadlineMs: 180_000,
   // Decision 5: zero automatic retries. A call that fails after the provider
   // generated a response has already been charged.
   maxAttempts: 1,
