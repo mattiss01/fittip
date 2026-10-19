@@ -235,9 +235,18 @@ export class RollingPlanConflictError extends Error {
 }
 
 export class RollingPlanPersistenceError extends Error {
-  constructor() {
+  /**
+   * What the database or the transport said, when it said anything: a code
+   * such as `PGRST301`, or the start of a message without one. Server-side
+   * only and never shown to the owner; it is here so a server log names the
+   * failure (19 Oct 2026: plan reads failing intermittently in CI).
+   */
+  readonly reason: string | undefined;
+
+  constructor(reason?: string) {
     super("The rolling plan operation could not be completed.");
     this.name = "RollingPlanPersistenceError";
+    this.reason = reason;
   }
 }
 
