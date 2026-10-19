@@ -100,7 +100,7 @@ test.describe("M3-19 delete a planned session", () => {
         .getByRole("button", { name: "Reactivate", exact: true })
         .click();
       await expect(
-        page.getByRole("button", { name: "Edit", exact: true }),
+        page.getByRole("link", { name: "Edit", exact: true }),
       ).toBeVisible();
       await chooseMore(page, "Cancel session");
       await sessionPanel(page, "Cancel session")
