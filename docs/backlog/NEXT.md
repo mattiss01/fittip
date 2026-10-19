@@ -48,10 +48,14 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 **Coach and records.**
 
-- [ ] **"Ask again" may suggest a cancel the owner just kept.** Found in the review of
-      ADR-033 (19 Oct 2026): the previous proposal sent to the coach carries its sessions,
-      not its cancels, so a cancel rejected with "Keep it" can come back. Careful lane (what
-      the coach is sent); the owner's to say whether it matters in use.
+- [~] **"Ask again" tells the coach every decision on its last proposal.** Owner,
+      19 Oct 2026: "the coach should get all decisions made by the user on his earlier
+      proposal." Each session goes back with accepted, replaced, addedBeside, rejected or
+      undecided (and the owner's session it replaced, by title and date), each cancel with
+      cancelled, kept or undecided; `kept` goes. The coach's own reasons stay out, as
+      today. A session the previous proposal is cancelling is no longer offered. The
+      previous-proposal allocation rises 5,900 to 11,000 bytes, inside the 18,000-token
+      ceiling already held. Careful lane: what the coach is sent.
 - [ ] **A fill's sources are recorded and never checked.** A suggestion names the
       logs, library entries and saved sessions it was built from, and since ADR-023
       the logs whose flags it was sent. Nothing compares them, so a flag corrected
