@@ -327,20 +327,23 @@ function SessionCard({
           {showsCancelled ? <span>Cancelled, kept on the record</span> : null}
         </div>
       ) : null}
-      {session.intent === null || logged ? null : (
+      {/* A cancelled session is a small, boxed line and nothing more (owner,
+          19 Oct 2026): its title, what it was, and that it is cancelled. For
+          training done anyway, its own page reactivates it. */}
+      {session.intent === null || logged || showsCancelled ? null : (
         <p className={styles.body}>{session.intent}</p>
       )}
-      {session.note === null ? null : (
+      {session.note === null || showsCancelled ? null : (
         <p className={styles.body}>{session.note}</p>
       )}
       {/* The plan's list until the log has actuals of its own, which then say
           what was done and are the ones worth reading. A skipped or replaced
           log records none, and still shows what the plan asked for. */}
-      {session.completion === null ||
-      session.completion.activities.length === 0 ? (
+      {showsCancelled ? null : session.completion === null ||
+        session.completion.activities.length === 0 ? (
         <ActivityList label="Planned" items={session.activities} />
       ) : null}
-      {session.completion === null ? (
+      {showsCancelled ? null : session.completion === null ? (
         <Link
           className={styles.logAction}
           href={`/home/log?plannedSession=${session.id}&date=${date}`}
