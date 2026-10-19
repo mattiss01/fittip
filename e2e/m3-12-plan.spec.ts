@@ -173,7 +173,7 @@ test.describe("M3-12 manual continuous planning", () => {
       // the card opens it, Edit is in sight, and the rest sit behind ⋯. This
       // flow is the same journey through a surface that was replaced.
       await openSession(page, today, "Aerobic run");
-      await page.getByRole("button", { name: "Edit", exact: true }).click();
+      await page.getByRole("link", { name: "Edit", exact: true }).click();
       const edit = sessionPanel(page, "Edit session");
       await edit.getByLabel("Title").fill("Long aerobic run");
       await edit.getByLabel("Minutes").fill("95");
@@ -206,13 +206,16 @@ test.describe("M3-12 manual continuous planning", () => {
       ).toBeVisible();
 
       await openSession(page, tomorrow, "Long aerobic run");
-      await page.getByRole("button", { name: "Edit", exact: true }).click();
+      await page.getByRole("link", { name: "Edit", exact: true }).click();
       const copyEdit = sessionPanel(page, "Edit session");
       await fillDate(copyEdit, "Date", dayAfter);
       await copyEdit.getByRole("button", { name: "Save session" }).click();
-      await expect(page.locator("[role='status']").first()).toContainText(
-        "Session updated.",
-      );
+      // A save goes back to the session from its edit page (owner, 19 Oct
+      // 2026).
+      await expect(page).not.toHaveURL(/\/edit/);
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Long aerobic run" }),
+      ).toBeVisible();
       await backToPlan(page);
       await expect(
         await sessionCard(page, dayAfter, "Long aerobic run"),

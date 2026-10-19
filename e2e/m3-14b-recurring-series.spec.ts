@@ -68,7 +68,7 @@ test.describe("M3-14B recurring series surface", () => {
       await expect(source.getByRole("link", { name: "Repeat" })).toHaveCount(0);
       await openSession(page, today, "Ordinary base");
       await expect(
-        page.getByRole("button", { name: "Edit", exact: true }),
+        page.getByRole("link", { name: "Edit", exact: true }),
       ).toBeVisible();
       await page.getByRole("button", { name: "More actions" }).click();
       await expect(page.locator("[data-session-actions] li")).toHaveText([
@@ -130,7 +130,7 @@ test.describe("M3-14B recurring series surface", () => {
 
       // Only this session changes one occurrence and marks it as diverged.
       await openSession(page, dailyStart, "Aerobic base");
-      await page.getByRole("button", { name: "Edit", exact: true }).click();
+      await page.getByRole("link", { name: "Edit", exact: true }).click();
       // One form for both scopes; the button chosen at the end is the scope.
       const onlyThis = recurringEditForm(sessionPanel(page, "Edit session"));
       await onlyThis.getByLabel("Title").fill("Diverged aerobic");
@@ -157,7 +157,7 @@ test.describe("M3-14B recurring series surface", () => {
       // The occurrence it was opened from is replaced by the successor's, so
       // the page returns to the Plan.
       await openSession(page, secondDaily, "Aerobic base");
-      await page.getByRole("button", { name: "Edit", exact: true }).click();
+      await page.getByRole("link", { name: "Edit", exact: true }).click();
       const future = recurringEditForm(sessionPanel(page, "Edit session"));
       await future.getByLabel("Title").fill("Future steady");
       await future.getByLabel("Repeat", { exact: true }).selectOption("daily");

@@ -107,3 +107,15 @@ export function sessionHref(
     ? `/home/plan/session/${sessionId}?from=today&date=${opened.date}`
     : `/home/plan/session/${sessionId}?date=${opened.date}`;
 }
+
+/**
+ * The session's edit page (owner, 19 Oct 2026), opened the same way as the
+ * session, so saving or going back returns to where it came from.
+ */
+export function sessionEditHref(
+  sessionId: string,
+  opened: { from?: "today"; date: string } | null = null,
+) {
+  const [path, query] = sessionHref(sessionId, opened).split("?");
+  return query === undefined ? `${path}/edit` : `${path}/edit?${query}`;
+}
