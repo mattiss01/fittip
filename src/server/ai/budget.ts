@@ -58,7 +58,8 @@ export const COACH_AI_FIXTURE_LIMITS: CoachAILimits = {
  * The approved live caps (M3-01B decision 4, 10 August 2026), sized against
  * `gpt-5.6-luna`'s measured behaviour rather than against a guess.
  *
- * `maxOutputTokens` is 3,000 for a forward-looking reason rather than a
+ * `maxOutputTokens` was 3,000 (8,000 since 19 October 2026, below) for a
+ * forward-looking reason rather than a
  * measured one: luna peaked at 1,513, but M3-03 adds a coach-authored week
  * description to the plan schema, and a ceiling that fits today's schema but
  * not the next one produces a truncation that looks exactly like a model
@@ -109,8 +110,10 @@ export const COACH_AI_FIXTURE_LIMITS: CoachAILimits = {
  * The output ceiling went from 3,000 to 8,000 on 19 October 2026 (owner):
  * `gpt-6-luna` reasons inside `max_completion_tokens`, and Sarah's roadmap
  * came back empty twice, each charged for exactly 3,000 output tokens. 8,000
- * is the most that fits the database's 8,000 micro-USD per-request ceiling: a
- * reservation is 6,250, and the daily ceiling admits 320 generations. Whether
+ * is the owner's choice, not the arithmetic limit: up to 11,500 would still
+ * fit the database's 8,000 micro-USD per-request ceiling. A reservation is
+ * 6,250, the daily ceiling admits 320 generations, and a call that times out
+ * is charged that whole 6,250. Whether
  * it is enough is still unmeasured; a roadmap charged about 4,750 would say
  * it is not.
  *
