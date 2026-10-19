@@ -215,6 +215,21 @@ export class MemoryRepository {
     return data;
   }
 
+  /**
+   * Whether a proposed item waits for the owner, for the dot on You and on
+   * Memory (owner, 19 Oct 2026). A count, never the content.
+   */
+  async hasProposed(): Promise<boolean> {
+    const userId = await this.getVerifiedUserId();
+    const { count, error } = await this.client
+      .from("memory_items")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "proposed");
+    if (error) throw new MemoryPersistenceError();
+    return (count ?? 0) > 0;
+  }
+
   private async getVerifiedUserId(): Promise<string> {
     try {
       return await requireAllowedVerifiedUser(this.client);
