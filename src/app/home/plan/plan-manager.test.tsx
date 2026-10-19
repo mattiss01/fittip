@@ -211,6 +211,30 @@ describe("PlanManager", () => {
     });
   });
 
+  it("swipes a card right to its edit page", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [session()]);
+    const card = day(TODAY).querySelector<HTMLElement>("[data-session-card]")!;
+    fireEvent.touchStart(card, { touches: [{ clientX: 100, clientY: 10 }] });
+    fireEvent.touchMove(card, { touches: [{ clientX: 220, clientY: 12 }] });
+    fireEvent.touchEnd(card, { touches: [] });
+    expect(within(card).getByRole("link", { name: "Edit" })).toHaveAttribute(
+      "href",
+      `/home/plan/session/${session().id}/edit`,
+    );
+    expect(within(card).queryByRole("button", { name: "Delete" })).toBeNull();
+  });
+
+  it("offers no edit on a cancelled card", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [
+      session({ status: "cancelled" }),
+    ]);
+    const card = day(TODAY).querySelector<HTMLElement>("[data-cancelled]")!;
+    fireEvent.touchStart(card, { touches: [{ clientX: 100, clientY: 10 }] });
+    fireEvent.touchMove(card, { touches: [{ clientX: 220, clientY: 12 }] });
+    fireEvent.touchEnd(card, { touches: [] });
+    expect(within(card).queryByRole("link", { name: "Edit" })).toBeNull();
+  });
+
   it("leaves a mostly vertical move to the scroll", () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [session()]);
     const card = day(TODAY).querySelector<HTMLElement>("[data-session-card]")!;

@@ -915,6 +915,27 @@ span.arrow {
   gap: 0.35rem;
 }
 
+/* Swiped right: Edit, in the room on the card's left. */
+.swipeEdit {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  right: calc(100% + 0.4rem);
+  display: flex;
+}
+
+.swipeEditLink {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 0.85rem;
+  background: var(--pine);
+  color: var(--paper);
+  font: 700 0.85rem var(--font-sans);
+  text-decoration: none;
+}
+
 .swipeCancel,
 .swipeDelete {
   flex: 1;

@@ -18,7 +18,12 @@ import {
 } from "./action-state";
 import { changePlanAction } from "./actions";
 import { usePlanDrag, type PlanDragSession } from "./plan-drag";
-import { SWIPE_OPEN_PX, useSwipe } from "./plan-swipe";
+import {
+  SWIPE_EDIT_PX,
+  SWIPE_OPEN_PX,
+  useSwipe,
+  type SwipeSide,
+} from "./plan-swipe";
 import { COMPLETION_OUTCOME_LABELS } from "../log/log-action-state";
 import { CreateSession, SkippedDates } from "./create-session";
 import { MonthSheet } from "./plan-month-sheet";
@@ -182,7 +187,10 @@ export function PlanManager({
 
   // A card swiped open to Cancel and Delete (owner, 19 Oct 2026): one at a
   // time, and the session whose delete waits to be confirmed.
-  const [swiped, setSwiped] = useState<string | null>(null);
+  const [swiped, setSwiped] = useState<{
+    id: string;
+    side: SwipeSide;
+  } | null>(null);
   const [deleting, setDeleting] = useState<PlanSessionView | null>(null);
   const sendSessionChange = (operation: "cancel" | "delete", id: string) => {
     const formData = new FormData();
@@ -193,9 +201,9 @@ export function PlanManager({
     startTransition(() => trackedPlanAction(formData));
   };
   const swipe = {
-    openId: swiped,
+    open: swiped,
     enabled: !(pending || seriesPending),
-    onOpen: setSwiped,
+    onOpen: (id: string, side: SwipeSide) => setSwiped({ id, side }),
     onClose: () => setSwiped(null),
     onCancel: (id: string) => sendSessionChange("cancel", id),
     onDelete: (session: PlanSessionView) => {
@@ -750,11 +758,15 @@ function PlanSessionCard({
 }) {
   const loggedElsewhere = readsAsLogged(session);
   const cancelled = session.status === "cancelled" && !session.log;
-  const open = swipe?.openId === session.id;
+  const side = swipe?.open?.id === session.id ? swipe.open.side : null;
+  const open = side !== null;
+  // A cancelled session is not edited; it is brought back or deleted.
+  const canEdit = !cancelled;
   const { offset, moving, handlers } = useSwipe({
     enabled: swipe !== null && swipe.enabled,
-    open,
-    onOpen: () => swipe?.onOpen(session.id),
+    canEdit,
+    open: side,
+    onOpen: (next) => swipe?.onOpen(session.id, next),
     onClose: () => swipe?.onClose(),
   });
   return (
@@ -805,7 +817,21 @@ function PlanSessionCard({
         )}
         {cardDetail(session, cancelled)}
       </span>
-      {swipe !== null && (open || moving) ? (
+      {swipe !== null && canEdit && (side === "edit" || offset > 0) ? (
+        <div
+          className={w.swipeEdit}
+          style={{ width: SWIPE_EDIT_PX }}
+          data-swipe-actions
+        >
+          <Link
+            className={w.swipeEditLink}
+            href={`/home/plan/session/${session.id}/edit`}
+          >
+            Edit
+          </Link>
+        </div>
+      ) : null}
+      {swipe !== null && (side === "actions" || offset < 0) ? (
         <div
           className={w.swipeActions}
           style={{ width: SWIPE_OPEN_PX }}
@@ -835,9 +861,9 @@ function PlanSessionCard({
 
 /** What a day's cards share for swiping one open (owner, 19 Oct 2026). */
 type SwipeControls = {
-  openId: string | null;
+  open: { id: string; side: SwipeSide } | null;
   enabled: boolean;
-  onOpen: (sessionId: string) => void;
+  onOpen: (sessionId: string, side: SwipeSide) => void;
   onClose: () => void;
   onCancel: (sessionId: string) => void;
   onDelete: (session: PlanSessionView) => void;
