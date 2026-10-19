@@ -201,6 +201,53 @@ describe("PostgresRollingPlanAdapter", () => {
     );
   });
 
+  // 19 Oct 2026: the gateway's 502 when the database API drops a connection.
+  it("reads the slice once more after a gateway error, and no more", async () => {
+    const gateway = {
+      data: null,
+      error: {
+        message: "An invalid response was received from the upstream server",
+      },
+      status: 502,
+    };
+    const empty = {
+      data: {
+        plan_id: null,
+        plan_revision: 0,
+        sessions: [],
+        recovery_dates: [],
+      },
+      error: null,
+      status: 200,
+    };
+    const rpc = vi
+      .fn()
+      .mockResolvedValueOnce(gateway)
+      .mockResolvedValueOnce(empty);
+    const plan = new RollingPlan(
+      new PostgresRollingPlanAdapter(client({ rpc })),
+    );
+    await expect(
+      plan.getPlanSlice("2026-08-16", "2026-08-17"),
+    ).resolves.toMatchObject({ revision: 0, sessions: [] });
+    expect(rpc).toHaveBeenCalledTimes(2);
+
+    rpc.mockReset();
+    rpc.mockResolvedValue(gateway);
+    await expect(plan.getPlanSlice("2026-08-16", "2026-08-17")).rejects.toThrow(
+      RollingPlanPersistenceError,
+    );
+    expect(rpc).toHaveBeenCalledTimes(2);
+
+    // Any other failure is not asked again.
+    rpc.mockReset();
+    rpc.mockResolvedValue({ ...gateway, status: 400 });
+    await expect(plan.getPlanSlice("2026-08-16", "2026-08-17")).rejects.toThrow(
+      RollingPlanPersistenceError,
+    );
+    expect(rpc).toHaveBeenCalledOnce();
+  });
+
   it("maps PT424 to the series rule without forwarding database text", async () => {
     const adapter = new PostgresRollingPlanAdapter(
       client({
