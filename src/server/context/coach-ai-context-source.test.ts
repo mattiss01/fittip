@@ -339,6 +339,14 @@ describe("the production coaching context source", () => {
     expect(plan.goalSuggestions).toEqual([open]);
   });
 
+  it("sends an empty don't-repeat list when the goal suggestions cannot be read", async () => {
+    listGoalSuggestionsForCoach.mockRejectedValue(new Error("unreachable"));
+
+    const records = await source("create_seven_day_plan").load(OWNER);
+
+    expect(records.goalSuggestions).toEqual([]);
+  });
+
   it("reads no library and no saved sessions for the plan or the roadmap", async () => {
     await source("create_seven_day_plan").load(OWNER);
     await source("create_roadmap").load(OWNER);

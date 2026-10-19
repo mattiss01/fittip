@@ -243,12 +243,18 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       fillsSession ? (await createPersonalActivityLibrary()).list() : [],
       fillsSession ? (await createSavedSessionLibrary()).list() : [],
       // ADR-035: the coach's own goal suggestions, for its "don't repeat"
-      // list. A fill suggests nothing and reads none.
+      // list. A fill suggests nothing and reads none. Only advice, so a
+      // failed read sends an empty list rather than failing the request: the
+      // worst it costs is one suggestion made again.
       fillsSession
         ? []
-        : (await createGoalSuggestions()).listForCoach(
-            shiftIsoDate(today, -ALREADY_SUGGESTED_REJECTED_DAYS),
-          ),
+        : createGoalSuggestions()
+            .then((suggestions) =>
+              suggestions.listForCoach(
+                shiftIsoDate(today, -ALREADY_SUGGESTED_REJECTED_DAYS),
+              ),
+            )
+            .catch(() => []),
     ]);
 
     // What ADR-013's window holds. For every operation but a fill that is
