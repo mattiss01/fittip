@@ -55,6 +55,34 @@ describe("MobileNavigation", () => {
     expect(screen.getByRole("link", { name: "You" })).toBeVisible();
   });
 
+  it("marks You while a coach suggestion waits, and says both reasons", () => {
+    const { container } = render(<MobileNavigation setupOpen decisionsOpen />);
+
+    expect(container.querySelectorAll(".sr-only")).toHaveLength(1);
+    expect(container.querySelectorAll("[data-decisions-open]")).toHaveLength(1);
+    expect(
+      screen.getByRole("link", { name: "You" }),
+    ).toHaveAccessibleDescription(
+      "Guided setup is not finished. Suggestions from the coach wait for your decision",
+    );
+  });
+
+  it("marks Plan whenever the Roadmap chip has a dot", () => {
+    const { container, rerender } = render(
+      <MobileNavigation roadmapAttention="review_due" />,
+    );
+
+    expect(container.querySelectorAll("[data-roadmap-attention]")).toHaveLength(
+      1,
+    );
+    expect(
+      screen.getByRole("link", { name: "Plan" }),
+    ).toHaveAccessibleDescription("A roadmap review is due.");
+
+    rerender(<MobileNavigation roadmapAttention={null} />);
+    expect(container.querySelector("[data-roadmap-attention]")).toBeNull();
+  });
+
   it("is not shown during guided setup", () => {
     usePathnameMock.mockReturnValueOnce("/home/you/onboarding");
     render(<MobileNavigation />);

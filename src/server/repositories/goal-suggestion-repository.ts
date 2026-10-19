@@ -151,6 +151,18 @@ export class GoalSuggestions {
     );
   }
 
+  /** Whether one waits for the owner, for the dot on You and on Goals. */
+  async hasOpen(): Promise<boolean> {
+    const userId = await this.getVerifiedUserId();
+    const { count, error } = await this.client
+      .from("goal_suggestions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "proposed");
+    if (error) throw new GoalSuggestionPersistenceError();
+    return (count ?? 0) > 0;
+  }
+
   /** Accept as Core or Supporting, or Reject. */
   async decide(input: {
     suggestionId: string;

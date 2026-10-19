@@ -228,17 +228,22 @@ export class ProfileRepository {
    * What the layout over Home needs, in one read: whether setup is still to
    * be done, and the owner's sports for the fields that offer them.
    */
-  async getHomeShell(): Promise<{ setupOpen: boolean; sports: string[] }> {
+  async getHomeShell(): Promise<{
+    setupOpen: boolean;
+    sports: string[];
+    timezoneName: string | null;
+  }> {
     const userId = await this.getVerifiedUserId();
     const { data, error } = await this.client
       .from("profiles")
-      .select("setup_finished_at, sports")
+      .select("setup_finished_at, sports, timezone_name")
       .eq("user_id", userId)
       .maybeSingle();
     if (error) throw new ProfilePersistenceError();
     return {
       setupOpen: !data || data.setup_finished_at === null,
       sports: data?.sports ?? [],
+      timezoneName: data?.timezone_name ?? null,
     };
   }
 

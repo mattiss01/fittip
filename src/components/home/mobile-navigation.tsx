@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import styles from "@/app/home/home.module.css";
+import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 import {
   PlanIcon,
   ProgressIcon,
@@ -20,9 +21,18 @@ const DESTINATIONS = [
 
 export function MobileNavigation({
   setupOpen = false,
+  decisionsOpen = false,
+  roadmapAttention = null,
 }: {
   /** Guided setup is not finished: "You", where it is reached, is marked. */
   setupOpen?: boolean;
+  /**
+   * A goal or memory suggestion of the coach waits for a decision (owner,
+   * 19 Oct 2026): "You", where Goals and Memory are, is marked too.
+   */
+  decisionsOpen?: boolean;
+  /** The Plan's Roadmap chip has a dot, so "Plan" has one (owner, 19 Oct). */
+  roadmapAttention?: "review_due" | "missing" | null;
 }) {
   const pathname = usePathname();
 
@@ -39,12 +49,28 @@ export function MobileNavigation({
           const current = pathname === href || pathname.startsWith(`${href}/`);
           // Said as well as shown, but as a description: the link is still
           // named "You", which is what it is looked for by.
-          const marked = setupOpen && href === "/home/you";
+          const notes =
+            href === "/home/you"
+              ? [
+                  ...(setupOpen ? ["Guided setup is not finished"] : []),
+                  ...(decisionsOpen
+                    ? ["Suggestions from the coach wait for your decision"]
+                    : []),
+                ]
+              : href === "/home/plan" && roadmapAttention !== null
+                ? [
+                    roadmapAttention === "review_due"
+                      ? ROADMAP_CONTROL_COPY.reviewDueNote
+                      : ROADMAP_CONTROL_COPY.missingNote,
+                  ]
+                : [];
+          const marked = notes.length > 0;
+          const noteId = `${href.slice("/home/".length)}-open-note`;
           return (
             <li key={href}>
               <Link
                 aria-current={current ? "page" : undefined}
-                aria-describedby={marked ? "setup-open-note" : undefined}
+                aria-describedby={marked ? noteId : undefined}
                 href={href}
               >
                 <span className={styles.navigationIcon}>
@@ -53,15 +79,23 @@ export function MobileNavigation({
                     <span
                       aria-hidden="true"
                       className={styles.navigationDot}
-                      data-setup-open
+                      data-setup-open={
+                        href === "/home/you" && setupOpen ? "" : undefined
+                      }
+                      data-decisions-open={
+                        href === "/home/you" && decisionsOpen ? "" : undefined
+                      }
+                      data-roadmap-attention={
+                        href === "/home/plan" ? "" : undefined
+                      }
                     />
                   ) : null}
                 </span>
                 <strong>{label}</strong>
               </Link>
               {marked ? (
-                <span className="sr-only" id="setup-open-note">
-                  Guided setup is not finished
+                <span className="sr-only" id={noteId}>
+                  {notes.join(". ")}
                 </span>
               ) : null}
             </li>

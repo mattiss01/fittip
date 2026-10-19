@@ -159,6 +159,19 @@ export function MemoryManager({ items, expectedRevision, today }: Props) {
         </a>
       ) : null}
 
+      {/* What waits for a decision comes first, above the filters and the
+          form (owner, 19 Oct 2026): You marks Memory with a dot until it is
+          decided. */}
+      <MemorySection
+        heading="Needs your review"
+        note="Proposed memory is never used as coaching context until you accept it."
+        entries={proposed}
+        expectedRevision={expectedRevision}
+        action={action}
+        actionState={state}
+        pending={pending}
+      />
+
       <div className={styles.filters} role="group" aria-label="Filter memory">
         {(
           [
@@ -202,15 +215,6 @@ export function MemoryManager({ items, expectedRevision, today }: Props) {
         </p>
       ) : null}
 
-      <MemorySection
-        heading="Needs your review"
-        note="Proposed memory is never used as coaching context until you accept it."
-        entries={proposed}
-        expectedRevision={expectedRevision}
-        action={action}
-        actionState={state}
-        pending={pending}
-      />
       <MemorySection
         heading="Review due"
         note="The review date has passed. These are excluded from coaching context until you renew, edit or disable them."

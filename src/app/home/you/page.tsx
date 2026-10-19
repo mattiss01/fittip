@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { SignOutButton } from "@/components/sign-out-button";
 import { createServerUserClient } from "@/lib/supabase/server-user-client";
+import { readOpenDecisions } from "@/server/profile/open-decisions";
 import { readRoadmapMissing } from "@/server/roadmap/roadmap-phases";
 import {
   ProfileAuthenticationError,
@@ -50,7 +51,10 @@ export default async function YouPage({
   }
   if (!profile) redirect("/");
   // Only straight after setup, and only while there is none to look at.
-  const offerRoadmap = setupNote !== null && (await readRoadmapMissing());
+  const [offerRoadmap, decisions] = await Promise.all([
+    setupNote !== null ? readRoadmapMissing() : false,
+    readOpenDecisions(),
+  ]);
 
   return (
     <main className={homeStyles.shell} id="main-content">
@@ -100,10 +104,24 @@ export default async function YouPage({
             </Link>
           </li>
         ) : null}
-        {PLACES.map(({ href, name }) => (
+        {/* A coach suggestion still undecided marks its place with the same
+            dot (owner, 19 Oct 2026); it waits at the top of that page. */}
+        {PLACES.map(({ href, name, decision }) => (
           <li key={href}>
             <Link className={styles.place} href={href}>
-              <strong>{name}</strong>
+              <strong>
+                {name}
+                {decisions[decision] ? (
+                  <>
+                    <span
+                      aria-hidden="true"
+                      className={styles.dot}
+                      data-decision-open={decision}
+                    />
+                    <span className="sr-only">, suggestions wait for you</span>
+                  </>
+                ) : null}
+              </strong>
               <Chevron />
             </Link>
           </li>
@@ -121,8 +139,8 @@ export default async function YouPage({
  * the place is for; each page says that itself.
  */
 const PLACES = [
-  { href: "/home/you/goals", name: "Goals" },
-  { href: "/home/you/memory", name: "Memory" },
+  { href: "/home/you/goals", name: "Goals", decision: "goals" },
+  { href: "/home/you/memory", name: "Memory", decision: "memory" },
 ] as const;
 
 /** The only way into Settings, so it is a full touch target with a name. */
