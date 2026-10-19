@@ -452,9 +452,9 @@ describe("Roadmap", () => {
     expect(menu.querySelectorAll("[data-roadmap-choice]")).toHaveLength(2);
   });
 
-  // ADR-029: the third choice is a roadmap of the owner's own, empty to
+  // ADR-029: writing it yourself is a roadmap of the owner's own, empty to
   // start, saved against the head this page read.
-  it("writes a roadmap by hand from the corner's sheet", async () => {
+  it("writes a roadmap by hand from Create a new roadmap", async () => {
     getHead.mockResolvedValue({ revision: 3, currentVersionId: "v" });
     listVersions.mockResolvedValue([version(3)]);
 
@@ -509,7 +509,7 @@ describe("Roadmap", () => {
     ).toBeNull();
   });
 
-  it("asks for a new roadmap from the corner's sheet", async () => {
+  it("asks the coach for a new roadmap from Create a new roadmap", async () => {
     listVersions.mockResolvedValue([version(1)]);
 
     render(await RoadmapPage());

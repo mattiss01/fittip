@@ -32,7 +32,7 @@ export function MoreMenu({
   const listId = useId();
   const buttonId = useId();
   // Choosing an item unmounts the list under the focus, so it goes back to
-  // the button that opened it rather than falling to the styles. Found by id
+  // the button that opened it rather than falling to the page. Found by id
   // because this runs from an item's handler, handed down during render.
   const close = useCallback(() => {
     setOpen(false);

@@ -24,7 +24,7 @@ export function RoadmapReviewDue({
   roadmapEnded,
   children,
 }: {
-  /** What the review may lead to, beside "Reviewed": Change with Coach. */
+  /** What the review may lead to, beside "Reviewed": Edit with Coach. */
   children?: ReactNode;
   versionId: string;
   /** The phase that ended, from zero. */

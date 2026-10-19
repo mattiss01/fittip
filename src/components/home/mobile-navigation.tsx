@@ -32,7 +32,7 @@ export function MobileNavigation({
    */
   decisionsOpen?: boolean;
   /** The Plan's Roadmap chip has a dot, so "Plan" has one (owner, 19 Oct). */
-  roadmapAttention?: "review_due" | "ended" | "missing" | null;
+  roadmapAttention?: keyof typeof ROADMAP_ATTENTION_NOTES | null;
 }) {
   const pathname = usePathname();
 
