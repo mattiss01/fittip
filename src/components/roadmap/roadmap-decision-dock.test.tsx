@@ -58,6 +58,9 @@ vi.mock("@/app/home/plan/roadmap/actions", () => ({
 vi.mock("@/app/home/you/memory/actions", () => ({
   changeMemoryAction: vi.fn(),
 }));
+vi.mock("@/app/home/you/goals/suggestion-actions", () => ({
+  decideGoalSuggestionAction: vi.fn(),
+}));
 
 describe("RoadmapDecisionDock", () => {
   afterEach(cleanup);
@@ -230,6 +233,7 @@ function review(
       today="2026-09-14"
       regenerationsRemaining={regenerationsRemaining}
       memory={{ revision: 0, suggestions }}
+      suggestedGoals={{ goalRevision: 0, suggestions: [] }}
     />
   );
 }

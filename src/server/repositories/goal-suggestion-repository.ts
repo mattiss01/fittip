@@ -14,6 +14,9 @@ import { MemoryCandidateBatchError } from "@/server/proposal-logging/memory-cand
 /** A goal the coach suggested, still waiting on the owner (ADR-034). */
 export type OpenGoalSuggestion = {
   id: string;
+  /** Where it came from, read from its source reference. */
+  source: "plan" | "roadmap";
+  proposalId: string | null;
   title: string;
   desiredOutcome: string;
   sports: string[];
@@ -89,7 +92,9 @@ export class GoalSuggestions {
           .maybeSingle(),
         this.client
           .from("goal_suggestions")
-          .select("id, title, desired_outcome, sports, target_date")
+          .select(
+            "id, title, desired_outcome, sports, target_date, source_reference",
+          )
           .eq("user_id", userId)
           .eq("status", "proposed")
           .order("created_at", { ascending: true }),
@@ -99,6 +104,10 @@ export class GoalSuggestions {
       goalRevision: head?.revision ?? 0,
       suggestions: data.map((row) => ({
         id: row.id,
+        source: row.source_reference.startsWith("roadmap-")
+          ? "roadmap"
+          : "plan",
+        proposalId: row.source_reference.split(":")[1] ?? null,
         title: row.title,
         desiredOutcome: row.desired_outcome,
         sports: row.sports,

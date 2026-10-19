@@ -251,11 +251,13 @@ export const PLAN_PROPOSAL_COPY = {
   // read as two different things. What differs is only where it came from.
   memoryPanelTitle: "Suggested from your planning note",
   memoryReviewLink: "Edit them in Memory",
+  /** ADR-034: a goal the coach suggested from the planning note. */
+  goalPanelTitle: "A goal from your planning note",
   /* Asked once before the review ends (owner, 19 Oct 2026). Leaving one is
      a choice: it waits in Memory, unused for coaching until accepted. */
   memoryBeforeEndTitle: "Still open from your planning note",
   memoryBeforeEndSupport:
-    "Accept or reject these now, or leave them: they wait in Memory and are not used for coaching until you accept them.",
+    "Accept or reject these now, or leave them for later. Nothing is used for coaching or added to your goals until you accept it.",
   /**
    * The pointer shown above the timeline. Deliberately not the panel's own
    * sentence: repeating it word for word would read as the same message twice

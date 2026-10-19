@@ -1,6 +1,12 @@
 import { redirect } from "next/navigation";
 
 import { GoalManager, type GoalView } from "@/components/goals/goal-manager";
+import { GoalSuggestions } from "@/components/goals/goal-suggestions";
+import {
+  createGoalSuggestions,
+  GoalSuggestionAuthenticationError,
+  type OpenGoalSuggestions,
+} from "@/server/repositories/goal-suggestion-repository";
 import { isoDateInTimezone } from "@/lib/date/local-date";
 import {
   createGoalRepository,
@@ -23,16 +29,20 @@ export default async function GoalsPage() {
   let collection;
   let changes: GoalStatusChange[];
   let timezoneName: string;
+  let suggested: OpenGoalSuggestions;
   try {
-    const [goals, profiles] = await Promise.all([
+    const [goals, profiles, suggestions] = await Promise.all([
       createGoalRepository(),
       createProfileRepository(),
+      createGoalSuggestions(),
     ]);
-    const [list, latest, profile] = await Promise.all([
+    const [list, latest, profile, open] = await Promise.all([
       goals.list(),
       goals.listStatusChanges(),
       profiles.getCurrentProfile(),
+      suggestions.listOpen(),
     ]);
+    suggested = open;
     collection = list;
     changes = latest;
     // A day needs a zone. Without a stored one the log's own, UTC, is used.
@@ -40,14 +50,16 @@ export default async function GoalsPage() {
   } catch (error) {
     if (
       (error instanceof GoalAuthenticationError ||
-        error instanceof ProfileAuthenticationError) &&
+        error instanceof ProfileAuthenticationError ||
+        error instanceof GoalSuggestionAuthenticationError) &&
       error.accessError?.reason === "not-owner"
     ) {
       redirect("/auth/denied");
     }
     if (
       error instanceof GoalAuthenticationError ||
-      error instanceof ProfileAuthenticationError
+      error instanceof ProfileAuthenticationError ||
+      error instanceof GoalSuggestionAuthenticationError
     ) {
       redirect("/");
     }
@@ -62,6 +74,17 @@ export default async function GoalsPage() {
       <header className={youStyles.header}>
         <h1>Goals</h1>
       </header>
+      {/* The coach's suggestions waiting on the owner (ADR-034), above the
+          goals they would join. Gone once each is decided. */}
+      {suggested.suggestions.length === 0 ? null : (
+        <section className={styles.suggestions} data-goal-suggestions>
+          <h2>Suggested by the coach</h2>
+          <GoalSuggestions
+            suggestions={suggested.suggestions}
+            expectedGoalRevision={suggested.goalRevision}
+          />
+        </section>
+      )}
       <GoalManager
         expectedRevision={collection.revision}
         today={isoDateInTimezone(new Date(), timezoneName)}

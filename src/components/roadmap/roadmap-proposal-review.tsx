@@ -1,6 +1,7 @@
 import { RoadmapBody } from "./roadmap-body";
 import { RoadmapDecisionDock } from "./roadmap-decision-dock";
 
+import type { GoalSuggestion } from "@/components/goals/goal-suggestions";
 import type { MemorySuggestion } from "@/components/memory/memory-suggestions";
 import { RoadmapLandingFocus } from "./roadmap-landing-focus";
 
@@ -39,6 +40,7 @@ export function RoadmapProposalReview({
   today,
   regenerationsRemaining,
   memory,
+  suggestedGoals,
 }: {
   proposal: RoadmapProposalView;
   expectedHeadRevision: number;
@@ -49,6 +51,11 @@ export function RoadmapProposalReview({
   regenerationsRemaining: number;
   /** The coach's memory suggestions still open, asked about before an ending. */
   memory: { revision: number; suggestions: readonly MemorySuggestion[] };
+  /** The coach's goal suggestions still open (ADR-034). */
+  suggestedGoals: {
+    goalRevision: number;
+    suggestions: readonly GoalSuggestion[];
+  };
 }) {
   // A generation request is what carries the horizon the owner asked for. If
   // that row is unreadable the view reports empty strings rather than a wrong
@@ -75,6 +82,7 @@ export function RoadmapProposalReview({
       <RoadmapDecisionDock
         key={proposal.id}
         memory={memory}
+        suggestedGoals={suggestedGoals}
         proposalId={proposal.id}
         content={roadmapForEditor(proposal.content)}
         expectedHeadRevision={expectedHeadRevision}

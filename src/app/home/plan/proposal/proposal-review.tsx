@@ -33,6 +33,10 @@ import {
 } from "@/lib/plan/plan-proposal-copy";
 import type { PlanProposalItemDecision } from "@/lib/plan/plan-proposal-view";
 import {
+  GoalSuggestions,
+  type GoalSuggestion,
+} from "@/components/goals/goal-suggestions";
+import {
   MemorySuggestions,
   type MemorySuggestion,
 } from "@/components/memory/memory-suggestions";
@@ -68,6 +72,7 @@ export function ProposalReview({
   staged,
   isExample,
   memory,
+  suggestedGoals,
 }: {
   proposalId: string;
   /** Present only on a proposal that replaced another one. */
@@ -94,6 +99,11 @@ export function ProposalReview({
   isExample: boolean;
   /** The coach's memory suggestions still open, asked about before an ending. */
   memory: { revision: number; suggestions: readonly MemorySuggestion[] };
+  /** The coach's goal suggestions still open (ADR-034), asked about likewise. */
+  suggestedGoals: {
+    goalRevision: number;
+    suggestions: readonly GoalSuggestion[];
+  };
 }) {
   const [state, action, pending] = useActionState(
     finishPlanReviewAction,
@@ -136,7 +146,10 @@ export function ProposalReview({
   const ownMemory = memory.suggestions.filter(
     (suggestion) => suggestion.proposalId === proposalId,
   );
-  const openMemory = ownMemory.length > 0;
+  const ownGoals = suggestedGoals.suggestions.filter(
+    (suggestion) => suggestion.proposalId === proposalId,
+  );
+  const openMemory = ownMemory.length > 0 || ownGoals.length > 0;
   const dialogId = useId();
   const discardTitle = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
@@ -360,10 +373,18 @@ export function ProposalReview({
             <div className={styles.goalPrompt}>
               <h2 id={`${dialogId}-memory`}>{COPY.memoryBeforeEndTitle}</h2>
               <p>{COPY.memoryBeforeEndSupport}</p>
-              <MemorySuggestions
-                suggestions={ownMemory}
-                expectedRevision={memory.revision}
-              />
+              {ownMemory.length > 0 ? (
+                <MemorySuggestions
+                  suggestions={ownMemory}
+                  expectedRevision={memory.revision}
+                />
+              ) : null}
+              {ownGoals.length > 0 ? (
+                <GoalSuggestions
+                  suggestions={ownGoals}
+                  expectedGoalRevision={suggestedGoals.goalRevision}
+                />
+              ) : null}
               <button
                 className={styles.primary}
                 type="button"
@@ -400,10 +421,18 @@ export function ProposalReview({
               {openMemory ? (
                 <>
                   <p>{COPY.memoryBeforeEndSupport}</p>
-                  <MemorySuggestions
-                    suggestions={ownMemory}
-                    expectedRevision={memory.revision}
-                  />
+                  {ownMemory.length > 0 ? (
+                    <MemorySuggestions
+                      suggestions={ownMemory}
+                      expectedRevision={memory.revision}
+                    />
+                  ) : null}
+                  {ownGoals.length > 0 ? (
+                    <GoalSuggestions
+                      suggestions={ownGoals}
+                      expectedGoalRevision={suggestedGoals.goalRevision}
+                    />
+                  ) : null}
                 </>
               ) : null}
               <form

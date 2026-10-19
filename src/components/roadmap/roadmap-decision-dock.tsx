@@ -20,6 +20,10 @@ import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { SheetLayer } from "@/app/home/plan/plan-sheet";
 import { CoachSpark } from "@/components/home/coach-spark";
 import {
+  GoalSuggestions,
+  type GoalSuggestion,
+} from "@/components/goals/goal-suggestions";
+import {
   MemorySuggestions,
   type MemorySuggestion,
 } from "@/components/memory/memory-suggestions";
@@ -95,6 +99,7 @@ export function RoadmapDecisionDock({
   regenerationsRemaining,
   children,
   memory,
+  suggestedGoals,
 }: {
   proposalId: string;
   /** The proposal body, needed only so the editor can open on it. */
@@ -108,6 +113,11 @@ export function RoadmapDecisionDock({
   children: ReactNode;
   /** The coach's memory suggestions still open, asked about before an ending. */
   memory: { revision: number; suggestions: readonly MemorySuggestion[] };
+  /** The coach's goal suggestions still open (ADR-034), asked about likewise. */
+  suggestedGoals: {
+    goalRevision: number;
+    suggestions: readonly GoalSuggestion[];
+  };
 }) {
   const accept = useRoadmapWrite(acceptRoadmapAction);
   // Open memory suggestions are put in front of the owner once before the
@@ -123,7 +133,10 @@ export function RoadmapDecisionDock({
   const ownMemory = memory.suggestions.filter(
     (suggestion) => suggestion.proposalId === proposalId,
   );
-  const openMemory = ownMemory.length > 0;
+  const ownGoals = suggestedGoals.suggestions.filter(
+    (suggestion) => suggestion.proposalId === proposalId,
+  );
+  const openMemory = ownMemory.length > 0 || ownGoals.length > 0;
   const memoryTitleId = useId();
   const decline = useRoadmapWrite(declineRoadmapAction);
   const askAgain = useRoadmapWrite(askAgainRoadmapAction);
@@ -358,10 +371,18 @@ export function RoadmapDecisionDock({
               {ROADMAP_CONTROL_COPY.memoryBeforeEndTitle}
             </h2>
             <p>{ROADMAP_CONTROL_COPY.memoryBeforeEndSupport}</p>
-            <MemorySuggestions
-              suggestions={ownMemory}
-              expectedRevision={memory.revision}
-            />
+            {ownMemory.length > 0 ? (
+              <MemorySuggestions
+                suggestions={ownMemory}
+                expectedRevision={memory.revision}
+              />
+            ) : null}
+            {ownGoals.length > 0 ? (
+              <GoalSuggestions
+                suggestions={ownGoals}
+                expectedGoalRevision={suggestedGoals.goalRevision}
+              />
+            ) : null}
             <button
               className={
                 memoryBefore === "accept"

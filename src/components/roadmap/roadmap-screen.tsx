@@ -9,7 +9,9 @@ import { RoadmapReviewDue } from "./roadmap-review-due";
 import { RoadmapProposalReview } from "./roadmap-proposal-review";
 import { RoadmapWriter } from "./roadmap-writer";
 
+import { GoalSuggestions } from "@/components/goals/goal-suggestions";
 import { MemorySuggestions } from "@/components/memory/memory-suggestions";
+import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
 import homeStyles from "@/app/home/home.module.css";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
@@ -114,6 +116,7 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
           today={state.today}
           regenerationsRemaining={state.regenerationsRemaining}
           memory={state.memory}
+          suggestedGoals={state.suggestedGoals}
         />
       ) : state.current === null ? (
         <>
@@ -229,6 +232,17 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
           <Link className={homeStyles.secondaryAction} href="/home/you/memory">
             {ROADMAP_COPY.memoryReviewLink}
           </Link>
+        </section>
+      ) : null}
+      {state.suggestedGoals.suggestions.length > 0 ? (
+        <section className={styles.memoryPanel} data-roadmap-goal-suggestions>
+          <h2 className={styles.sectionHeading}>
+            {ROADMAP_CONTROL_COPY.goalPanelTitle}
+          </h2>
+          <GoalSuggestions
+            suggestions={state.suggestedGoals.suggestions}
+            expectedGoalRevision={state.suggestedGoals.goalRevision}
+          />
         </section>
       ) : null}
     </div>
