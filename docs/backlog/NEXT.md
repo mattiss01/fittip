@@ -21,13 +21,6 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [~] **The coach is told what it already suggested.** Owner, 19 Oct 2026: a later note
-      that says the same thing got the same memory or goal suggestion again. Every plan
-      and roadmap call, "ask again" included, sends a "don't repeat" list: open memory and
-      goal suggestions and those rejected in the last 60 days, never planned from.
-      "Ask again" may suggest too (the goal skip goes); roadmap "ask again" keeps the
-      planning note. Within the 20,000-token ceiling, no spend change, no migration.
-      Careful lane (prompt data); ADR-035.
 - [ ] **A7-5 — Size the fill before its first live run.** Measure output tokens on a
       twelve-activity answer: the grammar pads each target with fourteen nullable keys
       against an 11,500-token ceiling. Needs a provider key, so it waits for one; each run
