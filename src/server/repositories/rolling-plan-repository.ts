@@ -65,7 +65,11 @@ export class PostgresRollingPlanAdapter implements RollingPlanAdapter {
       p_start_date: startDate,
       p_end_date: endDate,
     });
-    if (error) throw new RollingPlanPersistenceError();
+    if (error) {
+      throw new RollingPlanPersistenceError(
+        error.code || error.message.slice(0, 80),
+      );
+    }
     return parseSliceReceipt(data);
   }
 
