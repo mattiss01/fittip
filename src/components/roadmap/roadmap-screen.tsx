@@ -60,37 +60,35 @@ import {
  * planning note is not part of that body and never leaves the server, and the
  * outcome notice carries no content at all — only the sentence a write earned.
  */
-/** The headings that name the sheet a due review opens. */
-const REVIEW_SHEET_TITLE_IDS = {
-  menu: "roadmap-review-sheet-title",
-  change: "roadmap-review-change-title",
-  fresh: "roadmap-review-sheet-title",
-  write: "roadmap-review-sheet-title",
-  rewrite: "roadmap-review-sheet-title",
-};
+/**
+ * The headings that name each opener's sheet. Only one sheet is open at a
+ * time; each opener still names its own, so no two headings share an id.
+ */
+function sheetTitleIds(prefix: string) {
+  return {
+    create: `${prefix}-create-title`,
+    change: `${prefix}-change-title`,
+    fresh: `${prefix}-fresh-title`,
+    write: `${prefix}-write-title`,
+    rewrite: `${prefix}-rewrite-title`,
+  };
+}
 
-/** The sheet that edits the roadmap in force: it opens on nothing else. */
-const REWRITE_SHEET_TITLE_IDS = {
-  menu: "roadmap-rewrite-title",
-  change: "roadmap-rewrite-title",
-  fresh: "roadmap-rewrite-title",
-  write: "roadmap-rewrite-title",
-  rewrite: "roadmap-rewrite-title",
-};
-
-/** The writer's sheet while there is no roadmap: it opens on nothing else. */
-const FIRST_WRITE_SHEET_TITLE_IDS = {
-  menu: "roadmap-first-write-title",
-  change: "roadmap-first-write-title",
-  fresh: "roadmap-first-write-title",
-  write: "roadmap-first-write-title",
-  rewrite: "roadmap-first-write-title",
-};
+const REVIEW_SHEET_TITLE_IDS = sheetTitleIds("roadmap-review");
+const ACTIONS_SHEET_TITLE_IDS = sheetTitleIds("roadmap-actions");
+const ENDED_TOP_SHEET_TITLE_IDS = sheetTitleIds("roadmap-ended-top");
+const ENDED_BOTTOM_SHEET_TITLE_IDS = sheetTitleIds("roadmap-ended-bottom");
+const FIRST_WRITE_SHEET_TITLE_IDS = sheetTitleIds("roadmap-first");
 
 export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
   const goalTitles = Object.fromEntries(
     state.goals.map((goal) => [goal.id, goal.title]),
   );
+  // Its last day has passed: by the owner's own calendar, from the day after.
+  const ended =
+    state.current !== null && state.current.content.endDate < state.today;
+  // Nothing is asked for while a proposal awaits a decision.
+  const canAct = state.openProposal === null;
 
   return (
     <div className={styles.screen}>
@@ -127,8 +125,6 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
             <RoadmapNew
               opensOn="write"
               titleIds={FIRST_WRITE_SHEET_TITLE_IDS}
-              change={null}
-              fresh={null}
               write={
                 <RoadmapWrite
                   state={state}
@@ -140,10 +136,32 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
         </>
       ) : null}
 
-      {/* A phase has ended, or the roadmap has (ADR-027). Above the roadmap,
-          under a proposal that is waiting: deciding that comes first, and a
-          new roadmap would end the review with the roadmap it is of. */}
-      {state.current !== null && state.reviewDue !== null ? (
+      {/* The roadmap's last day has passed (owner, 19 Oct 2026): it says so
+          above the roadmap, and offers a new one, again below it. This
+          stands in for the review the ending was, whose "Reviewed" would
+          leave nothing to do. Not while a proposal is waiting: decide that
+          first. */}
+      {ended ? (
+        <section className={styles.reviewDue} data-roadmap-ended>
+          <h2 className={styles.reviewDueHeading}>
+            {ROADMAP_CONTROL_COPY.reviewDueRoadmap}
+          </h2>
+          <p className={styles.reviewDueBody}>
+            {ROADMAP_CONTROL_COPY.reviewDueRoadmapBody}
+          </p>
+          {canAct ? (
+            <div className={styles.reviewDueActions}>
+              <RoadmapCreate state={state} ids={ENDED_TOP_SHEET_TITLE_IDS} />
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {/* A phase has ended, or the roadmap's last day has come (ADR-027).
+          Above the roadmap, under a proposal that is waiting: deciding that
+          comes first, and a new roadmap would end the review with the roadmap
+          it is of. */}
+      {state.current !== null && !ended && state.reviewDue !== null ? (
         <RoadmapReviewDue
           versionId={state.current.id}
           phaseIndex={state.reviewDue.phaseIndex}
@@ -151,7 +169,7 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
         >
           {/* What a review may lead to (ADR-028). Not while a proposal is
               waiting: decide that first. */}
-          {state.openProposal === null ? (
+          {canAct ? (
             <RoadmapNew
               opensOn="change"
               titleIds={REVIEW_SHEET_TITLE_IDS}
@@ -161,7 +179,6 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
                   headingId={REVIEW_SHEET_TITLE_IDS.change}
                 />
               }
-              fresh={null}
             />
           ) : null}
         </RoadmapReviewDue>
@@ -180,37 +197,63 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
               reviewedThrough: state.reviewedThrough,
             }}
             goalTitles={goalTitles}
+            titleAction={
+              // Everything that can be done with the roadmap, beside its
+              // title (owner, 19 Oct 2026). Not while a proposal waits, which
+              // was made under this roadmap. Once it has ended there is
+              // nothing left to edit, only a new one to create.
+              canAct ? (
+                <RoadmapNew
+                  opensOn="actions"
+                  titleIds={ACTIONS_SHEET_TITLE_IDS}
+                  {...(ended
+                    ? {}
+                    : {
+                        rewrite: (
+                          <RoadmapWriter
+                            today={state.today}
+                            goals={state.goals.map((goal) => ({
+                              id: goal.id,
+                              title: goal.title,
+                            }))}
+                            expectedHeadRevision={state.head.revision}
+                            replaces
+                            headingId={ACTIONS_SHEET_TITLE_IDS.rewrite}
+                            inForce={{
+                              content: roadmapForEditor(state.current.content),
+                              lockedPhases: lockedPhaseCount(
+                                state.current.content.phases,
+                                state.today,
+                              ),
+                            }}
+                          />
+                        ),
+                        change: (
+                          <RoadmapChangeCompose
+                            state={state}
+                            headingId={ACTIONS_SHEET_TITLE_IDS.change}
+                          />
+                        ),
+                      })}
+                  fresh={
+                    <RoadmapCompose
+                      state={state}
+                      headingId={ACTIONS_SHEET_TITLE_IDS.fresh}
+                    />
+                  }
+                  write={
+                    <RoadmapWrite
+                      state={state}
+                      headingId={ACTIONS_SHEET_TITLE_IDS.write}
+                    />
+                  }
+                />
+              ) : null
+            }
           />
-          {/* Editing it by hand (ADR-030). Not while a proposal waits, which
-              was made under this roadmap, and not once it has ended. */}
-          {state.openProposal === null &&
-          state.current.content.endDate >= state.today ? (
+          {ended && canAct ? (
             <div className={styles.writeOffer}>
-              <RoadmapNew
-                opensOn="rewrite"
-                titleIds={REWRITE_SHEET_TITLE_IDS}
-                change={null}
-                fresh={null}
-                rewrite={
-                  <RoadmapWriter
-                    today={state.today}
-                    goals={state.goals.map((goal) => ({
-                      id: goal.id,
-                      title: goal.title,
-                    }))}
-                    expectedHeadRevision={state.head.revision}
-                    replaces
-                    headingId={REWRITE_SHEET_TITLE_IDS.rewrite}
-                    inForce={{
-                      content: roadmapForEditor(state.current.content),
-                      lockedPhases: lockedPhaseCount(
-                        state.current.content.phases,
-                        state.today,
-                      ),
-                    }}
-                  />
-                }
-              />
+              <RoadmapCreate state={state} ids={ENDED_BOTTOM_SHEET_TITLE_IDS} />
             </div>
           ) : null}
         </section>
@@ -246,6 +289,26 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
         </section>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * "Create a new roadmap", which asks who writes it: the coach or the owner.
+ */
+function RoadmapCreate({
+  state,
+  ids,
+}: {
+  state: RoadmapScreenState;
+  ids: ReturnType<typeof sheetTitleIds>;
+}) {
+  return (
+    <RoadmapNew
+      opensOn="create"
+      titleIds={ids}
+      fresh={<RoadmapCompose state={state} headingId={ids.fresh} />}
+      write={<RoadmapWrite state={state} headingId={ids.write} />}
+    />
   );
 }
 

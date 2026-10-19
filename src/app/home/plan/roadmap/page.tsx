@@ -4,13 +4,7 @@ import styles from "./roadmap.module.css";
 
 import homeStyles from "../../home.module.css";
 import { SubPageHeader } from "../sub-page-header";
-import { RoadmapNew } from "@/components/roadmap/roadmap-new";
-import {
-  RoadmapChangeCompose,
-  RoadmapCompose,
-  RoadmapScreen,
-  RoadmapWrite,
-} from "@/components/roadmap/roadmap-screen";
+import { RoadmapScreen } from "@/components/roadmap/roadmap-screen";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import { selectActiveGoalContext } from "@/server/goals/goal-records";
 import {
@@ -43,15 +37,6 @@ import { TRAINING_HISTORY_WINDOW_DAYS } from "@/server/training/training-history
 
 export const dynamic = "force-dynamic";
 
-/** The headings that name the corner's sheet, one for each thing it shows. */
-const SHEET_TITLE_IDS = {
-  menu: "roadmap-change-menu-title",
-  change: "roadmap-change-title",
-  fresh: "roadmap-new-title",
-  write: "roadmap-write-title",
-  rewrite: "roadmap-write-title",
-};
-
 /**
  * The roadmap.
  *
@@ -79,35 +64,9 @@ export default async function RoadmapPage() {
 
   return (
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
-      {/* Once there is a roadmap the page starts with it, and asking for
-          another is this one button (owner, 13 Oct 2026). Not while a proposal
-          awaits a decision: decide, then ask again. The version is on the
-          roadmap's own line. */}
-      <SubPageHeader
-        title={ROADMAP_COPY.routeTitle}
-        action={
-          state.current === null || state.openProposal !== null ? undefined : (
-            <RoadmapNew
-              titleIds={SHEET_TITLE_IDS}
-              change={
-                <RoadmapChangeCompose
-                  state={state}
-                  headingId={SHEET_TITLE_IDS.change}
-                />
-              }
-              fresh={
-                <RoadmapCompose
-                  state={state}
-                  headingId={SHEET_TITLE_IDS.fresh}
-                />
-              }
-              write={
-                <RoadmapWrite state={state} headingId={SHEET_TITLE_IDS.write} />
-              }
-            />
-          )
-        }
-      />
+      {/* Its controls are ⋯ beside the roadmap's own title (owner, 19 Oct
+          2026), not the corner. */}
+      <SubPageHeader title={ROADMAP_COPY.routeTitle} />
       <RoadmapScreen state={state} />
     </main>
   );

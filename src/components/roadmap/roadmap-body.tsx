@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { RoadmapDateRange } from "./roadmap-date-range";
 import {
   RoadmapSpine,
@@ -25,7 +27,7 @@ import {
  * of it is read or shown (owner, 13 October 2026).
  *
  * A Server Component with no interaction of its own. The controls live beside
- * it, not in it.
+ * it, not in it; the roadmap in force puts its ⋯ beside the title.
  */
 export function RoadmapBody({
   content,
@@ -36,7 +38,10 @@ export function RoadmapBody({
   goalTitles,
   marks,
   review,
+  titleAction,
 }: {
+  /** Drawn beside the title: the roadmap in force's controls. */
+  titleAction?: ReactNode;
   /** Given for the roadmap in force only; a proposal's milestones take none. */
   marks?: SpineMarks;
   /** Likewise: a proposal's reviews are neither due nor done. */
@@ -54,10 +59,17 @@ export function RoadmapBody({
   return (
     <>
       <ExampleTag providerCode={providerCode} />
-      <h2 className={styles.proposalTitle}>{content.title}</h2>
+      {titleAction === undefined || titleAction === null ? (
+        <h2 className={styles.proposalTitle}>{content.title}</h2>
+      ) : (
+        <div className={styles.titleRow}>
+          <h2 className={styles.proposalTitle}>{content.title}</h2>
+          {titleAction}
+        </div>
+      )}
       {/* From and to (owner, 13 and 14 Oct 2026). No version number: the
           page shows the roadmap in force and nothing to compare it with. */}
-      <p className={styles.horizon}>
+      <p className={styles.horizon} data-roadmap-horizon>
         {note === undefined ? null : (
           <span className={styles.horizonNote}>{note}</span>
         )}

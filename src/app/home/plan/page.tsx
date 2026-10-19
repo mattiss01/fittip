@@ -25,7 +25,7 @@ import { TimezoneConfirmation } from "./timezone-confirmation";
 import homeStyles from "../home.module.css";
 import { CoachSpark } from "@/components/home/coach-spark";
 import { isoDateInTimezone } from "@/lib/date/local-date";
-import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
+import { ROADMAP_ATTENTION_NOTES } from "@/lib/roadmap/roadmap-control-copy";
 import {
   ActivityLibraryProvider,
   type LibraryActivityOption,
@@ -103,6 +103,7 @@ export default async function PlanPage({ searchParams }: Props) {
                   attention === "review_due" ? "" : undefined
                 }
                 data-roadmap-missing={attention === "missing" ? "" : undefined}
+                data-roadmap-ended={attention === "ended" ? "" : undefined}
               />
             )}
           </Link>
@@ -113,9 +114,7 @@ export default async function PlanPage({ searchParams }: Props) {
             "Roadmap", which is what it is looked for by. */}
         {attention === null ? null : (
           <span className={w.srOnly} id="roadmap-attention-note">
-            {attention === "review_due"
-              ? ROADMAP_CONTROL_COPY.reviewDueNote
-              : ROADMAP_CONTROL_COPY.missingNote}
+            {ROADMAP_ATTENTION_NOTES[attention]}
           </span>
         )}
       </header>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import styles from "@/app/home/home.module.css";
-import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
+import { ROADMAP_ATTENTION_NOTES } from "@/lib/roadmap/roadmap-control-copy";
 import {
   PlanIcon,
   ProgressIcon,
@@ -32,7 +32,7 @@ export function MobileNavigation({
    */
   decisionsOpen?: boolean;
   /** The Plan's Roadmap chip has a dot, so "Plan" has one (owner, 19 Oct). */
-  roadmapAttention?: "review_due" | "missing" | null;
+  roadmapAttention?: keyof typeof ROADMAP_ATTENTION_NOTES | null;
 }) {
   const pathname = usePathname();
 
@@ -58,11 +58,7 @@ export function MobileNavigation({
                     : []),
                 ]
               : href === "/home/plan" && roadmapAttention !== null
-                ? [
-                    roadmapAttention === "review_due"
-                      ? ROADMAP_CONTROL_COPY.reviewDueNote
-                      : ROADMAP_CONTROL_COPY.missingNote,
-                  ]
+                ? [ROADMAP_ATTENTION_NOTES[roadmapAttention]]
                 : [];
           const marked = notes.length > 0;
           const noteId = `${href.slice("/home/".length)}-open-note`;

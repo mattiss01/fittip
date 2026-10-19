@@ -155,7 +155,7 @@ describe("Roadmap", () => {
     // When it runs. No version number (owner, 13 Oct 2026), and no length
     // beside the dates (owner, 14 Oct 2026).
     const horizon = document.querySelector(
-      "[data-roadmap-current] h2 + p",
+      "[data-roadmap-current] [data-roadmap-horizon]",
     ) as HTMLElement;
     expect(horizon).toHaveTextContent("14 Sept");
     expect(horizon).toHaveTextContent("6 Dec 2026");
@@ -346,50 +346,115 @@ describe("Roadmap", () => {
     expect(screen.queryByText("Expired")).toBeNull();
   });
 
-  // With a roadmap the page starts with it. Changing it is the button in the
-  // corner, which asks which way (ADR-028); each form is in the sheet.
+  // With a roadmap the page starts with it. What can be done with it is ⋯
+  // beside its title (owner, 19 Oct 2026); a new one first asks who writes
+  // it. Each form is in the sheet.
+  const openActions = () => {
+    const more = screen.getByRole("button", {
+      name: ROADMAP_COPY.actionsLabel,
+    });
+    fireEvent.click(more);
+    return document.getElementById(
+      more.getAttribute("aria-controls") as string,
+    ) as HTMLElement;
+  };
   const openChoice = (choice: "change" | "fresh" | "write") => {
+    openActions();
+    if (choice === "change") {
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: ROADMAP_COPY.changeWithCoachAction,
+        }),
+      );
+      return;
+    }
     fireEvent.click(
-      screen.getByRole("button", { name: ROADMAP_COPY.changeRoadmapAction }),
+      screen.getByRole("button", { name: ROADMAP_COPY.createRoadmapAction }),
     );
     const menu = screen.getByRole("dialog", {
-      name: ROADMAP_COPY.changeRoadmapAction,
+      name: ROADMAP_COPY.createRoadmapAction,
     });
     fireEvent.click(
       menu.querySelector(`[data-roadmap-choice="${choice}"]`) as HTMLElement,
     );
   };
 
-  it("starts with the roadmap and offers three ways to change it", async () => {
+  it("starts with the roadmap, its actions beside its title", async () => {
     listVersions.mockResolvedValue([version(1)]);
 
     render(await RoadmapPage());
 
     expect(document.querySelector("[data-roadmap-compose]")).toBeNull();
 
+    expect(
+      within(openActions())
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
+    ).toEqual([
+      ROADMAP_COPY.rewriteAction,
+      ROADMAP_COPY.changeWithCoachAction,
+      ROADMAP_COPY.createRoadmapAction,
+    ]);
+
     fireEvent.click(
-      screen.getByRole("button", { name: ROADMAP_COPY.changeRoadmapAction }),
+      screen.getByRole("button", { name: ROADMAP_COPY.createRoadmapAction }),
     );
     const menu = screen.getByRole("dialog", {
-      name: ROADMAP_COPY.changeRoadmapAction,
+      name: ROADMAP_COPY.createRoadmapAction,
     });
     expect(
       [...menu.querySelectorAll("[data-roadmap-choice]")].map(
         (choice) => choice.querySelector("strong")?.textContent,
       ),
-    ).toEqual([
-      ROADMAP_COPY.changeWithCoachAction,
-      ROADMAP_COPY.newWithCoachAction,
-      ROADMAP_COPY.writeAction,
-    ]);
+    ).toEqual([ROADMAP_COPY.newWithCoachAction, ROADMAP_COPY.writeAction]);
     // Nothing is asked for until a way is chosen.
     expect(document.querySelector("[data-roadmap-compose]")).toBeNull();
     expect(document.querySelector("[data-roadmap-write]")).toBeNull();
   });
 
-  // ADR-029: the third choice is a roadmap of the owner's own, empty to
+  // Owner, 19 Oct 2026: a roadmap whose last day has passed says so, and
+  // offers a new one above it and below it; there is nothing left to edit.
+  it("offers a new roadmap above and below one that has ended", async () => {
+    const ended = version(1);
+    ended.content.endDate = shiftIsoDate(today(), -1);
+    ended.content.phases = ended.content.phases.map((phase) => ({
+      ...phase,
+      endDate: shiftIsoDate(today(), -1),
+    }));
+    listVersions.mockResolvedValue([ended]);
+
+    render(await RoadmapPage());
+
+    const notice = document.querySelector(
+      "[data-roadmap-ended]",
+    ) as HTMLElement;
+    expect(
+      within(notice).getByText(ROADMAP_COPY.reviewDueRoadmap),
+    ).toBeTruthy();
+    // It stands in for the review the ending was.
+    expect(document.querySelector("[data-roadmap-review-due]")).toBeNull();
+    expect(document.querySelectorAll("[data-roadmap-create]")).toHaveLength(2);
+
+    expect(
+      within(openActions())
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
+    ).toEqual([ROADMAP_COPY.createRoadmapAction]);
+
+    fireEvent.click(
+      within(notice).getByRole("button", {
+        name: ROADMAP_COPY.createRoadmapAction,
+      }),
+    );
+    const menu = screen.getByRole("dialog", {
+      name: ROADMAP_COPY.createRoadmapAction,
+    });
+    expect(menu.querySelectorAll("[data-roadmap-choice]")).toHaveLength(2);
+  });
+
+  // ADR-029: writing it yourself is a roadmap of the owner's own, empty to
   // start, saved against the head this page read.
-  it("writes a roadmap by hand from the corner's sheet", async () => {
+  it("writes a roadmap by hand from Create a new roadmap", async () => {
     getHead.mockResolvedValue({ revision: 3, currentVersionId: "v" });
     listVersions.mockResolvedValue([version(3)]);
 
@@ -444,7 +509,7 @@ describe("Roadmap", () => {
     ).toBeNull();
   });
 
-  it("asks for a new roadmap from the corner's sheet", async () => {
+  it("asks the coach for a new roadmap from Create a new roadmap", async () => {
     listVersions.mockResolvedValue([version(1)]);
 
     render(await RoadmapPage());
@@ -465,7 +530,7 @@ describe("Roadmap", () => {
     // And the way back to the choice.
     fireEvent.click(within(sheet).getByRole("button", { name: "‹ Back" }));
     expect(
-      screen.getByRole("dialog", { name: ROADMAP_COPY.changeRoadmapAction }),
+      screen.getByRole("dialog", { name: ROADMAP_COPY.createRoadmapAction }),
     ).toBeTruthy();
   });
 
@@ -566,7 +631,7 @@ describe("Roadmap", () => {
     render(await RoadmapPage());
 
     expect(
-      screen.queryByRole("button", { name: ROADMAP_COPY.changeRoadmapAction }),
+      screen.queryByRole("button", { name: ROADMAP_COPY.actionsLabel }),
     ).toBeNull();
     // The review is still due and can be marked; it leads nowhere else yet.
     const due = document.querySelector(
@@ -578,7 +643,7 @@ describe("Roadmap", () => {
     expect(due.querySelector("[data-roadmap-change]")).toBeNull();
   });
 
-  it("offers Change with Coach from a due review, straight to its form", async () => {
+  it("offers Edit with Coach from a due review, straight to its form", async () => {
     listVersions.mockResolvedValue([endedVersion()]);
 
     render(await RoadmapPage());

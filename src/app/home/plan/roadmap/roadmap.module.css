@@ -60,6 +60,19 @@
   line-height: 1.15;
 }
 
+/* The title of the roadmap in force, with its ⋯ beside it. */
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.titleRow > .proposalTitle {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .proposalSummary {
   margin: 0.6rem 0 0;
   line-height: 1.55;
@@ -721,26 +734,6 @@
   .quietAction:hover {
     background: var(--sage);
   }
-}
-
-/* Beside the page's title: the way to a new roadmap once one is in force. */
-.newAction {
-  min-height: 2.75rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.5rem 0.9rem;
-  border: 0;
-  border-radius: var(--radius-control);
-  background: var(--accent-dark);
-  color: var(--paper);
-  font: 700 0.9rem var(--font-sans);
-  cursor: pointer;
-}
-
-.newAction:focus-visible {
-  outline: 3px solid var(--accent-dark);
-  outline-offset: 2px;
 }
 
 /* The sheet is the form's surface, so the form drops its own box. */
