@@ -552,7 +552,12 @@ export function SessionPage({
                       setPanel("reason");
                     }}
                   >
-                    {cancellation === null ? "Add reason" : "Edit reason"}
+                    {/* The coach's line counts as a reason already given
+                        (owner, 19 Oct 2026), though it is not stored as
+                        one: saved reasons are the athlete's own words. */}
+                    {cancellation === null && coachCancellation === null
+                      ? "Add reason"
+                      : "Edit reason"}
                   </MenuItem>
                   {past ? null : (
                     <MenuItem
