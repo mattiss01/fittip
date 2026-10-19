@@ -55,6 +55,12 @@ vi.mock("@/server/repositories/roadmap-repository", async (original) => {
   return { ...actual, createRoadmapRepository: createRoadmapMock };
 });
 
+const { recordGoalSuggestionMock } = vi.hoisted(() => ({
+  recordGoalSuggestionMock: vi.fn(),
+}));
+vi.mock("@/server/goals/goal-suggestion-recording", () => ({
+  recordGoalSuggestion: recordGoalSuggestionMock,
+}));
 vi.mock("@/server/repositories/ai-spend-repository", () => ({
   createAISpendRepository: createSpendLedgerMock,
 }));
@@ -543,6 +549,46 @@ describe("generatePlanProposal", () => {
     expect(finish.regenerationFeedback).toBe(
       "Too much running, not enough rest.",
     );
+  });
+
+  it("records the note's goal suggestion on a first answer, never on ask again (ADR-034)", async () => {
+    // The example coach suggests a goal when the note says "goal".
+    const note = "New goal: run 5 km twice a week.";
+    await generatePlanProposal(
+      { ...input(), planningNote: note },
+      { proposals: proposals as unknown as PlanProposalRepository },
+    );
+    expect(recordGoalSuggestionMock).toHaveBeenCalledWith(
+      "plan",
+      "t1",
+      expect.objectContaining({ title: "New goal: run 5 km twice a week." }),
+    );
+
+    recordGoalSuggestionMock.mockClear();
+    proposals.getProposal.mockResolvedValue({
+      id: PREVIOUS_ID,
+      items: [],
+      content: {
+        schemaVersion: "fittip.seven-day-plan.v2",
+        weekDescription: "Rest.",
+        startDate: TODAY,
+        endDate: END_DATE,
+        sessions: [],
+      },
+    });
+    await generatePlanProposal(
+      {
+        ...input(),
+        planningNote: note,
+        previousProposalId: PREVIOUS_ID,
+        regenerationFeedback: "Less running.",
+        idempotencyKey: "plan-generation-key-regen-goal",
+      },
+      { proposals: proposals as unknown as PlanProposalRepository },
+    );
+    // The same note answered again: suggesting it twice would offer the
+    // owner the same goal twice.
+    expect(recordGoalSuggestionMock).not.toHaveBeenCalled();
   });
 
   it("claims nothing when the proposal being replaced cannot be read", async () => {

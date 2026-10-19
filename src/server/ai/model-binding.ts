@@ -62,9 +62,9 @@ export type CoachAIModelBinding = {
  * stale is unknown, and unknown denies, because a wrong price near a hard
  * ceiling is worse than no proposal.
  *
- * Against `COACH_AI_LIVE_LIMITS` a reservation charges 18,000 x 125,000/1e6
- * plus 11,500 x 500,000/1e6 = 8,000 micro-USD, exactly the 8,000
- * per-request ceiling (3,750 until the output ceiling rose, 19 October 2026).
+ * Against `COACH_AI_LIVE_LIMITS` a reservation charges 20,000 x 125,000/1e6
+ * plus 11,500 x 500,000/1e6 = 8,250 micro-USD, inside the database's 9,000
+ * per-request ceiling (3,750 until the ceilings rose, 19 October 2026).
  */
 const OPENAI_GPT_6_LUNA: CoachAIModelBinding = {
   providerCode: "openai",

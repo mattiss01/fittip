@@ -5,6 +5,7 @@ import {
   type CoachAIContext,
   type CoachAIGoalReference,
 } from "@/server/ai/contracts";
+import { syntheticGoalSuggestion } from "@/server/ai/fixtures/synthetic-goal-suggestion";
 import { normalizeOwnerText } from "@/server/ai/owner-text";
 
 /**
@@ -84,6 +85,7 @@ export function synthesizeRoadmapBody(context: CoachAIContext): string {
   return JSON.stringify({
     roadmap,
     memoryCandidates: memoryCandidates(context),
+    goalSuggestion: syntheticGoalSuggestion(context),
   });
 }
 

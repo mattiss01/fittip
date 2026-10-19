@@ -5,6 +5,7 @@ import {
   type CoachAIContext,
   type CoachAIGoalReference,
 } from "@/server/ai/contracts";
+import { syntheticGoalSuggestion } from "@/server/ai/fixtures/synthetic-goal-suggestion";
 import { normalizeOwnerText } from "@/server/ai/owner-text";
 
 /**
@@ -199,7 +200,11 @@ export function synthesizePlanBody(context: CoachAIContext): string {
       : null,
   };
 
-  return JSON.stringify({ plan, memoryCandidates: memoryCandidates(context) });
+  return JSON.stringify({
+    plan,
+    memoryCandidates: memoryCandidates(context),
+    goalSuggestion: syntheticGoalSuggestion(context),
+  });
 }
 
 type FixtureConstraints = {

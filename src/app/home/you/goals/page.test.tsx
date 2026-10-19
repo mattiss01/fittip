@@ -35,6 +35,12 @@ vi.mock("@/server/repositories/profile-repository", () => ({
   createProfileRepository: createProfileMock,
   ProfileAuthenticationError: class extends Error {},
 }));
+vi.mock("@/server/repositories/goal-suggestion-repository", () => ({
+  createGoalSuggestions: async () => ({
+    listOpen: async () => ({ goalRevision: 0, suggestions: [] }),
+  }),
+  GoalSuggestionAuthenticationError: class extends Error {},
+}));
 vi.mock("@/components/goals/goal-manager", () => ({
   GoalManager: ({
     expectedRevision,

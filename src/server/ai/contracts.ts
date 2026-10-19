@@ -682,6 +682,20 @@ export type CoachAIMemoryCandidate = {
 export type RoadmapMemoryCandidate = CoachAIMemoryCandidate;
 
 /**
+ * ADR-034. An objective the planning note states that no target goal covers.
+ * Only ever a suggestion: the owner accepts it as Core or Supporting, which
+ * creates the goal, or rejects it. It carries no tier for that reason.
+ */
+export type CoachAIGoalSuggestion = {
+  title: string;
+  desiredOutcome: string;
+  /** One to ten, distinct. */
+  sports: string[];
+  /** Only when the note names a date. */
+  targetDate: string | null;
+};
+
+/**
  * Where a proposal's provenance comes from.
  *
  * Ids and revisions only, never copied content. Acceptance rechecks every one
@@ -714,6 +728,8 @@ export type CoachAISourceReference = {
 export type RoadmapResponse = {
   roadmap: RoadmapProposal;
   memoryCandidates: CoachAIMemoryCandidate[];
+  /** ADR-034; absent or null when none, or when the section was invalid. */
+  goalSuggestion?: CoachAIGoalSuggestion | null;
 };
 
 /**
@@ -812,6 +828,8 @@ export type SevenDayPlanProposal = {
 export type SevenDayPlanResponse = {
   plan: SevenDayPlanProposal;
   memoryCandidates: CoachAIMemoryCandidate[];
+  /** ADR-034; absent or null when none, or when the section was invalid. */
+  goalSuggestion?: CoachAIGoalSuggestion | null;
 };
 
 /**

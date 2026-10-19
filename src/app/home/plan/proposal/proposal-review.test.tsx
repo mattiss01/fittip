@@ -32,6 +32,9 @@ vi.mock("../actions", () => ({ changePlanAction: changePlanActionMock }));
 vi.mock("@/app/home/you/memory/actions", () => ({
   changeMemoryAction: vi.fn(),
 }));
+vi.mock("@/app/home/you/goals/suggestion-actions", () => ({
+  decideGoalSuggestionAction: vi.fn(),
+}));
 vi.mock("./actions", () => ({
   decidePlanProposalItemAction: decideItemActionMock,
   discardPlanProposalAction: discardActionMock,
@@ -50,6 +53,7 @@ import {
   PLAN_PROPOSAL_FEEDBACK_MAX_LENGTH,
 } from "@/lib/plan/plan-proposal-copy";
 import { REGENERATION_FEEDBACK_MAX_LENGTH } from "@/server/ai/owner-text";
+import type { GoalSuggestion } from "@/components/goals/goal-suggestions";
 import type { MemorySuggestion } from "@/components/memory/memory-suggestions";
 
 /**
@@ -107,6 +111,7 @@ function renderReview(
     days?: ProposalTimelineDay[];
     planChangedSinceComposed?: boolean;
     memory?: MemorySuggestion[];
+    goals?: GoalSuggestion[];
     nothingAdded?: boolean;
     safetyConsiderations?: string[];
     assumptions?: string[];
@@ -134,6 +139,7 @@ function renderReview(
       staged={0}
       isExample={false}
       memory={{ revision: 0, suggestions: overrides.memory ?? [] }}
+      suggestedGoals={{ goalRevision: 0, suggestions: overrides.goals ?? [] }}
     />,
   );
 }
@@ -405,6 +411,36 @@ describe("open memory suggestions before the review ends (owner, 19 Oct 2026)", 
 
     fireEvent.click(screen.getByRole("button", { name: COPY.finishAction }));
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("asks about this proposal's goal suggestion too (ADR-034)", () => {
+    renderReview({
+      goals: [
+        {
+          id: "g1",
+          proposalId: PROPOSAL_ID,
+          title: "Run 5 km twice a week",
+          desiredOutcome: "Two continuous 5 km runs a week.",
+          sports: ["Running"],
+          targetDate: "2027-01-10",
+        },
+      ],
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: COPY.finishAction }));
+    const question = screen.getByRole("dialog", {
+      name: COPY.memoryBeforeEndTitle,
+    });
+    expect(
+      within(question).getByRole("button", {
+        name: "Add as a core goal: Run 5 km twice a week",
+      }),
+    ).toHaveAttribute("value", "core");
+    expect(
+      within(question).getByRole("button", {
+        name: "Add as a supporting goal: Run 5 km twice a week",
+      }),
+    ).toHaveAttribute("value", "supporting");
   });
 
   it("asks nothing when none is open", () => {

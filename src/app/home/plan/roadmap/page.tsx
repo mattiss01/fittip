@@ -36,6 +36,7 @@ import {
   type RoadmapGoalSummary,
   type RoadmapScreenState,
 } from "@/server/roadmap/roadmap-records";
+import { createGoalSuggestions } from "@/server/repositories/goal-suggestion-repository";
 import { roadmapReviewDue } from "@/server/roadmap/roadmap-reviews";
 import { hasRecentSafetySignal } from "@/server/roadmap/roadmap-safety";
 import { TRAINING_HISTORY_WINDOW_DAYS } from "@/server/training/training-history-context";
@@ -133,15 +134,23 @@ async function loadRoadmapState(): Promise<RoadmapScreenState> {
     createProfileRepository(),
   ]);
 
-  const [profile, goalCollection, head, versions, reviewProposals, memory] =
-    await Promise.all([
-      profiles.getCurrentProfile(),
-      goalRepository.list(),
-      roadmaps.getHead(),
-      roadmaps.listVersions(),
-      roadmaps.getReviewProposals(),
-      roadmaps.listOpenMemorySuggestions(),
-    ]);
+  const [
+    profile,
+    goalCollection,
+    head,
+    versions,
+    reviewProposals,
+    memory,
+    openGoalSuggestions,
+  ] = await Promise.all([
+    profiles.getCurrentProfile(),
+    goalRepository.list(),
+    roadmaps.getHead(),
+    roadmaps.listVersions(),
+    roadmaps.getReviewProposals(),
+    roadmaps.listOpenMemorySuggestions(),
+    createGoalSuggestions().then((suggestions) => suggestions.listOpen()),
+  ]);
 
   // The owner's own calendar date where one is knowable. An unconfirmed zone
   // falls back to UTC rather than hiding the roadmap behind a zone prompt: a
@@ -202,6 +211,13 @@ async function loadRoadmapState(): Promise<RoadmapScreenState> {
         : roadmapReviewDue(current.content.phases, today, reviewedThrough),
     openProposal,
     memory,
+    // ADR-034: the roadmap's own goal suggestions; a plan's are on its review.
+    suggestedGoals: {
+      goalRevision: openGoalSuggestions.goalRevision,
+      suggestions: openGoalSuggestions.suggestions.filter(
+        (suggestion) => suggestion.source === "roadmap",
+      ),
+    },
     goals,
     otherGoalTitles,
     defaultEndDate: defaultRoadmapEndDate(today, goals),

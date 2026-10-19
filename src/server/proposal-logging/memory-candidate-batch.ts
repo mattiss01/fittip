@@ -55,3 +55,17 @@ export function logMemoryCandidateFailure(
     `[fittip] ${route} memory candidates not recorded: ${memoryCandidateFailureCode(error)}`,
   );
 }
+
+/**
+ * ADR-034: a goal suggestion that could not be recorded, for the same reason
+ * and on the same terms as the memory batch above: swallowed so the proposal
+ * stands, logged by code only, never its words.
+ */
+export function logGoalSuggestionFailure(
+  route: MemoryCandidateRoute,
+  error: unknown,
+): void {
+  console.warn(
+    `[fittip] ${route} goal suggestion not recorded: ${memoryCandidateFailureCode(error)}`,
+  );
+}

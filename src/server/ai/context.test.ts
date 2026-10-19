@@ -461,7 +461,7 @@ describe("the per-source context allocation", () => {
     expect(estimatedTokens).toBeLessThanOrEqual(
       COACH_AI_LIVE_LIMITS.maxInputTokens,
     );
-    expect(COACH_AI_LIVE_LIMITS.maxInputTokens).toBe(18_000);
+    expect(COACH_AI_LIVE_LIMITS.maxInputTokens).toBe(20_000);
   });
 
   it("reserves room in the training-history ceiling for a full miss list", () => {

@@ -13,7 +13,9 @@ import {
   coachAIStaticPrefix,
 } from "@/server/ai/openai-prompt";
 
-const STATIC_PREFIX_BUDGET = 7_800;
+// 8,100 since 19 Oct 2026 (ADR-034): the goal suggestion's sentence. The
+// worst case is 17,966 tokens against the 20,000 ceiling.
+const STATIC_PREFIX_BUDGET = 8_100;
 
 /**
  * The plan prompt gets a larger allowance than the roadmap's, and that is a
@@ -70,7 +72,9 @@ const STATIC_PREFIX_BUDGET = 7_800;
  * whatever the allocation becomes; this comment is the one thing that has to
  * be kept honest by hand.
  */
-const PLAN_STATIC_PREFIX_BUDGET = 9_400;
+// 9,800 since 19 Oct 2026 (ADR-034): the goal suggestion's sentence, and
+// the decisions on a previous proposal. 16,766 tokens of 20,000.
+const PLAN_STATIC_PREFIX_BUDGET = 9_800;
 
 describe("what every prompt says about the athlete's data (ADR-023)", () => {
   it.each([
@@ -106,13 +110,13 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
       );
 
     // 14,179 until ADR-028: a request to change the roadmap sends it whole.
-    expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(17_891);
+    expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(17_966);
     // 14,991 until the plan's logs took 10,200 bytes (16 Oct 2026); 15,216
     // until the prompt said an empty week is an answer (17 Oct 2026); 15,291
     // until the coach could suggest a cancel (ADR-033, 19 Oct 2026); 15,391
     // until every decision went back with the previous proposal (same day).
     expect(tokens("create_seven_day_plan", PLAN_STATIC_PREFIX_BUDGET)).toBe(
-      16_666,
+      16_766,
     );
     expect(
       tokens(

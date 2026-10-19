@@ -23,6 +23,7 @@ import {
   validateMemoryCandidates,
   withoutSemicolons,
   validateCoachAICandidate,
+  validateGoalSuggestion,
   validatePlanCandidate,
   validateRoadmapCandidate,
   validateSessionActivitiesCandidate,
@@ -1185,5 +1186,56 @@ describe("the coach writes no semicolons (owner, 17 Oct 2026)", () => {
     if (result.outcome !== "accepted") throw new Error("expected acceptance");
     expect(result.candidates[0]!.content.length).toBeLessThanOrEqual(200);
     expect(result.candidates[0]!.content.endsWith("…")).toBe(true);
+  });
+});
+
+describe("a goal suggestion (ADR-034)", () => {
+  const note = "I want to run 5 km twice a week by January.";
+  const good = {
+    title: "Run 5 km twice a week",
+    desiredOutcome: "Two continuous 5 km runs in a normal week.",
+    sports: ["Running", " running ", "Walking"],
+    targetDate: "2027-01-10",
+  };
+
+  it("keeps a suggestion drawn from the note, its sports distinct", () => {
+    expect(validateGoalSuggestion(good, note, "2026-10-19")).toEqual({
+      title: "Run 5 km twice a week",
+      desiredOutcome: "Two continuous 5 km runs in a normal week.",
+      sports: ["Running", "Walking"],
+      targetDate: "2027-01-10",
+    });
+  });
+
+  it.each([
+    ["without a planning note", good, null],
+    ["with no sport", { ...good, sports: [] }, note],
+    ["with a tier the owner chooses", { ...good, priorityTier: "core" }, note],
+    [
+      "with a target date before the request",
+      { ...good, targetDate: "2026-10-01" },
+      note,
+    ],
+    [
+      "with a date that is not one",
+      { ...good, targetDate: "next spring" },
+      note,
+    ],
+    ["with a blank title", { ...good, title: "  " }, note],
+  ] as const)(
+    "drops one %s, never the proposal",
+    (_label, value, planningNote) => {
+      expect(
+        validateGoalSuggestion(value, planningNote, "2026-10-19"),
+      ).toBeNull();
+    },
+  );
+
+  it("takes null as no suggestion, and a missing date as none named", () => {
+    expect(validateGoalSuggestion(null, note, "2026-10-19")).toBeNull();
+    expect(
+      validateGoalSuggestion({ ...good, targetDate: null }, note, "2026-10-19")
+        ?.targetDate,
+    ).toBeNull();
   });
 });

@@ -13,7 +13,9 @@ import {
 import homeStyles from "../../home.module.css";
 import { readMeasurementHistory } from "../activities/measurement-history";
 import { SubPageHeader } from "../sub-page-header";
+import { GoalSuggestions } from "@/components/goals/goal-suggestions";
 import { MemorySuggestions } from "@/components/memory/memory-suggestions";
+import { createGoalSuggestions } from "@/server/repositories/goal-suggestion-repository";
 import { ActivityLibraryProvider } from "@/components/training/activity-editor";
 import {
   COACH_START_MAX_DAYS_AHEAD,
@@ -150,6 +152,7 @@ export default async function PlanProposalPage() {
                 staged={stagedItemCount(state.proposal.items)}
                 isExample={isExampleProposal(state.proposal.providerCode)}
                 memory={state.memory}
+                suggestedGoals={state.suggestedGoals}
               />
             </ActivityLibraryProvider>
           )}
@@ -166,6 +169,15 @@ export default async function PlanProposalPage() {
               >
                 {COPY.memoryReviewLink}
               </Link>
+            </section>
+          ) : null}
+          {state.suggestedGoals.suggestions.length > 0 ? (
+            <section className={styles.memoryPanel} data-plan-goal-suggestions>
+              <h2>{COPY.goalPanelTitle}</h2>
+              <GoalSuggestions
+                suggestions={state.suggestedGoals.suggestions}
+                expectedGoalRevision={state.suggestedGoals.goalRevision}
+              />
             </section>
           ) : null}
         </>
@@ -198,6 +210,7 @@ async function loadProposalState() {
       finishKey: "",
       days: [],
       memory: { revision: 0, suggestions: [] },
+      suggestedGoals: { goalRevision: 0, suggestions: [] },
     };
   }
 
@@ -211,11 +224,20 @@ async function loadProposalState() {
   // Read beside the proposal because it is independent of it: a suggestion
   // from an earlier planning note is still waiting whether or not this
   // proposal is open. Decided here since 19 Oct 2026 (owner).
-  const [proposal, goalCollection, memory] = await Promise.all([
-    proposals.getLatestProposal(),
-    goals.list(),
-    proposals.listOpenMemorySuggestions(),
-  ]);
+  const [proposal, goalCollection, memory, openGoalSuggestions] =
+    await Promise.all([
+      proposals.getLatestProposal(),
+      goals.list(),
+      proposals.listOpenMemorySuggestions(),
+      createGoalSuggestions().then((suggestions) => suggestions.listOpen()),
+    ]);
+  // ADR-034: the plan's own goal suggestions; a roadmap's are on the Roadmap.
+  const suggestedGoals = {
+    goalRevision: openGoalSuggestions.goalRevision,
+    suggestions: openGoalSuggestions.suggestions.filter(
+      (suggestion) => suggestion.source === "plan",
+    ),
+  };
   const targetable = selectActiveGoalContext(goalCollection.goals).targetable;
   const hasGoals = targetable.length > 0;
 
@@ -252,6 +274,7 @@ async function loadProposalState() {
       finishKey: "",
       days: [],
       memory,
+      suggestedGoals,
     };
   }
 
@@ -296,6 +319,7 @@ async function loadProposalState() {
       loggedSessionIds,
     }),
     memory,
+    suggestedGoals,
   };
 }
 

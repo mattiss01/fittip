@@ -93,6 +93,8 @@ const allowedRoadmapModules = [
   "@/server/goals/goal-records",
   "@/server/repositories/completion-log-repository",
   "@/server/repositories/goal-repository",
+  // ADR-034, as on the proposal route: list and decide goal suggestions.
+  "@/server/repositories/goal-suggestion-repository",
   "@/server/repositories/profile-repository",
   "@/server/repositories/roadmap-repository",
   "@/server/roadmap/roadmap-edit",
@@ -316,6 +318,10 @@ const allowedPlanProposalModules = [
   // the session ids from it and nothing else; no write of the log is reached.
   "@/server/repositories/completion-log-repository",
   "@/server/repositories/goal-repository",
+  // ADR-034: the review lists the coach's goal suggestions and decides them
+  // through decide_goal_suggestion, which creates a goal only via
+  // apply_goal_change. No other goal write is reached.
+  "@/server/repositories/goal-suggestion-repository",
   "@/server/repositories/plan-proposal-repository",
   "@/server/repositories/profile-repository",
   // M3-16B added a read of the roadmap the proposal was planned under; the

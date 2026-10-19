@@ -160,8 +160,10 @@ export const ROADMAP_CONTROL_COPY = {
      2026). Leaving one is a choice: it waits in Memory, unused until accepted. */
   memoryBeforeEndTitle: "Still open from your planning note",
   memoryBeforeEndSupport:
-    "Accept or reject these now, or leave them: they wait in Memory and are not used for coaching until you accept them.",
+    "Accept or reject these now, or leave them for later. Nothing is used for coaching or added to your goals until you accept it.",
   memoryBeforeEndBack: "Back to the proposal",
+  /** ADR-034: a goal the coach suggested from the planning note. */
+  goalPanelTitle: "A goal from your planning note",
   /* "Ask again" on the proposal itself (owner, 14 Oct 2026): the note is
      written while the proposal can still be read. */
   askAgainAction: "Ask for another",

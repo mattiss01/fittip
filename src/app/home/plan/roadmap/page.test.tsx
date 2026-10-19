@@ -47,6 +47,24 @@ vi.mock("@/server/repositories/roadmap-repository", async (original) => {
     await original<typeof import("@/server/repositories/roadmap-repository")>();
   return { ...actual, createRoadmapRepository: createRoadmapMock };
 });
+vi.mock(
+  "@/server/repositories/goal-suggestion-repository",
+  async (original) => {
+    const actual =
+      await original<
+        typeof import("@/server/repositories/goal-suggestion-repository")
+      >();
+    return {
+      ...actual,
+      createGoalSuggestions: async () => ({
+        listOpen: async () => ({ goalRevision: 0, suggestions: [] }),
+      }),
+    };
+  },
+);
+vi.mock("@/app/home/you/goals/suggestion-actions", () => ({
+  decideGoalSuggestionAction: vi.fn(),
+}));
 vi.mock("@/server/repositories/goal-repository", async (original) => {
   const actual =
     await original<typeof import("@/server/repositories/goal-repository")>();

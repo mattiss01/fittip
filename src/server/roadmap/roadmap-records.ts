@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { OpenMemorySuggestions } from "@/server/memory/open-memory-suggestions";
+import type { OpenGoalSuggestions } from "@/server/repositories/goal-suggestion-repository";
 
 import type { RoadmapReviewDue } from "./roadmap-reviews";
 
@@ -341,6 +342,8 @@ export type RoadmapScreenState = {
    * the memory revision a decision must name (decided here since 19 Oct 2026).
    */
   memory: OpenMemorySuggestions;
+  /** ADR-034: the coach's goal suggestions from roadmap notes, still open. */
+  suggestedGoals: OpenGoalSuggestions;
   goals: RoadmapGoalSummary[];
   /**
    * The owner's goals that are not active (paused, abandoned, achieved), by
