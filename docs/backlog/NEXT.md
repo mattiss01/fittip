@@ -23,7 +23,7 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 - [ ] **A7-5 — Size the fill before its first live run.** Measure output tokens on a
       twelve-activity answer: the grammar pads each target with fourteen nullable keys
-      against a 3,000-token ceiling. Needs a provider key, so it waits for one; each run
+      against an 11,500-token ceiling. Needs a provider key, so it waits for one; each run
       is paid and needs the owner's approval of the call count.
 - [ ] **A9 — Progress over measurements.** Load, distance and pace across completions, once
       A4 has been used for long enough to have any. The comfort layer; last on purpose.
