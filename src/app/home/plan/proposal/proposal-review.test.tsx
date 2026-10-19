@@ -29,6 +29,9 @@ vi.mock("react", async (importOriginal) => {
 });
 
 vi.mock("../actions", () => ({ changePlanAction: changePlanActionMock }));
+vi.mock("@/app/home/you/memory/actions", () => ({
+  changeMemoryAction: vi.fn(),
+}));
 vi.mock("./actions", () => ({
   decidePlanProposalItemAction: decideItemActionMock,
   discardPlanProposalAction: discardActionMock,
@@ -47,6 +50,7 @@ import {
   PLAN_PROPOSAL_FEEDBACK_MAX_LENGTH,
 } from "@/lib/plan/plan-proposal-copy";
 import { REGENERATION_FEEDBACK_MAX_LENGTH } from "@/server/ai/owner-text";
+import type { MemorySuggestion } from "@/components/memory/memory-suggestions";
 
 /**
  * The review surface, as M3-16B changed it.
@@ -102,6 +106,7 @@ function renderReview(
   overrides: {
     days?: ProposalTimelineDay[];
     planChangedSinceComposed?: boolean;
+    memory?: MemorySuggestion[];
     nothingAdded?: boolean;
     safetyConsiderations?: string[];
     assumptions?: string[];
@@ -128,6 +133,7 @@ function renderReview(
       unresolved={0}
       staged={0}
       isExample={false}
+      memory={{ revision: 0, suggestions: overrides.memory ?? [] }}
     />,
   );
 }
@@ -342,6 +348,62 @@ describe("asking for a different plan (owner, 19 Oct 2026)", () => {
     expect(PLAN_PROPOSAL_FEEDBACK_MAX_LENGTH).toBe(
       REGENERATION_FEEDBACK_MAX_LENGTH,
     );
+  });
+});
+
+describe("open memory suggestions before the review ends (owner, 19 Oct 2026)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useActionStateMock.mockImplementation(
+      (_action: unknown, initial: unknown) => [initial, vi.fn(), false],
+    );
+  });
+
+  afterEach(cleanup);
+
+  const open = [
+    {
+      id: "m1",
+      memoryType: "constraint" as const,
+      content: "Weekdays are short.",
+    },
+  ];
+
+  it("asks once before finishing, and lets the owner go on", () => {
+    renderReview({ memory: open });
+
+    fireEvent.click(screen.getByRole("button", { name: COPY.finishAction }));
+    const question = screen.getByRole("dialog", {
+      name: COPY.memoryBeforeEndTitle,
+    });
+    expect(within(question).getByText("Weekdays are short.")).toBeVisible();
+    expect(
+      within(question).getByRole("button", {
+        name: "Reject: Weekdays are short.",
+      }),
+    ).toBeVisible();
+
+    fireEvent.click(
+      within(question).getByRole("button", { name: COPY.discardCancel }),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("lists them in the discard question too", () => {
+    renderReview({ memory: open });
+
+    fireEvent.click(screen.getByRole("button", { name: COPY.discardAction }));
+    const question = screen.getByRole("dialog", {
+      name: COPY.discardConfirmTitle,
+    });
+    expect(within(question).getByText("Weekdays are short.")).toBeVisible();
+  });
+
+  it("asks nothing when none is open", () => {
+    renderReview();
+
+    fireEvent.click(screen.getByRole("button", { name: COPY.finishAction }));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
 

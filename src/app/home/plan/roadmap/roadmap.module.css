@@ -934,3 +934,24 @@
   text-underline-offset: 0.2em;
   cursor: pointer;
 }
+
+/* Open memory suggestions, asked about once before accepting or declining a
+   proposal (owner, 19 Oct 2026). */
+.memoryBefore {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.2rem;
+}
+
+.memoryBefore > h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.memoryBefore > p {
+  margin: 0;
+  color: var(--ledger-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}

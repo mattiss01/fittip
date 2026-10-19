@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { RoadmapProposalReview } from "./roadmap-proposal-review";
 
 import type { RoadmapActionState } from "@/app/home/plan/roadmap/action-state";
+import type { MemorySuggestion } from "@/components/memory/memory-suggestions";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 import type { RoadmapProposalView } from "@/server/roadmap/roadmap-records";
 
@@ -54,8 +55,44 @@ vi.mock("@/app/home/plan/roadmap/actions", () => ({
     }),
 }));
 
+vi.mock("@/app/home/you/memory/actions", () => ({
+  changeMemoryAction: vi.fn(),
+}));
+
 describe("RoadmapDecisionDock", () => {
   afterEach(cleanup);
+
+  it("puts open memory suggestions in front of the owner once before Accept (owner, 19 Oct 2026)", async () => {
+    render(
+      review(FIRST, 3, 3, true, [
+        { id: "m1", memoryType: "constraint", content: "Weekdays are short." },
+      ]),
+    );
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: ROADMAP_CONTROL_COPY.acceptAction }),
+      );
+    });
+    // Asked, not accepted yet.
+    expect(
+      screen.getByText(ROADMAP_CONTROL_COPY.memoryBeforeEndTitle),
+    ).toBeTruthy();
+    expect(screen.getByText("Weekdays are short.")).toBeTruthy();
+    expect(screen.queryByText(CONFLICT)).toBeNull();
+
+    // Going on from the question submits the accept it interrupted.
+    const accepts = screen.getAllByRole("button", {
+      name: ROADMAP_CONTROL_COPY.acceptAction,
+    });
+    await act(async () => {
+      fireEvent.click(accepts[accepts.length - 1]);
+    });
+    expect(screen.getByText(CONFLICT)).toBeTruthy();
+    expect(
+      screen.queryByText(ROADMAP_CONTROL_COPY.memoryBeforeEndTitle),
+    ).toBeNull();
+  });
 
   it("drops a refusal when the proposal under it is replaced", async () => {
     const { rerender } = render(review(FIRST));
@@ -177,6 +214,7 @@ function review(
   expectedHeadRevision = 3,
   regenerationsRemaining = 3,
   active = true,
+  suggestions: MemorySuggestion[] = [],
 ) {
   return (
     <RoadmapProposalReview
@@ -186,6 +224,7 @@ function review(
       otherGoalTitles={active ? {} : { [GOAL]: "Half marathon" }}
       today="2026-09-14"
       regenerationsRemaining={regenerationsRemaining}
+      memory={{ revision: 0, suggestions }}
     />
   );
 }

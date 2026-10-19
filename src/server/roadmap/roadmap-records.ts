@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { OpenMemorySuggestions } from "@/server/memory/open-memory-suggestions";
+
 import type { RoadmapReviewDue } from "./roadmap-reviews";
 
 import { COACH_START_MAX_DAYS_AHEAD } from "@/lib/date/local-date";
@@ -334,8 +336,11 @@ export type RoadmapScreenState = {
   reviewDue: RoadmapReviewDue | null;
   /** The proposal awaiting a decision, if any. */
   openProposal: RoadmapProposalView | null;
-  /** Undecided candidates extracted from a planning note. */
-  openMemoryCandidateCount: number;
+  /**
+   * The coach's undecided memory suggestions from roadmap planning notes, and
+   * the memory revision a decision must name (decided here since 19 Oct 2026).
+   */
+  memory: OpenMemorySuggestions;
   goals: RoadmapGoalSummary[];
   /**
    * The owner's goals that are not active (paused, abandoned, achieved), by
@@ -434,7 +439,7 @@ export const ROADMAP_COPY = {
     "Only active, accepted information and the bounded training window are included.",
   contextEmptyGroup: "None included",
   memoryPanelTitle: "Possible memory updates",
-  memoryReviewLink: "Memory updates still need your review",
+  memoryReviewLink: "Edit them in Memory",
   milestonePrefix: "Aim for by",
   safetyNotice:
     "FitTip cannot assess or diagnose symptoms. If symptoms are severe, sudden, or getting worse, stop the affected activity and contact a qualified health professional.",
@@ -497,11 +502,6 @@ export const ROADMAP_COPY = {
   openProposalHeading: "A proposal is waiting",
   openProposalSupport:
     "Read it, change it, or turn it down. Your current roadmap stays exactly as it is until you accept.",
-  /** M3-02's wording, with the verb agreeing now as the plan panel's does. */
-  memoryCandidatesWaiting: (count: number) =>
-    count === 1
-      ? "1 item from a planning note is waiting for you. It is not used for coaching until you accept it."
-      : `${count} items from a planning note are waiting for you. They are not used for coaching until you accept them.`,
   /** Every wording a Client Component renders; see that module for why. */
   ...ROADMAP_CONTROL_COPY,
   /** `error.tsx` and `loading.tsx`; see that module for why it lives apart. */

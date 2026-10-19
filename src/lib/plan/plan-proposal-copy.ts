@@ -250,11 +250,12 @@ export const PLAN_PROPOSAL_COPY = {
   // thing is waiting in the same place, and two phrasings for one idea would
   // read as two different things. What differs is only where it came from.
   memoryPanelTitle: "Suggested from your planning note",
-  memoryCandidatesWaiting: (count: number) =>
-    count === 1
-      ? "1 item from a planning note is waiting for you. It is not used for coaching until you accept it."
-      : `${count} items from a planning note are waiting for you. They are not used for coaching until you accept them.`,
-  memoryReviewLink: "Review them in memory",
+  memoryReviewLink: "Edit them in Memory",
+  /* Asked once before the review ends (owner, 19 Oct 2026). Leaving one is
+     a choice: it waits in Memory, unused for coaching until accepted. */
+  memoryBeforeEndTitle: "Still open from your planning note",
+  memoryBeforeEndSupport:
+    "Accept or reject these now, or leave them: they wait in Memory and are not used for coaching until you accept them.",
   /**
    * The pointer shown above the timeline. Deliberately not the panel's own
    * sentence: repeating it word for word would read as the same message twice

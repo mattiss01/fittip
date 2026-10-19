@@ -13,6 +13,7 @@ import {
 import homeStyles from "../../home.module.css";
 import { readMeasurementHistory } from "../activities/measurement-history";
 import { SubPageHeader } from "../sub-page-header";
+import { MemorySuggestions } from "@/components/memory/memory-suggestions";
 import { ActivityLibraryProvider } from "@/components/training/activity-editor";
 import {
   COACH_START_MAX_DAYS_AHEAD,
@@ -91,9 +92,9 @@ export default async function PlanProposalPage() {
         </p>
       ) : (
         <>
-          {state.openMemoryCandidateCount > 0 ? (
+          {state.memory.suggestions.length > 0 ? (
             <p className={styles.memoryJump}>
-              {COPY.memoryCandidatesJump(state.openMemoryCandidateCount)}{" "}
+              {COPY.memoryCandidatesJump(state.memory.suggestions.length)}{" "}
               <a href="#memory-candidates">{COPY.memoryJumpLink}</a>
             </p>
           ) : null}
@@ -148,15 +149,17 @@ export default async function PlanProposalPage() {
                 unresolved={unresolvedItemCount(state.proposal.items)}
                 staged={stagedItemCount(state.proposal.items)}
                 isExample={isExampleProposal(state.proposal.providerCode)}
+                memory={state.memory}
               />
             </ActivityLibraryProvider>
           )}
-          {state.openMemoryCandidateCount > 0 ? (
+          {state.memory.suggestions.length > 0 ? (
             <section className={styles.memoryPanel} id="memory-candidates">
               <h2>{COPY.memoryPanelTitle}</h2>
-              <p className={styles.support}>
-                {COPY.memoryCandidatesWaiting(state.openMemoryCandidateCount)}
-              </p>
+              <MemorySuggestions
+                suggestions={state.memory.suggestions}
+                expectedRevision={state.memory.revision}
+              />
               <Link
                 className={homeStyles.secondaryAction}
                 href="/home/you/memory?from=plan-proposal"
@@ -194,7 +197,7 @@ async function loadProposalState() {
       planRevision: 0,
       finishKey: "",
       days: [],
-      openMemoryCandidateCount: 0,
+      memory: { revision: 0, suggestions: [] },
     };
   }
 
@@ -205,15 +208,14 @@ async function loadProposalState() {
     createGoalRepository(),
   ]);
 
-  // Counted beside the proposal because it is independent of it: a candidate
+  // Read beside the proposal because it is independent of it: a suggestion
   // from an earlier planning note is still waiting whether or not this
-  // proposal is open, and the memory surface is where it is decided.
-  const [proposal, goalCollection, openMemoryCandidateCount] =
-    await Promise.all([
-      proposals.getLatestProposal(),
-      goals.list(),
-      proposals.countOpenMemoryCandidates(),
-    ]);
+  // proposal is open. Decided here since 19 Oct 2026 (owner).
+  const [proposal, goalCollection, memory] = await Promise.all([
+    proposals.getLatestProposal(),
+    goals.list(),
+    proposals.listOpenMemorySuggestions(),
+  ]);
   const targetable = selectActiveGoalContext(goalCollection.goals).targetable;
   const hasGoals = targetable.length > 0;
 
@@ -249,7 +251,7 @@ async function loadProposalState() {
       planRevision: 0,
       finishKey: "",
       days: [],
-      openMemoryCandidateCount,
+      memory,
     };
   }
 
@@ -293,7 +295,7 @@ async function loadProposalState() {
       recoveryDates: slice.recoveryDates,
       loggedSessionIds,
     }),
-    openMemoryCandidateCount,
+    memory,
   };
 }
 

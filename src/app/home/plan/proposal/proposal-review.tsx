@@ -32,6 +32,10 @@ import {
   PLAN_PROPOSAL_FEEDBACK_MAX_LENGTH,
 } from "@/lib/plan/plan-proposal-copy";
 import type { PlanProposalItemDecision } from "@/lib/plan/plan-proposal-view";
+import {
+  MemorySuggestions,
+  type MemorySuggestion,
+} from "@/components/memory/memory-suggestions";
 
 const COPY = PLAN_PROPOSAL_COPY;
 
@@ -63,6 +67,7 @@ export function ProposalReview({
   unresolved,
   staged,
   isExample,
+  memory,
 }: {
   proposalId: string;
   /** Present only on a proposal that replaced another one. */
@@ -87,6 +92,8 @@ export function ProposalReview({
   unresolved: number;
   staged: number;
   isExample: boolean;
+  /** The coach's memory suggestions still open, asked about before an ending. */
+  memory: { revision: number; suggestions: readonly MemorySuggestion[] };
 }) {
   const [state, action, pending] = useActionState(
     finishPlanReviewAction,
@@ -118,6 +125,13 @@ export function ProposalReview({
   }
 
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  // Open memory suggestions are put in front of the owner once before the
+  // review ends (owner, 19 Oct 2026), so they are not left behind unseen.
+  // A ref, not state: the second submit runs before a state update lands.
+  const [memoryBeforeFinish, setMemoryBeforeFinish] = useState(false);
+  const memoryShown = useRef(false);
+  const finishForm = useRef<HTMLFormElement>(null);
+  const openMemory = memory.suggestions.length > 0;
   const dialogId = useId();
   const discardTitle = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
@@ -280,7 +294,18 @@ export function ProposalReview({
         )}
         {askingAgain ? null : (
           <div className={styles.dockActions}>
-            <form action={action} key={`finish-${state.submission}`}>
+            <form
+              action={action}
+              key={`finish-${state.submission}`}
+              ref={finishForm}
+              onSubmit={(event) => {
+                if (openMemory && !memoryShown.current) {
+                  event.preventDefault();
+                  memoryShown.current = true;
+                  setMemoryBeforeFinish(true);
+                }
+              }}
+            >
               <input type="hidden" name="proposalId" value={proposalId} />
               <input
                 type="hidden"
@@ -320,6 +345,41 @@ export function ProposalReview({
           </div>
         )}
 
+        {memoryBeforeFinish ? (
+          <SheetLayer
+            view="memory-before-finish"
+            placement="center"
+            labelledBy={`${dialogId}-memory`}
+            onClose={() => setMemoryBeforeFinish(false)}
+          >
+            <div className={styles.goalPrompt}>
+              <h2 id={`${dialogId}-memory`}>{COPY.memoryBeforeEndTitle}</h2>
+              <p>{COPY.memoryBeforeEndSupport}</p>
+              <MemorySuggestions
+                suggestions={memory.suggestions}
+                expectedRevision={memory.revision}
+              />
+              <button
+                className={styles.primary}
+                type="button"
+                onClick={() => {
+                  setMemoryBeforeFinish(false);
+                  finishForm.current?.requestSubmit();
+                }}
+              >
+                {COPY.finishAction}
+              </button>
+              <button
+                className={styles.quietAction}
+                type="button"
+                onClick={() => setMemoryBeforeFinish(false)}
+              >
+                {COPY.discardCancel}
+              </button>
+            </div>
+          </SheetLayer>
+        ) : null}
+
         {confirmingDiscard ? (
           <SheetLayer
             view="discard-proposal"
@@ -332,6 +392,15 @@ export function ProposalReview({
                 {COPY.discardConfirmTitle}
               </h2>
               <p>{COPY.discardConfirm(staged)}</p>
+              {openMemory ? (
+                <>
+                  <p>{COPY.memoryBeforeEndSupport}</p>
+                  <MemorySuggestions
+                    suggestions={memory.suggestions}
+                    expectedRevision={memory.revision}
+                  />
+                </>
+              ) : null}
               <form
                 // The question closes as the answer is sent; what comes back
                 // is shown by the dock's own notice.

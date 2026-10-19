@@ -1,0 +1,87 @@
+/* The coach's memory suggestions, inside a review (owner, 19 Oct 2026). */
+
+.list {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: var(--radius-control);
+  background: var(--ledger-paper);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+
+.type {
+  margin: 0;
+  color: var(--ledger-muted);
+  font: 500 0.62rem var(--font-mono);
+  text-transform: uppercase;
+}
+
+.content {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.choices {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.accept,
+.reject {
+  flex: 1;
+  min-height: 2.75rem;
+  border-radius: var(--radius-control);
+  font: 700 0.9rem var(--font-sans);
+  cursor: pointer;
+}
+
+.accept {
+  border: 0;
+  background: var(--pine);
+  color: var(--ledger-paper);
+}
+
+.reject {
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ledger-ink);
+}
+
+.accept:disabled,
+.reject:disabled {
+  opacity: 0.5;
+}
+
+.accept:focus-visible,
+.reject:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 2px;
+}
+
+.notice {
+  margin: 0;
+  color: var(--ledger-muted);
+  font-size: 0.85rem;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
