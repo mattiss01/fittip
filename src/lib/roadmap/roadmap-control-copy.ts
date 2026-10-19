@@ -156,6 +156,12 @@ export const ROADMAP_CONTROL_COPY = {
   editAction: "Edit proposal",
   declineAction: "Decline proposal",
   declineConfirm: "Decline this proposal? It will not become your roadmap.",
+  /* Asked once before a proposal is accepted or declined (owner, 19 Oct
+     2026). Leaving one is a choice: it waits in Memory, unused until accepted. */
+  memoryBeforeEndTitle: "Still open from your planning note",
+  memoryBeforeEndSupport:
+    "Accept or reject these now, or leave them: they wait in Memory and are not used for coaching until you accept them.",
+  memoryBeforeEndBack: "Back to the proposal",
   /* "Ask again" on the proposal itself (owner, 14 Oct 2026): the note is
      written while the proposal can still be read. */
   askAgainAction: "Ask for another",

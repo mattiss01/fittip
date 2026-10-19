@@ -9,6 +9,8 @@ import { RoadmapReviewDue } from "./roadmap-review-due";
 import { RoadmapProposalReview } from "./roadmap-proposal-review";
 import { RoadmapWriter } from "./roadmap-writer";
 
+import { MemorySuggestions } from "@/components/memory/memory-suggestions";
+
 import homeStyles from "@/app/home/home.module.css";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { lockedPhaseCount } from "@/lib/roadmap/roadmap-locked-phases";
@@ -111,6 +113,7 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
           otherGoalTitles={state.otherGoalTitles}
           today={state.today}
           regenerationsRemaining={state.regenerationsRemaining}
+          memory={state.memory}
         />
       ) : state.current === null ? (
         <>
@@ -210,19 +213,19 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
         </section>
       )}
 
-      {/* Separate from the roadmap, as M3-02 decision 4b requires: a memory
-          candidate is decided on the memory surface that owns it, and nothing
-          on this screen decides one either way. */}
-      {state.openMemoryCandidateCount > 0 ? (
+      {/* Separate from the roadmap and its dock, as M3-02 decision 4b has
+          it, and decided here since 19 Oct 2026 (owner) through the memory
+          page's own action: accepting or declining the roadmap still decides
+          none of them. */}
+      {state.memory.suggestions.length > 0 ? (
         <section className={styles.memoryPanel} data-roadmap-memory>
           <h2 className={styles.sectionHeading}>
             {ROADMAP_COPY.memoryPanelTitle}
           </h2>
-          <p className={styles.emptyState}>
-            {ROADMAP_COPY.memoryCandidatesWaiting(
-              state.openMemoryCandidateCount,
-            )}
-          </p>
+          <MemorySuggestions
+            suggestions={state.memory.suggestions}
+            expectedRevision={state.memory.revision}
+          />
           <Link className={homeStyles.secondaryAction} href="/home/you/memory">
             {ROADMAP_COPY.memoryReviewLink}
           </Link>

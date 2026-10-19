@@ -1,5 +1,9 @@
 import "server-only";
 
+import {
+  readOpenMemorySuggestions,
+  type OpenMemorySuggestions,
+} from "@/server/memory/open-memory-suggestions";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
@@ -360,22 +364,20 @@ export class RoadmapRepository {
   }
 
   /**
-   * How many candidates from a roadmap planning note the owner has not decided.
-   *
-   * Counted rather than listed: the roadmap detail shows a link, and the
-   * candidates themselves are reviewed on the accepted M2-02 surface, which
-   * owns their content.
+   * The memory suggestions from roadmap planning notes the owner has not
+   * decided, with their words and the memory revision a decision must name.
+   * Decided in the review itself since 19 Oct 2026 (owner), through the
+   * memory page's own action.
    */
-  async countOpenMemoryCandidates(): Promise<number> {
+  async listOpenMemorySuggestions(): Promise<OpenMemorySuggestions> {
     const userId = await this.getVerifiedUserId();
-    const { count, error } = await this.client
-      .from("memory_items")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("status", "proposed")
-      .like("source_reference", "roadmap-proposal:%");
-    if (error) throw new RoadmapPersistenceError();
-    return count ?? 0;
+    const open = await readOpenMemorySuggestions(
+      this.client,
+      userId,
+      "roadmap-proposal:",
+    );
+    if (open === null) throw new RoadmapPersistenceError();
+    return open;
   }
 
   /**

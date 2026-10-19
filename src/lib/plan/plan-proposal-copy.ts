@@ -106,21 +106,6 @@ export const PLAN_PROPOSAL_COPY = {
    */
   plannedPastDay:
     "This day has passed, so it can no longer be edited here. It stays on the timeline because the coach planned around it.",
-  roadmapHeading: "Planned under your roadmap",
-  roadmapPlannedUnder: (title: string, versionNumber: number) =>
-    `${title} — version ${versionNumber}, the roadmap you have accepted.`,
-  /**
-   * A roadmap accepted since the proposal was made. The proposal was planned
-   * under the older version, so naming the current roadmap here would name the
-   * wrong one, and the version number is the only honest thing left to say.
-   */
-  roadmapSuperseded: (versionNumber: number) =>
-    `Version ${versionNumber}, which you have since replaced. This proposal was planned under the older roadmap.`,
-  roadmapStaleOutOfWindow:
-    "These days fall outside your roadmap's own dates, so it describes a different stretch of training.",
-  roadmapStaleGoalMissing:
-    "Your roadmap gives attention to a goal you no longer hold, so part of its direction no longer applies.",
-  roadmapStaleLead: "Worth knowing:",
   proposedBadge: "Proposed",
   stagedBadge: "Will be added",
   replaceBadge: "Will replace",
@@ -265,11 +250,12 @@ export const PLAN_PROPOSAL_COPY = {
   // thing is waiting in the same place, and two phrasings for one idea would
   // read as two different things. What differs is only where it came from.
   memoryPanelTitle: "Suggested from your planning note",
-  memoryCandidatesWaiting: (count: number) =>
-    count === 1
-      ? "1 item from a planning note is waiting for you. It is not used for coaching until you accept it."
-      : `${count} items from a planning note are waiting for you. They are not used for coaching until you accept them.`,
-  memoryReviewLink: "Review them in memory",
+  memoryReviewLink: "Edit them in Memory",
+  /* Asked once before the review ends (owner, 19 Oct 2026). Leaving one is
+     a choice: it waits in Memory, unused for coaching until accepted. */
+  memoryBeforeEndTitle: "Still open from your planning note",
+  memoryBeforeEndSupport:
+    "Accept or reject these now, or leave them: they wait in Memory and are not used for coaching until you accept them.",
   /**
    * The pointer shown above the timeline. Deliberately not the panel's own
    * sentence: repeating it word for word would read as the same message twice
@@ -283,10 +269,9 @@ export const PLAN_PROPOSAL_COPY = {
 
   /* ---- Regeneration -------------------------------------------------------- */
   regenerateHeading: "Not what you wanted?",
-  regenerateSupport:
-    "Say what is wrong and the coach will plan the week again. This proposal stays until the new one arrives. Then what you added goes into your plan, and the rest is dropped.",
   regenerateLabel: "What should be different?",
-  regenerateHelper: "Up to 500 characters.",
+  /** Under the field, as the owner types (owner, 19 Oct 2026). */
+  regenerateCount: (length: number, max: number) => `${length}/${max}`,
   regenerateSubmit: "Ask for a different plan",
   regenerateOpen: "Ask for a different plan",
   regenerateCancel: "Never mind",
@@ -308,6 +293,13 @@ export const PLAN_PROPOSAL_COPY = {
 } as const;
 
 export const PLAN_PROPOSAL_NOTE_MAX_LENGTH = 1000;
+
+/**
+ * The "ask again" field's limit, for the browser. The server's own is
+ * `REGENERATION_FEEDBACK_MAX_LENGTH`, which a client component may not import;
+ * `proposal-review.test.tsx` holds the two equal.
+ */
+export const PLAN_PROPOSAL_FEEDBACK_MAX_LENGTH = 500;
 export const PLAN_PROPOSAL_MIN_DAYS = 1;
 export const PLAN_PROPOSAL_MAX_DAYS = 7;
 export const PLAN_PROPOSAL_DEFAULT_DAYS = 7;

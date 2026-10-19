@@ -83,7 +83,7 @@ const GOAL_ID = "7e150000-0000-4000-8000-000000000020";
 const getHead = vi.fn();
 const listVersions = vi.fn();
 const getReviewProposals = vi.fn();
-const countOpenMemoryCandidates = vi.fn();
+const listOpenMemorySuggestions = vi.fn();
 const listMilestoneMarks = vi.fn();
 const getReviewedThrough = vi.fn();
 const listGoals = vi.fn();
@@ -99,7 +99,10 @@ describe("Roadmap", () => {
       declinedPredecessor: null,
       history: [],
     });
-    countOpenMemoryCandidates.mockResolvedValue(0);
+    listOpenMemorySuggestions.mockResolvedValue({
+      revision: 0,
+      suggestions: [],
+    });
     listMilestoneMarks.mockResolvedValue([]);
     getReviewedThrough.mockResolvedValue(null);
     listGoals.mockResolvedValue({ revision: 1, goals: [goal()] });
@@ -108,7 +111,7 @@ describe("Roadmap", () => {
       getHead,
       listVersions,
       getReviewProposals,
-      countOpenMemoryCandidates,
+      listOpenMemorySuggestions,
       listMilestoneMarks,
       getReviewedThrough,
     });
@@ -833,39 +836,36 @@ describe("Roadmap", () => {
     expect(daysBetween(startDate, endDate)).toBe(55);
   });
 
-  it("sends the owner to the memory surface that owns a candidate", async () => {
-    countOpenMemoryCandidates.mockResolvedValue(2);
+  it("lists each open suggestion with Accept and Reject, and links to Memory (owner, 19 Oct 2026)", async () => {
+    listOpenMemorySuggestions.mockResolvedValue({
+      revision: 4,
+      suggestions: [
+        { id: "m1", memoryType: "constraint", content: "Weekdays are short." },
+        { id: "m2", memoryType: "preference", content: "Prefers mornings." },
+      ],
+    });
 
     render(await RoadmapPage());
 
     const panel = document.querySelector(
       "[data-roadmap-memory]",
     ) as HTMLElement;
+    expect(within(panel).getByText("Weekdays are short.")).toBeTruthy();
     expect(
-      within(panel).getByText(
-        "2 items from a planning note are waiting for you. They are not used for coaching until you accept them.",
-      ),
-    ).toBeTruthy();
+      within(panel).getByRole("button", {
+        name: "Accept: Prefers mornings.",
+      }),
+    ).toHaveAttribute("value", "accept");
+    expect(
+      within(panel).getByRole("button", {
+        name: "Reject: Weekdays are short.",
+      }),
+    ).toHaveAttribute("value", "reject");
     expect(
       within(panel)
         .getByRole("link", { name: ROADMAP_COPY.memoryReviewLink })
         .getAttribute("href"),
     ).toBe("/home/you/memory");
-  });
-
-  it("agrees the verb with a single waiting candidate", async () => {
-    countOpenMemoryCandidates.mockResolvedValue(1);
-
-    render(await RoadmapPage());
-
-    const panel = document.querySelector(
-      "[data-roadmap-memory]",
-    ) as HTMLElement;
-    expect(
-      within(panel).getByText(
-        "1 item from a planning note is waiting for you. It is not used for coaching until you accept it.",
-      ),
-    ).toBeTruthy();
   });
 
   it("redirects an expired session and a denied one before reading anything", async () => {
