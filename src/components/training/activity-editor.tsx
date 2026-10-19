@@ -289,11 +289,6 @@ export function ActivityEditor({
     <section className={styles.editor} aria-labelledby={`${prefix}-activities`}>
       <div className={styles.head}>
         <h3 id={`${prefix}-activities`}>Activities</h3>
-        <p className={styles.count}>
-          {rows.length === 0
-            ? "None"
-            : `${rows.length} of ${ACTIVITY_COPY.softLimit}`}
-        </p>
       </div>
 
       <input type="hidden" name={name} value={serialized} />
