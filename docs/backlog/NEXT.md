@@ -48,14 +48,6 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 **Coach and records.**
 
-- [~] **The coach suggests a goal.** Owner, 19 Oct 2026: Sarah's roadmap turned "5 km
-      twice a week by January" into a memory suggestion; it is a goal. Only from the
-      planning note, when it states an objective no active goal covers, at most one per
-      request. A suggestion is its own record (title, desired outcome, sports, target date
-      only when named), decided in the review beside memory, asked once before it ends,
-      and listed on Goals; Accept picks Core or Supporting and creates the goal through
-      `apply_goal_change` (3-core rule unchanged). Input ceiling 18,000 → 20,000 and the
-      per-request ceiling 8,000 → 9,000 for the prompt room. Careful lane; ADR-034.
 - [ ] **A fill's sources are recorded and never checked.** A suggestion names the
       logs, library entries and saved sessions it was built from, and since ADR-023
       the logs whose flags it was sent. Nothing compares them, so a flag corrected
