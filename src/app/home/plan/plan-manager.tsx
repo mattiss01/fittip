@@ -17,6 +17,7 @@ import {
   type PlanActionState,
 } from "./action-state";
 import { changePlanAction } from "./actions";
+import { usePlanDrag, type PlanDragSession } from "./plan-drag";
 import { COMPLETION_OUTCOME_LABELS } from "../log/log-action-state";
 import { CreateSession, SkippedDates } from "./create-session";
 import { MonthSheet } from "./plan-month-sheet";
@@ -177,6 +178,16 @@ export function PlanManager({
     : state.conflict === "stale" ||
       state.conflict === "timezone" ||
       stall === "unconfirmed";
+
+  // Dropping a card on another day moves it there (owner, 19 Oct 2026).
+  const drag = usePlanDrag((sessionId, localDate) => {
+    const formData = new FormData();
+    formData.set("operation", "move");
+    formData.set("sessionId", sessionId);
+    formData.set("localDate", localDate);
+    formData.set("expectedRevision", String(expectedRevision));
+    startTransition(() => trackedPlanAction(formData));
+  });
 
   const weeks = planWeeks(today, lastPlaceableDate, repeatsThrough, firstDate);
   // The weeks before this one sit ahead of it in the list (owner, 2 Oct
@@ -354,6 +365,8 @@ export function PlanManager({
                 isRecoveryDay={labelled.has(day.date)}
                 sessions={onDate(day.date)}
                 tones={tones}
+                dropTarget={drag.overDate === day.date}
+                dragHandle={pending || seriesPending ? null : drag.handle}
                 onAdd={() => {
                   setSheetSince(state.submission);
                   setSheet({ date: day.date, view: "menu" });
@@ -363,6 +376,7 @@ export function PlanManager({
           </ol>
         </Slide>
       </section>
+      {drag.ghost}
 
       <nav className={w.tiles} aria-label="Weeks" ref={tilesRef}>
         {weeks.map((candidate, index) => (
@@ -553,8 +567,14 @@ function PlanDay({
   isRecoveryDay,
   sessions,
   tones,
+  dropTarget,
+  dragHandle,
   onAdd,
 }: {
+  /** A lifted card is over this day, and letting go moves it here. */
+  dropTarget: boolean;
+  /** Makes a card draggable; none while a change is saving. */
+  dragHandle: ((session: PlanDragSession) => object) | null;
   day: PlanWeekDay;
   today: string;
   isRecoveryDay: boolean;
@@ -580,6 +600,7 @@ function PlanDay({
       data-past={day.past}
       data-beyond={day.beyond}
       data-recovery={isRecoveryDay}
+      data-drop-target={dropTarget || undefined}
     >
       <p className={w.date}>
         <span className={w.dow}>{weekdayLabel(day.date)}</span>
@@ -606,6 +627,17 @@ function PlanDay({
                 session={session}
                 past={day.past}
                 tone={tones.get(sportKey(session.sport)) ?? 0}
+                // A logged session stays where its log is, and the past is
+                // not replanned.
+                drag={
+                  dragHandle === null || day.past || session.log
+                    ? null
+                    : dragHandle({
+                        id: session.id,
+                        title: session.title,
+                        localDate: session.localDate,
+                      })
+                }
               />
             ))}
             {cancelled.map((session) => (
@@ -644,7 +676,10 @@ function PlanSessionCard({
   session,
   past,
   tone,
+  drag = null,
 }: {
+  /** What makes the card draggable to another day, where it may move. */
+  drag?: object | null;
   session: PlanSessionView;
   /** Before today: the session's page finds it by its day, not the window. */
   past: boolean;
@@ -659,6 +694,7 @@ function PlanSessionCard({
       data-cancelled={cancelled || undefined}
       data-logged={loggedElsewhere || undefined}
       data-session-card={cancelled || loggedElsewhere ? undefined : true}
+      {...drag}
     >
       <h3 className={w.cardTitle}>
         <Link
