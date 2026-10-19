@@ -38,59 +38,65 @@ export function MemorySuggestions({
   suggestions: readonly MemorySuggestion[];
   expectedRevision: number;
 }) {
-  return (
-    <ul className={styles.list}>
-      {suggestions.map((suggestion) => (
-        <Suggestion
-          key={suggestion.id}
-          suggestion={suggestion}
-          expectedRevision={expectedRevision}
-        />
-      ))}
-    </ul>
-  );
-}
-
-function Suggestion({
-  suggestion,
-  expectedRevision,
-}: {
-  suggestion: MemorySuggestion;
-  expectedRevision: number;
-}) {
+  // One action for the whole list: every row names the same collection
+  // revision, so while one decision is saving the others wait for the
+  // refresh that brings the next revision, rather than being refused as a
+  // conflict that never happened.
   const [state, action, pending] = useActionState(
     changeMemoryAction,
     INITIAL_MEMORY_ACTION_STATE,
   );
 
+  if (suggestions.length === 0) {
+    return (
+      <p className={styles.notice} role="status">
+        {state.status === "idle" ? "" : `${state.message} `}All decided.
+      </p>
+    );
+  }
+
   return (
-    <li className={styles.item} data-memory-suggestion={suggestion.id}>
-      <p className={styles.type}>{TYPE_LABELS[suggestion.memoryType]}</p>
-      <p className={styles.content}>{suggestion.content}</p>
-      <form className={styles.choices} action={action}>
-        <input type="hidden" name="itemId" value={suggestion.id} />
-        <input type="hidden" name="expectedRevision" value={expectedRevision} />
-        <button
-          className={styles.accept}
-          type="submit"
-          name="operation"
-          value="accept"
-          disabled={pending}
-          aria-label={`Accept: ${suggestion.content}`}
-        >
-          Accept
-        </button>
-        <button
-          className={styles.reject}
-          type="submit"
-          name="operation"
-          value="reject"
-          disabled={pending}
-          aria-label={`Reject: ${suggestion.content}`}
-        >
-          Reject
-        </button>
-      </form>
+    <>
+      <ul className={styles.list}>
+        {suggestions.map((suggestion) => (
+          <li
+            key={suggestion.id}
+            className={styles.item}
+            data-memory-suggestion={suggestion.id}
+          >
+            <p className={styles.type}>{TYPE_LABELS[suggestion.memoryType]}</p>
+            <p className={styles.content}>{suggestion.content}</p>
+            <form className={styles.choices} action={action}>
+              <input type="hidden" name="itemId" value={suggestion.id} />
+              <input
+                type="hidden"
+                name="expectedRevision"
+                value={expectedRevision}
+              />
+              <button
+                className={styles.accept}
+                type="submit"
+                name="operation"
+                value="accept"
+                disabled={pending}
+                aria-label={`Accept: ${suggestion.content}`}
+              >
+                Accept
+              </button>
+              <button
+                className={styles.reject}
+                type="submit"
+                name="operation"
+                value="reject"
+                disabled={pending}
+                aria-label={`Reject: ${suggestion.content}`}
+              >
+                Reject
+              </button>
+            </form>
+          </li>
+        ))}
+      </ul>
       <p
         className={state.status === "idle" ? styles.srOnly : styles.notice}
         data-state={pending ? "pending" : state.status}
@@ -99,6 +105,6 @@ function Suggestion({
       >
         {pending ? "Saving…" : state.message}
       </p>
-    </li>
+    </>
   );
 }

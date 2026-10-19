@@ -318,13 +318,8 @@ const allowedPlanProposalModules = [
   "@/server/repositories/goal-repository",
   "@/server/repositories/plan-proposal-repository",
   "@/server/repositories/profile-repository",
-  // M3-16B added the last two, deliberately and both read-only. The review
-  // says which accepted roadmap a proposal was planned under and whether that
-  // roadmap still describes the week, so the page reads the current version and
-  // runs the same staleness predicate the context assembly ran. Neither entry
-  // lets this surface accept, edit, or regenerate a roadmap: those live on
-  // `@/server/roadmap/roadmap-generation` and `roadmap-edit`, which stay off
-  // this list, and the assertion below still refuses a roadmap write.
+  // M3-16B added a read of the roadmap the proposal was planned under; the
+  // owner removed that section on 19 Oct 2026, and both entries went with it.
   //
   // What this list does NOT constrain, and did not before: `proposal-review.tsx`
   // imports `../actions` relatively, so the plan write it performs is outside
@@ -332,12 +327,14 @@ const allowedPlanProposalModules = [
   // That write is the product owner's explicit decision of 20 September 2026
   // (a planned session is editable inside review, through the plan's own
   // action rather than a second write path), and it is covered by
-  // `actions.test.ts` rather than by this file. Stated because the heading
-  // below says "behind the one Server Action module", and a reader should not
-  // have to discover that it means the one *proposal* Server Action module.
-  "@/server/repositories/roadmap-repository",
+  // `actions.test.ts` rather than by this file. Since 19 Oct 2026 the review
+  // also decides memory suggestions through the memory page's own action
+  // (`@/components/memory/memory-suggestions`), which reaches
+  // `apply_memory_change` and re-derives the owner; it is outside these
+  // checks for the same reason. Stated because the heading below says
+  // "behind the one Server Action module", and a reader should not have to
+  // discover that it means the one *proposal* Server Action module.
   "@/server/repositories/rolling-plan-repository",
-  "@/server/roadmap/roadmap-plan-context",
 ] as const;
 
 /** Everything the proposal route renders, wherever it lives. */

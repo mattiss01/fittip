@@ -61,14 +61,14 @@
 /* The cancelled state as the card's first line, in ink, and the title struck
    through under it (owner, 19 Oct 2026). */
 .cancelledBanner {
-  justify-self: start;
-  margin: 0;
-  padding: 0.3rem 0.7rem;
-  border-radius: var(--radius-pill);
+  margin: -1.3rem -1.2rem 0.3rem;
+  padding: 0.75rem 1.2rem;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
   background: var(--ledger-ink);
   color: var(--ledger-paper);
-  font: 700 0.72rem var(--font-mono);
-  letter-spacing: 0.06em;
+  font: 800 0.95rem var(--font-sans);
+  letter-spacing: 0.08em;
+  text-align: center;
   text-transform: uppercase;
 }
 
