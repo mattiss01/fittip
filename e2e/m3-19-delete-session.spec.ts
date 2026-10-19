@@ -63,7 +63,7 @@ test.describe("M3-19 delete a planned session", () => {
       await chooseMore(page, "Cancel session");
       const cancel = sessionPanel(page, "Cancel session");
       await expect(
-        cancel.getByText(/keeps the session on the record as cancelled/i),
+        cancel.getByText(/stays on the record as cancelled/i),
       ).toBeVisible();
       await page.screenshot({
         fullPage: true,
@@ -126,7 +126,7 @@ test.describe("M3-19 delete a planned session", () => {
       // returns to the Plan because the page's session is gone.
       await chooseMore(page, "Delete");
       const remove = sessionPanel(page, "Delete session");
-      const warning = remove.getByText(/does not keep it on the record/i);
+      const warning = remove.getByText(/gone for good/i);
       await expect(warning).toBeVisible();
       await expect(warning).toContainText("no undo");
       await remove.getByRole("button", { name: "Delete session" }).click();

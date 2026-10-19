@@ -83,8 +83,8 @@ test.describe("M3-14B recurring series surface", () => {
       // Saved-session reuse remains ordinary M3-13 behavior without a
       // recurrence shortcut.
       await chooseMore(page, "Save to library");
+      // Choosing it is the save (owner, 19 Oct 2026).
       const save = sessionPanel(page, "Save to library");
-      await save.getByRole("button", { name: "Save to library" }).click();
       await expect(save.getByText("Saved to your library.")).toBeVisible();
       await page.goto("/home/plan/saved");
       const saved = savedCard(page, "Ordinary base");

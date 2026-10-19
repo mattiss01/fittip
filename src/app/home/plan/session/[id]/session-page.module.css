@@ -250,6 +250,20 @@
   scroll-margin-top: 1rem;
 }
 
+/* A verb from ⋯, in the pop-up: the sheet is its box. */
+.dialog {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.dialog form {
+  padding: 0;
+}
+
+.dialog .scope {
+  margin: 0;
+}
+
 .panelHead {
   display: flex;
   align-items: center;

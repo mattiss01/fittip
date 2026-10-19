@@ -18,6 +18,7 @@ import { PlanDateInput, type PlanDateRange } from "../../plan-date-field";
 import { changePlanAction } from "../../actions";
 import { CancelReasonFields } from "../../cancel-reason-fields";
 import { MenuItem, MenuLink, MoreMenu } from "@/components/home/more-menu";
+import { SheetCloseButton, SheetLayer } from "../../plan-sheet";
 import { INITIAL_CANCELLATION_ACTION_STATE } from "../../cancellation-action-state";
 import { setCancellationReasonAction } from "../../cancellation-actions";
 import styles from "../../plan.module.css";
@@ -73,8 +74,7 @@ const PANEL_HEADINGS: Record<Panel, string> = {
   delete: "Delete session",
 };
 
-const ONE_OFF_WARNING =
-  "Permanent. Deleting removes this session from the plan and does not keep it on the record. There is no undo.";
+const ONE_OFF_WARNING = "Gone for good. There is no undo.";
 
 /**
  * A planned session on its own page: read first, changed on purpose (owner,
@@ -328,17 +328,24 @@ export function SessionPage({
     startTransition(() => planAction(formData));
   };
 
+  // The page's one status line. While a pop-up is open it is said there,
+  // where the owner is looking; the page behind is inert.
+  const inDialog = panel !== null && panel !== "edit";
+  const status = (
+    <p
+      className={quiet ? styles.srOnly : styles.notice}
+      data-state={noticeState}
+      role="status"
+      aria-live="polite"
+    >
+      {notice}
+    </p>
+  );
+
   return (
     <>
       {back}
-      <p
-        className={quiet ? styles.srOnly : styles.notice}
-        data-state={noticeState}
-        role="status"
-        aria-live="polite"
-      >
-        {notice}
-      </p>
+      {inDialog ? null : status}
       {showReload ? (
         <a
           className={styles.reload}
@@ -578,65 +585,69 @@ export function SessionPage({
         </div>
       </article>
 
-      {panel === null ? null : (
+      {panel === "edit" ? (
         <ActionPanel
           heading={PANEL_HEADINGS[panel]}
           onClose={() => setPanel(null)}
         >
-          {panel === "edit" ? (
-            recurring === null ? (
-              <form
-                className={styles.form}
-                action={planAction}
-                key={`edit-${state.submission}`}
-              >
-                <input type="hidden" name="operation" value="edit" />
-                <input type="hidden" name="sessionId" value={session.id} />
-                <input
-                  type="hidden"
-                  name="expectedRevision"
-                  value={expectedRevision}
-                />
-                <SessionFields
-                  idPrefix={`edit-${session.id}`}
-                  draft={
-                    state.operation === "edit" && state.draft
-                      ? state.draft
-                      : draftOf(session)
-                  }
-                  activities={session.activities}
-                  fill={{ sessionId: session.id, open: session.openFill }}
-                  dateField={
-                    <PlanDateInput
-                      label="Date"
-                      range={dateRange}
-                      defaultValue={session.localDate}
-                    />
-                  }
-                />
-                <button
-                  className={styles.primary}
-                  type="submit"
-                  disabled={busy}
-                >
-                  Save session
-                </button>
-              </form>
-            ) : (
-              <RecurringSessionControls
-                mode="edit"
-                today={today}
-                session={recurringView}
-                series={recurring.series}
-                expectedRevision={expectedRevision}
-                planAction={planAction}
-                planPending={pending}
-                seriesAction={trackedSeriesAction}
-                seriesPending={seriesPending}
+          {recurring === null ? (
+            <form
+              className={styles.form}
+              action={planAction}
+              key={`edit-${state.submission}`}
+            >
+              <input type="hidden" name="operation" value="edit" />
+              <input type="hidden" name="sessionId" value={session.id} />
+              <input
+                type="hidden"
+                name="expectedRevision"
+                value={expectedRevision}
               />
-            )
-          ) : null}
+              <SessionFields
+                idPrefix={`edit-${session.id}`}
+                draft={
+                  state.operation === "edit" && state.draft
+                    ? state.draft
+                    : draftOf(session)
+                }
+                activities={session.activities}
+                fill={{ sessionId: session.id, open: session.openFill }}
+                dateField={
+                  <PlanDateInput
+                    label="Date"
+                    range={dateRange}
+                    defaultValue={session.localDate}
+                  />
+                }
+              />
+              <button className={styles.primary} type="submit" disabled={busy}>
+                Save session
+              </button>
+            </form>
+          ) : (
+            <RecurringSessionControls
+              mode="edit"
+              today={today}
+              session={recurringView}
+              series={recurring.series}
+              expectedRevision={expectedRevision}
+              planAction={planAction}
+              planPending={pending}
+              seriesAction={trackedSeriesAction}
+              seriesPending={seriesPending}
+            />
+          )}
+        </ActionPanel>
+      ) : null}
 
+      {/* Everything ⋯ offers is a pop-up over the page, short and to the
+          point (owner, 19 Oct 2026); only Edit opens below the session. */}
+      {panel === null || panel === "edit" ? null : (
+        <ActionDialog
+          heading={PANEL_HEADINGS[panel]}
+          onClose={() => setPanel(null)}
+        >
+          {status}
           {panel === "duplicate" ? (
             <form className={styles.form} action={planAction}>
               <input type="hidden" name="operation" value="duplicate" />
@@ -651,12 +662,8 @@ export function SessionPage({
                 range={dateRange}
                 defaultValue={session.localDate}
               />
-              <p className={styles.consequenceStandalone}>
-                The copy is a new session. It carries none of this
-                session&rsquo;s history.
-              </p>
               <button className={styles.primary} type="submit" disabled={busy}>
-                Duplicate session
+                Duplicate
               </button>
             </form>
           ) : null}
@@ -670,16 +677,14 @@ export function SessionPage({
           ) : null}
 
           {panel === "save" ? (
-            <SaveToLibrary bare sessionId={session.id} />
+            <SaveToLibrary bare immediate sessionId={session.id} />
           ) : null}
 
           {panel === "cancel" ? (
             recurring === null ? (
               <form className={styles.form} action={planAction}>
                 <p className={styles.consequenceStandalone}>
-                  Cancelling keeps the session on the record as cancelled. It
-                  stops being part of what you plan to do, and you can still
-                  reactivate or delete it afterwards.
+                  It stays on the record as cancelled.
                 </p>
                 <input type="hidden" name="operation" value="cancel" />
                 <input type="hidden" name="sessionId" value={session.id} />
@@ -711,10 +716,7 @@ export function SessionPage({
           {panel === "delete" ? (
             recurring === null ? (
               <form className={styles.form} action={planAction}>
-                <p className={styles.permanentConsequence}>
-                  {ONE_OFF_WARNING} A session you have logged training against
-                  cannot be deleted.
-                </p>
+                <p className={styles.permanentConsequence}>{ONE_OFF_WARNING}</p>
                 <input type="hidden" name="operation" value="delete" />
                 <input type="hidden" name="sessionId" value={session.id} />
                 <input
@@ -745,7 +747,7 @@ export function SessionPage({
               />
             )
           ) : null}
-        </ActionPanel>
+        </ActionDialog>
       )}
     </>
   );
@@ -792,10 +794,7 @@ function ReasonForm({
         idPrefix={`reason-${sessionId}`}
         initial={initial?.reason ?? null}
       />
-      <p className={styles.consequenceStandalone}>
-        Only you see this. It is kept with the session and is not sent to a
-        coach.
-      </p>
+      <p className={styles.consequenceStandalone}>Only you see this.</p>
       <button className={styles.primary} type="submit" disabled={pending}>
         Save reason
       </button>
@@ -823,6 +822,38 @@ function ReasonForm({
         {pending ? "Saving the reason…" : state.message}
       </p>
     </form>
+  );
+}
+
+/**
+ * What a verb from ⋯ opens: a card in the middle of the screen, over the
+ * page, so a long session never leaves it out of reach below.
+ */
+function ActionDialog({
+  heading,
+  onClose,
+  children,
+}: {
+  heading: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const headingId = useId();
+  return (
+    <SheetLayer
+      view="session-action"
+      placement="center"
+      labelledBy={headingId}
+      onClose={onClose}
+    >
+      <section className={page.dialog} data-session-panel={heading}>
+        <div className={page.panelHead}>
+          <h2 id={headingId}>{heading}</h2>
+          <SheetCloseButton className={page.close}>Close</SheetCloseButton>
+        </div>
+        {children}
+      </section>
+    </SheetLayer>
   );
 }
 
