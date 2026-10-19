@@ -67,6 +67,40 @@ describe("ActivityEditor and the activity library", () => {
     ).toBeNull();
   });
 
+  // Owner, 19 Oct 2026: a long library is narrowed by name or sport.
+  it("narrows the library by what is typed", () => {
+    const RUN = {
+      ...SQUAT,
+      id: "7a000000-0000-4000-8000-0000000000f2",
+      name: "Strides",
+      sport: "Running",
+    };
+    render(
+      <ActivityLibraryProvider activities={[SQUAT, RUN]}>
+        <ActivityEditor idPrefix="t" sessionSport="Tennis" />
+      </ActivityLibraryProvider>,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add activity from library" }),
+    );
+    const search = screen.getByRole("searchbox", {
+      name: "Search your activities",
+    });
+
+    fireEvent.change(search, { target: { value: "run" } });
+    expect(screen.queryByRole("button", { name: /Back squat/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /Strides/ })).toBeTruthy();
+
+    fireEvent.change(search, { target: { value: "SQUAT " } });
+    expect(screen.getByRole("button", { name: /Back squat/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Strides/ })).toBeNull();
+
+    fireEvent.change(search, { target: { value: "swim" } });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "No activity matches.",
+    );
+  });
+
   it("copies a picked definition by value and links it", () => {
     const { container } = render(
       <ActivityLibraryProvider activities={[SQUAT]}>

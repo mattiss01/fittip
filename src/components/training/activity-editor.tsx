@@ -28,6 +28,7 @@ import {
   type TrainingMeasurementMode,
 } from "@/lib/training/measurement";
 import { ACTIVITY_COPY } from "@/lib/training/measurement-copy";
+import { LibraryPicker } from "./library-picker";
 import {
   startingMode,
   type ModeBySport,
@@ -382,47 +383,32 @@ export function ActivityEditor({
         )}
       </div>
       {picking && !atLimit ? (
-        <ul
-          className={styles.picker}
+        <LibraryPicker
           id={`${prefix}-library`}
-          aria-label={ACTIVITY_COPY.libraryLabel}
-        >
-          {library.map((option) => (
-            <li key={option.id}>
-              <button
-                className={styles.pick}
-                type="button"
-                onClick={() => {
-                  // A copy by value, as the Plan's reuse is: the row holds
-                  // these values from now on, and later edits to the
-                  // definition never reach it.
-                  setRows((current) => [
-                    ...current,
-                    {
-                      key: `picked-${nextKey++}`,
-                      personalActivityId: option.id,
-                      name: option.name,
-                      sport: option.sport,
-                      instructions: option.instructions,
-                      measurementMode: option.measurementMode,
-                      target: option.target,
-                      draft: draftFromMeasurement(
-                        option.measurementMode,
-                        option.target,
-                      ),
-                    },
-                  ]);
-                  setPicking(false);
-                }}
-              >
-                <span className={styles.summaryName}>{option.name}</span>
-                <span className={styles.summaryTarget}>
-                  {describeMeasurement(option.target) ?? option.sport}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+          options={library}
+          onPick={(option) => {
+            // A copy by value, as the Plan's reuse is: the row holds
+            // these values from now on, and later edits to the
+            // definition never reach it.
+            setRows((current) => [
+              ...current,
+              {
+                key: `picked-${nextKey++}`,
+                personalActivityId: option.id,
+                name: option.name,
+                sport: option.sport,
+                instructions: option.instructions,
+                measurementMode: option.measurementMode,
+                target: option.target,
+                draft: draftFromMeasurement(
+                  option.measurementMode,
+                  option.target,
+                ),
+              },
+            ]);
+            setPicking(false);
+          }}
+        />
       ) : null}
       {atLimit ? <p className={styles.limit}>{ACTIVITY_COPY.atLimit}</p> : null}
     </section>

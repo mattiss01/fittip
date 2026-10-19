@@ -23,6 +23,7 @@ import { ReorderHandle } from "@/components/training/reorder-handle";
 import type { ActivityValue } from "@/lib/training/activity-value";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
 import { ACTIVITY_COPY } from "@/lib/training/measurement-copy";
+import { LibraryPicker } from "@/components/training/library-picker";
 import {
   startingMode,
   type ModeBySport,
@@ -341,35 +342,17 @@ export function ActualActivities({
         )}
       </div>
       {picking && !atLimit ? (
-        <ul
-          className={styles.picker}
+        <LibraryPicker
           id={`${prefix}-library`}
-          aria-label={ACTIVITY_COPY.libraryLabel}
-        >
-          {library.map((option) => (
-            <li key={option.id}>
-              <button
-                className={styles.pick}
-                type="button"
-                onClick={() => {
-                  setRows((current) => [
-                    ...current,
-                    copiedRow(
-                      { ...option, personalActivityId: option.id },
-                      "picked",
-                    ),
-                  ]);
-                  setPicking(false);
-                }}
-              >
-                <span className={styles.pickName}>{option.name}</span>
-                <span className={styles.pickTarget}>
-                  {describeMeasurement(option.target) ?? option.sport}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+          options={library}
+          onPick={(option) => {
+            setRows((current) => [
+              ...current,
+              copiedRow({ ...option, personalActivityId: option.id }, "picked"),
+            ]);
+            setPicking(false);
+          }}
+        />
       ) : null}
     </fieldset>
   );

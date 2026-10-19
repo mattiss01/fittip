@@ -837,44 +837,6 @@
   gap: 0.5rem;
 }
 
-/* The library opens in place, under its button, never over the form. */
-.picker {
-  display: grid;
-  margin: 0;
-  padding: 0;
-  border: 1px solid var(--ledger-ink);
-  background: var(--ledger-paper);
-  list-style: none;
-}
-
-.picker li + li {
-  border-top: 1px solid var(--ledger-rule);
-}
-
-.pick {
-  width: 100%;
-  min-height: 2.75rem;
-  display: grid;
-  gap: 0.15rem;
-  padding: 0.5rem 0.6rem;
-  border: none;
-  background: none;
-  text-align: left;
-  cursor: pointer;
-}
-
-.pickName {
-  color: var(--ledger-ink);
-  font: 700 0.95rem var(--font-sans);
-  overflow-wrap: anywhere;
-}
-
-.pickTarget {
-  color: var(--ledger-muted);
-  font: 0.85rem/1.35 var(--font-sans);
-  overflow-wrap: anywhere;
-}
-
 /*
  * Inside its step the activity list is the question's answer, not a framed
  * section: the heading already asks it (owner, 3 Oct 2026: the empty list
