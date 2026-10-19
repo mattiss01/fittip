@@ -1818,31 +1818,57 @@ describe("what a plan regeneration would cost", () => {
   // not the pool: `refuseOver(usage.previous_proposal, ...)` runs before the
   // whole-context check. Measuring pool headroom therefore proves the wrong
   // thing, which is what the first version of this file did.
-  it("admits the largest rejected plan the database would store", () => {
-    // `plan_content_is_valid` permits three sessions a day across seven days,
-    // titles to 120 characters and sports to 60. This is that, reduced.
-    const previousProposal = {
-      weekDescription: "w".repeat(600),
-      days: Array.from({ length: 21 }, (_, index) => ({
-        date: shiftDate(TODAY, index % 7),
-        title: "t".repeat(120),
-        sport: "s".repeat(60),
-        durationMinutes: 180,
-      })),
-    };
+  it.each([
+    ["every session replacing one of the owner's", true, 0],
+    ["every handle cancelled instead", false, 21],
+  ])(
+    "admits the largest rejected plan the database would store: %s",
+    (_label, replacing, cancelCount) => {
+      // `plan_content_is_valid` permits three sessions a day across seven
+      // days, titles to 120 characters and sports to 60, and twenty-one
+      // handles, each named once by a replacement or a cancel (ADR-033). The
+      // two ends of that, reduced with every decision (owner, 19 Oct 2026).
+      const previousProposal = {
+        weekDescription: "w".repeat(600),
+        days: Array.from({ length: 21 }, (_, index) => ({
+          date: shiftDate(TODAY, index % 7),
+          title: "t".repeat(120),
+          sport: "s".repeat(60),
+          durationMinutes: 180,
+          decision: "addedBeside" as const,
+          ...(replacing
+            ? {
+                replaces: {
+                  date: shiftDate(TODAY, index % 7),
+                  title: "o".repeat(120),
+                },
+              }
+            : {}),
+        })),
+        ...(cancelCount > 0
+          ? {
+              cancels: Array.from({ length: cancelCount }, (_, index) => ({
+                date: shiftDate(TODAY, index % 7),
+                title: "c".repeat(120),
+                decision: "undecided" as const,
+              })),
+            }
+          : {}),
+      };
 
-    const assembled = realisticPlanContext({
-      regenerationFeedback: "f".repeat(500),
-      previousProposal,
-    });
+      const assembled = realisticPlanContext({
+        regenerationFeedback: "f".repeat(500),
+        previousProposal,
+      });
 
-    expect(assembled.usage.previous_proposal).toBeLessThanOrEqual(
-      PLAN_LIMITS.bytes.previousProposal,
-    );
-    expect(assembled.serializedBytes).toBeLessThanOrEqual(
-      PLAN_LIMITS.bytes.total,
-    );
-  });
+      expect(assembled.usage.previous_proposal).toBeLessThanOrEqual(
+        PLAN_LIMITS.bytes.previousProposal,
+      );
+      expect(assembled.serializedBytes).toBeLessThanOrEqual(
+        PLAN_LIMITS.bytes.total,
+      );
+    },
+  );
 
   it("leaves room in the pool for the feedback and the rejected proposal", () => {
     const assembled = realisticPlanContext();

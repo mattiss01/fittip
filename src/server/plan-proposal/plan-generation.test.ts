@@ -119,13 +119,17 @@ const proposals = {
 
 describe("previousPlanFits", () => {
   // The largest plan the database stores: three sessions on each of seven
-  // days, with the longest title and sport.
-  // Every session kept, the most a "kept" mark can add.
+  // days, with the longest title and sport, every one standing in for one of
+  // the owner's sessions, and every one accepted beside it.
   const largest = (letter: string) =>
     ({
       items: Array.from({ length: 21 }, (_, index) => ({
-        decision: "staged",
+        kind: "session",
+        decision: "staged_beside",
         contentIndex: index,
+        localDate: "2026-10-09",
+        title: letter.repeat(120),
+        replacesSessionId: `replaced-${index}`,
       })),
       content: {
         schemaVersion: "fittip.seven-day-plan.v2",
@@ -154,52 +158,100 @@ describe("previousPlanFits", () => {
   });
 });
 
-describe("what the coach is sent back of a declined proposal", () => {
-  it("names the sessions the owner kept, by position, and nothing else of the choices", () => {
-    const session = (title: string) => ({
-      date: TODAY,
-      title,
-      sport: "Running",
-      focus: "f",
-      intent: "i",
-      durationMinutes: 40,
-      primaryGoalId: GOAL_ID,
-      rationale: "r",
-    });
-    const reduced = reducePreviousPlan({
-      content: {
-        schemaVersion: "fittip.seven-day-plan.v2",
-        weekDescription: "Two runs.",
-        startDate: TODAY,
-        endDate: TODAY,
-        sessions: [session("Kept"), session("Declined"), session("Beside")],
-      },
-      items: [
-        { decision: "rejected", contentIndex: 1 },
-        { decision: "staged_beside", contentIndex: 2 },
-        { decision: "staged", contentIndex: 0 },
-      ],
-    } as Parameters<typeof reducePreviousPlan>[0]);
-
-    expect(reduced.kept).toEqual([0, 2]);
-    expect(reduced.days.map((day) => Object.keys(day))).toEqual(
-      Array(3).fill(["date", "title", "sport", "durationMinutes"]),
-    );
+describe("what the coach is sent back of a declined proposal (owner, 19 Oct 2026)", () => {
+  const session = (title: string) => ({
+    date: TODAY,
+    title,
+    sport: "Running",
+    focus: "f",
+    intent: "i",
+    durationMinutes: 40,
+    primaryGoalId: GOAL_ID,
+    rationale: "Why the coach thought so.",
+  });
+  const item = (
+    overrides: Partial<Parameters<typeof reducePreviousPlan>[0]["items"][0]>,
+  ) => ({
+    kind: "session",
+    decision: "proposed",
+    contentIndex: null,
+    localDate: TODAY,
+    title: null,
+    replacesSessionId: null,
+    ...overrides,
+  });
+  const content = (sessions: ReturnType<typeof session>[]) => ({
+    schemaVersion: "fittip.seven-day-plan.v2" as const,
+    weekDescription: "Two runs.",
+    startDate: TODAY,
+    endDate: TODAY,
+    sessions,
   });
 
-  it("sends no list when nothing was kept", () => {
-    const reduced = reducePreviousPlan({
-      content: {
-        schemaVersion: "fittip.seven-day-plan.v2",
-        weekDescription: "Rest.",
-        startDate: TODAY,
-        endDate: TODAY,
-        sessions: [],
+  it("names every decision on every session, and none of the coach's reasons", () => {
+    const reduced = reducePreviousPlan(
+      {
+        content: content([
+          session("Accepted"),
+          session("Swapped in"),
+          session("Beside"),
+          session("Declined"),
+          session("Open"),
+        ]),
+        items: [
+          item({ decision: "staged", contentIndex: 0 }),
+          item({
+            decision: "staged",
+            contentIndex: 1,
+            replacesSessionId: "long",
+          }),
+          item({
+            decision: "staged_beside",
+            contentIndex: 2,
+            replacesSessionId: "gone",
+          }),
+          item({ decision: "rejected", contentIndex: 3 }),
+          item({ contentIndex: 4 }),
+        ],
       },
-      items: [],
-    } as Parameters<typeof reducePreviousPlan>[0]);
+      new Map([["long", { localDate: TODAY, title: "Long run" }]]),
+    );
 
+    expect(
+      reduced.days.map((day) => [day.title, day.decision, day.replaces]),
+    ).toEqual([
+      ["Accepted", "accepted", undefined],
+      ["Swapped in", "replaced", { date: TODAY, title: "Long run" }],
+      // The session it stood beside is no longer on the plan: unnamed.
+      ["Beside", "addedBeside", undefined],
+      ["Declined", "rejected", undefined],
+      ["Open", "undecided", undefined],
+    ]);
+    expect(JSON.stringify(reduced)).not.toContain("Why the coach");
     expect(reduced).not.toHaveProperty("kept");
+  });
+
+  it("sends each suggested cancel with the decision on it", () => {
+    const reduced = reducePreviousPlan({
+      content: content([]),
+      items: [
+        item({ kind: "cancel", decision: "staged", title: "Intervals" }),
+        item({ kind: "cancel", decision: "rejected", title: "Strength" }),
+        item({ kind: "cancel", title: "Club run" }),
+      ],
+    });
+
+    expect(reduced.cancels).toEqual([
+      { date: TODAY, title: "Intervals", decision: "cancelled" },
+      { date: TODAY, title: "Strength", decision: "kept" },
+      { date: TODAY, title: "Club run", decision: "undecided" },
+    ]);
+  });
+
+  it("sends no cancels when there were none", () => {
+    const reduced = reducePreviousPlan({ content: content([]), items: [] });
+
+    expect(reduced).not.toHaveProperty("cancels");
   });
 });
 

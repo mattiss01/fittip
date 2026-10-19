@@ -61,6 +61,11 @@ const STATIC_PREFIX_BUDGET = 7_800;
  *
  *   9,400 + 64 + 52,100 = 61,564   ceil(61,564 / 4) = 15,391  vs  18,000
  *
+ * On 19 October 2026 the previous proposal came back with every decision
+ * (owner), and its allocation took 5,100 more bytes:
+ *
+ *   9,400 + 64 + 57,200 = 66,664   ceil(66,664 / 4) = 16,666  vs  18,000
+ *
  * The assertions below read `bytes.total` rather than a literal, so they bind
  * whatever the allocation becomes; this comment is the one thing that has to
  * be kept honest by hand.
@@ -104,9 +109,10 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
     expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(17_891);
     // 14,991 until the plan's logs took 10,200 bytes (16 Oct 2026); 15,216
     // until the prompt said an empty week is an answer (17 Oct 2026); 15,291
-    // until the coach could suggest a cancel (ADR-033, 19 Oct 2026).
+    // until the coach could suggest a cancel (ADR-033, 19 Oct 2026); 15,391
+    // until every decision went back with the previous proposal (same day).
     expect(tokens("create_seven_day_plan", PLAN_STATIC_PREFIX_BUDGET)).toBe(
-      15_391,
+      16_666,
     );
     expect(
       tokens(
@@ -366,6 +372,16 @@ describe("the plan prompt", () => {
     expect(Math.ceil(worstCase / 4)).toBeLessThanOrEqual(
       COACH_AI_LIVE_LIMITS.maxInputTokens,
     );
+  });
+
+  it("reads the previous proposal by the athlete's decision on each part (owner, 19 Oct 2026)", () => {
+    const prefix = coachAIStaticPrefix("create_seven_day_plan");
+
+    expect(prefix).toContain(
+      `"previousProposal" is your last answer with the athlete's "decision" on each part.`,
+    );
+    expect(prefix).toContain("Do not offer again what was rejected or kept.");
+    expect(prefix).not.toContain(`"kept" positions`);
   });
 
   it("shares the cacheable system half with the roadmap", () => {

@@ -5,6 +5,8 @@ import {
   COACH_AI_PROMPT_VERSIONS,
   COACH_AI_SCHEMA_VERSIONS,
   type CoachAIPreviousPlanReference,
+  type PreviousPlanCancelDecision,
+  type PreviousPlanSessionDecision,
   type SevenDayPlanProposal,
 } from "@/server/ai/contracts";
 import { COACH_AI_CONTEXT_LIMITS } from "@/server/ai/context";
@@ -79,10 +81,16 @@ export type PlanGenerationInput = {
   previousProposalId?: string | null;
   regenerationFeedback?: string | null;
   /**
-   * ADR-024. The planned sessions on the chosen days that the owner marked
-   * "can be replaced". Everything else on those days stays.
+   * ADR-024, ADR-033. The planned sessions on the chosen days the owner left
+   * open. Everything else on those days stays.
    */
   replaceableSessionIds?: readonly string[];
+  /**
+   * With `previousProposalId`: the owner's sessions the previous proposal's
+   * items stood in for, by id, so the coach is told what each replaced
+   * (owner, 19 Oct 2026). One absent is no longer on the plan.
+   */
+  replacedSessions?: ReadonlyMap<string, PlannedSessionName>;
 };
 
 export type PlanGenerationResult =
@@ -112,7 +120,7 @@ export async function generatePlanProposal(
     if (previous === null) {
       throw new CoachAIError("context_invalid");
     }
-    previousPlan = reducePreviousPlan(previous);
+    previousPlan = reducePreviousPlan(previous, input.replacedSessions);
   }
 
   const requestFingerprint = [
@@ -315,12 +323,21 @@ async function recordMemoryCandidates(
  *
  * Asked before a review is closed. Assembly makes the same check, but it runs
  * after "ask again" has already finished the review, so a proposal too large
- * to send was found out only once it could no longer be reopened.
+ * to send was found out only once it could no longer be reopened. Measured as
+ * if every session it replaced were still on the plan under the longest title
+ * a session may carry, so it never admits what assembly would then refuse.
  */
 export function previousPlanFits(proposal: PreviousProposal): boolean {
+  const longest = { localDate: "0000-00-00", title: "x".repeat(120) };
+  const worstCase = new Map(
+    proposal.items
+      .filter((item) => item.replacesSessionId !== null)
+      .map((item) => [item.replacesSessionId as string, longest]),
+  );
   return (
-    new TextEncoder().encode(JSON.stringify(reducePreviousPlan(proposal)))
-      .length <=
+    new TextEncoder().encode(
+      JSON.stringify(reducePreviousPlan(proposal, worstCase)),
+    ).length <=
     COACH_AI_CONTEXT_LIMITS.create_seven_day_plan.bytes.previousProposal
   );
 }
@@ -329,32 +346,75 @@ export function previousPlanFits(proposal: PreviousProposal): boolean {
 type PreviousProposal = {
   content: SevenDayPlanProposal;
   items: readonly {
+    kind: string;
     decision: string;
     contentIndex: number | null;
+    localDate: string;
+    title: string | null;
+    replacesSessionId: string | null;
   }[];
 };
 
+/** A planned session as "ask again" read it, for naming what was replaced. */
+export type PlannedSessionName = { localDate: string; title: string };
+
+/**
+ * Every decision the owner made on the proposal (owner, 19 Oct 2026), and
+ * nothing of the coach's own reasoning. `replacedSessions` names the owner's
+ * sessions a replacing item stood in for; one missing from it is no longer on
+ * the plan and is left unnamed.
+ */
 export function reducePreviousPlan(
   proposal: PreviousProposal,
+  replacedSessions: ReadonlyMap<string, PlannedSessionName> = new Map(),
 ): CoachAIPreviousPlanReference {
-  // A session the owner accepted stays open with the proposal while the coach
-  // is asked, and reaches the plan with the replacement (owner, 17 Oct 2026).
-  const kept = proposal.items
-    .filter(
-      (item) =>
-        (item.decision === "staged" || item.decision === "staged_beside") &&
-        item.contentIndex !== null,
-    )
-    .map((item) => item.contentIndex as number)
-    .sort((a, b) => a - b);
-  return {
-    weekDescription: proposal.content.weekDescription,
-    days: proposal.content.sessions.map((session) => ({
+  const byContent = new Map(
+    proposal.items
+      .filter((item) => item.kind === "session" && item.contentIndex !== null)
+      .map((item) => [item.contentIndex as number, item]),
+  );
+  const days = proposal.content.sessions.map((session, index) => {
+    const item = byContent.get(index);
+    const replacing = item?.replacesSessionId ?? null;
+    const replaced =
+      replacing === null ? undefined : replacedSessions.get(replacing);
+    return {
       date: session.date,
       title: session.title,
       sport: session.sport,
       durationMinutes: session.durationMinutes,
-    })),
-    ...(kept.length > 0 ? { kept } : {}),
+      decision: sessionDecision(item?.decision, replacing !== null),
+      ...(replaced === undefined
+        ? {}
+        : { replaces: { date: replaced.localDate, title: replaced.title } }),
+    };
+  });
+  const cancels = proposal.items
+    .filter((item) => item.kind === "cancel")
+    .map((item) => ({
+      date: item.localDate,
+      title: item.title ?? "",
+      decision: cancelDecision(item.decision),
+    }));
+  return {
+    weekDescription: proposal.content.weekDescription,
+    days,
+    ...(cancels.length > 0 ? { cancels } : {}),
   };
+}
+
+function sessionDecision(
+  decision: string | undefined,
+  replacing: boolean,
+): PreviousPlanSessionDecision {
+  if (decision === "staged") return replacing ? "replaced" : "accepted";
+  if (decision === "staged_beside") return "addedBeside";
+  if (decision === "rejected") return "rejected";
+  return "undecided";
+}
+
+function cancelDecision(decision: string): PreviousPlanCancelDecision {
+  if (decision === "staged") return "cancelled";
+  if (decision === "rejected") return "kept";
+  return "undecided";
 }

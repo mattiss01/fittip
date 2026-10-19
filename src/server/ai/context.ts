@@ -451,14 +451,20 @@ export const COACH_AI_CONTEXT_LIMITS = {
       // and the 500 it gives back is part of what lets `total` hold every
       // part. A rejected plan in a script of three bytes a character can pass
       // it; `previousPlanFits` says so before "ask again" closes the review.
-      previousProposal: 5_900,
+      //
+      // 11,000 since 19 Oct 2026, when every decision went back (owner): each
+      // session carries its decision and the owner's session it replaced, and
+      // the cancels (ADR-033) come too. The two legal worst cases in ASCII,
+      // every handle a replacement or every handle a cancel, measure under
+      // 10,500 (`context.test.ts`).
+      previousProposal: 11_000,
       roadmap: 4_000,
       currentRoadmap: 0,
       roadmapToChange: 0,
       roadmapPhase: 0,
       recentSafetyFlags: 0,
       sessionDetail: 0,
-      // The sum of the parts (51,100) and 1,000 for the envelope (817 at its
+      // The sum of the parts (56,200) and 1,000 for the envelope (817 at its
       // largest), whose
       // largest piece is twelve goal ids outside the horizon. Until ADR-023
       // decision 12 this was below the sum, on the reasoning that no request
@@ -469,8 +475,12 @@ export const COACH_AI_CONTEXT_LIMITS = {
       //   ceil(60,864 / 4) = 15,216  against maxInputTokens 18,000.
       //
       // 51,200 and 14,991 tokens until 16 Oct 2026, sized to the 15,000 of
-      // ADR-023; the logs' 900 bytes are what took it past.
-      total: 52_100,
+      // ADR-023; the logs' 900 bytes are what took it past. 52,100 until
+      // 19 Oct 2026, when the previous proposal took 5,100 more:
+      //
+      //   prefix 9,400 + wrapper 64 + context 57,200 = 66,664 characters
+      //   ceil(66,664 / 4) = 16,666  against maxInputTokens 18,000.
+      total: 57_200,
     },
   },
   // A7-2, within ADR-020. One session rather than a horizon, so the plan's
