@@ -26,7 +26,9 @@ main.setupPage {
 
 .backArrow {
   position: absolute;
-  top: calc(max(1.25rem, env(safe-area-inset-top)) + 0.75rem);
+  z-index: 1;
+  /* On the line of the page's title, which is the first thing on the page. */
+  top: max(1.25rem, env(safe-area-inset-top));
   left: 0.5rem;
   width: 2.75rem;
   min-height: 2.75rem;
@@ -143,6 +145,18 @@ main.setupPage {
 .centered {
   justify-content: center;
   text-align: center;
+}
+
+/* The page's title is a small one at the top centre, with room kept on both
+   sides for the back arrow (owner, 19 Oct 2026: a large title covered it). */
+main.setupPage > header {
+  min-height: 2.75rem;
+  padding: 0 3.25rem;
+}
+
+main.setupPage > header h1 {
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
 }
 
 /* Read by a screen reader, not shown: the label of a field whose question is
